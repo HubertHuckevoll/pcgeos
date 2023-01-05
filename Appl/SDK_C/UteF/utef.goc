@@ -1,0 +1,266 @@
+/********************************************************************
+ *
+ *      Copyright (c) Geoworks 1996 -- All Rights Reserved.
+ *
+ * PROJECT:     GEOS Sample Applications
+ * MODULE:      GenContent
+ * FILE:        gcont.goc
+ *
+ * AUTHOR:      Nathan Fiedler: November 13, 1996
+ *
+ * REVISION HISTORY:
+ *      Name    Date            Description
+ *      ----    ----            -----------
+ *      NF      11/13/96        Initial version
+ *
+ * DESCRIPTION:
+ *      This sample illustrates how to have a lot of Gen objects
+ *      on the screen at once. Although they can't all physically
+ *      fit on the screen at once, we can have the user scroll the
+ *      objects up and down to make them visible.
+ *
+ *      This sample uses a GenView and GenContent to provide the
+ *      scrolling. By using the scrolling behavior of the GenView
+ *      you can scroll up or down to make different Gen objects
+ *      visible on the screen. To actually implement the scrolling
+ *      we'll need to intercept the PgUp and PgDn keys to make the
+ *      view scroll up and down. We do that by intercepting the
+ *      MSG_META_KBD_CHAR message at the GenView level. There we
+ *      can check which key was pressed and either scroll up,
+ *      scroll down, or send the keypress to another object to be
+ *      handled in the appropriate manner.
+ *
+ * RCS STAMP:
+ *      $Id: gcont.goc,v 1.1 97/04/04 16:41:45 newdeal Exp $
+ *
+ *******************************************************************/
+
+/********************************************************************
+ *              Headers
+ *******************************************************************/
+@include <stdapp.goh>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <geoMisc.h>                    /* various unix-like goodies */
+
+
+
+// all codepoints up to 32 are not useable characters so we can use 1 and 2 as error codes
+//# define EOF     1
+#define INVALID 2
+
+// first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
+//#define B2LEAD 0xC0 // 1100 0000
+#define B2MASK 0x1F // 0001 1111
+
+// first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
+//#define B3LEAD 0xE0 // 1110 0000
+#define B3MASK 0x0F // 0000 1111
+
+// first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
+//#define B4LEAD 0xF0 // 1111 0000
+#define B4MASK 0x07 // 0000 0111
+
+// non-first bytes start with 10 and carries 6 bits of data
+//#define MBLEAD 0x80 // 1000 0000
+#define MBMASK 0x3F // 0011 1111
+
+
+/********************************************************************
+ *              Class Definitions
+ *******************************************************************/
+    @class GContProcessClass, GenProcessClass;
+    @endc;
+
+      /*
+       * Subclass this so we can intercept the
+       * keyboard presses and respond properly to
+       * the PgUp and PgDn keys.
+       */
+    @class GContViewClass, GenViewClass;
+    @endc;
+
+/********************************************************************
+ *              Class Declarations
+ *******************************************************************/
+    @classdecl GContProcessClass, neverSaved;
+    @classdecl GContViewClass;
+
+/********************************************************************
+ *              UI Object Resources
+ *******************************************************************/
+
+/********************************************************************
+ *              AppResource Resource
+ *******************************************************************/
+@start AppResource;
+
+@object GenApplicationClass GContApp = {
+    GI_visMoniker = list { @GContTextMoniker };
+    GI_comp = @GContPrimary;
+    gcnList( MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS ) =
+        @GContPrimary;
+}
+
+@visMoniker GContTextMoniker = "GenContent";
+
+@end AppResource;
+
+/********************************************************************
+ *              Interface Resource
+ *******************************************************************/
+@start Interface;
+
+@object GenPrimaryClass GContPrimary = {
+    GI_comp = @GContView;
+    HINT_SIZE_WINDOW_AS_DESIRED;
+}
+
+  /*
+   * To have Gen objects in a scrolling "area"
+   * we'll need to use a GenView. It's content
+   * will be the GenContent below, which contains
+   * all of the Gen objects we want to be scrollable.
+   */
+@object GContViewClass GContView = {
+    GVI_content = @GContContent;
+      /*
+       * Set the flag for "generic contents" since we have
+       * Gen objects as the content of this view.
+       * Also set the flag so the view will be the same
+       * color as the primary window, for appearances only.
+       */
+    GVI_attrs = @default | GVA_GENERIC_CONTENTS
+                         | GVA_SAME_COLOR_AS_PARENT_WIN;
+    GVI_vertAttrs = @default | GVDA_SCROLLABLE;
+}
+
+  /*
+   * This is the content object which contains
+   * all of the Gen objects that will be displayed
+   * in the GenView.
+   */
+@object GenContentClass GContContent = {
+    GI_comp = @GContValue1,
+              @GContText1;
+    GCI_genView = @GContView;
+}
+
+  /*
+   * These are just some example Gen objects
+   * that show that this concept really works.
+   */
+@object GenTextClass GContText1 = {
+    GI_visMoniker = "Text 1:";
+    GTXI_text = "";
+}
+
+@object GenValueClass GContValue1 = {
+    GI_visMoniker = "Value 1:";
+    GVLI_minimum = MakeWWFixed(-32767);
+    GVLI_maximum = MakeWWFixed(32767);
+	GVLI_value = MakeWWFixed(0);
+}
+
+@end Interface;
+
+
+dword fgetutf8c(FileHandle fhandle)
+{
+    dword result;
+    byte input[6] = {0,0,0,0,0,0};
+    sbyte fError;
+
+    fError = FileRead(fhandle, &input[0], 1, FALSE);
+
+    if (fError == -1)
+    {
+        // The EOF was hit by the first character.
+        return EOF;
+    }
+    else if (
+                ((input[0] & 0xC0) == 0x80)
+            ||  ((input[0] & 0xfe) == 0xfe)
+            )
+    {
+        // This is not the beginning of the multibyte sequence.
+        // This is not a valid UTF-8 stream.
+        return INVALID;
+    }
+    else
+    {
+        if (input[0] < 0x80)
+        {   // 1 byte encoding (7 bit ASCII character)
+            result = (dword) input[0];
+        }
+        else if (input[0] < 0xE0)
+        {   // 2 byte encoding
+            // first byte of a 2-byte encoding starts 110 and carries 5 bits of data
+            fError = FileRead(fhandle, &input[1], 1, FALSE);
+            if (fError == -1) return EOF;
+
+            result =    (dword)     (input[0] & B2MASK) << 6
+                        |           (input[1] & MBMASK);
+        }
+        else if(input[0] < 0xF0)
+        {   // 3 byte encoding
+            // first byte of a 3-byte encoding starts 1110 and carries 4 bits of data
+            fError = FileRead(fhandle, &input[1], 2, FALSE);
+            if (fError == -1) return EOF;
+
+            result =    (dword)     (input[0] & B3MASK) << 12
+                        |           (input[1] & MBMASK) << 6
+                        |           (input[2] & MBMASK);
+        }
+        else
+        {   // 4 byte encoding
+            // first byte of a 4-byte encoding starts 11110 and carries 3 bits of data
+            fError = FileRead(fhandle, &input[1], 3, FALSE);
+            if (fError == -1) return EOF;
+
+            result =    (dword)     (input[0] & B4MASK) << 18
+                        |           (input[1] & MBMASK) << 12
+                        |           (input[2] & MBMASK) << 6
+                        |           (input[3] & MBMASK);
+        }
+    }
+
+    return result;
+}
+
+@method GContProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
+{
+    dword c=0;
+    FileHandle fhandle=0;
+    char buf[6] = {0,0,0,0,0,0};
+
+    @callsuper();
+
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
+
+    fhandle = FileOpen("UTEF.TXT", FILE_ACCESS_R | FILE_DENY_RW);
+
+    if (fhandle != NullHandle)
+    {
+        FilePos(fhandle, 0, FILE_POS_START);
+        while ((c != INVALID))
+        {
+            c = fgetutf8c(fhandle);
+            if (c == 0) break;
+            sprintf(&buf, _TEXT("%ld"), c);
+
+            //@call GContValue1::MSG_GEN_VALUE_SET_VALUE(MakeWWFixed(c), FALSE);
+          	//@call GContValue1::MSG_GEN_VALUE_SET_VALUE(c, FALSE);
+            //@call GContValue1::MSG_GEN_VALUE_SET_VALUE(MakeWWFixed(c), FALSE);
+            @call GContText1::MSG_VIS_TEXT_APPEND_PTR(&buf, 0);
+            @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+
+        }
+        FileClose(fhandle, FALSE);
+    }
+
+    FilePopDir();
+
+}
