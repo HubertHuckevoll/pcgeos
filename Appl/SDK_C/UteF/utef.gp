@@ -81,6 +81,7 @@ library ansic
 #
 resource AppResource ui-object
 resource Interface   ui-object
+resource xlateResource  data, lmem, discardable
 #
 # Any classes that are defined in the application should be exported here.
 #
