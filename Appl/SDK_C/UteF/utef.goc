@@ -1,6 +1,6 @@
 /********************************************************************
  *
- *      Copyright (c) FreeGEOS Crew 2023.
+ *      Copyright (c) FreeGEOS Crew 01/2023.
  *
  *
  *******************************************************************/
@@ -275,7 +275,8 @@ byte TranslateCharNum(sdword num)
 
     if (num < 128)
     {
-        return (num>=32 || num==9 || num==13) ? (byte) num : ret;
+        if (num==10) ret = 13;
+        return (num >= 32 || num == 9 || num == 13) ? (byte) num : ret;
     }
 
     MemLock(OptrToHandle(@xlateTable));
@@ -299,6 +300,7 @@ sdword GetUtf8CharFromFile(FileHandle fhandle)
     sdword result = 0;
     byte input[6] = {0};
     sbyte fError = 0;
+    char charBuf[10] = {0};
 
     fError = FileRead(fhandle, &input[0], 1, FALSE);
 
@@ -312,9 +314,9 @@ sdword GetUtf8CharFromFile(FileHandle fhandle)
             ||  ((input[0] & 0xfe) == 0xfe)
             )
     {
-        // This is not the beginning of the multibyte sequence.
+        // This is not the beginning of a multibyte sequence.
         // This is not a valid UTF-8 stream.
-        return INVALID;
+        return (sdword) INVALID;
     }
     else
     {
@@ -387,22 +389,21 @@ void UTF8FileToGEOS()
 
             if (c != INVALID)
             {
-                sprintf(charBuf, "%ld", c);
-                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+                //sprintf(charBuf, "%ld", c);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                 gc = TranslateCharNum(c);
-                sprintf(charBuf, "%d", gc);
-                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+
+                //sprintf(charBuf, "%d", gc);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                 buf[0] = gc;
                 buf[1] = 0;
-                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
-                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
-
-                //FileWrite(outfile, (void*)&gc, 1, FALSE);
-                FileWrite(outfile, &buf, 2, FALSE);
+                FileWrite(outfile, buf, 2, FALSE);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
 
                 //buf[i] = gc;
                 //i++;
