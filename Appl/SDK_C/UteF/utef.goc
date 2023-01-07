@@ -1,37 +1,7 @@
 /********************************************************************
  *
- *      Copyright (c) Geoworks 1996 -- All Rights Reserved.
+ *      Copyright (c) FreeGEOS Crew 2023.
  *
- * PROJECT:     GEOS Sample Applications
- * MODULE:      GenContent
- * FILE:        gcont.goc
- *
- * AUTHOR:      Nathan Fiedler: November 13, 1996
- *
- * REVISION HISTORY:
- *      Name    Date            Description
- *      ----    ----            -----------
- *      NF      11/13/96        Initial version
- *
- * DESCRIPTION:
- *      This sample illustrates how to have a lot of Gen objects
- *      on the screen at once. Although they can't all physically
- *      fit on the screen at once, we can have the user scroll the
- *      objects up and down to make them visible.
- *
- *      This sample uses a GenView and GenContent to provide the
- *      scrolling. By using the scrolling behavior of the GenView
- *      you can scroll up or down to make different Gen objects
- *      visible on the screen. To actually implement the scrolling
- *      we'll need to intercept the PgUp and PgDn keys to make the
- *      view scroll up and down. We do that by intercepting the
- *      MSG_META_KBD_CHAR message at the GenView level. There we
- *      can check which key was pressed and either scroll up,
- *      scroll down, or send the keypress to another object to be
- *      handled in the appropriate manner.
- *
- * RCS STAMP:
- *      $Id: gcont.goc,v 1.1 97/04/04 16:41:45 newdeal Exp $
  *
  *******************************************************************/
 
@@ -42,12 +12,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <geoMisc.h>                    /* various unix-like goodies */
-
 
 // all codepoints up to 32 are not useable characters so we can use 1 and 2 as error codes
-//# define EOF     1
-#define INVALID 2
+#define EOF     (-1)
+#define INVALID (-2)
 
 // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
 //#define B2LEAD 0xC0 // 1100 0000
@@ -65,143 +33,139 @@
 //#define MBLEAD 0x80 // 1000 0000
 #define MBMASK 0x3F // 0011 1111
 
+#define NUM_XLATE_ELEMS 126
+@start xlateResource, data;
 
-typedef struct {
-    dword   utf8num;
-    byte    geosNum;
-} UTF8toGeosTable;
-
-//#define NUM_XLATE_ENTRIES 90
-//@extern chunk xlateTable;
-
-dword xlateTable[126] = {
-196
-,197
-,199
-,201
-,209
-,214
-,220
-,225
-,224
-,226
-,228
-,227
-,229
-,231
-,233
-,232
-,234
-,235
-,237
-,236
-,238
-,239
-,241
-,243
-,242
-,244
-,246
-,245
-,250
-,249
-,251
-,252
-,8224
-,176
-,162
-,163
-,167
-,8226
-,182
-,223
-,174
-,169
-,8482
-,180
-,168
-,8800
-,198
-,216
-,8734
-,177
-,8804
-,8805
-,165
-,181
-,8706
-,8721
-,8719
-,960
-,8747
-,170
-,186
-,937
-,230
-,248
-,191
-,161
-,172
-,8730
-,402
-,8776
-,8710
-,171
-,187
-,8230
-,160
-,192
-,195
-,213
-,338
-,339
-,8211
-,8212
-,8220
-,8221
-,8216
-,8217
-,247
-,9674
-,255
-,376
-,8260
-,8364
-,8249
-,8250
-,64257
-,64258
-,8225
-,183
-,8218
-,8222
-,8240
-,194
-,202
-,193
-,203
-,200
-,205
-,206
-,207
-,204
-,211
-,212
-,63743
-,210
-,218
-,219
-,217
-,305
-,710
-,732
-,175
-,728
-,730
-,184
-,733
-,731
-};
+    @chunk dword xlateTable[NUM_XLATE_ELEMS] = {
+/*GEOS*/ /*UTF8*/
+/*128*/  196
+/*129*/ ,197
+/*130*/ ,199
+/*131*/ ,201
+/*132*/ ,209
+/*133*/ ,214
+/*134*/ ,220
+/*135*/ ,225
+/*136*/ ,224
+/*137*/ ,226
+/*138*/ ,228
+/*139*/ ,227
+/*140*/ ,229
+/*141*/ ,231
+/*142*/ ,233
+/*143*/ ,232
+/*144*/ ,234
+/*145*/ ,235
+/*146*/ ,237
+/*147*/ ,236
+/*148*/ ,238
+/*149*/ ,239
+/*150*/ ,241
+/*151*/ ,243
+/*152*/ ,242
+/*153*/ ,244
+/*154*/ ,246
+/*155*/ ,245
+/*156*/ ,250
+/*157*/ ,249
+/*158*/ ,251
+/*159*/ ,252
+/*160*/ ,8224
+/*161*/ ,176
+/*162*/ ,162
+/*163*/ ,163
+/*164*/ ,167
+/*165*/ ,8226
+/*166*/ ,182
+/*167*/ ,223
+/*168*/ ,174
+/*169*/ ,169
+/*170*/ ,8482
+/*171*/ ,180
+/*172*/ ,168
+/*173*/ ,8800
+/*174*/ ,198
+/*175*/ ,216
+/*176*/ ,8734
+/*177*/ ,177
+/*178*/ ,8804
+/*179*/ ,8805
+/*180*/ ,165
+/*181*/ ,181
+/*182*/ ,8706
+/*183*/ ,8721
+/*184*/ ,8719
+/*185*/ ,960
+/*186*/ ,8747
+/*187*/ ,170
+/*188*/ ,186
+/*189*/ ,937
+/*190*/ ,230
+/*191*/ ,248
+/*192*/ ,191
+/*193*/ ,161
+/*194*/ ,172
+/*195*/ ,8730
+/*196*/ ,402
+/*197*/ ,8776
+/*198*/ ,8710
+/*199*/ ,171
+/*200*/ ,187
+/*201*/ ,8230
+/*202*/ ,160
+/*203*/ ,192
+/*204*/ ,195
+/*205*/ ,213
+/*206*/ ,338
+/*207*/ ,339
+/*208*/ ,8211
+/*209*/ ,8212
+/*210*/ ,8220
+/*211*/ ,8221
+/*212*/ ,8216
+/*213*/ ,8217
+/*214*/ ,247
+/*215*/ ,9674
+/*216*/ ,255
+/*217*/ ,376
+/*218*/ ,8260
+/*219*/ ,8364
+/*220*/ ,8249
+/*221*/ ,8250
+/*222*/ ,221       // MacRoman: 64257
+/*223*/ ,253       // MacRoman: 64258
+/*224*/ ,8225
+/*225*/ ,183
+/*226*/ ,8218
+/*227*/ ,8222
+/*228*/ ,8240
+/*229*/ ,194
+/*230*/ ,202
+/*231*/ ,193
+/*232*/ ,203
+/*233*/ ,200
+/*234*/ ,205
+/*235*/ ,206
+/*236*/ ,207
+/*237*/ ,204
+/*238*/ ,211
+/*239*/ ,212
+/*240*/ ,63743
+/*241*/ ,210
+/*242*/ ,218
+/*243*/ ,219
+/*244*/ ,217
+/*245*/ ,305
+/*246*/ ,710
+/*247*/ ,732
+/*248*/ ,175
+/*249*/ ,728
+/*251*/ ,730
+/*252*/ ,184
+/*253*/ ,733
+/*254*/ ,731
+    };
+@end xlateResource;
 
 /********************************************************************
  *              Class Definitions
@@ -250,7 +214,7 @@ dword xlateTable[126] = {
 @start Interface;
 
 @object GenPrimaryClass GContPrimary = {
-    GI_comp = @GContView;
+    GI_comp =   @GContView;
     HINT_SIZE_WINDOW_AS_DESIRED;
 }
 
@@ -305,46 +269,43 @@ dword xlateTable[126] = {
 
 byte TranslateCharNum(sdword num)
 {
-    //UTF8toGeosTable *xlate_table;
-    //xlateTable
-    byte i=0;
-    byte ret=225; // if not found: middle not.
+    dword *xlate_table;
+    byte i = 0;
+    byte ret = 225; // if not found: middle dot.
 
     if (num < 128)
     {
         return (num>=32 || num==9 || num==13) ? (byte) num : ret;
     }
 
-    //MemLock(OptrToHandle(@xlateTable));
-    //xlate_table = LMemDeref(@xlateTable);
+    MemLock(OptrToHandle(@xlateTable));
+    xlate_table = LMemDeref(@xlateTable);
 
-    // +  128
-    for(i = 0; i < 126; i++)
+    for(i = 0; i < NUM_XLATE_ELEMS; i++)
     {
-        if(xlateTable[i] == num)
+        if(xlate_table[i] == num)
         {
             ret = (byte) (i + 128);
             break;
         }
     }
 
-    // MemUnlock(OptrToHandle(@xlateTable));
+    MemUnlock(OptrToHandle(@xlateTable));
     return ret;
 }
 
-
-sdword fgetutf8c(FileHandle fhandle)
+sdword GetUtf8CharFromFile(FileHandle fhandle)
 {
     sdword result = 0;
-    byte input[6] = {0,0,0,0,0,0};
+    byte input[6] = {0};
     sbyte fError = 0;
 
     fError = FileRead(fhandle, &input[0], 1, FALSE);
 
-    if (fError == -1)
+    if (fError <= 0)
     {
         // The EOF was hit by the first character.
-        return EOF;
+        return (sdword) EOF;
     }
     else if (
                 ((input[0] & 0xC0) == 0x80)
@@ -363,18 +324,18 @@ sdword fgetutf8c(FileHandle fhandle)
         }
         else if (input[0] < 0xE0)
         {   // 2 byte encoding
-            // first byte of a 2-byte encoding starts 110 and carries 5 bits of data
+            // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
             fError = FileRead(fhandle, &input[1], 1, FALSE);
-            if (fError == -1) return EOF;
+            if (fError <= 0) return (sdword) EOF;
 
             result =    (sdword)    (input[0] & B2MASK) << 6
                         |           (input[1] & MBMASK);
         }
         else if(input[0] < 0xF0)
         {   // 3 byte encoding
-            // first byte of a 3-byte encoding starts 1110 and carries 4 bits of data
+            // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
             fError = FileRead(fhandle, &input[1], 2, FALSE);
-            if (fError == -1) return EOF;
+            if (fError <= 0) return (sdword) EOF;
 
             result =    (sdword)    (input[0] & B3MASK) << 12
                         |           (input[1] & MBMASK) << 6
@@ -382,9 +343,9 @@ sdword fgetutf8c(FileHandle fhandle)
         }
         else
         {   // 4 byte encoding
-            // first byte of a 4-byte encoding starts 11110 and carries 3 bits of data
+            // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
             fError = FileRead(fhandle, &input[1], 3, FALSE);
-            if (fError == -1) return EOF;
+            if (fError <= 0) return (sdword) EOF;
 
             result =    (sdword)    (input[0] & B4MASK) << 18
                         |           (input[1] & MBMASK) << 12
@@ -396,41 +357,69 @@ sdword fgetutf8c(FileHandle fhandle)
     return result;
 }
 
-@method GContProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
+void UTF8FileToGEOS()
 {
-    sdword c=0;
-    byte gc=0;
-    FileHandle fhandle=0;
-    byte buf[255]={0};
-    byte charBuf[10]={0};
-    byte i=0;
-
-    @callsuper();
+    sdword      c=0;
+    byte        gc=0;
+    FileHandle  infile=0;
+    FileHandle  outfile=0;
+    byte        buf[255]={0};
+    byte        charBuf[10]={0};
+    byte        i=0;
 
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
 
-    fhandle = FileOpen("UTEF.TXT", FILE_ACCESS_R | FILE_DENY_RW);
+    infile = FileOpen("UTEF.TXT", FILE_ACCESS_R | FILE_DENY_RW);
+    //outfile = FileOpen("GEOSF.TXT", FILE_ACCESS_W | FILE_DENY_RW);
+    outfile = FileCreate("GEOSF.TXT", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
 
-    if (fhandle != NullHandle)
+
+    if ((infile != NullHandle) && (outfile != NullHandle))
     {
-        FilePos(fhandle, 0, FILE_POS_START);
+        FilePos(infile, 0, FILE_POS_START);
+        FilePos(outfile, 0, FILE_POS_START);
+
         while ((c != INVALID))
         {
-            c = fgetutf8c(fhandle);
-            if (c == 0) break;
-            gc = TranslateCharNum(c);
-            sprintf(charBuf, "%d", gc);
-            buf[i] = gc;
-            i++;
-            @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-            @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+            c = GetUtf8CharFromFile(infile);
+            if (c == EOF) break;
+
+            if (c != INVALID)
+            {
+                sprintf(charBuf, "%ld", c);
+                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+
+                gc = TranslateCharNum(c);
+                sprintf(charBuf, "%d", gc);
+                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+
+                buf[0] = gc;
+                buf[1] = 0;
+                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+
+                //FileWrite(outfile, (void*)&gc, 1, FALSE);
+                FileWrite(outfile, &buf, 2, FALSE);
+
+                //buf[i] = gc;
+                //i++;
+            }
         }
-        buf[i] = 0;
-        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("---\r"), 0);
-        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
-        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
-        FileClose(fhandle, FALSE);
+        //buf[i] = 0;
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("---\r"), 0);
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+        FileClose(infile, FALSE);
+        FileClose(outfile, FALSE);
     }
     FilePopDir();
+}
+
+@method GContProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
+{
+    @callsuper();
+    UTF8FileToGEOS();
 }
