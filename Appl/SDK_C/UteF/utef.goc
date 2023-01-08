@@ -18,19 +18,19 @@
 #define INVALID (-2)
 
 // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
-//#define B2LEAD 0xC0 // 1100 0000
+#define B2LEAD 0xC0 // 1100 0000
 #define B2MASK 0x1F // 0001 1111
 
 // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
-//#define B3LEAD 0xE0 // 1110 0000
+#define B3LEAD 0xE0 // 1110 0000
 #define B3MASK 0x0F // 0000 1111
 
 // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
-//#define B4LEAD 0xF0 // 1111 0000
+#define B4LEAD 0xF0 // 1111 0000
 #define B4MASK 0x07 // 0000 0111
 
 // non-first bytes start with 10 and carries 6 bits of data
-//#define MBLEAD 0x80 // 1000 0000
+#define MBLEAD 0x80 // 1000 0000
 #define MBMASK 0x3F // 0011 1111
 
 #define NUM_XLATE_ELEMS 126
@@ -275,7 +275,7 @@ byte TranslateCharNum(sdword num)
 
     if (num < 128)
     {
-        if (num==10) ret = 13;
+        if (num==10) ret = 13; // FIXME: this works for LF files, what about CR/LF?
         return (num >= 32 || num == 9 || num == 13) ? (byte) num : ret;
     }
 
@@ -300,7 +300,6 @@ sdword GetUtf8CharFromFile(FileHandle fhandle)
     sdword result = 0;
     byte input[6] = {0};
     sbyte fError = 0;
-    char charBuf[10] = {0};
 
     fError = FileRead(fhandle, &input[0], 1, FALSE);
 
@@ -358,6 +357,90 @@ sdword GetUtf8CharFromFile(FileHandle fhandle)
 
     return result;
 }
+
+word GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, sdword *result)
+{
+    byte input[6] = {0};
+    byte* bufPtr = 0;
+    word bufEnd = 0;
+    word bufIdx = 0;
+    word rest = 0;
+
+    bufPtr = MemLock(bufHan);
+    bufEnd = bufSize;
+    rest = 0;
+
+    while (bufIdx > 0)
+    {
+        if ((bufPtr[bufIdx] == B2LEAD) ||
+            (bufPtr[bufIdx] == B3LEAD) ||
+            (bufPtr[bufIdx] == B4LEAD))
+        {
+            rest = bufSize - bufEnd;
+            break;
+        }
+        bufIdx--;
+    }
+
+    bufIdx = 0;
+    while(bufIdx < bufEnd)
+    {
+        input[0] = bufPtr[bufIdx];
+
+        if (
+                    ((input[0] & 0xC0) == 0x80)
+                ||  ((input[0] & 0xfe) == 0xfe)
+                )
+        {
+            // This is not the beginning of a multibyte sequence.
+            // This is not a valid UTF-8 stream.
+            *result = (sdword) INVALID;
+        }
+        else
+        {
+            if (input[0] < 0x80)
+            {   // 1 byte encoding (7 bit ASCII character)
+                *result = (sdword) input[0];
+                bufIdx++;
+            }
+            else if (input[0] < 0xE0)
+            {   // 2 byte encoding
+                // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
+                memcpy(&input[1], &bufPtr[bufIdx], 1);
+                bufIdx = bufIdx + 1;
+
+                *result =   (sdword)    (input[0] & B2MASK) << 6
+                            |           (input[1] & MBMASK);
+            }
+            else if(input[0] < 0xF0)
+            {   // 3 byte encoding
+                // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
+                memcpy(&input[1], &bufPtr[bufIdx], 2);
+                bufIdx = bufIdx + 2;
+
+                *result =   (sdword)    (input[0] & B3MASK) << 12
+                            |           (input[1] & MBMASK) << 6
+                            |           (input[2] & MBMASK);
+            }
+            else
+            {   // 4 byte encoding
+                // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
+                memcpy(&input[1], &bufPtr[bufIdx], 3);
+                bufIdx = bufIdx + 3;
+
+                *result =   (sdword)    (input[0] & B4MASK) << 18
+                            |           (input[1] & MBMASK) << 12
+                            |           (input[2] & MBMASK) << 6
+                            |           (input[3] & MBMASK);
+            }
+        }
+    }
+
+    MemUnlock(bufHan);
+    return rest;
+}
+
+
 
 void UTF8FileToGEOS()
 {
@@ -419,8 +502,77 @@ void UTF8FileToGEOS()
     FilePopDir();
 }
 
+void UTF8FileToGEOSBuffer()
+{
+    sdword      c=0;
+    byte        gc=0;
+    FileHandle  infile=0;
+    FileHandle  outfile=0;
+    byte        buf[255]={0};
+    byte        charBuf[10]={0};
+    byte        i=0;
+    MemHandle   bufHan = 0;
+    byte*       bufPtr = 0;
+
+    bufHan = MemAlloc(50, HF_SHARABLE | HF_SWAPABLE, 0);
+
+
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
+
+    infile = FileOpen("UTEF.TXT", FILE_ACCESS_R | FILE_DENY_RW);
+    //outfile = FileOpen("GEOSF.TXT", FILE_ACCESS_W | FILE_DENY_RW);
+    outfile = FileCreate("GEOSF.TXT", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
+
+
+    if ((infile != NullHandle) && (outfile != NullHandle))
+    {
+        FilePos(infile, 0, FILE_POS_START);
+        FilePos(outfile, 0, FILE_POS_START);
+
+        bufPtr = MemLock(bufHan);
+        while ((c != INVALID))
+        {
+            word GetUtf8CharFromBuffer(bufHan, 50, &c)
+
+            c = GetUtf8CharFromBuffer(infile);
+            if (c == EOF) break;
+
+            if (c != INVALID)
+            {
+                //sprintf(charBuf, "%ld", c);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+
+                gc = TranslateCharNum(c);
+
+                //sprintf(charBuf, "%d", gc);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+
+                buf[0] = gc;
+                buf[1] = 0;
+                FileWrite(outfile, buf, 2, FALSE);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+
+                //buf[i] = gc;
+                //i++;
+            }
+        }
+        //buf[i] = 0;
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("---\r"), 0);
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+        FileClose(infile, FALSE);
+        FileClose(outfile, FALSE);
+    }
+    FilePopDir();
+}
+
+
 @method GContProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
 {
     @callsuper();
-    UTF8FileToGEOS();
+    UTF8FileToGEOSBuffer();
 }
