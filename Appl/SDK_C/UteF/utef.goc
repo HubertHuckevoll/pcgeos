@@ -33,6 +33,7 @@
 #define MBMASK 0x3F // 0011 1111
 
 #define UTF8_CACHE 2000
+#define PLACEHOLDER_CHAR 225
 
 #define NUM_XLATE_ELEMS 126
 @start xlateResource, data;
@@ -262,7 +263,7 @@
     GI_visMoniker = "Value 1:";
     GVLI_minimum = MakeWWFixed(-32767);
     GVLI_maximum = MakeWWFixed(32767);
-	GVLI_value = MakeWWFixed(0);
+    GVLI_value = MakeWWFixed(0);
 }
 
 @end Interface;
@@ -272,7 +273,7 @@ byte TranslateCharNum(sdword num)
 {
     dword *xlate_table;
     byte i = 0;
-    byte ret = 225; // if not found: middle dot.
+    byte ret = PLACEHOLDER_CHAR; // if not found: middle dot.
 
     if (num < 128)
     {
@@ -498,7 +499,7 @@ void UTF8FileToGEOSBuffer()
     FileHandle  infile=0;
     FileHandle  outfile=0;
 
-    byte        buf[25]={0};
+    byte        buf[255]={0};
     byte        charBuf[25]={0};
 
     byte        i=0;
@@ -515,7 +516,6 @@ void UTF8FileToGEOSBuffer()
     dword       curFilePos = 0;
 
     inBufHan = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
-    outBufHan = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
 
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
@@ -560,6 +560,8 @@ void UTF8FileToGEOSBuffer()
 
                 curFilePos = curFilePos + bufSize;
                 bufIdx = 0;
+
+                outBufHan = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
                 outBufIdx = 0;
 
                 while(bufIdx < bufSize)
@@ -583,39 +585,68 @@ void UTF8FileToGEOSBuffer()
                     if (c != INVALID)
                     {
                         gc = TranslateCharNum(c);
+
+                        //word	LocalGeosToDosChar(word	ch, word	defaultChar);
+                        //word	LocalGeosToCodePageChar(word ch, DosCodePage codePage, word	defaultChar);
+
+                        /*
+                            CODE_PAGE_CURRENT		enum DosCodePage, 0
+                            CODE_PAGE_US			enum DosCodePage, 437
+                            CODE_PAGE_LATIN_1		enum DosCodePage, 819
+                            CODE_PAGE_MULTILINGUAL		enum DosCodePage, 850
+                            CODE_PAGE_MULTILINGUAL_EURO	enum DosCodePage, 858
+                            CODE_PAGE_PORTUGUESE		enum DosCodePage, 860
+                            CODE_PAGE_CANADIAN_FRENCH	enum DosCodePage, 863
+                            CODE_PAGE_NORDIC		enum DosCodePage, 865
+                        */
+
+                        gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
+
                         //sprintf(charBuf, "%d", gc);
                         //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
                         //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
-                        outBufPtr = MemLock(outBufHan);
+                        outBufPtr = (char*) MemLock(outBufHan);
                         outBufPtr[outBufIdx] = gc;
+                        //buf[0] = gc;
+                        //buf[1] = 0;
+
+                        //strcat((char*) outBufPtr, (char*) buf);
                         MemUnlock(outBufHan);
                         outBufIdx = outBufIdx + 1;
 
-                        sprintf(charBuf, "%d", outBufIdx);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(" - ", 0);
+                        //sprintf(charBuf, "%d", outBufIdx);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(" - ", 0);
 
-                        buf[0] = gc;
-                        buf[1] = 0;
+                        //buf[outBufIdx] = gc;
                         //FileWrite(outfile, buf, 2, FALSE);
 
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
                     }
                 }
 
                 if (outBufIdx > 0)
                 {
-                    outBufPtr = MemLock(outBufHan);
+                    //buf[outBufIdx] = 0;
+
+                    outBufPtr = (char*) MemLock(outBufHan);
                     outBufPtr[outBufIdx] = 0;
 
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(outBufPtr, 0);
+                    //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
-                    FileWrite(outfile, "---\r\0", 4, FALSE);
+
+                    //FileWrite(outfile, "Static\r\0", 8, FALSE);
+                    //FileWrite(outfile, buf, outBufIdx, FALSE);
+                    //FileWrite(outfile, "Dynamic\r\0", 9, FALSE);
+                    //FileWrite(outfile, "\0", 1, FALSE);
                     FileWrite(outfile, outBufPtr, outBufIdx, FALSE);
                     MemUnlock(outBufHan);
                 }
+                MemFree(outBufHan);
+
             }
             else
             {
@@ -625,7 +656,7 @@ void UTF8FileToGEOSBuffer()
         while (bufSize > 0);
 
         MemFree(inBufHan);
-        MemFree(outBufHan);
+        //MemFree(outBufHan);
 
         FileClose(infile, FALSE);
         FileClose(outfile, FALSE);
