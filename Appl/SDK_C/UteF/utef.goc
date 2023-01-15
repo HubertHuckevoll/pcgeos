@@ -16,6 +16,9 @@
 #define EOF     (-1)
 #define INVALID (-2)
 
+// single byte border, equals 7 bit ASCII
+#define B1BORDER 0x80
+
 // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
 #define B2LEAD 0xC0 // 1100 0000
 #define B2MASK 0x1F // 0001 1111
@@ -269,16 +272,16 @@
 @end Interface;
 
 
-byte TranslateCharNum(sdword num)
+word TranslateCharNum(sdword num)
 {
     dword *xlate_table;
     byte i = 0;
-    byte ret = PLACEHOLDER_CHAR; // if not found: middle dot.
+    word ret = PLACEHOLDER_CHAR; // if not found: middle dot.
 
     if (num < 128)
     {
         //if (num==10) ret = 13; // FIXME: this works for LF files, what about CR/LF?
-        return (num >= 32 || num == 9 || num == 13) ? (byte) num : ret;
+        return (num >= 32 || num == 9 || num == 13) ? (word) num : ret;
     }
 
     MemLock(OptrToHandle(@xlateTable));
@@ -288,7 +291,7 @@ byte TranslateCharNum(sdword num)
     {
         if(xlate_table[i] == num)
         {
-            ret = (byte) (i + 128);
+            ret = (word) (i + 128);
             break;
         }
     }
@@ -422,6 +425,8 @@ void UTF8FileToGEOS()
 
 sdword GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, word *bufIdx)
 {
+    #define     INPUT_BYTE(x) (bufPtr[*bufIdx+x])
+
     byte        input[6] = {0};
     word        bufEnd = 0;
     byte        *bufPtr = 0;
@@ -429,77 +434,69 @@ sdword GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, word *bufIdx)
 
     bufPtr = MemLock(bufHan);
 
-    input[0] = bufPtr[*bufIdx];
-
     if (
-                ((input[0] & 0xC0) == 0x80)
-            ||  ((input[0] & 0xfe) == 0xfe)
+                ((INPUT_BYTE(0) & B2LEAD) == B1BORDER) // This is not the beginning of a multibyte sequence.
+            ||  ((INPUT_BYTE(0) & 0xFE) == 0xFE) // This is not a valid UTF-8 stream.
         )
     {
-        // This is not the beginning of a multibyte sequence.
-        // This is not a valid UTF-8 stream.
         result = (sdword) INVALID;
         *bufIdx = *bufIdx + 1;
     }
     else
     {
-        if (input[0] < 0x80)
-        {   // 1 byte encoding (7 bit ASCII character)
-            result = (sdword) input[0];
+        if (INPUT_BYTE(0) < B1BORDER)
+        {   // 1 byte encoding
+            // (7 bit ASCII character)
+            result = (sdword) INPUT_BYTE(0);
+
             *bufIdx = *bufIdx + 1;
         }
-        else if (input[0] < 0xE0)
+        else if ((INPUT_BYTE(0) & B2LEAD) == B2LEAD)
         {   // 2 byte encoding
             // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
-            //memcpy(input[1], bufPtr[*bufIdx], 1);
-            input[1] = bufPtr[*bufIdx+1];
-            *bufIdx = *bufIdx + 2;
+            result =   (sdword)    (INPUT_BYTE(0) & B2MASK) << 6
+                        |          (INPUT_BYTE(1) & MBMASK);
 
-            result =   (sdword)    (input[0] & B2MASK) << 6
-                        |          (input[1] & MBMASK);
+            *bufIdx = *bufIdx + 2;
         }
-        else if(input[0] < 0xF0)
+        else if ((INPUT_BYTE(0) & B3LEAD) == B3LEAD)
         {   // 3 byte encoding
             // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
-            //memcpy(input[1], bufPtr[*bufIdx], 2);
-            input[1] = bufPtr[*bufIdx+1];
-            input[2] = bufPtr[*bufIdx+2];
-            *bufIdx = *bufIdx + 3;
 
-            result =   (sdword)    (input[0] & B3MASK) << 12
-                        |          (input[1] & MBMASK) << 6
-                        |          (input[2] & MBMASK);
+            result =   (sdword)    (INPUT_BYTE(0) & B3MASK) << 12
+                        |          (INPUT_BYTE(1) & MBMASK) << 6
+                        |          (INPUT_BYTE(2) & MBMASK);
+
+            *bufIdx = *bufIdx + 3;
         }
-        else
+        else if ((INPUT_BYTE(0) & B4LEAD) == B4LEAD)
         {   // 4 byte encoding
             // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
-            //memcpy(input[1], bufPtr[*bufIdx], 3);
-            input[1] = bufPtr[*bufIdx+1];
-            input[2] = bufPtr[*bufIdx+2];
-            input[3] = bufPtr[*bufIdx+3];
+
+            result =   (sdword)    (INPUT_BYTE(0) & B4MASK) << 18
+                        |          (INPUT_BYTE(1) & MBMASK) << 12
+                        |          (INPUT_BYTE(2) & MBMASK) << 6
+                        |          (INPUT_BYTE(3) & MBMASK);
 
             *bufIdx = *bufIdx + 4;
-
-            result =   (sdword)    (input[0] & B4MASK) << 18
-                        |          (input[1] & MBMASK) << 12
-                        |          (input[2] & MBMASK) << 6
-                        |          (input[3] & MBMASK);
         }
     }
 
     MemUnlock(bufHan);
 
     return result;
+
+    #undef INPUT_BYTE
 }
 
 void UTF8FileToGEOSBuffer()
 {
     sdword      c=0;
-    byte        gc=0;
+    word        gc=0;
     FileHandle  infile=0;
     FileHandle  outfile=0;
 
-    byte        buf[255]={0};
+    word        buf[255]={0};
     byte        charBuf[25]={0};
 
     byte        i=0;
@@ -545,7 +542,7 @@ void UTF8FileToGEOSBuffer()
                 while (bufIdx > 0)
                 {
                     if (
-                            ((bufPtr[bufIdx] & 0x80)   == 0x80) ||
+                            ((bufPtr[bufIdx] & B1BORDER) == B1BORDER) ||
                             ((bufPtr[bufIdx] & B2LEAD) == B2LEAD) ||
                             ((bufPtr[bufIdx] & B3LEAD) == B3LEAD) ||
                             ((bufPtr[bufIdx] & B4LEAD) == B4LEAD)
@@ -561,7 +558,7 @@ void UTF8FileToGEOSBuffer()
                 curFilePos = curFilePos + bufSize;
                 bufIdx = 0;
 
-                outBufHan = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
+                outBufHan = MemAlloc(UTF8_CACHE * 2, HF_SWAPABLE, HAF_ZERO_INIT);
                 outBufIdx = 0;
 
                 while(bufIdx < bufSize)
@@ -600,18 +597,20 @@ void UTF8FileToGEOSBuffer()
                             CODE_PAGE_NORDIC		enum DosCodePage, 865
                         */
 
-                        gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
+                        //gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
 
                         //sprintf(charBuf, "%d", gc);
                         //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
                         //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
-                        outBufPtr = (char*) MemLock(outBufHan);
-                        outBufPtr[outBufIdx] = gc;
+                        outBufPtr = MemLock(outBufHan);
+
+                        outBufPtr[outBufIdx] = (byte) gc;
+
                         //buf[0] = gc;
                         //buf[1] = 0;
-
                         //strcat((char*) outBufPtr, (char*) buf);
+
                         MemUnlock(outBufHan);
                         outBufIdx = outBufIdx + 1;
 
@@ -631,7 +630,7 @@ void UTF8FileToGEOSBuffer()
                 {
                     //buf[outBufIdx] = 0;
 
-                    outBufPtr = (char*) MemLock(outBufHan);
+                    outBufPtr = MemLock(outBufHan);
                     outBufPtr[outBufIdx] = 0;
 
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(outBufPtr, 0);
@@ -641,7 +640,7 @@ void UTF8FileToGEOSBuffer()
                     //FileWrite(outfile, "Static\r\0", 8, FALSE);
                     //FileWrite(outfile, buf, outBufIdx, FALSE);
                     //FileWrite(outfile, "Dynamic\r\0", 9, FALSE);
-                    //FileWrite(outfile, "\0", 1, FALSE);
+                    FileWrite(outfile, "\0", 1, FALSE);
                     FileWrite(outfile, outBufPtr, outBufIdx, FALSE);
                     MemUnlock(outBufHan);
                 }
