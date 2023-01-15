@@ -16,6 +16,7 @@
 #define EOF     (-1)
 #define INVALID (-2)
 
+
 // single byte border, equals 7 bit ASCII
 #define B1BORDER 0x80
 
@@ -427,8 +428,6 @@ sdword GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, word *bufIdx)
 {
     #define     INPUT_BYTE(x) (bufPtr[*bufIdx+x])
 
-    byte        input[6] = {0};
-    word        bufEnd = 0;
     byte        *bufPtr = 0;
     sdword      result = 0;
 
@@ -451,7 +450,7 @@ sdword GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, word *bufIdx)
 
             *bufIdx = *bufIdx + 1;
         }
-        else if ((INPUT_BYTE(0) & B2LEAD) == B2LEAD)
+        else if (INPUT_BYTE(0) < B3LEAD)
         {   // 2 byte encoding
             // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
             result =   (sdword)    (INPUT_BYTE(0) & B2MASK) << 6
@@ -459,20 +458,18 @@ sdword GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, word *bufIdx)
 
             *bufIdx = *bufIdx + 2;
         }
-        else if ((INPUT_BYTE(0) & B3LEAD) == B3LEAD)
+        else if (INPUT_BYTE(0) < B4LEAD)
         {   // 3 byte encoding
             // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
-
             result =   (sdword)    (INPUT_BYTE(0) & B3MASK) << 12
                         |          (INPUT_BYTE(1) & MBMASK) << 6
                         |          (INPUT_BYTE(2) & MBMASK);
 
             *bufIdx = *bufIdx + 3;
         }
-        else if ((INPUT_BYTE(0) & B4LEAD) == B4LEAD)
+        else
         {   // 4 byte encoding
             // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
-
             result =   (sdword)    (INPUT_BYTE(0) & B4MASK) << 18
                         |          (INPUT_BYTE(1) & MBMASK) << 12
                         |          (INPUT_BYTE(2) & MBMASK) << 6
@@ -496,7 +493,7 @@ void UTF8FileToGEOSBuffer()
     FileHandle  infile=0;
     FileHandle  outfile=0;
 
-    word        buf[255]={0};
+    byte        buf[255]={0};
     byte        charBuf[25]={0};
 
     byte        i=0;
@@ -570,10 +567,9 @@ void UTF8FileToGEOSBuffer()
 
                     c = GetUtf8CharFromBuffer(inBufHan, bufSize, &bufIdx);
 
-                    //sprintf(charBuf, "%ld", c);
-                    //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                    //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
-
+                    sprintf(charBuf, "%ld", c);
+                    @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                    @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                     //sprintf(charBuf, "%ld", bufIdx);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
@@ -599,16 +595,16 @@ void UTF8FileToGEOSBuffer()
 
                         //gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
 
-                        //sprintf(charBuf, "%d", gc);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+                        sprintf(charBuf, "%d", gc);
+                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                         outBufPtr = MemLock(outBufHan);
 
                         outBufPtr[outBufIdx] = (byte) gc;
 
-                        //buf[0] = gc;
-                        //buf[1] = 0;
+                        buf[0] = gc;
+                        buf[1] = 0;
                         //strcat((char*) outBufPtr, (char*) buf);
 
                         MemUnlock(outBufHan);
@@ -621,8 +617,8 @@ void UTF8FileToGEOSBuffer()
                         //buf[outBufIdx] = gc;
                         //FileWrite(outfile, buf, 2, FALSE);
 
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
+                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
                     }
                 }
 
