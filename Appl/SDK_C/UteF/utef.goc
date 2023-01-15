@@ -36,7 +36,7 @@
 #define MBLEAD 0x80 // 1000 0000
 #define MBMASK 0x3F // 0011 1111
 
-#define UTF8_CACHE 2000
+#define UTF8_CACHE 1000
 #define PLACEHOLDER_CHAR 225
 
 #define NUM_XLATE_ELEMS 126
@@ -514,7 +514,7 @@ void UTF8FileToGEOSBuffer()
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
 
-    infile = FileOpen("UTEF.TXT", FILE_ACCESS_R | FILE_DENY_RW);
+    infile = FileOpen("UTEF.HTM", FILE_ACCESS_R | FILE_DENY_RW);
     outfile = FileCreate("GEOSF.TXT", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
 
     if ((infile != NullHandle) && (outfile != NullHandle))
@@ -539,10 +539,10 @@ void UTF8FileToGEOSBuffer()
                 while (bufIdx > 0)
                 {
                     if (
-                            ((bufPtr[bufIdx] & B1BORDER) == B1BORDER) ||
-                            ((bufPtr[bufIdx] & B2LEAD) == B2LEAD) ||
-                            ((bufPtr[bufIdx] & B3LEAD) == B3LEAD) ||
-                            ((bufPtr[bufIdx] & B4LEAD) == B4LEAD)
+                            ((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) ||
+                            ((bufPtr[bufIdx] & B2LEAD)      == B2LEAD) ||
+                            ((bufPtr[bufIdx] & B3LEAD)      == B3LEAD) ||
+                            ((bufPtr[bufIdx] & B4LEAD)      == B4LEAD)
                         )
                     {
                         bufSize = bufIdx - 1; // go one before the leading byte we just found
@@ -555,7 +555,8 @@ void UTF8FileToGEOSBuffer()
                 curFilePos = curFilePos + bufSize;
                 bufIdx = 0;
 
-                outBufHan = MemAlloc(UTF8_CACHE * 2, HF_SWAPABLE, HAF_ZERO_INIT);
+                outBufHan = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
+                outBufPtr = MemLock(outBufHan);
                 outBufIdx = 0;
 
                 while(bufIdx < bufSize)
@@ -567,11 +568,7 @@ void UTF8FileToGEOSBuffer()
 
                     c = GetUtf8CharFromBuffer(inBufHan, bufSize, &bufIdx);
 
-                    sprintf(charBuf, "%ld", c);
-                    @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                    @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
-
-                    //sprintf(charBuf, "%ld", bufIdx);
+                    //sprintf(charBuf, "%ld", c);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
@@ -593,18 +590,16 @@ void UTF8FileToGEOSBuffer()
                             CODE_PAGE_NORDIC		enum DosCodePage, 865
                         */
 
-                        //gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
+                        gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
 
-                        sprintf(charBuf, "%d", gc);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
-
-                        outBufPtr = MemLock(outBufHan);
+                        //sprintf(charBuf, "%d", gc);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                         outBufPtr[outBufIdx] = (byte) gc;
 
-                        buf[0] = gc;
-                        buf[1] = 0;
+                        //buf[0] = gc;
+                        //buf[1] = 0;
                         //strcat((char*) outBufPtr, (char*) buf);
 
                         MemUnlock(outBufHan);
@@ -617,8 +612,8 @@ void UTF8FileToGEOSBuffer()
                         //buf[outBufIdx] = gc;
                         //FileWrite(outfile, buf, 2, FALSE);
 
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
                     }
                 }
 
@@ -636,10 +631,11 @@ void UTF8FileToGEOSBuffer()
                     //FileWrite(outfile, "Static\r\0", 8, FALSE);
                     //FileWrite(outfile, buf, outBufIdx, FALSE);
                     //FileWrite(outfile, "Dynamic\r\0", 9, FALSE);
-                    FileWrite(outfile, "\0", 1, FALSE);
+                    //FileWrite(outfile, "\0", 1, FALSE);
                     FileWrite(outfile, outBufPtr, outBufIdx, FALSE);
-                    MemUnlock(outBufHan);
                 }
+
+                MemUnlock(outBufHan);
                 MemFree(outBufHan);
 
             }
