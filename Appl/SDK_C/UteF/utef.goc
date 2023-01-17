@@ -36,7 +36,7 @@
 #define MBLEAD 0x80 // 1000 0000
 #define MBMASK 0x3F // 0011 1111
 
-#define UTF8_CACHE 1000
+#define UTF8_CACHE 50
 #define PLACEHOLDER_CHAR 225
 
 #define NUM_XLATE_ELEMS 126
@@ -273,16 +273,16 @@
 @end Interface;
 
 
-word TranslateCharNum(sdword num)
+byte TranslateCharNum(sdword num)
 {
     dword *xlate_table;
     byte i = 0;
-    word ret = PLACEHOLDER_CHAR; // if not found: middle dot.
+    byte ret = PLACEHOLDER_CHAR; // if not found: middle dot.
 
     if (num < 128)
     {
         //if (num==10) ret = 13; // FIXME: this works for LF files, what about CR/LF?
-        return (num >= 32 || num == 9 || num == 13) ? (word) num : ret;
+        return (num >= 32 || num == 9 || num == 13) ? (byte) num : ret;
     }
 
     MemLock(OptrToHandle(@xlateTable));
@@ -292,7 +292,7 @@ word TranslateCharNum(sdword num)
     {
         if(xlate_table[i] == num)
         {
-            ret = (word) (i + 128);
+            ret = (byte) (i + 128);
             break;
         }
     }
@@ -424,7 +424,7 @@ void UTF8FileToGEOS()
     FilePopDir();
 }
 
-sdword GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, word *bufIdx)
+sdword GetUtf8CharFromBuffer(MemHandle bufHan, word *bufIdx)
 {
     #define     INPUT_BYTE(x) (bufPtr[*bufIdx+x])
 
@@ -486,10 +486,60 @@ sdword GetUtf8CharFromBuffer(MemHandle bufHan, word bufSize, word *bufIdx)
     #undef INPUT_BYTE
 }
 
+
+/*
+    uint32_t r96_next_utf8_code_point(const char *data, uint32_t *index, uint32_t end) {
+        static const uint32_t utf8_offsets[6] = {
+                0x00000000UL, 0x00003080UL, 0x000E2080UL,
+                0x03C82080UL, 0xFA082080UL, 0x82082080UL};
+
+        uint32_t character = 0;
+        const unsigned char *bytes = (const unsigned char *) data;
+        int num_bytes = 0;
+        do {
+            character <<= 6;
+            character += bytes[(*index)++];
+            num_bytes++;
+        } while (*index != end && ((bytes[*index]) & 0xC0) == 0x80);
+        character -= utf8_offsets[num_bytes - 1];
+
+        return character;
+    }
+*/
+
+sdword GetUtf8CharFromBuffer2(char* data, word* index, word end)
+{
+    //char*       data = 0;
+	byte*       bytes = 0;
+	int         num_bytes = 0;
+    sdword      character = 0;
+
+	static const dword utf8_offsets[6] =
+    {
+        0x00000000UL, 0x00003080UL, 0x000E2080UL,
+        0x03C82080UL, 0xFA082080UL, 0x82082080UL
+    };
+
+    //data = MemLock(bufHan);
+    bytes = (char*) data;
+
+	do {
+		character <<= 6;
+		character += bytes[(*index)++];
+		num_bytes++;
+	} while (*index != end && ((bytes[*index]) & 0xC0) == 0x80);
+	character -= utf8_offsets[num_bytes - 1];
+
+    //MemUnlock(bufHan);
+
+	return character;
+}
+
+
 void UTF8FileToGEOSBuffer()
 {
     sdword      c=0;
-    word        gc=0;
+    byte        gc=0;
     FileHandle  infile=0;
     FileHandle  outfile=0;
 
@@ -509,8 +559,6 @@ void UTF8FileToGEOSBuffer()
 
     dword       curFilePos = 0;
 
-    inBufHan = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
-
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
 
@@ -522,6 +570,11 @@ void UTF8FileToGEOSBuffer()
         FilePos(infile, 0, FILE_POS_START);
         FilePos(outfile, 0, FILE_POS_START);
 
+        inBufHan    = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
+        outBufHan   = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
+        bufPtr      = MemLock(inBufHan);
+        outBufPtr   = MemLock(outBufHan);
+
         do
         {
             //sprintf(charBuf, "%ld", curFilePos);
@@ -529,9 +582,7 @@ void UTF8FileToGEOSBuffer()
             //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" = curFilePos"), 0);
 
             FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
-
-            bufPtr = MemLock(inBufHan);
-            bufSize = FileRead(infile, bufPtr, UTF8_CACHE, FALSE);
+            bufSize = FileRead(infile, bufPtr, UTF8_CACHE-1, FALSE);
 
             if (bufSize > 0)
             {
@@ -539,10 +590,10 @@ void UTF8FileToGEOSBuffer()
                 while (bufIdx > 0)
                 {
                     if (
-                            ((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) ||
+                            ((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) /*||
                             ((bufPtr[bufIdx] & B2LEAD)      == B2LEAD) ||
                             ((bufPtr[bufIdx] & B3LEAD)      == B3LEAD) ||
-                            ((bufPtr[bufIdx] & B4LEAD)      == B4LEAD)
+                            ((bufPtr[bufIdx] & B4LEAD)      == B4LEAD)*/
                         )
                     {
                         bufSize = bufIdx - 1; // go one before the leading byte we just found
@@ -550,13 +601,10 @@ void UTF8FileToGEOSBuffer()
                     }
                     bufIdx--;
                 }
-                MemUnlock(inBufHan);
+                //MemUnlock(inBufHan);
 
                 curFilePos = curFilePos + bufSize;
                 bufIdx = 0;
-
-                outBufHan = MemAlloc(UTF8_CACHE, HF_SWAPABLE, HAF_ZERO_INIT);
-                outBufPtr = MemLock(outBufHan);
                 outBufIdx = 0;
 
                 while(bufIdx < bufSize)
@@ -566,7 +614,8 @@ void UTF8FileToGEOSBuffer()
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
-                    c = GetUtf8CharFromBuffer(inBufHan, bufSize, &bufIdx);
+                    //c = GetUtf8CharFromBuffer(inBufHan, bufSize, &bufIdx);
+                    c = GetUtf8CharFromBuffer2(bufPtr, &bufIdx, bufSize);
 
                     //sprintf(charBuf, "%ld", c);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
@@ -590,19 +639,18 @@ void UTF8FileToGEOSBuffer()
                             CODE_PAGE_NORDIC		enum DosCodePage, 865
                         */
 
-                        gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
+                        //gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
 
                         //sprintf(charBuf, "%d", gc);
                         //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
                         //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
-                        outBufPtr[outBufIdx] = (byte) gc;
+                        outBufPtr[outBufIdx] = gc;
 
                         //buf[0] = gc;
                         //buf[1] = 0;
                         //strcat((char*) outBufPtr, (char*) buf);
 
-                        MemUnlock(outBufHan);
                         outBufIdx = outBufIdx + 1;
 
                         //sprintf(charBuf, "%d", outBufIdx);
@@ -621,8 +669,11 @@ void UTF8FileToGEOSBuffer()
                 {
                     //buf[outBufIdx] = 0;
 
-                    outBufPtr = MemLock(outBufHan);
+                    //outBufPtr = MemLock(outBufHan);
                     outBufPtr[outBufIdx] = 0;
+
+                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr)+1, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
+
 
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(outBufPtr, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
@@ -635,23 +686,23 @@ void UTF8FileToGEOSBuffer()
                     FileWrite(outfile, outBufPtr, outBufIdx, FALSE);
                 }
 
-                MemUnlock(outBufHan);
-                MemFree(outBufHan);
+                //MemUnlock(outBufHan);
+                //MemFree(outBufHan);
 
-            }
-            else
-            {
-                MemUnlock(inBufHan);
             }
         }
         while (bufSize > 0);
 
+        MemUnlock(inBufHan);
+        MemUnlock(outBufHan);
+
         MemFree(inBufHan);
-        //MemFree(outBufHan);
+        MemFree(outBufHan);
 
         FileClose(infile, FALSE);
         FileClose(outfile, FALSE);
     }
+
     FilePopDir();
 }
 
