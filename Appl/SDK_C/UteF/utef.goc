@@ -36,7 +36,7 @@
 #define MBLEAD 0x80 // 1000 0000
 #define MBMASK 0x3F // 0011 1111
 
-#define UTF8_CACHE 50
+#define UTF8_CACHE 20
 #define PLACEHOLDER_CHAR 225
 
 #define NUM_XLATE_ELEMS 126
@@ -424,14 +424,14 @@ void UTF8FileToGEOS()
     FilePopDir();
 }
 
-sdword GetUtf8CharFromBuffer(MemHandle bufHan, word *bufIdx)
+sdword GetUtf8CharFromBuffer(byte* bufPtr, word *bufIdx)
 {
     #define     INPUT_BYTE(x) (bufPtr[*bufIdx+x])
 
-    byte        *bufPtr = 0;
+    //byte        *bufPtr = 0;
     sdword      result = 0;
 
-    bufPtr = MemLock(bufHan);
+    //bufPtr = MemLock(bufHan);
 
     if (
                 ((INPUT_BYTE(0) & B2LEAD) == B1BORDER) // This is not the beginning of a multibyte sequence.
@@ -479,7 +479,7 @@ sdword GetUtf8CharFromBuffer(MemHandle bufHan, word *bufIdx)
         }
     }
 
-    MemUnlock(bufHan);
+    //MemUnlock(bufHan);
 
     return result;
 
@@ -522,11 +522,13 @@ sdword GetUtf8CharFromBuffer2(char* data, word* index, word end)
 
     bytes = (char*) data;
 
-	do {
+	do
+    {
 		character <<= 6;
 		character += bytes[(*index)++];
 		num_bytes++;
-	} while (*index != end && ((bytes[*index]) & 0xC0) == 0x80);
+	}
+    while (*index != end && ((bytes[*index]) & 0xC0) == 0x80);
 	character -= utf8_offsets[num_bytes - 1];
 
 	return character;
@@ -587,13 +589,13 @@ void UTF8FileToGEOSBuffer()
                 while (bufIdx > 0)
                 {
                     if (
-                            ((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) /* ||
+                            ((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) ||
                             ((bufPtr[bufIdx] & B2LEAD)      == B2LEAD) ||
                             ((bufPtr[bufIdx] & B3LEAD)      == B3LEAD) ||
-                            ((bufPtr[bufIdx] & B4LEAD)      == B4LEAD)*/
+                            ((bufPtr[bufIdx] & B4LEAD)      == B4LEAD)
                         )
                     {
-                        bufSize = bufIdx; // go one before the leading byte we just found
+                        bufSize = bufIdx-1; // go one before the leading byte we just found
                         break;
                     }
                     bufIdx--;
@@ -611,8 +613,8 @@ void UTF8FileToGEOSBuffer()
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
-                    //c = GetUtf8CharFromBuffer(inBufHan, bufSize, &bufIdx);
-                    c = GetUtf8CharFromBuffer2(bufPtr, &bufIdx, bufSize);
+                    c = GetUtf8CharFromBuffer(bufPtr, &bufIdx);
+                    //c = GetUtf8CharFromBuffer2(bufPtr, &bufIdx, bufSize);
 
                     //sprintf(charBuf, "%ld", c);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
@@ -669,7 +671,7 @@ void UTF8FileToGEOSBuffer()
                     //outBufPtr = MemLock(outBufHan);
                     outBufPtr[outBufIdx] = 0;
 
-                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr), CODE_PAGE_MULTILINGUAL_EURO, (word) PLACEHOLDER_CHAR);
+                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr)+1, CODE_PAGE_MULTILINGUAL_EURO, (word) PLACEHOLDER_CHAR);
 
 
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(outBufPtr, 0);
