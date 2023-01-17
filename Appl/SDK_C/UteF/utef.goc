@@ -520,7 +520,6 @@ sdword GetUtf8CharFromBuffer2(char* data, word* index, word end)
         0x03C82080UL, 0xFA082080UL, 0x82082080UL
     };
 
-    //data = MemLock(bufHan);
     bytes = (char*) data;
 
 	do {
@@ -529,8 +528,6 @@ sdword GetUtf8CharFromBuffer2(char* data, word* index, word end)
 		num_bytes++;
 	} while (*index != end && ((bytes[*index]) & 0xC0) == 0x80);
 	character -= utf8_offsets[num_bytes - 1];
-
-    //MemUnlock(bufHan);
 
 	return character;
 }
@@ -582,7 +579,7 @@ void UTF8FileToGEOSBuffer()
             //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" = curFilePos"), 0);
 
             FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
-            bufSize = FileRead(infile, bufPtr, UTF8_CACHE-1, FALSE);
+            bufSize = FileRead(infile, bufPtr, UTF8_CACHE-1, FALSE); // -1: we will need to add a zero in the end, so we can't max out
 
             if (bufSize > 0)
             {
@@ -590,13 +587,13 @@ void UTF8FileToGEOSBuffer()
                 while (bufIdx > 0)
                 {
                     if (
-                            ((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) /*||
+                            ((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) /* ||
                             ((bufPtr[bufIdx] & B2LEAD)      == B2LEAD) ||
                             ((bufPtr[bufIdx] & B3LEAD)      == B3LEAD) ||
                             ((bufPtr[bufIdx] & B4LEAD)      == B4LEAD)*/
                         )
                     {
-                        bufSize = bufIdx - 1; // go one before the leading byte we just found
+                        bufSize = bufIdx; // go one before the leading byte we just found
                         break;
                     }
                     bufIdx--;
@@ -672,7 +669,7 @@ void UTF8FileToGEOSBuffer()
                     //outBufPtr = MemLock(outBufHan);
                     outBufPtr[outBufIdx] = 0;
 
-                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr)+1, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
+                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr), CODE_PAGE_MULTILINGUAL_EURO, (word) PLACEHOLDER_CHAR);
 
 
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(outBufPtr, 0);
