@@ -44,7 +44,7 @@
 #define MBLEAD 0x80 // 1000 0000
 #define MBMASK 0x3F // 0011 1111
 
-#define UTF8_CACHE 100
+#define UTF8_CACHE 2000
 #define PLACEHOLDER_CHAR 225
 
 #define NUM_XLATE_ELEMS 126
@@ -577,7 +577,7 @@ void UTF8FileToGEOSBuffer()
     FileSetStandardPath(SP_DOCUMENT);
 
     infile = FileOpen("UTEF.HTM", FILE_ACCESS_R | FILE_DENY_RW);
-    outfile = FileCreate("GEOSF.TXT", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
+    outfile = FileCreate("GEOSF.HTM", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
 
     if ((infile != NullHandle) && (outfile != NullHandle))
     {
@@ -690,8 +690,8 @@ void UTF8FileToGEOSBuffer()
                     //outBufPtr = MemLock(outBufHan);
                     outBufPtr[outBufIdx] = 0;
 
-                    //LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr), CODE_PAGE_MULTILINGUAL_EURO, (word) PLACEHOLDER_CHAR);
-
+                    // CODE_PAGE_MULTILINGUAL_EURO
+                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr), CODE_PAGE_MULTILINGUAL, (word) PLACEHOLDER_CHAR);
 
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(outBufPtr, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
@@ -700,7 +700,7 @@ void UTF8FileToGEOSBuffer()
                     //FileWrite(outfile, "Static\r\0", 8, FALSE);
                     //FileWrite(outfile, buf, outBufIdx, FALSE);
                     //FileWrite(outfile, "Dynamic\r\0", 9, FALSE);
-                    FileWrite(outfile, "\0", 1, FALSE);
+                    //FileWrite(outfile, "\0", 1, FALSE);
                     FileWrite(outfile, outBufPtr, outBufIdx, FALSE);
                 }
 
