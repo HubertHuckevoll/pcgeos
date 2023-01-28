@@ -44,9 +44,9 @@
 //#define B4MASK        0x07    // 00000111
 
 // non-first bytes start with 10 and carry 6 bits of data
-//#define TBLEAD        0x2     // 10*
-//#define TBLEAD_OFFSET 6       // for use with (a >> 6) == 0x2
-//#define TBMASK        0x3F    // 00111111
+#define TBLEAD        0x2     // 10*
+#define TBLEAD_OFFSET 6       // for use with (a >> 6) == 0x2
+#define TBMASK        0x3F    // 00111111
 
 
 
@@ -467,7 +467,7 @@ sdword GetUtf8CharFromBuffer(byte* bufPtr, word *bufIdx)
     //bufPtr = MemLock(bufHan);
 
     if (
-                ((INPUT_BYTE(0) & B2LEAD) == B1BORDER) // This is not the beginning of a multibyte sequence.
+                ((INPUT_BYTE(0) >> TBLEAD_OFFSET) == TBLEAD) // This is not the beginning of a multibyte sequence.
             ||  ((INPUT_BYTE(0) & 0xFE) == 0xFE) // This is not a valid UTF-8 stream.
         )
     {
@@ -602,7 +602,7 @@ void UTF8FileToGEOSBuffer()
     FileSetStandardPath(SP_DOCUMENT);
 
     infile = FileOpen("UTEF.HTM", FILE_ACCESS_R | FILE_DENY_RW);
-    outfile = FileCreate("GEOSF.HTM", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
+    outfile = FileCreate("GEOSF.TXT", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
 
     if ((infile != NullHandle) && (outfile != NullHandle))
     {
