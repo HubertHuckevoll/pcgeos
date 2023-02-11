@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# this script must be run using the source command:
+# source mdcd ACME
+# or
+# . mdcd ACME
+mkdir $1
+cd $1
