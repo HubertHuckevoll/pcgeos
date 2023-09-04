@@ -16,30 +16,58 @@
 #define EOF     (-1)
 #define INVALID (-2)
 
+
+//#define // 10* - the most frequent pattern - use (a >> 6) == 0x2.
+//#define // 0* - use (a >> 7) == 0x0.
+//#define // 110* - use (a >> 5) == 0x6.
+//#define // 1110* - use (a >> 4) == 0xe.
+//#define // 11110* - use (a >> 3) == 0x1e.
+
+
 // single byte encoding, first bit is 0, then 7 bit ASCII
-#define BASCII        0x0     // 0*
-#define BASCII_OFFSET 7       // for use with (a >> 7) == 0x0
+//#define BASCII        0x0     // 0*
+//#define BASCII_OFFSET 7       // for use with (a >> 7) == 0x0
 
 // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
-#define B2LEAD        0x6     // 110*
-#define B2LEAD_OFFSET 5       // for use with (a >> 5) == 0x6
-#define B2MASK        0x1F    // 00011111
+//#define B2LEAD        0x6     // 110*
+//#define B2LEAD_OFFSET 5       // for use with (a >> 5) == 0x6
+//#define B2MASK        0x1F    // 00011111
 
 // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
-#define B3LEAD        0xE     // 1110*
-#define B3LEAD_OFFSET 4       // for use with (a >> 4) == 0xE
-#define B3MASK        0x0F    // 00001111
+//#define B3LEAD        0xE     // 1110*
+//#define B3LEAD_OFFSET 4       // for use with (a >> 4) == 0xE
+//#define B3MASK        0x0F    // 00001111
 
 // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
-#define B4LEAD        0x1E    // 11110*
-#define B4LEAD_OFFSET 3       // for use with (a >> 3) == 0x1E
-#define B4MASK        0x07    // 00000111
+//#define B4LEAD        0x1E    // 11110*
+//#define B4LEAD_OFFSET 3       // for use with (a >> 3) == 0x1E
+//#define B4MASK        0x07    // 00000111
 
-// TB = Transport Byte
 // non-first bytes start with 10 and carry 6 bits of data
 #define TBLEAD        0x2     // 10*
 #define TBLEAD_OFFSET 6       // for use with (a >> 6) == 0x2
 #define TBMASK        0x3F    // 00111111
+
+
+
+// single byte border, equals 7 bit ASCII
+#define B1BORDER 0x80
+
+// first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
+#define B2LEAD 0xC0 // 11000000
+#define B2MASK 0x1F // 00011111
+
+// first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
+#define B3LEAD 0xE0 // 11100000
+#define B3MASK 0x0F // 00001111
+
+// first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
+#define B4LEAD 0xF0 // 11110000
+#define B4MASK 0x07 // 00000111
+
+// non-first bytes start with 10 and carries 6 bits of data
+#define MBLEAD 0x80 // 10000000
+#define MBMASK 0x3F // 00111111
 
 #define UTF8_CACHE 2000
 #define PLACEHOLDER_CHAR 225
@@ -306,11 +334,137 @@ byte TranslateCharNum(sdword num)
     return ret;
 }
 
+sdword GetUtf8CharFromFile(FileHandle fhandle)
+{
+    sdword result = 0;
+    byte input[6] = {0};
+    sbyte fError = 0;
+
+    fError = FileRead(fhandle, &input[0], 1, FALSE);
+
+    if (fError <= 0)
+    {
+        // The EOF was hit by the first character.
+        return (sdword) EOF;
+    }
+    else if (
+                ((input[0] & 0xC0) == 0x80)
+            ||  ((input[0] & 0xfe) == 0xfe)
+            )
+    {
+        // This is not the beginning of a multibyte sequence.
+        // This is not a valid UTF-8 stream.
+        return (sdword) INVALID;
+    }
+    else
+    {
+        if (input[0] < 0x80)
+        {   // 1 byte encoding (7 bit ASCII character)
+            result = (sdword) input[0];
+        }
+        else if (input[0] < 0xE0)
+        {   // 2 byte encoding
+            // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
+            fError = FileRead(fhandle, &input[1], 1, FALSE);
+            if (fError <= 0) return (sdword) EOF;
+
+            result =    (sdword)    (input[0] & B2MASK) << 6
+                        |           (input[1] & MBMASK);
+        }
+        else if(input[0] < 0xF0)
+        {   // 3 byte encoding
+            // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
+            fError = FileRead(fhandle, &input[1], 2, FALSE);
+            if (fError <= 0) return (sdword) EOF;
+
+            result =    (sdword)    (input[0] & B3MASK) << 12
+                        |           (input[1] & MBMASK) << 6
+                        |           (input[2] & MBMASK);
+        }
+        else
+        {   // 4 byte encoding
+            // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
+            fError = FileRead(fhandle, &input[1], 3, FALSE);
+            if (fError <= 0) return (sdword) EOF;
+
+            result =    (sdword)    (input[0] & B4MASK) << 18
+                        |           (input[1] & MBMASK) << 12
+                        |           (input[2] & MBMASK) << 6
+                        |           (input[3] & MBMASK);
+        }
+    }
+
+    return result;
+}
+
+void UTF8FileToGEOS()
+{
+    sdword      c=0;
+    byte        gc=0;
+    FileHandle  infile=0;
+    FileHandle  outfile=0;
+    byte        buf[255]={0};
+    byte        charBuf[10]={0};
+    byte        i=0;
+
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
+
+    infile = FileOpen("UTEF.TXT", FILE_ACCESS_R | FILE_DENY_RW);
+    //outfile = FileOpen("GEOSF.TXT", FILE_ACCESS_W | FILE_DENY_RW);
+    outfile = FileCreate("GEOSF.TXT", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
+
+
+    if ((infile != NullHandle) && (outfile != NullHandle))
+    {
+        FilePos(infile, 0, FILE_POS_START);
+        FilePos(outfile, 0, FILE_POS_START);
+
+        while ((c != INVALID))
+        {
+            c = GetUtf8CharFromFile(infile);
+            if (c == EOF) break;
+
+            if (c != INVALID)
+            {
+                //sprintf(charBuf, "%ld", c);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+
+                gc = TranslateCharNum(c);
+
+                //sprintf(charBuf, "%d", gc);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
+
+                buf[0] = gc;
+                buf[1] = 0;
+                FileWrite(outfile, buf, 2, FALSE);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+
+                //buf[i] = gc;
+                //i++;
+            }
+        }
+        //buf[i] = 0;
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("---\r"), 0);
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+        FileClose(infile, FALSE);
+        FileClose(outfile, FALSE);
+    }
+    FilePopDir();
+}
+
 sdword GetUtf8CharFromBuffer(byte* bufPtr, word *bufIdx)
 {
     #define     INPUT_BYTE(x) (bufPtr[*bufIdx+x])
 
+    //byte        *bufPtr = 0;
     sdword      result = 0;
+
+    //bufPtr = MemLock(bufHan);
 
     if (
                 ((INPUT_BYTE(0) >> TBLEAD_OFFSET) == TBLEAD) // This is not the beginning of a multibyte sequence.
@@ -322,38 +476,152 @@ sdword GetUtf8CharFromBuffer(byte* bufPtr, word *bufIdx)
     }
     else
     {
-        if ((INPUT_BYTE(0) >> BASCII_OFFSET) == BASCII)
-        {   // 1 byte encoding (7 bit ASCII character)
+        //if (INPUT_BYTE(0) < B1BORDER)
+        if ((INPUT_BYTE(0) >> 7) == 0x0)
+        {   // 1 byte encoding
+            // (7 bit ASCII character)
             result = (sdword) INPUT_BYTE(0);
+
             *bufIdx = *bufIdx + 1;
         }
-        else if ((INPUT_BYTE(0) >> B2LEAD_OFFSET) == B2LEAD)
+        //else if (INPUT_BYTE(0) < B3LEAD)
+        else if ((INPUT_BYTE(0) >> 5) == 0x6)
+        //else if ((INPUT_BYTE(0) & B2LEAD) == B2LEAD)
         {   // 2 byte encoding
+            // first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
             result =   (sdword)    (INPUT_BYTE(0) & B2MASK) << 6
-                        |          (INPUT_BYTE(1) & TBMASK);
+                        |          (INPUT_BYTE(1) & MBMASK);
+
             *bufIdx = *bufIdx + 2;
         }
-        else if ((INPUT_BYTE(0) >> B3LEAD_OFFSET) == B3LEAD)
+        //else if (INPUT_BYTE(0) < B4LEAD)
+        else if ((INPUT_BYTE(0) >> 4) == 0xE)
+        //else if ((INPUT_BYTE(0) & B3LEAD) == B3LEAD)
         {   // 3 byte encoding
+            // first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
             result =   (sdword)    (INPUT_BYTE(0) & B3MASK) << 12
-                        |          (INPUT_BYTE(1) & TBMASK) << 6
-                        |          (INPUT_BYTE(2) & TBMASK);
+                        |          (INPUT_BYTE(1) & MBMASK) << 6
+                        |          (INPUT_BYTE(2) & MBMASK);
+
             *bufIdx = *bufIdx + 3;
         }
-        else if ((INPUT_BYTE(0) >> B4LEAD_OFFSET) == B4LEAD)
+        //else
+        else if ((INPUT_BYTE(0) >> 3) == 0x1E)
+        //else if ((INPUT_BYTE(0) & B4LEAD) == B4LEAD)
         {   // 4 byte encoding
+            // first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
             result =   (sdword)    (INPUT_BYTE(0) & B4MASK) << 18
-                        |          (INPUT_BYTE(1) & TBMASK) << 12
-                        |          (INPUT_BYTE(2) & TBMASK) << 6
-                        |          (INPUT_BYTE(3) & TBMASK);
+                        |          (INPUT_BYTE(1) & MBMASK) << 12
+                        |          (INPUT_BYTE(2) & MBMASK) << 6
+                        |          (INPUT_BYTE(3) & MBMASK);
+
             *bufIdx = *bufIdx + 4;
         }
     }
+
+    //MemUnlock(bufHan);
 
     return result;
 
     #undef INPUT_BYTE
 }
+
+
+/*
+    uint32_t r96_next_utf8_code_point(const char *data, uint32_t *index, uint32_t end) {
+        static const uint32_t utf8_offsets[6] = {
+                0x00000000UL, 0x00003080UL, 0x000E2080UL,
+                0x03C82080UL, 0xFA082080UL, 0x82082080UL};
+
+        uint32_t character = 0;
+        const unsigned char *bytes = (const unsigned char *) data;
+        int num_bytes = 0;
+        do {
+            character <<= 6;
+            character += bytes[(*index)++];
+            num_bytes++;
+        } while (*index != end && ((bytes[*index]) & 0xC0) == 0x80);
+        character -= utf8_offsets[num_bytes - 1];
+
+        return character;
+    }
+*/
+
+sdword GetUtf8CharFromBuffer2(char* data, word* index, word end)
+{
+    //char*       data = 0;
+	byte*       bytes = 0;
+	int         num_bytes = 0;
+    sdword      character = 0;
+
+	static const dword utf8_offsets[6] =
+    {
+        0x00000000UL, 0x00003080UL, 0x000E2080UL,
+        0x03C82080UL, 0xFA082080UL, 0x82082080UL
+    };
+
+    bytes = (char*) data;
+
+	do
+    {
+		character <<= 6;
+		character += bytes[(*index)++];
+		num_bytes++;
+	}
+    while (*index != end && ((bytes[*index]) & 0xC0) == 0x80);
+	character -= utf8_offsets[num_bytes - 1];
+
+	return character;
+}
+
+/**
+ * @brief from Phind.com (ChatGPT4)
+ *
+ * @param utf8
+ * @param html
+ */
+ /*
+void utf8_to_html_entities(const char *utf8, char *html) {
+    int i = 0;
+    int j = 0;
+    int len = strlen(utf8);
+
+    while (i < len) {
+        if ((utf8[i] & 0x80) == 0) {
+            // ASCII-Zeichen
+            html[j++] = utf8[i++];
+        } else {
+            // UTF-8-Multibyte-Sequenz analysieren und in HTML-Entity umwandeln
+            unsigned char first_byte = utf8[i++];
+            unsigned int codepoint = first_byte & 0x1F;
+            int trailing_bytes = 0;
+
+            if ((first_byte & 0xE0) == 0xC0) {
+                codepoint = first_byte & 0x1F;
+                trailing_bytes = 1;
+            } else if ((first_byte & 0xF0) == 0xE0) {
+                codepoint = first_byte & 0x0F;
+                trailing_bytes = 2;
+            } else if ((first_byte & 0xF8) == 0xF0) {
+                codepoint = first_byte & 0x07;
+                trailing_bytes = 3;
+            }
+
+            // Lesen der nachfolgenden Bytes und Erstellen der HTML-Entity
+            for (int k = 0; k < trailing_bytes; k++) {
+                codepoint = (codepoint << 6) | (utf8[i++] & 0x3F);
+            }
+
+            // HTML-Entity in den Ziel-String schreiben
+            j += sprintf(html + j, "&#%u;", codepoint);
+        }
+    }
+
+    // Null-Terminierung des Ziel-Strings
+    html[j] = '\0';
+}
+*/
+
 
 void UTF8FileToGEOSBuffer()
 {
@@ -364,6 +632,8 @@ void UTF8FileToGEOSBuffer()
 
     byte        buf[255]={0};
     byte        charBuf[25]={0};
+
+    byte        i=0;
 
     MemHandle   inBufHan = 0;
     byte*       bufPtr = 0;
@@ -407,10 +677,14 @@ void UTF8FileToGEOSBuffer()
                 while (bufIdx > 0)
                 {
                     if (
-                            ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII) ||
-                            ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD) ||
-                            ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD) ||
-                            ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
+                            ((bufPtr[bufIdx] >> 7) == 0x0) ||
+                            ((bufPtr[bufIdx] >> 5) == 0x6) ||
+                            ((bufPtr[bufIdx] >> 4) == 0xE) ||
+                            ((bufPtr[bufIdx] >> 3) == 0x1E)
+                            /*((bufPtr[bufIdx] & B1BORDER)    == B1BORDER) ||
+                            ((bufPtr[bufIdx] & B2LEAD)      == B2LEAD) ||
+                            ((bufPtr[bufIdx] & B3LEAD)      == B3LEAD) ||
+                            ((bufPtr[bufIdx] & B4LEAD)      == B4LEAD)*/
                         )
                     {
                         bufSize = bufIdx; // go one before the leading byte we just found
@@ -418,6 +692,7 @@ void UTF8FileToGEOSBuffer()
                     }
                     bufIdx--;
                 }
+                //MemUnlock(inBufHan);
 
                 curFilePos = curFilePos + bufSize;
                 bufIdx = 0;
@@ -431,10 +706,11 @@ void UTF8FileToGEOSBuffer()
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                     c = GetUtf8CharFromBuffer(bufPtr, &bufIdx);
+                    //c = GetUtf8CharFromBuffer2(bufPtr, &bufIdx, bufSize);
 
-                    sprintf(charBuf, "%ld", c);
-                    @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                    @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(":"), 0);
+                    //sprintf(charBuf, "%ld", c);
+                    //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                    //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                     if (c != INVALID)
                     {
@@ -456,10 +732,9 @@ void UTF8FileToGEOSBuffer()
 
                         //gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
 
-                        sprintf(charBuf, "%c", gc);
-                        //sprintf(charBuf, "&#%u;", gc);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                        @call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+                        //sprintf(charBuf, "%d", gc);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" - "), 0);
 
                         outBufPtr[outBufIdx] = gc;
 
@@ -489,7 +764,7 @@ void UTF8FileToGEOSBuffer()
                     outBufPtr[outBufIdx] = 0;
 
                     // CODE_PAGE_MULTILINGUAL_EURO
-                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr), CODE_PAGE_MULTILINGUAL_EURO, (word) PLACEHOLDER_CHAR);
+                    LocalGeosToCodePage((char *) outBufPtr, strlen(outBufPtr), CODE_PAGE_MULTILINGUAL, (word) PLACEHOLDER_CHAR);
 
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(outBufPtr, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
@@ -501,6 +776,10 @@ void UTF8FileToGEOSBuffer()
                     //FileWrite(outfile, "\0", 1, FALSE);
                     FileWrite(outfile, outBufPtr, outBufIdx, FALSE);
                 }
+
+                //MemUnlock(outBufHan);
+                //MemFree(outBufHan);
+
             }
         }
         while (bufSize > 0);
