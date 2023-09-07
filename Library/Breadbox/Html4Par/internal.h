@@ -1,9 +1,9 @@
 /***********************************************************************
  *
- * PROJECT:       HTML3Par
+ * PROJECT:       HTML4Par
  * FILE:          internal.h
  *
- * AUTHOR:    Marcus Gr�ber
+ * AUTHOR:    Marcus Gröber
  *
  * NOTES:         This file contains internal declarations used only for
  *                communications between various modules within the library.
@@ -254,7 +254,7 @@ typedef struct {
 #endif
 
 /* Interpret the passed string and parse the applicable attributes into
-   our own style structures */ 
+   our own style structures */
 void InterpretCSS(char *p, ParaStyleDelta *psd, CharStyleDelta *csd);
 
 /***************************************************************************
@@ -268,6 +268,33 @@ typedef struct {
   byte *HTMLbuf;
   word HTMLbufp,HTMLbufl;
 } HTMLFILE;
+
+// UTF8 stuff
+// single byte encoding, first bit is 0, then 7 bit ASCII
+#define BASCII        0x0     // 0*
+#define BASCII_OFFSET 7       // for use with (a >> 7) == 0x0
+
+// first byte of a 2-byte encoding starts with 110 and carries 5 bits of data
+#define B2LEAD        0x6     // 110*
+#define B2LEAD_OFFSET 5       // for use with (a >> 5) == 0x6
+#define B2MASK        0x1F    // 00011111
+
+// first byte of a 3-byte encoding starts with 1110 and carries 4 bits of data
+#define B3LEAD        0xE     // 1110*
+#define B3LEAD_OFFSET 4       // for use with (a >> 4) == 0xE
+#define B3MASK        0x0F    // 00001111
+
+// first byte of a 4-byte encoding starts with 11110 and carries 3 bits of data
+#define B4LEAD        0x1E    // 11110*
+#define B4LEAD_OFFSET 3       // for use with (a >> 3) == 0x1E
+#define B4MASK        0x07    // 00000111
+
+// TB = Transport Byte
+// non-first bytes start with 10 and carry 6 bits of data
+#define TBLEAD        0x2     // 10*
+#define TBLEAD_OFFSET 6       // for use with (a >> 6) == 0x2
+#define TBMASK        0x3F    // 00111111
+
 
 extern HTMLextra *HTMLext;
 extern TextTransferBlockHeader *ttbh;
@@ -525,7 +552,7 @@ typedef struct {
   byte currentCol;
 
   /* Last column with span consideration */
-  byte lastCol ;         
+  byte lastCol ;
 
   /* global attributes specified in cell header */
   HTMLtableData tableData;

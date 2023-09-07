@@ -41,8 +41,17 @@
 #define TBLEAD_OFFSET 6       // for use with (a >> 6) == 0x2
 #define TBMASK        0x3F    // 00111111
 
-#define UTF8_CACHE 2000
+#define UTF8_CACHE 10
 #define PLACEHOLDER_CHAR 225
+
+// from internal.h
+#define HTML_READBUF 1024
+typedef struct {
+  FileHandle fileHTML;
+  byte *HTMLbuf;
+  word HTMLbufp,HTMLbufl;
+} HTMLFILE;
+
 
 #define NUM_XLATE_ELEMS 126
 @start xlateResource, data;
@@ -286,8 +295,7 @@ byte TranslateCharNum(sdword num)
 
     if (num < 128)
     {
-        //if (num==10) ret = 13; // FIXME: this works for LF files, what about CR/LF?
-        return (num >= 32 || num == 9 || num == 13) ? (byte) num : ret;
+        return (num >= 32 || num == 9 || num == 13) ? (byte) num : 0;
     }
 
     MemLock(OptrToHandle(@xlateTable));
@@ -363,7 +371,7 @@ void UTF8FileToGEOSBuffer()
     FileHandle  outfile=0;
 
     byte        buf[255]={0};
-    byte        charBuf[25]={0};
+    byte        charBuf[255]={0};
 
     MemHandle   inBufHan = 0;
     byte*       bufPtr = 0;
@@ -374,7 +382,7 @@ void UTF8FileToGEOSBuffer()
     byte*       outBufPtr = 0;
     word        outBufIdx = 0;
 
-    dword       curFilePos = 0;
+    sdword      curFilePos = 0;
 
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
@@ -398,7 +406,7 @@ void UTF8FileToGEOSBuffer()
             //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
             //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" = curFilePos"), 0);
 
-            FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
+            curFilePos = FilePos(infile, 0, FILE_POS_RELATIVE);
             bufSize = FileRead(infile, bufPtr, UTF8_CACHE-1, FALSE); // -1: we will need to add a zero in the end, so we can't max out
 
             if (bufSize > 0)
@@ -418,8 +426,9 @@ void UTF8FileToGEOSBuffer()
                     }
                     bufIdx--;
                 }
-
                 curFilePos = curFilePos + bufSize;
+                FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
+
                 bufIdx = 0;
                 outBufIdx = 0;
 
@@ -433,6 +442,7 @@ void UTF8FileToGEOSBuffer()
                     c = GetUtf8CharFromBuffer(bufPtr, &bufIdx);
 
                     //sprintf(charBuf, "%ld", c);
+                    //sprintf(charBuf, "%c", c);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
                     //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(":"), 0);
 
@@ -440,51 +450,57 @@ void UTF8FileToGEOSBuffer()
                     {
                         gc = TranslateCharNum(c);
 
-                        //word	LocalGeosToDosChar(word	ch, word	defaultChar);
-                        //word	LocalGeosToCodePageChar(word ch, DosCodePage codePage, word	defaultChar);
+                        if (gc != 0)
+                        {
+                            buf[0] = gc;
+                            buf[1] = 0;
+                            @call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
 
-                        /*
-                            CODE_PAGE_CURRENT		enum DosCodePage, 0
-                            CODE_PAGE_US			enum DosCodePage, 437
-                            CODE_PAGE_LATIN_1		enum DosCodePage, 819
-                            CODE_PAGE_MULTILINGUAL		enum DosCodePage, 850
-                            CODE_PAGE_MULTILINGUAL_EURO	enum DosCodePage, 858
-                            CODE_PAGE_PORTUGUESE		enum DosCodePage, 860
-                            CODE_PAGE_CANADIAN_FRENCH	enum DosCodePage, 863
-                            CODE_PAGE_NORDIC		enum DosCodePage, 865
-                        */
+                            //word	LocalGeosToDosChar(word	ch, word	defaultChar);
+                            //word	LocalGeosToCodePageChar(word ch, DosCodePage codePage, word	defaultChar);
 
-                        // gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
+                            /*
+                                CODE_PAGE_CURRENT		enum DosCodePage, 0
+                                CODE_PAGE_US			enum DosCodePage, 437
+                                CODE_PAGE_LATIN_1		enum DosCodePage, 819
+                                CODE_PAGE_MULTILINGUAL		enum DosCodePage, 850
+                                CODE_PAGE_MULTILINGUAL_EURO	enum DosCodePage, 858
+                                CODE_PAGE_PORTUGUESE		enum DosCodePage, 860
+                                CODE_PAGE_CANADIAN_FRENCH	enum DosCodePage, 863
+                                CODE_PAGE_NORDIC		enum DosCodePage, 865
+                            */
 
-                        //sprintf(charBuf, "%c", gc);
-                        //sprintf(charBuf, "&#%u;", gc);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+                            // gc = LocalGeosToCodePageChar(gc, CODE_PAGE_MULTILINGUAL_EURO, PLACEHOLDER_CHAR);
 
-                        outBufPtr[outBufIdx] = gc;
+                            //sprintf(charBuf, "%c", gc);
+                            //sprintf(charBuf, "&#%u;", gc);
+                            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
 
-                        //buf[0] = gc;
-                        //buf[1] = 0;
-                        //strcat((char*) outBufPtr, (char*) buf);
+                            outBufPtr[outBufIdx] = gc;
 
-                        outBufIdx = outBufIdx + 1;
+                            //buf[0] = gc;
+                            //buf[1] = 0;
+                            //strcat((char*) outBufPtr, (char*) buf);
 
-                        //sprintf(charBuf, "%d", outBufIdx);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(" - ", 0);
+                            outBufIdx = outBufIdx + 1;
 
-                        //buf[outBufIdx] = gc;
-                        //FileWrite(outfile, buf, 2, FALSE);
+                            //sprintf(charBuf, "%d", outBufIdx);
+                            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(" - ", 0);
 
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
-                        //@call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
+                            //buf[outBufIdx] = gc;
+                            //FileWrite(outfile, buf, 2, FALSE);
+
+                            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(buf, 0);
+                            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR("\r", 0);
+                        }
                     }
                 }
 
                 if (outBufIdx > 0)
                 {
                     //buf[outBufIdx] = 0;
-
                     //outBufPtr = MemLock(outBufHan);
                     outBufPtr[outBufIdx] = 0;
 
@@ -518,6 +534,106 @@ void UTF8FileToGEOSBuffer()
     FilePopDir();
 }
 
+/*
+    if(((HTMLFILE*) data)->HTMLbufp >= ((HTMLFILE*) data)->HTMLbufl)
+    {
+        ((HTMLFILE*) data)->HTMLbufl = FileRead(((HTMLFILE*) data)->fileHTML,
+                                                ((HTMLFILE*) data)->HTMLbuf,
+                                                HTML_READBUF,
+                                                FALSE);
+        ((HTMLFILE *)data)->HTMLbufp = 0; // set pointer to start of buffer
+        if(((HTMLFILE *)data)->HTMLbufl == 0) return EOF; // read against end of file
+    }
+
+    return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
+*/
+
+sdword getcFileURL(dword data)  /* callback routine to get one char */
+{
+    FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
+    byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
+    word       bufIdx   = ((HTMLFILE*) data)->HTMLbufp;
+    word       bufSize  = ((HTMLFILE*) data)->HTMLbufl;
+
+    dword      curFilePos = 0;
+    sdword     result = 0;
+
+    if(bufIdx >= bufSize)
+    {
+        curFilePos = FilePos(infile, 0, FILE_POS_RELATIVE);
+        bufSize = FileRead(infile, bufPtr, HTML_READBUF, FALSE);
+
+        if (bufSize > 0)
+        {
+            bufIdx = bufSize - 1;
+            while (bufIdx > 0)
+            {
+                if (
+                        ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII) ||
+                        ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD) ||
+                        ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD) ||
+                        ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
+                    )
+                {
+                    bufSize = bufIdx; // go one before the leading byte we just found
+                    break;
+                }
+                bufIdx--;
+            }
+            curFilePos = curFilePos + bufSize;
+            FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
+
+            bufIdx = 0;
+
+            ((HTMLFILE*) data)->HTMLbufl = bufSize;
+            ((HTMLFILE *)data)->HTMLbufp = bufIdx; // set pointer to start of buffer
+            if (bufSize == 0) return EOF; // read against end of file
+        }
+    }
+
+    if (bufIdx < bufSize)
+    {
+        if (
+                    ((bufPtr[bufIdx] >> TBLEAD_OFFSET) == TBLEAD) // This is not the beginning of a multibyte sequence.
+                ||  ((bufPtr[bufIdx] & 0xFE) == 0xFE) // This is not a valid UTF-8 stream.
+            )
+        {
+            result = (sdword) INVALID;
+            bufIdx = bufIdx + 1;
+        }
+        else
+        {
+            if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
+            {   // 1 byte encoding (7 bit ASCII character)
+                result = (sdword) bufPtr[bufIdx];
+                bufIdx = bufIdx + 1;
+            }
+            else if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
+            {   // 2 byte encoding
+                result =   (sdword)    (bufPtr[bufIdx]   & B2MASK) << 6
+                            |          (bufPtr[bufIdx+1] & TBMASK);
+                bufIdx = bufIdx + 2;
+            }
+            else if ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD)
+            {   // 3 byte encoding
+                result =   (sdword)    (bufPtr[bufIdx]   & B3MASK) << 12
+                            |          (bufPtr[bufIdx+1] & TBMASK) << 6
+                            |          (bufPtr[bufIdx+2] & TBMASK);
+                bufIdx = bufIdx + 3;
+            }
+            else if ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
+            {   // 4 byte encoding
+                result =   (sdword)    (bufPtr[bufIdx]   & B4MASK) << 18
+                            |          (bufPtr[bufIdx+1] & TBMASK) << 12
+                            |          (bufPtr[bufIdx+2] & TBMASK) << 6
+                            |          (bufPtr[bufIdx+3] & TBMASK);
+                bufIdx = bufIdx + 4;
+            }
+        }
+    }
+
+    return result;
+}
 
 @method GContProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
 {
