@@ -574,11 +574,8 @@ typedef struct {
  *              Other constants
  ***************************************************************************/
 
-#ifdef DO_DBCS
 #define HTML_SPECIAL_ENTITY_BASE   0xee00  /* must use Unicode user area */
-#else
-#define HTML_SPECIAL_ENTITY_BASE   10000
-#endif
+
 #define HTML_TEXT_REGION_HIDDEN_Y  0x4000000
 
 #define PROGRESSIVE_FORMATTING_MINIMUM_UPDATE_HEIGHT 500
