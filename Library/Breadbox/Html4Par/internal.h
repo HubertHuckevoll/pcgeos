@@ -3,7 +3,7 @@
  * PROJECT:       HTML4Par
  * FILE:          internal.h
  *
- * AUTHOR:    Marcus Gröber
+ * AUTHOR:        Marcus Gröber
  *
  * NOTES:         This file contains internal declarations used only for
  *                communications between various modules within the library.
@@ -86,9 +86,9 @@ extern ReadHTML_getc getcScriptURL;
 #endif
 
 VMBlockHandle ChunksToVMChainBlock(VMFileHandle vmf,MemHandle heap,
-  ChunkHandle *chunks,word n_chunks);
+    ChunkHandle *chunks,word n_chunks);
 void VMChainBlockToChunks(VMFileHandle vmf,VMBlockHandle vmb,MemHandle heap,
-  ChunkHandle *chunks,word n_chunks);
+    ChunkHandle *chunks,word n_chunks);
 
 void VMChainifyLMemBlock(VMFileHandle vmf, VMChain vmc);
 
@@ -105,22 +105,22 @@ word LengthResolve(word total, HTMLmultiLength length);
 #define CSD_BASE   0x08                 /* revert to a basic font (cannot be
                                            used together with CSD_FONT) */
 #define CSD_EXTENDED 0x10               /* Change extended flags */
-#define CSD_RESET  0x80                 /* reset everything to default */
+#define CSD_RESET    0x80               /* reset everything to default */
 
 #define CSD_BASE_PLAIN          0       /* style is based on normal text */
 #define CSD_BASE_EXAMPLE        1       /* style is based on example text */
 
 typedef struct
 {
-  WordFlags CSD_which;                  /* which attributes to change */
-  union {
-    FontID    fontID;
-    word      baseStyle;
-  } CSD_fontOrBase;
-  sword       CSD_pointSize;            /* point size (1..7) */
-  ColorQuad CSD_color;
-  TextStyle CSD_textStyles;             /* style flags - added to current */
-  VisTextExtendedStyles CSD_extendedStyles ;
+    WordFlags               CSD_which;                  /* which attributes to change */
+    union {
+        FontID  fontID;
+        word    baseStyle;
+    } CSD_fontOrBase;
+    sword                   CSD_pointSize;            /* point size (1..7) */
+    ColorQuad               CSD_color;
+    TextStyle               CSD_textStyles;             /* style flags - added to current */
+    VisTextExtendedStyles   CSD_extendedStyles ;
 } CharStyleDelta;
 
 /*
@@ -182,47 +182,47 @@ typedef struct
  * enumerated type describing tag types which require special handling
  */
 typedef enum {
-  SPEC_NONE,
+    SPEC_NONE,
 
-  SPEC_A,
-  SPEC_P,       SPEC_Hx,
-  SPEC_HTML,    SPEC_HEAD,      SPEC_BODY,
-  SPEC_TITLE,   SPEC_BASE,
-  SPEC_HR,      SPEC_BR,        SPEC_IMG,
-  SPEC_LI,      SPEC_OL,        SPEC_UL,
-  SPEC_FONT,    SPEC_BASEFONT,
-  SPEC_FRAME,   SPEC_FRAMESET,
-  SPEC_FORM,    SPEC_INPUT,     SPEC_SELECT,      SPEC_OPTION,   SPEC_TEXTAREA,
-  SPEC_TABLE,   SPEC_TR,        SPEC_TD,
-  SPEC_Q,
-  SPEC_CONTAIN,
-  SPEC_MAP,     SPEC_AREA,
-  SPEC_DIV,
-  SPEC_META,
-  SPEC_DL,      SPEC_DTDD,
-  SPEC_MENU,
-  SPEC_PRE,     SPEC_PLAINTEXT,
-  SPEC_BLOCKQUOTE,
+    SPEC_A,
+    SPEC_P,       SPEC_Hx,
+    SPEC_HTML,    SPEC_HEAD,      SPEC_BODY,
+    SPEC_TITLE,   SPEC_BASE,
+    SPEC_HR,      SPEC_BR,        SPEC_IMG,
+    SPEC_LI,      SPEC_OL,        SPEC_UL,
+    SPEC_FONT,    SPEC_BASEFONT,
+    SPEC_FRAME,   SPEC_FRAMESET,
+    SPEC_FORM,    SPEC_INPUT,     SPEC_SELECT,      SPEC_OPTION,   SPEC_TEXTAREA,
+    SPEC_TABLE,   SPEC_TR,        SPEC_TD,
+    SPEC_Q,
+    SPEC_CONTAIN,
+    SPEC_MAP,     SPEC_AREA,
+    SPEC_DIV,
+    SPEC_META,
+    SPEC_DL,      SPEC_DTDD,
+    SPEC_MENU,
+    SPEC_PRE,     SPEC_PLAINTEXT,
+    SPEC_BLOCKQUOTE,
 #if EMBED_SUPPORT
-  SPEC_EMBED,
+    SPEC_EMBED,
 #endif
-  SPEC_NOEMBED,
-  SPEC_OBJECT,  SPEC_STYLE,
-  SPEC_NOSCRIPT, SPEC_SCRIPT,
-  SPEC_DONT_MATCH,
+    SPEC_NOEMBED,
+    SPEC_OBJECT,  SPEC_STYLE,
+    SPEC_NOSCRIPT, SPEC_SCRIPT,
+    SPEC_DONT_MATCH,
 } SpecialTagType;
 
 typedef struct {
-  char name[11];
-  ChunkHandle ca,pa;                    /* handles of "delta" chunks */
-  SpecialTagType spec;
-  word flags;
+    char name[11];
+    ChunkHandle ca,pa;                    /* handles of "delta" chunks */
+    SpecialTagType spec;
+    word flags;
 } HTMLStylesTable;
 
 typedef struct {
-  unsigned int num;
-  char name[7];
-  unsigned int c;
+    unsigned int num;
+    char name[7];
+    unsigned int c;
 } HTMLEntityTable;
 
 typedef struct {
@@ -230,8 +230,8 @@ typedef struct {
 } HTMLEntityString ;
 
 typedef struct {
-  char name[22];
-  ColorQuad qc;
+    char name[22];
+    ColorQuad qc;
 } HTMLColorTable;
 
 typedef struct {
@@ -264,9 +264,9 @@ void InterpretCSS(char *p, ParaStyleDelta *psd, CharStyleDelta *csd);
 #define HTML_READBUF 1024
 
 typedef struct {
-  FileHandle fileHTML;
-  byte *HTMLbuf;
-  word HTMLbufp,HTMLbufl;
+    FileHandle fileHTML;
+    byte *HTMLbuf;
+    word HTMLbufp,HTMLbufl;
 } HTMLFILE;
 
 // UTF8 stuff
@@ -310,8 +310,8 @@ extern sword           currentBaseFont;
 
 extern VisTextCharAttr vcaBase;
 
-extern Boolean insertCell;
-extern HTMLcellData insertCellData;
+extern Boolean          insertCell;
+extern HTMLcellData     insertCellData;
 
 extern int c2;
 
@@ -330,18 +330,18 @@ dword OpenFileURL(FileHandle fh, HTMLFILE *f);
 void CloseFileURL(HTMLFILE *f);
 
 word ModifyHypertextArray(word array, void *rec, word elsize, word element);
-  #define HTA_IMAGE_ARRAY       0
-  #define HTA_ANCHOR_ARRAY      1
-  #define HTA_FRAME_ARRAY       2
-  #define HTA_FORM_ARRAY        3
-  #define HTA_TABLE_ARRAY       4
-  #define HTA_CELL_ARRAY        5
-  #define HTA_MAP_ARRAY         6
-  #define HTA_META_ARRAY        7
-  #define HTA_EVENT_ARRAY       8
+    #define HTA_IMAGE_ARRAY       0
+    #define HTA_ANCHOR_ARRAY      1
+    #define HTA_FRAME_ARRAY       2
+    #define HTA_FORM_ARRAY        3
+    #define HTA_TABLE_ARRAY       4
+    #define HTA_CELL_ARRAY        5
+    #define HTA_MAP_ARRAY         6
+    #define HTA_META_ARRAY        7
+    #define HTA_EVENT_ARRAY       8
 
 #define AppendToHypertextArray(array, rec) \
-  ModifyHypertextArray(array, rec, 0, CA_NULL_ELEMENT);
+    ModifyHypertextArray(array, rec, 0, CA_NULL_ELEMENT);
 
 /* Appending cells are handled differently -- we'll use a macro */
 /* to do the standard optr append action, or else we'll just do */
@@ -413,34 +413,34 @@ void ConvertGeosCharEntities(TCHAR *str, word *len);
  ***************************************************************************/
 
 typedef struct {
-  word           style;
-  Boolean        noterm;
-  word           count;
-  Boolean        linebr;
-  SpecialTagType spec;
-  word           flags;
-  dword          startPos;
-  ParaStyleDelta delta;
-  CharStyleDelta charDelta;
-  optr           param;
+    word           style;
+    Boolean        noterm;
+    word           count;
+    Boolean        linebr;
+    SpecialTagType spec;
+    word           flags;
+    dword          startPos;
+    ParaStyleDelta delta;
+    CharStyleDelta charDelta;
+    optr           param;
 } TagStackElement;
 
 typedef struct {
-  SpecialTagType spec;
-  optr paramArray;
-  TagStackElement *tagStack;
-  CharStyleDelta ca;
-  ParaStyleDelta pa;
-  Boolean preserveParams;
-  word countStart;
-  word flags;
+    SpecialTagType spec;
+    optr paramArray;
+    TagStackElement *tagStack;
+    CharStyleDelta ca;
+    ParaStyleDelta pa;
+    Boolean preserveParams;
+    word countStart;
+    word flags;
 } TagOpenArguments;
 
 typedef void _pascal TagOpenHandler(TagOpenArguments *arg);
 
 typedef struct {
-  SpecialTagType spec;
-  TagOpenHandler *proc;
+    SpecialTagType spec;
+    TagOpenHandler *proc;
 } OpenHandlerEntry;
 
 typedef void _pascal pcfm_TagOpenHandler(TagOpenArguments *arg, void *pf);
@@ -506,13 +506,13 @@ typedef byte T_columnIndex ;            /* Type value for accessing columns in i
 MemHandle SpreadCreate(word numColumns, word interspacing, word availableWidth) ;
 void SpreadDestroy(MemHandle spread) ;
 void SpreadAdd(
-         MemHandle state,
-         word fromLeft,
-         word toRight,
-         sword pixels,
-         sword percent,
-         sword desiredWidth,
-         sword hardMinWidth) ;
+        MemHandle state,
+        word fromLeft,
+        word toRight,
+        sword pixels,
+        sword percent,
+        sword desiredWidth,
+        sword hardMinWidth) ;
 word SpreadCalculateLayout(MemHandle state, word totalWidth, word wantedWidth) ;
 word SpreadGetColumnWidth(MemHandle state, word column) ;
 void SpreadMarkColumnUsed(MemHandle state, word column) ;
@@ -544,30 +544,30 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
  ***************************************************************************/
 
 typedef struct {
-  /* element index of this table in table array */
-  word element;
+    /* element index of this table in table array */
+    word element;
 
-  /* current position within table */
-  word currentRow;
-  byte currentCol;
+    /* current position within table */
+    word currentRow;
+    byte currentCol;
 
-  /* Last column with span consideration */
-  byte lastCol ;
+    /* Last column with span consideration */
+    byte lastCol ;
 
-  /* global attributes specified in cell header */
-  HTMLtableData tableData;
-  HTMLcellData lastCellData;
+    /* global attributes specified in cell header */
+    HTMLtableData tableData;
+    HTMLcellData lastCellData;
 
-  ByteFlags cellFlagMask;               /* set bits specify cell defaults */
-  ByteFlags cellFlagValue;              /* cell flag defaults if mask bit set */
-  ColorQuad rowBackColor;               /* HCD_backColor default, if any */
+    ByteFlags cellFlagMask;               /* set bits specify cell defaults */
+    ByteFlags cellFlagValue;              /* cell flag defaults if mask bit set */
+    ColorQuad rowBackColor;               /* HCD_backColor default, if any */
 
-  struct {
-    byte remainingRowSpan;              /* count down for row spans */
-  } col[TABLE_MAX_COLUMNS];
+    struct {
+        byte remainingRowSpan;              /* count down for row spans */
+    } col[TABLE_MAX_COLUMNS];
 
-  ByteFlags flags ;
-  #define TABLE_STACK_HAS_RECEIVED_TR_TAG  0x80
+    ByteFlags flags ;
+    #define TABLE_STACK_HAS_RECEIVED_TR_TAG  0x80
 } TableStackElement;
 
 /***************************************************************************
