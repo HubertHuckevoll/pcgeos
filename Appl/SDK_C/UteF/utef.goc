@@ -41,7 +41,7 @@
 #define TBLEAD_OFFSET 6       // for use with (a >> 6) == 0x2
 #define TBMASK        0x3F    // 00111111
 
-#define UTF8_CACHE 10
+#define UTF8_CACHE 1024
 #define PLACEHOLDER_CHAR 225
 
 // from internal.h
@@ -320,43 +320,38 @@ sdword GetUtf8CharFromBuffer(byte* bufPtr, word *bufIdx)
 
     sdword      result = 0;
 
-    if (
-                ((INPUT_BYTE(0) >> TBLEAD_OFFSET) == TBLEAD) // This is not the beginning of a multibyte sequence.
-            ||  ((INPUT_BYTE(0) & 0xFE) == 0xFE) // This is not a valid UTF-8 stream.
-        )
-    {
-        result = (sdword) INVALID;
+    if ((INPUT_BYTE(0) >> BASCII_OFFSET) == BASCII)
+    {   // 1 byte encoding (7 bit ASCII character)
+        result = (sdword) INPUT_BYTE(0);
         *bufIdx = *bufIdx + 1;
+    }
+    else if ((INPUT_BYTE(0) >> B2LEAD_OFFSET) == B2LEAD)
+    {   // 2 byte encoding
+        result =   (sdword)    (INPUT_BYTE(0) & B2MASK) << 6
+                    |          (INPUT_BYTE(1) & TBMASK);
+        *bufIdx = *bufIdx + 2;
+    }
+    else if ((INPUT_BYTE(0) >> B3LEAD_OFFSET) == B3LEAD)
+    {   // 3 byte encoding
+        result =   (sdword)    (INPUT_BYTE(0) & B3MASK) << 12
+                    |          (INPUT_BYTE(1) & TBMASK) << 6
+                    |          (INPUT_BYTE(2) & TBMASK);
+        *bufIdx = *bufIdx + 3;
+    }
+    else if ((INPUT_BYTE(0) >> B4LEAD_OFFSET) == B4LEAD)
+    {   // 4 byte encoding
+        result =   (sdword)    (INPUT_BYTE(0) & B4MASK) << 18
+                    |          (INPUT_BYTE(1) & TBMASK) << 12
+                    |          (INPUT_BYTE(2) & TBMASK) << 6
+                    |          (INPUT_BYTE(3) & TBMASK);
+        *bufIdx = *bufIdx + 4;
     }
     else
     {
-        if ((INPUT_BYTE(0) >> BASCII_OFFSET) == BASCII)
-        {   // 1 byte encoding (7 bit ASCII character)
-            result = (sdword) INPUT_BYTE(0);
-            *bufIdx = *bufIdx + 1;
-        }
-        else if ((INPUT_BYTE(0) >> B2LEAD_OFFSET) == B2LEAD)
-        {   // 2 byte encoding
-            result =   (sdword)    (INPUT_BYTE(0) & B2MASK) << 6
-                        |          (INPUT_BYTE(1) & TBMASK);
-            *bufIdx = *bufIdx + 2;
-        }
-        else if ((INPUT_BYTE(0) >> B3LEAD_OFFSET) == B3LEAD)
-        {   // 3 byte encoding
-            result =   (sdword)    (INPUT_BYTE(0) & B3MASK) << 12
-                        |          (INPUT_BYTE(1) & TBMASK) << 6
-                        |          (INPUT_BYTE(2) & TBMASK);
-            *bufIdx = *bufIdx + 3;
-        }
-        else if ((INPUT_BYTE(0) >> B4LEAD_OFFSET) == B4LEAD)
-        {   // 4 byte encoding
-            result =   (sdword)    (INPUT_BYTE(0) & B4MASK) << 18
-                        |          (INPUT_BYTE(1) & TBMASK) << 12
-                        |          (INPUT_BYTE(2) & TBMASK) << 6
-                        |          (INPUT_BYTE(3) & TBMASK);
-            *bufIdx = *bufIdx + 4;
-        }
+        *bufIdx = *bufIdx + 1;
+        return (sdword) INVALID;
     }
+
 
     return result;
 
@@ -384,10 +379,13 @@ void UTF8FileToGEOSBuffer()
 
     sdword      curFilePos = 0;
 
+    word        dec = 0;
+
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
 
-    infile = FileOpen("UTF8HTM.HTM", FILE_ACCESS_R | FILE_DENY_RW);
+    //infile = FileOpen("UTF8TEST.HTM", FILE_ACCESS_R | FILE_DENY_RW);
+    infile = FileOpen("UTF8ISO.HTM", FILE_ACCESS_R | FILE_DENY_RW);
     outfile = FileCreate("GEOSHTM.HTM", (FCF_NATIVE | FILE_ACCESS_W | FILE_DENY_RW | FILE_CREATE_TRUNCATE), 0);
 
     if ((infile != NullHandle) && (outfile != NullHandle))
@@ -407,15 +405,21 @@ void UTF8FileToGEOSBuffer()
             //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT(" = curFilePos"), 0);
 
             curFilePos = FilePos(infile, 0, FILE_POS_RELATIVE);
+
+            //sprintf(charBuf, "%d", curFilePos);
+            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+            //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
+
             bufSize = FileRead(infile, bufPtr, UTF8_CACHE-1, FALSE); // -1: we will need to add a zero in the end, so we can't max out
 
             if (bufSize > 0)
             {
                 bufIdx = bufSize - 1;
+                dec = 0;
                 while (bufIdx > 0)
                 {
                     if (
-                            ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII) ||
+                            //((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII) ||
                             ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD) ||
                             ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD) ||
                             ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
@@ -424,10 +428,15 @@ void UTF8FileToGEOSBuffer()
                         bufSize = bufIdx; // go one before the leading byte we just found
                         break;
                     }
+                    dec++;
                     bufIdx--;
                 }
                 curFilePos = curFilePos + bufSize;
                 FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
+
+                //sprintf(charBuf, "%d", bufSize);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(charBuf, 0);
+                //@call GContText1::MSG_VIS_TEXT_APPEND_PTR(_TEXT("\r"), 0);
 
                 bufIdx = 0;
                 outBufIdx = 0;
@@ -548,7 +557,8 @@ void UTF8FileToGEOSBuffer()
     return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
 */
 
-sdword getcFileURL(dword data)  /* callback routine to get one char */
+/*
+sdword getcFileURL(dword data)  // callback routine to get one char
 {
     FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
     byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
@@ -634,6 +644,7 @@ sdword getcFileURL(dword data)  /* callback routine to get one char */
 
     return result;
 }
+*/
 
 @method GContProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
 {
