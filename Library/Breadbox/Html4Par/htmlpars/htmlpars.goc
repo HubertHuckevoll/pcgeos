@@ -2117,14 +2117,12 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
     {
         // see below why this is disabled...
         /*
-            if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
-            {   // 1 byte encoding (7 bit ASCII character)
-                result = (int) bufPtr[bufIdx];
-                bufIdx = bufIdx + 1;
-            }
-        */
-
-        if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
+        if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
+        {   // 1 byte encoding (7 bit ASCII character)
+            result = (int) bufPtr[bufIdx];
+            bufIdx = bufIdx + 1;
+        }
+        else*/ if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
         {   // 2 byte encoding
             result =   (int)       (bufPtr[bufIdx]   & B2MASK) << 6
                         |          (bufPtr[bufIdx+1] & TBMASK);
@@ -2156,6 +2154,11 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
                 it can do....
             */
             result = (int) bufPtr[bufIdx];
+            if ((bufPtr[bufIdx] >> TBLEAD_OFFSET) == TBLEAD)
+            {
+                result = (int) 0;
+            }
+
             bufIdx = bufIdx + 1;
         }
     }
