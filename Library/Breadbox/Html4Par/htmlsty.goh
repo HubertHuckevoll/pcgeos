@@ -617,6 +617,7 @@
   {0,   "",      0   }    /* end of list */
 };
 @else
+/*
 @chunk HTMLEntityTable xlateTable[] =
 {
     {9,     "tab",    9},
@@ -805,22 +806,197 @@
 
     {0,   "",      0   }    // end of list
 };
+*/
+
+// ISO/Western variant
+@chunk HTMLEntityTable xlateTable[] =
+{
+  // regular ASCII characters which have an entity name
+  {9,   "tab",   9   },
+  {34,  "quot",  '"' },
+  {38,  "amp",   '&' },
+  {60,  "lt",    '<' },
+  {62,  "gt",    '>' },
+
+  // Extensions based on Windows/ANSI characters set
+  {130, "sbquo",      0xE2},   // single opening quote, low
+  {131, "fnof",      0xC4},   // italic "f" currency symbol (?)
+  {132, "bdquo",      0xE3},   // double opening quote, low
+  {133, "hellip",      0xC9},   // ellipsis
+  {134, "dagger",      0xA0},   // dagger
+  {135, "Dagger",      0xE0},   // double dagger
+  {136, "circ",      0xF6},   // circonflex
+  {137, "permil",      0xE4},   // "per mille" symbol
+//{138, "",      '?' },         // S-hacek (?)
+  {139, "lsaquo",      0xDC},   // single opening french quote
+  {140, "OElig",      0xCE},   // OE ligature
+  {145, "lsquo",      0xD4},   // single opening quote, high
+  {146, "rsquo",      0xD5},   // single closing quote, high
+// {8217, "",      0xD5},   // add'l single closing quote, high (apostrophe)
+  {147, "ldquo",      0xD2},   // double opening quote, high
+  {148, "rdquo",      0xD3},   // double closing quote
+  {149, "bull",      0xA5},   // bullet
+//  {8226, "",      0xA5},   // additional bullet
+  {150, "ndash",      0xD0},   // En dash
+  {151, "mdash",      0xD1},   // Em dash
+// {8212, "",      0xD1},   // additional Em dash
+  {152, "tilde",      0xF7},   // tilde accent (?)
+  {153, "trade",      0xAA},   // trademark symbol
+//{154, "",      '?' },   // s-hacek (?)
+  {155, "rsaquo",      0xDD},   // single closing french quote
+  {156, "oelig",      0xCF},   // oe ligature
+  {159, "Yuml",      0xD9},   // Y-umlaut (?)
+
+  // Regular ISO Latin character set
+  {160, "nbsp",  0xCA},
+  {161, "iexcl", 0xC1},
+  {162, "cent",  0xA2},
+  {163, "pound", 0xA3},
+  {164, "curren",0xDB},
+  {165, "yen",   0xB4},
+  {166, "brvbar",0x7C},
+  {167, "sect",  0xA4},
+  {168, "uml",   0xFD},
+  {169, "copy",  0xA9},
+  {170, "ordf",  0xBB},
+  {171, "laquo", 0xC7},
+  {172, "not",   0xC2},
+  {173, "shy",   0x1F},
+  {174, "reg",   0xA8},
+  {175, "macro", 0xF8},
+  {176, "deg",   0xA1},
+  {177, "plusm", 0xB1},
+//{178, "sup2",  '?' },
+//{179, "sup3",  '?' },
+  {180, "acute", 0xAB},
+  {181, "micro", 0xB5},
+  {182, "para",  0xA6},
+  {183, "middot",0xE1},
+  {184, "cedil", 0xFE},
+//{185, "sup1",  '?' },
+  {186, "ordm",  0xBC},
+  {187, "raquo", 0xC8},
+//{188, "frac14",'?' },
+//{189, "frac12",'?' },
+//{190, "frac34",'?' },
+  {191, "iquest",0xC0},
+  {192, "Agrave",0xCB},
+  {193, "Aacute",0xE7},
+  {194, "Acirc", 0xE5},
+  {195, "Atilde",0xCC},
+  {196, "Auml",  0x80},
+  {197, "Aring", 0x81},
+  {198, "AElig", 0xAE},
+  {199, "Ccedil",0x82},
+  {200, "Egrave",0xE9},
+  {201, "Eacute",0x83},
+  {202, "Ecirc", 0xE6},
+  {203, "Euml",  0xE8},
+  {204, "Igrave",0xED},
+  {205, "Iacute",0xEA},
+  {206, "Icirc", 0xEB},
+  {207, "Iuml",  0xEC},
+//{208, "ETH",   '?' },
+  {209, "Ntilde",0x84},
+  {210, "Ograve",0xF1},
+  {211, "Oacute",0xEE},
+  {212, "Ocirc", 0xEF},
+  {213, "Otilde",0xCD},
+  {214, "Ouml",  0x85},
+//{215, "times", 0x78},
+  {216, "Oslash",0xAF},
+  {217, "Ugrave",0xF4},
+  {218, "Uacute",0xF2},
+  {219, "Ucirc", 0xF3},
+  {220, "Uuml",  0x86},
+  {221, "Yacute",0xDF},
+//{222, "THORN", '?' },
+  {223, "szlig", 0xA7},
+  {224, "agrave",0x88},
+  {225, "aacute",0x87},
+  {226, "acirc", 0x89},
+  {227, "atilde",0x8B},
+  {228, "auml",  0x8A},
+  {229, "aring", 0x8C},
+  {230, "aelig", 0xBE},
+  {231, "ccedil",0x8D},
+  {232, "egrave",0x8F},
+  {233, "eacute",0x8E},
+  {234, "ecirc", 0x90},
+  {235, "euml",  0x91},
+  {236, "igrave",0x93},
+  {237, "iacute",0x92},
+  {238, "icirc", 0x94},
+  {239, "iuml",  0x95},
+//{240, "eth",   '?' },
+  {241, "ntilde",0x96},
+  {242, "ograve",0x98},
+  {243, "oacute",0x97},
+  {244, "ocirc", 0x99},
+  {245, "otilde",0x9B},
+  {246, "ouml",  0x9A},
+  {247, "divide",0xD6},
+  {248, "oslash",0xBF},
+  {249, "ugrave",0x9D},
+  {250, "uacute",0x9C},
+  {251, "ucirc", 0x9E},
+  {252, "uuml",  0x9F},
+  {253, "yacute",0xDE},
+//{254, "thorn", '?' },
+  {255, "yuml",  0xD8},
+
+  // Fake characters that get expanded into strings
+  {175, "macr", HTML_SPECIAL_ENTITY_BASE},
+  {185, "sup1", HTML_SPECIAL_ENTITY_BASE+2},
+  {178, "sup2", HTML_SPECIAL_ENTITY_BASE+3},
+  {179, "sup3", HTML_SPECIAL_ENTITY_BASE+4},
+  {188, "frac14", HTML_SPECIAL_ENTITY_BASE+5},
+  {189, "frac12", HTML_SPECIAL_ENTITY_BASE+6},
+  {190, "frac34", HTML_SPECIAL_ENTITY_BASE+7},
+  {208, "ETH", HTML_SPECIAL_ENTITY_BASE+8},
+  {240, "eth", HTML_SPECIAL_ENTITY_BASE+9},
+  {222, "THORN", HTML_SPECIAL_ENTITY_BASE+10},
+  {254, "thorn", HTML_SPECIAL_ENTITY_BASE+11},
+  {215, "times", HTML_SPECIAL_ENTITY_BASE+12},
+
+  {0,   "",      0   }    // end of list
+};
+
 @endif
 
+/*
 @chunk HTMLEntityString EntityStringArray[] = {
-    { "1"   },   /* &sup1 */
-    { "2"   },   /* &sup2 */
-    { "3"   },   /* &sup3 */
-    { "1/4" },   /* &frac14 */
-    { "1/2" },   /* &frac12 */
-    { "3/4" },   /* &frac34 */
-    { "D"   },   /* &ETH */
-    { "d"   },   /* &eth */
-    { "P"   },   /* &THORN */
-    { "p"   },   /* &thorn */
-    { "x"   },   /* &times */
-    { "EUR" }    /* &euro */
+    { "1"   },   // &sup1
+    { "2"   },   // &sup2
+    { "3"   },   // &sup3
+    { "1/4" },   // &frac14
+    { "1/2" },   // &frac12
+    { "3/4" },   // &frac34
+    { "D"   },   // &ETH
+    { "d"   },   // &eth
+    { "P"   },   // &THORN
+    { "p"   },   // &thorn
+    { "x"   },   // &times
+    { "EUR" }    // &euro
 } ;
+*/
 
+// ISO variant of enitityString table
+@chunk HTMLEntityString EntityStringArray[] = {
+    { "-"   },
+    { "+/-" },
+    { "1"   },
+    { "2"   },
+    { "3"   },
+    { "1/4" },
+    { "1/2" },
+    { "3/4" },
+    { "D"   },
+    { "d"   },
+    { "P"   },
+    { "p"   },
+    { "x"   }
+} ;
+// end of ISO/Western variant of table
 
 @end EntityResource;

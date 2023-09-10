@@ -2056,8 +2056,8 @@ int getcOptrURL(dword data)  /* callback routine to get one char */
 
 int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 {
-/*
     // Original ISO/Western1252 Code:
+    /*
     if(((HTMLFILE*) data)->HTMLbufp >= ((HTMLFILE*) data)->HTMLbufl)
     {
       ((HTMLFILE*) data)->HTMLbufl = FileRead(((HTMLFILE*) data)->fileHTML,
@@ -2069,7 +2069,7 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
       if(((HTMLFILE*) data)->HTMLbufl == 0) return EOF;  // read against end of file
     }
     return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
-*/
+    */
 
     FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
     byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
@@ -2116,13 +2116,12 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
     if (bufIdx < bufSize)
     {
         // see below why this is disabled...
-        /*
         if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
         {   // 1 byte encoding (7 bit ASCII character)
             result = (int) bufPtr[bufIdx];
             bufIdx = bufIdx + 1;
         }
-        else*/ if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
+        else if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
         {   // 2 byte encoding
             result =   (int)       (bufPtr[bufIdx]   & B2MASK) << 6
                         |          (bufPtr[bufIdx+1] & TBMASK);
@@ -2166,6 +2165,7 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
     ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
 
     return result;
+
 }
 
 #if JAVASCRIPT_SUPPORT
