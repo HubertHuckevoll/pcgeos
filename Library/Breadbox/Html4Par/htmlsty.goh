@@ -622,8 +622,8 @@
     {9,     "tab",    9},
     {34,    "quot",   '"'},
     {38,    "amp",    '&'},
-    {60,    "lt",     '<'},
-    {62,    "gt",     '>'},
+    {60,    "lt",     0x3C}, // <
+    {62,    "gt",     0x3E}, // >
     {130,   "sbquo",  0xE2},
     {131,   "fnof",   0xC4},
     {132,   "bdquo",  0xE3},
@@ -801,7 +801,7 @@
     {222,   "THORN",  HTML_SPECIAL_ENTITY_BASE+8},
     {254,   "thorn",  HTML_SPECIAL_ENTITY_BASE+9},
     {215,   "times",  HTML_SPECIAL_ENTITY_BASE+10},
-    {8364,  "euro",   HTML_SPECIAL_ENTITY_BASE+11},
+    {8364,  "euro",   HTML_SPECIAL_ENTITY_BASE+11}, // the original GEOS fonts don't support the Euro sign...
 
     {0,   "",      0   }    // end of list
 };
