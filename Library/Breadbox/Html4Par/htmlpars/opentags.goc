@@ -3,7 +3,7 @@
  * PROJECT:       HTMLPars
  * FILE:          opentags.goc
  *
- * AUTHOR:        Marcus Gr�ber
+ * AUTHOR:        Marcus Gröber
  *
  * NOTE:          To compile properly, this file requires the INCLUDE
  *                files from the OmniGo SDK or later, because the
@@ -258,22 +258,26 @@ Boolean TranslateColor(char *p,ColorQuad *qc)
     qc->CQ_info = CF_INDEX;             /* any color as long as its black */
     qc->CQ_redOrIndex = C_BLACK;
 
-    if(*p=='\x23')  {                   /* skip over "#" sign */
-      p++;
-      hadPound = TRUE ;
+    if(*p=='\x23')
+    {                   /* skip over "#" sign */
+        p++;
+        hadPound = TRUE ;
     }
 
     /* Only search if we DON'T have a pound (optimization) */
-    if (!hadPound)  {
+    if (!hadPound)
+    {
         MemLock( OptrToHandle(@colorTable) );
         color_table = LMemDeref(@colorTable);
         for(i=0; i<NUM_COLOR_ENTRIES; i++)
-          if( !STRCMPISB(color_table[i].name,p) )
-          {                                 /* found color id in table? */
-            *qc = color_table[i].qc;        /* use associated color quad */
-            isColorConverted = TRUE ;
-            break;
-          }
+        {
+            if( !STRCMPISB(color_table[i].name,p) )
+            {                                 /* found color id in table? */
+                *qc = color_table[i].qc;        /* use associated color quad */
+                isColorConverted = TRUE ;
+                break;
+            }
+        }
         MemUnlock( OptrToHandle(@colorTable) );
     }
 
@@ -281,38 +285,43 @@ Boolean TranslateColor(char *p,ColorQuad *qc)
     /* try converting into a hex number */
     if ((i>=NUM_COLOR_ENTRIES) || (hadPound))
     {
-      cval = 0;
+        cval = 0;
 
-      /* Count the digits -- should be six.  If its a non-hex value, */
-      /* we ignore it and use zero for that hex spot. */
-      numHexDigits = 0 ;
-      while( (c=toupper(*(p++)))!=0 && (numHexDigits < 6))
-      {
-        cval<<=4;
-        if(isdigit(c))  {
-          cval |= (c-'0');
-        } else  {
-          if (isxdigit(c))
-              cval |= (c-'A'+10);
+        /* Count the digits -- should be six.  If its a non-hex value, */
+        /* we ignore it and use zero for that hex spot. */
+        numHexDigits = 0 ;
+        while( (c=toupper(*(p++)))!=0 && (numHexDigits < 6))
+        {
+            cval<<=4;
+            if(isdigit(c))
+            {
+                cval |= (c-'0');
+            }
+            else
+            {
+                if (isxdigit(c))
+                    cval |= (c-'A'+10);
+            }
+            numHexDigits++ ;
         }
-        numHexDigits++ ;
-      }
 
-      while (numHexDigits < 6)  {
-          cval <<= 4 ;
-          numHexDigits++ ;
-      }
+        while (numHexDigits < 6)
+        {
+            cval <<= 4 ;
+            numHexDigits++ ;
+        }
 
-      /* Well, we got something to use.  Use it */
-      qc->CQ_redOrIndex = (byte)(cval>>16);
-      qc->CQ_green = (byte)(cval>>8);
-      qc->CQ_blue = (byte)cval;
-      qc->CQ_info = CF_RGB;
-      isColorConverted = TRUE ;
+        /* Well, we got something to use.  Use it */
+        qc->CQ_redOrIndex = (byte)(cval>>16);
+        qc->CQ_green = (byte)(cval>>8);
+        qc->CQ_blue = (byte)cval;
+        qc->CQ_info = CF_RGB;
+        isColorConverted = TRUE ;
     }
 
     /* If no color is converted, use black (indexed) as the default */
-    if (!isColorConverted)  {
+    if (!isColorConverted)
+    {
         qc->CQ_redOrIndex = C_BLACK ;
         qc->CQ_info = CF_INDEX ;
     }
@@ -338,34 +347,34 @@ HTMLmultiLength ParseMultiLength(char *p, word n)
 
     if(!p || p[0]=='*' || p[0]=='\0')   /* variable sized dimension */
     {
-      ret = HTML_LEN_VARIABLE;
+        ret = HTML_LEN_VARIABLE;
     }
     else
     {
-      if(n==0)
-        q = p;
-      else                              /* buffer non zero-terminated strings */
-      {
-        if(n > sizeof(buf)-1)
-          n = sizeof(buf)-1;
+        if(n==0)
+            q = p;
+        else                              /* buffer non zero-terminated strings */
+        {
+            if(n > sizeof(buf)-1)
+                n = sizeof(buf)-1;
 @ifdef DO_DBCS
-        strncpysbcs(buf, p, n);
-        buf[n] = 0;
-	q = buf;
+            strncpysbcs(buf, p, n);
+            buf[n] = 0;
+            q = buf;
 @else
-        q = xstrncpy(buf, p, n+1);
+            q = xstrncpy(buf, p, n+1);
 @endif
-      }
+        }
 
-      len = ATOISB(q);                    /* get size (defaults to pixels) */
-      if(len<0) len = 0;                /* never accept negative widths */
-      ret = (HTMLmultiLength)(len & HTML_LEN_VALUE_MASK);
+        len = ATOISB(q);                    /* get size (defaults to pixels) */
+        if(len<0) len = 0;                /* never accept negative widths */
+        ret = (HTMLmultiLength)(len & HTML_LEN_VALUE_MASK);
 
-      if(STRCHRSB(q, '%'))                /* mark if specified as percentage */
-        ret |= HTML_LEN_PERCENT;
-      else if(STRCHRSB(q, '*'))
-	if (ret)  /* only if non-zero */
-	  ret |= HTML_LEN_PROPORTION;
+        if(STRCHRSB(q, '%'))                /* mark if specified as percentage */
+            ret |= HTML_LEN_PERCENT;
+        else if(STRCHRSB(q, '*'))
+            if (ret)  /* only if non-zero */
+                ret |= HTML_LEN_PROPORTION;
     }
 
     return ret;
@@ -378,16 +387,16 @@ Boolean ParseALIGN(optr paramArray, VisTextParaAttrAttributes *vtpaa)
     p = GetParamValue(paramArray, "ALIGN");
     if(p && *p)                         /* alignment */
     {
-      *vtpaa &= ~VTPAA_JUSTIFICATION;
-      if( 0==STRCMPISB(p, "CENTER") || 0==STRCMPISB(p, "MIDDLE") )
-        *vtpaa |= (J_CENTER<<VTPAA_JUSTIFICATION_OFFSET);
-      else if( 0==STRCMPISB(p, "RIGHT") )
-        *vtpaa |= (J_RIGHT<<VTPAA_JUSTIFICATION_OFFSET);
-      else if( 0==STRCMPISB(p, "JUSTIFY") )
-        *vtpaa |= (J_FULL<<VTPAA_JUSTIFICATION_OFFSET);
-      else                              /* default alignment: left */
-        *vtpaa |= (J_LEFT<<VTPAA_JUSTIFICATION_OFFSET);
-      return TRUE;                      /* we have an alignment setting */
+        *vtpaa &= ~VTPAA_JUSTIFICATION;
+        if( 0==STRCMPISB(p, "CENTER") || 0==STRCMPISB(p, "MIDDLE") )
+            *vtpaa |= (J_CENTER<<VTPAA_JUSTIFICATION_OFFSET);
+        else if( 0==STRCMPISB(p, "RIGHT") )
+            *vtpaa |= (J_RIGHT<<VTPAA_JUSTIFICATION_OFFSET);
+        else if( 0==STRCMPISB(p, "JUSTIFY") )
+            *vtpaa |= (J_FULL<<VTPAA_JUSTIFICATION_OFFSET);
+        else                              /* default alignment: left */
+            *vtpaa |= (J_LEFT<<VTPAA_JUSTIFICATION_OFFSET);
+        return TRUE;                      /* we have an alignment setting */
     }
     return FALSE;
 }
@@ -399,11 +408,11 @@ void LOCAL ParseBORDER(optr paramArray, WordFlags *flags)
     /* FRAMEBORDER and BORDER are synonyms (Netscape vs. IE) */
     p = GetParamValue(paramArray, "FRAMEBORDER");
     if(p && *p && ATOISB(p)==0)
-      *flags |= HTML_FRF_NOBORDER;
+        *flags |= HTML_FRF_NOBORDER;
 
     p = GetParamValue(paramArray, "BORDER");
     if(p && *p && ATOISB(p)==0)
-      *flags |= HTML_FRF_NOBORDER;
+        *flags |= HTML_FRF_NOBORDER;
 }
 
 Boolean ParseBGCOLOR(optr paramArray, ByteFlags *cellFlags, ColorQuad *qc)
@@ -412,12 +421,12 @@ Boolean ParseBGCOLOR(optr paramArray, ByteFlags *cellFlags, ColorQuad *qc)
 
     if( (HTMLext->HE_options & HTML_MONOCHROME)==0 )
     {
-      p = GetParamValue(paramArray, "BGCOLOR");
-      if(p && *p && TranslateColor(p, qc))
-      {                                  /* background color specified? */
-        *cellFlags |= HTML_CELL_BACK_COLOR;
-        return TRUE;
-      }
+        p = GetParamValue(paramArray, "BGCOLOR");
+        if(p && *p && TranslateColor(p, qc))
+        {                                  /* background color specified? */
+            *cellFlags |= HTML_CELL_BACK_COLOR;
+            return TRUE;
+        }
     }
 
     return FALSE;
@@ -428,12 +437,16 @@ Boolean ParseVALIGN(optr paramArray, ByteFlags *cellFlags)
     char *p;
 
     p = GetParamValue(paramArray, "VALIGN");
-    if(p && *p)  {
+    if(p && *p)
+    {
         /* Default to TOP if VALIGN is given unless BOTTOM or CENTER */
         *cellFlags &= ~HTML_CELL_VALIGN_MASK;
-        if ((0==STRCMPISB(p, "CENTER")) || (0==STRCMPISB(p, "MIDDLE")))  {
+        if ((0==STRCMPISB(p, "CENTER")) || (0==STRCMPISB(p, "MIDDLE")))
+        {
             *cellFlags |= HTML_CELL_VALIGN_CENTER ;
-        } else if (0==STRCMPISB(p, "BOTTOM"))  {
+        }
+        else if (0==STRCMPISB(p, "BOTTOM"))
+        {
             *cellFlags |= HTML_CELL_VALIGN_BOTTOM ;
         }
         return TRUE;
@@ -462,7 +475,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
     word ret = CA_NULL_ELEMENT;
 
     if(currentFlags & TAG_FLUSH_TEXT)   /* abort if supposed to ignore text */
-      return ret;
+        return ret;
 
     /* check maximum number of images */
     if (G_imageLimit==0)
@@ -477,146 +490,156 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
 
     altName = GetParamValue(paramArray,"ALT");
     if(!altName)
-      altName = "Image";                /* default placeholder */
+        altName = "Image";                /* default placeholder */
 
     memset(&id, 0, sizeof(id));       /* default graphic data structure */
 
     /* parse NAME attribute (for JS) */
-    if (parseName) {
-	p = GetParamValue(paramArray,"NAME");
-	if (p && *p) {
-	    id.name = NamePoolTokenizeDOS(NamePool, p, FALSE);
-	} else {
-	    id.name = NAME_POOL_NONE;
-	}
+    if (parseName)
+    {
+        p = GetParamValue(paramArray,"NAME");
+        if (p && *p)
+        {
+            id.name = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        }
+        else
+        {
+            id.name = NAME_POOL_NONE;
+        }
     }
 
     p = GetParamValue(paramArray, "SRC");
     if(p && *p)                         /* image filename */
     {
-      while (*p == ' ') p++;            /* skip leading spaces */
+        while (*p == ' ') p++;            /* skip leading spaces */
     }
 
-    if ((parseName && id.name != NAME_POOL_NONE) || (p && *p)) {
+    if ((parseName && id.name != NAME_POOL_NONE) || (p && *p))
+    {
+        GetCharacterBase(&vcaImage);      /* image style based on default */
+        vcaImage.VTCA_pointSize.WBF_frac = 0 ;
+        vcaImage.VTCA_pointSize.WBF_int = 4 ;
+        vcaImage.VTCA_fontID = FID_DTC_URW_MONO ; /* Use an small font */
+                                                  /* I would love a 0 point tall font, or even 1 point */
+        if (currentCS.VTCA_extendedStyles & VTES_NOWRAP)
+            vcaImage.VTCA_extendedStyles |= VTES_NOWRAP ;
 
-      GetCharacterBase(&vcaImage);      /* image style based on default */
-      vcaImage.VTCA_pointSize.WBF_frac = 0 ;
-      vcaImage.VTCA_pointSize.WBF_int = 4 ;
-      vcaImage.VTCA_fontID = FID_DTC_URW_MONO ; /* Use an small font */
-               /* I would love a 0 point tall font, or even 1 point */
-      if (currentCS.VTCA_extendedStyles & VTES_NOWRAP)
-          vcaImage.VTCA_extendedStyles |= VTES_NOWRAP ;
+        id.pos = AddText(&vcaImage, (char*)c_graphic);
+                                            /* embed placeholder character */
 
-      id.pos = AddText(&vcaImage, (char*)c_graphic);
-                                        /* embed placeholder character */
+        id.flags = 0;                     /* no special attributes so far */
 
-      id.flags = 0;                     /* no special attributes so far */
+        id.formElementIndex = element;    /* associate with form element */
+        if(element != CA_NULL_ELEMENT)    /* is specified: is graphical submit */
+            id.flags |= HTML_IDF_SUBMIT;
 
-      id.formElementIndex = element;    /* associate with form element */
-      if(element != CA_NULL_ELEMENT)    /* is specified: is graphical submit */
-        id.flags |= HTML_IDF_SUBMIT;
+        id.imageALT = NAME_POOL_NONE;     /* default: no alternative text */
+        if (p && *p)
+        {
+            id.imageURL = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        }
+        else
+        {
+            id.imageURL = NAME_POOL_NONE;
+        }
+                                            /* store URL of image */
 
-      id.imageALT = NAME_POOL_NONE;     /* default: no alternative text */
-      if (p && *p) {
-	  id.imageURL = NamePoolTokenizeDOS(NamePool, p, FALSE);
-      } else {
-	  id.imageURL = NAME_POOL_NONE;
-      }
-                                        /* store URL of image */
+        p = GetParamValue(paramArray, "USEMAP");
+        if(p && *p)                       /* store URL of map, if any */
+        {
+            while (*p == ' ') p++;          /* skip leading spaces */
+            id.usemap = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        }
+        else
+            id.usemap = NAME_POOL_NONE;
 
-      p = GetParamValue(paramArray, "USEMAP");
-      if(p && *p)                       /* store URL of map, if any */
-      {
-        while (*p == ' ') p++;          /* skip leading spaces */
-        id.usemap = NamePoolTokenizeDOS(NamePool, p, FALSE);
-      }
-      else
-        id.usemap = NAME_POOL_NONE;
+        if(GetParamValue(paramArray, "ISMAP"))
+            id.flags |= HTML_IDF_ISMAP;     /* set flag if image is a map */
 
-      if(GetParamValue(paramArray, "ISMAP"))
-        id.flags |= HTML_IDF_ISMAP;     /* set flag if image is a map */
+        p = GetParamValue(paramArray, "WIDTH");
+        if(p)
+        {                             /* width specified? */
+            id.size.XYS_width = ParseMultiLength(p, 0);    /* yes: use specified width */
+            if (HTML_LEN_GET_UNIT(id.size.XYS_width) != HTML_LEN_PIXEL)
+                id.size.XYS_width = 0 ;
+        }
+        else
+        {
+            id.size.XYS_width = 0;          /* no: use default width */
+        }
 
-      p = GetParamValue(paramArray, "WIDTH");
-      if(p)  {                             /* width specified? */
-        id.size.XYS_width = ParseMultiLength(p, 0);    /* yes: use specified width */
-        if (HTML_LEN_GET_UNIT(id.size.XYS_width) != HTML_LEN_PIXEL)
-            id.size.XYS_width = 0 ;
-      }  else  {
-        id.size.XYS_width = 0;          /* no: use default width */
-      }
+        p = GetParamValue(paramArray, "HEIGHT");
+        if(p)
+        {                           /* height specified? */
+            id.size.XYS_height = ParseMultiLength(p, 0);    /* yes: use specified width */
+            if (HTML_LEN_GET_UNIT(id.size.XYS_height) != HTML_LEN_PIXEL)
+                id.size.XYS_height = 0 ;
+        }
+        else
+        {
+            id.size.XYS_height = 0;         /* no: use default height */
+        }
 
-      p = GetParamValue(paramArray, "HEIGHT");
-      if(p)  {                           /* height specified? */
-        id.size.XYS_height = ParseMultiLength(p, 0);    /* yes: use specified width */
-        if (HTML_LEN_GET_UNIT(id.size.XYS_height) != HTML_LEN_PIXEL)
-            id.size.XYS_height = 0 ;
-      } else  {
-        id.size.XYS_height = 0;         /* no: use default height */
-      }
+        p = GetParamValue(paramArray, "HSPACE");
+        if(p)                             /* horizontal spacing specified? */
+            id.hspace = ATOISB(p);            /* yes: use specified spacing */
+        else
+            id.hspace = 0;                  /* no: use default spacing */
 
-      p = GetParamValue(paramArray, "HSPACE");
-      if(p)                             /* horizontal spacing specified? */
-        id.hspace = ATOISB(p);            /* yes: use specified spacing */
-      else
-        id.hspace = 0;                  /* no: use default spacing */
+        p = GetParamValue(paramArray, "VSPACE");
+        if(p)                             /* vertical spacing specified? */
+            id.vspace = ATOISB(p);            /* yes: use specified spacing */
+        else
+            id.vspace = 0;                  /* no: use default spacing */
 
-      p = GetParamValue(paramArray, "VSPACE");
-      if(p)                             /* vertical spacing specified? */
-        id.vspace = ATOISB(p);            /* yes: use specified spacing */
-      else
-        id.vspace = 0;                  /* no: use default spacing */
+        /* Always place a variable graphic */
+        id.len = 1;                     /* only one character to be replaced */
+        id.imageALT = NamePoolTokenizeDOS(NamePool, altName, FALSE);
 
-      /* Always place a variable graphic */
-      id.len = 1;                     /* only one character to be replaced */
-      id.imageALT = NamePoolTokenizeDOS(NamePool, altName, FALSE);
+        /* Mark the graphic as at an unknown (-1, -1) position */
+        id.HID_pos.P_x = -1 ;
+        id.HID_pos.P_y = -1 ;
 
-      /* Mark the graphic as at an unknown (-1, -1) position */
-      id.HID_pos.P_x = -1 ;
-      id.HID_pos.P_y = -1 ;
+        memset(&vtg, 0, sizeof(vtg));   /* default graphic data structure */
 
-      memset(&vtg, 0, sizeof(vtg));   /* default graphic data structure */
+        vtg.VTG_size = id.size;         /* size of graphic */
+        if (vtg.VTG_size.XYS_height == 0)
+            vtg.VTG_size.XYS_height = DEFAULT_IMAGE_HEIGHT ;
+        if (vtg.VTG_size.XYS_width == 0)
+            vtg.VTG_size.XYS_width = DEFAULT_IMAGE_WIDTH ;
+        id.HID_size = vtg.VTG_size;     /* cache size for vargraphic drawing */
 
-      vtg.VTG_size = id.size;         /* size of graphic */
-      if (vtg.VTG_size.XYS_height == 0)
-          vtg.VTG_size.XYS_height = DEFAULT_IMAGE_HEIGHT ;
-      if (vtg.VTG_size.XYS_width == 0)
-          vtg.VTG_size.XYS_width = DEFAULT_IMAGE_WIDTH ;
-      id.HID_size = vtg.VTG_size;     /* cache size for vargraphic drawing */
-      
-      vtg.VTG_size.XYS_width += 2*id.hspace;
-      vtg.VTG_size.XYS_height += 2*id.vspace;
-                                      /* add spacing around graphic */
+        vtg.VTG_size.XYS_width += 2*id.hspace;
+        vtg.VTG_size.XYS_height += 2*id.vspace;
+                                        /* add spacing around graphic */
 
-      /* update minimum size of this table cell (formatting hints) */
-      if(vtg.VTG_size.XYS_width > insertCellData.HCD_hardMinWidth)
-      {
-        insertCellData.HCD_hardMinWidth = vtg.VTG_size.XYS_width;
-      }
-      if(vtg.VTG_size.XYS_height > insertCellData.HCD_minHeight)
-      {
-        insertCellData.HCD_minHeight = vtg.VTG_size.XYS_height;
-      }
+        /* update minimum size of this table cell (formatting hints) */
+        if(vtg.VTG_size.XYS_width > insertCellData.HCD_hardMinWidth)
+        {
+            insertCellData.HCD_hardMinWidth = vtg.VTG_size.XYS_width;
+        }
+        if(vtg.VTG_size.XYS_height > insertCellData.HCD_minHeight)
+        {
+            insertCellData.HCD_minHeight = vtg.VTG_size.XYS_height;
+        }
 
-      vtg.VTG_type = VTGT_VARIABLE;   /* embed a variable graphic */
-      vtg.VTG_data.VTGD_variable.VTGV_manufacturerID =
-        HTML_VARGRAPH_MFGID;          /* identify variable graphic type */
-      vtg.VTG_data.VTGD_variable.VTGV_type = HTML_VARGRAPH_TYPE_IMAGE;
+        vtg.VTG_type = VTGT_VARIABLE;   /* embed a variable graphic */
+        vtg.VTG_data.VTGD_variable.VTGV_manufacturerID = HTML_VARGRAPH_MFGID; /* identify variable graphic type */
+        vtg.VTG_data.VTGD_variable.VTGV_type = HTML_VARGRAPH_TYPE_IMAGE;
 
-      if (vtg.VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
-          vtg.VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR ;
-      else
-          vtg.VTG_size.XYS_height = 0 ;
- 
-      ret = AppendToHypertextArray(HTA_IMAGE_ARRAY, &id);
-                                        /* add image record to array */
-      ((HTMLimageGraphicVariable *)
-        &vtg.VTG_data.VTGD_variable.VTGV_privateData)->HIGV_imageIndex = ret;         
-                                        /* store index of array element */
- 
-      AddAttrRun(ttbh->TTBH_graphicElements, ttbh->TTBH_graphicRuns,
-        &vtg, id.pos);                /* create graphic record for position */
+        if (vtg.VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
+            vtg.VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR ;
+        else
+            vtg.VTG_size.XYS_height = 0 ;
 
-      G_imageCount++;                   /* count images */
+        ret = AppendToHypertextArray(HTA_IMAGE_ARRAY, &id);
+                                            /* add image record to array */
+        ((HTMLimageGraphicVariable *) &vtg.VTG_data.VTGD_variable.VTGV_privateData)->HIGV_imageIndex = ret;
+                                            /* store index of array element */
+
+        AddAttrRun(ttbh->TTBH_graphicElements, ttbh->TTBH_graphicRuns, &vtg, id.pos); /* create graphic record for position */
+
+        G_imageCount++;                   /* count images */
     }
 
     c2 = '.';                           /* treat as character */
@@ -632,31 +655,32 @@ void LOCAL ParseEvent(optr paramArray, char *name, HTMLEventType evt,
     p = GetParamValue(paramArray, name);// Try to find attribute for event
     if(p && *p)
     {
-      /* if found, enter this event into the list */
-      hed.HED_evt = evt;
-      hed.HED_type = type;
-      hed.HED_obj = obj;
-      hed.HED_code = NamePoolTokenizeDOS(NamePool, p, FALSE);
-      AppendToHypertextArray(HTA_EVENT_ARRAY, &hed);
-    }   
+        /* if found, enter this event into the list */
+        hed.HED_evt = evt;
+        hed.HED_type = type;
+        hed.HED_obj = obj;
+        hed.HED_code = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        AppendToHypertextArray(HTA_EVENT_ARRAY, &hed);
+    }
 }
 
 void ParseEvents(optr paramArray, HTMLEventObjectType type, word obj)
-{   
-    if (HTMLext->HE_options & HTML_JAVASCRIPT) {
-    ParseEvent(paramArray, "ONABORT",     HTML_EVENT_ABORT,     type, obj);
-    ParseEvent(paramArray, "ONBLUR",      HTML_EVENT_BLUR,      type, obj);
-    ParseEvent(paramArray, "ONCHANGE",    HTML_EVENT_CHANGE,    type, obj);
-    ParseEvent(paramArray, "ONCLICK",     HTML_EVENT_CLICK,     type, obj);
-    ParseEvent(paramArray, "ONERROR",     HTML_EVENT_ERROR,     type, obj);
-    ParseEvent(paramArray, "ONFOCUS",     HTML_EVENT_FOCUS,     type, obj);
-    ParseEvent(paramArray, "ONLOAD",      HTML_EVENT_LOAD,      type, obj);
-    ParseEvent(paramArray, "ONMOUSEOVER", HTML_EVENT_MOUSEOVER, type, obj);
-    ParseEvent(paramArray, "ONMOUSEOUT",  HTML_EVENT_MOUSEOUT,  type, obj);
-    ParseEvent(paramArray, "ONRESET",     HTML_EVENT_RESET,     type, obj);
-    ParseEvent(paramArray, "ONSELECT",    HTML_EVENT_SELECT,    type, obj);
-    ParseEvent(paramArray, "ONSUBMIT",    HTML_EVENT_SUBMIT,    type, obj);
-    ParseEvent(paramArray, "ONUNLOAD",    HTML_EVENT_UNLOAD,    type, obj);
+{
+    if (HTMLext->HE_options & HTML_JAVASCRIPT)
+    {
+        ParseEvent(paramArray, "ONABORT",     HTML_EVENT_ABORT,     type, obj);
+        ParseEvent(paramArray, "ONBLUR",      HTML_EVENT_BLUR,      type, obj);
+        ParseEvent(paramArray, "ONCHANGE",    HTML_EVENT_CHANGE,    type, obj);
+        ParseEvent(paramArray, "ONCLICK",     HTML_EVENT_CLICK,     type, obj);
+        ParseEvent(paramArray, "ONERROR",     HTML_EVENT_ERROR,     type, obj);
+        ParseEvent(paramArray, "ONFOCUS",     HTML_EVENT_FOCUS,     type, obj);
+        ParseEvent(paramArray, "ONLOAD",      HTML_EVENT_LOAD,      type, obj);
+        ParseEvent(paramArray, "ONMOUSEOVER", HTML_EVENT_MOUSEOVER, type, obj);
+        ParseEvent(paramArray, "ONMOUSEOUT",  HTML_EVENT_MOUSEOUT,  type, obj);
+        ParseEvent(paramArray, "ONRESET",     HTML_EVENT_RESET,     type, obj);
+        ParseEvent(paramArray, "ONSELECT",    HTML_EVENT_SELECT,    type, obj);
+        ParseEvent(paramArray, "ONSUBMIT",    HTML_EVENT_SUBMIT,    type, obj);
+        ParseEvent(paramArray, "ONUNLOAD",    HTML_EVENT_UNLOAD,    type, obj);
     }
 }
 
@@ -668,15 +692,15 @@ void _pascal Open_A(TagOpenArguments *arg)
 
     p = GetParamValue(arg->paramArray,"NAME");
     if(p && *p)                         /* anchor name */
-      arg->preserveParams = TRUE;       /* remember target name on stack */
+        arg->preserveParams = TRUE;       /* remember target name on stack */
 
     p = GetParamValue(arg->paramArray,"HREF");
     if(p)
     {
-      arg->preserveParams = TRUE;
-      arg->ca.CSD_which |= CSD_COLOR;   /* change character style */
-      arg->ca.CSD_textStyles |= TS_UNDERLINE;
-      arg->ca.CSD_color = htbh->HTBH_other.HTBHO_linkColor;
+        arg->preserveParams = TRUE;
+        arg->ca.CSD_which |= CSD_COLOR;   /* change character style */
+        arg->ca.CSD_textStyles |= TS_UNDERLINE;
+        arg->ca.CSD_color = htbh->HTBH_other.HTBHO_linkColor;
     }
 }
 
@@ -686,7 +710,7 @@ void _pascal Open_Hx(TagOpenArguments *arg)
     ForceCloseStyle(SPEC_Hx, SPEC_DONT_MATCH);
 }
 
-void _pascal Open_HR(TagOpenArguments *arg) 
+void _pascal Open_HR(TagOpenArguments *arg)
 {
     VisTextParaAttrAttributes align = J_CENTER<<VTPAA_JUSTIFICATION_OFFSET;
     word size = 0;
@@ -695,7 +719,7 @@ void _pascal Open_HR(TagOpenArguments *arg)
     ParseALIGN(arg->paramArray, &align); /* handle ALIGN attribute */
     p = GetParamValue(arg->paramArray, "SIZE");
     if(p && *p)                     /* thickness of rule, if specified */
-      size = ATOISB(p);
+        size = ATOISB(p);
 
     InsertHRule(size, align);
 }
@@ -725,14 +749,16 @@ void _pascal Open_IMG(TagOpenArguments *arg)
 // >>> mg 000429: Vertical spacing around tables
             TAG_IS_PAR_STYLE
 // <<<
-        } ;
+    } ;
+
     static HTMLStylesTable trEntry = {
             "TR",
             OptrToChunk(@vcdNone),
             OptrToChunk(@vpdNone),
             SPEC_TR,
             0
-        } ;
+    } ;
+
     static HTMLStylesTable tdEntry = {
             "TD",
             OptrToChunk(@vcdNone),
@@ -741,14 +767,16 @@ void _pascal Open_IMG(TagOpenArguments *arg)
 // >>> mg 000429: Vertical spacing around tables
             TAG_IS_PAR_STYLE
 // <<<
-        } ;
+    } ;
+
     static HTMLStylesTable imgEntry = {
             "IMG",
             OptrToChunk(@vcdNone),
             OptrToChunk(@vpdNone),
             SPEC_IMG,
             0
-        } ;
+    } ;
+
     static insideHere = FALSE ;
     char *p ;
     Boolean haveAlign = FALSE ;
@@ -765,24 +793,29 @@ void _pascal Open_IMG(TagOpenArguments *arg)
         if ((0==STRCMPISB(p, "LEFT")) || (0==STRCMPISB(p, "RIGHT")))
             haveAlign = TRUE ;
 
-    if ((insideHere) || (!haveAlign))  {
+    if ((insideHere) || (!haveAlign))
+    {
         image = ParseImage(arg->paramArray, CA_NULL_ELEMENT, TRUE);
-        
+
         /* Attach event handlers */
         if(image != CA_NULL_ELEMENT)
-          ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_IMAGE, image);
-    } else {
+            ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_IMAGE, image);
+    }
+    else
+    {
         OpenTag(SPEC_TABLE, &tableEntry, IDupLMem(arg->paramArray)) ;
         tableLevel = EnclosingCount(SPEC_TABLE, NULL) ;
 
         /* Make sure we didn't go over the limit. */
-        if (tableLevel < HTML_MAXTABLE)  {
+        if (tableLevel < HTML_MAXTABLE)
+        {
             /* If an aligned image has an HSPACE or BORDER setting */
             /* we need to calculate an appropriate amount to add */
             /* the indented table width */
             amount = 0 ;
             p = GetParamValue(arg->paramArray, "BORDER");
-            if ((p) && (*p))  {
+            if ((p) && (*p))
+            {
                 amount = ATOISB(p) ;
 
                 /* If we have any border, add one more for the inner */
@@ -796,7 +829,8 @@ void _pascal Open_IMG(TagOpenArguments *arg)
 
             /* point to actual table waiting to be filled entry */
             tableStack = LMemDeref(tableStackO);
-            if (tableLevel)  {
+            if (tableLevel)
+            {
                 tableStack += tableLevel ;
 
                 if (HTML_LEN_GET_UNIT(tableStack->tableData.HTD_width)==HTML_LEN_PIXEL)
@@ -812,7 +846,9 @@ void _pascal Open_IMG(TagOpenArguments *arg)
             insideHere = FALSE ;
             CloseTag(SPEC_TD, &tdEntry, NULL) ;
             CloseTag(SPEC_TR, &trEntry, NULL) ;
-        } else {
+        }
+        else
+        {
             /* If the nesting tables are over the limit, there was no table */
             /* entry created. */
             /* Luckily, this is not a terrible problem.  We will just */
@@ -837,42 +873,43 @@ void _pascal Open_BODY(TagOpenArguments *arg)
 
     if( (HTMLext->HE_options & HTML_NO_BACKGROUND)==0 )
     {
-      p = GetParamValue(arg->paramArray,"BACKGROUND");
-      if(p && *p)                     /* background image name */
-      {
-        tok = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        p = GetParamValue(arg->paramArray,"BACKGROUND");
+        if(p && *p)                     /* background image name */
+        {
+            tok = NamePoolTokenizeDOS(NamePool, p, FALSE);
 
-        memset(&id, 0, sizeof(id));   /* default graphic data structure */
-        id.pos = HTML_IMAGE_POS_DOCUMENT_BACKGROUND;
-                                      /* this is a background image */
-        id.imageURL = tok;            /* store URL of image */
-        AppendToHypertextArray(HTA_IMAGE_ARRAY, &id);
-                                      /* add image record to array */
-      }
+            memset(&id, 0, sizeof(id));   /* default graphic data structure */
+            id.pos = HTML_IMAGE_POS_DOCUMENT_BACKGROUND;
+                                        /* this is a background image */
+            id.imageURL = tok;            /* store URL of image */
+            AppendToHypertextArray(HTA_IMAGE_ARRAY, &id);
+                                        /* add image record to array */
+        }
     }
 
     if( (HTMLext->HE_options & HTML_MONOCHROME)==0 )
     {
-      p = GetParamValue(arg->paramArray,"BGCOLOR");
-      if(p && *p)                     /* background color */
-      {
-        if (TranslateColor(p, &color))  {
-            htbh->HTBH_other.HTBHO_fileInfo |= HTML_FI_BACK_COLOR;
-            htbh->HTBH_other.HTBHO_backColor = color ;
+        p = GetParamValue(arg->paramArray,"BGCOLOR");
+        if(p && *p)                     /* background color */
+        {
+            if (TranslateColor(p, &color))
+            {
+                htbh->HTBH_other.HTBHO_fileInfo |= HTML_FI_BACK_COLOR;
+                htbh->HTBH_other.HTBHO_backColor = color ;
+            }
         }
-      }
 
-      p = GetParamValue(arg->paramArray,"TEXT");
-      if(p && *p)                       /* text color */
-        TranslateColor(p, &vcaBase.VTCA_color) ;
+        p = GetParamValue(arg->paramArray,"TEXT");
+        if(p && *p)                       /* text color */
+            TranslateColor(p, &vcaBase.VTCA_color) ;
 
-      p = GetParamValue(arg->paramArray,"LINK");
-      if(p && *p)                       /* link color */
-        TranslateColor(p, &(htbh->HTBH_other.HTBHO_linkColor));
+        p = GetParamValue(arg->paramArray,"LINK");
+        if(p && *p)                       /* link color */
+            TranslateColor(p, &(htbh->HTBH_other.HTBHO_linkColor));
 
-      p = GetParamValue(arg->paramArray,"VLINK");
-      if(p && *p)                       /* visited link color */
-        TranslateColor(p, &(htbh->HTBH_other.HTBHO_vlinkColor));
+        p = GetParamValue(arg->paramArray,"VLINK");
+        if(p && *p)                       /* visited link color */
+            TranslateColor(p, &(htbh->HTBH_other.HTBHO_vlinkColor));
     }
 
     /* Nonstandard tags */
@@ -881,17 +918,20 @@ void _pascal Open_BODY(TagOpenArguments *arg)
     {
         htbh->HTBH_other.HTBHO_leftMargin = ATOISB(p) ;
     }
+
     p = GetParamValue(arg->paramArray,"TOPMARGIN");
     if(p && *p)                     /* Margin from top of page */
     {
         htbh->HTBH_other.HTBHO_topMargin = ATOISB(p) ;
     }
+
     p = GetParamValue(arg->paramArray,"MARGINWIDTH");
     if(p && *p)                     /* Margin from left of page */
     {
         htbh->HTBH_other.HTBHO_leftMargin = ATOISB(p) ;
         /* Should also do a bottom Margin at some point */
     }
+
     p = GetParamValue(arg->paramArray,"MARGINHEIGHT");
     if(p && *p)                     /* Margin from left of page */
     {
@@ -909,10 +949,13 @@ void _pascal Open_EMBED(TagOpenArguments *arg)
     char *p;
 
     p = GetParamValue(arg->paramArray, "SRC");
-    if (p && *p) {
-	if (htbh->HTBH_other.HTBHO_embed != NAME_POOL_NONE)
-	    NamePoolReleaseToken(NamePool, htbh->HTBH_other.HTBHO_embed);
-	htbh->HTBH_other.HTBHO_embed = NamePoolTokenizeDOS(NamePool, p, FALSE);
+    if (p && *p)
+    {
+        if (htbh->HTBH_other.HTBHO_embed != NAME_POOL_NONE)
+        {
+            NamePoolReleaseToken(NamePool, htbh->HTBH_other.HTBHO_embed);
+        }
+        htbh->HTBH_other.HTBHO_embed = NamePoolTokenizeDOS(NamePool, p, FALSE);
     }
 }
 #endif
@@ -924,10 +967,10 @@ void _pascal Open_EMBED(TagOpenArguments *arg)
 /* Put them in the ColorRsource, to avoid wasting another handle */
 
 typedef struct
-    {
+{
     word FMS_FontID;
     char FMS_name[FID_NAME_LEN + 1];
-    }
+}
 FontMapStruct;
 
 @start ColorResource, data;
@@ -1018,34 +1061,36 @@ FontID LOCAL FindGeosFont(char *list)
     n = 0;
     MemLock(HandleOf(@FontMappingArray));
 
-    do {                                /* iterate names in list */
+    do
+    {                                /* iterate names in list */
 @ifdef DO_DBCS
-      p = GetNthFromListSBCS(list, n++, FALSE, &size);
+        p = GetNthFromListSBCS(list, n++, FALSE, &size);
 @else
-      p = GetNthFromList(list, n++, FALSE, &size);
+        p = GetNthFromList(list, n++, FALSE, &size);
 @endif
-      if(p)                             /* still more fonts? */
-      {
-      nArrayLen = ChunkArrayGetCount(@FontMappingArray);
-      for (nIdx = 0; nIdx < nArrayLen; nIdx++)
-      {
-          pFMS = ChunkArrayElementToPtr(@FontMappingArray, nIdx, NULL);
-          /*
-           * The font name needs to match exactly, though the
-           * case does not matter. But we need to be aware that
-           * the *parsed* font name is *not* NULL-terminated, so
-           * we check separately to see that the length of the
-           * font name strings match
-           */
-          if (!STRNCMPISB(p, pFMS->FMS_name, size) &&
-          pFMS->FMS_name[size] == 0)
-          {
-          fid = pFMS->FMS_FontID;
-          break;
-          }
-      }
-      }
-    } while(p && fid==FID_INVALID);
+        if(p)                             /* still more fonts? */
+        {
+            nArrayLen = ChunkArrayGetCount(@FontMappingArray);
+            for (nIdx = 0; nIdx < nArrayLen; nIdx++)
+            {
+                pFMS = ChunkArrayElementToPtr(@FontMappingArray, nIdx, NULL);
+                /*
+                * The font name needs to match exactly, though the
+                * case does not matter. But we need to be aware that
+                * the *parsed* font name is *not* NULL-terminated, so
+                * we check separately to see that the length of the
+                * font name strings match
+                */
+                if (!STRNCMPISB(p, pFMS->FMS_name, size) && pFMS->FMS_name[size] == 0)
+                {
+                    fid = pFMS->FMS_FontID;
+                    break;
+                }
+            }
+        }
+    }
+    while(p && fid==FID_INVALID);
+
     MemUnlock(HandleOf(@FontMappingArray));
     return fid;
 }
@@ -1057,10 +1102,10 @@ void _pascal Open_BASEFONT(TagOpenArguments *arg)
     p = GetParamValue(arg->paramArray,"SIZE");
     if(p && *p)                       /* default text size */
     {
-      currentBaseFont = ATOISB(p);      /* store current base font */
-      if(currentBaseFont<1) currentBaseFont = 1;
-      if(currentBaseFont>7) currentBaseFont = 7;
-                                      /* restrict to range 1..7 */
+        currentBaseFont = ATOISB(p);      /* store current base font */
+        if(currentBaseFont<1) currentBaseFont = 1;
+        if(currentBaseFont>7) currentBaseFont = 7;
+                                        /* restrict to range 1..7 */
     }
 }
 
@@ -1072,40 +1117,40 @@ void _pascal Open_FONT(TagOpenArguments *arg)
 
     if( (HTMLext->HE_options & HTML_MONOCHROME)==0 )
     {
-      p = GetParamValue(arg->paramArray,"COLOR");
-      if(p && *p)                     /* text color */
-      {
-        if (TranslateColor(p, &arg->ca.CSD_color))
-            arg->ca.CSD_which |= CSD_COLOR;    /* set new color */
-      }
+        p = GetParamValue(arg->paramArray,"COLOR");
+        if(p && *p)                     /* text color */
+        {
+            if (TranslateColor(p, &arg->ca.CSD_color))
+                arg->ca.CSD_which |= CSD_COLOR;    /* set new color */
+        }
     }
 
     p = GetParamValue(arg->paramArray,"SIZE");
     if(p && *p)                       /* text size */
     {
-      if(*p=='+')                     /* relative or absolute change? */
-        i = currentBaseFont + ATOISB(p+1);
-      else if(*p=='-')
-        i = currentBaseFont - ATOISB(p+1);
-      else
-        i = ATOISB(p);
+        if(*p=='+')                     /* relative or absolute change? */
+            i = currentBaseFont + ATOISB(p+1);
+        else if(*p=='-')
+            i = currentBaseFont - ATOISB(p+1);
+        else
+            i = ATOISB(p);
 
-      if(i<1) i = 1;                  /* restrict to range 1..7 */
-      if(i>7) i = 7;
+        if(i<1) i = 1;                  /* restrict to range 1..7 */
+        if(i>7) i = 7;
 
-      arg->ca.CSD_which |= CSD_SIZE;       /* set new font size from list */
-      arg->ca.CSD_pointSize = i;
+        arg->ca.CSD_which |= CSD_SIZE;       /* set new font size from list */
+        arg->ca.CSD_pointSize = i;
     }
 
     p = GetParamValue(arg->paramArray,"FACE");
     if(p && *p)
     {
-      fid = FindGeosFont(p);          /* check list for available fonts */
-      if(fid != FID_INVALID)          /* is this font available? */
-      {
-        arg->ca.CSD_which |= CSD_FONT;     /* use font */
-        arg->ca.CSD_fontOrBase.fontID = fid;
-      }
+        fid = FindGeosFont(p);          /* check list for available fonts */
+        if(fid != FID_INVALID)          /* is this font available? */
+        {
+            arg->ca.CSD_which |= CSD_FONT;     /* use font */
+            arg->ca.CSD_fontOrBase.fontID = fid;
+        }
     }
 }
 
@@ -1125,15 +1170,17 @@ void _pascal Open_FRAMESET_FRAME(TagOpenArguments *arg)
     /* Get limit up to which we have to search the stack */
     if(EnclosingCount(SPEC_FRAMESET, &top))
     {
-      /* Custom version of EnclosingCount() that only counts FRAMESET tags
-         with parameters. This eliminates "blank" levels that don't really
-         specify a split. For those, we have already discarded the parameters */
+        /* Custom version of EnclosingCount() that only counts FRAMESET tags
+            with parameters. This eliminates "blank" levels that don't really
+            specify a split. For those, we have already discarded the parameters */
 
-      for(i=0; i<=top; i++)
-        if(arg->tagStack[i].spec == SPEC_FRAMESET && arg->tagStack[i].param) 
-        {                               /* found requested element? */
-          fr.HF_level++;                /* increase nesting level */
-          top2 = i;                     /* pass back latest one */
+        for(i=0; i<=top; i++)
+        {
+            if(arg->tagStack[i].spec == SPEC_FRAMESET && arg->tagStack[i].param)
+            {                               /* found requested element? */
+                fr.HF_level++;                /* increase nesting level */
+                top2 = i;                     /* pass back latest one */
+            }
         }
     }
 
@@ -1142,83 +1189,85 @@ void _pascal Open_FRAMESET_FRAME(TagOpenArguments *arg)
 
     if(SPEC_FRAMESET == arg->spec)       /*** handle frame sets */
     {
-      fr.HF_flags |= HTML_FRF_FRAMESET;
+        fr.HF_flags |= HTML_FRF_FRAMESET;
 
-      p = GetParamValue(arg->paramArray, "ROWS");
-      if(!p || (!STRCHRSB(p, ',') && !STRCHRSB(p, ' ')))
-      {
-        p = GetParamValue(arg->paramArray, "COLS");
+        p = GetParamValue(arg->paramArray, "ROWS");
         if(!p || (!STRCHRSB(p, ',') && !STRCHRSB(p, ' ')))
-          return;                       /* "empty" level: ignore */
+        {
+            p = GetParamValue(arg->paramArray, "COLS");
+            if(!p || (!STRCHRSB(p, ',') && !STRCHRSB(p, ' ')))
+            return;                       /* "empty" level: ignore */
 
-        fr.HF_flags |= HTML_FRF_COLS;
-      }
+            fr.HF_flags |= HTML_FRF_COLS;
+        }
 
-      arg->preserveParams = TRUE;        /* remember parameters on par stack */
+        arg->preserveParams = TRUE;        /* remember parameters on par stack */
     }
     else                            /*** handle frames */
     {
-      if(!fr.HF_level)              /* ignore frame outside any frame set */
-        return;
+        if(!fr.HF_level)              /* ignore frame outside any frame set */
+            return;
 
-      p = GetParamValue(arg->paramArray, "SRC");
-      if(p && *p)
-        fr.HF_url = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        p = GetParamValue(arg->paramArray, "SRC");
+        if(p && *p)
+            fr.HF_url = NamePoolTokenizeDOS(NamePool, p, FALSE);
 
-      p = GetParamValue(arg->paramArray, "NAME");
-      if(p && *p)
-        fr.HF_name = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        p = GetParamValue(arg->paramArray, "NAME");
+        if(p && *p)
+            fr.HF_name = NamePoolTokenizeDOS(NamePool, p, FALSE);
 
-      p = GetParamValue(arg->paramArray, "SCROLLING");
-      if(!p || STRCMPISB(p, "NO"))
-        fr.HF_flags |= HTML_FRF_SCROLLING;
-      if (p && !STRCMPISB(p, "YES"))
-        fr.HF_flags |= (HTML_FRF_SCROLLING | HTML_FRF_FORCE_SCROLL);
+        p = GetParamValue(arg->paramArray, "SCROLLING");
+        if(!p || STRCMPISB(p, "NO"))
+            fr.HF_flags |= HTML_FRF_SCROLLING;
+        if (p && !STRCMPISB(p, "YES"))
+            fr.HF_flags |= (HTML_FRF_SCROLLING | HTML_FRF_FORCE_SCROLL);
 
-      p = GetParamValue(arg->paramArray, "MARGINWIDTH");
-      if (p && *p)
-          fr.HF_marginWidth = ATOISB(p) ;
-      p = GetParamValue(arg->paramArray, "MARGINHEIGHT");
-      if (p && *p)
-          fr.HF_marginHeight = ATOISB(p) ;
+        p = GetParamValue(arg->paramArray, "MARGINWIDTH");
+        if (p && *p)
+            fr.HF_marginWidth = ATOISB(p) ;
+        p = GetParamValue(arg->paramArray, "MARGINHEIGHT");
+        if (p && *p)
+            fr.HF_marginHeight = ATOISB(p) ;
 
-      /* also factor in BORDER attributes of all enclosing frame sets */
-      for(i=0; i<=top; i++)
-        if(arg->tagStack[i].spec == SPEC_FRAMESET && arg->tagStack[i].param)
-        {                                 /* found a frameset element? */
-          ParseBORDER(arg->tagStack[i].param, &fr.HF_flags);
+        /* also factor in BORDER attributes of all enclosing frame sets */
+        for(i=0; i<=top; i++)
+        {
+            if(arg->tagStack[i].spec == SPEC_FRAMESET && arg->tagStack[i].param)
+            {                                 /* found a frameset element? */
+                ParseBORDER(arg->tagStack[i].param, &fr.HF_flags);
+            }
         }
-      ParseBORDER(arg->paramArray, &fr.HF_flags);
+        ParseBORDER(arg->paramArray, &fr.HF_flags);
     }
 
     if(fr.HF_level)                 /* get size of enclosed windows */
     {
-      /* ROWS is only accepted if it lists more than one frame's height.
-         In situations where both ROWS and COLS are specified, this gives
-         priority to the dimension where the actual split takes place. */
+        /* ROWS is only accepted if it lists more than one frame's height.
+            In situations where both ROWS and COLS are specified, this gives
+            priority to the dimension where the actual split takes place. */
 
-      p = GetParamValue(arg->tagStack[top2].param, "ROWS");
-      if(!p || (!STRCHRSB(p, ',') && !STRCHRSB(p, ' ')))
-      {
-        p = GetParamValue(arg->tagStack[top2].param, "COLS");
-        fr.HF_flags |= HTML_FRF_SIZE_WIDTH;
-      }
+        p = GetParamValue(arg->tagStack[top2].param, "ROWS");
+        if(!p || (!STRCHRSB(p, ',') && !STRCHRSB(p, ' ')))
+        {
+            p = GetParamValue(arg->tagStack[top2].param, "COLS");
+            fr.HF_flags |= HTML_FRF_SIZE_WIDTH;
+        }
 
-      if(p)
-      {
+        if(p)
+        {
 @ifdef DO_DBCS
-        q = GetNthFromListSBCS(p, arg->tagStack[top2].count-1, TRUE, &size);
+            q = GetNthFromListSBCS(p, arg->tagStack[top2].count-1, TRUE, &size);
 @else
-        q = GetNthFromList(p, arg->tagStack[top2].count-1, TRUE, &size);
+            q = GetNthFromList(p, arg->tagStack[top2].count-1, TRUE, &size);
 @endif
-        fr.HF_size = ParseMultiLength(q, size);
-      }
-      arg->tagStack[top2].count++;      /* count element at this level of set */
+            fr.HF_size = ParseMultiLength(q, size);
+        }
+        arg->tagStack[top2].count++;      /* count element at this level of set */
     }
 
     frame = AppendToHypertextArray(HTA_FRAME_ARRAY, &fr);
                                       /* add frame record to array */
-    
+
     /* Attach events to frameset */
     if(SPEC_FRAMESET == arg->spec)
       ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_FRAMESET, frame);
@@ -1238,134 +1287,139 @@ void _pascal Open_FORM_INPUT_SELECT(TagOpenArguments *arg)
 
     switch(arg->spec)                    /* parse arguments */
     {
-      case SPEC_FORM:
-        p = GetParamValue(arg->paramArray, "METHOD");
-        if(p)
-        {
-          if(!STRCMPISB(p, "POST"))
-            fd.HFD_var.header.options |= HTML_OPT_METHOD_POST;
-          else if(!STRCMPISB(p, "GET"))
-            fd.HFD_var.header.options |= HTML_OPT_METHOD_GET;
-        }
-        p = GetParamValue(arg->paramArray, "ENCTYPE");
-        if(!p)                          // "encoding" and "encType" are synonyms
-          p = GetParamValue(arg->paramArray, "ENCODING");
-        if(p)
-        {
-          if(!strcmpi(p, "APPLICATION/X-WWW-FORM-URLENCODED"))
-            fd.HFD_var.header.options |= HTML_OPT_ENCODING_URL;
-          else if(!STRCMPISB(p, "MULTIPART/FORM-DATA"))
-            fd.HFD_var.header.options |= HTML_OPT_ENCODING_MULTI;
-        }
-        p3 = p1;                        // for historical reasons...
-        p1 = GetParamValue(arg->paramArray, "ACTION");
-        p2 = GetParamValue(arg->paramArray, "TARGET");
-        fd.HFD_itemType = HTML_FORM_HEADER;
-	/* handle nested forms, if needed */
-	if ((!p1 || !(*p1)) && EnclosingCount(SPEC_FORM, NULL)) {
-	    /* no ACTION, continue to use enclosing form */
-	    fd.HFD_itemType = HTML_FORM_NONE;
-	}
+        case SPEC_FORM:
+            p = GetParamValue(arg->paramArray, "METHOD");
+            if(p)
+            {
+                if(!STRCMPISB(p, "POST"))
+                    fd.HFD_var.header.options |= HTML_OPT_METHOD_POST;
+                else if(!STRCMPISB(p, "GET"))
+                    fd.HFD_var.header.options |= HTML_OPT_METHOD_GET;
+            }
+            p = GetParamValue(arg->paramArray, "ENCTYPE");
+
+            if(!p)                          // "encoding" and "encType" are synonyms
+                p = GetParamValue(arg->paramArray, "ENCODING");
+
+            if(p)
+            {
+                if(!strcmpi(p, "APPLICATION/X-WWW-FORM-URLENCODED"))
+                    fd.HFD_var.header.options |= HTML_OPT_ENCODING_URL;
+                else if(!STRCMPISB(p, "MULTIPART/FORM-DATA"))
+                    fd.HFD_var.header.options |= HTML_OPT_ENCODING_MULTI;
+            }
+            p3 = p1;                        // for historical reasons...
+            p1 = GetParamValue(arg->paramArray, "ACTION");
+            p2 = GetParamValue(arg->paramArray, "TARGET");
+            fd.HFD_itemType = HTML_FORM_HEADER;
+
+            /* handle nested forms, if needed */
+            if ((!p1 || !(*p1)) && EnclosingCount(SPEC_FORM, NULL))
+            {
+                /* no ACTION, continue to use enclosing form */
+                fd.HFD_itemType = HTML_FORM_NONE;
+            }
         break;
 
-      case SPEC_SELECT:
-        p = GetParamValue(arg->paramArray, "SIZE");
-        if(p)
-          fd.HFD_var.select.size = ATOISB(p);
-        p = GetParamValue(arg->paramArray, "MULTIPLE");
-        if(p)
-          fd.HFD_var.select.flags |= HTML_SELECT_MULTI;
-@ifdef COMPILE_OPTION_TEXT_PROMPT
-        p3 = GetParamValue(arg->paramArray, "ALT");
-@endif
-        fd.HFD_itemType = HTML_FORM_SELECT;
-        arg->preserveParams = TRUE;      /* remember parameters on par stack */
-        break;
-
-      case SPEC_INPUT:
-        p = GetParamValue(arg->paramArray, "TYPE");
-        /* Assume default is Text box (based on http://www.yahoo.com/) */
-        fd.HFD_itemType = HTML_FORM_TEXT ;
-        if(p)
-        {
-          if(!STRCMPISB(p, "TEXT"))   /* decode plain-text type specifier */
-            fd.HFD_itemType = HTML_FORM_TEXT;
-          else if(!STRCMPISB(p, "CHECKBOX"))
-            fd.HFD_itemType = HTML_FORM_CHECKBOX;
-          else if(!STRCMPISB(p, "RADIO"))
-            fd.HFD_itemType = HTML_FORM_RADIO;
-          else if(!STRCMPISB(p, "SUBMIT"))
-            fd.HFD_itemType = HTML_FORM_SUBMIT;
-          else if(!STRCMPISB(p, "BUTTON"))
-            fd.HFD_itemType = HTML_FORM_BUTTON;
-          else if(!STRCMPISB(p, "RESET"))
-            fd.HFD_itemType = HTML_FORM_RESET;
-          else if(!STRCMPISB(p, "HIDDEN"))
-            fd.HFD_itemType = HTML_FORM_HIDDEN;
-          else if(!STRCMPISB(p, "PASSWORD"))
-            fd.HFD_itemType = HTML_FORM_PASSWORD;
-          else if(!STRCMPISB(p, "FILE"))
-            fd.HFD_itemType = HTML_FORM_FILE;
-          else if(!STRCMPISB(p, "IMAGE"))
-            fd.HFD_itemType = HTML_FORM_IMAGE;
-        }
-
-        switch(fd.HFD_itemType)
-        {
-          case HTML_FORM_FILE:
-            p2 = GetParamValue(arg->paramArray, "ACCEPT");
-          case HTML_FORM_TEXT:
-          case HTML_FORM_PASSWORD:
+        case SPEC_SELECT:
             p = GetParamValue(arg->paramArray, "SIZE");
             if(p)
-              fd.HFD_var.text_password.size = atoi((TCHAR*)p);
-            p = GetParamValue(arg->paramArray, "MAXLENGTH");
+                fd.HFD_var.select.size = ATOISB(p);
+            p = GetParamValue(arg->paramArray, "MULTIPLE");
             if(p)
-              fd.HFD_var.text_password.maxlen = atoi((TCHAR*)p);
+                fd.HFD_var.select.flags |= HTML_SELECT_MULTI;
 @ifdef COMPILE_OPTION_TEXT_PROMPT
             p3 = GetParamValue(arg->paramArray, "ALT");
 @endif
-            break;
+            fd.HFD_itemType = HTML_FORM_SELECT;
+            arg->preserveParams = TRUE;      /* remember parameters on par stack */
+        break;
 
-          case HTML_FORM_CHECKBOX:
-          case HTML_FORM_RADIO:
-            p = GetParamValue(arg->paramArray, "CHECKED");
+        case SPEC_INPUT:
+            p = GetParamValue(arg->paramArray, "TYPE");
+            /* Assume default is Text box (based on http://www.yahoo.com/) */
+            fd.HFD_itemType = HTML_FORM_TEXT ;
             if(p)
-              fd.HFD_var.checkbox_radio.flags |= HTML_BOOLEAN_SELECTED;
-            break;
-        }
+            {
+                if(!STRCMPISB(p, "TEXT"))   /* decode plain-text type specifier */
+                    fd.HFD_itemType = HTML_FORM_TEXT;
+                else if(!STRCMPISB(p, "CHECKBOX"))
+                    fd.HFD_itemType = HTML_FORM_CHECKBOX;
+                else if(!STRCMPISB(p, "RADIO"))
+                    fd.HFD_itemType = HTML_FORM_RADIO;
+                else if(!STRCMPISB(p, "SUBMIT"))
+                    fd.HFD_itemType = HTML_FORM_SUBMIT;
+                else if(!STRCMPISB(p, "BUTTON"))
+                    fd.HFD_itemType = HTML_FORM_BUTTON;
+                else if(!STRCMPISB(p, "RESET"))
+                    fd.HFD_itemType = HTML_FORM_RESET;
+                else if(!STRCMPISB(p, "HIDDEN"))
+                    fd.HFD_itemType = HTML_FORM_HIDDEN;
+                else if(!STRCMPISB(p, "PASSWORD"))
+                    fd.HFD_itemType = HTML_FORM_PASSWORD;
+                else if(!STRCMPISB(p, "FILE"))
+                    fd.HFD_itemType = HTML_FORM_FILE;
+                else if(!STRCMPISB(p, "IMAGE"))
+                    fd.HFD_itemType = HTML_FORM_IMAGE;
+            }
+
+            switch(fd.HFD_itemType)
+            {
+                case HTML_FORM_FILE:
+                    p2 = GetParamValue(arg->paramArray, "ACCEPT");
+
+                case HTML_FORM_TEXT:
+
+                case HTML_FORM_PASSWORD:
+                    p = GetParamValue(arg->paramArray, "SIZE");
+                    if(p)
+                        fd.HFD_var.text_password.size = atoi((TCHAR*)p);
+                    p = GetParamValue(arg->paramArray, "MAXLENGTH");
+                    if(p)
+                        fd.HFD_var.text_password.maxlen = atoi((TCHAR*)p);
+@ifdef COMPILE_OPTION_TEXT_PROMPT
+                        p3 = GetParamValue(arg->paramArray, "ALT");
+@endif
+                break;
+
+                case HTML_FORM_CHECKBOX:
+                case HTML_FORM_RADIO:
+                    p = GetParamValue(arg->paramArray, "CHECKED");
+                    if(p)
+                        fd.HFD_var.checkbox_radio.flags |= HTML_BOOLEAN_SELECTED;
+                break;
+            }
         break;
     }
 
     if(fd.HFD_itemType)             /* decoded element successfully? */
     {
-      if(p1 && *p1)                 /* store argument strings */
-        fd.HFD_name = NamePoolTokenizeDOS(NamePool, p1, FALSE);
-      if(p2 && *p2)
-        fd.HFD_value = NamePoolTokenizeDOS(NamePool, p2, FALSE);
-      if(p3 && *p3)
-        fd.HFD_prompt = NamePoolTokenizeDOS(NamePool, p3, FALSE);
+        if(p1 && *p1)                 /* store argument strings */
+            fd.HFD_name = NamePoolTokenizeDOS(NamePool, p1, FALSE);
+        if(p2 && *p2)
+            fd.HFD_value = NamePoolTokenizeDOS(NamePool, p2, FALSE);
+        if(p3 && *p3)
+            fd.HFD_prompt = NamePoolTokenizeDOS(NamePool, p3, FALSE);
 
-      if(arg->spec==SPEC_FORM)      /* form header: go to next form */
-	  formCount++;
+        if(arg->spec==SPEC_FORM)      /* form header: go to next form */
+            formCount++;
 
-      element = AddFormElement(&fd);/* embed form element into text */
+        element = AddFormElement(&fd);/* embed form element into text */
 
-      if(element != CA_NULL_ELEMENT)
-      {
-        if(arg->spec==SPEC_SELECT)       /* store element of <SELECT> menu */
-          currentMenu = element;    /* (for associating <OPTION> entires) */
+        if(element != CA_NULL_ELEMENT)
+        {
+            if(arg->spec==SPEC_SELECT)       /* store element of <SELECT> menu */
+                currentMenu = element;    /* (for associating <OPTION> entires) */
 
-        /* Handle image part of <INPUT type=image ...> and embed graphic. */
-        if(fd.HFD_itemType == HTML_FORM_IMAGE)
-          ParseImage(arg->paramArray, element, FALSE);
+            /* Handle image part of <INPUT type=image ...> and embed graphic. */
+            if(fd.HFD_itemType == HTML_FORM_IMAGE)
+                ParseImage(arg->paramArray, element, FALSE);
 
-        /* Create entries for event handlers, if any */
-        ParseEvents(arg->paramArray, 
-          (arg->spec==SPEC_FORM)?
-            HTML_EVENT_OBJECT_FORM : HTML_EVENT_OBJECT_ELEMENT,
-          element);
-      }
+            /* Create entries for event handlers, if any */
+            ParseEvents(arg->paramArray,
+                        (arg->spec==SPEC_FORM) ? HTML_EVENT_OBJECT_FORM : HTML_EVENT_OBJECT_ELEMENT,
+                        element);
+        }
     }
 }
 
@@ -1405,20 +1459,21 @@ void _pascal Open_BASE(TagOpenArguments *arg)
     p = GetParamValue(arg->paramArray, "HREF");
     if(p && *p)                     /* URI specified? */
     {
-      if(htbh->HTBH_other.HTBHO_baseURI != NAME_POOL_NONE)
-        NamePoolReleaseToken(NamePool, htbh->HTBH_other.HTBHO_baseURI);
-                                    /* release previous base URI */
-      htbh->HTBH_other.HTBHO_baseURI = NamePoolTokenizeDOS(NamePool, p, FALSE);
-                                    /* create token for new base */
+        if(htbh->HTBH_other.HTBHO_baseURI != NAME_POOL_NONE)
+            NamePoolReleaseToken(NamePool, htbh->HTBH_other.HTBHO_baseURI);
+                                        /* release previous base URI */
+        htbh->HTBH_other.HTBHO_baseURI = NamePoolTokenizeDOS(NamePool, p, FALSE);
+                                        /* create token for new base */
     }
+
     p = GetParamValue(arg->paramArray, "TARGET");
     if(p && *p)                     /* target specified? */
     {
-      if(htbh->HTBH_other.HTBHO_baseTarget != NAME_POOL_NONE)
-        NamePoolReleaseToken(NamePool, htbh->HTBH_other.HTBHO_baseTarget);
-                                    /* release previous base URI */
-      htbh->HTBH_other.HTBHO_baseTarget = NamePoolTokenizeDOS(NamePool, p, FALSE);
-                                    /* create token for new base */
+        if(htbh->HTBH_other.HTBHO_baseTarget != NAME_POOL_NONE)
+            NamePoolReleaseToken(NamePool, htbh->HTBH_other.HTBHO_baseTarget);
+                                        /* release previous base URI */
+        htbh->HTBH_other.HTBHO_baseTarget = NamePoolTokenizeDOS(NamePool, p, FALSE);
+                                        /* create token for new base */
     }
 }
 
@@ -1431,57 +1486,59 @@ void _pascal Open_AREA(TagOpenArguments *arg)
     /* combines standard map element header with extended space for
        coordinates */
     struct {
-      HTMLmapData md;
-      HTMLmultiLength coord[HTML_MAXPOLYCOORD-1];
+        HTMLmapData md;
+        HTMLmultiLength coord[HTML_MAXPOLYCOORD-1];
     } area;
 
     if(EnclosingCount(SPEC_MAP, &top))
     {                               /* find the MAP we're in */
-      p = GetParamValue(arg->tagStack[top].param, "NAME");
-      if(p && *p)
-        area.md.HMD_name = NamePoolTokenizeDOS(NamePool, p, FALSE);
-      else
-        area.md.HMD_name = NAME_POOL_NONE;
+        p = GetParamValue(arg->tagStack[top].param, "NAME");
+        if(p && *p)
+            area.md.HMD_name = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        else
+            area.md.HMD_name = NAME_POOL_NONE;
 
-      p = GetParamValue(arg->paramArray, "SHAPE");
-      area.md.HMD_shape = HTML_MAP_SHAPE_RECT;
-      if(p)
-      {
-        if(STRCMPISB(p, "RECT")==0)
-          area.md.HMD_shape = HTML_MAP_SHAPE_RECT;
-        else if(STRCMPISB(p, "CIRCLE")==0)
-          area.md.HMD_shape = HTML_MAP_SHAPE_CIRCLE;
-        else if(STRCMPISB(p, "POLY")==0 || STRCMPISB(p, "POLYGON")==0)
-          area.md.HMD_shape = HTML_MAP_SHAPE_POLY;
-      }
+        p = GetParamValue(arg->paramArray, "SHAPE");
+        area.md.HMD_shape = HTML_MAP_SHAPE_RECT;
+        if(p)
+        {
+            if(STRCMPISB(p, "RECT")==0)
+                area.md.HMD_shape = HTML_MAP_SHAPE_RECT;
+            else if(STRCMPISB(p, "CIRCLE")==0)
+                area.md.HMD_shape = HTML_MAP_SHAPE_CIRCLE;
+            else if(STRCMPISB(p, "POLY")==0 || STRCMPISB(p, "POLYGON")==0)
+                area.md.HMD_shape = HTML_MAP_SHAPE_POLY;
+        }
 
-      area.md.HMD_anchor = ParseHREF(arg->paramArray, textpos, HTML_ADF_MAP);
-                                    /* create associated anchor */
+        area.md.HMD_anchor = ParseHREF(arg->paramArray, textpos, HTML_ADF_MAP);
+                                        /* create associated anchor */
 
-      p = GetParamValue(arg->paramArray, "COORDS");
-      if(p)
-      {
-        i = 0;
-        do {
+        p = GetParamValue(arg->paramArray, "COORDS");
+        if(p)
+        {
+            i = 0;
+            do
+            {
 @ifdef DO_DBCS
-          q = GetNthFromListSBCS(p, i, TRUE, &size);
+                q = GetNthFromListSBCS(p, i, TRUE, &size);
 @else
-          q = GetNthFromList(p, i, TRUE, &size);
+                q = GetNthFromList(p, i, TRUE, &size);
 @endif
-          if(q)                     /* while still more coordinates */
-            area.md.HMD_coord[i++] = ParseMultiLength(q, size);
-        } while(i<HTML_MAXPOLYCOORD && q);
-      }
-      else
-        i = 1;  /* will add zero sized element */
+                if(q)                     /* while still more coordinates */
+                    area.md.HMD_coord[i++] = ParseMultiLength(q, size);
+            }
+            while(i<HTML_MAXPOLYCOORD && q);
+        }
+        else
+            i = 1;  /* will add zero sized element */
 
-      ModifyHypertextArray(HTA_MAP_ARRAY,
-        &area, sizeof(HTMLmapData) + sizeof(HTMLmultiLength) * (i-1),
-        CA_NULL_ELEMENT);           /* append element of correct size */
+        ModifyHypertextArray(HTA_MAP_ARRAY,
+                            &area, sizeof(HTMLmapData) + sizeof(HTMLmultiLength) * (i-1),
+                            CA_NULL_ELEMENT);           /* append element of correct size */
 
-      /* Attach event handlers */
-      if(area.md.HMD_anchor != CA_NULL_ELEMENT)
-        ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_AREA, area.md.HMD_anchor);
+        /* Attach event handlers */
+        if(area.md.HMD_anchor != CA_NULL_ELEMENT)
+            ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_AREA, area.md.HMD_anchor);
     }
 }
 
@@ -1503,74 +1560,78 @@ void _pascal Open_LI(TagOpenArguments *arg)
 
     if(cnt2 && ((!cnt1) || (top2>top1)))
     {
-      /* Terminate previous LI */
-      ForceCloseStyle(SPEC_LI, SPEC_OL);
+        /* Terminate previous LI */
+        ForceCloseStyle(SPEC_LI, SPEC_OL);
 
-      p = GetParamValue(arg->paramArray, "SKIP");
-      if(p && *p)                   /* Skip over numbering if specified */
-        arg->tagStack[top2].count += ATOISB(p);
+        p = GetParamValue(arg->paramArray, "SKIP");
+        if(p && *p)                   /* Skip over numbering if specified */
+            arg->tagStack[top2].count += ATOISB(p);
 
-      p = GetParamValue(arg->tagStack[top2].param, "TYPE");
-      if(p && *p)                   /* get type attribute of "our" OL */
-        type = *p;
-      else
-        type = '1';                 /* default type: arabic */
+        p = GetParamValue(arg->tagStack[top2].param, "TYPE");
+        if(p && *p)                   /* get type attribute of "our" OL */
+            type = *p;
+        else
+            type = '1';                 /* default type: arabic */
 
-      index = arg->tagStack[top2].count++;
-      switch(type)
-      {
-        case 'i':                   /* roman numbering */
-        case 'I':
-          prepText[0] = '\0' ;
-          if (index < 1000)  {
-              STRCATSB(prepText, roman100[index/100]) ;
-              index %= 100 ;
-              STRCATSB(prepText, roman10[index/10]) ;
-              index %= 10 ;
-              STRCATSB(prepText, roman[index]);
-              STRCATSB(prepText, ".");  /* append "dot" */
-              if(type=='I')           /* uppercase romans */
-                  STRUPRSB(prepText);
-              break;
-          }
-          SPRINTFSB(prepText, "%d.", index);
-          break ;
-        case 'a':                   /* letter "numbering" */
-        case 'A':
-          if(index<=26)             /* (at least up to 26 entries) */
-          {
-            SPRINTFSB(prepText, "%c.", (char)(index + (type-1)));
-            break;
-          } else if (index < 676)
-          {
-            SPRINTFSB(prepText, "%c%c.", (char)((index/26) + (type-1)), (char)((index%26) + (type-1)));
-            break;
-          }
-          SPRINTFSB(prepText, "%d.", index);
-          break ;
-        default:                    /* all else fails: arabic... */
-          SPRINTFSB(prepText, "%d.", index);
-          break ;
-      }
+        index = arg->tagStack[top2].count++;
+        switch(type)
+        {
+            case 'i':                   /* roman numbering */
+            case 'I':
+                prepText[0] = '\0' ;
+                if (index < 1000)
+                {
+                    STRCATSB(prepText, roman100[index/100]) ;
+                    index %= 100 ;
+                    STRCATSB(prepText, roman10[index/10]) ;
+                    index %= 10 ;
+                    STRCATSB(prepText, roman[index]);
+                    STRCATSB(prepText, ".");  /* append "dot" */
+                    if(type=='I')           /* uppercase romans */
+                        STRUPRSB(prepText);
+                    break;
+                }
+                SPRINTFSB(prepText, "%d.", index);
+            break ;
+
+            case 'a':                   /* letter "numbering" */
+            case 'A':
+                if(index<=26)             /* (at least up to 26 entries) */
+                {
+                    SPRINTFSB(prepText, "%c.", (char)(index + (type-1)));
+                    break;
+                }
+                else if (index < 676)
+                {
+                    SPRINTFSB(prepText, "%c%c.", (char)((index/26) + (type-1)), (char)((index%26) + (type-1)));
+                    break;
+                }
+                SPRINTFSB(prepText, "%d.", index);
+            break ;
+
+            default:                    /* all else fails: arabic... */
+                SPRINTFSB(prepText, "%d.", index);
+            break ;
+        }
     }
     else
     {
-      /* Terminate previous LI */
-      ForceCloseStyle(SPEC_LI, SPEC_UL);
+        /* Terminate previous LI */
+        ForceCloseStyle(SPEC_LI, SPEC_UL);
 
 @ifdef DO_DBCS
 //      sprintfsbcs(prepText, "&#%d;", C_BULLET);
 //C_BULLET don't exist in DBCS encodings, use alternative
-      sprintfsbcs(prepText, "&#%d;", C_KATAKANA_MIDDLE_DOT);
+        sprintfsbcs(prepText, "&#%d;", C_KATAKANA_MIDDLE_DOT);
 @else
-      STRCPYSB(prepText, "\xA5");
+        STRCPYSB(prepText, "\xA5");
 @endif
     }
 
     if(cnt1 || cnt2)                /* use tab only if in list */
-      STRCATSB(prepText, "\t");
+        STRCATSB(prepText, "\t");
     else
-      STRCATSB(prepText, " ");
+        STRCATSB(prepText, " ");
 
     c2 = '.';                         /* treat as character */
     EndParagraph(prepText);
@@ -1588,83 +1649,99 @@ void _pascal Open_META(TagOpenArguments *arg)
 
     p = GetParamValue(arg->paramArray, "HTTP-EQUIV");
     if(!p || !*p)
-      p = GetParamValue(arg->paramArray, "NAME");
+    {
+        p = GetParamValue(arg->paramArray, "NAME");
+    }
     else
 @ifdef DO_DBCS
-      {
+    {
         /* check charset */
         contentType = !strncmpisb(p, "content-type", 0);
         meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
-      }
+    }
 @else
       meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
 @endif
 
     if(p && *p)
+    {
       meta.HMD_name = NamePoolTokenizeDOS(NamePool, p, FALSE);
+    }
     else
+    {
       meta.HMD_name = NAME_POOL_NONE;
+    }
 
     p = GetParamValue(arg->paramArray, "CONTENT");
     if(p && *p)
 @ifdef DO_DBCS
-      {
+    {
         meta.HMD_content = NamePoolTokenizeDOS(NamePool, p, FALSE);
-	/* handle charset */
-	if (contentType) {
-	  struprsb(p);  /* okay to modify param array element */
-	  p = strstrsbcs(p, "CHARSET=");
-	  if (p) {
-	    int i, j;
-	    char buf[15];
-	    TCHAR id[20];
-	    char *idCP;
-	    TCHAR *idTP;
-	    DosCodePage cp;
-	    word size;
-	    Boolean found = FALSE;
-            extern DosCodePage G_htmlCodePage;
-	    extern void ApplyFontWeightWidthAndSpacingAdjustment(VisTextCharAttr *p_cs, Boolean useCodePage);
+        /* handle charset */
+        if (contentType)
+        {
+            struprsb(p);  /* okay to modify param array element */
+            p = strstrsbcs(p, "CHARSET=");
+            if (p)
+            {
+                int i, j;
+                char buf[15];
+                TCHAR id[20];
+                char *idCP;
+                TCHAR *idTP;
+                DosCodePage cp;
+                word size;
+                Boolean found = FALSE;
+                extern DosCodePage G_htmlCodePage;
+                extern void ApplyFontWeightWidthAndSpacingAdjustment(VisTextCharAttr *p_cs, Boolean useCodePage);
 
-	    p+= 8;  /* skip CHARSET= */
-	    /* this should only happen once per page, so we'll just read
-	       the .ini file directly (instead of buffering .ini data) */
-	    for (i = 0; i < NUM_CODE_PAGE_FONT_ADJ_ENTRIES; i++) {
-	      sprintfsbcs(buf, "cp-%d", i);
-	      if (!InitFileReadInteger("HTMLView", buf, (word*)&cp)) {
-		sprintfsbcs(buf, "cp%uid", cp);
-		j = 0;
-		while (!InitFileReadStringSectionBuffer("HTMLView", buf,
-							j++, (char*)id,
-							sizeof(id)/sizeof(TCHAR),
-							&size)) {
-		  /* convert ASCII-only id string to single-byte */
-		  idTP = id; idCP = (char *)id;
-		  while(*idTP) *idCP++ = *idTP++; *idCP = 0;
-		  if (!strncmpisb(p, (char*)id, 0)) {
-		    /* set new code page */
-		    HTMLext->HE_codePage = cp;
-		    G_htmlCodePage = cp;
-		    /* update base font */
-		    ApplyFontWeightWidthAndSpacingAdjustment(&vcaBase, TRUE);
-		    found = TRUE;
-		    break;
-		  }
-		}
-	      }
-	      if (found) break;
-	    }
-	  }
-	}
-      }
+                p+= 8;  /* skip "CHARSET=" */
+                /* this should only happen once per page, so we'll just read
+                   the .ini file directly (instead of buffering .ini data) */
+                for (i = 0; i < NUM_CODE_PAGE_FONT_ADJ_ENTRIES; i++)
+                {
+                    sprintfsbcs(buf, "cp-%d", i);
+                    if (!InitFileReadInteger("HTMLView", buf, (word*)&cp))
+                    {
+                        sprintfsbcs(buf, "cp%uid", cp);
+                        j = 0;
+                        while (!InitFileReadStringSectionBuffer("HTMLView", buf,
+                                j++, (char*)id,
+                                sizeof(id)/sizeof(TCHAR),
+                                &size))
+                        {
+                            /* convert ASCII-only id string to single-byte */
+                            idTP = id; idCP = (char *)id;
+                            while(*idTP) *idCP++ = *idTP++; *idCP = 0;
+                            if (!strncmpisb(p, (char*)id, 0))
+                            {
+                                /* set new code page */
+                                HTMLext->HE_codePage = cp;
+                                G_htmlCodePage = cp;
+                                /* update base font */
+                                ApplyFontWeightWidthAndSpacingAdjustment(&vcaBase, TRUE);
+                                found = TRUE;
+                                break;
+                            }
+                        }
+                    }
+                    if (found) break;
+                }
+            }
+        }
+    }
 @else
-      meta.HMD_content = NamePoolTokenizeDOS(NamePool, p, FALSE);
+    {
+        meta.HMD_content = NamePoolTokenizeDOS(NamePool, p, FALSE);
+    }
 @endif
     else
-      meta.HMD_content = NAME_POOL_NONE;
+    {
+        meta.HMD_content = NAME_POOL_NONE;
+    }
 
-    ModifyHypertextArray(HTA_META_ARRAY, &meta, sizeof(HTMLmetaData),
-      CA_NULL_ELEMENT);             /* append element */
+    /* append element */
+    ModifyHypertextArray(HTA_META_ARRAY, &meta, sizeof(HTMLmetaData), CA_NULL_ELEMENT);
 }
 
 void _pascal Open_OL(TagOpenArguments *arg)
@@ -1676,10 +1753,10 @@ void _pascal Open_OL(TagOpenArguments *arg)
     /* Parse ordered list attributes */
     p = GetParamValue(arg->paramArray,"START");
     if(!p || !*p)
-      p = GetParamValue(arg->paramArray,"SEQNUM");
+        p = GetParamValue(arg->paramArray,"SEQNUM");
 
     if(p && *p)
-      arg->countStart = ATOISB(p);           /* start of numbering */
+        arg->countStart = ATOISB(p);           /* start of numbering */
 }
 
 #pragma argsused
@@ -1702,7 +1779,7 @@ void _pascal Open_NOSCRIPT(TagOpenArguments *arg)
 {
     /* show contents if JavaScript is off */
     if(!(HTMLext->HE_options & HTML_JAVASCRIPT))
-      arg->flags &= ~(TAG_FLUSH_TEXT | TAG_IGNORE_TAGS);
+        arg->flags &= ~(TAG_FLUSH_TEXT | TAG_IGNORE_TAGS);
 }
 
 #pragma argsused
