@@ -188,7 +188,7 @@ typedef struct {
   /* for use by higher level components */
   ChunkHandle     HABH_metaArray;       /* meta data, if any */
   ChunkHandle     HABH_frameArray;      /* frame set to use, if any */
-  
+
   ChunkHandle     HABH_regionArray ;    /* Regions, if any */
 
   VMBlockHandle   HABH_lineArray ;      /* Calculated lines, if any */
@@ -196,7 +196,7 @@ typedef struct {
 } HypertextArrayBlockHeader;
 
 
-/* 
+/*
  * Element of image array
  *
  * Conceptually, the only reason for this structure is that there is not ennough
@@ -207,7 +207,7 @@ typedef struct {
 
 typedef struct {
 
-  /*** Fields filled in by parser: ***/  
+  /*** Fields filled in by parser: ***/
 
   dword pos;                            /* starting position of image */
 #define HTML_IMAGE_POS_DOCUMENT_BACKGROUND          TEXT_ADDRESS_PAST_END
@@ -242,8 +242,8 @@ typedef struct {
   VMBlockHandle HID_vmb;
   word          HID_IADType;            /* Type of graphic */
 
-  WWFixed       HID_tmatrixE11;         /* Partial transfer matrix:  e11 element */   
-  WWFixed       HID_tmatrixE22;         /* Partial transfer matrix:  e22 element */   
+  WWFixed       HID_tmatrixE11;         /* Partial transfer matrix:  e11 element */
+  WWFixed       HID_tmatrixE22;         /* Partial transfer matrix:  e22 element */
   XYOffset      HID_drawOffset;         /* XY picture offset */
 
   /* Cached information */
@@ -335,7 +335,7 @@ typedef struct {
                                            to the same form. Elements of one
                                            form are always consecutive. */
 
-  NameToken     HFD_name;               // Name of element in form, if any 
+  NameToken     HFD_name;               // Name of element in form, if any
                                         //  HEADER: action=...
                                         //  OPTION: displayed string
   NameToken     HFD_value;              // Initial value or text of element
@@ -651,7 +651,7 @@ typedef struct {
 typedef enum {
   HTML_EVENT_ABORT, HTML_EVENT_ERROR, HTML_EVENT_LOAD, HTML_EVENT_UNLOAD,
 
-  HTML_EVENT_BLUR, HTML_EVENT_FOCUS, 
+  HTML_EVENT_BLUR, HTML_EVENT_FOCUS,
   HTML_EVENT_CHANGE, HTML_EVENT_RESET, HTML_EVENT_SUBMIT, HTML_EVENT_SELECT,
 
   HTML_EVENT_CLICK, HTML_EVENT_MOUSEOVER, HTML_EVENT_MOUSEOUT,
@@ -659,7 +659,7 @@ typedef enum {
 
 /* Objects that can fire events in our browser. Comments next to each object
    list the events supported by the respective object in NS3. Events marked
-   with (*) are currently not implemented for this object. 
+   with (*) are currently not implemented for this object.
 
    Some possible events are not fired by the basic HTMLClass implementation.
    They are defined for use by subclasses that actually implement those
@@ -727,6 +727,8 @@ typedef struct {
 
   void _pascal *HE_getExtFile;          /* callback to request external file */
 
+  word           HE_srcEncoding;         /* either HE_SE_UTF8 or HE_SE_ISO */
+
 @ifdef DO_DBCS
   DosCodePage    HE_codePage;
 @endif
@@ -743,7 +745,7 @@ typedef struct _ScriptSrcHeader {
     VMFileHandle file;       /* huge-array holding script-generated HTML */
     VMBlockHandle block;
     word i;                  /* current read-position in huge-array */
-    struct _ScriptSrcHeader *parent; 
+    struct _ScriptSrcHeader *parent;
 			     /* enclosing script, or NULL if none */
 } ScriptSrcHeader;
 @endif
@@ -754,8 +756,8 @@ typedef struct _ScriptSrcHeader {
  * Inputs:
  *     TCHAR *url                  -- (relative) URL of file to request
  *     optr frame                 -- frame as passed in HTMLext structure
- *     NameToken docurl           -- (absolute) URL of enclosing document 
- *     NameToken docbase          -- specified base URL, if any 
+ *     NameToken docurl           -- (absolute) URL of enclosing document
+ *     NameToken docbase          -- specified base URL, if any
  *     word scriptIdx             -- index of script fragment on page, or 0
  *                                   if missing external scripts above this one
  *     VMFileHandle *vmf          -- suggested VM file to create HugeArray in
@@ -992,14 +994,14 @@ typedef dword T_tableArrayHandle ;
    * Note that these messages have to call the superclass *after* performing
    * their actions to free the name token passed for the link parameters.
    */
-  @message void MSG_HTML_TEXT_HOTSPOT_PTR(optr pool, 
+  @message void MSG_HTML_TEXT_HOTSPOT_PTR(optr pool,
                NameToken link, NameToken target);
   @message void MSG_HTML_TEXT_HOTSPOT_SELECT(optr pool,
                NameToken link, NameToken target, HTMLFormDataHandle postData);
 
   @message void MSG_HTML_TEXT_HOTSPOT_NOTIFY(word number, Message msg,
     TCHAR *data);
-  
+
   #define POSITION_ANCHOR_SIZE 1+1+10+1   // "#" marker-char 10-digits "\0"
   @message int MSG_HTML_TEXT_GOTO_ANCHOR(optr pool, NameToken anchor);
   @message void MSG_HTML_TEXT_CREATE_POSITION_ANCHOR(TCHAR *buf);
@@ -1011,7 +1013,7 @@ typedef dword T_tableArrayHandle ;
   @message Boolean MSG_HTML_TEXT_GET_IMAGE(word nImage, HTMLimageData *data);
   @message Boolean MSG_HTML_TEXT_RESOLVE_IMAGE(word nImage, HTMLimageData *data,
     word invalFrom, word invalTo);
- 
+
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED(word nImage);
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_RESOLVING(word nImage);
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_BROKEN(word nImage);
@@ -1087,7 +1089,7 @@ typedef dword T_tableArrayHandle ;
   @message void MSG_HTML_TEXT_INTERNAL_INIT_INVAL_AREA(dword heightThreshold) ;
   @message void MSG_HTML_TEXT_INTERNAL_COLLECT_INVAL_AREA(
                     dword startX,
-                    dword startY, 
+                    dword startY,
                     dword endX,
                     dword endY) ;
 
@@ -1129,7 +1131,7 @@ typedef dword T_tableArrayHandle ;
 
   @message word MSG_HTML_TEXT_GET_FORM_ELEMENT_COUNT();
   @message Boolean MSG_HTML_TEXT_GET_FORM_ELEMENT(word n, HTMLformData *data);
-  
+
   @message word MSG_HTML_TEXT_GET_LINK_COUNT();
   @message Boolean MSG_HTML_TEXT_GET_LINK(word n, HTMLanchorData *data);
   @message void MSG_HTML_TEXT_SET_LINK(word n, HTMLanchorData *data);

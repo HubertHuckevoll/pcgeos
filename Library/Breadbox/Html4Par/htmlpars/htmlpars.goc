@@ -138,6 +138,7 @@ static word scriptCount;
 DosCodePage G_htmlCodePage;
 #endif
 
+
 /***************************************************************************
  *              Translate between style sheet and Geos attributes
  ***************************************************************************/
@@ -2077,7 +2078,10 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
     word       bufSize  = ((HTMLFILE*) data)->HTMLbufl;
 
     dword      curFilePos = 0;
-    int        result = 0;
+    dword      result = 0;
+
+    // FIXME
+    InitFileWriteInteger("UteF", "cp", ((HTMLextra*) HTMLext)->HE_srcEncoding);
 
     if(bufIdx >= bufSize)
     {
@@ -2118,25 +2122,25 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
         // see below why this is disabled...
         if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
         {   // 1 byte encoding (7 bit ASCII character)
-            result = (int) bufPtr[bufIdx];
+            result = bufPtr[bufIdx];
             bufIdx = bufIdx + 1;
         }
         else if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
         {   // 2 byte encoding
-            result =   (int)       (bufPtr[bufIdx]   & B2MASK) << 6
+            result =               (bufPtr[bufIdx]   & B2MASK) << 6
                         |          (bufPtr[bufIdx+1] & TBMASK);
             bufIdx = bufIdx + 2;
         }
         else if ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD)
         {   // 3 byte encoding
-            result =   (int)       (bufPtr[bufIdx]   & B3MASK) << 12
+            result =               (bufPtr[bufIdx]   & B3MASK) << 12
                         |          (bufPtr[bufIdx+1] & TBMASK) << 6
                         |          (bufPtr[bufIdx+2] & TBMASK);
             bufIdx = bufIdx + 3;
         }
         else if ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
         {   // 4 byte encoding
-            result =   (int)       (bufPtr[bufIdx]   & B4MASK) << 18
+            result =               (bufPtr[bufIdx]   & B4MASK) << 18
                         |          (bufPtr[bufIdx+1] & TBMASK) << 12
                         |          (bufPtr[bufIdx+2] & TBMASK) << 6
                         |          (bufPtr[bufIdx+3] & TBMASK);
@@ -2152,10 +2156,10 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
                 output it and hope that TranslateCharNum does the best
                 it can do....
             */
-            result = (int) bufPtr[bufIdx];
+            result = bufPtr[bufIdx];
             if ((bufPtr[bufIdx] >> TBLEAD_OFFSET) == TBLEAD)
             {
-                result = (int) 0;
+                result = 0;
             }
 
             bufIdx = bufIdx + 1;
@@ -2164,7 +2168,8 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 
     ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
 
-    return result;
+    // FIXME!!!!!
+    return (int) result;
 
 }
 
@@ -2210,7 +2215,9 @@ int /*LOCAL*/ getcScriptURL(dword data)
 
 /***************************************************************************
  *              Main loops (external entries)
- ***************************************************************************/
+ **********************************************char = 888
+cp = 0
+*****************************/
 
 int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
                          VMBlockHandle *item)
@@ -2256,6 +2263,7 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
         }
 
     HTMLext = ext;                      /* Make extra data available globally */
+    HTMLext->HE_srcEncoding = 0;
 #ifdef DO_DBCS
     G_htmlCodePage = HTMLext->HE_codePage;
 #endif
