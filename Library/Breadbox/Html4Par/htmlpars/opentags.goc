@@ -1733,6 +1733,8 @@ void _pascal Open_META(TagOpenArguments *arg)
     }
 @else
     {
+        //FIXME!!!
+        HTMLext->HE_srcEncoding = 888;
         meta.HMD_content = NamePoolTokenizeDOS(NamePool, p, FALSE);
     }
 @endif
