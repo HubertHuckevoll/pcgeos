@@ -1642,9 +1642,7 @@ void _pascal Open_META(TagOpenArguments *arg)
 {
     char *p;
     HTMLmetaData meta;
-@ifdef DO_DBCS
     Boolean contentType = FALSE;
-@endif
 
     meta.HMD_flags = 0;
 
@@ -1654,15 +1652,11 @@ void _pascal Open_META(TagOpenArguments *arg)
         p = GetParamValue(arg->paramArray, "NAME");
     }
     else
-@ifdef DO_DBCS
     {
         /* check charset */
-        contentType = !strncmpisb(p, "content-type", 0);
+        contentType = !STRNCMPISB(p, "content-type", 0);
         meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
     }
-@else
-      meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
-@endif
 
     if(p && *p)
     {
@@ -1681,8 +1675,8 @@ void _pascal Open_META(TagOpenArguments *arg)
         /* handle charset */
         if (contentType)
         {
-            struprsb(p);  /* okay to modify param array element */
-            p = strstrsbcs(p, "CHARSET=");
+            STRUPRSB(p);  /* okay to modify param array element */
+            p = STRSTRSB(p, "CHARSET=");
             if (p)
             {
                 int i, j;
@@ -1701,10 +1695,10 @@ void _pascal Open_META(TagOpenArguments *arg)
                    the .ini file directly (instead of buffering .ini data) */
                 for (i = 0; i < NUM_CODE_PAGE_FONT_ADJ_ENTRIES; i++)
                 {
-                    sprintfsbcs(buf, "cp-%d", i);
+                    SPRINTFSBCS(buf, "cp-%d", i);
                     if (!InitFileReadInteger("HTMLView", buf, (word*)&cp))
                     {
-                        sprintfsbcs(buf, "cp%uid", cp);
+                        SPRINTFSBCS(buf, "cp%uid", cp);
                         j = 0;
                         while (!InitFileReadStringSectionBuffer("HTMLView", buf,
                                 j++, (char*)id,
@@ -1714,7 +1708,7 @@ void _pascal Open_META(TagOpenArguments *arg)
                             /* convert ASCII-only id string to single-byte */
                             idTP = id; idCP = (char *)id;
                             while(*idTP) *idCP++ = *idTP++; *idCP = 0;
-                            if (!strncmpisb(p, (char*)id, 0))
+                            if (!STRNCMPISB(p, (char*)id, 0))
                             {
                                 /* set new code page */
                                 HTMLext->HE_codePage = cp;
@@ -1733,15 +1727,31 @@ void _pascal Open_META(TagOpenArguments *arg)
     }
 @else
     {
-        //FIXME!!!
-        HTMLext->HE_srcEncoding = 888;
         meta.HMD_content = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        if (contentType)
+        {
+            STRUPRSB(p);  /* okay to modify param array element */
+            p = STRSTRSB(p, "CHARSET=");
+            if (p)
+            {
+                p+= 8;  /* skip "CHARSET=" */
+                if (!STRNCMPISB(p, (char*) "UTF-8", 0))
+                {
+                    HTMLext->HE_srcEncoding = 8;
+                }
+                else
+                {
+                    HTMLext->HE_srcEncoding = 8859;
+                }
+            }
+        }
     }
 @endif
     else
     {
         meta.HMD_content = NAME_POOL_NONE;
     }
+
 
     /* append element */
     ModifyHypertextArray(HTA_META_ARRAY, &meta, sizeof(HTMLmetaData), CA_NULL_ELEMENT);

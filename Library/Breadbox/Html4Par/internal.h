@@ -45,6 +45,7 @@ extern NameToken _pascal NamePoolConcatStrDOS(optr pool, NameToken tok, char *st
 #define STRCMPISB(s,t) strcmpi(s,t)
 #define STRUPRSB(s) strupr(s)
 #define STRNCMPISB(s,t,n) LocalCmpStringsNoCase(s,t,n)
+#define STRSTRSB(s,t) strstr(s,t);
 #define NamePoolConcatStrDOS(p,t,s) NamePoolConcatStr(p,t,s)
 #endif
 

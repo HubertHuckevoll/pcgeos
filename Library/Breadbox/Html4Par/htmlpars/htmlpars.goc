@@ -160,8 +160,7 @@ void AdjustTrackKerning(VisTextCharAttr *vtca)
 
 void GetCharacterBase(VisTextCharAttr *cs)
 {
-    sword *fontRamp = (HTMLext->HE_options & HTML_NO_REDUCED_SIZES)?
-      fontRampNoSmall : fontRampDefault;
+    sword *fontRamp = (HTMLext->HE_options & HTML_NO_REDUCED_SIZES) ? fontRampNoSmall : fontRampDefault;
 
     *cs = vcaBase;
 /*    cs->VTCA_pointSize.WBF_int =
@@ -2074,8 +2073,8 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
     word       bufIdx   = ((HTMLFILE*) data)->HTMLbufp;
     word       bufSize  = ((HTMLFILE*) data)->HTMLbufl;
 
-    dword      curFilePos = 0;
-    dword      result = 0;
+    dword              curFilePos = 0;
+    unsigned long int  result = 0;
 
     // FIXME
     InitFileWriteInteger("UteF", "cp", ((HTMLextra*) HTMLext)->HE_srcEncoding);
@@ -2124,23 +2123,29 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
         }
         else if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
         {   // 2 byte encoding
-            result =               (bufPtr[bufIdx]   & B2MASK) << 6
+            result =               ((bufPtr[bufIdx]  & B2MASK) << 6)
                         |          (bufPtr[bufIdx+1] & TBMASK);
             bufIdx = bufIdx + 2;
         }
         else if ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD)
         {   // 3 byte encoding
-            result =               (bufPtr[bufIdx]   & B3MASK) << 12
-                        |          (bufPtr[bufIdx+1] & TBMASK) << 6
-                        |          (bufPtr[bufIdx+2] & TBMASK);
+            result =               ((bufPtr[bufIdx]   & B3MASK) << 12)
+                        |          ((bufPtr[bufIdx+1] & TBMASK) << 6)
+                        |          (bufPtr[bufIdx+2]  & TBMASK);
             bufIdx = bufIdx + 3;
         }
         else if ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
         {   // 4 byte encoding
-            result =               (bufPtr[bufIdx]   & B4MASK) << 18
-                        |          (bufPtr[bufIdx+1] & TBMASK) << 12
-                        |          (bufPtr[bufIdx+2] & TBMASK) << 6
-                        |          (bufPtr[bufIdx+3] & TBMASK);
+            // however, GEOS doesn't have support for any characters
+            // that are higher than 63743 in UTF-8, so we dont't decode
+            // these characters and hopefully save some cycles...
+            /*
+            result =               ((bufPtr[bufIdx]   & B4MASK) << 18)
+                        |          ((bufPtr[bufIdx+1] & TBMASK) << 12)
+                        |          ((bufPtr[bufIdx+2] & TBMASK) << 6)
+                        |          (bufPtr[bufIdx+3]  & TBMASK);
+            */
+            result = 0;
             bufIdx = bufIdx + 4;
         }
         else
@@ -2165,8 +2170,8 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 
     ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
 
-    // FIXME!!!!!
-    return (int) result;
+    result = (int) (result <= 65535) ? result : 0;
+    return result;
 
 }
 
