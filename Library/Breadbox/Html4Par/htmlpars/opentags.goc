@@ -1645,24 +1645,40 @@ void _pascal Open_META(TagOpenArguments *arg)
 
     meta.HMD_flags = 0;
 
+/*
+    meta.HMD_flags = 0;
+
     p = GetParamValue(arg->paramArray, "HTTP-EQUIV");
     if(!p || !*p)
-    {
-        p = GetParamValue(arg->paramArray, "NAME");
-    }
+      p = GetParamValue(arg->paramArray, "NAME");
     else
-    {
-        /* check charset */
-        contentType = !STRNCMPISB(p, "content-type", 0);
+@ifdef DO_DBCS
+      {
+        // check charset
+        contentType = !strncmpisb(p, "content-type", 0);
         meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
-    }
+      }
+@else
+      meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
+@endif
+
+*/
+
+    p = GetParamValue(arg->paramArray, "HTTP-EQUIV");
 
     if(p && *p)
     {
+        contentType = !STRNCMPISB(p, "content-type", 0);
+        meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
+    }
+    else {
+        p = GetParamValue(arg->paramArray, "NAME");
+    }
+
+    if(p && *p) {
       meta.HMD_name = NamePoolTokenizeDOS(NamePool, p, FALSE);
     }
-    else
-    {
+    else {
       meta.HMD_name = NAME_POOL_NONE;
     }
 

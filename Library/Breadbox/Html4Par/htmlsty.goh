@@ -617,7 +617,8 @@
   {0,   "",      0   }    /* end of list */
 };
 @else
-/*
+
+// UTF-8 Table
 @chunk HTMLEntityTable xlateTable[] =
 {
     {9,     "tab",    9},
@@ -806,9 +807,10 @@
 
     {0,   "",      0   }    // end of list
 };
-*/
+// end of UTF8 table
 
 // ISO/Western variant
+/*
 @chunk HTMLEntityTable xlateTable[] =
 {
   // regular ASCII characters which have an entity name
@@ -963,8 +965,9 @@
 };
 
 @endif
+*/
 
-/*
+// UTF-8 variant of enitityString table
 @chunk HTMLEntityString EntityStringArray[] = {
     { "1"   },   // &sup1
     { "2"   },   // &sup2
@@ -979,9 +982,10 @@
     { "x"   },   // &times
     { "EUR" }    // &euro
 } ;
-*/
+// end of UTF-8 variant of table
 
 // ISO variant of enitityString table
+/*
 @chunk HTMLEntityString EntityStringArray[] = {
     { "-"   },
     { "+/-" },
@@ -997,6 +1001,7 @@
     { "p"   },
     { "x"   }
 } ;
+*/
 // end of ISO/Western variant of table
 
 @end EntityResource;
