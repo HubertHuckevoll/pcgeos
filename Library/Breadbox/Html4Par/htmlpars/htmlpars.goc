@@ -2056,126 +2056,113 @@ int getcOptrURL(dword data)  /* callback routine to get one char */
 
 int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 {
-    // Original ISO/Western1252 Code:
-    /*
-    if(((HTMLFILE*) data)->HTMLbufp >= ((HTMLFILE*) data)->HTMLbufl)
-    {
-      ((HTMLFILE*) data)->HTMLbufl = FileRead(((HTMLFILE*) data)->fileHTML,
-                                              ((HTMLFILE*) data)->HTMLbuf,
-                                              HTML_READBUF,
-                                              FALSE);
 
-      ((HTMLFILE*) data)->HTMLbufp = 0;                  // set pointer to start of buffer
-      if(((HTMLFILE*) data)->HTMLbufl == 0) return EOF;  // read against end of file
-    }
-    return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
-    */
-
-    FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
-    byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
-    word       bufIdx   = ((HTMLFILE*) data)->HTMLbufp;
-    word       bufSize  = ((HTMLFILE*) data)->HTMLbufl;
-
-    dword              curFilePos = 0;
-    unsigned long int  result = 0;
-
-    // FIXME
-    InitFileWriteInteger("UteF", "cp", ((HTMLextra*) HTMLext)->HE_srcEncoding);
-
-    if(bufIdx >= bufSize)
-    {
-        curFilePos = FilePos(infile, 0, FILE_POS_RELATIVE);
-        bufSize = FileRead(infile, bufPtr, HTML_READBUF, FALSE);
-
-        if (bufSize > 0)
+    if (((HTMLextra*) HTMLext)->HE_srcEncoding == 8859)
+    {   // Original ISO/Western1252 Code:
+        if (((HTMLFILE*) data)->HTMLbufp >= ((HTMLFILE*) data)->HTMLbufl)
         {
-            bufIdx = bufSize - 1;
-            while (bufIdx > 0)
+            ((HTMLFILE*) data)->HTMLbufl = FileRead(((HTMLFILE*) data)->fileHTML,
+                                                    ((HTMLFILE*) data)->HTMLbuf,
+                                                    HTML_READBUF,
+                                                    FALSE);
+
+            ((HTMLFILE*) data)->HTMLbufp = 0;                  // set pointer to start of buffer
+            if(((HTMLFILE*) data)->HTMLbufl == 0) return EOF;  // read against end of file
+        }
+
+        return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
+    }
+    else
+    {   // UTF8
+        FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
+        byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
+        word       bufIdx   = ((HTMLFILE*) data)->HTMLbufp;
+        word       bufSize  = ((HTMLFILE*) data)->HTMLbufl;
+
+        dword              curFilePos = 0;
+        unsigned long int  result = 0;
+
+        if(bufIdx >= bufSize)
+        {
+            curFilePos = FilePos(infile, 0, FILE_POS_RELATIVE);
+            bufSize = FileRead(infile, bufPtr, HTML_READBUF, FALSE);
+
+            if (bufSize > 0)
             {
-                if (
-                        ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII) ||
-                        ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD) ||
-                        ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD) ||
-                        ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
-                   )
+                bufIdx = bufSize - 1;
+                while (bufIdx > 0)
                 {
-                    bufSize = bufIdx; // go one before the leading byte we just found
-                    break;
+                    if (
+                            ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII) ||
+                            ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD) ||
+                            ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD) ||
+                            ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
+                    )
+                    {
+                        bufSize = bufIdx; // go one before the leading byte we just found
+                        break;
+                    }
+                    bufIdx--;
                 }
-                bufIdx--;
+                curFilePos = curFilePos + bufSize;
+                FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
+
+                bufIdx = 0;
+                ((HTMLFILE*) data)->HTMLbufl = bufSize;
             }
-            curFilePos = curFilePos + bufSize;
-            FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
+            else
+            {
+                return EOF; // read against end of file
+            }
+        }
 
-            bufIdx = 0;
-            ((HTMLFILE*) data)->HTMLbufl = bufSize;
-        }
-        else
+        if (bufIdx < bufSize)
         {
-            return EOF; // read against end of file
-        }
-    }
-
-    if (bufIdx < bufSize)
-    {
-        // see below why this is disabled...
-        if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
-        {   // 1 byte encoding (7 bit ASCII character)
-            result = bufPtr[bufIdx];
-            bufIdx = bufIdx + 1;
-        }
-        else if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
-        {   // 2 byte encoding
-            result =               ((bufPtr[bufIdx]  & B2MASK) << 6)
-                        |          (bufPtr[bufIdx+1] & TBMASK);
-            bufIdx = bufIdx + 2;
-        }
-        else if ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD)
-        {   // 3 byte encoding
-            result =               ((bufPtr[bufIdx]   & B3MASK) << 12)
-                        |          ((bufPtr[bufIdx+1] & TBMASK) << 6)
-                        |          (bufPtr[bufIdx+2]  & TBMASK);
-            bufIdx = bufIdx + 3;
-        }
-        else if ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
-        {   // 4 byte encoding
-            // however, GEOS doesn't have support for any characters
-            // that are higher than 63743 in UTF-8, so we dont't decode
-            // these characters and hopefully save some cycles...
-            /*
-            result =               ((bufPtr[bufIdx]   & B4MASK) << 18)
-                        |          ((bufPtr[bufIdx+1] & TBMASK) << 12)
-                        |          ((bufPtr[bufIdx+2] & TBMASK) << 6)
-                        |          (bufPtr[bufIdx+3]  & TBMASK);
-            */
-            result = 0;
-            bufIdx = bufIdx + 4;
-        }
-        else
-        {
-            /*
-                if this is not a 2-,3- or 4-byte UTF8 leadbyte, it's either a
-                UTF8 single byte which contains a plain ASCII value
-                or something with an even higher value which COULD be
-                an ISO/Western encoded byte. In either case we just
-                output it and hope that TranslateCharNum does the best
-                it can do....
-            */
-            result = bufPtr[bufIdx];
-            if ((bufPtr[bufIdx] >> TBLEAD_OFFSET) == TBLEAD)
+            // see below why this is disabled...
+            if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
+            {   // 1 byte encoding (7 bit ASCII character)
+                result = bufPtr[bufIdx];
+                bufIdx = bufIdx + 1;
+            }
+            else if ((bufPtr[bufIdx] >> B2LEAD_OFFSET) == B2LEAD)
+            {   // 2 byte encoding
+                result =               ((bufPtr[bufIdx]  & B2MASK) << 6)
+                            |          (bufPtr[bufIdx+1] & TBMASK);
+                bufIdx = bufIdx + 2;
+            }
+            else if ((bufPtr[bufIdx] >> B3LEAD_OFFSET) == B3LEAD)
+            {   // 3 byte encoding
+                result =               ((bufPtr[bufIdx]   & B3MASK) << 12)
+                            |          ((bufPtr[bufIdx+1] & TBMASK) << 6)
+                            |          (bufPtr[bufIdx+2]  & TBMASK);
+                bufIdx = bufIdx + 3;
+            }
+            else if ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
+            {   // 4 byte encoding
+                // however, GEOS doesn't have support for any characters
+                // that are higher than 63743 in UTF-8, so we dont't decode
+                // these characters and hopefully save some cycles...
+                /*
+                result =               ((bufPtr[bufIdx]   & B4MASK) << 18)
+                            |          ((bufPtr[bufIdx+1] & TBMASK) << 12)
+                            |          ((bufPtr[bufIdx+2] & TBMASK) << 6)
+                            |          (bufPtr[bufIdx+3]  & TBMASK);
+                */
+                result = 0;
+                bufIdx = bufIdx + 4;
+            }
+            else
             {
                 result = 0;
+                bufIdx = bufIdx + 1;
             }
-
-            bufIdx = bufIdx + 1;
         }
+
+        ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
+
+        result = (int) (result <= 65535) ? result : 0;
+        return result;
     }
-
-    ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
-
-    result = (int) (result <= 65535) ? result : 0;
-    return result;
-
 }
 
 #if JAVASCRIPT_SUPPORT
