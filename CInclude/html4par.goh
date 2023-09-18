@@ -727,7 +727,7 @@ typedef struct {
 
   void _pascal *HE_getExtFile;          /* callback to request external file */
 
-  word           HE_srcEncoding;         /* either HE_SE_UTF8 or HE_SE_ISO */
+  word           HE_srcEncoding;         /* either HE_SRC_UTF8 or HE_SRC_ISO */
 
 @ifdef DO_DBCS
   DosCodePage    HE_codePage;

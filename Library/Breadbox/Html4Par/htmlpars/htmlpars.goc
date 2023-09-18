@@ -2056,8 +2056,10 @@ int getcOptrURL(dword data)  /* callback routine to get one char */
 
 int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 {
-
-    if (((HTMLextra*) HTMLext)->HE_srcEncoding == 8859)
+    if (
+        (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UNKNOWN) ||
+        (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_ISO)
+       )
     {   // Original ISO/Western1252 Code:
         if (((HTMLFILE*) data)->HTMLbufp >= ((HTMLFILE*) data)->HTMLbufl)
         {
@@ -2072,7 +2074,7 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 
         return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
     }
-    else
+    else if (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UTF8)
     {   // UTF8
         FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
         byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
