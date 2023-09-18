@@ -1646,33 +1646,18 @@ void _pascal Open_META(TagOpenArguments *arg)
 
     meta.HMD_flags = 0;
 
-/*
-    meta.HMD_flags = 0;
-
+    // Look for "name" or "http-equiv" attribute
     p = GetParamValue(arg->paramArray, "HTTP-EQUIV");
-    if(!p || !*p)
-      p = GetParamValue(arg->paramArray, "NAME");
-    else
-@ifdef DO_DBCS
-      {
-        // check charset
-        contentType = !strncmpisb(p, "content-type", 0);
-        meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
-      }
-@else
-      meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
-@endif
-
-*/
-
-    p = GetParamValue(arg->paramArray, "HTTP-EQUIV");
-
     if(p && *p)
     {
+        // Note: If the "http-equiv" attribute is set, the "name"
+        // attribute should not be set.
         contentType = !STRNCMPISB(p, "content-type", 0);
         meta.HMD_flags |= HTML_META_FLAGS_HTTP_EQUIV;
     }
     else {
+        // The name attribute specifies the name for the metadata.
+        // The name attribute specifies a name for the information/value of the content attribute.
         p = GetParamValue(arg->paramArray, "NAME");
     }
 
@@ -1683,9 +1668,9 @@ void _pascal Open_META(TagOpenArguments *arg)
       meta.HMD_name = NAME_POOL_NONE;
     }
 
+    // Look for "content" attribute
     p = GetParamValue(arg->paramArray, "CONTENT");
     if(p && *p)
-@ifdef DO_DBCS
     {
         meta.HMD_content = NamePoolTokenizeDOS(NamePool, p, FALSE);
         /* handle charset */
@@ -1693,6 +1678,7 @@ void _pascal Open_META(TagOpenArguments *arg)
         {
             STRUPRSB(p);  /* okay to modify param array element */
             p = STRSTRSB(p, "CHARSET=");
+@ifdef DO_DBCS
             if (p)
             {
                 int i, j;
@@ -1739,35 +1725,30 @@ void _pascal Open_META(TagOpenArguments *arg)
                     if (found) break;
                 }
             }
-        }
-    }
 @else
-    {
-        meta.HMD_content = NamePoolTokenizeDOS(NamePool, p, FALSE);
-        if (contentType)
-        {
-            STRUPRSB(p);  /* okay to modify param array element */
-            p = STRSTRSB(p, "CHARSET=");
             if (p)
             {
                 p+= 8;  /* skip "CHARSET=" */
                 if (!STRNCMPISB(p, (char*) "UTF-8", 0))
                 {
-                    HTMLext->HE_srcEncoding = 8;
+                    HTMLext->HE_srcEncoding = HE_SRC_UTF8;
+                }
+                else if (!STRNCMPISB(p, (char*) "ISO-8859-1", 0))
+                {
+                    HTMLext->HE_srcEncoding = HE_SRC_ISO;
                 }
                 else
                 {
-                    HTMLext->HE_srcEncoding = 8859;
+                    HTMLext->HE_srcEncoding = HE_SRC_UNKNOWN;
                 }
             }
+@endif
         }
     }
-@endif
     else
     {
         meta.HMD_content = NAME_POOL_NONE;
     }
-
 
     /* append element */
     ModifyHypertextArray(HTA_META_ARRAY, &meta, sizeof(HTMLmetaData), CA_NULL_ELEMENT);
