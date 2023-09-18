@@ -296,6 +296,10 @@ typedef struct {
 #define TBLEAD_OFFSET 6       // for use with (a >> 6) == 0x2
 #define TBMASK        0x3F    // 00111111
 
+// UTF8 vs LATIN-1/Western 1252 HTML source encoding constant
+#define HE_SRC_UNKNOWN    0
+#define HE_SRC_ISO        1
+#define HE_SRC_UTF8       2
 
 extern HTMLextra *HTMLext;
 extern TextTransferBlockHeader *ttbh;
