@@ -2037,42 +2037,45 @@ int LOCAL HandleTag(MemHandle localHeap)
 int getcOptrURL(dword data)  /* callback routine to get one char */
 {
 
-    unsigned char c,*p;
+    unsigned char c, *p;
 
-    p = MemLock( OptrToHandle(((OPTRFILE *)data)->text) );
+    p = MemLock(OptrToHandle(((OPTRFILE*)data)->text));
 
-    if( OptrToChunk( ((OPTRFILE *)data)->text ) )
-        p = LMemDeref( ((OPTRFILE *)data)->text );
-    c = p[((OPTRFILE *)data)->i+2];     /* get data and advance pointer */
+    if(OptrToChunk(((OPTRFILE*)data)->text))
+    {
+        p = LMemDeref(((OPTRFILE*)data)->text);
+    }
 
-    MemUnlock( OptrToHandle(((OPTRFILE *)data)->text) );
+    c = p[((OPTRFILE*)data)->i + 2];     /* get data and advance pointer */
 
-    return (c!=0)?c:EOF;
+    MemUnlock(OptrToHandle(((OPTRFILE *)data)->text));
+
+    return (c!=0) ? c : EOF;
 }
 
 
+/*
+if (
+    (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UNKNOWN) ||
+    (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_ISO)
+    )
+{   // Original ISO/Western1252 Code:
+    if (((HTMLFILE*) data)->HTMLbufp >= ((HTMLFILE*) data)->HTMLbufl)
+    {
+        ((HTMLFILE*) data)->HTMLbufl = FileRead(((HTMLFILE*) data)->fileHTML,
+                                                ((HTMLFILE*) data)->HTMLbuf,
+                                                HTML_READBUF,
+                                                FALSE);
+
+        ((HTMLFILE*) data)->HTMLbufp = 0;                  // set pointer to start of buffer
+        if(((HTMLFILE*) data)->HTMLbufl == 0) return EOF;  // read against end of file
+    }
+
+    return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
+}
+*/
 int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 {
-    /*
-    if (
-        (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UNKNOWN) ||
-        (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_ISO)
-       )
-    {   // Original ISO/Western1252 Code:
-        if (((HTMLFILE*) data)->HTMLbufp >= ((HTMLFILE*) data)->HTMLbufl)
-        {
-            ((HTMLFILE*) data)->HTMLbufl = FileRead(((HTMLFILE*) data)->fileHTML,
-                                                    ((HTMLFILE*) data)->HTMLbuf,
-                                                    HTML_READBUF,
-                                                    FALSE);
-
-            ((HTMLFILE*) data)->HTMLbufp = 0;                  // set pointer to start of buffer
-            if(((HTMLFILE*) data)->HTMLbufl == 0) return EOF;  // read against end of file
-        }
-
-        return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
-    }
-    */
 
 
     FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
@@ -2169,7 +2172,7 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
             }
         }
         else if (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_ISO)
-        {
+        {   // 1 byte LATIN-1/ISO8859-1/Western1252 encoding.
             result = bufPtr[bufIdx];
             bufIdx = bufIdx + 1;
         }
@@ -2177,9 +2180,9 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 
     ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
 
-    // cut off anything thats higher than word range because we are int
+    // cut off anything thats higher than 9999 because we start _ENTITY_BASE at 10.000
     // and don't support any other characters anyway...
-    result = (int) (result <= 32767) ? result : 0;
+    result = (int) (result <= UTF8_SUPPORTED_CHAR_RANGE) ? result : 0;
     return result;
 }
 
@@ -2225,9 +2228,7 @@ int /*LOCAL*/ getcScriptURL(dword data)
 
 /***************************************************************************
  *              Main loops (external entries)
- **********************************************char = 888
-cp = 0
-*****************************/
+ ***************************************************************************/
 
 int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
                          VMBlockHandle *item)
@@ -2273,7 +2274,7 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
         }
 
     HTMLext = ext;                      /* Make extra data available globally */
-    HTMLext->HE_srcEncoding = 0;
+    HTMLext->HE_srcEncoding = HE_SRC_UNKNOWN; // we don't know the file encoding yet
 #ifdef DO_DBCS
     G_htmlCodePage = HTMLext->HE_codePage;
 #endif
@@ -2412,8 +2413,8 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
             case '\r':                        /* pre-formatted CR? */
                 if(!(currentFlags & TAG_FLUSH_TEXT))
                 {
-                EndLine("");                  /* simulate line break */
-                c2 = ' ';                     /* multiple line breaks permitted */
+                    EndLine("");                  /* simulate line break */
+                    c2 = ' ';                     /* multiple line breaks permitted */
                 }
                 c = HTMLgetc();
                 break;
@@ -2488,6 +2489,7 @@ int EXPORT ParsePlainFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext, VMB
         }
 
     HTMLext = ext;                      /* Make extra data available globally */
+    HTMLext->HE_srcEncoding = HE_SRC_UNKNOWN; // we don't know the file encoding yet
 #ifdef DO_DBCS
     G_htmlCodePage = HTMLext->HE_codePage;
 #endif
