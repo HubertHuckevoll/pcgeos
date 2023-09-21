@@ -579,6 +579,8 @@ typedef struct {
  *              Other constants
  ***************************************************************************/
 
+#define UTF8_SUPPORTED_CHAR_RANGE  9999
+
 #ifdef DO_DBCS
 #define HTML_SPECIAL_ENTITY_BASE   0xee00  /* must use Unicode user area */
 #else
