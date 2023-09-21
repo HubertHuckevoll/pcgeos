@@ -2056,6 +2056,7 @@ int getcOptrURL(dword data)  /* callback routine to get one char */
 
 int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 {
+    /*
     if (
         (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UNKNOWN) ||
         (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_ISO)
@@ -2074,22 +2075,28 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
 
         return ((HTMLFILE*) data)->HTMLbuf[((HTMLFILE*) data)->HTMLbufp++]; // return next character from file
     }
-    else if (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UTF8)
-    {   // UTF8
-        FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
-        byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
-        word       bufIdx   = ((HTMLFILE*) data)->HTMLbufp;
-        word       bufSize  = ((HTMLFILE*) data)->HTMLbufl;
+    */
 
-        dword              curFilePos = 0;
-        unsigned long int  result = 0;
 
-        if(bufIdx >= bufSize)
+    FileHandle infile   = ((HTMLFILE*) data)->fileHTML;
+    byte*      bufPtr   = ((HTMLFILE*) data)->HTMLbuf;
+    word       bufIdx   = ((HTMLFILE*) data)->HTMLbufp;
+    word       bufSize  = ((HTMLFILE*) data)->HTMLbufl;
+
+    dword              curFilePos = 0;
+    unsigned long int  result = 0;
+
+    if(bufIdx >= bufSize)
+    {
+        curFilePos = FilePos(infile, 0, FILE_POS_RELATIVE);
+        bufSize = FileRead(infile, bufPtr, HTML_READBUF, FALSE);
+
+        if (bufSize > 0)
         {
-            curFilePos = FilePos(infile, 0, FILE_POS_RELATIVE);
-            bufSize = FileRead(infile, bufPtr, HTML_READBUF, FALSE);
-
-            if (bufSize > 0)
+            if (
+                (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UTF8) ||
+                (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UNKNOWN)
+               )
             {
                 bufIdx = bufSize - 1;
                 while (bufIdx > 0)
@@ -2108,19 +2115,24 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
                 }
                 curFilePos = curFilePos + bufSize;
                 FilePos(infile, curFilePos, FILE_POS_START); // go back if previous buffer didn't end on a lead byte
+            }
 
-                bufIdx = 0;
-                ((HTMLFILE*) data)->HTMLbufl = bufSize;
-            }
-            else
-            {
-                return EOF; // read against end of file
-            }
+            bufIdx = 0;
+            ((HTMLFILE*) data)->HTMLbufl = bufSize;
         }
-
-        if (bufIdx < bufSize)
+        else
         {
-            // see below why this is disabled...
+            return EOF; // read against end of file
+        }
+    }
+
+    if (bufIdx < bufSize)
+    {
+        if (
+            (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UTF8) ||
+            (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_UNKNOWN)
+           )
+        {
             if ((bufPtr[bufIdx] >> BASCII_OFFSET) == BASCII)
             {   // 1 byte encoding (7 bit ASCII character)
                 result = bufPtr[bufIdx];
@@ -2142,7 +2154,7 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
             else if ((bufPtr[bufIdx] >> B4LEAD_OFFSET) == B4LEAD)
             {   // 4 byte encoding
                 // however, GEOS doesn't have support for any characters
-                // that are higher than 63743 in UTF-8, so we dont't decode
+                // that are higher than ~9000 in UTF-8, so we dont't decode
                 // these characters and hopefully save some cycles...
                 /*
                 result =               ((bufPtr[bufIdx]   & B4MASK) << 18)
@@ -2159,12 +2171,19 @@ int LOCAL getcFileURL(dword data)  /* callback routine to get one char */
                 bufIdx = bufIdx + 1;
             }
         }
-
-        ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
-
-        result = (int) (result <= 65535) ? result : 0;
-        return result;
+        else if (((HTMLextra*) HTMLext)->HE_srcEncoding == HE_SRC_ISO)
+        {
+            result = bufPtr[bufIdx];
+            bufIdx = bufIdx + 1;
+        }
     }
+
+    ((HTMLFILE*) data)->HTMLbufp = bufIdx; // set pointer to current position
+
+    // cut off anything thats higher than word range because we are int
+    // and don't support any other characters anyway...
+    result = (int) (result <= 32767) ? result : 0;
+    return result;
 }
 
 #if JAVASCRIPT_SUPPORT
