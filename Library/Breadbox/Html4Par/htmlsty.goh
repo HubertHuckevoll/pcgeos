@@ -788,8 +788,7 @@
     {8800,  "",       0xAD},
     {8804,  "",       0xB2},
     {8805,  "",       0xB3},
-    {9674,  "",       0xD7},
-    {63743, "",       0xF0},
+    {9674,  "loz",    0xD7},
 
     //Fake characters that get expanded into strings
     {185,   "sup1",   HTML_SPECIAL_ENTITY_BASE+0},
