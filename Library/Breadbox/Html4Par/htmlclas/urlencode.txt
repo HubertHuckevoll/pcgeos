@@ -1,0 +1,118 @@
+#include <stdio.h>
+
+void urlencode(char *dst, const char *src) {
+    char c;
+    while (c = *src++) {
+        if (c == ' ') {
+            *dst++ = '+';
+        } else if ((c < '0' && c != '-' && c != '.') ||
+                   (c < 'A' && c > '9') ||
+                   (c > 'Z' && c < 'a' && c != '_') ||
+                   (c > 'z')) {
+            *dst++ = '%';
+            *dst++ = "0123456789ABCDEF"[c >> 4];
+            *dst++ = "0123456789ABCDEF"[c & 15];
+        } else {
+            *dst++ = c;
+        }
+    }
+    *dst = '\0';
+}
+
+int main() {
+    char ch = 'A';
+    char hex[3];
+    char encoded[9];  // 3 * sizeof(hex) + 1
+
+    sprintf(hex, "%02X", ch);
+    urlencode(encoded, hex);
+
+    printf("URL Encoded string = %s\n", encoded);
+
+    return 0;
+}
+
+
+// alternative
+
+
+#include <stdio.h>
+
+void codepoint_to_utf8(uint32_t codepoint, char *bytes) {
+    if (codepoint <= 0x007F) {
+        bytes[0] = (char)codepoint;
+        bytes[1] = '\0';
+    } else if (codepoint <= 0x07FF) {
+        bytes[0] = (char)(0xC0 | (codepoint >> 6));
+        bytes[1] = (char)(0x80 | (codepoint & 0x3F));
+        bytes[2] = '\0';
+    } else if (codepoint <= 0xFFFF) {
+        bytes[0] = (char)(0xE0 | (codepoint >> 12));
+        bytes[1] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+        bytes[2] = (char)(0x80 | (codepoint & 0x3F));
+        bytes[3] = '\0';
+    } else if (codepoint <= 0x10FFFF) {
+        bytes[0] = (char)(0xF0 | (codepoint >> 18));
+        bytes[1] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
+        bytes[2] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+        bytes[3] = (char)(0x80 | (codepoint & 0x3F));
+        bytes[4] = '\0';
+    }
+}
+
+int main() {
+    uint32_t codepoint = 0x924;
+    char bytes[5];
+    codepoint_to_utf8(codepoint, bytes);
+
+    printf("Hex representation of UTF-8 bytes: ");
+    for (int i = 0; bytes[i] != '\0'; i++) {
+        printf("%02X ", (unsigned char)bytes[i]);
+    }
+    printf("\n");
+
+    return 0;
+}
+
+// utf8 stringlength = bytelength
+
+#include <stdio.h>
+
+int utf8StringLength(const char* str) {
+    int length = 0;
+    while (*str) {
+        unsigned char ch = *str;
+        if (ch < 0x80) {
+            // ASCII character
+            length += 1;
+        } else if (ch < 0xC0) {
+            // Invalid UTF-8 sequence
+            // Skip this byte
+        } else if (ch < 0xE0) {
+            // 2-byte UTF-8 sequence
+            length += 2;
+        } else if (ch < 0xF0) {
+            // 3-byte UTF-8 sequence
+            length += 3;
+        } else if (ch < 0xF8) {
+            // 4-byte UTF-8 sequence
+            length += 4;
+        } else if (ch < 0xFC) {
+            // 5-byte UTF-8 sequence
+            length += 5;
+        } else if (ch < 0xFE) {
+            // 6-byte UTF-8 sequence
+            length += 6;
+        }
+        str++;
+    }
+    return length;
+}
+
+int main() {
+    const char* str = "Hello, 世界!";
+    int length = utf8StringLength(str);
+    printf("Length: %d\n", length);
+    return 0;
+}
+
