@@ -304,19 +304,17 @@ void FormElementRemoveSelectList(void);
                         {
                             p_text = MemLock(mem) ;
                             NamePoolCopy(
-                            pself->HTI_namePool,
-                            p_text,
-                            (textLen > FORM_MAX_CHARACTERS_IN_TEXT_AREA ? FORM_MAX_CHARACTERS_IN_TEXT_AREA : textLen)*sizeof(TCHAR),
-                            p_formData->HFD_value,
-                            NULL);
+                                pself->HTI_namePool,
+                                p_text,
+                                (textLen > FORM_MAX_CHARACTERS_IN_TEXT_AREA ? FORM_MAX_CHARACTERS_IN_TEXT_AREA : textLen)*sizeof(TCHAR),
+                                p_formData->HFD_value,
+                                NULL);
                             MemUnlock(mem) ;
                         }
                         else
                         {
                             /* didn't use token */
-                            NamePoolReleaseToken(
-                            pself->HTI_namePool,
-                            p_formData->HFD_value);
+                            NamePoolReleaseToken(pself->HTI_namePool, p_formData->HFD_value);
                         }
 
                         /* Record the new block */
@@ -438,9 +436,9 @@ MemHandle _export FormStringCreate(void)
 
     /* Allocate a block of the correct size */
     mem = MemAlloc(
-                FORM_STRING_INITIALIZE_SIZE + sizeof(T_formString),
-                HF_SWAPABLE | HF_SHARABLE,
-                HAF_ZERO_INIT | HAF_NO_ERR) ;
+            FORM_STRING_INITIALIZE_SIZE + sizeof(T_formString),
+            HF_SWAPABLE | HF_SHARABLE,
+            HAF_ZERO_INIT | HAF_NO_ERR) ;
 
     if (mem)
     {
@@ -708,14 +706,12 @@ static dword FormStringLengthMulti(T_formString *postData);
                     /* If we found the header, record the vitals */
                     if (p_formData->HFD_itemType == HTML_FORM_HEADER)
                     {
-                        method = (p_formData->HFD_var.header.options &
-                          HTML_OPT_METHOD_MASK);
+                        method = (p_formData->HFD_var.header.options & HTML_OPT_METHOD_MASK);
                         urlToken = p_formData->HFD_name ;
-            targetToken = p_formData->HFD_value ;
+                        targetToken = p_formData->HFD_value ;
 @ifdef JAVASCRIPT_SUPPORT
                         /* check return value and abort submit */
-                        if (notify && !(@call self::MSG_HTML_TEXT_FIRE_EVENT(
-                            HTML_EVENT_SUBMIT, HTML_EVENT_OBJECT_FORM, i)))
+                        if (notify && !(@call self::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_SUBMIT, HTML_EVENT_OBJECT_FORM, i)))
                         {
                             method = -1;  // doesn't match any valid method
                             i = num;      // no reason to do any more work
@@ -767,8 +763,7 @@ static dword FormStringLengthMulti(T_formString *postData);
             {
                 p_formData = ChunkArrayElementToPtr(array, i, &size);
                 /* don't need final prefix */
-                (void)(@call oself::MSG_HTML_TEXT_FORM_APPEND_ELEMENT(
-                    formString, imageSubmit, prefix, enctype));
+                (void)(@call oself::MSG_HTML_TEXT_FORM_APPEND_ELEMENT(formString, imageSubmit, prefix, enctype));
             }
             MemUnlock(OptrToHandle(array)) ;
 
@@ -973,9 +968,7 @@ static dword FormStringLengthMulti(T_formString *postData);
                             NamePool,
                             buf,
                             sizeof(buf)-1*sizeof(TCHAR),
-                                        p_formData->HFD_name?
-                                        p_formData->HFD_name:
-                                        p_formData->HFD_value,
+                            p_formData->HFD_name ? p_formData->HFD_name : p_formData->HFD_value,
                             &bufP) ;
                         addBuf = TRUE ;
                         /* Note that if we add more entries, to append a & char */
@@ -1056,8 +1049,7 @@ static dword FormStringLengthMulti(T_formString *postData);
                 {
                     FormStringAppend(formString, (notMulti ? _TEXT(".x=") : _TEXT(".x"))) ;
 
-                    if (!notMulti)
-                        FormStringAppendNull(formString);
+                    if (!notMulti) FormStringAppendNull(formString);
                     itoa(p_formData->HFD_var.submit.rel.P_x, itoaBuf) ;
 
                     if (notMulti)
@@ -1086,8 +1078,7 @@ static dword FormStringLengthMulti(T_formString *postData);
 
                 if (notMulti)
                 {
-                    if (addEqual)
-                        FormStringAppend(formString, _TEXT("=")) ;
+                    if (addEqual) FormStringAppend(formString, _TEXT("=")) ;
                 }
                 else
                     FormStringAppendNull(formString);
@@ -1127,8 +1118,7 @@ static dword FormStringLengthMulti(T_formString *postData);
                     MemUnlock(mem) ;
                     p_text = NULL ;
                 }
-                if (!notMulti)
-                    FormStringAppendNull(formString);
+                if (!notMulti) FormStringAppendNull(formString);
             }
 
             /* handle nameless image submits */
@@ -1321,8 +1311,7 @@ extern void FormElementInvalidate(
                     p_element = ChunkArrayElementToPtr(formArray, i, &size);
                     /* turn off matching form radio buttons */
                     if ((p_element->HFD_itemType == HTML_FORM_RADIO) &&
-                        (p_element->HFD_formNumber ==
-                        formArrayElement->HFD_formNumber) &&
+                        (p_element->HFD_formNumber == formArrayElement->HFD_formNumber) &&
                         (p_element->HFD_name == formArrayElement->HFD_name) &&
                         (p_element != formArrayElement))
                     {
