@@ -74,12 +74,13 @@ extern DosCodePage G_htmlCodePage;
             itemType = formElement->HFD_itemType;
             /* input objects */
             if (itemType == HTML_FORM_TEXT ||
-            itemType == HTML_FORM_TEXTAREA ||
-            itemType == HTML_FORM_PASSWORD ||
-            itemType == HTML_FORM_SUBMIT ||
-            itemType == HTML_FORM_BUTTON ||
-            itemType == HTML_FORM_IMAGE) {
-            itemCount++;
+                itemType == HTML_FORM_TEXTAREA ||
+                itemType == HTML_FORM_PASSWORD ||
+                itemType == HTML_FORM_SUBMIT ||
+                itemType == HTML_FORM_BUTTON ||
+                itemType == HTML_FORM_IMAGE)
+            {
+                itemCount++;
             }
             /* objects that we'd like to focus */
             if (itemType == HTML_FORM_SUBMIT ||
@@ -607,7 +608,7 @@ void _export FormStringAppend(MemHandle mem, TCHAR *p_string)
     /* DBCS TBD: conversion of Unicode form strings to DOS */
     len++;  /* include null */
     LocalGeosToDos(p_dest, (unsigned int*) p_string, &len, DEFCHAR, &cp,
-         0, (DosToGeosStringStatus *)&status, &backup);
+        0, (DosToGeosStringStatus *)&status, &backup);
     p_formString->numChars += len-1;  /* don't include null */
 @else
     memcpy(p_dest, p_string, len+1) ;
@@ -753,10 +754,10 @@ static dword FormStringLengthMulti(T_formString *postData);
                             MemUnlock(formString);
                         }
                         prefix = @call oself::MSG_HTML_TEXT_FORM_APPEND_ELEMENT(
-                                                formString,
-                                                i,
-                                                prefix,
-                                                enctype) ;
+                            formString,
+                            i,
+                            prefix,
+                            enctype) ;
                     }
                 }
             }
