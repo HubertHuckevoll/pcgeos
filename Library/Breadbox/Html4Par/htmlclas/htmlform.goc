@@ -724,7 +724,9 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
                 p_dest[2] = hexTable[c & 15] ;
                 p_dest += 2 ;
 @else
-                utf8CharSize = GeosCharToUTF8(c, utf8Char);
+                //c = LocalGeosToCodePageChar(c, CODE_PAGE_LATIN_1, '.'); // LATIN1 encoding
+
+                utf8CharSize = GeosCharToUTF8(c, utf8Char); // UTF8
                 for (z=0; z < utf8CharSize; z++)
                 {
                     p_dest[0] = '%';
