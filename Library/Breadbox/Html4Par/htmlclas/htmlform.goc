@@ -34,6 +34,11 @@
 #include <htmlfstr.h>
 #include "htmlclas/formset.h"
 
+
+// for debugging only
+#include "initfile.h"
+
+
 #define TEXTAREA_MIN_COLS                10
 #define TEXTAREA_MIN_ROWS                1
 #define FORM_SELECT_MIN_MULTI_LINES      1
@@ -44,6 +49,8 @@
 extern DosCodePage G_htmlCodePage;
 @endif
 
+// for UTF8 conversion
+@extern chunk @xlateTable;
 
 /* this fixed a bug (1436) where JS was used to move focus, not needed for
    JS version -- brianc 10/26/00 */
@@ -455,6 +462,146 @@ MemHandle _export FormStringCreate(void)
     return mem ;
 }
 
+/*
+1 byte: It can represent code points in the ASCII range (0-127).
+2 bytes: It can represent code points in the range (128-2047).
+3 bytes: It can represent code points in the range (2048-65535).
+4 bytes: It can represent code points in the range (65536-1114111).
+*/
+unsigned int CalcLenOfGeosStringIfItWasUTF8AndUrlEncoded(TCHAR* p_string)
+{
+    unsigned int length = 0;
+    HTMLEntityTable* xlate_table;
+    int i = 0;
+    TCHAR c = *p_string;
+
+
+    MemLock(OptrToHandle(@xlateTable));
+    xlate_table = LMemDeref(@xlateTable);
+
+    while (*p_string != '\0')
+    {
+        c = *p_string;
+
+        if (c < 128)
+        {
+            if (c == 13)
+            {
+                // CRs becomes CRLFs
+                length += 6;
+            }
+            else if (
+                        ((c < 64) || (c >= 91 && c <= 96) || (c >= 123)) &&
+                        (c != 32) &&
+                        (c != '.') &&
+                        ((c<'0') || (c>'9')) &&
+                        (c != '-') &&
+                        (c != '_') &&
+                        (c != '*')
+                    )
+            {
+                length += 3 ;   // Will be %XX per irregular character
+            }
+            else
+            {
+                length++ ;
+            }
+        }
+        else
+        {
+            i = 0;
+            while ((xlate_table[i].num != 0) && (xlate_table[i].c != 0))
+            {
+                if (c == xlate_table[i].c)
+                {
+                    if (xlate_table[i].num < 128)
+                    {
+                        // ASCII character
+                        length += 1;
+                    }
+                    else if (xlate_table[i].num < 2048)
+                    {
+                        // 2-byte UTF-8 sequence
+                        length += 6; // Will be %XX (= 3 bytes) per irregular character => 6 bytes
+                    }
+                    else if (xlate_table[i].num < 65536)
+                    {
+                        // 3-byte UTF-8 sequence
+                        length += 9; // Will be %XX (= 3 bytes) per irregular character => 9 bytes
+                    }
+                    else
+                    {
+                        // ignore everything else, will be replaced with a one byte dot
+                        length += 1;
+                    }
+                    break;
+                }
+                i++;
+            }
+        }
+
+        p_string++;
+    }
+
+    MemUnlock(OptrToHandle(@xlateTable));
+
+    return length;
+}
+
+
+byte GeosCharToUTF8(char c, char* output)
+{
+    HTMLEntityTable* xlate_table;
+    byte i = 0;
+    unsigned int codepoint = 0;
+
+    MemLock(OptrToHandle(@xlateTable));
+    xlate_table = LMemDeref(@xlateTable);
+
+    memset(output, 0, sizeof(output)); // reset everything with 0 so we are always 0-terminated
+
+    if (c < 128)
+    {
+        output[0] = c;
+    }
+    else
+    {
+        while ((xlate_table[i].num != 0) && (xlate_table[i].c != 0))
+        {
+            if (c == xlate_table[i].c)
+            {
+                codepoint = xlate_table[i].num;
+                if (codepoint <= 0x7F)
+                {
+                    output[0] = codepoint;
+                }
+                else if (codepoint <= 0x7FF)
+                {
+                    output[0] = 0xC0 | ((codepoint >> 6) & 0x1F);
+                    output[1] = 0x80 | (codepoint & 0x3F);
+                }
+                else if (codepoint <= 0xFFFF)
+                {
+                    output[0] = 0xE0 | ((codepoint >> 12) & 0x0F);
+                    output[1] = 0x80 | ((codepoint >> 6) & 0x3F);
+                    output[2] = 0x80 | (codepoint & 0x3F);
+                }
+                else
+                {
+                    output[0] = 0;
+                }
+                break;
+            }
+            i++;
+        }
+    }
+
+    MemUnlock(OptrToHandle(@xlateTable));
+
+    return STRLENSB(output);
+}
+
+
 T_formString *FormStringLockAndGrow(MemHandle mem, word len)
 {
     T_formString *p_formString ;
@@ -490,23 +637,36 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
     char *p_dest ;
     static char hexTable[16] = "0123456789ABCDEF" ;
 
-    /* Determine the new length of the string */
+    static char utf8Char[5] = {0};
+    byte utf8CharSize = 0;
+    byte z = 0;
+    static char hexBuf[4] = {0};
+
+
+    len = CalcLenOfGeosStringIfItWasUTF8AndUrlEncoded(p_string);
+
+    InitFileWriteString("debug", "str", p_string);
+    InitFileWriteInteger("debug", "len", len);
+
+
+    // Determine the new length of the string
+/*
     for (len=0, p_char = p_string; *p_char; p_char++)
     {
         c = *p_char ;
         if (c == 13)
         {
-            /* CRs becomes CRLFs */
+            // CRs becomes CRLFs
             len += 6;
         }
         else if (((c < 64) || (c >= 91 && c <= 96) || (c >= 123)) && (c != 32) && (c != '.') && ((c<'0') || (c>'9')) && (c != '-') && (c != '_') && (c != '*'))
         {
-            len += 3 ;   /* Will be %XX per irregular character */
+            len += 3 ;   // Will be %XX per irregular character
 @ifdef DO_DBCS
-            /* conversion of Unicode to form submission data */
+            // conversion of Unicode to form submission data
             d = c;
             LocalGeosToDosChar((unsigned int*)&d, G_htmlCodePage, 0, (DosToGeosStringStatus*)&status);
-            if (d > 255) len += 3;  /* %XX%XX for double-byte */
+            if (d > 255) len += 3;  // %XX%XX for double-byte
 @endif
         }
         else
@@ -514,7 +674,7 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
             len++ ;
         }
     }
-
+*/
     p_formString = FormStringLockAndGrow(mem, len);
 
     /* Now let's create the new string (at the ending null) */
@@ -546,27 +706,36 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
             if ((c < 64) || (c >= 91 && c <= 96) || (c >= 123))
             {
 @ifdef DO_DBCS
+                // untested after UTF8 enhancements! meyerk 09/2023
                 LocalGeosToDosChar((unsigned int*)&c, G_htmlCodePage, 0, (DosToGeosStringStatus*)&status);
-@else
-                c = LocalGeosToCodePageChar(c, CODE_PAGE_LATIN_1, '.');
-@endif
                 p_dest[0] = '%' ;
-@ifdef DO_DBCS
-               /* conversion of Unicode to form submission data */
-               /* do high word */
+                // conversion of Unicode to form submission data
+                // do high word
                 if (c > 255)
                 {
                     p_dest[1] = hexTable[(c>>8)>>4] ;
                     p_dest[2] = hexTable[(c>>8)&15] ;
                     p_dest[3] = '%';
                     p_dest += 3;
-                    /* continue with low word */
+                    // continue with low word
                     c &= 255;
                 }
-@endif
-                p_dest[1] = hexTable[c>>4] ;
-                p_dest[2] = hexTable[c&15] ;
+                p_dest[1] = hexTable[c >> 4] ;
+                p_dest[2] = hexTable[c & 15] ;
                 p_dest += 2 ;
+@else
+                utf8CharSize = GeosCharToUTF8(c, utf8Char);
+                for (z=0; z < utf8CharSize; z++)
+                {
+                    p_dest[0] = '%';
+                    p_dest[1] = hexTable[utf8Char[z] >> 4];
+                    p_dest[2] = hexTable[utf8Char[z] & 15];
+
+                    // inc 3 if we are in the char, inc 2 if we are in the last byte
+                    // because for loop will inc again
+                    p_dest += (z == (utf8CharSize - 1)) ? 2 : 3;
+                }
+@endif
             }
             else
             {
@@ -575,7 +744,8 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
             }
         }
     }
-    /* And null terminate */
+
+    // And null terminate
     *p_dest = '\0' ;
     p_formString->numChars += len;
 
