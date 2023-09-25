@@ -469,10 +469,10 @@ MemHandle _export FormStringCreate(void)
 3 bytes: can represent code points in the range (2048-65535).
 4 bytes: can represent code points in the range (65536-1114111).
 */
-#define FORM_STRING_LENGTH_AS_LATIN             1
-#define FORM_STRING_LENGTH_AS_LATIN_AND_URL     2
-#define FORM_STRING_LENGTH_AS_UTF8              3
-#define FORM_STRING_LENGTH_AS_UTF8_AND_URL      4
+#define FORM_STRING_AS_LATIN             1
+#define FORM_STRING_AS_LATIN_AND_URL     2
+#define FORM_STRING_AS_UTF8              3
+#define FORM_STRING_AS_UTF8_AND_URL      4
 
 unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
 {
@@ -481,13 +481,13 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
     int i = 0;
     char c = *p_string;
 
-    if (mode == FORM_STRING_LENGTH_AS_LATIN)
+    if (mode == FORM_STRING_AS_LATIN)
     {
         length = STRLENSB(p_string);
     }
     else
     {
-        if ((mode == FORM_STRING_LENGTH_AS_UTF8) || (mode == FORM_STRING_LENGTH_AS_UTF8_AND_URL))
+        if ((mode == FORM_STRING_AS_UTF8) || (mode == FORM_STRING_AS_UTF8_AND_URL))
         {
             MemLock(OptrToHandle(@xlateTable));
             xlate_table = LMemDeref(@xlateTable);
@@ -502,7 +502,7 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
                 if (c == 13)
                 {
                     // CRs becomes CRLFs when URL encoded, otherwise its just one byte
-                    length += ((mode == FORM_STRING_LENGTH_AS_LATIN_AND_URL) || (mode == FORM_STRING_LENGTH_AS_UTF8_AND_URL)) ? 6 : 1;
+                    length += ((mode == FORM_STRING_AS_LATIN_AND_URL) || (mode == FORM_STRING_AS_UTF8_AND_URL)) ? 6 : 1;
                 }
                 else if (
                             ((c < 64) || (c >= 91 && c <= 96) || (c >= 123)) &&
@@ -515,7 +515,7 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
                         )
                 {
                     // Will be %XX per irregular character when URL encoded, otherwise just one byte
-                    length += ((mode == FORM_STRING_LENGTH_AS_LATIN_AND_URL) || (mode == FORM_STRING_LENGTH_AS_UTF8_AND_URL)) ? 3 : 1;
+                    length += ((mode == FORM_STRING_AS_LATIN_AND_URL) || (mode == FORM_STRING_AS_UTF8_AND_URL)) ? 3 : 1;
                 }
                 else
                 {
@@ -525,7 +525,7 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
             }
             else
             {
-                if ((mode == FORM_STRING_LENGTH_AS_UTF8) || (mode == FORM_STRING_LENGTH_AS_UTF8_AND_URL))
+                if ((mode == FORM_STRING_AS_UTF8) || (mode == FORM_STRING_AS_UTF8_AND_URL))
                 {
                     i = 0;
                     while ((xlate_table[i].num != 0) && (xlate_table[i].c != 0))
@@ -542,14 +542,14 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
                                 // 2-byte UTF-8 sequence
                                 // Will be %XX (= 3 bytes) per irregular character => 2 x 3 = 6 bytes
                                 // 2 bytes if not URL encoded
-                                length += (mode == FORM_STRING_LENGTH_AS_UTF8_AND_URL) ? 6 : 2;
+                                length += (mode == FORM_STRING_AS_UTF8_AND_URL) ? 6 : 2;
                             }
                             else if (xlate_table[i].num < 65536)
                             {
                                 // 3-byte UTF-8 sequence
                                 // Will be %XX (= 3 bytes) per irregular character => 3 x 3 = 9 bytes
                                 // 3 bytes if not URL encoded
-                                length += (mode == FORM_STRING_LENGTH_AS_UTF8_AND_URL) ? 9 : 3;
+                                length += (mode == FORM_STRING_AS_UTF8_AND_URL) ? 9 : 3;
                             }
                             else
                             {
@@ -561,7 +561,7 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
                         i++;
                     }
                 }
-                else if (mode == FORM_STRING_LENGTH_AS_LATIN_AND_URL)
+                else if (mode == FORM_STRING_AS_LATIN_AND_URL)
                 {   // characters over 128 are non-ascii and have to be %XX encoded if we want URL encoding
                     length += 3;
                 }
@@ -570,7 +570,7 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
             p_string++;
         }
 
-        if ((mode == FORM_STRING_LENGTH_AS_UTF8) || (mode == FORM_STRING_LENGTH_AS_UTF8_AND_URL))
+        if ((mode == FORM_STRING_AS_UTF8) || (mode == FORM_STRING_AS_UTF8_AND_URL))
         {
             MemUnlock(OptrToHandle(@xlateTable));
         }
@@ -675,8 +675,8 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
     static char hexBuf[4] = {0};
 
 
-    //len = ProjectedSizeOfFormString(p_string, FORM_STRING_LENGTH_AS_UTF8_AND_URL);
-    len = ProjectedSizeOfFormString(p_string, FORM_STRING_LENGTH_AS_LATIN_AND_URL);
+    //len = ProjectedSizeOfFormString(p_string, FORM_STRING_AS_UTF8_AND_URL);
+    len = ProjectedSizeOfFormString(p_string, FORM_STRING_AS_LATIN_AND_URL);
 
     // Determine the new length of the string
 /*
