@@ -522,7 +522,7 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
                     length++;
                 }
             }
-            else
+            else if (c >= 128)
             {
                 if ((mode == FORM_STRING_AS_UTF8) || (mode == FORM_STRING_AS_UTF8_AND_URL))
                 {
@@ -552,7 +552,7 @@ unsigned int ProjectedSizeOfFormString(char* p_string, byte mode)
                             }
                             else
                             {
-                                // ignore everything else, will be replaced with a one byte dot
+                                // everything else will be replaced with a one byte "."
                                 length += 1;
                             }
                             break;
