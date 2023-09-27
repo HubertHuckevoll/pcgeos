@@ -430,7 +430,7 @@ void FormElementRemoveSelectList(void);
 
 
 /*------------------------------------------------------------------------*/
-/* Routines for handling FormStrings: */
+/* Routines for handling FormStrings:                                     */
 /*------------------------------------------------------------------------*/
 
 #define FORM_STRING_INITIALIZE_SIZE   (256 - sizeof(T_formString))
@@ -484,10 +484,17 @@ T_formString *FormStringLockAndGrow(MemHandle mem, word len)
     return p_formString;
 }
 
-/*
-This function calculates the length of a Geos-encoded string if it was a Latin1 string
-(same length) or an UTF8 string OR a URL-encoded Latin1 or UTF8 string.
-*/
+/********************************************************************
+ *  This function calculates the length of a GEOS encoded string
+ *  after it has been converted to:
+ ********************************************************************
+ *  Latin 1
+ *  UTF8
+ *  URL-encoded Latin 1
+ *  URL-enoded UTF8
+ ********************************************************************
+ */
+
 typedef byte FormStringTargetFormat;
 #define FORM_STRING_AS_LATIN             1
 #define FORM_STRING_AS_LATIN_AND_URL     2
@@ -604,8 +611,13 @@ unsigned int FormStringCalculateConvertedLength(char* p_string, FormStringTarget
     return length;
 }
 
-/**
- * returns number of bytes in character
+
+/********************************************************************
+ *  This function converts a GEOS encoded char into an UTF8 encoded
+ *  char.
+ ********************************************************************
+ *  returns number of bytes in the UTF8 character
+ ********************************************************************
  */
 byte FormStringGeosCharToUTF8Char(char c, char* output)
 {
@@ -659,7 +671,15 @@ byte FormStringGeosCharToUTF8Char(char c, char* output)
     return STRLENSB(output);
 }
 
-/*
+/********************************************************************
+ *  This function converts a GEOS encoded string into:
+ ********************************************************************
+ *  Latin 1
+ *  UTF8
+ *  URL-encoded Latin 1
+ *  URL-enoded UTF8
+ ********************************************************************
+ */
 void FormStringConvert(TCHAR* p_string, char* p_dest, FormStringTargetFormat mode)
 {
     byte c ;
@@ -672,7 +692,8 @@ void FormStringConvert(TCHAR* p_string, char* p_dest, FormStringTargetFormat mod
     if (mode == FORM_STRING_AS_LATIN)
     {
         // check if "O" works, otherwise pass len of string...
-        LocalGeosToCodePage(p_dest, 0, CODE_PAGE_LATIN_1, '.');
+        memcpy(p_dest, p_string, STRLENSB(p_string));
+        LocalGeosToCodePage(p_dest, STRLENSB(p_string), CODE_PAGE_LATIN_1, '.');
     }
     else // FORM_STRING_AS_UTF8, FORM_STRING_AS_LATIN_AND_URL, FORM_STRING_AS_UTF8_AND_URL
     {
@@ -752,151 +773,10 @@ void FormStringConvert(TCHAR* p_string, char* p_dest, FormStringTargetFormat mod
             }
         }
 
+        // And null terminate
+        *p_dest = '\0' ;
     }
-
-    // And null terminate
-    *p_dest = '\0' ;
 }
-*/
-
-
-void FormStringConvertLatin(TCHAR* p_string, char* p_dest, FormStringTargetFormat mode)
-{
-    byte c ;
-    char *p_char ;
-    static char hexTable[16] = "0123456789ABCDEF" ;
-
-    if (mode == FORM_STRING_AS_LATIN)
-    {
-        // check if "O" works, otherwise pass len of string...
-        LocalGeosToCodePage(p_dest, 0, CODE_PAGE_LATIN_1, '.');
-    }
-    else if (mode == FORM_STRING_AS_LATIN_AND_URL)
-    {
-        for (p_char=p_string; *p_char; p_char++, p_dest++)
-        {
-            c = *p_char ;
-
-            // Convert characters
-            if (c == 32)
-            {
-                // if URL encoded, spaces become pluses
-                *p_dest = '+';
-            }
-            else if (c == 13)
-            {
-                // if URL encode, CRs becomes CRLFs
-                STRCPYSB(p_dest, "%0D%0A");
-                p_dest += 5;  // inc'd again in loop
-            }
-            else if (((c>='0') && (c <='9')) || (c == '.') || (c == '-') || (c == '_') || (c == '*'))
-            {
-                *p_dest = c ;
-            }
-            else
-            {
-                // Convert Geos to ISO Latin 1
-                // Punctuation and special 8 bit ASCII characters are %XX'd
-                if ((c < 64) || (c >= 91 && c <= 96) || (c >= 123))
-                {
-                    c = LocalGeosToCodePageChar(c, CODE_PAGE_LATIN_1, '.');
-                    p_dest[0] = '%';
-                    p_dest[1] = hexTable[c >> 4];
-                    p_dest[2] = hexTable[c & 15];
-                    p_dest += 2;
-                }
-                else
-                {
-                    // Everything else is copied
-                    *p_dest = c ;
-                }
-            }
-        }
-    }
-
-    // And null terminate
-    *p_dest = '\0' ;
-}
-
-
-void FormStringConvertUTF8(TCHAR* p_string, char* p_dest, FormStringTargetFormat mode)
-{
-    byte c ;
-    char *p_char ;
-    static char hexTable[16] = "0123456789ABCDEF" ;
-    static char utf8Char[5] = {0};
-    byte utf8CharSize = 0;
-    byte z = 0;
-
-    if ((mode == FORM_STRING_AS_UTF8) || (mode == FORM_STRING_AS_UTF8_AND_URL))
-    {
-        for (p_char=p_string; *p_char; p_char++, p_dest++)
-        {
-            c = *p_char ;
-
-            // Convert characters
-            if (c == 32)
-            {
-                // if URL encoded, spaces become pluses
-                *p_dest = (mode == FORM_STRING_AS_UTF8_AND_URL) ? '+' : c;
-            }
-            else if (c == 13)
-            {
-                // if URL encode, CRs becomes CRLFs
-                if (mode == FORM_STRING_AS_UTF8_AND_URL)
-                {
-                    STRCPYSB(p_dest, "%0D%0A");
-                    p_dest += 5;  // should be 6 but inc'd again in loop
-                }
-                else if (mode == FORM_STRING_AS_UTF8)
-                {
-                    *p_dest = c;
-                }
-            }
-            else if (((c>='0') && (c <='9')) || (c == '.') || (c == '-') || (c == '_') || (c == '*'))
-            {
-                *p_dest = c ;
-            }
-            else
-            {
-                // Convert Geos to UTF8 bytes first
-                // non-ASCII bytes are %XX'd if we are URL encoding
-                if ((c < 64) || (c >= 91 && c <= 96) || (c >= 123))
-                {
-                    utf8CharSize = FormStringGeosCharToUTF8Char(c, utf8Char);
-
-                    if (mode == FORM_STRING_AS_UTF8_AND_URL)
-                    {
-                        for (z=0; z < utf8CharSize; z++)
-                        {
-                            p_dest[0] = '%';
-                            p_dest[1] = hexTable[utf8Char[z] >> 4];
-                            p_dest[2] = hexTable[utf8Char[z] & 15];
-
-                            // inc 3 if we are in the char, inc only 2 if we are in the last byte
-                            // because the for-loop will inc again
-                            p_dest += (z == (utf8CharSize - 1)) ? 2 : 3;
-                        }
-                    }
-                    else if (mode == FORM_STRING_AS_UTF8)
-                    {
-                        STRCPYSB(p_dest, utf8Char);
-                        p_dest += utf8CharSize - 1;  // -1 as we will inc again in loop
-                    }
-                }
-                else
-                {
-                    // Everything else is copied
-                    *p_dest = c ;
-                }
-            }
-        }
-    }
-
-    // And null terminate
-    *p_dest = '\0' ;
-}
-
 
 
 void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
@@ -906,11 +786,12 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
     TCHAR c, d;
     word status;
 @else
-    byte c ;
+    byte c;
 @endif
     TCHAR *p_char ;
     T_formString *p_formString ;
     char *p_dest ;
+    char *g;
     static char hexTable[16] = "0123456789ABCDEF" ;
 
     static char utf8Char[5] = {0};
@@ -920,41 +801,18 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
 
 
     len = FormStringCalculateConvertedLength(p_string, FORM_STRING_AS_UTF8_AND_URL);
-    //len = FormStringCalculateConvertedLength(p_string, FORM_STRING_AS_LATIN_AND_URL);
+    //len = FormStringCalculateConvertedLength(p_string, FORM_STRING_AS_LATIN);
 
-    // Determine the new length of the string
-/*
-    for (len=0, p_char = p_string; *p_char; p_char++)
-    {
-        c = *p_char ;
-        if (c == 13)
-        {
-            // CRs becomes CRLFs
-            len += 6;
-        }
-        else if (((c < 64) || (c >= 91 && c <= 96) || (c >= 123)) && (c != 32) && (c != '.') && ((c<'0') || (c>'9')) && (c != '-') && (c != '_') && (c != '*'))
-        {
-            len += 3 ;   // Will be %XX per irregular character
-@ifdef DO_DBCS
-            // conversion of Unicode to form submission data
-            d = c;
-            LocalGeosToDosChar((unsigned int*)&d, G_htmlCodePage, 0, (DosToGeosStringStatus*)&status);
-            if (d > 255) len += 3;  // %XX%XX for double-byte
-@endif
-        }
-        else
-        {
-            len++ ;
-        }
-    }
-*/
     p_formString = FormStringLockAndGrow(mem, len);
 
-    /* Now let's create the new string (at the ending null) */
+    // Now let's create the new string (at the ending null)
     p_dest = p_formString->data + p_formString->numChars - 1 ;
+    p_formString->numChars += len;
 
-    FormStringConvertUTF8(p_string, p_dest, FORM_STRING_AS_UTF8);
-    //FormStringConvertLatin(p_string, p_dest, FORM_STRING_AS_LATIN_AND_URL);
+    FormStringConvert(p_string, p_dest, FORM_STRING_AS_UTF8_AND_URL);
+
+    MemUnlock(mem) ;
+
 
 /*
     for (p_char=p_string; *p_char; p_char++, p_dest++)
@@ -1036,8 +894,6 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
     *p_dest = '\0' ;
 */
 
-    p_formString->numChars += len;
-    MemUnlock(mem) ;
 }
 
 void _export FormStringAppend(MemHandle mem, TCHAR *p_string)
@@ -1045,34 +901,71 @@ void _export FormStringAppend(MemHandle mem, TCHAR *p_string)
     word len ;
     T_formString *p_formString ;
     char *p_dest ;
+
 @ifdef DO_DBCS
     DosCodePage cp = CODE_PAGE_LATIN_1;
     word status, backup;
-@endif
 
-    /* Determine the new length of the string */
+    // Determine the new length of the string
     len = strlen(p_string) ;
 
-    /* enough for full two-byte DBCS expansion */
+    // enough for full two-byte DBCS expansion
     p_formString = FormStringLockAndGrow(mem, len*sizeof(TCHAR));
 
-    /* Now let's create the new string (at the ending null) */
+    // Now let's create the new string (at the ending null)
+    p_dest = p_formString->data + p_formString->numChars - 1 ;
+
+    // DBCS TBD: conversion of Unicode form strings to DOS
+    len++;  // include null
+    LocalGeosToDos(p_dest, (unsigned int*) p_string, &len, DEFCHAR, &cp, 0, (DosToGeosStringStatus *)&status, &backup);
+    p_formString->numChars += len-1;  // don't include null
+
+    MemUnlock(mem) ;
+@else
+    // Determine the new length of the string as Latin 1 or UTF8
+    len = FormStringCalculateConvertedLength(p_string, FORM_STRING_AS_UTF8);
+
+    // make us some space
+    p_formString = FormStringLockAndGrow(mem, len);
+
+    // Now let's create the new string (at the ending null)
+    p_dest = p_formString->data + p_formString->numChars - 1;
+
+    // copy p_string to p_dest as we work with p_dest
+    memcpy(p_dest, p_string, len+1);
+    p_formString->numChars += len;
+
+    // Convert Geos to ISO Latin 1 / UTF8
+    FormStringConvert(p_string, p_dest, FORM_STRING_AS_UTF8);
+
+    MemUnlock(mem) ;
+@endif
+
+/*
+    // Determine the new length of the string
+    len = strlen(p_string) ;
+
+    // enough for full two-byte DBCS expansion
+    p_formString = FormStringLockAndGrow(mem, len*sizeof(TCHAR));
+
+    // Now let's create the new string (at the ending null)
     p_dest = p_formString->data + p_formString->numChars - 1 ;
 
 @ifdef DO_DBCS
-    /* DBCS TBD: conversion of Unicode form strings to DOS */
-    len++;  /* include null */
+    // DBCS TBD: conversion of Unicode form strings to DOS
+    len++;  // include null
     LocalGeosToDos(p_dest, (unsigned int*) p_string, &len, DEFCHAR, &cp,
         0, (DosToGeosStringStatus *)&status, &backup);
-    p_formString->numChars += len-1;  /* don't include null */
+    p_formString->numChars += len-1;  // don't include null
 @else
     memcpy(p_dest, p_string, len+1) ;
     p_formString->numChars += len;
-    /* Convert Geos to ISO Latin 1 */
+    // Convert Geos to ISO Latin 1
     LocalGeosToCodePage(p_dest, len, CODE_PAGE_LATIN_1, '.');
 @endif
 
     MemUnlock(mem) ;
+*/
 }
 
 void * _export FormStringDerefData(MemHandle mem)
