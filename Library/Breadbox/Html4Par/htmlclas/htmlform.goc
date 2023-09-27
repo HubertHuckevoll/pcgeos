@@ -691,7 +691,7 @@ void FormStringConvert(TCHAR* p_string, char* p_dest, FormStringTargetFormat mod
 
     if (mode == FORM_STRING_AS_LATIN)
     {
-        // check if "O" works, otherwise pass len of string...
+        // FIXME: check if we include the "0" at the end or not... otherwise pass len of string...
         memcpy(p_dest, p_string, STRLENSB(p_string));
         LocalGeosToCodePage(p_dest, STRLENSB(p_string), CODE_PAGE_LATIN_1, '.');
     }
