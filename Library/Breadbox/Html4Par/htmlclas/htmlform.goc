@@ -494,7 +494,7 @@ typedef byte FormStringTargetFormat;
 #define FORM_STRING_AS_UTF8              3
 #define FORM_STRING_AS_UTF8_AND_URL      4
 
-unsigned int ProjectedSizeOfFormString(char* p_string, FormStringTargetFormat mode)
+unsigned int FormStringCalculateConvertedLength(char* p_string, FormStringTargetFormat mode)
 {
     unsigned int length = 0;
     HTMLEntityTable* xlate_table;
@@ -919,8 +919,8 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
     static char hexBuf[4] = {0};
 
 
-    len = ProjectedSizeOfFormString(p_string, FORM_STRING_AS_UTF8_AND_URL);
-    //len = ProjectedSizeOfFormString(p_string, FORM_STRING_AS_LATIN_AND_URL);
+    len = FormStringCalculateConvertedLength(p_string, FORM_STRING_AS_UTF8_AND_URL);
+    //len = FormStringCalculateConvertedLength(p_string, FORM_STRING_AS_LATIN_AND_URL);
 
     // Determine the new length of the string
 /*
