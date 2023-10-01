@@ -58,3 +58,4 @@ dependencies.mk
 Makefile
 !Installed/**/dependencies.mk
 !Installed/**/Makefile
+Appl/Breadbox/BbxBrow/Art/freeicon/appicon.txt
