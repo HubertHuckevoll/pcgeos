@@ -2636,18 +2636,18 @@ placed.\n\
 \n\
 The defined formats are:\n\
     Abbr  Color  Aspect        Size      Style  Width  Height\n\
-    ----  -----	 ------------  --------	 -----	-----  ------\n\
-    LC    4-bit  normal        large	 icon	 64      40\n\
-    LM    Mono	 normal        large	 icon	 64      40\n\
-    SC    4-bit	 normal	       standard	 icon	 48	 30\n\
-    SM    Mono	 normal	       standard	 icon	 48	 30\n\
-    LCGA  Mono	 verySquished  large	 icon	 64	 18\n\
-    SCGA  Mono	 verySquished  tiny	 icon	 48	 14\n\
-    YC	  4-bit	 normal	       tiny	 icon	 32	 20\n\
-    YM	  Mono	 normal	       tiny	 icon	 32	 20\n\
-    TC	  4-bit	 normal	       tiny	 tool	 15	 15\n\
-    TM	  Mono	 normal	       tiny	 tool	 15	 15\n\
-    TCGA  Mono   verySquished  tiny	 tool	 15	 10\n\
+    ----  -----  ------------  --------	 -----	-----  ------\n\
+    LC    4-bit  normal        large     icon   64     40\n\
+    LM    Mono   normal        large     icon   64     40\n\
+    SC    4-bit  normal        standard  icon   48     30\n\
+    SM    Mono   normal        standard  icon   48     30\n\
+    LCGA  Mono   verySquished  large     icon   64     18\n\
+    SCGA  Mono   verySquished  tiny      icon   48     14\n\
+    YC    4-bit  normal        tiny      icon   32     20\n\
+    YM    Mono   normal        tiny      icon   32     20\n\
+    TC    4-bit  normal        tiny      tool   15     15\n\
+    TM    Mono   normal        tiny      tool   15     15\n\
+    TCGA  Mono   verySquished  tiny      tool   15     10\n\
 \n\
 The grids are sequences of these formats laid out with a common top edge,\n\
 from left to right, and a one pixel margin between each pair of icons, and\n\

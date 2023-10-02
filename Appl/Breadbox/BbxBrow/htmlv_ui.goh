@@ -17,8 +17,8 @@
 @start AppResource;
 @object HTMLVApplicationClass HTMLVApp = {
 	 GI_visMoniker = @list{@TextMoniker,
-                           @Moniker0/*,
-                           @Moniker1,
+                           @Moniker0,
+                           @Moniker1/*,
                            @Moniker2,
                            @Moniker3,
                            @Moniker4*/}
