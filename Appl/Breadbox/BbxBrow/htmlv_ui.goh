@@ -19,7 +19,7 @@
 	 GI_visMoniker = @list{@TextMoniker,
                            @Moniker0,
                            @Moniker1/*,
-                           @Moniker2,
+                           @Moniker2/*,
                            @Moniker3,
                            @Moniker4*/}
     ATTR_GEN_INIT_FILE_CATEGORY = HTMLVIEW_CATEGORY;
