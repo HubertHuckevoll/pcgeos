@@ -62,8 +62,11 @@ SpecificUIGroup = PrefInteraction {
 UIList = PrefItemGroup vardataReloc {
     destination = ConfigUIRoot;
     children =
+	UILMotif,
+	UILMotifDesk,
 	UILISUI,
-	UILMotif;
+	UILISUIMan;
+
     prefAttrs = default +rebootIfChanged;
     initFileFlags = default +useItemMonikers;
     hints = {
@@ -85,14 +88,25 @@ UIList = PrefItemGroup vardataReloc {
 }
 
 UILMotif = GenItem {
-    moniker = "Motif";
+    moniker = "Motif & GeoManager";
     identifier = CUIC_MOTIF;
 }
 
+UILMotifDesk = GenItem {
+    moniker = "Motif & Desktop";
+    identifier = CUIC_MOTIF_DESK;
+}
+
 UILISUI = GenItem {
-    moniker = "Industry Standard";
+    moniker = "ISUI & Desktop";
     identifier = CUIC_ISUI;
 }
+
+UILISUIMan = GenItem {
+    moniker = "ISUI & GeoManager";
+    identifier = CUIC_ISUI_MANAGER;
+}
+
 
 /******************************************************************************
  *
