@@ -65,6 +65,14 @@ VMFileHandle LWVMFileOpen(void);
  	       	    	App instance...
  *******************************************************************/
 
+#define LW_NUMBER_OF_OPTIONS	9
+
+typedef struct {
+    SAOptionTable   LW_saot;
+    SAOptionDesc    LW_saod[LW_NUMBER_OF_OPTIONS];
+} LWSAOptionTable;
+
+
 @start AppResource;
 
 /*******************************************************************
@@ -75,43 +83,23 @@ VMFileHandle LWVMFileOpen(void);
  * AppResource. This is in the hope it never is moved on the lmem heap
  * and the structure internal local near point stay intanct (LW_INI_CATEGORY).
  */
-#define LW_NUMBER_OF_OPTIONS	9
 
-typedef struct {
-    SAOptionTable   LW_saot;
-    SAOptionDesc    LW_saod[LW_NUMBER_OF_OPTIONS];
-} LWSAOptionTable;
-
-@chunk LWSAOptionTable lastwordsOptionTable = {
-    {LW_INI_CATEGORY, LW_NUMBER_OF_OPTIONS},
+@chunk LWSAOptionTable lastwordsOptionTable =
+{
+    {
+        LW_INI_CATEGORY,
+        LW_NUMBER_OF_OPTIONS
+    },
     { /* Table o' options: */
-    	{LW_INI_KEY_TYPE,
-	 sizeof(LWFormatType),
-	 word_offsetof(LWApplicationInstance, LWCI_format)},
-	{LW_INI_KEY_RANDOM_COLOR,
-	 sizeof(Boolean),
-	 word_offsetof(LWApplicationInstance, LWCI_randomColor)},
-    	{LW_INI_KEY_COLOR,
-	 sizeof(byte),
-	 word_offsetof(LWApplicationInstance, LWCI_color)},
-        {LW_INI_KEY_MOTION,
-	 sizeof(SaverVectorReflectType),
-	 word_offsetof(LWApplicationInstance, LWCI_motion)},
-	{LW_INI_KEY_SPEED,
-	 sizeof(LWSpeedType),
-	 word_offsetof(LWApplicationInstance, LWCI_speed)},
-	{LW_INI_KEY_SIZE,
-	 sizeof(word),
-	 word_offsetof(LWApplicationInstance, LWCI_size)},
-	{LW_INI_KEY_RANDOM_ANGLE,
-	 sizeof(Boolean),
-	 word_offsetof(LWApplicationInstance, LWCI_randomAngle)},
-	{LW_INI_KEY_ANGLE,
-	 sizeof(sword),
-	 word_offsetof(LWApplicationInstance, LWCI_angle)},
-	{LW_INI_KEY_FONT,
-	 sizeof(FontID),
-	 word_offsetof(LWApplicationInstance, LWCI_fontID)},
+    	{LW_INI_KEY_TYPE,sizeof(LWFormatType),word_offsetof(LWApplicationInstance, LWCI_format)},
+	{LW_INI_KEY_RANDOM_COLOR,sizeof(Boolean),word_offsetof(LWApplicationInstance, LWCI_randomColor)},
+    	{LW_INI_KEY_COLOR,sizeof(byte),word_offsetof(LWApplicationInstance, LWCI_color)},
+        {LW_INI_KEY_MOTION,sizeof(SaverVectorReflectType),word_offsetof(LWApplicationInstance, LWCI_motion)},
+	{LW_INI_KEY_SPEED,sizeof(LWSpeedType),word_offsetof(LWApplicationInstance, LWCI_speed)},
+	{LW_INI_KEY_SIZE,sizeof(word),word_offsetof(LWApplicationInstance, LWCI_size)},
+	{LW_INI_KEY_RANDOM_ANGLE,sizeof(Boolean),word_offsetof(LWApplicationInstance, LWCI_randomAngle)},
+	{LW_INI_KEY_ANGLE,sizeof(sword),word_offsetof(LWApplicationInstance, LWCI_angle)},
+	{LW_INI_KEY_FONT,sizeof(FontID),word_offsetof(LWApplicationInstance, LWCI_fontID)},
     }
 };
 
@@ -144,24 +132,28 @@ typedef struct {
  ***********************************************************************/
 @method LWApplicationClass, MSG_META_LOAD_OPTIONS
 {
-    word numChars;
+    word            numChars;
+    SAOptionTable*  saot = (void*) 0;
 
     /*
      * Get the message text from the .ini file, if it exists, and
      * place it in our message buffer.
      */
-    InitFileReadStringBuffer(LW_INI_CATEGORY,
-			     LW_INI_KEY_MESSAGE,
-			     pself->LWCI_msgText,
-			     LW_MAX_LENGTH,
-			     &numChars);
+    InitFileReadStringBuffer(
+        LW_INI_CATEGORY,
+		LW_INI_KEY_MESSAGE,
+		pself->LWCI_msgText,
+		LW_MAX_LENGTH,
+		&numChars
+    );
 
     /*
      * Load the application object's instance data from the
      * .ini file via the option table.
      */
-    SaverApplicationGetOptions((SAOptionTable *)
-        LMemDeref(@lastwordsOptionTable), oself);
+    saot = (SAOptionTable *) LMemDeref(@lastwordsOptionTable);
+
+    //SaverApplicationGetOptions(saot, oself);
 
     @callsuper();
 }

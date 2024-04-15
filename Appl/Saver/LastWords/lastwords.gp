@@ -16,7 +16,7 @@
 #
 # Permanent name
 #
-name lastword.app
+name lastword.lib
 #
 # All specific screen savers are libraries that may be launched but once
 #

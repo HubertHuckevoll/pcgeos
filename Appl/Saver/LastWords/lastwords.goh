@@ -28,17 +28,17 @@
   	    	    	Type Definitions and #defines
  ***********************************************************************/
 
-#define LW_INI_CATEGORY	    	"lastwords"
-#define LW_INI_KEY_TYPE	    	"type"
-#define LW_INI_KEY_RANDOM_COLOR "randomcolor"
-#define LW_INI_KEY_COLOR    	"color"
-#define LW_INI_KEY_MOTION	"motion"
-#define LW_INI_KEY_SPEED    	"speed"
-#define LW_INI_KEY_SIZE  	"size"
-#define LW_INI_KEY_RANDOM_ANGLE "randomangle"
-#define LW_INI_KEY_ANGLE   	"angle"
-#define LW_INI_KEY_FONT	    	"lwfont"
-#define LW_INI_KEY_MESSAGE    	"message"
+#define LW_INI_CATEGORY	    	(char _near*) "lastwords"
+#define LW_INI_KEY_TYPE	    	(char _near*) "type"
+#define LW_INI_KEY_RANDOM_COLOR (char _near*) "randomcolor"
+#define LW_INI_KEY_COLOR    	(char _near*) "color"
+#define LW_INI_KEY_MOTION	(char _near*) "motion"
+#define LW_INI_KEY_SPEED    	(char _near*) "speed"
+#define LW_INI_KEY_SIZE  	(char _near*) "size"
+#define LW_INI_KEY_RANDOM_ANGLE (char _near*) "randomangle"
+#define LW_INI_KEY_ANGLE   	(char _near*) "angle"
+#define LW_INI_KEY_FONT	    	(char _near*) "lwfont"
+#define LW_INI_KEY_MESSAGE    	(char _near*) "message"
 
 typedef enum /* word */ {
     LWFT_TEXT,
