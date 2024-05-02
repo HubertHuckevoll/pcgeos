@@ -701,19 +701,29 @@ Classes & Methods
 
 @method OpenWithAppLaunchTriggerClass, MSG_SET_TRIGGER_MONIKER
 {
-    Boolean                 isMoniker = FALSE;
-    DisplayScheme	        ds;
-    MemHandle               mhHeap = NullHandle;
-    VisMoniker*             vmp;
-    byte                    *moniker;
-    byte*                   gstr = (void*) 0;
-    word                    foo = 0;
-    TokenMonikerInfo        tmi;
-    GStateHandle            gs, mgs;
-    word                    gschunk;
+    MemHandle               lmemHeap = NullHandle;
+    optr                    finalMoniker = NullOptr;
 
     @call oself::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(fname, VUM_DELAYED_VIA_APP_QUEUE);
 
+    // prepare "Canvas", GState for drawing
+    lmemHeap = MemAllocLMem(LMEM_TYPE_GSTRING, sizeof(LMemBlockHeader));
+
+    finalMoniker = CreateIconTextMoniker(lmemHeap, tok, fname);
+
+    // replace moniker
+    @call oself::MSG_GEN_REPLACE_VIS_MONIKER(
+        VUM_NOW,
+        0, 0, 0,
+        VMDT_GSTRING,
+        VMST_OPTR,
+        (dword) finalMoniker
+    );
+
+    MemFree(lmemHeap);
+
+
+/*
     @call GeodeGetAppObject(0)::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME(&ds);
     isMoniker = TokenLookupMoniker(
         TOKEN_CHARS(tok->GT_chars[0],tok->GT_chars[1],tok->GT_chars[2],tok->GT_chars[3]),
@@ -766,6 +776,68 @@ Classes & Methods
 
         TokenUnlockTokenMoniker(moniker);
     }
+*/
+}
+
+
+optr CreateIconTextMoniker(MemHandle lmemHeap, GeodeToken* tok, char* text)
+{
+    Boolean                 isMoniker = FALSE;
+    DisplayScheme	        ds;
+    VisMoniker*             vmp;
+    byte                    *moniker;
+    byte*                   gstr = (void*) 0;
+    word                    foo = 0;
+    TokenMonikerInfo        tmi;
+    GStateHandle            gs, mgs;
+    word                    gschunk;
+    optr                    finalMoniker = NullOptr;
+
+    @call GeodeGetAppObject(0)::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME(&ds);
+
+    isMoniker = TokenLookupMoniker(
+        TOKEN_CHARS(tok->GT_chars[0],tok->GT_chars[1],tok->GT_chars[2],tok->GT_chars[3]),
+        tok->GT_manufID,
+        ds.DS_displayType,
+        ((VMSF_GSTRING) | (VMS_TOOL << VMSF_STYLE_OFFSET)),
+        &tmi
+    );
+
+    if (isMoniker)
+    {
+        moniker = TokenLockTokenMoniker(tmi);
+        vmp = LMemDeref((optr) moniker);
+
+        if (vmp->VM_width <= TOOL_ICON_WIDTH)
+        {
+            MemLock(lmemHeap);
+            gs = GrCreateGString(lmemHeap, GST_CHUNK, &gschunk);
+
+            // load icon moniker from Token-DB, draw on canvas
+            gstr = (byte *)vmp+(sizeof(VisMonikerWithGString));
+            mgs = GrLoadGString(PtrToSegment(gstr), GST_PTR, PtrToOffset(gstr));
+            GrSaveState(gs);
+            GrDrawGString(gs, mgs, 0, 1, 0, &foo);
+            GrRestoreState(gs);
+            GrDestroyGString(mgs, gs, GSKT_LEAVE_DATA);
+
+            // draw text
+            GrDrawText(gs, TOOL_ICON_WIDTH + 2, 1, text, 0);
+
+            // finish
+            GrEndGString(gs);
+
+            finalMoniker = ConstructOptr(lmemHeap, gschunk);
+
+            // kill everything
+            GrDestroyGString(gs, 0, GSKT_LEAVE_DATA);
+            MemUnlock(lmemHeap);
+          }
+
+        TokenUnlockTokenMoniker(moniker);
+    }
+
+    return finalMoniker;
 }
 
 
@@ -865,16 +937,34 @@ three arguments:
 ********************************************************************/
 @method	ConfigureAppListClass, MSG_QUERY_APP_MONIKER
 {
-    char*   filePtr = (void*) 0;
-    word    elSize = 0;
-    char*   fname = (char*) 0;
+    char*                   filePtr = (void*) 0;
+    word                    elSize = 0;
+    char*                   fname = (char*) 0;
+    MemHandle               lmemHeap = NullHandle;
+    optr                    finalMoniker = NullOptr;
+    GeodeToken              tok;
 
     MemLock(HandleOf(appList));
 
     filePtr = (char*) ChunkArrayElementToPtr(appList, item, &elSize);
+    FileGetPathExtAttributes(filePtr, FEA_TOKEN, (&tok), sizeof(GeodeToken));
     fname = strrchr(filePtr, '\\') + 1;
-    @call list::MSG_GEN_DYNAMIC_LIST_REPLACE_ITEM_TEXT(item, fname);
 
+    lmemHeap = MemAllocLMem(LMEM_TYPE_GSTRING, sizeof(LMemBlockHeader));
+    finalMoniker = CreateIconTextMoniker(lmemHeap, &tok, fname);
+
+    @call list::MSG_GEN_DYNAMIC_LIST_REPLACE_ITEM_MONIKER(
+		item,
+		0,
+		0,
+		0,
+		0,
+		VMDT_GSTRING,
+		VMST_OPTR,
+		(dword) finalMoniker
+    );
+
+    MemFree(lmemHeap);
     MemUnlock(HandleOf(appList));
 }
 

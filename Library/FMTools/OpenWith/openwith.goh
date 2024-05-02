@@ -71,4 +71,5 @@ void        _pascal LaunchApp(GeodeToken *tok, DiskHandle appDisk, char *appPath
 void        _pascal ReadAppsFromIniFile();
 Boolean     _pascal ReadAppsCallback(const char *stringSection, word sectionNum, void* enumData);
 void        _pascal WriteAppsToIniFile();
+optr        _pascal CreateIconTextMoniker(MemHandle lmemHeap, GeodeToken* tok, char* text);
 void        _pascal _export ShowStopper();
