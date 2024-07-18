@@ -1353,6 +1353,7 @@ DIR (ensemble) {
 		DIR (Tools) {
 			IF (tools) {
 				Appl/Tools/Localize/localize{ec}.geo GFS LOCALPC
+				Appl/Tools/WListGen/wlistgen{ec}.geo GFS LOCALPC
 			}
 		}
 	}

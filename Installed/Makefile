@@ -133,7 +133,7 @@ minimalAppl	: minimalGame minimalUtils minimalTools minimalSavers \
 
 minimalUtils	: prefmgr
 
-minimalTools    : resedit
+minimalTools    : resedit wlgen
 
 minimalGame	: solitaire cword amateur bjack hearts gwpoker \
                   pyramid sokoban uki mine column battle \
@@ -1419,7 +1419,7 @@ Installed/Library/SSL:				ansic socket mapheap MAKELIB
 
 # product-specific dependency on fjpeg
 impgraph	: Installed/Library/Breadbox/ImpGraph
-Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg fjpeg MAKELIB 
+Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg fjpeg MAKELIB
 
 ijgjpeg	: 	Installed/Library/Breadbox/Ijgjpeg
 Installed/Library/Breadbox/Ijgjpeg:		ui ansic MAKELIB
@@ -1808,3 +1808,5 @@ Installed/Appl/Slides:				ui text impex convert MAKEAPPL
 
 resedit	: Installed/Appl/Tools/Localize
 Installed/Appl/Tools/Localize:		ui text spool MAKEAPPL
+wlgen	: Installed/Appl/Tools/WListGen
+Installed/Appl/Tools/WListGen:			ui ansic wmlib MAKEAPPL
