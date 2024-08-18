@@ -316,27 +316,27 @@
 #endif
 
   /* Rounding function, as used by the interpreter */
-  typedef TT_F26Dot6  (*TRound_Function)( EXEC_OPS TT_F26Dot6 distance,
-                                                   TT_F26Dot6 compensation );
+  typedef TT_F26Dot6  _near (*TRound_Function)( EXEC_OPS TT_F26Dot6 distance,
+                                                         TT_F26Dot6 compensation );
 
   /* Point displacement along the freedom vector routine, as */
   /* used by the interpreter                                 */
-  typedef void  (*TMove_Function)( EXEC_OPS PGlyph_Zone  zone,
-                                            UShort       point,
-                                            TT_F26Dot6   distance );
+  typedef void  _near (*TMove_Function) ( EXEC_OPS PGlyph_Zone  zone,
+                                                   UShort       point,
+                                                   TT_F26Dot6   distance );
 
   /* Distance projection along one of the proj. vectors, as used */
   /* by the interpreter                                          */
-  typedef TT_F26Dot6  (*TProject_Function)( EXEC_OPS TT_Vector*  v1,
-                                                     TT_Vector*  v2 );
+  typedef TT_F26Dot6  _near (*TProject_Function)( EXEC_OPS TT_Vector*  v1,
+                                                           TT_Vector*  v2 );
 
   /* reading a cvt value. Take care of non-square pixels when needed */
-  typedef TT_F26Dot6  TGet_CVT_Function ( EXEC_OPS UShort  index );
+  typedef TT_F26Dot6  _near (*TGet_CVT_Function) ( EXEC_OPS UShort  index );
 
   /* setting or moving a cvt value.  Take care of non-square pixels  */
   /* when needed                                                     */
-  typedef void  TSet_CVT_Function ( EXEC_OPS  UShort      index,
-                                              TT_F26Dot6  value );
+  typedef void  _near (*TSet_CVT_Function) ( EXEC_OPS  UShort      index,
+                                                       TT_F26Dot6  value );
 
   /* subglyph transformation record */
   struct  TTransform_
@@ -716,9 +716,9 @@
 
     TMove_Function     func_move;      /* current point move function */
 
-    TGet_CVT_Function  _near * func_read_cvt;  /* read a cvt entry              */
-    TSet_CVT_Function  _near * func_write_cvt; /* write a cvt entry (in pixels) */
-    TSet_CVT_Function  _near * func_move_cvt;  /* incr a cvt entry (in pixels)  */
+    TGet_CVT_Function  func_read_cvt;  /* read a cvt entry              */
+    TSet_CVT_Function  func_write_cvt; /* write a cvt entry (in pixels) */
+    TSet_CVT_Function  func_move_cvt;  /* incr a cvt entry (in pixels)  */
 
     UShort             loadSize;
     PSubglyph_Stack    loadStack;      /* loading subglyph stack */

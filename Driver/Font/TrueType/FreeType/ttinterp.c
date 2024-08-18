@@ -166,35 +166,15 @@
 #define INS_Goto_CodeRange( range, ip ) \
                         Ins_Goto_CodeRange( EXEC_ARGS range, ip )
 
-#ifdef __GEOS__
-#define CUR_Func_project( x, y )   ProcCallFixedOrMovable_cdecl( CUR.func_project, EXEC_ARGS x, y )
-#else
 #define CUR_Func_project( x, y )   CUR.func_project( EXEC_ARGS x, y )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_move( z, p, d )   ProcCallFixedOrMovable_cdecl( CUR.func_move, EXEC_ARGS z, p, d )
-#else
 #define CUR_Func_move( z, p, d )   CUR.func_move( EXEC_ARGS z, p, d )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_dualproj( x, y )  ProcCallFixedOrMovable_cdecl( CUR.func_dualproj, EXEC_ARGS x, y )
-#else
 #define CUR_Func_dualproj( x, y )  CUR.func_dualproj( EXEC_ARGS x, y )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_freeProj( x, y )  ProcCallFixedOrMovable_cdecl( CUR.func_freeProj, EXEC_ARGS x, y )
-#else
 #define CUR_Func_freeProj( x, y )  CUR.func_freeProj( EXEC_ARGS x, y )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_round( d, c )     ProcCallFixedOrMovable_cdecl( CUR.func_round, EXEC_ARGS d, c )
-#else
 #define CUR_Func_round( d, c )     CUR.func_round( EXEC_ARGS d, c )
-#endif  /* __GEOS__ */
 
 #define CUR_Func_read_cvt( index )  CUR.func_read_cvt( EXEC_ARGS index )
 
@@ -814,9 +794,9 @@
  *
  *****************************************************************/
 
-  static void  Direct_Move( EXEC_OPS PGlyph_Zone zone,
-                                     UShort      point,
-                                     TT_F26Dot6  distance )
+  static void  _near Direct_Move( EXEC_OPS PGlyph_Zone zone,
+                                           UShort      point,
+                                           TT_F26Dot6  distance )
   {
     TT_F26Dot6 v;
 
@@ -857,9 +837,9 @@
  *
  *******************************************************************/
 
-  static void  Direct_Move_X( EXEC_OPS PGlyph_Zone  zone,
-                                       UShort       point,
-                                       TT_F26Dot6   distance )
+  static void  _near Direct_Move_X( EXEC_OPS PGlyph_Zone  zone,
+                                             UShort       point,
+                                             TT_F26Dot6   distance )
   {
     zone->cur[point].x += distance;
     zone->touch[point] |= TT_Flag_Touched_X;
@@ -871,9 +851,9 @@
  *
  *******************************************************************/
 
-  static void  Direct_Move_Y( EXEC_OPS PGlyph_Zone  zone,
-                                       UShort       point,
-                                       TT_F26Dot6   distance )
+  static void  _near Direct_Move_Y( EXEC_OPS PGlyph_Zone  zone,
+                                             UShort       point,
+                                             TT_F26Dot6   distance )
   {
     zone->cur[point].y += distance;
     zone->touch[point] |= TT_Flag_Touched_Y;
@@ -898,8 +878,8 @@
  *
  ******************************************************************/
 
-  static TT_F26Dot6  Round_None( EXEC_OPS TT_F26Dot6  distance,
-                                          TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_None( EXEC_OPS TT_F26Dot6  distance,
+                                                TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -934,8 +914,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                             TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_To_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                   TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -973,8 +953,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_To_Half_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                  TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_To_Half_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                        TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1010,8 +990,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Down_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                  TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Down_To_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                        TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1049,8 +1029,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Up_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Up_To_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                      TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1088,8 +1068,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_To_Double_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                    TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_To_Double_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                          TT_F26Dot6  compensation )
   {
     TT_F26Dot6 val;
 
@@ -1132,8 +1112,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Super( EXEC_OPS TT_F26Dot6  distance,
-                                           TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Super( EXEC_OPS TT_F26Dot6  distance,
+                                                 TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1176,8 +1156,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Super_45( EXEC_OPS TT_F26Dot6  distance,
-                                              TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Super_45( EXEC_OPS TT_F26Dot6  distance,
+                                                    TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1410,8 +1390,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Project_x( EXEC_OPS TT_Vector*  v1,
-                                         TT_Vector*  v2 )
+  static TT_F26Dot6  _near Project_x( EXEC_OPS TT_Vector*  v1,
+                                               TT_Vector*  v2 )
   {
     return (v1->x - v2->x);
   }
@@ -1429,8 +1409,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Project_y( EXEC_OPS TT_Vector*  v1,
-                                         TT_Vector*  v2 )
+  static TT_F26Dot6  _near Project_y( EXEC_OPS TT_Vector*  v1,
+                                               TT_Vector*  v2 )
   {
     return (v1->y - v2->y);
   }
@@ -5265,7 +5245,7 @@
         {
           B = ((ULong)B & 0xF) - 8;
           if ( B >= 0 )
-            B++;
+            ++B;
           B = B * 64L / (1L << CUR.GS.delta_shift);
 
           CUR_Func_move( &CUR.zp0, A, B );
