@@ -883,10 +883,10 @@
 
         FORGET_Frame();
 
-        k = 1 + 1;
+        k = 2;
 
         if ( new_flags & ARGS_ARE_WORDS )
-          k *= 2;
+          k <<= 1;
 
         if ( new_flags & WE_HAVE_A_SCALE )
           k += 2;

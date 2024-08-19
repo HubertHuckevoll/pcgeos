@@ -84,7 +84,7 @@
     while ( z )
     {
       z = (unsigned INT64)z >> 1;
-      j++;
+      ++j;
     }
     return j - 1;
   }
@@ -146,7 +146,7 @@
 
     if ( a <= 46340 && b <= 46340 && c <= 176095 )
     {
-      a = ( a*b + c/2 )/c;
+      a = ( a*b + (c >> 1))/c;
     }
     else
     {
@@ -154,7 +154,7 @@
 
       MulTo64( a, b, &temp );
       temp2.hi = (TT_Int32)(c >> 31);
-      temp2.lo = (TT_Word32)(c / 2);
+      temp2.lo = (TT_Word32)(c >> 1);
       Add64( &temp, &temp2, &temp );
       a = Div64by32( &temp, c );
     }
@@ -287,7 +287,7 @@
     /* Check carry overflow of i1 + lo */
     if ( i1 )
     {
-      if ( lo >= (TT_Word32)-(TT_Int32)i1 ) hi++;
+      if ( lo >= (TT_Word32)-(TT_Int32)i1 ) ++hi;
       lo += i1;
     }
 
@@ -325,7 +325,7 @@
                             /* Return Max/Min Int32 if divide overflow */
                             /* This includes division by zero!         */
     q = 0;
-    for ( i = 0; i < 32; i++ )
+    for ( i = 0; i < 32; ++i )
     {
       r <<= 1;
       q <<= 1;
@@ -364,7 +364,7 @@
     while ( i > 0 )
     {
       i >>= 1;
-      j++;
+      ++j;
     }
     return j-1;
   }
@@ -406,7 +406,7 @@ void  MulDivList( TT_Long*  a, ULong  n, TT_Long  b, TT_Long  c )
 {
   ULong i;
 
-  for ( i = 0; i < n; i++ )
+  for ( i = 0; i < n; ++i )
     a[i] = TT_MulDiv( a[i], b, c );
 }
 
@@ -419,7 +419,7 @@ void  TransVecList( TT_Vector*  vec, ULong  n, TT_Matrix*  matrix )
     ULong  i;
     TT_F26Dot6  x, y;
 
-    for ( i = 0; i < n; i++ )
+    for ( i = 0; i < n; ++i )
     {
       x = TT_MulFix( vec->x, matrix->xx ) +
           TT_MulFix( vec->y, matrix->xy );
@@ -429,7 +429,7 @@ void  TransVecList( TT_Vector*  vec, ULong  n, TT_Matrix*  matrix )
 
       vec->x = x;
       vec->y = y;
-      vec++;
+      ++vec;
     }  
 }
 
