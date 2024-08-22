@@ -23,6 +23,7 @@
 #include "ttcache.h"
 #include "tttables.h"
 #include "ttcmap.h"
+#include <heap.h>
 
 #ifdef __cplusplus
   extern "C" {
@@ -232,8 +233,8 @@
 
   struct  TCodeRange_
   {
-    PByte  Base;
-    ULong  Size;
+    PByte   Base;
+    UShort  Size;
   };
 
   typedef struct TCodeRange_  TCodeRange;
@@ -255,7 +256,7 @@
   struct  TDefRecord_
   {
     Int    Range;     /* in which code range is it located ? */
-    ULong  Start;     /* where does it start ?               */
+    UShort Start;     /* where does it start ?               */
     Int    Opc;       /* function #, or instruction code     */
     Bool   Active;    /* is it active ?                      */
   };
@@ -269,9 +270,9 @@
   struct  TCallRecord_
   {
     Int    Caller_Range;
-    ULong  Caller_IP;
-    Long   Cur_Count;
-    ULong  Cur_Restart;
+    UShort Caller_IP;
+    Short  Cur_Count;
+    UShort Cur_Restart;
   };
 
   typedef struct TCallRecord_  TCallRecord;
@@ -497,14 +498,18 @@
                                                 /* found in the TTF file */
     TT_Horizontal_Header  horizontalHeader;     /* the horizontal header */
 
+#ifdef TT_CONFIG_OPTION_PROCESS_VMTX
     Bool                  verticalInfo;         /* True when vertical table */
     TT_Vertical_Header    verticalHeader;       /* is present in the font   */
+#endif
 
     TT_OS2                os2;                  /* 'OS/2' table */
 
     TT_Postscript         postscript;           /* 'Post' table */
 
+#ifdef TT_CONFIG_OPTION_PROCESS_HDMX
     TT_Hdmx               hdmx;                 /* 'Hdmx' table */
+#endif
 
     TName_Table           nameTable;            /* name table */
 
@@ -520,25 +525,21 @@
     PCMapTable  cMaps;
 
     /* The glyph locations table */
-    ULong     numLocations;         /* UShort is not enough */
-#ifndef TT_HUGE_PTR
-    PStorage  glyphLocations;
-#else
-    Storage TT_HUGE_PTR * glyphLocations;
-#endif
+    UShort    numLocations;
+    MemHandle glyphLocationBlock;
 
     /* NOTE : The "hmtx" is now part of the horizontal header */
 
     /* the font program, if any */
-    ULong   fontPgmSize;
+    UShort  fontPgmSize;
     PByte   fontProgram;
 
     /* the cvt program, if any */
-    ULong   cvtPgmSize;
+    UShort  cvtPgmSize;
     PByte   cvtProgram;
 
     /* the original, unscaled, control value table */
-    ULong   cvtSize;
+    UShort  cvtSize;
     PShort  cvt;
 
     /* The following values _must_ be set by the */
@@ -599,22 +600,13 @@
     TGraphicsState   GS;
     TGraphicsState   default_GS;
 
-    ULong            cvtSize;   /* the scaled control value table */
+    UShort           cvtSize;   /* the scaled control value table */
     PLong            cvt;
 
-    ULong            storeSize; /* The storage area is now part of the */
+    UShort           storeSize; /* The storage area is now part of the */
     PLong            storage;   /* instance                            */
 
     TGlyph_Zone      twilight;  /* The instance's twilight zone */
-
-    /* debugging variables */
-
-    /* When using the debugger, we must keep the */
-    /* execution context tied to the instance    */
-    /* object rather than asking it on demand    */
-
-    Bool                debug;
-    PExecution_Context  context;
   };
 
 
@@ -633,13 +625,13 @@
 
     TT_Error        error;     /* last execution error */
 
-    Long            top;        /* top of exec. stack  */
+    Short           top;        /* top of exec. stack  */
 
-    ULong           stackSize;  /* size of exec. stack */
+    UShort          stackSize;  /* size of exec. stack */
     PStorage        stack;      /* current exec. stack */
 
     Long            args;
-    ULong           new_top;    /* new top after exec.    */
+    UShort          new_top;    /* new top after exec.    */
 
     TGlyph_Zone     zp0,            /* zone records */
                     zp1,
@@ -653,18 +645,18 @@
 
     Int             curRange;  /* current code range number   */
     PByte           code;      /* current code range          */
-    ULong           IP;        /* current instruction pointer */
-    ULong           codeSize;  /* size of current range       */
+    UShort          IP;        /* current instruction pointer */
+    UShort          codeSize;  /* size of current range       */
 
     Byte            opcode;    /* current opcode              */
     Int             length;    /* length of current opcode    */
 
     Bool            step_ins;  /* true if the interpreter must */
                                /* increment IP after ins. exec */
-    ULong           cvtSize;
+    UShort          cvtSize;
     PLong           cvt;
 
-    ULong           glyphSize; /* glyph instructions buffer size */
+    UShort          glyphSize; /* glyph instructions buffer size */
     PByte           glyphIns;  /* glyph instructions buffer */
 
     UShort          numFDefs;  /* number of function defs         */
@@ -689,17 +681,13 @@
     TCodeRangeTable codeRangeTable;  /* table of valid coderanges */
                                      /* useful for the debugger   */
 
-    ULong           storeSize;  /* size of current storage */
+    UShort          storeSize;  /* size of current storage */
     PLong           storage;    /* storage area            */
 
     TT_F26Dot6      period;     /* values used for the */
     TT_F26Dot6      phase;      /* 'SuperRounding'     */
     TT_F26Dot6      threshold;
 
-    /* this seems to be unused */
-#if 0
-    Int             cur_ppem;       /* ppem along the current proj vector */
-#endif
     Long            scale1;         /* scaling values along the current   */
     Long            scale2;         /* projection vector too..            */
     Bool            cached_metrics; /* the ppem is computed lazily. used  */
@@ -712,8 +700,9 @@
                                    /* the prep program               */
     Bool            is_composite;  /* ture if the glyph is composite */
 
-    Bool            pedantic_hinting;  /* if true, read and write array   */
-                                       /* bounds faults halt the hinting  */
+#ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
+   Bool            pedantic_hinting;  /* if true, read and write array   */
+#endif                                /* bounds faults halt the hinting  */
 
     /* latest interpreter additions */
 
@@ -731,7 +720,7 @@
     TSet_CVT_Function  func_write_cvt; /* write a cvt entry (in pixels) */
     TSet_CVT_Function  func_move_cvt;  /* incr a cvt entry (in pixels)  */
 
-    ULong              loadSize;
+    UShort             loadSize;
     PSubglyph_Stack    loadStack;      /* loading subglyph stack */
 
   };
@@ -774,22 +763,15 @@
   LOCAL_DEF
   TT_Error  Goto_CodeRange( PExecution_Context  exec,
                             Int                 range,
-                            ULong               IP );
+                            UShort              IP );
 
-#if 0
-  /* Return a pointer to a given coderange record. */
-  /* Used only by the debugger.                    */
-  LOCAL_DEF
-  PCodeRange  Get_CodeRange( PExecution_Context  exec,
-                             Int                 range );
-#endif
 
   /* Set a given code range properties */
   LOCAL_DEF
   TT_Error  Set_CodeRange( PExecution_Context  exec,
                            Int                 range,
                            void*               base,
-                           ULong               length );
+                           UShort              length );
 
   /* Clear a given coderange */
   LOCAL_DEF
@@ -813,8 +795,7 @@
                           PInstance           ins );
 
   LOCAL_DEF
-  TT_Error  Context_Run( PExecution_Context  exec,
-                         Bool                debug );
+  TT_Error  Context_Run( PExecution_Context  exec );
 
   LOCAL_DEF
   TT_Error  Instance_Init( PInstance  ins );
