@@ -398,17 +398,6 @@
 
 #endif /* LONG64 */
 
-/* This convenience function applies TT_MulDiv to a list.                  */
-/* Its main purpose is to reduce the number of inter-module calls in GEOS. */
-
-LOCAL_FUNC
-void  MulDivList( TT_Long*  a, UShort  n, TT_Long  b, TT_Long  c )
-{
-  UShort i;
-
-  for ( i = 0; i < n; ++i )
-    a[i] = TT_MulDiv( a[i], b, c );
-}
 
 /* This convenience function applies a matrix  to a list of vectors.       */
 /* Its main purpose is to reduce the number of inter-module calls in GEOS. */
