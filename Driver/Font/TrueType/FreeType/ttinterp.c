@@ -225,6 +225,8 @@
 /*                                                                   */
 /*********************************************************************/
 
+#ifdef TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK
+
 #undef  PACK
 #define PACK( x, y )  ((x << 4) | y)
 
@@ -505,6 +507,8 @@
     /*  MIRP[30]  */  PACK( 2, 0 ),
     /*  MIRP[31]  */  PACK( 2, 0 )
   };
+
+#endif  /* TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK */
 
   static  const  TT_Vector  Null_Vector = {0,0};
 
@@ -5778,6 +5782,8 @@
         goto LErrorLabel_;
       }
 
+#ifdef TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK
+
       /* First, let's check for empty stack and overflow */
 
       CUR.args = CUR.top - (Pop_Push_Count[CUR.opcode] >> 4);
@@ -5802,6 +5808,7 @@
         CUR.error = TT_Err_Stack_Overflow;
         goto LErrorLabel_;
       }
+#endif  /* TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK */
 
       CUR.step_ins = TRUE;
       CUR.error    = TT_Err_Ok;
