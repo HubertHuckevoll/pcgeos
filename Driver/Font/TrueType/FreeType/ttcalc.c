@@ -56,7 +56,7 @@
     s ^= b; b = ABS( b );
     s ^= c; c = ABS( c );
 
-    a = ((TT_Int64)a * b + c/2) / c;
+    a = ((TT_Int64)a * b + (c >> 1)) / c;
     return ( s < 0 ) ? -a : a;
   }
 
@@ -402,9 +402,9 @@
 /* Its main purpose is to reduce the number of inter-module calls in GEOS. */
 
 LOCAL_FUNC
-void  MulDivList( TT_Long*  a, ULong  n, TT_Long  b, TT_Long  c )
+void  MulDivList( TT_Long*  a, UShort  n, TT_Long  b, TT_Long  c )
 {
-  ULong i;
+  UShort i;
 
   for ( i = 0; i < n; ++i )
     a[i] = TT_MulDiv( a[i], b, c );
@@ -414,9 +414,9 @@ void  MulDivList( TT_Long*  a, ULong  n, TT_Long  b, TT_Long  c )
 /* Its main purpose is to reduce the number of inter-module calls in GEOS. */
 
 LOCAL_FUNC
-void  TransVecList( TT_Vector*  vec, ULong  n, TT_Matrix*  matrix )
+void  TransVecList( TT_Vector*  vec, UShort  n, TT_Matrix*  matrix )
 {
-    ULong  i;
+    UShort  i;
     TT_F26Dot6  x, y;
 
     for ( i = 0; i < n; ++i )
