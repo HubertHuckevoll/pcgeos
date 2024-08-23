@@ -166,53 +166,21 @@
 #define INS_Goto_CodeRange( range, ip ) \
                         Ins_Goto_CodeRange( EXEC_ARGS range, ip )
 
-#ifdef __GEOS__
-#define CUR_Func_project( x, y )   ProcCallFixedOrMovable_cdecl( CUR.func_project, EXEC_ARGS x, y )
-#else
 #define CUR_Func_project( x, y )   CUR.func_project( EXEC_ARGS x, y )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_move( z, p, d )   ProcCallFixedOrMovable_cdecl( CUR.func_move, EXEC_ARGS z, p, d )
-#else
 #define CUR_Func_move( z, p, d )   CUR.func_move( EXEC_ARGS z, p, d )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_dualproj( x, y )  ProcCallFixedOrMovable_cdecl( CUR.func_dualproj, EXEC_ARGS x, y )
-#else
 #define CUR_Func_dualproj( x, y )  CUR.func_dualproj( EXEC_ARGS x, y )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_freeProj( x, y )  ProcCallFixedOrMovable_cdecl( CUR.func_freeProj, EXEC_ARGS x, y )
-#else
 #define CUR_Func_freeProj( x, y )  CUR.func_freeProj( EXEC_ARGS x, y )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_round( d, c )     ProcCallFixedOrMovable_cdecl( CUR.func_round, EXEC_ARGS d, c )
-#else
 #define CUR_Func_round( d, c )     CUR.func_round( EXEC_ARGS d, c )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_read_cvt( index )  ProcCallFixedOrMovable_cdecl( CUR.func_read_cvt, EXEC_ARGS index ) 
-#else
 #define CUR_Func_read_cvt( index )  CUR.func_read_cvt( EXEC_ARGS index )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_write_cvt( index, val ) ProcCallFixedOrMovable_cdecl( CUR.func_write_cvt, EXEC_ARGS index, val )
-#else
 #define CUR_Func_write_cvt( index, val ) CUR.func_write_cvt( EXEC_ARGS index, val )
-#endif  /* __GEOS__ */
 
-#ifdef __GEOS__
-#define CUR_Func_move_cvt( index, val ) ProcCallFixedOrMovable_cdecl( CUR.func_move_cvt, EXEC_ARGS index, val )
-#else
 #define CUR_Func_move_cvt( index, val ) CUR.func_move_cvt( EXEC_ARGS index, val )
-#endif  /* __GEOS__ */
 
 #define CURRENT_Ratio()  Current_Ratio( EXEC_ARG )
 #define CURRENT_Ppem()   Current_Ppem( EXEC_ARG )
@@ -256,6 +224,8 @@
 /*     by arguments a1..an, then 1 is chosen.                        */
 /*                                                                   */
 /*********************************************************************/
+
+#ifdef TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK
 
 #undef  PACK
 #define PACK( x, y )  ((x << 4) | y)
@@ -538,6 +508,8 @@
     /*  MIRP[31]  */  PACK( 2, 0 )
   };
 
+#endif  /* TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK */
+
   static  const  TT_Vector  Null_Vector = {0,0};
 
 #undef  NULL_Vector
@@ -634,38 +606,38 @@
   }
 
 
-  static TT_F26Dot6  Read_CVT( EXEC_OPS ULong  index )
+  static TT_F26Dot6  _near Read_CVT( EXEC_OPS UShort  index )
   {
     return CUR.cvt[index];
   }
 
 #ifdef TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS
-  static TT_F26Dot6  Read_CVT_Stretched( EXEC_OPS ULong  index )
+  static TT_F26Dot6  _near Read_CVT_Stretched( EXEC_OPS UShort  index )
   {
     return TT_MulFix( CUR.cvt[index], CURRENT_Ratio() );
   }
 #endif
 
 
-  static void  Write_CVT( EXEC_OPS ULong  index, TT_F26Dot6  value )
+  static void  _near Write_CVT( EXEC_OPS UShort  index, TT_F26Dot6  value )
   {
     CUR.cvt[index] = value;
   }
 
 #ifdef TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS
-  static void  Write_CVT_Stretched( EXEC_OPS ULong  index, TT_F26Dot6  value )
+  static void  _near Write_CVT_Stretched( EXEC_OPS UShort  index, TT_F26Dot6  value )
   {
     CUR.cvt[index] = TT_MulDiv( value, 0x10000, CURRENT_Ratio() );
   }
 #endif
 
-  static void  Move_CVT( EXEC_OPS ULong  index, TT_F26Dot6  value )
+  static void  _near Move_CVT( EXEC_OPS UShort  index, TT_F26Dot6  value )
   {
     CUR.cvt[index] += value;
   }
 
 #ifdef TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS
-  static void  Move_CVT_Stretched( EXEC_OPS ULong  index, TT_F26Dot6  value )
+  static void  __near Move_CVT_Stretched( EXEC_OPS UShort  index, TT_F26Dot6  value )
   {
     CUR.cvt[index] += TT_MulDiv( value, 0x10000, CURRENT_Ratio() );
   }
@@ -696,7 +668,7 @@
       if ( CUR.IP + 1 >= CUR.codeSize )
         return FAILURE;
 
-      CUR.length = CUR.code[CUR.IP + 1] * 2 + 2;
+      CUR.length = ( CUR.code[CUR.IP + 1] << 1 ) + 2;
       break;
 
     case 0xB0:
@@ -718,7 +690,7 @@
     case 0xBD:
     case 0xBE:
     case 0xBF:
-      CUR.length = (CUR.opcode - 0xB8) * 2 + 3;
+      CUR.length = ( (CUR.opcode - 0xB8) << 1 ) + 3;
       break;
 
     default:
@@ -826,9 +798,9 @@
  *
  *****************************************************************/
 
-  static void  Direct_Move( EXEC_OPS PGlyph_Zone zone,
-                                     UShort      point,
-                                     TT_F26Dot6  distance )
+  static void  _near Direct_Move( EXEC_OPS PGlyph_Zone zone,
+                                           UShort      point,
+                                           TT_F26Dot6  distance )
   {
     TT_F26Dot6 v;
 
@@ -869,9 +841,9 @@
  *
  *******************************************************************/
 
-  static void  Direct_Move_X( EXEC_OPS PGlyph_Zone  zone,
-                                       UShort       point,
-                                       TT_F26Dot6   distance )
+  static void  _near Direct_Move_X( EXEC_OPS PGlyph_Zone  zone,
+                                             UShort       point,
+                                             TT_F26Dot6   distance )
   {
     zone->cur[point].x += distance;
     zone->touch[point] |= TT_Flag_Touched_X;
@@ -883,9 +855,9 @@
  *
  *******************************************************************/
 
-  static void  Direct_Move_Y( EXEC_OPS PGlyph_Zone  zone,
-                                       UShort       point,
-                                       TT_F26Dot6   distance )
+  static void  _near Direct_Move_Y( EXEC_OPS PGlyph_Zone  zone,
+                                             UShort       point,
+                                             TT_F26Dot6   distance )
   {
     zone->cur[point].y += distance;
     zone->touch[point] |= TT_Flag_Touched_Y;
@@ -910,8 +882,8 @@
  *
  ******************************************************************/
 
-  static TT_F26Dot6  Round_None( EXEC_OPS TT_F26Dot6  distance,
-                                          TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_None( EXEC_OPS TT_F26Dot6  distance,
+                                                TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -946,8 +918,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                             TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_To_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                   TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -985,8 +957,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_To_Half_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                  TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_To_Half_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                        TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1022,8 +994,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Down_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                  TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Down_To_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                        TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1061,8 +1033,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Up_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Up_To_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                      TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1100,8 +1072,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_To_Double_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                    TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_To_Double_Grid( EXEC_OPS TT_F26Dot6  distance,
+                                                          TT_F26Dot6  compensation )
   {
     TT_F26Dot6 val;
 
@@ -1144,8 +1116,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Super( EXEC_OPS TT_F26Dot6  distance,
-                                           TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Super( EXEC_OPS TT_F26Dot6  distance,
+                                                 TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1188,8 +1160,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Round_Super_45( EXEC_OPS TT_F26Dot6  distance,
-                                              TT_F26Dot6  compensation )
+  static TT_F26Dot6  _near Round_Super_45( EXEC_OPS TT_F26Dot6  distance,
+                                                    TT_F26Dot6  compensation )
   {
     TT_F26Dot6  val;
 
@@ -1278,7 +1250,7 @@
     switch ( (Int)(selector & 0xC0) )
     {
       case 0:
-        CUR.period = GridPeriod / 2;
+        CUR.period = GridPeriod >> 1;
         break;
 
       case 0x40:
@@ -1286,7 +1258,7 @@
         break;
 
       case 0x80:
-        CUR.period = GridPeriod * 2;
+        CUR.period = GridPeriod << 1;
         break;
 
       /* This opcode is reserved, but... */
@@ -1303,26 +1275,26 @@
       break;
 
     case 0x10:
-      CUR.phase = CUR.period / 4;
+      CUR.phase = CUR.period >> 2;
       break;
 
     case 0x20:
-      CUR.phase = CUR.period / 2;
+      CUR.phase = CUR.period >> 1;
       break;
 
     case 0x30:
-      CUR.phase = GridPeriod * 3 / 4;
+      CUR.phase = ( GridPeriod * 3 ) >> 2;
       break;
     }
 
     if ( (selector & 0x0F) == 0 )
       CUR.threshold = CUR.period - 1;
     else
-      CUR.threshold = ( (Int)(selector & 0x0F) - 4 ) * CUR.period / 8;
+      CUR.threshold = ( (Int)(selector & 0x0F) - 4 ) * ( CUR.period >> 3 );
 
-    CUR.period    /= 256;
-    CUR.phase     /= 256;
-    CUR.threshold /= 256;
+    CUR.period    >>= 8;
+    CUR.phase     >>= 8;
+    CUR.threshold >>= 8;
   }
 
 
@@ -1422,8 +1394,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Project_x( EXEC_OPS TT_Vector*  v1,
-                                         TT_Vector*  v2 )
+  static TT_F26Dot6  _near Project_x( EXEC_OPS TT_Vector*  v1,
+                                               TT_Vector*  v2 )
   {
     return (v1->x - v2->x);
   }
@@ -1441,8 +1413,8 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  Project_y( EXEC_OPS TT_Vector*  v1,
-                                         TT_Vector*  v2 )
+  static TT_F26Dot6  _near Project_y( EXEC_OPS TT_Vector*  v1,
+                                               TT_Vector*  v2 )
   {
     return (v1->y - v2->y);
   }
@@ -1598,9 +1570,9 @@
     {
       /* We need to increase W, by a minimal amount */
       if ( Vx < Vy )
-        Vx++;
+        ++Vx;
       else
-        Vy++;
+        ++Vy;
 
       W = Vx * Vx + Vy * Vy;
     }
@@ -1609,9 +1581,9 @@
     {
       /* We need to decrease W, by a minimal amount */
       if ( Vx < Vy )
-        Vx--;
+        --Vx;
       else
-        Vy--;
+        --Vy;
 
       W = Vx * Vx + Vy * Vy;
     }
@@ -2055,7 +2027,7 @@
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
 #define DO_RS                                                   \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                               \
      if ( BOUNDS( I, CUR.storeSize ) )                          \
      {                                                          \
        if ( CUR.pedantic_hinting )                              \
@@ -2071,7 +2043,7 @@
 #else
 #define DO_RS                                                   \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                               \
      if ( BOUNDS( I, CUR.storeSize ) )                          \
        args[0] = 0;                                             \
      else                                                       \
@@ -2083,7 +2055,7 @@
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
 #define DO_WS  \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                                 \
      if ( BOUNDS( I, CUR.storeSize ) )                          \
      {                                                          \
        if ( CUR.pedantic_hinting )                              \
@@ -2097,7 +2069,7 @@
 #else
 #define DO_WS  \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                                 \
      if ( ! BOUNDS( I, CUR.storeSize ) )                        \
        CUR.storage[I] = args[1];                                \
    }
@@ -2107,7 +2079,7 @@
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
 #define DO_RCVT  \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                                 \
      if ( BOUNDS( I, CUR.cvtSize ) )                            \
      {                                                          \
        if ( CUR.pedantic_hinting )                              \
@@ -2123,7 +2095,7 @@
 #else
 #define DO_RCVT  \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                                 \
      if ( BOUNDS( I, CUR.cvtSize ) )                            \
          args[0] = 0;                                           \
      else                                                       \
@@ -2135,7 +2107,7 @@
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
 #define DO_WCVTP                             \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                                 \
      if ( BOUNDS( I, CUR.cvtSize ) )                            \
      {                                                          \
        if ( CUR.pedantic_hinting )                              \
@@ -2149,7 +2121,7 @@
 #else
 #define DO_WCVTP                             \
    {                                                            \
-     ULong  I = (ULong)args[0];                                 \
+     UShort  I = (UShort)args[0];                               \
      if ( ! BOUNDS( I, CUR.cvtSize ) )                          \
        CUR_Func_write_cvt( I, args[1] );                        \
    }
@@ -2159,7 +2131,7 @@
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
 #define DO_WCVTF                                                   \
    {                                                               \
-     ULong  I = (ULong)args[0];                                    \
+     UShort  I = (UShort)args[0];                                  \
      if ( BOUNDS( I, CUR.cvtSize ) )                               \
      {                                                             \
        if ( CUR.pedantic_hinting )                                 \
@@ -2173,7 +2145,7 @@
 #else
 #define DO_WCVTF                                                   \
    {                                                               \
-     ULong  I = (ULong)args[0];                                    \
+     UShort  I = (UShort)args[0];                                  \
      if ( ! BOUNDS( I, CUR.cvtSize ) )                             \
        CUR.cvt[I] = FUnits_To_Pixels( EXEC_ARGS (Short)args[1] );  \
    }
@@ -3117,7 +3089,7 @@
       switch ( CUR.opcode )
       {
       case 0x58:      /* IF */
-        nIfs++;
+        ++nIfs;
         break;
 
       case 0x1b:      /* ELSE */
@@ -3125,7 +3097,7 @@
         break;
 
       case 0x59:      /* EIF */
-        nIfs--;
+        --nIfs;
         Out = (nIfs == 0);
         break;
       }
@@ -3153,11 +3125,11 @@
       switch ( CUR.opcode )
       {
       case 0x58:    /* IF */
-        nIfs++;
+        ++nIfs;
         break;
 
       case 0x59:    /* EIF */
-        nIfs--;
+        --nIfs;
         break;
       }
     } while ( nIfs != 0 );
@@ -3423,7 +3395,7 @@
     /* First of all, look for the same instruction in our table */
     def   = CUR.IDefs;
     limit = def + CUR.numIDefs;
-    for ( ; def < limit; def++ )
+    for ( ; def < limit; ++def )
       if ( def->Opc == opcode )
         break;
     
@@ -3491,7 +3463,7 @@
       return;
     }
 
-    for ( K = 1; K <= L; K++ )
+    for ( K = 1; K <= L; ++K )
       args[K - 1] = CUR.code[CUR.IP + K + 1];
 
     CUR.new_top += L;
@@ -3518,7 +3490,7 @@
 
     CUR.IP += 2;
 
-    for ( K = 0; K < L; K++ )
+    for ( K = 0; K < L; ++K )
       args[K] = GET_ShortIns();
 
     CUR.step_ins = FALSE;
@@ -3544,7 +3516,7 @@
       return;
     }
 
-    for ( K = 1; K <= L; K++ )
+    for ( K = 1; K <= L; ++K )
       args[K - 1] = CUR.code[CUR.IP + K];
   }
 
@@ -3569,7 +3541,7 @@
 
     CUR.IP++;
 
-    for ( K = 0; K < L; K++ )
+    for ( K = 0; K < L; ++K )
       args[K] = GET_ShortIns();
 
     CUR.step_ins = FALSE;
@@ -4069,7 +4041,7 @@
       return;
     }
 
-    for ( I = L; I <= K; I++ )
+    for ( I = L; I <= K; ++I )
       CUR.pts.touch[I] |= TT_Flag_On_Curve;
   }
 
@@ -4098,7 +4070,7 @@
       return;
     }
 
-    for ( I = L; I <= K; I++ )
+    for ( I = L; I <= K; ++I )
       CUR.pts.touch[I] &= ~TT_Flag_On_Curve;
   }
 
@@ -4267,7 +4239,7 @@
     }
 
     /* UNDOCUMENTED! SHC doesn't touch the points */
-    for ( i = first_point; i <= last_point; i++ )
+    for ( i = first_point; i <= last_point; ++i )
     {
       if ( zp.cur != CUR.zp2.cur || refp != i )
         MOVE_Zp2_Point( i, dx, dy, FALSE );
@@ -4308,7 +4280,7 @@
       last_point = 0;
 
     /* UNDOCUMENTED! SHZ doesn't touch the points */
-    for ( i = 0; i <= last_point; i++ )
+    for ( i = 0; i <= last_point; ++i )
     {
       if ( zp.cur != CUR.zp2.cur || refp != i )
         MOVE_Zp2_Point( i, dx, dy, FALSE );
@@ -4458,13 +4430,13 @@
 
   static void  Ins_MIAP( INS_ARG )
   {
-    ULong       cvtEntry;
+    UShort      cvtEntry;
     UShort      point;
     TT_F26Dot6  distance,
                 org_dist;
 
 
-    cvtEntry = (ULong)args[1];
+    cvtEntry = (UShort)args[1];
     point    = (UShort)args[0];
 
     if ( BOUNDS( point,    CUR.zp0.n_points ) ||
@@ -4615,7 +4587,7 @@
   static void  Ins_MIRP( INS_ARG )
   {
     UShort      point;
-    ULong       cvtEntry;
+    UShort      cvtEntry;
 
     TT_F26Dot6  cvt_dist,
                 distance,
@@ -4624,7 +4596,7 @@
 
 
     point    = (UShort)args[0];
-    cvtEntry = (ULong)(args[1] + 1);
+    cvtEntry = (UShort)(args[1] + 1);
 
     /* XXX: UNDOCUMENTED! cvt[-1] = 0 always */
 
@@ -4859,11 +4831,11 @@
       CUR.zp2.cur[point].x = ( CUR.zp1.cur[a0].x +
                                CUR.zp1.cur[a1].x +
                                CUR.zp0.cur[b0].x +
-                               CUR.zp0.cur[b1].x ) / 4;
+                               CUR.zp0.cur[b1].x ) >> 2;
       CUR.zp2.cur[point].y = ( CUR.zp1.cur[a0].y +
                                CUR.zp1.cur[a1].y +
                                CUR.zp0.cur[b0].y +
-                               CUR.zp0.cur[b1].y ) / 4;
+                               CUR.zp0.cur[b1].y ) >> 2;
     }
   }
 
@@ -4893,7 +4865,7 @@
     }
 
     distance = CUR_Func_project( CUR.zp0.cur + p2,
-                                 CUR.zp1.cur + p1 ) / 2;
+                                 CUR.zp1.cur + p1 ) >> 1;
 
     CUR_Func_move( &CUR.zp1, p1, distance );
     CUR_Func_move( &CUR.zp0, p2, -distance );
@@ -5069,7 +5041,7 @@
 
     if ( x1 == x2 )
     {
-      for ( i = p1; i <= p2; i++ )
+      for ( i = p1; i <= p2; ++i )
       {
         x = LINK->orgs[i].x;
 
@@ -5085,7 +5057,7 @@
 
     if ( x1 < x2 )
     {
-      for ( i = p1; i <= p2; i++ )
+      for ( i = p1; i <= p2; ++i )
       {
         x = LINK->orgs[i].x;
 
@@ -5108,7 +5080,7 @@
 
     /* x2 < x1 */
 
-    for ( i = p1; i <= p2; i++ )
+    for ( i = p1; i <= p2; ++i )
     {
       x = LINK->orgs[i].x;
       if ( x <= x2 )
@@ -5170,14 +5142,14 @@
       first_point = point;
 
       while ( point <= end_point && (CUR.pts.touch[point] & mask) == 0 )
-        point++;
+        ++point;
 
       if ( point <= end_point )
       {
         first_touched = point;
         cur_touched   = point;
 
-        point++;
+        ++point;
 
         while ( point <= end_point )
         {
@@ -5192,7 +5164,7 @@
             cur_touched = point;
           }
 
-          point++;
+          ++point;
         }
 
         if ( cur_touched == first_touched )
@@ -5213,7 +5185,7 @@
                     &V );
         }
       }
-      contour++;
+      ++contour;
     } while ( contour < CUR.pts.n_contours );
   }
 
@@ -5277,7 +5249,7 @@
         {
           B = ((ULong)B & 0xF) - 8;
           if ( B >= 0 )
-            B++;
+            ++B;
           B = B * 64L / (1L << CUR.GS.delta_shift);
 
           CUR_Func_move( &CUR.zp0, A, B );
@@ -5302,7 +5274,8 @@
   static void  Ins_DELTAC( INS_ARG )
   {
     ULong  nump, k;
-    ULong  A, C;
+    UShort A;
+    ULong  C;
     Long   B;
 
 
@@ -5318,7 +5291,7 @@
 
       CUR.args -= 2;
 
-      A = (ULong)CUR.stack[CUR.args + 1];
+      A = (UShort)CUR.stack[CUR.args + 1];
       B = CUR.stack[CUR.args];
 
       if ( BOUNDS( A, CUR.cvtSize ) )
@@ -5355,8 +5328,8 @@
         {
           B = ((ULong)B & 0xF) - 8;
           if ( B >= 0 )
-            B++;
-          B = B * 64L / (1L << CUR.GS.delta_shift);
+            ++B;
+          B = (B << 6) / (1L << CUR.GS.delta_shift);
 
           CUR_Func_move_cvt( A, B );
         }
@@ -5414,7 +5387,7 @@
     
     def   = CUR.IDefs;
     limit = def + CUR.numIDefs;
-    for ( ; def < limit; def++ )
+    for ( ; def < limit; ++def )
     {
       if ( def->Opc == CUR.opcode && def->Active )
       {
@@ -5809,6 +5782,8 @@
         goto LErrorLabel_;
       }
 
+#ifdef TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK
+
       /* First, let's check for empty stack and overflow */
 
       CUR.args = CUR.top - (Pop_Push_Count[CUR.opcode] >> 4);
@@ -5833,6 +5808,7 @@
         CUR.error = TT_Err_Stack_Overflow;
         goto LErrorLabel_;
       }
+#endif  /* TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK */
 
       CUR.step_ins = TRUE;
       CUR.error    = TT_Err_Ok;

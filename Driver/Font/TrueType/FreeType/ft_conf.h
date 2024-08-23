@@ -232,6 +232,13 @@
 #undef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
 
 
+/*************************************************************************/
+/* Define TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK if you want to check  */
+/* interpreters stack before execute an instruction.                     */
+
+#undef TT_CONFIG_OPTION_CHECK_INTERPRETER_STACK
+
+
 /**********************************************************************/
 /*                                                                    */
 /*  The following macros are used to define the debug level, as well  */

@@ -850,7 +850,6 @@
 
     TT_Error  error;
     UShort    i;
-    UShort    j;
     PFace     face;
 
 
@@ -890,19 +889,16 @@
 
     /* Scale the cvt values to the new ppem.          */
     /* We use by default the y ppem to scale the CVT. */
-
-    for ( i = 0; i < ins->cvtSize; ++i )
-      ins->cvt[i] = TT_MulDiv( face->cvt[i],
-                               ins->metrics.scale1,
-                               ins->metrics.scale2 );
+    MulDivList( ins->cvt, ins->cvtSize, face->cvt, ins->metrics.scale1, ins->metrics.scale2 );
+    
 
     /* All twilight points are originally zero */
-    for ( j = 0; j < ins->twilight.n_points; ++j )
+    for ( i = 0; i < ins->twilight.n_points; ++i )
     {
-      ins->twilight.org[j].x = 0;
-      ins->twilight.org[j].y = 0;
-      ins->twilight.cur[j].x = 0;
-      ins->twilight.cur[j].y = 0;
+      ins->twilight.org[i].x = 0;
+      ins->twilight.org[i].y = 0;
+      ins->twilight.cur[i].x = 0;
+      ins->twilight.cur[i].y = 0;
     }
 
     /* clear storage area */
