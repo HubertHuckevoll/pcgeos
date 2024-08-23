@@ -74,7 +74,7 @@
 
 #endif /* LONG64 */
 
-
+LOCAL_DEF void  MulDivList( TT_Long*  vecResult, UShort  n, TT_Short*  vec, TT_Long  c, TT_Long  d );
 LOCAL_DEF void  TransVecList( TT_Vector*  vec, UShort  n, TT_Matrix*  matrix );
 
 #define INT_TO_F26DOT6( x )    ( (Long)(x) << 6  )

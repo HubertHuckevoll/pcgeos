@@ -403,6 +403,20 @@
 /* Its main purpose is to reduce the number of inter-module calls in GEOS. */
 
 LOCAL_FUNC
+void  MulDivList( TT_Long*  vecResult, UShort  n, TT_Short*  vec, TT_Long  c, TT_Long  d )
+{
+    UShort  i;
+
+
+    for ( i = 0; i < n; ++i )
+      vecResult[i] = TT_MulDiv( vec[i], c, d );
+}
+
+
+/* This convenience function applies a matrix  to a list of vectors.       */
+/* Its main purpose is to reduce the number of inter-module calls in GEOS. */
+
+LOCAL_FUNC
 void  TransVecList( TT_Vector*  vec, UShort  n, TT_Matrix*  matrix )
 {
     UShort  i;
