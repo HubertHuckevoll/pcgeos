@@ -277,7 +277,7 @@ int _pascal _export convertPNG()
     file = FileOpen("FLUGZEUG.PNG", FILE_ACCESS_R | FILE_DENY_RW);
     if (file == NullHandle) return 1;
 
-    if checkPNGHeader(file) processPNGChunks(file, writePPMChunk);
+    if (checkPNGHeader(file)) processPNGChunks(file, writePPMChunk);
 
     FileClose(file, FALSE);
     FilePopDir();

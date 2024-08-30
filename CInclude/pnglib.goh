@@ -30,6 +30,8 @@ struct IHDRChunk {
 #define IMAGE_DATA_CHUNK 0x54414449  // 'IDAT' in little-endian
 #define END_CHUNK 0x444E4549  // 'IEND' in little-endian
 
+const unsigned char PNG_SIGNATURE[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+
 enum LineFilter {
     LFNone = 0,
     LFSub = 1,
