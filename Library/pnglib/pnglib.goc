@@ -175,9 +175,9 @@ void processPNGChunks(FileHandle file, void (*callback)(unsigned char *data, uns
                     if (have > 0)
                     {
                         // Pass the decompressed data to unfilterImage
-                        //unfilterImage(chunkData, width, height, bpp, callback);
+                        unfilterImage(chunkData, width, height, bpp, callback);
                         //callback("dummy!", 6);
-                        writePPMChunk("dummy!", 6);
+                        //writePPMChunk("dummy!", 6);
                     }
 
                     if (ret == Z_STREAM_END)
@@ -248,6 +248,25 @@ void writePPMChunk(unsigned char *data, unsigned long length) {
     FileWrite(out, data, length, FALSE);
 }
 
+// Funktion zum Überprüfen des PNG-Headers
+int checkPNGHeader(FileHandle file)
+{
+    unsigned char header[8];
+
+    // Lese die ersten 8 Bytes ein
+    if (FileRead(file, header, 8, FALSE) != 8) {
+        return 0;
+    }
+
+    // Vergleiche die gelesenen Bytes mit der PNG-Signatur
+    if (memcmp(header, PNG_SIGNATURE, 8) != 0) {
+        return 0;
+    }
+
+    // PNG-Signatur ist korrekt
+    return 1;
+}
+
 int _pascal _export convertPNG()
 {
     FileHandle file;
@@ -258,7 +277,7 @@ int _pascal _export convertPNG()
     file = FileOpen("FLUGZEUG.PNG", FILE_ACCESS_R | FILE_DENY_RW);
     if (file == NullHandle) return 1;
 
-    processPNGChunks(file, writePPMChunk);
+    if checkPNGHeader(file) processPNGChunks(file, writePPMChunk);
 
     FileClose(file, FALSE);
     FilePopDir();
