@@ -193,8 +193,7 @@ Out_Final(char	*outfile)   	/* Name of output file */
 	    ST_Unlock(symbols, protoRels[i].library->name);
 	}
     }
-    
-    printf("out final 2 in\n");
+		
     (*fileOps->write)(outbuf, outsize, outfile);
 }
 
