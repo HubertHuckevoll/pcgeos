@@ -76,8 +76,6 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 translationFileToken GeodeToken < "TRNS", MANUFACTURER_ID_GEOWORKS >
-stepText		char	".\r"
-
 
 REARunBatchJob	method dynamic ResEditProcessClass, 
 					MSG_RESEDIT_RUN_BATCH_JOB
@@ -131,16 +129,6 @@ fileEnumParams		local   FileEnumParams
 		; remember the log file handle to be used in the batch process
 		mov	es:[batchLogFile], ax
 
-		;mov	bx, ax
-		;mov	al, FILE_NO_ERRORS
-		;mov	cx, 2
-		;push	ds
-		;segmov  ds, cs
-		;mov	dx, offset stepText
-		;call	FileWrite
-		;mov	al, FILE_NO_ERRORS
-		;call	FileCommit
-		;pop	ds
 logFileError:
 		call	MemFree				; free block with handle in bx
 		call	FilePopDir
@@ -815,9 +803,6 @@ noOptr:
 
 		mov	al, FILE_NO_ERRORS
 		call	FileWrite
-
-		mov	al, FILE_NO_ERRORS
-		call	FileCommit
 		pop	dx
 
 		pop	dx, bp, ax, es, di
@@ -944,8 +929,6 @@ BatchReportReturn	proc	far
 		mov	cx, 2
 		mov	al, FILE_NO_ERRORS
 		call	FileWrite
-		mov	al, FILE_NO_ERRORS
-		call	FileCommit
 noAutorun:
 		pop	ds
 		mov	ax, MSG_VIS_TEXT_APPEND
@@ -1007,8 +990,6 @@ BatchReportTab	proc	far
 		mov	cx, 1
 		mov	al, FILE_NO_ERRORS
 		call	FileWrite
-		mov	al, FILE_NO_ERRORS
-		call	FileCommit
 noAutorun:
 		pop	ds
 		mov	ax, MSG_VIS_TEXT_APPEND
