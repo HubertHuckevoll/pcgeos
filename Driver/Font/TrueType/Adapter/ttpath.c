@@ -95,6 +95,8 @@ static void CalcDriversTransformMatrix( TransformMatrix* transformMatrix,
                                         GStateHandle gstate, 
                                         WindowHandle win );
 
+extern void InitConvertHeader( TRUETYPE_VARS, FontHeader* fontHeader );
+
 
 /********************************************************************
  *                      TrueType_Gen_Path
@@ -165,6 +167,8 @@ EC(     ECCheckBounds( (void*)fontHeader ) );
         /* open face, create instance and glyph */
         if( TrueType_Lock_Face(trueTypeVars, trueTypeOutline) )
                 goto Fin;
+
+        InitConvertHeader(trueTypeVars, fontHeader);
 
         TT_New_Glyph( FACE, &GLYPH );
 
@@ -312,6 +316,8 @@ EC(     ECCheckBounds( (void*)fontHeader ) );
         /* open face, create instance */
         if( TrueType_Lock_Face(trueTypeVars, trueTypeOutline) )
                 goto Fin;
+
+        InitConvertHeader(trueTypeVars, fontHeader);
 
         /* get TT char index */
         charIndex = TT_Char_Index( CHAR_MAP, GeosCharToUnicode( character ) );
@@ -901,12 +907,26 @@ static void CalcDriversTransformMatrix( TransformMatrix* transformMatrix, GState
 
 EC(     ECCheckBounds( transformMatrix ) );
 EC(     ECCheckGStateHandle( gstate) );
-EC(     ECCheckWindowHandle( win ) );
 
 
-        WinGetTransform( win, &windowMatrix );
+        if( win )
+        {
+EC(             ECCheckWindowHandle( win ) );
+                WinGetTransform( win, &windowMatrix );
+        }
+        else
+        {
+                windowMatrix.TM_e11.WWF_int  = 1;
+                windowMatrix.TM_e11.WWF_frac = 0;
+                windowMatrix.TM_e12.WWF_int  = 0;
+                windowMatrix.TM_e12.WWF_frac = 0;
+                windowMatrix.TM_e21.WWF_int  = 0;
+                windowMatrix.TM_e21.WWF_frac = 0;
+                windowMatrix.TM_e22.WWF_int  = 1;
+                windowMatrix.TM_e22.WWF_frac = 0;
+        }
+
         GrGetTransform( gstate, &graphicMatrix );
-
 
         temp_e11 = GrMulWWFixed( transformMatrix->TM_matrix.xx, WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e11 ) ) 
                         + GrMulWWFixed( transformMatrix->TM_matrix.xy, WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e21 ) );
