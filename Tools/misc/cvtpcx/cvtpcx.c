@@ -27,10 +27,12 @@
  *	with it.
  *
  ***********************************************************************/
+/*
 #ifndef lint
 static char *rcsid =
 "$Id: cvtpcx.c,v 1.48 98/03/16 14:08:54 kho Exp $";
 #endif lint
+*/
 
 #include    <config.h>
 #include    <stdio.h>
