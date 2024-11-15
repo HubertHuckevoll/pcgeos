@@ -1168,6 +1168,63 @@ error:
     return palette;
 }
 
+
+/***********************************************************************
+ *			Read16ColorPalette
+ ***********************************************************************
+ * SYNOPSIS:	    Reads in the 16-color palette from a 4-bit PCX file
+ * CALLED BY:	    readega
+ * RETURN:	    byte * : pointer to palette
+ * SIDE EFFECTS:    Seeks to the palette location in the file header,
+ *                  then restores the original file position. Allocates 
+ *                  memory to hold the palette.
+ *
+ * STRATEGY:        Seek to byte 16 in the PCX header, where the 16-color 
+ *                  palette is stored (16 colors × 3 bytes each). 
+ *                  Read the palette into memory.
+ *
+ * REVISION HISTORY:
+ *	Name	Date		Description
+ *	----	----		-----------
+ *	meyerk  11/12/24        Adapted for reading 16-color palettes from 4-bit PCX
+ *
+ ***********************************************************************/
+
+byte *
+Read16ColorPalette(FILE *stream)
+{
+    byte *palette = NULL;
+    long currentPos;
+
+    /* Save current file position for restoration later */
+    currentPos = ftell(stream);
+
+    /* The palette starts at byte 16 of the PCX header */
+    if (fseek(stream, 16, SEEK_SET) != 0) {
+        goto error;
+    }
+
+    /* Allocate memory for the 16-color palette (16 colors x 3 bytes each) */
+    palette = (byte *)malloc(48 * sizeof(byte)); // 16 * 3 = 48
+    if (!palette) {
+        perror("Memory allocation failed");
+        goto error;
+    }
+
+    /* Read the 16-color palette from the file */
+    if (fread(palette, 48, 1, stream) != 1) {
+        free(palette);
+        palette = NULL;
+        goto error;
+    }
+
+error:
+    /* Restore the original file position */
+    fseek(stream, currentPos, SEEK_SET);
+    return palette;
+}
+
+
 /***********************************************************************
  *			IsSameAsGeosPalette
  ***********************************************************************
