@@ -1253,6 +1253,40 @@ IsSameAsGeosPalette(byte *palette)
 
     return 1;
 }
+
+/***********************************************************************
+ *			IsSameAsGeosPalette16
+ ***********************************************************************
+ * SYNOPSIS:	    Compares the 16-color palette from the PCX file 
+ *                  with the first 16 entries in the GEOS palette table.
+ * CALLED BY:	    readega
+ * RETURN:	    0 if the palettes are different, 1 if they're the same
+ *
+ * STRATEGY:        Compare the first 16 palette entries (16 colors × 3 bytes)
+ *                  in the provided palette to the corresponding entries in 
+ *                  the GEOS color table.
+ *
+ * REVISION HISTORY:
+ *	Name	Date		Description
+ *	----	----		-----------
+ *	user    11/12/24        Adapted for updated GEOS palette structure
+ *
+ ***********************************************************************/
+int
+IsSameAsGeosPalette16(byte *palette)
+{
+    int i;
+
+    // Compare the first 48 bytes (16 colors × 3 bytes per color)
+    for (i = 0; i < 16 * 3; i++) {
+        if (palette[i] != GeosColorTable[i]) {
+            return 0; // Palettes are not the same
+        }
+    }
+
+    return 1; // Palettes are the same
+}
+
 /***********************************************************************
  *				readvga
  ***********************************************************************
@@ -1655,6 +1689,16 @@ readega(FILE	    *stream,
     int	    	y;
     int	    	maxy;
     Icon    	*result;
+
+    /*
+     * read in the 16 color palette
+     */
+    colorTable = Read16ColorPalette(stream);
+    if (colorTable == NULL) {
+	return NULL;
+    }
+
+    outputCustomPalette = !IsSameAsGeosPalette16(colorTable);
 
     /*
      * Fetch the number of bytes per scanline in the input file and allocate
