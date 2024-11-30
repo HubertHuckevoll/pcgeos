@@ -87,7 +87,6 @@
 
 #include "tttypes.h"
 #include "ttconfig.h"
-#include "ttmutex.h"
 
 #ifdef __cplusplus
   extern "C" {
@@ -98,25 +97,18 @@
 
   typedef TT_Error  TDestructor ( void*  object );
 
-  typedef TConstructor  TRefresher;
-  typedef TDestructor   TFinalizer;
-
   typedef TConstructor*  PConstructor;
   typedef TDestructor*   PDestructor;
-  typedef TRefresher*    PRefresher;
-  typedef TFinalizer*    PFinalizer;
 
 
   /* A Cache class record holds the data necessary to define */
   /* a cache kind.                                           */
   struct  TCache_Class_
   {
-    ULong         object_size;
-    Long          idle_limit;
+    UShort        object_size;
+    Short         idle_limit;
     PConstructor  init;
     PDestructor   done;
-    PRefresher    reset;
-    PFinalizer    finalize;
   };
 
   typedef struct TCache_Class_  TCache_Class;
@@ -143,12 +135,11 @@
 
   struct  TCache_
   {
-    PEngine_Instance  engine;
+    //PEngine_Instance  engine;
     PCache_Class      clazz;      /* 'class' is a reserved word in C++ */
-    TMutex*           lock;
     TSingle_List      active;
     TSingle_List      idle;
-    Long              idle_count;
+    Short             idle_count;
   };
 
   typedef struct TCache_  TCache;
@@ -166,10 +157,9 @@
   /* doesn't need protection                                        */
 
   LOCAL_DEF
-  TT_Error  Cache_Create( PEngine_Instance  engine,
+  TT_Error  Cache_Create( /*PEngine_Instance  engine,*/
                           PCache_Class      clazz,
-                          TCache*           cache,
-                          TMutex*           lock );
+                          TCache*           cache );
 
   /* Destroys a cache and all its listed objects */
 
@@ -200,10 +190,10 @@
 
 
   LOCAL_DEF
-  TT_Error  TTCache_Init( PEngine_Instance  engine );
+  TT_Error  TTCache_Init( );
 
   LOCAL_DEF
-  TT_Error  TTCache_Done( PEngine_Instance  engine );
+  TT_Error  TTCache_Done( );
 
 
 #ifdef __cplusplus

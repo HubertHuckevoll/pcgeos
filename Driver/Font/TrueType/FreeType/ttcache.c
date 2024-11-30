@@ -25,6 +25,10 @@
 #include "ttcache.h"
 #include "ttobjs.h"
 
+#ifdef __GEOS__
+extern TEngine_Instance engineInstance;
+#endif  /* __GEOS__ */
+
 /* required by the tracing mode */
 #undef  TT_COMPONENT
 #define TT_COMPONENT  trace_cache
@@ -33,16 +37,8 @@
 
 /* The macro FREE_Elements aliases the current engine instance's */
 /* free list_elements recycle list.                              */
-#define FREE_Elements  ( engine->list_free_elements )
+#define FREE_Elements  ( engineInstance.list_free_elements )
 
-/* Redefinition of LOCK and UNLOCK macros for New_Element and Done_Element */
-/* Note: The macros are redefined below for the cache functions            */
-
-#undef  LOCK
-#define LOCK()    MUTEX_Lock   ( engine->lock )
-
-#undef  UNLOCK
-#define UNLOCK()  MUTEX_Release( engine->lock )
 
 /*******************************************************************
  *
@@ -58,12 +54,11 @@
  ******************************************************************/
 
   static
-  PList_Element  Element_New( PEngine_Instance  engine )
+  PList_Element  Element_New( )
   {
     PList_Element  element;
 
 
-    LOCK();
     if ( FREE_Elements )
     {
       element       = (PList_Element)FREE_Elements;
@@ -77,9 +72,6 @@
         element->data = NULL;
       }
     }
-
-    /* Note: in case of failure, Alloc sets the pointer to NULL */
-    UNLOCK();
 
     return element;
   }
@@ -100,25 +92,12 @@
  ******************************************************************/
 
   static
-  void  Element_Done( PEngine_Instance  engine,
-                      PList_Element     element )
+  void  Element_Done( PList_Element     element )
   {
-    LOCK();
     /* Simply add the list element to the recycle list */
     element->next = (PList_Element)FREE_Elements;
     FREE_Elements = element;
-    UNLOCK();
   }
-
-
-/* Redefinition of LOCK and UNLOCK macros for the cache functions          */
-/* Note: The macros are defined above for the list element functions       */
-
-#undef  LOCK
-#define LOCK()    MUTEX_Lock( *cache->lock )
-
-#undef  UNLOCK
-#define UNLOCK()  MUTEX_Release( *cache->lock )
 
 
 /*******************************************************************
@@ -135,24 +114,15 @@
  *
  *            cache       address of cache to create
  *
- *            lock        address of the mutex to use for this
- *                        cache.  The mutex will be used to protect
- *                        the cache's lists.  Use NULL for unprotected
- *                        cache.
- *
  *  Output :  Error code.
  *
  ******************************************************************/
 
   LOCAL_FUNC
-  TT_Error  Cache_Create( PEngine_Instance  engine,
-                          PCache_Class      clazz,
-                          TCache*           cache,
-                          TMutex*           lock )
+  TT_Error  Cache_Create( PCache_Class      clazz,
+                          TCache*           cache )
   {
-    cache->engine     = engine;
     cache->clazz      = clazz;
-    cache->lock       = lock;
     cache->idle_count = 0;
 
     ZERO_List( cache->active );
@@ -204,7 +174,7 @@
 #endif  /* __GEOS__ */  
       FREE( current->data );
 
-      Element_Done( cache->engine, current );
+      Element_Done( current );
       current = next;
     }
     ZERO_List(cache->active);
@@ -221,7 +191,7 @@
 #endif
       FREE( current->data );
 
-      Element_Done( cache->engine, current );
+      Element_Done( current );
       current = next;
     }
     ZERO_List(cache->idle);
@@ -266,40 +236,14 @@
     TT_Error       error;
     PList_Element  current;
     PConstructor   build;
-    PRefresher     reset;
     void*          object;
 
 
-    LOCK();
     current = cache->idle;
     if ( current )
     {
       cache->idle = current->next;
       cache->idle_count--;
-    }
-    UNLOCK();
-
-    if ( current )
-    {
-      object = current->data;
-      reset  = cache->clazz->reset;
-      if ( reset )
-      {
-#ifdef __GEOS__
-        error = ProcCallFixedOrMovable_cdecl( reset, object, parent_object );
-#else
-        error = reset( object, parent_object );
-#endif  /* __GEOS__ */
-        if ( error )
-        {
-          LOCK();
-          current->next = cache->idle;
-          cache->idle   = current;
-          cache->idle_count++;
-          UNLOCK();
-          goto Exit;
-        }
-      }
     }
     else
     {
@@ -309,7 +253,7 @@
       if ( MEM_Alloc( object, cache->clazz->object_size ) )
         goto Memory_Fail;
 
-      current = Element_New( cache->engine );
+      current = Element_New( );
       if ( !current )
         goto Memory_Fail;
 
@@ -322,15 +266,13 @@
 #endif    /* __GEOS__ */
       if ( error )
       {
-        Element_Done( cache->engine, current );
+        Element_Done( current );
         goto Fail;
       }
     }
 
-    LOCK();
     current->next = cache->active;
     cache->active = current;
-    UNLOCK();
 
     *new_object = current->data;
     return TT_Err_Ok;
@@ -370,16 +312,9 @@
   LOCAL_FUNC
   TT_Error  Cache_Done( TCache*  cache, void*  data )
   {
-    TT_Error       error;
     PList_Element  element;
     PList_Element  prev;
-    PFinalizer     finalize;
-    Long           limit;
-    Bool           destroy;
 
-
-    /* Look for object in active list */
-    LOCK();
 
     element = cache->active;
     prev = NULL;
@@ -397,16 +332,11 @@
       element = element->next;
     }
 
-    UNLOCK();
     return TT_Err_Unlisted_Object;
 
   Suite:
 
-    limit   = cache->clazz->idle_limit;
-    destroy = (cache->idle_count >= limit);
-    UNLOCK();
-
-    if ( destroy )
+    if ( cache->idle_count >= cache->clazz->idle_limit )
     {
       /* destroy the object when the cache is full */
 #ifdef __GEOS__
@@ -415,47 +345,22 @@
       cache->clazz->done( element->data );
 #endif  /* __GEOS__ */
       FREE( element->data );
-      Element_Done( cache->engine, element );
+      Element_Done( element );
     }
     else
     {
       /* Finalize the object before adding it to the   */
       /* idle list.  Return the error if any is found. */
-
-      finalize = cache->clazz->finalize;
-      if ( finalize )
-      {
-#ifdef __GEOS__
-        error = ProcCallFixedOrMovable_cdecl( finalize, element->data );
-#else
-        error = finalize( element->data );
-#endif  /* __GEOS__ */
-        if ( error )
-          goto Exit;
-
-        /* Note: a failure at finalize time is a severe bug in     */
-        /*       the engine, which is why we allow ourselves to    */
-        /*       lose the object in this case.  A finalizer should */
-        /*       have its own error codes to spot this kind of     */
-        /*       problems easily.                                  */
-      }
-
-      LOCK();
       element->next = cache->idle;
       cache->idle   = element;
       cache->idle_count++;
-      UNLOCK();
     }
-
-    error = TT_Err_Ok;
-
-  Exit:
-    return error;
+    return TT_Err_Ok;
   }
 
 
   LOCAL_FUNC
-  TT_Error  TTCache_Init( PEngine_Instance  engine )
+  TT_Error  TTCache_Init( )
   {
     /* Create list elements mutex */
     FREE_Elements = NULL;
@@ -464,7 +369,7 @@
 
 
   LOCAL_FUNC
-  TT_Error  TTCache_Done( PEngine_Instance  engine )
+  TT_Error  TTCache_Done( )
   {
     /* We don't protect this function, as this is the end of the engine's */
     /* execution..                                                        */
