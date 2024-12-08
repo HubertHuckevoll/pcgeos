@@ -1054,7 +1054,7 @@ void AddParaCond(void)
         STRCPYSB(insertPrepend,"\t");     /* make sure it's indented */
 
       if(*insertPrepend)                /* prepend text to paragraph? */
-        AddText(&vcaBase, insertPrepend);
+        AddText(&insertParagraphCS, insertPrepend);
 
       FixupStartPos(pos);               /* fixup tag starting positions on
                                            stack to after prepended text */
@@ -1089,7 +1089,8 @@ void EndParagraph(char *p)
         {
           if( STRLENSB(p) >= strlen((TCHAR*)insertPrepend) )
             STRCPYSB(insertPrepend, p);   /* prepend overrides non-prepend */
-
+          
+          insertParagraphCS = currentCS;          
           insertParagraphFlags &= ~BREAK_LINE_BREAK;
                                         /* para break overrides line break */
           insertParagraphFlags |= (currentFlags & TAG_PAR_SPACING);
