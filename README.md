@@ -84,7 +84,7 @@ The SDK requires "sed" (https://en.wikipedia.org/wiki/Sed) and "perl" (https://e
    perl -I. buildbbx.pl
    ```
    - Answer the questions as follows:
-     - Platform: `linux`
+     - Platform: `nt`
      - EC version: `y`
      - DBCS: `n`
      - Geodes: `y`
