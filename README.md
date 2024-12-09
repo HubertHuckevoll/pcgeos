@@ -1,84 +1,184 @@
+
 # PC/GEOS
-This repository is the offical place to hold all the source codes around the PC/GEOS graphical user
-interface and its sophisticated applications. It is the source to build SDK and release version of PC/GEOS.
-It is the place to collaborate on further developments.
 
-The base of this repository is the source code used to build Breadbox Ensemble 4.13 reduced by some modules identified as critical in regard to the license choosen for the repository.
+This repository is the official place to hold all the source codes around the PC/GEOS graphical user interface and its sophisticated applications. It is the source to build SDK and release versions of PC/GEOS. It is the place to collaborate on further developments.
 
-While now the WATCOM is used to compile the C parts, the full SDK is available for Windows and Linux.
+The base of this repository is the source code used to build Breadbox Ensemble 4.13, reduced by some modules identified as critical regarding the license chosen for the repository.
 
-# How to build?
+While now WATCOM is used to compile the C parts, the full SDK is available for Windows and Linux.
 
-## Prerequisites
-The SDK requires "sed" (https://en.wikipedia.org/wiki/Sed) and "perl" (https://en.wikipedia.org/wiki/Perl) to be installed. Both are pre-installed in most Linux-distributions. Windows-users should install "sed" by adding the usr/bin of the official git distribution (https://git-scm.com) to the path (or Cygwin), and should use the perl-variant "Strawberry Perl" (http://strawberryperl.com/).
+---
 
-On Linux if you want to use swat for debugging with good system integration is is required to install xdotools package. It ensures swat receives the keyboard focus once needed. 
+## How to build?
 
-## Install WATCOM and set environment
-- Unzip WATCOM tools from the latest [release-tar-gz](https://github.com/open-watcom/open-watcom-v2/releases/download/2020-12-01-Build/ow-snapshot.tar.gz) for instance to `C:\WATCOM-V2`
-- add WATCOM env variable: `WATCOM=c:\WATCOM-V2`
-- set `BASEBOX=basebox` to use the advanced emulator backend from [pcgeos-basebox](https://github.com/bluewaysw/pcgeos-basebox/tags) if it is on the executable path, alternatively you may provide the full path to the executable as well
-- set `ROOT_DIR` to the root of the checkout
-- set `LOCAL_ROOT` to a local working directory (can be empty at first, but should be under `pcgeos`, so you can use it for development of your own apps as well)
-- add `C:\WATCOM-V2\binnt` to your system path variable
-- add bin of the checkout of this repo to path variable
-- add sed and perl to path variable - note the order to avoid loading the wrong Perl version. Example:
+### Prerequisites
 
-        set WATCOM=c:\WATCOM-V2
-        set ROOT_DIR=C:\Geos\pcgeos
-        set LOCAL_ROOT=c:\Geos\pcgeos\Local
-        set BASEBOX=basebox
-        PATH %WATCOM%\binnt;%ROOT_DIR%\bin;C:\Geos\pcgeos-basebox\binnt;%PATH%;c:\Program Files\Git\usr\bin
+The SDK requires "sed" (https://en.wikipedia.org/wiki/Sed) and "perl" (https://en.wikipedia.org/wiki/Perl) to be installed. 
 
-Document is work in progress.... stay tuned!
+- **Linux:** Both tools are pre-installed in most Linux distributions. Additionally, if you want to use `swat` for debugging with good system integration, install the `xdotools` package. This ensures `swat` receives keyboard focus when needed.
+- **Windows:** Install "sed" by adding the `usr/bin` of the official Git distribution (https://git-scm.com) to the path (or use Cygwin). For Perl, use the "Strawberry Perl" distribution (http://strawberryperl.com).
 
+---
 
-## Building PC/GEOS SDK
-Build pmake tool:
-- `cd %ROOT_DIR%/Tools/pmake/pmake`
-- `wmake install`
+### Install WATCOM and set environment
 
-Build all the other SDK Tools:
-- `cd %ROOT_DIR%/Installed/Tools`
-- `pmake install`
+#### Linux Instructions:
+1. Download and extract the latest Open Watcom snapshot:
+   ```bash
+   wget https://github.com/open-watcom/open-watcom-v2/releases/download/2020-12-01-Build/ow-snapshot.tar.gz
+   tar -xzf ow-snapshot.tar.gz -C /opt
+   ```
 
-Build all PC/GEOS (target) components:
-- `cd %ROOT_DIR%/Installed`
-- `pmake`
+2. Set environment variables:
+   ```bash
+   export WATCOM=/opt/open-watcom-v2
+   export ROOT_DIR=$HOME/Geos/pcgeos
+   export LOCAL_ROOT=$ROOT_DIR/Local
+   export BASEBOX=basebox
+   export PATH=$WATCOM/binl:$ROOT_DIR/bin:$PATH
+   ```
 
-Build the target environment:
-- `cd %ROOT_DIR%/Tools/build/product/bbxensem/Scripts`
-- `perl -I. buildbbx.pl`
-  - the answers to the questions from the above perl-script are:
-    - nt (for the platform)
-    - y (for the EC version)
-    - n (for the DBCS)
-    - y (for the geodes)
-    - n (for the VM files)
-    - and then you'll have to enter the path to a "gbuild"-folder in your LOCAL_ROOT-folder.
-  - BTW: It's expected that the current version of the perl-script creates several "Could not find file _name_ in any of the source trees."-messages.
+3. Install `xdotool` (if not already installed):
+   ```bash
+   sudo apt-get install xdotool
+   ```
 
-Launch the target environment in dosbox:
-- make sure dosbox is added to your path variable, or [pcgeos-basebox](https://github.com/bluewaysw/pcgeos-basebox/tags) is installed and configured using BASEBOX environmental variable
-- `%ROOT_DIR%/bin/target`
-  - the "swat" debugger stops immediately after the first stage of the boot process
-  - enter `quit` at the "=>" prompt to detach the debugger and launch PC/GEOS stand-alone
-    - or: enter `c` to launch with the debugger running in the background (slower)
+#### Windows Instructions:
+1. Download and extract the latest Open Watcom snapshot from [Open Watcom Releases](https://github.com/open-watcom/open-watcom-v2/releases/download/2020-12-01-Build/ow-snapshot.tar.gz) to `C:\WATCOM-V2`.
 
+2. Set environment variables:
+   ```cmd
+   set WATCOM=C:\WATCOM-V2
+   set ROOT_DIR=C:\Geos\pcgeos
+   set LOCAL_ROOT=C:\Geos\pcgeos\Local
+   set BASEBOX=basebox
+   PATH %WATCOM%\binnt;%ROOT_DIR%\bin;C:\Geos\pcgeos-basebox\binnt;%PATH%;C:\Program Files\Git\usr\bin
+   ```
 
-## Customize target environment
-If you want to customize the target environment settings only for yourself, you should not change the file %ROOT_DIR%/bin/basebox.conf.
-- Create a file called basebox_user.conf in %LOCAL_ROOT% folder.
-- Enter the new settings here. These settings overwrite those from basebox.conf. Example:
-  - [cpu]
-  - cycles=55000
+---
 
+### Building PC/GEOS SDK
 
-# How to develop?
+#### Linux Instructions:
+1. Build the `pmake` tool:
+   ```bash
+   cd $ROOT_DIR/Tools/pmake/pmake
+   wmake install
+   ```
 
-PC/GEOS comes with extensive technical documentation that describes tools, programming languages and API calls from the perspective of an SDK user. This documentation can be found in the `TechDocs` folder and is available in Markdown format.
+2. Build all other SDK tools:
+   ```bash
+   cd $ROOT_DIR/Installed/Tools
+   pmake install
+   ```
+
+3. Build all PC/GEOS (target) components:
+   ```bash
+   cd $ROOT_DIR/Installed
+   pmake
+   ```
+
+4. Build the target environment:
+   ```bash
+   cd $ROOT_DIR/Tools/build/product/bbxensem/Scripts
+   perl -I. buildbbx.pl
+   ```
+   - Answer the questions as follows:
+     - Platform: `linux`
+     - EC version: `y`
+     - DBCS: `n`
+     - Geodes: `y`
+     - VM files: `n`
+     - Path to `gbuild` folder: `<path to your LOCAL_ROOT folder>`
+
+#### Windows Instructions:
+1. Build the `pmake` tool:
+   ```cmd
+   cd %ROOT_DIR%\Tools\pmake\pmake
+   wmake install
+   ```
+
+2. Build all other SDK tools:
+   ```cmd
+   cd %ROOT_DIR%\Installed\Tools
+   pmake install
+   ```
+
+3. Build all PC/GEOS (target) components:
+   ```cmd
+   cd %ROOT_DIR%\Installed
+   pmake
+   ```
+
+4. Build the target environment:
+   ```cmd
+   cd %ROOT_DIR%\Tools\build\product\bbxensem\Scripts
+   perl -I. buildbbx.pl
+   ```
+   - Answer the questions as follows:
+     - Platform: `nt`
+     - EC version: `y`
+     - DBCS: `n`
+     - Geodes: `y`
+     - VM files: `n`
+     - Path to `gbuild` folder: `<path to your LOCAL_ROOT folder>`
+
+---
+
+### Launch the Target Environment
+
+#### Linux Instructions:
+1. Ensure DOSBox or `pcgeos-basebox` is installed:
+   ```bash
+   sudo apt-get install dosbox
+   ```
+   Or install [pcgeos-basebox](https://github.com/bluewaysw/pcgeos-basebox/tags).
+
+2. Launch the target environment:
+   ```bash
+   $ROOT_DIR/bin/target
+   ```
+   - The "swat" debugger will stop after the first boot stage.
+   - At the `=>` prompt, enter:
+     - `quit`: to detach the debugger and launch PC/GEOS stand-alone.
+     - `c`: to continue with the debugger running in the background (slower).
+
+#### Windows Instructions:
+1. Ensure DOSBox is installed and added to your PATH, or use the `BASEBOX` environment variable pointing to `pcgeos-basebox`.
+
+2. Launch the target environment:
+   ```cmd
+   %ROOT_DIR%\bin\target
+   ```
+   - Follow the same steps as Linux for the debugger.
+
+---
+
+### Customize Target Environment
+
+To customize settings for your environment, avoid editing the base configuration file:
+- **Linux:** `$ROOT_DIR/bin/basebox.conf`
+- **Windows:** `%ROOT_DIR%\bin\basebox.conf`
+
+Instead, create a `basebox_user.conf` file in your local root folder:
+- **Linux:** `$LOCAL_ROOT/basebox_user.conf`
+- **Windows:** `%LOCAL_ROOT%\basebox_user.conf`
+
+Example content:
+```ini
+[cpu]
+cycles=55000
+```
+
+---
+
+## How to develop?
+
+PC/GEOS comes with extensive technical documentation that describes tools, programming languages, and API calls from the perspective of an SDK user. This documentation can be found in the `TechDocs` folder and is available in Markdown format.
 
 You can find a browseable, searchable version of the documentation here: https://bluewaysw.github.io/pcgeos/
 
-##
-We are on https://discord.com/ for more efficient collaboration. Please register at https://discord.gg/qtMqgZXhf9 for blueway.Softworks or use an existing discord-account to get access to our developer community. Welcome!
+---
+
+For efficient collaboration, join our developer community on Discord: [Blueway Softworks Discord](https://discord.gg/qtMqgZXhf9).
+
