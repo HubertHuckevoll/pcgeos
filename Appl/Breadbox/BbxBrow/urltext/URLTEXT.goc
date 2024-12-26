@@ -265,13 +265,16 @@ typedef struct {
 MemHandle MemStreamInit(MemHandle stream)
 {
     MemStreamHeader *streamP;
+    byte* blkPArr;
     MemHandle *blkP;
     MemHandle ret = stream;
     int i;
 
     if (stream) {
 	streamP = MemPLock(stream);
-	(byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+	blkPArr = (byte *)streamP + sizeof(MemStreamHeader);
+  blkP = (MemHandle *) blkPArr;
+
 	for (i = 0; i < streamP->maxBlk; i++) {
 	    if (!blkP[i]) break;
 	    MemFree(blkP[i]);
@@ -294,6 +297,7 @@ MemHandle MemStreamInit(MemHandle stream)
 void MemStreamDelete(MemHandle stream, word bufSize, Boolean emptyLast)
 {
     MemStreamHeader *streamP;
+    byte* blkPArr;
     MemHandle *blkP;
     int i, last;
 
@@ -305,7 +309,8 @@ void MemStreamDelete(MemHandle stream, word bufSize, Boolean emptyLast)
     last = streamP->head/MEM_STREAM_BLOCK_SIZE;
     if (emptyLast && (streamP->head == streamP->tail)) last++;
     /* free blocks before head */
-    (byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+    blkPArr = (byte *)streamP + sizeof(MemStreamHeader);
+    blkP = (MemHandle *) blkPArr;
     for (i = 0; i < last; i++) {
 	if (blkP[i]) {
 	    MemFree(blkP[i]);
@@ -318,6 +323,7 @@ void MemStreamDelete(MemHandle stream, word bufSize, Boolean emptyLast)
 word MemStreamRead(MemHandle stream, void *buffer, word bufSize, word offset)
 {
     MemStreamHeader *streamP;
+    byte* blkPArr;
     MemHandle *blkP;
     byte *dataP;
     word blockOffset, dataOffset;
@@ -329,7 +335,9 @@ word MemStreamRead(MemHandle stream, void *buffer, word bufSize, word offset)
 	bufSize = streamP->tail - streamP->head;
     }
     if (bufSize) {  /* handles no more data because of write overflow */
-	(byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+	blkPArr = (byte *)streamP + sizeof(MemStreamHeader);
+  blkP = (MemHandle *) blkPArr;
+
 	/* copy from start block */
 	blockOffset = streamP->head/MEM_STREAM_BLOCK_SIZE;
 	if (blkP[blockOffset]) {
@@ -362,6 +370,7 @@ word MemStreamRead(MemHandle stream, void *buffer, word bufSize, word offset)
 void MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
 {
     MemStreamHeader *streamP;
+    byte* blkPArr;
     MemHandle *blkP;
     byte *dataP;
     word blockOffset, dataOffset;
@@ -369,7 +378,9 @@ void MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
 
     streamP = MemPLock(stream);
     if ((streamP->tail + (dword)bufSize) < (dword)MEM_STREAM_BLOCK_SIZE*(dword)MEM_STREAM_INIT_BLKS) {
-	(byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+	blkPArr = (byte *)streamP + sizeof(MemStreamHeader);
+  blkP = (MemHandle *) blkPArr;
+
 	/* copy to start block */
 	blockOffset = streamP->tail/MEM_STREAM_BLOCK_SIZE;
 	if (!blkP[blockOffset]) {
@@ -498,8 +509,8 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 	           where the fetch thread could set fileDone and WakeUp no-one
 	           (since we aren't blocked yet); to catch this, we now atomically
 	           check fileDone and block */
-            Block(&(loadProgressDataP->LPD_emptyQueue),
-	                                &loadProgressDataP->LPD_fileDone);
+            Block((word*) &(loadProgressDataP->LPD_emptyQueue),
+	                                (Boolean*) &loadProgressDataP->LPD_fileDone);
             ThreadPSem(loadProgressDataP->LPD_sem);
         }
 

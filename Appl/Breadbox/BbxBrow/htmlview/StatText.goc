@@ -147,17 +147,17 @@ typedef struct {
         if (p_current->STM_priority <= priority)
             break ;
         p_prev = p_current ;
-        current = p_current->STM_next ;
+        current = (unsigned short) p_current->STM_next ;
     }
 
     /* Record the next one (or bad id) */
-    p_newMessage->STM_next = current ;
+    p_newMessage->STM_next = (void*) current ;
 
     /* Fix up the previous one (if there is one) */
     if (p_prev)  {
         p_prev->STM_next = newItem ;
     } else {
-        pself->STI_firstMessage = newItem ;
+        pself->STI_firstMessage = (unsigned short) newItem ;
     }
 
     pself->STI_numMessages++ ;
@@ -342,14 +342,14 @@ typedef struct {
             if (current == textID)
                 break ;
             p_prev = p_current ;
-            current = p_current->STM_next ;
+            current = (unsigned short) p_current->STM_next ;
         }
 
         /* Unlink the previous one */
         if (p_prev)
             p_prev->STM_next = p_current->STM_next ;
         else
-            pself->STI_firstMessage = p_current->STM_next ;
+            pself->STI_firstMessage = (unsigned short) p_current->STM_next ;
 
         /* Ok, we are unlinked.  Now delete */
         LMemFreeHandles(block, textID) ;

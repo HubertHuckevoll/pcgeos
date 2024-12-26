@@ -2137,8 +2137,6 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
 
 @extern method URLFrameClass, MSG_URL_FRAME_LOADING_FINISHED
 {
-    optr text;
-
     if (pself->UFI_frameLoadCount) {
 	if ((--pself->UFI_frameLoadCount) == 0) {
 @ifdef JAVASCRIPT_SUPPORT

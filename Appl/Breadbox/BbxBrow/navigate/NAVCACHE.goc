@@ -440,7 +440,7 @@ void LOCAL CleanupCache(void)
 	if (found) {
 	    for (cachedFile = MemLock(mh); found; found--, cachedFile++ ) {
 		id = 0;
-		idP = cachedFile;
+		idP = (TCHAR*) &cachedFile->CF_name;
 		while( (c=toupper(*(idP++)))!=0 && isxdigit(c) ) {
 		    id<<=4;
 		    if(isdigit(c)) id |= (c-'0');
@@ -810,9 +810,9 @@ void LOCAL EnforceSrcCacheSizeLimits(TCHAR *buf, dword addSize, dword id)
     word len;
     word i;
 #ifdef ALT_SRC_CACHE
-    sdword *cacheSize = (id & CACHE_ALT_FLAG)? &altSrcCacheSize:&srcCacheSize;
+    sdword *cacheSize = (sdword *) (id & CACHE_ALT_FLAG)? &altSrcCacheSize:&srcCacheSize;
 #else
-    sdword *cacheSize = &srcCacheSize;
+    sdword *cacheSize = (sdword *) &srcCacheSize;
 #endif
     srcCacheData *data;
     Boolean success;
@@ -1528,9 +1528,9 @@ void LOCAL EnforceObjCacheSizeLimits(void)
 #ifdef DEFAULT_OBJECT_CACHE_LIMIT
     sdword limit;
 #ifdef ALT_SRC_CACHE
-    sdword *cacheSize = (oct & CACHE_ALT_FLAG)? &altObjCacheSize:&objCacheSize;
+    sdword *cacheSize = (sdword *) (oct & CACHE_ALT_FLAG)? &altObjCacheSize:&objCacheSize;
 #else
-    sdword *cacheSize = &objCacheSize;
+    sdword *cacheSize = (sdword *) &objCacheSize;
 #endif
 #endif
     objCacheData *data;

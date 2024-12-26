@@ -508,9 +508,12 @@ void RestoreTVBW(void)
     };
 
     if(UserStandardDialogOptr(           /* notify user */
-        _TEXT("ResetMemory"), &responseTable, 0, 0, @MsgClearCache,
-        (CDT_WARNING << CDBF_DIALOG_TYPE_OFFSET) |
-        (GIT_MULTIPLE_RESPONSE << CDBF_INTERACTION_TYPE_OFFSET)) == IC_YES)
+        _TEXT("ResetMemory"),
+        (void*) &responseTable,
+        (optr) 0,
+        (optr) 0,
+        @MsgClearCache,
+        (CDT_WARNING << CDBF_DIALOG_TYPE_OFFSET) | (GIT_MULTIPLE_RESPONSE << CDBF_INTERACTION_TYPE_OFFSET)) == IC_YES)
     {
       HWChecksumCheck() ;
 

@@ -1780,15 +1780,11 @@ void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *pcFlags,
 	}
 	NamePoolDestroyIfDynamic(url);
 	if (strcmp(type, _TEXT("HTTPS")) == 0) {
-	    @call SecureStatus::MSG_GEN_USE_VIS_MONIKER(
-		@SecureStatusOnMoniker, VUM_NOW);
-	    @call SecureStatus::MSG_META_ADD_VAR_DATA(
-		ATTR_GEN_FOCUS_HELP, sizeof(optr), &onHelp);
+	    @call SecureStatus::MSG_GEN_USE_VIS_MONIKER(ChunkOf(@SecureStatusOnMoniker), VUM_NOW);
+	    @call SecureStatus::MSG_META_ADD_VAR_DATA(ATTR_GEN_FOCUS_HELP, sizeof(optr), &onHelp);
 	} else {
-	    @call SecureStatus::MSG_GEN_USE_VIS_MONIKER(
-		@SecureStatusOffMoniker, VUM_NOW);
-	    @call SecureStatus::MSG_META_ADD_VAR_DATA(
-		ATTR_GEN_FOCUS_HELP, sizeof(optr), &offHelp);
+	    @call SecureStatus::MSG_GEN_USE_VIS_MONIKER(ChunkOf(@SecureStatusOffMoniker), VUM_NOW);
+	    @call SecureStatus::MSG_META_ADD_VAR_DATA(ATTR_GEN_FOCUS_HELP, sizeof(optr), &offHelp);
 	}
     }
 }
