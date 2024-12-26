@@ -440,7 +440,7 @@ void LOCAL CleanupCache(void)
 	if (found) {
 	    for (cachedFile = MemLock(mh); found; found--, cachedFile++ ) {
 		id = 0;
-		idP = (TCHAR*) &cachedFile->CF_name;
+		idP = cachedFile->CF_name;
 		while( (c=toupper(*(idP++)))!=0 && isxdigit(c) ) {
 		    id<<=4;
 		    if(isdigit(c)) id |= (c-'0');
