@@ -1444,8 +1444,10 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
   MemHandle mh;
   int type;
 
-  if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type))
+  if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type)) {
 	type = NET_TYPE_PPP ;
+  }
+
   if( connectionNum && ( type != NET_TYPE_HOST ) )
   {
     @call IDModifyConnectionButton::MSG_GEN_SET_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
@@ -1532,6 +1534,15 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
   }
   @send IDConnectionPhoneNumber::MSG_VIS_MARK_INVALID(VOF_GEOMETRY_INVALID, VUM_NOW);
   @send IDConnectionPhoneNumber::MSG_GEN_SET_USABLE(VUM_NOW);
+
+  if (type == NET_TYPE_PPP) {
+    @send IDConnectionPhoneAndLogin::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+  }
+  else {
+    @send IDConnectionPhoneAndLogin::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+  }
+
+  @send IDialupPrimary::MSG_GEN_RESET_TO_INITIAL_SIZE(VUM_DELAYED_VIA_UI_QUEUE);
 }
 
 /***********************************************************************
