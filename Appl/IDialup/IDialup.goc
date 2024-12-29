@@ -149,7 +149,7 @@ void IDialupEnsureDefaultConnection(void);
 	  G_registered = TRUE ;
   }
 
-    @call self::MSG_IDP_INITIALIZE_CONNECTION();
+    @call self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
 
     // Hack to delete the temporary access point created by signup, just in case
     // signup crashes and fails to clean up after itself. (dhunter 1/13/2000)
@@ -160,12 +160,12 @@ void IDialupEnsureDefaultConnection(void);
         AccessPointCommit();
 
         // Reload the accpnt list.
-        @call self::MSG_IDP_INITIALIZE_CONNECTION();
+        @call self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
     }
 
     // Ensure that there is only one default access point.  We do this because
     // Welcome can add a new default without un-defaulting the old one.  The
-    // last one discovered (the one set by MSG_IDP_INITIALIZE_CONNECTION) is the
+    // last one discovered (the one set by MSG_IDP_INITIALIZE_ACCPNT_LIST) is the
     // desired default.
     IDialupEnsureDefaultConnection();
 
@@ -1103,7 +1103,7 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
     if(creatingConnection)
     {
         creatingConnection = FALSE;
-        @call self::MSG_IDP_INITIALIZE_CONNECTION();
+        @call self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
     }
     else
     {
@@ -1257,15 +1257,16 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
 
       // reset the current accesspoint
       currentAccpnt = 0;
-      @send self::MSG_IDP_INITIALIZE_CONNECTION();
+      @send self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
     }
 }
 
 /***********************************************************************
- *		MSG_IDP_INITIALIZE_CONNECTION
+ *		MSG_IDP_INITIALIZE_ACCPNT_LIST
  ***********************************************************************
  *
- * SYNOPSIS:	Initialize UI and Connection settings.
+ * SYNOPSIS:	Initialize the active accpnt by loading it from the INI
+ *              and load the accpnt list.
  * CALLED BY:
  * RETURN:
  *
@@ -1277,149 +1278,149 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
  *	mzhu    	12/03/98   	Initial Revision
  *
  ***********************************************************************/
-@method IDialupProcessClass, MSG_IDP_INITIALIZE_CONNECTION
+@method IDialupProcessClass, MSG_IDP_INITIALIZE_ACCPNT_LIST
 {
-  word *id, datalen, i, defaultItem=0;
-  word tmpAccpnt=0, tmpItem=0;
+    word *id, datalen, i, defaultItem=0;
+    word tmpAccpnt=0, tmpItem=0;
+    word *hidden;
 
-  if(connectionHandle)
+    if(connectionHandle)
     {
-		if(connectionChunk)
-			{
-			MemLock(connectionHandle);
-			ChunkArrayZeroHandles(connectionHandle, connectionChunk);
-			MemUnlock(connectionHandle);
-			}
+        if(connectionChunk)
+        {
+            MemLock(connectionHandle);
+            ChunkArrayZeroHandles(connectionHandle, connectionChunk);
+            MemUnlock(connectionHandle);
+        }
     }
-  else
+    else
     {
-      connectionHandle = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
-    }
-
-  MemLock(connectionHandle);
-  connectionChunk = AccessPointGetEntries(connectionHandle, 0, APT_INTERNET);
-
-  currentAccpnt = AccessPointGetActivePoint(APT_INTERNET);
-  defaultAccpnt = 0;
-
-  if(connectionChunk)
-		{
-		connectionNum = ChunkArrayGetCountHandles(connectionHandle, connectionChunk);
-		if(!connectionNum)
-			{
-			// the ini file wrong
-			EC(EC_ERROR(-1);)
-			}
-		else
-			{
-			word *hidden;
-
-			// the accesspoint0001 is protected from being used, and its APT_INTERNET
-			for(i=0; i<connectionNum; i++)
-				{
-				id = ChunkArrayElementToPtrHandles(connectionHandle, connectionChunk, i, &datalen);
-
-				if(*id == HIDDEN_INTERNET_ACCPNT)
-					{
-					hidden = id;
-					continue;
-					}
-				if(!currentAccpnt)
-					{
-					tmpAccpnt = *id;
-					tmpItem = i;
-					}
-				else if(currentAccpnt == *id)
-					{
-					tmpItem = i;
-					}
-
-				if(!AccessPointGetIntegerPropertyDirect(*id, DEFAULT_KEY, (int*) &datalen)
-																	&& datalen != 0)
-					{
-					defaultAccpnt = *id;
-					defaultItem = i;
-					}
-
-			// Hack to flag for deletion the temporary access point created by signup,
-			// just in case signup crashes and fails to clean up after itself.
-			// The actual removal occurs in MSG_GEN_PROCESS_OPEN_APPLICATION.
-			// (dhunter 1/13/2000)
-				if (!AccessPointGetIntegerPropertyDirect(*id, TEMPORARY_KEY, (int*) &datalen)
-																	&& datalen == 1)
-					tempAccpnt = *id;
-				}
-
-			if(hidden)
-				{
-				ChunkArrayDeleteHandle(connectionChunk, hidden);
-				}
-			else
-				{
-				// the ini file wrong
-				EC(EC_ERROR(-1);)
-				}
-			}
-		}
-	 else
-		{
-		MemUnlock(connectionHandle);
-		EC(EC_ERROR(-1);)
-		return;
-		}
-
-  connectionNum = ChunkArrayGetCountHandles(connectionHandle, connectionChunk);
-
-  MemUnlock(connectionHandle);
-
-  @call IDConnectionList::MSG_GEN_DYNAMIC_LIST_INITIALIZE(connectionNum);
-
-  if(connectionNum)
-    {
-/*#if _NDO2000
-/*#else
-      @call IDNewNumbers::MSG_GEN_SET_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
-/*#endif */
-		@call IDConnectButton::MSG_GEN_SET_ENABLED(VUM_NOW);
-	 }
-  else
-    {
-/*#if _NDO2000
-/*#else
-      @call IDNewNumbers::MSG_GEN_SET_NOT_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
-/*#endif */
-      @call IDConnectButton::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+        connectionHandle = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
     }
 
-//  if(!currentAccpnt)
-//    {
-//	 if(defaultAccpnt)
-//		{
-//		currentAccpnt = defaultAccpnt;
-//		@send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(defaultItem, 0);
-//		}
-//	 else if(tmpAccpnt)
-//		{
-//		currentAccpnt = tmpAccpnt;
-//		@send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(tmpItem, 0);
-//		}
-//	 }
-//  else
+    MemLock(connectionHandle);
+    connectionChunk = AccessPointGetEntries(connectionHandle, 0, APT_INTERNET);
+
+    if (!connectionChunk)
     {
-     // currentAccpnt = AccessPointGetActivePoint(APT_INTERNET);
-	 @send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(tmpItem, 0);
+        MemUnlock(connectionHandle);
+        EC(EC_ERROR(-1);)
+        return;
     }
 
-	/* if there is only 1 access point then let's make it the default
-	  access point automagically...  jfh 2/19/02 */
-	if ((connectionNum == 1) && !defaultAccpnt) {
-		@call IDConnectionDefaultBoxGroup::MSG_GEN_BOOLEAN_GROUP_SET_BOOLEAN_STATE(1, TRUE);
-		@call self::MSG_IDP_SET_DEFAULT_CONNECTION();
-		}
+    connectionNum = ChunkArrayGetCountHandles(connectionHandle, connectionChunk);
+    if(!connectionNum)
+    {
+        // the ini file wrong
+        MemUnlock(connectionHandle);
+        EC(EC_ERROR(-1);)
+        return;
+    }
 
-  // AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
-  // AccessPointCommit();
-  @send self::MSG_IDP_CONNECTION_SET_CURRENT();
+    currentAccpnt = AccessPointGetActivePoint(APT_INTERNET);
+    defaultAccpnt = 0;
+
+    for(i=0; i<connectionNum; i++)
+    {
+        id = ChunkArrayElementToPtrHandles(connectionHandle, connectionChunk, i, &datalen);
+
+        // the accesspoint0001 is protected from being used, prepare for removal from the list
+        if(*id == HIDDEN_INTERNET_ACCPNT)
+        {
+            hidden = id;
+            continue;
+        }
+
+        // if we don't have a valid accpnt just yet, we will use the first one we stumple upon
+        if(!currentAccpnt)
+        {
+            tmpAccpnt = *id;
+            tmpItem = i;
+        }
+        else if(currentAccpnt == *id)
+        {   // if we have a valid accpnt, store its "i" to be used as the active list item
+            tmpItem = i;
+        }
+
+        // test if this is the default access point
+        if(!AccessPointGetIntegerPropertyDirect(
+            *id,
+            DEFAULT_KEY,
+            (int*) &datalen) && datalen != 0)
+        {
+            defaultAccpnt = *id;
+            defaultItem = i;
+        }
+
+        // Hack to flag for deletion the temporary access point created by signup,
+        // just in case signup crashes and fails to clean up after itself.
+        // The actual removal occurs in MSG_GEN_PROCESS_OPEN_APPLICATION.
+        // (dhunter 1/13/2000)
+        if (!AccessPointGetIntegerPropertyDirect(
+            *id,
+            TEMPORARY_KEY,
+            (int*) &datalen) && datalen == 1)
+        {
+            tempAccpnt = *id; // don't confuse with tmpAccpnt!
+        }
+    }
+
+    if(hidden)
+    {   // delete the hidden access point from the list
+        ChunkArrayDeleteHandle(connectionChunk, hidden);
+    }
+    else
+    {
+        // if we have no hidden accpnt as of now, the ini file is broken
+        EC(EC_ERROR(-1);)
+    }
+
+    // rescan needed, as we have removed the hidden access point from the list, so the count is off
+    connectionNum = ChunkArrayGetCountHandles(connectionHandle, connectionChunk);
+
+    MemUnlock(connectionHandle);
+
+    @call IDConnectionList::MSG_GEN_DYNAMIC_LIST_INITIALIZE(connectionNum);
+
+    // if no connection at all, disable the connect button
+    // FIXME: should only be done if the connection is not a HOST/EtherODI/EtherPKT connection
+    if(connectionNum)
+    {
+        @call IDConnectButton::MSG_GEN_SET_ENABLED(VUM_NOW);
+    }
+    else
+    {
+        @call IDConnectButton::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+    }
+
+    if(!currentAccpnt)
+    {
+        if(defaultAccpnt)
+        {
+            currentAccpnt = defaultAccpnt;
+            @send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(defaultItem, 0);
+        }
+        else if(tmpAccpnt)
+        {
+            currentAccpnt = tmpAccpnt;
+            @send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(tmpItem, 0);
+        }
+    }
+    else
+    {
+        @send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(tmpItem, 0);
+    }
+
+    /* if there is only 1 access point then let's make it the default
+    access point automagically...  jfh 2/19/02 */
+    if ((connectionNum == 1) && !defaultAccpnt)
+    {
+        @call IDConnectionDefaultBoxGroup::MSG_GEN_BOOLEAN_GROUP_SET_BOOLEAN_STATE(1, TRUE);
+        @call self::MSG_IDP_SET_DEFAULT_CONNECTION();
+    }
+
+    // now update the rest of the UI
+    @send self::MSG_IDP_CONNECTION_SET_CURRENT();
 }
 
 /***********************************************************************
@@ -1446,8 +1447,8 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
   MemHandle mh;
   int type;
 
-  AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
-  AccessPointCommit();
+  // AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
+  // AccessPointCommit();
 
   if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type)) {
 	type = NET_TYPE_PPP ;
