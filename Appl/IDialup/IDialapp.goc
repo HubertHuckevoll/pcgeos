@@ -145,8 +145,9 @@ static void SendFlashNotification(void);
   @call IDConnectionGroup::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
   @send IDialupPrimary::MSG_GEN_RESET_TO_INITIAL_SIZE(VUM_DELAYED_VIA_UI_QUEUE);
 
-  if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type))
+  if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type)) {
 	  type = NET_TYPE_PPP;
+  }
   /* enable delete and modify only if there are access points defined that are
    * editable, type 2 is host-network type, so not editable */
   if( connectionNum && ( type != NET_TYPE_HOST ) )
@@ -302,18 +303,102 @@ SendFlashNotification()
  ***********************************************************************/
 @method IDialupAppClass, MSG_IDA_CONNECTION_LIST_APPLY
 {
-  word *id, datalen;
+    word *id, datalen;
 
-  // now display the new selection
-  MemLock(connectionHandle);
+    word oldNetType = 0 ;
+    word netType = 0 ;
+    char buffer[80] ;
+    word size ;
+    Boolean changed = FALSE ;
 
-  id = ChunkArrayElementToPtrHandles(connectionHandle, connectionChunk, selection, &datalen);
+    // if error, set netType to NET_TYPE_PPP
+    if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &oldNetType)) {
+        oldNetType = NET_TYPE_PPP ;
+    }
 
-  MemUnlock(connectionHandle);
+    // get the new selection
+    MemLock(connectionHandle);
+    id = ChunkArrayElementToPtrHandles(connectionHandle, connectionChunk, selection, &datalen);
+    MemUnlock(connectionHandle);
+    currentAccpnt = *id;
 
-  currentAccpnt = *id;
+    // Set the current access point to the selected one
+    AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
+    AccessPointCommit();
 
-  @send process::MSG_IDP_CONNECTION_SET_CURRENT();
+    // get netType of new accpnt. if error, set netType to NET_TYPE_PPP
+    if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &netType)) {
+        netType = NET_TYPE_PPP ;
+    }
+
+    // swap drivers if netType has changed
+    if (oldNetType != netType)
+    {
+      InitFileReadStringBuffer("tcpip", "driver", buffer, sizeof(buffer)-1, &size) ;
+      buffer[size] = '\0' ;
+      if( netType == NET_TYPE_HOST )
+      {
+          NEC(char *driver = "Host TCP/IP Driver" ; )
+          EC(char *driver = "EC Host TCP/IP Driver" ; )
+          //if ((strlen(buffer)) && (strcmp(driver, buffer)!=0)) changed = TRUE ;
+          InitFileWriteString("tcpip", "driver", driver) ;
+
+          InitFileDeleteEntry("tcpip", "link") ;
+          InitFileWriteString("tcpip", "linkDomain", "Host") ;
+          InitFileDeleteEntry("tcpip", "linkPermname") ;
+      }
+      else
+      {
+          NEC(char *driver = "TCP/IP Driver" ; )
+          EC(char *driver = "EC TCP/IP Driver" ; )
+          //if ((strlen(buffer)) && (strcmp(driver, buffer)!=0)) changed = TRUE ;
+          InitFileWriteString("tcpip", "driver", driver) ;
+
+          InitFileReadStringBuffer("tcpip", "link", buffer, sizeof(buffer)-1, &size) ;
+          buffer[size] = '\0' ;
+          if (netType == NET_TYPE_ODI)
+          {
+              NEC(char *link = "ODI Ethernet Driver" ; )
+              EC(char *link = "EC ODI Ethernet Driver" ; )
+              //if ((strlen(buffer)) && (strcmp(link, buffer)!=0)) changed = TRUE ;
+              InitFileWriteString("tcpip", "link", link) ;
+              InitFileWriteString("tcpip", "linkDomain", "EtherODI") ;
+              InitFileDeleteEntry("tcpip", "linkPermname") ;
+          }
+          else if (netType == NET_TYPE_PKT)
+          {
+              NEC(char *link = "Packet Ethernet Driver" ; )
+              EC(char *link = "EC Packet Ethernet Driver" ; )
+              //if ((strlen(buffer)) && (strcmp(link, buffer)!=0)) changed = TRUE ;
+              InitFileWriteString("tcpip", "link", link) ;
+              InitFileWriteString("tcpip", "linkDomain", "EtherPKT") ;
+              InitFileDeleteEntry("tcpip", "linkPermname") ;
+          }
+          else
+          {
+              NEC(char *ppplink = "PPP Driver" ; )
+              EC(char *ppplink = "EC PPP Driver" ; )
+              //if ((strlen(buffer)) && (strcmp(ppplink, buffer)!=0)) changed = TRUE ;
+              InitFileWriteString("tcpip", "link", ppplink) ;
+              InitFileWriteString("tcpip", "linkDomain", "PPP") ;
+              InitFileWriteString("tcpip", "linkPermname", "ppp") ;
+          }
+      }
+
+      InitFileCommit();
+      UserStandardDialogOptr(
+          0,
+          0,
+          0,
+          0,
+          @mustRestart,
+          (CDT_ERROR<<CDBF_DIALOG_TYPE_OFFSET)|(GIT_NOTIFICATION<<CDBF_INTERACTION_TYPE_OFFSET)) ;
+      SysShutdown(SST_RESTART) ;
+    }
+    else
+    {
+      @send process::MSG_IDP_CONNECTION_SET_CURRENT();
+    }
 }
 
 /***********************************************************************

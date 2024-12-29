@@ -172,19 +172,19 @@ void IDialupEnsureDefaultConnection(void);
     @callsuper();
 
     if(launchBlock)
-      {
-	ab = MemLock(launchBlock);
-	wait = ab->ALB_extraData;
-	if(wait)
+    {
+	  ab = MemLock(launchBlock);
+	  wait = ab->ALB_extraData;
+	  if(wait)
 	  {
-	    // we should connect from here
-	    // if there is only one Connection setting, use it to connect
-	    // otherwise, we need to ask user to choose one (or use the default one
-	    // if there is one marked default
-	    @call self::MSG_IDP_SELECT_ACCPNT();
+	     // we should connect from here
+	     // if there is only one Connection setting, use it to connect
+	     // otherwise, we need to ask user to choose one (or use the default one
+	     // if there is one marked default
+	     @call self::MSG_IDP_SELECT_ACCPNT();
 	  }
-	MemUnlock(launchBlock);
-      }
+	  MemUnlock(launchBlock);
+    }
 
     if(!wait)
       @call IDialupPrimary::MSG_GEN_DISPLAY_SET_NOT_MINIMIZED();
@@ -665,8 +665,9 @@ void IDialupEnsureDefaultConnection(void);
   creatingConnection = FALSE;
 
   // set to PPP if netType not set...
-  if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type))
+  if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type)) {
 	  type = NET_TYPE_PPP ;
+  }
   @call IDEditConnectionType::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(type, FALSE) ;
   @call oself::MSG_IDP_EDIT_TYPE_UPDATE() ;
 
@@ -1298,7 +1299,7 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
   MemLock(connectionHandle);
   connectionChunk = AccessPointGetEntries(connectionHandle, 0, APT_INTERNET);
 
-  currentAccpnt = 0;
+  currentAccpnt = AccessPointGetActivePoint(APT_INTERNET);
   defaultAccpnt = 0;
 
   if(connectionChunk)
@@ -1390,21 +1391,22 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
       @call IDConnectButton::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
     }
 
-  if(!currentAccpnt)
+//  if(!currentAccpnt)
+//    {
+//	 if(defaultAccpnt)
+//		{
+//		currentAccpnt = defaultAccpnt;
+//		@send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(defaultItem, 0);
+//		}
+//	 else if(tmpAccpnt)
+//		{
+//		currentAccpnt = tmpAccpnt;
+//		@send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(tmpItem, 0);
+//		}
+//	 }
+//  else
     {
-	 if(defaultAccpnt)
-		{
-		currentAccpnt = defaultAccpnt;
-		@send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(defaultItem, 0);
-		}
-	 else if(tmpAccpnt)
-		{
-		currentAccpnt = tmpAccpnt;
-		@send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(tmpItem, 0);
-		}
-	 }
-  else
-    {
+     // currentAccpnt = AccessPointGetActivePoint(APT_INTERNET);
 	 @send IDConnectionList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(tmpItem, 0);
     }
 
@@ -1415,8 +1417,8 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
 		@call self::MSG_IDP_SET_DEFAULT_CONNECTION();
 		}
 
-  AccessPointSetActivePoint(defaultAccpnt, APT_INTERNET);
-  AccessPointCommit();
+  // AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
+  // AccessPointCommit();
   @send self::MSG_IDP_CONNECTION_SET_CURRENT();
 }
 
@@ -1444,6 +1446,9 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
   MemHandle mh;
   int type;
 
+  AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
+  AccessPointCommit();
+
   if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type)) {
 	type = NET_TYPE_PPP ;
   }
@@ -1458,7 +1463,6 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
     @call IDModifyConnectionButton::MSG_GEN_SET_NOT_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
     @call IDDeleteConnectionButton::MSG_GEN_SET_NOT_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
   }
-
 
   if(!AccessPointGetIntegerPropertyDirect(currentAccpnt, DEFAULT_KEY, (int*) &datalen)
      && datalen != 0)
@@ -1495,7 +1499,6 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
       @call IDConnectionDefaultBoxGroup::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
   }
 
-  AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
   /*
   if(AccessPointGetIntegerPropertyDirect(currentAccpnt, "hours", &tHours))
     tHours = 0;
@@ -1905,10 +1908,10 @@ void IDialupUpdateEditOKButton(void)
  ***********************************************************************/
 @method IDialupProcessClass, MSG_IDP_CONNECT
 {
-    word netType = 0 ;
-    char buffer[80] ;
-    word size ;
-    Boolean changed = FALSE ;
+    // word netType = 0 ;
+    // char buffer[80] ;
+    // word size ;
+    // Boolean changed = FALSE ;
 
     connectSent = TRUE;
     disconnectRequested = FALSE;
@@ -1921,6 +1924,7 @@ void IDialupUpdateEditOKButton(void)
         G_registered = FALSE ;
     }
 
+/*
     AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
     AccessPointCommit();
 
@@ -1993,6 +1997,7 @@ void IDialupUpdateEditOKButton(void)
     }
     else
     {
+*/
         @call IDConnectButton::MSG_GEN_SET_NOT_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
         @call IDDisconnectButton::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
         @call IDInfoGroup::MSG_IDI_RESET();		/* Make sure stats are 0'd */
@@ -2025,7 +2030,7 @@ void IDialupUpdateEditOKButton(void)
                 @call IDialupApp::MSG_IDA_VIEW_CONNECTION();
             }
         }
-    }
+    //}
 }
 
 
