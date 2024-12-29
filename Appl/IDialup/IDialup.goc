@@ -870,9 +870,10 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
             str,
             (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
             (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET) |
-            CDBF_SYSTEM_MODAL);
-            MemUnlock( OptrToHandle( @invalidDNS1Str )
+            CDBF_SYSTEM_MODAL
         );
+
+        MemUnlock( OptrToHandle( @invalidDNS1Str ));
 
         MemFree( hanDNS1 );
         MemFree( hanDNS2 );
