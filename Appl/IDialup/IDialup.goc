@@ -972,7 +972,7 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
             /* never prompt for a password */
             AccessPointSetIntegerPropertyDirect(currentAccpnt, (char*)APSP_PROMPT_SECRET, 0);
 
-            /* dummy phone number - apparently always needed, but why? */
+            /* dummy phone number */
             AccessPointSetStringPropertyDirect(currentAccpnt, (char*)APSP_PHONE, _TEXT("+"));
         }
     }
