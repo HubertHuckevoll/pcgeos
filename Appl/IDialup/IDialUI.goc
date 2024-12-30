@@ -56,7 +56,7 @@
     gcnList(MANUFACTURER_ID_GEOWORKS,GAGCNLT_WINDOWS) = @IDialupPrimary;
     ATTR_GEN_HELP_FILE = "dialup";
 }
-@visMoniker IDialupTextMoniker = "Internet Dial-up & Configure";
+@visMoniker IDialupTextMoniker = "Internet Dial-Up & Configure";
 
 @end	AppResource
 

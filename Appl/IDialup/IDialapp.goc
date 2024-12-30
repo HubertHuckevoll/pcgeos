@@ -340,7 +340,6 @@ SendFlashNotification()
       {
           NEC(char *driver = "Host TCP/IP Driver" ; )
           EC(char *driver = "EC Host TCP/IP Driver" ; )
-          //if ((strlen(buffer)) && (strcmp(driver, buffer)!=0)) changed = TRUE ;
           InitFileWriteString("tcpip", "driver", driver) ;
 
           InitFileDeleteEntry("tcpip", "link") ;
@@ -351,7 +350,6 @@ SendFlashNotification()
       {
           NEC(char *driver = "TCP/IP Driver" ; )
           EC(char *driver = "EC TCP/IP Driver" ; )
-          //if ((strlen(buffer)) && (strcmp(driver, buffer)!=0)) changed = TRUE ;
           InitFileWriteString("tcpip", "driver", driver) ;
 
           InitFileReadStringBuffer("tcpip", "link", buffer, sizeof(buffer)-1, &size) ;
@@ -360,7 +358,6 @@ SendFlashNotification()
           {
               NEC(char *link = "ODI Ethernet Driver" ; )
               EC(char *link = "EC ODI Ethernet Driver" ; )
-              //if ((strlen(buffer)) && (strcmp(link, buffer)!=0)) changed = TRUE ;
               InitFileWriteString("tcpip", "link", link) ;
               InitFileWriteString("tcpip", "linkDomain", "EtherODI") ;
               InitFileDeleteEntry("tcpip", "linkPermname") ;
@@ -369,7 +366,6 @@ SendFlashNotification()
           {
               NEC(char *link = "Packet Ethernet Driver" ; )
               EC(char *link = "EC Packet Ethernet Driver" ; )
-              //if ((strlen(buffer)) && (strcmp(link, buffer)!=0)) changed = TRUE ;
               InitFileWriteString("tcpip", "link", link) ;
               InitFileWriteString("tcpip", "linkDomain", "EtherPKT") ;
               InitFileDeleteEntry("tcpip", "linkPermname") ;
@@ -378,7 +374,6 @@ SendFlashNotification()
           {
               NEC(char *ppplink = "PPP Driver" ; )
               EC(char *ppplink = "EC PPP Driver" ; )
-              //if ((strlen(buffer)) && (strcmp(ppplink, buffer)!=0)) changed = TRUE ;
               InitFileWriteString("tcpip", "link", ppplink) ;
               InitFileWriteString("tcpip", "linkDomain", "PPP") ;
               InitFileWriteString("tcpip", "linkPermname", "ppp") ;
@@ -397,7 +392,7 @@ SendFlashNotification()
     }
     else
     {
-      @send process::MSG_IDP_CONNECTION_SET_CURRENT();
+      @send process::MSG_IDP_UPDATE_UI_FOR_CURRENT_CONNECTION();
     }
 }
 

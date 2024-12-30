@@ -1109,7 +1109,7 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
     else
     {
         // change the current connection display
-        @call self::MSG_IDP_CONNECTION_SET_CURRENT();
+        @call self::MSG_IDP_UPDATE_UI_FOR_CURRENT_CONNECTION();
     }
 
     // We no longer automatically do this via GI_attrs since we may not
@@ -1422,11 +1422,11 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
     }
 
     // now update the rest of the UI
-    @send self::MSG_IDP_CONNECTION_SET_CURRENT();
+    @send self::MSG_IDP_UPDATE_UI_FOR_CURRENT_CONNECTION();
 }
 
 /***********************************************************************
- *	MSG_IDP_CONNECTION_SET_CURRENT for IDialupProcessClass
+ *	MSG_IDP_UPDATE_UI_FOR_CURRENT_CONNECTION for IDialupProcessClass
  ***********************************************************************
  * SYNOPSIS:     Edit the current CONNECTION setting.
  *
@@ -1442,15 +1442,12 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
  *	mzhu	11/23/98	Initial Revision
  *
  ***********************************************************************/
-@method IDialupProcessClass, MSG_IDP_CONNECTION_SET_CURRENT
+@method IDialupProcessClass, MSG_IDP_UPDATE_UI_FOR_CURRENT_CONNECTION
 {
   word datalen;
   TCHAR name[MAX_TEXT_LEN];
   MemHandle mh;
   int type;
-
-  // AccessPointSetActivePoint(currentAccpnt, APT_INTERNET);
-  // AccessPointCommit();
 
   if (AccessPointGetIntegerPropertyDirect(currentAccpnt, "netType", (int*) &type)) {
 	type = NET_TYPE_PPP ;
@@ -1888,7 +1885,7 @@ void IDialupUpdateEditOKButton(void)
 	    IC_INTERACTION_COMPLETE);
 
 	/* Update the UI since the number is shown with dialer options. */
-	@send self::MSG_IDP_CONNECTION_SET_CURRENT();
+	@send self::MSG_IDP_UPDATE_UI_FOR_CURRENT_CONNECTION();
     }
 }
 
