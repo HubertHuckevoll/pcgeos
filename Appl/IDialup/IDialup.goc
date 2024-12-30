@@ -149,7 +149,7 @@ void IDialupEnsureDefaultConnection(void);
 	  G_registered = TRUE ;
   }
 
-    @call self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
+    @call self::MSG_IDP_READ_ACTIVE_ACCPNT_AND_ACCPNT_LIST();
 
     // Hack to delete the temporary access point created by signup, just in case
     // signup crashes and fails to clean up after itself. (dhunter 1/13/2000)
@@ -160,12 +160,12 @@ void IDialupEnsureDefaultConnection(void);
         AccessPointCommit();
 
         // Reload the accpnt list.
-        @call self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
+        @call self::MSG_IDP_READ_ACTIVE_ACCPNT_AND_ACCPNT_LIST();
     }
 
     // Ensure that there is only one default access point.  We do this because
     // Welcome can add a new default without un-defaulting the old one.  The
-    // last one discovered (the one set by MSG_IDP_INITIALIZE_ACCPNT_LIST) is the
+    // last one discovered (the one set by MSG_IDP_READ_ACTIVE_ACCPNT_AND_ACCPNT_LIST) is the
     // desired default.
     IDialupEnsureDefaultConnection();
 
@@ -1104,7 +1104,7 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
     if(creatingConnection)
     {
         creatingConnection = FALSE;
-        @call self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
+        @call self::MSG_IDP_READ_ACTIVE_ACCPNT_AND_ACCPNT_LIST();
     }
     else
     {
@@ -1149,13 +1149,13 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
 
   @call IDEditConnectionName::MSG_VIS_TEXT_DELETE_ALL();
 
-/*#if _NDO2000 */
-  @call IDEditIP::MSG_VIS_TEXT_DELETE_ALL();
+  // @call IDEditIP::MSG_VIS_TEXT_DELETE_ALL();
+  // init with 0.0.0.0 in the hope of triggering DHCP (meyerk 12/2024)
+  @call IDEditIP::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(_TEXT("0.0.0.0"), VUM_DELAYED_VIA_UI_QUEUE);
 
   @call IDEditMask::MSG_VIS_TEXT_DELETE_ALL();
 
   @call IDEditGateway::MSG_VIS_TEXT_DELETE_ALL();
-/*#endif */
 
   @call IDEditDNS1::MSG_VIS_TEXT_DELETE_ALL();
 
@@ -1258,12 +1258,15 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
 
       // reset the current accesspoint
       currentAccpnt = 0;
-      @send self::MSG_IDP_INITIALIZE_ACCPNT_LIST();
+
+      // this tries to read the current accpnt from geos.ini, but there is none,
+      // so it will set the current accpnt to the first one in the list
+      @send self::MSG_IDP_READ_ACTIVE_ACCPNT_AND_ACCPNT_LIST();
     }
 }
 
 /***********************************************************************
- *		MSG_IDP_INITIALIZE_ACCPNT_LIST
+ *		MSG_IDP_READ_ACTIVE_ACCPNT_AND_ACCPNT_LIST
  ***********************************************************************
  *
  * SYNOPSIS:	Initialize the active accpnt by loading it from the INI
@@ -1279,7 +1282,7 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
  *	mzhu    	12/03/98   	Initial Revision
  *
  ***********************************************************************/
-@method IDialupProcessClass, MSG_IDP_INITIALIZE_ACCPNT_LIST
+@method IDialupProcessClass, MSG_IDP_READ_ACTIVE_ACCPNT_AND_ACCPNT_LIST
 {
     word *id, datalen, i, defaultItem=0;
     word tmpAccpnt=0, tmpItem=0;
