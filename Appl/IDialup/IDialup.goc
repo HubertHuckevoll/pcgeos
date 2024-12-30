@@ -1149,9 +1149,7 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
 
   @call IDEditConnectionName::MSG_VIS_TEXT_DELETE_ALL();
 
-  // @call IDEditIP::MSG_VIS_TEXT_DELETE_ALL();
-  // init with 0.0.0.0 in the hope of triggering DHCP (meyerk 12/2024)
-  @call IDEditIP::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(_TEXT("0.0.0.0"), VUM_DELAYED_VIA_UI_QUEUE);
+  @call IDEditIP::MSG_VIS_TEXT_DELETE_ALL();
 
   @call IDEditMask::MSG_VIS_TEXT_DELETE_ALL();
 
