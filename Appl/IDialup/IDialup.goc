@@ -1453,7 +1453,8 @@ AccessPointLocalDialingOptions GetLocalDialingOptions (void)
 	type = NET_TYPE_PPP ;
   }
 
-  if( connectionNum && ( type != NET_TYPE_HOST ) )
+  //if( connectionNum && ( type != NET_TYPE_HOST ) )
+  if( type != NET_TYPE_HOST )
   {
     @call IDModifyConnectionButton::MSG_GEN_SET_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
     @call IDDeleteConnectionButton::MSG_GEN_SET_ENABLED(VUM_DELAYED_VIA_UI_QUEUE);
