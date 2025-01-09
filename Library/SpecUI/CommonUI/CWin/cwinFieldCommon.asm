@@ -465,9 +465,20 @@ if not _NO_FIELD_BACKGROUND
 	add	di, ds:[di].Vis_offset
 	tst	ds:[di].OLFI_BGFile		; if no gstring to draw, exit
 	jz	exit
+
+	push	ds					; save ds
+	segmov	ds, dgroup				; load dgroup
+	cmp	ds:[firstStart], 0
+	pop	ds
+	je	exit
+
 	mov	di, bp				; di = gstate
 	CallMod	OLFieldDrawBG			; draw the background
 exit:
+	push	ds					; save ds
+	segmov	ds, dgroup				; load dgroup
+	mov	ds:[firstStart], 1
+	pop	ds
 endif
 	stc
 	ret

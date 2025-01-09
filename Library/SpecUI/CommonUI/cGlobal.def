@@ -112,6 +112,7 @@ global	olShortLongTouchTime:word
 endif
 if TOOL_AREA_IS_TASK_BAR
 global  taskBarPrefs:TaskBarFlags
+global	firstStart:word
 endif
 global	systemFontHeight:word
 
