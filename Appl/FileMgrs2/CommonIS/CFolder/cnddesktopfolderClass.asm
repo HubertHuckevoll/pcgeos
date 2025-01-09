@@ -12,7 +12,7 @@ ROUTINES:
 	Name			Description
 	----			-----------
 
-	
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -21,7 +21,7 @@ REVISION HISTORY:
 
 DESCRIPTION:
 	This file contains the class routines of the NDDesktopClass
-		
+
 
 	$Id: cnddesktopfolderClass.asm,v 1.3 98/06/03 13:10:27 joon Exp $
 
@@ -39,13 +39,13 @@ DESCRIPTION:	Draw the desktop
 PASS:		*ds:si	= NDDesktopClass object
 		^hcx	= Window
 RETURN:		nothing
-DESTROYED:	ax, cx, dx, bp 
+DESTROYED:	ax, cx, dx, bp
 
 REGISTER/STACK USAGE:
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -53,14 +53,14 @@ REVISION HISTORY:
 	joon	4/4/98   	Initial version copied from DeskVisExposed
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NDDesktopMetaExposed	method	dynamic	NDDesktopClass, 
+NDDesktopMetaExposed	method	dynamic	NDDesktopClass,
 					MSG_META_EXPOSED
 	mov	bp, ds:[si]			; deref. instance handle
 	mov	ds:[bp].DVI_window, cx		; save window for later
 	mov	di, ds:[bp].DVI_gState		; get gState
 	tst	di				; check if gState created yet
 	jnz	DVE_gotGState			; if so, don't create again
-	mov	di, cx				; else, 
+	mov	di, cx				; else,
 	call	GrCreateState 		; create gState for window
 	mov	cx, ss:[desktopFontID]		; set default font in gState
 	mov	dx, ss:[desktopFontSize]
@@ -74,7 +74,7 @@ DVE_gotGState:
 	push	si, di				; save gState handle
 	mov	bx, segment GenFieldClass
 	mov	si, offset GenFieldClass
-	mov	ax, MSG_VIS_DRAW
+	mov	ax, MSG_EXPLICIT_FIELD_DRAW
 	mov	cl, mask DF_EXPOSED
 	mov	bp, di
 	mov	di, mask MF_RECORD
@@ -117,12 +117,12 @@ DESCRIPTION:	The Desktop folder is never closed, so we have a stub
 		a single call).
 
 PASS:		*ds:si	= NDDesktopClass object
-RETURN:		nothing 
-DESTROYED:	nothing 
+RETURN:		nothing
+DESTROYED:	nothing
 
 REGISTER/STACK USAGE:
-PSEUDO CODE/STRATEGY:	
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+PSEUDO CODE/STRATEGY:
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -140,21 +140,21 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		NDDesktopViewSizeChanged
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-DESCRIPTION:	
+DESCRIPTION:
 
 PASS:		*ds:si	- NDDesktopClass object
 		ds:di	- NDDesktopClass instance data
 		es	- dgroup
 
-RETURN:		
+RETURN:
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
 REGISTER/STACK USAGE:
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -163,7 +163,7 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-NDDesktopViewSizeChanged	method	dynamic	NDDesktopClass, 
+NDDesktopViewSizeChanged	method	dynamic	NDDesktopClass,
 					MSG_META_CONTENT_VIEW_SIZE_CHANGED
 
 		uses	ax,cx,dx,bp
@@ -174,10 +174,10 @@ NDDesktopViewSizeChanged	method	dynamic	NDDesktopClass,
 	; it will keep the horrible "icons show up in the wrong place"
 	; bug from happening, I think...
 	;
-		
+
 		mov	ax, MSG_REDRAW
 		call	ObjCallInstanceNoLock
-		
+
 	;
 	; Convert all icon positions back to percentages, so that the
 	; icons will move properly to accommodate scrollbars.
@@ -188,7 +188,7 @@ NDDesktopViewSizeChanged	method	dynamic	NDDesktopClass,
 		.leave
 		mov	di, offset NDDesktopClass
 		GOTO	ObjCallSuperNoLock
-		
+
 NDDesktopViewSizeChanged	endm
 
 
@@ -204,11 +204,11 @@ CALLED BY:	NDDesktopViewSizeChanged, NDDesktopSaveIconPositions
 
 PASS:		*ds:si - NDDesktopClass object
 
-RETURN:		nothing 
+RETURN:		nothing
 
 DESTROYED:	ax,bx
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -264,16 +264,16 @@ SYNOPSIS:	callback routine to convert this object's position to
 		a percentage
 
 CALLED BY:	NDDesktopConvertPositionsToPercentages via
-		FolderSendToDisplayList 
+		FolderSendToDisplayList
 
 PASS:		ss:bp - inherited local vars
 		ds:di - FolderRecord
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 	We assume that the passed position coordinates are within the
 	range -2048<=N<=2047. This is good enough to handle almost anything
 	that would happen on a 1024x768 screen.
@@ -318,7 +318,7 @@ ConvertPositionToPercentageCB	proc far
 		cmp	ax, ss:[viewSize].P_y
 		ja	done
 
-		
+
 		mov	dx, ds:[di].FR_iconBounds.R_left
 		clr	ax
 		sardw	dxax
@@ -354,15 +354,15 @@ PASS:		*ds:si	- NDDesktopClass object
 		ds:di	- NDDesktopClass instance data
 		es	- dgroup
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
 REGISTER/STACK USAGE:
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -371,7 +371,7 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-NDDesktopSaveIconPositions	method	dynamic	NDDesktopClass, 
+NDDesktopSaveIconPositions	method	dynamic	NDDesktopClass,
 					MSG_FOLDER_SAVE_ICON_POSITIONS
 		uses	ax,cx,dx,bp
 		.enter
@@ -393,21 +393,21 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		NDDesktopSetDisplayOptions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-DESCRIPTION:	
+DESCRIPTION:
 
 PASS:		*ds:si	- NDDesktopClass object
 		ds:di	- NDDesktopClass instance data
 		es	- dgroup
 
-RETURN:		
+RETURN:
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
 REGISTER/STACK USAGE:
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -416,7 +416,7 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-NDDesktopSetDisplayOptions	method	dynamic	NDDesktopClass, 
+NDDesktopSetDisplayOptions	method	dynamic	NDDesktopClass,
 					MSG_SET_DISPLAY_OPTIONS
 
 		uses	ax,cx,dx,bp
@@ -448,15 +448,15 @@ PASS:		*ds:si	- NDDesktopClass object
 		ds:di	- NDDesktopClass instance data
 		es	- dgroup
 
-RETURN:		
+RETURN:
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
 REGISTER/STACK USAGE:
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -464,7 +464,7 @@ REVISION HISTORY:
        brianc	12/28/98   	Initial version.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NDDesktopRedrawWastebasket	method	dynamic	NDDesktopClass, 
+NDDesktopRedrawWastebasket	method	dynamic	NDDesktopClass,
 					MSG_ND_DESKTOP_REDRAW_WASTEBASKET
 	;
 	; lock folder buffer and find wastebasket
@@ -512,9 +512,9 @@ PASS:		ds:di - FolderRecord
 
 RETURN:		carry clear
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -579,7 +579,7 @@ RETURN:		ax	- MouseReturnFlags	(In Objects/uiInputC.def)
 			  mask MRF_CLEAR_POINTER_IMAGE - Causes the PIL_GADGET
 						level cursor to be cleared
 DESTROYED:	cx, dx, bp
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -589,7 +589,7 @@ REVISION HISTORY:
 	JS	3/ 3/93   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NDDesktopStartOther	method dynamic NDDesktopClass, 
+NDDesktopStartOther	method dynamic NDDesktopClass,
 					MSG_META_START_OTHER
 	test	ss:[fileDragging], mask FDF_MOVECOPY or mask FDF_DRAG_STARTED
 	jnz	callSuper
@@ -629,7 +629,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		NDDesktopCheckTransferEntry
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	returns carry clear, because the generic folderclass accepts 
+SYNOPSIS:	returns carry clear, because the generic folderclass accepts
 		everything and has no special behavior.
 
 CALLED BY:	MSG_SHELL_OBJECT_CHECK_TRANSFER_ENTRY
@@ -668,7 +668,7 @@ NDDesktopCheckTransferEntry	method	NDDesktopClass,
 	mov	ds, dx
 	tstListTransfer ds
 	pop	ds
-	jz	regularTransfer	
+	jz	regularTransfer
 
 	cmp	cx, 1					; put up error box
 	jne	specialHandling				;  for last item only
@@ -762,10 +762,10 @@ RETURN:		carry set - if error an occurred,
 
 DESTROYED:	ax, bx, cx, dx, si, di, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -793,7 +793,7 @@ pathWithVolume	local	PathName
 createSUD:
 	;
 	; Construct the path of the student link
-	;	
+	;
 	mov	si, offset FQTH_pathname
 	segmov	es, ss
 	lea	di, ss:[pathWithVolume]
@@ -804,7 +804,7 @@ createSUD:
 copyDone::
 	;
 	; Construct the path of the student's home
-	;	
+	;
 	mov	bx, ds:[FQTH_diskHandle]
 	clr	dx				; no drive label
 	segmov	ds, ss
@@ -816,7 +816,7 @@ copyDone::
 	jc	done
 	;
 	; See if this is a valid path
-	;	
+	;
 	segmov	ds, cs
 	mov	si, offset genericDir
 	clr	cx
@@ -885,10 +885,10 @@ RETURN:		carry set - if an error occurred,
 
 DESTROYED:	ax, bx, cx, dx, di
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -932,21 +932,21 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		NDDesktopScan
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-DESCRIPTION:	
+DESCRIPTION:
 
 PASS:		*ds:si	- NDDesktopClass object
 		ds:di	- NDDesktopClass instance data
 		es	- dgroup
 
-RETURN:		
+RETURN:
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
 REGISTER/STACK USAGE:
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -954,7 +954,7 @@ REVISION HISTORY:
        chrisb	7/13/93   	Initial version.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NDDesktopScan	method	dynamic	NDDesktopClass, 
+NDDesktopScan	method	dynamic	NDDesktopClass,
 					MSG_SCAN
 		.enter
 	;
