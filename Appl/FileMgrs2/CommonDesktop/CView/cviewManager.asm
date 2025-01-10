@@ -3,7 +3,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 1992 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:		
+MODULE:
 FILE:		cviewManager.asm
 
 AUTHOR:		Chris Boyke
@@ -18,7 +18,7 @@ REVISION HISTORY:
 	cdb	8/27/92   	Initial version.
 
 DESCRIPTION:
-	
+
 
 	$Id: cviewManager.asm,v 1.3 98/06/03 13:51:38 joon Exp $
 
@@ -57,7 +57,7 @@ PASS:		*ds:si	= DesktopViewClass object
 		cl	= background color
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -67,7 +67,7 @@ REVISION HISTORY:
 	JS	12/10/92   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-DesktopViewSetInitialBackgroundColor	method dynamic DesktopViewClass, 
+DesktopViewSetInitialBackgroundColor	method dynamic DesktopViewClass,
 					MSG_DESKTOP_VIEW_SET_INITIAL_BG_COLOR
 	mov	ds:[di].DVI_backGrColor, cl
 	ret
@@ -91,7 +91,7 @@ PASS:		*ds:si	= DesktopViewClass object
 		bp	= SpecBuildFlags
 RETURN:		nothing
 DESTROYED:	ax, cx, dx, bp
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -101,7 +101,7 @@ REVISION HISTORY:
 	JS	12/10/92   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-DesktopViewSpecBuildBranch	method dynamic DesktopViewClass, 
+DesktopViewSpecBuildBranch	method dynamic DesktopViewClass,
 					MSG_SPEC_BUILD_BRANCH
 	uses	ax, bp, es
 	.enter
@@ -118,7 +118,7 @@ NOFXIP<	segmov	es, dgroup, ax						>
 	mov	cl, es:[folderBackColor]
 
 checkMonochrome:
-	; If we are in monochrome, make sure no folder backgrounds are 
+	; If we are in monochrome, make sure no folder backgrounds are
 	; filled with a wash color, as they may be mapped to black in
 	; the monochrome case
 
@@ -170,11 +170,11 @@ PASS:		*ds:si	= DesktopViewClass object
 
 RETURN:		ax	= MouseReturnFlags
 
-ALLOWED TO DESTROY:	
+ALLOWED TO DESTROY:
 		cx, dx, bp
 		bx, si, di, ds, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -242,11 +242,11 @@ PASS:		*ds:si	= DesktopViewClass object
 
 RETURN:		ax	= MouseReturnFlags
 
-ALLOWED TO DESTROY:	
+ALLOWED TO DESTROY:
 		cx, dx, bp
 		bx, si, di, ds, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -302,11 +302,11 @@ PASS:		*ds:si	= DesktopViewClass object
 
 RETURN:		ax	= MouseReturnFlags
 
-ALLOWED TO DESTROY:	
+ALLOWED TO DESTROY:
 		cx, dx, bp
 		bx, si, di, ds, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -357,11 +357,11 @@ RETURN:		ax	= MouseReturnFlags
 				MRF_PROCESSED
 				MRF_REPLAY
 
-ALLOWED TO DESTROY:	
+ALLOWED TO DESTROY:
 		cx, dx, bp
 		bx, si, di, ds, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 		finish quick-transfer on any button activity
@@ -423,11 +423,11 @@ PASS:		*ds:si	= DesktopViewClass object
 
 RETURN:		nothing
 
-ALLOWED TO DESTROY:	
+ALLOWED TO DESTROY:
 		ax, cx, dx, bp
 		bx, si, di, ds, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -482,11 +482,11 @@ PASS:		*ds:si	= DesktopViewClass object
 
 RETURN:		nothing
 
-ALLOWED TO DESTROY:	
+ALLOWED TO DESTROY:
 		ax, cx, dx, bp
 		bx, si, di, ds, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -572,7 +572,7 @@ PASS:		*ds:si	= NDDesktopViewClass object
 RETURN:		nothing
 DESTROYED:	ax, cx, dx, bp
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -634,7 +634,9 @@ endif
 	cmp	ax, di
 	je	done
 
+	;mov	cx, UtilAsciiToHex32
 	mov	cx, ax
+	mov	ch, mask WCF_TRANSPARENT
 	clr	dx
 	mov	ax, MSG_GEN_VIEW_SET_COLOR
 	call	ObjCallInstanceNoLock
