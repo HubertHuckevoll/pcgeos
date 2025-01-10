@@ -2,8 +2,8 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	Copyright (c) GeoWorks 1993 -- All Rights Reserved
 
-PROJECT:	
-MODULE:		
+PROJECT:
+MODULE:
 FILE:		cNDDesktopPrimaryClass.asm
 
 AUTHOR:		Joon Song, May 19, 1993
@@ -12,7 +12,7 @@ ROUTINES:
 	Name			Description
 	----			-----------
 
-	
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -44,7 +44,7 @@ PASS:		*ds:si	= NDDesktopPrimaryClass object
 		bp	= 0 if top window, else window for object to open on
 RETURN:		nothing
 DESTROYED:	ax, cx, dx, bp
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -54,7 +54,7 @@ REVISION HISTORY:
 	JS	6/ 2/93   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NDDesktopPrimaryVisOpen	method dynamic NDDesktopPrimaryClass, 
+NDDesktopPrimaryVisOpen	method dynamic NDDesktopPrimaryClass,
 					MSG_VIS_OPEN
 	push	es
 	mov	bx, segment dgroup
@@ -64,7 +64,19 @@ NDDesktopPrimaryVisOpen	method dynamic NDDesktopPrimaryClass,
 	pop	es
 
 	mov	di, offset NDDesktopPrimaryClass
-	GOTO	ObjCallSuperNoLock
+	call	ObjCallSuperNoLock
+
+	mov	ax, MSG_VIS_QUERY_WINDOW
+	call	ObjCallInstanceNoLock
+	jcxz	done
+
+	mov	si, WIT_COLOR
+	clr	ax, bx
+	mov	ah, mask WCF_TRANSPARENT
+	mov	di, cx
+	call	WinSetInfo
+done:
+	ret
 
 NDDesktopPrimaryVisOpen	endm
 
@@ -91,7 +103,7 @@ PASS:		*ds:si	= NDDesktopPrimaryClass object
 RETURN:		carry set if character was handled by someone (and should
 		not be used elsewhere).
 DESTROYED:	ax, cx, dx, bp
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -101,7 +113,7 @@ REVISION HISTORY:
 	JS	3/30/93   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NDDesktopPrimaryKbdChar method dynamic NDDesktopPrimaryClass, 
+NDDesktopPrimaryKbdChar method dynamic NDDesktopPrimaryClass,
 				MSG_META_KBD_CHAR, MSG_META_FUP_KBD_CHAR
 if DBCS_PCGEOS
 	cmp	cx, C_SYS_ESCAPE
@@ -141,7 +153,7 @@ PASS:		*ds:si	= NDDesktopPrimaryClass object
 		ax	= message #
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -151,7 +163,7 @@ REVISION HISTORY:
 	JS	6/29/93   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NDDesktopPrimaryClose	method dynamic NDDesktopPrimaryClass, 
+NDDesktopPrimaryClose	method dynamic NDDesktopPrimaryClass,
 					MSG_GEN_DISPLAY_CLOSE
 	ret
 NDDesktopPrimaryClose	endm

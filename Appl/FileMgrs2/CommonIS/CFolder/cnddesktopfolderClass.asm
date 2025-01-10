@@ -29,7 +29,28 @@ DESCRIPTION:
 
 FolderCode segment resource
 
-
+NDDesktopMetaVisOpen	method dynamic NDDesktopClass,
+					MSG_VIS_OPEN
+
+	mov	di, offset NDDesktopClass
+	call	ObjCallSuperNoLock
+
+	mov	ax, MSG_VIS_QUERY_WINDOW
+	call	ObjCallInstanceNoLock
+	jcxz	done
+
+	mov	si, WIT_COLOR
+	clr	ax, bx
+	mov	ah, mask WCF_TRANSPARENT
+	mov	di, cx
+	call	WinSetInfo
+done:
+	ret
+
+NDDesktopMetaVisOpen	endm
+
+
+
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		NDDesktopMetaExposed
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -71,19 +92,19 @@ DVE_gotGState:
 	call	GrBeginUpdate
 
 	; Have the field draw the background in our gstate
-	push	si, di				; save gState handle
-	mov	bx, segment GenFieldClass
-	mov	si, offset GenFieldClass
-	mov	ax, MSG_VIS_DRAW
-	mov	cl, mask DF_EXPOSED
-	mov	bp, di
-	mov	di, mask MF_RECORD
-	call	ObjMessage
+	;push	si, di				; save gState handle
+	;mov	bx, segment GenFieldClass
+	;mov	si, offset GenFieldClass
+	;mov	ax, MSG_VIS_DRAW
+	;mov	cl, mask DF_EXPOSED
+	;mov	bp, di
+	;mov	di, mask MF_RECORD
+	;call	ObjMessage
 
-	mov	ax, MSG_GEN_GUP_CALL_OBJECT_OF_CLASS
-	mov	cx, di
-	call	UserCallApplication
-	pop	si, di				; restore gState handle
+	; mov	ax, MSG_GEN_GUP_CALL_OBJECT_OF_CLASS
+	; mov	cx, di
+	; call	UserCallApplication
+	; pop	si, di				; restore gState handle
 
 	mov	ax, MSG_DV_DRAW			; draw ourselves
 	mov	bp, di
