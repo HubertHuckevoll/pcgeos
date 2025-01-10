@@ -74,7 +74,7 @@ DVE_gotGState:
 	push	si, di				; save gState handle
 	mov	bx, segment GenFieldClass
 	mov	si, offset GenFieldClass
-	mov	ax, MSG_EXPLICIT_FIELD_DRAW
+	mov	ax, MSG_VIS_DRAW
 	mov	cl, mask DF_EXPOSED
 	mov	bp, di
 	mov	di, mask MF_RECORD

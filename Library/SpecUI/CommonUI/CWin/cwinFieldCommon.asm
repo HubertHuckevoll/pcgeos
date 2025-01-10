@@ -445,14 +445,12 @@ ife	TRANSPARENT_FIELDS
 OLFieldDraw	method	dynamic OLFieldClass, MSG_VIS_DRAW
 
 if not _NO_FIELD_BACKGROUND
-endif
-	stc
-	ret
-OLFieldDraw	endm
-endif
-
-
-OLFieldDrawExplicit	method	dynamic OLFieldClass, MSG_EXPLICIT_FIELD_DRAW
+;don't call superclass as there are no children that we want to draw
+;- brianc 12/10/92
+;	push	bp
+;	mov	di, offset OLFieldClass		; es:di <- ptr to class.
+;	call	ObjCallSuperNoLock		; Let super do the work.
+;	pop	bp
 
 	mov	di, ds:[si]
 	add	di, ds:[di].Gen_offset
@@ -467,15 +465,14 @@ OLFieldDrawExplicit	method	dynamic OLFieldClass, MSG_EXPLICIT_FIELD_DRAW
 	add	di, ds:[di].Vis_offset
 	tst	ds:[di].OLFI_BGFile		; if no gstring to draw, exit
 	jz	exit
-
 	mov	di, bp				; di = gstate
 	CallMod	OLFieldDrawBG			; draw the background
 exit:
+endif
 	stc
 	ret
-
-OLFieldDrawExplicit	endm
-
+OLFieldDraw	endm
+endif
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
