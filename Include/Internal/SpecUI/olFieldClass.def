@@ -189,9 +189,6 @@ MSG_OL_FIELD_SEND_TO_GEN_APPLICATIONS	message
 ; Pass:		dx	= message
 ; Return:	nothing
 ;
-
-MSG_EXPLICIT_FIELD_DRAW			message
-
 endif
 
 ;------------------------------------------------------------------------------

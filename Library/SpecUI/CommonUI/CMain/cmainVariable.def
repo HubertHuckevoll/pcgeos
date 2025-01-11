@@ -138,7 +138,6 @@ endif
 
 if TOOL_AREA_IS_TASK_BAR
 taskBarPrefs		TaskBarFlags	0
-firstStart		word		0
 endif
 
 ;------------------------------------------------------------------------------
