@@ -27,7 +27,7 @@ method	HideHourglass, FolderClass, MSG_FOLDER_MARK_NOT_BUSY
 
 
 if _NEWDESK
-		
+
 NDFolderClass
 NDDesktopClass
 NDPrinterClass
@@ -63,15 +63,15 @@ endif		; if _NEWDESKBA
 
 FileMgrsClassStructures	ends
 
-		
+
 	;
-	; NewDesk and Zoomer don't have the UI for alot of the 
+	; NewDesk and Zoomer don't have the UI for alot of the
 	; Geomanager display options, so the grab from these
 	; defaults.  Zoomer does have the UI for display mode,
 	; so we don't have a default for zoomer for display
 	; mode, just for NewDesk
 	;
-idata	segment		
+idata	segment
 if _NEWDESK or _ZMGR
 defDisplayTypes	FI_DisplayTypes	mask FIDT_ALL
 defDisplayAttrs	FI_DisplayAttrs mask FIDA_RO or mask FIDA_ARCHIVE or \
@@ -180,7 +180,7 @@ doingMultiFileLaunch	byte
 if _FAX_CAPABILITY
 outputType		PrinterDriverType
 endif
-		
+
 if COUNT_SORT_COMPARISONS
 ;
 ; counts number of comparions done in SortFolderBuffer
@@ -210,5 +210,7 @@ BA <	transferAbortFlag	byte	>
 ;
 mappingField1	PathName
 mappingField2	PathName
+
+ctrlIsDown	byte
 
 udata	ends

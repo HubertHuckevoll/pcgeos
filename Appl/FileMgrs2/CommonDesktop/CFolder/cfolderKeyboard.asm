@@ -3,7 +3,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 1992 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:		
+MODULE:
 FILE:		cfolderKeyboard.asm
 
 AUTHOR:		Chris Boyke
@@ -18,7 +18,7 @@ REVISION HISTORY:
        chrisb	6/15/93   	Initial version.
 
 DESCRIPTION:
-	
+
 
 	$Id: cfolderKeyboard.asm,v 1.2 98/06/03 13:34:02 joon Exp $
 
@@ -46,7 +46,7 @@ PASS:		*ds:si	= FolderClass object
 
 RETURN:
 
-DESTROYED:	ax,cx,dx,bp	
+DESTROYED:	ax,cx,dx,bp
 
 PSEUDO CODE/STRATEGY:
 
@@ -61,6 +61,9 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 FolderKbdChar	method	dynamic FolderClass, MSG_META_KBD_CHAR
+
+	; we store the state of the ctrl keys
+	mov	ss:[ctrlIsDown], dh
 
 	test	dl, mask CF_FIRST_PRESS or mask CF_REPEAT_PRESS
 	jz	fup
@@ -132,14 +135,14 @@ SBCS <	jnz	fup							>
 	;
 	; Since shift-A, etc. is used to activate drives, but the
 	; SHIFT flag isn't set for such things, make sure the thing
-	; isn't uppercase 
+	; isn't uppercase
 	;
 SBCS <	mov	al, cl							>
 SBCS <	clr	ah							>
 DBCS <	mov	ax, cx							>
 	call	LocalIsUpper
 	jnz	fup
-		
+
 	cmp	ds:[bx].FOI_displayList, NIL
 	je	fup
 	call	FolderLockBuffer
@@ -169,12 +172,12 @@ cmpNext:
 	jne	cmpLoop
 
 	cmp	bp, ds:[bx].FOI_displayList
-	jne	useDisplayList	
+	jne	useDisplayList
 	jmp	unlockBuffer
 
 endif ; not GPC_ONLY
-endif ; GMGR	
-	
+endif ; GMGR
+
 goodKey:
 	;
 	; process keyboard shortcut
@@ -215,7 +218,7 @@ callHandler:
 	push	si
 	mov	si, ds:[si]
 	call	cs:[bp].folderKeysWrapTable
-	pop	si		
+	pop	si
 	jnc	unlockBuffer
 
 selectThisOne:
@@ -288,7 +291,7 @@ SYNOPSIS:	Handle one of the keypresses
 CALLED BY:	FolderKbdChar
 
 PASS:		ds:si = Folder instance data
-		es:di = current FolderRecord 
+		es:di = current FolderRecord
 
 RETURN:		carry set to set new selection
 			es:dx = new selection
@@ -297,7 +300,7 @@ RETURN:		carry set to set new selection
 DESTROYED:	ax, bx, bp, di, si
 
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -440,7 +443,7 @@ hBackward:
 	jae	checkNext
 	movdw	bestDiff, dxcx
 	jmp	newBest
-	
+
 vertical:
 	test	flags, mask FKNF_BACKWARD
 	jnz	vBackward
@@ -534,7 +537,7 @@ FolderKeyWrapDown equ FolderKeyDown
 else	; GPC_SIMPLE_KBD_NAVIGATION
 
 FolderKeyHome	proc	near
-	class	FolderClass 
+	class	FolderClass
 	mov	dx, ds:[si].FOI_displayList	; NIL is okay
 	stc					; change selection
 	ret
@@ -574,7 +577,7 @@ ForceRef	currentScore
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (X direction) 
+						; (X direction)
 	mov	bx, es:[di].FR_iconBounds.R_top
 	mov	di, ds:[si].FOI_displayList
 
@@ -631,7 +634,7 @@ ForceRef	currentScore
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (X direction) 
+						; (X direction)
 	mov	bx, es:[di].FR_iconBounds.R_top
 	mov	di, ds:[si].FOI_displayList
 findIconLoop:
@@ -681,7 +684,7 @@ currentScore	local	dword
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (Y direction) 
+						; (Y direction)
 	mov	bx, es:[di].FR_iconBounds.R_left
 	mov	di, ds:[si].FOI_displayList
 findIconLoop:
@@ -736,13 +739,13 @@ currentScore	local	dword
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (Y direction) 
+						; (Y direction)
 	;
 	; For the loop:
 	; 	ax	= center of current selection
 	; 	bx	= left edge of current selection
 	; 	di	= record to check next
-	; 
+	;
 	mov	bx, es:[di].FR_iconBounds.R_left
 	mov	di, ds:[si].FOI_displayList
 findIconLoop:
@@ -793,7 +796,7 @@ RETURN:		carry set to change selection:
 SIDE EFFECTS:	none
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -820,7 +823,7 @@ RETURN:		carry set to change selection:
 			dx	= new selection
 		carry clear to not change
 DESTROYED:	ax, bx
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 		Run through things looking for an icon that is
@@ -828,8 +831,8 @@ PSEUDO CODE/STRATEGY:
 		(2) moving all the way right from it doesn't end us up with
 		    the current selection, and
 		(3) is the closest left-most one of this set.
-		
-		Strategy: 
+
+		Strategy:
 			- work through the display list looking for icons
 			  that are below the center of the current one.
 			- if an icon is closer than any previous, but still
@@ -840,7 +843,7 @@ PSEUDO CODE/STRATEGY:
 			  FolderKeyRight until it stops changing. If final
 			  thing is same as current selection, set minimum to
 			  what we thought was the best and try again.
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -850,7 +853,7 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 FolderKeyWrapRight	proc	near
 	class	FolderClass
-bestSoFar	local	nptr.FolderRecord	push	di	
+bestSoFar	local	nptr.FolderRecord	push	di
 current		local	nptr.FolderRecord 	push 	di
 bestScore	local	sword
 bestLeft	local	sword
@@ -867,7 +870,7 @@ again:
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (Y direction) 
+						; (Y direction)
 	mov	di, ds:[si].FOI_displayList
 findIconLoop:
 	mov	dx, es:[di].FR_iconBounds.R_top
@@ -899,7 +902,7 @@ checkNext:
 	; Now work our way right from the beast and see if we end up where
 	; we started, implying what we have is actually on the same "level"
 	; as what we had.
-	; 
+	;
 	mov	di, ss:[bestSoFar]
 moveRight:
 	cmp	es:[di].FR_displayNext, NIL
@@ -948,7 +951,7 @@ RETURN:		carry set to change selection:
 			dx	= new selection
 		carry clear to not change
 DESTROYED:	ax, bx
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 		Run through things looking for an icon that is
@@ -956,8 +959,8 @@ PSEUDO CODE/STRATEGY:
 		(2) moving all the way right from it doesn't end us up with
 		    the current selection, and
 		(3) is the closest left-most one of this set.
-		
-		Strategy: 
+
+		Strategy:
 			- work through the display list looking for icons
 			  that are below the center of the current one.
 			- if an icon is closer than any previous, but still
@@ -968,7 +971,7 @@ PSEUDO CODE/STRATEGY:
 			  FolderKeyRight until it stops changing. If final
 			  thing is same as current selection, set minimum to
 			  what we thought was the best and try again.
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -979,7 +982,7 @@ REVISION HISTORY:
 FolderKeyWrapLeft	proc	near
 	class	FolderClass
 
-bestSoFar	local	nptr.FolderRecord	push	di	
+bestSoFar	local	nptr.FolderRecord	push	di
 current		local	nptr.FolderRecord 	push 	di
 bestScore	local	sword
 bestRight	local	sword
@@ -998,7 +1001,7 @@ again:
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (Y direction) 
+						; (Y direction)
 	mov	di, ds:[si].FOI_displayList
 findIconLoop:
 	mov	dx, es:[di].FR_iconBounds.R_top
@@ -1030,7 +1033,7 @@ checkNext:
 	; Now work our way left from the beast and see if we end up where
 	; we started, implying what we have is actually on the same "level"
 	; as what we had.
-	; 
+	;
 	mov	di, ss:[bestSoFar]
 moveLeft:
 	cmp	di, ds:[si].FOI_displayList
@@ -1088,7 +1091,7 @@ RETURN:		carry set to change selection:
 			dx	= new selection
 		carry clear to not change
 DESTROYED:	ax, bx
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -1100,7 +1103,7 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 FolderKeyWrapDown	proc	near
 	class	FolderClass
-bestSoFar	local	nptr.FolderRecord	push	di	
+bestSoFar	local	nptr.FolderRecord	push	di
 current		local	nptr.FolderRecord 	push 	di
 bestScore	local	sword
 bestTop		local	sword
@@ -1117,7 +1120,7 @@ again:
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (X direction) 
+						; (X direction)
 	mov	di, ds:[si].FOI_displayList
 findIconLoop:
 	mov	dx, es:[di].FR_iconBounds.R_left
@@ -1149,7 +1152,7 @@ checkNext:
 	; Now work our way down from the beast and see if we end up where
 	; we started, implying what we have is actually on the same "level"
 	; as what we had.
-	; 
+	;
 	mov	di, ss:[bestSoFar]
 moveRight:
 	cmp	es:[di].FR_displayNext, NIL
@@ -1198,7 +1201,7 @@ RETURN:		carry set to change selection:
 			dx	= new selection
 		carry clear to not change
 DESTROYED:	ax, bx
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -1211,7 +1214,7 @@ REVISION HISTORY:
 FolderKeyWrapUp	proc	near
 	class	FolderClass
 
-bestSoFar	local	nptr.FolderRecord	push	di	
+bestSoFar	local	nptr.FolderRecord	push	di
 current		local	nptr.FolderRecord 	push 	di
 bestScore	local	sword
 bestBottom	local	sword
@@ -1230,7 +1233,7 @@ again:
 	sub	ax, bx
 	shr	ax
 	add	ax, bx				; ax = center of icon
-						; (X direction) 
+						; (X direction)
 	mov	di, ds:[si].FOI_displayList
 findIconLoop:
 	mov	dx, es:[di].FR_iconBounds.R_left
@@ -1262,7 +1265,7 @@ checkNext:
 	; Now work our way up from the beast and see if we end up where
 	; we started, implying what we have is actually on the same "level"
 	; as what we had.
-	; 
+	;
 	mov	di, ss:[bestSoFar]
 moveUp:
 	cmp	di, ds:[si].FOI_displayList
@@ -1316,22 +1319,22 @@ DESCRIPTION:
 
 CALLED BY:	INTERNAL - FolderKey{Up,Down,Right,Left}
 
-PASS:		dx	= distance from cursor to icon 
+PASS:		dx	= distance from cursor to icon
 			  (in direction of keypress)
-		cx	= distance from cursor to icon		
+		cx	= distance from cursor to icon
 			  (perpendicular to keypress)
 
 RETURN:		Inherited local variables:
 			bestScore, bestSoFar
 
-DESTROYED:	cx, dx 
+DESTROYED:	cx, dx
 		currentScore (inherited local variable)
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1372,7 +1375,7 @@ continue:					; bx = |^y - ^x|
 	mov	cx, ax			; dx:cx = Constant*sqr(distance)
 
 	clr	ax
-	call	GrUDivWWFixed		     	; divide, fraction in dx.cx 
+	call	GrUDivWWFixed		     	; divide, fraction in dx.cx
 	mov	ax, cx
 	cmpdw	bestScore, dxax
 	jb	done
@@ -1415,10 +1418,10 @@ RETURN:		if carry set
 			folder buffer is not locked
 
 DESTROYED:	ax, bx, cx, dx, bp
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1573,7 +1576,7 @@ checkIconInOnlyOneRegion:
 	jl	notInOld
 	mov	ax, ss:[oldRegion].R_top
 	cmp	ax, es:[di].FR_boundBox.R_bottom
-	jg	notInOld	
+	jg	notInOld
 	mov	ax, ss:[oldRegion].R_bottom
 	cmp	ax, es:[di].FR_boundBox.R_top
 	jl	notInOld
@@ -1587,7 +1590,7 @@ notInOld:
 	jl	notInNew
 	mov	ax, ss:[newRegion].R_top
 	cmp	ax, es:[di].FR_boundBox.R_bottom
-	jg	notInNew	
+	jg	notInNew
 	mov	ax, ss:[newRegion].R_bottom
 	cmp	ax, es:[di].FR_boundBox.R_top
 	jl	notInNew
@@ -1766,21 +1769,21 @@ folderKeysRoutineTable	nptr.near \
 FOLDER_KEYS_ROUTINE_TABLE_SIZE = length folderKeysRoutineTable
 
 folderKeysWrapTable	nptr.near \
-	FolderKeyWrapLeft,		; VC_LEFT     
-	FolderKeyWrapRight,		; VC_RIGHT    
+	FolderKeyWrapLeft,		; VC_LEFT
+	FolderKeyWrapRight,		; VC_RIGHT
 	FolderKeyWrapLeft,   		; VC_JOYSTICK_180
 	FolderKeyWrapRight,		; VC_JOYSTICK_0
 	FolderKeyWrapUp,   		; VC_JOYSTICK_90
 	FolderKeyWrapDown,		; VC_JOYSTICK_270
-	FolderKeyWrapUp,		; VC_UP	      
-	FolderKeyWrapDown,		; VC_DOWN     
-	FolderKeyNoWrap,		; VC_ENTER    
+	FolderKeyWrapUp,		; VC_UP
+	FolderKeyWrapDown,		; VC_DOWN
+	FolderKeyNoWrap,		; VC_ENTER
 	FolderKeyNoWrap,		; CTRL ENTER
-	FolderKeyNoWrap,		; VC_FIRE_BUTTON_1    
-	FolderKeyNoWrap,		; VC_FIRE_BUTTON_2    
-	FolderKeyNoWrap,		; VC_HOME     
-	FolderKeyNoWrap,		; VC_END      
-	FolderKeyWrapRight,		; VC_TAB      
+	FolderKeyNoWrap,		; VC_FIRE_BUTTON_1
+	FolderKeyNoWrap,		; VC_FIRE_BUTTON_2
+	FolderKeyNoWrap,		; VC_HOME
+	FolderKeyNoWrap,		; VC_END
+	FolderKeyWrapRight,		; VC_TAB
 	FolderKeyWrapLeft		; Shift+VC_TAB
 .assert length folderKeysWrapTable eq length folderKeysRoutineTable
 .assert (size KeyboardShortcut eq size word)

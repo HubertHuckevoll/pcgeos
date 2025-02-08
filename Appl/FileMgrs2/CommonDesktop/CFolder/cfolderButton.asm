@@ -804,8 +804,20 @@ InheritAndCreateNewFolderWindow	proc	far
 		.enter
 
 if _NEWDESK
+	;
+	; make sure to ALWAYS open a new window
+	; if the Ctrl is down, even when in FIBM_SINGLE
+	;
+		test	ss:[ctrlIsDown], mask SS_LCTRL
+		mov	ss:[ctrlIsDown], 0
+		jnz	openNewWindow
+
+	;
+	; only open new window if we're not in single mode
+	;
 		test	ss:[browseMode], mask FIBM_SINGLE
 		jz	openNewWindow
+
 	; If we're trying to open a window by opening an object on the
 	; desktop, then make a new window instead of trying to reuse an
 	; existing one.
@@ -826,6 +838,7 @@ if _NEWDESK
 		call	ShellFreePathBuffer
 		pop	bx, cx, es, di
 		jc	openNewWindow		; branch to front existing
+forceNew:
 ;endif
 	;
 	; if opening wastebasket, use regular routine (will bring
