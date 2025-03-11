@@ -12,6 +12,9 @@
 @include <extgraph.goh>
 #include "pngexp.h"
 
+Boolean _pascal writePPMDebugFile(dword width, dword height, VMFileHandle srcfile, VMBlockHandle bmpblock, BMFormat bitform);
+
+
 /********************************************************************
     API
 ********************************************************************/
@@ -86,9 +89,14 @@ Boolean _pascal pngExportBitmap(VMFileHandle srcfile, VMBlockHandle bmpblock, Fi
     // Write PLTE chunk (if applicable)
     writePLTEChunk(destfile, srcfile, bmpblock, bmptype, bitform);
 
+
+
+    writePPMDebugFile(width, height, srcfile, bmpblock, bitform);
+
+
     // Write IDAT chunk (handles scanline processing, filtering, and compression)
-    if (!writeIDATChunk(destfile, scanlineBuffer, prevLine, scanlineSize, width, height, srcfile, bmpblock))
-        goto onerror;
+    //if (!writeIDATChunk(destfile, scanlineBuffer, prevLine, scanlineSize, width, height, srcfile, bmpblock))
+    //    goto onerror;
 //    {
 //        MemFree(scanlineMem);
 //        MemFree(prevLineMem);
@@ -384,6 +392,66 @@ Boolean _pascal writeIDATChunk(FileHandle file, void *scanlineBuffer, void *prev
 
     return TRUE;
 }
+
+
+Boolean _pascal writePPMDebugFile(dword width, dword height, VMFileHandle srcfile, VMBlockHandle bmpblock, BMFormat bitform)
+{
+    FileHandle debugFile;
+    void *lineptr;
+    word size, y;
+    char header[32] = {0};
+
+    // Only process 24-bit RGB images
+    if (bitform != BMF_24BIT)
+    {
+        return FALSE; // Unsupported format
+    }
+
+	FilePushDir();
+	FileSetStandardPath(SP_DOCUMENT);
+	debugFile = FileCreate("debug.ppm", FCF_NATIVE | FILE_CREATE_TRUNCATE | FILE_ACCESS_RW | FILE_DENY_RW, 0);
+    if (!debugFile)
+    {
+        return FALSE; // Failed to create file
+    }
+
+    // Write PPM Header (P6 format)
+    sprintf(header, "P6\n%lu %lu\n255\n", width, height);
+    if (FileWrite(debugFile, header, strlen(header), FALSE) != strlen(header))
+    {
+        FileClose(debugFile, 0);
+        return FALSE; // Failed to write header
+    }
+
+    // Write each scanline as raw RGB data
+    for (y = 0; y < height; y++)
+    {
+        if (HAL_COUNT(HugeArrayLock(srcfile, bmpblock, y, &lineptr, &size)))
+        {
+            // Directly write the RGB scanline data (already in 24-bit format)
+            if (FileWrite(debugFile, lineptr, size, FALSE) != size)
+            {
+                HugeArrayUnlock(lineptr);
+                FileClose(debugFile, 0);
+                return FALSE; // Writing failed
+            }
+
+            HugeArrayUnlock(lineptr);
+        }
+        else
+        {
+            FileClose(debugFile, 0);
+            return FALSE; // Failed to lock scanline
+        }
+    }
+
+    // Close the file after writing all data
+    FileClose(debugFile, 0);
+    FilePopDir();
+
+    return TRUE;
+}
+
 
 /*********************************************************************/
 Boolean _pascal writeIENDChunk(FileHandle file)
