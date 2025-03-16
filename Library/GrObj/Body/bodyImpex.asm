@@ -9,8 +9,8 @@ FILE:		bodyImpex.asm
 AUTHOR:		Steve Scholl
 
 METHODS:
-	Name		
-	----	
+	Name
+	----
 	GrObjBodyImport
 	GrObjBodyExport
 
@@ -35,18 +35,18 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Import a gstring into a newly created gstring object
 
-PASS:		
+PASS:
 		*(ds:si) - instance data of object
 		ds:[bx] - instance data of object
 		ds:[di] - master part of object (if any)
 		es - segment of GrObjBodyClass
-		
+
 		ss:bp - ImpexTranslationParams
 
-RETURN:		
+RETURN:
 		nothing
-	
-DESTROYED:	
+
+DESTROYED:
 		ax
 
 PSEUDO CODE/STRATEGY:
@@ -68,7 +68,7 @@ GrObjBodyImport	method dynamic GrObjBodyClass, MSG_GB_IMPORT
 	uses	cx
 	.enter
 
-	test	ss:[bp].ITP_dataClass, mask IDC_GRAPHICS	
+	test	ss:[bp].ITP_dataClass, mask IDC_GRAPHICS
 	jz	done
 
 	mov	cx,ss:[bp].ITP_clipboardFormat
@@ -104,7 +104,7 @@ clearFrame:
 	call	GrObjBodySendToSelectedGrObjs
 
 	pop	bp					;impex stack frame
-	call	GrObjImpexImportExportCompleted				
+	call	GrObjImpexImportExportCompleted
 
 done:
 	.leave
@@ -124,7 +124,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Export gstring
 
-PASS:		
+PASS:
 		*(ds:si) - instance data of object
 		ds:[bx] - instance data of object
 		ds:[di] - master part of object (if any)
@@ -132,10 +132,10 @@ PASS:
 
 		ss:bp - ImpexTranslationParams
 
-RETURN:		
+RETURN:
 		ss:[bp].ITP_transferVMChain.high <- gstring handle
-	
-DESTROYED:	
+
+DESTROYED:
 		ax
 
 PSEUDO CODE/STRATEGY:
@@ -161,7 +161,7 @@ GrObjBodyExport	method dynamic GrObjBodyClass, MSG_GB_EXPORT
 	;
 
 	mov_tr	ax,si					;body chunk
-	mov	bx,ss:[bp].ITP_transferVMFile		
+	mov	bx,ss:[bp].ITP_transferVMFile
 	mov	cl, GST_VMEM
 	call	GrCreateGString
 	mov	ss:[bp].ITP_transferVMChain.high,si
@@ -177,7 +177,7 @@ GrObjBodyExport	method dynamic GrObjBodyClass, MSG_GB_EXPORT
 	;    Pass DF_PRINT so that text objects won't show their
 	;    selections.
 	;
-	
+
 	push	bp					;stack frame
 	call	GrObjBodySetGrObjDrawFlagsForDraw
 	ornf	dx, mask GODF_DRAW_OBJECTS_ONLY or \
@@ -189,7 +189,7 @@ GrObjBodyExport	method dynamic GrObjBodyClass, MSG_GB_EXPORT
 	call	GrEndGString
 	pop	bp					;stack frame
 
-	call	GrObjImpexImportExportCompleted				
+	call	GrObjImpexImportExportCompleted
 
 	.leave
 	ret
@@ -218,10 +218,10 @@ CALLED BY:	INTERNAL
 PASS:		*ds:si - body
 		di - gstring handle
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -267,7 +267,7 @@ SYNOPSIS:	Export gstring that contains the selected grobjects.
 		Draw the objects so that the upper left of their
 		bounding rect will be at 0,0
 
-PASS:		
+PASS:
 		*(ds:si) - instance data of object
 		ds:[bx] - instance data of object
 		ds:[di] - master part of object (if any)
@@ -275,10 +275,10 @@ PASS:
 
 		ss:bp - ImpexTranslationParams
 
-RETURN:		
+RETURN:
 		ss:[bp].ITP_transferVMChain.high <- gstring handle
-	
-DESTROYED:	
+
+DESTROYED:
 		ax
 
 PSEUDO CODE/STRATEGY:
@@ -296,7 +296,7 @@ REVISION HISTORY:
 	srs	5/21/92   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-GrObjBodyExportSelectedGrObjs	method dynamic GrObjBodyClass, 
+GrObjBodyExportSelectedGrObjs	method dynamic GrObjBodyClass,
 						MSG_GB_EXPORT_SELECTED_GROBJS
 	uses	cx,dx,bp
 	.enter
@@ -307,7 +307,7 @@ GrObjBodyExportSelectedGrObjs	method dynamic GrObjBodyClass,
 	;
 
 	mov_tr	ax,si					;body chunk
-	mov	bx,ss:[bp].ITP_transferVMFile		
+	mov	bx,ss:[bp].ITP_transferVMFile
 	mov	cl, GST_VMEM
 	call	GrCreateGString
 	mov	ss:[bp].ITP_transferVMChain.high,si
@@ -320,7 +320,7 @@ GrObjBodyExportSelectedGrObjs	method dynamic GrObjBodyClass,
 	;
 
 	push	bp					;stack frame
-	call	GrObjBodyGetNumSelectedGrObjs	
+	call	GrObjBodyGetNumSelectedGrObjs
 	tst	bp
 	pop	bp					;stack frame
 	jz	endString
@@ -343,7 +343,7 @@ GrObjBodyExportSelectedGrObjs	method dynamic GrObjBodyClass,
 	;    Pass DF_PRINT so that text objects won't show their
 	;    selections.
 	;
-	
+
 	push	bp					;stack frame
 	call	GrObjBodySetGrObjDrawFlagsForDraw
 	ornf	dx, mask GODF_DRAW_SELECTED_OBJECTS_ONLY or \
@@ -357,7 +357,7 @@ GrObjBodyExportSelectedGrObjs	method dynamic GrObjBodyClass,
 
 endString:
 	call	GrEndGString
-	call	GrObjImpexImportExportCompleted				
+	call	GrObjImpexImportExportCompleted
 
 	.leave
 	ret
@@ -372,14 +372,14 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GrObjImpexImportExportCompleted
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Gets the handle of the impex library, and calls 
+SYNOPSIS:	Gets the handle of the impex library, and calls
 		ImpexImportExportCompleted().
 
 CALLED BY:	GLOBAL
 PASS:		ss:bp - ImpexTranslationParams
 RETURN:		nada
 DESTROYED:	nada
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -429,10 +429,10 @@ CALLED BY:	INTERNAL
 PASS:		*ds:si - body
 		di - gstring handle
 
-RETURN:		
+RETURN:
 		ax,bx - upper left of selected bounds
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -482,7 +482,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GrObjBodyTranslateBackToZeroZero
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Apply a translation to the gstring so that the objects 
+SYNOPSIS:	Apply a translation to the gstring so that the objects
 		will be drawn within a rectangle that has an upper left
 		of 0,0 and the lower right is the width and height of the
 		selection bounds.
@@ -494,10 +494,10 @@ PASS:		*ds:si - body
 		di - gstring handle
 		ax,bx - upper left of selected object bounds
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -584,10 +584,10 @@ GrObjBodyConvertSelectedGrObjsToBitmap	method dynamic	GrObjBodyClass,
 
 	; Check width of selected objects.  If they are too wide, then warn
 	; the user with an error dialog.  --JimG 6/14/94
-	
+
 	sub	sp, size RectDWord
 	mov	bp, sp
-	
+
 	mov	ax, MSG_GB_GET_BOUNDS_OF_SELECTED_GROBJS
 	call	ObjCallInstanceNoLock			;Destroys: ax
 	movdw	axbx, ss:[bp].RD_right
@@ -603,7 +603,7 @@ tooWide:
 	mov	ax, offset convertToBitmapTooBigErrorString
 	call	GrObjBodyStandardError
 	jmp	done
-	
+
 beginConversion:
 	call	GBMarkBusy
 
@@ -680,6 +680,9 @@ endif
 	call	GrLoadGString				;si <- GString
 	mov	cx, si					;cx <- gstring
 	pop	bx, si					;^lbx:si <- bitmap
+
+	;push	bx, si
+
 	mov	di,mask MF_FIXUP_DS
 	mov	ax,MSG_GO_INITIALIZE
 	call	ObjMessage
@@ -691,6 +694,26 @@ endif
 	mov	ax, MSG_BG_CREATE_VIS_BITMAP
 	mov	di,mask MF_FIXUP_DS
 	call	ObjMessage
+
+; Pass:		cl - BMFormat
+;		dx - x dpi
+;		bp - y dpi
+
+	;pop	bx, si
+
+
+	pusha
+	clr	ch
+	mov	cl, BMF_8BIT
+	mov	dx, 72
+	mov	bp, 72
+	mov	di, mask MF_CALL
+	clr	di
+	mov	ax, MSG_VIS_BITMAP_SET_FORMAT_AND_RESOLUTION
+	call	ObjMessage
+	popa
+
+
 
 	mov_tr	ax, si					;ax <- grobj chunk
 	mov	si, bp					;GString
@@ -740,7 +763,7 @@ Return:		nothing
 
 Destroyed:	ax
 
-Comments:	
+Comments:
 
 Revision History:
 
@@ -784,7 +807,7 @@ GrObjBodyConvertSelectedGrObjsToGraphic	method dynamic	GrObjBodyClass,
 	pop	ax					;ax <- block handle
 	call	GrObjBodyParseGString
 
-	call	GBMarkNotBusy	
+	call	GBMarkNotBusy
 
 	.leave
 	ret
@@ -806,7 +829,7 @@ Return:		nothing
 
 Destroyed:	ax
 
-Comments:	
+Comments:
 
 Revision History:
 
@@ -911,7 +934,7 @@ CheckHack	<offset GOID_position eq 0>
 	mov	al,HUM_NOW
 	call	GrObjBodySendBecomeSelectedToChild
 
-	call	GrObjBodyEndCreateCommon	
+	call	GrObjBodyEndCreateCommon
 
 	.leave
 	ret
@@ -932,7 +955,7 @@ Return:		nothing
 
 Destroyed:	ax
 
-Comments:	
+Comments:
 
 Revision History:
 
@@ -952,7 +975,7 @@ GrObjBodyCreateStar	method dynamic	GrObjBodyClass,	MSG_GB_CREATE_STAR
 	mov	ax, MSG_GB_REMOVE_ALL_GROBJS_FROM_SELECTION_LIST
 	call	ObjCallInstanceNoLock
 
-	mov	cx, ss:[bp].SMSP_outerRadius.P_x	
+	mov	cx, ss:[bp].SMSP_outerRadius.P_x
 	mov	dx, ss:[bp].SMSP_outerRadius.P_y
 
 	shl	cx
@@ -1030,7 +1053,7 @@ CheckHack	<offset GOID_position eq 0>
 	mov	al, HUM_NOW
 	call	GrObjBodySendBecomeSelectedToChild
 
-	call	GrObjBodyEndCreateCommon	
+	call	GrObjBodyEndCreateCommon
 
 	.leave
 	ret
@@ -1052,7 +1075,7 @@ Return:		^lcx:dx - new grobj
 
 Destroyed:	ax
 
-Comments:	
+Comments:
 
 Revision History:
 
@@ -1083,18 +1106,18 @@ CheckHack	<offset GOID_height eq GBCGP_height>
 	; Gets the center of the body's window in PARENT coords
 	;
 	call	GrObjBodyGetWinCenter
-	
+
 	;
 	; Do a simple transform so that the PointDWFixed at ss:bp points
 	; to the upper-left-hand corner of the new object to be created
 	; (since that is what MSG_GO_INITIALIZE requires).
 	;
-	
+
 	movwwf	axcx, ss:[bp].GBCGP_width
 	sarwwf	axcx					;half width
 	cwd
 	subdwf	ss:[bp].PDF_x, dxaxcx			;PDF_x = left edge
-	
+
 	movwwf	axcx, ss:[bp].GBCGP_height
 	sarwwf	axcx					;half height
 	cwd
@@ -1133,7 +1156,7 @@ CheckHack	<offset GOID_height eq GBCGP_height>
 	mov	ax, MSG_GB_ADD_GROBJ_TO_SELECTION_LIST
 	call	ObjCallInstanceNoLock
 
-	call	GrObjBodyEndCreateCommon	
+	call	GrObjBodyEndCreateCommon
 
 	.leave
 	ret
@@ -1153,11 +1176,11 @@ CALLED BY:	GrObjBodyCreatePolygon, GrObjBodyCreateStar,
 
 PASS:		*ds:si - GrObjBodyClass object
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -1192,11 +1215,11 @@ CALLED BY:	GrObjBodyCreatePolygon, GrObjBodyCreateStar,
 
 PASS:		*ds:si - GrObjBodyClass object
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -1224,7 +1247,7 @@ SYNOPSIS:	Create a vis bitmap object from the HugeBitmap
 
 		NOTE:******
 		The caller must
-		have explicity set or cleared ATTR_GB_PASTE_CALL_BACK 
+		have explicity set or cleared ATTR_GB_PASTE_CALL_BACK
 		before calling this routine.
 
 CALLED BY:	INTERNAL
@@ -1235,10 +1258,10 @@ PASS:		*ds:si - GrObjBody`
 		ax - vm block handle of huge bitmap
 		ss:[bp] - PDF center of paste
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -1312,10 +1335,10 @@ PASS:		*ds:si - GrObjBody
 		bx - vm file handle of huge bitmap
 		ax - vm block handle of huge bitmap
 		ss:bp - PointDWFixed center of object
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -1394,13 +1417,13 @@ endif
 	clr	cx					;width frac
 	movwwf	ss:[bp].GOID_width,axcx
 	sarwwf	axcx
-	cwd	
+	cwd
 	subdwf	ss:[bp].GOID_position.PDF_x,dxaxcx
 	mov	ax,bx					;height
 	clr	cx					;height frac
 	movdw	ss:[bp].GOID_height,axcx
 	sardw	axcx
-	cwd	
+	cwd
 	subdwf	ss:[bp].GOID_position.PDF_y,dxaxcx
 if 0
 	;    Now see if the bitmap is position too far afield, and
@@ -1437,7 +1460,7 @@ checkLeft:
 	tst	dx				;negative?
 	js	doneBounds			;yes - left bounds OK
 	adddwf	ss:[bp].GOID_position.PDF_x,dxaxcx
-doneBounds:		
+doneBounds:
 
 	;    If the bitmap is too large to fit on the screen, the upper-left
 	;    of the bitmap is now on the upper-left of the margin. So, we
@@ -1498,7 +1521,7 @@ endif
 if 0
 	;    ...then its scale factor
 	;
-	
+
 	cmp	di, 0xfff
 	je	doneScale
 	push	ds
@@ -1529,7 +1552,7 @@ endif
 	;    Calculate parent dimensions now that we have
 	;    geometry and attributes
 	;
-	
+
 	clr	di
 	mov	ax,MSG_GO_CALC_PARENT_DIMENSIONS
 	call	ObjMessage
@@ -1548,19 +1571,19 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GrObjBodyInitVisBitmapFromHugeBitmap
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 
-CALLED BY:	INTERNAL 
+CALLED BY:	INTERNAL
 		GrObjBodyImportHugeBitmap
 
-PASS: 
+PASS:
 		^lcx:dx - bitmap guardian
 		bx - vm file handle of huge bitmap
 		ax - vm block handle of huge bitmap
 
-RETURN:		
+RETURN:
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -1584,7 +1607,7 @@ GrObjBodyInitVisBitmapFromHugeBitmap		proc	near
 
 	pushdw	bxax					;vm file/block
 	movdw	bxsi,cxdx				;guardian od
-	mov	di,mask MF_CALL				
+	mov	di,mask MF_CALL
 	mov	ax,MSG_GOVG_GET_VIS_WARD_OD
 	call	ObjMessage
 
@@ -1608,23 +1631,23 @@ SYNOPSIS:	Just take the whole gstring and cram it into one gstring object
 
 		NOTE:******
 		The caller must
-		have explicity set or cleared ATTR_GB_PASTE_CALL_BACK 
+		have explicity set or cleared ATTR_GB_PASTE_CALL_BACK
 		before calling this routine.
 
 CALLED BY:	INTERNAL
 		GrObjBodyImport
 		GrObjBodyPasteCommon
-		
-PASS:		
+
+PASS:
 		*ds:si = GrObjBody
 		bx - VM file handle of gstring
 		ax - vm block handle of gstring
 		ss:[bp] - PointDFixed position to center the gstring on.
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -1721,11 +1744,11 @@ PASS:		ss:bp - GrObjInitializeData
 		bx - vm file handle of gstring
 		ss:di - PointDWFixed - center of object
 
-RETURN:		
+RETURN:
 		clc - GrObjInitializeData initalized
 		stc - gstring bounds to big
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -1779,14 +1802,14 @@ GrObjBodyParseGStringSetGOID		proc	near
 	clr	cx					;width frac
 	movwwf	ss:[bp].GOID_width,axcx
 	sarwwf	axcx
-	cwd	
+	cwd
 	subdwf	ss:[bp].GOID_position.PDF_x,dxaxcx
 	pop	ax					;bottom
 	sub	ax,bx					;bottom-top
 	clr	cx					;height frac
 	movdw	ss:[bp].GOID_height,axcx
 	sardw	axcx
-	cwd	
+	cwd
 	subdwf	ss:[bp].GOID_position.PDF_y,dxaxcx
 	clc						;no error
 
@@ -1819,17 +1842,17 @@ CALLED BY:	INTERNAL
 		GrObjBodyImport
 		GrObjBodyPasteCommon
 		GrObjBodyConvertSelectedGrObjsToGraphic
-		
-PASS:		
+
+PASS:
 		*ds:si = GrObjBody
 		bx - VM file
 		ax - block handle
 		ss:[bp] - PointDFixed position to center the gstring on.
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -1927,7 +1950,7 @@ GrObjBodyParseGString		proc	far
 	;
 
 	pop	dx					;body chunk
-	push	dx					;body chunk 
+	push	dx					;body chunk
 	sub	sp,size GrObjBodyParseGStringStruc
 	mov	bp,sp
 	mov	bx,ds:[LMBH_handle]
@@ -1939,7 +1962,7 @@ GrObjBodyParseGString		proc	far
 	push	ds:[LMBH_handle]			;body handle
 	call	GrParseGString
 	pop	bx					;body handle
-	call	MemDerefDS	
+	call	MemDerefDS
 	add	sp,size GrObjBodyParseGStringStruc
 
 	;    Clean up gstring and gstate
@@ -1968,15 +1991,15 @@ SYNOPSIS:	Create an grobj for the output element that was stopped on
 
 CALLED BY:	GrParseGString
 
-PASS:		
+PASS:
 		ds:si - pointer to element
 		ss:bx - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		ax - FALSE to continue parsing
 		ds - element segment
 
-DESTROYED:	
+DESTROYED:
 		ax,cx,dx,bp,es,di - ok because call back
 
 PSEUDO CODE/STRATEGY:
@@ -2015,7 +2038,7 @@ GrObjBodyParseGStringCB		proc	far
 	shl	bx					;Offset into
 							; ObjectRoutineTable
 							; which is a word table
-	add	bx,offset ObjectRoutineTable 
+	add	bx,offset ObjectRoutineTable
 	call	es:[bx]					; near call (XIP OK)
 
 	;    Add the new grobject to the body and have it drawn.
@@ -2056,12 +2079,12 @@ GStringOpTable	byte	\
 	GR_FILL_BITMAP
 
 ObjectRoutineTable	word \
-	offset GrObjBodyCreateGrObjFromGrDrawRect,	
-	offset GrObjBodyCreateGrObjFromGrDrawEllipse,	
-	offset GrObjBodyCreateGrObjFromGrDrawLine,	
+	offset GrObjBodyCreateGrObjFromGrDrawRect,
+	offset GrObjBodyCreateGrObjFromGrDrawEllipse,
+	offset GrObjBodyCreateGrObjFromGrDrawLine,
 	offset GrObjBodyCreateGrObjFromGrDrawRoundRect,
-	offset GrObjBodyCreateGrObjFromGrFillRect,	
-	offset GrObjBodyCreateGrObjFromGrFillEllipse,	
+	offset GrObjBodyCreateGrObjFromGrFillRect,
+	offset GrObjBodyCreateGrObjFromGrFillEllipse,
 	offset GrObjBodyCreateGrObjFromGrFillRoundRect,
 	offset GrObjBodyCreateGrObjFromGrDrawBitmap,
 	offset GrObjBodyCreateGrObjFromGrDrawBitmap
@@ -2081,15 +2104,15 @@ SYNOPSIS:	Create a RectClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2137,15 +2160,15 @@ SYNOPSIS:	Create a EllipseClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2194,15 +2217,15 @@ SYNOPSIS:	Create a RoundedRectClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2259,15 +2282,15 @@ SYNOPSIS:	Create a LineClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2315,12 +2338,12 @@ CALLED BY:	INTERNAL
 		GrObjBodyCreateGrObjFromGrDrawArc
 		GrObjBodyCreateGrObjFromGrDrawLine
 		GrObjBodyCreateGrObjFromGrDrawRoundRect
-	
-PASS:		
+
+PASS:
 		^lcx:dx - object
-RETURN:		
+RETURN:
 		nothing
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2363,15 +2386,15 @@ SYNOPSIS:	Create a RectClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2419,15 +2442,15 @@ SYNOPSIS:	Create a EllipseClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2475,15 +2498,15 @@ SYNOPSIS:	Create a RoundedRectClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2544,12 +2567,12 @@ CALLED BY:	INTERNAL
 		GrObjBodyCreateGrObjFromGrFillArc
 		GrObjBodyCreateGrObjFromGrFillLine
 		GrObjBodyCreateGrObjFromGrFillRoundRect
-	
-PASS:		
+
+PASS:
 		^lcx:dx - object
-RETURN:		
+RETURN:
 		nothing
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2594,16 +2617,16 @@ CALLED BY:	INTERNAL
 		GrObjBodyCreateEllipseFromGStringElement
 		GrObjBodyCreateLineFromGStringElement
 
-PASS:		
+PASS:
 		ds:si - pointer to x1 field of rect in gstring element
 		cx:dx - class of object to create
 		di - gstate with attributes
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		cx:dx - optr of new object
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2647,7 +2670,7 @@ GrObjBodyCreateRectBasedGrObjectFromGStringElement		proc	near
 	;    Calculate parent dimensions now that we have
 	;    geometry and attributes
 	;
-	
+
 	movdw	bxsi,cxdx				;new od
 	mov	di,mask MF_FIXUP_DS
 	mov	ax,MSG_GO_CALC_PARENT_DIMENSIONS
@@ -2679,16 +2702,16 @@ SYNOPSIS:	Initialize the geometry of a grobject from a pointer
 CALLED BY:	INTERNAL
 		GrObjBodyCreateRectBasedGrObjectFromGStringElement
 
-PASS:	
+PASS:
 		ds:si - pointer to x1 field of rect in gstring element
 		di - gstate handle
 		cx:dx - optr of object
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2707,10 +2730,10 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 OpGrObjBodyRect	struct
-	OGOBR_x1	word	
-	OGOBR_y1	word	
-	OGOBR_x2	word	
-	OGOBR_y2	word	
+	OGOBR_x1	word
+	OGOBR_y1	word
+	OGOBR_x2	word
+	OGOBR_y2	word
 OpGrObjBodyRect	ends
 
 GrObjBodyInitRectBasedGrObjFromGStringElement		proc	near
@@ -2737,7 +2760,7 @@ GrObjBodyInitRectBasedGrObjFromGStringElement		proc	near
 	sub	ax,ds:[si].OGOBR_y1
 	mov	ss:[bp].BI_height.WWF_int,ax
 
-	;    Calculate the center of the object in the gstate's 
+	;    Calculate the center of the object in the gstate's
 	;    coordinate system
 	;
 
@@ -2792,20 +2815,20 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GrObjBodySetAreaAttributesFromGState
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Get area attributes from the gstate and set them in 
-		the object	
+SYNOPSIS:	Get area attributes from the gstate and set them in
+		the object
 
 CALLED BY:	INTERNAL
 		GrObjBodyCreateRectBasedGrObjectFromGStringElement
 
-PASS:		
+PASS:
 		di - gstate
 		bx:si - object
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2872,20 +2895,20 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GrObjBodySetLineAttributesFromGState
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Get line attributes from the gstate and set them in 
-		the object	
+SYNOPSIS:	Get line attributes from the gstate and set them in
+		the object
 
 CALLED BY:	INTERNAL
 		GrObjBodyCreateRectBasedGrObjectFromGStringElement
 
-PASS:		
+PASS:
 		di - gstate
 		bx:si - object
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -2962,16 +2985,16 @@ SYNOPSIS:	Create a BitmapGuardianClass object from the gstring element
 CALLED BY:	INTERNAL
 		GrObjBodyParseGStringCB
 
-PASS:		
+PASS:
 		ds:si - GString element pointer
 		di - gstate
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		^lcx:dx - new object
 		ds - segment of last slice of bitmap
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -3014,13 +3037,13 @@ GrObjBodyCreateGrObjFromGrDrawBitmap		proc	near
 
 	;    Fill in the mask so that our bitmap will show up
 	;
-	
+
 	mov	ax,mask BM_EDIT_MASK
 	clr	dx					;no ColorTransfer
 	call	GrSetBitmapMode
 	test	ax, mask BM_EDIT_MASK
 	jz	afterMask
-	
+
 	mov	ax,C_BLACK or (CF_INDEX shl 8)
 	call	GrSetAreaColor
 	mov	ax,MIN_COORD
@@ -3060,10 +3083,10 @@ CALLED BY:	INTERNAL
 
 PASS:		^lcx:dx - guardian
 
-RETURN:		
+RETURN:
 		di - gstate
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -3108,22 +3131,22 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 SYNOPSIS:	HugeArrayNext bitmap to next slice
 
 CALLED BY:	INTERNAL
-		GrObjBodyCreateGrObjFromGrDrawBitmap 
+		GrObjBodyCreateGrObjFromGrDrawBitmap
 
 PASS:		ds:si - pointing at CBitmap structure in
 		a GR_DRAW_BITMAP or GSE_BITMAP_SLICE gstring element
 
-RETURN:		
+RETURN:
 		if next gstring element is a GSE_BITMAP_SLICE
 			ds:si - pointing at CBitmap structure in next
-			gstring element		
+			gstring element
 			carry clear
 
 		if next gstring element is not a GSE_BITMAP_SLICE
 			ds:si - pointing a op code of next gstring element
 			carry set
-		
-DESTROYED:	
+
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -3170,7 +3193,7 @@ gotElementStructSize:
 	;    back up to begining of gstring element
 	;
 
-	sub	si,ax					
+	sub	si,ax
 
 	call	HugeArrayNext
 
@@ -3200,7 +3223,7 @@ notExpected:
 	call	HugeArrayPrev
 	add	si,size OpBitmapSlice
 	stc
-	jmp	done	
+	jmp	done
 
 GrObjBodyDrawBitmapFromGStringCB		endp
 
@@ -3219,10 +3242,10 @@ PASS:		ds:si - gstring element
 		^lcx:dx - od of object
 		ss:bp - GrObjBodyParseGStringStruc
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -3256,7 +3279,7 @@ GrObjBodyInitBitmapGuardianFromGStringElement		proc near
 	;    Calculate parent dimensions now that we have
 	;    geometry and attributes
 	;
-	
+
 	mov	di,mask MF_FIXUP_DS
 	mov	ax,MSG_GO_CALC_PARENT_DIMENSIONS
 	call	ObjMessage
@@ -3281,7 +3304,7 @@ GrObjBodyInitBitmapGuardianFromGStringElement		proc near
 	pop	di					;element offset
 	pushdw	bxsi					;guardian od
 	movdw	bxsi,cxdx				;ward od
-	call	GrObjBodyGetResolutionFromOpDrawBitmap	
+	call	GrObjBodyGetResolutionFromOpDrawBitmap
 	mov	dx,ax					;x res
 	mov	bp,cx					;y res
 	mov	cl,ds:[di].CB_simple.B_type+size OpDrawBitmap
@@ -3310,18 +3333,18 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GrObjBodyGetResolutionFromOpDrawBitmap
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Description:	return resolution of bitmap from OpDrawBitmap in 
+Description:	return resolution of bitmap from OpDrawBitmap in
 		gstring
 
 Pass:		ds:di - OpDrawBitmap gstring element
 
-Return:		
+Return:
 		ax - x res
 		cx - y res
 
 Destroyed:	nothing
 
-Comments:	
+Comments:
 
 Revision History:
 
@@ -3358,10 +3381,10 @@ CALLED BY:	INTERNAL
 PASS:		ds:si - gstring element
 		^lcx:dx - guardian od
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -3416,7 +3439,7 @@ GrObjBodyInitBitmapGuardianGeometry		proc	near
 	mov	ss:[bp].BI_height.WWF_int,ax
 	pop	di						;gstate
 
-	;    Calculate the center of the object in the gstate's 
+	;    Calculate the center of the object in the gstate's
 	;    coordinate system
 	;
 
@@ -3481,7 +3504,7 @@ Return:		nothing
 
 Destroyed:	nothing
 
-Comments:	
+Comments:
 
 Revision History:
 
