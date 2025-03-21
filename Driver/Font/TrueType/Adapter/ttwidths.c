@@ -23,6 +23,7 @@
 #include <graphics.h>
 #include <heap.h>
 #include "ttwidths.h"
+#include "ttacache.h"
 #include "ttcharmapper.h"
 #include "ttmemory.h"
 #include "ttinit.h"
@@ -71,7 +72,7 @@ extern void InitConvertHeader( TRUETYPE_VARS, FontHeader* fontHeader );
 static void FillKerningFlags( FontHeader* fontHeader, FontBuf* fontBuf );
 
 static void AdjustTransMatrix( TransformMatrix* transMatrix, 
-                               FontMatrix* graphicMatrix );
+                               FontMatrix* windowMatrix );
 
 
 #define OFFSET_KERN_PAIRS         ( sizeof(FontBuf) +                                   \
@@ -139,14 +140,14 @@ static void AdjustTransMatrix( TransformMatrix* transMatrix,
 MemHandle _pascal TrueType_Gen_Widths(
                         MemHandle            fontHandle,
                         FontMatrix*          fontMatrix,
-                        FontMatrix*          graphicMatrix,
                         WWFixedAsDWord       pointSize,
                         Byte                 width,
                         Byte                 weight,
-			const FontInfo*      fontInfo, 
+                        const FontInfo*      fontInfo, 
                         const OutlineEntry*  headerEntry,
                         const OutlineEntry*  firstEntry,
                         TextStyle            stylesToImplement,
+                        FontMatrix*          windowMatrix,
                         MemHandle            varBlock ) 
 {
         TrueTypeOutlineEntry*  trueTypeOutline;
@@ -155,7 +156,7 @@ MemHandle _pascal TrueType_Gen_Widths(
         FontBuf*               fontBuf;
         word                   size;
         TransformMatrix*       transMatrix;
-
+        TrueTypeCacheBufSpec   bufSpec;
 
 EC(     ECCheckMemHandle( fontHandle ) );
 EC(     ECCheckBounds( (void*)fontMatrix ) );
@@ -183,60 +184,82 @@ EC(     ECCheckBounds( (void*)fontHeader ) );
         InitConvertHeader( trueTypeVars, fontHeader );
 
         /* alloc Block for FontBuf, CharTableEntries, KernPairs and kerning values */
-        size = AllocFontBlock( sizeof( TransformMatrix ), 
-                               fontHeader->FH_numChars, 
-                               fontHeader->FH_kernCount, 
-                               &fontHandle );
-        fontBuf = (FontBuf*)MemDeref( fontHandle );
-EC(     ECCheckBounds( (void*) fontBuf ) );
+        bufSpec.TTCBS_pointSize = pointSize;
+        bufSpec.TTCBS_width = width;
+        bufSpec.TTCBS_weight = weight;
+        bufSpec.TTCBS_stylesToImplement = stylesToImplement;
 
-        /* initialize fields in FontBuf that do not have to be scaled */
-        fontBuf->FB_dataSize     = size;
-        fontBuf->FB_maker        = FM_TRUETYPE;
-        fontBuf->FB_flags        = FBF_IS_OUTLINE;
-        fontBuf->FB_heapCount    = 0;
+        if((fontMatrix->FM_flags & TF_COMPLEX) || !TrueType_Cache_LoadFontBlock(
+                trueTypeVars->cacheFile, trueTypeVars->entry.TTOE_fontFileName, 
+                trueTypeVars->entry.TTOE_fontFileSize,
+                trueTypeVars->entry.TTOE_magicWord,
+                &bufSpec,
+                &fontHandle	
+        )) {
+                size = AllocFontBlock( sizeof( TransformMatrix ), 
+                                fontHeader->FH_numChars, 
+                                fontHeader->FH_kernCount, 
+                                &fontHandle );
+                fontBuf = (FontBuf*)MemDeref( fontHandle );
+EC(             ECCheckBounds( (void*) fontBuf ) );
 
-        fontBuf->FB_firstChar    = fontHeader->FH_firstChar;
-        fontBuf->FB_lastChar     = fontHeader->FH_lastChar;
-        fontBuf->FB_defaultChar  = fontHeader->FH_defaultChar;
+                /* initialize fields in FontBuf that do not have to be scaled */
+                fontBuf->FB_dataSize     = size;
+                fontBuf->FB_maker        = FM_TRUETYPE;
+                fontBuf->FB_flags        = FBF_IS_OUTLINE;
+                fontBuf->FB_heapCount    = 0;
 
-        fontBuf->FB_kernCount    = fontHeader->FH_kernCount;
-        fontBuf->FB_kernPairs    = fontHeader->FH_kernCount ? OFFSET_KERN_PAIRS : 0;
-        fontBuf->FB_kernValues   = fontHeader->FH_kernCount ? OFFSET_KERN_VALUES : 0;
+                fontBuf->FB_firstChar    = fontHeader->FH_firstChar;
+                fontBuf->FB_lastChar     = fontHeader->FH_lastChar;
+                fontBuf->FB_defaultChar  = fontHeader->FH_defaultChar;
 
-        /* calculate scale factor */
-        CalcScaleForWidths( trueTypeVars, pointSize, stylesToImplement, width, weight );
+                fontBuf->FB_kernCount    = fontHeader->FH_kernCount;
+                fontBuf->FB_kernPairs    = fontHeader->FH_kernCount ? OFFSET_KERN_PAIRS : 0;
+                fontBuf->FB_kernValues   = fontHeader->FH_kernCount ? OFFSET_KERN_VALUES : 0;
 
-        /* convert FontHeader and fill FontBuf structure */
-        ConvertHeader( trueTypeVars, fontHeader, fontBuf );
+                /* calculate scale factor */
+                CalcScaleForWidths( trueTypeVars, pointSize, stylesToImplement, width, weight );
 
-        /* fill kerning pairs and kerning values */
-        ConvertKernPairs( trueTypeVars, fontBuf );
+                /* convert FontHeader and fill FontBuf structure */
+                ConvertHeader( trueTypeVars, fontHeader, fontBuf );
 
-        /* convert widths and fill CharTableEntries */
-        ConvertWidths( trueTypeVars, fontHeader, fontBuf );
+                /* fill kerning pairs and kerning values */
+                ConvertKernPairs( trueTypeVars, fontBuf );
 
-        /* FIXME: We are temporarily disabling support for kerning as this causes instability in the driver. */
-#if 0
-        FillKerningFlags( fontHeader, fontBuf ); 
-#endif
+                /* convert widths and fill CharTableEntries */
+                ConvertWidths( trueTypeVars, fontHeader, fontBuf );
 
-        /* calculate the transformation matrix and copy it into the FontBlock */
-        transMatrix = (TransformMatrix*)(((byte*)fontBuf) + sizeof( FontBuf ) + fontHeader->FH_numChars * sizeof( CharTableEntry ));
-EC(     ECCheckBounds( (void*)transMatrix ) );
-        CalcTransform( transMatrix, fontMatrix, fontBuf, stylesToImplement, width, weight );
+                FillKerningFlags( fontHeader, fontBuf ); 
 
-        /* adjust FB_height, FB_minTSB, FB_pixHeight and FB_baselinePos */
-        AdjustFontBuf( transMatrix, fontMatrix, fontBuf );
+                /* calculate the transformation matrix and copy it into the FontBlock */
+                transMatrix = (TransformMatrix*)(((byte*)fontBuf) + sizeof( FontBuf ) + fontHeader->FH_numChars * sizeof( CharTableEntry ));
+EC(             ECCheckBounds( (void*)transMatrix ) );
+                CalcTransform( transMatrix, fontMatrix, fontBuf, stylesToImplement, width, weight );
 
-        /* Are the glyphs rendered as regions? */
-        if( IsRegionNeeded( transMatrix, fontBuf ) )
-                fontBuf->FB_flags |= FBF_IS_REGION;
+                /* adjust FB_height, FB_minTSB, FB_pixHeight and FB_baselinePos */
+                AdjustFontBuf( transMatrix, fontMatrix, fontBuf );
 
-        AdjustTransMatrix( transMatrix, graphicMatrix );
+                /* Are the glyphs rendered as regions? */
+                if( IsRegionNeeded( transMatrix, fontBuf ) )
+                        fontBuf->FB_flags |= FBF_IS_REGION;
+
+                AdjustTransMatrix( transMatrix, windowMatrix );
+
+                if( !(fontMatrix->FM_flags & TF_COMPLEX) ) {
+
+                        TrueType_Cache_UpdateFontBlock(
+                                trueTypeVars->cacheFile,
+                                trueTypeVars->entry.TTOE_fontFileName,
+                                trueTypeVars->entry.TTOE_fontFileSize,
+                                trueTypeVars->entry.TTOE_magicWord,
+                                &bufSpec, fontHandle		
+                        );
+                }
+        }
         TrueType_Unlock_Face( trueTypeVars );
 Fail:        
         MemUnlock( varBlock );
+
         return fontHandle;
 }
 
@@ -426,6 +449,7 @@ void ConvertKernPairs( TRUETYPE_VARS, FontBuf* fontBuf )
         word              table;
         TT_Kern_0_Pair*   pairs;
         LookupEntry*      indices;
+        word              kernCount = 0;
         
 
         KernPair*  kernPair  = (KernPair*) ( ( (byte*)fontBuf ) + fontBuf->FB_kernPairs );
@@ -483,11 +507,14 @@ EC(             ECCheckBounds( pairs ) );
 
                                 ++kernPair;
                                 ++kernValue;
+
+                                ++kernCount;
                         }
                 }
                 GEO_UNLOCK( kerningDir.tables->t.kern0.pairsBlock );
                 TT_Kerning_Directory_Done( &kerningDir );
         }
+        EC_ERROR_IF(kernCount != fontBuf->FB_kernCount, -1);
         GEO_UNLOCK( LOOKUP_TABLE );
 }
 #pragma code_seg()
@@ -626,6 +653,8 @@ EC(     ECCheckBounds( (void*)fontBuf ) );
         transMatrix->TM_scriptX = 0;
         transMatrix->TM_heightY = 0;
         transMatrix->TM_scriptY = 0;
+        transMatrix->TM_resX    = 72;
+        transMatrix->TM_resY    = 72;
 
         /* fake bold style       */
         if( stylesToImplement & TS_BOLD )
@@ -673,15 +702,9 @@ EC(     ECCheckBounds( (void*)fontBuf ) );
 
         if( fontMatrix->FM_flags & TF_ROTATED )
         {
-                TT_Fixed  xy, yx;
-
-
-                xy = - ( TrueType_GrMulWWFixed( styleMatrix.yy, fontMatrix->FM_21 ) );
-                yx = - ( TrueType_GrMulWWFixed( styleMatrix.xx, fontMatrix->FM_12 ) +
-                         TrueType_GrMulWWFixed( styleMatrix.xy, fontMatrix->FM_22 ) );
-
-                transMatrix->TM_matrix.xy = xy;
-                transMatrix->TM_matrix.yx = yx;
+                transMatrix->TM_matrix.yx = - ( TrueType_GrMulWWFixed( styleMatrix.xx, fontMatrix->FM_12 ) +
+                                                TrueType_GrMulWWFixed( styleMatrix.xy, fontMatrix->FM_22 ) );
+                transMatrix->TM_matrix.xy = - ( TrueType_GrMulWWFixed( styleMatrix.yy, fontMatrix->FM_21 ) );
         }
 }
 
@@ -733,15 +756,15 @@ static word AllocFontBlock( word        additionalSpace,
         /* allocate memory for FontBuf, CharTableEntries, KernPairs and additional space */
         if( *fontHandle == NullHandle )
         {
-                *fontHandle = MemAllocSetOwner( FONT_MAN_ID, MAX( size, MAX_FONTBUF_SIZE ), 
-                        HF_SWAPABLE | HF_SHARABLE,
+                *fontHandle = MemAllocSetOwner( FONT_MAN_ID, size, 
+                        HF_SWAPABLE | HF_SHARABLE | HF_DISCARDABLE,
                         HAF_NO_ERR | HAF_LOCK | HAF_ZERO_INIT );
 EC(             ECCheckMemHandle( *fontHandle ) );
                 HandleP( *fontHandle );
         }
         else
         {
-                MemReAlloc( *fontHandle, MAX( size, MAX_FONTBUF_SIZE ), HAF_NO_ERR | HAF_LOCK );
+                MemReAlloc( *fontHandle, size, HAF_NO_ERR | HAF_LOCK );
 EC(             ECCheckMemHandle( *fontHandle ) );
         }
 
@@ -952,7 +975,7 @@ static void AdjustFontBuf( TransformMatrix* transMatrix,
  * 
  * PARAMETERS:     transMatrix     
  *                    Pointer to the transformation matrix to be adjusted.
- *                 graphicMatrix 
+ *                 windowMatrix 
  *                    Pointer to the font matrix used for scaling.
  * 
  * RETURNS:        void
@@ -968,20 +991,20 @@ static void AdjustFontBuf( TransformMatrix* transMatrix,
  *      01.02.25  JK        Initial Revision
  *******************************************************************/
 
-static void AdjustTransMatrix( TransformMatrix* transMatrix, FontMatrix* graphicMatrix )
+static void AdjustTransMatrix( TransformMatrix* transMatrix, FontMatrix* windowMatrix )
 {
-        WWFixedAsDWord  scaleX = GrSDivWWFixed( transMatrix->TM_matrix.xx, graphicMatrix->FM_11 );
-        WWFixedAsDWord  scaleY = GrSDivWWFixed( transMatrix->TM_matrix.yy, graphicMatrix->FM_22 );
+        if( windowMatrix == NULL )
+                return;
 
         /* set horizontal and vertical resolution based on 72 dpi */
-        transMatrix->TM_resX = ABS( INTEGER_OF_WWFIXEDASDWORD( TrueType_GrMulWWFixed( WORD_TO_WWFIXEDASDWORD( 72 ), scaleX ) ) );
-        transMatrix->TM_resY = ABS( INTEGER_OF_WWFIXEDASDWORD( TrueType_GrMulWWFixed( WORD_TO_WWFIXEDASDWORD( 72 ), scaleY ) ) );
+        transMatrix->TM_resX = INTEGER_OF_WWFIXEDASDWORD( GrMulWWFixed( WORD_TO_WWFIXEDASDWORD( 72 ), windowMatrix->FM_11 ) );
+        transMatrix->TM_resY = INTEGER_OF_WWFIXEDASDWORD( GrMulWWFixed( WORD_TO_WWFIXEDASDWORD( 72 ), windowMatrix->FM_22 ) );
 
-        /* scale transMatrix by scaleX and scaleY */
-        transMatrix->TM_matrix.xx = GrSDivWWFixed( transMatrix->TM_matrix.xx, scaleX );
-        transMatrix->TM_matrix.xy = GrSDivWWFixed( transMatrix->TM_matrix.xy, scaleX );
-        transMatrix->TM_matrix.yy = GrSDivWWFixed( transMatrix->TM_matrix.yy, scaleY );
-        transMatrix->TM_matrix.yx = GrSDivWWFixed( transMatrix->TM_matrix.yx, scaleY );
+        /* normalize transformation matrix values */
+        transMatrix->TM_matrix.xx = GrSDivWWFixed( transMatrix->TM_matrix.xx, windowMatrix->FM_11 );
+        transMatrix->TM_matrix.xy = GrSDivWWFixed( transMatrix->TM_matrix.xy, windowMatrix->FM_11 );
+        transMatrix->TM_matrix.yy = GrSDivWWFixed( transMatrix->TM_matrix.yy, windowMatrix->FM_22 );
+        transMatrix->TM_matrix.yx = GrSDivWWFixed( transMatrix->TM_matrix.yx, windowMatrix->FM_22 );
 }
 
 

@@ -187,6 +187,7 @@ DIR (ensemble) {
 		Appl/Launcher/launcher{ec}.geo
 		Tools/build/product/bbxensem/Images/{dbcs}/TOKEN_DA.000 LOCALPC
 		Tools/build/product/bbxensem/Images/lastword.000
+		Tools/build/product/bbxensem/Images/TTF_CACH.000 LOCALPC
 
 		# the browser cache folders
 		DIR (cache) {
@@ -349,6 +350,7 @@ DIR (ensemble) {
 		Library/Cell/{dbcs}/cell{ec}.geo GFS LOCALPC
 		Library/Chart/{dbcs}/chart{ec}.geo GFS LOCALPC
 		Library/Compress/compress{ec}.geo GFS LOCALPC
+		Library/Convert/convert{ec}.geo GFS LOCALPC
 
 		Library/ConView/conview{ec}.geo GFS LOCALPC
 		Library/GrObj/{dbcs}/grobj{ec}.geo XIP=XIP LOCALPC
@@ -427,20 +429,23 @@ DIR (ensemble) {
 		#
 		# GPC Browser libraries
 		#
-#		Library/Breadbox/Html4Par/JS{dbcs}/html4par{ec}.geo GFS LOCALPC
 		Library/Breadbox/Html4Par/html4par{ec}.geo GFS LOCALPC
 		Library/Breadbox/Ibms/{dbcs}/ibms{ec}.geo GFS LOCALPC
 		Library/Breadbox/Ijgjpeg/{dbcs}/ijgjpeg{ec}.geo GFS LOCALPC
 		Library/Breadbox/ExtGraph/{dbcs}/extgraph{ec}.geo GFS LOCALPC
 		Library/Breadbox/Giflib/giflib{ec}.geo GFS LOCALPC
 		Library/Cookies/{dbcs}/cookies{ec}.geo GFS LOCALPC
-#		Library/JS/{dbcs}/js{ec}.geo GFS LOCALPC
 		Library/Breadbox/Fjpeg/{dbcs}/fjpeg{ec}.geo GFS LOCALPC
 
 		#
 		# for WebMagick (and InfoServ)
 		#
 		Library/SSL/{dbcs}/ssl{ec}.geo GFS LOCALPC
+
+		#
+		# introduced with FreeGEOS project...
+		#
+		Library/PngLib/pnglib{ec}.geo GFS LOCALPC
 
 		#
 		# for Global Email
@@ -476,7 +481,6 @@ DIR (ensemble) {
 		Library/Breadbox/Gsol/gsol{ec}.geo
 
 		DIR (font) {
-			Driver/Font/Nimbus/{dbcs}/nimbus{ec}.geo GFS LOCALPC
 			Driver/Font/TrueType/{dbcs}/truetype{ec}.geo GFS LOCALPC
 		}
 
@@ -740,8 +744,8 @@ DIR (ensemble) {
 #				Driver/Sound/WinNT/{dbcs}/sndwinnt{ec}.geo LOCALPC
 #				#Driver/Sound/GPCSS/{dbcs}/gpcss{ec}.geo LOCALPC
 #			} ELSE {
-				Driver/Sound/Standard/standard.geo GFS LOCALPC
-				Driver/Sound/SoundBlaster/sblaster.geo GFS LOCALPC
+				Driver/Sound/Standard/standard{ec}.geo GFS LOCALPC
+				Driver/Sound/SoundBlaster/sblaster{ec}.geo GFS LOCALPC
 #			}
 		}
 
@@ -1048,6 +1052,7 @@ DIR (ensemble) {
 				FontData/Ttf/z003.ttf GFS LOCALPC
 				FontData/Ttf/MarVoSym.ttf GFS LOCALPC
 				FontData/Ttf/MarVoSym.txt GFS LOCALPC
+				FontData/Ttf/markfelt.ttf GFS LOCALPC
 			}
 		}
 
@@ -1413,7 +1418,6 @@ DIR (ensemble) {
 		Appl/GeoPoint/geopoint{ec}.geo
 		Appl/dil/bbxmail/bbxmail{ec}.geo GFS LOCALPC
 		Appl/Breadbox/BbxBrow/bbxbrow{ec}.geo GFS LOCALPC
-#		Appl/Breadbox/BbxBrow/JS{dbcs}/bbxbrow{ec}.geo GFS LOCALPC
 		Appl/Preferences/PrefMgr/prefmgr{ec}.geo GFS LOCALPC
 		Appl/GeoDex/geodex{ec}.geo GFS LOCALPC
 		Appl/Calendar/geoplan{ec}.geo GFS LOCALPC
