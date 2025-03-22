@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Create PostScript file
+cat <<EOF > test.ps
+%!PS-Adobe-3.0
+%%Pages: 1
+%%BoundingBox: 0 0 612 792
+/Times-Roman findfont 12 scalefont setfont
+100 700 moveto
+(Hello, this is a test PDF with FlateDecode compression.) show
+showpage
+EOF
+
+# Convert PostScript to PDF 1.0 using Ghostscript
+gs -q -sDEVICE=pdfwrite -dCompatibilityLevel=1.0 -dPDFSETTINGS=/default \
+   -dNOPAUSE -dBATCH -sOutputFile=test_flate.pdf test.ps
+
+# Optional: verify PDF version and compression (if qpdf is installed)
+
+echo "PDF Version:"
+qpdf inspect test_flate.pdf
+
+echo "Checking for FlateDecode filter..."
+qpdf --qdf --object-streams=disable test_flate.pdf test_flate_qdf.pdf
+grep -a FlateDecode test_flate_qdf.pdf && echo "FlateDecode found." || echo "FlateDecode NOT found."
+
+echo "Done. Output PDF: test_flate.pdf"

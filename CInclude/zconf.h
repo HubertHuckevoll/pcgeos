@@ -1,6 +1,6 @@
 /* zconf.h -- configuration of the zlib compression library
  * Copyright (C) 1995-1998 Jean-loup Gailly.
- * For conditions of distribution and use, see copyright notice in zlib.h 
+ * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
 /* @(#) $Id$ */
@@ -285,6 +285,13 @@ typedef uLong FAR uLongf;
 #  include <file.h>
 #  include <ec.h>
 #  define NO_ERRNO_H
+
+#ifndef ZCONF_NO_SEEK_MACRO
+#  define SEEK_SET 0
+#  define SEEK_CUR 1
+#  define SEEK_END 2
+#endif
+
 #endif
 
 #endif /* _ZCONF_H */

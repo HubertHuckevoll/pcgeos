@@ -43,6 +43,7 @@ library	geos
 library ui
 library ansic
 library spool
+library zlib
 #
 #
 resource DisplayUI object shared read-only

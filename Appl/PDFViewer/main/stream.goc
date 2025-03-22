@@ -18,6 +18,9 @@
 @include "stream.goh"
 @include "ccitt.h"
 
+// #include "zlib.h"
+
+
 
 //------------------------------------------------------------------------
 
@@ -31,13 +34,18 @@
 
 Stream *StreamMakeFilter(Stream *str1, char *name, Obj *params, XRef *xref);
 
-void FlateStreamReadSome(Stream *str);
-GBool FlateStreamStartBlock(Stream *str);
-void FlateStreamLoadFixedCodes(Stream *str);
-GBool FlateStreamReadDynamicCodes(Stream *str);
-void FlateStreamCompHuffmanCodes(Stream *str, FlateHuffmanTab *tab, long n);
-long FlateStreamGetHuffmanCodeWord(Stream *str, FlateHuffmanTab *tab);
-long FlateStreamGetCodeWord(Stream *str, long bits);
+// void FlateStreamReadSome(Stream *str);
+// GBool FlateStreamStartBlock(Stream *str);
+// void FlateStreamLoadFixedCodes(Stream *str);
+// GBool FlateStreamReadDynamicCodes(Stream *str);
+// void FlateStreamCompHuffmanCodes(Stream *str, FlateHuffmanTab *tab, long n);
+// long FlateStreamGetHuffmanCodeWord(Stream *str, FlateHuffmanTab *tab);
+// long FlateStreamGetCodeWord(Stream *str, long bits);
+
+// long FlateStreamGetChar(Stream *str);
+// long FlateStreamLookChar(Stream *str);
+
+
 
 
 void ASCIIHexStreamInit(Stream *str, Stream *str1);
@@ -264,25 +272,56 @@ long StreamLookChar(Stream *str) {
     return EOF;
 }
 
-long FlateStreamGetChar(Stream *str) {
-  FlateData *pflate = str->u.flate;
-  long c;
-  Guchar *buf = MemLock(pflate->bufhan);
 
-  while (pflate->remain == 0) {
-    if (pflate->endOfBlock && pflate->eof)
-    {
-      MemUnlock(pflate->bufhan);
-      return EOF;
+word FlateStreamFillInputBuffer(Stream *str, Guchar *buf, word maxSize)
+{
+    word bytesRead = 0;
+    long c;
+
+    while (bytesRead < maxSize) {
+        c = StreamGetChar(str->str);
+        if (c == EOF) {
+            break;
+        }
+        buf[bytesRead++] = (Guchar)c;
     }
-    FlateStreamReadSome(str);
-  }
-  c = buf[pflate->index];
-  pflate->index = (pflate->index + 1) & flateMask;
-  --pflate->remain;
-  MemUnlock(pflate->bufhan);
-  return c;
+
+    return bytesRead;
 }
+
+
+long FlateStreamGetChar(Stream *str)
+{
+    FlateData *pflate = str->u.flate;
+    long c;
+    int ret;
+
+    if (pflate->hasPushback) {
+        pflate->hasPushback = gFalse;
+        return (long)pflate->pushback;
+    }
+
+    if (pflate->zstrm.avail_in == 0) {
+        pflate->zstrm.avail_in = FlateStreamFillInputBuffer(str, pflate->inBuffer, pflate->inBufferSize);
+        if (pflate->zstrm.avail_in == 0) {
+            return EOF;
+        }
+        pflate->zstrm.next_in = pflate->inBuffer;
+    }
+
+    pflate->zstrm.avail_out = 1;
+    pflate->zstrm.next_out = &pflate->pushback;  // reuse pushback buffer
+
+    ret = inflate(&pflate->zstrm, Z_NO_FLUSH);
+    if (ret == Z_STREAM_END) {
+        return EOF;
+    } else if (ret != Z_OK) {
+        return EOF;
+    }
+
+    return (long)pflate->pushback;
+}
+
 
 Dict *StreamGetDict(Stream *str) {
 
@@ -348,20 +387,20 @@ void StreamReset(Stream *str) {
     }
 }
 
-/* 
+/*
  * Gets the length of the base file stream
 */
 long StreamGetLength(Stream *str) {
 
-    if (str->kind == strFile) 
+    if (str->kind == strFile)
 	return FStreamGetLength(str);
 
     return StreamGetLength(str->str);
 }
 
-long StreamGetPos(Stream *str) { 
+long StreamGetPos(Stream *str) {
 
-    if (str->kind == strFile) 
+    if (str->kind == strFile)
 	return FStreamGetPos(str);
 
     return StreamGetPos(str->str);
@@ -419,7 +458,7 @@ void StreamResetImage(Stream *stream, short width1, short nComps1, short nBits1)
   stream->rowBytes = (stream->nVals * stream->nBits + 7) >> 3;
   stream->rawLine = (Guchar *)grealloc(stream->rawLine, stream->rowBytes + stream->pixBytes);
   memset(stream->rawLine, 0, stream->rowBytes);
-  stream->pixLine = (Guchar *)grealloc(stream->pixLine, 
+  stream->pixLine = (Guchar *)grealloc(stream->pixLine,
 				       ((stream->nVals + 7) & ~7) * sizeof(Guchar));
   stream->pixIdx = stream->nVals;
 }
@@ -462,7 +501,7 @@ GBool StreamGetImagePixel(Stream *this, Guchar *pix) {
 	this->rawLine[this->pixBytes+i] = this->rawLine[this->pixBytes+i] + (Guchar)c;
 	break;
       case 13:			// PNG average
-	this->rawLine[this->pixBytes+i] = 
+	this->rawLine[this->pixBytes+i] =
 	    ((this->rawLine[i] + this->rawLine[this->pixBytes+i]) >> 1) +
 	    (Guchar)c;
 	break;
@@ -782,7 +821,7 @@ void FStreamFree(Stream *this) {
 //  if (this->savePos >= 0)
 //    FilePos(this->f, this->savePos, FILE_POS_START);
 
-    
+
     ObjFree(&fs->dict);
     FileClose(fs->f, FALSE);
     gfree(fs);
@@ -882,25 +921,25 @@ GBool FStreamCheckHeader(Stream *str) {
 long FStreamGetChar(Stream *str) {
     FStream *this = str->u.fs;
 
-    return (this->bufPtr >= this->bufEnd && 
-	    !FStreamFillBuf(str)) ? EOF : (*this->bufPtr++ & 0xff); 
+    return (this->bufPtr >= this->bufEnd &&
+	    !FStreamFillBuf(str)) ? EOF : (*this->bufPtr++ & 0xff);
 }
 
 long FStreamLookChar(Stream *str) {
     FStream *this = str->u.fs;
 
-    return (this->bufPtr >= this->bufEnd && 
-	    !FStreamFillBuf(str)) ? EOF : (*this->bufPtr & 0xff); 
+    return (this->bufPtr >= this->bufEnd &&
+	    !FStreamFillBuf(str)) ? EOF : (*this->bufPtr & 0xff);
 }
 
 long FStreamGetLength(Stream *str) {
     return str->u.fs->length;
 }
 
-long FStreamGetPos(Stream *str) { 
+long FStreamGetPos(Stream *str) {
     FStream *this = str->u.fs;
 
-    return this->bufPos + (this->bufPtr - this->buf); 
+    return this->bufPos + (this->bufPtr - this->buf);
 }
 
 //  GBool isBinary(GBool last = gTrue) { return last; }
@@ -934,7 +973,7 @@ void SubStreamFree(Stream *str) {
 /*
  * For inline images, we can't reset the stream at str->str; that would
  * force it back to beginning-of-page, I think.  I think it will be safe
- * to not propagate this call to str->str; if I'm wrong, you'll have to 
+ * to not propagate this call to str->str; if I'm wrong, you'll have to
  * store the underlying stream pos when the substream is init'd, then use
  * that pos to reset/position the stream here.
  */
@@ -1059,7 +1098,7 @@ long ASCIIHexStreamLookChar(Stream *str) {
 
 long ASCIIHexStreamGetChar(Stream *str) {
     long c = ASCIIHexStreamLookChar(str);
-    str->buf = EOF; 
+    str->buf = EOF;
     return c;
 }
 
@@ -1149,7 +1188,7 @@ long ASCII85StreamLookChar(Stream *str) {
 
 long ASCII85StreamGetChar(Stream *str) {
     long ch = ASCII85StreamLookChar(str);
-    ++str->u.a85->index; 
+    ++str->u.a85->index;
     return ch;
 }
 
@@ -1337,18 +1376,18 @@ GBool LZWStreamFillBuf(Stream *str)
   return gTrue;
 }
 
-long LZWStreamGetChar(Stream *str) { 
+long LZWStreamGetChar(Stream *str) {
     LZWData *plzw = str->u.lzw;
 
-    return (plzw->bufPtr >= plzw->bufEnd && !LZWStreamFillBuf(str)) ? 
-	EOF : (*plzw->bufPtr++ & 0xff); 
+    return (plzw->bufPtr >= plzw->bufEnd && !LZWStreamFillBuf(str)) ?
+	EOF : (*plzw->bufPtr++ & 0xff);
 }
 
 long LZWStreamLookChar(Stream *str) {
     LZWData *plzw = str->u.lzw;
 
-    return (plzw->bufPtr >= plzw->bufEnd && !LZWStreamFillBuf(str)) ? 
-	EOF : (*plzw->bufPtr & 0xff); 
+    return (plzw->bufPtr >= plzw->bufEnd && !LZWStreamFillBuf(str)) ?
+	EOF : (*plzw->bufPtr & 0xff);
 }
 
 //GooString *LZWStreamGetPSFilter(Stream *str, char *indent) {
@@ -1438,18 +1477,18 @@ GBool RunLengthStreamFillBuf(Stream *str) {
   return gTrue;
 }
 
-long RunLengthStreamGetChar(Stream *str) { 
+long RunLengthStreamGetChar(Stream *str) {
     RunLengthData *pRun = str->u.runLength;
 
-    return (pRun->bufPtr >= pRun->bufEnd && !RunLengthStreamFillBuf(str)) ? 
-	EOF : (*pRun->bufPtr++ & 0xff); 
+    return (pRun->bufPtr >= pRun->bufEnd && !RunLengthStreamFillBuf(str)) ?
+	EOF : (*pRun->bufPtr++ & 0xff);
 }
 
 long RunLengthStreamLookChar(Stream *str) {
     RunLengthData *pRun = str->u.runLength;
 
-    return (pRun->bufPtr >= pRun->bufEnd && !RunLengthStreamFillBuf(str)) ? 
-	EOF : (*pRun->bufPtr & 0xff); 
+    return (pRun->bufPtr >= pRun->bufEnd && !RunLengthStreamFillBuf(str)) ?
+	EOF : (*pRun->bufPtr & 0xff);
 }
 
 //------------------------------------------------------------------------
@@ -1574,7 +1613,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	  ++pfax->a0;
 	  a0New = pfax->codingLine[pfax->a0 + 1] = pfax->codingLine[pfax->a0] + code2;
 	  ++pfax->a0;
-	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		 pfax->refLine[pfax->b1] < pfax->columns)
 	    pfax->b1 += 2;
 	  break;
@@ -1582,7 +1621,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	  a0New = pfax->codingLine[++pfax->a0] = pfax->refLine[pfax->b1];
 	  if (pfax->refLine[pfax->b1] < pfax->columns) {
 	    ++pfax->b1;
-	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		   pfax->refLine[pfax->b1] < pfax->columns)
 	      pfax->b1 += 2;
 	  }
@@ -1591,7 +1630,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	  a0New = pfax->codingLine[++pfax->a0] = pfax->refLine[pfax->b1] + 1;
 	  if (pfax->refLine[pfax->b1] < pfax->columns) {
 	    ++pfax->b1;
-	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		   pfax->refLine[pfax->b1] < pfax->columns)
 	      pfax->b1 += 2;
 	  }
@@ -1599,7 +1638,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	case twoDimVertL1:
 	  a0New = pfax->codingLine[++pfax->a0] = pfax->refLine[pfax->b1] - 1;
 	  --pfax->b1;
-	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		 pfax->refLine[pfax->b1] < pfax->columns)
 	    pfax->b1 += 2;
 	  break;
@@ -1607,7 +1646,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	  a0New = pfax->codingLine[++pfax->a0] = pfax->refLine[pfax->b1] + 2;
 	  if (pfax->refLine[pfax->b1] < pfax->columns) {
 	    ++pfax->b1;
-	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		   pfax->refLine[pfax->b1] < pfax->columns)
 	      pfax->b1 += 2;
 	  }
@@ -1615,7 +1654,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	case twoDimVertL2:
 	  a0New = pfax->codingLine[++pfax->a0] = pfax->refLine[pfax->b1] - 2;
 	  --pfax->b1;
-	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		 pfax->refLine[pfax->b1] < pfax->columns)
 	    pfax->b1 += 2;
 	  break;
@@ -1623,7 +1662,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	  a0New = pfax->codingLine[++pfax->a0] = pfax->refLine[pfax->b1] + 3;
 	  if (pfax->refLine[pfax->b1] < pfax->columns) {
 	    ++pfax->b1;
-	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	    while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		   pfax->refLine[pfax->b1] < pfax->columns)
 	      pfax->b1 += 2;
 	  }
@@ -1631,7 +1670,7 @@ long CCITTFaxStreamLookChar(Stream *str) {
 	case twoDimVertL3:
 	  a0New = pfax->codingLine[++pfax->a0] = pfax->refLine[pfax->b1] - 3;
 	  --pfax->b1;
-	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] && 
+	  while (pfax->refLine[pfax->b1] <= pfax->codingLine[pfax->a0] &&
 		 pfax->refLine[pfax->b1] < pfax->columns)
 	    pfax->b1 += 2;
 	  break;
@@ -2923,247 +2962,229 @@ GBool DCTStream::isBinary(GBool last) {
 #pragma code_seg("FlateStream")
 #endif
 
+/*
 @start FLATEDATA, data;
 
-@chunk short codeLenCodeMap_[flateMaxCodeLenCodes] = {
-  16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
-};
+// @chunk short codeLenCodeMap_[flateMaxCodeLenCodes] = {
+//   16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
+// };
 
-@chunk FlateDecode lengthDecode_[flateMaxLitCodes-257] = {
-  {0,   3},
-  {0,   4},
-  {0,   5},
-  {0,   6},
-  {0,   7},
-  {0,   8},
-  {0,   9},
-  {0,  10},
-  {1,  11},
-  {1,  13},
-  {1,  15},
-  {1,  17},
-  {2,  19},
-  {2,  23},
-  {2,  27},
-  {2,  31},
-  {3,  35},
-  {3,  43},
-  {3,  51},
-  {3,  59},
-  {4,  67},
-  {4,  83},
-  {4,  99},
-  {4, 115},
-  {5, 131},
-  {5, 163},
-  {5, 195},
-  {5, 227},
-  {0, 258}
-};
+// @chunk FlateDecode lengthDecode_[flateMaxLitCodes-257] = {
+//   {0,   3},
+//   {0,   4},
+//   {0,   5},
+//   {0,   6},
+//   {0,   7},
+//   {0,   8},
+//   {0,   9},
+//   {0,  10},
+//   {1,  11},
+//   {1,  13},
+//   {1,  15},
+//   {1,  17},
+//   {2,  19},
+//   {2,  23},
+//   {2,  27},
+//   {2,  31},
+//   {3,  35},
+//   {3,  43},
+//   {3,  51},
+//   {3,  59},
+//   {4,  67},
+//   {4,  83},
+//   {4,  99},
+//   {4, 115},
+//   {5, 131},
+//   {5, 163},
+//   {5, 195},
+//   {5, 227},
+//   {0, 258}
+// };
 
-@chunk FlateDecode distDecode_[flateMaxDistCodes] = {
-  { 0,     1},
-  { 0,     2},
-  { 0,     3},
-  { 0,     4},
-  { 1,     5},
-  { 1,     7},
-  { 2,     9},
-  { 2,    13},
-  { 3,    17},
-  { 3,    25},
-  { 4,    33},
-  { 4,    49},
-  { 5,    65},
-  { 5,    97},
-  { 6,   129},
-  { 6,   193},
-  { 7,   257},
-  { 7,   385},
-  { 8,   513},
-  { 8,   769},
-  { 9,  1025},
-  { 9,  1537},
-  {10,  2049},
-  {10,  3073},
-  {11,  4097},
-  {11,  6145},
-  {12,  8193},
-  {12, 12289},
-  {13, 16385},
-  {13, 24577}
-};
+// @chunk FlateDecode distDecode_[flateMaxDistCodes] = {
+//   { 0,     1},
+//   { 0,     2},
+//   { 0,     3},
+//   { 0,     4},
+//   { 1,     5},
+//   { 1,     7},
+//   { 2,     9},
+//   { 2,    13},
+//   { 3,    17},
+//   { 3,    25},
+//   { 4,    33},
+//   { 4,    49},
+//   { 5,    65},
+//   { 5,    97},
+//   { 6,   129},
+//   { 6,   193},
+//   { 7,   257},
+//   { 7,   385},
+//   { 8,   513},
+//   { 8,   769},
+//   { 9,  1025},
+//   { 9,  1537},
+//   {10,  2049},
+//   {10,  3073},
+//   {11,  4097},
+//   {11,  6145},
+//   {12,  8193},
+//   {12, 12289},
+//   {13, 16385},
+//   {13, 24577}
+// };
 
 @end FLATEDATA;
+*/
 
 void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1,
-			 long colors1, long bits1) {
+  long colors1, long bits1)
+{
+    FlateData *pflate;
 
-  StreamInit(str);
-  str->str = str1;
+    // Initialize base stream
+    StreamInit(str);
+    str->str = str1;
+    str->kind = strFlate;
 
-  str->kind = strFlate;
-  str->u.flate = gmalloc( sizeof (FlateData) );
-  str->u.flate->bufhan = MemAlloc( flateWindow, HF_DYNAMIC, HAF_STANDARD_NO_ERR );
+    // Allocate FlateData
+    pflate = (FlateData *) gmalloc(sizeof(FlateData));
+    str->u.flate = pflate;
 
-  str->predictor = predictor1;
-  if (predictor1 > 1) {
-    str->width = columns1;
-    str->nComps = colors1;
-    str->nBits = bits1;
-  }
+    // Allocate output buffer
+    pflate->bufhan = MemAlloc(flateWindow, HF_DYNAMIC, HAF_STANDARD_NO_ERR);
+
+    // Allocate input buffer
+    pflate->inBufferSize = 4096; // Adjust buffer size as needed
+    pflate->inBuffer = (Guchar *) gmalloc(pflate->inBufferSize);
+
+    // Initialize zlib stream
+    pflate->zstrm.zalloc = Z_NULL;
+    pflate->zstrm.zfree = Z_NULL;
+    pflate->zstrm.opaque = Z_NULL;
+    pflate->zstrm.avail_in = 0;
+    pflate->zstrm.next_in = Z_NULL;
+    inflateInit(&pflate->zstrm);
+
+    // Predictor settings (unchanged)
+    str->predictor = predictor1;
+    if (predictor1 > 1) {
+        str->width = columns1;
+        str->nComps = colors1;
+        str->nBits = bits1;
+    }
 }
 
-void FlateStreamFree(Stream *str) {
-    MemFree(str->u.flate->bufhan);
-    gfree(str->u.flate);
+void FlateStreamFree(Stream *str)
+{
+    FlateData *pflate = str->u.flate;
+
+    if (pflate) {
+      // Free zlib state
+      inflateEnd(&pflate->zstrm);
+
+      // Free input buffer
+      if (pflate->inBuffer) {
+        gfree(pflate->inBuffer);
+      }
+
+      // Free output buffer
+      MemFree(pflate->bufhan);
+
+      // Free FlateData structure
+      gfree(pflate);
+    }
 }
 
-void FlateStreamReset(Stream *str) {
-  long cmf, flg;
-  FlateData *pflate = str->u.flate;
+void FlateStreamReset(Stream *str)
+{
+    FlateData *pflate = str->u.flate;
 
-  StreamReset(str->str);
+    StreamReset(str->str);
 
-  // read header
-  //~ need to look at window size?
-  pflate->endOfBlock = pflate->eof = gTrue;
-  cmf = StreamGetChar(str->str);
-  flg = StreamGetChar(str->str);
-  if (cmf == EOF || flg == EOF)
-    return;
-  if ((cmf & 0x0f) != 0x08) {
-      EC_WARNING(-1);
-//    error(getPos(), "Unknown compression method in flate stream");
-    return;
-  }
-  if ((((cmf << 8) + flg) % 31) != 0) {
-      EC_WARNING(-1);
-//    error(getPos(), "Bad FCHECK in flate stream");
-    return;
-  }
-  if (flg & 0x20) {
-      EC_WARNING(-1);
-//    error(getPos(), "FDICT bit set in flate stream");
-    return;
-  }
+    // Reset zlib decompression state
+    inflateReset(&pflate->zstrm);
 
-  // initialize
-  pflate->index = 0;
-  pflate->remain = 0;
-  pflate->codeBuf = 0;
-  pflate->codeSize = 0;
-  pflate->compressedBlock = gFalse;
-  pflate->endOfBlock = gTrue;
-  pflate->eof = gFalse;
+    // Reset stream state
+    pflate->index = 0;
+    pflate->remain = 0;
+    pflate->endOfBlock = gTrue;
+    pflate->eof = gFalse;
 }
 
 /* FlateStreamGetChar moved above into StreamGetChar's code segment. */
 
-long FlateStreamLookChar(Stream *str) {
-  FlateData *pflate = str->u.flate;
-  long c;
-  Guchar *buf = MemLock(pflate->bufhan);
+long FlateStreamLookChar(Stream *str)
+{
+    long c;
 
-  while (pflate->remain == 0) {
-    if (pflate->endOfBlock && pflate->eof)
-    {
-      MemUnlock(pflate->bufhan);
-      return EOF;
-    }
-    FlateStreamReadSome(str);
-  }
-  c = buf[pflate->index];
-  MemUnlock(pflate->bufhan);
-  return c;
+    c = FlateStreamGetChar(str);  // use GetChar to get next byte
+    if (c == EOF)
+        return EOF;
+
+    // push the byte back into the zlib stream by ungetting it
+    str->u.flate->pushback = (Guchar)c;
+    str->u.flate->hasPushback = gTrue;
+
+    return c;
 }
+
 
 /*
 GString *FlateStream::getPSFilter(char *indent) {
   return NULL;
 }
 */
-GBool FlateStreamIsBinary(Stream *str, GBool last) {
-  return StreamIsBinary(str->str, gTrue);
+GBool FlateStreamIsBinary(Stream *str, GBool last)
+{
+    return StreamIsBinary(str->str, gTrue);
 }
 
-void FlateStreamReadSome(Stream *str) {
-  FlateData *pflate = str->u.flate;
-  FlateDecode *lengthDecode;
-  FlateDecode *distDecode;
-  Guchar *buf = MemDeref(pflate->bufhan);	/* locked by caller */
+/*
+void FlateStreamReadSome(Stream *str)
+{
+    FlateData *pflate = str->u.flate;
+    Guchar *buf = MemLock(pflate->bufhan);
+    int ret;
 
-  long code1, code2;
-  long len, dist;
-  long i, j, k;
-  long c;
-
-  if (pflate->endOfBlock) {
-    if (!FlateStreamStartBlock(str))
-      return;
-  }
-
-  MemLock(OptrToHandle(@lengthDecode_));
-  lengthDecode = LMemDeref(@lengthDecode_);
-  distDecode = LMemDeref(@distDecode_);
-
-  if (pflate->compressedBlock) {
-    if ((code1 = FlateStreamGetHuffmanCodeWord(str, &pflate->litCodeTab)) == EOF)
-      goto err;
-    if (code1 < 256) {
-      buf[pflate->index] = code1;
-      pflate->remain = 1;
-    } else if (code1 == 256) {
-      pflate->endOfBlock = gTrue;
-      pflate->remain = 0;
-    } else {
-      code1 -= 257;
-      code2 = lengthDecode[code1].bits;
-      if (code2 > 0 && (code2 = FlateStreamGetCodeWord(str, code2)) == EOF)
-	goto err;
-      len = lengthDecode[code1].first + code2;
-      if ((code1 = FlateStreamGetHuffmanCodeWord(str, &pflate->distCodeTab)) == EOF)
-	goto err;
-      code2 = distDecode[code1].bits;
-      if (code2 > 0 && (code2 = FlateStreamGetCodeWord(str, code2)) == EOF)
-	goto err;
-      dist = distDecode[code1].first + code2;
-      i = pflate->index;
-      j = (pflate->index - dist) & flateMask;
-      for (k = 0; k < len; ++k) {
-	buf[i] = buf[j];
-	i = (i + 1) & flateMask;
-	j = (j + 1) & flateMask;
-      }
-      pflate->remain = len;
+    // Fill input buffer if needed
+    if (pflate->zstrm.avail_in == 0 && !pflate->eof)
+    {
+        long bytesRead = StreamGetChars(str->str, pflate->inBuffer, pflate->inBufferSize);
+        if (bytesRead <= 0) {
+            pflate->eof = gTrue;
+            MemUnlock(pflate->bufhan);
+            return;
+        }
+        pflate->zstrm.avail_in = bytesRead;
+        pflate->zstrm.next_in = pflate->inBuffer;
     }
 
-  } else {
-    len = (pflate->blockLen < flateWindow) ? pflate->blockLen : flateWindow;
-    for (i = 0, j = pflate->index; i < len; ++i, j = (j + 1) & flateMask) {
-      if ((c = StreamGetChar(str->str)) == EOF) {
-	pflate->endOfBlock = pflate->eof = gTrue;
-	break;
-      }
-      buf[j] = c & 0xff;
+    // Set up output buffer
+    pflate->zstrm.avail_out = flateWindow;
+    pflate->zstrm.next_out = buf;
+
+    // Inflate data
+    ret = inflate(&pflate->zstrm, Z_NO_FLUSH);
+
+    if (ret == Z_STREAM_END)
+    {
+        pflate->eof = gTrue;
     }
-    pflate->remain = i;
-    pflate->blockLen -= len;
-    if (pflate->blockLen == 0)
-      pflate->endOfBlock = gTrue;
-  }
+    else if (ret != Z_OK)
+    {
+        EC_WARNING(-1); // Handle error
+        pflate->eof = gTrue;
+        pflate->endOfBlock = gTrue;
+    }
 
-  MemUnlock(OptrToHandle(@lengthDecode_));
-  return;
+    // Update output buffer state
+    pflate->remain = flateWindow - pflate->zstrm.avail_out;
+    pflate->index = 0;
 
-err:
-  EC_WARNING(-1);
-//  error(getPos(), "Unexpected end of file in flate stream");
-  pflate->endOfBlock = pflate->eof = gTrue;
-  pflate->remain = 0;
-
-  MemUnlock(OptrToHandle(@lengthDecode_));
+    MemUnlock(pflate->bufhan);
 }
+
 
 GBool FlateStreamStartBlock(Stream *str) {
   FlateData *pflate = str->u.flate;
@@ -3435,4 +3456,5 @@ long FlateStreamGetCodeWord(Stream *str, long bits) {
   pflate->codeSize -= bits;
   return c;
 }
+*/
 

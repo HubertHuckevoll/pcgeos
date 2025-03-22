@@ -3,7 +3,7 @@
 	Copyright (c) GlobalPC 1999.  All rights reserved.
 	GLOBALPC CONFIDENTIAL
 
-PROJECT:	
+PROJECT:
 MODULE:		PDF Viewer
 FILE:		pdfGeode.goh
 
@@ -25,6 +25,13 @@ DESCRIPTION:
 	$Id$
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+// FIXME - this is a hack
+#define ZCONF_NO_SEEK_MACRO
+#include "zlib.h"
+#undef SEEK_SET
+#undef SEEK_CUR
+#undef SEEK_END
 
 /*
  * There's round-off error in setting the current point after drawing
@@ -573,6 +580,25 @@ typedef struct FlateDecode {
   long first;			// first length/distance
 } FlateDecode;
 
+
+typedef struct FlateData {
+  MemHandle bufhan;      // Output buffer handle (unchanged)
+  long index;            // Current index into output buffer (unchanged)
+  long remain;           // Number of valid bytes in output buffer (unchanged)
+
+  z_stream zstrm;        // zlib stream structure for decompression
+  Guchar *inBuffer;      // Buffer to store compressed input data
+  word inBufferSize;     // Size of the input buffer
+  GBool endOfBlock;      // Set when end of block is reached (unchanged)
+  GBool eof;             // Set when end of stream is reached (unchanged)
+
+  // Pushback support for LookChar
+  Guchar pushback;
+  GBool hasPushback;
+
+} FlateData;
+
+/*
 typedef struct FlateData {
 
   MemHandle bufhan;		// output data buffer
@@ -590,6 +616,7 @@ typedef struct FlateData {
   GBool eof;			// set when end of stream is reached
 
 } FlateData;
+*/
 
 //------------------------------------------------------------------------
 // ASCII85Stream
