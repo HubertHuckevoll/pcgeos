@@ -16,7 +16,7 @@ OBJS            = array.obj catalog.obj dict.obj gfx.obj gfxFont.obj\
 COMMON          = array.goh catalog.goh ccitt.h diction.goh gfx.goh\
                   gfxFont.goh gfxFont2.goh gfxState.goh gmem.goh gstr.goh\
                   gtypes.goh lexer.goh obj.goh page.goh parser.goh\
-                  pdfvu.goh stream.goh xref.goh pdfGeode.goh
+                  stream.goh xref.goh pdfGeode.goh pdfvu.goh
 MODULES         =
 CMODULES        = main ui util
 SRCS            = $(MAIN) $(UI) $(UTIL) $(COMMON)

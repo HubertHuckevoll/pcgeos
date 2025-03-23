@@ -45,7 +45,6 @@ Stream *StreamMakeFilter(Stream *str1, char *name, Obj *params, XRef *xref);
 // long FlateStreamGetChar(Stream *str);
 // long FlateStreamLookChar(Stream *str);
 
-
 void ASCIIHexStreamInit(Stream *str, Stream *str1);
 void ASCIIHexStreamFree(Stream *str);
 void ASCIIHexStreamReset(Stream *str);
@@ -2923,6 +2922,33 @@ void debugWriteBuffer(const Guchar *data, word len) {
   }
 }
 
+void log(const char *fmt, ...)
+{
+  FileHandle fh = NullHandle;
+  char buffer[256] = {0};
+  int len = 0;
+  va_list args;
+
+  va_start(args, fmt);
+  len = vsprintf(buffer, fmt, args);
+  va_end(args);
+
+  // Try to open existing log file
+  fh = FileOpen("geoslog.txt", FILE_ACCESS_RW | FILE_DENY_RW);
+
+  // If open fails, create it
+  if (fh == NullHandle) {
+      fh = FileCreate("geoslog.txt", FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_RW, 0);
+      if (fh == NullHandle) return; // Abort if still invalid
+  }
+
+  // Seek to end of file before writing
+  FilePos(fh, 0, FILE_POS_END);
+  FileWrite(fh, buffer, len, FALSE);
+  FileClose(fh, 0);
+}
+
+
 
 void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, long colors1, long bits1)
 {
@@ -2938,10 +2964,10 @@ void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, 
     str->u.flate = pflate;
 
     // Allocate output buffer
-    pflate->bufhan = MemAlloc(flateWindow, HF_DYNAMIC, HAF_STANDARD_NO_ERR);
+    pflate->bufhan = MemAlloc(4096, HF_DYNAMIC, HAF_STANDARD_NO_ERR);
 
     // Allocate input buffer
-    pflate->inBufferSize = 4096; // Adjust buffer size as needed
+    pflate->inBufferSize = 2048; // Adjust buffer size as needed
     pflate->inBuffer = (Guchar *) gmalloc(pflate->inBufferSize);
     pflate->hasPushback = gFalse;
     pflate->pushback = 0;
@@ -2955,8 +2981,8 @@ void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, 
     pflate->zstrm.opaque = Z_NULL;
     pflate->zstrm.avail_in = 0;
     pflate->zstrm.next_in = Z_NULL;
-    //inflateInit(&pflate->zstrm);
-    inflateInit2(&pflate->zstrm, 15);
+    inflateInit(&pflate->zstrm);
+    //inflateInit2(&pflate->zstrm, 15);
 
     // Predictor settings (unchanged)
     str->predictor = predictor1;
@@ -3012,8 +3038,6 @@ void FlateStreamReset(Stream *str)
     pflate->eof = gFalse;
 }
 
-/* FlateStreamGetChar moved above into StreamGetChar's code segment. */
-
 word FlateStreamFillInputBuffer(Stream *str, Guchar *buf, word maxSize)
 {
     word bytesRead = 0;
@@ -3032,6 +3056,11 @@ word FlateStreamFillInputBuffer(Stream *str, Guchar *buf, word maxSize)
 
     return bytesRead;
 }
+
+/*
+  FlateStreamGetChar moved above into StreamGetChar's code segment.
+  - we took it back here for clearity as a lot of code has gone now (meyerk 3/2025)
+*/
 
 long FlateStreamGetChar(Stream *str)
 {
@@ -3096,6 +3125,7 @@ GBool FlateStreamReadSome(Stream *str)
     Guchar *buf = MemLock(pflate->bufhan);
     int ret;
     word bytesRead = 0;
+    int i = 0;
 
     bytesRead = FlateStreamFillInputBuffer(str, pflate->inBuffer, pflate->inBufferSize);
 
@@ -3106,22 +3136,36 @@ GBool FlateStreamReadSome(Stream *str)
     }
 
     pflate->zstrm.avail_in = bytesRead;
+    log("bytesRead = %u\n", bytesRead);
+
+    for (i = 0; i < 121; i++) {
+      log("inBuffer[%d] = 0x%02X\n", i, pflate->inBuffer[i]);
+    }
+
     pflate->zstrm.next_in = pflate->inBuffer;
 
-    pflate->zstrm.avail_out = flateWindow;
+    pflate->zstrm.avail_out = (word) 4096; // flateWindow;
     pflate->zstrm.next_out = buf;
 
-    debugWriteBuffer(pflate->zstrm.next_in, pflate->zstrm.avail_in);
+    log("before, zstrm->avail_out = %u\n", pflate->zstrm.avail_out);
+
     ret = inflate(&pflate->zstrm, Z_NO_FLUSH);
 
-    if (ret == Z_STREAM_END) {
+    log("consumed = %u, produced = %u\n", pflate->zstrm.total_in, pflate->zstrm.total_out);
+    log("after, zstrm->avail_out = %u\n", pflate->zstrm.avail_out);
+
+    if (ret == Z_STREAM_END)
+    {
         pflate->eof = gTrue;
-    } else if (ret != Z_OK) {
+    }
+    else if (ret != Z_OK)
+    {
+        log("ret = %d\n", ret);
         MemUnlock(pflate->bufhan);
         return gFalse;
     }
 
-    pflate->remain = flateWindow - pflate->zstrm.avail_out;
+    pflate->remain = 4096 - pflate->zstrm.avail_out;
     pflate->index = 0;
 
     MemUnlock(pflate->bufhan);
