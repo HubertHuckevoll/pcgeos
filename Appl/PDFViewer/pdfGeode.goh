@@ -554,7 +554,7 @@ typedef struct LZWData {
 // FlateStream
 //------------------------------------------------------------------------
 
-#define flateWindow          32768    // buffer size
+#define flateWindow          6000    // 32768 FIXME: has new meaning // buffer size
 #define flateMask            (flateWindow-1)
 #define flateMaxHuffman         15    // max Huffman code length
 #define flateMaxCodeLenCodes    19    // max # code length codes
