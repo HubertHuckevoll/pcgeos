@@ -2933,6 +2933,9 @@ void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, 
     pflate->hasPushback = gFalse;
     pflate->pushback = 0;
 
+    pflate->index = 0;            // Current index into output buffer (unchanged)
+    pflate->remain = 0;           // Number of valid bytes in output buffer (unchanged)
+
     // Initialize zlib stream
     pflate->zstrm.zalloc = Z_NULL;
     pflate->zstrm.zfree = Z_NULL;
@@ -2944,7 +2947,8 @@ void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, 
 
     // Predictor settings (unchanged)
     str->predictor = predictor1;
-    if (predictor1 > 1) {
+    if (predictor1 > 1)
+    {
         str->width = columns1;
         str->nComps = colors1;
         str->nBits = bits1;
@@ -2955,7 +2959,8 @@ void FlateStreamFree(Stream *str)
 {
     FlateData *pflate = str->u.flate;
 
-    if (pflate) {
+    if (pflate)
+    {
       // Free zlib state
       inflateEnd(&pflate->zstrm);
 
@@ -3012,7 +3017,27 @@ word FlateStreamFillInputBuffer(Stream *str, Guchar *buf, word maxSize)
     return bytesRead;
 }
 
-long FlateStreamGetChar(Stream *str) {
+void appendCharToDebugFile(Guchar ch)
+{
+  FileHandle fh;
+  word written;
+
+  // Open the file for append (create if it doesn't exist)
+	fh = FileOpen("debug.txt", FILE_ACCESS_RW | FILE_DENY_RW);
+
+  // Seek to end for append
+  FilePos(fh, 0, FILE_POS_END);
+
+  // Write single byte
+  FileWrite(fh, &ch, sizeof(ch), FALSE);
+
+  // Close file
+  FileClose(fh, 0);
+}
+
+
+long FlateStreamGetChar(Stream *str)
+{
   FlateData *pflate = str->u.flate;
   Guchar *buf;
 
@@ -3021,8 +3046,10 @@ long FlateStreamGetChar(Stream *str) {
       return (long)pflate->pushback;
   }
 
-  if (pflate->remain == 0) {
-      if (!FlateStreamReadSome(str)) {
+  if (pflate->remain == 0)
+  {
+      if (!FlateStreamReadSome(str))
+      {
           return EOF;
       }
   }
@@ -3060,7 +3087,8 @@ GBool FlateStreamIsBinary(Stream *str, GBool last)
     return StreamIsBinary(str->str, gTrue);
 }
 
-GBool FlateStreamReadSome(Stream *str) {
+GBool FlateStreamReadSome(Stream *str)
+{
   FlateData *pflate = str->u.flate;
   Guchar *buf;
   int ret;
@@ -3072,9 +3100,11 @@ GBool FlateStreamReadSome(Stream *str) {
   }
 
   // Fill input buffer if empty
-  if (pflate->zstrm.avail_in == 0 && !pflate->eof) {
+  if (pflate->zstrm.avail_in == 0 && !pflate->eof)
+  {
       bytesRead = FlateStreamFillInputBuffer(str, pflate->inBuffer, pflate->inBufferSize);
-      if (bytesRead == 0) {
+      if (bytesRead == 0)
+      {
           pflate->eof = gTrue;
           MemUnlock(pflate->bufhan);
           return gFalse;
@@ -3089,9 +3119,12 @@ GBool FlateStreamReadSome(Stream *str) {
 
   ret = inflate(&pflate->zstrm, Z_NO_FLUSH);
 
-  if (ret == Z_STREAM_END) {
+  if (ret == Z_STREAM_END)
+  {
       pflate->eof = gTrue;
-  } else if (ret != Z_OK) {
+  }
+  else if (ret != Z_OK)
+  {
       pflate->eof = gTrue;
       MemUnlock(pflate->bufhan);
       return gFalse;
