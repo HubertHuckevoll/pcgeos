@@ -2955,8 +2955,8 @@ void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, 
     pflate->zstrm.opaque = Z_NULL;
     pflate->zstrm.avail_in = 0;
     pflate->zstrm.next_in = Z_NULL;
-    inflateInit(&pflate->zstrm);
-    //inflateInit2(&pflate->zstrm, -MAX_WBITS);
+    //inflateInit(&pflate->zstrm);
+    inflateInit2(&pflate->zstrm, 15);
 
     // Predictor settings (unchanged)
     str->predictor = predictor1;
@@ -3019,17 +3019,15 @@ word FlateStreamFillInputBuffer(Stream *str, Guchar *buf, word maxSize)
     word bytesRead = 0;
     long c;
 
-    while (bytesRead < maxSize) {
+    while (bytesRead < maxSize)
+    {
         c = StreamGetChar(str->str);
-        if (c == EOF) {
+        if (c == EOF)
+        {
             break;
         }
-        buf[bytesRead++] = (Guchar)c;
 
-        // DEBUG: log first few bytes
-        if (bytesRead <= 4) {
-          debugWriteBuffer(buf, bytesRead);
-        }
+        buf[bytesRead++] = (Guchar)c;
     }
 
     return bytesRead;
@@ -3097,53 +3095,37 @@ GBool FlateStreamReadSome(Stream *str)
     FlateData *pflate = str->u.flate;
     Guchar *buf = MemLock(pflate->bufhan);
     int ret;
+    word bytesRead = 0;
 
-    // Load input if needed
-    if (pflate->zstrm.avail_in == 0 && !pflate->eof)
-    {
-        word bytesRead = FlateStreamFillInputBuffer(str, pflate->inBuffer, pflate->inBufferSize);
+    bytesRead = FlateStreamFillInputBuffer(str, pflate->inBuffer, pflate->inBufferSize);
 
-        if (bytesRead == 0)
-        {
-            pflate->eof = gTrue;
-            MemUnlock(pflate->bufhan);
-            return gFalse;
-        }
-
-        pflate->zstrm.avail_in = bytesRead;
-        pflate->zstrm.next_in = pflate->inBuffer;
+    if (bytesRead == 0) {
+        pflate->eof = gTrue;
+        MemUnlock(pflate->bufhan);
+        return gFalse;
     }
 
-    pflate->remain = 0;
+    pflate->zstrm.avail_in = bytesRead;
+    pflate->zstrm.next_in = pflate->inBuffer;
+
+    pflate->zstrm.avail_out = flateWindow;
+    pflate->zstrm.next_out = buf;
+
+    debugWriteBuffer(pflate->zstrm.next_in, pflate->zstrm.avail_in);
+    ret = inflate(&pflate->zstrm, Z_NO_FLUSH);
+
+    if (ret == Z_STREAM_END) {
+        pflate->eof = gTrue;
+    } else if (ret != Z_OK) {
+        MemUnlock(pflate->bufhan);
+        return gFalse;
+    }
+
+    pflate->remain = flateWindow - pflate->zstrm.avail_out;
     pflate->index = 0;
-
-    // Loop until we produce output or run out of input
-    do
-    {
-        pflate->zstrm.avail_out = flateWindow;
-        pflate->zstrm.next_out = buf;
-
-        ret = inflate(&pflate->zstrm, Z_NO_FLUSH);
-
-        if (ret == Z_STREAM_END)
-        {
-            pflate->eof = gTrue;
-            break;
-        }
-        else if (ret != Z_OK)
-        {
-            // Optional: dump bad input
-            debugWriteBuffer(pflate->zstrm.next_in, pflate->zstrm.avail_in);
-            MemUnlock(pflate->bufhan);
-            return gFalse;
-        }
-
-        pflate->remain = flateWindow - pflate->zstrm.avail_out;
-
-        // Repeat loop if we got no output but still have input
-    } while (pflate->remain == 0 && pflate->zstrm.avail_in > 0);
 
     MemUnlock(pflate->bufhan);
     return (pflate->remain > 0);
 }
+
 
