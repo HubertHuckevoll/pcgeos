@@ -3067,13 +3067,16 @@ long FlateStreamGetChar(Stream *str)
   FlateData *pflate = str->u.flate;
   Guchar *buf;
 
-  if (pflate->hasPushback) {
+  if (pflate->hasPushback)
+  {
       pflate->hasPushback = gFalse;
       return (long)pflate->pushback;
   }
 
-  if (pflate->remain == 0) {
-      if (!FlateStreamReadSome(str)) {
+  if (pflate->remain == 0)
+  {
+      if (!FlateStreamReadSome(str))
+      {
           return EOF;
       }
   }
