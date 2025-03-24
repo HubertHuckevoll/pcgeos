@@ -2957,8 +2957,6 @@ void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, 
     // Allocate input buffer
     pflate->inBufferSize = ZLIB_IN_BUFFER_SIZE; // Adjust buffer size as needed
     pflate->inBuffer = (Guchar *) gmalloc(pflate->inBufferSize);
-    pflate->hasPushback = gFalse;
-    pflate->pushback = 0;
 
     pflate->index = 0;            // Current index into output buffer (unchanged)
     pflate->remain = 0;           // Number of valid bytes in output buffer (unchanged)
@@ -3012,9 +3010,6 @@ void FlateStreamReset(Stream *str)
 
     // Reset zlib decompression state
     inflateReset(&pflate->zstrm);
-
-    str->u.flate->hasPushback = gFalse;
-    pflate->pushback = 0;
 
     pflate->zstrm.next_in = Z_NULL;
     pflate->zstrm.avail_in = 0;
