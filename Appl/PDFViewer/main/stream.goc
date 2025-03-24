@@ -2910,18 +2910,6 @@ GBool DCTStream::isBinary(GBool last) {
 #endif
 
 
-void debugWriteBuffer(const Guchar *data, word len) {
-  FileHandle fh;
-
-  // Create file with native name, read/write access, and deny read/write sharing
-  fh = FileCreate("debug.bin", (FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_RW), 0);
-
-  if (fh != -1) {
-      FileWrite(fh, (void *)data, len, FALSE);
-      FileClose(fh, 0);
-  }
-}
-
 void log(const char *fmt, ...)
 {
   FileHandle fh = NullHandle;
@@ -3064,55 +3052,48 @@ word FlateStreamFillInputBuffer(Stream *str, Guchar *buf, word maxSize)
 
 long FlateStreamGetChar(Stream *str)
 {
-  FlateData *pflate = str->u.flate;
-  Guchar *buf;
+    FlateData *pflate = str->u.flate;
+    Guchar *buf;
+    long c = 0;
 
-  if (pflate->hasPushback)
-  {
-      pflate->hasPushback = gFalse;
-      return (long)pflate->pushback;
-  }
+    if (pflate->remain == 0)
+    {
+        if (!FlateStreamReadSome(str))
+        {
+            pflate->eof = gTrue;
+            return (long) EOF;
+        }
+    }
 
-  if (pflate->remain == 0)
-  {
-      if (!FlateStreamReadSome(str))
-      {
-          return EOF;
-      }
-  }
+    buf = MemLock(pflate->outBufferHan);
+    c = buf[pflate->index++];
+    pflate->remain--;
+    MemUnlock(pflate->outBufferHan);
 
-  buf = MemLock(pflate->outBufferHan);
-  pflate->pushback = buf[pflate->index++];
-  pflate->remain--;
-  MemUnlock(pflate->outBufferHan);
-
-  return (long)pflate->pushback;
+    return c;
 }
 
 long FlateStreamLookChar(Stream *str)
 {
     FlateData *pflate = str->u.flate;
     Guchar *buf;
-
-    if (pflate->hasPushback)
-        return pflate->pushback;
+    long c = 0;
 
     // Fill buffer if needed
-    while (pflate->remain == 0) {
-        if (pflate->eof) {
+    while (pflate->remain == 0)
+    {
+        if (pflate->eof)
             return EOF;
-        }
-        if (!FlateStreamReadSome(str)) {
+
+        if (!FlateStreamReadSome(str))
             return EOF;
-        }
     }
 
     buf = MemLock(pflate->outBufferHan);
-    pflate->pushback = buf[pflate->index]; // Don't increment index
-    pflate->hasPushback = gTrue;
+    c = buf[pflate->index];  // Just peek at it
     MemUnlock(pflate->outBufferHan);
 
-    return pflate->pushback;
+    return c;
 }
 
 /*
@@ -3142,24 +3123,12 @@ GBool FlateStreamReadSome(Stream *str)
     }
 
     pflate->zstrm.avail_in = bytesRead;
-    //log("bytesRead = %u\n", bytesRead);
-
-    // for (i = 0; i < 121; i++) {
-    //   log("inBuffer[%d] = 0x%02X\n", i, pflate->inBuffer[i]);
-    // }
-
     pflate->zstrm.next_in = pflate->inBuffer;
 
     pflate->zstrm.avail_out = (word) ZLIB_OUT_BUFFER_SIZE; // flateWindow;
     pflate->zstrm.next_out = outbuf;
 
-    //log("before, zstrm->avail_out = %u\n", pflate->zstrm.avail_out);
-    //log("zstrm.wbits = %d\n", pflate->zstrm.wbits);
-
     ret = inflate(&pflate->zstrm, Z_NO_FLUSH);
-
-    log("consumed = %u, produced = %u\n", pflate->zstrm.total_in, pflate->zstrm.total_out);
-    //log("after, zstrm->avail_out = %u\n", pflate->zstrm.avail_out);
 
     if (ret == Z_STREAM_END)
     {
@@ -3167,7 +3136,7 @@ GBool FlateStreamReadSome(Stream *str)
     }
     else if (ret != Z_OK)
     {
-        log("ret = %d\n", ret);
+        pflate->eof = gTrue;
         MemUnlock(pflate->outBufferHan);
         return gFalse;
     }

@@ -554,28 +554,8 @@ typedef struct LZWData {
 // FlateStream
 //------------------------------------------------------------------------
 
-#define ZLIB_OUT_BUFFER_SIZE  1024
 #define ZLIB_IN_BUFFER_SIZE   512
-
-// #define flateWindow             32768
-// #define flateMask            (flateWindow-1)
-// #define flateMaxHuffman         15    // max Huffman code length
-// #define flateMaxCodeLenCodes    19    // max # code length codes
-// #define flateMaxLitCodes       288    // max # literal codes
-// #define flateMaxDistCodes       30    // max # distance codes
-
-// Huffman code table entry
-// typedef struct FlateCode {
-//   long len;			// code length in bits
-//   long code;			// code word
-//   long val;			// value represented by this code
-// } FlateCode;
-
-// Huffman code table
-// typedef struct FlateHuffmanTab {
-//   long start[flateMaxHuffman+2];// indexes of first code of each length
-//   FlateCode *codes;		// codes, sorted by length and code word
-// } FlateHuffmanTab;
+#define ZLIB_OUT_BUFFER_SIZE  1024
 
 // Decoding info for length and distance code words
 typedef struct FlateDecode {
@@ -585,41 +565,18 @@ typedef struct FlateDecode {
 
 
 typedef struct FlateData {
-  MemHandle outBufferHan;      // Output buffer handle (unchanged)
-  long index;            // Current index into output buffer (unchanged)
-  long remain;           // Number of valid bytes in output buffer (unchanged)
+  MemHandle outBufferHan;       // Output buffer handle
+  long index;                   // Current index into output buffer
+  long remain;                  // Number of valid bytes in output buffer
 
-  z_stream zstrm;        // zlib stream structure for decompression
-  Guchar *inBuffer;      // Buffer to store compressed input data
-  word inBufferSize;     // Size of the input buffer
-  GBool endOfBlock;      // Set when end of block is reached (unchanged)
-  GBool eof;             // Set when end of stream is reached (unchanged)
-
-  // Pushback support for LookChar
-  Guchar pushback;
-  GBool hasPushback;
+  z_stream zstrm;               // zlib stream structure for decompression
+  Guchar *inBuffer;             // Buffer to store compressed input data
+  word inBufferSize;            // Size of the input buffer
+  GBool endOfBlock;             // Set when end of block is reached
+  GBool eof;                    // Set when end of stream is reached
 
 } FlateData;
 
-/*
-typedef struct FlateData {
-
-  MemHandle outBufferHan;		// output data buffer
-  long index;			// current index into output buffer
-  long remain;			// number valid bytes in output buffer
-  long codeBuf;			// input buffer
-  long codeSize;		// number of bits in input buffer
-  FlateCode			// literal and distance codes
-    allCodes[flateMaxLitCodes + flateMaxDistCodes];
-  FlateHuffmanTab litCodeTab;	// literal code table
-  FlateHuffmanTab distCodeTab;	// distance code table
-  GBool compressedBlock;	// set if reading a compressed block
-  long blockLen;		// remaining length of uncompressed block
-  GBool endOfBlock;		// set when end of block is reached
-  GBool eof;			// set when end of stream is reached
-
-} FlateData;
-*/
 
 //------------------------------------------------------------------------
 // ASCII85Stream
