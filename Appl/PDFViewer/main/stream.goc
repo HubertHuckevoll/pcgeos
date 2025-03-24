@@ -3092,25 +3092,28 @@ long FlateStreamGetChar(Stream *str)
 long FlateStreamLookChar(Stream *str)
 {
     FlateData *pflate = str->u.flate;
-    long c = 0;
+    Guchar *buf;
 
-    if (pflate->hasPushback) {
+    if (pflate->hasPushback)
         return pflate->pushback;
+
+    // Fill buffer if needed
+    while (pflate->remain == 0) {
+        if (pflate->eof) {
+            return EOF;
+        }
+        if (!FlateStreamReadSome(str)) {
+            return EOF;
+        }
     }
 
-    // Look ahead in the base stream, don't consume
-    c = StreamLookChar(str->str);
-    if (c == EOF) {
-        return EOF;
-    }
-
-    // Cache for pushback
-    pflate->pushback = (Guchar)c;
+    buf = MemLock(pflate->outBufferHan);
+    pflate->pushback = buf[pflate->index]; // Don't increment index
     pflate->hasPushback = gTrue;
+    MemUnlock(pflate->outBufferHan);
 
-    return c;
+    return pflate->pushback;
 }
-
 
 /*
 GString *FlateStream::getPSFilter(char *indent) {
