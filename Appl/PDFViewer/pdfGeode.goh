@@ -554,25 +554,28 @@ typedef struct LZWData {
 // FlateStream
 //------------------------------------------------------------------------
 
-#define flateWindow          6000    // 32768 FIXME: has new meaning // buffer size
-#define flateMask            (flateWindow-1)
-#define flateMaxHuffman         15    // max Huffman code length
-#define flateMaxCodeLenCodes    19    // max # code length codes
-#define flateMaxLitCodes       288    // max # literal codes
-#define flateMaxDistCodes       30    // max # distance codes
+#define ZLIB_OUT_BUFFER_SIZE  1024
+#define ZLIB_IN_BUFFER_SIZE   512
+
+// #define flateWindow             32768
+// #define flateMask            (flateWindow-1)
+// #define flateMaxHuffman         15    // max Huffman code length
+// #define flateMaxCodeLenCodes    19    // max # code length codes
+// #define flateMaxLitCodes       288    // max # literal codes
+// #define flateMaxDistCodes       30    // max # distance codes
 
 // Huffman code table entry
-typedef struct FlateCode {
-  long len;			// code length in bits
-  long code;			// code word
-  long val;			// value represented by this code
-} FlateCode;
+// typedef struct FlateCode {
+//   long len;			// code length in bits
+//   long code;			// code word
+//   long val;			// value represented by this code
+// } FlateCode;
 
 // Huffman code table
-typedef struct FlateHuffmanTab {
-  long start[flateMaxHuffman+2];// indexes of first code of each length
-  FlateCode *codes;		// codes, sorted by length and code word
-} FlateHuffmanTab;
+// typedef struct FlateHuffmanTab {
+//   long start[flateMaxHuffman+2];// indexes of first code of each length
+//   FlateCode *codes;		// codes, sorted by length and code word
+// } FlateHuffmanTab;
 
 // Decoding info for length and distance code words
 typedef struct FlateDecode {
@@ -582,7 +585,7 @@ typedef struct FlateDecode {
 
 
 typedef struct FlateData {
-  MemHandle bufhan;      // Output buffer handle (unchanged)
+  MemHandle outBufferHan;      // Output buffer handle (unchanged)
   long index;            // Current index into output buffer (unchanged)
   long remain;           // Number of valid bytes in output buffer (unchanged)
 
@@ -601,7 +604,7 @@ typedef struct FlateData {
 /*
 typedef struct FlateData {
 
-  MemHandle bufhan;		// output data buffer
+  MemHandle outBufferHan;		// output data buffer
   long index;			// current index into output buffer
   long remain;			// number valid bytes in output buffer
   long codeBuf;			// input buffer

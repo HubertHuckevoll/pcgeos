@@ -34,7 +34,7 @@
 
 Stream *StreamMakeFilter(Stream *str1, char *name, Obj *params, XRef *xref);
 
-// void FlateStreamReadSome(Stream *str);
+GBool FlateStreamReadSome(Stream *str);
 // GBool FlateStreamStartBlock(Stream *str);
 // void FlateStreamLoadFixedCodes(Stream *str);
 // GBool FlateStreamReadDynamicCodes(Stream *str);
@@ -2964,10 +2964,10 @@ void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, 
     str->u.flate = pflate;
 
     // Allocate output buffer
-    pflate->bufhan = MemAlloc(512, HF_DYNAMIC, HAF_STANDARD_NO_ERR);
+    pflate->outBufferHan = MemAlloc(ZLIB_OUT_BUFFER_SIZE, HF_DYNAMIC, HAF_STANDARD_NO_ERR);
 
     // Allocate input buffer
-    pflate->inBufferSize = 256; // Adjust buffer size as needed
+    pflate->inBufferSize = ZLIB_IN_BUFFER_SIZE; // Adjust buffer size as needed
     pflate->inBuffer = (Guchar *) gmalloc(pflate->inBufferSize);
     pflate->hasPushback = gFalse;
     pflate->pushback = 0;
@@ -3009,7 +3009,7 @@ void FlateStreamFree(Stream *str)
       }
 
       // Free output buffer
-      MemFree(pflate->bufhan);
+      MemFree(pflate->outBufferHan);
 
       // Free FlateData structure
       gfree(pflate);
@@ -3081,10 +3081,10 @@ long FlateStreamGetChar(Stream *str)
       }
   }
 
-  buf = MemLock(pflate->bufhan);
+  buf = MemLock(pflate->outBufferHan);
   pflate->pushback = buf[pflate->index++];
   pflate->remain--;
-  MemUnlock(pflate->bufhan);
+  MemUnlock(pflate->outBufferHan);
 
   return (long)pflate->pushback;
 }
@@ -3125,7 +3125,7 @@ GBool FlateStreamIsBinary(Stream *str, GBool last)
 GBool FlateStreamReadSome(Stream *str)
 {
     FlateData *pflate = str->u.flate;
-    Guchar *buf = MemLock(pflate->bufhan);
+    Guchar *outbuf = MemLock(pflate->outBufferHan);
     int ret;
     word bytesRead = 0;
     int i = 0;
@@ -3134,7 +3134,7 @@ GBool FlateStreamReadSome(Stream *str)
 
     if (bytesRead == 0) {
         pflate->eof = gTrue;
-        MemUnlock(pflate->bufhan);
+        MemUnlock(pflate->outBufferHan);
         return gFalse;
     }
 
@@ -3147,8 +3147,8 @@ GBool FlateStreamReadSome(Stream *str)
 
     pflate->zstrm.next_in = pflate->inBuffer;
 
-    pflate->zstrm.avail_out = (word) 512; // flateWindow;
-    pflate->zstrm.next_out = buf;
+    pflate->zstrm.avail_out = (word) ZLIB_OUT_BUFFER_SIZE; // flateWindow;
+    pflate->zstrm.next_out = outbuf;
 
     //log("before, zstrm->avail_out = %u\n", pflate->zstrm.avail_out);
     //log("zstrm.wbits = %d\n", pflate->zstrm.wbits);
@@ -3165,14 +3165,14 @@ GBool FlateStreamReadSome(Stream *str)
     else if (ret != Z_OK)
     {
         log("ret = %d\n", ret);
-        MemUnlock(pflate->bufhan);
+        MemUnlock(pflate->outBufferHan);
         return gFalse;
     }
 
-    pflate->remain = 512 - pflate->zstrm.avail_out;
+    pflate->remain = ZLIB_OUT_BUFFER_SIZE - pflate->zstrm.avail_out;
     pflate->index = 0;
 
-    MemUnlock(pflate->bufhan);
+    MemUnlock(pflate->outBufferHan);
     return (pflate->remain > 0);
 }
 

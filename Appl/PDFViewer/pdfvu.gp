@@ -37,7 +37,7 @@ tokenid 0
 #
 #
 heapspace 70k
-stack 3000
+stack 6000
 #
 library	geos
 library ui
