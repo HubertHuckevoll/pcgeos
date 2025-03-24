@@ -2909,35 +2909,6 @@ GBool DCTStream::isBinary(GBool last) {
 #pragma code_seg("FlateStream")
 #endif
 
-
-void log(const char *fmt, ...)
-{
-  FileHandle fh = NullHandle;
-  char buffer[256] = {0};
-  int len = 0;
-  va_list args;
-
-  va_start(args, fmt);
-  len = vsprintf(buffer, fmt, args);
-  va_end(args);
-
-  // Try to open existing log file
-  fh = FileOpen("geoslog.txt", FILE_ACCESS_RW | FILE_DENY_RW);
-
-  // If open fails, create it
-  if (fh == NullHandle) {
-      fh = FileCreate("geoslog.txt", FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_RW, 0);
-      if (fh == NullHandle) return; // Abort if still invalid
-  }
-
-  // Seek to end of file before writing
-  FilePos(fh, 0, FILE_POS_END);
-  FileWrite(fh, buffer, len, FALSE);
-  FileClose(fh, 0);
-}
-
-
-
 void FlateStreamInit(Stream *str, Stream *str1, long predictor1, long columns1, long colors1, long bits1)
 {
     FlateData *pflate;
