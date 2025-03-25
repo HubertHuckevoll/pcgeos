@@ -554,8 +554,8 @@ typedef struct LZWData {
 // FlateStream
 //------------------------------------------------------------------------
 
-#define ZLIB_IN_BUFFER_SIZE   512
-#define ZLIB_OUT_BUFFER_SIZE  1024
+#define ZLIB_IN_BUFFER_SIZE   1024
+#define ZLIB_OUT_BUFFER_SIZE  2048
 
 // Decoding info for length and distance code words
 typedef struct FlateDecode {
@@ -564,14 +564,16 @@ typedef struct FlateDecode {
 } FlateDecode;
 
 
-typedef struct FlateData {
+typedef struct FlateData
+{
   MemHandle outBufferHan;       // Output buffer handle
+  MemHandle inBufferHan;        // Input buffer handle
+
   long index;                   // Current index into output buffer
   long remain;                  // Number of valid bytes in output buffer
 
   z_stream zstrm;               // zlib stream structure for decompression
-  Guchar *inBuffer;             // Buffer to store compressed input data
-  word inBufferSize;            // Size of the input buffer
+
   GBool endOfBlock;             // Set when end of block is reached
   GBool eof;                    // Set when end of stream is reached
 
