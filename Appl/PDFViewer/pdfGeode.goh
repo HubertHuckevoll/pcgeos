@@ -554,8 +554,8 @@ typedef struct LZWData {
 // FlateStream
 //------------------------------------------------------------------------
 
-#define ZLIB_IN_BUFFER_SIZE   2048
-#define ZLIB_OUT_BUFFER_SIZE  4096
+#define ZLIB_IN_BUFFER_SIZE   1024
+#define ZLIB_OUT_BUFFER_SIZE  2048
 
 // Decoding info for length and distance code words
 typedef struct FlateDecode {
