@@ -34,7 +34,7 @@ static FileHandle _DbgOpenLogFile(Boolean truncate)
     return fh;
 }
 
-void dbgLogInit(void)
+void LogInit(void)
 {
     FileHandle fh;
 
@@ -44,7 +44,7 @@ void dbgLogInit(void)
     }
 }
 
-void dbgLogStart(void)
+void LogStart(void)
 {
   FileHandle fh;
   TimerDateAndTime now;
@@ -67,7 +67,7 @@ void dbgLogStart(void)
   FileClose(fh, (Boolean)0);
 }
 
-void dbgLogEnd(void)
+void LogEnd(void)
 {
     FileHandle fh;
 
@@ -79,7 +79,7 @@ void dbgLogEnd(void)
     FileClose(fh, (Boolean)0);
 }
 
-void dbgLog(const char *fmt, ...)
+void Log(const char *fmt, ...)
 {
     FileHandle fh;
     char buffer[256];
@@ -99,7 +99,7 @@ void dbgLog(const char *fmt, ...)
     FileClose(fh, (Boolean)0);
 }
 
-void dbgLogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end)
+void LogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end)
 {
     char segment[256];
     word len, from, to;
@@ -137,87 +137,87 @@ void dbgLogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word en
     if ((to > from) && ((to - from) < sizeof(segment))) {
         memcpy(segment, str + from, to - from);
         segment[to - from] = '\0';
-        dbgLog("%s", segment);
+        Log("%s", segment);
     }
 }
 
-void dbgLogStrHead(const char *str, word len)
+void LogStrHead(const char *str, word len)
 {
-  dbgLogStrSegment(str, DBG_STR_HEAD, len, 0);
+  LogStrSegment(str, DBG_STR_HEAD, len, 0);
 }
 
-void dbgLogStrTail(const char *str, word len)
+void LogStrTail(const char *str, word len)
 {
-  dbgLogStrSegment(str, DBG_STR_TAIL, len, 0);
+  LogStrSegment(str, DBG_STR_TAIL, len, 0);
 }
 
-void dbgLogStrRange(const char *str, word from, word to)
+void LogStrRange(const char *str, word from, word to)
 {
-  dbgLogStrSegment(str, DBG_STR_RANGE, from, to);
+  LogStrSegment(str, DBG_STR_RANGE, from, to);
 }
 
-void dbgLogStrAll(const char *str)
+void LogStrAll(const char *str)
 {
-  dbgLogStrSegment(str, DBG_STR_ALL, 0, 0);
+  LogStrSegment(str, DBG_STR_ALL, 0, 0);
 }
 
-void dbgLogByte(const char *label, byte val)
+void LogByte(const char *label, byte val)
 {
-  dbgLog("%s: %u", label, (word)val);
+  Log("%s: %u", label, (word)val);
 }
 
-void dbgLogSByte(const char *label, sbyte val)
+void LogSByte(const char *label, sbyte val)
 {
-  dbgLog("%s: %d", label, (sword)val);
+  Log("%s: %d", label, (sword)val);
 }
 
-void dbgLogWord(const char *label, word val)
+void LogWord(const char *label, word val)
 {
-  dbgLog("%s: %u (0x%04x)", label, val, val);
+  Log("%s: %u (0x%04x)", label, val, val);
 }
 
-void dbgLogSWord(const char *label, sword val)
+void LogSWord(const char *label, sword val)
 {
-  dbgLog("%s: %d", label, val);
+  Log("%s: %d", label, val);
 }
 
-void dbgLogDWord(const char *label, dword val)
+void LogDWord(const char *label, dword val)
 {
-  dbgLog("%s: %lu (0x%08lx)", label, val, val);
+  Log("%s: %lu (0x%08lx)", label, val, val);
 }
 
-void dbgLogSDWord(const char *label, sdword val)
+void LogSDWord(const char *label, sdword val)
 {
-  dbgLog("%s: %ld", label, val);
+  Log("%s: %ld", label, val);
 }
 
-void dbgLogBoolean(const char *label, Boolean val)
+void LogBoolean(const char *label, Boolean val)
 {
-  dbgLog("%s: %s", label, val ? "TRUE" : "FALSE");
+  Log("%s: %s", label, val ? "TRUE" : "FALSE");
 }
 
-void dbgLogPtr(const char *label, void *ptr)
+void LogPtr(const char *label, void *ptr)
 {
-  dbgLog("%s: %Fp", label, ptr);
+  Log("%s: %Fp", label, ptr);
 }
 
-void dbgLogChunkHandle(const char *label, ChunkHandle ch)
+void LogChunkHandle(const char *label, ChunkHandle ch)
 {
-  dbgLog("%s: chunk 0x%04x", label, ch);
+  Log("%s: chunk 0x%04x", label, ch);
 }
 
-void dbgLogMemHandle(const char *label, MemHandle mh)
+void LogMemHandle(const char *label, MemHandle mh)
 {
-  dbgLog("%s: mem handle 0x%04x", label, mh);
+  Log("%s: mem handle 0x%04x", label, mh);
 }
 
-void dbgLogFileHandle(const char *label, FileHandle fh)
+void LogFileHandle(const char *label, FileHandle fh)
 {
-  dbgLog("%s: file handle 0x%04x", label, fh);
+  Log("%s: file handle 0x%04x", label, fh);
 }
 
-void dbgLogOptr(const char *label, optr o)
+void LogOptr(const char *label, optr o)
 {
-  dbgLog("%s: optr 0x%08lx", label, o);
+  Log("%s: optr 0x%08lx", label, o);
 }
 

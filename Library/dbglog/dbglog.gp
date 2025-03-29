@@ -6,26 +6,26 @@ tokenid 0
 library geos
 library ansic
 
-export dbgLogInit
-export dbgLogStart
-export dbgLog
-export dbgLogEnd
+export LogInit
+export LogStart
+export Log
+export LogEnd
 
-export dbgLogStrSegment
-export dbgLogStrHead
-export dbgLogStrTail
-export dbgLogStrRange
-export dbgLogStrAll
+export LogStrSegment
+export LogStrHead
+export LogStrTail
+export LogStrRange
+export LogStrAll
 
-export dbgLogByte
-export dbgLogSByte
-export dbgLogWord
-export dbgLogSWord
-export dbgLogDWord
-export dbgLogSDWord
-export dbgLogBoolean
-export dbgLogPtr
-export dbgLogChunkHandle
-export dbgLogMemHandle
-export dbgLogFileHandle
-export dbgLogOptr
+export LogByte
+export LogSByte
+export LogWord
+export LogSWord
+export LogDWord
+export LogSDWord
+export LogBoolean
+export LogPtr
+export LogChunkHandle
+export LogMemHandle
+export LogFileHandle
+export LogOptr
