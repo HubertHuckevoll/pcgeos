@@ -1,28 +1,142 @@
-@include <stdapp.goh>
-@include <Ansi/string.h>
+#include <geos.h>
+#include <file.h>
+#include <vm.h>
+#include <timedate.h>
+#include <stdarg.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <timedate.h>
+#include <localize.h>
+#include "dbglog.h"
 
-void log(const char *fmt, ...)
+#define LOG_FILENAME "dbglog.txt"
+
+static FileHandle _DbgOpenLogFile(Boolean truncate)
 {
-  FileHandle fh = NullHandle;
-  char buffer[256] = {0};
-  int len = 0;
-  va_list args;
+    FileHandle fh;
 
-  va_start(args, fmt);
-  len = vsprintf(buffer, fmt, args);
-  va_end(args);
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
 
-  // Try to open existing log file
-  fh = FileOpen("geoslog.txt", FILE_ACCESS_RW | FILE_DENY_RW);
+    if (truncate) {
+        FileDelete(LOG_FILENAME);
+    }
 
-  // If open fails, create it
-  if (fh == NullHandle) {
-      fh = FileCreate("geoslog.txt", FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_RW, 0);
-      if (fh == NullHandle) return; // Abort if still invalid
-  }
+    fh = FileOpen(LOG_FILENAME, FILE_ACCESS_RW | FILE_DENY_W);
+    if (fh == NullHandle) {
+        fh = FileCreate(LOG_FILENAME,
+                        (FILE_CREATE_TRUNCATE | FCF_NATIVE) |
+                        (FILE_ACCESS_RW | FILE_DENY_W),
+                        0);
+    }
 
-  // Seek to end of file before writing
-  FilePos(fh, 0, FILE_POS_END);
-  FileWrite(fh, buffer, len, FALSE);
-  FileClose(fh, 0);
+    FilePopDir();
+    return fh;
+}
+
+void dbgLogInit(void)
+{
+    FileHandle fh;
+
+    fh = _DbgOpenLogFile(TRUE);
+    if (fh != NullHandle) {
+        FileClose(fh, (Boolean)0);
+    }
+}
+
+void dbgLogStart(void)
+{
+  FileHandle fh;
+  TimerDateAndTime now;
+  char buffer[64];
+  word length;
+
+  fh = _DbgOpenLogFile(FALSE);
+  if (fh == NullHandle) return;
+
+  TimerGetDateAndTime(&now);
+  LocalFormatDateTime(buffer, DTF_LONG_NO_WEEKDAY, &now);
+
+  FilePos(fh, 0L, FILE_POS_END);
+  FileWrite(fh, (void *)"=== LOG START: ", 15, (Boolean)0);
+
+  length = strlen(buffer);
+  FileWrite(fh, (void *)buffer, length, (Boolean)0);
+  FileWrite(fh, (void *)" ===\r\n", 6, (Boolean)0);
+
+  FileClose(fh, (Boolean)0);
+}
+
+void dbgLogEnd(void)
+{
+    FileHandle fh;
+
+    fh = _DbgOpenLogFile(FALSE);
+    if (fh == NullHandle) return;
+
+    FilePos(fh, 0L, FILE_POS_END);
+    FileWrite(fh, (void *)"=== LOG END ===\r\n", 17, (Boolean)0);
+    FileClose(fh, (Boolean)0);
+}
+
+void dbgLog(const char *fmt, ...)
+{
+    FileHandle fh;
+    char buffer[256];
+    int len;
+    va_list args;
+
+    va_start(args, fmt);
+    len = vsprintf(buffer, fmt, args);
+    va_end(args);
+
+    fh = _DbgOpenLogFile(FALSE);
+    if (fh == NullHandle) return;
+
+    FilePos(fh, 0L, FILE_POS_END);
+    FileWrite(fh, (void *)buffer, len, (Boolean)0);
+    FileWrite(fh, (void *)"\r\n", 2, (Boolean)0);
+    FileClose(fh, (Boolean)0);
+}
+
+void dbgLogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end)
+{
+    char segment[256];
+    word len, from, to;
+
+    len = strlen(str);
+    from = 0;
+    to = len;
+
+    switch (mode) {
+        case DBG_STR_HEAD:
+            if (startOrLen < len) {
+                to = startOrLen;
+            }
+            break;
+        case DBG_STR_TAIL:
+            if (startOrLen < len) {
+                from = len - startOrLen;
+            }
+            break;
+        case DBG_STR_RANGE:
+            if (startOrLen < len) {
+                from = startOrLen;
+            }
+            if (end < len) {
+                to = end;
+            }
+            break;
+        case DBG_STR_ALL:
+        default:
+            from = 0;
+            to = len;
+            break;
+    }
+
+    if ((to > from) && ((to - from) < sizeof(segment))) {
+        memcpy(segment, str + from, to - from);
+        segment[to - from] = '\0';
+        dbgLog("%s", segment);
+    }
 }
