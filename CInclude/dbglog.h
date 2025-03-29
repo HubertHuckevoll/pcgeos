@@ -18,14 +18,24 @@ void dbgLogInit(void);     // Clear log and start fresh
 void dbgLogStart(void);    // Add timestamped session header
 void dbgLogEnd(void);      // Add session footer
 void dbgLog(const char *fmt, ...);  // Formatted log entry
+
 void dbgLogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end);
+void dbgLogStrHead(const char *str, word len);
+void dbgLogStrTail(const char *str, word len);
+void dbgLogStrRange(const char *str, word from, word to);
+void dbgLogStrAll(const char *str);
 
-//--------------------------------------------------------------------------
-// Convenience macros for common string segment modes
-
-#define dbgLogStrHead(str, len)   dbgLogStrSegment(str, DBG_STR_HEAD, len, 0)
-#define dbgLogStrTail(str, len)   dbgLogStrSegment(str, DBG_STR_TAIL, len, 0)
-#define dbgLogStrRange(str,f,t)   dbgLogStrSegment(str, DBG_STR_RANGE, f, t)
-#define dbgLogStrAll(str)         dbgLogStrSegment(str, DBG_STR_ALL, 0, 0)
+void dbgLogByte(const char *label, byte val);
+void dbgLogSByte(const char *label, sbyte val);
+void dbgLogWord(const char *label, word val);
+void dbgLogSWord(const char *label, sword val);
+void dbgLogDWord(const char *label, dword val);
+void dbgLogSDWord(const char *label, sdword val);
+void dbgLogBoolean(const char *label, Boolean val);
+void dbgLogPtr(const char *label, void *ptr);
+void dbgLogChunkHandle(const char *label, ChunkHandle ch);
+void dbgLogMemHandle(const char *label, MemHandle mh);
+void dbgLogFileHandle(const char *label, FileHandle fh);
+void dbgLogOptr(const char *label, optr o);
 
 #endif // __DBGLOG_H__

@@ -140,3 +140,68 @@ void dbgLogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word en
         dbgLog("%s", segment);
     }
 }
+
+void dbgLogStrHead(const char *str, word len) {
+  dbgLogStrSegment(str, DBG_STR_HEAD, len, 0);
+}
+
+void dbgLogStrTail(const char *str, word len) {
+  dbgLogStrSegment(str, DBG_STR_TAIL, len, 0);
+}
+
+void dbgLogStrRange(const char *str, word from, word to) {
+  dbgLogStrSegment(str, DBG_STR_RANGE, from, to);
+}
+
+void dbgLogStrAll(const char *str) {
+  dbgLogStrSegment(str, DBG_STR_ALL, 0, 0);
+}
+
+void dbgLogByte(const char *label, byte val) {
+  dbgLog("%s: %u", label, (word)val);
+}
+
+void dbgLogSByte(const char *label, sbyte val) {
+  dbgLog("%s: %d", label, (sword)val);
+}
+
+void dbgLogWord(const char *label, word val) {
+  dbgLog("%s: %u (0x%04x)", label, val, val);
+}
+
+void dbgLogSWord(const char *label, sword val) {
+  dbgLog("%s: %d", label, val);
+}
+
+void dbgLogDWord(const char *label, dword val) {
+  dbgLog("%s: %lu (0x%08lx)", label, val, val);
+}
+
+void dbgLogSDWord(const char *label, sdword val) {
+  dbgLog("%s: %ld", label, val);
+}
+
+void dbgLogBoolean(const char *label, Boolean val) {
+  dbgLog("%s: %s", label, val ? "TRUE" : "FALSE");
+}
+
+void dbgLogPtr(const char *label, void *ptr) {
+  dbgLog("%s: %Fp", label, ptr);
+}
+
+void dbgLogChunkHandle(const char *label, ChunkHandle ch) {
+  dbgLog("%s: chunk 0x%04x", label, ch);
+}
+
+void dbgLogMemHandle(const char *label, MemHandle mh) {
+  dbgLog("%s: mem handle 0x%04x", label, mh);
+}
+
+void dbgLogFileHandle(const char *label, FileHandle fh) {
+  dbgLog("%s: file handle 0x%04x", label, fh);
+}
+
+void dbgLogOptr(const char *label, optr o) {
+  dbgLog("%s: optr 0x%08lx", label, o);
+}
+
