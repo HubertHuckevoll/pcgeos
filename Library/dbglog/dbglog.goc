@@ -1,13 +1,11 @@
 #include <geos.h>
 #include <file.h>
-#include <vm.h>
 #include <timedate.h>
-#include <stdarg.h>
 #include <Ansi/string.h>
 #include <Ansi/stdio.h>
 #include <timedate.h>
 #include <localize.h>
-#include "dbglog.h"
+#include <dbglog.h>
 
 #define LOG_FILENAME "dbglog.txt"
 
