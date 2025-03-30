@@ -571,9 +571,7 @@ Boolean AppListIniFileReadCallback(const char *stringSection, word sectionNum, v
 
     LogInit();
     LogStart();
-    LogStrAll("Section", str);
-    Log("Test: direct label = '%s'", "Section");
-
+    LogWord("sectionNum", sectionNum);
     LogEnd();
 
     return FALSE; // no error

@@ -8,12 +8,11 @@ library ansic
 
 export LOGINIT
 export LOGSTART
-export LOG
 export LOGEND
+export LOGSTR
 export LOGSTRHEAD
 export LOGSTRTAIL
 export LOGSTRRANGE
-export LOGSTRALL
 export LOGBYTE
 export LOGSBYTE
 export LOGWORD

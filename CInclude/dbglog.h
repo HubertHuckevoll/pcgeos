@@ -16,12 +16,13 @@ typedef enum {
 
 void _pascal _export LogInit(void);     // Clear log and start fresh
 void _pascal _export LogStart(void);    // Add timestamped session header
-void _pascal _export Log(const char *fmt, ...);  // Formatted log entry
 void _pascal _export LogEnd(void);      // Add session footer
+
+void _pascal _export LogStr(const char *label, const char *str);
 void _pascal _export LogStrHead(const char *label, const char *str, word len);
 void _pascal _export LogStrTail(const char *label, const char *str, word len);
 void _pascal _export LogStrRange(const char *label, const char *str, word from, word to);
-void _pascal _export LogStrAll(const char *label, const char *str);
+
 void _pascal _export LogByte(const char *label, byte val);
 void _pascal _export LogSByte(const char *label, sbyte val);
 void _pascal _export LogWord(const char *label, word val);
