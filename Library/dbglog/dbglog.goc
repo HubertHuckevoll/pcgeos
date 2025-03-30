@@ -9,7 +9,7 @@
 
 #define LOG_FILENAME "dbglog.txt"
 
-FileHandle _export _DbgOpenLogFile(Boolean truncate)
+FileHandle _pascal _export _DbgOpenLogFile(Boolean truncate)
 {
     FileHandle fh;
 
@@ -32,7 +32,7 @@ FileHandle _export _DbgOpenLogFile(Boolean truncate)
     return fh;
 }
 
-void _export LogInit(void)
+void _pascal _export LogInit(void)
 {
     FileHandle fh;
 
@@ -42,7 +42,7 @@ void _export LogInit(void)
     }
 }
 
-void _export LogStart(void)
+void _pascal _export LogStart(void)
 {
   FileHandle fh;
   TimerDateAndTime now;
@@ -65,7 +65,7 @@ void _export LogStart(void)
   FileClose(fh, (Boolean)0);
 }
 
-void _export Log(const char *fmt, ...)
+void _pascal _export Log(const char *fmt, ...)
 {
     FileHandle fh;
     char buffer[256];
@@ -85,7 +85,7 @@ void _export Log(const char *fmt, ...)
     FileClose(fh, (Boolean)0);
 }
 
-void _export LogEnd(void)
+void _pascal _export LogEnd(void)
 {
     FileHandle fh;
 
@@ -97,7 +97,7 @@ void _export LogEnd(void)
     FileClose(fh, (Boolean)0);
 }
 
-void _export LogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end)
+void _pascal _export LogStrSegment(const char *label, const char *str, DbgStrMode mode, word startOrLen, word end)
 {
     char segment[256];
     word len, from, to;
@@ -135,86 +135,88 @@ void _export LogStrSegment(const char *str, DbgStrMode mode, word startOrLen, wo
     if ((to > from) && ((to - from) < sizeof(segment))) {
         memcpy(segment, str + from, to - from);
         segment[to - from] = '\0';
-        Log("%s", segment);
+        Log("%s: \"%s\"", label, segment);
+    } else {
+        Log("%s: [string empty or out of bounds]", label);
     }
 }
 
-void _export LogStrHead(const char *str, word len)
+void _pascal _export LogStrHead(const char *label, const char *str, word len)
 {
-  LogStrSegment(str, DBG_STR_HEAD, len, 0);
+    LogStrSegment(label, str, DBG_STR_HEAD, len, 0);
 }
 
-void _export LogStrTail(const char *str, word len)
+void _pascal _export LogStrTail(const char *label, const char *str, word len)
 {
-  LogStrSegment(str, DBG_STR_TAIL, len, 0);
+    LogStrSegment(label, str, DBG_STR_TAIL, len, 0);
 }
 
-void _export LogStrRange(const char *str, word from, word to)
+void _pascal _export LogStrRange(const char *label, const char *str, word from, word to)
 {
-  LogStrSegment(str, DBG_STR_RANGE, from, to);
+    LogStrSegment(label, str, DBG_STR_RANGE, from, to);
 }
 
-void _export LogStrAll(const char *str)
+void _pascal _export LogStrAll(const char *label, const char *str)
 {
-  LogStrSegment(str, DBG_STR_ALL, 0, 0);
+    LogStrSegment(label, str, DBG_STR_ALL, 0, 0);
 }
 
-void _export LogByte(const char *label, byte val)
+void _pascal _export LogByte(const char *label, byte val)
 {
   Log("%s: %u", label, (word)val);
 }
 
-void _export LogSByte(const char *label, sbyte val)
+void _pascal _export LogSByte(const char *label, sbyte val)
 {
   Log("%s: %d", label, (sword)val);
 }
 
-void _export LogWord(const char *label, word val)
+void _pascal _export LogWord(const char *label, word val)
 {
   Log("%s: %u (0x%04x)", label, val, val);
 }
 
-void _export LogSWord(const char *label, sword val)
+void _pascal _export LogSWord(const char *label, sword val)
 {
   Log("%s: %d", label, val);
 }
 
-void _export LogDWord(const char *label, dword val)
+void _pascal _export LogDWord(const char *label, dword val)
 {
   Log("%s: %lu (0x%08lx)", label, val, val);
 }
 
-void _export LogSDWord(const char *label, sdword val)
+void _pascal _export LogSDWord(const char *label, sdword val)
 {
   Log("%s: %ld", label, val);
 }
 
-void _export LogBoolean(const char *label, Boolean val)
+void _pascal _export LogBoolean(const char *label, Boolean val)
 {
   Log("%s: %s", label, val ? "TRUE" : "FALSE");
 }
 
-void _export LogPtr(const char *label, void *ptr)
+void _pascal _export LogPtr(const char *label, void *ptr)
 {
   Log("%s: %Fp", label, ptr);
 }
 
-void _export LogChunkHandle(const char *label, ChunkHandle ch)
+void _pascal _export LogChunkHandle(const char *label, ChunkHandle ch)
 {
   Log("%s: chunk 0x%04x", label, ch);
 }
 
-void _export LogMemHandle(const char *label, MemHandle mh)
+void _pascal _export LogMemHandle(const char *label, MemHandle mh)
 {
   Log("%s: mem handle 0x%04x", label, mh);
 }
 
-void _export LogFileHandle(const char *label, FileHandle fh)
+void _pascal _export LogFileHandle(const char *label, FileHandle fh)
 {
   Log("%s: file handle 0x%04x", label, fh);
 }
 
-void _export LogOptr(const char *label, optr o)
+void _pascal _export LogOptr(const char *label, optr o)
 {
   Log("%s: optr 0x%08lx", label, o);
 }
