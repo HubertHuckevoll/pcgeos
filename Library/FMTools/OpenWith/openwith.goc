@@ -6,6 +6,7 @@ NOTES:      started in 2024/04 for FreeGEOS project
 ***********************************************************************/
 
 @include <openwith.goh>
+#include <dbglog.h>
 
 /***********************************************************************
 Resourcen
@@ -567,6 +568,8 @@ Boolean AppListIniFileReadCallback(const char *stringSection, word sectionNum, v
 
     str = (char*) ChunkArrayAppend(*((optr*) enumData), 0); // convert VOID-Pointer to OPTR-Pointer and deref afterwards...
     strcpy(str, stringSection);
+
+    LogStrAll(str);
 
     return FALSE; // no error
 }

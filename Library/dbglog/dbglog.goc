@@ -9,7 +9,7 @@
 
 #define LOG_FILENAME "dbglog.txt"
 
-static FileHandle _DbgOpenLogFile(Boolean truncate)
+FileHandle _export _DbgOpenLogFile(Boolean truncate)
 {
     FileHandle fh;
 
@@ -32,7 +32,7 @@ static FileHandle _DbgOpenLogFile(Boolean truncate)
     return fh;
 }
 
-void LogInit(void)
+void _export LogInit(void)
 {
     FileHandle fh;
 
@@ -42,7 +42,7 @@ void LogInit(void)
     }
 }
 
-void LogStart(void)
+void _export LogStart(void)
 {
   FileHandle fh;
   TimerDateAndTime now;
@@ -55,7 +55,7 @@ void LogStart(void)
   TimerGetDateAndTime(&now);
   LocalFormatDateTime(buffer, DTF_LONG_NO_WEEKDAY, &now);
 
-  FilePos(fh, 0L, FILE_POS_END);
+  FilePos(fh, 0, FILE_POS_END);
   FileWrite(fh, (void *)"=== LOG START: ", 15, (Boolean)0);
 
   length = strlen(buffer);
@@ -65,19 +65,7 @@ void LogStart(void)
   FileClose(fh, (Boolean)0);
 }
 
-void LogEnd(void)
-{
-    FileHandle fh;
-
-    fh = _DbgOpenLogFile(FALSE);
-    if (fh == NullHandle) return;
-
-    FilePos(fh, 0L, FILE_POS_END);
-    FileWrite(fh, (void *)"=== LOG END ===\r\n", 17, (Boolean)0);
-    FileClose(fh, (Boolean)0);
-}
-
-void Log(const char *fmt, ...)
+void _export Log(const char *fmt, ...)
 {
     FileHandle fh;
     char buffer[256];
@@ -97,7 +85,19 @@ void Log(const char *fmt, ...)
     FileClose(fh, (Boolean)0);
 }
 
-void LogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end)
+void _export LogEnd(void)
+{
+    FileHandle fh;
+
+    fh = _DbgOpenLogFile(FALSE);
+    if (fh == NullHandle) return;
+
+    FilePos(fh, 0, FILE_POS_END);
+    FileWrite(fh, (void *)"=== LOG END ===\r\n", 17, (Boolean)0);
+    FileClose(fh, (Boolean)0);
+}
+
+void _export LogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end)
 {
     char segment[256];
     word len, from, to;
@@ -139,82 +139,82 @@ void LogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end)
     }
 }
 
-void LogStrHead(const char *str, word len)
+void _export LogStrHead(const char *str, word len)
 {
   LogStrSegment(str, DBG_STR_HEAD, len, 0);
 }
 
-void LogStrTail(const char *str, word len)
+void _export LogStrTail(const char *str, word len)
 {
   LogStrSegment(str, DBG_STR_TAIL, len, 0);
 }
 
-void LogStrRange(const char *str, word from, word to)
+void _export LogStrRange(const char *str, word from, word to)
 {
   LogStrSegment(str, DBG_STR_RANGE, from, to);
 }
 
-void LogStrAll(const char *str)
+void _export LogStrAll(const char *str)
 {
   LogStrSegment(str, DBG_STR_ALL, 0, 0);
 }
 
-void LogByte(const char *label, byte val)
+void _export LogByte(const char *label, byte val)
 {
   Log("%s: %u", label, (word)val);
 }
 
-void LogSByte(const char *label, sbyte val)
+void _export LogSByte(const char *label, sbyte val)
 {
   Log("%s: %d", label, (sword)val);
 }
 
-void LogWord(const char *label, word val)
+void _export LogWord(const char *label, word val)
 {
   Log("%s: %u (0x%04x)", label, val, val);
 }
 
-void LogSWord(const char *label, sword val)
+void _export LogSWord(const char *label, sword val)
 {
   Log("%s: %d", label, val);
 }
 
-void LogDWord(const char *label, dword val)
+void _export LogDWord(const char *label, dword val)
 {
   Log("%s: %lu (0x%08lx)", label, val, val);
 }
 
-void LogSDWord(const char *label, sdword val)
+void _export LogSDWord(const char *label, sdword val)
 {
   Log("%s: %ld", label, val);
 }
 
-void LogBoolean(const char *label, Boolean val)
+void _export LogBoolean(const char *label, Boolean val)
 {
   Log("%s: %s", label, val ? "TRUE" : "FALSE");
 }
 
-void LogPtr(const char *label, void *ptr)
+void _export LogPtr(const char *label, void *ptr)
 {
   Log("%s: %Fp", label, ptr);
 }
 
-void LogChunkHandle(const char *label, ChunkHandle ch)
+void _export LogChunkHandle(const char *label, ChunkHandle ch)
 {
   Log("%s: chunk 0x%04x", label, ch);
 }
 
-void LogMemHandle(const char *label, MemHandle mh)
+void _export LogMemHandle(const char *label, MemHandle mh)
 {
   Log("%s: mem handle 0x%04x", label, mh);
 }
 
-void LogFileHandle(const char *label, FileHandle fh)
+void _export LogFileHandle(const char *label, FileHandle fh)
 {
   Log("%s: file handle 0x%04x", label, fh);
 }
 
-void LogOptr(const char *label, optr o)
+void _export LogOptr(const char *label, optr o)
 {
   Log("%s: optr 0x%08lx", label, o);
 }
