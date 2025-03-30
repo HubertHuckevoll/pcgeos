@@ -19,7 +19,6 @@ void LogStart(void);    // Add timestamped session header
 void LogEnd(void);      // Add session footer
 void Log(const char *fmt, ...);  // Formatted log entry
 
-void LogStrSegment(const char *str, DbgStrMode mode, word startOrLen, word end);
 void LogStrHead(const char *str, word len);
 void LogStrTail(const char *str, word len);
 void LogStrRange(const char *str, word from, word to);

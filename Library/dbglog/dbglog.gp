@@ -11,7 +11,6 @@ export LogStart
 export Log
 export LogEnd
 
-export LogStrSegment
 export LogStrHead
 export LogStrTail
 export LogStrRange
