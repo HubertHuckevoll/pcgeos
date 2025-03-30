@@ -53,7 +53,7 @@ void _export LogStart(void)
   if (fh == NullHandle) return;
 
   TimerGetDateAndTime(&now);
-  LocalFormatDateTime(buffer, DTF_LONG_NO_WEEKDAY, &now);
+  LocalFormatDateTime(buffer, DTF_HMS_24HOUR, &now);
 
   FilePos(fh, 0, FILE_POS_END);
   FileWrite(fh, (void *)"=== LOG START: ", 15, (Boolean)0);
@@ -93,7 +93,7 @@ void _export LogEnd(void)
     if (fh == NullHandle) return;
 
     FilePos(fh, 0, FILE_POS_END);
-    FileWrite(fh, (void *)"=== LOG END ===\r\n", 17, (Boolean)0);
+    FileWrite(fh, (void *)"=== LOG END ===\r\n\r\n", 19, (Boolean)0);
     FileClose(fh, (Boolean)0);
 }
 
