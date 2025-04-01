@@ -42,7 +42,7 @@ static void _writeToFile(const char *line)
     FileClose(fh, FALSE);
 }
 
-void _pascal _export LogInit(void)
+extern void _pascal _export LogInit(void)
 {
     FileHandle fh = _DbgOpenLogFile(TRUE);
     if (fh != NullHandle) {
@@ -52,8 +52,8 @@ void _pascal _export LogInit(void)
 
 void _pascal _export LogStart(void)
 {
-    char buffer[64];
-    char logLine[96];
+    static char buffer[64] = {0};
+    static char logLine[96] = {0};
     TimerDateAndTime now;
 
     TimerGetDateAndTime(&now);
@@ -70,92 +70,92 @@ void _pascal _export LogEnd(void)
 
 void _pascal _export LogByte(const char *label, byte val)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: %u", label, (word)val);
     _writeToFile(buf);
 }
 
 void _pascal _export LogSByte(const char *label, sbyte val)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: %d", label, (sword)val);
     _writeToFile(buf);
 }
 
 void _pascal _export LogWord(const char *label, word val)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: %u (0x%04x)", label, val, val);
     _writeToFile(buf);
 }
 
 void _pascal _export LogSWord(const char *label, sword val)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: %d", label, val);
     _writeToFile(buf);
 }
 
 void _pascal _export LogDWord(const char *label, dword val)
 {
-    char buf[80];
+    static char buf[80] = {0};
     sprintf(buf, "%s: %lu (0x%08lx)", label, val, val);
     _writeToFile(buf);
 }
 
 void _pascal _export LogSDWord(const char *label, sdword val)
 {
-    char buf[80];
+    static char buf[80] = {0};
     sprintf(buf, "%s: %ld", label, val);
     _writeToFile(buf);
 }
 
 void _pascal _export LogBoolean(const char *label, Boolean val)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: %s", label, val ? "TRUE" : "FALSE");
     _writeToFile(buf);
 }
 
 void _pascal _export LogPtr(const char *label, void *ptr)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: %Fp", label, ptr);
     _writeToFile(buf);
 }
 
 void _pascal _export LogChunkHandle(const char *label, ChunkHandle ch)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: chunk 0x%04x", label, ch);
     _writeToFile(buf);
 }
 
 void _pascal _export LogMemHandle(const char *label, MemHandle mh)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: mem handle 0x%04x", label, mh);
     _writeToFile(buf);
 }
 
 void _pascal _export LogFileHandle(const char *label, FileHandle fh)
 {
-    char buf[64];
+    static char buf[64] = {0};
     sprintf(buf, "%s: file handle 0x%04x", label, fh);
     _writeToFile(buf);
 }
 
 void _pascal _export LogOptr(const char *label, optr o)
 {
-    char buf[80];
+    static char buf[80] = {0};
     sprintf(buf, "%s: optr 0x%08lx", label, o);
     _writeToFile(buf);
 }
 
 void _pascal _export LogStrSegment(const char *label, const char *str, DbgStrMode mode, word startOrLen, word end)
 {
-    char segment[256];
-    char line[320];
+    static char segment[256] = {0};
+    static char line[320] = {0};
     word len = strlen(str);
     word from = 0, to = len;
 
@@ -188,7 +188,7 @@ void _pascal _export LogStrSegment(const char *label, const char *str, DbgStrMod
 
 void _pascal _export LogStr(const char *label, const char *value)
 {
-    char buf[256] = {0};
+    static char buf[256] = {0};
     sprintf(buf, "%s: \"%s\"", label, value);
     _writeToFile(buf);
 }

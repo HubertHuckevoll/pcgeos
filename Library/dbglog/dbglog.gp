@@ -1,8 +1,12 @@
 name dbglog.lib
+
 longname "Debug Logging Library"
-type library, single
+
+type library, single, c-api
+
 tokenchars "DLIB"
 tokenid 0
+
 library geos
 library ansic
 
