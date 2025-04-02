@@ -14,7 +14,7 @@ typedef enum {
 //--------------------------------------------------------------------------
 // API function declarations
 
-extern void _pascal _export LogInit(void);     // Clear log and start fresh
+void _pascal _export LogInit(void);     // Clear log and start fresh
 void _pascal _export LogStart(void);    // Add timestamped session header
 void _pascal _export LogEnd(void);      // Add session footer
 

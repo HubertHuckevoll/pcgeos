@@ -42,7 +42,7 @@ static void _writeToFile(const char *line)
     FileClose(fh, FALSE);
 }
 
-extern void _pascal _export LogInit(void)
+void _pascal _export LogInit(void)
 {
     FileHandle fh = _DbgOpenLogFile(TRUE);
     if (fh != NullHandle) {
