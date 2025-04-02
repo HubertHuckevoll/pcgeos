@@ -71,6 +71,6 @@ void        _pascal SelectedFilesLaunchApp(GeodeToken *tok, DiskHandle appDisk, 
 void        _pascal SelectedFilesFree();
 Boolean     _pascal AppListIsAppAlreadyInList(optr list, char* appName, word listLen);
 void        _pascal AppListIniFileRead();
-Boolean     _pascal _export AppListIniFileReadCallback(const char *stringSection, word sectionNum, void* enumData);
+Boolean     _pascal AppListIniFileReadCallback(const char *stringSection, word sectionNum, void* enumData);
 void        _pascal AppListIniFileWrite();
 void        _pascal AppListFree();
