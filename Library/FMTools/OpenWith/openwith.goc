@@ -562,7 +562,7 @@ void AppListIniFileRead()
 /********************************************************************
 the callback for reading an INI string blob...
 ********************************************************************/
-Boolean AppListIniFileReadCallback(const char *stringSection, word sectionNum, void* enumData)
+Boolean _pascal _export AppListIniFileReadCallback(const char *stringSection, word sectionNum, void* enumData)
 {
     char* str;
 
