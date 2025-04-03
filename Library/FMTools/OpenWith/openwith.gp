@@ -17,7 +17,7 @@ resource DialogUI object
 library geos
 library ui
 library ansic
-# library dbglog
+library dbglog
 
 # API functions
 export GETTHOSETOOLS

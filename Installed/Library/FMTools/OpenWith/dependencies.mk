@@ -27,6 +27,6 @@ openwith.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h token.h \
-                Ansi/stdio.h Ansi/stdlib.h Ansi/string.h dbglogmc.h
+                Ansi/stdio.h Ansi/stdlib.h Ansi/string.h dbglog.h
 
 openwithEC.geo openwith.geo : geos.ldf ui.ldf ansic.ldf dbglog.ldf 
