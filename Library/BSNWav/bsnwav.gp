@@ -41,7 +41,7 @@ library geos
 # No UI-Objects, No UserStandardDialog (replaced by SysNotify() )
 # ANSIC uses UI too
 #
-# library ansic
+library ansic
 # library ui
 
 # resource STATUSBOXRESOURCE	ui-object

@@ -26,7 +26,7 @@
 #include <$(SYSMAKEFILE)>
 
 GOCFLAGS += -L bsnwav
-CCOMFLAGS += -WDE -w
+# CCOMFLAGS += -WDE -w
 # CCOMFLAGS += -O2 -w -w-amp -w-cln -w-pin
 # LINKFLAGS += -N Copyright\20Dirk\20Lausecker\202000
 
