@@ -3,15 +3,14 @@
 #
 # If you edit it, you will lose your changes, should it be regenerated.
 #
-GEODE           = bsd8st
-ASM_TO_OBJS     = manager.asm
+GEODE           = prefsndn
+ASM_TO_OBJS     =
 UI_TO_RDFS      =
-SRCS            = bsdac.asm bsdelay.asm bserror.asm bsinit.asm bsint.asm\
-                  bsmixer.asm bsnwav.asm bsrecord.asm bsregs.asm\
-                  bsstrate.asm bsstream.asm bstimer.asm bsvoice.asm\
-                  bswav.asm manager.asm bsconst.def bserror.def
-OBJS            = manager.obj
+SRCS            = dirk.h prefsndn.goc prefsndn.goh
+OBJS            = prefsndn.obj
 LOBJS           =
+LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
+LIBNAME         = prefsndn
 
 SYSMAKEFILE     = geode.mk
 

@@ -25,17 +25,17 @@ DESCRIPTION:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-ifndef	GPC_ONLY
-ifndef PRODUCT_NDO2000
-PRODUCT_NDO2000			equ	1	; needed for Nokia SDK compatibility, as the 
+;ifndef	GPC_ONLY
+;ifndef PRODUCT_NDO2000
+;PRODUCT_NDO2000			equ	1	; needed for Nokia SDK compatibility, as the
 								; author of BestSound is not using the ND/MyTurn
 								; SDK configuration
-endif
+;endif
 
 WAV_CALL_BSNWAV			enum	Warnings
 WAV_AFTER_BSNWAV		enum	Warnings
 
-endif
+;endif
 
 PROGRESS_WARNINGS	equ	FALSE
 
@@ -115,7 +115,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		WAVPLAYFILE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-C FUNCTION:	WavPlayFile	
+C FUNCTION:	WavPlayFile
 
 C DECLARATION:
 
@@ -209,7 +209,7 @@ SYNOPSIS:	Create WavFilePathBlock and create another thread, passing
 
 CALLED BY:	EXTERNAL
 
-PASS:		
+PASS:
 	bx - disk handle OR StandardPath
 		If BX is 0, then the passed path is either relative to
 		the thread's current path, or is absolute (with a
@@ -220,7 +220,7 @@ PASS:
 
 	es:di - file name with extension and null terminated
 
-RETURN:		
+RETURN:
 		nothing
 DESTROYED:
 		nothing
@@ -276,7 +276,7 @@ WavPlayFile		proc	far
 	pop	ds,si				;filename fptr
 	mov	di,offset WFPB_file
 	mov	cx,(size WFPB_file)/2
-	rep movsw	
+	rep movsw
 
 	;     Unlock WavFilePathBlock
 	;
@@ -317,10 +317,10 @@ CALLED BY:	INTERNAL
 
 PASS:		cx - WavFilePathBlock handle
 
-RETURN:		
+RETURN:
 		nothing
 
-DESTROYED:	
+DESTROYED:
 		nothing
 
 PSEUDO CODE/STRATEGY:
@@ -431,7 +431,7 @@ headerBuffer	local	HeaderDescriptor
 	.enter
 
 	segmov	ds, ss, ax			; ds <- ss, trashes ax
-	
+
 	;
 	; Read the header of the file into the buffer on the stack.
 	;
@@ -441,8 +441,8 @@ headerBuffer	local	HeaderDescriptor
 	mov	cx, size HeaderDescriptor	; # of bytes to read
 
 	call	FileRead
-	
-	; 
+
+	;
 	; Is the file a RIFF file?
 	;
 	mov	ax, {word} ds:[headerBuffer].HD_fileID
@@ -452,9 +452,9 @@ headerBuffer	local	HeaderDescriptor
 
 	cmpdw	axbx, cxdx
 	jne	checkAIFF
-	
+
 	;
-	; So far so good.  Is it a WAVE format?  
+	; So far so good.  Is it a WAVE format?
 	;
 	mov	ax, {word} ds:[headerBuffer].HD_fileFormat
 	mov	cx, "WA"
@@ -468,7 +468,7 @@ noGood:
 	stc
 	jmp	exit
 
-checkAIFF:	
+checkAIFF:
 	mov	cx, "FO"
 	mov	dx, "RM"
 	cmpdw	axbx, cxdx
@@ -485,7 +485,7 @@ checkAIFF:
 	cmpdw	axbx, cxdx
 	mov	ax, SFF_AIFF
 	jne	noGood
-	
+
 goodExit:
 	clc
 
@@ -537,7 +537,7 @@ PlaySoundFromFile	proc	far	uses	ax, di, ds, si, cx, dx, bp
 ; Playing WAV-File with BSNWAV-Lib
 ;----------------------------------
 
-ifndef	GPC_ONLY
+;ifndef	GPC_ONLY
 
 EC<	WARNING	WAV_CALL_BSNWAV>
 
@@ -558,7 +558,7 @@ EC<	WARNING	WAV_AFTER_BSNWAV>
 
 	tst	ax
 	jz	exit			; respond = 0 --> finish
-endif
+;endif
 
 ;--------------------------------------
 ; Playing WAV-File with the 'old' code
@@ -731,7 +731,7 @@ calcSleep:
 ;
 
 	;
-	; Check if the sound stream is empty - if not, sleep for a second, 
+	; Check if the sound stream is empty - if not, sleep for a second,
 	; and check again...
 	;
 
@@ -751,7 +751,7 @@ waitForStreamToEmpty:
 
 streamEmpty:
 	;
-	; The sound stream is empty - wait another 1/2 second 
+	; The sound stream is empty - wait another 1/2 second
 	;
 	mov	ax, 30
 	call	TimerSleep
@@ -777,7 +777,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		ReadDataFromFile
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Read data from the file into the buffer for the data.  
+SYNOPSIS:	Read data from the file into the buffer for the data.
 
 CALLED BY:	PlaySound... routines
 
@@ -826,12 +826,12 @@ PrintMessage <Nuke ECCode>
 	call	MemGetInfo
 	tst	ah
 	ERROR_Z	-1
-	
+
 	mov	ax, MGIT_SIZE
 	call	MemGetInfo
 	cmp	ax, cx
 	ERROR_B	-1
-	
+
 	mov	dx, ds
 	mov	ax, MGIT_ADDRESS
 	call	MemGetInfo
@@ -860,8 +860,8 @@ if 0
 PrintMessage <nuke this>
 
 	push	si
-	mov	si, dx							
-	add	si, cx							
+	mov	si, dx
+	add	si, cx
 	cmp	si, DATA_BUFFER_SIZE+1
 	ERROR_A	-1
 	cmp	{byte} ds:[DATA_BUFFER_SIZE], 0
@@ -891,7 +891,7 @@ if	0
 	ERROR_NE	-1
 endif
 	clc
-done:	
+done:
 	.leave
 	ret
 
@@ -908,7 +908,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		PlaySoundFromBuffer
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Play the sound that is in the buffer. 
+SYNOPSIS:	Play the sound that is in the buffer.
 
 CALLED BY:	PlaySound... routines
 
@@ -944,21 +944,21 @@ PlaySoundFromBuffer	proc	far
 	mov	cx, fileInfo.FFD_sampleRate
 	mov	ss:[dacThingie].SFD_rate, cx
 	mov	ss:[dacThingie].SFD_playFlags, mask DACPF_CATENATE
-	
+
 	mov	bx, dacHandle
 	mov	dx, ds
 	clr	si				; dx:si = buffer of DAC data
-	mov	cx, ss:[bytesLeft]	
+	mov	cx, ss:[bytesLeft]
 
-playLoop:	
+playLoop:
 if 0	; Why limit the byte count?
 	;
 	; Play a certain number of bytes (<= cx) to DAC.
 	;
-	cmp	cx, DAC_STREAM_SIZE			
+	cmp	cx, DAC_STREAM_SIZE
 	jbe	playToDAC			; not much left, play it all!
 	mov	cx, DAC_STREAM_SIZE		; too much!  play part of it.
-	
+
 playToDAC:
 endif
 	push	bp
@@ -989,11 +989,11 @@ endif
 	; from and keep track of the number of bytes to go.
 	;
 	and	ss:[dacThingie].SFD_format, not DACRB_WITH_REFERENCE_BYTE
-	add	si, ax			; si <- beginning of next part of buffer 
+	add	si, ax			; si <- beginning of next part of buffer
 	mov	ss:[bytesLeft], cx	; save # of bytes left in buffer to play
 	jmp	short playLoop
 
-donePlaying:	
+donePlaying:
 	.leave
 	ret
 PlaySoundFromBuffer	endp
@@ -1009,7 +1009,7 @@ CALLED BY:	GLOBAL
 PASS:		bx - file handle
 RETURN:		nada
 DESTROYED:	nada
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -1092,7 +1092,7 @@ PlaySoundPCM	proc	near
 	;
 	mov	ax, DATA_BUFFER_SIZE
 	mov	cx, ALLOC_STATIC_LOCK
-	call	MemAlloc			; bx <- handle of block 
+	call	MemAlloc			; bx <- handle of block
 	jc	error
 	mov	ds, ax
 	mov	es, ax
@@ -1164,14 +1164,14 @@ play:
 	; Play the sound that is in the buffer. cx is # of bytes in buffer
 	;
 	call	PlaySoundFromBuffer
-	
+
  	;
 	; Are we done with a file?
 	;
 	tstdw	fileInfo.FFD_bytesLeft
 	jnz	readBuffer
 
-done:	
+done:
 	;
 	; unlock the block containing the buffer for the data
 	;
@@ -1188,7 +1188,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Attach the DAC.  If unsuccessful, will try again with
-		maximum priority.  
+		maximum priority.
 
 CALLED BY:	SampleSoundsFileSelected
 
@@ -1218,12 +1218,12 @@ PrepareSoundStream	proc	near
 	mov	dx, fileInfo.FFD_formatMID
 	mov	si, fileInfo.FFD_format
 	call	SoundEnableSampleStream
-;	jnc	done					; attached! 
+;	jnc	done					; attached!
 
 if 0
 	;
 	; driver unavailable, try again with highest priority.
-	; if still won't attach, must be a hardware error 
+	; if still won't attach, must be a hardware error
 	; (i.e. does user even have a sound driver?)
 	;
 	clr	ax					; 0 = highest priority
@@ -1240,13 +1240,13 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		FindRIFFChunk
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Find the specified type of chunk in the file. Only looks 
+SYNOPSIS:	Find the specified type of chunk in the file. Only looks
 		at the part of the file that is after the current position.
 
 CALLED BY:	ProcessRIFFFile
 
 PASS:		bx - handle of sound file
-		cxdx	= chunk ID of the type of chunk to find 
+		cxdx	= chunk ID of the type of chunk to find
 		es	= dgroup
 
 RETURN:		carry set if chunk not found
@@ -1269,13 +1269,13 @@ FindRIFFChunk	proc	near
 .assert	ID_STRING_LENGTH	eq	size dword
 	chunkBuffer	local	dword
 
-	chunkSize	local	dword	
-	
+	chunkSize	local	dword
+
 	.enter
 
 	push	cx, dx				; save chunkID
 
-	
+
 	segmov	ds, ss, ax			; ds <- ss, trashes ax
 
 findChunk:
@@ -1287,7 +1287,7 @@ findChunk:
 	clr 	ax				; flags
 	mov	cx, ID_STRING_LENGTH		; # of bytes to read
 
-	call	FileRead		
+	call	FileRead
 	jc	popDone
 
 	;
@@ -1299,10 +1299,10 @@ findChunk:
 	je	done				; found it!
 
 	;
-	; Keep looking.  
+	; Keep looking.
 	;
 	push	cx, dx				; save chunkID
-	
+
 	;
 	; Read the size of the current chunk.
 	;
@@ -1333,7 +1333,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		ProcessRIFFFormatChunk
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Extract format and sample rate info from the format chunk	
+SYNOPSIS:	Extract format and sample rate info from the format chunk
 		and compute the DACSampleFormat from it.
 
 CALLED BY:	ProcessRIFFFile
@@ -1374,7 +1374,7 @@ ProcessRIFFFormatChunk	proc	near
 	;
 	; Read the data of the format chunk into the fmtChunkInfo structure.
 	;
-	mov	cx, size FormatChunkDescriptor	
+	mov	cx, size FormatChunkDescriptor
 	mov	dx, bp
 	add	dx, offset fmtChunkInfo		; ds:dx = buffer to read to
 	clr	al				; flags
@@ -1414,7 +1414,7 @@ setRate:
 	;
 	mov	cx, fmtChunkInfo.FCD_blockAlign
 	mov	fileInfo.FFD_blockAlign, cx
-	
+
 	;
 	; Get the format tag.
 	;
@@ -1510,14 +1510,14 @@ goodFormat:
 	xchg	cx, dx				; cx:dx = offset from current pos
 	call	FilePos
 
-clearCarry:	
+clearCarry:
 	clc					; everything went okay!
 	jmp 	short done
-	
+
 badFormat:
 	stc
 
-done:	
+done:
 	.leave
 
 	ret
@@ -1540,7 +1540,7 @@ DESTROYED:	nothing
 SIDE EFFECTS:	chunkRead adjusted for new file position
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1573,12 +1573,12 @@ ProcessRIFFFormatChunkEx	proc	near
 	sub	cx, ss:[chunkRead]
 	cmp	cx, ss:[extraSize]
 	jb	done			; not enough - carry set
-	
+
 	; Allocate a block to hold the extra data.
 	;
 	mov	ax, ss:[extraSize]
 	mov	cx, ALLOC_STATIC_LOCK
-	call	MemAlloc			; bx <- handle of block 
+	call	MemAlloc			; bx <- handle of block
 	jc	done
 	mov	ds, ax
 	mov	ss:[extraSeg], ax
@@ -1631,7 +1631,7 @@ ProcessRIFFDataChunk	proc	near
 
 	;
 	; Read the size of the data chunk and save it.
-	;	
+	;
 	segmov	ds, ss, ax			; ds <- ss, trashes dx
 
 	mov	dx, bp
@@ -1645,14 +1645,14 @@ ProcessRIFFDataChunk	proc	near
 	movdw	dxax, chunkSize
 	movdw	fileInfo.FFD_dataSize, dxax	; save size of data
 	movdw	fileInfo.FFD_bytesLeft, dxax	; whole thing is left
-	
+
 	;
 	; Find the current position.
 	;
 	call	GetCurrentFilePosition
-	
+
 	movdw	fileInfo.FFD_dataOffset, dxax	; save position
-exit:	
+exit:
 	.leave
 	ret
 ProcessRIFFDataChunk	endp
@@ -1670,7 +1670,7 @@ PASS:		bx - file handle
 
 RETURN:		dxax	= current position
 
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 
@@ -1706,7 +1706,7 @@ PASS:		cx:dx = vfptr to GeodeToken
 
 RETURN:		nothing
 DESTROYED:	nothing
- 
+
 PSEUDO CODE/STRATEGY:
 
  To call this function, you need to make sure the wav file is pointed by a key
@@ -1780,7 +1780,7 @@ DBCS <	mov	cx, mask UHTAF_NULL_TERMINATE or mask UHTAF_SBCS_STRING	>
 	;
 	lea	di, keyBuffer
 	call	WavReadInitKeyToPlay
-		
+
 	.leave
 	ret
 WavPlayInitSound	endp
@@ -1804,7 +1804,7 @@ WavReadInitKeyToPlay	proc	near
 	mov	bp, InitFileReadFlags <IFCC_INTACT, 1, 0, 0>
 	call	InitFileReadString
 	mov	cx, bx
-		
+
 	jc	notFound
 	call	MemLock
 	mov	es, ax
@@ -1822,7 +1822,7 @@ endif
 	mov	bx, cx
 	call	MemFree
 notFound:
-	
+
 	.leave
 	ret
 WavReadInitKeyToPlay	endp
@@ -1830,18 +1830,18 @@ WavReadInitKeyToPlay	endp
 ;
 ; PASS:	  ds:si - string of 4-letter token
 ;	  es:di - buffer to store the converted hex letters.
-; Return: si, di - changed 
+; Return: si, di - changed
 ;
 UtilAsciiToHexString	proc	near
 	uses	ax, cx, dx
 	.enter
-	
+
 	clr	dx, ax
 	mov	cx, 4		; token are 4 letters
 
 loopNext:
 	push	cx
-		
+
 	mov	al, ds:[si]
 SBCS <	mov	cx, mask UHTAF_NULL_TERMINATE				>
 DBCS <	mov	cx, mask UHTAF_NULL_TERMINATE or mask UHTAF_SBCS_STRING	>
@@ -1875,7 +1875,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Lock the global exclusive.  Only one thread can play
 		a wav file at a time.
-		
+
 		May be called externally to wait for a sound to finish
 		playing.  (Be sure to UnlockExclusive as well).
 
@@ -1883,11 +1883,11 @@ CALLED BY:	WavPlaySoundAndDestroyThread, GLOBAL
 PASS:		nothing
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 		May block if someone is playing a sound.
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1918,10 +1918,10 @@ CALLED BY:	WavPlaySoundAndDestroyThread, GLOBAL
 PASS:		nothing
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description

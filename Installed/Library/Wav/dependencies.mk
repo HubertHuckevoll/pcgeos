@@ -1,9 +1,9 @@
-WAVMANAGER.obj \
-WAVMANAGER.eobj: GEOS.DEF EC.DEF LIBRARY.DEF LMEM.DEF VM.DEF SYSTEM.DEF \
-                LOCALIZE.DEF SLLANG.DEF RESOURCE.DEF GEODE.DEF HEAP.DEF \
-                INITFILE.DEF INTERNAL/STRDRINT.DEF INTERNAL/SEMINT.DEF \
-                INTERNAL/STREAMDR.DEF DRIVER.DEF FILE.DEF TIMER.DEF \
-                THREAD.DEF SOUND.DEF INTERNAL/SOUNDFMT.DEF WAV.DEF \
-                WAVCONSTANTS.DEF WAVMACROS.DEF WAV.ASM ADPCM.ASM
+wavManager.obj \
+wavManager.eobj: geos.def ec.def library.def lmem.def vm.def system.def \
+                localize.def sllang.def resource.def geode.def heap.def \
+                initfile.def Internal/strDrInt.def Internal/semInt.def \
+                Internal/streamDr.def driver.def file.def timer.def \
+                thread.def bsnwav.def sound.def Internal/soundFmt.def \
+                wav.def wavConstants.def wavMacros.def wav.asm adpcm.asm
 
-WavEC.geo Wav.geo : GEOS.LDF SOUND.LDF 
+wavEC.geo wav.geo : geos.ldf sound.ldf bsnwav.ldf 

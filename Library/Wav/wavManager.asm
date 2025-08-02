@@ -3,7 +3,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 1991 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:		
+MODULE:
 FILE:		wavManager.asm
 
 AUTHOR:		Steve Scholl
@@ -14,7 +14,7 @@ REVISION HISTORY:
 	srs	8/13/93		Initial revision
 
 DESCRIPTION:
-	
+
 
 	$Id: wavManager.asm,v 1.1 97/04/07 11:51:31 newdeal Exp $
 
@@ -50,9 +50,9 @@ include thread.def
 ; BestSound NewWave
 ;
 
-ifndef GPC_ONLY
+; ifndef GPC_ONLY
 UseLib	bsnwav.def
-endif
+; endif
 
 ;------------------------------------------------------------------------------
 ;			library stuff

@@ -12,8 +12,8 @@ REVISION HISTORY:
 	Name	Datum		Beschreibung
 	----	-----		------------
 	DL	08.08.98	Init
-        DL	07.10.1999	Ableitung fÅr Recording
-        DL	22.12.1999	Ableitung fÅr NewWave (Umgehung Soundlib)
+        DL	07.10.1999	Ableitung fÔøΩr Recording
+        DL	22.12.1999	Ableitung fÔøΩr NewWave (Umgehung Soundlib)
         DL	22.08.2000	Translation for ND
 
 
@@ -43,9 +43,9 @@ include	localize.def
 
 include	Internal/interrup.def
 
-include bsConst.def
-include	bsError.def
-include bsTimer.asm
+include bsconst.def
+include	bserror.def
+include bstimer.asm
 
 UseLib	  sound.def
 UseDriver Internal/DMADrv.def
@@ -65,22 +65,22 @@ BS_OUTPUT_DSP		equ	1	; use soundcard
 ;		Source files for driver
 ;-----------------------------------------------------------------------------
 	.ioenable
-include bsError.asm		; Error Checking routines and such
+include bserror.asm		; Error Checking routines and such
 
-include bsRegs.asm		; FM register writing routine and n.e.
-include bsInit.asm		; set up board for use
-include	bsDelay.asm		; micro second busy-wait code
-include	bsStrate.asm		; strategy routine and nothing else
-include bsInt.asm		; interrupt code for DMA
+include bsregs.asm		; FM register writing routine and n.e.
+include bsinit.asm		; set up board for use
+include	bsdelay.asm		; micro second busy-wait code
+include	bsstrate.asm		; strategy routine and nothing else
+include bsint.asm		; interrupt code for DMA
 
-include	bsVoice.asm		; regular driver code
-include bsDAC.asm		; DAC driver code
+include	bsvoice.asm		; regular driver code
+include bsdac.asm		; DAC driver code
 
-include bsStream.asm		; stream stuff for dac
-include	bsWav.asm		;
-include	bsMixer.asm		; Mixer control
-include	mixLib.def		; Mixerdefinitions
+include bsstream.asm		; stream stuff for dac
+include	bswav.asm		;
+include	bsmixer.asm		; Mixer control
+include	mixlib.def		; Mixerdefinitions
 
-include bsRecord.asm		; Recording Functions
-include	bsNWav.asm		; NewWave-Play
+include bsrecord.asm		; Recording Functions
+include	bsnwav.asm		; NewWave-Play
 

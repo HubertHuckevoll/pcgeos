@@ -3,7 +3,7 @@
 #
 # If you edit it, you will lose your changes, should it be regenerated.
 #
-GEODE           = BSD16
+GEODE           = bsd16
 ASM_TO_OBJS     = manager.asm
 UI_TO_RDFS      =
 SRCS            = bsdac.asm bsdelay.asm bserror.asm bsinit.asm bsint.asm\

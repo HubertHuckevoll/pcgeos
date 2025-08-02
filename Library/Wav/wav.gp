@@ -3,7 +3,7 @@
 #	Copyright (c) GeoWorks 1991 -- All Rights Reserved
 #
 # PROJECT:	PC GEOS
-# MODULE:	
+# MODULE:
 # FILE:		wav.gp
 #
 # AUTHOR:	Steve Scholl
@@ -23,9 +23,9 @@ name wav.lib
 library geos
 library sound
 
-ifndef GPC_ONLY
-# lib rary bsn wav
-endif
+# ifndef GPC_ONLY
+library bsnwav
+# endif
 
 #
 # Specify geode type
