@@ -1,0 +1,1922 @@
+#pragma -cln
+
+/**************************************************************
+
+	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+
+PROJECT:	BestSound NewWave-Library
+
+DATEI:		SUBCODE.GOC
+
+AUTHOR:		Dirk Lausecker
+
+Routines:
+	BSNWAllocSecBuffer	Allocate Secondarybuffer by driver
+	BSNWavLoadDriver	Load driver
+        BSNWGetData		Get Data from source
+	BSNWLoadCache		Fill cache with data
+	BSNWLoadData		Get Data from source into Playcache and copy
+				them with the Konverter to the Secondarybuffer
+	BSNWPlay		Read Data from source and play it
+ 	BSNWFillSilence		Fill Secondarybuffer with silence
+
+
+REVISION HISTORY:
+
+	Name	Datum		Beschreibung
+	----	-----		------------
+	DL	20.02.2000	neuer Header
+        DL	23.02.2000	interne Subroutinen -> SUBCODE.GOC
+        DL	07.08.2000	Translation of the comments
+
+***************************************************************/
+
+@define	BSNWAV_NO_UI
+
+/*
+@define	GERMAN
+#define	GERMAN
+/* Compiler switch for german version */
+
+@include <stdapp.goh>
+
+@ifndef BSNWAV_NO_UI
+#include <Ansi/stdio.h>
+#include <Ansi/string.h>
+@endif
+
+#include <sound.h>
+#include <library.h>
+#include <driver.h>
+#include <initfile.h>
+#include <geode.h>
+#include <resource.h>
+
+#include <dirksnd.h>
+#include <file.h>
+#include <riff.h>
+
+@include "bsnwav.goh"
+@include "Main/subcode.goh"
+
+/******************** Constants/Makros ************************/
+
+#define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
+#define FP_OFF( fp )( (unsigned )( fp ))
+#define MK_FP( seg,ofs )( (void _seg * )( seg ) +( void near * )( ofs ))
+
+
+/******************** Strings / Globals ***********************/
+
+const char 	playKeyIT[] 	= "PlayBufferSize";
+const char 	secondKeyIT[] 	= "SecondBufferSize";
+const char 	reverseKeyIT[] 	= "OutputChannelReverse";
+word		peakLevel2 = 0;		// helper for peak level
+
+
+/**************************** Funktionen ************************/
+
+void	MyBreak(void)
+{
+
+}
+
+/****************************
+
+	BSNWLibEntry
+
+  IN:
+  LibraryCallType	type
+  GeodeHandle		client
+
+  OUT:
+  TRUE		error
+  FALSE		no error
+
+ ****************************/
+#pragma argsused
+
+Boolean	_pascal BSNWLibEntry(LibraryCallType type,GeodeHandle client)
+{
+        asm push ds
+        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+        switch (type)
+	{
+            case LCT_ATTACH:
+            {
+	    	// The library was just loaded.
+
+      	        //Init
+                sampleDriver = NullHandle;
+                driverInfo = 0;
+
+                // Connect to Soundcard driver
+                // Set Compatibilityflag to FALSE
+		// if the driver can not be connected
+                if (BSNWavLoadDriver(&gle, playStatusText))
+                {
+                    // demoMode
+                    compatFlag = FALSE;
+                }
+                else
+                {
+                    BSNWLoadIniSettings();
+
+                    // check driver
+                    compatFlag = BSNWaveCheckDriver(0,0);
+                };
+
+            }; break;
+
+            case LCT_DETACH:
+            {
+	        // The library is about to be unloaded.
+              	// Abort Output
+              	if (playStatus)
+                {
+		    // BSNWaveStopRecOrPlay(0);
+                    // for playing shutdown WAV's it's
+                    // better to wait !
+                    if (BSNWPreCheck(BSNW_WAIT_FOR_FREE)==BSNW_NOT_FREE)
+		    {
+                      	BSNWaveStopRecOrPlay(0);
+                    };
+                };
+
+                //Free driver if it was loaded by Library
+                if (sampleDriver && driverUsed)
+                {
+                    GeodeFreeDriver (sampleDriver);
+                    sampleDriver = NullHandle;
+                };
+            }; break;
+
+            case LCT_NEW_CLIENT:
+            {
+
+	    }; break;		/* A new client of the library was just loaded. */
+
+            case LCT_NEW_CLIENT_THREAD:
+            {
+            	// Store GeodeHandle of the first caller
+                // Background: On Shutdown we must wait until shutdown-Sound
+                // is played. For detecting shutdown, we compare the
+                // GeodeHandle from StartUp (here) and LCT_CLIENT_THREAD_EXIT
+                if (attachGeode == 0)
+                {
+                    MyBreak();
+                    attachGeode = client;
+                };
+
+	    }; break;		/* A new thread was just created for a
+                        			         * current client of the library. */
+            case LCT_CLIENT_THREAD_EXIT:
+            {
+                if (attachGeode == client)
+                {
+                    if (BSNWPreCheck(BSNW_WAIT_FOR_FREE)==BSNW_NOT_FREE)
+		    {
+                      	BSNWaveStopRecOrPlay(0);
+                    };
+                };
+
+	    }; break;		/* A thread was just exited for a current
+            			 * client of the library. */
+            case LCT_CLIENT_EXIT:
+            {
+                if (BSNWPreCheck(BSNW_WAIT_FOR_FREE)==BSNW_NOT_FREE)
+		{
+                    BSNWaveStopRecOrPlay(0);
+                };
+            };  break;		/* Library's client is about to be unloaded. */
+        };
+
+        asm pop ds
+        return (FALSE);
+}
+
+/***********************************
+
+	BSNWavLoadDriver
+
+	Search/Load Driver
+ IN:
+ * gle	     Ablage Fehlercode
+ [sampleDriver] = Treibername
+ OUT	Boolean	demoMode
+ * name	     Treibername
+
+ **********************************/
+
+Boolean	_pascal BSNWavLoadDriver(GeodeLoadError *gle,
+				 char 		*name)
+{
+    	Boolean	demoMode;
+    	asm push ds
+    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+
+   	 // read drivername from INI
+    	demoMode = FALSE;
+        driverUsed = FALSE;
+
+    	if(InitFileReadStringBuffer(soundCatIT,sampleDriverIT,name,32,&datasize))
+    	{   //sampleDriver-Entry not found
+    	    //try with synthDriver
+    	    demoMode = (InitFileReadStringBuffer(soundCatIT,synthDriverIT,name,32,&datasize));
+	};
+
+        //Fehlercode reset
+    	*gle = 0;
+
+        //search/load driver
+    	if (demoMode)
+    	{
+      	    //Demomode = no driver !
+    	}
+    	else
+    	{   // Search driver
+      	    sampleDriver = GeodeFind (name,GEODE_NAME_SIZE,0,0);
+     	    if (!sampleDriver)
+            {	//sampleDriver not in memory !
+
+		// Move to the SYSTEM directory (that's where the libraries are)
+    		FilePushDir ();
+    		FileSetCurrentPath (SP_SYSTEM,"SOUND");
+
+    		// load driver and check the handle
+                sampleDriver = GeodeUseDriver (name, 0, 0, gle);
+    		demoMode = (sampleDriver == NullHandle);
+
+                // set special flag
+                driverUsed = !demoMode;
+
+    		// Get back to wherever we started from.
+    		FilePopDir ();
+      	    };
+	};
+
+    	asm pop ds
+
+    	return (demoMode);
+}
+
+/**********************************************************
+
+	BSCallDriver
+
+  	C-Subroutine for calling driverfunction
+
+ IN	di	Routine number
+
+
+ **********************************************************/
+
+void _pascal BSCallDriver ()
+{
+  	int segm;
+  	int offs;
+  	int axsave;
+
+  	asm {
+    	    push ds
+            push bp
+    	    push si
+    	    push ax
+    	    push bx
+    	    push cx
+    	    push dx
+    	    push di
+  	}
+  	//search entrypoint
+  	if (!driverInfo)
+        {
+  	    driverInfo = GeodeInfoDriver(sampleDriver);
+        };
+
+  	segm = FP_SEG(driverInfo) ;
+  	offs = FP_OFF(driverInfo) ;
+
+  	asm {
+    	    pop  di
+    	    pop  dx
+    	    pop  cx
+    	    pop  bx
+    	    pop  ax
+    	    mov	 axsave,ax		// "if" will destroy ax
+  	}
+
+  	// call to entrypoint
+  	if ((segm | offs) > 0)
+  	{
+   	    asm {
+    		mov  ax,axsave
+    		mov  si, offs
+    		mov  ds, segm
+    		db   0x3e, 0xff, 0x1c	/* call far ds:[si] */
+   		}
+  	};
+
+  	asm {
+    		pop  si
+                pop  bp
+    		pop  ds
+  	}
+}
+
+/**********************************************************
+
+	BSNWAllocSecBuffer
+
+        Allocate Secondarybuffer
+
+
+ IN:	word		len
+ 	(glob)simFlags 	> 0	for test purpose only !
+
+ OUT:	**ptr	Pointer to Buffer
+        word	real length
+
+ **********************************************************/
+
+word _pascal BSNWAllocSecBuffer(byte **ptr,word len)
+{
+        byte		*ptr2;
+	word		segm;
+        word		off;
+        word		len2;
+
+	asm push ds
+	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        // Optimize bufferlen
+        // LA 04.01.2001
+        if (bytesToPlay>(dword)len)
+        {
+	    len2 = len;
+        }
+        else
+        {
+	    len2 = (word)bytesToPlay;
+        };
+
+        // Simulation mode
+        if(simFlags || !compatFlag)
+        {
+	    secondHandle = MemAlloc(len2,HF_SWAPABLE,HAF_ZERO_INIT);
+            if (secondHandle)
+            {
+	        *ptr = MemLock(secondHandle);
+            }
+            else
+            {
+                // error
+                *ptr = 0;
+            };
+
+        }
+        else
+        {
+
+            // call driver
+
+    	    asm {
+      	    	push ax
+                push bx
+                push cx
+      	    	push dx
+      	    	push di
+                mov  cx,len2
+                mov  di,DRE_BSNWAV_SECOND_ALLOC
+    	    }
+    	    BSCallDriver();
+    	    asm {
+            	mov  len,cx
+            	mov  off,dx
+            	mov  segm,ax
+      	    	pop  di
+      	    	pop  dx
+                pop  cx
+                pop  bx
+      	    	pop  ax
+    	    }
+
+            // store Pointer
+            ptr2 = MK_FP(segm,off);
+            *ptr = ptr2;
+        };
+    	asm	pop ds
+
+	return(len);
+}
+
+
+/********************************************
+
+	BSNWAllocPlayCache
+
+        Allocate Playcache
+
+ IN:	word	len
+ 	ds	dgroup
+
+ OUT:	*void	Pointer Playcache
+ 	(glob)	playCacheHandle
+
+ ********************************************/
+
+void	* _pascal BSNWAllocPlayCache(word len)
+{
+        void	*ptr;
+
+        // Alloc
+	playCacheHandle = MemAlloc(len,HF_SWAPABLE,HAF_ZERO_INIT);
+
+        // Lock
+        if (playCacheHandle)
+        {
+            ptr = MemLock(playCacheHandle);
+        }
+        else
+        {
+            // Error
+	    ptr = 0;
+        };
+
+	return (ptr);
+}
+
+/****************************************************************
+
+		BSNWReadWaveFormat
+
+	Search for WAV-File Header with Formatinfo
+
+ IN:	*BSWavFileHeader   		 Pointer to Headerdataspace
+ OUT:	word	BSNW_STATUS_OK		 Format will be supported
+ 		BSNW_UNKNOWN_WAVE_FORMAT Unknown Format
+                BSNW_MEMORY_ERROR	 Error
+
+ ****************************************************************/
+int	_pascal BSNWReadWaveFormat(BSWavFileHeader *bw)
+{
+        dword	chunkType = 0;	// Chunktype
+        dword	rl = 0;		// Reminding len
+        Boolean	error;		// errorflag
+
+	int	respond = BSNW_STATUS_OK;
+
+        // Pos = 0
+        BSNWSetSourcePosition(0);
+
+        // Search for RIFF
+	if (BSNWGetData(&chunkType,4))
+        {
+            // No RIFF-Info ?
+            respond = BSNW_MEMORY_ERROR;
+        }
+        else
+        {
+  	    if (chunkType == CODE_RIFF)
+            {
+                // read filelen - 8
+                error = BSNWGetData(&(bw->BWFH_fullLen),4);
+
+	    	// Formname "WAVE"
+		if ( (BSNWGetData(&chunkType,4)) || error )
+        	{
+            	    // error reading WAVE
+            	    respond = BSNW_MEMORY_ERROR;
+        	}
+        	else
+        	{
+                    if (chunkType == CODE_WAVE)
+                    {
+            	    	// search for fmt -Chunk
+                        if (BSNWSearchChunk(CODE_fmt))
+                        {
+                            //////// "fmt"-Chunk found ! //////////
+
+            	    	    // read fmt-Chunk
+                            if (BSNWGetData(&(bw->BWFH_fmtChunk),sizeof(BSWavFormChunk) ) )
+                            {
+                                // error reading fmt -Chunk
+                            	respond = BSNW_MEMORY_ERROR;
+                            }
+                            else
+                            {
+                                // go to end of Chunk
+                                rl = chunkLen - sizeof(BSWavFormChunk);
+                                if (rl)
+                                {
+                                    if(BSNWSetSourcePosition(playSourcePos + rl))
+                                    {
+                                    	respond = BSNW_MEMORY_ERROR;
+                                    };
+                                };
+
+            	    	    	// Check Waveformat
+                                // supported Format --> BSWN_FORMAT_PCM
+
+                                if (bw->BWFH_fmtChunk.BWFC_dataFormat == BSWN_FORMAT_PCM)
+// add here supported format's --->
+                                {
+                                    respond = BSNW_STATUS_OK;
+                                }
+                                else
+                                {
+                                    // unsupported format
+                                    respond = BSNW_UNKNOWN_WAVE_FORMAT;
+                                };
+                            };
+
+                        }
+                        else
+                        {
+                            // no "fmt"-Chunk found
+                            respond = BSNW_MEMORY_ERROR;
+
+                        };
+                    }
+                    else
+                    {
+            	    	// no "WAVE"-Chunk !
+            	    	respond = BSNW_MEMORY_ERROR;
+
+                    };
+                };
+            }
+            else
+            {
+            	// no RIFF-Chunk !
+            	respond = BSNW_MEMORY_ERROR;
+            };
+	};
+
+	return (respond);
+}
+
+/*********************************************************
+
+		BSNWGetData
+
+        Read data from source
+
+ IN:    (glob)	playSourceType	Sourcetype
+ 	void	*dest		Pointer for data
+	word	len		Length
+ OUT:	Boolean	error		errorflag
+
+ *********************************************************/
+
+Boolean  _pascal BSNWGetData(void *dest,word len)
+{
+	Boolean		error = FALSE;
+        word		count = 0;
+
+        switch (playSourceType)
+        {
+            case BSNW_SOURCE_FILE :
+            {
+                if (playSourceFH)
+                {
+		    //sourcetype: File
+                    count = FileRead(playSourceFH,dest,len,FALSE);
+                    error = (count != len);
+                }
+                else
+                {
+                    // invalid FileHandle
+                    error = TRUE;
+                };
+
+            }; break;
+
+            case BSNW_SOURCE_CALL :
+            {
+            	// sourcetype = Callbackroutine
+                if (playCBPtr)
+                {
+                    // call Callbackroutine
+		    error = (Boolean)ProcCallFixedOrMovable_pascal(dest,len,playCBPtr);
+                }
+                else
+                {
+                    // trouble with Callback
+                    error = TRUE;
+                };
+            }; break;
+
+            default : error = TRUE; break;
+        };
+
+        // Save current Position
+        if (!error)
+        {
+            playSourcePos = playSourcePos + len;
+        };
+
+	return (error);
+}
+
+/*********************************************************
+
+		BSNWSetSourcePosition
+
+ 		Set Read-Position
+
+ IN:	dword	pos	new absolute Position
+ OUT	Boolean		errorflag
+ 	(glob)	playSourcePos
+
+ *********************************************************/
+
+Boolean  _pascal BSNWSetSourcePosition(dword pos)
+{
+	Boolean		error = FALSE;
+
+        // save New Position in global Var.
+        playSourcePos = pos;
+
+        // sourcetype
+        switch (playSourceType)
+        {
+            case BSNW_SOURCE_FILE :
+            {
+                if (playSourceFH)
+                {
+                    // go to new Position
+                    (void)FilePos(playSourceFH,pos,FILE_POS_START);
+
+                    // Error ? (ThreadError)
+                    error = (ThreadGetError() > 0);
+                }
+                else
+                {
+                    // invalid FileHandle
+                    error = TRUE;
+                };
+
+            }; break;
+
+            case BSNW_SOURCE_CALL :
+            {
+            	// sourcetype = Callbackroutine
+                error = TRUE;
+
+                // !!! NOT IMPLEMENTED !!!
+            };
+
+            default : error = TRUE; break;
+        };
+
+	return (error);
+}
+
+/*********************************************************
+
+		BSNWSearchChunk
+
+  	Search for chunk type
+
+ IN:	dword	type	Chunktype (Example: CODE_fmt)
+ OUT:	Boolean	TRUE	Chunk found
+
+ *********************************************************/
+
+Boolean	_pascal BSNWSearchChunk(dword type)
+{
+	Boolean	foundFlag = TRUE;
+
+        do
+        {
+            // Set Fileposition
+            // (not at the first time)
+            if (foundFlag)
+            {
+                // 1st loop = no Positioning !
+            	foundFlag = FALSE;
+            }
+            else
+            {
+		playSourcePos = playSourcePos + chunkLen;
+	    	foundFlag = BSNWSetSourcePosition(playSourcePos);
+            };
+
+            // Chunktype
+            if (!foundFlag)
+            {
+            	// Load Chunktype (if Positioning was OK)
+            	foundFlag = BSNWGetData(&chunkType,4);
+            };
+
+            // Chunklength
+            if (!foundFlag)
+            {
+            	//load Chunklength
+            	foundFlag = BSNWGetData(&chunkLen,4);
+            };
+
+
+        } while ( (!foundFlag) && (type != chunkType) );
+
+        foundFlag = (type == chunkType);
+
+        return (foundFlag);
+}
+
+/*********************************************************
+
+		BSNWPrepKS
+
+        Prepare Konverter and soundcard for output
+
+ IN:	word	sampleRate
+ 	word	channels
+        word	bits
+
+ OUT:	int	respond		BSNW_STATUS_OK
+ 				BSNW_HARDWARE_NOT_READY
+ 	(glob)	playSampleRate
+        (glob)	playChannels
+        (glob)	playBits
+        (glob)	konvRateRed	Factor Sampleratereduction
+        (glob)	konvBitsRed	Factor Bitdephtreduction
+        (glob)	konvChanRed	Factor Channelreduction
+
+
+ 1. Get max. values from soundcard and compare with needed params.
+ 2. If necessary --> Adapt Parameters
+ 3. Prepare konverter
+ 4. Programming soundcard (by driver)
+
+ *********************************************************/
+
+int	_pascal  BSNWPrepKS(word sampleRate,
+			    byte channels,
+            		    byte bits)
+{
+    	word	back;		// retVal driver
+    	int	respond = BSNW_STATUS_OK;
+
+        // Get max. values from soundcard
+	stereoToggle = BSNWavGetMaxProperties(&playMaxRate, &playMaxChannels, &playMaxBits);
+
+        // Samplerate
+        if (sampleRate > playMaxRate)
+        {
+            konvRateRed = sampleRate/playMaxRate;
+            playSampleRate = playMaxRate;
+        }
+        else
+        {
+            // Samplerate OK
+            playSampleRate = sampleRate;
+            konvRateRed = 1;
+        };
+
+        // channels
+        if (channels > playMaxChannels)
+        {
+            konvChanRed = channels/playMaxChannels;
+            playChannels = playMaxChannels;
+        }
+        else
+        {
+            // Kanalzahl OK
+            playChannels = channels;
+            konvChanRed = 1;
+        };
+
+        // Bits
+        if (bits > playMaxBits)
+        {
+            konvBitsRed = bits/playMaxBits;
+            playBits = playMaxBits;
+        }
+        else
+        {
+            // Bittiefe OK
+            playBits = bits;
+            konvBitsRed = 1;
+        };
+
+        // Programming Soundcard
+        if ( (sampleRate > 5000) && (sampleRate < 44200) &&
+             (      bits > 7   ) && (      bits < 17   ) &&
+             (  channels > 0   ) && (  channels < 3   ) )
+        {
+            // Parameters valid
+	    back = BSNWSetParams(playSampleRate,(word)playBits,(word)playChannels);
+        };
+
+	// interprete response of soundcard
+	if (back)
+        {
+            respond = BSNW_HARDWARE_NOT_READY;
+        };
+
+    	return (respond);
+}
+
+/*********************************************************
+
+		BSNWLoadData
+
+      Get Data from source into Playcache and
+      copy them with the Konverter to the Secondarybuffer
+
+ IN:	void	*cachePtr
+	void	*secPtr
+        (glob)	secondFree	free Bytes
+        			in Secondarybuffer
+
+ OUT:	int	respond		BSNW_STATUS_OK
+ 				BSNW_HARDWARE_NOT_READY
+                                BSNW_PLAY_FINISHED
+
+ 1. Read data from source
+ 2. Call Konverter
+ 3. goto 1. until Secondarybuffer is filled
+
+ *********************************************************/
+
+int	_pascal BSNWLoadData(void *cachePtr,
+			     void *secPtr)
+{
+	int	respond = BSNW_STATUS_OK;
+
+        // read from source until buffer is filled
+        // or the source go out of data
+        while ( (secondFree) && (respond == BSNW_STATUS_OK) )
+	{
+	    // Fill Cache
+            if ( (cacheFree) && (bytesToPlay) )
+            {
+            	respond = BSNWLoadCache(cachePtr);
+                // bytesToPlay,cacheFull will be updated
+            };
+
+            // Cachedata --> Konverter --> Secondarybuffer
+            if (cacheFull)
+            {
+                // Konvert Cachedata
+                if (konvBitsRed == 1)
+                {
+                    // no reduction of bitdepth
+            	    BSNWKonvertData(cachePtr,secPtr);
+                }
+                else
+                {
+                    // 16 --> 8 Bit
+                    BSNWKonvert16To8(cachePtr,secPtr);
+                }
+            }
+            else
+            {
+                // Source is out of data
+                // fill with silence
+            	BSNWFillSilence(secPtr,secondFree);
+        	respond = BSNW_PLAY_FINISHED;
+            };
+	};
+
+        // End
+        return (respond);
+}
+
+/*********************************************************
+
+		BSNWLoadCache
+
+      Read data from source to cache
+
+ IN:	void	*cachePtr
+ 	(glob)	cacheOffset
+ 	(glob)	cacheFree
+        (glob)	bytesToPlay
+
+
+ OUT:	int	respond		BSNW_STATUS_OK
+ 				BSNW_HARDWARE_NOT_READY
+                                BSNW_PLAY_FINISHED
+
+ *********************************************************/
+
+int	_pascal BSNWLoadCache(void *cachePtr)
+{
+
+	int	respond = BSNW_STATUS_OK;
+        word	len,len2 = 0;
+        byte	*ptr;
+
+        if ( ((dword)cacheFree) < bytesToPlay)
+        {
+            // enough data ready
+            len = cacheFree;
+        }
+        else
+        {
+            // not enough data
+            len = (word)bytesToPlay;
+        };
+
+        // crossing Playcachebounds ?
+        if ( (cacheOffset + len) >= playCacheLen)
+        {
+            // crossing Cachebounds
+            // read data until end of cachebuffer
+            len2 = playCacheLen - cacheOffset;
+
+            ptr =  cachePtr;
+            ptr = ptr + cacheOffset;
+	    if (BSNWGetData(ptr,len2))
+	    {
+            	// Error
+        	respond = BSNW_PLAY_FINISHED;
+                bytesToPlay = 0;
+            }
+            else
+            {
+            	// no error
+            	len = len - len2;
+            	cacheFree = cacheFree - len2;
+                cacheFull = cacheFull + len2;
+                bytesToPlay = bytesToPlay - (dword)len2;
+
+                // Pointer = Start of Cachebuffer
+                cacheOffset = 0;
+            };
+
+        };
+
+        // If loading data until bufferend was OK,
+	// than load the rest from start
+	if ((respond == BSNW_STATUS_OK) && len )
+        {
+            // Load Cache
+            ptr =  cachePtr;
+            ptr = ptr + cacheOffset;
+	    if (BSNWGetData(ptr,len))
+	    {
+            	// error
+        	respond = BSNW_PLAY_FINISHED;
+                bytesToPlay = 0;
+            }
+            else
+            {
+            	// no error
+            	cacheOffset = cacheOffset + len;
+                if (!(cacheOffset<playCacheLen))
+                {
+                    cacheOffset = 0;
+                };
+            	cacheFree = cacheFree - len;
+                cacheFull = cacheFull + len;
+                bytesToPlay = bytesToPlay - (dword)len;
+            };
+        };
+
+        // End
+        return (respond);
+}
+
+/*************************************
+ *
+ *    	BSNWStartPlay
+ *
+ * 	Start NewWave-Play
+ *
+ * IN:  -
+ * OUT:	TRUE	error
+ *
+ *************************************/
+
+Boolean	_pascal	BSNWStartPlay(void)
+{
+        Boolean		back = FALSE;
+        word		back2 = 0;
+
+  	asm push ds
+  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        if(simFlags || !compatFlag)
+        {
+            back2 = 0;
+        }
+        else
+        {
+    	    asm {
+      		push ax
+      	    	push dx
+      	    	push di
+      	    	mov  di,DRE_BSNWAV_START_PLAY
+    	    }
+    	    BSCallDriver();
+    	    asm {
+      	        pop  di
+      	        pop  dx
+      	        pop  ax
+                mov  back2,cx		// retVal
+    	    }
+        };
+
+        // errorflag
+        back = (back2>0);
+
+        asm	pop ds
+
+	return (back);
+}
+
+/************************************************************
+
+ 	BSNWaveGetAIState
+
+        Request state of AutoInit-Output
+
+ IN:		options	    Highbyte > 0 --> Lowbyte valid
+ 			    Lowbyte = bsOptions
+ 	(global)compatFlag
+
+ OUT:	word	high  Byte = 0 -> lower Bufferhalf
+ 		low   Byte = INT Counter
+
+ ***********************************************************/
+
+word	_pascal BSNWaveGetAIState(word options)
+{
+	word	state = 0;
+
+	asm push ds
+	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        if (compatFlag)
+        {
+            // call driver
+    	    asm {
+      	    	push ax
+                push bx
+                push cx
+      	    	push dx
+      	    	push di
+                mov  di,DRE_BSNWAV_GET_AI_STATE
+                mov  cx,options
+    	    }
+    	    BSCallDriver();
+    	    asm {
+            	mov  state,cx
+      	    	pop  di
+      	    	pop  dx
+                pop  cx
+                pop  bx
+      	    	pop  ax
+    	    }
+	};
+
+    	asm	pop ds
+
+        return (state);
+}
+
+/************************************************************
+
+ 	BSNWFillSilence
+
+ 	Fill Secondarybuffer with silence
+
+ IN:	byte	secPtr
+        (glob)	secondKOffset
+        (glob)	secondFree
+        (glob)	secBufLen
+        (glob)	playBits
+
+ ***********************************************************/
+
+void	_pascal BSNWFillSilence(void *secPtr,word len)
+{
+        byte	*ptr;
+        byte	fill;
+
+        // test pointer
+        if (secPtr)
+        {
+            if (playBits==16)
+            {
+            	fill = 0;
+            }
+            else
+            {
+            	fill = 0x80;
+            };
+
+            ptr = secPtr;
+	    ptr = ptr + secondKOffset;
+
+	    while (len && secondFree)
+	    {
+	        // silence
+                *ptr = fill;
+
+                // Pointer to next sample
+                ptr++;
+                len--;
+                secondFree--;
+                secondKOffset++;
+
+                if (secondKOffset>=secBufLen)
+                {
+            	    ptr = secPtr;
+                    secondKOffset = 0;
+                };
+
+            };
+        };
+}
+
+/*********************************************************
+
+		BSNWKonvertData
+
+      Cachedata --> Konverter --> Secondarybuffer
+
+ IN:	void	*cachePtr
+ 	void	*secPtr
+ 	(glob)	cacheFull
+ 	(glob)	cacheKOffset
+        (glob)	secondKOffset
+
+ OUT:	(glob)	peakLevel
+
+ *********************************************************/
+
+void	_pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
+{
+        byte	*dest;
+        byte	*src;
+        byte	b;
+	word	sample;
+        dword	level = 0;
+        dword	div = 0;
+        int	i;
+
+        dest = secPtr + secondKOffset;
+        src =  cachePtr  + cacheKOffset;
+        b = 0x80;
+
+	while ( (cacheFull) && (secondFree) )
+        {
+            // 1:1
+            sample = (word)(*src);
+
+            // Stereo --> Mono
+            if (konvChanRed>1)
+            {
+            	// Pointer / Counter
+            	src++;
+            	cacheFull--;
+            	cacheFree++;
+            	cacheKOffset++;
+
+            	if (cacheKOffset>=playCacheLen)
+            	{
+		    cacheKOffset = 0;
+        	    src =  cachePtr;
+            	};
+
+                sample = (sample + (word)(*src)) / 2;
+            };
+
+            // Sample -> Buffer
+            *dest = (byte)sample;
+
+            // Peak level
+            if (playBits == 16)
+            {
+            	// 16 Bit -> ignore lower Byte of Sample for peakLevel
+		if (0!=(cacheKOffset & 1))
+                {
+		    // only positiv 16 Bit signed values
+                    if ((byte)sample < 0x80)
+                    {
+                        sample = sample + 0x80;
+                        if ( ((byte)sample) > b)
+                        {
+                            b = (byte)sample;
+                        };
+                    };
+
+                };
+            }
+            else
+            {
+                // 8 Bit
+
+                // Compare level with peaklevel
+
+                if ((byte)sample > b)
+                {
+                    b = (byte)sample;
+                };
+
+            };
+
+            // Destination pointer
+            dest++;
+            secondFree--;
+            secondKOffset++;
+            if (secondKOffset>=secBufLen)
+            {
+		secondKOffset = 0;
+        	dest = secPtr;
+            };
+
+            // Sourcepointer to next sample
+            i = konvRateRed;
+            if (konvChanRed>1)
+            {
+                //Stereo -> Mono
+            	i = i+i-1;
+            };
+
+            while(i)
+            {
+
+            	src++;
+            	cacheFull--;
+            	cacheFree++;
+            	cacheKOffset++;
+            	if (cacheKOffset>=playCacheLen)
+            	{
+		    cacheKOffset = 0;
+        	    src =  cachePtr;
+            	};
+            	i--;
+            };
+        };
+
+        // signal level
+        peakLevel2 = (word)(b - 0x80);
+        peakLevel = peakLevel2;
+}
+
+/*********************************************************
+
+		BSNWKonvert16To8
+
+      Cachedata --> Konverter --> Secondarybuffer
+      Konverting 16 Bit WAV to 8 Bit WAV
+
+ IN:	void	*cachePtr
+ 	void	*secPtr
+ 	(glob)	cacheFull
+ 	(glob)	cacheKOffset
+        (glob)	secondKOffset
+
+ OUT:	(glob)	peakLevel
+
+ *********************************************************/
+
+extern	byte		konvRateRed;
+extern	byte		konvBitsRed;
+extern	byte		konvChanRed;
+
+void	_pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
+{
+        byte	*dest;
+        byte	b,bs;
+        int	*src;
+        long	sample;
+        int	i;
+
+        dest = secPtr;
+        src =  cachePtr;
+        dest = dest + secondKOffset;
+        src =  src  + (cacheKOffset>>1);
+        b = 0x80;
+
+	while ( (cacheFull) && (secondFree) )
+        {
+            // read 16 Bit
+            sample = (long)(*src);
+
+            // Stereo -> Mono
+            if (konvChanRed>1)
+            {
+            	src++;
+            	cacheFull--;
+            	cacheFree++;
+            	cacheKOffset++;
+            	cacheFull--;
+            	cacheFree++;
+            	cacheKOffset++;
+
+            	if (cacheKOffset>=playCacheLen)
+            	{
+		    cacheKOffset = 0;
+        	    src =  cachePtr;
+            	};
+
+                sample = (sample + (long)(*src)) / 2;
+            };
+
+            // 16 --> 8
+            bs = (byte)(0x80 + (byte)(sample>>8));
+            *dest = bs;
+
+            // peak level
+            if (bs > b)
+            	b = bs;
+
+            // Dest-pointer
+            dest++;
+            secondFree--;
+            secondKOffset++;
+            if (secondKOffset>=secBufLen)
+            {
+		secondKOffset = 0;
+        	dest = secPtr;
+            };
+
+            // Sourcepointer to next sample
+            i = konvRateRed;
+            if (konvChanRed>1)
+            {
+                //Stereo -> Mono
+            	i = i+i-1;
+            };
+
+            while(i)
+            {
+
+            	src++;
+            	cacheFull--;
+            	cacheFree++;
+            	cacheKOffset++;
+            	cacheFull--;
+            	cacheFree++;
+            	cacheKOffset++;
+            	if (cacheKOffset>=playCacheLen)
+            	{
+		    cacheKOffset = 0;
+        	    src =  cachePtr;
+            	};
+            	i--;
+            };
+
+        };
+
+        // peak level (7 Bit)
+        peakLevel2 = (word)(b - 0x80);
+        peakLevel = peakLevel2;
+}
+
+/************************************************
+
+		BSNWPreCheck
+
+  Checking: 1. Library used by another thread ?
+  	    2. Support the driver NewWave ?
+
+ IN:	playFlags	Parameter
+ OUT:	int		0 = OK
+
+ ************************************************/
+
+int	_pascal BSNWPreCheck(word playFlags)
+{
+	int	respond;
+        word	i;
+
+    	if (playStatus != BSNW_STATUS_OK)
+    	{
+        // Library used by another thread !
+
+    	    // waiting some seconds
+    	    if (playFlags & BSNW_WAIT_FOR_FREE)
+    	    {
+            	i = 0;		// Timeoutcounter
+
+             	do
+             	{
+    	     	    TimerSleep(10);
+                    i++;
+             	}
+	     	while ( (playStatus) && (i<BSNW_WAIT_TIMEOUT) );
+
+             	// Timeout
+             	if (!(i<BSNW_WAIT_TIMEOUT))
+             	{
+            	    // Timeout !
+            	    respond = BSNW_NOT_FREE;
+                }
+                else
+                {
+                    respond = BSNW_STATUS_OK;
+             	};
+    	    }
+    	    else
+    	    {
+            	// no wait, no sound :-(
+            	respond = BSNW_NOT_FREE;
+            };
+        }
+        else
+        {
+            respond = BSNW_STATUS_OK;
+    	};
+
+        // check Hardware
+        if (!BSNWaveCheckDriver(playFlags,0))
+        {
+            // No NewWave-support by driver
+            respond = BSNW_WRONG_DRIVER;
+        };
+	return (respond);
+}
+
+/************************************************
+
+		BSNWInsertSample
+
+   Insert dummy sample for toggling Left/Right
+
+ ************************************************/
+
+void	_pascal BSNWInsertSample(void *ptr,byte bits)
+{
+            byte	*bPtr;
+            word	*wPtr;
+
+            if (bits > 8)
+            {
+                // 16 Bit
+                wPtr = ptr;
+            	*wPtr = 0x0000;
+            	secondOffset++;
+            	secondOffset++;
+            	secondKOffset++;
+            	secondKOffset++;
+            	secondFree--;
+            	secondFree--;
+            }
+            else
+            {
+                // 8 Bit
+                bPtr = ptr;
+            	*bPtr = 0x80;
+            	secondOffset++;
+            	secondKOffset++;
+            	secondFree--;
+            };
+}
+
+/**********************************************************
+
+		BSNWLoadIniSettings
+
+ Subroutine will read some settings from the
+ INI which was written by the Pref-Module prefsndn.geo
+
+ [sound]
+ PlayBufferSize
+ SecondBufferSize
+ OutputChannelReverse
+
+ **********************************************************/
+
+void	BSNWLoadIniSettings(void)
+{
+	if (InitFileReadInteger(soundCatIT,playKeyIT,&playCacheLen))
+        {
+            // default value if not found
+	    playCacheLen = BSNW_BUFFER_SIZE;
+        };
+
+        // Only multiples of 8 allowed
+        // minimal cachesize = 512
+        playCacheLen = playCacheLen & 0xfff8;
+        if (playCacheLen<512)
+        {
+        	playCacheLen = 512;
+        };
+
+	if (InitFileReadInteger(soundCatIT,secondKeyIT,&secBufLenSoll))
+        {
+	    secBufLenSoll = BSNW_BUFFER_SIZE;
+        };
+
+        // Only multiples of 8 allowed
+        // minimal cachesize = 512
+        secBufLenSoll = secBufLenSoll & 0xfff8;
+        if (secBufLenSoll<512)
+        {
+        	secBufLenSoll = 512;
+        };
+
+	if (InitFileReadInteger(soundCatIT,reverseKeyIT,&stereoToggleIni))
+        {
+	    stereoToggleIni = 0;
+        };
+}
+
+/**********************************************************
+
+	BSNWSetParams
+
+  Send Play-params to driver
+
+  IN:	word	rate
+  	word	bits
+        word	channels
+  OUT:	int	0 --> OK
+
+ **********************************************************/
+
+int	_pascal BSNWSetParams(word rate,word bits,word channels)
+{
+        int	back;
+
+    	asm {
+      	    push ax
+      	    push dx
+      	    push di
+      	    mov  di,DRE_BSNWAV_SET_SAMPLING
+      	    mov  bx,rate			/* value number */
+            mov  cx,channels
+            mov  ch,0
+            mov  dx,bits
+            mov  dh,0
+    	}
+    	BSCallDriver();
+    	asm {
+      	    pop  di
+      	    pop  dx
+      	    pop  ax
+            mov  back,cx		// retVal
+    	}
+
+	return(back);
+}
+
+/******************************************************************
+
+	BSNWPrepare
+
+	Preparing Output
+
+ IN:	word	playFlags
+ 	optr	parent
+
+ ******************************************************************/
+
+int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
+{
+	int	respond = 0;
+        word	bits,rate;
+        word	konvertFaktor;
+        char	*ptr;
+        word	size;
+
+        // Delete Flags
+        playStopFlag = FALSE;
+    	statusBox = 0;
+    	respond = BSNW_STATUS_OK;
+    	playCachePtr = 0;
+    	secondPtr = 0;			// Pointer Secondarybuffer
+    	fullLen = 0;
+    	timeOutCounter = 0;
+
+	// Prepare UI (Statusbox) if:
+        if ( (playFlags & BSNW_SHOW_STATUS) // 1. requested
+	  && (parent != NullOptr))	    // 2. parent-obj defined
+        {
+            // Attach Statusbox to Tree and enable
+            statusBox = BSCNCreateStatusBox(parent);
+        }
+        else
+        {
+            // no UI
+            statusGlyphOptr1 = 0;
+            statusGlyphOptr2 = 0;
+	    statusRightBoxOptr = 0;
+        };
+
+        // Allocate Playcache if:
+        if ( respond == BSNW_STATUS_OK )	// 1. Soundcard is ready
+        {
+            // Allocate Playcache
+
+            // Optimize buffersize
+            if (bytesToPlay>(dword)playCacheLen)
+            {
+            	size = playCacheLen;
+            }
+            else
+            {
+            	size = (word)bytesToPlay;
+            };
+
+            playCachePtr = BSNWAllocPlayCache(size);
+            cacheFree    = playCacheLen;
+            cacheFull    = 0;
+        }
+        else
+        {
+            // No Secondarybuffer --> No Playcache
+            playCachePtr = 0;
+        };
+
+
+        // Prepare Soundcard
+
+        if (playCachePtr)
+        {
+            // Playcache OK
+
+            // Prepare Konverter / Soundcard
+            respond = BSNWPrepKS((word)bfc->BWFC_sampleRate,
+            		     (byte)bfc->BWFC_channels,
+            		     (byte)bfc->BWFC_bitsPerSample);
+        }
+        else
+	{
+            // Playcache not valid
+	    respond = BSNW_MEMORY_ERROR;
+        };
+
+        // Display WAV-Parameters
+        if (statusGlyphOptr1)
+        {
+
+@ifndef	BSNWAV_NO_UI
+
+            rate = (word)(bfc->BWFC_sampleRate);
+	    bits = (word)(bfc->BWFC_bitsPerSample);
+
+            ptr = playStatusText;
+            konvertFaktor = (konvRateRed * konvBitsRed * konvChanRed);
+
+            if (konvertFaktor>1)
+            {
+                // if konverting --> []
+            	*ptr = '[';
+                ptr++;
+            };
+
+            if (bfc->BWFC_channels == 1)
+            {
+	    	sprintf(ptr,"%uHz - %uBit - Mono",rate,bits);
+            	// Mono --> Disable right Speaker
+            	@send statusRightBoxOptr::MSG_GEN_SET_NOT_USABLE(VUM_NOW);
+	    }
+            else
+            {
+	    	sprintf(ptr,"%uHz - %uBit - Stereo",rate,bits);
+            };
+
+            if (konvertFaktor>1)
+            {
+            	strcat(playStatusText,"]");
+            };
+
+            @call statusGlyphOptr1::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_DELAYED_VIA_UI_QUEUE); /**/
+
+@endif
+
+        };
+
+        // Allocating Secondbuffer
+
+        if (respond == BSNW_STATUS_OK)
+        {
+            // Allocate Secondarybuffer
+            secBufLen  = BSNWAllocSecBuffer(&secondPtr,secBufLenSoll);
+            secBufL2   = secBufLen>>1;		// halbe Pufferl„nge
+            secondFree = secBufLen;
+        };
+
+        playLen2     = secBufL2 * konvRateRed * konvBitsRed * konvChanRed;
+        fullLen      = bytesToPlay;
+        playedBytes  = 0;
+        secondOffset = 0;
+        cacheOffset  = 0;
+        secondKOffset= 0;
+        cacheKOffset = 0;
+
+        // Toggle channels if :
+        if (  ( stereoToggle && (stereoToggleIni==0) )	// 1. driver request this
+	    ||(!stereoToggle && (stereoToggleIni >0) ) )// 2. INI request this
+        {
+            BSNWInsertSample(secondPtr,playBits);
+        };
+
+	return (respond);
+};
+
+/**********************************************************
+
+	BSNWPlay
+
+        Read Data from source and play it
+
+ IN:	bytesToPlay
+ OUT:	respond
+
+ **********************************************************/
+
+int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
+{
+        int	respond = BSNW_STATUS_OK;
+        dword	i;
+        word	aiState,aiState2;
+        dword	newSec,lastSec = 0;		// Sekundenwerte
+
+
+        peakLevel2 = 0;				// reset helper
+
+	if(BSNW_PLAY_FINISHED==BSNWLoadData(playCachePtr,secondPtr))
+        {
+            // extreme short WAV-file
+	    BSNWStartPlay();
+	    aiState2 = BSNWaveGetAIState(0xFF01);	// FF01 --> ISR clear the buffer
+
+            do
+            {
+                TimerSleep(1);
+	        aiState = BSNWaveGetAIState(0);
+            } while (aiState == aiState2);
+        }
+        else
+        {
+
+
+/////////////////////////////////////////////////
+//	PLAYLOOP
+//
+// No data to play --> respond = BSNW_PLAY_FINISHED
+//
+/////////////////////////////////////////////////
+
+            i = 0;		// loopcounter
+
+            // loop until end
+	    while (respond == BSNW_STATUS_OK)
+	    {
+                // 1st loop --> start
+                if (i==0)
+                {
+		    BSNWStartPlay();
+		    aiState2 = BSNWaveGetAIState(0xFF01);	// FF01 --> ISR clear the buffer
+                };
+
+	        aiState = BSNWaveGetAIState(0);
+                if (aiState != aiState2)
+                {
+                    //////// INT ! //////////
+
+                    playedBytes = playedBytes + playLen2;
+
+                    // Timeout-detector
+                    if ( ( ( (aiState & 0x00ff)-1 ) != (aiState2 & 0x00ff) )
+                     &&(aiState & 0x00ff) )
+                    {
+                        // Timeout !
+                        timeOutCounter++;
+@ifndef	BSNWAV_NO_UI
+            	        sprintf(playStatusText,"%u Timeout(s)",(word)timeOutCounter);
+            	        @call statusGlyphOptr1::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_NOW); /**/
+@endif
+                    };
+                    // update globals
+                    secondFree = secondFree + secBufL2;
+                    aiState2 = aiState;
+
+                    // Detect DMA-bufferside
+                    if (aiState & 0xFF00)
+                    {
+                        secondKOffset = 0;
+                    }
+                    else
+                    {
+                        secondKOffset = secBufL2;
+                    };
+
+                    /////// End INT /////
+                }
+                else
+                {
+                    // no INT --> let the current Thread 1/60 sec sleep
+            	    TimerSleep(1);
+                };
+
+                // load data to playcache until Secondarybuffer is filled
+                if(secondFree)
+                {
+	    	    respond = BSNWLoadData(playCachePtr,secondPtr);
+
+                    if (bytesToPlay)
+                    {
+                        // "some" bytes left
+                    }
+                    else
+                    {
+                        // Reading data is done
+
+
+                        // wait until soundcard has played all samples
+             	        if (playedBytes < fullLen)
+                        {
+                    	    respond = BSNW_STATUS_OK;
+
+                        }
+                        else
+                        {
+                    	    respond = BSNW_PLAY_FINISHED;
+                        };
+                    };
+                };
+
+                ////////////// Display if: /////////////
+
+                if ( (statusGlyphOptr2) 		// 1. requested
+	          && (secondFree == 0)		// 2. Buffers are filled
+	          && ((i&0x001F) == 0x0007)	)	// 3. 8th loop
+                {
+                    newSec = BSNWaveCalcPlaytimeText(playStatusText,playedBytes,fullLen,bfc->BWFC_avgRate,BSCPT_REST_TIME);
+                    if ( (newSec != lastSec)	// 4. new SECOND or
+                      || (newSec < 5 ) )		//    SECOND lower 5
+                    {
+@ifndef	BSNWAV_NO_UI
+            	        @send statusGlyphOptr2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_DELAYED_VIA_UI_QUEUE);
+@endif
+                        lastSec = newSec;
+                    };
+                };
+
+                ///////// Simulation (NT-Target) //////////
+                if (simFlags)
+                {
+            	    secondFree = secBufL2;
+    //	    	UserStandardSound(SST_CUSTOM_NOTE,HIGH_A,5);
+            	    TimerSleep(5);
+                };
+
+                /////////// Check Abort condition /////////////
+
+                // Stopflag (Abort by user)
+                if (playStopFlag)
+                {
+            	    respond = BSNW_ABORT;
+                };
+
+                i++;		// loopcounter
+            };
+        };
+
+////////////// END ///////////////////////
+
+        // Stop soundcard/DMA and free Secondarybuffer
+        // (driver will do this jobs)
+	BSNWaveStopRecOrPlay(secondPtr);
+
+	if (respond == BSNW_PLAY_FINISHED)
+        {
+            // BSNW_PLAY_FINISHED is only for internal use
+	    // must be replaced with BSNW_STATUS_OK
+            respond = BSNW_STATUS_OK;
+        };
+
+        // Free Playcache
+        if (playCachePtr)
+        {
+            if(secondHandle)
+            {
+                // Simulated Secondarybuffer (NT Target)
+	    	MemUnlock(secondHandle);
+	    	MemFree(secondHandle);
+            };
+
+	    MemUnlock(playCacheHandle);
+	    MemFree(playCacheHandle);
+
+        };
+
+@ifndef	BSNWAV_NO_UI
+        // Disable Statusbox and remove from tree if:
+        if (    (playFlags &  BSNW_SHOW_STATUS)	// 1. Display was visible
+	     && (parent    != NullOptr)		// 2. parent was defined
+	     && (statusBox != NullOptr) )	// 3. statusBox was defined
+        {
+	    @call statusBox::MSG_GEN_SET_NOT_USABLE(VUM_NOW);
+	    @call parent::MSG_GEN_REMOVE_CHILD(statusBox,0);
+	    @call statusBox::MSG_META_BLOCK_FREE();
+        };
+@endif
+
+        // reset internal state
+        playStatus = BSNW_STATUS_OK;
+
+    	return (respond);
+}
+

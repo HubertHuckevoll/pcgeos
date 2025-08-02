@@ -1,0 +1,91 @@
+R 0.21.0.0 <Dirk> <1:52:58 Dec 18, 2000> <short-WAV-playing OK>
+R 0.20.1.0 <Dirk> <0:13:29 Dec 18, 2000> <Library will wait until shutdown-sound is played>
+R 0.20.0.0 <Dirk> <2:21:04 Dec 15, 2000> <STANDARD.GEO will not cause crashes>
+R 0.19.2.0 <Dirk> <0:22:19 Dec 14, 2000> <Cachesizes multiples of 8>
+R 0.19.1.0 <Dirk> <21:46:43 Nov 30, 2000> <Wait on detach until WAV was played>
+R 0.19.0.0 <Dirk> <1:02:27 Nov 30, 2000> <no use of UI-Lib>
+P 1.6
+R 0.18.3.0 <Dirk> <2:52:26 Nov 24, 2000> <Compilerflag BSNWAV_NO_UI>
+R 0.18.2.0 <Dirk> <17:06:46 Nov 4, 2000> <BSNWLibEntry bugfixed>
+P 1.5
+R 0.18.2.0 <Dirk> <23:06:57 Oct 1, 2000> <BSNWaveGetLastFormat gibt datLen zurck>
+R 0.18.1.1 <Dirk> <2:38:29 Sep 27, 2000> <BSNWaveGetLastFormat changed>
+R 0.18.0.0 <Dirk> <23:29:16 Aug 21, 2000> <Build for ND>
+P 1.4 <Dirk> <23:29:05 Aug 21, 2000> <New entrypoints>
+R 0.17.2.4 <Dirk Lausecker> <15:51:02 Aug 18, 2000> <optimizing levelmeter>
+R 0.17.2.0 <Dirk Lausecker> <18:16:12 Aug 17, 2000> <removing avg level>
+R 0.17.1.0 <Dirk Lausecker> <17:54:10 Aug 17, 2000> <avg level>
+R 0.17.0.0 <Dirk> <15:40:35 Aug 13, 2000> <BSNWaveGetLastFormat>
+R 0.16.3.0 <Dirk> <12:01:42 Aug 13, 2000> <Bugfix resetting playState after abort>
+R 0.16.2.0 <Dirk Lausecker> <17:26:38 Aug 11, 2000> <BSNWaveGetPlayState()>
+R 0.16.1.0 <Dirk> <1:41:29 Aug 8, 2000> <Translation of the comments>
+R 0.16.0.0 <Dirk> <0:15:42 Jul 29, 2000> <Vorbereitung fr NewDeal Contract>
+R 0.15.4.0 <19:15:46 Apr 15, 19100> <Callback OK>
+R 0.15.3.0 <18:08:48 Apr 15, 19100> <BSNWPrepare neuer Parameter>
+R 0.15.2.0 <17:53:48 Apr 15, 19100> <BSNWPlay,BSNWPrepare --> SUBCODE.GOC>
+R 0.15.1.1 <17:22:18 Apr 15, 19100> <BSNWPlay()>
+R 0.15.1.0 <17:17:16 Apr 15, 19100> <BSNWPrepare()>
+R 0.15.0.0 <18:50:18 Apr 10, 19100> <Vorbereitung WavPlayCallback>
+R 0.14.3.0 <dirk> <16:07:59 Apr 8, 2000> <Timeoutmeldung per Call>
+R 0.14.2.0 <dirk> <14:56:45 Apr 8, 2000> <Treiberaufrufe nur wenn NewWave-Treiber>
+R 0.14.1.0 <Dirk Lausecker> <17:50:13 Apr 7, 2000> <BSNWaveGetStatus>
+P 1.3
+R 0.14.0.0 <Dirk Lausecker> <17:05:59 Apr 7, 2000> <BSNWavePlayMemory deaktiviert>
+R 0.13.2.0 <Dirk Lausecker> <16:42:17 Apr 7, 2000> <library sound aus GP-File entfernt>
+R 0.13.1.0 <Dirk Lausecker> <17:25:25 Apr 6, 2000> <BSCallDriver optimiert>
+P 1.2 <04.04.2000> <TreiberTest andere Parameter>
+R 0.13.0.0 <Dirk Lausecker> <16:43:50 Apr 4, 2000> <Treibertest universell>
+R 0.12.4.0 <Dirk Lausecker> <16:22:50 Apr 4, 2000> <Neustrukturierung BSNWavePlayFile()>
+R 0.12.3.1 <Dirk Lausecker> <15:53:59 Apr 4, 2000> <Treiber l”scht abgespielte Bufferh„lfte>
+R 0.12.2.0 <dirk> <3:01:25 Mar 23, 2000> <Anpassung an 8/16 Bit>
+R 0.12.1.0 <dirk> <1:23:39 Mar 20, 2000> <Buffergr”áe / Stereokanaltausch aus INI>
+R 0.12.0.0 <dirk> <21:24:47 Mar 17, 2000> <Treiber kann Tausch der Stereokan„le anfordern>
+R 0.11.0.0 <dirk> <0:49:49 Mar 17, 2000> <Treiberconnect beim Laden der Library>
+P 1.1 <16.03.2000> <Singlecycle entfernt>
+R 0.10.1.0 <dirk> <0:30:17 Mar 13, 2000> <Treibertest mit Wert 5>
+R 0.10.0.0 <dirk> <0:12:22 Mar 13, 2000> <BSNWaveCheckDriver>
+R 0.9.8.0 <dirk> <18:04:18 Mar 12, 2000> <Moniker>
+R 0.9.7.0 <dirk> <0:48:44 Mar 12, 2000> <Singlecycle deaktiviert (Probleme Geos2.01>
+R 0.9.6.0 <Dirk Lausecker> <14:13:07 Mar 10, 2000> <singleMode verhindert Prelleffekt bei SC-Init.>
+R 0.9.5.0 <Dirk Lausecker> <17:46:29 Mar 9, 2000> <>
+R 0.9.4.18 <Dirk Lausecker> <15:27:40 Mar 9, 2000> <Singlecycleende>
+R 0.9.4.0 <20:36:48 Mar 8, 19100> <[konv. Format]>
+R 0.9.3.0 <dirk> <22:18:03 Mar 6, 2000> <Restzeitanzeige>
+R 0.9.2.0 <Dirk Lausecker> <16:50:17 Mar 6, 2000> <M”glichen Singlecycleaufruf eingebaut>
+R 0.9.1.0 <Dirk Lausecker> <17:46:37 Mar 2, 2000> <BSNWPrepKS aufger„umt>
+R 0.9.0.0 <Dirk Lausecker> <16:53:38 Mar 2, 2000> <BSNWPlayMemory>
+R 0.8.6.0 <Dirk> <20:27:20 Mar 1, 2000> <Aufr„umaktion>
+R 0.8.5.59 <Dirk> <19:18:08 Mar 1, 2000> <simFlags erm”glichen Test unter NT-Target>
+R 0.8.5.0 <Dirk Lausecker> <15:09:41 Feb 29, 2000> <Konverter>
+R 0.8.4.0 <dirk> <3:32:41 Feb 29, 2000> <Knackbug gefunden>
+R 0.8.3.0 <Dirk Lausecker> <16:48:59 Feb 28, 2000> <Timeouterkennung>
+R 0.8.2.0 <dirk> <3:17:50 Feb 28, 2000> <>
+R 0.8.1.40 <dirk> <3:16:33 Feb 28, 2000> <Zu viel Statusanzeige -> St”rungen>
+R 0.8.1.0 <dirk> <11:16:25 Feb 26, 2000> <Windows WAV-Files werden abgespielt>
+R 0.8.0.0 <dirk> <16:51:59 Feb 25, 2000> <Play funktioniert>
+R 0.7.6.0 <dirk> <23:17:22 Feb 23, 2000> <>
+R 0.7.5.0 <Dirk Lausecker> <16:34:53 Feb 23, 2000> <SUBCODE.GOC angelegt>
+R 0.7.4.0 <dirk> <2:10:26 Feb 22, 2000> <Waveformatprfung implementiert>
+R 0.7.3.0 <Dirk Lausecker> <16:51:10 Feb 21, 2000> <Headeranalyse>
+R 0.7.2.0 <dirk> <1:30:56 Feb 21, 2000> <Umbenennung StopRecording/StopRecOrPlay>
+R 0.7.1.0 <Dirk Lausecker> <17:29:09 Feb 18, 2000> <BSNWSecondAlloc>
+R 0.7.0.0 <dirk> <0:42:58 Dec 27, 1999> <Ableitung BS-NewWave>
+R 0.6.0.0 <dirk> <0:30:48 Oct 25, 1999> <BSRecGetMaxProperties>
+R 0.5.5.0 <dirk> <19:39:59 Oct 22, 1999> <BSRecGetState prft Recordingf„higkeit des Treibers>
+R 0.5.4.0 <dirk> <1:50:06 Oct 20, 1999> <BSRecCalcRMS berechnet w„hrend Aufnahme RMS>
+R 0.5.3.0 <dirk> <17:07:35 Oct 16, 1999> <WAV-Header>
+R 0.5.2.0 <dirk> <19:27:50 Oct 14, 1999> <GetData>
+R 0.5.1.0 <dirk> <23:05:04 Oct 10, 1999> <TempFileCreate>
+R 0.5.0.0 <dirk> <0:32:13 Oct 7, 1999> <Ableitung fr Recording>
+R 0.4.2.0 <23:51:39 Oct 21, 1998> <Flag driverUsed>
+R 0.4.1.0 <16:26:55 Oct 14, 1998> <Treibertest OK>
+R 0.4.0.0 <15:36:17 Oct 13, 1998> <Itemgroup OK>
+R 0.3.2.0 <12:19:18 Oct 10, 1998> <Balance L-R getauscht>
+R 0.3.1.0 <10:58:35 Oct 10, 1998> <Pegel einstellbar !>
+R 0.3.0.0 <19:37:39 Oct 9, 1998> <Definition mixerValue von BSMixer.app bernommen>
+R 0.2.0.0 <16:29:03 Oct 8, 1998> <Token fr Text>
+R 0.1.1.0 <19:50:13 Oct 6, 1998> <Mixertreiber wird geladen>
+R 0.1.0.0 <12:07:58 Oct 6, 1998> <Umbau von Template erfolgreich>
+R 0.0.0.4 <18:28:06 Jun 21, 1997> <Initialversion>
+P 1.0 <22:31:44 Jun 7, 1997> <>
+R 0.1.0.0 <22:31:44 Jun 7, 1997> <>

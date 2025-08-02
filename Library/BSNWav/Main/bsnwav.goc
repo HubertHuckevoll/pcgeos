@@ -1,0 +1,1221 @@
+/**************************************************************
+
+   Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+
+PROJECT:	BestSound NewWave-Library
+
+FILE:		BSNWAV.GOC
+
+AUTHOR:		Dirk Lausecker
+
+REVISION HISTORY:
+	Name	Datum		Beschreibung
+	----	-----		------------
+	DL	20.02.2000	new Header
+	DL	23.02.2000	subroutines -> SUBCODE.GOC
+	DL	07.08.2000	Translation of the comments
+	DL	29.11.2000	Excluding use of UI-Lib
+        DL	01.01.2001	Play Start/End Position
+
+Descr.:
+        Library playing WAV-files with a totally new technique
+        Communicating directly with the soundcard-driver over
+        new defined entrypoints without SOUND and STREAM Library !
+
+Routines:
+	BSNWavePlayFile		Exported function for Application level
+	BSNWaveStop        	Stopping playing with setting a internal flag
+ 	BSNWaveStopRecOrPlay	Stopping driver Recording or Playback
+	BSNWAllocSecBuffer	Allocating Secondarybuffer
+        BSNWaveGetStatus	Getting State
+
+Playcache:
+        The loaded data from the source (WAV-file) will be temporally
+        saved in the playcache. When the playcache is filled, the
+        sample data will be converted (if needed) and transfered to
+        the secondary buffer (allocated by the soundcard driver)
+
+Secondarybuffer:
+        Allocated DMA-Buffer (by the driver)
+
+***************************************************************/
+
+/* Flag for german localized version */
+/*
+@define	GERMAN
+#define	GERMAN
+
+/*-----------------------------------*/
+/* Switching off the use of UI-Lib   */
+@define	BSNWAV_NO_UI
+/*-----------------------------------*/
+
+
+#define SIM_VALUE	0
+// 1 --> for testing purpose only / Allocating Secbuffer by library
+
+@include <stdapp.goh>
+
+@ifndef BSNWAV_NO_UI
+#include <Ansi/stdio.h>
+#include <Ansi/string.h>
+@endif
+
+#include <gstring.h>
+#include <library.h>
+#include <driver.h>
+#include <initfile.h>
+#include <geode.h>
+
+#include <dirksnd.h>
+#include <file.h>
+#include <riff.h>
+
+@include "bsnwav.goh"
+
+/******************** Const / Makros ************************/
+
+#define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
+#define FP_OFF( fp )( (unsigned )( fp ))
+#define MK_FP( seg,ofs )( (void _seg * )( seg ) +( void near * )( ofs ))
+
+/*********************************
+    Globals fr BSNWave
+ *********************************/
+
+word		datasize 	= 0;		//Buffer for ReadIni
+Handle		sampleDriver	= NullHandle;
+const char 	*soundCatIT 	= "sound";		//INI Entry
+const char 	*sampleDriverIT = "sampleDriver";	//INI Entry
+const char 	*synthDriverIT 	= "synthDriver";	//INI Entry
+
+GeodeLoadError 	gle;
+Boolean		driverUsed	= FALSE;	// driver loaded by BSNWAV
+DriverInfoStruct *driverInfo;			// driver address
+
+//
+// for NewWave-Play
+//
+word		simFlags = SIM_VALUE;	// Bit0->Simulating Soundcard
+int		playStatus = 0;		// 0 = System ready (default)
+					// 1 = Playing from File
+					// 2 = Playing from Memory
+int		playStopFlag = 0;	// <>0 --> Abort
+dword		playedBytes = 0;	// played Bytes
+dword		bytesToPlay = 0;	// Bytes to play
+optr		statusGlyphOptr1 = 0;	// 1. col Statusbox
+optr		statusGlyphOptr2 = 0;
+optr		statusRightBoxOptr = 0;
+char		playStatusText[80];
+MemHandle	playCacheHandle = NullHandle;
+BSWavFileHeader	bwfh;					// Header WAV-File
+word		playSourceType = BSNW_SOURCE_FILE;	// Datasource = File
+FileHandle	playSourceFH = NullHandle;		// FileHandle Source
+dword   	chunkType = 0;
+dword		chunkLen = 0;
+dword		playSourcePos = 0;	// Current Position in WAV-Source
+word		playSampleRate = 0;
+byte		playChannels = 1;	// channels 1=mono
+byte		playBits = 8;		// Bitdepth
+word		playMaxRate = 0;	// Rate supported by soundcard
+byte		playMaxChannels = 1;	// channels
+byte		playMaxBits = 8;	// Bits
+byte		konvRateRed = 1;	// Factor Sampleratereduction
+byte		konvBitsRed = 1;	// Factor Bitreduction
+byte		konvChanRed = 1;	// Factor Channelreduction
+
+byte		*playCachePtr;		// Pointer Playcache
+byte		*secondPtr;		// Pointer Secondarybuffer
+word		playCacheLen = 8192;	// Length Playcache
+word		secBufLen = 8192;	// Length Secondarybuffers
+word		secBufLenSoll = 8192;	// requested length Secondarybuffer
+word		cacheOffset = 0;	// Offset PlayCache
+word		secondOffset = 0;	// Offset Secondbuffer
+word		cacheFree = 0;		// Free space in PlayCache
+word		cacheFull = 0;		// waiting Bytes in cache
+word		cacheKOffset = 0;	// Cacheoffset Reader
+word		secondKOffset = 0;	// SecondPointerOffset Reader
+word		secondFree = 0;         // Free space in Secondarybuffer
+word		secondHandle = 0;	// test purpose only (SecondAlloc)
+word		peakLevel = 0;		// signal level (calculated by Konverter)
+word		playLen2 = 0;		// needed samples from Cache
+					// for filling Secondarybufferhalf
+void		*playCBPtr;		// Callback pointer
+Boolean		stereoToggle = FALSE;	// Soundcard toggle Left/Right
+word		stereoToggleIni = 0;	// INI-Value
+
+Boolean		compatFlag = FALSE;	// TRUE = driver supports "NewWave"
+optr		statusBox;
+word		secBufL2;
+dword		fullLen;
+dword		timeOutCounter;
+GeodeHandle	attachGeode = 0;
+
+/**********************************************************
+	Internal Functions
+ **********************************************************/
+
+int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent);
+int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent);
+
+/*
+ *      MONIKER
+ */
+
+@start MONIKERRESOURCE, data;
+@include <Art/moniker.goh>
+@end MONIKERRESOURCE;
+
+
+
+@include "Main/subcode.goh"
+
+@ifndef	BSNWAV_NO_UI
+@class	StatusInteractionClass,GenInteractionClass;
+
+@endc;
+
+@classdecl StatusInteractionClass;
+
+@endif
+
+/*********** Exported Library-Functions *************/
+
+
+/**************************************************
+
+     	BSNWavGetMaxProperties
+
+        Requesting Maxrate, channels, bits
+
+  IN:   *maxRate	Pointer Rate
+ 	*maxChannels	Pointer channels
+ 	*maxBits	Pointer Bits
+  OUT:	maxRate, maxChannels, maxBits
+ 	reverseFlag	TRUE -> channels must be
+				toggled (SBPro)
+
+ *************************************************/
+
+Boolean	_pascal	BSNWavGetMaxProperties(word *maxRate, byte *maxChannels, byte *maxBits)
+{
+        byte	reverseByte;
+	word	rate = 22050;
+        byte	channels = 1;
+        byte	bits = 8;
+
+  	asm push ds
+  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        // Is driver New-Wave compatible ?
+        if (compatFlag)
+        {
+    	    asm {
+      	    push di;
+      	    mov  di,DRE_BSNWAV_GET_MAX_PROPERTIES;	/* get value */
+    	    }
+    	    BSCallDriver();
+    	    asm {
+      	    pop  di;
+            mov  rate,cx;
+            mov	 channels,dl;
+            mov	 bits,dh;
+            mov	 reverseByte,al;
+            }
+    	};
+
+        // retVal
+        *maxRate = rate;
+	*maxChannels = channels;
+        *maxBits = bits;
+
+        asm pop ds
+
+	return (reverseByte > 0);
+}
+
+/*************************************
+ *
+ *    	BSNWaveStopRecOrPlay
+ *
+ * 	Stopping Rec/Play
+ *
+ * IN:
+ * OUT:	TRUE	= Error
+ *
+ *************************************/
+
+Boolean	  _pascal  BSNWaveStopRecOrPlay(void *secPtr)
+{
+        Boolean	back;
+        word	back2;
+
+  	asm push ds
+  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+    	// Clear Secondarybuffer
+        if (secPtr)
+	{
+    	    BSNWFillSilence(secPtr,secBufLen);
+        };
+
+    	if ( (simFlags == 0) && (compatFlag) )
+    	{
+
+        // Stopping driver
+
+    	  asm {
+      	    push ax
+      	    push dx
+      	    push di
+	    mov  di,DRE_STOP_REC_OR_PLAY
+    	    }
+    	  BSCallDriver();
+    	  asm {
+      	    pop  di
+      	    pop  dx
+      	    pop  ax
+            mov  back2,cx		// Rckgabewert
+    	    }
+    	};
+
+        // Errorflag
+	back = (back2 > 0);
+
+        asm	pop ds
+
+	return (back);
+}
+
+/***************************************************************
+
+	BSNWavePlayFile
+
+        Main function for playing WAV-file
+
+ Descr:	Blocking calling thread until playing is finished
+ 	or aborted by flag
+
+ IN:    FileHandle	RIFF-File
+ 	word		playFlags (Parameter)
+        Bit 0		BSNW_SHOW_STATUS
+        Bit 1		BSNW_WAIT_FOR_FREE
+        Bit 2		BSNW_SHOW_ERROR_MSG
+        Bit 3           reserved
+	Bit 4		BSNW_TEST_ONLY
+	optr		parent (Gentree Statusbox)
+
+ OUT:	int		status (reason of ending)
+ 	= 0		success / no errors
+	= 1		aborted by flag
+	= 2		Timeout
+        = 3		Soundcard not ready
+        = 4		Memory error
+        = 5		PLAY by another thread
+        = 6		BSNW_UNKNOWN_WAVE_FORMAT
+
+ [Play From/Len]
+ The optr (parent) will be used as a pointer to a structure
+ for defining the Startposition (ms) and the max. playtime (ms)
+
+typedef struct {
+	dword		BWPP_start;		// Startposition (ms)
+	dword		BWPP_stop;		// time for play (ms)
+
+} BSWavPlayPositions;
+
+typedef struct {
+	word		BWFC_dataFormat;	// 1 = PCM-Daten
+        word		BWFC_channels;		// Kanalzahl
+        dword		BWFC_sampleRate;	// Samples pro Sekunde
+        dword		BWFC_avgRate;		// durchschnittl. Datenrate
+        word		BWFC_blockAlign;	// L„nge eines Sampleblocks
+        word		BWFC_bitsPerSample;	// Bits pro Sample
+
+} BSWavFormChunk;
+
+typedef struct {
+	char		BWFH_typRIFF[4];	// "RIFF"
+	dword		BWFH_fullLen;		// Gesamtdateigr”áe - 8
+	char		BWFH_formName[4];	// "WAVE"
+	char		BWFH_typFMT[4];		// "fmt "
+	dword		BWFH_fmtLen;		// 16
+	BSWavFormChunk	BWFH_fmtChunk;
+	char		BWFH_typData[4];	// "data"
+	dword		BWFH_datLen;		// L„nge der Sounddaten
+
+} BSWavFileHeader;
+
+
+ *********************************************************/
+
+int 	_pascal BSNWavePlayFile(FileHandle fh,
+				word 	   playFlags,
+				optr 	   parent)
+{
+        int			respond;		// retVal
+        dword			posStart;
+	dword			posStop;
+	BSWavPlayPositions	*posPtr;
+
+	asm push ds
+	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+	// PLAY by another thread ?
+	respond = BSNWPreCheck(playFlags);
+
+	if (respond == BSNW_STATUS_OK)
+        {
+
+    ////////////// Prepare Library ////////////////////
+
+            // setting internal state (for other threads)
+            playStatus = BSNW_STATUS_PLAY_FILE;
+
+            // Data sourcetype
+	    playSourceType = BSNW_SOURCE_FILE;		// Datenquelle = File
+
+            // FileHandle of WAV-file
+            playSourceFH = fh;
+
+            // checking soundcard state
+            if ( BSNWaveGetStatus() != 0 )
+            {
+                // Soundcard not free
+                respond = BSNW_HARDWARE_NOT_READY;
+            };
+
+    ////////////// Analyze WAV-Header ////////////////
+
+	    if (respond == BSNW_STATUS_OK)
+            {
+                respond = BSNWReadWaveFormat(&bwfh);
+            };
+
+            // Errormessage to user if:
+            if ( (respond == BSNW_UNKNOWN_WAVE_FORMAT)	// 1. unknown Format
+              && (playFlags & BSNW_SHOW_ERROR_MSG ) )	// 2. Message allowed
+            {
+                // "Unknown Waveformat !"
+	        BSNWaveDialogUnknownFormat(bwfh.BWFH_fmtChunk.BWFC_dataFormat);
+                playStatus = BSNW_STATUS_OK;
+	    };
+
+    ////////////// Analyze chunks ////////////////
+
+            if ((respond == BSNW_STATUS_OK) )
+            {
+    	        // search for data-Chunk
+    	        if (BSNWSearchChunk(CODE_data))
+    	        {
+		    // data-Chunk found
+
+                    // PlayPositions
+                    if ( (playFlags & BSNW_PLAY_POS)
+                      && (0==(playFlags & BSNW_SHOW_STATUS))
+		      && (parent>0))
+                    {
+                        // read PlayPostions
+                        posPtr   = (BSWavPlayPositions*)parent;
+                    	posStart = posPtr->BWPP_start;
+			posStop   = posPtr->BWPP_stop;
+
+                        // ms -> Blocks
+                        // Samples = (x * Samplerate)/1000
+                        posStart = (posStart * bwfh.BWFH_fmtChunk.BWFC_sampleRate)/1000;
+			posStop   = (posStop * bwfh.BWFH_fmtChunk.BWFC_sampleRate)/1000;
+
+                        // Blocksize -> Bytes
+                        posStart = posStart * bwfh.BWFH_fmtChunk.BWFC_blockAlign;
+			posStop   = posStop * bwfh.BWFH_fmtChunk.BWFC_blockAlign;
+
+			// Startposition
+			if ((posStart>0) && (posStart<chunkLen))
+			{
+			    (void)BSNWSetSourcePosition(playSourcePos+posStart);
+			};
+
+			// Stop
+			if ((posStop > posStart) && (posStop < chunkLen))
+			{
+			    chunkLen = posStop - posStart;
+			}
+			else
+			{
+			    chunkLen = chunkLen - posStart;
+			};
+		    };
+
+		    // Prepare output
+		    bytesToPlay = chunkLen;
+                    bwfh.BWFH_datLen = chunkLen;
+
+                    if ((0==(playFlags & BSNW_TEST_ONLY)))
+                    {
+            	    	respond = BSNWPrepare(&bwfh.BWFH_fmtChunk,playFlags,parent);
+                    };
+                }
+                else
+                {
+    		    // data-Chunk not found
+                    bwfh.BWFH_datLen = 0;
+        	    bytesToPlay = 0;
+		    playSampleRate = 0;
+		    playChannels = 0;
+		    playBits = 0;
+	    	    respond = BSNW_MEMORY_ERROR;
+                };
+            };
+
+    /////////////       PLAY	//////////////////
+
+            if ((respond == BSNW_STATUS_OK)&& (0==(playFlags & BSNW_TEST_ONLY)))
+            {
+                // Play WAV-file
+                respond = BSNWPlay(&bwfh.BWFH_fmtChunk,playFlags,parent);
+            }
+            else
+            {
+		playStatus = BSNW_STATUS_OK;
+            };
+
+        };
+
+        asm	pop ds
+
+	return (respond);
+}
+
+/********************************************
+
+	BSNWaveStop
+
+        Stopping playing
+
+ ********************************************/
+
+void 	_pascal BSNWaveStop(void)
+{
+    	asm push ds
+    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        // set Stopflag
+        playStopFlag = TRUE;
+
+        asm pop ds
+}
+
+/*************************************
+ *
+ *    	BSNWaveSetPause
+ *
+ * 	NewWave-Play Pause/Restart
+ *
+ * IN:	byte	modus	0 = state requ.
+ *			1 = PAUSE
+ *			2 = Restart
+ * OUT:	byte	current mode
+ *
+ *************************************/
+
+byte  _pascal  BSNWaveSetPause(byte mode)
+{
+        byte	back;
+
+  	asm push ds
+  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+
+    	if (simFlags == 0 && compatFlag)
+    	{
+
+    	  asm {
+      	    push ax
+      	    push dx
+      	    push di
+            mov	 cl,mode
+      	    mov  di,DRE_BSNWAV_SET_PAUSE
+    	    }
+    	  BSCallDriver();
+    	  asm {
+      	    pop  di
+      	    pop  dx
+      	    pop  ax
+            mov  back,ch		// Rckgabewert
+    	    }
+    	};
+
+        asm	pop ds
+
+	return (back);
+}
+
+/***************************************************************
+
+	BSNWaveCalcPlaytimeText
+
+        Create string with played/reminding time
+
+ IN:	textBuffer	pointer to buffer
+ 			0 -> create no string
+ 	current		current Bytes
+        full		End bytes (for Reminding time)
+        rate		Bytes per second
+        mode		0 = Playtimedisplay
+        		1 = Reminding timedisplay
+ OUT:	dword		Seconds
+
+ ***************************************************************/
+
+void _pascal PrintVal2 (char * ptr, word value)
+{
+	ptr[0] = 48+(value/10);
+	ptr[1] = 48+(value%10);
+};
+
+void _pascal PrintVal3 (char * ptr, word value)
+{
+	ptr[0] = 48+(value/100);
+	value = value - (100*(word)(value/100));
+	ptr[1] = 48+(value/10);
+	ptr[2] = 48+(value%10);
+};
+
+dword	_pascal BSNWaveCalcPlaytimeText(char 	*textBuffer,
+					dword   current,
+                                        dword	full,
+                                        dword	rate,
+                                        int	mode)
+{
+	word	sec = 0;	// retVal
+        dword	time = 0;
+        dword	val;
+	char	*ptr;
+        dword	bytes;
+
+        ptr = textBuffer;
+
+	// checking Parameters
+        if (!rate)
+        {
+            rate = 1;		// invalid rate
+        };
+
+        switch (mode)
+	{
+	    case BSCPT_FULL_TIME:
+            {
+		// Playtimedisplay
+                time = current;
+
+            }; break;
+
+	    case BSCPT_REST_TIME:
+            {
+                // Reminding time
+                time = full - current;
+
+                if (ptr)
+                {
+                    *ptr = '-';
+                    ptr++;
+                    *ptr = ' ';
+                    ptr++;
+                };
+
+
+            }; break;
+
+            default : break;
+        };
+
+        // Bytes -> Seconds
+	bytes = time;
+        time = time / rate;
+        sec = (word)time;
+
+        // Hours
+        if (time > 3600)
+        {
+	    val = time / 3600;
+            if (ptr)
+            {
+//            	sprintf(ptr,"%d:",(word)val);
+                ptr[0] = (byte)val+48;
+                ptr[1] = ':';
+            	ptr = ptr + 2;
+            };
+
+            time = time - (val * 3600);
+        };
+
+        // Minutes
+	    val = time / 60;
+            if (ptr)
+            {
+                if (val)
+                {
+//            	    sprintf(ptr,"%02d:",(word)val);
+		    PrintVal2 (ptr, (word)val);
+            	    ptr = ptr + 3;
+                }
+                else
+                {
+//            	    sprintf(ptr,"0:");
+                    ptr[0]='0';
+                    ptr[1]=':';
+            	    ptr = ptr + 2;
+                };
+            };
+            time = time - (val * 60);
+
+        // Seconds
+	if (ptr)
+        {
+//            sprintf(ptr,"%02d",(word)time);
+	    PrintVal2 (ptr, (word)time);
+            ptr = ptr + 2;
+
+            if (sec < 5)
+            {
+		// 1/100 sec
+		val = (bytes * 100) / rate;
+
+//        	sprintf(ptr,".%03d",(word)val);
+		PrintVal3 (ptr,(word)val);
+            };
+	};
+
+	return (sec);
+}
+
+/***************************************************************
+
+	BSNWaveDialogUnknownFormat
+
+ ***************************************************************/
+
+#ifdef GERMAN
+#define	TEXT_UNKNOWN_WAV_FORMAT	"Unbekanntes Waveformat (0x\01) !"
+#define	TEXT_UNKNOWN_WAV_FORMAT_2	"Unbekanntes Waveformat (%04X)"
+#define	TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI	"Unbekanntes Waveformat"
+#else
+#define	TEXT_UNKNOWN_WAV_FORMAT	"Unknown Waveformat (0x\01) !"
+#define	TEXT_UNKNOWN_WAV_FORMAT_2	"Unknown Waveformat (%04X)"
+#define	TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI	"Unknown Waveformat"
+#endif
+
+void	BSNWaveDialogUnknownFormat(word formatID)
+{
+
+@ifdef	BSNWAV_NO_UI
+
+//	sprintf(playStatusText,TEXT_UNKNOWN_WAV_FORMAT_2,formatID);
+//	(void)SysNotify(SNF_CONTINUE,playStatusText,0);
+// sorry: no UI, no sprintf
+	(void)SysNotify(SNF_CONTINUE,TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI,0);
+
+
+@else
+	sprintf(playStatusText,"%04X",formatID);
+	(void)UserStandardDialog(0,              //helpContext,
+				 0,              //customTriggers,
+				 0,              //arg2,
+				 playStatusText,              //arg1,
+				 TEXT_UNKNOWN_WAV_FORMAT,
+				 (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET)
+				 | (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET)
+				 );
+
+@endif
+
+}
+
+/*********************************************************************
+
+	UI - Resources and functions for Statusbox
+
+ *********************************************************************/
+
+////////////////////////////////////////////////////////////////////
+//	Resource for Statusbox
+////////////////////////////////////////////////////////////////////
+
+@ifndef	BSNWAV_NO_UI
+
+@start STATUSBOXRESOURCE;
+
+@ifdef	GERMAN
+@visMoniker	StatusBoxMoniker = "WAV-Ausgabe";
+@else
+@visMoniker	StatusBoxMoniker = "OUTPUT";
+@endif
+
+@object StatusInteractionClass StatusBox =
+{
+        GI_visMoniker = @StatusBoxMoniker;
+        GI_comp   = @StatusLeftBoxGroup,@StatusGroup,@StatusRightBoxGroup;
+        GI_attrs  = @default | GA_KBD_SEARCH_PATH;
+        GI_states = @default & ~GS_USABLE;
+        GII_visibility = GIV_DIALOG;
+        GII_type  = GIT_COMMAND;
+        GII_attrs = @default | GIA_MODAL | GIA_INITIATED_VIA_USER_DO_DIALOG;
+        HINT_ORIENT_CHILDREN_HORIZONTALLY;
+        HINT_CENTER_CHILDREN_HORIZONTALLY;
+	HINT_CENTER_WINDOW;
+        HINT_SIZE_WINDOW_AS_DESIRED;
+        HINT_FULL_JUSTIFY_CHILDREN_HORIZONTALLY;
+        HINT_INCLUDE_ENDS_IN_CHILD_SPACING;
+};
+
+@object StatusInteractionClass StatusGroup =
+{
+        GI_comp   = @StatusGlyph1,@StatusGlyph2;
+        GII_visibility = GIV_SUB_GROUP;
+        HINT_ORIENT_CHILDREN_VERTICALLY;
+        HINT_CENTER_CHILDREN_HORIZONTALLY;
+};
+
+@object GenGlyphClass StatusGlyph1 =
+{
+        GI_visMoniker = "00000Hz - 0 Bit - ?????";
+};
+
+@object GenGlyphClass StatusGlyph2 =
+{
+	GI_visMoniker = " ";
+};
+
+/*****************
+ * Spkr.box Left *
+ *****************/
+
+@object StatusInteractionClass StatusLeftBoxGroup =
+{
+        GI_comp   = @LeftBoxGlyph;
+        GII_visibility = GIV_SUB_GROUP;
+        HINT_ORIENT_CHILDREN_VERTICALLY;
+        HINT_CENTER_CHILDREN_VERTICALLY;
+        HINT_CENTER_CHILDREN_HORIZONTALLY;
+};
+
+@object GenGlyphClass LeftBoxGlyph =
+{
+        GI_visMoniker = list{@MonikerBoxLeft};
+};
+
+/******************
+ * Spkr.box Right *
+ ******************/
+
+@object StatusInteractionClass StatusRightBoxGroup =
+{
+        GI_comp   = @RightBoxGlyph;
+        GII_visibility = GIV_SUB_GROUP;
+        HINT_ORIENT_CHILDREN_VERTICALLY;
+        HINT_CENTER_CHILDREN_VERTICALLY;
+        HINT_CENTER_CHILDREN_HORIZONTALLY;
+};
+
+@object GenGlyphClass RightBoxGlyph =
+{
+        GI_visMoniker = list{@MonikerBoxRight};
+};
+
+
+@end STATUSBOXRESOURCE;
+
+@endif
+
+/**********************************************************
+
+	BSCNCreateStatusBox
+
+ IN:	optr	parent		Gentree-obj as parent
+
+ **********************************************************/
+
+optr _pascal BSCNCreateStatusBox(optr parent)
+{
+        MemHandle 	newBlock = 0;
+        optr		op = 0;
+
+@ifndef	BSNWAV_NO_UI
+
+	_asm push ds ;
+	GeodeLoadDGroup( GeodeGetCodeProcessHandle() ) ;
+
+        // Dupl. Resource
+	newBlock = ObjDuplicateResource(
+				HandleOf(@StatusBox),
+				GeodeGetProcessHandle(),/* owner of duplicate */
+				-1);
+
+	if(newBlock)
+	{
+	    // create optr
+            op = ConstructOptr(newBlock, ChunkOf(@StatusBox));
+            statusGlyphOptr1   = ConstructOptr(newBlock,ChunkOf(@StatusGlyph1));
+            statusGlyphOptr2   = ConstructOptr(newBlock,ChunkOf(@StatusGlyph2));
+            statusRightBoxOptr = ConstructOptr(newBlock,ChunkOf(@StatusRightBoxGroup));
+	}
+        else
+        {
+            op = 0;
+        };
+
+        _asm pop ds;
+
+        // linking to GenTree of caller
+	@call parent::MSG_GEN_ADD_CHILD (op,CCF_MARK_DIRTY);
+	@send op::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+
+        // Display Statusbox
+	@send op::MSG_GEN_INTERACTION_INITIATE();
+
+@endif
+
+	return ( op );
+}
+
+@ifndef	BSNWAV_NO_UI
+
+/*******************************************
+
+	MSG_GEN_GUP_INTERACTION_COMMAND
+
+
+        Handler for Cancel-button will set
+        the playStopFlag
+
+ *******************************************/
+
+@method StatusInteractionClass , MSG_GEN_GUP_INTERACTION_COMMAND
+{
+    	asm push ds
+    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        // Set Stopflag
+        playStopFlag = TRUE;
+
+        _asm pop ds
+
+        return( @callsuper() );
+};
+
+@endif
+
+/**********************************************************
+
+  	BSNWaveCheckDriver
+
+ 	Checking driver for NewWave-capability
+
+  IN:	flags	BSNW_SHOW_ERROR_MSG
+  OUT:	TRUE	NewWave will be support by the driver
+
+ **********************************************************/
+
+#ifndef	DRE_SOUND_QUERY_DEVICE_CAPABILITY
+#define	DRE_SOUND_QUERY_DEVICE_CAPABILITY	12
+#endif
+
+#ifdef GERMAN
+#define	TEXT_WRONG_DRIVER	"Der Soundkartentreiber ist nicht NewWave-kompatibel !\rBitte einen geeigneten BestSound-Treiber installieren oder per eMail anfordern (dlausecker\x40snafu.de)."
+#else
+#define	TEXT_WRONG_DRIVER	"The sound driver is not compatible with this program!"
+#endif
+
+Boolean _pascal BSNWaveCheckDriver(word flags, word testValue)
+{
+	word	state;
+        word	numOfDACs;
+        Boolean	respond;
+
+        // TestValue = 0 --> BSNW_DRIVER_TEST_VALUE (5)
+        if (!testValue)
+        {
+            testValue = BSNW_DRIVER_TEST_VALUE;
+        };
+
+	asm push ds
+	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        // First see is there a driver with DAC-capability
+
+    	asm {
+      	    push ax
+            push bx
+            push cx
+      	    push dx
+      	    push di
+            mov  di,DRE_SOUND_QUERY_DEVICE_CAPABILITY
+    	}
+    	BSCallDriver();
+    	asm {
+            mov	 numOfDACs,dx
+      	    pop  di
+      	    pop  dx
+            pop  cx
+            pop  bx
+      	    pop  ax
+    	}
+
+	if (numOfDACs>0)
+        {
+            // Check the BestSound Capability of the driver
+    	    asm {
+      	        push ax
+                push bx
+                push cx
+      	        push dx
+      	        push di
+                mov  cx,0			// DAC to check
+                mov  ax,MANUFACTURER_ID_BSW
+                mov  bx,DACSF_MIXER_TEST
+                mov  dx,testValue		// sample rate (in Hz)
+                mov  di,DRE_SOUND_DAC_CHECK_SAMPLE_RATE_AND_FORMAT
+    	    }
+    	    BSCallDriver();
+    	    asm {
+                mov  state,dx
+      	        pop  di
+      	        pop  dx
+                pop  cx
+                pop  bx
+      	        pop  ax
+    	    }
+            respond = (state == testValue);
+        }
+        else
+        {
+            // The driver has no DAC-Channel
+            // We clear the respond-Flag so the routine
+            // will report -> "Driver doesn't support BSNWAV"
+            respond = FALSE;
+        };
+
+        // Errormessage
+@ifndef	BSNWAV_NO_UI
+	if ((!respond) && (flags & BSNW_SHOW_ERROR_MSG) )
+        {
+
+	    (void)UserStandardDialog(	0,              //helpContext,
+            				0,              //customTriggers,
+                                        0,              //arg2,
+                                        0,              //arg1,
+                                        TEXT_WRONG_DRIVER,
+                                        (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET)
+                                        | (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET)      //dia
+                                        );
+        };
+@endif
+
+    	asm	pop ds
+
+        return (respond);
+}
+
+/************************************************************
+
+ 	BSNWaveGetStatus
+
+ 	Request State of soundcard
+
+ IN:	-
+ OUT:	word	high Byte = dacStatus
+ 		low  Byte = bsStatus
+
+ dacStatus:
+ Old flag used by old WAV-Output functions
+ 0 = idle (OK)
+
+ bsStatus:
+ NewWave-Play and Recording using the variable bsStatus
+ for indicating status of the soundcard
+ 0 = idle (OK)
+
+ for extracting use the macro BSEXDACSTATUS and BSEXBSSTATUS
+
+ ***********************************************************/
+
+word	_pascal BSNWaveGetStatus(void)
+{
+	word	state = 0;
+
+	asm push ds
+	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        if (compatFlag)
+	{
+            // call driver
+
+    	    asm {
+      	    	push ax
+                push bx
+                push cx
+      	    	push dx
+      	    	push di
+                mov  di,DRE_BSNWAV_GET_STATUS
+    	    }
+    	    BSCallDriver();
+    	    asm {
+            	mov  state,cx
+      	    	pop  di
+      	    	pop  dx
+                pop  cx
+                pop  bx
+		pop  ax
+    	    }
+        };
+
+    	asm	pop ds
+
+        return (state);
+}
+
+/******************************************************************
+
+	BSNWavePlayCallback
+
+        Main function for playing sample data over callback
+
+ Descr:
+        use this function if you want create or load the
+	sample data by yourself (for example decoded MP3 data ;-)
+        Can be stopped by calling  BSNWaveStop()
+
+ IN:	(BSWavFormChunk)*bfc	Sampleformat
+ 	word 			playFlags
+
+ ******************************************************************/
+
+int 	_pascal BSNWavePlayCallback(BSWavFormChunk *bfc,
+				    dword	   bytes,
+				    word 	   playFlags,
+				    optr 	   parent,
+                                    PCB(word,routine,(void *,word)))
+{
+
+        int	respond;		// retVal
+
+    	asm push ds
+	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        // PLAY by another thread ?
+    	respond = BSNWPreCheck(playFlags);
+
+    	if (respond == BSNW_STATUS_OK)
+        {
+            playCBPtr = routine;
+	    playSourceType = BSNW_SOURCE_CALL;		// Sourcetype = Callback
+            bytesToPlay = bytes;
+
+            // Preparing soundcard
+	    respond = BSNWPrepare(bfc,playFlags,parent);
+
+            if (respond == BSNW_STATUS_OK)
+            {
+            	// Playloop
+	    	respond = BSNWPlay(bfc,playFlags,parent);
+            };
+
+        };
+
+        asm	pop ds
+
+	return(respond);
+}
+
+/**********************************************************
+
+	BSNWavePlayMemory
+
+	reserved for future
+
+ **********************************************************/
+#pragma argsused
+
+int  _pascal BSNWavePlayMemory( BSWavFormChunk 	*bfc,
+				void		*buffer,
+				word 		len,
+				word		playFlags)
+{
+	word	secLen;
+	int	i;
+        int	respond = BSNW_STATUS_OK;
+	word	aiState,aiState2;
+
+    	return(respond);
+}
+
+/**********************************************************
+
+	BSNWaveGetPlayState
+
+	returns the current state of playing
+
+ IN:	*playStates	Pointer to BSWavPlayStates structure
+
+ OUT:	int		reserved for future
+
+typedef struct {
+	dword		BWPS_current;		// played Bytes
+        dword		BWPS_full;		// Bytes to play
+
+} BSWavPlayStates;
+
+ **********************************************************/
+#pragma argsused
+
+int _pascal BSNWaveGetPlayState( BSWavPlayStates *playStates)
+{
+	int	retVal = 0;
+
+    	asm push ds
+    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        if (playStates)
+        {
+            playStates->BWPS_current = playedBytes;
+            playStates->BWPS_full = fullLen;
+            playStates->BWPS_level = (word)peakLevel;
+        };
+
+        asm	pop ds
+
+    	return(retVal);
+}
+
+/**********************************************************
+
+	BSNWaveGetLastFormat
+
+	returns the format of the last used WAV-file
+
+ IN:
+
+ OUT:	dword		full len in bytes
+
+
+ **********************************************************/
+
+#pragma argsused
+
+dword _pascal BSNWaveGetLastFormat( dword *sampleRate, word *channels, word *bits)
+{
+	dword	retVal;
+
+    	asm 	push ds
+    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
+        // return the parameters
+        *sampleRate = bwfh.BWFH_fmtChunk.BWFC_sampleRate;
+        *channels   = bwfh.BWFH_fmtChunk.BWFC_channels;
+        *bits 	    = bwfh.BWFH_fmtChunk.BWFC_bitsPerSample;
+        retVal 	    = bwfh.BWFH_datLen;
+
+        asm	pop ds
+
+    	return(retVal);
+}
