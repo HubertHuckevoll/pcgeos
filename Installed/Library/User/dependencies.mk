@@ -314,7 +314,7 @@ User.eobj: User/userManager.asm \
                 Internal/taskDr.def Internal/powerDr.def net.def \
                 Internal/netDr.def Internal/serialDr.def \
                 Internal/streamDr.def Internal/socketID.def netware.def \
-                wav.def userMacro.def userConstant.def userVariable.def \
+                userMacro.def userConstant.def userVariable.def \
                 userManager.rdef userLibrary.asm userMain.asm \
                 userScreen.asm userUtils.asm Internal/patch.def \
                 userDialog.asm userTransfer.asm userQuick.asm \
@@ -389,4 +389,4 @@ uiManager.rdef: generic.uih product.uih Internal/prodFeatures.uih \
                 UI/../Art/mkrDialUpTC.ui
 userManager.rdef: generic.uih product.uih User/userPassword.ui
 
-uiEC.geo ui.geo : geos.ldf compress.ldf net.ldf sound.ldf wav.ldf 
+uiEC.geo ui.geo : geos.ldf compress.ldf net.ldf sound.ldf 

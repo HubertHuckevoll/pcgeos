@@ -58,7 +58,7 @@ UseDriver	Internal/taskDr.def
 UseDriver	Internal/powerDr.def
 
 UseLib		net.def
-UseLib		wav.def
+; UseLib		wav.def
 
 	DecodeProtocol
 

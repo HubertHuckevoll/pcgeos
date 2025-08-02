@@ -1,0 +1,628 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+
+PROJECT:	BestSound
+MODULE:		Soundcheck
+FILE:		uimain.goc
+
+AUTHOR:		Dirk Lausecker
+
+ROUTINES:
+	Name			Description
+	----			-----------
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	DL	12.03.2000   	Initial version.
+        DL	15.08.2000	Translation for ND
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+@define	UI_UIMAIN_GOC
+
+@include <bsnwav.goh>
+
+#include <gstring.h>
+#include <Ansi/stdio.h>
+#include <Ansi/string.h>
+
+#include <timer.h>
+#include <file.h>
+
+@include <stdapp.goh>
+
+@include "UI/uimain.goh"
+@include "Main/process.goh"
+@include "Main/subcode.goh"
+@include "Main/globals.goh"
+
+/*
+ * Classdeklaration
+ */
+
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ %		Objects
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+/*----------------------------------------------------------------------
+ *		AppResource		(ui thread)
+ *----------------------------------------------------------------------*/
+
+// Name of helpfile
+@ifdef	GERMAN
+@define TEXT_HELP_FILE	"schlp_de"
+@else
+@define TEXT_HELP_FILE	"sndchk"
+@endif
+
+@start	AppResource;
+
+@object GenApplicationClass SDCKApp =
+{
+    GI_visMoniker = list {@SDCKTextMoniker,@Moniker0,@Moniker1,@Moniker2}
+    GI_comp = 	@SDCKPrimary,
+    		@CreateProgressBox;
+
+    gcnList(MANUFACTURER_ID_GEOWORKS,GAGCNLT_WINDOWS) = @SDCKPrimary;
+    ATTR_GEN_HELP_FILE = @TEXT_HELP_FILE;
+}
+
+@visMoniker SDCKTextMoniker = "SoundCheck";
+
+@end	AppResource;
+
+/*
+ *      APPLMONIKER
+ */
+@start APPLMONIKERRESOURCE, data;
+@include <Art/appmkr.goh>
+@end APPLMONIKERRESOURCE;
+
+/*
+ *      MONIKER
+ */
+
+@start MONIKERRESOURCE, data;
+@include <Art/moniker.goh>
+@end MONIKERRESOURCE;
+
+/*----------------------------------------------------------------------
+ *		Interface		(ui thread)
+ *----------------------------------------------------------------------*/
+@start	Interface;
+
+@object GenPrimaryClass SDCKPrimary  = {
+    	GI_visMoniker = list {@SDCKTextMoniker,@Moniker0,@Moniker1,@Moniker2}
+
+    	GI_comp = @FileMenu,@MainGroup,@PrimaryGlyph;
+	ATTR_GEN_DISPLAY_NOT_MAXIMIZABLE;
+    	ATTR_GEN_HELP_CONTEXT = "TOC";
+    	HINT_SIZE_WINDOW_AS_DESIRED;
+    	HINT_CENTER_CHILDREN_HORIZONTALLY;
+        HINT_DISPLAY_NOT_RESIZABLE;
+}
+
+@object GenGlyphClass PrimaryGlyph = {
+    GI_visMoniker = "© 2000 Dirk Lausecker";
+}
+
+@end Interface;
+
+/************
+ * FileMenu *
+ ************/
+
+@start MENURESOURCE;
+
+@object GenInteractionClass FileMenu =
+{
+    GI_comp = 	@InfoBox,
+		@AnalyseTrigger;
+    GI_visMoniker = "SoundCheck";
+    GII_visibility = GIV_POPUP;
+    GI_attrs = @default | GA_KBD_SEARCH_PATH;
+    ATTR_GEN_INTERACTION_GROUP_TYPE = (GIGT_FILE_MENU); /* Standard File Menu */
+}
+
+@object	GenTriggerClass AnalyseTrigger = {
+	GI_visMoniker   = "Start";
+	GTI_actionMsg   = MSG_SNDCHK_CHECK_SYSTEM;
+        GTI_destination = process;
+}
+
+@end MENURESOURCE;
+
+/***********************************************************************
+	M A I N G R O U P and MainSubGroups
+ ***********************************************************************/
+
+@start MAINGROUPRESOURCE;
+
+@object GenInteractionClass MainGroup = {
+    	GI_comp		= @MainSubGroup1,@MainSubGroup2,@MainSubGroup3;
+    	GI_attrs	= @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility	= GIV_SUB_GROUP;
+    	HINT_CENTER_CHILDREN_HORIZONTALLY;
+    	HINT_ORIENT_CHILDREN_VERTICALLY;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+/***************
+  MainSubGroup1  	Display results
+ ***************/
+@ifdef	GERMAN
+@define	TEXT_SYSTEMANALYSE	"Systemanalyse"
+@define	TEXT_SB_COMP_CARD	"Soundblasterkompatible Soundkarte"
+@define	TEXT_DMA_FOUND 		"DMA-Treiber (DOSREAL.GEO)"
+@define	TEXT_SUPPORT_MIXER 	"Treiber unterstützt BS-Mixer"
+@define	TEXT_SUPPORT_RECORD 	"Treiber unterstützt BS-Recording"
+@define	TEXT_SUPPORT_BSNWAV 	"Treiber unterstützt BS-NewWave"
+
+@else
+@define	TEXT_SYSTEMANALYSE	"Sound Card Test Results"
+@define	TEXT_SB_COMP_CARD	"Sound Blaster-compatible sound card"
+@define	TEXT_DMA_FOUND 		"DMA Driver (DOSREAL.GEO)"
+@define	TEXT_SUPPORT_MIXER 	"Driver supports BestSound Mixer"
+@define	TEXT_SUPPORT_RECORD 	"Driver supports BestSound Recorder"
+@define	TEXT_SUPPORT_BSNWAV 	"Driver supports WAV QuickPlayer"
+
+
+@endif
+
+@object GenInteractionClass MainSubGroup1 = {
+        GI_visMoniker   = @TEXT_SYSTEMANALYSE;
+    	GI_comp         = @MSG1Sub1,@MSG1Sub2;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility  = GIV_SUB_GROUP;
+    	HINT_CENTER_CHILDREN_HORIZONTALLY;
+    	HINT_ORIENT_CHILDREN_HORIZONTALLY;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+	HINT_DRAW_IN_BOX;
+}
+
+@object GenInteractionClass MSG1Sub1 = {
+    	GI_comp         = @MSG1_1GlyphL,@MSG1_2GlyphL,@MSG1_3GlyphL,@MSG1_4GlyphL,@MSG1_5GlyphL;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility  = GIV_SUB_GROUP;
+    	HINT_ORIENT_CHILDREN_VERTICALLY;
+        HINT_EXPAND_HEIGHT_TO_FIT_PARENT;
+	HINT_FULL_JUSTIFY_CHILDREN_VERTICALLY;
+}
+
+@object GenInteractionClass MSG1Sub2 = {
+    	GI_comp         = @MSG1_1GlyphR,@MSG1_2GlyphR,@MSG1_3GlyphR,@MSG1_4GlyphR,@MSG1_5GlyphR;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility  = GIV_SUB_GROUP;
+    	HINT_ORIENT_CHILDREN_VERTICALLY;
+        HINT_EXPAND_HEIGHT_TO_FIT_PARENT;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+        HINT_CENTER_CHILDREN_VERTICALLY;
+        HINT_CENTER_CHILDREN_HORIZONTALLY;
+	HINT_FULL_JUSTIFY_CHILDREN_VERTICALLY;
+}
+
+@object GenGlyphClass MSG1_1GlyphL =
+{
+	GI_visMoniker = @TEXT_SB_COMP_CARD;
+}
+
+@object GenGlyphClass MSG1_1GlyphR =
+{
+	GI_visMoniker = "?";
+}
+
+@object GenGlyphClass MSG1_2GlyphL =
+{
+	GI_visMoniker = @TEXT_DMA_FOUND;
+}
+
+@object GenGlyphClass MSG1_2GlyphR =
+{
+	GI_visMoniker = "?";
+}
+
+@object GenGlyphClass MSG1_3GlyphL =
+{
+	GI_visMoniker = @TEXT_SUPPORT_MIXER;
+}
+
+@object GenGlyphClass MSG1_3GlyphR =
+{
+	GI_visMoniker = "?";
+}
+
+@object GenGlyphClass MSG1_4GlyphL =
+{
+	GI_visMoniker = @TEXT_SUPPORT_RECORD;
+}
+
+@object GenGlyphClass MSG1_4GlyphR =
+{
+	GI_visMoniker = "?";
+}
+
+@object GenGlyphClass MSG1_5GlyphL =
+{
+	GI_visMoniker = @TEXT_SUPPORT_BSNWAV;
+}
+
+@object GenGlyphClass MSG1_5GlyphR =
+{
+	GI_visMoniker = "?";
+}
+
+/***************
+  MainSubGroup2		Systemsounds
+ ***************/
+
+@ifdef	GERMAN
+@define	TEXT_SYSTEM_SOUNDS	"Systemklänge"
+@define	TEXT_WARNING		"Warnton"
+@define	TEXT_ERROR		"Fehlerton"
+@define	TEXT_NOTIFICATION	"Hinweiston"
+
+@else
+@define	TEXT_SYSTEM_SOUNDS	"Test System Sounds"
+@define	TEXT_WARNING		"Alarm"
+@define	TEXT_ERROR		"Error"
+@define	TEXT_NOTIFICATION	"Indicator"
+
+@endif
+
+@object GenInteractionClass MainSubGroup2 = {
+        GI_visMoniker   = @TEXT_SYSTEM_SOUNDS;
+    	GI_comp         = @MainSub2Trigger1,@MainSub2Trigger2,@MainSub2Trigger3;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility  = GIV_SUB_GROUP;
+    	HINT_ORIENT_CHILDREN_HORIZONTALLY;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+        HINT_FULL_JUSTIFY_CHILDREN_HORIZONTALLY;
+        HINT_INCLUDE_ENDS_IN_CHILD_SPACING;
+	HINT_DRAW_IN_BOX;
+}
+
+@object GenTriggerClass MainSub2Trigger1 =
+{
+	GI_visMoniker 	= @TEXT_WARNING;
+	GTI_actionMsg 	= MSG_SNDCHK_PROCESS_WARNTON;
+        GTI_destination = process;
+}
+
+@object GenTriggerClass MainSub2Trigger2 =
+{
+	GI_visMoniker 	= @TEXT_ERROR;
+	GTI_actionMsg 	= MSG_SNDCHK_PROCESS_FEHLERTON;
+        GTI_destination = process;
+}
+
+@object GenTriggerClass MainSub2Trigger3 =
+{
+	GI_visMoniker 	= @TEXT_NOTIFICATION;
+	GTI_actionMsg 	= MSG_SNDCHK_PROCESS_HINWEISTON;
+        GTI_destination = process;
+}
+
+/***************
+  MainSubGroup3		Geos/ND - WAV
+ ***************/
+
+@ifdef	GERMAN
+@define	TEXT_OUTPUT		"WAV-Ausgabe"
+@define	TEXT_OUTPUT_ON		"Ausgabe auf:"
+@define	TEXT_FILE		"Datei"
+@define	TEXT_PLAY_ONE		"PLAY (1x)"
+@define	TEXT_PLAY_ENDLESS	"PLAY (endlos)"
+@define	TEXT_SAVE		"Speichern"
+@define	TEXT_PERIOD		"Dauer (sec):"
+
+@else
+@define	TEXT_OUTPUT		"Test WAV Support"
+@define	TEXT_OUTPUT_ON		"Output To"
+@define	TEXT_FILE		"File"
+@define	TEXT_PLAY_ONE		"Play Once"
+@define	TEXT_PLAY_ENDLESS	"Play Repeatedly"
+@define	TEXT_SAVE		"Create .WAV File"
+@define	TEXT_PERIOD		"Duration (seconds):"
+
+@endif
+
+@object GenInteractionClass MainSubGroup3 = {
+        GI_visMoniker  = @TEXT_OUTPUT;
+    	GI_comp        = @MSG3Sub1,@MSG3Sub2,@MSG3Sub3;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility = GIV_SUB_GROUP;
+    	HINT_CENTER_CHILDREN_HORIZONTALLY;
+    	HINT_ORIENT_CHILDREN_VERTICALLY;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+	HINT_DRAW_IN_BOX;
+}
+
+@object GenInteractionClass MSG3Sub1 = {
+    	GI_comp         = @WAVSamplerateItemGroup,@WAVBitsItemGroup,@WAVChannelsItemGroup;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility  = GIV_SUB_GROUP;
+    	HINT_ORIENT_CHILDREN_HORIZONTALLY;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+        HINT_FULL_JUSTIFY_CHILDREN_HORIZONTALLY;
+        HINT_INCLUDE_ENDS_IN_CHILD_SPACING;
+}
+
+@object	GenItemGroupClass WAVSamplerateItemGroup =
+{
+	GI_comp = @Rate_11025,@Rate_22050,@Rate_44100;
+        GIGI_selection = 22;
+        GIGI_behaviorType = GIGBT_EXCLUSIVE;
+    	HINT_ORIENT_CHILDREN_VERTICALLY;
+	HINT_ITEM_GROUP_MINIMIZE_SIZE;
+        HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION;
+}
+
+@object	GenItemClass Rate_11025 =
+{
+	GI_visMoniker = "11025 Hz";
+	GII_identifier = 11;
+}
+
+@object	GenItemClass Rate_22050 =
+{
+	GI_visMoniker = "22050 Hz";
+	GII_identifier = 22;
+}
+
+@object	GenItemClass Rate_44100 =
+{
+	GI_visMoniker = "44100 Hz";
+	GII_identifier = 44;
+}
+
+@object	GenItemGroupClass WAVBitsItemGroup =
+{
+	GI_comp = @WavBits8,@WavBits16;
+        GIGI_selection = 8;
+        GIGI_behaviorType = GIGBT_EXCLUSIVE;
+    	HINT_ORIENT_CHILDREN_VERTICALLY;
+	HINT_ITEM_GROUP_MINIMIZE_SIZE;
+        HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION;
+}
+
+@object	GenItemClass WavBits8 =
+{
+	GI_visMoniker = "8 Bit";
+	GII_identifier = 8;
+}
+
+@object	GenItemClass WavBits16 =
+{
+	GI_visMoniker = "16 Bit";
+	GII_identifier = 16;
+}
+
+@object	GenItemGroupClass WAVChannelsItemGroup =
+{
+	GI_comp = @WavMono,@WavStereo;
+        GIGI_selection = 1;
+        GIGI_behaviorType = GIGBT_EXCLUSIVE;
+    	HINT_ORIENT_CHILDREN_VERTICALLY;
+	HINT_ITEM_GROUP_MINIMIZE_SIZE;
+        HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION;
+}
+
+@object	GenItemClass WavMono =
+{
+	GI_visMoniker = "Mono";
+	GII_identifier = 1;
+}
+
+@object	GenItemClass WavStereo =
+{
+	GI_visMoniker = "Stereo";
+	GII_identifier = 2;
+}
+
+@object GenInteractionClass MSG3Sub2 = {
+        GI_visMoniker   = @TEXT_OUTPUT_ON;
+    	GI_comp         = @OutputItemGroup;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility  = GIV_SUB_GROUP;
+    	HINT_ORIENT_CHILDREN_HORIZONTALLY;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+	HINT_DRAW_IN_BOX;
+}
+
+@object	GenItemGroupClass OutputItemGroup =
+{
+	GI_comp = @Output_WAV,@Output_BSNWAV,@Output_File;
+        GIGI_selection = 2;
+        GIGI_behaviorType = GIGBT_EXCLUSIVE;
+        GIGI_destination = process;
+    	HINT_ORIENT_CHILDREN_HORIZONTALLY;
+        ATTR_GEN_ITEM_GROUP_STATUS_MSG = MSG_SNDCHK_PROCESS_OUTPUT_STATUS;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+        HINT_FULL_JUSTIFY_CHILDREN_HORIZONTALLY;
+        HINT_INCLUDE_ENDS_IN_CHILD_SPACING;
+}
+
+@object	GenItemClass Output_WAV =
+{
+	GI_visMoniker = "WAV Library";
+	GII_identifier = 1;
+}
+
+@object	GenItemClass Output_BSNWAV =
+{
+	GI_visMoniker = "NewWave Library";
+	GII_identifier = 2;
+}
+
+@object	GenItemClass Output_File =
+{
+	GI_visMoniker = @TEXT_FILE;
+	GII_identifier = 3;
+}
+
+@object GenInteractionClass MSG3Sub3 = {
+    	GI_comp         = @LenValue,@MainSub3Trigger1,@MainSub3Trigger2,@MainSub3Trigger3;
+    	GI_attrs        = @default | GA_KBD_SEARCH_PATH;
+    	GII_visibility  = GIV_SUB_GROUP;
+    	HINT_ORIENT_CHILDREN_HORIZONTALLY;
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+        HINT_FULL_JUSTIFY_CHILDREN_HORIZONTALLY;
+        HINT_INCLUDE_ENDS_IN_CHILD_SPACING;
+}
+
+@object GenTriggerClass MainSub3Trigger1 =
+{
+	GI_visMoniker 	= @TEXT_PLAY_ONE;
+	GTI_actionMsg 	= MSG_SNDCHK_PROCESS_PLAY_ONCE;
+        GTI_destination = process;
+}
+
+@object GenTriggerClass MainSub3Trigger2 =
+{
+	GI_visMoniker 	= @TEXT_PLAY_ENDLESS;
+	GTI_actionMsg 	= MSG_SNDCHK_PROCESS_PLAY_CONT;
+        GTI_destination = process;
+}
+
+@object GenTriggerClass MainSub3Trigger3 =
+{
+	GI_visMoniker 	= @TEXT_SAVE;
+    	GI_states = @default & ~GS_USABLE;
+	GTI_actionMsg 	= MSG_SNDCHK_PROCESS_PLAY_FILE;
+        GTI_destination = process;
+}
+
+@object GenValueClass LenValue =
+{
+	GI_visMoniker 	= @TEXT_PERIOD;
+	GVLI_value 	= MakeWWFixed(2.0);
+	GVLI_minimum 	= MakeWWFixed(1.0);
+	GVLI_maximum 	= MakeWWFixed(999.0);
+}
+
+@end MAINGROUPRESOURCE;
+
+/*************
+  Textobjects
+ *************/
+
+@start MAINTEXTOBJRESOURCE;
+
+//////////////////////
+// CreateProgressBox
+//////////////////////
+
+@ifdef	GERMAN
+@define	TEXT_CREATE_PROGRESS	"WAV-Datei wird angelegt..."
+@else
+@define	TEXT_CREATE_PROGRESS	"Creating .WAV File..."
+@endif
+
+@object GenInteractionClass CreateProgressBox =
+{
+    GI_visMoniker = @TEXT_CREATE_PROGRESS;
+    GI_comp = @CreateProgressGlyph;
+    GII_attrs = @default | GIA_NOT_USER_INITIATABLE | GIA_MODAL;
+    GII_visibility = GIV_DIALOG;
+    GII_type = GIT_MULTIPLE_RESPONSE;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_CENTER_CHILDREN_HORIZONTALLY;
+
+}
+
+@object GenGlyphClass CreateProgressGlyph =
+{
+	GI_visMoniker = "0% fertig";
+}
+
+@end MAINTEXTOBJRESOURCE;
+
+/*----------------------------------------------------------------------
+ *		Infobox
+ *----------------------------------------------------------------------*/
+
+@start 	UIMainInfoResource;
+
+/***********
+ * InfoBox *
+ ***********/
+
+@ifdef	GERMAN
+@define	TEXT_INFO_2	"Testet Geos/NDO Soundsystem"
+
+@else
+
+@define	TEXT_INFO_2	"Checking NewDeal Sound Support"
+
+@endif
+
+@object GenInteractionClass InfoBox = {
+    GI_visMoniker = 'I',"Information";
+    GI_attrs = @default | GA_KBD_SEARCH_PATH;
+    GI_kbdAccelerator = ctrl 'i';
+    GII_visibility = GIV_DIALOG;
+    GII_type = GIT_NOTIFICATION;
+    GI_comp = 	@InfoGrafik,@InfoGlyph1,@InfoGlyph2,@InfoGlyph3,
+    		@InfoGlyph4,@InfoGlyph5,@InfoGlyph6;
+    HINT_CENTER_CHILDREN_HORIZONTALLY;
+    HINT_CENTER_CHILDREN_VERTICALLY;
+    ATTR_GEN_HELP_CONTEXT = "SpecialThanks";
+}
+
+@object GenGlyphClass InfoGrafik = {
+    GI_visMoniker = list {@SDCKTextMoniker,@Moniker0,@Moniker1,@Moniker2}
+}
+
+@object GenGlyphClass InfoGlyph1 = {
+    GI_visMoniker = "SoundCheck";
+}
+
+@object GenGlyphClass InfoGlyph2 = {
+    GI_visMoniker = @TEXT_INFO_2;
+}
+
+@object GenGlyphClass InfoGlyph3 = {
+    GI_visMoniker = "\xa9 2000 Dirk Lausecker";
+}
+
+
+@object GenGlyphClass InfoGlyph4 = {
+    GI_visMoniker = "Portions of this program are Copyright ";
+}
+
+@object GenGlyphClass InfoGlyph5 = {
+    GI_visMoniker = "Geoworks 1993, 1994 and used by permission.";
+}
+
+@object GenGlyphClass InfoGlyph6 = {
+    GI_visMoniker = "Version X.X - X.X";
+}
+
+@end 	UIMainInfoResource;
+
+
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ %		Code
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

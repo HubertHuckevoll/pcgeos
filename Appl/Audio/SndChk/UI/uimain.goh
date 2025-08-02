@@ -1,0 +1,58 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+
+PROJECT:	BestSound
+MODULE:		Soundcheck
+FILE:		uimain.goh
+
+AUTHOR:		Dirk Lausecker
+
+ROUTINES:
+	Name			Description
+	----			-----------
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	DL	12.03.1999   	Initial version.
+
+DESCRIPTION:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+@ifndef	UI_UIMAIN_GOH
+@define	UI_UIMAIN_GOH
+
+@ifndef	UI_UIMAIN_GOC
+
+// Objektdekl.
+@extern	object	CreateProgressBox;
+@extern	object	CreateProgressGlyph;
+
+
+@extern	object	SDCKApp;
+@extern object	InfoGlyph6;
+@extern object	PrimaryGlyph;
+@extern object	MainSub3Trigger1;
+@extern object	MainSub3Trigger2;
+@extern object	MainSub3Trigger3;
+@extern object	WAVSamplerateItemGroup;
+@extern object	WAVBitsItemGroup;
+@extern object	WAVChannelsItemGroup;
+@extern object	MSG1_1GlyphR;
+@extern object	MSG1_2GlyphR;
+@extern object	MSG1_3GlyphR;
+@extern object	MSG1_4GlyphR;
+@extern object	MSG1_5GlyphR;
+@extern object	LenValue;
+@extern object	OutputItemGroup;
+
+@extern	visMoniker	OKVGAMoniker;
+@extern	visMoniker	OKMonoMoniker;
+@extern	visMoniker	ErrorVGAMoniker;
+@extern	visMoniker	ErrorMonoMoniker;
+
+@endif
+
+@endif

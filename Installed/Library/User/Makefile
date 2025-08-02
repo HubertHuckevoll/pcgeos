@@ -40,18 +40,17 @@ UI              = uiDispCtrl.asm uiEMOM.asm uiEMTrigger.asm uiEdit.asm\
                   uiTool.ui uiView.ui
 USER            = userC.asm userDialog.asm userDocumentSave.asm\
                   userFlow.asm userFlowGrab.asm userFlowGrabLow.asm\
-                  userFlowMisc.asm userFlowUtils.asm userLibrary.asm\
-                  userListUtils.asm userLog.asm userMain.asm\
-                  userManager.asm userQuick.asm userScreen.asm\
+                  userFlowInput.asm userFlowMisc.asm userFlowUtils.asm\
+                  userLibrary.asm userListUtils.asm userLog.asm\
+                  userMain.asm userManager.asm userQuick.asm userScreen.asm\
                   userStrings.asm userTitleScreen.asm userTransfer.asm\
-                  userUtils.asm userFlowInput.asm userConstant.def\
-                  userMacro.def userVariable.def userManager.ui\
-                  userPassword.ui
+                  userUtils.asm userConstant.def userMacro.def\
+                  userVariable.def userManager.ui userPassword.ui
 VIS             = visClass.asm visComp.asm visCompGeometry.asm\
-                  visContentClass.asm visEmpty.asm visGeometry.asm\
-                  visIsoContent.asm visManager.asm visSpec.asm\
-                  visSpecUtils.asm visUtilsClass.asm visUtilsResident.asm\
-                  visContentCommon.asm visConstant.def visMacro.def\
+                  visContentClass.asm visContentCommon.asm visEmpty.asm\
+                  visGeometry.asm visIsoContent.asm visManager.asm\
+                  visSpec.asm visSpecUtils.asm visUtilsClass.asm\
+                  visUtilsResident.asm visConstant.def visMacro.def\
                   visVariable.def
 UI_TO_RDFS      = helpControl.ui uiManager.ui userManager.ui
 OBJS            =

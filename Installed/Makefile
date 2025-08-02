@@ -89,7 +89,7 @@ Installed/Tools/swat/Stub/WinCom:	MAKESTUB
 minimalLibrary	: kernel swap sound net ui isui motif spool text mailbox \
 		  genpc ansic cdaudio cell chart color compress config hash impex \
 		  borlandc watcomc math pen resolver spline ssmeta styles \
-		  wav game cards spreadsheet parse spell convert \
+		  bestsnd wav game cards spreadsheet parse spell convert \
 		  saver prefLibs accpnt netutils \
 		  socket dhcp borlandrtl ffile streamc mailhub mailsmtp \
 		  modemc mailpop3 lot123ss csv \
@@ -214,7 +214,7 @@ Installed/Library/Net :	kernel MAKELIB
 
 # removed pcmcia
 ui	: Installed/Library/User
-Installed/Library/User	:	kernel sound compress net wav MAKELIB
+Installed/Library/User	:	kernel sound compress net MAKELIB
 
 isui	: Installed/Library/SpecUI/ISUI
 Installed/Library/SpecUI/ISUI	:	kernel text MAKELIB
@@ -1764,7 +1764,8 @@ prefsndn	: Installed/Library/Pref/Prefsndn
 Installed/Library/Pref/Prefsndn:		ui ansic config sound MAKELIB
 
 # BestSound - supplemental sound API.
-bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp sndchk
+bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp
+# sndchk
 
 bsnwav	: Installed/Library/Audio/BSNWav
 Installed/Library/Audio/BSNWav:			kernel MAKELIB

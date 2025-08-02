@@ -1,0 +1,53 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+
+PROJECT:	BestSound
+MODULE:		BestSound Quickplayer
+FILE:		bsqp.goc
+
+AUTHOR:		Dirk Lausecker
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	DL	12.03.2000   	Initial version.
+        DL	14.08.2000	Translation for ND
+
+DESCRIPTION:
+	Globals
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+@define	MAIN_BSQP_GOC
+
+@include <bsnwav.goh>		/* this include-line must be the first ! */
+
+@include <stdapp.goh>
+
+char		fullPath[250];
+char		WCI_soundName[33];
+char		WCI_soundPath[222];
+char		globalText[80];
+TimerHandle	tih = NullHandle;
+word		tid;			// TimerID
+word		quickMode = 0;		// Quickplaymodus
+
+Boolean		capabFlag = FALSE;	// Treiber ist BS-kompatibel
+
+word		playFlag = 0;		// playState
+char		playText[] = "PLAY";	// strings for replacing visMoniker
+char		pauseText[] = "PAUSE";
+dword		bqSampleRate = 0;
+word		bqChannels = 0;		// 1 = MONO 2 = STEREO
+word		bqBits = 0;		// 8 / 16 Bit
+word		rmsValue = 0;		// 255 = Vollaussteuerung
+WindowHandle	winHan = 0;		// Handle fÅr GenView
+Color		backGroundColor = C_BLUE;
+dword		bqSampleBytes = 0;
+dword		bqAllBytes = 0;	
+
+word		bqOptions = 0;		// global value for options
+word		bqDispStyle = 1;	// 1=normal 2=remaining
+Boolean		bqMinimizedState = FALSE;
+

@@ -46,7 +46,7 @@ library compress noload
 library net noload
 #library	pcmcia noload
 library	sound
-library	wav
+# library	w a v
 
 #
 # Desktop-related things
@@ -179,7 +179,7 @@ resource UserCStubXIP			code fixed read-only shared
 resource UIControlInfoXIP		read-only shared
 endif
 resource EMOMCommon			code read-only shared
-resource EMTriggerCommon		code read-only shared 
+resource EMTriggerCommon		code read-only shared
 resource UserSaveDocName		code read-only shared
 
 

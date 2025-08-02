@@ -1,0 +1,53 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+
+PROJECT:	BestSound
+MODULE:		BestSound Quickplayer
+FILE:		uimain.goh
+
+AUTHOR:		Dirk Lausecker
+
+ROUTINES:
+	Name			Description
+	----			-----------
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	DL	12.03.1999   	Initial version.
+
+DESCRIPTION:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+@ifndef	UI_UIMAIN_GOH
+@define	UI_UIMAIN_GOH
+
+@ifndef	UI_UIMAIN_GOC
+
+// Objektdekl.
+
+@extern	object	TimeDispList;
+@extern	object	OptionsBooleans;
+@extern	object	FileSelectorBox;
+@extern	object	WavFileSelector;
+@extern	object	FileSelectorOpenTrigger;
+@extern	object	PLAYTrigger;
+
+@extern	object	BSQPPrimary;
+@extern	object	BSQPApp;
+@extern object	InfoGlyph6;
+@extern object	PrimaryGlyph;
+@extern	object	TriggerGroup;
+
+@endif
+
+// subclassing ApplicationClass
+@class BSQPApplicationClass, GenApplicationClass;
+@endc
+
+@class BSQPPrimaryClass, GenPrimaryClass;
+@endc
+
+@endif

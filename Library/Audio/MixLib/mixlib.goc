@@ -20,9 +20,9 @@
 /* */
 
 @include <stdapp.goh>
-@include <Ansi\stdio.h>
+@include <Ansi/stdio.h>
 
-#include <Ansi\string.h>
+#include <Ansi/string.h>
 #include <sound.h>
 #include <library.h>
 #include <driver.h>
@@ -36,7 +36,7 @@
 #define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
 #define FP_OFF( fp )( (unsigned )( fp ))
 
-word		datasize 	= 0;		//Puffer fÅr ReadIni
+word		datasize 	= 0;		//Puffer fÔøΩr ReadIni
 Handle		mixerDriver	= NullHandle;
 const char 	*soundCatIT 	= "sound";		//INI Eintrag
 const char 	*mixerDriverIT 	= "mixerDriver";	//INI Eintrag
@@ -157,7 +157,7 @@ Boolean	_pascal BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
     		/* mixer driver laden und Handle pruefen */
                 mixerDriver = GeodeUseDriver (name, 0, 0, gle);
     		demoMode = (mixerDriver == NullHandle);
-                driverUsed = !demoMode;		//Flag setzen, da· Treiber extra
+                driverUsed = !demoMode;		//Flag setzen, daÔøΩ Treiber extra
                 				//geladen wurde. (driverUsed)
 
     		FilePopDir ();
@@ -303,7 +303,7 @@ word	_pascal BSMixerGetValue (word token, byte dataType)
         		      if ((val1|val2)<2) value = 128;
                            }; break;
               };
-              //LautstÑrke Null -> Balance = Mitte;
+              //LautstÔøΩrke Null -> Balance = Mitte;
         };
         asm	pop ds
 
@@ -314,12 +314,12 @@ word	_pascal BSMixerGetValue (word token, byte dataType)
 /********************************
  *	    BSMixerGetCap	*
  *				*
- * 	Anzahl EinstellkanÑle	*
+ * 	Anzahl EinstellkanÔøΩle	*
  * 	ermitteln		*
  *				*
  *  IN	word	*dsp  Adresse V.*
  *                              *
- * OUT	word	Anzahl KanÑle	*
+ * OUT	word	Anzahl KanÔøΩle	*
  *	*dsp	DSP Version	*
  ********************************/
 
@@ -431,21 +431,21 @@ void _pascal BSCallDriver ()
 @chunk	char bsmText5[] = "LINE";
 @chunk	char bsmText6[] = "Mikro";
 @chunk	char bsmText7[] = "PC-Lspr";
-@chunk	char bsmText8[] = "Höhen";
+@chunk	char bsmText8[] = "HÔøΩhen";
 @chunk	char bsmText9[] = "Tiefen";
 @chunk	char bsmText10[] = "Aufnahmefilter";
 @chunk	char bsmText11[] = "Tiefpass";
 @chunk	char bsmText12[] = "Aufnahmequelle";
 @chunk	char bsmText13[] = "Wiedergabefilter";
 @chunk	char bsmText14[] = "Stereo";
-@chunk	char bsmText15[] = "Quelle für Wiedergabe";
+@chunk	char bsmText15[] = "Quelle fÔøΩr Wiedergabe";
 @chunk	char bsmText16[] = "Aufnahmequelle Links";
 @chunk	char bsmText17[] = "Aufnahmequelle Rechts";
-@chunk	char bsmText18[] = "Aufnahmeverstärkung Links";
-@chunk	char bsmText19[] = "Aufnahmeverstärkung Rechts";
-@chunk	char bsmText20[] = "Wiedergabeverstärkung Links";
-@chunk	char bsmText21[] = "Wiedergabeverstärkung Rechts";
-@chunk	char bsmText22[] = "Automatische Verstärkungsregelung";
+@chunk	char bsmText18[] = "AufnahmeverstÔøΩrkung Links";
+@chunk	char bsmText19[] = "AufnahmeverstÔøΩrkung Rechts";
+@chunk	char bsmText20[] = "WiedergabeverstÔøΩrkung Links";
+@chunk	char bsmText21[] = "WiedergabeverstÔøΩrkung Rechts";
+@chunk	char bsmText22[] = "Automatische VerstÔøΩrkungsregelung";
 @chunk	char bsmText23[] = "FM-L";
 @chunk	char bsmText24[] = "FM-R";
 @chunk	char bsmText25[] = "LINE-L";
@@ -614,7 +614,7 @@ void _pascal BSMixerGetTokenText (word token,char *tokenText)
 /********************************
  * 	BSMixerGetSubToken	*
  *				*
- * Token fÅr Bool/Item ermitt.	*
+ * Token fÔøΩr Bool/Item ermitt.	*
  *				*
  * IN	word	token		*
  *	word	identifier	*
@@ -729,7 +729,7 @@ void _pascal	BSMixerSpecValue(word valNum, MixerValue *value)
                 pop  bx
       	    	pop  ax
     	    }
-            //Specification Åbertragen
+            //Specification ÔøΩbertragen
 	    value->valVisible = Visible;	//Sichtbarkeit
 	    value->valStereoFlag = StereoFlag;	//TRUE = Stereo */
             value->valTarget = Target;		//1=Mixer 2=Record 3=Other
@@ -799,7 +799,7 @@ word _pascal BSMixerGetState(void)
             }
             else
             {
-            	state = 0x4000;		//keine MixerunterstÅtzung !
+            	state = 0x4000;		//keine MixerunterstÔøΩtzung !
                 demoModus = TRUE;	//deshalb Demomodus !
             };
 

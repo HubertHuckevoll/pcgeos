@@ -24,6 +24,6 @@
 
 GOCFLAGS += -L prefsndn
 XCOMFLAGS =-WDE
-LINKFLAGS += -N written\20by\20Dirk\20Lausecker\202000
+# LINKFLAGS += -N written\20by\20Dirk\20Lausecker\202000
 _PROTO=2.0
 

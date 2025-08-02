@@ -10,10 +10,10 @@ FILE:		userMain.asm
 ROUTINES:
 	Name			Description
 	----			-----------
-    MTD MSG_GEN_PROCESS_ATTACH_TO_PASSED_STATE_FILE 
+    MTD MSG_GEN_PROCESS_ATTACH_TO_PASSED_STATE_FILE
 				Attach to state file
 
-    MTD MSG_GEN_PROCESS_OPEN_APPLICATION 
+    MTD MSG_GEN_PROCESS_OPEN_APPLICATION
 				Startup application
 
     INT UserNotifyPCMCIA        Inform the PCMCIA library (if there is one)
@@ -28,7 +28,7 @@ ROUTINES:
 
     INT InitOverstrikeMode      Sets up overstrike mode flag.
 
-    INT InitActivationDialogMode 
+    INT InitActivationDialogMode
 				Sets up activation dialog flag.
 
     INT InitKbdAcceleratorMode  Sets up kbd accelerator mode flag.
@@ -49,7 +49,7 @@ ROUTINES:
 				application listed in the
 				execOnStartupBackground key.
 
-    GLB LoadApplicationWithErrorMessage 
+    GLB LoadApplicationWithErrorMessage
 				Loads an application and puts up a
 				SysNotify box if any error.
 
@@ -62,11 +62,11 @@ ROUTINES:
     GLB UserLoadHWR             Loads up the handwriting-recognition
 				driver.
 
-    MTD MSG_USER_UPDATE_SOUND_PARAMS 
+    MTD MSG_USER_UPDATE_SOUND_PARAMS
 				This routine updates the sound parameters
 				(like if the sound driver is loaded or not)
 
-    MTD MSG_USER_FREE_SOUND_HANDLE 
+    MTD MSG_USER_FREE_SOUND_HANDLE
 				Free a sound handle
 
     INT SetDefaultInputMap      Set the default button map
@@ -78,10 +78,10 @@ ROUTINES:
     EXT UserAllocObjBlock       Allocate a block on the heap, to be used
 				for holding UI objects.
 
-    MTD MSG_PROCESS_NOTIFY_PROCESS_EXIT 
+    MTD MSG_PROCESS_NOTIFY_PROCESS_EXIT
 				Notificatin of process exit
 
-    MTD MSG_GEN_PROCESS_CREATE_NEW_STATE_FILE 
+    MTD MSG_GEN_PROCESS_CREATE_NEW_STATE_FILE
 				Create state file for UI
 
     INT UIBusyTimerRoutine      Handle time-out of busy timer -- check to
@@ -90,28 +90,28 @@ ROUTINES:
 
     INT LaunchHomescreen        Launches/brings-to-top homescreen
 
-    MTD MSG_USER_PROMPT_FOR_PASSWORD 
+    MTD MSG_USER_PROMPT_FOR_PASSWORD
 				Prompt for the password
 
-    INT NotifyPowerDriverPasswordOK 
+    INT NotifyPowerDriverPasswordOK
 				Tell the power driver that the entered
 				password is OK, or, perhaps, that none was
 				needed.
 
-    MTD MSG_USER_IS_PASSWORD_DIALOG_ACTIVE 
+    MTD MSG_USER_IS_PASSWORD_DIALOG_ACTIVE
 				Tell whether the password dialog is
 				on-screen
 
     INT VerifyBIOSPassword      Verify a password vs. the BIOS password
 
-    MTD MSG_USER_PASSWORD_ENTERED 
+    MTD MSG_USER_PASSWORD_ENTERED
 				Deal with the password being entered
 
     INT UserEncryptPassword     Encrypt a password (or other string)
 
     EXT CalculateHash           Calculate the 32-bit ID for a string
 
-    INT InstallRemovePasswordMonitor 
+    INT InstallRemovePasswordMonitor
 				Install or remove the APM password monitor.
 
     INT	UserInstallRemoveKeyClickMonitor
@@ -187,7 +187,7 @@ PSEUDO CODE/STRATEGY:
 		selectDisplaysMenu	= {true, false}
 		featuresExecutesDefault	= {true, false}
 		clickGoesThrough	= {true, false}
-	
+
 	if the values for the "execOnStartup" and "otherVideoDrivers"
 		keys span more than 1 line, they would need to be converted
 		to 'blobs'. Just enclose the parameters within curly
@@ -218,7 +218,7 @@ UserAttach	method	UserClass, MSG_META_ATTACH
 	call	ThreadModify
 	mov	ds:[uiThread], bx		;store UI thread here,
 						; so that ui utility routines
-						; can compare w/current 
+						; can compare w/current
 						; running thread.
 
 	mov	bx, handle 0
@@ -241,13 +241,13 @@ haveUndo:
 	call	UI_LogWriteEntry
 
 	;---------------------------------------------------------------------
-	
+
 	call	InitOverstrikeMode		;initialize overstrike mode
 
 	call	InitActivationDialogMode	;initialize activation dialog
 
 	;---------------------------------------------------------------------
-	
+
 	call	InitKbdAcceleratorMode		;initialize kbd accelerator mode
 
 	;----------------------------------------------------------------------
@@ -261,7 +261,7 @@ haveUndo:
 	mov	bx, handle 0
 	call	ObjMessage
 
-if PLAY_STARTUP_SHUTDOWN_MUSIC
+ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	;---------------------------------------------------------------------
 	;PLAY STARTUP MUSIC
 	sub	sp, size GeodeToken
@@ -369,7 +369,7 @@ endif
 	pop	ds
 	jc	10$
 	mov	ds:[unbuildControllers], al
-	
+
 10$:
 	push	ds				;save dgroup block
 	mov	cx, cs
@@ -380,7 +380,7 @@ endif
 	push	cx
 	call	InitFileReadString		;bx <- mem handle to string
 	pop	cx
-	jc	useDefaultSpecific		
+	jc	useDefaultSpecific
 
 	mov	bp, bx				;save mem handle
 	call	MemLock
@@ -409,7 +409,7 @@ EC <	ERROR	UI_CANNOT_LOAD_SPECIFIC_UI				>
 NEC <	mov	bx, handle cannotLoadSPUIError				>
 NEC <	call	MemLock							>
 NEC <	mov	ds, ax							>
-assume	ds:Strings    
+assume	ds:Strings
 NEC <	mov	si, ds:[cannotLoadSPUIError]				>
 assume	ds:dgroup
 NEC <	mov	ax, SST_DIRTY						>
@@ -417,7 +417,7 @@ NEC <	jmp	SysShutdown						>
 gotUI:
 	pop	ds				;retrieve dgroup
 	mov	ds:[uiSpecUILibrary], bx	; Store away handle of specific
-						; UI library we're using, so 
+						; UI library we're using, so
 						; that we can free it later.
 
 						;bx = specific UI to
@@ -482,14 +482,14 @@ doNotify:
 	clr	di				;no second string
 	mov	ax, mask SNF_EXIT
 	call	SysNotify
-				;Since no screens have been registered yet, 
+				;Since no screens have been registered yet,
 				; SysNotify will just exit, and will not
 				; return.
 assume	ds:dgroup
 	.unreached
 endif
 
-tokenDBInitialized:	
+tokenDBInitialized:
 
 ;	;-----------------------------------------------------------------------
 ;	;REMOVE TITLE SCREEN
@@ -500,7 +500,7 @@ tokenDBInitialized:
 
 	;-----------------------------------------------------------------------
 	;CREATE A SCREEN OBJECT
-	
+
 ;	pop	bx, si
 
 	;bx = object block, si = system object
@@ -592,9 +592,9 @@ tokenDBInitialized:
 	;
 	andnf	ds:[uiFlags], not mask UIF_INIT
 
-		
+
 		ret
-	
+
 UserAttach	endm
 
 
@@ -835,7 +835,7 @@ noPen:
 
 	;----------------------------------------------------------------------
 	;LOAD THE SPOOLER SO NEITHER pref NOR welcome HAS TO DEAL WITH IT
-	;unless otherwise specified in the init file. 
+	;unless otherwise specified in the init file.
 
 	call	UserLoadSpooler
 	mov	ds:[spoolerHandle], bx
@@ -846,22 +846,22 @@ noPen:
 
 	;----------------------------------------------------------------------
 	;LOAD THE MAILBOX LIBRARY
-	
+
 	call	UserLoadMailbox
 	mov	ds:[mailboxHandle], bx
 	tst	bx
 	jnz	doHelp
-	
+
 	; if couldn't load mailbox, then drop mailbox & medium notifications on
 	; the floor
-	
+
 	mov	si, SST_MAILBOX
 	call	SysIgnoreNotification
 
 	mov	si, SST_MEDIUM
 	call	SysIgnoreNotification
 doHelp:
-	
+
 	;----------------------------------------------------------------------
 	;ADD SYSTEM HELP OBJECTS TO GCN LIST
 
@@ -926,7 +926,7 @@ startupDone:
 
 
 printErrorAndExit:
-	
+
 	mov	bx, handle loadSpoolerErrorOne
 	call	MemLock
 	mov	ds, ax
@@ -1019,7 +1019,7 @@ endif
 	;CHECK FOR CRASH LAST TIME
 
 	;
-	; is there a temporary reason to delete the 
+	; is there a temporary reason to delete the
 
 	segmov	ds, cs
 	mov	si, offset uiCategoryStr
@@ -1085,7 +1085,7 @@ notCrashed:
 	mov	cx, IC_YES		;Leave state files alone!
 	call	GeodeGetDGroupDS
 	GOTO	UserDeleteStateFilesDialogResponse
-	
+
 askUser:
 	call	GeodeGetDGroupDS
 
@@ -1263,7 +1263,7 @@ noStateFile:
 	call	FilePushDir
 	mov	ax, SP_STATE			;Go to the state directory
 	call	FileSetStandardPath
-		
+
 	sub	sp, size FileEnumParams
 	mov	bp, sp
 
@@ -1501,7 +1501,7 @@ deviceStr			char	"device", 0
 overstrikeModeStr		char	"overstrikeMode",0
 
 kbdAcceleratorModeStr		char	"kbdAcceleratorMode",0
-				
+
 noSpoolerKeyString		char 	"noSpooler", 0
 
 noMailboxKeyString		char 	"noMailbox", 0
@@ -1625,16 +1625,16 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Load the task-switch driver specified in the ini file.
 
-CALLED BY:	
-PASS:		
-RETURN:		
-DESTROYED:	
+CALLED BY:
+PASS:
+RETURN:
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1651,10 +1651,10 @@ UserLoadTaskDriver proc	near
 	;
 	; First try the user-specified one. It may refuse to load b/c the
 	; task-switcher isn't loaded, or there may not be one defined.
-	; 
+	;
 		mov	ax, offset cs:logTaskStr
 		call	UI_LogWriteEntry
-		
+
 		mov	ax, SP_TASK_SWITCH_DRIVERS
 		mov	cx, TASK_PROTO_MAJOR
 		mov	dx, TASK_PROTO_MINOR
@@ -1667,12 +1667,12 @@ UserLoadTaskDriver proc	near
 	; defined to be an extended driver, but I also know the default driver
 	; doesn't do squat with the DRE_TEST_DEVICE and DRE_SET_DEVICE calls,
 	; so I'm not going to try and fudge them...
-	; 
+	;
 		mov	ax, offset cs:logDefaultTaskStr
 		call	UI_LogWriteEntry
 
 		mov	ax, SP_TASK_SWITCH_DRIVERS
-		call	FileSetStandardPath		
+		call	FileSetStandardPath
 
 		mov	si, offset defaultTaskDR
 		mov	ax, TASK_PROTO_MAJOR
@@ -1682,7 +1682,7 @@ UserLoadTaskDriver proc	near
 setDefaultDriver:
 	;
 	; bx = driver handle; set it as *the* task-switch driver for the system.
-	; 
+	;
 		mov	ax, GDDT_TASK
 		call	GeodeSetDefaultDriver
 done:
@@ -1859,9 +1859,9 @@ DESCRIPTION:	Retrieve and load the mouse driver specified.
 
 CALLED BY:	INTERNAL (UserAttach)
 
-PASS:		nothing 
+PASS:		nothing
 
-RETURN:		nothing 
+RETURN:		nothing
 
 DESTROYED:	ax,bx,cx,dx,bp,di,si
 
@@ -1897,7 +1897,7 @@ LoadMouseDriver	proc	near
 	;
 		mov	ax, GDDT_MOUSE
 		call	GeodeGetDefaultDriver
-		tst	ax	
+		tst	ax
 		jnz	done
 	;
 	; Load mouse driver specified in .ini file
@@ -1929,7 +1929,7 @@ done:
 	; a second mouse driver as well, as on pen-based
 	; systems that can use an optional mouse.
 	;
-		
+
 		segmov	ds, cs
 		mov	si, offset secondMouseCategoryStr
 		mov	ax, SP_MOUSE_DRIVERS
@@ -1977,7 +1977,7 @@ if FULL_EXECUTE_IN_PLACE
 		call	SysRemoveFromStack
 		call	SysRemoveFromStack	;release stack space
 		pop	ds, si
-endif		
+endif
 		pop	es
 		jc	done			; exit if error
 		jmp	loadedMouseDriver
@@ -2003,10 +2003,10 @@ RETURN:		nothing
 DESTROYED:	bx, di, ax, cx, dx, ds, si
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -2050,10 +2050,10 @@ RETURN:		carry clear if key found:
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -2066,7 +2066,7 @@ GetIniString	proc	near	uses bp, cx, ax
 		mov	bp, INITFILE_INTACT_CHARS
 		call	InitFileReadString
 		jc	done
-		
+
 		call	MemLock
 		mov	ds, ax
 		clr	si
@@ -2080,7 +2080,7 @@ COMMENT @-----------------------------------------------------------------------
 
 FUNCTION:	StartupAppls
 
-DESCRIPTION:	
+DESCRIPTION:
 
 CALLED BY:	INTERNAL (UserAttach, MSG_USER_STARTUP_APPLS)
 
@@ -2092,7 +2092,7 @@ RETURN:		carry set if user wants to shutdown because of app launch
 			user is allow us to continue even though app launch
 			error occurred)
 
-DESTROYED:	
+DESTROYED:
 
 REGISTER/STACK USAGE:
 
@@ -2180,10 +2180,10 @@ RETURN:		es, bx	= values to pass to next iteration
 DESTROYED:	ax, cx, dx, di, si, bp may all be biffed
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -2198,7 +2198,7 @@ StartupAppls_callback proc	far
 	;
 	; Now load the app. We always give the user a choice of whether to
 	; shut down or not.
-	; 
+	;
 		mov	bp, bx
 		mov	bx, 1		; it's ok for app to not exist
 		mov	ah, mask ALF_NO_ACTIVATION_DIALOG
@@ -2208,14 +2208,14 @@ StartupAppls_callback proc	far
 		call	LoadApplicationWithErrorMessage
 	;
 	; Return extra data in bx again.
-	; 
+	;
 		mov	bx, bp
 		jnc	done
 	;
 	; User is shutting down the system, so change BX to tell StartupAppls
 	; that we actually were called, but stop enumerating sections (NOT
 	; doesn't touch the carry)
-	; 
+	;
 		not	bx
 done:
 		.leave
@@ -2230,7 +2230,7 @@ StartupApplsBG_callback proc	far
 	;
 	; Now load the app. We always give the user a choice of whether to
 	; shut down or not.
-	; 
+	;
 		mov	bp, bx
 		mov	bx, 1		; it's ok for app to not exist
 	;
@@ -2245,14 +2245,14 @@ StartupApplsBG_callback proc	far
 		call	LoadApplicationWithErrorMessage
 	;
 	; Return extra data in bx again.
-	; 
+	;
 		mov	bx, bp
 		jnc	done
 	;
 	; User is shutting down the system, so change BX to tell StartupAppls
 	; that we actually were called, but stop enumerating sections (NOT
 	; doesn't touch the carry)
-	; 
+	;
 		not	bx
 done:
 		.leave
@@ -2276,7 +2276,7 @@ PASS:		ds:si - ptr to application to load
 RETURN:		carry set if the user is shutting down the system.
 		ax = 0 if no error
 DESTROYED:	ax, bx, cx, dx
- 
+
 PSEUDO CODE/STRATEGY:
 		This page intentionally left blank
 
@@ -2368,7 +2368,7 @@ assume	ds:Strings
 	push	cx			;Save size of stack frame
 	push	di			;Save ptr to stack frame
 	rep	movsb
-	call	MemUnlock	
+	call	MemUnlock
 assume	ds:dgroup
 	segmov	ds, ss
 	pop	si			;DS:SI <- first string
@@ -2376,12 +2376,12 @@ assume	ds:dgroup
 
 	mov	ax, mask SNF_ABORT or mask SNF_CONTINUE
 	tst	dx			;If serious shutdown, don't allow user
-	jnz	80$			; to continue	
+	jnz	80$			; to continue
 	mov	ax, mask SNF_EXIT	;
 80$:
 	call	SysNotify		;
 	pop	cx			;Get stack frame size
-	add	sp, cx			;Nuke stack frame	
+	add	sp, cx			;Nuke stack frame
 	pop	cx			;Get stack frame size
 	add	sp, cx			;Nuke stack frame
 	test	ax, mask SNF_ABORT	;
@@ -2404,15 +2404,15 @@ COMMENT @-----------------------------------------------------------------------
 
 FUNCTION:	LoadScreenBlanker
 
-DESCRIPTION:	
+DESCRIPTION:
 
 CALLED BY:	INTERNAL (InitGeos)
 
-PASS:		
+PASS:
 
-RETURN:		
+RETURN:
 
-DESTROYED:	
+DESTROYED:
 
 REGISTER/STACK USAGE:
 
@@ -2442,7 +2442,7 @@ LoadScreenBlanker	proc	near	uses	ds
 
 	inc	ax			;transform T to 0, F to 1
 	jne	done			;branch if F
-	
+
 	mov	dx, offset cs:screenBlankerTimeoutKeyString
 	call	InitFileReadInteger	;ax <- value
 	mov	cx, SCREEN_BLANKER_DEFAULT ;default value
@@ -2477,7 +2477,7 @@ PASS:		nada
 RETURN:		carry set if error
 		else, bx - geode process handle
 DESTROYED:	various important but undocumented things
- 
+
 PSEUDO CODE/STRATEGY:
 		This page intentionally left blank
 
@@ -2499,7 +2499,7 @@ UserLoadSpooler	proc	near	uses	ds
 	mov	dx, offset noSpoolerKeyString
 	mov	ax, offset logSpoolerStr
 	call	UserLoadSysLibraryApp
-	
+
 	.leave
 	ret
 UserLoadSpooler	endp
@@ -2520,7 +2520,7 @@ RETURN:		carry set if error
 		else
 			bx 	= geode process handle
 DESTROYED:	ax, dx, cx, si
- 
+
 PSEUDO CODE/STRATEGY:
 		This page intentionally left blank
 
@@ -2542,7 +2542,7 @@ UserLoadMailbox	proc	near	uses	ds
 	mov	dx, offset noMailboxKeyString
 	mov	ax, offset logMailboxStr
 	call	UserLoadSysLibraryApp
-	
+
 	.leave
 	ret
 UserLoadMailbox	endp
@@ -2554,7 +2554,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Load a library application that lives in SP_SYSTEM
 
-CALLED BY:	(INTERNAL) UserLoadSpooler, 
+CALLED BY:	(INTERNAL) UserLoadSpooler,
 			   UserLoadMailbox
 PASS:		cs:si	= filename of application
 		cs:dx	= boolean ini key to look for to see if load should
@@ -2566,10 +2566,10 @@ RETURN:		carry set if couldn't load:
 			bx	= geode handle (0 if ini file said not to
 				  load it)
 DESTROYED:	ax, cx, dx, ds
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -2581,12 +2581,12 @@ UserLoadSysLibraryApp proc	near
 		.enter
 	;
 	; Log what we're about to load.
-	; 
+	;
 		call	UI_LogWriteEntry
 	;
 	; First check the .ini file for an override that would make us
 	; not load this thing.
-	; 
+	;
 		push	si
 		mov	cx, cs
 		mov	ds, cx
@@ -2606,7 +2606,7 @@ loadIt:
 	;
 	; It's ok to load the thing.
 	; ds = cs
-	; 
+	;
 		;
 		; Now load the beastie
 		;
@@ -2636,7 +2636,7 @@ PASS:		nada
 RETURN:		carry set if error
 		else, bx - geode process handle
 DESTROYED:	various important but undocumented things
- 
+
 PSEUDO CODE/STRATEGY:
 		This page intentionally left blank
 
@@ -2705,7 +2705,7 @@ CALLED BY:	GLOBAL
 PASS:		ds - segment of UserClass
 RETURN:		nada
 DESTROYED:	various important but undocumented things
- 
+
 PSEUDO CODE/STRATEGY:
 		This page intentionally left blank
 
@@ -2746,8 +2746,8 @@ UserUpdateSoundParams	method	dynamic UserClass,
 	mov	dx, offset soundString
 	call	InitFileReadBoolean
 	pop	ds
-	jc	yesSound		;If no sound parameter, default to 
-					; having sound. 
+	jc	yesSound		;If no sound parameter, default to
+					; having sound.
 	tst	ax			;If parameter was "false", no sound
 	jz	noSound			;
 					;Else, we have sound...
@@ -2781,7 +2781,7 @@ noSound:
 noSoundLoaded:
 	clr	ds:[soundDriver]
 exit:
-		
+
 	VSem	ds, soundDriverSem, TRASH_AX_BX
 	.leave
 	ret
@@ -2798,7 +2798,7 @@ CALLED BY:	INTERNAL (UserUpdateSoundParams / SetUpStandardSounds)
 PASS:		es	= dgroup
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 		We need to update key click and alarm tone. To be API
@@ -2847,7 +2847,7 @@ DESTROYED:	ax
 
 SIDE EFFECTS:
 		Free's block who's handle is passed in cx
-		
+
 PSEUDO CODE/STRATEGY:
 		Free that puppy.
 
@@ -2880,7 +2880,7 @@ REVISION HISTORY:
 	AY	6/22/95		Changed to call Sound lib to do the work
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-UserFreeSoundHandle	method dynamic UserClass, 
+UserFreeSoundHandle	method dynamic UserClass,
 					MSG_USER_FREE_SOUND_HANDLE
 
 	mov	bx, cx			; ^hbx = SoundControl to free
@@ -2994,7 +2994,7 @@ SetDefaultInputMap	proc	near
 	mov	dx, offset cs:[keyboardOnlyStr]
 	mov	bl, mask UIBF_KEYBOARD_ONLY
 	call	CheckKey
-	; 
+	;
 	; if no .ini file entry for "keyboardOnly", default to false
 	; if pen system, otherwise consult mouse driver.
 	;
@@ -3113,7 +3113,7 @@ COMMENT @-----------------------------------------------------------------------
 
 FUNCTION:	CheckNumMouseButtons
 
-DESCRIPTION:	
+DESCRIPTION:
 
 CALLED BY:	INTERNAL (SetDefaultInputMap)
 
@@ -3139,10 +3139,10 @@ REVISION HISTORY:
 -------------------------------------------------------------------------------@
 DEFAULT_NUM_BUTTONS	=	3
 
-inputMapTable	nptr.InputMapHeader 	OneButton, 
+inputMapTable	nptr.InputMapHeader 	OneButton,
 					TwoButton,
 					ThreeButton
-			
+
 
 CheckNumMouseButtons	proc	near	uses bx, bp, cx, si
 	.enter
@@ -3187,14 +3187,14 @@ COMMENT @-----------------------------------------------------------------------
 
 FUNCTION:	CheckKey
 
-DESCRIPTION:	
+DESCRIPTION:
 
 CALLED BY:	INTERNAL (SetDefaultInputMap)
 
 PASS:		si - offset to category ASCIIZ string
 		dx - offset to key ASCIIZ string
 		bl - mask
-		
+
 
 RETURN:		ds:[inMask], ds:[outMask] - modified by bl
 		carry set if .ini file entry *not* found
@@ -3252,16 +3252,16 @@ PASS:		cx	= non zero to install monitor
 		cx	= 0 to remove monitor
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
 	kho	8/17/95    	Initial version (modified after
-				OLFieldEnsureStickyMonitor) 
+				OLFieldEnsureStickyMonitor)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
@@ -3275,7 +3275,7 @@ CALLED BY:	UserAttach()
 PASS:		none
 RETURN:		none
 DESTROYED:	none
-SIDE EFFECTS:	
+SIDE EFFECTS:
 	Doesn't return if the specified date has passed.
 
 PSEUDO CODE/STRATEGY:
@@ -3291,8 +3291,8 @@ PSEUDO CODE/STRATEGY:
 	Something like:
 if SOFTWARE_EXPIRES
 
-LocalDefString softwareExpiredError 
-<"This test version of the software has expired -- 
+LocalDefString softwareExpiredError
+<"This test version of the software has expired --
   please download a new version.", 0>
 
 endif
@@ -3309,7 +3309,7 @@ endif
 
 	(or FALSE, depending on the version you're compiling) in
 	Library/User/uiConstant.gp.
-	
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -3350,7 +3350,7 @@ softwareExpired:
 		mov	bx, handle softwareExpiredError
 		call	MemLock
 		mov	ds, ax
-assume	ds:Strings    
+assume	ds:Strings
 		mov	si, ds:[softwareExpiredError]
 assume	ds:dgroup
 		mov	ax, SST_DIRTY
@@ -3772,7 +3772,7 @@ COMMENT @----------------------------------------------------------------------
 FUNCTION:	UserDetach -- MSG_META_DETACH for UserClass
 
 DESCRIPTION:	This method commands the UI process to exit.  Before we
-		can do that, we have to shut down all applications which 
+		can do that, we have to shut down all applications which
 		depend on us.  SO, we detach the system object & wait for
 		an acknowledge, at which time we actually detach the UI
 		process.
@@ -3846,7 +3846,7 @@ if 0		; Removed 10/19/92: GenProcessClass has special code to
 		; down in UserAck -- ardeb
 
 	; If it is the system object asking us to detach, the system object
-	; will be history by the time this (the UI) process is ready to 
+	; will be history by the time this (the UI) process is ready to
 	; exit -- we won't actually be able to ACK it, so clear the source
 	; now, before proceeding.  The sys object is aware of this, as
 	; you fill find matching documentation in genSystem.asm noting that
@@ -3860,7 +3860,7 @@ endif
 	;
 	test	ds:[uiFlags], mask UIF_DETACHING_APP
 	jz	notYetDetachingApp
-	
+
 justAckSender:
 	; If we have, then just ack whoever the heck sent this message to us.
 	;
@@ -3893,7 +3893,7 @@ notYetDetachingSystem:
 	mov	ds:[uiAckID], cx
 	movdw	ds:[uiAckOD], dxbp
 
-if PLAY_STARTUP_SHUTDOWN_MUSIC
+ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	; Play shutdown music.
 	;
 	push	ax, ds
@@ -3960,7 +3960,7 @@ CALLED BY:	MSG_META_DETACH_ABORT
 PASS:		ds = es	= dgroup
 RETURN:		nada
 DESTROYED:	various important but undocumented things
- 
+
 PSEUDO CODE/STRATEGY:
 		This page intentionally left blank
 
@@ -4028,7 +4028,7 @@ EC <	ERROR_NZ	UI_PROCESS_UNKOWN_ACK_SOURCE			>
 	cmp	bp, offset UIApp
 EC <	ERROR_NZ	UI_PROCESS_UNKOWN_ACK_SOURCE			>
 
-	; Pass ACK from app object on to superclass, GenProcessClass, to 
+	; Pass ACK from app object on to superclass, GenProcessClass, to
 	; finish performing shutdown of application side of UI.
 	;
 	mov	di, offset UserClass
@@ -4036,7 +4036,7 @@ EC <	ERROR_NZ	UI_PROCESS_UNKOWN_ACK_SOURCE			>
 	ret
 
 systemObjectAck:
-	mov	ds:[uiSystemObj].handle, -1	
+	mov	ds:[uiSystemObj].handle, -1
 	; Stop the screen saver
 
 	mov	ax, MSG_IM_DISABLE_SCREEN_SAVER
@@ -4058,7 +4058,7 @@ noPen:
 	call	ImReleaseInput			; Release IM grab
 	call	WinReleaseChange		; Release Window system grab
 
-	; Free the specific UI we used earlier, but after queue has 
+	; Free the specific UI we used earlier, but after queue has
 	; been flushed one more time, so that no more IM events are coming
 	; through.
 	mov	ax, MSG_USER_FREE_SPECIFIC_UI
@@ -4075,7 +4075,7 @@ noPen:
 	jz	noHWRLib
 	call	GeodeFreeLibrary
 noHWRLib:
-	
+
 
 	;
 	; Close down the Token database
@@ -4087,7 +4087,7 @@ noHWRLib:
 	;
 	call	ClipboardCloseClipboardFile
 
-if PLAY_STARTUP_SHUTDOWN_MUSIC
+ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	;
 	; If there was a shutdown sound playing, this will wait until it
 	; exits.  Otherwise, this should do nothing.
@@ -4099,7 +4099,7 @@ endif	; PLAY_STARTUP_SHUTDOWN_MUSIC
 
 	; DO NOT send MSG_META_ACK to the superclass, since MetaClass will
 	; try & handle this as if we'd called ObjInitDetach, which we HAVE NOT.
-	; Instead, send MSG_META_DETACH *not* to our superclass, 
+	; Instead, send MSG_META_DETACH *not* to our superclass,
 	; GenProcessClass, but rather, to its superclass "ProcessClass,"
 	; which we didn't do earlier.  ProcessClass will send the
 	; MSG_META_ACK for us.
@@ -4116,7 +4116,7 @@ endif	; PLAY_STARTUP_SHUTDOWN_MUSIC
 	mov	di, offset GenProcessClass
 	mov	ax, MSG_META_DETACH
 	CallSuper	MSG_META_DETACH
-	ret	
+	ret
 
 UserAck	endm
 
@@ -4284,7 +4284,7 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 
-UserCreateNewStateFile	method dynamic	UserClass, 
+UserCreateNewStateFile	method dynamic	UserClass,
 					MSG_GEN_PROCESS_CREATE_NEW_STATE_FILE
 
 	mov	ax, ds:[stateFileHandle]
@@ -4538,7 +4538,7 @@ RETURN:		if error:
 			bp - handle of library
 
 DESTROYED:	various important but undocumented things
- 
+
 PSEUDO CODE/STRATEGY:
 		This page intentionally left blank
 
@@ -4626,10 +4626,10 @@ RETURN:		nothing
 DESTROYED:	everything
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -4660,7 +4660,7 @@ inval:
 findRoot:
 	;
 	; Refresh the pointer image in the video driver.
-	; 
+	;
 		mov	bp, -1
 		call	ImSetPtrImage
 	;
@@ -4675,7 +4675,7 @@ findRoot:
 					;  do this...
 	;
 	; Force the pointer back on-screen.
-	; 
+	;
 		call	ImGetPtrWin
 		call	GeodeInfoDriver
 		push	ax, bx, cx, dx, si, di, bp
@@ -4685,7 +4685,7 @@ findRoot:
 	;
 	; Fetch the current pointer root and use it for both the root and
 	; the error window.
-	; 
+	;
 fetchPtrWin:
 		call	ImGetPtrWin
 		mov	cx, di
@@ -4707,7 +4707,7 @@ PASS:		cx - root window to invalidate
 		ss:bp - ptr to Rectangle structure (bounds to invalidate)
 RETURN:		nada
 DESTROYED:	nada
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -4761,7 +4761,7 @@ RETURN:		al	= mask MF_DATA if event is to be passed through
 DESTROYED:	ah, bx, ds, es (possibly)
 		cx, dx, si, bp (if event swallowed)
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 		Click according to dgroup:[keyClickType].
@@ -4967,7 +4967,7 @@ done:
 doneNotActive:
 
 	call	NotifyPowerDriverPasswordOK
-		
+
 	mov	ax, dgroup
 	mov	ds, ax
 	clr	ds:[passwordActive]
@@ -4993,13 +4993,13 @@ SYNOPSIS:	Tell the power driver that the entered password is OK,
 
 CALLED BY:	UserPromptForPassword, UserPasswordEntered
 
-PASS:		nothing 
+PASS:		nothing
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -5021,7 +5021,7 @@ NotifyPowerDriverPasswordOK	proc near
 
 		tst	bx			; quit if no power driver
 		jz	done
-		
+
 		call	GeodeInfoDriver
 		mov	di, DR_POWER_PASSWORD_OK
 		call	ds:[si].DIS_strategy
@@ -5044,13 +5044,13 @@ PASS:		*ds:si	- UserClass object
 
 RETURN:		ax - TRUE if on-screen, FALSE otherwise
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
 REGISTER/STACK USAGE:
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
-KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:	
+KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -5060,7 +5060,7 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 
-UserIsPasswordDialogActive	method	dynamic	UserClass, 
+UserIsPasswordDialogActive	method	dynamic	UserClass,
 					MSG_USER_IS_PASSWORD_DIALOG_ACTIVE
 
 		mov	al, ds:[passwordActive]
@@ -5196,7 +5196,7 @@ endif
 	mov	ds, cx
 
 	mov	si, offset uiCategoryStr2
-	mov	dx, offset pwEncryptEnableKeyStr 
+	mov	dx, offset pwEncryptEnableKeyStr
 	call	InitFileReadBoolean
 	segmov	ds, ss
 	segmov	es, ss
@@ -5408,7 +5408,7 @@ EC <    mov   	bx, ds	                                    >
 EC <    call    ECAssertValidFarPointerXIP                  >
 EC <    pop   	bx                                          >
 endif
-		
+
 	.enter
 
 	clr	ax
@@ -5470,7 +5470,7 @@ PASS:		ds:si	= path whose ID wants calculating
 		cxdx	= hash seed value
 RETURN:		cxdx	= 32-bit ID
 DESTROYED:	none
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -5502,7 +5502,7 @@ charLoop:
 		jz	done		; yes
 	;
 	; Multiply existing value by 33
-	; 
+	;
 		movdw	dibp, bxdx	; save current value for add
 		rol	dx, cl		; *32, saving high 5 bits in low ones
 		shl	bx, cl		; *32, making room for high 5 bits of
@@ -5514,14 +5514,14 @@ charLoop:
 		adddw	bxdx, dibp	; *32+1 = *33
 	;
 	; Add current character into the value.
-	; 
+	;
 		add	dx, ax
 		adc	bx, 0
-		jmp	charLoop		
+		jmp	charLoop
 done:
 	;
 	; Return ID in cxdx
-	; 
+	;
 		mov	cx, bx
 		.leave
 		ret
