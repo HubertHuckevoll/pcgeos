@@ -80,5 +80,5 @@ export	BSNWAVECALCPLAYTIMETEXT
 export	BSNWAVEGETPLAYSTATE
 export	BSNWAVEGETLASTFORMAT
 
-usernotes "NewWave-Library for best sound. \xa9 2000 Dirk Lausecker"
+# usernotes "NewWave-Library for best sound. \xa9 2000 Dirk Lausecker"
 

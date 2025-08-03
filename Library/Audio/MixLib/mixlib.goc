@@ -1,22 +1,22 @@
 /************************************************
- *						*
- *	Projekt:	BestSound		*
- *						*
- *	Module:		Mixer-Library		*
- *						*
- *	File:		MIXLIB.GOC		*
- *						*
- *	Autor:		Dirk Lausecker		*
- *						*
- * BSMixerLoadDriver	Mixertreiber laden	*
- * BSMixerGetCap	Out: valNum Anzahl Val.	*
- * BSMixerGetValue				*
- *						*
+ *                      *
+ *  Projekt:    BestSound       *
+ *                      *
+ *  Module:     Mixer-Library       *
+ *                      *
+ *  File:       MIXLIB.GOC      *
+ *                      *
+ *  Autor:      Dirk Lausecker      *
+ *                      *
+ * BSMixerLoadDriver    Mixertreiber laden  *
+ * BSMixerGetCap    Out: valNum Anzahl Val. *
+ * BSMixerGetValue              *
+ *                      *
  ************************************************/
 
 /*
-@define	GERMAN
-#define	GERMAN
+@define GERMAN
+#define GERMAN
 /* */
 
 @include <stdapp.goh>
@@ -33,19 +33,26 @@
 
 /**************************** Konstanten ************************/
 
-#define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
-#define FP_OFF( fp )( (unsigned )( fp ))
+// #define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
+// #define FP_OFF( fp )( (unsigned )( fp ))
 
-word		datasize 	= 0;		//Puffer f�r ReadIni
-Handle		mixerDriver	= NullHandle;
-const char 	*soundCatIT 	= "sound";		//INI Eintrag
-const char 	*mixerDriverIT 	= "mixerDriver";	//INI Eintrag
-const char 	*synthDriverIT 	= "synthDriver";	//INI Eintrag
-//char		driverName[32] 	= "sblaster.geo";
-Boolean		demoModus	= TRUE;
-byte		valNum		= 0;
-GeodeLoadError 	gle;
-Boolean		driverUsed	= FALSE;	//Treiber wurde extra geladen
+// Watcom C 16 bit compatible macros
+#define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
+#define FP_OFF(fp) ((unsigned short)(fp))
+#define MK_FP(seg, ofs) ((void far *)(((unsigned long)(seg) << 16) | (unsigned)(ofs)))
+
+
+
+word        datasize    = 0;        //Puffer f�r ReadIni
+Handle      mixerDriver = NullHandle;
+const char  *soundCatIT     = "sound";      //INI Eintrag
+const char  *mixerDriverIT  = "mixerDriver";    //INI Eintrag
+const char  *synthDriverIT  = "synthDriver";    //INI Eintrag
+//char      driverName[32]  = "sblaster.geo";
+Boolean     demoModus   = TRUE;
+byte        valNum      = 0;
+GeodeLoadError  gle;
+Boolean     driverUsed  = FALSE;    //Treiber wurde extra geladen
 
 /********************** Funktionsdeklarationen ******************/
 
@@ -55,34 +62,37 @@ Boolean		driverUsed	= FALSE;	//Treiber wurde extra geladen
 
 /****************************
 
-	LibMixEntry
+    LibMixEntry
 
   IN:
-  LibraryCallType	type
+  LibraryCallType   type
   (warum wurde Library gerufen)
-  GeodeHandle		client
+  GeodeHandle       client
   (evtl. aufrufendes Programm)
 
   OUT:
-  TRUE		Fehler
-  FALSE		no error
+  TRUE      Fehler
+  FALSE     no error
 
  ****************************/
 
-Boolean	_pascal LibMixEntry(LibraryCallType type,GeodeHandle client)
+Boolean _pascal LibMixEntry(LibraryCallType type,GeodeHandle client)
 {
-        asm push ds
+        __asm {
+            push ds
+        }
         GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+
         switch (type) {
-            case LCT_ATTACH:				/* The library was just loaded. */
+            case LCT_ATTACH:                /* The library was just loaded. */
               {
-      	          //Init
+                  //Init
                   mixerDriver = NullHandle;
                   demoModus = TRUE;
               };
               break;
 
-            case LCT_DETACH:				/* The library is about to be unloaded. */
+            case LCT_DETACH:                /* The library is about to be unloaded. */
             {
                 //Treiber freigeben wenn er mit
                 //GeodeUseDriver geladen wurde
@@ -94,115 +104,128 @@ Boolean	_pascal LibMixEntry(LibraryCallType type,GeodeHandle client)
             };
 
               break;
-            case LCT_NEW_CLIENT:	break;		/* A new client of the library was just loaded. */
-            case LCT_NEW_CLIENT_THREAD:	break;		/* A new thread was just created for a
-                        			         * current client of the library. */
-            case LCT_CLIENT_THREAD_EXIT:break;		/* A thread was just exited for a current
+            case LCT_NEW_CLIENT:    break;      /* A new client of the library was just loaded. */
+            case LCT_NEW_CLIENT_THREAD: break;      /* A new thread was just created for a
+                                             * current client of the library. */
+            case LCT_CLIENT_THREAD_EXIT:break;      /* A thread was just exited for a current
                                                          * client of the library. */
-            case LCT_CLIENT_EXIT:	break;		/* Library's client is about to be unloaded. */
+            case LCT_CLIENT_EXIT:   break;      /* Library's client is about to be unloaded. */
         };
-        asm pop ds
+
+        __asm {
+            pop ds
+        }
+
         return (FALSE);
 }
 
 /****************************
 
-	BSMixerLoadDriver
+    BSMixerLoadDriver
 
  Mixertreiber laden bzw. fuer
  Benutzung vorbereiten
 
  IN
- * gle	     Ablage Fehlercode
+ * gle       Ablage Fehlercode
  [mixerDriver] = Treibername
- OUT	Boolean	demoMode
- * name	     Treibername
+ OUT    Boolean demoMode
+ * name      Treibername
 
  ****************************/
 
-Boolean	_pascal BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
+Boolean _pascal BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
 {
-    	Boolean	demoMode;
-    	asm push ds
-    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+        Boolean demoMode;
+
+        __asm {
+            push ds
+        }
+
+        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
 
-   	 /* Treibername aus INI lesen */
-    	demoMode = FALSE;
+     /* Treibername aus INI lesen */
+        demoMode = FALSE;
         driverUsed = FALSE;
 
-    	if(InitFileReadStringBuffer(soundCatIT,mixerDriverIT,name,32,&datasize))
-    	{   //mixerDriver-Eintrag nicht gefunden
-    	    //synthDriver versuchen, wenn nicht gefunden
-    	    demoMode = (InitFileReadStringBuffer(soundCatIT,synthDriverIT,name,32,&datasize));
-	};
+        if(InitFileReadStringBuffer(soundCatIT,mixerDriverIT,name,32,&datasize))
+        {   //mixerDriver-Eintrag nicht gefunden
+            //synthDriver versuchen, wenn nicht gefunden
+            demoMode = (InitFileReadStringBuffer(soundCatIT,synthDriverIT,name,32,&datasize));
+        };
 
         //Fehlercode reset
-    	*gle = 0;
+        *gle = 0;
 
         //Treiber suchen/laden
-    	if (demoMode)
-    	{
-      	    //Demomodus = kein Treiber laden
-    	}
-    	else
-    	{   //Treibereintrag in INI gefunden, jetzt Mixertreiber laden
-      	    mixerDriver = GeodeFind (name,GEODE_NAME_SIZE,0,0);
-     	    if (!mixerDriver)
-            {	//mixerDriver nicht im Speicher - muss geladen werden
+        if (demoMode)
+        {
+            //Demomode = load no driver
+        }
+        else
+        {   //Treibereintrag in INI gefunden, jetzt Mixertreiber laden
+            mixerDriver = GeodeFind (name,GEODE_NAME_SIZE,0,0);
+            if (!mixerDriver)
+            {   //mixerDriver not in memory - must be loaded
 
-    		FilePushDir ();
-    		FileSetCurrentPath (SP_SYSTEM,"SOUND");
+                FilePushDir ();
+                FileSetCurrentPath (SP_SYSTEM,"SOUND");
 
-    		/* mixer driver laden und Handle pruefen */
+                /* load mixer driver, check handle */
                 mixerDriver = GeodeUseDriver (name, 0, 0, gle);
-    		demoMode = (mixerDriver == NullHandle);
-                driverUsed = !demoMode;		//Flag setzen, da� Treiber extra
-                				//geladen wurde. (driverUsed)
+                demoMode = (mixerDriver == NullHandle);
+                driverUsed = !demoMode;     //set Flag, driver has been loaded (driverUsed)
 
-    		FilePopDir ();
-      	    };
+                FilePopDir ();
+            };
 
-	};
-	demoModus = demoMode;
-    	asm pop ds
+        };
 
-    	return (demoMode);
+        demoModus = demoMode;
+
+        __asm {
+            pop ds
+        }
+
+        return (demoMode);
 }
 
 /********************************
- *    BSMixerSetValue		*
- *				*
- * Mixerkanal setzen		*
- *				*
- * IN:	word	token		*
- *		0 = Reset	*
- *	byte	datatype	*
- *	1       Pegel,Balance   *
- *	2	Pegel_L,Pegel_R *
- *	byte	value1,value2	*
- * 				*
+ *    BSMixerSetValue       *
+ *              *
+ * Mixerkanal setzen        *
+ *              *
+ * IN:  word    token       *
+ *      0 = Reset   *
+ *  byte    datatype    *
+ *  1       Pegel,Balance   *
+ *  2   Pegel_L,Pegel_R *
+ *  byte    value1,value2   *
+ *              *
  ********************************/
 
-void	_pascal BSMixerSetValue (word token, byte dataType, byte value1, byte value2)
+void    _pascal BSMixerSetValue (word token, byte dataType, byte value1, byte value2)
 {
-        word	val_L;
-        word	val_R;
+        word    val_L;
+        word    val_R;
 
-	    asm	push ds
-  	    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+        __asm {
+            push ax
+        }
+        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
-	if (demoModus)
-	{
-  	//im Demomodus keine Daten an Treiber senden !
- 	}
-	else
-	{
-        //kein Demomodus !
+        if (demoModus)
+        {
+        //im Demomodus keine Daten an Treiber senden !
+        }
+        else
+        {
+            //kein Demomodus !
             //Pegel/Balance in Pegel_L/Pegel_R umrechnen
-	    if (dataType == 1)
+            if (dataType == 1)
             {
-            	if ((value2 >127))
+                if ((value2 >127))
                 {
                     val_R = ((255-value2)*value1)/127;
                     val_L = value1;
@@ -217,154 +240,173 @@ void	_pascal BSMixerSetValue (word token, byte dataType, byte value1, byte value
                 value2 = (byte)val_L;
             };
 
-            //Treiber aufrufen
-	    asm {
-	      push di
-	      push ax
-	      push dx
-	      mov  di,DRE_BSMIXER_SET_VALUE	/* get value */
-	      mov  al,value1			//Links
-	      mov  ah,value2			//Rechts
-	      mov  dx,token			/* value number */
-	    }
-	    BSCallDriver();
-	    asm {
-	      pop  dx
-	      pop  ax
-	      pop  di
-	    }
-	};
-	    asm	pop ds
+                //Treiber aufrufen
+            __asm {
+                push di
+                push ax
+                push dx
+                mov  di,DRE_BSMIXER_SET_VALUE /* get value */
+                mov  al,value1            //Links
+                mov  ah,value2            //Rechts
+                mov  dx,token         /* value number */
+            }
+
+            BSCallDriver();
+
+            __asm {
+                pop  dx
+                pop  ax
+                pop  di
+            }
+        };
+
+        __asm {
+            pop ds
+        }
 }
 
 /************************
- *			*
- *    BSMixerGetValue	*
- *			*
- * Mixerkanal lesen	*
- * 			*
- * dataType		*
+ *          *
+ *    BSMixerGetValue   *
+ *          *
+ * Mixerkanal lesen *
+ *          *
+ * dataType     *
  * 1 = Pegel            *
  * 2 = Balance          *
  * 3 = Rohdaten         *
  ************************/
 
-word	_pascal BSMixerGetValue (word token, byte dataType)
+word    _pascal BSMixerGetValue (word token, byte dataType)
 {
-  	word	value;
-  	byte	val1,val2;
+    word    value;
+    byte    val1,val2;
 
-	asm	push ds
-  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+    __asm {
+        push ds
+    }
+    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if (demoModus)
         {
-  	      value = 0;
+          value = 0;
         }
         else
         {
-    	      asm {
-      	          push ax
-      	          push dx
-      	          push di
-      	          mov  di,DRE_BSMIXER_GET_VALUE	/* get value */
-      	          mov  dx,token			/* value number */
-    	      }
-    	      BSCallDriver();
-    	      asm {
-      	          pop  di
-      	          mov  value,ax
-      	          pop  dx
-      	          pop  ax
-    	      }
+            __asm {
+                push ax
+                push dx
+                push di
+                mov  di,DRE_BSMIXER_GET_VALUE /* get value */
+                mov  dx,token         /* value number */
+            }
 
-              //Datentyp interpretieren
-              val1 = value & 0x00ff;
-              val2 = (value>>8) & 0x00ff;
-	      if (!val1)
-                  val1 = 1;
-              switch (dataType)
-              {
-                  case 1 : {	//Pegel
-		    	      if (val1 > val2)
-                              { value = val1; }
-                              else
-                              { value = val2; };
-                           }; break;
-                  case 2 : {	//Balance
-		    	      if (val1 > val2)
-                              {
-			          value = val2*127/val1;
-			      }
-                              else
-                              {   value = val1*127/val2;
-			          value = 255 - value;
-			      };
-        		      if ((val1|val2)<2) value = 128;
-                           }; break;
-              };
-              //Lautst�rke Null -> Balance = Mitte;
+            BSCallDriver();
+
+            __asm {
+                pop  di
+                mov  value,ax
+                pop  dx
+                pop  ax
+            }
+
+            //Datentyp interpretieren
+            val1 = value & 0x00ff;
+            val2 = (value>>8) & 0x00ff;
+            if (!val1)
+            val1 = 1;
+            switch (dataType)
+            {
+                case 1 : {    //Pegel
+                    if (val1 > val2)
+                    { value = val1; }
+                    else
+                    { value = val2; };
+                }; break;
+
+                case 2 : {    //Balance
+                    if (val1 > val2)
+                    {
+                        value = val2*127/val1;
+                    }
+                    else
+                    {   value = val1*127/val2;
+                        value = 255 - value;
+                    };
+                    if ((val1|val2)<2) value = 128;
+                }; break;
+            };
+              //Volume 0 -> Balance = Middle;
         };
-        asm	pop ds
 
+        __asm {
+            pop ds
+        }
 
         return(value);
 }
 
 /********************************
- *	    BSMixerGetCap	*
- *				*
- * 	Anzahl Einstellkan�le	*
- * 	ermitteln		*
- *				*
- *  IN	word	*dsp  Adresse V.*
+ *      BSMixerGetCap   *
+ *              *
+ *  Anzahl Einstellkan�le  *
+ *  ermitteln       *
+ *              *
+ *  IN  word    *dsp  Adresse V.*
  *                              *
- * OUT	word	Anzahl Kan�le	*
- *	*dsp	DSP Version	*
+ * OUT  word    Anzahl Kan�le  *
+ *  *dsp    DSP Version *
  ********************************/
 
-word	_pascal BSMixerGetCap (word *dsp)
+word    _pascal BSMixerGetCap (word *dsp)
 {
-    	word	valNum,DSPVersion;
+        word    valNum,DSPVersion;
 
-//    demoModus = TRUE;		//LA TEST !!!
+//    demoModus = TRUE;     //LA TEST !!!
 
-  	asm push ds
-  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+        __asm {
+            push ds
+        }
+        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if (demoModus)
         {
-        //im Demomodus keine Daten an Treiber senden !
-    	    valNum = 5;
+            //im Demomodus keine Daten an Treiber senden !
+            valNum = 5;
             DSPVersion = 0;
         }
         else
         {
 
-    	    asm {
-      	        push di
-      	        mov  di,DRE_BSMIXER_GET_CAP         /* get number of values */
-      	    }
-      	    BSCallDriver();
-	    asm {
-      	        pop  di
-      	        mov  valNum,cx
-                mov	 DSPVersion,dx
-    	    }
-        }
-        asm pop ds
+            __asm {
+                push di
+                mov  di,DRE_BSMIXER_GET_CAP         /* get number of values */
+            }
 
-        *dsp	= DSPVersion;
+            BSCallDriver();
+
+            __asm {
+                pop  di
+                mov  valNum,cx
+                mov  DSPVersion,dx
+            }
+        }
+
+        __asm {
+            pop ds
+        }
+
+        *dsp    = DSPVersion;
 
         return (valNum);
 }
 
 /********************************
- * 	BSCallDriver		*
- *				*
- * IN	di	Routinennummer	*
- *				*
- * C-Routine mit ASMCode zum	*
+ *  BSCallDriver        *
+ *              *
+ * IN   di  Routinennummer  *
+ *              *
+ * C-Routine mit ASMCode zum    *
  * Aufrufen einer Treiberroutine*
  ********************************/
 
@@ -373,9 +415,9 @@ void _pascal BSCallDriver ()
         DriverInfoStruct * driverInfo;
         int segm;
         int offs;
-        int	axsave;
+        int axsave;
 
-        asm {
+        __asm {
           push ds
           push si
           push ax
@@ -384,252 +426,257 @@ void _pascal BSCallDriver ()
           push dx
           push di
         }
+
         //Treibereinsprung ermitteln
         driverInfo = GeodeInfoDriver(mixerDriver);
         segm = FP_SEG(driverInfo) ;
         offs = FP_OFF(driverInfo) ;
 
-        asm {
+        __asm {
           pop  di
           pop  dx
           pop  cx
           pop  bx
           pop  ax
-          mov	 axsave,ax		//folgende if-Verzweigung zerstoert ax
+          mov    axsave,ax      //folgende if-Verzweigung zerstoert ax
         }
 
         //Sprungverteiler-Routine aufrufen
         if ((segm | offs) > 0)
         {
-           asm {
-            mov	 ax,axsave
-            mov  si, offs
-            mov  ds, segm
-            DB   03eh, 0ffh, 01ch	/* call far ds:[si] */
-         }
-
+            __asm {
+                mov  ax,axsave
+                mov  si, offs
+                mov  ds, segm
+                DB   03eh, 0ffh, 01ch   /* call far ds:[si] */
+            }
         }
         else
         {
-            demoModus = TRUE;		//Bei Fehler DEMOMODUS !
+            demoModus = TRUE;       //Bei Fehler DEMOMODUS !
         };
 
-        asm {
+        __asm {
               pop  si
               pop  ds
         }
 }
 
-@start	STRINGRESOURCE, data;
+@start  STRINGRESOURCE, data;
 
-@ifdef	GERMAN
+@ifdef  GERMAN
 
-@chunk	char bsmText1[] = "SUMME";
-@chunk	char bsmText2[] = "FM";
-@chunk	char bsmText3[] = "CD";
-@chunk	char bsmText4[] = "WAV";
-@chunk	char bsmText5[] = "LINE";
-@chunk	char bsmText6[] = "Mikro";
-@chunk	char bsmText7[] = "PC-Lspr";
-@chunk	char bsmText8[] = "H�hen";
-@chunk	char bsmText9[] = "Tiefen";
-@chunk	char bsmText10[] = "Aufnahmefilter";
-@chunk	char bsmText11[] = "Tiefpass";
-@chunk	char bsmText12[] = "Aufnahmequelle";
-@chunk	char bsmText13[] = "Wiedergabefilter";
-@chunk	char bsmText14[] = "Stereo";
-@chunk	char bsmText15[] = "Quelle f�r Wiedergabe";
-@chunk	char bsmText16[] = "Aufnahmequelle Links";
-@chunk	char bsmText17[] = "Aufnahmequelle Rechts";
-@chunk	char bsmText18[] = "Aufnahmeverst�rkung Links";
-@chunk	char bsmText19[] = "Aufnahmeverst�rkung Rechts";
-@chunk	char bsmText20[] = "Wiedergabeverst�rkung Links";
-@chunk	char bsmText21[] = "Wiedergabeverst�rkung Rechts";
-@chunk	char bsmText22[] = "Automatische Verst�rkungsregelung";
-@chunk	char bsmText23[] = "FM-L";
-@chunk	char bsmText24[] = "FM-R";
-@chunk	char bsmText25[] = "LINE-L";
-@chunk	char bsmText26[] = "LINE-R";
-@chunk	char bsmText27[] = "CD-L";
-@chunk	char bsmText28[] = "CD-R";
-@chunk	char bsmText29[] = "1 fach";
-@chunk	char bsmText30[] = "2 fach";
-@chunk	char bsmText31[] = "4 fach";
-@chunk	char bsmText32[] = "8 fach";
-@chunk	char bsmText33[] = "aus";
-@chunk	char bsmText34[] = "ein";
-@chunk	char bsmText35[] = "aktiv";
-@chunk	char bsmText36[] = "inaktiv";
-@chunk	char bsmText0[]  = "???";
+@chunk  char bsmText1[] = "SUMME";
+@chunk  char bsmText2[] = "FM";
+@chunk  char bsmText3[] = "CD";
+@chunk  char bsmText4[] = "WAV";
+@chunk  char bsmText5[] = "LINE";
+@chunk  char bsmText6[] = "Mikro";
+@chunk  char bsmText7[] = "PC-Lspr";
+@chunk  char bsmText8[] = "H�hen";
+@chunk  char bsmText9[] = "Tiefen";
+@chunk  char bsmText10[] = "Aufnahmefilter";
+@chunk  char bsmText11[] = "Tiefpass";
+@chunk  char bsmText12[] = "Aufnahmequelle";
+@chunk  char bsmText13[] = "Wiedergabefilter";
+@chunk  char bsmText14[] = "Stereo";
+@chunk  char bsmText15[] = "Quelle f�r Wiedergabe";
+@chunk  char bsmText16[] = "Aufnahmequelle Links";
+@chunk  char bsmText17[] = "Aufnahmequelle Rechts";
+@chunk  char bsmText18[] = "Aufnahmeverst�rkung Links";
+@chunk  char bsmText19[] = "Aufnahmeverst�rkung Rechts";
+@chunk  char bsmText20[] = "Wiedergabeverst�rkung Links";
+@chunk  char bsmText21[] = "Wiedergabeverst�rkung Rechts";
+@chunk  char bsmText22[] = "Automatische Verst�rkungsregelung";
+@chunk  char bsmText23[] = "FM-L";
+@chunk  char bsmText24[] = "FM-R";
+@chunk  char bsmText25[] = "LINE-L";
+@chunk  char bsmText26[] = "LINE-R";
+@chunk  char bsmText27[] = "CD-L";
+@chunk  char bsmText28[] = "CD-R";
+@chunk  char bsmText29[] = "1 fach";
+@chunk  char bsmText30[] = "2 fach";
+@chunk  char bsmText31[] = "4 fach";
+@chunk  char bsmText32[] = "8 fach";
+@chunk  char bsmText33[] = "aus";
+@chunk  char bsmText34[] = "ein";
+@chunk  char bsmText35[] = "aktiv";
+@chunk  char bsmText36[] = "inaktiv";
+@chunk  char bsmText0[]  = "???";
 
 @else
 
-@chunk	char bsmText1[] = "MASTER";
-@chunk	char bsmText2[] = "FM";
-@chunk	char bsmText3[] = "CD";
-@chunk	char bsmText4[] = "WAV";
-@chunk	char bsmText5[] = "LINE";
-@chunk	char bsmText6[] = "Micro";
-@chunk	char bsmText7[] = "PC-Spkr";
-@chunk	char bsmText8[] = "Treble";
-@chunk	char bsmText9[] = "Bass";
-@chunk	char bsmText10[] = "Imput Filter";
-@chunk	char bsmText11[] = "Lowpass";
-@chunk	char bsmText12[] = "Recording Source";
-@chunk	char bsmText13[] = "Output Filter";
-@chunk	char bsmText14[] = "Stereo";
-@chunk	char bsmText15[] = "Output Source";
-@chunk	char bsmText16[] = "Record Source Left";
-@chunk	char bsmText17[] = "Record Source Right";
-@chunk	char bsmText18[] = "Input Gain Left";
-@chunk	char bsmText19[] = "Input Gain Right";
-@chunk	char bsmText20[] = "Output Gain Left";
-@chunk	char bsmText21[] = "Output Gain Right";
-@chunk	char bsmText22[] = "AGC";
-@chunk	char bsmText23[] = "FM-L";
-@chunk	char bsmText24[] = "FM-R";
-@chunk	char bsmText25[] = "LINE-L";
-@chunk	char bsmText26[] = "LINE-R";
-@chunk	char bsmText27[] = "CD-L";
-@chunk	char bsmText28[] = "CD-R";
-@chunk	char bsmText29[] = "1x";
-@chunk	char bsmText30[] = "2x";
-@chunk	char bsmText31[] = "4x";
-@chunk	char bsmText32[] = "8x";
-@chunk	char bsmText33[] = "off";
-@chunk	char bsmText34[] = "on";
-@chunk	char bsmText35[] = "active";
-@chunk	char bsmText36[] = "inactive";
-@chunk	char bsmText0[]  = "???";
+@chunk  char bsmText1[] = "MASTER";
+@chunk  char bsmText2[] = "FM";
+@chunk  char bsmText3[] = "CD";
+@chunk  char bsmText4[] = "WAV";
+@chunk  char bsmText5[] = "LINE";
+@chunk  char bsmText6[] = "Micro";
+@chunk  char bsmText7[] = "PC-Spkr";
+@chunk  char bsmText8[] = "Treble";
+@chunk  char bsmText9[] = "Bass";
+@chunk  char bsmText10[] = "Imput Filter";
+@chunk  char bsmText11[] = "Lowpass";
+@chunk  char bsmText12[] = "Recording Source";
+@chunk  char bsmText13[] = "Output Filter";
+@chunk  char bsmText14[] = "Stereo";
+@chunk  char bsmText15[] = "Output Source";
+@chunk  char bsmText16[] = "Record Source Left";
+@chunk  char bsmText17[] = "Record Source Right";
+@chunk  char bsmText18[] = "Input Gain Left";
+@chunk  char bsmText19[] = "Input Gain Right";
+@chunk  char bsmText20[] = "Output Gain Left";
+@chunk  char bsmText21[] = "Output Gain Right";
+@chunk  char bsmText22[] = "AGC";
+@chunk  char bsmText23[] = "FM-L";
+@chunk  char bsmText24[] = "FM-R";
+@chunk  char bsmText25[] = "LINE-L";
+@chunk  char bsmText26[] = "LINE-R";
+@chunk  char bsmText27[] = "CD-L";
+@chunk  char bsmText28[] = "CD-R";
+@chunk  char bsmText29[] = "1x";
+@chunk  char bsmText30[] = "2x";
+@chunk  char bsmText31[] = "4x";
+@chunk  char bsmText32[] = "8x";
+@chunk  char bsmText33[] = "off";
+@chunk  char bsmText34[] = "on";
+@chunk  char bsmText35[] = "active";
+@chunk  char bsmText36[] = "inactive";
+@chunk  char bsmText0[]  = "???";
 
 @endif
 
-@end	STRINGRESOURCE;
+@end    STRINGRESOURCE;
 
 
 /********************************
- * 	BSMixerGetTokenText	*
- *				*
- * IN	word	token		*
- * 	char	*tokenText	*
- * OUT	tokenText		*
+ *  BSMixerGetTokenText *
+ *              *
+ * IN   word    token       *
+ *  char    *tokenText  *
+ * OUT  tokenText       *
  ********************************/
 
 void _pascal BSMixerGetTokenText (word token,char *tokenText)
 {
-           int 	segment;
-           int 	offsett;
-           char	*textPtr;
-           optr	op;
+        int  segment;
+        int  offsett;
+        char *textPtr;
+        optr op;
 
-           asm  push ds
-           GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+        __asm  {
+            push ds
+        }
+        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
-           //Textresource locken
-           MemLock(OptrToHandle(@bsmText1));
+        //Textresource locken
+        MemLock(OptrToHandle(@bsmText1));
 
-           //Token --> Text
-           switch (token)
-           {
-    	       case BSMX_TOKEN_MASTER 	: op = @bsmText1 ; break;
-    	       case BSMX_TOKEN_MIDI 	: op = @bsmText2 ; break;	//FM
-    	       case BSMX_TOKEN_CD	: op = @bsmText3 ; break;
-    	       case BSMX_TOKEN_VOICE	: op = @bsmText4 ; break;	//WAV
-    	       case BSMX_TOKEN_LINE	: op = @bsmText5 ; break;
-    	       case BSMX_TOKEN_MIC	: op = @bsmText6 ; break;
-    	       case BSMX_TOKEN_SPEAKER	: op = @bsmText7 ; break;
-    	       case BSMX_TOKEN_TREBLE	: op = @bsmText8 ; break;
-    	       case BSMX_TOKEN_BASS	: op = @bsmText9 ; break;
-    	       case BSMX_TOKEN_IN_FLT	: op = @bsmText10 ; break;
-    	       case BSMX_TOKEN_LOWPASS	: op = @bsmText11 ; break;
-    	       case BSMX_TOKEN_INP_SRC	: op = @bsmText12 ; break;
-    	       case BSMX_TOKEN_OUT_FLT	: op = @bsmText13 ; break;
-    	       case BSMX_TOKEN_STEREO	: op = @bsmText14 ; break;
-    	       case BSMX_TOKEN_OUT_MX_SW : op = @bsmText15 ; break;
-    	       case BSMX_TOKEN_IN_MX_SW_L: op = @bsmText16 ; break;
-    	       case BSMX_TOKEN_IN_MX_SW_R: op = @bsmText17 ; break;
-    	       case BSMX_TOKEN_IN_GAIN_L : op = @bsmText18 ; break;
-    	       case BSMX_TOKEN_IN_GAIN_R : op = @bsmText19 ; break;
-    	       case BSMX_TOKEN_OUT_GAIN_L: op = @bsmText20 ; break;
-    	       case BSMX_TOKEN_OUT_GAIN_R: op = @bsmText21 ; break;
-    	       case BSMX_TOKEN_AGC	: op = @bsmText22 ; break;
-    	       case BSMX_TOKEN_MIDI_L	: op = @bsmText23 ; break;
-    	       case BSMX_TOKEN_MIDI_R	: op = @bsmText24 ; break;
-    	       case BSMX_TOKEN_LINE_L	: op = @bsmText25 ; break;
-    	       case BSMX_TOKEN_LINE_R	: op = @bsmText26 ; break;
-    	       case BSMX_TOKEN_CD_L	: op = @bsmText27 ; break;
-    	       case BSMX_TOKEN_CD_R	: op = @bsmText28 ; break;
-    	       case BSMX_TOKEN_GAIN_0	: op = @bsmText29 ; break;
-    	       case BSMX_TOKEN_GAIN_1	: op = @bsmText30 ; break;
-    	       case BSMX_TOKEN_GAIN_2	: op = @bsmText31 ; break;
-    	       case BSMX_TOKEN_GAIN_3	: op = @bsmText32 ; break;
-    	       case BSMX_TOKEN_OFF	: op = @bsmText33 ; break;
-    	       case BSMX_TOKEN_ON	: op = @bsmText34 ; break;
-    	       case BSMX_TOKEN_ACTIVE	: op = @bsmText35 ; break;
-    	       case BSMX_TOKEN_INACT	: op = @bsmText36 ; break;
-               default			: op = @bsmText0  ;
+        //Token --> Text
+        switch (token)
+        {
+            case BSMX_TOKEN_MASTER   : op = @bsmText1 ; break;
+            case BSMX_TOKEN_MIDI     : op = @bsmText2 ; break;   //FM
+            case BSMX_TOKEN_CD   : op = @bsmText3 ; break;
+            case BSMX_TOKEN_VOICE    : op = @bsmText4 ; break;   //WAV
+            case BSMX_TOKEN_LINE : op = @bsmText5 ; break;
+            case BSMX_TOKEN_MIC  : op = @bsmText6 ; break;
+            case BSMX_TOKEN_SPEAKER  : op = @bsmText7 ; break;
+            case BSMX_TOKEN_TREBLE   : op = @bsmText8 ; break;
+            case BSMX_TOKEN_BASS : op = @bsmText9 ; break;
+            case BSMX_TOKEN_IN_FLT   : op = @bsmText10 ; break;
+            case BSMX_TOKEN_LOWPASS  : op = @bsmText11 ; break;
+            case BSMX_TOKEN_INP_SRC  : op = @bsmText12 ; break;
+            case BSMX_TOKEN_OUT_FLT  : op = @bsmText13 ; break;
+            case BSMX_TOKEN_STEREO   : op = @bsmText14 ; break;
+            case BSMX_TOKEN_OUT_MX_SW : op = @bsmText15 ; break;
+            case BSMX_TOKEN_IN_MX_SW_L: op = @bsmText16 ; break;
+            case BSMX_TOKEN_IN_MX_SW_R: op = @bsmText17 ; break;
+            case BSMX_TOKEN_IN_GAIN_L : op = @bsmText18 ; break;
+            case BSMX_TOKEN_IN_GAIN_R : op = @bsmText19 ; break;
+            case BSMX_TOKEN_OUT_GAIN_L: op = @bsmText20 ; break;
+            case BSMX_TOKEN_OUT_GAIN_R: op = @bsmText21 ; break;
+            case BSMX_TOKEN_AGC  : op = @bsmText22 ; break;
+            case BSMX_TOKEN_MIDI_L   : op = @bsmText23 ; break;
+            case BSMX_TOKEN_MIDI_R   : op = @bsmText24 ; break;
+            case BSMX_TOKEN_LINE_L   : op = @bsmText25 ; break;
+            case BSMX_TOKEN_LINE_R   : op = @bsmText26 ; break;
+            case BSMX_TOKEN_CD_L : op = @bsmText27 ; break;
+            case BSMX_TOKEN_CD_R : op = @bsmText28 ; break;
+            case BSMX_TOKEN_GAIN_0   : op = @bsmText29 ; break;
+            case BSMX_TOKEN_GAIN_1   : op = @bsmText30 ; break;
+            case BSMX_TOKEN_GAIN_2   : op = @bsmText31 ; break;
+            case BSMX_TOKEN_GAIN_3   : op = @bsmText32 ; break;
+            case BSMX_TOKEN_OFF  : op = @bsmText33 ; break;
+            case BSMX_TOKEN_ON   : op = @bsmText34 ; break;
+            case BSMX_TOKEN_ACTIVE   : op = @bsmText35 ; break;
+            case BSMX_TOKEN_INACT    : op = @bsmText36 ; break;
+            default          : op = @bsmText0  ;
 
+        };
 
-           };
-           //String von Treiber geben lassen wenn Token nicht bekannt war
-           if ((token > 49) && (demoModus == 0))
-           {
-               segment = FP_SEG(tokenText) ;
-  	       offsett = FP_OFF(tokenText) ;
-	       asm {
-                   push ax
-                   push bx
-                   push cx
-     	           push di
-	           mov	ax,segment		//Textzeiger
-                   mov bx,offsett
-                   mov	cx,token
-      	           mov  di,DRE_BSMIXER_TOKEN_TO_TEXT
-      	       }
-      	       BSCallDriver();
-      	       asm {
-	           pop di
-                   pop	cx
-                   pop bx
-                   pop ax
-	       }
+        //String von Treiber geben lassen wenn Token nicht bekannt war
+        if ((token > 49) && (demoModus == 0))
+        {
+            segment = FP_SEG(tokenText) ;
+            offsett = FP_OFF(tokenText) ;
+            __asm {
+                push ax
+                push bx
+                push cx
+                push di
+                mov  ax,segment      //Textzeiger
+                mov bx,offsett
+                mov  cx,token
+                mov  di,DRE_BSMIXER_TOKEN_TO_TEXT
+            }
 
-           }
-           else
-           {
-               //bekannter Token / demoModus
-    	       //String kopieren
-	       textPtr = LMemDeref(op);
-	       strcpy (tokenText,textPtr);
+            BSCallDriver();
 
-           };
+            __asm {
+                pop di
+                pop  cx
+                pop bx
+                pop ax
+            }
+        }
+        else
+        {
+            //bekannter Token / demoModus
+            //String kopieren
+            textPtr = LMemDeref(op);
+            strcpy (tokenText,textPtr);
+        };
 
-           //TokenTextresource freigeben
-           MemUnlock(OptrToHandle(@bsmText1));
+        //TokenTextresource freigeben
+        MemUnlock(OptrToHandle(@bsmText1));
 
-           asm	pop ds
-
+        __asm {
+            pop ds
+        }
 }
 
 /********************************
- * 	BSMixerGetSubToken	*
- *				*
- * Token f�r Bool/Item ermitt.	*
- *				*
- * IN	word	token		*
- *	word	identifier	*
- * OUT	tokenText		*
+ *  BSMixerGetSubToken  *
+ *              *
+ * Token f�r Bool/Item ermitt. *
+ *              *
+ * IN   word    token       *
+ *  word    identifier  *
+ * OUT  tokenText       *
  ********************************/
 
 word _pascal BSMixerGetSubToken(word token, word identifier)
 {
-        word	subToken;
+        word    subToken;
 
-	asm push ds
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+        __asm {
+            push ds
+        }
+        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         //demoModus = keine Aufrufe an Treiber
-	if (demoModus)
+        if (demoModus)
         {
             //demoModus
             subToken = 0;
@@ -637,177 +684,191 @@ word _pascal BSMixerGetSubToken(word token, word identifier)
         else
         {
             //Treiber aufrufen
-    	    asm {
-      	    	push ax
+            __asm {
+                push ax
                 push bx
                 push cx
-      	    	push dx
-      	    	push di
-            	mov  cx,token
+                push dx
+                push di
+                mov  cx,token
                 mov  dx,identifier
-      	    	mov  di,DRE_BSMIXER_GET_SUB_TOKEN
-    	    }
-    	    BSCallDriver();
-    	    asm {
-            	mov  subToken,ax
-      	    	pop  di
-      	    	pop  dx
+                mov  di,DRE_BSMIXER_GET_SUB_TOKEN
+            }
+            BSCallDriver();
+            __asm {
+                mov  subToken,ax
+                pop  di
+                pop  dx
                 pop  cx
                 pop  bx
-      	    	pop  ax
-    	    }
+                pop  ax
+            }
         };
 
-    	    asm	pop ds
+        __asm {
+            pop ds
+        }
 
         //Ende
         return (subToken);
 }
 
 /********************************
- * 	BSMixerSpecValue	*
- *				*
- * IN	word	valNum		*
- * 	char	*tokenText	*
- * OUT	tokenText		*
+ *  BSMixerSpecValue    *
+ *              *
+ * IN   word    valNum      *
+ *  char    *tokenText  *
+ * OUT  tokenText       *
  ********************************/
 
-void _pascal	BSMixerSpecValue(word valNum, MixerValue *value)
+void _pascal    BSMixerSpecValue(word valNum, MixerValue *value)
 {
-	word	Range;
-        word	Token;
-	byte	Type;
-        byte	Slider;
-	byte	Target;
-        byte	Visible;
-        byte	StereoFlag;
+    word    Range;
+    word    Token;
+    byte    Type;
+    byte    Slider;
+    byte    Target;
+    byte    Visible;
+    byte    StereoFlag;
 
-	asm push ds
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+    __asm
+    {
+        push ds
+    }
+    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         //demoModus = keine Aufrufe an Treiber
-	if (demoModus)
+        if (demoModus)
         {
             //demoModus
-	    value->valVisible = TRUE;		//Sichtbarkeit
-	    value->valStereoFlag = FALSE;	//FALSE = mono
-            value->valTarget = 1;		//1=Mixer 2=Record 3=Other
-	    value->valRange = 255;		//(word)Wertebereich
-            value->valToken = valNum+1;		//(word)Texttoken 1,2,3,...32
-	    value->valType = 1;			//0=none 1=Slider 2=Item 3=Boolean
-	    value->valPos = valNum;		//Position des Sliders 0,1,2...
-        /* */
+            value->valVisible = TRUE;       //Sichtbarkeit
+            value->valStereoFlag = FALSE;   //FALSE = mono
+            value->valTarget = 1;       //1=Mixer 2=Record 3=Other
+            value->valRange = 255;      //(word)Wertebereich
+            value->valToken = valNum+1;     //(word)Texttoken 1,2,3,...32
+            value->valType = 1;         //0=none 1=Slider 2=Item 3=Boolean
+            value->valPos = valNum;     //Position des Sliders 0,1,2...
+            /* */
         }
         else
         {
             //Treiber aufrufen
-    	    asm {
-      	    	push ax
+            __asm {
+                push ax
                 push bx
                 push cx
-      	    	push dx
-      	    	push di
-      	    	mov  di,DRE_BSMIXER_SPEC_VALUE
-      	    	mov  dx,valNum
-    	    }
-    	    BSCallDriver();
-    	    asm {
+                push dx
+                push di
+                mov  di,DRE_BSMIXER_SPEC_VALUE
+                mov  dx,valNum
+            }
+
+            BSCallDriver();
+
+            __asm {
                 mov  Range,ax
                 mov  Token,bx
-      	    	mov  Target,dl
-		mov  Type,cl
+                mov  Target,dl
+                mov  Type,cl
                 mov  Slider,ch
-                mov  al,80h			//MSB = Visible
+                mov  al,80h         //MSB = Visible
                 and  al,dh
-      	    	mov  Visible,al
-                mov  al,40h			//Bit 14 = Stereo
+                mov  Visible,al
+                mov  al,40h         //Bit 14 = Stereo
                 and  al,dh
-      	    	mov  StereoFlag,al		/* */
-      	    	pop  di
-      	    	pop  dx
+                mov  StereoFlag,al      /* */
+                pop  di
+                pop  dx
                 pop  cx
                 pop  bx
-      	    	pop  ax
-    	    }
+                pop  ax
+            }
             //Specification �bertragen
-	    value->valVisible = Visible;	//Sichtbarkeit
-	    value->valStereoFlag = StereoFlag;	//TRUE = Stereo */
-            value->valTarget = Target;		//1=Mixer 2=Record 3=Other
-	    value->valRange = Range;		//(word)Wertebereich
-            value->valToken = Token;		//(word)Texttoken 1,2,3,...32
-	    value->valType = Type;			//0=none 1=Slider 2=Item 3=Boolean
-	    value->valPos = Slider;		//Position des Sliders 0,1,2...
+            value->valVisible = Visible;    //Sichtbarkeit
+            value->valStereoFlag = StereoFlag;  //TRUE = Stereo */
+            value->valTarget = Target;      //1=Mixer 2=Record 3=Other
+            value->valRange = Range;        //(word)Wertebereich
+            value->valToken = Token;        //(word)Texttoken 1,2,3,...32
+            value->valType = Type;          //0=none 1=Slider 2=Item 3=Boolean
+            value->valPos = Slider;     //Position des Sliders 0,1,2...
         };
 
-    	asm	pop ds
-
+        __asm {
+            pop ds
+        }
         //Ende
 }
 
 /********************************
- * 	BSMixerGetState		*
- *				*
- * Treiberanbindung pruefen	*
- *				*
- * OUT	word	state		*
- *	0x8000	demoModus	*
- *	0x4000	no Mixersupport	*
- *				*
+ *  BSMixerGetState     *
+ *              *
+ * Treiberanbindung pruefen *
+ *              *
+ * OUT  word    state       *
+ *  0x8000  demoModus   *
+ *  0x4000  no Mixersupport *
+ *              *
  ********************************/
 
 word _pascal BSMixerGetState(void)
 {
-        word	state;
+    word    state;
 
-	asm push ds
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+    __asm {
+        push ds
+    }
+    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
-        //demoModus = keine Aufrufe an Treiber
-	if (demoModus)
+    //demoModus = keine Aufrufe an Treiber
+    if (demoModus)
+    {
+        //demoModus
+        state = 0x8000;
+    }
+    else
+    {
+        //Treiber aufrufen
+        __asm {
+            push ax
+            push bx
+            push cx
+            push dx
+            push di
+            mov  cx,0           // DAC to check
+            mov  ax,MANUFACTURER_ID_BSW
+            mov  bx,DACSF_MIXER_TEST
+            mov  dx,2           // sample rate (in Hz)
+            mov  di,DRE_SOUND_DAC_CHECK_SAMPLE_RATE_AND_FORMAT
+        }
+
+        BSCallDriver();
+
+        __asm {
+            mov  state,dx
+            pop  di
+            pop  dx
+            pop  cx
+            pop  bx
+            pop  ax
+        }
+
+        //Antwort auswerten
+        if (state == 2)
         {
-            //demoModus
-            state = 0x8000;
+            state = 0;      //Treiber unterstuetzt Mixer !
         }
         else
         {
-            //Treiber aufrufen
-    	    asm {
-      	    	push ax
-                push bx
-                push cx
-      	    	push dx
-      	    	push di
-                mov  cx,0			// DAC to check
-                mov  ax,MANUFACTURER_ID_BSW
-                mov  bx,DACSF_MIXER_TEST
-                mov  dx,2			// sample rate (in Hz)
-                mov  di,DRE_SOUND_DAC_CHECK_SAMPLE_RATE_AND_FORMAT
-    	    }
-    	    BSCallDriver();
-    	    asm {
-            	mov  state,dx
-      	    	pop  di
-      	    	pop  dx
-                pop  cx
-                pop  bx
-      	    	pop  ax
-    	    }
-            //Antwort auswerten
-            if (state == 2)
-            {
-            	state = 0;		//Treiber unterstuetzt Mixer !
-            }
-            else
-            {
-            	state = 0x4000;		//keine Mixerunterst�tzung !
-                demoModus = TRUE;	//deshalb Demomodus !
-            };
-
+            state = 0x4000;     //keine Mixerunterst�tzung !
+            demoModus = TRUE;   //deshalb Demomodus !
         };
+    };
 
-    	    asm	pop ds
+    __asm {
+        pop ds
+    }
 
-        //Ende
-        return (state);
+    //Ende
+    return (state);
 }
 

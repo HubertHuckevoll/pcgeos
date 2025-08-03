@@ -83,13 +83,18 @@ stub_wincom	: Installed/Tools/swat/Stub/WinCom
 Installed/Tools/swat/Stub/WinCom:	MAKESTUB
 
 
+
+# Bestsound: bsnwav mixlib bsd16 bsd8st bsqp
+
+
 #
 # Libraries
 #
 minimalLibrary	: kernel swap sound net ui isui motif spool text mailbox \
 		  genpc ansic cdaudio cell chart color compress config hash impex \
 		  borlandc watcomc math pen resolver spline ssmeta styles \
-		  bestsnd wav game cards spreadsheet parse spell convert \
+		  bsnwav mixlib wav \
+		  game cards spreadsheet parse spell convert \
 		  saver prefLibs accpnt netutils \
 		  socket dhcp borlandrtl ffile streamc mailhub mailsmtp \
 		  modemc mailpop3 lot123ss csv \
@@ -101,7 +106,7 @@ minimalLibrary	: kernel swap sound net ui isui motif spool text mailbox \
 		  rsftool bmptools
 
 prefLibs	: prefvid prefts preftd \
-		  prefsnd prefos prefmous preflo preflf prefkbd \
+		  prefsndn prefos prefmous preflo preflf prefkbd \
 		  prefintl prefcomp prefbg prefpntc preffont configui
 
 # prefs not used preflvl prefuic prefui prefts prefspui prefsock preflink preflang
@@ -131,7 +136,8 @@ minimalAppl	: minimalGame minimalUtils minimalTools minimalSavers \
 		  bbxchat bbxmail \
 		  newsread geozip sclock trayapps\
  	  	  hmbase pdfvu bnkr30 ftpc \
- 	  	  instc instf grafcalc
+ 	  	  instc instf grafcalc \
+		  bsqp
 
 minimalUtils	: prefmgr
 
@@ -174,7 +180,7 @@ minimalDriver	: nimbus ms4 ntfat os2 cdrom stream dri gdi keyboard modem gdipoin
 		  vga vga8 vga15 vga16 vga24 ega cga mcga hgc att6300 dscga \
 		  printerDriver ctm ctmabs imps2 \
 		  ps2 msys msser msbus kbmouse absgen genmouse emm extmem \
-		  xms filestr nonts taskmax bnf sblaster comm spooltd \
+		  xms filestr nonts taskmax bnf sblaster bsd16 bsd8st comm spooltd \
 		  vmtree filedd logibus logiser dma mslf kbd_drivers \
 		  etherodi etherpkt msnet cdados truetype
 
@@ -1768,7 +1774,7 @@ bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp
 # sndchk
 
 bsnwav	: Installed/Library/Audio/BSNWav
-Installed/Library/Audio/BSNWav:			kernel MAKELIB
+Installed/Library/Audio/BSNWav:			kernel ansic MAKELIB
 
 mixlib	: Installed/Library/Audio/MixLib
 Installed/Library/Audio/MixLib:			bsnwav sound ui ansic MAKELIB
