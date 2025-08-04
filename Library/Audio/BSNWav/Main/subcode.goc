@@ -102,12 +102,8 @@ void	MyBreak(void)
  ****************************/
 #pragma argsused
 
-Boolean	_pascal BSNWLibEntry(LibraryCallType type,GeodeHandle client)
+Boolean	_pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 {
-        __asm {
-            push ds
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
         switch (type)
         {
             case LCT_ATTACH:
@@ -199,10 +195,6 @@ Boolean	_pascal BSNWLibEntry(LibraryCallType type,GeodeHandle client)
             };  break; /* Library's client is about to be unloaded. */
         };
 
-        __asm {
-            pop ds
-        }
-
         return (FALSE);
 }
 
@@ -219,15 +211,9 @@ Boolean	_pascal BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 
  **********************************/
 
-Boolean	_pascal BSNWavLoadDriver(GeodeLoadError *gle, char *name)
+Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
 {
         Boolean	demoMode;
-
-        __asm {
-            push ds
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
-
 
         // read drivername from INI
         demoMode = FALSE;
@@ -268,10 +254,6 @@ Boolean	_pascal BSNWavLoadDriver(GeodeLoadError *gle, char *name)
                 FilePopDir ();
             };
         };
-
-        __asm {
-            pop ds
-        }
 
         return (demoMode);
 }
@@ -355,17 +337,12 @@ void _pascal BSCallDriver ()
 
  **********************************************************/
 
-word _pascal BSNWAllocSecBuffer(byte **ptr,word len)
+word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
 {
     byte		*ptr2;
     word		segm;
     word		off;
     word		len2;
-
-    __asm {
-        push ds
-    }
-    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
     // Optimize bufferlen
     // LA 04.01.2001
@@ -423,10 +400,6 @@ word _pascal BSNWAllocSecBuffer(byte **ptr,word len)
         ptr2 = MK_FP(segm,off);
         *ptr = ptr2;
     };
-
-    __asm {
-        pop ds
-    }
 
     return(len);
 }
@@ -1005,15 +978,10 @@ int	_pascal BSNWLoadCache(void *cachePtr)
  *
  *************************************/
 
-Boolean	_pascal	BSNWStartPlay(void)
+Boolean	_pascal	_export BSNWStartPlay(void)
 {
         Boolean		back = FALSE;
         word		back2 = 0;
-
-        __asm {
-            push ds
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if(simFlags || !compatFlag)
         {
@@ -1041,10 +1009,6 @@ Boolean	_pascal	BSNWStartPlay(void)
         // errorflag
         back = (back2>0);
 
-        __asm {
-            pop ds
-        }
-
     return (back);
 }
 
@@ -1063,14 +1027,9 @@ Boolean	_pascal	BSNWStartPlay(void)
 
  ***********************************************************/
 
-word	_pascal BSNWaveGetAIState(word options)
+word	_pascal _export BSNWaveGetAIState(word options)
 {
     word	state = 0;
-
-    __asm {
-        push ds
-    }
-    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
     if (compatFlag)
     {
@@ -1096,10 +1055,6 @@ word	_pascal BSNWaveGetAIState(word options)
             pop  ax
         }
     };
-
-    __asm	{
-        pop ds
-    }
 
     return (state);
 }

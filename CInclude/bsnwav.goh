@@ -8,7 +8,7 @@
  *                                              *
  *      Autor:          Dirk Lausecker          *
  *                                              *
- * 28.07.2000   DL      Fr ND berarbeitet     *
+ * 28.07.2000   DL      Fï¿½r ND ï¿½berarbeitet     *
  *                                              *
  ************************************************/
 
@@ -53,7 +53,7 @@
 
 /////////////////////////////////////////////////////////////////////
 // PlayFlags
-// Bits zur Parameterbergabe an BSNWavePlayFile()
+// Bits zur Parameterï¿½bergabe an BSNWavePlayFile()
 
 #define BSNW_SHOW_STATUS        0x01
 // Display Statusbox for showing Rate/Bits/Channels and Time
@@ -154,7 +154,7 @@ typedef struct {
  *-----------------------------------------------*/
 
 
-extern  int _pascal BSNWavePlayFile(FileHandle  fh,
+extern  int _pascal _export BSNWavePlayFile(FileHandle  fh,
 				    word        playFlags,
 				    optr        parent);
 // Playing  WAV-file with/without Statebox (Rate, Bits, Channels, Time)
@@ -163,7 +163,7 @@ extern  int _pascal BSNWavePlayFile(FileHandle  fh,
 /*-----------------------------------------------*/
 
 
-extern int _pascal BSNWavePlayCallback(BSWavFormChunk *bfc,
+extern int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
 				       dword       bytes,
 				       word        playFlags,
 				       optr        parent,
@@ -175,12 +175,12 @@ extern int _pascal BSNWavePlayCallback(BSWavFormChunk *bfc,
 /*-----------------------------------------------*/
 
 
-extern  void    _pascal BSNWaveStop(void);
+extern  void    _pascal _export BSNWaveStop(void);
 // Stopping NewWave-Output
 
 /*-----------------------------------------------*/
 
-extern  byte  _pascal  BSNWaveSetPause(byte mode);
+extern  byte  _pascal  _export BSNWaveSetPause(byte mode);
 // NewWave-Output PAUSE (Request, Pause, Continue)
 // IN:  byte    mode    0 = Request Pausestate
 //                      1 = PAUSE
@@ -190,7 +190,7 @@ extern  byte  _pascal  BSNWaveSetPause(byte mode);
 
 /*-----------------------------------------------*/
 
-dword _pascal BSNWaveGetLastFormat(dword 	*sampleRate,
+dword _pascal _export BSNWaveGetLastFormat(dword 	*sampleRate,
 				   word 	*channels,
 				   word 	*bits);
 // returns the format of the last played WAV-file
@@ -198,7 +198,7 @@ dword _pascal BSNWaveGetLastFormat(dword 	*sampleRate,
 
 /*-----------------------------------------------*/
 
-extern  Boolean _pascal BSNWaveCheckDriver(word flags,
+extern  Boolean _pascal _export BSNWaveCheckDriver(word flags,
 					   word testValue);
 // checking driver for NewWave capability
 // returns TRUE if the driver support BS-NewWave
@@ -214,37 +214,37 @@ extern int _pascal BSNWavePlayMemory(   BSWavFormChunk  *bfc,
 
 /*-----------------------------------------------*/
 
-extern  word    _pascal BSNWaveGetAIState(word options);
+extern  word    _pascal _export BSNWaveGetAIState(word options);
 // setting bsOptions and reading AutoInit-State from driver
-// OUT: word    High-Byte = 0 -> untere Bufferh„lfte
+// OUT: word    High-Byte = 0 -> untere Bufferhï¿½lfte
 //              Low- Byte = IRQ-Counter
 
 /*-----------------------------------------------*/
 
-extern  Boolean _pascal BSNWavGetMaxProperties( word *maxRate,
-						byte *maxChannels,
-						byte *maxBits);
+extern  Boolean _pascal _export BSNWavGetMaxProperties( word *maxRate,
+							byte *maxChannels,
+							byte *maxBits);
 // Getting max. Samplerate, Channels, Bitdepth from driver
 // returns TRUE if the L/R-channels must be swapped
 // Workaround for a bug in the SB-Pro hardware
 
 /*-----------------------------------------------*/
 
-extern word     _pascal BSNWaveGetStatus(void);
+extern word     _pascal _export BSNWaveGetStatus(void);
 // reading dacStatus and bsStatus from driver
 // Use the macros BSEXDACSTATUS and BSEXBSSTATUS
 // for extracting the values !
 
 /*-----------------------------------------------*/
 
-extern word     _pascal BSNWAllocSecBuffer(byte **ptr,
+extern word     _pascal _export BSNWAllocSecBuffer(byte **ptr,
 					   word len);
 // Allocating Secondarybuffer for AI-Playback
 // returns the real size of the allocated buffer
 
 /*-----------------------------------------------*/
 
-extern  Boolean _pascal  BSNWaveStopRecOrPlay(void *secBuf);
+extern  Boolean _pascal  _export BSNWaveStopRecOrPlay(void *secBuf);
 // Stopping Recording/Playing and freeing Secondarybuffer
 // returns TRUE on any errors
 
@@ -260,7 +260,7 @@ dword   _pascal BSNWaveCalcPlaytimeText(char    *textBuffer,
 /*-----------------------------------------------*/
 
 
-int _pascal BSNWaveGetPlayState( BSWavPlayStates *playStates);
+int _pascal _export BSNWaveGetPlayState( BSWavPlayStates *playStates);
 // Requesting playstate
 
 
@@ -271,7 +271,7 @@ int _pascal BSNWaveGetPlayState( BSWavPlayStates *playStates);
 extern  Boolean _pascal LibRecEntry(    LibraryCallType type,
 					GeodeHandle     client);
 extern  void    _pascal BSCallDriver (void);            //intern
-extern  Boolean _pascal BSNWavLoadDriver(GeodeLoadError *gle,
+extern  Boolean _pascal _export BSNWavLoadDriver(GeodeLoadError *gle,
 					 char           *name);
 
 /*-----------------------------------------------*/

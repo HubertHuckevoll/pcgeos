@@ -194,17 +194,12 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent);
 
  *************************************************/
 
-Boolean	_pascal	BSNWavGetMaxProperties(word *maxRate, byte *maxChannels, byte *maxBits)
+Boolean	_pascal	_export BSNWavGetMaxProperties(word *maxRate, byte *maxChannels, byte *maxBits)
 {
         byte	reverseByte;
 	word	rate = 22050;
         byte	channels = 1;
         byte	bits = 8;
-
-  	__asm {
-                push ds
-        }
-  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         // Is driver New-Wave compatible ?
         if (compatFlag)
@@ -230,9 +225,6 @@ Boolean	_pascal	BSNWavGetMaxProperties(word *maxRate, byte *maxChannels, byte *m
 	*maxChannels = channels;
         *maxBits = bits;
 
-        __asm {
-                pop ds
-        }
 	return (reverseByte > 0);
 }
 
@@ -247,16 +239,10 @@ Boolean	_pascal	BSNWavGetMaxProperties(word *maxRate, byte *maxChannels, byte *m
  *
  *************************************/
 
-Boolean	  _pascal  BSNWaveStopRecOrPlay(void *secPtr)
+Boolean	  _pascal  _export BSNWaveStopRecOrPlay(void *secPtr)
 {
         Boolean	back;
         word	back2;
-
-  	__asm
-        {
-                push ds
-        }
-  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
     	// Clear Secondarybuffer
         if (secPtr)
@@ -288,10 +274,6 @@ Boolean	  _pascal  BSNWaveStopRecOrPlay(void *secPtr)
 
         // Errorflag
 	back = (back2 > 0);
-
-        __asm	{
-                pop ds
-        }
 
 	return (back);
 }
@@ -358,7 +340,7 @@ typedef struct {
 
  *********************************************************/
 
-int 	_pascal BSNWavePlayFile(FileHandle fh,
+int 	_pascal _export BSNWavePlayFile(FileHandle fh,
 				word 	   playFlags,
 				optr 	   parent)
 {
@@ -366,12 +348,6 @@ int 	_pascal BSNWavePlayFile(FileHandle fh,
         dword			posStart;
 	dword			posStop;
 	BSWavPlayPositions	*posPtr;
-
-	__asm
-        {
-                push ds
-        }
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
 	// PLAY by another thread ?
 	respond = BSNWPreCheck(playFlags);
@@ -493,10 +469,6 @@ int 	_pascal BSNWavePlayFile(FileHandle fh,
 
         };
 
-        __asm	{
-                pop ds
-        }
-
 	return (respond);
 }
 
@@ -508,19 +480,10 @@ int 	_pascal BSNWavePlayFile(FileHandle fh,
 
  ********************************************/
 
-void 	_pascal BSNWaveStop(void)
+void 	_pascal _export BSNWaveStop(void)
 {
-    	__asm {
-                push ds
-        }
-    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
-
         // set Stopflag
         playStopFlag = TRUE;
-
-        __asm {
-                pop ds
-        }
 }
 
 /*************************************
@@ -536,15 +499,9 @@ void 	_pascal BSNWaveStop(void)
  *
  *************************************/
 
-byte  _pascal  BSNWaveSetPause(byte mode)
+byte  _pascal  _export BSNWaveSetPause(byte mode)
 {
         byte	back;
-
-  	__asm {
-                push ds
-        }
-  	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
-
 
     	if (simFlags == 0 && compatFlag)
     	{
@@ -566,10 +523,6 @@ byte  _pascal  BSNWaveSetPause(byte mode)
             mov  back,ch		// Rückgabewert
     	  }
     	};
-
-        __asm	{
-                pop ds
-        }
 
 	return (back);
 }
@@ -859,17 +812,12 @@ void	BSNWaveDialogUnknownFormat(word formatID)
 
  **********************************************************/
 
-optr _pascal BSCNCreateStatusBox(optr parent)
+optr _pascal _export BSCNCreateStatusBox(optr parent)
 {
         MemHandle 	newBlock = 0;
         optr		op = 0;
 
 @ifndef	BSNWAV_NO_UI
-
-	__asm {
-                push ds
-        }
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() ) ;
 
         // Dupl. Resource
 	newBlock = ObjDuplicateResource(
@@ -889,10 +837,6 @@ optr _pascal BSCNCreateStatusBox(optr parent)
         {
             op = 0;
         };
-
-        __asm {
-                pop ds
-        }
 
         // linking to GenTree of caller
 	@call parent::MSG_GEN_ADD_CHILD (op,CCF_MARK_DIRTY);
@@ -959,7 +903,7 @@ optr _pascal BSCNCreateStatusBox(optr parent)
 #define	TEXT_WRONG_DRIVER	"The sound driver is not compatible with this program!"
 #endif
 
-Boolean _pascal BSNWaveCheckDriver(word flags, word testValue)
+Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
 {
 	word	state;
         word	numOfDACs;
@@ -970,11 +914,6 @@ Boolean _pascal BSNWaveCheckDriver(word flags, word testValue)
         {
             testValue = BSNW_DRIVER_TEST_VALUE;
         };
-
-	__asm {
-                push ds
-        }
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         // First see is there a driver with DAC-capability
 
@@ -1050,10 +989,6 @@ Boolean _pascal BSNWaveCheckDriver(word flags, word testValue)
         };
 @endif
 
-    	__asm {
-                pop ds
-        }
-
         return (respond);
 }
 
@@ -1080,14 +1015,9 @@ Boolean _pascal BSNWaveCheckDriver(word flags, word testValue)
 
  ***********************************************************/
 
-word	_pascal BSNWaveGetStatus(void)
+word	_pascal _export BSNWaveGetStatus(void)
 {
 	word	state = 0;
-
-	__asm {
-                push ds
-        }
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if (compatFlag)
 	{
@@ -1114,10 +1044,6 @@ word	_pascal BSNWaveGetStatus(void)
     	    }
         };
 
-    	__asm {
-                pop ds
-        }
-
         return (state);
 }
 
@@ -1137,19 +1063,13 @@ word	_pascal BSNWaveGetStatus(void)
 
  ******************************************************************/
 
-int 	_pascal BSNWavePlayCallback(BSWavFormChunk *bfc,
+int 	_pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
 				    dword	   bytes,
 				    word 	   playFlags,
 				    optr 	   parent,
                                     PCB(word,routine,(void *,word)))
 {
-
         int	respond;		// retVal
-
-    	__asm {
-                push ds
-        }
-	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         // PLAY by another thread ?
     	respond = BSNWPreCheck(playFlags);
@@ -1170,10 +1090,6 @@ int 	_pascal BSNWavePlayCallback(BSWavFormChunk *bfc,
             };
 
         };
-
-        __asm	{
-                pop ds
-        }
 
 	return(respond);
 }
@@ -1219,14 +1135,9 @@ typedef struct {
  **********************************************************/
 #pragma argsused
 
-int _pascal BSNWaveGetPlayState( BSWavPlayStates *playStates)
+int _pascal _export BSNWaveGetPlayState( BSWavPlayStates *playStates)
 {
 	int	retVal = 0;
-
-    	__asm {
-                push ds
-        }
-    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if (playStates)
         {
@@ -1234,10 +1145,6 @@ int _pascal BSNWaveGetPlayState( BSWavPlayStates *playStates)
             playStates->BWPS_full = fullLen;
             playStates->BWPS_level = (word)peakLevel;
         };
-
-        __asm {
-                pop ds
-        }
 
     	return(retVal);
 }
@@ -1257,14 +1164,9 @@ int _pascal BSNWaveGetPlayState( BSWavPlayStates *playStates)
 
 #pragma argsused
 
-dword _pascal BSNWaveGetLastFormat( dword *sampleRate, word *channels, word *bits)
+dword _pascal _export BSNWaveGetLastFormat( dword *sampleRate, word *channels, word *bits)
 {
 	dword	retVal;
-
-    	__asm {
-                push ds
-        }
-    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         // return the parameters
         *sampleRate = bwfh.BWFH_fmtChunk.BWFC_sampleRate;
@@ -1272,8 +1174,5 @@ dword _pascal BSNWaveGetLastFormat( dword *sampleRate, word *channels, word *bit
         *bits 	    = bwfh.BWFH_fmtChunk.BWFC_bitsPerSample;
         retVal 	    = bwfh.BWFH_datLen;
 
-        __asm {
-            	pop ds
-        }
     	return(retVal);
 }
