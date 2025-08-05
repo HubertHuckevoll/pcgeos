@@ -6,7 +6,7 @@
 GEODE           = mixlib
 ASM_TO_OBJS     =
 UI_TO_RDFS      =
-SRCS            = mixlib.def mixlib.goc mixlib.goh
+SRCS            = mixlib.def mixlib.goc
 OBJS            = mixlib.obj
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf

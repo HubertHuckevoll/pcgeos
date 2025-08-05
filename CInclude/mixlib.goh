@@ -100,33 +100,33 @@ typedef struct{
 
 /*-----------------------------------------------*/
 
-extern	word 	_pascal BSMixerGetState(void);
+extern	word 	_pascal _export BSMixerGetState(void);
 // returns 0x8000 if Demomode is active
 // or 0x4000 if the driver does not support mixercontrol
 // or 0x0000 if everything is OK
 
 /*-----------------------------------------------*/
 
-extern	word 	_pascal	BSMixerGetSubToken(word token,
+extern	word 	_pascal	_export BSMixerGetSubToken(word token,
 					   word identifier);
 // returns Subtoken
 
 /*-----------------------------------------------*/
 
-extern  void	_pascal BSMixerSpecValue(word 	     valNum,
+extern  void	_pascal _export BSMixerSpecValue(word 	     valNum,
 					 MixerValue  *value);
 // returns description of an settings channel
 // in the structure MixerValue (pointed by value)
 
 /*-----------------------------------------------*/
 
-extern	void 	_pascal BSMixerGetTokenText(word token,
+extern	void 	_pascal _export BSMixerGetTokenText(word token,
 					    char *tokenText);
 // converting Token (Number) to text
 
 /*-----------------------------------------------*/
 
-extern	void	_pascal BSMixerSetValue(word token,
+extern	void	_pascal _export BSMixerSetValue(word token,
 					byte dataType,
 					byte value1,
 					byte value2);
@@ -136,25 +136,25 @@ extern	void	_pascal BSMixerSetValue(word token,
 
 /*-----------------------------------------------*/
 
-extern	word	_pascal BSMixerGetValue(word token,
+extern	word	_pascal _export BSMixerGetValue(word token,
 					byte dataType);
 // returns the value of one channel defined by token
 
 /*-----------------------------------------------*/
 
-extern	word	_pascal BSMixerGetCap (word *dsp);
+extern	word	_pascal _export BSMixerGetCap(word *dsp);
 // returns the DSP-version (pointed by dsp) and
 // the number the channels
 
 /*-----------------------------------------------*/
 
-extern	Boolean	_pascal LibMixEntry(LibraryCallType 	type,
+extern	Boolean	_pascal _export LibMixEntry(LibraryCallType 	type,
 				    GeodeHandle 	client);
 // Entrypoint
 
 /*-----------------------------------------------*/
 
-extern 	Boolean	_pascal BSMixerLoadDriver(GeodeLoadError *gle,
+extern 	Boolean	_pascal _export BSMixerLoadDriver(GeodeLoadError *gle,
 					  char 		 *name);
 // Store the handle of the soundcard driver in a global variable
 // for internal use

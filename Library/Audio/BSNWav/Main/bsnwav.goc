@@ -864,18 +864,13 @@ optr _pascal _export BSCNCreateStatusBox(optr parent)
 
 @method StatusInteractionClass , MSG_GEN_GUP_INTERACTION_COMMAND
 {
-    	__asm
-        {
-                push ds
-        }
-    	GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
+    	PUSHDS;
+        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         // Set Stopflag
         playStopFlag = TRUE;
 
-        __asm {
-                pop ds
-        }
+        POPDS;
 
         return( @callsuper() );
 };

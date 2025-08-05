@@ -43,11 +43,11 @@
 
 
 
-word        datasize    = 0;        //Puffer f�r ReadIni
+word        datasize    = 0;        //Buffer for ReadIni
 Handle      mixerDriver = NullHandle;
-const char  *soundCatIT     = "sound";      //INI Eintrag
-const char  *mixerDriverIT  = "mixerDriver";    //INI Eintrag
-const char  *synthDriverIT  = "synthDriver";    //INI Eintrag
+const char  *soundCatIT     = "sound";      //INI Entry
+const char  *mixerDriverIT  = "mixerDriver";    //INI Entry
+const char  *synthDriverIT  = "synthDriver";    //INI Entry
 //char      driverName[32]  = "sblaster.geo";
 Boolean     demoModus   = TRUE;
 byte        valNum      = 0;
@@ -76,13 +76,8 @@ Boolean     driverUsed  = FALSE;    //Treiber wurde extra geladen
 
  ****************************/
 
-Boolean _pascal LibMixEntry(LibraryCallType type,GeodeHandle client)
+Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
 {
-        __asm {
-            push ds
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
-
         switch (type) {
             case LCT_ATTACH:                /* The library was just loaded. */
               {
@@ -112,10 +107,6 @@ Boolean _pascal LibMixEntry(LibraryCallType type,GeodeHandle client)
             case LCT_CLIENT_EXIT:   break;      /* Library's client is about to be unloaded. */
         };
 
-        __asm {
-            pop ds
-        }
-
         return (FALSE);
 }
 
@@ -134,16 +125,9 @@ Boolean _pascal LibMixEntry(LibraryCallType type,GeodeHandle client)
 
  ****************************/
 
-Boolean _pascal BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
+Boolean _pascal _export BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
 {
         Boolean demoMode;
-
-        __asm {
-            push ds
-        }
-
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
-
 
      /* Treibername aus INI lesen */
         demoMode = FALSE;
@@ -184,10 +168,6 @@ Boolean _pascal BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
 
         demoModus = demoMode;
 
-        __asm {
-            pop ds
-        }
-
         return (demoMode);
 }
 
@@ -205,15 +185,10 @@ Boolean _pascal BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
  *              *
  ********************************/
 
-void    _pascal BSMixerSetValue (word token, byte dataType, byte value1, byte value2)
+void    _pascal _export BSMixerSetValue (word token, byte dataType, byte value1, byte value2)
 {
         word    val_L;
         word    val_R;
-
-        __asm {
-            push ax
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if (demoModus)
         {
@@ -259,10 +234,6 @@ void    _pascal BSMixerSetValue (word token, byte dataType, byte value1, byte va
                 pop  di
             }
         };
-
-        __asm {
-            pop ds
-        }
 }
 
 /************************
@@ -277,15 +248,10 @@ void    _pascal BSMixerSetValue (word token, byte dataType, byte value1, byte va
  * 3 = Rohdaten         *
  ************************/
 
-word    _pascal BSMixerGetValue (word token, byte dataType)
+word    _pascal _export BSMixerGetValue (word token, byte dataType)
 {
     word    value;
     byte    val1,val2;
-
-    __asm {
-        push ds
-    }
-    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if (demoModus)
         {
@@ -339,10 +305,6 @@ word    _pascal BSMixerGetValue (word token, byte dataType)
               //Volume 0 -> Balance = Middle;
         };
 
-        __asm {
-            pop ds
-        }
-
         return(value);
 }
 
@@ -358,16 +320,11 @@ word    _pascal BSMixerGetValue (word token, byte dataType)
  *  *dsp    DSP Version *
  ********************************/
 
-word    _pascal BSMixerGetCap (word *dsp)
+word    _pascal _export BSMixerGetCap (word *dsp)
 {
         word    valNum,DSPVersion;
 
 //    demoModus = TRUE;     //LA TEST !!!
-
-        __asm {
-            push ds
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         if (demoModus)
         {
@@ -390,10 +347,6 @@ word    _pascal BSMixerGetCap (word *dsp)
                 mov  valNum,cx
                 mov  DSPVersion,dx
             }
-        }
-
-        __asm {
-            pop ds
         }
 
         *dsp    = DSPVersion;
@@ -557,17 +510,12 @@ void _pascal BSCallDriver ()
  * OUT  tokenText       *
  ********************************/
 
-void _pascal BSMixerGetTokenText (word token,char *tokenText)
+void _pascal _export BSMixerGetTokenText (word token,char *tokenText)
 {
         int  segment;
         int  offsett;
         char *textPtr;
         optr op;
-
-        __asm  {
-            push ds
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         //Textresource locken
         MemLock(OptrToHandle(@bsmText1));
@@ -650,10 +598,6 @@ void _pascal BSMixerGetTokenText (word token,char *tokenText)
 
         //TokenTextresource freigeben
         MemUnlock(OptrToHandle(@bsmText1));
-
-        __asm {
-            pop ds
-        }
 }
 
 /********************************
@@ -666,14 +610,9 @@ void _pascal BSMixerGetTokenText (word token,char *tokenText)
  * OUT  tokenText       *
  ********************************/
 
-word _pascal BSMixerGetSubToken(word token, word identifier)
+word _pascal _export BSMixerGetSubToken(word token, word identifier)
 {
         word    subToken;
-
-        __asm {
-            push ds
-        }
-        GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         //demoModus = keine Aufrufe an Treiber
         if (demoModus)
@@ -705,10 +644,6 @@ word _pascal BSMixerGetSubToken(word token, word identifier)
             }
         };
 
-        __asm {
-            pop ds
-        }
-
         //Ende
         return (subToken);
 }
@@ -721,7 +656,7 @@ word _pascal BSMixerGetSubToken(word token, word identifier)
  * OUT  tokenText       *
  ********************************/
 
-void _pascal    BSMixerSpecValue(word valNum, MixerValue *value)
+void _pascal _export BSMixerSpecValue(word valNum, MixerValue *value)
 {
     word    Range;
     word    Token;
@@ -730,12 +665,6 @@ void _pascal    BSMixerSpecValue(word valNum, MixerValue *value)
     byte    Target;
     byte    Visible;
     byte    StereoFlag;
-
-    __asm
-    {
-        push ds
-    }
-    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
         //demoModus = keine Aufrufe an Treiber
         if (demoModus)
@@ -793,9 +722,6 @@ void _pascal    BSMixerSpecValue(word valNum, MixerValue *value)
             value->valPos = Slider;     //Position des Sliders 0,1,2...
         };
 
-        __asm {
-            pop ds
-        }
         //Ende
 }
 
@@ -810,14 +736,9 @@ void _pascal    BSMixerSpecValue(word valNum, MixerValue *value)
  *              *
  ********************************/
 
-word _pascal BSMixerGetState(void)
+word _pascal _export BSMixerGetState(void)
 {
     word    state;
-
-    __asm {
-        push ds
-    }
-    GeodeLoadDGroup( GeodeGetCodeProcessHandle() );
 
     //demoModus = keine Aufrufe an Treiber
     if (demoModus)
@@ -863,10 +784,6 @@ word _pascal BSMixerGetState(void)
             demoModus = TRUE;   //deshalb Demomodus !
         };
     };
-
-    __asm {
-        pop ds
-    }
 
     //Ende
     return (state);
