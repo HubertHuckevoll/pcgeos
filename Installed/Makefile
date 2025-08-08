@@ -954,7 +954,7 @@ manager: Installed/Appl/FileMgrs2/GeoManager
 Installed/Appl/FileMgrs2/GeoManager:	ui shell spool MAKEAPPL
 
 isdesk: Installed/Appl/FileMgrs2/ISDesk
-Installed/Appl/FileMgrs2/ISDesk:	ui shell spool wav shell MAKEAPPL
+Installed/Appl/FileMgrs2/ISDesk:	ui shell spool wav MAKEAPPL
 
 sclock:	Installed/Appl/SysTray/SClock
 Installed/Appl/SysTray/SClock:		ui MAKEAPPL
