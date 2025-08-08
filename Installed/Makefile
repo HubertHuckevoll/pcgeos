@@ -353,7 +353,6 @@ Installed/Library/SSMeta:	ui math MAKELIB
 hostif	: Installed/Library/HostIf
 Installed/Library/HostIf:	kernel MAKELIB
 
-# bsnwav will only be compiled (and is only referenced in WAV) if PRODUCT==NDO2000
 wav	: Installed/Library/Wav
 Installed/Library/Wav:	kernel sound bsnwav MAKELIB
 
