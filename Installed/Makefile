@@ -141,7 +141,7 @@ minimalAppl	: minimalGame minimalUtils minimalTools minimalSavers \
 
 minimalUtils	: prefmgr
 
-minimalTools    : resedit wlgen
+minimalTools    : resedit wlgen prntscrn
 
 minimalGame	: solitaire cword amateur bjack hearts gwpoker \
                   pyramid sokoban uki mine column battle \
@@ -158,8 +158,6 @@ minimalSavers	: lol blackhole blank bobbin circles dribble dust \
 		  fades flame hopalong letter logo maze lastwords \
 		  melt noodle palette pieces pith qix rotate sand \
 		  spotlight stars string swarm tickertape tiles worms
-
-minimalTools	: prntscrn
 
 otherEnsemble	: conview reader term tedit geofile dirls  \
 		  graphvwr macror dump perf bim ffind bbxcd webbox \
