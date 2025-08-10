@@ -1,26 +1,14 @@
 /*======================================================================
- *  qoiimp.goh  —  Public header for QOI bitmap importer
- *
- *  Pairs with the experimental QOI reader (.goc/.c) you posted.
- *  Provides the error enum and the four exported entry points.
- *----------------------------------------------------------------------*/
-
+ *  qoiimp.goh — Public header for the QOI bitmap importer (true-color)
+ *======================================================================*/
 #ifndef __QOIIMP_GOH__
 #define __QOIIMP_GOH__
 
-/*
- * These headers provide the core GEOS types used in the prototypes:
- *  - PathName, FileHandle
- *  - VMFileHandle, VMBlockHandle
- */
 #include <geos.h>
 #include <file.h>
 #include <vm.h>
 
-/*
- * Error codes returned by the importer. Keep values in sync with the
- * implementation (.goc/.c).
- */
+/* Error codes returned by the importer. */
 typedef enum
 {
     QE_NO_ERROR = 0,
@@ -30,94 +18,22 @@ typedef enum
     QE_OUT_OF_MEMORY,
     QE_OUT_OF_DATA,
     QE_BLOCK_LOCK_FAILURE,
-    QE_PALETTE_WRITE_FAILURE
+    QE_PALETTE_WRITE_FAILURE   /* kept for compatibility; never used in TC path */
 } QoiError;
 
-/**********************************************************************
-*   QOI DEFINITIONS
-**********************************************************************/
-
-/* QOI spec constants */
-#define QOI_MAGIC_0 'q'
-#define QOI_MAGIC_1 'o'
-#define QOI_MAGIC_2 'i'
-#define QOI_MAGIC_3 'f'
-
-#define QOI_END_0 0x00
-#define QOI_END_1 0x00
-#define QOI_END_2 0x00
-#define QOI_END_3 0x00
-#define QOI_END_4 0x00
-#define QOI_END_5 0x00
-#define QOI_END_6 0x00
-#define QOI_END_7 0x01
-
-#define QOI_OP_INDEX  0x00 /* .. 0x3f */
-#define QOI_OP_DIFF   0x40 /* .. 0x7f */
-#define QOI_OP_LUMA   0x80 /* .. 0xbf */
-#define QOI_OP_RUN    0xc0 /* .. 0xff */
-#define QOI_OP_RGB    0xfe
-#define QOI_OP_RGBA   0xff
-
-#define QOI_MASK_2    0xC0
-
-typedef struct
-{
-    byte     magic[4];     /* "qoif" */
-    dword    widthBE;      /* big endian */
-    dword    heightBE;     /* big endian */
-    byte     channels;     /* 3 or 4 */
-    byte     colorspace;   /* 0 or 1; informational */
-} QoiHeaderOnDisk;
-
-typedef struct
-{
-    VMFileHandle    QOS_file;
-    VMBlockHandle   QOS_block;
-    word            QOS_width;
-    word            QOS_height;
-    BMFormat        QOS_format;     /* BMF_8BIT (+BMT_MASK when alpha used) */
-    MemHandle       QOS_line;       /* scanline: [mask?][indices] */
-    word            QOS_maskoff;
-    word            QOS_stride;     /* index bytes per line */
-    Boolean         QOS_hasAlpha;   /* true if channels==4 and any A<255 seen */
-    word            QOS_y;
-} qoiOutStream;
-
-typedef struct
-{
-    byte r, g, b, a;
-} QoiRGBA;
-
-typedef RGBValue qoiPalette[256];
-
-/*
- * Import a QOI file by pathname into a VM bitmap in 'destfile'.
- * On success, returns the VMBlockHandle of the created bitmap (BMF_8BIT,
- * BMT_PALETTE, BMT_COMPLEX; BMT_MASK if the source had alpha).
- * On failure, returns 0 and stores a QoiError in *error (if non-NULL).
- */
+/* Import QOI by pathname into a VM bitmap in 'destfile'. */
 extern VMBlockHandle _pascal _export
 QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error);
 
-/*
- * Import a QOI file already opened as 'srcfile' into a VM bitmap in 'destfile'.
- * Semantics/return value as above.
- */
+/* Import QOI by open file handle into a VM bitmap in 'destfile'. */
 extern VMBlockHandle _pascal _export
 QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, QoiError *error);
 
-/*
- * Lightweight probe by pathname: checks the 4-byte magic only.
- * Returns QE_NO_ERROR if it's a QOI file; QE_WRONG_FILE_FORMAT otherwise,
- * or another QoiError on I/O problems.
- */
+/* Lightweight probe by pathname: checks the 4-byte magic only. */
 extern QoiError _pascal _export
 QoiImportTestBitmapFName(PathName srcname);
 
-/*
- * Lightweight probe by file handle variant.
- */
+/* Lightweight probe by handle: checks the 4-byte magic only. */
 extern QoiError _pascal _export
 QoiImportTestBitmapFHandle(FileHandle srcfile);
 

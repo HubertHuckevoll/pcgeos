@@ -1,3 +1,11 @@
+/*
+ *  qoilib.goc — QOI -> GEOS 24-bit bitmap importer (true color only)
+ *
+ *  Output: BMF_24BIT | BMT_COMPLEX [| BMT_MASK if any A<255 encountered]
+ *  API:    QoiImportBitmapFName, QoiImportBitmapFHandle,
+ *          QoiImportTestBitmapFName, QoiImportTestBitmapFHandle
+ */
+
 #include <geos.h>
 #include <heap.h>
 #include <vm.h>
@@ -6,8 +14,55 @@
 #include <Ansi/string.h>
 #include <graphics.h>
 @include <extgraph.goh>
-@include <qoilib.goh>
 
+#include "qoilib.goh"      /* public prototypes + QoiError */
+
+/**********************************************************************
+*   QOI DEFINITIONS
+**********************************************************************/
+
+/* QOI spec constants */
+#define QOI_MAGIC_0 'q'
+#define QOI_MAGIC_1 'o'
+#define QOI_MAGIC_2 'i'
+#define QOI_MAGIC_3 'f'
+
+#define QOI_OP_INDEX  0x00 /* .. 0x3f */
+#define QOI_OP_DIFF   0x40 /* .. 0x7f */
+#define QOI_OP_LUMA   0x80 /* .. 0xbf */
+#define QOI_OP_RUN    0xc0 /* .. 0xff */
+#define QOI_OP_RGB    0xfe
+#define QOI_OP_RGBA   0xff
+
+#define QOI_MASK_2    0xC0
+
+typedef struct
+{
+    byte     magic[4];     /* "qoif" */
+    dword    widthBE;      /* big endian */
+    dword    heightBE;     /* big endian */
+    byte     channels;     /* 3 or 4 */
+    byte     colorspace;   /* 0 or 1; informational */
+} QoiHeaderOnDisk;
+
+typedef struct
+{
+    VMFileHandle    QOS_file;
+    VMBlockHandle   QOS_block;
+    word            QOS_width;
+    word            QOS_height;
+    BMFormat        QOS_format;     /* BMF_24BIT (+BMT_MASK when alpha used) */
+    MemHandle       QOS_line;       /* scanline: [mask?][RGB triplets] */
+    word            QOS_maskoff;
+    word            QOS_stride;     /* bytes per scanline incl. mask */
+    Boolean         QOS_hasAlpha;   /* true if any A<255 seen */
+    word            QOS_y;
+} qoiOutStream;
+
+typedef struct
+{
+    byte r, g, b, a;
+} QoiRGBA;
 
 /**********************************************************************
 *   LOCAL HELPERS
@@ -57,102 +112,25 @@ qoiHash(QoiRGBA px)
     return (byte)(s & 63);
 }
 
-/* simple palette map: exact-match if present, else append until 256, else nearest */
-typedef struct
-{
-    qoiPalette     pal;
-    word           count;
-} qoiPalState;
-
-static word
-qoiPalFindExact(qoiPalState *ps, QoiRGBA px, Boolean *found)
-{
-    word i;
-    RGBValue *p;
-    p = ps->pal;
-    for (i = 0; i < ps->count; i++)
-    {
-        if ((p[i].RGB_red == px.r) &&
-            (p[i].RGB_green == px.g) &&
-            (p[i].RGB_blue == px.b))
-        {
-            *found = TRUE;
-            return i;
-        }
-    }
-    *found = FALSE;
-    return 0;
-}
-
-static word
-qoiPalAddOrNearest(qoiPalState *ps, QoiRGBA px)
-{
-    Boolean found;
-    word idx, i, bestI;
-    long bestD, dr, dg, db, d;
-    RGBValue *p;
-
-    idx = qoiPalFindExact(ps, px, &found);
-    if (found) { return idx; }
-
-    if (ps->count < 256)
-    {
-        idx = ps->count;
-        p = ps->pal;
-        p[idx].RGB_red   = px.r;
-        p[idx].RGB_green = px.g;
-        p[idx].RGB_blue  = px.b;
-        ps->count++;
-        return idx;
-    }
-
-    /* nearest (euclidean, integer) */
-    p = ps->pal;
-    bestI = 0;
-    dr = (long)p[0].RGB_red   - (long)px.r;
-    dg = (long)p[0].RGB_green - (long)px.g;
-    db = (long)p[0].RGB_blue  - (long)px.b;
-    bestD = dr*dr + dg*dg + db*db;
-
-    for (i = 1; i < 256; i++)
-    {
-        dr = (long)p[i].RGB_red   - (long)px.r;
-        dg = (long)p[i].RGB_green - (long)px.g;
-        db = (long)p[i].RGB_blue  - (long)px.b;
-        d = dr*dr + dg*dg + db*db;
-        if (d < bestD)
-        {
-            bestD = d;
-            bestI = i;
-        }
-    }
-    return bestI;
-}
-
 /**********************************************************************
-*   CORE DECODER
+*   CORE DECODER — TRUE COLOR (24-bit + optional 1-bit mask)
 **********************************************************************/
 
 static QoiError
-qoiDecodeTo8BitIndexed(FileHandle fh, qoiOutStream *os, byte channels)
+qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
 {
     QoiRGBA index[64];
     QoiRGBA px;
-    word x, y;
-    dword total, emitted;
+    word x, y, i;
     dword run;
     byte *scan;
     byte *maskPtr;
     word maskIdx;
     byte maskBit;
     MemHandle line;
-    qoiPalState ps;
-    byte b, b2, b3;
+    byte b, b2;
     Boolean ok;
-    word stride;
-    word lineBytes;
     word maskBytes;
-    word i;
     void *lineptr;
     word size;
 
@@ -163,40 +141,27 @@ qoiDecodeTo8BitIndexed(FileHandle fh, qoiOutStream *os, byte channels)
     }
     px.r = 0; px.g = 0; px.b = 0; px.a = 255;
 
-    ps.count = 0;
-    for (i = 0; i < 256; i++)
-    {
-        ps.pal[i].RGB_red = 0;
-        ps.pal[i].RGB_green = 0;
-        ps.pal[i].RGB_blue = 0;
-    }
-
-    lineBytes = os->QOS_width;                /* 1 byte index per pixel */
     maskBytes = (channels == 4) ? ((os->QOS_width + 7) / 8) : 0;
-    stride    = lineBytes + maskBytes;
 
-    os->QOS_maskoff = 0; /* mask first for GIF code; here we put mask first too */
-    os->QOS_stride  = stride;
+    os->QOS_maskoff = 0; /* mask first (GEOS convention) */
+    os->QOS_stride  = (word)(maskBytes + os->QOS_width * 3);
 
     line = os->QOS_line;
-    scan = MemLock(line);
+    scan = (byte*) MemLock(line);
     if (scan == NULL)
     {
         return QE_OUT_OF_MEMORY;
     }
-    maskPtr = scan;            /* mask bytes at start (if any) */
-    scan    = scan + maskBytes;/* indices after mask */
+    maskPtr = scan;                  /* mask bytes at start (if any) */
+    scan    = scan + maskBytes;      /* RGB data after mask          */
 
     maskIdx = 0;
     maskBit = 0;
-
-    total   = (dword)os->QOS_width * (dword)os->QOS_height;
-    emitted = 0;
     run     = 0;
 
     for (y = 0; y < os->QOS_height; y++)
     {
-        /* reset mask for the scanline */
+        /* clear mask for this scanline */
         if (channels == 4)
         {
             for (i = 0; i < maskBytes; i++) { maskPtr[i] = 0; }
@@ -239,8 +204,8 @@ qoiDecodeTo8BitIndexed(FileHandle fh, qoiOutStream *os, byte channels)
                         }
                         case QOI_OP_DIFF:
                         {
-                            px.r = (byte)(px.r + (( (b >> 4) & 0x03) - 2));
-                            px.g = (byte)(px.g + (( (b >> 2) & 0x03) - 2));
+                            px.r = (byte)(px.r + (((b >> 4) & 0x03) - 2));
+                            px.g = (byte)(px.g + (((b >> 2) & 0x03) - 2));
                             px.b = (byte)(px.b + ((  b       & 0x03) - 2));
                             break;
                         }
@@ -270,48 +235,41 @@ qoiDecodeTo8BitIndexed(FileHandle fh, qoiOutStream *os, byte channels)
                 index[qoiHash(px)] = px;
             }
 
-            /* map to palette index */
+            /* mask bit: opaque=1, any A<255 => transparent */
+            if (channels == 4)
             {
-                word pi;
-                if (channels == 4 && px.a < 255)
+                if (px.a == 255)
                 {
-                    /* transparent pixel: index still mapped for color (unused for draw),
-                       mask bit set to 0 (transparent). */
-                    os->QOS_hasAlpha = TRUE;
-                    /* leave mask bit cleared for transparent; set bit for opaque */
+                    maskPtr[maskIdx] |= (byte)(0x80 >> maskBit);
                 }
                 else
                 {
-                    /* set mask bit to 1 for opaque pixel when mask present */
-                    if (channels == 4)
-                    {
-                        maskPtr[maskIdx] |= (byte)(0x80 >> maskBit);
-                    }
+                    os->QOS_hasAlpha = TRUE;
                 }
 
-                pi = qoiPalAddOrNearest(&ps, px);
-                scan[x] = (byte)pi;
-
-                if (channels == 4)
+                maskBit++;
+                if (maskBit == 8)
                 {
-                    maskBit++;
-                    if (maskBit == 8)
-                    {
-                        maskBit = 0;
-                        maskIdx++;
-                    }
+                    maskBit = 0;
+                    maskIdx++;
                 }
             }
 
-            emitted++;
+            /* write RGB */
+            {
+                byte *p;
+                p = scan + (x * 3);
+                p[0] = px.r;
+                p[1] = px.g;
+                p[2] = px.b;
+            }
         }
 
         /* write the scanline to the VM bitmap */
         if (HAL_COUNT(HugeArrayLock(os->QOS_file, os->QOS_block,
                                     (dword)y, &lineptr, &size)) != 0)
         {
-            /* layout: mask then indices (like GIF code path) */
-            memcpy(lineptr, MemDeref(line), os->QOS_stride);
+            memcpy(lineptr, (void*)MemDeref(line), os->QOS_stride);
             HugeArrayDirty(lineptr);
             HugeArrayUnlock(lineptr);
         }
@@ -322,33 +280,19 @@ qoiDecodeTo8BitIndexed(FileHandle fh, qoiOutStream *os, byte channels)
         }
     }
 
-    /* read and discard 8-byte end marker */
+    /* read and discard 8-byte end marker (lenient) */
     {
         byte tail[8];
         ok = qoiReadN(fh, tail, 8);
         if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
-        /* optional: verify equals 00 00 00 00 00 00 00 01 */
-        /* lenient: no hard failure if encoder padded differently */
     }
 
     MemUnlock(line);
-
-    /* install palette */
-    {
-        EGError egstat;
-        egstat = BmpSetBitmapPalette(os->QOS_file, os->QOS_block,
-                                     ps.pal, 0, (word)(ps.count ? ps.count : 1));
-        if (egstat != EGE_NO_ERROR)
-        {
-            return QE_PALETTE_WRITE_FAILURE;
-        }
-    }
-
     return QE_NO_ERROR;
 }
 
 /**********************************************************************
-*   PUBLIC API (mirrors GIF importer)
+*   PUBLIC API
 **********************************************************************/
 
 VMBlockHandle _pascal _export
@@ -377,110 +321,104 @@ QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
 VMBlockHandle _pascal _export
 QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, QoiError *error)
 {
-    QoiError stat = QE_NO_ERROR;
+    QoiError        stat = QE_NO_ERROR;
     QoiHeaderOnDisk hd;
-    dword wBE, hBE;
-    dword Wd, Hd;
-    word W, H;
-    byte channels;
-    byte colorspace;
-    qoiOutStream os;
-    GStateHandle bmstate;
-    BMFormat bmformat;
-    MemHandle line;
-    word lineBytes;
-    word maskBytes;
+    dword           Wd, Hd;
+    word            W, H;
+    byte            channels;
+    byte            colorspace;
+    qoiOutStream    os;
+    GStateHandle    bmstate;
+    BMFormat        bmformat;
+    MemHandle       line = 0;
+    word            lineBytes;
+    word            maskBytes;
 
-    /* start of file */
-    if (FilePos(srcfile, 0, FILE_POS_START) != 0)
-    {
+    os.QOS_block = 0;
+
+    /* rewind and read header */
+    if (FilePos(srcfile, 0, FILE_POS_START) != 0) {
         stat = QE_INVALID_FILE;
-        goto end;
+        goto done;
     }
-
-    if (!qoiReadN(srcfile, &hd, sizeof(QoiHeaderOnDisk)))
-    {
+    if (!qoiReadN(srcfile, (void*)&hd, (word)sizeof(QoiHeaderOnDisk))) {
         stat = QE_WRONG_FILE_FORMAT;
-        goto end;
+        goto done;
     }
-
-    if (hd.magic[0] != QOI_MAGIC_0 ||
-        hd.magic[1] != QOI_MAGIC_1 ||
-        hd.magic[2] != QOI_MAGIC_2 ||
-        hd.magic[3] != QOI_MAGIC_3)
-    {
+    if (hd.magic[0] != QOI_MAGIC_0 || hd.magic[1] != QOI_MAGIC_1 ||
+        hd.magic[2] != QOI_MAGIC_2 || hd.magic[3] != QOI_MAGIC_3) {
         stat = QE_WRONG_FILE_FORMAT;
-        goto end;
+        goto done;
     }
 
-    wBE = hd.widthBE;
-    hBE = hd.heightBE;
-    Wd  = qoiBE32ToHost(wBE);
-    Hd  = qoiBE32ToHost(hBE);
+    Wd = qoiBE32ToHost(hd.widthBE);
+    Hd = qoiBE32ToHost(hd.heightBE);
+    W  = qoiClampWordFromDword(Wd);
+    H  = qoiClampWordFromDword(Hd);
 
-    /* clamp to GEOS word bitmap sizes */
-    W = qoiClampWordFromDword(Wd);
-    H = qoiClampWordFromDword(Hd);
+    channels   = hd.channels;      /* 3 or 4 */
+    colorspace = hd.colorspace;    /* informational only */
+    (void)colorspace;
 
-    channels  = hd.channels;      /* 3 or 4 */
-    colorspace= hd.colorspace;    /* ignored */
-
-    if (!((channels == 3) || (channels == 4)))
-    {
+    if (!(channels == 3 || channels == 4)) {
         stat = QE_WRONG_FILE_FORMAT;
-        goto end;
+        goto done;
     }
 
-    bmformat = BMF_8BIT | BMT_PALETTE | BMT_COMPLEX;
-    if (channels == 4)
-    {
-        bmformat |= BMT_MASK;     /* we’ll populate mask bits during decode */
+    /* 24-bit true color, optional mask */
+    bmformat = (BMFormat)(BMF_24BIT | BMT_COMPLEX);
+    if (channels == 4) {
+        bmformat = (BMFormat)(bmformat | BMT_MASK);
     }
 
+    /* create VM-backed complex bitmap + gstate */
     os.QOS_block = GrCreateBitmap(bmformat, W, H, destfile, 0, &bmstate);
-    if (os.QOS_block == 0)
-    {
+    if (os.QOS_block == 0) {
         stat = QE_OUT_OF_MEMORY;
-        GrDestroyBitmap(bmstate, BMD_LEAVE_DATA);
-        goto end;
+        goto done;
     }
+    GrDestroyBitmap(bmstate, BMD_LEAVE_DATA);  /* keep VM data */
 
-    /* drop gstate; keep VM data */
-    GrDestroyBitmap(bmstate, BMD_LEAVE_DATA);
-
-    /* prepare line buffer: [mask?][index bytes] */
-    lineBytes = W;                             /* 1 byte per pixel index */
-    maskBytes = (channels == 4) ? ((W + 7) / 8) : 0;
+    /* temp scanline: [mask?][RGB*W] */
+    lineBytes = (word)(W * 3);
+    maskBytes = (channels == 4) ? (word)((W + 7) / 8) : 0;
 
     line = MemAlloc((word)(lineBytes + maskBytes), HF_SWAPABLE, 0);
-    if (line == NULL)
-    {
-        VMFreeVMChain(destfile, VMCHAIN_MAKE_FROM_VM_BLOCK(os.QOS_block));
+    if (line == 0) {
         stat = QE_OUT_OF_MEMORY;
-        goto end;
+        goto fail_free_bitmap;
     }
 
+    /* fill output stream */
     os.QOS_file     = destfile;
     os.QOS_width    = W;
     os.QOS_height   = H;
-    os.QOS_format   = (bmformat & ~BMT_MASK);
+    os.QOS_format   = (BMFormat)(bmformat & ~BMT_MASK);
     os.QOS_line     = line;
-    os.QOS_hasAlpha = (channels == 4) ? FALSE : FALSE;
+    os.QOS_hasAlpha = FALSE;
     os.QOS_y        = 0;
 
-    stat = qoiDecodeTo8BitIndexed(srcfile, &os, channels);
+    /* decode into the bitmap */
+    stat = qoiDecodeTo24Bit(srcfile, &os, channels);
 
-    /* free temp line buffer */
+    /* release temp line */
     MemFree(line);
+    line = 0;
 
-    if (stat != QE_NO_ERROR)
-    {
-        VMFreeVMChain(destfile, VMCHAIN_MAKE_FROM_VM_BLOCK(os.QOS_block));
-        os.QOS_block = 0;
-        goto end;
+    if (stat != QE_NO_ERROR) {
+        goto fail_free_bitmap;
     }
 
-end:
+    /* success */
+    goto done;
+
+fail_free_bitmap:
+    if (os.QOS_block != 0) {
+        VMFreeVMChain(destfile, VMCHAIN_MAKE_FROM_VM_BLOCK(os.QOS_block));
+        os.QOS_block = 0;
+    }
+
+done:
     if (error) { *error = stat; }
     return os.QOS_block;
 }
@@ -514,7 +452,7 @@ QoiImportTestBitmapFHandle(FileHandle srcfile)
     if (FilePos(srcfile, 0, FILE_POS_START) != 0)
         return QE_INVALID_FILE;
 
-    rd = FileRead(srcfile, magic, 4, 0);
+    rd = FileRead(srcfile, (void*)&magic[0], 4, 0);
     if (rd != 4)
         return QE_WRONG_FILE_FORMAT;
 
