@@ -18,53 +18,6 @@
 #include "qoilib.goh"      /* public prototypes + QoiError */
 
 /**********************************************************************
-*   QOI DEFINITIONS
-**********************************************************************/
-
-/* QOI spec constants */
-#define QOI_MAGIC_0 'q'
-#define QOI_MAGIC_1 'o'
-#define QOI_MAGIC_2 'i'
-#define QOI_MAGIC_3 'f'
-
-#define QOI_OP_INDEX  0x00 /* .. 0x3f */
-#define QOI_OP_DIFF   0x40 /* .. 0x7f */
-#define QOI_OP_LUMA   0x80 /* .. 0xbf */
-#define QOI_OP_RUN    0xc0 /* .. 0xff */
-#define QOI_OP_RGB    0xfe
-#define QOI_OP_RGBA   0xff
-
-#define QOI_MASK_2    0xC0
-
-typedef struct
-{
-    byte     magic[4];     /* "qoif" */
-    dword    widthBE;      /* big endian */
-    dword    heightBE;     /* big endian */
-    byte     channels;     /* 3 or 4 */
-    byte     colorspace;   /* 0 or 1; informational */
-} QoiHeaderOnDisk;
-
-typedef struct
-{
-    VMFileHandle    QOS_file;
-    VMBlockHandle   QOS_block;
-    word            QOS_width;
-    word            QOS_height;
-    BMFormat        QOS_format;     /* BMF_24BIT (+BMT_MASK when alpha used) */
-    MemHandle       QOS_line;       /* scanline: [mask?][RGB triplets] */
-    word            QOS_maskoff;
-    word            QOS_stride;     /* bytes per scanline incl. mask */
-    Boolean         QOS_hasAlpha;   /* true if any A<255 seen */
-    word            QOS_y;
-} qoiOutStream;
-
-typedef struct
-{
-    byte r, g, b, a;
-} QoiRGBA;
-
-/**********************************************************************
 *   LOCAL HELPERS
 **********************************************************************/
 
