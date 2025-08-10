@@ -1,9 +1,6 @@
 /*
- *  qoilib.goc — QOI -> GEOS 24-bit bitmap importer (true color only)
+ *  qoilib.goc — QOI -> GEOS 24-bit bitmap importer
  *
- *  Output: BMF_24BIT | BMT_COMPLEX [| BMT_MASK if any A<255 encountered]
- *  API:    QoiImportBitmapFName, QoiImportBitmapFHandle,
- *          QoiImportTestBitmapFName, QoiImportTestBitmapFHandle
  */
 
 #include <geos.h>
@@ -70,7 +67,7 @@ qoiHash(QoiRGBA px)
 **********************************************************************/
 
 static QoiError
-qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
+qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels, byte alphaTreshold)
 {
     QoiRGBA index[64];
     QoiRGBA px;
@@ -86,6 +83,7 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
     word maskBytes;
     void *lineptr;
     word size;
+    word used;
 
     /* init index + prev pixel */
     for (i = 0; i < 64; i++)
@@ -191,7 +189,7 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
             /* mask bit: opaque=1, any A<255 => transparent */
             if (channels == 4)
             {
-                if (px.a == 255)
+                if (px.a >= alphaTreshold)
                 {
                     maskPtr[maskIdx] |= (byte)(0x80 >> maskBit);
                 }
@@ -215,6 +213,15 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
                 p[0] = px.r;
                 p[1] = px.g;
                 p[2] = px.b;
+            }
+        }
+
+        // clean mask bits?
+        if (channels == 4)
+        {
+            used = (word)(os->QOS_width & 7);
+            if (used != 0) {
+                maskPtr[maskBytes - 1] &= (byte)(0xFF << (8 - used));
             }
         }
 
@@ -249,7 +256,7 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
 **********************************************************************/
 
 VMBlockHandle _pascal _export
-QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
+QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, byte alphaTreshold, QoiError *error)
 {
     FileHandle srcfile;
     QoiError stat;
@@ -258,7 +265,7 @@ QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
     srcfile = FileOpen(srcname, FILE_ACCESS_W | FILE_DENY_RW);
     if (srcfile)
     {
-        bmblock = QoiImportBitmapFHandle(srcfile, destfile, &stat);
+        bmblock = QoiImportBitmapFHandle(srcfile, destfile, alphaTreshold, &stat);
         FileClose(srcfile, 0);
     }
     else
@@ -272,7 +279,7 @@ QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
 }
 
 VMBlockHandle _pascal _export
-QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, QoiError *error)
+QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, byte alphaTreshold, QoiError *error)
 {
     QoiError        stat = QE_NO_ERROR;
     QoiHeaderOnDisk hd;
@@ -352,7 +359,7 @@ QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, QoiError *erro
     os.QOS_y        = 0;
 
     /* decode into the bitmap */
-    stat = qoiDecodeTo24Bit(srcfile, &os, channels);
+    stat = qoiDecodeTo24Bit(srcfile, &os, channels, alphaTreshold);
 
     /* release temp line */
     MemFree(line);

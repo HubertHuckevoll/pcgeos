@@ -21,7 +21,7 @@ dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
     QoiError error = 0;
 
     *chain = 0;
-    bmblock = QoiImportBitmapFHandle(frame->IF_sourceFile, frame->IF_transferVMFile, &error);
+    bmblock = QoiImportBitmapFHandle(frame->IF_sourceFile, frame->IF_transferVMFile, 192, &error);
 
     if ((bmblock != NullHandle) && (error == QE_NO_ERROR))
     {

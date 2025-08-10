@@ -108,7 +108,7 @@ ImpBmpStatus _pascal Imp_BmpProcessFile(ImpBmpParams *params,ImpBmpFormat format
   {
 	QoiError stat = QE_NO_ERROR;
 
-	params->IBP_bitmap = QoiImportBitmapFHandle(params->IBP_source, params->IBP_dest, &stat);
+	params->IBP_bitmap = QoiImportBitmapFHandle(params->IBP_source, params->IBP_dest, 192, &stat);
    	strcpy(params->IBP_impForm, ".QOI");
 
 	if(stat == GE_NO_ERROR)

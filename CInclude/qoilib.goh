@@ -67,11 +67,11 @@ typedef struct
 
 /* Import QOI by pathname into a VM bitmap in 'destfile'. */
 extern VMBlockHandle _pascal _export
-QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error);
+QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, byte alphaTreshold, QoiError *error);
 
 /* Import QOI by open file handle into a VM bitmap in 'destfile'. */
 extern VMBlockHandle _pascal _export
-QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, QoiError *error);
+QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, byte alphaTreshold, QoiError *error);
 
 /* Lightweight probe by pathname: checks the 4-byte magic only. */
 extern QoiError _pascal _export
