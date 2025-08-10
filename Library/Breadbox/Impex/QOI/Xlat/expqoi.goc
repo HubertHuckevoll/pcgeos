@@ -55,15 +55,12 @@ dword _pascal QoiExport(ExportFrame *frame)
         return(TE_ERROR);
     }
 
-    // if(desttype == BMF_4BIT) desttype |= BMT_PALETTE;
-    // if(desttype == BMF_8BIT) desttype |= BMT_PALETTE;
-
     // convert gstring to bmp
     bmblock = BmpGStringToBitmap(
         frame->EF_transferVMFile,
         VMCHAIN_GET_VM_BLOCK(frame->EF_transferVMChain),
         frame->EF_transferVMFile,
-        BMF_24BIT,
+        desttype,
         &egstat);
 
     if(egstat != EGE_NO_ERROR)

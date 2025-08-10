@@ -1,7 +1,7 @@
 /*
  *  qoiexp.goc — GEOS -> QOI exporter (RGB / RGBA only)
  *
- *  Input:  BMF_24BIT [| BMT_MASK], BMT_COMPLEX expected
+ *  Input:  BMF_24BIT [| BMT_MASK]
  *  Output: QOI file written to 'destfile'
  *
  *  API:
@@ -316,18 +316,12 @@ QoiExportBitmapFHandle(VMFileHandle srcfile, VMBlockHandle bmpblock, FileHandle 
     W  = (Wd > 65535UL) ? 65535 : (word)Wd;
     H  = (Hd > 65535UL) ? 65535 : (word)Hd;
 
-    /* fetch type */
+    /* fetch type to see if we have a mask */
     bmptype  = BmpGetBitmapType(srcfile, bmpblock, &egStat);
     if (egStat != EGE_NO_ERROR) {
         return QE_INVALID_FILE;
     }
-    bmformat = (BMFormat)(bmptype & BMT_FORMAT);
     hasMask  = ( (bmptype & BMT_MASK) ? TRUE : FALSE );
-
-    only support true color */
-    if (bmformat != BMF_24BIT) {
-        return QE_WRONG_FILE_FORMAT;
-    }
 
     result = qoiEncodeBitmapToFile(destfile, srcfile, bmpblock, W, H, hasMask);
     return result;

@@ -12,10 +12,6 @@ global  QOIIMPORT: far
 global  QOITESTFILE: far
 global  QOIEXPORT: far
 
-; build up the right palette from gstring
-; global  PALGSTRINGCOLELEMENT: far
-; global  MY_GRPARSEGSTRING:far
-
 	SetGeosConvention               ; set calling convention
 
 ;================================================================================
