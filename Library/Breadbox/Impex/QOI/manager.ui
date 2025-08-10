@@ -1,0 +1,33 @@
+#include <generic.uih>
+
+start ExportInterface;
+
+QoiExpBit24 = GenItem {
+    moniker = 'T', "TrueColor (24 bits/pixel)";
+    identifier = 0;
+}
+
+QoiExpFormGroup = GenItemGroup {
+    hints = {
+      HINT_ITEM_GROUP_MINIMIZE_SIZE,
+      HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION
+    }
+    selection = 0;
+    children = QoiExpBit24;
+}
+
+QoiExpBitFormat = GenInteraction {
+    moniker = 'C', "Colors:";
+    children = QoiExpFormGroup;
+}
+
+QoiExportGroup = GenInteraction {
+    genStates = default -usable;
+    hints = {
+      HINT_ORIENT_CHILDREN_VERTICALLY,
+      HINT_EXPAND_WIDTH_TO_FIT_PARENT
+    }
+    children = QoiExpBitFormat;
+}
+
+end ExportInterface;

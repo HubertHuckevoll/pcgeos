@@ -1,0 +1,45 @@
+/***********************************************************************
+ *
+ * MODULE:    QOI Import
+ *
+ ***********************************************************************/
+
+/*
+ ***************************************************************************
+ *      Include files
+ ***************************************************************************
+ */
+
+@include <stdapp.goh>
+@include <impex.goh>
+@include <qoilib.goh>
+#include <extgraph.h>
+
+dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
+{
+    VMBlockHandle bmblock;
+    QoiError error = 0;
+
+    *chain = 0;
+    bmblock = QoiImportBitmapFHandle(frame->IF_sourceFile, frame->IF_transferVMFile, &error);
+
+    if ((bmblock != NullHandle) && (error == QE_NO_ERROR))
+    {
+        *chain = VMCHAIN_MAKE_FROM_VM_BLOCK(bmblock);
+        return (TE_NO_ERROR | (((dword)CIF_BITMAP) << 16)); /* CIF_BITMAP must be included if no error */
+    }
+
+    return (TE_INVALID_FORMAT);
+}
+
+word _pascal QoiTestFile(FileHandle file)
+{
+    Boolean isQOI = FALSE;
+
+    isQOI = QoiImportTestBitmapFHandle(file);
+
+    if(!isQOI) return NO_IDEA_FORMAT;
+
+    return TE_NO_ERROR;
+};
+
