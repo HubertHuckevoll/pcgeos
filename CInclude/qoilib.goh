@@ -1,6 +1,11 @@
 /*======================================================================
   qoiimp.goh — Public header for the QOI bitmap importer / exporter
   (true-color)
+
+  Alpha treshold:
+  A == 255 is opaque; A == 0...254 => transparent
+  threshold = 0 => everything is opaque
+  threshold = 128 => A 128...255 opaque, A 0...127 transparent
  *======================================================================*/
 #ifndef __QOILIB_GOH__
 #define __QOILIB_GOH__
