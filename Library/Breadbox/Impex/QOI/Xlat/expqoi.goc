@@ -63,7 +63,7 @@ dword _pascal QoiExport(ExportFrame *frame)
         frame->EF_transferVMFile,
         VMCHAIN_GET_VM_BLOCK(frame->EF_transferVMChain),
         frame->EF_transferVMFile,
-        desttype,
+        BMF_24BIT,
         &egstat);
 
     if(egstat != EGE_NO_ERROR)
@@ -89,15 +89,6 @@ dword _pascal QoiExport(ExportFrame *frame)
 
     // free bmblock
     VMFreeVMChain(frame->EF_transferVMFile, VMCHAIN_MAKE_FROM_VM_BLOCK(bmblock));
-
-
-    QE_NO_ERROR = 0,
-    QE_CANT_OPEN_SOURCE_FILE,
-    QE_INVALID_FILE,
-    QE_WRONG_FILE_FORMAT,
-    QE_OUT_OF_MEMORY,
-    QE_OUT_OF_DATA,
-    QE_BLOCK_LOCK_FAILURE
 
     if(gstat != QE_NO_ERROR)
     {

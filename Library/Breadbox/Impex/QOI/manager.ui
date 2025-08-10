@@ -4,7 +4,7 @@ start ExportInterface;
 
 QoiExpBit24 = GenItem {
     moniker = 'T', "TrueColor (24 bits/pixel)";
-    identifier = 0;
+    identifier = 1;
 }
 
 QoiExpFormGroup = GenItemGroup {
@@ -12,7 +12,7 @@ QoiExpFormGroup = GenItemGroup {
       HINT_ITEM_GROUP_MINIMIZE_SIZE,
       HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION
     }
-    selection = 0;
+    selection = 1;
     children = QoiExpBit24;
 }
 

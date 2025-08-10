@@ -324,7 +324,7 @@ QoiExportBitmapFHandle(VMFileHandle srcfile, VMBlockHandle bmpblock, FileHandle 
     bmformat = (BMFormat)(bmptype & BMT_FORMAT);
     hasMask  = ( (bmptype & BMT_MASK) ? TRUE : FALSE );
 
-    /* only support true color */
+    only support true color */
     if (bmformat != BMF_24BIT) {
         return QE_WRONG_FILE_FORMAT;
     }

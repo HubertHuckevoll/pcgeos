@@ -13,7 +13,7 @@
 @include <stdapp.goh>
 @include <impex.goh>
 @include <qoilib.goh>
-#include <extgraph.h>
+@include <extgraph.goh>
 
 dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
 {

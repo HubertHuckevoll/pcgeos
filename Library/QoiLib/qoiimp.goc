@@ -402,12 +402,11 @@ QoiImportTestBitmapFHandle(FileHandle srcfile)
     byte magic[4];
     int rd;
 
-    if (FilePos(srcfile, 0, FILE_POS_START) != 0)
-        return QE_INVALID_FILE;
+    FilePos(srcfile, 0, FILE_POS_START);
 
     rd = FileRead(srcfile, (void*)&magic[0], 4, 0);
     if (rd != 4)
-        return QE_WRONG_FILE_FORMAT;
+        return QE_INVALID_FILE;
 
     if (magic[0] == QOI_MAGIC_0 &&
         magic[1] == QOI_MAGIC_1 &&
