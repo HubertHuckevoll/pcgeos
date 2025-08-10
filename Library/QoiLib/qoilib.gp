@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# PNG Library
+# QOI Library
 #
 ##############################################################################
 
@@ -9,30 +9,18 @@ longname        "QOI Library"
 tokenchars      "QOIL"
 tokenid         0
 
+# Library type: plain C API, single code segment
 type            library, single, c-api
 
+# Dependencies used by the implementation:
+#  - geos: VM, HugeArray, Mem*, File*
+#  - ansic: memcpy/strcmp/etc. (Ansi/string.h)
 library         geos
 library         ansic
-#library         zlib
+library         extgraph
 
-export PNGIMPORTCONVERTFILE
-export PNGIMPORTCHECKHEADER
-export PNGIMPORTPROCESSCHUNKS
-export PNGIMPORTWHATOUTPUTFORMAT
-export PNGIMPORTINITIATEOUTPUTBITMAP
-export PNGIMPORTHANDLEPALETTE
-export PNGIMPORTINITIDATPROCESSINGSTATE
-export PNGIMPORTGETNEXTIDATSCANLINE
-export PNGIMPORTIDATPROCESSINGUNLOCKHANDLES
-export PNGIMPORTAPPLYGEOSFORMATTRANSFORMATIONS
-export PNGIMPORTWRITESCANLINETOBITMAP
-export PNGIMPORTIDATPROCESSINGLOCKHANDLES
-export PNGIMPORTCLEANUPIDATPROCESSINGSTATE
-
-export PNGCALCBYTESPERROW
-export PNGCALCBYTESPERPIXEL
-export PNGCALCLINEALLOCSIZE
-export PNGREMOVEALPHACHANNEL
-export PNGCONVERT16BITLINETO8BIT
-export PNGPAD1BITTO4BIT
-export PNGPAD2BITTO4BIT
+# Public exports (match the _pascal _export functions in your .goc/.c)
+export QOIIMPORTBITMAPFNAME
+export QOIIMPORTBITMAPFHANDLE
+export QOIIMPORTTESTBITMAPFNAME
+export QOIIMPORTTESTBITMAPFHANDLE

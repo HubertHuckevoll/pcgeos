@@ -129,6 +129,7 @@ static void SendSelectNotify(VMBlockHandle bmpblock);
 #define BV_SHOW_GIF         4
 #define BV_SHOW_JPEG        5
 #define BV_SHOW_PNG         6
+#define BV_SHOW_QOI         7
 
 /**************************************************************************/
 
@@ -1158,15 +1159,15 @@ FileHandle BVThumbnailDB = 0;
 		GI_visMoniker = 'f', "Preferences";
 		GI_comp = @BVImpFileShowAll,
 				  @BVImpFileShowAllMedia,
+@ifdef JPEG_SUPPORT
+				  @BVImpFileShowJPEG,
+@endif
 				  @BVImpFileShowBMP,
 				  @BVImpFileShowPCX,
 				  @BVImpFileShowPNG,
-@ifdef JPEG_SUPPORT
 				  @BVImpFileShowGIF,
-				  @BVImpFileShowJPEG;
-@else
-				  @BVImpFileShowGIF;
-@endif
+				  @BVImpFileShowQOI;
+
 		HINT_ITEM_GROUP_MINIMIZE_SIZE;
 		ATTR_GEN_INIT_FILE_KEY = "viewOpt";
 }
@@ -1215,6 +1216,13 @@ FileHandle BVThumbnailDB = 0;
 @object GenItemClass BVImpFileShowGIF = {
 		GI_visMoniker = 'I', "Show .GIF Files";
 		GII_identifier = BV_SHOW_GIF;
+}
+
+/**************************************************************************/
+
+@object GenItemClass BVImpFileShowQOI = {
+		GI_visMoniker = 'I', "Show .QOI Files";
+		GII_identifier = BV_SHOW_QOI;
 }
 
 /**************************************************************************/
@@ -1470,6 +1478,11 @@ FileHandle BVThumbnailDB = 0;
 	 case IBF_TIFF:
 		strcpy(mask, "*.TIF");
 		break;
+
+	 case IBF_QOI:
+		strcpy(mask, "*.QOI");
+		break;
+
   };
   @call BVImpFileMask::MSG_VIS_TEXT_REPLACE_ALL_PTR(mask, 0);
   @call BVImpFileSel::MSG_GEN_FILE_SELECTOR_SET_MASK(mask);
@@ -2657,6 +2670,11 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 			 case IBF_TIFF:
 				strcpy(string, ".TIF");
 				break;
+
+			 case IBF_QOI:
+				strcpy(string, ".QOI");
+				break;
+
 	}; */
 	@call BVPicInfoForm::MSG_VIS_TEXT_REPLACE_ALL_PTR(pself->BVImpForm,0);
 
@@ -2813,15 +2831,21 @@ Boolean StrEnd(char *text, char *endstr)
 								filelist[count1] = filelist[count2];
 								count1++;
 							}
-
-@ifdef JPEG_SUPPORT
 							else
-								if(StrEnd(&filelist[count2].BVFA_name, ".JPG") && ((sel == BV_SHOW_JPEG)
+								if(StrEnd(&filelist[count2].BVFA_name, ".QOI") && ((sel == BV_SHOW_QOI)
 									|| (sel == BV_SHOW_ALL_MEDIA)))
 								{
 									filelist[count1] = filelist[count2];
 									count1++;
 								}
+@ifdef JPEG_SUPPORT
+								else
+									if(StrEnd(&filelist[count2].BVFA_name, ".JPG") && ((sel == BV_SHOW_JPEG)
+										|| (sel == BV_SHOW_ALL_MEDIA)))
+									{
+										filelist[count1] = filelist[count2];
+										count1++;
+									}
 @endif
 			}
 			else

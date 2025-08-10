@@ -24,6 +24,8 @@
 #include "IMPBMP/impgif.h"
 @endif /* GIFLIB_SUPPORT */
 
+@include <qoilib.goh>
+
 /*********************************************************************/
 
 /* Import formats */
@@ -101,6 +103,20 @@ ImpBmpStatus _pascal Imp_BmpProcessFile(ImpBmpParams *params,ImpBmpFormat format
   }
 @endif /* GIFLIB_SUPPORT */
 
+
+  if(format == IBF_QOI)
+  {
+	QoiError stat = QE_NO_ERROR;
+
+	params->IBP_bitmap = QoiImportBitmapFHandle(params->IBP_source, params->IBP_dest, &stat);
+   	strcpy(params->IBP_impForm, ".QOI");
+
+	if(stat == GE_NO_ERROR)
+		return(IBS_NO_ERROR);
+	else
+		return(IBS_SYS_ERROR);
+  }
+
   return(status);
 };
 
@@ -137,6 +153,9 @@ ImpBmpFormat _pascal Imp_BmpTestFile(FileHandle file)
   status = ImpGIFTestFile(file);
   if(status == IBS_NO_ERROR) return(IBF_GIF);
 @endif /* GIFLIB_SUPPORT */
+
+  stat = QoiImportTestBitmapFHandle(file);
+  if(stat == QE_NO_ERROR) return(IBF_QOI);
 
   return(0); /* for unknown format */
 };

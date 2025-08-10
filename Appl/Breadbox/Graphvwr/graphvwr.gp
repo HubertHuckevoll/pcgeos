@@ -33,6 +33,9 @@ exempt pnglib
 library thumbdb
 library ijgjpeg
 
+library qoilib
+exempt qoilib
+
 exempt thumbdb
 exempt extui
 exempt ijgjpeg

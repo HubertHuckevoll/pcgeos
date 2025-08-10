@@ -4,111 +4,128 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = library
-CELL            = cellC.asm cellCell.asm cellFlags.asm cellRange.asm\
-                  cellEC.asm cellManager.asm cellUtils.asm cellSort.asm\
-                  cellInsertDelete.asm cellMain.asm cellRow.asm\
-                  cellConstants.def cellMacros.def
-RULER           = rulerC.asm rulerView.asm rulerSelect.asm\
-                  uiGuideCreateControl.asm rulerTables.asm rulerGuide.asm\
-                  uiControlCommon.asm uiGridSpacingControl.asm\
-                  rulerDraw.asm rulerMethods.asm rulerManager.asm\
-                  uiRulerShow.asm rulerContent.asm rulerGrid.asm\
-                  rulerConstrain.asm uiRulerTypeControl.asm\
-                  uiRulerGuideControl.asm rulerUtils.asm rulerConstant.def\
-                  rulerMacro.def uiRulerGuideControl.ui ruler.ui\
-                  uiGridSpacingControl.ui uiGuideCreateControl.ui\
-                  uiRulerTypeControl.ui uiRulerShow.ui
-PHOTOPC         = eph_cmd.c eph_io.c photopc.c eph_iob.c eph_read.c\
-                  eph_err.c eph_open.c eph_io.h eph_priv.h config.h
-PARSE           = parseEC.asm parseDateTime.asm parseFormat.asm\
-                  parseScanner.asm parseC.asm parseVariables.asm\
-                  parseParse.asm parseFunctFixedArgs.asm parseStack.asm\
-                  parseFunctListArgs.asm parseFunctSingleArgs.asm\
-                  parseDepend.asm parseError.asm parseWrite.asm\
-                  parseManager.asm parseOperators.asm\
-                  parseFunctionUtils.asm parseFunctStrBoolArgs.asm\
-                  parseMain.asm parseEval.asm parseConstants.def\
-                  parseMacros.def parseStrings.ui
-CGADGET         = RptTrig.goc uiTI.goc uiDI.goc TimeInp.goc DateInp.goc\
-                  externs.goh
-STREAMC         = streamCSerial.asm streamCEntry.asm streamCUtils.asm\
-                  streamCParallel.asm streamCStream.asm streamCDriver.asm\
-                  streamCManager.asm streamCVariable.def\
-                  streamCConstant.def
-COMPRESS        = compressManager.asm compressIO.asm compressMain.asm\
-                  compressVariable.def compressMacro.def\
-                  compressConstant.def
-HYPERLINK       = hyperlinkManager.asm hyperlinkMain.asm hyperlinkUtils.asm\
-                  pageMain.asm hyperlinkConstant.def pageUI.ui hyperlink.ui
-RESOLVER        = resolverComm.asm resolverEvents.asm resolver.asm\
-                  resolverCache.asm resolverActions.asm resolverUtils.asm\
-                  resolverManager.asm resolverCApi.asm resolverInt.def
-ACCPNT          = accpntManager.asm accpntUtils.asm accpntApi.asm\
-                  accpntList.asm accpntCApi.asm accpntControl.asm\
-                  accpntConstant.def accpntMacro.def accpntClass.def\
+ACCPNT          = accpntApi.asm accpntCApi.asm accpntControl.asm\
+                  accpntList.asm accpntManager.asm accpntUtils.asm\
+                  accpntClass.def accpntConstant.def accpntMacro.def\
                   accpnt.ui
-SAVER           = saverInput.asm saverUtils.asm saverStrings.asm\
-                  saverCrypt.asm saverFades.asm saverBitmap.asm\
-                  saverApplication.asm saverPassword.asm saverVector.asm\
-                  saverRandom.asm saverC.asm saverManager.asm\
-                  saverConstant.def saver.ui
-CONVERT         = convertVM.asm convertVMUtils.asm convertText.asm\
-                  convertDrawDocument.asm convertGStringTables.asm\
-                  convertGString.asm convertGeoWrite.asm convertGeoDex.asm\
-                  convertManager.asm convertScrapbook.asm\
-                  convertGString.def convertScrapbook.def convertText.def\
-                  convertConstant.def convertDrawDocument.def\
-                  convertGeoDex.def convertGeoWrite.def
-BCKRST          = utils.goc restor.goc backup.goc brfatals.goh
-HOTSPOT         = hserrors.h hstextHS.goc genHS.goc hotspot.goc\
-                  headbody.goc hstext.goc hsutils.goc
-ANSIC           = memory_asm.asm ansic.asm bcc_rtl.asm string_asm.asm\
-                  stdlib_asm.asm malloc_asm.asm stdio_asm.asm ansic.def\
-                  ansicErrors.def ansicGeode.def string.c stdio.c scanf.c
-WAV             = wav.asm wavManager.asm adpcm.asm wavMacros.def\
-                  wavConstants.def
-NETUTILS        = queue.asm hugelmemC.asm queueEC.asm address.asm\
-                  hugelmemEC.asm random.asm netUtilsManager.asm\
-                  hugelmem.asm queue.def hugelmem.def
-PARENTC         = parentcManager.asm parentcURLs.asm parentControl.asm\
-                  parentControl.ui
+ANSIC           = ansic.asm malloc_asm.asm memory_asm.asm stdio_asm.asm\
+                  stdlib_asm.asm string_asm.asm wcc_rtl.asm ansic.def\
+                  ansicErrors.def ansicGeode.def scanf.c stdio.c string.c
+BCKRST          = backup.goc restor.goc utils.goc brfatals.goh
+CGADGET         = DateInp.goc RptTrig.goc TimeInp.goc uiDI.goc uiTI.goc\
+                  externs.goh
+CELL            = cellC.asm cellCell.asm cellEC.asm cellFlags.asm\
+                  cellInsertDelete.asm cellMain.asm cellManager.asm\
+                  cellRange.asm cellRow.asm cellSort.asm cellUtils.asm\
+                  cellConstants.def cellMacros.def
+COMPRESS        = compressIO.asm compressMain.asm compressManager.asm\
+                  memory.asm compressConstant.def compressMacro.def\
+                  compressVariable.def explode.c implode.c pklib.h
+CONVERT         = convertDrawDocument.asm convertGString.asm\
+                  convertGStringTables.asm convertGeoDex.asm\
+                  convertGeoWrite.asm convertManager.asm\
+                  convertScrapbook.asm convertText.asm convertVM.asm\
+                  convertVMUtils.asm convertConstant.def\
+                  convertDrawDocument.def convertGString.def\
+                  convertGeoDex.def convertGeoWrite.def\
+                  convertScrapbook.def convertText.def
+COOKIES         = Cookies.goc Cookies.goh
+DHCP            = dhcpMain.asm dhcpManager.asm dhcpUtils.asm\
+                  dhcpConstant.def dhcpMacro.def
+HASH            = hC.asm hHeap.asm hHeapEC.asm hIndex.asm hIndexEC.asm\
+                  hMain.asm manager.asm hashGeod.def
+HOTSPOT         = hserrors.h genHS.goc headbody.goc hotspot.goc hstext.goc\
+                  hstextHS.goc hsutils.goc
+HYPERLINK       = hyperlinkMain.asm hyperlinkManager.asm hyperlinkUtils.asm\
+                  pageMain.asm hyperlinkConstant.def hyperlink.ui pageUI.ui
 IDIALC          = idialControl.asm idialcManager.asm idialConstant.def\
                   idialControl.ui
-SOCKET          = socketMisc.asm socketCApi.asm socketManager.asm\
-                  socketLoad.asm socketApi.asm socketStrategy.asm\
-                  socketControl.asm socketError.asm socketLink.asm\
-                  socketConnection.asm socketPacket.asm socketConstant.def\
-                  socketMacro.def
+MODEMC          = modemC.asm modemCEci.asm modemCManager.asm\
+                  modemCConstant.def
+NETUTILS        = address.asm hugelmem.asm hugelmemC.asm hugelmemEC.asm\
+                  netUtilsManager.asm queue.asm queueEC.asm random.asm\
+                  hugelmem.def queue.def
+PCCOM           = pccom.asm pccomClient.asm pccomData.asm pccomFSel.asm\
+                  pccomFile.asm pccomIntegrity.asm pccomManager.asm\
+                  pccomScr.asm pccomStrings.asm pccomUtils.asm\
+                  pccomConstants.def pccomMacro.def
+PARENTC         = parentControl.asm parentcManager.asm parentcURLs.asm\
+                  parentControl.ui
+PARSE           = parseC.asm parseDateTime.asm parseDepend.asm parseEC.asm\
+                  parseError.asm parseEval.asm parseFormat.asm\
+                  parseFunctFixedArgs.asm parseFunctListArgs.asm\
+                  parseFunctSingleArgs.asm parseFunctStrBoolArgs.asm\
+                  parseFunctionUtils.asm parseMain.asm parseManager.asm\
+                  parseOperators.asm parseParse.asm parseScanner.asm\
+                  parseStack.asm parseVariables.asm parseWrite.asm\
+                  parseConstants.def parseMacros.def parseStrings.ui
+PHOTOPC         = eph_cmd.c eph_err.c eph_io.c eph_iob.c eph_open.c\
+                  eph_read.c photopc.c config.h eph_io.h eph_priv.h
+PNGLIB          = pnglib.goc
 PROFPNT         = ProfPnt.goc
-COOKIES         = Cookies.goc Cookies.goh
-SOUND           = soundManager.asm soundMixer.asm soundResident.asm\
-                  soundVoiceAllocation.asm soundC.asm soundDriver.asm\
-                  soundCommon.asm soundError.def soundConstant.def
-SSMETA          = ssmetaDataRecord.asm ssmetaManager.asm ssmetaC.asm\
-                  ssmetaUtils.asm ssmetaMain.asm ssmetaInitAndExitCode.asm\
-                  ssmetaConstant.def ssmetaStrings.ui
-HASH            = hMain.asm hIndex.asm hHeapEC.asm hHeap.asm manager.asm\
-                  hC.asm hIndexEC.asm hashGeod.def
-DHCP            = dhcpMain.asm dhcpUtils.asm dhcpManager.asm\
-                  dhcpConstant.def dhcpMacro.def
-UI_TO_RDFS      = ruler.ui parseStrings.ui hyperlink.ui accpnt.ui saver.ui\
-                  parentControl.ui idialControl.ui ssmetaStrings.ui
-OBJS            = eph_cmd.obj eph_io.obj photopc.obj eph_iob.obj\
-                  eph_read.obj eph_err.obj eph_open.obj RptTrig.obj\
-                  uiTI.obj uiDI.obj TimeInp.obj DateInp.obj utils.obj\
-                  restor.obj backup.obj hstextHS.obj genHS.obj hotspot.obj\
-                  headbody.obj hstext.obj hsutils.obj string.obj stdio.obj\
-                  scanf.obj ProfPnt.obj Cookies.obj
+RESOLVER        = resolver.asm resolverActions.asm resolverCApi.asm\
+                  resolverCache.asm resolverComm.asm resolverEvents.asm\
+                  resolverManager.asm resolverUtils.asm resolverInt.def
+RULER           = rulerC.asm rulerConstrain.asm rulerContent.asm\
+                  rulerDraw.asm rulerGrid.asm rulerGuide.asm\
+                  rulerManager.asm rulerMethods.asm rulerSelect.asm\
+                  rulerTables.asm rulerUtils.asm rulerView.asm\
+                  uiControlCommon.asm uiGridSpacingControl.asm\
+                  uiGuideCreateControl.asm uiRulerGuideControl.asm\
+                  uiRulerShow.asm uiRulerTypeControl.asm rulerConstant.def\
+                  rulerMacro.def ruler.ui uiGridSpacingControl.ui\
+                  uiGuideCreateControl.ui uiRulerGuideControl.ui\
+                  uiRulerShow.ui uiRulerTypeControl.ui
+SSMETA          = ssmetaC.asm ssmetaDataRecord.asm\
+                  ssmetaInitAndExitCode.asm ssmetaMain.asm\
+                  ssmetaManager.asm ssmetaUtils.asm ssmetaConstant.def\
+                  ssmetaStrings.ui
+SAVER           = saverApplication.asm saverBitmap.asm saverC.asm\
+                  saverCrypt.asm saverFades.asm saverInput.asm\
+                  saverManager.asm saverPassword.asm saverRandom.asm\
+                  saverStrings.asm saverUtils.asm saverVector.asm\
+                  saverConstant.def saver.ui
+SOCKET          = socketApi.asm socketCApi.asm socketConnection.asm\
+                  socketControl.asm socketError.asm socketLink.asm\
+                  socketLoad.asm socketManager.asm socketMisc.asm\
+                  socketPacket.asm socketStrategy.asm socketConstant.def\
+                  socketMacro.def
+SOUND           = soundC.asm soundCommon.asm soundDriver.asm\
+                  soundManager.asm soundMixer.asm soundResident.asm\
+                  soundVoiceAllocation.asm soundConstant.def soundError.def
+STREAMC         = streamCDriver.asm streamCEntry.asm streamCManager.asm\
+                  streamCParallel.asm streamCSerial.asm streamCStream.asm\
+                  streamCUtils.asm streamCConstant.def streamCVariable.def
+WAV             = adpcm.asm wav.asm wavManager.asm wavConstants.def\
+                  wavMacros.def
+QOILIB          = qoilib.goc
+GOPHER          = gopher.goc gopherParse.goc gopherRequest.goc\
+                  gopherSerial.goc gopherSocket.goc gopherUtil.goc\
+                  gopherC.goh gopherSerialC.goh gopherSocketC.goh
+UI_TO_RDFS      = accpnt.ui hyperlink.ui idialControl.ui parentControl.ui\
+                  parseStrings.ui ruler.ui ssmetaStrings.ui saver.ui
+OBJS            = scanf.obj stdio.obj string.obj backup.obj restor.obj\
+                  utils.obj DateInp.obj RptTrig.obj TimeInp.obj uiDI.obj\
+                  uiTI.obj explode.obj implode.obj Cookies.obj genHS.obj\
+                  headbody.obj hotspot.obj hstext.obj hstextHS.obj\
+                  hsutils.obj eph_cmd.obj eph_err.obj eph_io.obj\
+                  eph_iob.obj eph_open.obj eph_read.obj photopc.obj\
+                  pnglib.obj ProfPnt.obj qoilib.obj gopher.obj\
+                  gopherParse.obj gopherRequest.obj gopherSerial.obj\
+                  gopherSocket.obj gopherUtil.obj
 COMMON          =
-MODULES         = Cell Ruler Parse StreamC Compress Hyperlink Resolver\
-                  AccPnt Saver Convert AnsiC Wav NetUtils ParentC IDialC\
-                  Socket Sound SSMeta Hash DHCP
-CMODULES        = PhotoPC CGadget BckRst HotSpot AnsiC ProfPnt Cookies
-SRCS            = $(CELL) $(RULER) $(PHOTOPC) $(PARSE) $(CGADGET)\
-                  $(STREAMC) $(COMPRESS) $(HYPERLINK) $(RESOLVER) $(ACCPNT)\
-                  $(SAVER) $(CONVERT) $(BCKRST) $(HOTSPOT) $(ANSIC) $(WAV)\
-                  $(NETUTILS) $(PARENTC) $(IDIALC) $(SOCKET) $(PROFPNT)\
-                  $(COOKIES) $(SOUND) $(SSMETA) $(HASH) $(DHCP) $(COMMON)
+MODULES         = AccPnt AnsiC Cell Compress Convert DHCP Hash Hyperlink\
+                  IDialC ModemC NetUtils PCCom ParentC Parse Resolver Ruler\
+                  SSMeta Saver Socket Sound StreamC Wav
+CMODULES        = AnsiC BckRst CGadget Compress Cookies HotSpot PhotoPC\
+                  PngLib ProfPnt QoiLib Gopher
+SRCS            = $(ACCPNT) $(ANSIC) $(BCKRST) $(CGADGET) $(CELL)\
+                  $(COMPRESS) $(CONVERT) $(COOKIES) $(DHCP) $(HASH)\
+                  $(HOTSPOT) $(HYPERLINK) $(IDIALC) $(MODEMC) $(NETUTILS)\
+                  $(PCCOM) $(PARENTC) $(PARSE) $(PHOTOPC) $(PNGLIB)\
+                  $(PROFPNT) $(RESOLVER) $(RULER) $(SSMETA) $(SAVER)\
+                  $(SOCKET) $(SOUND) $(STREAMC) $(WAV) $(QOILIB) $(GOPHER)\
+                  $(COMMON)
 LOBJS           =
 
 SYSMAKEFILE     = geode.mk
