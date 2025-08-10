@@ -20,6 +20,10 @@ dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
     VMBlockHandle bmblock;
     QoiError error = 0;
 
+    QoiImportSetAlphaThreshold(1);
+    QoiImportSetBlendColor(255, 255, 255);
+    QoiImportSetBlendEnabled(TRUE);
+
     *chain = 0;
     bmblock = QoiImportBitmapFHandle(frame->IF_sourceFile, frame->IF_transferVMFile, &error);
 
@@ -34,11 +38,11 @@ dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
 
 word _pascal QoiTestFile(FileHandle file)
 {
-    Boolean isQOI = FALSE;
+    QoiError isQOI;
 
     isQOI = QoiImportTestBitmapFHandle(file);
 
-    if(!isQOI) return NO_IDEA_FORMAT;
+    if(isQOI != QE_NO_ERROR) return NO_IDEA_FORMAT;
 
     return TE_NO_ERROR;
 };

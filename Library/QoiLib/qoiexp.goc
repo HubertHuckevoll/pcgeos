@@ -299,7 +299,6 @@ QoiExportBitmapFHandle(VMFileHandle srcfile, VMBlockHandle bmpblock, FileHandle 
     dword       Wd, Hd;
     word        W, H;
     BMType      bmptype;
-    BMFormat    bmformat;
     Boolean     hasMask;
     QoiError    result;
 

@@ -65,6 +65,17 @@ typedef struct
     word            QOS_y;
 } qoiOutStream;
 
+/* --- Import alpha/Blend controls --- */
+extern void _pascal _export
+QoiImportSetAlphaThreshold(byte threshold);
+
+extern void _pascal _export
+QoiImportSetBlendColor(byte r, byte g, byte b);
+
+extern void _pascal _export
+QoiImportSetBlendEnabled(Boolean on);
+
+/* --- QOI import --- */
 /* Import QOI by pathname into a VM bitmap in 'destfile'. */
 extern VMBlockHandle _pascal _export
 QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error);

@@ -17,6 +17,14 @@
 
 #include "qoilib.goh"      /* public prototypes + QoiError */
 
+/* Import-time alpha handling knobs (defaults preserve old behavior) */
+static byte    g_qoiAlphaThreshold = 255;   /* A >= 255 => opaque, else transparent */
+static Boolean g_qoiBlendEnable    = FALSE; /* off by default */
+static byte    g_qoiBlendR         = 0;     /* blend target color (RGB) */
+static byte    g_qoiBlendG         = 0;
+static byte    g_qoiBlendB         = 0;
+
+
 /**********************************************************************
 *   LOCAL HELPERS
 **********************************************************************/
@@ -65,6 +73,27 @@ qoiHash(QoiRGBA px)
     return (byte)(s & 63);
 }
 
+
+void _pascal _export
+QoiImportSetAlphaThreshold(byte threshold)
+{
+    g_qoiAlphaThreshold = threshold;   /* 0..255; 0 => everything opaque */
+}
+
+void _pascal _export
+QoiImportSetBlendColor(byte r, byte g, byte b)
+{
+    g_qoiBlendR = r;
+    g_qoiBlendG = g;
+    g_qoiBlendB = b;
+}
+
+void _pascal _export
+QoiImportSetBlendEnabled(Boolean on)
+{
+    g_qoiBlendEnable = on;
+}
+
 /**********************************************************************
 *   CORE DECODER — TRUE COLOR (24-bit + optional 1-bit mask)
 **********************************************************************/
@@ -86,6 +115,10 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
     word maskBytes;
     void *lineptr;
     word size;
+
+    Boolean opaque;
+    byte    r8, g8, b8;
+    word    a16, ia16;
 
     /* init index + prev pixel */
     for (i = 0; i < 64; i++)
@@ -186,6 +219,57 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
 
                 /* update index */
                 index[qoiHash(px)] = px;
+
+                /* decide opacity by threshold, set mask bit accordingly */
+                opaque = TRUE;
+                if (channels == 4)
+                {
+                    if (px.a >= g_qoiAlphaThreshold)
+                    {
+                        /* mark opaque pixel in 1-bit mask */
+                        maskPtr[maskIdx] |= (byte)(0x80 >> maskBit);
+                    }
+                    else
+                    {
+                        /* below threshold -> transparent */
+                        opaque = FALSE;
+                        os->QOS_hasAlpha = TRUE;   /* we saw some alpha */
+                    }
+
+                    maskBit++;
+                    if (maskBit == 8)
+                    {
+                        maskBit = 0;
+                        maskIdx++;
+                    }
+                }
+
+                /* color to write (optional blend over constant RGB if semi-transparent) */
+                r8 = px.r;
+                g8 = px.g;
+                b8 = px.b;
+
+                /* If we treat it as opaque (by threshold), but the source has A<255,
+                * optionally pre-composite against a constant color for nicer visuals. */
+                if (opaque && g_qoiBlendEnable && (channels == 4) && (px.a < 255))
+                {
+                    /* integer blend: out = src*A + bg*(255-A), /255 rounded */
+                    a16  = (word)px.a;
+                    ia16 = (word)(255 - px.a);
+
+                    r8 = (byte)((( (word)r8 * a16 ) + ( (word)g_qoiBlendR * ia16 ) + 127) / 255);
+                    g8 = (byte)((( (word)g8 * a16 ) + ( (word)g_qoiBlendG * ia16 ) + 127) / 255);
+                    b8 = (byte)((( (word)b8 * a16 ) + ( (word)g_qoiBlendB * ia16 ) + 127) / 255);
+                }
+
+                /* write RGB triplet */
+                {
+                    byte *p;
+                    p = scan + (x * 3);
+                    p[0] = r8;
+                    p[1] = g8;
+                    p[2] = b8;
+                }
             }
 
             /* mask bit: opaque=1, any A<255 => transparent */

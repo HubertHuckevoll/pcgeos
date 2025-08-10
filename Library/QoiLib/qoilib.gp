@@ -20,6 +20,10 @@ library         ansic
 library         extgraph
 
 # Public exports (match the _pascal _export functions in your .goc/.c)
+export QOIIMPORTSETALPHATHRESHOLD
+export QOIIMPORTSETBLENDCOLOR
+export QOIIMPORTSETBLENDENABLED
+
 export QOIIMPORTBITMAPFNAME
 export QOIIMPORTBITMAPFHANDLE
 export QOIIMPORTTESTBITMAPFNAME
