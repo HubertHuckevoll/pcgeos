@@ -34,11 +34,11 @@ dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
 
 word _pascal QoiTestFile(FileHandle file)
 {
-    Boolean isQOI = FALSE;
+    QoiError isQOI = FALSE;
 
     isQOI = QoiImportTestBitmapFHandle(file);
 
-    if(!isQOI) return NO_IDEA_FORMAT;
+    if(isQOI != QE_NO_ERROR) return NO_IDEA_FORMAT;
 
     return TE_NO_ERROR;
 };
