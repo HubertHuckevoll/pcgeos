@@ -132,7 +132,8 @@ char contentName[PATH_BUFFER_SIZE];     /* name of current image */
 char temp_path[PATH_BUFFER_SIZE];       /* path of file with gstring */
 Boolean abortRequest;                   /* set to true by "stop" trigger */
 
-char *Mask[3]={"","*.PLT","*.CGM"};
+char *Mask[4]={"", "*.PLT", "*.CGM", "*.SVG"};
+                                        /* file masks for file selector */
 
 /***********************************************************************
  *                              ContentDestroy
@@ -220,11 +221,14 @@ ContentCreate(char *path)
       /* which format was chosen? */
       switch( @call FormatList::MSG_GEN_ITEM_GROUP_GET_SELECTION() )
       {
-        case FORMAT_HPGL:               
+        case FORMAT_HPGL:
           ret = ReadHPGL(srcFile, settings, UpdateProgressPct);
           break;
         case FORMAT_CGM:
           ret = ReadCGM(srcFile, settings, UpdateProgressPct);
+          break;
+        case FORMAT_SVG:
+          ret = ReadSVG(srcFile, settings, UpdateProgressPct);
           break;
         default:
           ret = TE_INVALID_FORMAT;     /* No gstring was created */

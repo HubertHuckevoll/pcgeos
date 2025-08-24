@@ -91,5 +91,7 @@ TransError _export _pascal ReadHPGL(FileHandle srcFile,word settings,
   ProgressCallback *callback);
 TransError _export _pascal ReadCGM(FileHandle srcFile,word settings,
   ProgressCallback *callback);
+TransError _export _pascal ReadSVG(FileHandle srcFile,word settings,
+  ProgressCallback *callback);
 
 #endif

@@ -1,0 +1,551 @@
+/***********************************************************************
+ *
+ * PROJECT:      Meta
+ * FILE:         svg.goc
+ *
+ * DESCRIPTION:  Basic SVG parser for Meta library (GEOS/Watcom style)
+ *
+ ***********************************************************************/
+
+@include <stdapp.goh>
+
+#include <Ansi/string.h>
+#include <Ansi/stdlib.h>
+#include <Ansi/stdio.h>
+#include <Ansi/ctype.h>
+#include <file.h>
+#include <system.h>
+#include <graphics.h>
+#include <gstring.h>
+#include <meta.h>
+
+#define MAX_SVG_POINTS   512
+
+/* ===== Fixed-point helpers (16.16) ===== */
+#define WWFIXED_ONE      ((WWFixedAsDWord)(1UL << 16))
+
+static WWFixedAsDWord MakeWWFixedFromInt(int v)
+{
+    WWFixedAsDWord f;
+    f = ((WWFixedAsDWord)((sdword)v)) << 16;
+    return f;
+}
+
+/* Parse "-12.34" → 16.16 fixed; returns pointer to first char after number */
+static const char * ParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
+{
+    sdword sign;
+    dword ip;
+    dword frac;
+    dword scale;
+    word c;
+    WWFixedAsDWord result;
+
+    sign = 1;
+    ip = 0;
+    frac = 0;
+    scale = 1;
+
+    while (*s && isspace(*s)) {
+        s++;
+    }
+    if (*s == '+') {
+        s++;
+    } else if (*s == '-') {
+        sign = -1;
+        s++;
+    }
+
+    while ((c = (word)(byte)*s) >= '0' && c <= '9') {
+        ip = ip * 10 + (c - '0');
+        s++;
+    }
+
+    if (*s == '.') {
+        s++;
+        while ((c = (word)(byte)*s) >= '0' && c <= '9') {
+            if (scale < 1000000UL) {       /* cap precision */
+                frac = frac * 10 + (c - '0');
+                scale *= 10;
+            }
+            s++;
+        }
+    }
+
+    result = MakeWWFixedFromInt((int)ip);
+    if (scale != 0) {
+        dword fpart;
+        fpart = ((frac << 16) / scale);
+        result += (WWFixedAsDWord)fpart;
+    }
+    if (sign < 0) {
+        result = (WWFixedAsDWord)(0 - (sdword)result);
+    }
+
+    *out = result;
+    return s;
+}
+
+/*---------------------------------------------------------------
+ * Utility routines for attribute parsing
+ *---------------------------------------------------------------*/
+static Boolean GetAttr(const char *tag, const char *name, char *out)
+{
+    word i;
+    const char *p;
+    const char *q;
+
+    i = 0;
+    p = strstr(tag, name);
+    if (!p) {
+        return FALSE;
+    }
+    q = strchr(p, '=');
+    if (!q) {
+        return FALSE;
+    }
+    p = q + 1;
+    while (*p && (*p == '"' || isspace(*p))) {
+        p++;
+    }
+    i = 0;
+    while (*p && *p != '"' && *p != '>' && *p != ' ' && i < 127) {
+        out[i++] = *p++;
+    }
+    out[i] = 0;
+    return TRUE;
+}
+
+static void ParseColorAttr(const char *tag, const char *name, Boolean line)
+{
+    char buf[64];
+    int r;
+    int g;
+    int b;
+
+    r = g = b = 0;
+    if (GetAttr(tag, name, buf)) {
+        if (strcmp(buf, "none") == 0) {
+            return;
+        }
+        if (buf[0] == '#') {
+            if (sscanf(buf + 1, "%02x%02x%02x", &r, &g, &b) == 3) {
+                if (line) {
+                    Meta_SetLineColor(CF_RGB, (word)r, (word)g, (word)b);
+                } else {
+                    Meta_SetAreaColor(CF_RGB, (word)r, (word)g, (word)b);
+                }
+            }
+        }
+    }
+}
+
+static void ParseStrokeWidth(const char *tag)
+{
+    char buf[32];
+    int w;
+
+    w = 0;
+    if (GetAttr(tag, "stroke-width", buf)) {
+        w = atoi(buf);
+        Meta_SetLineWidth(MakeWWFixed(w));
+    }
+}
+
+/* transform="scale(a[,b])" in fixed-point; see notes in ReadSVG for GS */
+static void ParseTransform(const char *tag)
+{
+    char buf[64];
+    char *p;
+    WWFixedAsDWord sx;
+    WWFixedAsDWord sy;
+
+    p = NULL;
+    sx = WWFIXED_ONE;
+    sy = WWFIXED_ONE;
+
+    if (GetAttr(tag, "transform", buf)) {
+        p = strstr(buf, "scale");
+        if (p) {
+            char *lp;
+            const char *s;
+
+            lp = strchr(p, '(');
+            if (lp) {
+                s = lp + 1;
+                s = ParseWWFixed16_16(s, &sx);
+                while (*s && isspace(*s)) {
+                    s++;
+                }
+                if (*s == ',') {
+                    s++;
+                    s = ParseWWFixed16_16(s, &sy);
+                } else {
+                    sy = sx;
+                }
+
+                /* Map scale to Meta scaling space (legacy approach):
+                 * scale * 32767 → world corner, then 32767 viewport.
+                 */
+                {
+                    WWFixedAsDWord limit;
+                    WWFixedAsDWord sxScaled;
+                    WWFixedAsDWord syScaled;
+                    sword xs;
+                    sword ys;
+
+                    limit    = MakeWWFixedFromInt(32767);
+                    sxScaled = GrMulWWFixed(sx, limit);
+                    syScaled = GrMulWWFixed(sy, limit);
+                    xs       = (sword)((sdword)sxScaled >> 16);
+                    ys       = (sword)((sdword)syScaled >> 16);
+
+                    Meta_SetScaling(0, 0, xs, ys, 32767, 32767);
+                }
+            }
+        }
+    }
+}
+
+static void ParsePoints(const char *points, Point *pointsP, word *numPointsP)
+{
+    const char *s;
+    sword x;
+    sword y;
+    int xi;
+    int yi;
+
+    s = points;
+    *numPointsP = 0;
+    xi = yi = 0;
+
+    while (*s && *numPointsP < MAX_SVG_POINTS) {
+        while (*s && isspace(*s)) {
+            s++;
+        }
+        if (!*s) {
+            break;
+        }
+
+        xi = atoi(s);
+        while (*s && *s != ',' && !isspace(*s)) {
+            s++;
+        }
+        if (*s == ',') {
+            s++;
+        }
+        while (*s && isspace(*s)) {
+            s++;
+        }
+        yi = atoi(s);
+        while (*s && *s != ' ' && *s != ',' && *s != '\0') {
+            s++;
+        }
+
+        x = (sword)xi;
+        y = (sword)yi;
+        pointsP[*numPointsP].P_x = x;
+        pointsP[*numPointsP].P_y = y;
+
+        (*numPointsP)++;
+
+        while (*s && (isspace(*s) || *s == ',')) {
+            s++;
+        }
+    }
+}
+
+/*---------------------------------------------------------------
+ * ReadSVG -- parse basic SVG elements (streamed, SAX-like)
+ *---------------------------------------------------------------*/
+TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
+                                   ProgressCallback *callback)
+{
+    /* --- constants --- */
+    #define SVG_IO_BUF_SIZE  1024
+    #define TAG_BUF_SIZE     256
+
+    /* --- locals --- */
+    MemHandle      ioBufH;
+    char          *ioBufP;
+    word           bytesRead;
+    word           pos;
+    Boolean        inTag;
+    Boolean        inQuote;
+    char           quoteCh;
+    char           tag[TAG_BUF_SIZE];
+    word           tagLen;
+
+    MemHandle      ptsH;
+    Point         *ptsP;
+    Boolean        havePts;
+
+    /* scratch for attribute parsing (reused per tag) */
+    char           xb[32], yb[32], x2b[32], y2b[32];
+    char           pb[256];
+    char           wb[32], hb[32];
+    char           cxb[32], cyb[32], rxb[32], ryb[32];
+    char           db[256];
+
+    /* small temporaries reused by handlers */
+    sword          x, y, x2, y2;
+    word           np;
+    const char    *sP;
+    sword          lastx;
+    sword          lasty;
+
+    (void)settings;
+    (void)callback;
+
+    /* --- init --- */
+    ioBufH  = 0;
+    ioBufP  = NULL;
+    ptsH    = 0;
+    ptsP    = NULL;
+    havePts = FALSE;
+
+    inTag   = FALSE;
+    inQuote = FALSE;
+    quoteCh = 0;
+    tagLen  = 0;
+
+    /* I/O buffer */
+    ioBufH = MemAlloc(SVG_IO_BUF_SIZE, HAF_ZERO_INIT, 0);
+    if (ioBufH == 0) {
+        return TE_OUT_OF_MEMORY;
+    }
+    ioBufP = (char*) MemLock(ioBufH);
+    if (!ioBufP) {
+        MemFree(ioBufH);
+        return TE_OUT_OF_MEMORY;
+    }
+
+    /* points workspace (used by polyline/polygon) */
+    ptsH = MemAlloc((word)(MAX_SVG_POINTS * sizeof(Point)), HAF_ZERO_INIT, 0);
+    if (ptsH) {
+        ptsP = (Point*) MemLock(ptsH);
+        if (ptsP) {
+            havePts = TRUE;
+        }
+    }
+
+    /* --- streamed read/scan loop --- */
+    for (;;)
+    {
+        /* GEOS FileRead: FALSE = don't fatal on short read/EOF */
+        bytesRead = FileRead(srcFile, (void*)ioBufP, SVG_IO_BUF_SIZE, FALSE);
+        if (bytesRead == (word)-1 || bytesRead == 0) {
+            /* error or EOF */
+            break;
+        }
+
+        pos = 0;
+        while (pos < bytesRead)
+        {
+            char ch;
+            ch = ioBufP[pos++];
+
+            if (!inTag) {
+                if (ch == '<') {
+                    inTag = TRUE;
+                    inQuote = FALSE;
+                    quoteCh = 0;
+                    tagLen = 0;
+                }
+                continue;
+            }
+
+            /* inside a tag: collect until unquoted '>' */
+            if (inQuote) {
+                if (ch == quoteCh) {
+                    inQuote = FALSE;
+                }
+                if (tagLen < (TAG_BUF_SIZE - 1)) {
+                    tag[tagLen++] = ch;
+                }
+                continue;
+            } else {
+                if (ch == '"' || ch == '\'') {
+                    inQuote = TRUE;
+                    quoteCh = ch;
+                    if (tagLen < (TAG_BUF_SIZE - 1)) {
+                        tag[tagLen++] = ch;
+                    }
+                    continue;
+                }
+                if (ch != '>') {
+                    if (tagLen < (TAG_BUF_SIZE - 1)) {
+                        tag[tagLen++] = ch;
+                    }
+                    continue;
+                }
+                /* found end of tag */
+                tag[tagLen] = 0;
+                inTag = FALSE;
+
+                /* ignore close tags like </g> */
+                if (tag[0] == '/') {
+                    continue;
+                }
+
+                /* ---- element handlers ---- */
+
+                if (!strncmp(tag, "line", 4)) {
+                    xb[0] = yb[0] = x2b[0] = y2b[0] = 0;
+                    if (GetAttr(tag, "x1", xb) && GetAttr(tag, "y1", yb) &&
+                        GetAttr(tag, "x2", x2b) && GetAttr(tag, "y2", y2b)) {
+
+                        ParseColorAttr(tag, "stroke", TRUE);
+                        ParseStrokeWidth(tag);
+                        ParseTransform(tag);
+                        Meta_Line((sword)atoi(xb), (sword)atoi(yb),
+                                  (sword)atoi(x2b), (sword)atoi(y2b));
+                    }
+
+                } else if (!strncmp(tag, "polyline", 8)) {
+                    pb[0] = 0;
+                    if (GetAttr(tag, "points", pb) && havePts) {
+                        ParseColorAttr(tag, "stroke", TRUE);
+                        ParseStrokeWidth(tag);
+                        ParseTransform(tag);
+                        ParsePoints(pb, ptsP, &np);
+                        if (np > 0) {
+                            Meta_Polyline(ptsP, np);
+                        }
+                    }
+
+                } else if (!strncmp(tag, "polygon", 7)) {
+                    pb[0] = 0;
+                    if (GetAttr(tag, "points", pb) && havePts) {
+                        ParseColorAttr(tag, "stroke", TRUE);
+                        ParseColorAttr(tag, "fill", FALSE);
+                        ParseStrokeWidth(tag);
+                        ParseTransform(tag);
+                        ParsePoints(pb, ptsP, &np);
+                        if (np > 0) {
+                            Meta_Polygon(ptsP, np, TRUE, TRUE);
+                        }
+                    }
+
+                } else if (!strncmp(tag, "rect", 4)) {
+                    xb[0] = yb[0] = wb[0] = hb[0] = 0;
+                    if (GetAttr(tag, "x", xb) && GetAttr(tag, "y", yb) &&
+                        GetAttr(tag, "width", wb) && GetAttr(tag, "height", hb)) {
+
+                        ParseColorAttr(tag, "stroke", TRUE);
+                        ParseColorAttr(tag, "fill", FALSE);
+                        ParseStrokeWidth(tag);
+                        ParseTransform(tag);
+
+                        x  = (sword)atoi(xb);
+                        y  = (sword)atoi(yb);
+                        x2 = (sword)(x + (sword)atoi(wb));
+                        y2 = (sword)(y + (sword)atoi(hb));
+                        Meta_Rect(x, y, x2, y2, TRUE, TRUE);
+                    }
+
+                } else if (!strncmp(tag, "ellipse", 7)) {
+                    cxb[0] = cyb[0] = rxb[0] = ryb[0] = 0;
+                    if (GetAttr(tag, "cx", cxb) && GetAttr(tag, "cy", cyb) &&
+                        GetAttr(tag, "rx", rxb) && GetAttr(tag, "ry", ryb)) {
+
+                        ParseColorAttr(tag, "stroke", TRUE);
+                        ParseColorAttr(tag, "fill", FALSE);
+                        ParseStrokeWidth(tag);
+                        ParseTransform(tag);
+
+                        Meta_Ellipse((sword)atoi(cxb),
+                                     (sword)atoi(cyb),
+                                     (sword)atoi(rxb),
+                                     (sword)atoi(ryb),
+                                     0, TRUE, TRUE);
+                    }
+
+                } else if (!strncmp(tag, "path", 4)) {
+                    db[0] = 0;
+                    if (GetAttr(tag, "d", db) && havePts) {
+                        ParseColorAttr(tag, "stroke", TRUE);
+                        ParseColorAttr(tag, "fill", FALSE);
+                        ParseStrokeWidth(tag);
+                        ParseTransform(tag);
+
+                        /* Very primitive M/L/Z handling; streaming-friendly */
+                        Meta_BeginPath();
+                        sP = (const char*)db;
+                        lastx = 0;
+                        lasty = 0;
+
+                        while (*sP) {
+                            while (*sP && isspace(*sP)) {
+                                sP++;
+                            }
+                            if (*sP == 'M' || *sP == 'm') {
+                                sP++;
+                                lastx = (sword)atoi(sP);
+                                while (*sP && *sP != ',' && *sP != ' ') {
+                                    sP++;
+                                }
+                                if (*sP == ',') {
+                                    sP++;
+                                }
+                                while (*sP && isspace(*sP)) {
+                                    sP++;
+                                }
+                                lasty = (sword)atoi(sP);
+                                while (*sP && *sP != ' ' && *sP != 'Z' && *sP != 'z') {
+                                    sP++;
+                                }
+
+                            } else if (*sP == 'L' || *sP == 'l') {
+                                sword lx;
+                                sword ly;
+
+                                sP++;
+                                lx = (sword)atoi(sP);
+                                while (*sP && *sP != ',' && *sP != ' ') {
+                                    sP++;
+                                }
+                                if (*sP == ',') {
+                                    sP++;
+                                }
+                                while (*sP && isspace(*sP)) {
+                                    sP++;
+                                }
+                                ly = (sword)atoi(sP);
+                                while (*sP && *sP != ' ' && *sP != 'Z' && *sP != 'z') {
+                                    sP++;
+                                }
+
+                                Meta_Line(lastx, lasty, lx, ly);
+                                lastx = lx;
+                                lasty = ly;
+
+                            } else if (*sP == 'Z' || *sP == 'z') {
+                                Meta_EndPath(TRUE, TRUE);
+                                break;
+
+                            } else {
+                                sP++;
+                            }
+                        }
+                    }
+                }
+
+                /* ready for next tag */
+                tagLen = 0;
+            }
+        }
+    }
+
+    /* --- cleanup --- */
+    if (ptsP) {
+        MemUnlock(ptsH);
+    }
+    if (ptsH) {
+        MemFree(ptsH);
+    }
+    MemUnlock(ioBufH);
+    MemFree(ioBufH);
+
+    return TE_NO_ERROR;
+}

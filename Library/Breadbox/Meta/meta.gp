@@ -49,3 +49,4 @@ export META_END
 
 export READHPGL
 export READCGM
+export READSVG

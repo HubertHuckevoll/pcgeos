@@ -15,14 +15,16 @@
     GI_visMoniker = 'H',"HPGL";
     GII_identifier = FORMAT_HPGL;
 }
-@end Interface;
-@start Interface;
 @object GenItemClass vconv_ui_obj0032 = {
     GI_visMoniker = 'C',"CGM";
     GII_identifier = FORMAT_CGM;
 }
+@object GenItemClass vconv_ui_obj0033 = {
+    GI_visMoniker = 'S',"SVG";
+    GII_identifier = FORMAT_SVG;
+}
 @end Interface;
-@ifdef ADD_RULERS    
+@ifdef ADD_RULERS
 @endif
 @ifdef ADD_RULERS
 @endif
@@ -48,7 +50,7 @@
 @object GenFileSelectorClass ConvFileS = {
     GFSI_destination = process;
     GFSI_notificationMsg = MSG_VConv_CONVERT_FILE;
-    GFSI_fileCriteria = (@default | FSFC_MASK_CASE_INSENSITIVE) & 
+    GFSI_fileCriteria = (@default | FSFC_MASK_CASE_INSENSITIVE) &
     		          ~(FSFC_GEOS_EXECUTABLES | FSFC_GEOS_NON_EXECUTABLES);
 }
 @end Interface;
@@ -89,7 +91,7 @@
 @endif
 }
 @end Interface;
-@ifdef ADD_RULERS    
+@ifdef ADD_RULERS
 @endif
 @ifdef ADD_RULERS
 @endif
@@ -130,7 +132,7 @@
 @endif
 @start Interface;
 @object GenInteractionClass vconv_ui_obj0026 = {
-    HINT_ORIENT_CHILDREN_VERTICALLY; 
+    HINT_ORIENT_CHILDREN_VERTICALLY;
 @ifndef _PMVG_GI_comp_0026
 @define _PMVG_GI_comp_0026
   GI_comp =
@@ -166,7 +168,7 @@
 @endif
 }
 @end Interface;
-@ifdef ADD_RULERS    
+@ifdef ADD_RULERS
 @endif
 @start Interface;
 @object GenBooleanClass vconv_ui_obj0042 = {
@@ -202,7 +204,7 @@
 @object GenToolGroupClass vconv_ui_obj0005 = {
     /* This GenToolGroup object helps manage the tools within
      * a toolbox GenInteraction. */
-     
+
     GTGI_controller = EditControl;
     HINT_MINIMIZE_CHILD_SPACING;
     HINT_SAME_ORIENTATION_AS_PARENT;
@@ -213,7 +215,7 @@
 @object GenToolGroupClass vconv_ui_obj0006 = {
     /* This GenToolGroup object helps manage the tools within
      * a toolbox GenInteraction. */
-     
+
     GTGI_controller = ViewControl;
     HINT_MINIMIZE_CHILD_SPACING;
     HINT_SAME_ORIENTATION_AS_PARENT;
@@ -225,7 +227,7 @@
 @object GenViewClass CornerView = {
     /* The CornerView is used to make the space where the horizontal and
        vertical rulers meet. */
-       
+
     GI_attrs = @default & ~GA_TARGETABLE;
     GVI_attrs = @default | GVA_SAME_COLOR_AS_PARENT_WIN;
     GVI_horizAttrs = @default | GVDA_NO_LARGER_THAN_CONTENT;
@@ -315,7 +317,7 @@
     HINT_SEEK_REPLY_BAR;
 }
 @end Interface;
-@ifdef ADD_RULERS    
+@ifdef ADD_RULERS
 @start Interface;
 @object RulerTypeControlClass VConvRulerType = {
     GCI_output = @VRuleVis;             /* send messages directly to ruler */
@@ -377,14 +379,14 @@
     * the GenPrimary window.  The user may, by using the
     * GenToolControl, place tools of other controller objects
     * within this GenInteraction. */
-    
+
     HINT_TOOLBOX;
 		/* This GenInteraction is a toolbox. */
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
     HINT_ALLOW_CHILDREN_TO_WRAP;
     HINT_ORIENT_CHILDREN_HORIZONTALLY;
 		/* The above help determine the toolbox geometry. */
-		
+
 @ifndef _PMVG_GI_comp_0004
 @define _PMVG_GI_comp_0004
   GI_comp =
@@ -512,7 +514,7 @@
 @endif
 }
 @end Interface;
-@ifdef ADD_RULERS    
+@ifdef ADD_RULERS
 @start Interface;
 @object GenInteractionClass RulerSettings = {
     GI_visMoniker = "Rulers";
@@ -621,7 +623,7 @@
     GII_type = GIT_PROGRESS;
 
     HINT_CENTER_CHILDREN_HORIZONTALLY;
-    
+
 @ifndef _PMVG_GI_comp_0019
 @define _PMVG_GI_comp_0019
   GI_comp =
@@ -703,7 +705,7 @@
      */
     GII_visibility = GIV_POPUP;
     ATTR_GEN_INTERACTION_GROUP_TYPE = GIGT_OPTIONS_MENU;
-@ifdef ADD_RULERS    
+@ifdef ADD_RULERS
 @ifndef _PMVG_GI_comp_0036
 @define _PMVG_GI_comp_0036
   GI_comp =

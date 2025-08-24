@@ -7,5 +7,5 @@ XGOCFLAGS = -L meta
 #XCCOMFLAGS = -WDE
 
 # Set Copyright notice
-XLINKFLAGS = -N Copyright\20Marcus\20Groeber
+# XLINKFLAGS = -N Copyright\20Marcus\20Groeber
 
