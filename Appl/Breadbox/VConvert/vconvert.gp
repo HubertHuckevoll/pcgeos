@@ -30,7 +30,7 @@ library meta
 library grobj
 # library ruler
 
-stack 4096
+stack 7000
 
 resource AppResource ui-object
 resource Interface ui-object

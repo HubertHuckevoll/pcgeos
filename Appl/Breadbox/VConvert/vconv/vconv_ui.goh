@@ -72,23 +72,7 @@
     GIGI_selection = FORMAT_HPGL;       /* default format */
     GIGI_applyMsg = MSG_VConv_FORMAT_CHANGED;
     GIGI_destination = process;
-@ifndef _PMVG_GI_comp_0030
-@define _PMVG_GI_comp_0030
-  GI_comp =
-@else
-  ,
-@endif
-    @vconv_ui_obj0031
-@ifndef _PMVG_GI_comp_0030
-@define _PMVG_GI_comp_0030
-  GI_comp =
-@else
-  ,
-@endif
-    @vconv_ui_obj0032
-@ifdef _PMVG_GI_comp_0030
-  ;
-@endif
+    GI_comp = @vconv_ui_obj0031, @vconv_ui_obj0032, @vconv_ui_obj0033;
 }
 @end Interface;
 @ifdef ADD_RULERS
