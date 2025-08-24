@@ -50,6 +50,8 @@
 @object GenFileSelectorClass ConvFileS = {
     GFSI_destination = process;
     GFSI_notificationMsg = MSG_VConv_CONVERT_FILE;
+    ATTR_GEN_FILE_SELECTOR_VIRTUAL_ROOT = {SP_DOCUMENT, "."};
+    ATTR_GEN_PATH_DATA = { SP_DOCUMENT,"." };
     GFSI_fileCriteria = (@default | FSFC_MASK_CASE_INSENSITIVE) &
     		          ~(FSFC_GEOS_EXECUTABLES | FSFC_GEOS_NON_EXECUTABLES);
 }
@@ -69,7 +71,7 @@
     /*
      * group of menu items containing the various formats
      */
-    GIGI_selection = FORMAT_HPGL;       /* default format */
+    GIGI_selection = FORMAT_SVG;       /* default format */
     GIGI_applyMsg = MSG_VConv_FORMAT_CHANGED;
     GIGI_destination = process;
     GI_comp = @vconv_ui_obj0031, @vconv_ui_obj0032, @vconv_ui_obj0033;
