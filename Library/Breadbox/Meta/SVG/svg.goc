@@ -34,6 +34,7 @@ static Boolean        GetAttrBounded(const char *tag, const char *name, char *ou
 static void           ApplyStrokeAndFill(const char *tag);
 static void           ApplyStrokeWidth(const char *tag);
 static void           ApplyTransform(const char *tag);
+static void           ParseFillRule(const char *tag);
 static void           SVG_ParsePoints(const char *points, Point *pointsP, word *numPointsP);
 static void           HandleLineTag(const char *tag);
 static void           HandlePolylineTag(const char *tag, struct _SVGScratch *sc);
@@ -42,6 +43,10 @@ static void           HandleRectTag(const char *tag);
 static void           HandleEllipseTag(const char *tag);
 static void           HandleCircleTag(const char *tag);
 static void           HandlePathTag(const char *tag, struct _SVGScratch *sc);
+
+/* tiny path helpers */
+static const char *   SVG_SkipWS(const char *s);
+static const char *   SVG_ScanInt(const char *s, sword *out);
 
 /* scanner context */
 typedef struct {
@@ -284,27 +289,116 @@ typedef struct _SVGScratch {
     Point   pts[MAX_SVG_POINTS];
 } SVGScratch;
 
-/* ---------- style helpers ---------- */
+/* ---------- color & style helpers ---------- */
+
+static Boolean ExpandShortHex(const char *s, word *r, word *g, word *b)
+{
+    if (s[0] == '#' && strlen(s) == 4) {
+        char hh[7];
+        hh[0] = '#';
+        hh[1] = s[1]; hh[2] = s[1];
+        hh[3] = s[2]; hh[4] = s[2];
+        hh[5] = s[3]; hh[6] = s[3];
+        *r = HexByte(hh + 1);
+        *g = HexByte(hh + 3);
+        *b = HexByte(hh + 5);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static Boolean ParseRGBFunc(const char *s, word *r, word *g, word *b)
+{
+    /* supports: rgb(255,0,0) and rgb(50%,0%,0%) */
+    const char *p;
+    int v1;
+    int v2;
+    int v3;
+    int isPct;
+
+    p = strstr(s, "rgb(");
+    if (!p) {
+        return FALSE;
+    }
+    p += 4;
+
+    isPct = 0;
+    v1 = atoi(p);
+    while (*p && *p != ',' && *p != ')' && *p != '%') p++;
+    if (*p == '%') { isPct = 1; p++; }
+    if (*p == ',') p++;
+    v2 = atoi(p);
+    while (*p && *p != ',' && *p != ')' && *p != '%') p++;
+    if (*p == '%') { isPct = 1; p++; }
+    if (*p == ',') p++;
+    v3 = atoi(p);
+    while (*p && *p != ')' && *p != '%') p++;
+    if (*p == '%') { isPct = 1; }
+
+    if (isPct) {
+        if (v1 < 0) v1 = 0; if (v1 > 100) v1 = 100;
+        if (v2 < 0) v2 = 0; if (v2 > 100) v2 = 100;
+        if (v3 < 0) v3 = 0; if (v3 > 100) v3 = 100;
+        *r = (word)((v1 * 255) / 100);
+        *g = (word)((v2 * 255) / 100);
+        *b = (word)((v3 * 255) / 100);
+    } else {
+        if (v1 < 0) v1 = 0; if (v1 > 255) v1 = 255;
+        if (v2 < 0) v2 = 0; if (v2 > 255) v2 = 255;
+        if (v3 < 0) v3 = 0; if (v3 > 255) v3 = 255;
+        *r = (word)v1; *g = (word)v2; *b = (word)v3;
+    }
+    return TRUE;
+}
+
 static void ApplyStrokeAndFill(const char *tag)
 {
     static char sFill[64];
     static char sStroke[64];
+    word r;
+    word g;
+    word b;
 
     sFill[0] = 0;
     sStroke[0] = 0;
 
     if (GetAttrBounded(tag, "stroke", sStroke, sizeof(sStroke)))
     {
-        if (strcmp(sStroke, "none") != 0 && sStroke[0] == '#' && strlen(sStroke) >= 7)
-        {
-            Meta_SetLineColor(CF_RGB, HexByte(sStroke+1), HexByte(sStroke+3), HexByte(sStroke+5));
+        if (strcmp(sStroke, "none") != 0) {
+            if (sStroke[0] == '#' && strlen(sStroke) >= 7) {
+                Meta_SetLineColor(CF_RGB, HexByte(sStroke+1), HexByte(sStroke+3), HexByte(sStroke+5));
+            } else if (ExpandShortHex(sStroke, &r, &g, &b)) {
+                Meta_SetLineColor(CF_RGB, r, g, b);
+            } else if (ParseRGBFunc(sStroke, &r, &g, &b)) {
+                Meta_SetLineColor(CF_RGB, r, g, b);
+            }
         }
     }
     if (GetAttrBounded(tag, "fill", sFill, sizeof(sFill)))
     {
-        if (strcmp(sFill, "none") != 0 && sFill[0] == '#' && strlen(sFill) >= 7)
-        {
-            Meta_SetAreaColor(CF_RGB, HexByte(sFill+1), HexByte(sFill+3), HexByte(sFill+5));
+        if (strcmp(sFill, "none") != 0) {
+            if (sFill[0] == '#' && strlen(sFill) >= 7) {
+                Meta_SetAreaColor(CF_RGB, HexByte(sFill+1), HexByte(sFill+3), HexByte(sFill+5));
+            } else if (ExpandShortHex(sFill, &r, &g, &b)) {
+                Meta_SetAreaColor(CF_RGB, r, g, b);
+            } else if (ParseRGBFunc(sFill, &r, &g, &b)) {
+                Meta_SetAreaColor(CF_RGB, r, g, b);
+            }
+        }
+    }
+}
+
+static void ParseFillRule(const char *tag)
+{
+    static char buf[16];
+
+    buf[0] = 0;
+    if (GetAttrBounded(tag, "fill-rule", buf, sizeof(buf)))
+    {
+        if (!strcmp(buf, "evenodd")) {
+            Meta_SetFillRule(ODD_EVEN);
+        } else {
+            Meta_SetFillRule(WINDING); /* SVG default: nonzero */
         }
     }
 }
@@ -453,6 +547,7 @@ static void HandlePolygonTag(const char *tag, SVGScratch *sc)
     if (GetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
     {
         ApplyStrokeAndFill(tag);
+        ParseFillRule(tag);
         ApplyStrokeWidth(tag);
         ApplyTransform(tag);
         SVG_ParsePoints(sc->pb, sc->pts, &np);
@@ -522,6 +617,27 @@ static void HandleCircleTag(const char *tag)
     }
 }
 
+/* ---- tiny path helpers ---- */
+static const char * SVG_SkipWS(const char *s)
+{
+    while (*s && isspace(*s)) {
+        s++;
+    }
+    return s;
+}
+
+static const char * SVG_ScanInt(const char *s, sword *out)
+{
+    int v;
+
+    v = atoi(s);
+    *out = (sword)v;
+    while (*s && *s != ' ' && *s != ',' && *s != '\t' && *s != '\r' && *s != '\n' && *s != 'Z' && *s != 'z') {
+        s++;
+    }
+    return s;
+}
+
 static void HandlePathTag(const char *tag, SVGScratch *sc)
 {
     const char *sP;
@@ -529,59 +645,106 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
     Boolean     closed;
     sword       lastx;
     sword       lasty;
+    char        lastCmd;
+    Boolean     haveCmd;
 
     sc->db[0] = 0;
     if (!GetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) return;
 
     ApplyStrokeAndFill(tag);
+    ParseFillRule(tag);
     ApplyStrokeWidth(tag);
     ApplyTransform(tag);
 
-    np = 0;
-    closed = FALSE;
-    lastx = 0;
-    lasty = 0;
-    sP = sc->db;
+    np      = 0;
+    closed  = FALSE;
+    lastx   = 0;
+    lasty   = 0;
+    lastCmd = 0;
+    haveCmd = FALSE;
+    sP      = sc->db;
 
     while (*sP)
     {
-        while (*sP && isspace(*sP)) sP++;
-        if (*sP == 'M' || *sP == 'm')
-        {
-            sP++;
-            lastx = (sword)atoi(sP);
-            while (*sP && *sP != ',' && *sP != ' ') sP++;
-            if (*sP == ',') sP++;
-            while (*sP && isspace(*sP)) sP++;
-            lasty = (sword)atoi(sP);
-            while (*sP && *sP != ' ' && *sP != 'Z' && *sP != 'z') sP++;
-            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lastx; sc->pts[np].P_y = lasty; np++; }
+        sword x;
+        sword y;
+
+        sP = SVG_SkipWS(sP);
+        if (!*sP) {
+            break;
         }
-        else if (*sP == 'L' || *sP == 'l')
-        {
+
+        if (isalpha(*sP)) {
+            lastCmd = *sP++;
+            haveCmd = TRUE;
+        } else if (!haveCmd) {
+            /* malformed path starting with numbers but no prior command */
+            break;
+        }
+
+        switch (lastCmd) {
+        case 'M': case 'm': {
+            /* first pair is move-to; subsequent pairs imply line-to with same rel/abs mode */
+            sP = SVG_SkipWS(sP);
+            sP = SVG_ScanInt(sP, &x);
+            if (*sP == ',') sP++;
+            sP = SVG_SkipWS(sP);
+            sP = SVG_ScanInt(sP, &y);
+
+            if (lastCmd == 'm') { x += lastx; y += lasty; }
+            lastx = x; lasty = y;
+            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = x; sc->pts[np].P_y = y; np++; }
+
+            /* After an M, any additional coordinate pairs should be treated as L with same rel/abs */
+            lastCmd = (lastCmd == 'M') ? 'L' : 'l';
+            haveCmd = TRUE;
+            break;
+        }
+        case 'L': case 'l': {
             sword lx;
             sword ly;
 
-            sP++;
-            lx = (sword)atoi(sP);
-            while (*sP && *sP != ',' && *sP != ' ') sP++;
+            sP = SVG_SkipWS(sP);
+            sP = SVG_ScanInt(sP, &lx);
             if (*sP == ',') sP++;
-            while (*sP && isspace(*sP)) sP++;
-            ly = (sword)atoi(sP);
-            while (*sP && *sP != ' ' && *sP != 'Z' && *sP != 'z') sP++;
+            sP = SVG_SkipWS(sP);
+            sP = SVG_ScanInt(sP, &ly);
+
+            if (lastCmd == 'l') { lx += lastx; ly += lasty; }
             if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lx; sc->pts[np].P_y = ly; np++; }
-            lastx = lx;
-            lasty = ly;
-        }
-        else if (*sP == 'Z' || *sP == 'z')
-        {
-            closed = TRUE;
-            sP++;
+            lastx = lx; lasty = ly;
             break;
         }
-        else
-        {
-            sP++;  /* skip unhandled command */
+        case 'H': case 'h': {
+            sword lx;
+
+            sP = SVG_SkipWS(sP);
+            sP = SVG_ScanInt(sP, &lx);
+            if (lastCmd == 'h') lx += lastx;
+            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lx; sc->pts[np].P_y = lasty; np++; }
+            lastx = lx;
+            break;
+        }
+        case 'V': case 'v': {
+            sword ly;
+
+            sP = SVG_SkipWS(sP);
+            sP = SVG_ScanInt(sP, &ly);
+            if (lastCmd == 'v') ly += lasty;
+            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lastx; sc->pts[np].P_y = ly; np++; }
+            lasty = ly;
+            break;
+        }
+        case 'Z': case 'z':
+            closed = TRUE;
+            sP++;
+            /* do not reset haveCmd; path may end here */
+            break;
+
+        default:
+            /* skip unhandled (curves/arcs/others) one char at a time */
+            sP++;
+            break;
         }
     }
 
@@ -658,7 +821,7 @@ static Boolean ScanNextTag(FileHandle fh, ScanCtx *c, SVGScratch *sc)
                     continue;
                 }
 
-                /* finished a tag */
+                /* finished a tag; if it overflowed, it was truncated safely */
                 sc->tag[c->tagLen] = 0;
                 c->inTag = FALSE;
                 return TRUE;
@@ -697,19 +860,20 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     total = FilePos(srcFile, 0, FILE_POS_END);
     FilePos(srcFile, 0, FILE_POS_START);
 
-    // if (callback) (void)(*callback)(0);
+    /* progress disabled for safety while ABI is verified */
+    /* if (callback) (void)(*callback)(0); */
 
     scH = MemAlloc((word)sizeof(SVGScratch), HF_DYNAMIC, HAF_ZERO_INIT);
     if (!scH)
     {
-        // if (callback) (void)(*callback)(100);
+        /* if (callback) (void)(*callback)(100); */
         return TE_OUT_OF_MEMORY;
     }
     scP = (SVGScratch*) MemLock(scH);
     if (!scP)
     {
         MemFree(scH);
-        // if (callback) (void)(*callback)(100);
+        /* if (callback) (void)(*callback)(100); */
         return TE_OUT_OF_MEMORY;
     }
 
@@ -718,7 +882,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     {
         MemUnlock(scH);
         MemFree(scH);
-        // if (callback) (void)(*callback)(100);
+        /* if (callback) (void)(*callback)(100); */
         return TE_OUT_OF_MEMORY;
     }
     ioP = (char*) MemLock(ioH);
@@ -727,7 +891,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
         MemFree(ioH);
         MemUnlock(scH);
         MemFree(scH);
-        // if (callback) (void)(*callback)(100);
+        /* if (callback) (void)(*callback)(100); */
         return TE_OUT_OF_MEMORY;
     }
 
@@ -742,7 +906,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
             break;
         }
 
-        /* progress (throttled; avoid tiny files) */
+        /* progress (throttled; avoid tiny files) — disabled for now */
         if (callback && total >= 2048)
         {
             done = (dword)FilePos(srcFile, 0, FILE_POS_RELATIVE);
@@ -754,7 +918,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
                 if (pct != lastPct)
                 {
                     lastPct = pct;
-                    // if ((*callback)(pct)) break;
+                    /* if ((*callback)(pct)) break; */
                 }
             }
         }
@@ -802,7 +966,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     if (ioH) MemFree(ioH);
     if (scP) MemUnlock(scH);
     if (scH) MemFree(scH);
-    // if (callback) (void)(*callback)(100);
+    /* if (callback) (void)(*callback)(100); */
 
     return TE_NO_ERROR;
 }
