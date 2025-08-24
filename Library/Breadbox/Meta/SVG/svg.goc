@@ -367,6 +367,11 @@ static void ApplyTransform(const char *tag)
             syScaled = GrMulWWFixedSafe(sy, limit);
             xs       = (sword)((sdword)sxScaled >> 16);
             ys       = (sword)((sdword)syScaled >> 16);
+
+            /* avoid zero scale → divide-by-zero inside meta */
+            if (xs == 0) xs = 1;
+            if (ys == 0) ys = 1;
+
             Meta_SetScaling(0, 0, xs, ys, 32767, 32767);
         }
     }
@@ -686,22 +691,25 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     lastPct = 0;
     done    = 0;
 
-    total = FilePos(srcFile, FILE_POS_END, 0);
-    FilePos(srcFile, FILE_POS_START, 0);
+    /* ensure meta scale is non-zero before any drawing */
+    Meta_SetScaling(0, 0, 32767, 32767, 32767, 32767);
 
-    if (callback) (void)(*callback)(0);
+    total = FilePos(srcFile, 0, FILE_POS_END);
+    FilePos(srcFile, 0, FILE_POS_START);
+
+    // if (callback) (void)(*callback)(0);
 
     scH = MemAlloc((word)sizeof(SVGScratch), HF_DYNAMIC, HAF_ZERO_INIT);
     if (!scH)
     {
-        if (callback) (void)(*callback)(100);
+        // if (callback) (void)(*callback)(100);
         return TE_OUT_OF_MEMORY;
     }
     scP = (SVGScratch*) MemLock(scH);
     if (!scP)
     {
         MemFree(scH);
-        if (callback) (void)(*callback)(100);
+        // if (callback) (void)(*callback)(100);
         return TE_OUT_OF_MEMORY;
     }
 
@@ -710,7 +718,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     {
         MemUnlock(scH);
         MemFree(scH);
-        if (callback) (void)(*callback)(100);
+        // if (callback) (void)(*callback)(100);
         return TE_OUT_OF_MEMORY;
     }
     ioP = (char*) MemLock(ioH);
@@ -719,7 +727,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
         MemFree(ioH);
         MemUnlock(scH);
         MemFree(scH);
-        if (callback) (void)(*callback)(100);
+        // if (callback) (void)(*callback)(100);
         return TE_OUT_OF_MEMORY;
     }
 
@@ -737,7 +745,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
         /* progress (throttled; avoid tiny files) */
         if (callback && total >= 2048)
         {
-            done = (dword)FilePos(srcFile, FILE_POS_RELATIVE, 0);
+            done = (dword)FilePos(srcFile, 0, FILE_POS_RELATIVE);
             if (done > total) done = total;
 
             {
@@ -746,7 +754,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
                 if (pct != lastPct)
                 {
                     lastPct = pct;
-                    if ((*callback)(pct)) break;
+                    // if ((*callback)(pct)) break;
                 }
             }
         }
@@ -794,7 +802,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     if (ioH) MemFree(ioH);
     if (scP) MemUnlock(scH);
     if (scH) MemFree(scH);
-    if (callback) (void)(*callback)(100);
+    // if (callback) (void)(*callback)(100);
 
     return TE_NO_ERROR;
 }

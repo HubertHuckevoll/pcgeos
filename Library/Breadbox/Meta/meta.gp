@@ -12,7 +12,7 @@ longname        "Meta Drawing Layer"
 tokenchars      "META"
 tokenid         16424
 
-type            library, single, c-api
+type            library, single
 
 library	geos
 library	ui
