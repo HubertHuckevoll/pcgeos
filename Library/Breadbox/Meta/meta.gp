@@ -20,6 +20,8 @@ library ansic
 library grobj
 library math
 
+resource MetaSvgNamedColorRes lmem, shared, read-only
+
 export RAD
 export PHI
 export META_SETLINECOLOR
