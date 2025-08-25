@@ -38,7 +38,8 @@ static void           SVG_ParsePoints(const char *points, Point *pointsP, word *
 static void           SVG_GetScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut);
 static void           SVG_ApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWord sy);
 static sword          SVG_ScaleLength(sword v, WWFixedAsDWord s);
-static void           NormalizeRect(sword *x1, sword *y1, sword *x2, sword *y2);
+static Boolean        SVG_HasStroke(const char *tag);
+static Boolean        SVG_HasFill(const char *tag);
 static void           HandleLineTag(const char *tag);
 static void           HandlePolylineTag(const char *tag, struct _SVGScratch *sc);
 static void           HandlePolygonTag(const char *tag, struct _SVGScratch *sc);
@@ -488,16 +489,28 @@ static sword SVG_ScaleLength(sword v, WWFixedAsDWord s)
     return out;
 }
 
-
-/* ensure non-negative width/height after transforms */
-static void NormalizeRect(sword *x1, sword *y1, sword *x2, sword *y2)
+static Boolean SVG_HasStroke(const char *tag)
 {
-    sword t;
-    if (*x1 > *x2) { t = *x1; *x1 = *x2; *x2 = t; }
-    if (*y1 > *y2) { t = *y1; *y1 = *y2; *y2 = t; }
+    char b[32];
+    /* SVG default: stroke is none unless present and not "none" */
+    return GetAttrBounded(tag, "stroke", b, sizeof(b)) && strcmp(b, "none") != 0;
+}
+static Boolean SVG_HasFill(const char *tag)
+{
+    char b[32];
+    /* SVG default: most shapes are filled if 'fill' is absent */
+    if (GetAttrBounded(tag, "fill", b, sizeof(b))) {
+        return strcmp(b, "none") != 0;
+    }
+    return TRUE; /* default fill applies to rect/circle/ellipse/polygon/path */
 }
 
+
+
 /* ---------- element handlers ---------- */
+
+
+
 static void HandleLineTag(const char *tag)
 {
     static char     xb[32], yb[32], x2b[32], y2b[32];
@@ -591,7 +604,7 @@ static void HandlePolygonTag(const char *tag, SVGScratch *sc)
                 sc->pts[i].P_x = px;
                 sc->pts[i].P_y = py;
             }
-            Meta_Polygon(sc->pts, np, TRUE, TRUE);
+            Meta_Polygon(sc->pts, np, SVG_HasFill(tag), SVG_HasStroke(tag));
         }
     }
 }
@@ -626,7 +639,7 @@ static void HandleRectTag(const char *tag)
         if (y > y2) { sword t = y; y = y2; y2 = t; }
         if (x > x2) { sword t = x; x = x2; x2 = t; }
 
-        Meta_Rect(x, y, x2, y2, TRUE, TRUE);
+        Meta_Rect(x, y, x2, y2, SVG_HasFill(tag), SVG_HasStroke(tag));
     }
 }
 
@@ -659,7 +672,7 @@ static void HandleEllipseTag(const char *tag)
         rx = SVG_ScaleLength(rx, sx);
         ry = SVG_ScaleLength(ry, sy);
 
-        Meta_Ellipse(cx, cy, rx, ry, 0, TRUE, TRUE);
+        Meta_Ellipse(cx, cy, rx, ry, 0, SVG_HasFill(tag), SVG_HasStroke(tag));
     }
 }
 
@@ -691,11 +704,14 @@ static void HandleCircleTag(const char *tag)
         rx = SVG_ScaleLength(r, sx);
         ry = SVG_ScaleLength(r, sy);
 
-        Meta_Ellipse(cx, cy, rx, ry, 0, TRUE, TRUE);
+        Meta_Ellipse(cx, cy, rx, ry, 0, SVG_HasFill(tag), SVG_HasStroke(tag));
     }
 }
 
+
 /* ---- tiny path helpers ---- */
+
+
 static const char * SVG_SkipWS(const char *s)
 {
     while (*s && isspace(*s)) {
@@ -842,7 +858,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             sc->pts[i].P_y = py;
         }
 
-        if (closed) Meta_Polygon(sc->pts, np, TRUE, TRUE);
+        if (closed) Meta_Polygon(sc->pts, np, SVG_HasFill(tag), SVG_HasStroke(tag));
         else        Meta_Polyline(sc->pts, np);
     }
 }
