@@ -188,6 +188,7 @@ ContentCreate(char *path)
     word settings;
     optr body;
     GStateHandle tempGS;
+    word formatSel;
 
     ContentDestroy();                   /* destroy image if one is loaded */
 
@@ -215,11 +216,16 @@ ContentCreate(char *path)
         tempGS = GrCreateGString(contentFile, GST_VMEM, &contentGSBlock);
       }
 
+      formatSel = @call FormatList::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+      if (formatSel == FORMAT_SVG) {
+        settings |= SETTINGS_INPUT_Y_DOWN;   /* NEW: SVG is Y-down */
+      }
+
       Meta_Start(settings,tempGS,body,contentFile);
                                         /* initialize drawing system */
 
       /* which format was chosen? */
-      switch( @call FormatList::MSG_GEN_ITEM_GROUP_GET_SELECTION() )
+      switch(formatSel)
       {
         case FORMAT_HPGL:
           ret = ReadHPGL(srcFile, settings, UpdateProgressPct);

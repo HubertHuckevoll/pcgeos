@@ -14,10 +14,11 @@
 #include <xlatLib.h>
 
 /* masks for conversion options */
-#define SETTINGS_DOTEXT       1         /* convert text objects? */
-#define SETTINGS_CREATE_GROBJ 2         /* create GrObjs, not GString */
-#define SETTINGS_OPT_SPLINES  4         /* attempt to create splines? */
-#define SETTINGS_DOARCS       32768     /* convert elliptical arcs? */
+#define SETTINGS_DOTEXT         1         /* convert text objects? */
+#define SETTINGS_CREATE_GROBJ   2         /* create GrObjs, not GString */
+#define SETTINGS_OPT_SPLINES    4         /* attempt to create splines? */
+#define SETTINGS_INPUT_Y_DOWN   8         /* input coordinates are Y-down (SVG) */
+#define SETTINGS_DOARCS         32768     /* convert elliptical arcs? */
 
 /* maximum number of points in a polyline */
 #define MAX_POINTS 4096

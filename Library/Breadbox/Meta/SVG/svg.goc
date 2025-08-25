@@ -33,9 +33,12 @@ static Boolean        TagIs(const char *tag, const char *name);
 static Boolean        GetAttrBounded(const char *tag, const char *name, char *out, word outSize);
 static void           ApplyStrokeAndFill(const char *tag);
 static void           ApplyStrokeWidth(const char *tag);
-static void           ApplyTransform(const char *tag);
 static void           ParseFillRule(const char *tag);
 static void           SVG_ParsePoints(const char *points, Point *pointsP, word *numPointsP);
+static void           SVG_GetScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut);
+static void           SVG_ApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWord sy);
+static sword          SVG_ScaleLength(sword v, WWFixedAsDWord s);
+static void           NormalizeRect(sword *x1, sword *y1, sword *x2, sword *y2);
 static void           HandleLineTag(const char *tag);
 static void           HandlePolylineTag(const char *tag, struct _SVGScratch *sc);
 static void           HandlePolygonTag(const char *tag, struct _SVGScratch *sc);
@@ -413,64 +416,6 @@ static void ApplyStrokeWidth(const char *tag)
     }
 }
 
-static void ApplyTransform(const char *tag)
-{
-    static char      b[96];
-    char            *p;
-    WWFixedAsDWord   sx;
-    WWFixedAsDWord   sy;
-
-    sx = WWFIXED_ONE;
-    sy = WWFIXED_ONE;
-
-    if (!GetAttrBounded(tag, "transform", b, sizeof(b)))
-    {
-        return;
-    }
-
-    p = strstr(b, "scale");
-    if (p)
-    {
-        char        *lp;
-        const char  *s;
-
-        lp = strchr(p, '(');
-        if (!lp) return;
-        s = lp + 1;
-        s = ParseWWFixed16_16(s, &sx);
-        while (*s && isspace(*s)) s++;
-        if (*s == ',')
-        {
-            s++;
-            (void)ParseWWFixed16_16(s, &sy);
-        }
-        else
-        {
-            sy = sx;
-        }
-
-        {
-            WWFixedAsDWord limit;
-            WWFixedAsDWord sxScaled;
-            WWFixedAsDWord syScaled;
-            sword          xs;
-            sword          ys;
-
-            limit    = MakeWWFixedFromInt(32767);
-            sxScaled = GrMulWWFixedSafe(sx, limit);
-            syScaled = GrMulWWFixedSafe(sy, limit);
-            xs       = (sword)((sdword)sxScaled >> 16);
-            ys       = (sword)((sdword)syScaled >> 16);
-
-            /* avoid zero scale → divide-by-zero inside meta */
-            if (xs == 0) xs = 1;
-            if (ys == 0) ys = 1;
-
-            Meta_SetScaling(0, 0, xs, ys, 32767, 32767);
-        }
-    }
-}
-
 /* ---------- points parser (renamed to avoid collisions) ---------- */
 static void SVG_ParsePoints(const char *points, Point *pointsP, word *numPointsP)
 {
@@ -506,10 +451,62 @@ static void SVG_ParsePoints(const char *points, Point *pointsP, word *numPointsP
     }
 }
 
+static void SVG_GetScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut)
+{
+    static char buf[96];
+    char *p; const char *s; WWFixedAsDWord sx, sy;
+
+    sx = WWFIXED_ONE; sy = WWFIXED_ONE;
+    if (!GetAttrBounded(tag, "transform", buf, sizeof(buf))) { *sxOut=sx; *syOut=sy; return; }
+    p = strstr(buf, "scale"); if (!p) { *sxOut=sx; *syOut=sy; return; }
+    p = strchr(p, '('); if (!p) { *sxOut=sx; *syOut=sy; return; }
+    s = p + 1;
+    s = ParseWWFixed16_16(s, &sx);
+    while (*s && isspace(*s)) s++;
+    if (*s == ',') { s++; (void)ParseWWFixed16_16(s, &sy); } else { sy = sx; }
+    if ((sdword)sx == 0) sx = (WWFixedAsDWord)1;   /* avoid vanishing */
+    if ((sdword)sy == 0) sy = (WWFixedAsDWord)1;
+    *sxOut = sx; *syOut = sy;
+}
+
+static void SVG_ApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWord sy)
+{
+    WWFixedAsDWord X = (WWFixedAsDWord)((sdword)(*x) << 16);
+    WWFixedAsDWord Y = (WWFixedAsDWord)((sdword)(*y) << 16);
+    X = GrMulWWFixed(X, sx);
+    Y = GrMulWWFixed(Y, sy);
+    *x = (sword)((sdword)X >> 16);
+    *y = (sword)((sdword)Y >> 16);
+}
+
+static sword SVG_ScaleLength(sword v, WWFixedAsDWord s)
+{
+    WWFixedAsDWord V = (WWFixedAsDWord)((sdword)v << 16);
+    WWFixedAsDWord R = GrMulWWFixed(V, s);
+    sword out = (sword)((sdword)R >> 16);
+    if (out < 0) out = (sword)(-out);
+    return out;
+}
+
+
+/* ensure non-negative width/height after transforms */
+static void NormalizeRect(sword *x1, sword *y1, sword *x2, sword *y2)
+{
+    sword t;
+    if (*x1 > *x2) { t = *x1; *x1 = *x2; *x2 = t; }
+    if (*y1 > *y2) { t = *y1; *y1 = *y2; *y2 = t; }
+}
+
 /* ---------- element handlers ---------- */
 static void HandleLineTag(const char *tag)
 {
-    static char xb[32], yb[32], x2b[32], y2b[32];
+    static char     xb[32], yb[32], x2b[32], y2b[32];
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+    sword           x1;
+    sword           y1;
+    sword           x2;
+    sword           y2;
 
     if (GetAttrBounded(tag, "x1", xb, sizeof(xb)) &&
         GetAttrBounded(tag, "y1", yb, sizeof(yb)) &&
@@ -518,30 +515,59 @@ static void HandleLineTag(const char *tag)
     {
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
-        ApplyTransform(tag);
-        Meta_Line((sword)atoi(xb), (sword)atoi(yb),
-                  (sword)atoi(x2b), (sword)atoi(y2b));
+
+        x1 = (sword)atoi(xb);
+        y1 = (sword)atoi(yb);
+        x2 = (sword)atoi(x2b);
+        y2 = (sword)atoi(y2b);
+
+        SVG_GetScale(tag, &sx, &sy);
+        SVG_ApplyScalePoint(&x1, &y1, sx, sy);
+        SVG_ApplyScalePoint(&x2, &y2, sx, sy);
+
+        Meta_Line(x1, y1, x2, y2);
     }
 }
 
 static void HandlePolylineTag(const char *tag, SVGScratch *sc)
 {
-    word np;
+    word            np;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+    word            i;
 
     sc->pb[0] = 0;
     if (GetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
     {
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
-        ApplyTransform(tag);
+
         SVG_ParsePoints(sc->pb, sc->pts, &np);
-        if (np > 0) Meta_Polyline(sc->pts, np);
+        if (np > 0)
+        {
+            SVG_GetScale(tag, &sx, &sy);
+            for (i = 0; i < np; i++)
+            {
+                sword px;
+                sword py;
+
+                px = sc->pts[i].P_x;
+                py = sc->pts[i].P_y;
+                SVG_ApplyScalePoint(&px, &py, sx, sy);
+                sc->pts[i].P_x = px;
+                sc->pts[i].P_y = py;
+            }
+            Meta_Polyline(sc->pts, np);
+        }
     }
 }
 
 static void HandlePolygonTag(const char *tag, SVGScratch *sc)
 {
-    word np;
+    word            np;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+    word            i;
 
     sc->pb[0] = 0;
     if (GetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
@@ -549,19 +575,36 @@ static void HandlePolygonTag(const char *tag, SVGScratch *sc)
         ApplyStrokeAndFill(tag);
         ParseFillRule(tag);
         ApplyStrokeWidth(tag);
-        ApplyTransform(tag);
+
         SVG_ParsePoints(sc->pb, sc->pts, &np);
-        if (np > 0) Meta_Polygon(sc->pts, np, TRUE, TRUE);
+        if (np > 0)
+        {
+            SVG_GetScale(tag, &sx, &sy);
+            for (i = 0; i < np; i++)
+            {
+                sword px;
+                sword py;
+
+                px = sc->pts[i].P_x;
+                py = sc->pts[i].P_y;
+                SVG_ApplyScalePoint(&px, &py, sx, sy);
+                sc->pts[i].P_x = px;
+                sc->pts[i].P_y = py;
+            }
+            Meta_Polygon(sc->pts, np, TRUE, TRUE);
+        }
     }
 }
 
 static void HandleRectTag(const char *tag)
 {
-    static char xb[32], yb[32], wb[32], hb[32];
-    sword       x;
-    sword       y;
-    sword       x2;
-    sword       y2;
+    static char     xb[32], yb[32], wb[32], hb[32];
+    sword           x;
+    sword           y;
+    sword           x2;
+    sword           y2;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
 
     if (GetAttrBounded(tag, "x", xb, sizeof(xb)) &&
         GetAttrBounded(tag, "y", yb, sizeof(yb)) &&
@@ -570,19 +613,32 @@ static void HandleRectTag(const char *tag)
     {
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
-        ApplyTransform(tag);
 
         x  = (sword)atoi(xb);
         y  = (sword)atoi(yb);
         x2 = (sword)(x + (sword)atoi(wb));
         y2 = (sword)(y + (sword)atoi(hb));
+
+        SVG_GetScale(tag, &sx, &sy);
+        SVG_ApplyScalePoint(&x,  &y,  sx, sy);
+        SVG_ApplyScalePoint(&x2, &y2, sx, sy);
+
+        if (y > y2) { sword t = y; y = y2; y2 = t; }
+        if (x > x2) { sword t = x; x = x2; x2 = t; }
+
         Meta_Rect(x, y, x2, y2, TRUE, TRUE);
     }
 }
 
 static void HandleEllipseTag(const char *tag)
 {
-    static char cxb[32], cyb[32], rxb[32], ryb[32];
+    static char     cxb[32], cyb[32], rxb[32], ryb[32];
+    sword           cx;
+    sword           cy;
+    sword           rx;
+    sword           ry;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
 
     if (GetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
         GetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
@@ -591,17 +647,32 @@ static void HandleEllipseTag(const char *tag)
     {
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
-        ApplyTransform(tag);
 
-        Meta_Ellipse((sword)atoi(cxb), (sword)atoi(cyb),
-                     (sword)atoi(rxb), (sword)atoi(ryb),
-                     0, TRUE, TRUE);
+        cx = (sword)atoi(cxb);
+        cy = (sword)atoi(cyb);
+        rx = (sword)atoi(rxb);
+        ry = (sword)atoi(ryb);
+
+        SVG_GetScale(tag, &sx, &sy);
+
+        SVG_ApplyScalePoint(&cx, &cy, sx, sy);
+        rx = SVG_ScaleLength(rx, sx);
+        ry = SVG_ScaleLength(ry, sy);
+
+        Meta_Ellipse(cx, cy, rx, ry, 0, TRUE, TRUE);
     }
 }
 
 static void HandleCircleTag(const char *tag)
 {
-    static char cxb[32], cyb[32], rb[32];
+    static char     cxb[32], cyb[32], rb[32];
+    sword           cx;
+    sword           cy;
+    sword           r;
+    sword           rx;
+    sword           ry;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
 
     if (GetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
         GetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
@@ -609,11 +680,18 @@ static void HandleCircleTag(const char *tag)
     {
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
-        ApplyTransform(tag);
 
-        Meta_Ellipse((sword)atoi(cxb), (sword)atoi(cyb),
-                     (sword)atoi(rb),  (sword)atoi(rb),
-                     0, TRUE, TRUE);
+        cx = (sword)atoi(cxb);
+        cy = (sword)atoi(cyb);
+        r  = (sword)atoi(rb);
+
+        SVG_GetScale(tag, &sx, &sy);
+
+        SVG_ApplyScalePoint(&cx, &cy, sx, sy);
+        rx = SVG_ScaleLength(r, sx);
+        ry = SVG_ScaleLength(r, sy);
+
+        Meta_Ellipse(cx, cy, rx, ry, 0, TRUE, TRUE);
     }
 }
 
@@ -640,13 +718,16 @@ static const char * SVG_ScanInt(const char *s, sword *out)
 
 static void HandlePathTag(const char *tag, SVGScratch *sc)
 {
-    const char *sP;
-    word        np;
-    Boolean     closed;
-    sword       lastx;
-    sword       lasty;
-    char        lastCmd;
-    Boolean     haveCmd;
+    const char     *sP;
+    word            np;
+    Boolean         closed;
+    sword           lastx;
+    sword           lasty;
+    char            lastCmd;
+    Boolean         haveCmd;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+    word            i;
 
     sc->db[0] = 0;
     if (!GetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) return;
@@ -654,7 +735,6 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
     ApplyStrokeAndFill(tag);
     ParseFillRule(tag);
     ApplyStrokeWidth(tag);
-    ApplyTransform(tag);
 
     np      = 0;
     closed  = FALSE;
@@ -750,6 +830,18 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
 
     if (np > 1)
     {
+        WWFixedAsDWord sx, sy;
+        word i;
+
+        SVG_GetScale(tag, &sx, &sy);
+        for (i = 0; i < np; i++) {
+            sword px = sc->pts[i].P_x;
+            sword py = sc->pts[i].P_y;
+            SVG_ApplyScalePoint(&px, &py, sx, sy);
+            sc->pts[i].P_x = px;
+            sc->pts[i].P_y = py;
+        }
+
         if (closed) Meta_Polygon(sc->pts, np, TRUE, TRUE);
         else        Meta_Polyline(sc->pts, np);
     }
@@ -854,7 +946,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     lastPct = 0;
     done    = 0;
 
-    /* ensure meta scale is non-zero before any drawing */
+    /* world 0..32767 in both axes; uniform scale derives from X extent */
     Meta_SetScaling(0, 0, 32767, 32767, 32767, 32767);
 
     total = FilePos(srcFile, 0, FILE_POS_END);

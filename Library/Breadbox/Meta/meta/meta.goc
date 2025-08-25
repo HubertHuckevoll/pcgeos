@@ -33,7 +33,8 @@
 Boolean meta_Text,               /* attempt to convert text items? */
         meta_Arcs,               /* attempt to convert arc items? */
         meta_Splines,            /* create articial splines? */
-        meta_GrObj;              /* create GrObj rather than gstrings? */
+        meta_GrObj,              /* create GrObj rather than gstrings? */
+        meta_YDown;              /* input coordinates are Y-down (SVG)? */
 GStateHandle meta_GS;            /* GState for data output */
 VMBlockHandle meta_gstringBlock; /* block handle of output GString */
 optr meta_body;                  /* GrObjBody */
@@ -294,9 +295,11 @@ void static _Meta_UpdateArea(void)
 void static _Meta_UpdateEnvironment(void)
 {
         if(meta_scale_c) {
-          GrApplyScale(meta_GS,
-            _meta_scale*_meta_undersc,-_meta_scale*_meta_undersc);
-          meta_scale_c=FALSE;           /* scale has been updated */
+        GrApplyScale(meta_GS,
+            _meta_scale*_meta_undersc,
+            (meta_YDown ? +_meta_scale*_meta_undersc
+                        : -_meta_scale*_meta_undersc));
+            meta_scale_c=FALSE;
         }
         if(meta_clip_c) {
           if(_meta_clip_x1==_meta_clip_x2 || _meta_clip_y1==_meta_clip_y2)
@@ -383,7 +386,8 @@ int Add_GrObj(optr obj)
 
         memset(&tm,0,sizeof(tm));
         *(WWFixedAsDWord *)&tm.TM_e11=_meta_scale*_meta_undersc;
-        *(WWFixedAsDWord *)&tm.TM_e22=-_meta_scale*_meta_undersc;
+        *(WWFixedAsDWord *)&tm.TM_e22=(meta_YDown ? +_meta_scale*_meta_undersc
+                                                  : -_meta_scale*_meta_undersc);
         @call obj::MSG_GO_TRANSFORM(&tm);
 
         @call obj::MSG_GO_NOTIFY_GROBJ_VALID();
@@ -890,7 +894,7 @@ Meta_ArcThreePoint(Point *p,ArcCloseType act,Boolean in,Boolean edges)
             FloatDwordToFloat(x1); FloatSqr();
               FloatMultiply();
 
-          FloatDwordToFloat(x2); FloatSqr(); 
+          FloatDwordToFloat(x2); FloatSqr();
           FloatDwordToFloat(x3); FloatSqr();
             FloatSub();
         FloatDwordToFloat(y2); FloatSqr();
@@ -981,7 +985,7 @@ void _export _pascal Meta_EndPath(Boolean in,Boolean edges)
           return;                       /* close only on last nesting level */
 
         if(in)                          /* draw interior if visible */
-        {                        
+        {
           _Meta_UpdateEnvironment();    /* update general data */
           if(!_meta_transparency && meta_AreaFill!=SDM_100)
           {
@@ -1034,8 +1038,9 @@ void _export _pascal Meta_TextAt(int x,int y,char *s,WWFixedAsDWord size,sword a
         GrSaveState(meta_GS);
         GrApplyTranslation(meta_GS,MakeWWFixed(x),MakeWWFixed(y));
         GrApplyScale(meta_GS,
-           GrSDivWWFixed(MakeWWFixed(1),_meta_scale*_meta_undersc),
-          -GrSDivWWFixed(MakeWWFixed(1),_meta_scale*_meta_undersc));
+            GrSDivWWFixed(MakeWWFixed(1), _meta_scale*_meta_undersc),
+            (meta_YDown)    ?  GrSDivWWFixed(MakeWWFixed(1), _meta_scale*_meta_undersc)
+                            : -GrSDivWWFixed(MakeWWFixed(1), _meta_scale*_meta_undersc));
         GrApplyRotation(meta_GS,MakeWWFixed(angle));
 
         ta.TA_font = FID_DTC_URW_MONO;  /* Font ist immer URW Mono */
@@ -1063,6 +1068,9 @@ word _export _pascal Meta_Start(
                                         /* convert arc items? */
         meta_Splines=(settings & SETTINGS_OPT_SPLINES);
                                         /* create artifical splines? */
+
+        meta_YDown=(settings & SETTINGS_INPUT_Y_DOWN);
+                                        /* y axis points downwards? */
 
         Meta_SetLineColor(CF_INDEX,0,0,0);      /* set default line color */
         Meta_SetAreaColor(CF_INDEX,0,0,0);      /* set default area color */
