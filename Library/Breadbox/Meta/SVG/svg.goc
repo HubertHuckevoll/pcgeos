@@ -16,6 +16,7 @@
 #include <graphics.h>
 #include <gstring.h>
 #include <meta.h>
+#include <float.h>
 
 
 #define SVG_COLOR_NAME_LEN   32
@@ -279,7 +280,15 @@ static void           SVG_FlattenQuad(struct _SVGScratch *sc, word *np,
 static void           SVG_FlattenCubic(struct _SVGScratch *sc, word *np,
                              sword x0, sword y0, sword c1x, sword c1y, sword c2x, sword c2y, sword x1, sword y1,
                              word segs);
-
+static WWFixedAsDWord SVG_WWFSqrt(WWFixedAsDWord v);
+static WWFixedAsDWord SVG_Atan2Deg_WW(WWFixedAsDWord y, WWFixedAsDWord x);
+static WWFixedAsDWord SVG_WWFabs(WWFixedAsDWord v);
+static void           SVG_FlattenArc(struct _SVGScratch *sc, word *np,
+                           WWFixedAsDWord x0, WWFixedAsDWord y0,
+                           WWFixedAsDWord rx, WWFixedAsDWord ry,
+                           WWFixedAsDWord xAxisRotDegW,
+                           int largeArcFlag, int sweepFlag,
+                           WWFixedAsDWord x1, WWFixedAsDWord y1);
 
 /* tiny path helpers */
 static const char *   SVG_SkipWS(const char *s);
@@ -931,12 +940,18 @@ static const char * SVG_ScanCoordX(const char *s, sword *out)
     p = ParseWWFixed16_16(s, &f);
     *out = VB_MapPosX_F(f);
 
-    while (*p && *p != ' ' && *p != ',' && *p != '\t' &&
-           *p != '\r' && *p != '\n' && *p != 'Z' && *p != 'z') {
+    while (*p) {
+        if (*p == ' ' || *p == ',' || *p == '\t' ||
+            *p == '\r' || *p == '\n' ||
+            *p == 'Z' || *p == 'z' ||
+            isalpha((byte)*p)) {
+            break;
+        }
         p++;
     }
     return p;
 }
+
 static const char * SVG_ScanCoordY(const char *s, sword *out)
 {
     WWFixedAsDWord f;
@@ -945,12 +960,18 @@ static const char * SVG_ScanCoordY(const char *s, sword *out)
     p = ParseWWFixed16_16(s, &f);
     *out = VB_MapPosY_F(f);
 
-    while (*p && *p != ' ' && *p != ',' && *p != '\t' &&
-           *p != '\r' && *p != '\n' && *p != 'Z' && *p != 'z') {
+    while (*p) {
+        if (*p == ' ' || *p == ',' || *p == '\t' ||
+            *p == '\r' || *p == '\n' ||
+            *p == 'Z' || *p == 'z' ||
+            isalpha((byte)*p)) {
+            break;
+        }
         p++;
     }
     return p;
 }
+
 static const char * SVG_ScanLenX(const char *s, sword *out)
 {
     WWFixedAsDWord f;
@@ -959,12 +980,18 @@ static const char * SVG_ScanLenX(const char *s, sword *out)
     p = ParseWWFixed16_16(s, &f);
     *out = VB_MapLenX_F(f);
 
-    while (*p && *p != ' ' && *p != ',' && *p != '\t' &&
-           *p != '\r' && *p != '\n' && *p != 'Z' && *p != 'z') {
+    while (*p) {
+        if (*p == ' ' || *p == ',' || *p == '\t' ||
+            *p == '\r' || *p == '\n' ||
+            *p == 'Z' || *p == 'z' ||
+            isalpha((byte)*p)) {
+            break;
+        }
         p++;
     }
     return p;
 }
+
 static const char * SVG_ScanLenY(const char *s, sword *out)
 {
     WWFixedAsDWord f;
@@ -973,8 +1000,13 @@ static const char * SVG_ScanLenY(const char *s, sword *out)
     p = ParseWWFixed16_16(s, &f);
     *out = VB_MapLenY_F(f);
 
-    while (*p && *p != ' ' && *p != ',' && *p != '\t' &&
-           *p != '\r' && *p != '\n' && *p != 'Z' && *p != 'z') {
+    while (*p) {
+        if (*p == ' ' || *p == ',' || *p == '\t' ||
+            *p == '\r' || *p == '\n' ||
+            *p == 'Z' || *p == 'z' ||
+            isalpha((byte)*p)) {
+            break;
+        }
         p++;
     }
     return p;
@@ -1132,7 +1164,188 @@ static void SVG_FlattenCubic(SVGScratch *sc, word *np,
     }
 }
 
+/* Convert 16.16 fixed -> sqrt in 16.16 via GEOS Float stack */
+static WWFixedAsDWord SVG_WWFSqrt(WWFixedAsDWord v)
+{
+    if ((sdword)v <= 0) return 0;
+    FloatDwordToFloat((dword)v);        /* v (fixed) */
+    FloatDwordToFloat(65536);           /* 65536 */
+    FloatDivide();                      /* v/65536 -> real */
+    FloatSqrt();                        /* sqrt(real) */
+    FloatDwordToFloat(65536);
+    FloatMultiply();                    /* back to 16.16 */
+    return (WWFixedAsDWord)FloatFloatToDword();
+}
+
+/* atan2(y,x) -> degrees (16.16) using GEOS Float stack */
+static WWFixedAsDWord SVG_Atan2Deg_WW(WWFixedAsDWord y, WWFixedAsDWord x)
+{
+    /* push y */
+    FloatDwordToFloat((dword)y);
+    FloatDwordToFloat(65536);
+    FloatDivide();   /* y in real */
+
+    /* push x */
+    FloatDwordToFloat((dword)x);
+    FloatDwordToFloat(65536);
+    FloatDivide();   /* x in real */
+
+    /* atan2(y,x) in radians */
+    FloatArcTan2();
+
+    /* convert radians -> degrees */
+    FloatWordToFloat(180);
+    FloatMultiply();
+    FloatPi();
+    FloatDivide();
+
+    /* back to 16.16 */
+    FloatDwordToFloat(65536);
+    FloatMultiply();
+    return (WWFixedAsDWord)FloatFloatToDword();
+}
+
+static WWFixedAsDWord SVG_WWFabs(WWFixedAsDWord v)
+{
+    return ((sdword)v < 0) ? (WWFixedAsDWord)(0 - (sdword)v) : v;
+}
+
+static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
+                           WWFixedAsDWord x0, WWFixedAsDWord y0,
+                           WWFixedAsDWord rx, WWFixedAsDWord ry,
+                           WWFixedAsDWord xAxisRotDegW,
+                           int largeArcFlag, int sweepFlag,
+                           WWFixedAsDWord x1, WWFixedAsDWord y1)
+{
+    /* declare variables (Watcom = C89 rules) */
+    WWFixedAsDWord cRot, sRot;
+    WWFixedAsDWord dx2, dy2, x1p, y1p;
+    WWFixedAsDWord rx2, ry2, t1, t2, rchk, scale;
+    WWFixedAsDWord num, den, ratio, coef, cxp, cyp;
+    WWFixedAsDWord midX, midY, cx, cy;
+    WWFixedAsDWord vx1, vy1, vx2, vy2, theta1, delta;
+    WWFixedAsDWord rotBin;
+    WWFixedAsDWord cross, dot;
+    WWFixedAsDWord angDeg, angBin;
+    WWFixedAsDWord cA, sA;
+    WWFixedAsDWord termX, termY;
+    sword px, py;
+    int segs, i;
+    char dbg[64];
+    sword cx_s, cy_s;
+
+    if ((sdword)rx == 0 || (sdword)ry == 0 ||
+        ((sdword)(x0 - x1) == 0 && (sdword)(y0 - y1) == 0)) {
+        SVG_AddPt(sc, np, WWFixedToSWordRound(x1), WWFixedToSWordRound(y1));
+        return;
+    }
+
+    if ((sdword)rx < 0) rx = -rx;
+    if ((sdword)ry < 0) ry = -ry;
+
+    /* convert rotation degrees → binary angle units (0..65536 = full circle) */
+    rotBin = GrMulWWFixed(xAxisRotDegW, MakeWWFixed(182.044444)); /* 65536/360 */
+    cRot   = GrQuickCosine(rotBin);
+    sRot   = GrQuickSine(rotBin);
+
+    dx2 = GrSDivWWFixed(x0 - x1, MakeWWFixed(2));
+    dy2 = GrSDivWWFixed(y0 - y1, MakeWWFixed(2));
+
+    x1p = GrMulWWFixed(cRot, dx2) + GrMulWWFixed(sRot, dy2);
+    y1p = -GrMulWWFixed(sRot, dx2) + GrMulWWFixed(cRot, dy2);
+
+    rx2 = GrMulWWFixed(rx, rx);
+    ry2 = GrMulWWFixed(ry, ry);
+    t1  = GrSDivWWFixed(GrMulWWFixed(x1p, x1p), rx2);
+    t2  = GrSDivWWFixed(GrMulWWFixed(y1p, y1p), ry2);
+    rchk = t1 + t2;
+    if ((sdword)rchk > (sdword)WWFIXED_ONE) {
+        scale = SVG_WWFSqrt(rchk);
+        rx    = GrMulWWFixed(rx, scale);
+        ry    = GrMulWWFixed(ry, scale);
+        rx2   = GrMulWWFixed(rx, rx);
+        ry2   = GrMulWWFixed(ry, ry);
+    }
+
+    num = GrMulWWFixed(rx2, ry2) - GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
+        - GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
+    den = GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
+        + GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
+
+    if ((sdword)num <= 0 || (sdword)den <= 0) {
+        coef = 0;
+    } else {
+        ratio = GrSDivWWFixed(num, den);
+        coef  = SVG_WWFSqrt(ratio);
+        if (largeArcFlag == sweepFlag) {
+            coef = (WWFixedAsDWord)(0 - (sdword)coef);
+        }
+    }
+
+    cxp = GrMulWWFixed(coef, GrSDivWWFixed(GrMulWWFixed(rx, y1p), ry));
+    cyp = -GrMulWWFixed(coef, GrSDivWWFixed(GrMulWWFixed(ry, x1p), rx));
+
+    midX = GrSDivWWFixed(x0 + x1, MakeWWFixed(2));
+    midY = GrSDivWWFixed(y0 + y1, MakeWWFixed(2));
+
+    cx = GrMulWWFixed(cRot, cxp) - GrMulWWFixed(sRot, cyp) + midX;
+    cy = GrMulWWFixed(sRot, cxp) + GrMulWWFixed(cRot, cyp) + midY;
+
+    vx1 = GrSDivWWFixed((x1p - cxp), rx);
+    vy1 = GrSDivWWFixed((y1p - cyp), ry);
+    vx2 = GrSDivWWFixed((-x1p - cxp), rx);
+    vy2 = GrSDivWWFixed((-y1p - cyp), ry);
+
+    theta1 = SVG_Atan2Deg_WW(vy1, vx1);
+    cross  = GrMulWWFixed(vx1, vy2) - GrMulWWFixed(vy1, vx2);
+    dot    = GrMulWWFixed(vx1, vx2) + GrMulWWFixed(vy1, vy2);
+    delta  = SVG_Atan2Deg_WW(cross, dot);
+
+    /* Normalize delta into [-180, 180] */
+    if ((sdword)delta > MakeWWFixed(180)) {
+        delta -= MakeWWFixed(360);
+    } else if ((sdword)delta < -MakeWWFixed(180)) {
+        delta += MakeWWFixed(360);
+    }
+
+    /* DEBUG: print theta1 and delta at arc center */
+    cx_s = WWFixedToSWordRound(cx);
+    cy_s = WWFixedToSWordRound(cy);
+    sprintf(dbg, "t=%d d=%d",
+        WWFixedToSWordRound(theta1),
+        WWFixedToSWordRound(delta));
+    Meta_TextAt(cx_s, cy_s, dbg, MakeWWFixed(8), 0);
+
+    {
+        sword dAbsDeg = WWFixedToSWordRound(SVG_WWFabs(delta));
+        segs = dAbsDeg / 11;
+        if (segs * 11 < dAbsDeg) segs++;
+        if (segs < 1)  segs = 1;
+        if (segs > 60) segs = 60;
+    }
+
+    for (i = 1; i <= segs; i++) {
+        angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)),
+                                        MakeWWFixed(segs));
+        angBin = GrMulWWFixed(angDeg, MakeWWFixed(182.044444)); /* deg → bin angle */
+        cA     = GrQuickCosine(angBin);
+        sA     = GrQuickSine(angBin);
+
+        termX = GrMulWWFixed(cRot, GrMulWWFixed(rx, cA))
+              - GrMulWWFixed(sRot, GrMulWWFixed(ry, sA));
+        termY = GrMulWWFixed(sRot, GrMulWWFixed(rx, cA))
+              + GrMulWWFixed(cRot, GrMulWWFixed(ry, sA));
+
+        px = WWFixedToSWordRound(cx + termX);
+        py = WWFixedToSWordRound(cy + termY);
+        SVG_AddPt(sc, np, px, py);
+    }
+}
+
+
+/* -------------------------------------- */
 /* ---------- element handlers ---------- */
+/* -------------------------------------- */
 
 static void HandleLineTag(const char *tag)
 {
@@ -1391,7 +1604,6 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
         }
 
         switch (lastCmd) {
-
         /* ----- moveto (subsequent pairs are lineto) ----- */
         case 'M': case 'm': {
             sP = SVG_SkipWS(sP);
@@ -1618,6 +1830,89 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             break;
         }
 
+        case 'A': case 'a': {
+            WWFixedAsDWord rxW, ryW, rotW, tmpW;
+            WWFixedAsDWord exW, eyW, dxW, dyW;
+            WWFixedAsDWord x0W, y0W;
+            WWFixedAsDWord rxMap, ryMap;
+            WWFixedAsDWord exMap, eyMap;
+            int laf, swf;
+            Boolean done;
+
+            done = FALSE;
+            while (!done) {
+                sP = SVG_SkipWS(sP);
+                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') {
+                    done = TRUE;
+                    continue;
+                }
+
+                /* rx */
+                sP = ParseWWFixed16_16(sP, &rxW);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+
+                /* ry */
+                sP = ParseWWFixed16_16(sP, &ryW);
+
+                /* rotation */
+                sP = SVG_SkipWS(sP);
+                sP = ParseWWFixed16_16(sP, &rotW);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+
+                /* large-arc flag */
+                sP = ParseWWFixed16_16(sP, &tmpW);
+                laf = (WWFixedToSWordRound(tmpW) != 0);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+
+                /* sweep flag */
+                sP = ParseWWFixed16_16(sP, &tmpW);
+                swf = (WWFixedToSWordRound(tmpW) != 0);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+
+                /* endpoint */
+                if (lastCmd == 'A') {
+                    sP = ParseWWFixed16_16(sP, &exW);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = ParseWWFixed16_16(sP, &eyW);
+                } else { /* relative */
+                    sP = ParseWWFixed16_16(sP, &dxW);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = ParseWWFixed16_16(sP, &dyW);
+                    exW = MakeWWFixed(lastx) + dxW;
+                    eyW = MakeWWFixed(lasty) + dyW;
+                }
+
+                /* current point already in world coords */
+                x0W = ((WWFixedAsDWord)lastx) << 16;
+                y0W = ((WWFixedAsDWord)lasty) << 16;
+
+                /* map radii as lengths */
+                rxMap = ((WWFixedAsDWord)VB_MapLenX_F(rxW)) << 16;
+                ryMap = ((WWFixedAsDWord)VB_MapLenY_F(ryW)) << 16;
+
+                /* map endpoint as position */
+                exMap = ((WWFixedAsDWord)VB_MapPosX_F(exW)) << 16;
+                eyMap = ((WWFixedAsDWord)VB_MapPosY_F(eyW)) << 16;
+
+                /* flatten into polyline */
+                SVG_FlattenArc(sc, &np,
+                               x0W, y0W,
+                               rxMap, ryMap,
+                               rotW, laf, swf,
+                               exMap, eyMap);
+
+                lastx = WWFixedToSWordRound(exMap);
+                lasty = WWFixedToSWordRound(eyMap);
+            }
+            break;
+        }
+
         /* ----- smooth cubic (S/s): reflect lastC2 across current point ----- */
         case 'S': case 's': {
             sword c1x, c1y, c2x, c2y, ex, ey;
@@ -1678,7 +1973,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             break;
 
         default:
-            /* (A/a not implemented yet; skip char) */
+            /* (path command not implemented yet; skip char) */
             sP++;
             lastWasCubic = lastWasQuad = FALSE;
             break;
