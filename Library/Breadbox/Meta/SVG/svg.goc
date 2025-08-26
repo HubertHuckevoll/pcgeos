@@ -230,10 +230,22 @@ static void           HandleCircleTag(const char *tag);
 static void           HandlePathTag(const char *tag, struct _SVGScratch *sc);
 static Boolean        AsciiNoCaseEq(const char *a, const char *b);
 static Boolean        SVG_FindNamedColor(const char *name, word *r, word *g, word *b);
+static void           SVG_AddPt(struct _SVGScratch *sc, word *np, sword x, sword y);
+static void           SVG_FlattenQuad(struct _SVGScratch *sc, word *np,
+                            sword x0, sword y0, sword cx, sword cy, sword x1, sword y1,
+                            word segs);
+static void           SVG_FlattenCubic(struct _SVGScratch *sc, word *np,
+                             sword x0, sword y0, sword c1x, sword c1y, sword c2x, sword c2y, sword x1, sword y1,
+                             word segs);
+
 
 /* tiny path helpers */
 static const char *   SVG_SkipWS(const char *s);
 static const char *   SVG_ScanInt(const char *s, sword *out);
+
+/* rounding helpers for decimal→sword */
+static sword          WWFixedToSWordRound(WWFixedAsDWord w);
+static sword          SVG_ParseSCoordStr(const char *s);
 
 static void           ScanCtxInit(ScanCtx *c);
 static Boolean        ScanNextTag(FileHandle fh, ScanCtx *c, struct _SVGScratch *sc);
@@ -315,6 +327,22 @@ static const char * ParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
     }
     *out = result;
     return s;
+}
+
+/* round signed 16.16 to signed 16-bit */
+static sword WWFixedToSWordRound(WWFixedAsDWord w)
+{
+    sdword v;
+    v = (sdword)w;
+    if (v >= 0) v += 0x8000; else v -= 0x8000;   /* ±0.5 */
+    return (sword)(v >> 16);
+}
+
+static sword SVG_ParseSCoordStr(const char *s)
+{
+    WWFixedAsDWord f;
+    (void)ParseWWFixed16_16(s, &f);
+    return WWFixedToSWordRound(f);
 }
 
 /* ---------- tiny hex helpers (no stdio) ---------- */
@@ -624,10 +652,11 @@ static void ParseFillRule(const char *tag)
 static void ApplyStrokeWidth(const char *tag)
 {
     static char b[20];
-
     if (GetAttrBounded(tag, "stroke-width", b, sizeof(b)))
     {
-        Meta_SetLineWidth(MakeWWFixed(atoi(b)));
+        WWFixedAsDWord lw;
+        (void)ParseWWFixed16_16(b, &lw);          /* allow decimals */
+        Meta_SetLineWidth(lw);
     }
 }
 
@@ -637,27 +666,20 @@ static void SVG_ParsePoints(const char *points, Point *pointsP, word *numPointsP
     const char *s;
     sword       x;
     sword       y;
-    int         xi;
-    int         yi;
 
     s = points;
     *numPointsP = 0;
-    xi = yi = 0;
 
     while (*s && *numPointsP < MAX_SVG_POINTS)
     {
-        while (*s && isspace(*s)) s++;
+        s = SVG_SkipWS(s);
         if (!*s) break;
 
-        xi = atoi(s);
-        while (*s && *s != ',' && !isspace(*s)) s++;
+        s = SVG_ScanInt(s, &x);
         if (*s == ',') s++;
-        while (*s && isspace(*s)) s++;
-        yi = atoi(s);
-        while (*s && *s != ' ' && *s != ',' && *s != '\0') s++;
+        s = SVG_SkipWS(s);
+        s = SVG_ScanInt(s, &y);
 
-        x = (sword)xi;
-        y = (sword)yi;
         pointsP[*numPointsP].P_x = x;
         pointsP[*numPointsP].P_y = y;
         (*numPointsP)++;
@@ -719,7 +741,73 @@ static Boolean SVG_HasFill(const char *tag)
     return TRUE; /* default fill applies to rect/circle/ellipse/polygon/path */
 }
 
+static void SVG_AddPt(SVGScratch *sc, word *np, sword x, sword y)
+{
+    if (*np < MAX_SVG_POINTS) {
+        sc->pts[*np].P_x = x;
+        sc->pts[*np].P_y = y;
+        (*np)++;
+    }
+}
 
+static void SVG_FlattenQuad(SVGScratch *sc, word *np,
+                            sword x0, sword y0, sword cx, sword cy, sword x1, sword y1,
+                            word segs)
+{
+    /* P(t)=(1-t)^2 P0 + 2(1-t)t C + t^2 P1, t in (0..1] */
+    word i;
+    for (i = 1; i <= segs; i++) {
+        /* fixed t in 0..1 mapped to 0..65536 */
+        WWFixedAsDWord t  = (WWFixedAsDWord)(((dword)i << 16) / segs);
+        WWFixedAsDWord it = WWFIXED_ONE - t;
+
+        WWFixedAsDWord X =
+            GrMulWWFixed(GrMulWWFixed(it, it), ((sdword)x0 << 16)) +
+            GrMulWWFixed(GrMulWWFixed(MakeWWFixed(2), GrMulWWFixed(it, t)), ((sdword)cx << 16)) +
+            GrMulWWFixed(GrMulWWFixed(t, t), ((sdword)x1 << 16));
+
+        WWFixedAsDWord Y =
+            GrMulWWFixed(GrMulWWFixed(it, it), ((sdword)y0 << 16)) +
+            GrMulWWFixed(GrMulWWFixed(MakeWWFixed(2), GrMulWWFixed(it, t)), ((sdword)cy << 16)) +
+            GrMulWWFixed(GrMulWWFixed(t, t), ((sdword)y1 << 16));
+
+        SVG_AddPt(sc, np, (sword)((sdword)X >> 16), (sword)((sdword)Y >> 16));
+    }
+}
+
+static void SVG_FlattenCubic(SVGScratch *sc, word *np,
+                             sword x0, sword y0, sword c1x, sword c1y, sword c2x, sword c2y, sword x1, sword y1,
+                             word segs)
+{
+    /* P(t)=(1-t)^3 P0 + 3(1-t)^2 t C1 + 3(1-t) t^2 C2 + t^3 P1 */
+    word i;
+    for (i = 1; i <= segs; i++) {
+        WWFixedAsDWord t   = (WWFixedAsDWord)(((dword)i << 16) / segs);
+        WWFixedAsDWord it  = WWFIXED_ONE - t;
+        WWFixedAsDWord it2 = GrMulWWFixed(it, it);
+        WWFixedAsDWord t2  = GrMulWWFixed(t, t);
+
+        /* coefficients */
+        WWFixedAsDWord k0 = GrMulWWFixed(it2, it);                       /* (1-t)^3 */
+        WWFixedAsDWord k1 = GrMulWWFixed(MakeWWFixed(3), GrMulWWFixed(it2, t)); /* 3(1-t)^2 t */
+        WWFixedAsDWord k2 = GrMulWWFixed(MakeWWFixed(3), GrMulWWFixed(it, t2));  /* 3(1-t) t^2 */
+        WWFixedAsDWord k3 = GrMulWWFixed(t2, t);                         /* t^3 */
+
+        WWFixedAsDWord X =
+            GrMulWWFixed(k0, ((sdword)x0 << 16)) +
+            GrMulWWFixed(k1, ((sdword)c1x << 16)) +
+            GrMulWWFixed(k2, ((sdword)c2x << 16)) +
+            GrMulWWFixed(k3, ((sdword)x1  << 16));
+
+        WWFixedAsDWord Y =
+            GrMulWWFixed(k0, ((sdword)y0 << 16)) +
+            GrMulWWFixed(k1, ((sdword)c1y << 16)) +
+            GrMulWWFixed(k2, ((sdword)c2y << 16)) +
+            GrMulWWFixed(k3, ((sdword)y1  << 16));
+
+        SVG_AddPt(sc, np, (sword)((sdword)X >> 16), (sword)((sdword)Y >> 16));
+    }
+}
 
 /* ---------- element handlers ---------- */
 
@@ -743,10 +831,10 @@ static void HandleLineTag(const char *tag)
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
 
-        x1 = (sword)atoi(xb);
-        y1 = (sword)atoi(yb);
-        x2 = (sword)atoi(x2b);
-        y2 = (sword)atoi(y2b);
+        x1 = SVG_ParseSCoordStr(xb);
+        y1 = SVG_ParseSCoordStr(yb);
+        x2 = SVG_ParseSCoordStr(x2b);
+        y2 = SVG_ParseSCoordStr(y2b);
 
         SVG_GetScale(tag, &sx, &sy);
         SVG_ApplyScalePoint(&x1, &y1, sx, sy);
@@ -841,10 +929,10 @@ static void HandleRectTag(const char *tag)
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
 
-        x  = (sword)atoi(xb);
-        y  = (sword)atoi(yb);
-        x2 = (sword)(x + (sword)atoi(wb));
-        y2 = (sword)(y + (sword)atoi(hb));
+        x  = SVG_ParseSCoordStr(xb);
+        y  = SVG_ParseSCoordStr(yb);
+        x2 = (sword)(x + SVG_ParseSCoordStr(wb));
+        y2 = (sword)(y + SVG_ParseSCoordStr(hb));
 
         SVG_GetScale(tag, &sx, &sy);
         SVG_ApplyScalePoint(&x,  &y,  sx, sy);
@@ -875,10 +963,10 @@ static void HandleEllipseTag(const char *tag)
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
 
-        cx = (sword)atoi(cxb);
-        cy = (sword)atoi(cyb);
-        rx = (sword)atoi(rxb);
-        ry = (sword)atoi(ryb);
+        cx = SVG_ParseSCoordStr(cxb);
+        cy = SVG_ParseSCoordStr(cyb);
+        rx = SVG_ParseSCoordStr(rxb);
+        ry = SVG_ParseSCoordStr(ryb);
 
         SVG_GetScale(tag, &sx, &sy);
 
@@ -908,9 +996,9 @@ static void HandleCircleTag(const char *tag)
         ApplyStrokeAndFill(tag);
         ApplyStrokeWidth(tag);
 
-        cx = (sword)atoi(cxb);
-        cy = (sword)atoi(cyb);
-        r  = (sword)atoi(rb);
+        cx = SVG_ParseSCoordStr(cxb);
+        cy = SVG_ParseSCoordStr(cyb);
+        r  = SVG_ParseSCoordStr(rb);
 
         SVG_GetScale(tag, &sx, &sy);
 
@@ -936,14 +1024,17 @@ static const char * SVG_SkipWS(const char *s)
 
 static const char * SVG_ScanInt(const char *s, sword *out)
 {
-    int v;
+    WWFixedAsDWord f;
+    const char *p;
 
-    v = atoi(s);
-    *out = (sword)v;
-    while (*s && *s != ' ' && *s != ',' && *s != '\t' && *s != '\r' && *s != '\n' && *s != 'Z' && *s != 'z') {
-        s++;
+    p = ParseWWFixed16_16(s, &f);           /* accept decimals */
+    *out = WWFixedToSWordRound(f);
+
+    while (*p && *p != ' ' && *p != ',' && *p != '\t' &&
+           *p != '\r' && *p != '\n' && *p != 'Z' && *p != 'z') {
+        p++;
     }
-    return s;
+    return p;
 }
 
 static void HandlePathTag(const char *tag, SVGScratch *sc)
@@ -1033,6 +1124,69 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             if (lastCmd == 'h') lx += lastx;
             if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lx; sc->pts[np].P_y = lasty; np++; }
             lastx = lx;
+            break;
+        }
+        case 'Q': case 'q': {
+            /* quadratic Bézier: (cx,cy) (x,y) ; multiple pairs allowed */
+            sword cx, cy, ex, ey;
+            for (;;) {
+                sP = SVG_SkipWS(sP);
+                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+                sP = SVG_ScanInt(sP, &cx);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &cy);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &ex);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &ey);
+
+                if (lastCmd == 'q') { cx += lastx; cy += lasty; ex += lastx; ey += lasty; }
+
+                /* start at last point; add flattened curve points (no duplicate of start) */
+                SVG_FlattenQuad(sc, &np, lastx, lasty, cx, cy, ex, ey, 8);
+
+                lastx = ex; lasty = ey;
+            }
+            break;
+        }
+        case 'C': case 'c': {
+            /* cubic Bézier: (c1x,c1y c2x,c2y x,y) ; multiple groups allowed */
+            sword c1x, c1y, c2x, c2y, ex, ey;
+            for (;;) {
+                sP = SVG_SkipWS(sP);
+                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+                sP = SVG_ScanInt(sP, &c1x);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &c1y);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &c2x);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &c2y);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &ex);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = SVG_ScanInt(sP, &ey);
+
+                if (lastCmd == 'c') {
+                    c1x += lastx; c1y += lasty;
+                    c2x += lastx; c2y += lasty;
+                    ex  += lastx; ey  += lasty;
+                }
+
+                SVG_FlattenCubic(sc, &np, lastx, lasty, c1x, c1y, c2x, c2y, ex, ey, 10);
+
+                lastx = ex; lasty = ey;
+            }
             break;
         }
         case 'V': case 'v': {
