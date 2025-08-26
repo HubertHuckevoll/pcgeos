@@ -1341,11 +1341,19 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
     Boolean         closed;
     sword           lastx;
     sword           lasty;
+    sword           subStartX;
+    sword           subStartY;
+    /* reflection state */
+    Boolean         lastWasCubic;
+    Boolean         lastWasQuad;
+    sword           lastC2x, lastC2y;   /* previous cubic's 2nd control */
+    sword           lastQcx, lastQcy;   /* previous quad's control point */
+
     char            lastCmd;
     Boolean         haveCmd;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
     word            i;
+
+    WWFixedAsDWord  sx2, sy2;
 
     sc->db[0] = 0;
     if (!GetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) return;
@@ -1354,23 +1362,26 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
     ParseFillRule(tag);
     ApplyStrokeWidth(tag);
 
-    np      = 0;
-    closed  = FALSE;
-    lastx   = 0;
-    lasty   = 0;
-    lastCmd = 0;
-    haveCmd = FALSE;
-    sP      = sc->db;
+    np            = 0;
+    closed        = FALSE;
+    lastx         = 0;
+    lasty         = 0;
+    subStartX     = 0;
+    subStartY     = 0;
+    lastCmd       = 0;
+    haveCmd       = FALSE;
+    lastWasCubic  = FALSE;
+    lastWasQuad   = FALSE;
+    lastC2x = lastC2y = lastQcx = lastQcy = 0;
+
+    sP = sc->db;
 
     while (*sP)
     {
-        sword x;
-        sword y;
+        sword x, y;
 
         sP = SVG_SkipWS(sP);
-        if (!*sP) {
-            break;
-        }
+        if (!*sP) break;
 
         if (isalpha(*sP)) {
             lastCmd = *sP++;
@@ -1380,6 +1391,8 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
         }
 
         switch (lastCmd) {
+
+        /* ----- moveto (subsequent pairs are lineto) ----- */
         case 'M': case 'm': {
             sP = SVG_SkipWS(sP);
             if (lastCmd == 'M') {
@@ -1399,16 +1412,17 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             }
 
             lastx = x; lasty = y;
+            subStartX = x; subStartY = y;
             if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = x; sc->pts[np].P_y = y; np++; }
 
             lastCmd = (lastCmd == 'M') ? 'L' : 'l';
-            haveCmd = TRUE;
+            lastWasCubic = lastWasQuad = FALSE;
             break;
         }
-        case 'L': case 'l': {
-            sword lx;
-            sword ly;
 
+        /* ----- lineto (supports repeated pairs) ----- */
+        case 'L': case 'l': {
+            sword lx, ly;
             sP = SVG_SkipWS(sP);
             if (lastCmd == 'L') {
                 sP = SVG_ScanCoordX(sP, &lx);
@@ -1425,14 +1439,15 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 lx = (sword)(lastx + dx);
                 ly = (sword)(lasty + dy);
             }
-
             if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lx; sc->pts[np].P_y = ly; np++; }
             lastx = lx; lasty = ly;
+            lastWasCubic = lastWasQuad = FALSE;
             break;
         }
+
+        /* ----- horizontal lineto (supports repeated numbers) ----- */
         case 'H': case 'h': {
             sword lx;
-
             sP = SVG_SkipWS(sP);
             if (lastCmd == 'H') {
                 sP = SVG_ScanCoordX(sP, &lx);
@@ -1444,11 +1459,13 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             }
             if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lx; sc->pts[np].P_y = lasty; np++; }
             lastx = lx;
+            lastWasCubic = lastWasQuad = FALSE;
             break;
         }
+
+        /* ----- vertical lineto (supports repeated numbers) ----- */
         case 'V': case 'v': {
             sword ly;
-
             sP = SVG_SkipWS(sP);
             if (lastCmd == 'V') {
                 sP = SVG_ScanCoordY(sP, &ly);
@@ -1460,8 +1477,11 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             }
             if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lastx; sc->pts[np].P_y = ly; np++; }
             lasty = ly;
+            lastWasCubic = lastWasQuad = FALSE;
             break;
         }
+
+        /* ----- quadratic Bézier (repeating groups) ----- */
         case 'Q': case 'q': {
             sword cx, cy, ex, ey;
             for (;;) {
@@ -1498,9 +1518,50 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 SVG_FlattenQuad(sc, &np, lastx, lasty, cx, cy, ex, ey, 8);
 
                 lastx = ex; lasty = ey;
+                lastWasQuad = TRUE; lastQcx = cx; lastQcy = cy;
+                lastWasCubic = FALSE;
             }
             break;
         }
+
+        /* ----- smooth quadratic (T/t): reflect last Q control or use current point ----- */
+        case 'T': case 't': {
+            sword ex, ey, cx, cy;
+            for (;;) {
+                sP = SVG_SkipWS(sP);
+                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+                if (lastCmd == 'T') {
+                    sP = SVG_ScanCoordX(sP, &ex);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanCoordY(sP, &ey);
+                } else {
+                    sword dex, dey;
+                    sP = SVG_ScanLenX(sP, &dex);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanLenY(sP, &dey);
+                    ex = (sword)(lastx + dex); ey = (sword)(lasty + dey);
+                }
+
+                if (lastWasQuad) {
+                    cx = (sword)(lastx + (lastx - lastQcx));
+                    cy = (sword)(lasty + (lasty - lastQcy));
+                } else {
+                    cx = lastx; cy = lasty;
+                }
+
+                SVG_FlattenQuad(sc, &np, lastx, lasty, cx, cy, ex, ey, 8);
+
+                lastx = ex; lasty = ey;
+                lastWasQuad = TRUE; lastQcx = cx; lastQcy = cy;
+                lastWasCubic = FALSE;
+            }
+            break;
+        }
+
+        /* ----- cubic Bézier (repeating groups) ----- */
         case 'C': case 'c': {
             sword c1x, c1y, c2x, c2y, ex, ey;
             for (;;) {
@@ -1550,24 +1611,82 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 SVG_FlattenCubic(sc, &np, lastx, lasty, c1x, c1y, c2x, c2y, ex, ey, 10);
 
                 lastx = ex; lasty = ey;
+                lastC2x = c2x; lastC2y = c2y;
+                lastWasCubic = TRUE;
+                lastWasQuad  = FALSE;
             }
             break;
         }
+
+        /* ----- smooth cubic (S/s): reflect lastC2 across current point ----- */
+        case 'S': case 's': {
+            sword c1x, c1y, c2x, c2y, ex, ey;
+            for (;;) {
+                sP = SVG_SkipWS(sP);
+                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+                if (lastWasCubic) {
+                    c1x = (sword)(lastx + (lastx - lastC2x));
+                    c1y = (sword)(lasty + (lasty - lastC2y));
+                } else {
+                    c1x = lastx; c1y = lasty;
+                }
+
+                if (lastCmd == 'S') {
+                    sP = SVG_ScanCoordX(sP, &c2x);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanCoordY(sP, &c2y);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanCoordX(sP, &ex);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanCoordY(sP, &ey);
+                } else {
+                    sword dc2x, dc2y, dex, dey;
+                    sP = SVG_ScanLenX(sP, &dc2x);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanLenY(sP, &dc2y);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanLenX(sP, &dex);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
+                    sP = SVG_ScanLenY(sP, &dey);
+                    c2x = (sword)(lastx + dc2x); c2y = (sword)(lasty + dc2y);
+                    ex  = (sword)(lastx + dex);  ey  = (sword)(lasty + dey);
+                }
+
+                SVG_FlattenCubic(sc, &np, lastx, lasty, c1x, c1y, c2x, c2y, ex, ey, 10);
+
+                lastx = ex; lasty = ey;
+                lastC2x = c2x; lastC2y = c2y;
+                lastWasCubic = TRUE;
+                lastWasQuad  = FALSE;
+            }
+            break;
+        }
+
+        /* ----- closepath ----- */
         case 'Z': case 'z':
             closed = TRUE;
             sP++;
+            lastx = subStartX; lasty = subStartY;
+            lastWasCubic = lastWasQuad = FALSE;
             break;
 
         default:
+            /* (A/a not implemented yet; skip char) */
             sP++;
+            lastWasCubic = lastWasQuad = FALSE;
             break;
         }
     }
 
     if (np > 1)
     {
-        WWFixedAsDWord sx2, sy2;
-
         SVG_GetScale(tag, &sx2, &sy2);
         for (i = 0; i < np; i++) {
             sword px = sc->pts[i].P_x;
@@ -1576,7 +1695,6 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             sc->pts[i].P_x = px;
             sc->pts[i].P_y = py;
         }
-
         if (closed) Meta_Polygon(sc->pts, np, SVG_HasFill(tag), SVG_HasStroke(tag));
         else        Meta_Polyline(sc->pts, np);
     }
