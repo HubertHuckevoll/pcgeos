@@ -1217,7 +1217,6 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
                            int largeArcFlag, int sweepFlag,
                            WWFixedAsDWord x1, WWFixedAsDWord y1)
 {
-    /* declare variables (Watcom = C89 rules) */
     WWFixedAsDWord cRot, sRot;
     WWFixedAsDWord dx2, dy2, x1p, y1p;
     WWFixedAsDWord rx2, ry2, t1, t2, rchk, scale;
@@ -1225,14 +1224,12 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     WWFixedAsDWord midX, midY, cx, cy;
     WWFixedAsDWord vx1, vy1, vx2, vy2, theta1, delta;
     WWFixedAsDWord rotBin;
-    WWFixedAsDWord cross, dot;
     WWFixedAsDWord angDeg, angBin;
     WWFixedAsDWord cA, sA;
     WWFixedAsDWord termX, termY;
     sword px, py;
     int segs, i;
-    char dbg[64];
-    sword cx_s, cy_s;
+    char dbg[160];
 
     if ((sdword)rx == 0 || (sdword)ry == 0 ||
         ((sdword)(x0 - x1) == 0 && (sdword)(y0 - y1) == 0)) {
@@ -1243,7 +1240,7 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     if ((sdword)rx < 0) rx = -rx;
     if ((sdword)ry < 0) ry = -ry;
 
-    /* convert rotation degrees → binary angle units (0..65536 = full circle) */
+    /* rotation (deg → bin angle units) */
     rotBin = GrMulWWFixed(xAxisRotDegW, MakeWWFixed(182.044444)); /* 65536/360 */
     cRot   = GrQuickCosine(rotBin);
     sRot   = GrQuickSine(rotBin);
@@ -1297,24 +1294,36 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     vy2 = GrSDivWWFixed((-y1p - cyp), ry);
 
     theta1 = SVG_Atan2Deg_WW(vy1, vx1);
-    cross  = GrMulWWFixed(vx1, vy2) - GrMulWWFixed(vy1, vx2);
-    dot    = GrMulWWFixed(vx1, vx2) + GrMulWWFixed(vy1, vy2);
-    delta  = SVG_Atan2Deg_WW(cross, dot);
 
-    /* Normalize delta into [-180, 180] */
-    if ((sdword)delta > MakeWWFixed(180)) {
-        delta -= MakeWWFixed(360);
-    } else if ((sdword)delta < -MakeWWFixed(180)) {
-        delta += MakeWWFixed(360);
+    /* delta as angle between v1 and v2 */
+    {
+        WWFixedAsDWord cross = GrMulWWFixed(vx1, vy2) - GrMulWWFixed(vy1, vx2);
+        WWFixedAsDWord dot   = GrMulWWFixed(vx1, vx2) + GrMulWWFixed(vy1, vy2);
+        delta = SVG_Atan2Deg_WW(cross, dot);
     }
 
-    /* DEBUG: print theta1 and delta at arc center */
-    cx_s = WWFixedToSWordRound(cx);
-    cy_s = WWFixedToSWordRound(cy);
-    sprintf(dbg, "t=%d d=%d",
+    /* normalize for sweep/largeArc */
+    if (largeArcFlag) {
+        if (sweepFlag && (sdword)delta < 0) {
+            delta += MakeWWFixed(360);
+        } else if (!sweepFlag && (sdword)delta > 0) {
+            delta -= MakeWWFixed(360);
+        }
+    }
+
+    /* debug output below the arc (offset 20px down) */
+    sprintf(dbg, "t=%d d=%d laf=%d sf=%d x0=%d y0=%d x1=%d y1=%d",
         WWFixedToSWordRound(theta1),
-        WWFixedToSWordRound(delta));
-    Meta_TextAt(cx_s, cy_s, dbg, MakeWWFixed(8), 0);
+        WWFixedToSWordRound(delta),
+        largeArcFlag, sweepFlag,
+        WWFixedToSWordRound(x0),
+        WWFixedToSWordRound(y0),
+        WWFixedToSWordRound(x1),
+        WWFixedToSWordRound(y1));
+
+    Meta_TextAt(WWFixedToSWordRound(x0),
+                WWFixedToSWordRound(y0) + 20,   /* shifted down */
+                dbg, MakeWWFixedFromInt(10), 0);
 
     {
         sword dAbsDeg = WWFixedToSWordRound(SVG_WWFabs(delta));
@@ -1327,7 +1336,7 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     for (i = 1; i <= segs; i++) {
         angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)),
                                         MakeWWFixed(segs));
-        angBin = GrMulWWFixed(angDeg, MakeWWFixed(182.044444)); /* deg → bin angle */
+        angBin = GrMulWWFixed(angDeg, MakeWWFixed(182.044444));
         cA     = GrQuickCosine(angBin);
         sA     = GrQuickSine(angBin);
 
@@ -1341,6 +1350,7 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         SVG_AddPt(sc, np, px, py);
     }
 }
+
 
 
 /* -------------------------------------- */
