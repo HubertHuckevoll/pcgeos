@@ -1240,15 +1240,15 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     if ((sdword)rx < 0) rx = -rx;
     if ((sdword)ry < 0) ry = -ry;
 
-    /* rotation: pass DEGREES directly to the quick trig (no 182.044444) */
-    cRot = GrQuickCosine(xAxisRotDegW);  /* FIX */
-    sRot = GrQuickSine(xAxisRotDegW);    /* FIX */
+    /* rotation: pass DEGREES directly to the quick trig */
+    cRot = GrQuickCosine(xAxisRotDegW);
+    sRot = GrQuickSine(xAxisRotDegW);
 
-    /* midpoint between points in rotated system (matches NanoSVG) */
+    /* midpoint between points in rotated system */
     dx2 = GrSDivWWFixed(x0 - x1, MakeWWFixed(2));
     dy2 = GrSDivWWFixed(y0 - y1, MakeWWFixed(2));
     x1p = GrMulWWFixed(cRot, dx2) + GrMulWWFixed(sRot, dy2);
-    y1p = -GrMulWWFixed(sRot, dx2) + GrMulWWFixed(cRot, dy2);  /* FIX */
+    y1p = -GrMulWWFixed(sRot, dx2) + GrMulWWFixed(cRot, dy2);
 
     /* ensure radii large enough */
     rx2 = GrMulWWFixed(rx, rx);
@@ -1264,7 +1264,7 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         ry2   = GrMulWWFixed(ry, ry);
     }
 
-    /* choose center sign (largeArc/sweep) – same as NanoSVG */
+    /* choose center sign (largeArc/sweep) */
     num = GrMulWWFixed(rx2, ry2) - GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
         - GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
     den = GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
@@ -1274,7 +1274,7 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     } else {
         ratio = GrSDivWWFixed(num, den);
         coef  = SVG_WWFSqrt(ratio);
-        if (largeArcFlag == sweepFlag)       /* same logic as nsvg s = -s */
+        if (largeArcFlag == sweepFlag)
             coef = (WWFixedAsDWord)(0 - (sdword)coef);
     }
 
@@ -1292,7 +1292,7 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     vx2 = GrSDivWWFixed((-x1p - cxp), rx);
     vy2 = GrSDivWWFixed((-y1p - cyp), ry);
 
-    /* angles in DEGREES */
+    /* angles in degrees */
     theta1 = SVG_Atan2Deg_WW(vy1, vx1);
     {
         WWFixedAsDWord cross = GrMulWWFixed(vx1, vy2) - GrMulWWFixed(vy1, vx2);
@@ -1300,15 +1300,13 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         delta = SVG_Atan2Deg_WW(cross, dot);   /* [-180,180] */
     }
 
-    /* enforce sweep ONLY (do not touch delta for large-arc again) */
-    if (!sweepFlag && (sdword)delta > 0)       /* FIX */
+    /* enforce sweep ONLY */
+    if (!sweepFlag && (sdword)delta > 0)
         delta -= MakeWWFixed(360);
-    else if (sweepFlag && (sdword)delta < 0)   /* FIX */
+    else if (sweepFlag && (sdword)delta < 0)
         delta += MakeWWFixed(360);
 
-    /* remove the old 'large-arc correction' and 'normalize again' blocks */
-
-    /* segment count (your choice) */
+    /* segment count */
     {
         sword dAbsDeg = WWFixedToSWordRound(SVG_WWFabs(delta));
         segs = dAbsDeg / 11;
@@ -1317,19 +1315,17 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         if (segs > 60) segs = 60;
     }
 
-    /* include the start point because this arc is emitted as its own polyline */
-    // SVG_AddPt(sc, np, WWFixedToSWordRound(x0), WWFixedToSWordRound(y0));  /* FIX */
-
-    /* generate points – pass DEGREES to trig, no Y negation */
+    /* generate points – degrees to trig, no Y-negation */
     for (i = 1; i <= segs; i++) {
-        angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)), MakeWWFixed(segs));
-        cA = GrQuickCosine(angDeg);   /* FIX */
-        sA = GrQuickSine(angDeg);     /* FIX */
+        angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)),
+                                        MakeWWFixed(segs));
+        cA = GrQuickCosine(angDeg);
+        sA = GrQuickSine(angDeg);
 
-        termX = GrMulWWFixed(cRot, GrMulWWFixed(rx, cA))
-              - GrMulWWFixed(sRot, GrMulWWFixed(ry, sA));
-        termY = GrMulWWFixed(sRot, GrMulWWFixed(rx, cA))
-              + GrMulWWFixed(cRot, GrMulWWFixed(ry, sA));     /* FIX (no minus) */
+        termX =  GrMulWWFixed(cRot, GrMulWWFixed(rx, cA))
+               - GrMulWWFixed(sRot, GrMulWWFixed(ry, sA));
+        termY =  GrMulWWFixed(sRot, GrMulWWFixed(rx, cA))
+               + GrMulWWFixed(cRot, GrMulWWFixed(ry, sA));
 
         px = WWFixedToSWordRound(cx + termX);
         py = WWFixedToSWordRound(cy + termY);
@@ -1633,6 +1629,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
         case 'A': case 'a': {
             WWFixedAsDWord rxW, ryW, rotW, tmpW;
             WWFixedAsDWord exW, eyW, dxW, dyW;
+            WWFixedAsDWord x0W, y0W, rxMap, ryMap, exMap, eyMap;
             int laf, swf;
             Boolean done = FALSE;
 
@@ -1640,7 +1637,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 sP = SVG_SkipWS(sP);
                 if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') { done = TRUE; continue; }
 
-                /* rx, ry, rotation (all in 16.16) */
+                /* rx, ry, rotation (all 16.16) */
                 sP = ParseWWFixed16_16(sP, &rxW);
                 if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
                 sP = ParseWWFixed16_16(sP, &ryW);
@@ -1654,7 +1651,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 sP = ParseWWFixed16_16(sP, &tmpW); swf = (WWFixedToSWordRound(tmpW) != 0);
                 if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
 
-                /* endpoint in same coord space as the rest of the path */
+                /* endpoint (abs/rel) */
                 if (lastCmd == 'A') {
                     sP = ParseWWFixed16_16(sP, &exW);
                     if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
@@ -1667,20 +1664,27 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                     eyW = MakeWWFixed(lasty) + dyW;
                 }
 
-                /* Append arc points into the current path (no immediate draw) */
-                SVG_FlattenArc(sc, &np,
-                    ((WWFixedAsDWord)lastx) << 16, ((WWFixedAsDWord)lasty) << 16,
-                    rxW, ryW,
-                    rotW,                 /* pass 16.16 degrees */
-                    laf, swf,             /* use swf as-is */
-                    exW, eyW);
+                /* map to the same device coords as other path commands */
+                x0W   = ((WWFixedAsDWord)lastx) << 16;
+                y0W   = ((WWFixedAsDWord)lasty) << 16;
+                rxMap = ((WWFixedAsDWord)VB_MapLenX_F(rxW)) << 16;
+                ryMap = ((WWFixedAsDWord)VB_MapLenY_F(ryW)) << 16;
+                exMap = ((WWFixedAsDWord)VB_MapPosX_F(exW)) << 16;
+                eyMap = ((WWFixedAsDWord)VB_MapPosY_F(eyW)) << 16;
 
-                /* update current point in the same coord space */
-                lastx = WWFixedToSWordRound(exW);
-                lasty = WWFixedToSWordRound(eyW);
+                /* append arc points; do not draw/scale now */
+                SVG_FlattenArc(sc, &np,
+                            x0W, y0W, rxMap, ryMap,
+                            rotW, laf, swf,      /* swf as-is */
+                            exMap, eyMap);
+
+                /* update current point (mapped) */
+                lastx = WWFixedToSWordRound(exMap);
+                lasty = WWFixedToSWordRound(eyMap);
             }
             break;
         }
+
 
 
         /* ----- smooth cubic (S/s): reflect lastC2 across current point ----- */
