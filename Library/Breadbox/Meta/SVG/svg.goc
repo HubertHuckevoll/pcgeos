@@ -1318,7 +1318,7 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     }
 
     /* include the start point because this arc is emitted as its own polyline */
-    SVG_AddPt(sc, np, WWFixedToSWordRound(x0), WWFixedToSWordRound(y0));  /* FIX */
+    // SVG_AddPt(sc, np, WWFixedToSWordRound(x0), WWFixedToSWordRound(y0));  /* FIX */
 
     /* generate points – pass DEGREES to trig, no Y negation */
     for (i = 1; i <= segs; i++) {
@@ -1633,106 +1633,51 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
         case 'A': case 'a': {
             WWFixedAsDWord rxW, ryW, rotW, tmpW;
             WWFixedAsDWord exW, eyW, dxW, dyW;
-            WWFixedAsDWord x0W, y0W;
-            WWFixedAsDWord rxMap, ryMap;
-            WWFixedAsDWord exMap, eyMap;
             int laf, swf;
-            int rotDeg;
-            Boolean done;
+            Boolean done = FALSE;
 
-            done = FALSE;
             while (!done) {
                 sP = SVG_SkipWS(sP);
-                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') {
-                    done = TRUE;
-                    continue;
-                }
+                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') { done = TRUE; continue; }
 
-                /* rx */
+                /* rx, ry, rotation (all in 16.16) */
                 sP = ParseWWFixed16_16(sP, &rxW);
-                if (*sP == ',') sP++;
-                sP = SVG_SkipWS(sP);
-
-                /* ry */
+                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
                 sP = ParseWWFixed16_16(sP, &ryW);
-
-                /* rotation (convert to integer degrees) */
                 sP = SVG_SkipWS(sP);
                 sP = ParseWWFixed16_16(sP, &rotW);
-                if (*sP == ',') sP++;
-                sP = SVG_SkipWS(sP);
+                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
 
-                /* large-arc flag */
-                sP = ParseWWFixed16_16(sP, &tmpW);
-                laf = (WWFixedToSWordRound(tmpW) != 0);
-                if (*sP == ',') sP++;
-                sP = SVG_SkipWS(sP);
+                /* flags */
+                sP = ParseWWFixed16_16(sP, &tmpW); laf = (WWFixedToSWordRound(tmpW) != 0);
+                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
+                sP = ParseWWFixed16_16(sP, &tmpW); swf = (WWFixedToSWordRound(tmpW) != 0);
+                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
 
-                /* sweep flag */
-                sP = ParseWWFixed16_16(sP, &tmpW);
-                swf = (WWFixedToSWordRound(tmpW) != 0);
-                if (*sP == ',') sP++;
-                sP = SVG_SkipWS(sP);
-
-                /* endpoint */
+                /* endpoint in same coord space as the rest of the path */
                 if (lastCmd == 'A') {
                     sP = ParseWWFixed16_16(sP, &exW);
-                    if (*sP == ',') sP++;
-                    sP = SVG_SkipWS(sP);
+                    if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
                     sP = ParseWWFixed16_16(sP, &eyW);
-                } else { /* relative */
+                } else {
                     sP = ParseWWFixed16_16(sP, &dxW);
-                    if (*sP == ',') sP++;
-                    sP = SVG_SkipWS(sP);
+                    if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
                     sP = ParseWWFixed16_16(sP, &dyW);
                     exW = MakeWWFixed(lastx) + dxW;
                     eyW = MakeWWFixed(lasty) + dyW;
                 }
 
-                /* current point already in world coords */
-                x0W = ((WWFixedAsDWord)lastx) << 16;
-                y0W = ((WWFixedAsDWord)lasty) << 16;
-
-                /* map radii as lengths */
-                rxMap = ((WWFixedAsDWord)VB_MapLenX_F(rxW)) << 16;
-                ryMap = ((WWFixedAsDWord)VB_MapLenY_F(ryW)) << 16;
-
-                /* map endpoint as position */
-                exMap = ((WWFixedAsDWord)VB_MapPosX_F(exW)) << 16;
-                eyMap = ((WWFixedAsDWord)VB_MapPosY_F(eyW)) << 16;
-
-                /* flatten arc into sc->pts */
-                np = 0;
+                /* Append arc points into the current path (no immediate draw) */
                 SVG_FlattenArc(sc, &np,
-                            x0W, y0W,
-                            rxMap, ryMap,
-                            /* pass rotW (16.16 degrees), keep swf */
-                            rotW, laf, swf,
-                            exMap, eyMap);
+                    ((WWFixedAsDWord)lastx) << 16, ((WWFixedAsDWord)lasty) << 16,
+                    rxW, ryW,
+                    rotW,                 /* pass 16.16 degrees */
+                    laf, swf,             /* use swf as-is */
+                    exW, eyW);
 
-                /* scale arc points and emit immediately */
-                {
-                    WWFixedAsDWord sx2, sy2;
-                    int i;
-                    SVG_GetScale(tag, &sx2, &sy2);
-                    for (i = 0; i < np; i++) {
-                        sword px = sc->pts[i].P_x;
-                        sword py = sc->pts[i].P_y;
-                        SVG_ApplyScalePoint(&px, &py, sx2, sy2);
-                        sc->pts[i].P_x = px;
-                        sc->pts[i].P_y = py;
-                    }
-                    if (np > 1) {
-                        Meta_Polyline(sc->pts, np);
-                    }
-                }
-
-                /* update current point */
-                lastx = WWFixedToSWordRound(exMap);
-                lasty = WWFixedToSWordRound(eyMap);
-
-                /* reset point buffer so arcs don’t spill into path */
-                np = 0;
+                /* update current point in the same coord space */
+                lastx = WWFixedToSWordRound(exW);
+                lasty = WWFixedToSWordRound(eyW);
             }
             break;
         }
