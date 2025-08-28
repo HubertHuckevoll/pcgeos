@@ -1215,7 +1215,7 @@ static WWFixedAsDWord SVG_WWFabs(WWFixedAsDWord v)
 static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
                            WWFixedAsDWord x0, WWFixedAsDWord y0,
                            WWFixedAsDWord rx, WWFixedAsDWord ry,
-                           WWFixedAsDWord xAxisRotDegW, /* 16.16 degrees */
+                           WWFixedAsDWord xAxisRotDegW,
                            int largeArcFlag, int sweepFlag,
                            WWFixedAsDWord x1, WWFixedAsDWord y1)
 {
@@ -1240,15 +1240,15 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     if ((sdword)rx < 0) rx = -rx;
     if ((sdword)ry < 0) ry = -ry;
 
-    /* rotation: pass degrees (16.16) directly to GrQuickCosine/Sine */
-    cRot = GrQuickCosine(xAxisRotDegW);
-    sRot = GrQuickSine(xAxisRotDegW);
+    /* rotation: pass DEGREES directly to the quick trig (no 182.044444) */
+    cRot = GrQuickCosine(xAxisRotDegW);  /* FIX */
+    sRot = GrQuickSine(xAxisRotDegW);    /* FIX */
 
-    /* midpoint between points in rotated system (SVG spec) */
+    /* midpoint between points in rotated system (matches NanoSVG) */
     dx2 = GrSDivWWFixed(x0 - x1, MakeWWFixed(2));
     dy2 = GrSDivWWFixed(y0 - y1, MakeWWFixed(2));
     x1p = GrMulWWFixed(cRot, dx2) + GrMulWWFixed(sRot, dy2);
-    y1p = -GrMulWWFixed(sRot, dx2) + GrMulWWFixed(cRot, dy2);
+    y1p = -GrMulWWFixed(sRot, dx2) + GrMulWWFixed(cRot, dy2);  /* FIX */
 
     /* ensure radii large enough */
     rx2 = GrMulWWFixed(rx, rx);
@@ -1264,64 +1264,51 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         ry2   = GrMulWWFixed(ry, ry);
     }
 
-    /* center in rotated coord system */
+    /* choose center sign (largeArc/sweep) – same as NanoSVG */
     num = GrMulWWFixed(rx2, ry2) - GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
         - GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
     den = GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
         + GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
-
     if ((sdword)num <= 0 || (sdword)den <= 0) {
         coef = 0;
     } else {
         ratio = GrSDivWWFixed(num, den);
         coef  = SVG_WWFSqrt(ratio);
-        if (largeArcFlag == sweepFlag) {
+        if (largeArcFlag == sweepFlag)       /* same logic as nsvg s = -s */
             coef = (WWFixedAsDWord)(0 - (sdword)coef);
-        }
     }
 
+    /* center in original coords */
     cxp = GrMulWWFixed(coef, GrSDivWWFixed(GrMulWWFixed(rx, y1p), ry));
     cyp = GrMulWWFixed(-coef, GrSDivWWFixed(GrMulWWFixed(ry, x1p), rx));
-
-    /* back to original coord system */
     midX = GrSDivWWFixed(x0 + x1, MakeWWFixed(2));
     midY = GrSDivWWFixed(y0 + y1, MakeWWFixed(2));
     cx = GrMulWWFixed(cRot, cxp) - GrMulWWFixed(sRot, cyp) + midX;
     cy = GrMulWWFixed(sRot, cxp) + GrMulWWFixed(cRot, cyp) + midY;
 
-    /* unit vectors for angles */
+    /* unit vectors to start/end on the ellipse */
     vx1 = GrSDivWWFixed((x1p - cxp), rx);
     vy1 = GrSDivWWFixed((y1p - cyp), ry);
     vx2 = GrSDivWWFixed((-x1p - cxp), rx);
     vy2 = GrSDivWWFixed((-y1p - cyp), ry);
 
-    /* angles in DEGREES (16.16) */
+    /* angles in DEGREES */
     theta1 = SVG_Atan2Deg_WW(vy1, vx1);
-
     {
         WWFixedAsDWord cross = GrMulWWFixed(vx1, vy2) - GrMulWWFixed(vy1, vx2);
         WWFixedAsDWord dot   = GrMulWWFixed(vx1, vx2) + GrMulWWFixed(vy1, vy2);
-        delta = SVG_Atan2Deg_WW(cross, dot);   /* in [-180, 180] */
+        delta = SVG_Atan2Deg_WW(cross, dot);   /* [-180,180] */
     }
 
-    /* apply sweep direction */
-    if (!sweepFlag && (sdword)delta > 0) {
+    /* enforce sweep ONLY (do not touch delta for large-arc again) */
+    if (!sweepFlag && (sdword)delta > 0)       /* FIX */
         delta -= MakeWWFixed(360);
-    } else if (sweepFlag && (sdword)delta < 0) {
+    else if (sweepFlag && (sdword)delta < 0)   /* FIX */
         delta += MakeWWFixed(360);
-    }
 
-    /* apply large-arc as per spec using |delta| */
-    {
-        WWFixedAsDWord absDelta = SVG_WWFabs(delta);
-        if (!largeArcFlag && (sdword)absDelta > (sdword)MakeWWFixed(180)) {
-            delta += ((sdword)delta > 0) ? -MakeWWFixed(360) : MakeWWFixed(360);
-        } else if (largeArcFlag && (sdword)absDelta < (sdword)MakeWWFixed(180)) {
-            delta += ((sdword)delta > 0) ? MakeWWFixed(360) : -MakeWWFixed(360);
-        }
-    }
+    /* remove the old 'large-arc correction' and 'normalize again' blocks */
 
-    /* number of segments (cap to something sane) */
+    /* segment count (your choice) */
     {
         sword dAbsDeg = WWFixedToSWordRound(SVG_WWFabs(delta));
         segs = dAbsDeg / 11;
@@ -1330,17 +1317,19 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         if (segs > 60) segs = 60;
     }
 
-    /* generate points — use degrees directly in trig */
+    /* include the start point because this arc is emitted as its own polyline */
+    SVG_AddPt(sc, np, WWFixedToSWordRound(x0), WWFixedToSWordRound(y0));  /* FIX */
+
+    /* generate points – pass DEGREES to trig, no Y negation */
     for (i = 1; i <= segs; i++) {
-        angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)),
-                                        MakeWWFixed(segs));
-        cA = GrQuickCosine(angDeg);
-        sA = GrQuickSine(angDeg);
+        angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)), MakeWWFixed(segs));
+        cA = GrQuickCosine(angDeg);   /* FIX */
+        sA = GrQuickSine(angDeg);     /* FIX */
 
         termX = GrMulWWFixed(cRot, GrMulWWFixed(rx, cA))
               - GrMulWWFixed(sRot, GrMulWWFixed(ry, sA));
         termY = GrMulWWFixed(sRot, GrMulWWFixed(rx, cA))
-              + GrMulWWFixed(cRot, GrMulWWFixed(ry, sA));
+              + GrMulWWFixed(cRot, GrMulWWFixed(ry, sA));     /* FIX (no minus) */
 
         px = WWFixedToSWordRound(cx + termX);
         py = WWFixedToSWordRound(cy + termY);
