@@ -1178,23 +1178,22 @@ static WWFixedAsDWord SVG_WWFSqrt(WWFixedAsDWord v)
 }
 
 /* atan2(y,x) -> degrees (16.16) using GEOS Float stack */
-/* atan2(y,x) -> degrees (16.16) using GEOS Float stack */
 static WWFixedAsDWord SVG_Atan2Deg_WW(WWFixedAsDWord y, WWFixedAsDWord x)
 {
-    /* push y (signed 16.16 → real) */
-    FloatDwordToFloat((sdword)y);
-    FloatDwordToFloat(65536);
-    FloatDivide();
-
-    /* push x (signed 16.16 → real) */
+    /* push x (signed 16.16 → real) FIRST, like META.goc’s phi() */
     FloatDwordToFloat((sdword)x);
     FloatDwordToFloat(65536);
     FloatDivide();
 
-    /* atan2(y, x) in radians */
+    /* push y (signed 16.16 → real) SECOND (on top) */
+    FloatDwordToFloat((sdword)y);
+    FloatDwordToFloat(65536);
+    FloatDivide();
+
+    /* atan2(y, x) in radians (expects x then y on the stack) */
     FloatArcTan2();
 
-    /* convert radians → degrees */
+    /* radians → degrees */
     FloatWordToFloat(180);
     FloatMultiply();
     FloatPi();
@@ -1207,6 +1206,7 @@ static WWFixedAsDWord SVG_Atan2Deg_WW(WWFixedAsDWord y, WWFixedAsDWord x)
 }
 
 
+
 static WWFixedAsDWord SVG_WWFabs(WWFixedAsDWord v)
 {
     return ((sdword)v < 0) ? (WWFixedAsDWord)(0 - (sdword)v) : v;
@@ -1215,7 +1215,7 @@ static WWFixedAsDWord SVG_WWFabs(WWFixedAsDWord v)
 static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
                            WWFixedAsDWord x0, WWFixedAsDWord y0,
                            WWFixedAsDWord rx, WWFixedAsDWord ry,
-                           WWFixedAsDWord xAxisRotDegW,
+                           WWFixedAsDWord xAxisRotDegW, /* 16.16 degrees */
                            int largeArcFlag, int sweepFlag,
                            WWFixedAsDWord x1, WWFixedAsDWord y1)
 {
@@ -1225,12 +1225,10 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     WWFixedAsDWord num, den, ratio, coef, cxp, cyp;
     WWFixedAsDWord midX, midY, cx, cy;
     WWFixedAsDWord vx1, vy1, vx2, vy2, theta1, delta;
-    WWFixedAsDWord angDeg, angBin, cA, sA;
+    WWFixedAsDWord angDeg, cA, sA;
     WWFixedAsDWord termX, termY;
-    WWFixedAsDWord rotBin;
     sword px, py;
     int segs, i;
-    char dbg[160];
 
     /* trivial cases */
     if ((sdword)rx == 0 || (sdword)ry == 0 ||
@@ -1242,17 +1240,17 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     if ((sdword)rx < 0) rx = -rx;
     if ((sdword)ry < 0) ry = -ry;
 
-    /* rotation */
-    rotBin = GrMulWWFixed(xAxisRotDegW, MakeWWFixed(182.044444)); /* 65536/360 */
-    cRot   = GrQuickCosine(rotBin);
-    sRot   = GrQuickSine(rotBin);
+    /* rotation: pass degrees (16.16) directly to GrQuickCosine/Sine */
+    cRot = GrQuickCosine(xAxisRotDegW);
+    sRot = GrQuickSine(xAxisRotDegW);
 
-    /* midpoint */
+    /* midpoint between points in rotated system (SVG spec) */
     dx2 = GrSDivWWFixed(x0 - x1, MakeWWFixed(2));
     dy2 = GrSDivWWFixed(y0 - y1, MakeWWFixed(2));
     x1p = GrMulWWFixed(cRot, dx2) + GrMulWWFixed(sRot, dy2);
     y1p = -GrMulWWFixed(sRot, dx2) + GrMulWWFixed(cRot, dy2);
 
+    /* ensure radii large enough */
     rx2 = GrMulWWFixed(rx, rx);
     ry2 = GrMulWWFixed(ry, ry);
     t1  = GrSDivWWFixed(GrMulWWFixed(x1p, x1p), rx2);
@@ -1266,10 +1264,12 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         ry2   = GrMulWWFixed(ry, ry);
     }
 
+    /* center in rotated coord system */
     num = GrMulWWFixed(rx2, ry2) - GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
         - GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
     den = GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
         + GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
+
     if ((sdword)num <= 0 || (sdword)den <= 0) {
         coef = 0;
     } else {
@@ -1281,53 +1281,47 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
     }
 
     cxp = GrMulWWFixed(coef, GrSDivWWFixed(GrMulWWFixed(rx, y1p), ry));
-    cyp = -GrMulWWFixed(coef, GrSDivWWFixed(GrMulWWFixed(ry, x1p), rx));
+    cyp = GrMulWWFixed(-coef, GrSDivWWFixed(GrMulWWFixed(ry, x1p), rx));
+
+    /* back to original coord system */
     midX = GrSDivWWFixed(x0 + x1, MakeWWFixed(2));
     midY = GrSDivWWFixed(y0 + y1, MakeWWFixed(2));
     cx = GrMulWWFixed(cRot, cxp) - GrMulWWFixed(sRot, cyp) + midX;
     cy = GrMulWWFixed(sRot, cxp) + GrMulWWFixed(cRot, cyp) + midY;
 
+    /* unit vectors for angles */
     vx1 = GrSDivWWFixed((x1p - cxp), rx);
     vy1 = GrSDivWWFixed((y1p - cyp), ry);
     vx2 = GrSDivWWFixed((-x1p - cxp), rx);
     vy2 = GrSDivWWFixed((-y1p - cyp), ry);
 
+    /* angles in DEGREES (16.16) */
     theta1 = SVG_Atan2Deg_WW(vy1, vx1);
+
     {
         WWFixedAsDWord cross = GrMulWWFixed(vx1, vy2) - GrMulWWFixed(vy1, vx2);
         WWFixedAsDWord dot   = GrMulWWFixed(vx1, vx2) + GrMulWWFixed(vy1, vy2);
-        delta = SVG_Atan2Deg_WW(cross, dot);   /* range [-180,180] */
+        delta = SVG_Atan2Deg_WW(cross, dot);   /* in [-180, 180] */
     }
 
-    /* GEOS/META has downward Y axis: flip angles */
-    theta1 = (WWFixedAsDWord)(0 - (sdword)theta1);
-    delta  = (WWFixedAsDWord)(0 - (sdword)delta);
-
-    /* enforce sweep according to SVG spec */
+    /* apply sweep direction */
     if (!sweepFlag && (sdword)delta > 0) {
         delta -= MakeWWFixed(360);
     } else if (sweepFlag && (sdword)delta < 0) {
         delta += MakeWWFixed(360);
     }
 
-    /* large-arc correction */
-    if (largeArcFlag) {
-        if ((sdword)delta > 0) delta -= MakeWWFixed(360);
-        else                   delta += MakeWWFixed(360);
+    /* apply large-arc as per spec using |delta| */
+    {
+        WWFixedAsDWord absDelta = SVG_WWFabs(delta);
+        if (!largeArcFlag && (sdword)absDelta > (sdword)MakeWWFixed(180)) {
+            delta += ((sdword)delta > 0) ? -MakeWWFixed(360) : MakeWWFixed(360);
+        } else if (largeArcFlag && (sdword)absDelta < (sdword)MakeWWFixed(180)) {
+            delta += ((sdword)delta > 0) ? MakeWWFixed(360) : -MakeWWFixed(360);
+        }
     }
 
-    /* debug info below arc */
-    sprintf(dbg, "t=%d d=%d laf=%d sf=%d x0=%d y0=%d x1=%d y1=%d",
-        WWFixedToSWordRound(theta1),
-        WWFixedToSWordRound(delta),
-        largeArcFlag, sweepFlag,
-        WWFixedToSWordRound(x0), WWFixedToSWordRound(y0),
-        WWFixedToSWordRound(x1), WWFixedToSWordRound(y1));
-    Meta_TextAt((WWFixedToSWordRound(x0) + WWFixedToSWordRound(x1)) / 2,
-                WWFixedToSWordRound(y0) + 20,
-                dbg, MakeWWFixedFromInt(10), 0);
-
-    /* number of segments */
+    /* number of segments (cap to something sane) */
     {
         sword dAbsDeg = WWFixedToSWordRound(SVG_WWFabs(delta));
         segs = dAbsDeg / 11;
@@ -1336,13 +1330,12 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
         if (segs > 60) segs = 60;
     }
 
-    /* generate points */
+    /* generate points — use degrees directly in trig */
     for (i = 1; i <= segs; i++) {
         angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)),
                                         MakeWWFixed(segs));
-        angBin = GrMulWWFixed(angDeg, MakeWWFixed(182.044444));
-        cA     = GrQuickCosine(angBin);
-        sA     = GrQuickSine(angBin);
+        cA = GrQuickCosine(angDeg);
+        sA = GrQuickSine(angDeg);
 
         termX = GrMulWWFixed(cRot, GrMulWWFixed(rx, cA))
               - GrMulWWFixed(sRot, GrMulWWFixed(ry, sA));
@@ -1357,206 +1350,10 @@ static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
 
 
 
+
 /* -------------------------------------- */
 /* ---------- element handlers ---------- */
 /* -------------------------------------- */
-
-static void HandleLineTag(const char *tag)
-{
-    static char     xb[32], yb[32], x2b[32], y2b[32];
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-    sword           x1;
-    sword           y1;
-    sword           x2;
-    sword           y2;
-
-    if (GetAttrBounded(tag, "x1", xb, sizeof(xb)) &&
-        GetAttrBounded(tag, "y1", yb, sizeof(yb)) &&
-        GetAttrBounded(tag, "x2", x2b, sizeof(x2b)) &&
-        GetAttrBounded(tag, "y2", y2b, sizeof(y2b)))
-    {
-        ApplyStrokeAndFill(tag);
-        ApplyStrokeWidth(tag);
-
-        x1 = SVG_ParseCoordXStr(xb);
-        y1 = SVG_ParseCoordYStr(yb);
-        x2 = SVG_ParseCoordXStr(x2b);
-        y2 = SVG_ParseCoordYStr(y2b);
-
-        SVG_GetScale(tag, &sx, &sy);
-        SVG_ApplyScalePoint(&x1, &y1, sx, sy);
-        SVG_ApplyScalePoint(&x2, &y2, sx, sy);
-
-        Meta_Line(x1, y1, x2, y2);
-    }
-}
-
-static void HandlePolylineTag(const char *tag, SVGScratch *sc)
-{
-    word            np;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-    word            i;
-
-    sc->pb[0] = 0;
-    if (GetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
-    {
-        ApplyStrokeAndFill(tag);
-        ApplyStrokeWidth(tag);
-
-        SVG_ParsePoints(sc->pb, sc->pts, &np);
-        if (np > 0)
-        {
-            SVG_GetScale(tag, &sx, &sy);
-            for (i = 0; i < np; i++)
-            {
-                sword px;
-                sword py;
-
-                px = sc->pts[i].P_x;
-                py = sc->pts[i].P_y;
-                SVG_ApplyScalePoint(&px, &py, sx, sy);
-                sc->pts[i].P_x = px;
-                sc->pts[i].P_y = py;
-            }
-            Meta_Polyline(sc->pts, np);
-        }
-    }
-}
-
-static void HandlePolygonTag(const char *tag, SVGScratch *sc)
-{
-    word            np;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-    word            i;
-
-    sc->pb[0] = 0;
-    if (GetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
-    {
-        ApplyStrokeAndFill(tag);
-        ParseFillRule(tag);
-        ApplyStrokeWidth(tag);
-
-        SVG_ParsePoints(sc->pb, sc->pts, &np);
-        if (np > 0)
-        {
-            SVG_GetScale(tag, &sx, &sy);
-            for (i = 0; i < np; i++)
-            {
-                sword px;
-                sword py;
-
-                px = sc->pts[i].P_x;
-                py = sc->pts[i].P_y;
-                SVG_ApplyScalePoint(&px, &py, sx, sy);
-                sc->pts[i].P_x = px;
-                sc->pts[i].P_y = py;
-            }
-            Meta_Polygon(sc->pts, np, SVG_HasFill(tag), SVG_HasStroke(tag));
-        }
-    }
-}
-
-static void HandleRectTag(const char *tag)
-{
-    static char     xb[32], yb[32], wb[32], hb[32];
-    sword           x;
-    sword           y;
-    sword           x2;
-    sword           y2;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-
-    if (GetAttrBounded(tag, "x", xb, sizeof(xb)) &&
-        GetAttrBounded(tag, "y", yb, sizeof(yb)) &&
-        GetAttrBounded(tag, "width", wb, sizeof(wb)) &&
-        GetAttrBounded(tag, "height", hb, sizeof(hb)))
-    {
-        ApplyStrokeAndFill(tag);
-        ApplyStrokeWidth(tag);
-
-        x  = SVG_ParseCoordXStr(xb);
-        y  = SVG_ParseCoordYStr(yb);
-        x2 = (sword)(x + SVG_ParseLenXStr(wb));
-        y2 = (sword)(y + SVG_ParseLenYStr(hb));
-
-        SVG_GetScale(tag, &sx, &sy);
-        SVG_ApplyScalePoint(&x,  &y,  sx, sy);
-        SVG_ApplyScalePoint(&x2, &y2, sx, sy);
-
-        if (y > y2) { sword t = y; y = y2; y2 = t; }
-        if (x > x2) { sword t = x; x = x2; x2 = t; }
-
-        Meta_Rect(x, y, x2, y2, SVG_HasFill(tag), SVG_HasStroke(tag));
-    }
-}
-
-static void HandleEllipseTag(const char *tag)
-{
-    static char     cxb[32], cyb[32], rxb[32], ryb[32];
-    sword           cx;
-    sword           cy;
-    sword           rx;
-    sword           ry;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-
-    if (GetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
-        GetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
-        GetAttrBounded(tag, "rx", rxb, sizeof(rxb)) &&
-        GetAttrBounded(tag, "ry", ryb, sizeof(ryb)))
-    {
-        ApplyStrokeAndFill(tag);
-        ApplyStrokeWidth(tag);
-
-        cx = SVG_ParseCoordXStr(cxb);
-        cy = SVG_ParseCoordYStr(cyb);
-        rx = SVG_ParseLenXStr(rxb);
-        ry = SVG_ParseLenYStr(ryb);
-
-        SVG_GetScale(tag, &sx, &sy);
-
-        SVG_ApplyScalePoint(&cx, &cy, sx, sy);
-        rx = SVG_ScaleLength(rx, sx);
-        ry = SVG_ScaleLength(ry, sy);
-
-        Meta_Ellipse(cx, cy, rx, ry, 0, SVG_HasFill(tag), SVG_HasStroke(tag));
-    }
-}
-
-static void HandleCircleTag(const char *tag)
-{
-    static char     cxb[32], cyb[32], rb[32];
-    sword           cx;
-    sword           cy;
-    sword           r;
-    sword           rx;
-    sword           ry;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-
-    if (GetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
-        GetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
-        GetAttrBounded(tag, "r",  rb,  sizeof(rb)))
-    {
-        ApplyStrokeAndFill(tag);
-        ApplyStrokeWidth(tag);
-
-        cx = SVG_ParseCoordXStr(cxb);
-        cy = SVG_ParseCoordYStr(cyb);
-        r  = SVG_ParseLenXStr(rb);
-
-        SVG_GetScale(tag, &sx, &sy);
-
-        SVG_ApplyScalePoint(&cx, &cy, sx, sy);
-        rx = SVG_ScaleLength(r, sx);
-        ry = SVG_ScaleLength(r, sy);
-
-        Meta_Ellipse(cx, cy, rx, ry, 0, SVG_HasFill(tag), SVG_HasStroke(tag));
-    }
-}
 
 
 /* ---- path (axis-aware, abs vs rel) ---- */
@@ -1851,6 +1648,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             WWFixedAsDWord rxMap, ryMap;
             WWFixedAsDWord exMap, eyMap;
             int laf, swf;
+            int rotDeg;
             Boolean done;
 
             done = FALSE;
@@ -1869,7 +1667,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 /* ry */
                 sP = ParseWWFixed16_16(sP, &ryW);
 
-                /* rotation */
+                /* rotation (convert to integer degrees) */
                 sP = SVG_SkipWS(sP);
                 sP = ParseWWFixed16_16(sP, &rotW);
                 if (*sP == ',') sP++;
@@ -1914,20 +1712,42 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 exMap = ((WWFixedAsDWord)VB_MapPosX_F(exW)) << 16;
                 eyMap = ((WWFixedAsDWord)VB_MapPosY_F(eyW)) << 16;
 
-                /* flatten into polyline — NOTE: sweep flag inverted (!swf) */
-                /* flatten into polyline */
+                /* flatten arc into sc->pts */
+                np = 0;
                 SVG_FlattenArc(sc, &np,
                             x0W, y0W,
                             rxMap, ryMap,
+                            /* pass rotW (16.16 degrees), keep swf */
                             rotW, laf, swf,
                             exMap, eyMap);
 
+                /* scale arc points and emit immediately */
+                {
+                    WWFixedAsDWord sx2, sy2;
+                    int i;
+                    SVG_GetScale(tag, &sx2, &sy2);
+                    for (i = 0; i < np; i++) {
+                        sword px = sc->pts[i].P_x;
+                        sword py = sc->pts[i].P_y;
+                        SVG_ApplyScalePoint(&px, &py, sx2, sy2);
+                        sc->pts[i].P_x = px;
+                        sc->pts[i].P_y = py;
+                    }
+                    if (np > 1) {
+                        Meta_Polyline(sc->pts, np);
+                    }
+                }
 
+                /* update current point */
                 lastx = WWFixedToSWordRound(exMap);
                 lasty = WWFixedToSWordRound(eyMap);
+
+                /* reset point buffer so arcs don’t spill into path */
+                np = 0;
             }
             break;
         }
+
 
         /* ----- smooth cubic (S/s): reflect lastC2 across current point ----- */
         case 'S': case 's': {
@@ -2010,6 +1830,206 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
         else        Meta_Polyline(sc->pts, np);
     }
 }
+
+
+static void HandleLineTag(const char *tag)
+{
+    static char     xb[32], yb[32], x2b[32], y2b[32];
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+    sword           x1;
+    sword           y1;
+    sword           x2;
+    sword           y2;
+
+    if (GetAttrBounded(tag, "x1", xb, sizeof(xb)) &&
+        GetAttrBounded(tag, "y1", yb, sizeof(yb)) &&
+        GetAttrBounded(tag, "x2", x2b, sizeof(x2b)) &&
+        GetAttrBounded(tag, "y2", y2b, sizeof(y2b)))
+    {
+        ApplyStrokeAndFill(tag);
+        ApplyStrokeWidth(tag);
+
+        x1 = SVG_ParseCoordXStr(xb);
+        y1 = SVG_ParseCoordYStr(yb);
+        x2 = SVG_ParseCoordXStr(x2b);
+        y2 = SVG_ParseCoordYStr(y2b);
+
+        SVG_GetScale(tag, &sx, &sy);
+        SVG_ApplyScalePoint(&x1, &y1, sx, sy);
+        SVG_ApplyScalePoint(&x2, &y2, sx, sy);
+
+        Meta_Line(x1, y1, x2, y2);
+    }
+}
+
+static void HandlePolylineTag(const char *tag, SVGScratch *sc)
+{
+    word            np;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+    word            i;
+
+    sc->pb[0] = 0;
+    if (GetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
+    {
+        ApplyStrokeAndFill(tag);
+        ApplyStrokeWidth(tag);
+
+        SVG_ParsePoints(sc->pb, sc->pts, &np);
+        if (np > 0)
+        {
+            SVG_GetScale(tag, &sx, &sy);
+            for (i = 0; i < np; i++)
+            {
+                sword px;
+                sword py;
+
+                px = sc->pts[i].P_x;
+                py = sc->pts[i].P_y;
+                SVG_ApplyScalePoint(&px, &py, sx, sy);
+                sc->pts[i].P_x = px;
+                sc->pts[i].P_y = py;
+            }
+            Meta_Polyline(sc->pts, np);
+        }
+    }
+}
+
+static void HandlePolygonTag(const char *tag, SVGScratch *sc)
+{
+    word            np;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+    word            i;
+
+    sc->pb[0] = 0;
+    if (GetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
+    {
+        ApplyStrokeAndFill(tag);
+        ParseFillRule(tag);
+        ApplyStrokeWidth(tag);
+
+        SVG_ParsePoints(sc->pb, sc->pts, &np);
+        if (np > 0)
+        {
+            SVG_GetScale(tag, &sx, &sy);
+            for (i = 0; i < np; i++)
+            {
+                sword px;
+                sword py;
+
+                px = sc->pts[i].P_x;
+                py = sc->pts[i].P_y;
+                SVG_ApplyScalePoint(&px, &py, sx, sy);
+                sc->pts[i].P_x = px;
+                sc->pts[i].P_y = py;
+            }
+            Meta_Polygon(sc->pts, np, SVG_HasFill(tag), SVG_HasStroke(tag));
+        }
+    }
+}
+
+static void HandleRectTag(const char *tag)
+{
+    static char     xb[32], yb[32], wb[32], hb[32];
+    sword           x;
+    sword           y;
+    sword           x2;
+    sword           y2;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+
+    if (GetAttrBounded(tag, "x", xb, sizeof(xb)) &&
+        GetAttrBounded(tag, "y", yb, sizeof(yb)) &&
+        GetAttrBounded(tag, "width", wb, sizeof(wb)) &&
+        GetAttrBounded(tag, "height", hb, sizeof(hb)))
+    {
+        ApplyStrokeAndFill(tag);
+        ApplyStrokeWidth(tag);
+
+        x  = SVG_ParseCoordXStr(xb);
+        y  = SVG_ParseCoordYStr(yb);
+        x2 = (sword)(x + SVG_ParseLenXStr(wb));
+        y2 = (sword)(y + SVG_ParseLenYStr(hb));
+
+        SVG_GetScale(tag, &sx, &sy);
+        SVG_ApplyScalePoint(&x,  &y,  sx, sy);
+        SVG_ApplyScalePoint(&x2, &y2, sx, sy);
+
+        if (y > y2) { sword t = y; y = y2; y2 = t; }
+        if (x > x2) { sword t = x; x = x2; x2 = t; }
+
+        Meta_Rect(x, y, x2, y2, SVG_HasFill(tag), SVG_HasStroke(tag));
+    }
+}
+
+static void HandleEllipseTag(const char *tag)
+{
+    static char     cxb[32], cyb[32], rxb[32], ryb[32];
+    sword           cx;
+    sword           cy;
+    sword           rx;
+    sword           ry;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+
+    if (GetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
+        GetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
+        GetAttrBounded(tag, "rx", rxb, sizeof(rxb)) &&
+        GetAttrBounded(tag, "ry", ryb, sizeof(ryb)))
+    {
+        ApplyStrokeAndFill(tag);
+        ApplyStrokeWidth(tag);
+
+        cx = SVG_ParseCoordXStr(cxb);
+        cy = SVG_ParseCoordYStr(cyb);
+        rx = SVG_ParseLenXStr(rxb);
+        ry = SVG_ParseLenYStr(ryb);
+
+        SVG_GetScale(tag, &sx, &sy);
+
+        SVG_ApplyScalePoint(&cx, &cy, sx, sy);
+        rx = SVG_ScaleLength(rx, sx);
+        ry = SVG_ScaleLength(ry, sy);
+
+        Meta_Ellipse(cx, cy, rx, ry, 0, SVG_HasFill(tag), SVG_HasStroke(tag));
+    }
+}
+
+static void HandleCircleTag(const char *tag)
+{
+    static char     cxb[32], cyb[32], rb[32];
+    sword           cx;
+    sword           cy;
+    sword           r;
+    sword           rx;
+    sword           ry;
+    WWFixedAsDWord  sx;
+    WWFixedAsDWord  sy;
+
+    if (GetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
+        GetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
+        GetAttrBounded(tag, "r",  rb,  sizeof(rb)))
+    {
+        ApplyStrokeAndFill(tag);
+        ApplyStrokeWidth(tag);
+
+        cx = SVG_ParseCoordXStr(cxb);
+        cy = SVG_ParseCoordYStr(cyb);
+        r  = SVG_ParseLenXStr(rb);
+
+        SVG_GetScale(tag, &sx, &sy);
+
+        SVG_ApplyScalePoint(&cx, &cy, sx, sy);
+        rx = SVG_ScaleLength(r, sx);
+        ry = SVG_ScaleLength(r, sy);
+
+        Meta_Ellipse(cx, cy, rx, ry, 0, SVG_HasFill(tag), SVG_HasStroke(tag));
+    }
+}
+
+
 
 /* ---------- streaming scanner ---------- */
 static void ScanCtxInit(ScanCtx *c)
