@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Quarter circle arcs, 25 radius -->
+  <path d="M 50,50 A 25,25 0 0 0 75,75" stroke="black" fill="none"/>
+  <path d="M 50,50 A 25,25 0 0 1 75,75" stroke="red" fill="none"/>
+  <path d="M 50,50 A 25,25 0 1 0 75,75" stroke="green" fill="none"/>
+  <path d="M 50,50 A 25,25 0 1 1 75,75" stroke="blue" fill="none"/>
+</svg>

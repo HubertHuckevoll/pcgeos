@@ -1164,174 +1164,380 @@ static void SVG_FlattenCubic(SVGScratch *sc, word *np,
     }
 }
 
-/* Convert 16.16 fixed -> sqrt in 16.16 via GEOS Float stack */
-static WWFixedAsDWord SVG_WWFSqrt(WWFixedAsDWord v)
+/* ===== Fixed-point helpers (WWFixed 16.16) ===== */
+
+/* WWFixed 16.16 add/sub helpers (C89). */
+#ifndef SVG_WWFIX_ADD_SUB_DEFINED
+#define SVG_WWFIX_ADD_SUB_DEFINED
+
+#define GrAddWWFixed(a,b) \
+    ((WWFixedAsDWord)((sdword)(a) + (sdword)(b)))
+
+#define GrSubWWFixed(a,b) \
+    ((WWFixedAsDWord)((sdword)(a) - (sdword)(b)))
+
+#endif /* SVG_WWFIX_ADD_SUB_DEFINED */
+
+
+
+static WWFixedAsDWord
+WWSqrt(WWFixedAsDWord a)
 {
-    if ((sdword)v <= 0) return 0;
-    FloatDwordToFloat((dword)v);        /* v (fixed) */
-    FloatDwordToFloat(65536);           /* 65536 */
-    FloatDivide();                      /* v/65536 -> real */
-    FloatSqrt();                        /* sqrt(real) */
-    FloatDwordToFloat(65536);
-    FloatMultiply();                    /* back to 16.16 */
-    return (WWFixedAsDWord)FloatFloatToDword();
+    /* Newton-Raphson for 16.16 fixed.
+     * g_{n+1} = (g + a/g) / 2
+     */
+    WWFixedAsDWord g;
+    WWFixedAsDWord prev;
+    int i;
+
+    if ((sdword)a <= 0) {
+        return MakeWWFixed(0);
+    }
+
+    /* crude initial guess: max(1, a) but scaled into 16.16 */
+    g = a;
+    /* clamp starting guess to something reasonable to avoid overflow in a/g */
+    if ((sdword)g <= 0) {
+        g = MakeWWFixed(1);
+    }
+
+    prev = 0;
+    for (i = 0; i < 16; i++) {
+        WWFixedAsDWord q;
+
+        if (g == 0) {
+            g = MakeWWFixed(1);
+        }
+        q = GrSDivWWFixed(a, g);                    /* a/g */
+        g = GrSDivWWFixed(GrAddWWFixed(g, q), MakeWWFixed(2)); /* (g + a/g)/2 */
+
+        if (g == prev) {
+            break;
+        }
+        prev = g;
+    }
+    return g;
 }
 
-/* atan2(y,x) -> degrees (16.16) using GEOS Float stack */
-static WWFixedAsDWord SVG_Atan2Deg_WW(WWFixedAsDWord y, WWFixedAsDWord x)
+static WWFixedAsDWord
+WWAbs(WWFixedAsDWord x)
 {
-    /* push x (signed 16.16 → real) FIRST, like META.goc’s phi() */
-    FloatDwordToFloat((sdword)x);
-    FloatDwordToFloat(65536);
-    FloatDivide();
-
-    /* push y (signed 16.16 → real) SECOND (on top) */
-    FloatDwordToFloat((sdword)y);
-    FloatDwordToFloat(65536);
-    FloatDivide();
-
-    /* atan2(y, x) in radians (expects x then y on the stack) */
-    FloatArcTan2();
-
-    /* radians → degrees */
-    FloatWordToFloat(180);
-    FloatMultiply();
-    FloatPi();
-    FloatDivide();
-
-    /* back to 16.16 */
-    FloatDwordToFloat(65536);
-    FloatMultiply();
-    return (WWFixedAsDWord)FloatFloatToDword();
+    return ( (sdword)x < 0 ) ? (WWFixedAsDWord)(-(sdword)x) : x;
 }
 
-
-
-static WWFixedAsDWord SVG_WWFabs(WWFixedAsDWord v)
+static WWFixedAsDWord
+WWMin(WWFixedAsDWord a, WWFixedAsDWord b)
 {
-    return ((sdword)v < 0) ? (WWFixedAsDWord)(0 - (sdword)v) : v;
+    return ((sdword)a < (sdword)b) ? a : b;
 }
 
-static void SVG_FlattenArc(struct _SVGScratch *sc, word *np,
-                           WWFixedAsDWord x0, WWFixedAsDWord y0,
-                           WWFixedAsDWord rx, WWFixedAsDWord ry,
-                           WWFixedAsDWord xAxisRotDegW,
-                           int largeArcFlag, int sweepFlag,
-                           WWFixedAsDWord x1, WWFixedAsDWord y1)
+static WWFixedAsDWord
+WWMax(WWFixedAsDWord a, WWFixedAsDWord b)
 {
-    WWFixedAsDWord cRot, sRot;
-    WWFixedAsDWord dx2, dy2, x1p, y1p;
-    WWFixedAsDWord rx2, ry2, t1, t2, rchk, scale;
-    WWFixedAsDWord num, den, ratio, coef, cxp, cyp;
-    WWFixedAsDWord midX, midY, cx, cy;
-    WWFixedAsDWord vx1, vy1, vx2, vy2, theta1, delta;
-    WWFixedAsDWord angDeg, cA, sA;
-    WWFixedAsDWord termX, termY;
-    sword px, py;
-    int segs, i;
+    return ((sdword)a > (sdword)b) ? a : b;
+}
 
-    /* trivial cases */
-    if ((sdword)rx == 0 || (sdword)ry == 0 ||
-        ((sdword)(x0 - x1) == 0 && (sdword)(y0 - y1) == 0)) {
-        SVG_AddPt(sc, np, WWFixedToSWordRound(x1), WWFixedToSWordRound(y1));
+/* Fast atan2 approximation in **degrees** (16.16 WWFixed).
+ * Eberly’s trick with two linear maps; good enough for segmentation.
+ * Range: [-180°, +180°]
+ */
+static WWFixedAsDWord
+WWAtan2Deg(WWFixedAsDWord y, WWFixedAsDWord x)
+{
+    WWFixedAsDWord absY, r, angle;
+    WWFixedAsDWord k45, k135;
+    WWFixedAsDWord denom;
+
+    absY = WWAbs(y);
+    k45  = MakeWWFixed(45);
+    k135 = MakeWWFixed(135);
+
+    if ((sdword)x >= 0) {
+        /* r = (x - |y|) / (x + |y|) */
+        denom = GrAddWWFixed(x, absY);
+        if ((sdword)denom == 0) {
+            r = 0; /* x==y==0 won't really happen here, but keep safe */
+        } else {
+            r = GrSDivWWFixed(GrSubWWFixed(x, absY), denom);
+        }
+        angle = GrSubWWFixed(k45, GrMulWWFixed(k45, r));
+    } else {
+        /* r = (x + |y|) / (|y| - x) */
+        denom = GrSubWWFixed(absY, x);
+        if ((sdword)denom == 0) {
+            r = 0;
+        } else {
+            r = GrSDivWWFixed(GrAddWWFixed(x, absY), denom);
+        }
+        angle = GrSubWWFixed(k135, GrMulWWFixed(k45, r));
+    }
+
+    if ((sdword)y < 0) {
+        angle = (WWFixedAsDWord)(-(sdword)angle);
+    }
+    return angle;
+}
+
+/* ===== Elliptical-arc flattener (fixed-point) =====
+ *
+ * Inputs (all 16.16):
+ *   x0W,y0W : start point
+ *   rxW,ryW : radii (>=0)
+ *   rotW    : x-axis-rotation in **degrees**
+ *   laf,swf : large-arc-flag (0/1), sweep-flag (0/1)
+ *   x1W,y1W : end point
+ *
+ * Appends integer Points to sc->pts and advances *pNp.
+ * Emits no duplicate of the start point (same contract as your Quad/Cubic flatteners).
+ */
+
+static void
+SVG_FlattenArc(SVGScratch *sc, word *pNp,
+               WWFixedAsDWord x0W, WWFixedAsDWord y0W,
+               WWFixedAsDWord rxW, WWFixedAsDWord ryW,
+               WWFixedAsDWord rotW,
+               int laf, int swf,
+               WWFixedAsDWord x1W, WWFixedAsDWord y1W)
+{
+    /* ----- variables (C89: declare first) ----- */
+    WWFixedAsDWord zero, one, two, half;
+    WWFixedAsDWord pi180;             /* 180° (deg) if needed */
+    WWFixedAsDWord cphi, sphi;        /* cosφ, sinφ (φ in degrees) */
+    WWFixedAsDWord dx, dy, x1p, y1p;  /* primed coordinates */
+    WWFixedAsDWord frx, fry;          /* |rx|, |ry| */
+    WWFixedAsDWord rx2, ry2;          /* rx^2, ry^2 */
+    WWFixedAsDWord x1p2, y1p2;        /* x1'^2, y1'^2 */
+    WWFixedAsDWord lam, scale;        /* λ (radii correction), scale=sqrt(λ) */
+    WWFixedAsDWord num, den, frac, s; /* center calc */
+    WWFixedAsDWord cxp, cyp;          /* center in primed frame */
+    WWFixedAsDWord mx, my;            /* midpoint */
+    WWFixedAsDWord cx, cy;            /* center in original frame */
+    WWFixedAsDWord ux, uy, vx, vy;    /* unit vectors */
+    WWFixedAsDWord th1, dth;          /* start angle, delta angle (degrees) */
+    WWFixedAsDWord cross, dot, absDth;
+    WWFixedAsDWord deltaMaxDeg, stepDeg, theta;
+    WWFixedAsDWord tmp, tmp2;
+    WWFixedAsDWord xr, yr, xp, yp, x, y;
+    WWFixedAsDWord nSegWW;
+    sword xi, yi;
+    word np, remaining, nSeg, k;
+
+    /* ----- constants ----- */
+    zero = MakeWWFixed(0);
+    one  = MakeWWFixed(1);
+    two  = MakeWWFixed(2);
+    half = GrSDivWWFixed(one, two);
+    pi180 = MakeWWFixed(180); /* degrees representation */
+
+    /* degenerates */
+    if (WWFixedToSWordRound(rxW) == 0 || WWFixedToSWordRound(ryW) == 0) {
+        if (*pNp < MAX_SVG_POINTS) {
+            sc->pts[*pNp].P_x = WWFixedToSWordRound(x1W);
+            sc->pts[*pNp].P_y = WWFixedToSWordRound(y1W);
+            (*pNp)++;
+        }
+        return;
+    }
+    if (WWFixedToSWordRound(x0W) == WWFixedToSWordRound(x1W) &&
+        WWFixedToSWordRound(y0W) == WWFixedToSWordRound(y1W)) {
         return;
     }
 
-    if ((sdword)rx < 0) rx = -rx;
-    if ((sdword)ry < 0) ry = -ry;
+    /* |rx|, |ry| */
+    frx = WWAbs(rxW);
+    fry = WWAbs(ryW);
 
-    /* rotation: pass DEGREES directly to the quick trig */
-    cRot = GrQuickCosine(xAxisRotDegW);
-    sRot = GrQuickSine(xAxisRotDegW);
+    /* cosφ, sinφ (φ in **degrees**) */
+    cphi = GrQuickCosine(rotW);
+    sphi = GrQuickSine(rotW);
 
-    /* midpoint between points in rotated system */
-    dx2 = GrSDivWWFixed(x0 - x1, MakeWWFixed(2));
-    dy2 = GrSDivWWFixed(y0 - y1, MakeWWFixed(2));
-    x1p = GrMulWWFixed(cRot, dx2) + GrMulWWFixed(sRot, dy2);
-    y1p = -GrMulWWFixed(sRot, dx2) + GrMulWWFixed(cRot, dy2);
+    /* midpoint diff in original frame: (x0 - x1)/2, (y0 - y1)/2 */
+    dx = GrSDivWWFixed(GrSubWWFixed(x0W, x1W), two);
+    dy = GrSDivWWFixed(GrSubWWFixed(y0W, y1W), two);
 
-    /* ensure radii large enough */
-    rx2 = GrMulWWFixed(rx, rx);
-    ry2 = GrMulWWFixed(ry, ry);
-    t1  = GrSDivWWFixed(GrMulWWFixed(x1p, x1p), rx2);
-    t2  = GrSDivWWFixed(GrMulWWFixed(y1p, y1p), ry2);
-    rchk = t1 + t2;
-    if ((sdword)rchk > (sdword)WWFIXED_ONE) {
-        scale = SVG_WWFSqrt(rchk);
-        rx    = GrMulWWFixed(rx, scale);
-        ry    = GrMulWWFixed(ry, scale);
-        rx2   = GrMulWWFixed(rx, rx);
-        ry2   = GrMulWWFixed(ry, ry);
+    /* x1' =  cosφ*dx + sinφ*dy
+     * y1' = -sinφ*dx + cosφ*dy
+     */
+    tmp  = GrMulWWFixed(cphi, dx);
+    tmp2 = GrMulWWFixed(sphi, dy);
+    x1p  = GrAddWWFixed(tmp, tmp2);
+
+    tmp  = GrMulWWFixed(sphi, dx);
+    tmp  = (WWFixedAsDWord)(-(sdword)tmp);
+    tmp2 = GrMulWWFixed(cphi, dy);
+    y1p  = GrAddWWFixed(tmp, tmp2);
+
+    /* squares */
+    x1p2 = GrMulWWFixed(x1p, x1p);
+    y1p2 = GrMulWWFixed(y1p, y1p);
+    rx2  = GrMulWWFixed(frx, frx);
+    ry2  = GrMulWWFixed(fry, fry);
+
+    /* Radii correction λ = x1'^2/rx^2 + y1'^2/ry^2 ; if λ>1, scale rx,ry *= sqrt(λ) */
+    tmp  = GrSDivWWFixed(x1p2, rx2);
+    tmp2 = GrSDivWWFixed(y1p2, ry2);
+    lam  = GrAddWWFixed(tmp, tmp2);
+
+    if ((sdword)lam > (sdword)one) {
+        scale = WWSqrt(lam);
+        frx = GrMulWWFixed(frx, scale);
+        fry = GrMulWWFixed(fry, scale);
+        rx2 = GrMulWWFixed(frx, frx);
+        ry2 = GrMulWWFixed(fry, fry);
     }
 
-    /* choose center sign (largeArc/sweep) */
-    num = GrMulWWFixed(rx2, ry2) - GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
-        - GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
-    den = GrMulWWFixed(rx2, GrMulWWFixed(y1p, y1p))
-        + GrMulWWFixed(ry2, GrMulWWFixed(x1p, x1p));
-    if ((sdword)num <= 0 || (sdword)den <= 0) {
-        coef = 0;
+    /* Center in primed frame:
+     * s = sqrt( max(0, (rx^2*ry^2 - rx^2*y1'^2 - ry^2*x1'^2) / (rx^2*y1'^2 + ry^2*x1'^2)) )
+     * if (laf == swf) s = -s
+     */
+    tmp  = GrMulWWFixed(rx2, ry2);
+    tmp2 = GrMulWWFixed(rx2, y1p2);
+    num  = GrSubWWFixed(tmp, tmp2);
+    tmp2 = GrMulWWFixed(ry2, x1p2);
+    num  = GrSubWWFixed(num, tmp2);
+
+    tmp  = GrMulWWFixed(rx2, y1p2);
+    tmp2 = GrMulWWFixed(ry2, x1p2);
+    den  = GrAddWWFixed(tmp, tmp2);
+
+    if ((sdword)den == 0) {
+        frac = zero;
     } else {
-        ratio = GrSDivWWFixed(num, den);
-        coef  = SVG_WWFSqrt(ratio);
-        if (largeArcFlag == sweepFlag)
-            coef = (WWFixedAsDWord)(0 - (sdword)coef);
+        frac = GrSDivWWFixed(num, den);
+        if ((sdword)frac < 0) {
+            frac = zero;
+        }
     }
 
-    /* center in original coords */
-    cxp = GrMulWWFixed(coef, GrSDivWWFixed(GrMulWWFixed(rx, y1p), ry));
-    cyp = GrMulWWFixed(-coef, GrSDivWWFixed(GrMulWWFixed(ry, x1p), rx));
-    midX = GrSDivWWFixed(x0 + x1, MakeWWFixed(2));
-    midY = GrSDivWWFixed(y0 + y1, MakeWWFixed(2));
-    cx = GrMulWWFixed(cRot, cxp) - GrMulWWFixed(sRot, cyp) + midX;
-    cy = GrMulWWFixed(sRot, cxp) + GrMulWWFixed(cRot, cyp) + midY;
-
-    /* unit vectors to start/end on the ellipse */
-    vx1 = GrSDivWWFixed((x1p - cxp), rx);
-    vy1 = GrSDivWWFixed((y1p - cyp), ry);
-    vx2 = GrSDivWWFixed((-x1p - cxp), rx);
-    vy2 = GrSDivWWFixed((-y1p - cyp), ry);
-
-    /* angles in degrees */
-    theta1 = SVG_Atan2Deg_WW(vy1, vx1);
-    {
-        WWFixedAsDWord cross = GrMulWWFixed(vx1, vy2) - GrMulWWFixed(vy1, vx2);
-        WWFixedAsDWord dot   = GrMulWWFixed(vx1, vx2) + GrMulWWFixed(vy1, vy2);
-        delta = SVG_Atan2Deg_WW(cross, dot);   /* [-180,180] */
+    s = WWSqrt(frac);
+    if (laf == swf) {
+        s = (WWFixedAsDWord)(-(sdword)s);
     }
 
-    /* enforce sweep ONLY */
-    if (!sweepFlag && (sdword)delta > 0)
-        delta -= MakeWWFixed(360);
-    else if (sweepFlag && (sdword)delta < 0)
-        delta += MakeWWFixed(360);
+    /* cx' =  s * (rx*y1') / ry
+     * cy' = -s * (ry*x1') / rx
+     */
+    tmp  = GrMulWWFixed(frx, y1p);
+    tmp  = GrSDivWWFixed(tmp, fry);
+    cxp  = GrMulWWFixed(s, tmp);
 
-    /* segment count */
-    {
-        sword dAbsDeg = WWFixedToSWordRound(SVG_WWFabs(delta));
-        segs = dAbsDeg / 11;
-        if (segs * 11 < dAbsDeg) segs++;
-        if (segs < 1)  segs = 1;
-        if (segs > 60) segs = 60;
+    tmp  = GrMulWWFixed(fry, x1p);
+    tmp  = GrSDivWWFixed(tmp, frx);
+    tmp  = (WWFixedAsDWord)(-(sdword)tmp);
+    cyp  = GrMulWWFixed(s, tmp);
+
+    /* mx,my = (x0+x1)/2, (y0+y1)/2 */
+    mx = GrSDivWWFixed(GrAddWWFixed(x0W, x1W), two);
+    my = GrSDivWWFixed(GrAddWWFixed(y0W, y1W), two);
+
+    /* cx,cy back to original frame:
+     * cx = cosφ*cx' - sinφ*cy' + mx
+     * cy = sinφ*cx' + cosφ*cy' + my
+     */
+    tmp  = GrMulWWFixed(cphi, cxp);
+    tmp2 = GrMulWWFixed(sphi, cyp);
+    tmp2 = (WWFixedAsDWord)(-(sdword)tmp2);
+    cx   = GrAddWWFixed(GrAddWWFixed(tmp, tmp2), mx);
+
+    tmp  = GrMulWWFixed(sphi, cxp);
+    tmp2 = GrMulWWFixed(cphi, cyp);
+    cy   = GrAddWWFixed(GrAddWWFixed(tmp, tmp2), my);
+
+    /* unit vectors u and v to compute θ1 and Δθ */
+    /* u = ((x1' - cx')/rx, (y1' - cy')/ry) */
+    ux = GrSDivWWFixed(GrSubWWFixed(x1p, cxp), frx);
+    uy = GrSDivWWFixed(GrSubWWFixed(y1p, cyp), fry);
+
+    /* v = ((-x1' - cx')/rx, (-y1' - cy')/ry) */
+    vx = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)x1p), cxp), frx);
+    vy = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)y1p), cyp), fry);
+
+    /* θ1 = atan2(uy, ux) in degrees; Δθ = atan2(cross, dot) in degrees */
+    th1 = WWAtan2Deg(uy, ux);
+
+    tmp  = GrMulWWFixed(ux, vy);
+    tmp2 = GrMulWWFixed(uy, vx);
+    cross = GrSubWWFixed(tmp, tmp2);
+
+    tmp  = GrMulWWFixed(ux, vx);
+    tmp2 = GrMulWWFixed(uy, vy);
+    dot   = GrAddWWFixed(tmp, tmp2);
+
+    dth = WWAtan2Deg(cross, dot); /* signed */
+
+    /* Normalize Δθ for sweep flag: ensure its sign matches CCW(+) / CW(-) */
+    if (!swf) {
+        if ((sdword)dth > 0) {
+            dth = GrSubWWFixed(dth, MakeWWFixed(360));
+        }
+    } else {
+        if ((sdword)dth < 0) {
+            dth = GrAddWWFixed(dth, MakeWWFixed(360));
+        }
     }
 
-    /* generate points – degrees to trig, no Y-negation */
-    for (i = 1; i <= segs; i++) {
-        angDeg = theta1 + GrSDivWWFixed(GrMulWWFixed(delta, MakeWWFixed(i)),
-                                        MakeWWFixed(segs));
-        cA = GrQuickCosine(angDeg);
-        sA = GrQuickSine(angDeg);
+    /* segments: ~12° per segment (like NanoSVG’s granularity) */
+    absDth = WWAbs(dth);
+    deltaMaxDeg = MakeWWFixed(12);
 
-        termX =  GrMulWWFixed(cRot, GrMulWWFixed(rx, cA))
-               - GrMulWWFixed(sRot, GrMulWWFixed(ry, sA));
-        termY =  GrMulWWFixed(sRot, GrMulWWFixed(rx, cA))
-               + GrMulWWFixed(cRot, GrMulWWFixed(ry, sA));
-
-        px = WWFixedToSWordRound(cx + termX);
-        py = WWFixedToSWordRound(cy + termY);
-        SVG_AddPt(sc, np, px, py);
+    /* nSeg = ceil(absΔθ / deltaMaxDeg) */
+    nSegWW = GrSDivWWFixed(absDth, deltaMaxDeg);
+    nSeg = (word)WWFixedToSWordRound(nSegWW);
+    if (GrMulWWFixed(MakeWWFixed(nSeg), deltaMaxDeg) < absDth) {
+        nSeg++;
     }
+    if (nSeg < 1) {
+        nSeg = 1;
+    }
+
+    /* clamp by available point slots */
+    np = *pNp;
+    remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
+    if (remaining == 0) {
+        return;
+    }
+    if (nSeg > remaining) {
+        nSeg = remaining;
+    }
+
+    /* step in degrees */
+    stepDeg = GrSDivWWFixed(dth, MakeWWFixed(nSeg));
+
+    /* Emit k = 1..nSeg points */
+    for (k = 1; k <= nSeg; k++) {
+        WWFixedAsDWord cth, sth;
+        /* θ = θ1 + k*stepDeg */
+        theta = GrAddWWFixed(th1, GrMulWWFixed(stepDeg, MakeWWFixed(k)));
+
+        /* x' = rx*cosθ ; y' = ry*sinθ  (θ in degrees) */
+        cth = GrQuickCosine(theta);
+        sth = GrQuickSine(theta);
+
+        xr = GrMulWWFixed(frx, cth);
+        yr = GrMulWWFixed(fry, sth);
+
+        /* rotate back & translate: x = cosφ*x' - sinφ*y' + cx; y = sinφ*x' + cosφ*y' + cy */
+        xp = GrSubWWFixed(GrMulWWFixed(cphi, xr), GrMulWWFixed(sphi, yr));
+        yp = GrAddWWFixed(GrMulWWFixed(sphi, xr), GrMulWWFixed(cphi, yr));
+
+        x = GrAddWWFixed(xp, cx);
+        y = GrAddWWFixed(yp, cy);
+
+        xi = WWFixedToSWordRound(x);
+        yi = WWFixedToSWordRound(y);
+
+        if (np < MAX_SVG_POINTS) {
+            sc->pts[np].P_x = xi;
+            sc->pts[np].P_y = yi;
+            np++;
+        } else {
+            break;
+        }
+    }
+
+    *pNp = np;
 }
+
 
 
 
@@ -1626,61 +1832,94 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
             break;
         }
 
-        case 'A': case 'a': {
+        /* ----- elliptical arc (repeating groups) ----- */
+        case 'A': case 'a':
+        {
             WWFixedAsDWord rxW, ryW, rotW, tmpW;
             WWFixedAsDWord exW, eyW, dxW, dyW;
-            WWFixedAsDWord x0W, y0W, rxMap, ryMap, exMap, eyMap;
-            int laf, swf;
-            Boolean done = FALSE;
+            WWFixedAsDWord x0W, y0W;
+            int            laf, swf;
+            Boolean        done;
 
-            while (!done) {
+            done = FALSE;
+            while (!done)
+            {
                 sP = SVG_SkipWS(sP);
-                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') { done = TRUE; continue; }
+                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') {
+                    done = TRUE;
+                    continue;
+                }
 
-                /* rx, ry, rotation (all 16.16) */
+                /* rx, ry, x-axis-rotation (all 16.16, still in path space) */
                 sP = ParseWWFixed16_16(sP, &rxW);
-                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
                 sP = ParseWWFixed16_16(sP, &ryW);
                 sP = SVG_SkipWS(sP);
                 sP = ParseWWFixed16_16(sP, &rotW);
-                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
 
-                /* flags */
-                sP = ParseWWFixed16_16(sP, &tmpW); laf = (WWFixedToSWordRound(tmpW) != 0);
-                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
-                sP = ParseWWFixed16_16(sP, &tmpW); swf = (WWFixedToSWordRound(tmpW) != 0);
-                if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
+                /* flags (large-arc, sweep) */
+                sP = ParseWWFixed16_16(sP, &tmpW);
+                laf = (WWFixedToSWordRound(tmpW) != 0);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
+                sP = ParseWWFixed16_16(sP, &tmpW);
+                swf = (WWFixedToSWordRound(tmpW) != 0);
+                if (*sP == ',') sP++;
+                sP = SVG_SkipWS(sP);
 
-                /* endpoint (abs/rel) */
+                /* endpoint (abs/rel) — still in un-mapped path space */
                 if (lastCmd == 'A') {
                     sP = ParseWWFixed16_16(sP, &exW);
-                    if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
                     sP = ParseWWFixed16_16(sP, &eyW);
                 } else {
                     sP = ParseWWFixed16_16(sP, &dxW);
-                    if (*sP == ',') sP++; sP = SVG_SkipWS(sP);
+                    if (*sP == ',') sP++;
+                    sP = SVG_SkipWS(sP);
                     sP = ParseWWFixed16_16(sP, &dyW);
                     exW = MakeWWFixed(lastx) + dxW;
                     eyW = MakeWWFixed(lasty) + dyW;
                 }
 
-                /* map to the same device coords as other path commands */
-                x0W   = ((WWFixedAsDWord)lastx) << 16;
-                y0W   = ((WWFixedAsDWord)lasty) << 16;
-                rxMap = ((WWFixedAsDWord)VB_MapLenX_F(rxW)) << 16;
-                ryMap = ((WWFixedAsDWord)VB_MapLenY_F(ryW)) << 16;
-                exMap = ((WWFixedAsDWord)VB_MapPosX_F(exW)) << 16;
-                eyMap = ((WWFixedAsDWord)VB_MapPosY_F(eyW)) << 16;
+                /* SVG degenerates */
+                if ((WWFixedToSWordRound(rxW) == 0) || (WWFixedToSWordRound(ryW) == 0)) {
+                    /* radius zero -> straight line to end point */
+                    if (np < MAX_SVG_POINTS) {
+                        sc->pts[np].P_x = WWFixedToSWordRound(exW);
+                        sc->pts[np].P_y = WWFixedToSWordRound(eyW);
+                        np++;
+                    }
+                    lastx = WWFixedToSWordRound(exW);
+                    lasty = WWFixedToSWordRound(eyW);
+                    continue;
+                }
+                if ((WWFixedToSWordRound(exW) == lastx) && (WWFixedToSWordRound(eyW) == lasty)) {
+                    /* identical endpoints -> no-op */
+                    continue;
+                }
 
-                /* append arc points; do not draw/scale now */
+                /* current point in the same space (16.16 for the flattener) */
+                x0W = ((WWFixedAsDWord)lastx) << 16;
+                y0W = ((WWFixedAsDWord)lasty) << 16;
+
+                /* flatten to polyline in *path space* (no VB_Map* here) */
                 SVG_FlattenArc(sc, &np,
-                            x0W, y0W, rxMap, ryMap,
-                            rotW, laf, swf,      /* swf as-is */
-                            exMap, eyMap);
+                               x0W, y0W,      /* start (16.16) */
+                               rxW, ryW,      /* radii (16.16) */
+                               rotW,          /* x-axis rotation (deg, 16.16) */
+                               laf, swf,
+                               exW, eyW);     /* end (16.16) */
 
-                /* update current point (mapped) */
-                lastx = WWFixedToSWordRound(exMap);
-                lasty = WWFixedToSWordRound(eyMap);
+                /* update current point (un-mapped) */
+                lastx = WWFixedToSWordRound(exW);
+                lasty = WWFixedToSWordRound(eyW);
+
+                lastWasCubic = FALSE;
+                lastWasQuad  = FALSE;
             }
             break;
         }
