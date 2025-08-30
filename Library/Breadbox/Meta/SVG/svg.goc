@@ -1292,6 +1292,9 @@ WWAtan2Deg(WWFixedAsDWord y, WWFixedAsDWord x)
  * Emits no duplicate of the start point (same contract as your Quad/Cubic flatteners).
  */
 
+/* define once in a common header or above, as you prefer */
+#define SVG_ARC_DEBUG 1
+
 static void
 SVG_FlattenArc(SVGScratch *sc, word *pNp,
                WWFixedAsDWord x0W, WWFixedAsDWord y0W,
@@ -1309,7 +1312,7 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
     WWFixedAsDWord rx2, ry2;          /* rx^2, ry^2 */
     WWFixedAsDWord x1p2, y1p2;        /* x1'^2, y1'^2 */
     WWFixedAsDWord lam, scale;        /* λ (radii correction), scale=sqrt(λ) */
-    WWFixedAsDWord num, den, frac, s; /* center calc */
+    WWFixedAsDWord num, den, frac, s; /* reused temps + s */
     WWFixedAsDWord cxp, cyp;          /* center in primed frame */
     WWFixedAsDWord mx, my;            /* midpoint */
     WWFixedAsDWord cx, cy;            /* center in original frame */
@@ -1323,12 +1326,38 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
     sword xi, yi;
     word np, remaining, nSeg, k;
 
+    /* --- debug locals --- */
+#ifdef SVG_ARC_DEBUG
+    word  np0;
+    sword sx, sy, ex, ey;
+    sword ccx, ccy, sth1, sdth, sStep;
+    sword fxi, fyi, mxi, myi, lxi, lyi;
+    word  midK;
+    Boolean haveMid;
+    char   dbuf[160];
+#endif
+
     /* ----- constants ----- */
     zero = MakeWWFixed(0);
     one  = MakeWWFixed(1);
     two  = MakeWWFixed(2);
     half = GrSDivWWFixed(one, two);
     pi180 = MakeWWFixed(180); /* degrees representation */
+
+    /* --- debug: inputs --- */
+#ifdef SVG_ARC_DEBUG
+    np0 = *pNp;
+    sx  = WWFixedToSWordRound(x0W);
+    sy  = WWFixedToSWordRound(y0W);
+    ex  = WWFixedToSWordRound(x1W);
+    ey  = WWFixedToSWordRound(y1W);
+    sprintf(dbuf,
+        "ARC in: start=(%d,%d) end=(%d,%d) rx=%d ry=%d rot=%d laf=%d swf=%d np=%u",
+        (int)sx,(int)sy,(int)ex,(int)ey,
+        (int)WWFixedToSWordRound(rxW),(int)WWFixedToSWordRound(ryW),
+        (int)WWFixedToSWordRound(rotW), laf, swf, (unsigned)(*pNp));
+    _WRITE_TO_FILE(dbuf);
+#endif
 
     /* degenerates */
     if (WWFixedToSWordRound(rxW) == 0 || WWFixedToSWordRound(ryW) == 0) {
@@ -1337,10 +1366,18 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
             sc->pts[*pNp].P_y = WWFixedToSWordRound(y1W);
             (*pNp)++;
         }
+#ifdef SVG_ARC_DEBUG
+        sprintf(dbuf, "ARC degenerate: line-to end=(%d,%d) new_np=%u",
+                (int)WWFixedToSWordRound(x1W), (int)WWFixedToSWordRound(y1W), (unsigned)(*pNp));
+        _WRITE_TO_FILE(dbuf);
+#endif
         return;
     }
     if (WWFixedToSWordRound(x0W) == WWFixedToSWordRound(x1W) &&
         WWFixedToSWordRound(y0W) == WWFixedToSWordRound(y1W)) {
+#ifdef SVG_ARC_DEBUG
+        _WRITE_TO_FILE("ARC degenerate: identical endpoints");
+#endif
         return;
     }
 
@@ -1385,39 +1422,41 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
         fry = GrMulWWFixed(fry, scale);
         rx2 = GrMulWWFixed(frx, frx);
         ry2 = GrMulWWFixed(fry, fry);
+
+        /* recompute λ with scaled radii */
+        tmp  = GrSDivWWFixed(x1p2, rx2);
+        tmp2 = GrSDivWWFixed(y1p2, ry2);
+        lam  = GrAddWWFixed(tmp, tmp2);
     }
 
-    /* Center in primed frame:
-     * s = sqrt( max(0, (rx^2*ry^2 - rx^2*y1'^2 - ry^2*x1'^2) / (rx^2*y1'^2 + ry^2*x1'^2)) )
-     * if (laf == swf) s = -s
-     */
-    tmp  = GrMulWWFixed(rx2, ry2);
-    tmp2 = GrMulWWFixed(rx2, y1p2);
-    num  = GrSubWWFixed(tmp, tmp2);
-    tmp2 = GrMulWWFixed(ry2, x1p2);
-    num  = GrSubWWFixed(num, tmp2);
-
-    tmp  = GrMulWWFixed(rx2, y1p2);
-    tmp2 = GrMulWWFixed(ry2, x1p2);
-    den  = GrAddWWFixed(tmp, tmp2);
-
-    if ((sdword)den == 0) {
-        frac = zero;
+    /* ----- robust s using λ; avoids rx2*ry2 overflow ----- */
+    if ((sdword)lam == 0) {
+        s = zero;
     } else {
-        frac = GrSDivWWFixed(num, den);
+        /* num = 1/λ ; frac = num - 1 = (1/λ)-1 */
+        num  = GrSDivWWFixed(one, lam);
+        frac = GrSubWWFixed(num, one);
         if ((sdword)frac < 0) {
             frac = zero;
         }
+        s = WWSqrt(frac);
     }
-
-    s = WWSqrt(frac);
     if (laf == swf) {
         s = (WWFixedAsDWord)(-(sdword)s);
     }
 
-    /* cx' =  s * (rx*y1') / ry
-     * cy' = -s * (ry*x1') / rx
-     */
+#ifdef SVG_ARC_DEBUG
+    {
+        sword slam = WWFixedToSWordRound(lam);
+        sword sinv1 = WWFixedToSWordRound(frac); /* actually (1/λ)-1 */
+        sword ss    = WWFixedToSWordRound(s);
+        sprintf(dbuf, "ARC s-via-lam: lam=%d invLam-1=%d s=%d",
+                (int)slam, (int)sinv1, (int)ss);
+        _WRITE_TO_FILE(dbuf);
+    }
+#endif
+
+    /* cx' / cy' */
     tmp  = GrMulWWFixed(frx, y1p);
     tmp  = GrSDivWWFixed(tmp, fry);
     cxp  = GrMulWWFixed(s, tmp);
@@ -1431,10 +1470,7 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
     mx = GrSDivWWFixed(GrAddWWFixed(x0W, x1W), two);
     my = GrSDivWWFixed(GrAddWWFixed(y0W, y1W), two);
 
-    /* cx,cy back to original frame:
-     * cx = cosφ*cx' - sinφ*cy' + mx
-     * cy = sinφ*cx' + cosφ*cy' + my
-     */
+    /* back to original frame */
     tmp  = GrMulWWFixed(cphi, cxp);
     tmp2 = GrMulWWFixed(sphi, cyp);
     tmp2 = (WWFixedAsDWord)(-(sdword)tmp2);
@@ -1444,16 +1480,14 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
     tmp2 = GrMulWWFixed(cphi, cyp);
     cy   = GrAddWWFixed(GrAddWWFixed(tmp, tmp2), my);
 
-    /* unit vectors u and v to compute θ1 and Δθ */
-    /* u = ((x1' - cx')/rx, (y1' - cy')/ry) */
+    /* unit vectors u and v */
     ux = GrSDivWWFixed(GrSubWWFixed(x1p, cxp), frx);
     uy = GrSDivWWFixed(GrSubWWFixed(y1p, cyp), fry);
 
-    /* v = ((-x1' - cx')/rx, (-y1' - cy')/ry) */
     vx = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)x1p), cxp), frx);
     vy = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)y1p), cyp), fry);
 
-    /* θ1 = atan2(uy, ux) in degrees; Δθ = atan2(cross, dot) in degrees */
+    /* θ1 and Δθ (degrees) */
     th1 = WWAtan2Deg(uy, ux);
 
     tmp  = GrMulWWFixed(ux, vy);
@@ -1466,7 +1500,7 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
 
     dth = WWAtan2Deg(cross, dot); /* signed */
 
-    /* Normalize Δθ for sweep flag: ensure its sign matches CCW(+) / CW(-) */
+    /* sweep normalize */
     if (!swf) {
         if ((sdword)dth > 0) {
             dth = GrSubWWFixed(dth, MakeWWFixed(360));
@@ -1477,7 +1511,7 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
         }
     }
 
-    /* segments: ~12° per segment (like NanoSVG’s granularity) */
+    /* segments: ~12° per segment */
     absDth = WWAbs(dth);
     deltaMaxDeg = MakeWWFixed(12);
 
@@ -1491,10 +1525,13 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
         nSeg = 1;
     }
 
-    /* clamp by available point slots */
+    /* clamp slots */
     np = *pNp;
     remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
     if (remaining == 0) {
+#ifdef SVG_ARC_DEBUG
+        _WRITE_TO_FILE("ARC abort: no remaining point slots");
+#endif
         return;
     }
     if (nSeg > remaining) {
@@ -1503,6 +1540,22 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
 
     /* step in degrees */
     stepDeg = GrSDivWWFixed(dth, MakeWWFixed(nSeg));
+
+    /* --- debug: center/angles/segmentation --- */
+#ifdef SVG_ARC_DEBUG
+    ccx  = WWFixedToSWordRound(cx);
+    ccy  = WWFixedToSWordRound(cy);
+    sth1 = WWFixedToSWordRound(th1);
+    sdth = WWFixedToSWordRound(dth);
+    sStep= WWFixedToSWordRound(stepDeg);
+    sprintf(dbuf,
+        "ARC core: center=(%d,%d) th1=%d dth=%d nSeg=%u step=%d",
+        (int)ccx,(int)ccy,(int)sth1,(int)sdth,(unsigned)nSeg,(int)sStep);
+    _WRITE_TO_FILE(dbuf);
+    /* prepare sample debug */
+    fxi=fyi=lxi=lyi=0; mxi=myi=0; haveMid=FALSE;
+    midK = (nSeg >= 3) ? (word)((nSeg+1)/2) : 0;
+#endif
 
     /* Emit k = 1..nSeg points */
     for (k = 1; k <= nSeg; k++) {
@@ -1527,6 +1580,12 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
         xi = WWFixedToSWordRound(x);
         yi = WWFixedToSWordRound(y);
 
+#ifdef SVG_ARC_DEBUG
+        if (k == 1) { fxi = xi; fyi = yi; }
+        if (midK && k == midK) { mxi = xi; myi = yi; haveMid = TRUE; }
+        lxi = xi; lyi = yi;
+#endif
+
         if (np < MAX_SVG_POINTS) {
             sc->pts[np].P_x = xi;
             sc->pts[np].P_y = yi;
@@ -1537,6 +1596,20 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
     }
 
     *pNp = np;
+
+    /* --- debug: emission summary --- */
+#ifdef SVG_ARC_DEBUG
+    {
+        word added = (word)(np - np0);
+        if (!haveMid) { mxi = fxi; myi = fyi; }
+        sprintf(dbuf,
+            "ARC out: added=%u new_np=%u first=(%d,%d) mid=(%d,%d) last=(%d,%d) target=(%d,%d)",
+            (unsigned)added, (unsigned)np,
+            (int)fxi,(int)fyi,(int)mxi,(int)myi,(int)lxi,(int)lyi,
+            (int)WWFixedToSWordRound(x1W),(int)WWFixedToSWordRound(y1W));
+        _WRITE_TO_FILE(dbuf);
+    }
+#endif
 }
 
 
@@ -1549,6 +1622,9 @@ SVG_FlattenArc(SVGScratch *sc, word *pNp,
 
 
 /* ---- path (axis-aware, abs vs rel) ---- */
+
+
+#define SVG_ARC_LOG
 
 static void HandlePathTag(const char *tag, SVGScratch *sc)
 {
@@ -1888,6 +1964,17 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
 
                 /* SVG degenerates */
                 if ((WWFixedToSWordRound(rxW) == 0) || (WWFixedToSWordRound(ryW) == 0)) {
+#ifdef SVG_ARC_LOG
+                    {
+                        char buf[160];
+                        sprintf(buf,
+                            "A/a degenerate (radius=0): start=(%d,%d) end=(%d,%d)",
+                            (int)lastx, (int)lasty,
+                            (int)WWFixedToSWordRound(exW),
+                            (int)WWFixedToSWordRound(eyW));
+                        _WRITE_TO_FILE(buf);
+                    }
+#endif
                     /* radius zero -> straight line to end point */
                     if (np < MAX_SVG_POINTS) {
                         sc->pts[np].P_x = WWFixedToSWordRound(exW);
@@ -1899,6 +1986,15 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                     continue;
                 }
                 if ((WWFixedToSWordRound(exW) == lastx) && (WWFixedToSWordRound(eyW) == lasty)) {
+#ifdef SVG_ARC_LOG
+                    {
+                        char buf[160];
+                        sprintf(buf,
+                            "A/a noop (identical endpoints): start=(%d,%d)",
+                            (int)lastx, (int)lasty);
+                        _WRITE_TO_FILE(buf);
+                    }
+#endif
                     /* identical endpoints -> no-op */
                     continue;
                 }
@@ -1907,6 +2003,59 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                 x0W = ((WWFixedAsDWord)lastx) << 16;
                 y0W = ((WWFixedAsDWord)lasty) << 16;
 
+#ifdef SVG_ARC_LOG
+                {
+                    word  npBefore;
+                    char  buf[192];
+                    sword sx_i, sy_i, ex_i, ey_i, rx_i, ry_i, rot_i;
+
+                    npBefore = np;
+
+                    sx_i  = lastx;
+                    sy_i  = lasty;
+                    ex_i  = WWFixedToSWordRound(exW);
+                    ey_i  = WWFixedToSWordRound(eyW);
+                    rx_i  = WWFixedToSWordRound(rxW);
+                    ry_i  = WWFixedToSWordRound(ryW);
+                    rot_i = WWFixedToSWordRound(rotW);
+
+                    sprintf(buf,
+                        "A/a in: start=(%d,%d) end=(%d,%d) rx=%d ry=%d rot=%d laf=%d swf=%d np=%u",
+                        (int)sx_i,(int)sy_i,(int)ex_i,(int)ey_i,
+                        (int)rx_i,(int)ry_i,(int)rot_i, laf, swf, (unsigned)npBefore);
+                    _WRITE_TO_FILE(buf);
+
+                    /* ---- actual flattener ---- */
+                    SVG_FlattenArc(sc, &np, x0W, y0W, rxW, ryW, rotW, laf, swf, exW, eyW);
+
+                    {
+                        word npAfter, added;
+                        npAfter = np;
+                        added   = (npAfter > npBefore) ? (npAfter - npBefore) : 0;
+                        sprintf(buf, "A/a out: added=%u new_np=%u",
+                                (unsigned)added, (unsigned)npAfter);
+                        _WRITE_TO_FILE(buf);
+                        if (added > 0) {
+                            sprintf(buf, "  first=(%d,%d) last=(%d,%d)",
+                                    (int)sc->pts[npBefore].P_x, (int)sc->pts[npBefore].P_y,
+                                    (int)sc->pts[npAfter-1].P_x, (int)sc->pts[npAfter-1].P_y);
+                            _WRITE_TO_FILE(buf);
+
+                            /* Uncomment to dump every emitted point
+                            {
+                                word i;
+                                for (i = npBefore; i < npAfter; ++i) {
+                                    sprintf(buf, "  pt[%u]=(%d,%d)",
+                                            (unsigned)i,
+                                            (int)sc->pts[i].P_x, (int)sc->pts[i].P_y);
+                                    _WRITE_TO_FILE(buf);
+                                }
+                            }
+                            */
+                        }
+                    }
+                }
+#else
                 /* flatten to polyline in *path space* (no VB_Map* here) */
                 SVG_FlattenArc(sc, &np,
                                x0W, y0W,      /* start (16.16) */
@@ -1914,6 +2063,7 @@ static void HandlePathTag(const char *tag, SVGScratch *sc)
                                rotW,          /* x-axis rotation (deg, 16.16) */
                                laf, swf,
                                exW, eyW);     /* end (16.16) */
+#endif
 
                 /* update current point (un-mapped) */
                 lastx = WWFixedToSWordRound(exW);
