@@ -17,6 +17,7 @@
 #include <gstring.h>
 #include <meta.h>
 #include <float.h>
+#include <dbglogmc.h>
 
 
 #define SVG_COLOR_NAME_LEN   32
