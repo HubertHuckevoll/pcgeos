@@ -30,9 +30,9 @@ typedef struct
     char SNC_name[SVG_COLOR_NAME_LEN + 1];   /* NUL-terminated */
 } SvgNamedColor;
 
-#define MAX_SVG_POINTS    512
+#define MAX_SVG_POINTS    1024
 #define SVG_IO_BUF_SIZE   1024
-#define TAG_BUF_SIZE      256
+#define TAG_BUF_SIZE      512
 
 /* ===== Fixed-point helpers (16.16) ===== */
 #define WWFIXED_ONE      ((WWFixedAsDWord)(1UL << 16))
