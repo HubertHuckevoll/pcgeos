@@ -82,6 +82,7 @@ static void SvgPathFlattenCubic(SVGScratch *sc, word *np,
 }
 
 /* ===== Elliptical-arc flattener (fixed-point) ===== */
+/* ===== Elliptical-arc flattener (fixed-point) ===== */
 static void
 SvgPathFlattenArc(SVGScratch *sc, word *pNp,
                   WWFixedAsDWord x0W, WWFixedAsDWord y0W,
@@ -94,7 +95,7 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     WWFixedAsDWord cphi, sphi;
     WWFixedAsDWord dx, dy, x1p, y1p;
     WWFixedAsDWord frx, fry;
-    WWFixedAsDWord u, v, u2, v2, sum;
+    WWFixedAsDWord u, v, u2, v2;
     WWFixedAsDWord lam, scale;
     WWFixedAsDWord s;
     WWFixedAsDWord cxp, cyp;
@@ -106,8 +107,11 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     WWFixedAsDWord deltaMaxDeg, stepDeg, theta;
     WWFixedAsDWord xr, yr, xp, yp, x, y;
     WWFixedAsDWord nSegWW;
-    sword xi, yi, exi, eyi;
-    word np, remaining, nSeg, k;
+    WWFixedAsDWord u0, v0;
+    WWFixedAsDWord num, frac;
+    WWFixedAsDWord cth, sth;
+    sword          xi, yi, exi, eyi;
+    word           np, remaining, nSeg, k;
 
     zero = MakeWWFixed(0);
     one  = MakeWWFixed(1);
@@ -139,36 +143,30 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     y1p  = GrAddWWFixed((WWFixedAsDWord)(-(sdword)GrMulWWFixed(sphi, dx)),
                         GrMulWWFixed(cphi, dy));
 
-    {
-        WWFixedAsDWord u0, v0;
-        u0 = GrSDivWWFixed(SvgGeomWWAbs(x1p), frx);
-        v0 = GrSDivWWFixed(SvgGeomWWAbs(y1p), fry);
-        u2 = GrMulWWFixed(u0, u0);
-        v2 = GrMulWWFixed(v0, v0);
-        lam = GrAddWWFixed(u2, v2);
-    }
+    u0  = GrSDivWWFixed(SvgGeomWWAbs(x1p), frx);
+    v0  = GrSDivWWFixed(SvgGeomWWAbs(y1p), fry);
+    u2  = GrMulWWFixed(u0, u0);
+    v2  = GrMulWWFixed(v0, v0);
+    lam = GrAddWWFixed(u2, v2);
 
     if ((sdword)lam > (sdword)one) {
         scale = SvgGeomWWSqrt(lam);
-        frx = GrMulWWFixed(frx, scale);
-        fry = GrMulWWFixed(fry, scale);
-        u = GrSDivWWFixed(x1p, frx);
-        v = GrSDivWWFixed(y1p, fry);
-        u2 = GrMulWWFixed(u, u);
-        v2 = GrMulWWFixed(v, v);
+        frx   = GrMulWWFixed(frx, scale);
+        fry   = GrMulWWFixed(fry, scale);
+        u     = GrSDivWWFixed(x1p, frx);
+        v     = GrSDivWWFixed(y1p, fry);
+        u2    = GrMulWWFixed(u, u);
+        v2    = GrMulWWFixed(v, v);
     } else {
-        u = GrSDivWWFixed(x1p, frx);
-        v = GrSDivWWFixed(y1p, fry);
+        u  = GrSDivWWFixed(x1p, frx);
+        v  = GrSDivWWFixed(y1p, fry);
         u2 = GrMulWWFixed(u, u);
         v2 = GrMulWWFixed(v, v);
     }
 
-    {
-        WWFixedAsDWord num, frac;
-        num  = GrSubWWFixed(one, GrAddWWFixed(u2, v2));
-        frac = GrSDivWWFixed((sdword)num < 0 ? zero : num, GrAddWWFixed(u2, v2));
-        s    = SvgGeomWWSqrt(frac);
-    }
+    num  = GrSubWWFixed(one, GrAddWWFixed(u2, v2));
+    frac = GrSDivWWFixed((sdword)num < 0 ? zero : num, GrAddWWFixed(u2, v2));
+    s    = SvgGeomWWSqrt(frac);
     if (laf == swf) {
         s = (WWFixedAsDWord)(-(sdword)s);
     }
@@ -187,74 +185,76 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     vx = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)x1p), cxp), frx);
     vy = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)y1p), cyp), fry);
 
-    th1 = SvgGeomWWAtan2Deg(uy, ux);
+    th1   = SvgGeomWWAtan2Deg(uy, ux);
     cross = GrSubWWFixed(GrMulWWFixed(ux, vy), GrMulWWFixed(uy, vx));
     dot   = GrAddWWFixed(GrMulWWFixed(ux, vx), GrMulWWFixed(uy, vy));
     dth   = SvgGeomWWAtan2Deg(cross, dot);
 
     if (!swf) {
-        if ((sdword)dth > 0) dth = GrSubWWFixed(dth, MakeWWFixed(360));
+        if ((sdword)dth > 0) {
+            dth = GrSubWWFixed(dth, MakeWWFixed(360));
+        }
     } else {
-        if ((sdword)dth < 0) dth = GrAddWWFixed(dth, MakeWWFixed(360));
+        if ((sdword)dth < 0) {
+            dth = GrAddWWFixed(dth, MakeWWFixed(360));
+        }
     }
 
     absDth = SvgGeomWWAbs(dth);
-    {
-        WWFixedAsDWord nSegWW;
-        word nSeg;
-        word np;
-        WWFixedAsDWord stepDeg;
-        word k;
 
-        deltaMaxDeg = MakeWWFixed(12);
-        nSegWW = GrSDivWWFixed(absDth, deltaMaxDeg);
-        nSeg = (word)SvgGeomWWFixedToSWordRound(nSegWW);
-        if (GrMulWWFixed(MakeWWFixed(nSeg), deltaMaxDeg) < absDth) nSeg++;
-        if (nSeg < 1) nSeg = 1;
-
-        np = *pNp;
-        {
-            word remaining;
-            remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
-            if (remaining == 0) return;
-            if (nSeg > remaining) nSeg = remaining;
-        }
-
-        exi = SvgGeomWWFixedToSWordRound(x1W);
-        eyi = SvgGeomWWFixedToSWordRound(y1W);
-
-        stepDeg = GrSDivWWFixed(dth, MakeWWFixed(nSeg));
-        for (k = 1; k <= nSeg; k++) {
-            WWFixedAsDWord cth, sth;
-            WWFixedAsDWord xr, yr, xp, yp, x, y;
-
-            theta = GrAddWWFixed(th1, GrMulWWFixed(stepDeg, MakeWWFixed(k)));
-            cth = GrQuickCosine(theta);
-            sth = GrQuickSine(theta);
-
-            xr = GrMulWWFixed(frx, cth);
-            yr = GrMulWWFixed(fry, sth);
-
-            xp = GrSubWWFixed(GrMulWWFixed(cphi, xr), GrMulWWFixed(sphi, yr));
-            yp = GrAddWWFixed(GrMulWWFixed(sphi, xr), GrMulWWFixed(cphi, yr));
-
-            x = GrAddWWFixed(xp, cx);
-            y = GrAddWWFixed(yp, cy);
-
-            xi = SvgGeomWWFixedToSWordRound(x);
-            yi = SvgGeomWWFixedToSWordRound(y);
-            if (k == nSeg) { xi = exi; yi = eyi; }
-
-            if (np < MAX_SVG_POINTS) {
-                sc->pts[np].P_x = xi;
-                sc->pts[np].P_y = yi;
-                np++;
-            } else {
-                break;
-            }
-        }
-        *pNp = np;
+    deltaMaxDeg = MakeWWFixed(12);
+    nSegWW      = GrSDivWWFixed(absDth, deltaMaxDeg);
+    nSeg        = (word)SvgGeomWWFixedToSWordRound(nSegWW);
+    if (GrMulWWFixed(MakeWWFixed(nSeg), deltaMaxDeg) < absDth) {
+        nSeg++;
     }
+    if (nSeg < 1) {
+        nSeg = 1;
+    }
+
+    np        = *pNp;
+    remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
+    if (remaining == 0) {
+        return;
+    }
+    if (nSeg > remaining) {
+        nSeg = remaining;
+    }
+
+    exi = SvgGeomWWFixedToSWordRound(x1W);
+    eyi = SvgGeomWWFixedToSWordRound(y1W);
+
+    stepDeg = GrSDivWWFixed(dth, MakeWWFixed(nSeg));
+    for (k = 1; k <= nSeg; k++) {
+        theta = GrAddWWFixed(th1, GrMulWWFixed(stepDeg, MakeWWFixed(k)));
+        cth   = GrQuickCosine(theta);
+        sth   = GrQuickSine(theta);
+
+        xr = GrMulWWFixed(frx, cth);
+        yr = GrMulWWFixed(fry, sth);
+
+        xp = GrSubWWFixed(GrMulWWFixed(cphi, xr), GrMulWWFixed(sphi, yr));
+        yp = GrAddWWFixed(GrMulWWFixed(sphi, xr), GrMulWWFixed(cphi, yr));
+
+        x = GrAddWWFixed(xp, cx);
+        y = GrAddWWFixed(yp, cy);
+
+        xi = SvgGeomWWFixedToSWordRound(x);
+        yi = SvgGeomWWFixedToSWordRound(y);
+        if (k == nSeg) {
+            xi = exi;
+            yi = eyi;
+        }
+
+        if (np < MAX_SVG_POINTS) {
+            sc->pts[np].P_x = xi;
+            sc->pts[np].P_y = yi;
+            np++;
+        } else {
+            break;
+        }
+    }
+    *pNp = np;
 }
 
 /* ---- main <path> handler (coordinator) ---- */
