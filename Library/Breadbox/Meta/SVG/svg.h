@@ -65,7 +65,7 @@ Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
 /* ---- style (stroke/fill/colors) ---- */
 void    SvgStyleApplyStrokeAndFill(const char *tag);
 void    SvgStyleApplyStrokeWidth(const char *tag);
-void    SvgStyleParseFillRule(const char *tag);
+void    SvgStyleApplyFillRule(const char *tag);
 Boolean SvgStyleHasStroke(const char *tag);
 Boolean SvgStyleHasFill(const char *tag);
 

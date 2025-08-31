@@ -779,7 +779,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     }
 
     SvgStyleApplyStrokeAndFill(tag);
-    SvgStyleParseFillRule(tag);
+    SvgStyleApplyFillRule(tag);
     SvgStyleApplyStrokeWidth(tag);
 
     np            = 0;

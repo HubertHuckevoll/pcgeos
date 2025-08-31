@@ -311,7 +311,7 @@ void SvgStyleApplyStrokeAndFill(const char *tag)
     }
 }
 
-void SvgStyleParseFillRule(const char *tag)
+void SvgStyleApplyFillRule(const char *tag)
 {
     static char buf[16];
 
