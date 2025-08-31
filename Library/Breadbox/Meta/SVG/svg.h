@@ -2,16 +2,12 @@
  * svg.goh — Master public header for the Meta SVG renderer (GEOS/GOC)
  *------------------------------------------------------------------*/
 
-#ifndef META_SVG_H
-#define META_SVG_H
-
 /* GEOS system headers */
-// @include <stdapp.goh>
+@include <stdapp.goh>
+
 #include "Ansi/string.h"
 #include "Ansi/stdlib.h"
-#include "Ansi/ctype.h"
 #include "file.h"
-#include "system.h"
 #include "graphics.h"
 #include "gstring.h"
 #include "meta.h"
@@ -109,7 +105,4 @@ void SvgPathHandle(const char *tag, SVGScratch *sc);
 
 /* ---- streamed parser entry ---- */
 typedef Boolean _pascal ProgressCallback(word percent);
-TransError _export _pascal SvgParserReadSVG(FileHandle srcFile, word settings,
-                                            ProgressCallback *callback);
-
-#endif /* META_SVG_H */
+TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCallback *callback);

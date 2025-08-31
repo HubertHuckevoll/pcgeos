@@ -1,7 +1,7 @@
 /***********************************************************************
  * svgView.goc — viewBox / viewport / preserveAspectRatio mapping
  ***********************************************************************/
-#include "SVG/svg.goh"
+#include "SVG/svg.h"
 
 /* preserveAspectRatio parsed state */
 typedef enum { SVG_PAR_ALIGN_MIN=0, SVG_PAR_ALIGN_MID=1, SVG_PAR_ALIGN_MAX=2 } SvgParAlign;

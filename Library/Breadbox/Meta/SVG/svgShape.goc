@@ -1,7 +1,7 @@
 /***********************************************************************
  * svgShape.goc — simple SVG elements: line/polyline/polygon/rect/ellipse/circle
  ***********************************************************************/
-#include "SVG/svg.goh"
+#include "SVG/svg.h"
 
 /* ---- points parser (axis-aware) ---- */
 

@@ -1,7 +1,7 @@
 /***********************************************************************
  * svgStyle.goc — styling: stroke/fill/width/fill-rule & color keywords
  ***********************************************************************/
-#include "SVG/svg.goh"
+#include "SVG/svg.h"
 
 /* ---------- tiny hex helpers (style-local) ---------- */
 static word SvgStyleHexNibble(char c)

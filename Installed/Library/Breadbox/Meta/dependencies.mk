@@ -146,51 +146,61 @@ splineop.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h float.h metaint.h
-svgGeom.obj \
-svgGeom.eobj: 
-svgGeom.obj \
-svgGeom.eobj: Ansi/string.h geos.h Ansi/stdlib.h Ansi/ctype.h file.h \
-                system.h geode.h graphics.h fontID.h font.h color.h \
-                gstring.h meta.h xlatLib.h vm.h lmem.h geoworks.h float.h \
-                dbglogmc.h timedate.h Ansi/stdio.h localize.h sllang.h
-svgUtil.obj \
-svgUtil.eobj: 
-svgUtil.obj \
-svgUtil.eobj: Ansi/string.h geos.h Ansi/stdlib.h Ansi/ctype.h file.h \
-                system.h geode.h graphics.h fontID.h font.h color.h \
-                gstring.h meta.h xlatLib.h vm.h lmem.h geoworks.h float.h \
-                dbglogmc.h timedate.h Ansi/stdio.h localize.h sllang.h
-svgStyle.obj \
-svgStyle.eobj: 
-svgStyle.obj \
-svgStyle.eobj: Ansi/string.h geos.h Ansi/stdlib.h Ansi/ctype.h file.h \
-                system.h geode.h graphics.h fontID.h font.h color.h \
-                gstring.h meta.h xlatLib.h vm.h lmem.h geoworks.h float.h \
-                dbglogmc.h timedate.h Ansi/stdio.h localize.h sllang.h
-svgView.obj \
-svgView.eobj: 
-svgView.obj \
-svgView.eobj: Ansi/string.h geos.h Ansi/stdlib.h Ansi/ctype.h file.h \
-                system.h geode.h graphics.h fontID.h font.h color.h \
-                gstring.h meta.h xlatLib.h vm.h lmem.h geoworks.h float.h \
-                dbglogmc.h timedate.h Ansi/stdio.h localize.h sllang.h
-svgShape.obj \
-svgShape.eobj: 
-svgShape.obj \
-svgShape.eobj: Ansi/string.h geos.h Ansi/stdlib.h Ansi/ctype.h file.h \
-                system.h geode.h graphics.h fontID.h font.h color.h \
-                gstring.h meta.h xlatLib.h vm.h lmem.h geoworks.h float.h \
-                dbglogmc.h timedate.h Ansi/stdio.h localize.h sllang.h
 svg.obj \
 svg.eobj: 
 svg.obj \
-svg.eobj: SVG/svg.h
+svg.eobj: SVG/svg.h Ansi/string.h geos.h Ansi/stdlib.h file.h \
+                graphics.h fontID.h font.h color.h gstring.h meta.h \
+                xlatLib.h vm.h lmem.h geode.h geoworks.h float.h \
+                dbglogmc.h timedate.h Ansi/stdio.h localize.h \
+                Ansi/ctype.h sllang.h
+svgGeom.obj \
+svgGeom.eobj: 
+svgGeom.obj \
+svgGeom.eobj: SVG/svg.h Ansi/string.h geos.h Ansi/stdlib.h file.h \
+                graphics.h fontID.h font.h color.h gstring.h meta.h \
+                xlatLib.h vm.h lmem.h geode.h geoworks.h float.h \
+                dbglogmc.h timedate.h Ansi/stdio.h localize.h \
+                Ansi/ctype.h sllang.h
 svgPath.obj \
 svgPath.eobj: 
 svgPath.obj \
-svgPath.eobj: Ansi/string.h geos.h Ansi/stdlib.h Ansi/ctype.h file.h \
-                system.h geode.h graphics.h fontID.h font.h color.h \
-                gstring.h meta.h xlatLib.h vm.h lmem.h geoworks.h float.h \
-                dbglogmc.h timedate.h Ansi/stdio.h localize.h sllang.h
+svgPath.eobj: SVG/svg.h Ansi/string.h geos.h Ansi/stdlib.h file.h \
+                graphics.h fontID.h font.h color.h gstring.h meta.h \
+                xlatLib.h vm.h lmem.h geode.h geoworks.h float.h \
+                dbglogmc.h timedate.h Ansi/stdio.h localize.h \
+                Ansi/ctype.h sllang.h
+svgShape.obj \
+svgShape.eobj: 
+svgShape.obj \
+svgShape.eobj: SVG/svg.h Ansi/string.h geos.h Ansi/stdlib.h file.h \
+                graphics.h fontID.h font.h color.h gstring.h meta.h \
+                xlatLib.h vm.h lmem.h geode.h geoworks.h float.h \
+                dbglogmc.h timedate.h Ansi/stdio.h localize.h \
+                Ansi/ctype.h sllang.h
+svgStyle.obj \
+svgStyle.eobj: 
+svgStyle.obj \
+svgStyle.eobj: SVG/svg.h Ansi/string.h geos.h Ansi/stdlib.h file.h \
+                graphics.h fontID.h font.h color.h gstring.h meta.h \
+                xlatLib.h vm.h lmem.h geode.h geoworks.h float.h \
+                dbglogmc.h timedate.h Ansi/stdio.h localize.h \
+                Ansi/ctype.h sllang.h
+svgUtil.obj \
+svgUtil.eobj: 
+svgUtil.obj \
+svgUtil.eobj: SVG/svg.h Ansi/string.h geos.h Ansi/stdlib.h file.h \
+                graphics.h fontID.h font.h color.h gstring.h meta.h \
+                xlatLib.h vm.h lmem.h geode.h geoworks.h float.h \
+                dbglogmc.h timedate.h Ansi/stdio.h localize.h \
+                Ansi/ctype.h sllang.h
+svgView.obj \
+svgView.eobj: 
+svgView.obj \
+svgView.eobj: SVG/svg.h Ansi/string.h geos.h Ansi/stdlib.h file.h \
+                graphics.h fontID.h font.h color.h gstring.h meta.h \
+                xlatLib.h vm.h lmem.h geode.h geoworks.h float.h \
+                dbglogmc.h timedate.h Ansi/stdio.h localize.h \
+                Ansi/ctype.h sllang.h
 
 metaEC.geo meta.geo : geos.ldf ui.ldf ansic.ldf grobj.ldf math.ldf 

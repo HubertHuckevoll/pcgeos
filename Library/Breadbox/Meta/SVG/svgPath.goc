@@ -1,7 +1,7 @@
 /***********************************************************************
  * svgPath.goc — <path> handler + subcommands + flatteners
  ***********************************************************************/
-#include "SVG/svg.goh"
+#include "SVG/svg.h"
 
 /* tiny helpers specific to path handling */
 static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)

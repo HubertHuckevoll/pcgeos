@@ -1,7 +1,7 @@
 /***********************************************************************
  * svgUtil.goc — common ASCII helpers
  ***********************************************************************/
-#include "SVG/svg.goh"
+#include "SVG/svg.h"
 
 /* small ASCII case-insensitive compare */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b)

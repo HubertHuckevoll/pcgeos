@@ -1,7 +1,7 @@
 /***********************************************************************
  * svgGeom.goc — shared fixed-point helpers (WWFixed 16.16)
  ***********************************************************************/
-#include "SVG/svg.goh"
+#include "SVG/svg.h"
 
 /* 16.16 from int */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v)
