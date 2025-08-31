@@ -1,18 +1,7 @@
 /*--------------------------------------------------------------------
- * svg.goh — Master public header for the Meta SVG renderer (GEOS/GOC)
+ * svg.h — Master public header for the Meta SVG renderer (GEOS/GOC)
  *------------------------------------------------------------------*/
 
-/* GEOS system headers */
-@include <stdapp.goh>
-
-#include "Ansi/string.h"
-#include "Ansi/stdlib.h"
-#include "file.h"
-#include "graphics.h"
-#include "gstring.h"
-#include "meta.h"
-#include "float.h"
-#include "dbglogmc.h"
 
 /* ---- global compile-time constants ---- */
 #define SVG_COLOR_NAME_LEN   32

@@ -1,6 +1,19 @@
 /***********************************************************************
  * svgParser.goc — streamed SAX-like parser, tag/attr utilities, ReadSVG
  ***********************************************************************/
+@include <stdapp.goh>
+
+#include <Ansi/string.h>
+#include <Ansi/stdlib.h>
+#include <Ansi/ctype.h>
+#include <file.h>
+#include <system.h>
+#include <graphics.h>
+#include <gstring.h>
+#include <meta.h>
+#include <float.h>
+#include <dbglogmc.h>
+
 #include "SVG/svg.h"
 
 /* ---- scanner context ---- */

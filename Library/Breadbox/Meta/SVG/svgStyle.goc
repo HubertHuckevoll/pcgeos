@@ -1,6 +1,19 @@
 /***********************************************************************
  * svgStyle.goc — styling: stroke/fill/width/fill-rule & color keywords
  ***********************************************************************/
+@include <stdapp.goh>
+
+#include <Ansi/string.h>
+#include <Ansi/stdlib.h>
+#include <Ansi/ctype.h>
+#include <file.h>
+#include <system.h>
+#include <graphics.h>
+#include <gstring.h>
+#include <meta.h>
+#include <float.h>
+#include <dbglogmc.h>
+
 #include "SVG/svg.h"
 
 /* ---------- tiny hex helpers (style-local) ---------- */
@@ -112,7 +125,7 @@ static word SvgStyleHexByte(const char *p)
     {186, 85,211,"mediumorchid"},
     {147,112,219,"mediumpurple"},
     { 60,179,113,"mediumseagreen"},
-    {123,104,238},"mediumslateblue",
+    {123,104,238,"mediumslateblue"},
     {  0,250,154,"mediumspringgreen"},
     { 72,209,204,"mediumturquoise"},
     {199, 21,133,"mediumvioletred"},
@@ -127,7 +140,7 @@ static word SvgStyleHexByte(const char *p)
     {107,142, 35,"olivedrab"},
     {255,165,  0,"orange"},
     {255, 69,  0,"orangered"},
-    {218,112,214},"orchid",
+    {218,112,214,"orchid"},
     {238,232,170,"palegoldenrod"},
     {152,251,152,"palegreen"},
     {175,238,238,"paleturquoise"},
