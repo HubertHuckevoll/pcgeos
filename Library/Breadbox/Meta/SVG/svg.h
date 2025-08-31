@@ -90,6 +90,8 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc);
 void SvgShapeHandleRect(const char *tag);
 void SvgShapeHandleEllipse(const char *tag);
 void SvgShapeHandleCircle(const char *tag);
+
+/* ---- tag handlers: path with subcommands ---- */
 void SvgPathHandle(const char *tag, SVGScratch *sc);
 static void SvgPathHandleMoveTo   (const char **sPP, char *lastCmdP,
                                    SVGScratch *sc, word *npP,
