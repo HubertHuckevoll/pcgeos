@@ -91,6 +91,54 @@ void SvgShapeHandleRect(const char *tag);
 void SvgShapeHandleEllipse(const char *tag);
 void SvgShapeHandleCircle(const char *tag);
 void SvgPathHandle(const char *tag, SVGScratch *sc);
+static void SvgPathHandleMoveTo   (const char **sPP, char *lastCmdP,
+                                   SVGScratch *sc, word *npP,
+                                   sword *lastxP, sword *lastyP,
+                                   sword *subStartXP, sword *subStartYP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP);
+static void SvgPathHandleLineTo   (const char **sPP, char lastCmd,
+                                   SVGScratch *sc, word *npP,
+                                   sword *lastxP, sword *lastyP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP);
+static void SvgPathHandleHLineTo  (const char **sPP, char lastCmd,
+                                   SVGScratch *sc, word *npP,
+                                   sword *lastxP, sword *lastyP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP);
+static void SvgPathHandleVLineTo  (const char **sPP, char lastCmd,
+                                   SVGScratch *sc, word *npP,
+                                   sword *lastxP, sword *lastyP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP);
+static void SvgPathHandleQuadratic(const char **sPP, char lastCmd,
+                                   SVGScratch *sc, word *npP,
+                                   sword *lastxP, sword *lastyP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                                   sword *lastQcxP, sword *lastQcyP);
+static void SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
+                                         SVGScratch *sc, word *npP,
+                                         sword *lastxP, sword *lastyP,
+                                         Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                                         sword *lastQcxP, sword *lastQcyP);
+static void SvgPathHandleCubic    (const char **sPP, char lastCmd,
+                                   SVGScratch *sc, word *npP,
+                                   sword *lastxP, sword *lastyP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                                   sword *lastC2xP, sword *lastC2yP);
+static void SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
+                                     SVGScratch *sc, word *npP,
+                                     sword *lastxP, sword *lastyP,
+                                     Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                                     sword *lastC2xP, sword *lastC2yP);
+static void SvgPathHandleArc      (const char **sPP, char lastCmd,
+                                   SVGScratch *sc, word *npP,
+                                   sword *lastxP, sword *lastyP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP);
+static void SvgPathHandleClose    (const char **sPP,
+                                   Boolean *closedP,
+                                   sword *lastxP, sword *lastyP,
+                                   sword subStartX, sword subStartY,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP);
+static void SvgPathHandleUnknown  (const char **sPP,
+                                   Boolean *lastWasCubicP, Boolean *lastWasQuadP);
 
 /* ---- streamed parser entry ---- */
 typedef Boolean _pascal ProgressCallback(word percent);

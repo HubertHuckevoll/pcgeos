@@ -257,6 +257,502 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     *pNp = np;
 }
 
+
+/* ---------- per-command implementations (C89: all vars at top) ---------- */
+
+static void
+SvgPathHandleMoveTo(const char **sPP, char *lastCmdP,
+                    SVGScratch *sc, word *npP,
+                    sword *lastxP, sword *lastyP,
+                    sword *subStartXP, sword *subStartYP,
+                    Boolean *lastWasCubicP, Boolean *lastWasQuadP)
+{
+    const char *sP;
+    sword x, y;
+    WWFixedAsDWord f, fx, fy;
+    sword dx, dy;
+
+    sP = *sPP;
+
+    sP = SvgParserSkipWS(sP);
+    if (*lastCmdP == 'M') {
+        sP = SvgParserParseWWFixed16_16(sP, &f);  x = SvgViewMapPosX_F(f);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &f);  y = SvgViewMapPosY_F(f);
+    } else {
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &fx); dx = SvgViewMapLenX_F(fx);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &fy); dy = SvgViewMapLenY_F(fy);
+        x = (sword)(*lastxP + dx);
+        y = (sword)(*lastyP + dy);
+    }
+
+    *lastxP = x; *lastyP = y;
+    *subStartXP = x; *subStartYP = y;
+    if (*npP < MAX_SVG_POINTS) {
+        sc->pts[*npP].P_x = x; sc->pts[*npP].P_y = y; (*npP)++;
+    }
+
+    *lastCmdP = (*lastCmdP == 'M') ? 'L' : 'l';
+    *lastWasCubicP = FALSE;
+    *lastWasQuadP  = FALSE;
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleLineTo(const char **sPP, char lastCmd,
+                    SVGScratch *sc, word *npP,
+                    sword *lastxP, sword *lastyP,
+                    Boolean *lastWasCubicP, Boolean *lastWasQuadP)
+{
+    const char *sP;
+    sword lx, ly;
+    WWFixedAsDWord f, fx, fy;
+    sword dx, dy;
+
+    sP = *sPP;
+
+    sP = SvgParserSkipWS(sP);
+    if (lastCmd == 'L') {
+        sP = SvgParserParseWWFixed16_16(sP, &f);  lx = SvgViewMapPosX_F(f);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &f);  ly = SvgViewMapPosY_F(f);
+    } else {
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &fx); dx = SvgViewMapLenX_F(fx);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &fy); dy = SvgViewMapLenY_F(fy);
+        lx = (sword)(*lastxP + dx);
+        ly = (sword)(*lastyP + dy);
+    }
+
+    if (*npP < MAX_SVG_POINTS) { sc->pts[*npP].P_x = lx; sc->pts[*npP].P_y = ly; (*npP)++; }
+    *lastxP = lx; *lastyP = ly;
+    *lastWasCubicP = FALSE;
+    *lastWasQuadP  = FALSE;
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleHLineTo(const char **sPP, char lastCmd,
+                     SVGScratch *sc, word *npP,
+                     sword *lastxP, sword *lastyP,
+                     Boolean *lastWasCubicP, Boolean *lastWasQuadP)
+{
+    const char *sP;
+    sword lx;
+    WWFixedAsDWord f, fx;
+    sword dx;
+
+    sP = *sPP;
+
+    sP = SvgParserSkipWS(sP);
+    if (lastCmd == 'H') {
+        sP = SvgParserParseWWFixed16_16(sP, &f);  lx = SvgViewMapPosX_F(f);
+    } else {
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &fx); dx = SvgViewMapLenX_F(fx);
+        lx = (sword)(*lastxP + dx);
+    }
+
+    if (*npP < MAX_SVG_POINTS) { sc->pts[*npP].P_x = lx; sc->pts[*npP].P_y = *lastyP; (*npP)++; }
+    *lastxP = lx;
+    *lastWasCubicP = FALSE;
+    *lastWasQuadP  = FALSE;
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleVLineTo(const char **sPP, char lastCmd,
+                     SVGScratch *sc, word *npP,
+                     sword *lastxP, sword *lastyP,
+                     Boolean *lastWasCubicP, Boolean *lastWasQuadP)
+{
+    const char *sP;
+    sword ly;
+    WWFixedAsDWord f, fy;
+    sword dy;
+
+    sP = *sPP;
+
+    sP = SvgParserSkipWS(sP);
+    if (lastCmd == 'V') {
+        sP = SvgParserParseWWFixed16_16(sP, &f);  ly = SvgViewMapPosY_F(f);
+    } else {
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &fy); dy = SvgViewMapLenY_F(fy);
+        ly = (sword)(*lastyP + dy);
+    }
+
+    if (*npP < MAX_SVG_POINTS) { sc->pts[*npP].P_x = *lastxP; sc->pts[*npP].P_y = ly; (*npP)++; }
+    *lastyP = ly;
+    *lastWasCubicP = FALSE;
+    *lastWasQuadP  = FALSE;
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleQuadratic(const char **sPP, char lastCmd,
+                       SVGScratch *sc, word *npP,
+                       sword *lastxP, sword *lastyP,
+                       Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                       sword *lastQcxP, sword *lastQcyP)
+{
+    const char *sP;
+    sword cx, cy, ex, ey;
+    WWFixedAsDWord f;
+    sword dcx, dcy, dex, dey;
+
+    sP = *sPP;
+
+    for (;;) {
+        sP = SvgParserSkipWS(sP);
+        if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+        if (lastCmd == 'Q') {
+            sP = SvgParserParseWWFixed16_16(sP, &f); cx = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); cy = SvgViewMapPosY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); ex = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); ey = SvgViewMapPosY_F(f);
+        } else {
+            sP = SvgParserParseWWFixed16_16(sP, &f); dcx = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dcy = SvgViewMapLenY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dex = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dey = SvgViewMapLenY_F(f);
+            cx = (sword)(*lastxP + dcx); cy = (sword)(*lastyP + dcy);
+            ex = (sword)(*lastxP + dex); ey = (sword)(*lastyP + dey);
+        }
+
+        SvgPathFlattenQuad(sc, npP, *lastxP, *lastyP, cx, cy, ex, ey, 8);
+
+        *lastxP = ex; *lastyP = ey;
+        *lastWasQuadP = TRUE;  *lastQcxP = cx; *lastQcyP = cy;
+        *lastWasCubicP = FALSE;
+    }
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
+                             SVGScratch *sc, word *npP,
+                             sword *lastxP, sword *lastyP,
+                             Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                             sword *lastQcxP, sword *lastQcyP)
+{
+    const char *sP;
+    sword ex, ey, cx, cy;
+    WWFixedAsDWord f;
+    sword dex, dey;
+
+    sP = *sPP;
+
+    for (;;) {
+        sP = SvgParserSkipWS(sP);
+        if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+        if (lastCmd == 'T') {
+            sP = SvgParserParseWWFixed16_16(sP, &f); ex = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); ey = SvgViewMapPosY_F(f);
+        } else {
+            sP = SvgParserParseWWFixed16_16(sP, &f); dex = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dey = SvgViewMapLenY_F(f);
+            ex = (sword)(*lastxP + dex); ey = (sword)(*lastyP + dey);
+        }
+
+        if (*lastWasQuadP) {
+            cx = (sword)(*lastxP + (*lastxP - *lastQcxP));
+            cy = (sword)(*lastyP + (*lastyP - *lastQcyP));
+        } else {
+            cx = *lastxP; cy = *lastyP;
+        }
+
+        SvgPathFlattenQuad(sc, npP, *lastxP, *lastyP, cx, cy, ex, ey, 8);
+
+        *lastxP = ex; *lastyP = ey;
+        *lastWasQuadP = TRUE;  *lastQcxP = cx; *lastQcyP = cy;
+        *lastWasCubicP = FALSE;
+    }
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleCubic(const char **sPP, char lastCmd,
+                   SVGScratch *sc, word *npP,
+                   sword *lastxP, sword *lastyP,
+                   Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                   sword *lastC2xP, sword *lastC2yP)
+{
+    const char *sP;
+    sword c1x, c1y, c2x, c2y, ex, ey;
+    WWFixedAsDWord f;
+    sword dc1x, dc1y, dc2x, dc2y, dex, dey;
+
+    sP = *sPP;
+
+    for (;;) {
+        sP = SvgParserSkipWS(sP);
+        if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+        if (lastCmd == 'C') {
+            sP = SvgParserParseWWFixed16_16(sP, &f); c1x = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); c1y = SvgViewMapPosY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); c2x = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); c2y = SvgViewMapPosY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); ex = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); ey = SvgViewMapPosY_F(f);
+        } else {
+            sP = SvgParserParseWWFixed16_16(sP, &f); dc1x = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dc1y = SvgViewMapLenY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dc2x = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dc2y = SvgViewMapLenY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dex  = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dey  = SvgViewMapLenY_F(f);
+            c1x = (sword)(*lastxP + dc1x); c1y = (sword)(*lastyP + dc1y);
+            c2x = (sword)(*lastxP + dc2x); c2y = (sword)(*lastyP + dc2y);
+            ex  = (sword)(*lastxP + dex);  ey  = (sword)(*lastyP + dey);
+        }
+
+        SvgPathFlattenCubic(sc, npP, *lastxP, *lastyP, c1x, c1y, c2x, c2y, ex, ey, 10);
+
+        *lastxP = ex; *lastyP = ey;
+        *lastC2xP = c2x; *lastC2yP = c2y;
+        *lastWasCubicP = TRUE;
+        *lastWasQuadP  = FALSE;
+    }
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
+                         SVGScratch *sc, word *npP,
+                         sword *lastxP, sword *lastyP,
+                         Boolean *lastWasCubicP, Boolean *lastWasQuadP,
+                         sword *lastC2xP, sword *lastC2yP)
+{
+    const char *sP;
+    sword c1x, c1y, c2x, c2y, ex, ey;
+    WWFixedAsDWord f;
+    sword dc2x, dc2y, dex, dey;
+
+    sP = *sPP;
+
+    for (;;) {
+        sP = SvgParserSkipWS(sP);
+        if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
+
+        if (*lastWasCubicP) {
+            c1x = (sword)(*lastxP + (*lastxP - *lastC2xP));
+            c1y = (sword)(*lastyP + (*lastyP - *lastC2yP));
+        } else {
+            c1x = *lastxP; c1y = *lastyP;
+        }
+
+        if (lastCmd == 'S') {
+            sP = SvgParserParseWWFixed16_16(sP, &f); c2x = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); c2y = SvgViewMapPosY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); ex  = SvgViewMapPosX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); ey  = SvgViewMapPosY_F(f);
+        } else {
+            sP = SvgParserParseWWFixed16_16(sP, &f); dc2x = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dc2y = SvgViewMapLenY_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dex  = SvgViewMapLenX_F(f);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &f); dey  = SvgViewMapLenY_F(f);
+            c2x = (sword)(*lastxP + dc2x); c2y = (sword)(*lastyP + dc2y);
+            ex  = (sword)(*lastxP + dex);  ey  = (sword)(*lastyP + dey);
+        }
+
+        SvgPathFlattenCubic(sc, npP, *lastxP, *lastyP, c1x, c1y, c2x, c2y, ex, ey, 10);
+
+        *lastxP = ex; *lastyP = ey;
+        *lastC2xP = c2x; *lastC2yP = c2y;
+        *lastWasCubicP = TRUE;
+        *lastWasQuadP  = FALSE;
+    }
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleArc(const char **sPP, char lastCmd,
+                 SVGScratch *sc, word *npP,
+                 sword *lastxP, sword *lastyP,
+                 Boolean *lastWasCubicP, Boolean *lastWasQuadP)
+{
+    const char *sP;
+    WWFixedAsDWord rxW, ryW, rotW, tmpW;
+    WWFixedAsDWord exW, eyW, dxW, dyW;
+    WWFixedAsDWord x0W, y0W;
+    int laf, swf;
+    Boolean done;
+
+    sP = *sPP;
+
+    done = FALSE;
+    while (!done) {
+        sP = SvgParserSkipWS(sP);
+        if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') {
+            done = TRUE;
+            continue;
+        }
+
+        sP = SvgParserParseWWFixed16_16(sP, &rxW);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &ryW);
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &rotW);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+
+        sP = SvgParserParseWWFixed16_16(sP, &tmpW);
+        laf = (SvgGeomWWFixedToSWordRound(tmpW) != 0);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+        sP = SvgParserParseWWFixed16_16(sP, &tmpW);
+        swf = (SvgGeomWWFixedToSWordRound(tmpW) != 0);
+        if (*sP == ',') sP++;
+        sP = SvgParserSkipWS(sP);
+
+        if (lastCmd == 'A') {
+            sP = SvgParserParseWWFixed16_16(sP, &exW);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &eyW);
+        } else {
+            sP = SvgParserParseWWFixed16_16(sP, &dxW);
+            if (*sP == ',') sP++;
+            sP = SvgParserSkipWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &dyW);
+            exW = SvgGeomMakeWWFixedFromInt(*lastxP) + dxW;
+            eyW = SvgGeomMakeWWFixedFromInt(*lastyP) + dyW;
+        }
+
+        if ((SvgGeomWWFixedToSWordRound(rxW) == 0) || (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
+            if (*npP < MAX_SVG_POINTS) {
+                sc->pts[*npP].P_x = SvgGeomWWFixedToSWordRound(exW);
+                sc->pts[*npP].P_y = SvgGeomWWFixedToSWordRound(eyW);
+                (*npP)++;
+            }
+            *lastxP = SvgGeomWWFixedToSWordRound(exW);
+            *lastyP = SvgGeomWWFixedToSWordRound(eyW);
+            continue;
+        }
+        if ((SvgGeomWWFixedToSWordRound(exW) == *lastxP) && (SvgGeomWWFixedToSWordRound(eyW) == *lastyP)) {
+            continue;
+        }
+
+        x0W = ((WWFixedAsDWord)(*lastxP)) << 16;
+        y0W = ((WWFixedAsDWord)(*lastyP)) << 16;
+
+        SvgPathFlattenArc(sc, npP, x0W, y0W, rxW, ryW, rotW, laf, swf, exW, eyW);
+
+        *lastxP = SvgGeomWWFixedToSWordRound(exW);
+        *lastyP = SvgGeomWWFixedToSWordRound(eyW);
+
+        *lastWasCubicP = FALSE;
+        *lastWasQuadP  = FALSE;
+    }
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleClose(const char **sPP,
+                   Boolean *closedP,
+                   sword *lastxP, sword *lastyP,
+                   sword subStartX, sword subStartY,
+                   Boolean *lastWasCubicP, Boolean *lastWasQuadP)
+{
+    const char *sP;
+
+    sP = *sPP;
+
+    *closedP = TRUE;
+    sP++;
+    *lastxP = subStartX;
+    *lastyP = subStartY;
+    *lastWasCubicP = FALSE;
+    *lastWasQuadP  = FALSE;
+
+    *sPP = sP;
+}
+
+static void
+SvgPathHandleUnknown(const char **sPP,
+                     Boolean *lastWasCubicP, Boolean *lastWasQuadP)
+{
+    const char *sP;
+
+    sP = *sPP;
+
+    sP++;
+    *lastWasCubicP = FALSE;
+    *lastWasQuadP  = FALSE;
+
+    *sPP = sP;
+}
+
+
 /* ---- main <path> handler (coordinator) ---- */
 
 void SvgPathHandle(const char *tag, SVGScratch *sc)
@@ -272,15 +768,15 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     Boolean         lastWasQuad;
     sword           lastC2x, lastC2y;
     sword           lastQcx, lastQcy;
-
     char            lastCmd;
     Boolean         haveCmd;
     word            i;
-
     WWFixedAsDWord  sx2, sy2;
 
     sc->db[0] = 0;
-    if (!SvgParserGetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) return;
+    if (!SvgParserGetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) {
+        return;
+    }
 
     SvgStyleApplyStrokeAndFill(tag);
     SvgStyleParseFillRule(tag);
@@ -296,16 +792,16 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     haveCmd       = FALSE;
     lastWasCubic  = FALSE;
     lastWasQuad   = FALSE;
-    lastC2x = lastC2y = lastQcx = lastQcy = 0;
+    lastC2x = 0; lastC2y = 0; lastQcx = 0; lastQcy = 0;
 
     sP = sc->db;
 
     while (*sP)
     {
-        sword x, y;
-
         sP = SvgParserSkipWS(sP);
-        if (!*sP) break;
+        if (!*sP) {
+            break;
+        }
 
         if (isalpha(*sP)) {
             lastCmd = *sP++;
@@ -315,380 +811,68 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         }
 
         switch (lastCmd) {
-        case 'M': case 'm': {
-            sP = SvgParserSkipWS(sP);
-            if (lastCmd == 'M') {
-                WWFixedAsDWord f;
-                sP = SvgParserParseWWFixed16_16(sP, &f);
-                x  = SvgViewMapPosX_F(f);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &f);
-                y  = SvgViewMapPosY_F(f);
-            } else {
-                WWFixedAsDWord fx, fy;
-                sword dx, dy;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &fx); dx = SvgViewMapLenX_F(fx);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &fy); dy = SvgViewMapLenY_F(fy);
-                x = (sword)(lastx + dx);
-                y = (sword)(lasty + dy);
-            }
-
-            lastx = x; lasty = y;
-            subStartX = x; subStartY = y;
-            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = x; sc->pts[np].P_y = y; np++; }
-
-            lastCmd = (lastCmd == 'M') ? 'L' : 'l';
-            lastWasCubic = lastWasQuad = FALSE;
+        case 'M':
+        case 'm':
+            SvgPathHandleMoveTo(&sP, &lastCmd, sc, &np, &lastx, &lasty,
+                                &subStartX, &subStartY, &lastWasCubic, &lastWasQuad);
             break;
-        }
 
-        case 'L': case 'l': {
-            sword lx, ly;
-            sP = SvgParserSkipWS(sP);
-            if (lastCmd == 'L') {
-                WWFixedAsDWord f;
-                sP = SvgParserParseWWFixed16_16(sP, &f); lx = SvgViewMapPosX_F(f);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &f); ly = SvgViewMapPosY_F(f);
-            } else {
-                WWFixedAsDWord fx, fy;
-                sword dx, dy;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &fx); dx = SvgViewMapLenX_F(fx);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &fy); dy = SvgViewMapLenY_F(fy);
-                lx = (sword)(lastx + dx);
-                ly = (sword)(lasty + dy);
-            }
-            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lx; sc->pts[np].P_y = ly; np++; }
-            lastx = lx; lasty = ly;
-            lastWasCubic = lastWasQuad = FALSE;
+        case 'L':
+        case 'l':
+            SvgPathHandleLineTo(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                                &lastWasCubic, &lastWasQuad);
             break;
-        }
 
-        case 'H': case 'h': {
-            sword lx;
-            sP = SvgParserSkipWS(sP);
-            if (lastCmd == 'H') {
-                WWFixedAsDWord f;
-                sP = SvgParserParseWWFixed16_16(sP, &f); lx = SvgViewMapPosX_F(f);
-            } else {
-                WWFixedAsDWord fx;
-                sword dx;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &fx); dx = SvgViewMapLenX_F(fx);
-                lx = (sword)(lastx + dx);
-            }
-            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lx; sc->pts[np].P_y = lasty; np++; }
-            lastx = lx;
-            lastWasCubic = lastWasQuad = FALSE;
+        case 'H':
+        case 'h':
+            SvgPathHandleHLineTo(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                                 &lastWasCubic, &lastWasQuad);
             break;
-        }
 
-        case 'V': case 'v': {
-            sword ly;
-            sP = SvgParserSkipWS(sP);
-            if (lastCmd == 'V') {
-                WWFixedAsDWord f;
-                sP = SvgParserParseWWFixed16_16(sP, &f); ly = SvgViewMapPosY_F(f);
-            } else {
-                WWFixedAsDWord fy;
-                sword dy;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &fy); dy = SvgViewMapLenY_F(fy);
-                ly = (sword)(lasty + dy);
-            }
-            if (np < MAX_SVG_POINTS) { sc->pts[np].P_x = lastx; sc->pts[np].P_y = ly; np++; }
-            lasty = ly;
-            lastWasCubic = lastWasQuad = FALSE;
+        case 'V':
+        case 'v':
+            SvgPathHandleVLineTo(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                                 &lastWasCubic, &lastWasQuad);
             break;
-        }
 
-        case 'Q': case 'q': {
-            sword cx, cy, ex, ey;
-            for (;;) {
-                sP = SvgParserSkipWS(sP);
-                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
-
-                if (lastCmd == 'Q') {
-                    WWFixedAsDWord f;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); cx = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); cy = SvgViewMapPosY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ex = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ey = SvgViewMapPosY_F(f);
-                } else {
-                    WWFixedAsDWord f;
-                    sword dcx, dcy, dex, dey;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dcx = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dcy = SvgViewMapLenY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dex = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dey = SvgViewMapLenY_F(f);
-                    cx = (sword)(lastx + dcx); cy = (sword)(lasty + dcy);
-                    ex = (sword)(lastx + dex); ey = (sword)(lasty + dey);
-                }
-
-                SvgPathFlattenQuad(sc, &np, lastx, lasty, cx, cy, ex, ey, 8);
-
-                lastx = ex; lasty = ey;
-                lastWasQuad = TRUE; lastQcx = cx; lastQcy = cy;
-                lastWasCubic = FALSE;
-            }
+        case 'Q':
+        case 'q':
+            SvgPathHandleQuadratic(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                                   &lastWasCubic, &lastWasQuad, &lastQcx, &lastQcy);
             break;
-        }
 
-        case 'T': case 't': {
-            sword ex, ey, cx, cy;
-            for (;;) {
-                sP = SvgParserSkipWS(sP);
-                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
-
-                if (lastCmd == 'T') {
-                    WWFixedAsDWord f;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ex = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ey = SvgViewMapPosY_F(f);
-                } else {
-                    WWFixedAsDWord f;
-                    sword dex, dey;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dex = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dey = SvgViewMapLenY_F(f);
-                    ex = (sword)(lastx + dex); ey = (sword)(lasty + dey);
-                }
-
-                if (lastWasQuad) {
-                    cx = (sword)(lastx + (lastx - lastQcx));
-                    cy = (sword)(lasty + (lasty - lastQcy));
-                } else {
-                    cx = lastx; cy = lasty;
-                }
-
-                SvgPathFlattenQuad(sc, &np, lastx, lasty, cx, cy, ex, ey, 8);
-
-                lastx = ex; lasty = ey;
-                lastWasQuad = TRUE; lastQcx = cx; lastQcy = cy;
-                lastWasCubic = FALSE;
-            }
+        case 'T':
+        case 't':
+            SvgPathHandleSmoothQuadratic(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                                         &lastWasCubic, &lastWasQuad, &lastQcx, &lastQcy);
             break;
-        }
 
-        case 'C': case 'c': {
-            sword c1x, c1y, c2x, c2y, ex, ey;
-            for (;;) {
-                sP = SvgParserSkipWS(sP);
-                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
-
-                if (lastCmd == 'C') {
-                    WWFixedAsDWord f;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); c1x = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); c1y = SvgViewMapPosY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); c2x = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); c2y = SvgViewMapPosY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ex = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ey = SvgViewMapPosY_F(f);
-                } else {
-                    WWFixedAsDWord f;
-                    sword dc1x, dc1y, dc2x, dc2y, dex, dey;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dc1x = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dc1y = SvgViewMapLenY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dc2x = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dc2y = SvgViewMapLenY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dex = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dey = SvgViewMapLenY_F(f);
-                    c1x = (sword)(lastx + dc1x); c1y = (sword)(lasty + dc1y);
-                    c2x = (sword)(lastx + dc2x); c2y = (sword)(lasty + dc2y);
-                    ex  = (sword)(lastx + dex);  ey  = (sword)(lasty + dey);
-                }
-
-                SvgPathFlattenCubic(sc, &np, lastx, lasty, c1x, c1y, c2x, c2y, ex, ey, 10);
-
-                lastx = ex; lasty = ey;
-                lastC2x = c2x; lastC2y = c2y;
-                lastWasCubic = TRUE;
-                lastWasQuad  = FALSE;
-            }
+        case 'C':
+        case 'c':
+            SvgPathHandleCubic(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                               &lastWasCubic, &lastWasQuad, &lastC2x, &lastC2y);
             break;
-        }
 
-        case 'A': case 'a':
-        {
-            WWFixedAsDWord rxW, ryW, rotW, tmpW;
-            WWFixedAsDWord exW, eyW, dxW, dyW;
-            WWFixedAsDWord x0W, y0W;
-            int            laf, swf;
-            Boolean        done;
-
-            done = FALSE;
-            while (!done)
-            {
-                sP = SvgParserSkipWS(sP);
-                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') {
-                    done = TRUE;
-                    continue;
-                }
-
-                sP = SvgParserParseWWFixed16_16(sP, &rxW);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &ryW);
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &rotW);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-
-                sP = SvgParserParseWWFixed16_16(sP, &tmpW);
-                laf = (SvgGeomWWFixedToSWordRound(tmpW) != 0);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-                sP = SvgParserParseWWFixed16_16(sP, &tmpW);
-                swf = (SvgGeomWWFixedToSWordRound(tmpW) != 0);
-                if (*sP == ',') sP++;
-                sP = SvgParserSkipWS(sP);
-
-                if (lastCmd == 'A') {
-                    sP = SvgParserParseWWFixed16_16(sP, &exW);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &eyW);
-                } else {
-                    sP = SvgParserParseWWFixed16_16(sP, &dxW);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &dyW);
-                    exW = SvgGeomMakeWWFixedFromInt(lastx) + dxW;
-                    eyW = SvgGeomMakeWWFixedFromInt(lasty) + dyW;
-                }
-
-                if ((SvgGeomWWFixedToSWordRound(rxW) == 0) || (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
-                    if (np < MAX_SVG_POINTS) {
-                        sc->pts[np].P_x = SvgGeomWWFixedToSWordRound(exW);
-                        sc->pts[np].P_y = SvgGeomWWFixedToSWordRound(eyW);
-                        np++;
-                    }
-                    lastx = SvgGeomWWFixedToSWordRound(exW);
-                    lasty = SvgGeomWWFixedToSWordRound(eyW);
-                    continue;
-                }
-                if ((SvgGeomWWFixedToSWordRound(exW) == lastx) && (SvgGeomWWFixedToSWordRound(eyW) == lasty)) {
-                    continue;
-                }
-
-                x0W = ((WWFixedAsDWord)lastx) << 16;
-                y0W = ((WWFixedAsDWord)lasty) << 16;
-
-                SvgPathFlattenArc(sc, &np, x0W, y0W, rxW, ryW, rotW, laf, swf, exW, eyW);
-
-                lastx = SvgGeomWWFixedToSWordRound(exW);
-                lasty = SvgGeomWWFixedToSWordRound(eyW);
-
-                lastWasCubic = FALSE;
-                lastWasQuad  = FALSE;
-            }
+        case 'S':
+        case 's':
+            SvgPathHandleSmoothCubic(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                                     &lastWasCubic, &lastWasQuad, &lastC2x, &lastC2y);
             break;
-        }
 
-        case 'S': case 's': {
-            sword c1x, c1y, c2x, c2y, ex, ey;
-            for (;;) {
-                sP = SvgParserSkipWS(sP);
-                if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') break;
-
-                if (lastWasCubic) {
-                    c1x = (sword)(lastx + (lastx - lastC2x));
-                    c1y = (sword)(lasty + (lasty - lastC2y));
-                } else {
-                    c1x = lastx; c1y = lasty;
-                }
-
-                if (lastCmd == 'S') {
-                    WWFixedAsDWord f;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); c2x = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); c2y = SvgViewMapPosY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ex = SvgViewMapPosX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); ey = SvgViewMapPosY_F(f);
-                } else {
-                    WWFixedAsDWord f;
-                    sword dc2x, dc2y, dex, dey;
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dc2x = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dc2y = SvgViewMapLenY_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dex = SvgViewMapLenX_F(f);
-                    if (*sP == ',') sP++;
-                    sP = SvgParserSkipWS(sP);
-                    sP = SvgParserParseWWFixed16_16(sP, &f); dey = SvgViewMapLenY_F(f);
-                    c2x = (sword)(lastx + dc2x); c2y = (sword)(lasty + dc2y);
-                    ex  = (sword)(lastx + dex);  ey  = (sword)(lasty + dey);
-                }
-
-                SvgPathFlattenCubic(sc, &np, lastx, lasty, c1x, c1y, c2x, c2y, ex, ey, 10);
-
-                lastx = ex; lasty = ey;
-                lastC2x = c2x; lastC2y = c2y;
-                lastWasCubic = TRUE;
-                lastWasQuad  = FALSE;
-            }
+        case 'A':
+        case 'a':
+            SvgPathHandleArc(&sP, lastCmd, sc, &np, &lastx, &lasty,
+                             &lastWasCubic, &lastWasQuad);
             break;
-        }
 
-        case 'Z': case 'z':
-            closed = TRUE;
-            sP++;
-            lastx = subStartX; lasty = subStartY;
-            lastWasCubic = lastWasQuad = FALSE;
+        case 'Z':
+        case 'z':
+            SvgPathHandleClose(&sP, &closed, &lastx, &lasty,
+                               subStartX, subStartY, &lastWasCubic, &lastWasQuad);
             break;
 
         default:
-            sP++;
-            lastWasCubic = lastWasQuad = FALSE;
+            SvgPathHandleUnknown(&sP, &lastWasCubic, &lastWasQuad);
             break;
         }
     }
@@ -704,7 +888,11 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
             sc->pts[i].P_x = px;
             sc->pts[i].P_y = py;
         }
-        if (closed) Meta_Polygon(sc->pts, np, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
-        else        Meta_Polyline(sc->pts, np);
+        if (closed) {
+            Meta_Polygon(sc->pts, np, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+        } else {
+            Meta_Polyline(sc->pts, np);
+        }
     }
 }
+
