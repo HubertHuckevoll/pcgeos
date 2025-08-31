@@ -1,0 +1,21 @@
+/***********************************************************************
+ * svgUtil.goc — common ASCII helpers
+ ***********************************************************************/
+#include "SVG/svg.goh"
+
+/* small ASCII case-insensitive compare */
+Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b)
+{
+    byte ca;
+    byte cb;
+
+    while (*a || *b) {
+        ca = (byte)*a++;
+        cb = (byte)*b++;
+        if (ca >= 'A' && ca <= 'Z') ca = (byte)(ca + ('a' - 'A'));
+        if (cb >= 'A' && cb <= 'Z') cb = (byte)(cb + ('a' - 'A'));
+        if (ca != cb) return FALSE;
+        if (ca == 0)  return TRUE;
+    }
+    return TRUE;
+}

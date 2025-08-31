@@ -1,0 +1,218 @@
+/***********************************************************************
+ * svgView.goc — viewBox / viewport / preserveAspectRatio mapping
+ ***********************************************************************/
+#include "SVG/svg.goh"
+
+/* preserveAspectRatio parsed state */
+typedef enum { SVG_PAR_ALIGN_MIN=0, SVG_PAR_ALIGN_MID=1, SVG_PAR_ALIGN_MAX=2 } SvgParAlign;
+
+/* module-private state */
+static Boolean        g_vbInited   = FALSE;
+static WWFixedAsDWord g_vbMinX     = 0;
+static WWFixedAsDWord g_vbMinY     = 0;
+static WWFixedAsDWord g_vbW        = 0;
+static WWFixedAsDWord g_vbH        = 0;
+static WWFixedAsDWord g_vpW        = 0;
+static WWFixedAsDWord g_vpH        = 0;
+
+static WWFixedAsDWord g_scaleX     = WWFIXED_ONE;
+static WWFixedAsDWord g_scaleY     = WWFIXED_ONE;
+static WWFixedAsDWord g_addX       = 0;
+static WWFixedAsDWord g_addY       = 0;
+static WWFixedAsDWord g_invPow2    = WWFIXED_ONE;
+
+static Boolean  g_parNone = FALSE;
+static Boolean  g_parSlice = FALSE;
+static SvgParAlign g_parAx = SVG_PAR_ALIGN_MID;
+static SvgParAlign g_parAy = SVG_PAR_ALIGN_MID;
+
+static void SvgViewComputePar(const char *parStr)
+{
+    const char *s;
+    char buf[64];
+    word n;
+
+    g_parNone = FALSE;
+    g_parSlice = FALSE;
+    g_parAx = SVG_PAR_ALIGN_MID;
+    g_parAy = SVG_PAR_ALIGN_MID;
+
+    if (!parStr || !*parStr) {
+        return; /* default already xMidYMid meet */
+    }
+
+    n = 0; s = parStr;
+    while (*s && n < (sizeof(buf)-1)) {
+        char c = *s++;
+        if (c >= 'A' && c <= 'Z') c = (char)(c + ('a' - 'A'));
+        buf[n++] = c;
+    }
+    buf[n] = 0;
+
+    if (!strncmp(buf, "none", 4)) {
+        g_parNone = TRUE;
+        return;
+    }
+
+    if      (!strncmp(buf, "xminymin", 8)) { g_parAx = SVG_PAR_ALIGN_MIN; g_parAy = SVG_PAR_ALIGN_MIN; s = parStr + 8; }
+    else if (!strncmp(buf, "xmidymin", 8)) { g_parAx = SVG_PAR_ALIGN_MID; g_parAy = SVG_PAR_ALIGN_MIN; s = parStr + 8; }
+    else if (!strncmp(buf, "xmaxymin", 8)) { g_parAx = SVG_PAR_ALIGN_MAX; g_parAy = SVG_PAR_ALIGN_MIN; s = parStr + 8; }
+    else if (!strncmp(buf, "xminymid", 8)) { g_parAx = SVG_PAR_ALIGN_MIN; g_parAy = SVG_PAR_ALIGN_MID; s = parStr + 8; }
+    else if (!strncmp(buf, "xmidymid", 8)) { g_parAx = SVG_PAR_ALIGN_MID; g_parAy = SVG_PAR_ALIGN_MID; s = parStr + 8; }
+    else if (!strncmp(buf, "xmaxymid", 8)) { g_parAx = SVG_PAR_ALIGN_MAX; g_parAy = SVG_PAR_ALIGN_MID; s = parStr + 8; }
+    else if (!strncmp(buf, "xminymax", 8)) { g_parAx = SVG_PAR_ALIGN_MIN; g_parAy = SVG_PAR_ALIGN_MAX; s = parStr + 8; }
+    else if (!strncmp(buf, "xmidymax", 8)) { g_parAx = SVG_PAR_ALIGN_MID; g_parAy = SVG_PAR_ALIGN_MAX; s = parStr + 8; }
+    else if (!strncmp(buf, "xmaxymax", 8)) { g_parAx = SVG_PAR_ALIGN_MAX; g_parAy = SVG_PAR_ALIGN_MAX; s = parStr + 8; }
+    else {
+        s = parStr; /* keep defaults if unknown */
+    }
+
+    while (*s && isspace(*s)) s++;
+    if (!strncmp(s, "slice", 5)) g_parSlice = TRUE;
+}
+
+void SvgViewInitFromSvgTag(const char *tag)
+{
+    static char vb[96];
+    static char wb[32], hb[32];
+    static char par[64];
+    const char *s;
+    WWFixedAsDWord rawSx, rawSy, uni, leftoverX, leftoverY;
+    sdword w0, h0;
+    word   reduce;
+    sword  worldW, worldH;
+
+    if (g_vbInited) return;
+
+    g_vbMinX = 0; g_vbMinY = 0; g_vbW = 0; g_vbH = 0;
+    g_vpW = 0; g_vpH = 0;
+    g_scaleX = WWFIXED_ONE; g_scaleY = WWFIXED_ONE;
+    g_addX = 0; g_addY = 0;
+    g_invPow2 = WWFIXED_ONE;
+
+    par[0] = 0;
+    if (SvgParserGetAttrBounded(tag, "preserveAspectRatio", par, sizeof(par))) {
+        SvgViewComputePar(par);
+    } else {
+        SvgViewComputePar("");
+    }
+
+    if (SvgParserGetAttrBounded(tag, "viewBox", vb, sizeof(vb))) {
+        s = vb;
+        s = SvgParserParseWWFixed16_16(s, &g_vbMinX);
+        s = SvgParserSkipWS(s); s = SvgParserParseWWFixed16_16(s, &g_vbMinY);
+        s = SvgParserSkipWS(s); s = SvgParserParseWWFixed16_16(s, &g_vbW);
+        s = SvgParserSkipWS(s); s = SvgParserParseWWFixed16_16(s, &g_vbH);
+    }
+    if ((sdword)g_vbW <= 0 || (sdword)g_vbH <= 0) {
+        if (SvgParserGetAttrBounded(tag, "width",  wb, sizeof(wb)))  (void)SvgParserParseWWFixed16_16(wb, &g_vpW);
+        if (SvgParserGetAttrBounded(tag, "height", hb, sizeof(hb)))  (void)SvgParserParseWWFixed16_16(hb, &g_vpH);
+        if ((sdword)g_vpW <= 0) g_vpW = SvgGeomMakeWWFixedFromInt(100);
+        if ((sdword)g_vpH <= 0) g_vpH = SvgGeomMakeWWFixedFromInt(100);
+        g_vbMinX = 0; g_vbMinY = 0;
+        g_vbW = g_vpW; g_vbH = g_vpH;
+    }
+
+    if ((sdword)g_vpW == 0) g_vpW = g_vbW;
+    if ((sdword)g_vpH == 0) g_vpH = g_vbH;
+
+    rawSx = GrSDivWWFixed(g_vpW, g_vbW);
+    rawSy = GrSDivWWFixed(g_vpH, g_vbH);
+
+    if (g_parNone) {
+        g_scaleX = rawSx;
+        g_scaleY = rawSy;
+        g_addX = 0;
+        g_addY = 0;
+    } else {
+        uni = g_parSlice ? ((rawSx > rawSy) ? rawSx : rawSy)
+                         : ((rawSx < rawSy) ? rawSx : rawSy);
+        g_scaleX = uni;
+        g_scaleY = uni;
+
+        leftoverX = g_vpW - GrMulWWFixed(g_vbW, uni);
+        leftoverY = g_vpH - GrMulWWFixed(g_vbH, uni);
+        if ((sdword)leftoverX < 0) leftoverX = 0;
+        if ((sdword)leftoverY < 0) leftoverY = 0;
+
+        g_addX = (g_parAx == SVG_PAR_ALIGN_MIN) ? 0
+              : (g_parAx == SVG_PAR_ALIGN_MID) ? GrSDivWWFixed(leftoverX, MakeWWFixed(2))
+                                               : leftoverX;
+        g_addY = (g_parAy == SVG_PAR_ALIGN_MIN) ? 0
+              : (g_parAy == SVG_PAR_ALIGN_MID) ? GrSDivWWFixed(leftoverY, MakeWWFixed(2))
+                                               : leftoverY;
+    }
+
+    w0 = ((sdword)g_vpW) >> 16;  if (w0 <= 0) w0 = 1;
+    h0 = ((sdword)g_vpH) >> 16;  if (h0 <= 0) h0 = 1;
+
+    reduce = 1;
+    while ((w0 / (sdword)reduce) > 32760 || (h0 / (sdword)reduce) > 32760) {
+        if (reduce >= 32768) break;
+        reduce <<= 1;
+    }
+    g_invPow2 = (reduce > 1) ? GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(reduce))
+                             : WWFIXED_ONE;
+
+    worldW = (sword)(w0 / (sdword)reduce);
+    worldH = (sword)(h0 / (sdword)reduce);
+    if (worldW < 1) worldW = 1;
+    if (worldH < 1) worldH = 1;
+
+    Meta_SetScaling(0, 0, worldW, worldH, worldW, worldH);
+
+    g_vbInited = TRUE;
+}
+
+void SvgViewInitDefault(void)
+{
+    if (g_vbInited) return;
+
+    g_vbMinX = 0; g_vbMinY = 0;
+    g_vbW = SvgGeomMakeWWFixedFromInt(1024);
+    g_vbH = SvgGeomMakeWWFixedFromInt(1024);
+    g_vpW = g_vbW; g_vpH = g_vbH;
+
+    g_scaleX = WWFIXED_ONE;
+    g_scaleY = WWFIXED_ONE;
+    g_addX   = 0;
+    g_addY   = 0;
+    g_invPow2= WWFIXED_ONE;
+
+    Meta_SetScaling(0, 0, 1024, 1024, 1024, 1024);
+    g_vbInited = TRUE;
+}
+
+/* mappers: viewBox space -> world space (sword) */
+sword SvgViewMapPosX_F(WWFixedAsDWord fx)
+{
+    WWFixedAsDWord v;
+    v  = fx - g_vbMinX;
+    v  = GrMulWWFixed(v, g_scaleX);
+    v += g_addX;
+    v  = GrMulWWFixed(v, g_invPow2);
+    return SvgGeomWWFixedToSWordRound(v);
+}
+sword SvgViewMapPosY_F(WWFixedAsDWord fy)
+{
+    WWFixedAsDWord v;
+    v  = fy - g_vbMinY;
+    v  = GrMulWWFixed(v, g_scaleY);
+    v += g_addY;
+    v  = GrMulWWFixed(v, g_invPow2);
+    return SvgGeomWWFixedToSWordRound(v);
+}
+sword SvgViewMapLenX_F(WWFixedAsDWord fx)
+{
+    WWFixedAsDWord v;
+    v = GrMulWWFixed(fx, g_scaleX);
+    v = GrMulWWFixed(v, g_invPow2);
+    return SvgGeomWWFixedToSWordRound(v);
+}
+sword SvgViewMapLenY_F(WWFixedAsDWord fy)
+{
+    WWFixedAsDWord v;
+    v = GrMulWWFixed(fy, g_scaleY);
+    v = GrMulWWFixed(v, g_invPow2);
+    return SvgGeomWWFixedToSWordRound(v);
+}
