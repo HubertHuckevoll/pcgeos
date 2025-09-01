@@ -756,26 +756,30 @@ SvgPathHandleUnknown(const char **sPP,
 
 /* Emit current subpath; handles implicit close-on-fill per SVG spec */
 /* Emit current subpath; close-on-fill without duplicating the first point */
+/* Emit current subpath; always fill if 'fill' is present, even if not closed.
+   Stroke the closing edge only when 'Z/z' was used (closed==TRUE). */
 static void
 SvgPathEmitSubpath(const char *tag,
                    SVGScratch *sc, word *npP,
                    Boolean closed,
                    WWFixedAsDWord sx2, WWFixedAsDWord sy2)
 {
+    word      i, np;
+    sword     px, py;
     SvgMatrix elemOnWorld;
-    word i, np;
-    sword px, py;
-    Boolean doFill, doStroke;
+    Boolean   hasFill, hasStroke;
 
-    (void)sx2; (void)sy2;   /* not used anymore */
+    (void)sx2; (void)sy2;
 
     np = *npP;
-    if (np < 2) { *npP = 0; return; }
+    *npP = 0;                     /* we’re going to flush no matter what */
+    if (np <= 1) return;
 
-    /* Build matrix that acts on already-world points (no double view mapping) */
+    hasFill   = SvgStyleHasFill(tag);
+    hasStroke = SvgStyleHasStroke(tag);
+
+    /* Transform points from world→world using element-on-world CTM */
     SvgXformBuildElemOnWorld(tag, &elemOnWorld);
-
-    /* Apply element transform in world space */
     for (i = 0; i < np; i++) {
         px = sc->pts[i].P_x;
         py = sc->pts[i].P_y;
@@ -784,27 +788,27 @@ SvgPathEmitSubpath(const char *tag,
         sc->pts[i].P_y = py;
     }
 
-    doFill   = SvgStyleHasFill(tag);
-    doStroke = SvgStyleHasStroke(tag);
+    /* FILL: SVG fills *all* subpaths (implicitly closed). */
+    if (hasFill) {
+        /* Edges parameter: only draw a closing stroke when the author used Z/z. */
+        Meta_Polygon(sc->pts, np, /*in=*/TRUE, /*edges=*/(hasStroke && closed));
+        /* If stroke exists but subpath wasn’t explicitly closed, we still need
+           the outline without the implicit close: draw the polyline stroke now. */
+        if (hasStroke && !closed) {
+            Meta_Polyline(sc->pts, np);
+        }
+        return;
+    }
 
-    if (doFill) {
-        /* SVG: fill implies a closed contour, but Meta_Polygon closes it
-           internally — do NOT append the first point again. */
-        Meta_Polygon(sc->pts, np, /*in=*/TRUE, /*edges=*/doStroke);
-    } else if (doStroke) {
+    /* No fill: stroke only. Respect Z/z for closed outlines. */
+    if (hasStroke) {
         if (closed) {
-            /* draw just the stroked closed outline */
             Meta_Polygon(sc->pts, np, /*in=*/FALSE, /*edges=*/TRUE);
         } else {
-            /* open stroked outline */
             Meta_Polyline(sc->pts, np);
         }
     }
-    /* neither fill nor stroke => nothing to draw */
-
-    *npP = 0;
 }
-
 
 
 void SvgPathHandle(const char *tag, SVGScratch *sc)
