@@ -192,8 +192,10 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
                 SvgMatTranslate(&T1, v2, v3);
                 SvgMatRotateDeg(&R, v1);
                 SvgMatTranslate(&T2, (WWFixedAsDWord)(-(sdword)v2), (WWFixedAsDWord)(-(sdword)v3));
-                SvgMatMul(&T1, &R, &tmp);
-                SvgMatMul(&tmp, &T2, &t);
+
+                /* Need t = T1 ∘ R ∘ T2, but SvgMatMul(m1,m2,r) gives r = m2 ∘ m1 */
+                SvgMatMul(&T2, &R, &tmp);   /* tmp = R ∘ T2 */
+                SvgMatMul(&tmp, &T1, &t);   /* t   = T1 ∘ (R ∘ T2) */
             } else {
                 if (*p == ')') p++;
                 SvgMatRotateDeg(&t, v1);
@@ -233,12 +235,14 @@ void SvgXformBuildWorld(const char *tag,
     SvgViewGetMatrix(&vm.a, &vm.b, &vm.c, &vm.d, &vm.e, &vm.f);
     SvgXformParseAttrUser(tag, &elem);
 
+    /* Want: out = VM ∘ Parent ∘ Element */
     if (parentCTM) {
-        SvgMatMul(parentCTM, &elem, &tmp);
-        SvgMatMul(&vm, &tmp, outWorld);
+        SvgMatMul(&elem, parentCTM, &tmp);  /* tmp = parent ∘ elem */
+        SvgMatMul(&tmp, &vm, outWorld);     /* out = vm ∘ (parent ∘ elem) */
     } else {
-        SvgMatMul(&vm, &elem, outWorld);
+        SvgMatMul(&elem, &vm, outWorld);    /* out = vm ∘ elem */
     }
+
 }
 
 void
