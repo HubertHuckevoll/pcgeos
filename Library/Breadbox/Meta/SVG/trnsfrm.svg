@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="300" height="200" viewBox="0 0 300 200"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Axes to sanity-check origin -->
+  <path d="M0 0H300" stroke="#e5e5e5" stroke-width="1" fill="none"/>
+  <path d="M0 0V200" stroke="#e5e5e5" stroke-width="1" fill="none"/>
+
+  <!-- Reference rect: (10,10), size 40x30 -->
+  <rect id="base" x="10" y="10" width="40" height="30"
+        fill="#f99" stroke="#000" stroke-width="1"/>
+
+  <!-- 1) translate(80,0): base moved right by 80 -->
+  <rect x="10" y="10" width="40" height="30"
+        transform="translate(80,0)"
+        fill="#9f9" stroke="#000" stroke-width="1"/>
+
+  <!-- 2) scale(2,1): about origin → left edge shifts to x=20, width doubles to 80 -->
+  <rect x="10" y="10" width="40" height="30"
+        transform="scale(2,1)"
+        fill="#99f" stroke="#000" stroke-width="1"/>
+
+  <!-- 3) rotate(90,30,25): 90° around the rect’s center (30,25) -->
+  <rect x="10" y="10" width="40" height="30"
+        transform="rotate(90,30,25)"
+        fill="#f9f" stroke="#000" stroke-width="1"/>
+
+  <!-- 4) skewX(30): shear to the right by tan(30°)*y -->
+  <rect x="10" y="60" width="40" height="30"
+        transform="skewX(30)"
+        fill="#fa4" stroke="#000" stroke-width="1"/>
+
+  <!-- 5) matrix(0,-1, 1,0, 0,80):
+         x' = 0*x + 1*y + 0  (= y)
+         y' = -1*x + 0*y + 80 (= 80 - x)
+         → 90° rotation + translate -->
+  <rect x="10" y="10" width="40" height="30"
+        transform="matrix(0,-1,1,0,0,80)"
+        fill="#0aa" stroke="#000" stroke-width="1"/>
+
+  <!-- A small dot at origin for reference -->
+  <circle cx="0" cy="0" r="2" fill="#000"/>
+</svg>

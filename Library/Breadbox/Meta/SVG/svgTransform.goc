@@ -1,0 +1,280 @@
+/***********************************************************************
+ * svgTransform.goc — CTM (affine) parsing + application (WWFixed 16.16)
+ ***********************************************************************/
+@include <stdapp.goh>
+
+#include <Ansi/string.h>
+#include <Ansi/stdlib.h>
+#include <Ansi/ctype.h>
+#include <file.h>
+#include <system.h>
+#include <graphics.h>
+#include <gstring.h>
+#include <meta.h>
+
+#include "SVG/svg.h"
+
+/* ---- constructors ---- */
+
+static void SvgMatIdentity(SvgMatrix *m)
+{
+    m->a = m->d = WWFIXED_ONE;
+    m->b = m->c = m->e = m->f = MakeWWFixed(0);
+}
+
+static void SvgMatTranslate(SvgMatrix *m, WWFixedAsDWord tx, WWFixedAsDWord ty)
+{
+    SvgMatIdentity(m);
+    m->e = tx; m->f = ty;
+}
+
+static void SvgMatScale(SvgMatrix *m, WWFixedAsDWord sx, WWFixedAsDWord sy)
+{
+    SvgMatIdentity(m);
+    m->a = sx; m->d = sy;
+}
+
+static void SvgMatRotateDeg(SvgMatrix *m, WWFixedAsDWord deg)
+{
+    WWFixedAsDWord c, s;
+    c = GrQuickCosine(deg);
+    s = GrQuickSine(deg);
+    m->a = c;  m->c = (WWFixedAsDWord)(-(sdword)s);
+    m->b = s;  m->d = c;
+    m->e = MakeWWFixed(0);
+    m->f = MakeWWFixed(0);
+}
+
+static void SvgMatSkewX(SvgMatrix *m, WWFixedAsDWord deg)
+{
+    WWFixedAsDWord t;
+    WWFixedAsDWord c, s;
+    c = GrQuickCosine(deg);
+    s = GrQuickSine(deg);
+    t = (sdword)c ? GrSDivWWFixed(s, c) : MakeWWFixed(0);
+    SvgMatIdentity(m);
+    m->c = t; /* x' = x + tan(a)*y */
+}
+
+static void SvgMatSkewY(SvgMatrix *m, WWFixedAsDWord deg)
+{
+    WWFixedAsDWord t;
+    WWFixedAsDWord c, s;
+    c = GrQuickCosine(deg);
+    s = GrQuickSine(deg);
+    t = (sdword)c ? GrSDivWWFixed(s, c) : MakeWWFixed(0);
+    SvgMatIdentity(m);
+    m->b = t; /* y' = y + tan(a)*x */
+}
+
+/* r = m2 ∘ m1  (apply m1 then m2) */
+static void SvgMatMul(const SvgMatrix *m1, const SvgMatrix *m2, SvgMatrix *r)
+{
+    WWFixedAsDWord a, b, c, d, e, f;
+
+    a = GrAddWWFixed(GrMulWWFixed(m2->a, m1->a), GrMulWWFixed(m2->c, m1->b));
+    b = GrAddWWFixed(GrMulWWFixed(m2->b, m1->a), GrMulWWFixed(m2->d, m1->b));
+    c = GrAddWWFixed(GrMulWWFixed(m2->a, m1->c), GrMulWWFixed(m2->c, m1->d));
+    d = GrAddWWFixed(GrMulWWFixed(m2->b, m1->c), GrMulWWFixed(m2->d, m1->d));
+    e = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(m2->a, m1->e), GrMulWWFixed(m2->c, m1->f)), m2->e);
+    f = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(m2->b, m1->e), GrMulWWFixed(m2->d, m1->f)), m2->f);
+
+    r->a = a; r->b = b; r->c = c; r->d = d; r->e = e; r->f = f;
+}
+
+/* apply to a POSITION (includes translation) */
+void SvgXformApplyPoint(sword *xP, sword *yP, const SvgMatrix *m)
+{
+    WWFixedAsDWord X, Y, xw, yw;
+
+    X = ((WWFixedAsDWord)((sdword)(*xP))) << 16;
+    Y = ((WWFixedAsDWord)((sdword)(*yP))) << 16;
+
+    xw = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(m->a, X), GrMulWWFixed(m->c, Y)), m->e);
+    yw = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(m->b, X), GrMulWWFixed(m->d, Y)), m->f);
+
+    *xP = SvgGeomWWFixedToSWordRound(xw);
+    *yP = SvgGeomWWFixedToSWordRound(yw);
+}
+
+/* apply to a VECTOR (ignores translation) — use for lengths/radii */
+void SvgXformApplyVector(sword *dxP, sword *dyP, const SvgMatrix *m)
+{
+    WWFixedAsDWord X, Y, xw, yw;
+
+    X = ((WWFixedAsDWord)((sdword)(*dxP))) << 16;
+    Y = ((WWFixedAsDWord)((sdword)(*dyP))) << 16;
+
+    xw = GrAddWWFixed(GrMulWWFixed(m->a, X), GrMulWWFixed(m->c, Y));
+    yw = GrAddWWFixed(GrMulWWFixed(m->b, X), GrMulWWFixed(m->d, Y));
+
+    *dxP = SvgGeomWWFixedToSWordRound(xw);
+    *dyP = SvgGeomWWFixedToSWordRound(yw);
+}
+
+/* ---- parse transform attribute into USER-SPACE matrix ---- */
+
+static const char* SvgParseNumber(const char *s, WWFixedAsDWord *out)
+{
+    s = SvgParserSkipWS(s);
+    s = SvgParserParseWWFixed16_16(s, out);
+    s = SvgParserSkipWS(s);
+    if (*s == ',') { s++; }
+    return s;
+}
+
+/* outUser gets the element's matrix in USER units (no viewBox). */
+void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
+{
+    char buf[192];
+    const char *s;
+    SvgMatrix acc;
+
+    SvgMatIdentity(&acc);
+
+    buf[0] = 0;
+    if (!SvgParserGetAttrBounded(tag, "transform", buf, sizeof(buf))) {
+        *outUser = acc;
+        return;
+    }
+
+    s = buf;
+    while (*s) {
+        WWFixedAsDWord v1, v2, v3;
+        SvgMatrix t;
+        const char *p;
+
+        s = SvgParserSkipWS(s);
+        if (!*s) break;
+
+        if (!AnsiStrnCmp(s, "matrix(", 7)) {
+            WWFixedAsDWord a,b,c,d,e,f;
+            p = s + 7;
+            p = SvgParseNumber(p, &a);
+            p = SvgParseNumber(p, &b);
+            p = SvgParseNumber(p, &c);
+            p = SvgParseNumber(p, &d);
+            p = SvgParseNumber(p, &e);
+            p = SvgParseNumber(p, &f);
+            if (*p == ')') p++;
+            t.a=a; t.b=b; t.c=c; t.d=d; t.e=e; t.f=f;
+            SvgMatMul(&acc, &t, &acc);  /* left-to-right application */
+            s = p;
+        } else if (!AnsiStrnCmp(s, "translate(", 10)) {
+            p = s + 10;
+            p = SvgParseNumber(p, &v1);
+            p = SvgParserSkipWS(p);
+            if (*p != ')') { p = SvgParseNumber(p, &v2); } else { v2 = MakeWWFixed(0); }
+            if (*p == ')') p++;
+            SvgMatTranslate(&t, v1, v2);
+            SvgMatMul(&acc, &t, &acc);
+            s = p;
+        } else if (!AnsiStrnCmp(s, "scale(", 6)) {
+            p = s + 6;
+            p = SvgParseNumber(p, &v1);
+            p = SvgParserSkipWS(p);
+            if (*p != ')') { p = SvgParseNumber(p, &v2); } else { v2 = v1; }
+            if (*p == ')') p++;
+            SvgMatScale(&t, v1, v2);
+            SvgMatMul(&acc, &t, &acc);
+            s = p;
+        } else if (!AnsiStrnCmp(s, "rotate(", 7)) {
+            p = s + 7;
+            p = SvgParseNumber(p, &v1); /* angle in degrees */
+            p = SvgParserSkipWS(p);
+            if (*p != ')') {
+                /* rotate(a, cx, cy) == T(cx,cy) * R(a) * T(-cx,-cy) */
+                SvgMatrix T1, R, T2, tmp;
+                p = SvgParseNumber(p, &v2); /* cx */
+                p = SvgParseNumber(p, &v3); /* cy */
+                if (*p == ')') p++;
+
+                SvgMatTranslate(&T1, v2, v3);
+                SvgMatRotateDeg(&R, v1);
+                SvgMatTranslate(&T2, (WWFixedAsDWord)(-(sdword)v2), (WWFixedAsDWord)(-(sdword)v3));
+                SvgMatMul(&T1, &R, &tmp);
+                SvgMatMul(&tmp, &T2, &t);
+            } else {
+                if (*p == ')') p++;
+                SvgMatRotateDeg(&t, v1);
+            }
+            SvgMatMul(&acc, &t, &acc);
+            s = p;
+        } else if (!AnsiStrnCmp(s, "skewX(", 6)) {
+            p = s + 6;
+            p = SvgParseNumber(p, &v1);
+            if (*p == ')') p++;
+            SvgMatSkewX(&t, v1);
+            SvgMatMul(&acc, &t, &acc);
+            s = p;
+        } else if (!AnsiStrnCmp(s, "skewY(", 6)) {
+            p = s + 6;
+            p = SvgParseNumber(p, &v1);
+            if (*p == ')') p++;
+            SvgMatSkewY(&t, v1);
+            SvgMatMul(&acc, &t, &acc);
+            s = p;
+        } else {
+            /* unknown chunk; skip one token */
+            while (*s && *s != ')' && !isspace(*s)) s++;
+            if (*s == ')') s++;
+        }
+    }
+    *outUser = acc;
+}
+
+/* Build WORLD-SPACE CTM = ViewMatrix ∘ Parent ∘ Element */
+void SvgXformBuildWorld(const char *tag,
+                        const SvgMatrix *parentCTM, /* can be NULL */
+                        SvgMatrix *outWorld)
+{
+    SvgMatrix vm, elem, tmp;
+
+    SvgViewGetMatrix(&vm.a, &vm.b, &vm.c, &vm.d, &vm.e, &vm.f);
+    SvgXformParseAttrUser(tag, &elem);
+
+    if (parentCTM) {
+        SvgMatMul(parentCTM, &elem, &tmp);
+        SvgMatMul(&vm, &tmp, outWorld);
+    } else {
+        SvgMatMul(&vm, &elem, outWorld);
+    }
+}
+
+void
+SvgXformBuildElemOnWorld(const char *tag, SvgMatrix *outElemWorld)
+{
+    SvgMatrix vm;
+    SvgMatrix inv;
+    SvgMatrix elem;
+    SvgMatrix tmp;
+    WWFixedAsDWord one;
+
+    one = MakeWWFixed(1);
+
+    /* VM: world <- user */
+    SvgViewGetMatrix(&vm.a, &vm.b, &vm.c, &vm.d, &vm.e, &vm.f);
+
+    /* element: user <- user */
+    SvgXformParseAttrUser(tag, &elem);
+
+    /* VM^{-1}; VM is scale+translate (b=c=0) */
+    if ((sdword)vm.a == 0 || (sdword)vm.d == 0) {
+        /* degenerate; fall back to element only */
+        *outElemWorld = elem;
+        return;
+    }
+    inv.a = GrSDivWWFixed(one, vm.a);
+    inv.b = MakeWWFixed(0);
+    inv.c = MakeWWFixed(0);
+    inv.d = GrSDivWWFixed(one, vm.d);
+    inv.e = (WWFixedAsDWord)(-(sdword)GrMulWWFixed(inv.a, vm.e)); /* -e/a */
+    inv.f = (WWFixedAsDWord)(-(sdword)GrMulWWFixed(inv.d, vm.f)); /* -f/d */
+
+    /* out = VM ∘ Element ∘ VM^{-1}
+       SvgMatMul(r = m2 ∘ m1), i.e., apply m1 then m2 */
+    SvgMatMul(&inv, &elem, &tmp);        /* tmp = Element ∘ VM^{-1} */
+    SvgMatMul(&tmp, &vm, outElemWorld);  /* out = VM ∘ tmp */
+}
+
+

@@ -74,6 +74,7 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
 }
 
 /* element-local transform="scale(...)" (kept) */
+/*
 void SvgShapeGetLocalScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut)
 {
     static char buf[96];
@@ -107,6 +108,7 @@ void SvgShapeApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWo
     *x = (sword)((sdword)X >> 16);
     *y = (sword)((sdword)Y >> 16);
 }
+*/
 
 sword SvgShapeScaleLength(sword v, WWFixedAsDWord s)
 {
@@ -125,13 +127,16 @@ sword SvgShapeScaleLength(sword v, WWFixedAsDWord s)
 
 void SvgShapeHandleLine(const char *tag)
 {
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-    sword           x1;
-    sword           y1;
-    sword           x2;
-    sword           y2;
     static char     xb[32], yb[32], x2b[32], y2b[32];
+    WWFixedAsDWord  fx1;
+    WWFixedAsDWord  fy1;
+    WWFixedAsDWord  fx2;
+    WWFixedAsDWord  fy2;
+    SvgMatrix       ctm;
+    sword           x1w;
+    sword           y1w;
+    sword           x2w;
+    sword           y2w;
 
     if (SvgParserGetAttrBounded(tag, "x1", xb, sizeof(xb)) &&
         SvgParserGetAttrBounded(tag, "y1", yb, sizeof(yb)) &&
@@ -141,28 +146,41 @@ void SvgShapeHandleLine(const char *tag)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
+        (void)SvgParserParseWWFixed16_16(xb,  &fx1);
+        (void)SvgParserParseWWFixed16_16(yb,  &fy1);
+        (void)SvgParserParseWWFixed16_16(x2b, &fx2);
+        (void)SvgParserParseWWFixed16_16(y2b, &fy2);
+
+        /* world CTM = View ∘ Element (parent CTM omitted here) */
+        SvgXformBuildWorld(tag, NULL, &ctm);
+
+        /* apply CTM to the two points (do math in 16.16 for precision) */
         {
-            WWFixedAsDWord f;
-            (void)SvgParserParseWWFixed16_16(xb, &f); x1 = SvgViewMapPosX_F(f);
-            (void)SvgParserParseWWFixed16_16(yb, &f); y1 = SvgViewMapPosY_F(f);
-            (void)SvgParserParseWWFixed16_16(x2b,&f); x2 = SvgViewMapPosX_F(f);
-            (void)SvgParserParseWWFixed16_16(y2b,&f); y2 = SvgViewMapPosY_F(f);
+            WWFixedAsDWord X, Y, Xp, Yp;
+
+            X  = fx1; Y  = fy1;
+            Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+            Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+            x1w = SvgGeomWWFixedToSWordRound(Xp);
+            y1w = SvgGeomWWFixedToSWordRound(Yp);
+
+            X  = fx2; Y  = fy2;
+            Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+            Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+            x2w = SvgGeomWWFixedToSWordRound(Xp);
+            y2w = SvgGeomWWFixedToSWordRound(Yp);
         }
 
-        SvgShapeGetLocalScale(tag, &sx, &sy);
-        SvgShapeApplyScalePoint(&x1, &y1, sx, sy);
-        SvgShapeApplyScalePoint(&x2, &y2, sx, sy);
-
-        Meta_Line(x1, y1, x2, y2);
+        Meta_Line(x1w, y1w, x2w, y2w);
     }
 }
 
+
 void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
 {
-    word            np;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-    word            i;
+    word      np;
+    word      i;
+    SvgMatrix elemOnWorld;
 
     sc->pb[0] = 0;
     if (SvgParserGetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
@@ -170,32 +188,31 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
+        /* points parsed into WORLD space */
         SvgShapeParsePoints(sc->pb, sc->pts, &np);
-        if (np > 0)
+        if (np > 1)
         {
-            SvgShapeGetLocalScale(tag, &sx, &sy);
-            for (i = 0; i < np; i++)
-            {
-                sword px;
-                sword py;
+            SvgXformBuildElemOnWorld(tag, &elemOnWorld);
 
-                px = sc->pts[i].P_x;
-                py = sc->pts[i].P_y;
-                SvgShapeApplyScalePoint(&px, &py, sx, sy);
+            for (i = 0; i < np; i++) {
+                sword px = sc->pts[i].P_x;
+                sword py = sc->pts[i].P_y;
+                SvgXformApplyPoint(&px, &py, &elemOnWorld);
                 sc->pts[i].P_x = px;
                 sc->pts[i].P_y = py;
             }
+
             Meta_Polyline(sc->pts, np);
         }
     }
 }
 
+
 void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
 {
-    word            np;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
-    word            i;
+    word      np;
+    word      i;
+    SvgMatrix elemOnWorld;
 
     sc->pb[0] = 0;
     if (SvgParserGetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
@@ -204,72 +221,94 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
         SvgStyleApplyFillRule(tag);
         SvgStyleApplyStrokeWidth(tag);
 
+        /* points parsed into WORLD space */
         SvgShapeParsePoints(sc->pb, sc->pts, &np);
-        if (np > 0)
+        if (np > 2)
         {
-            SvgShapeGetLocalScale(tag, &sx, &sy);
-            for (i = 0; i < np; i++)
-            {
-                sword px;
-                sword py;
+            SvgXformBuildElemOnWorld(tag, &elemOnWorld);
 
-                px = sc->pts[i].P_x;
-                py = sc->pts[i].P_y;
-                SvgShapeApplyScalePoint(&px, &py, sx, sy);
+            for (i = 0; i < np; i++) {
+                sword px = sc->pts[i].P_x;
+                sword py = sc->pts[i].P_y;
+                SvgXformApplyPoint(&px, &py, &elemOnWorld);
                 sc->pts[i].P_x = px;
                 sc->pts[i].P_y = py;
             }
+
             Meta_Polygon(sc->pts, np, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
         }
     }
 }
 
+
 void SvgShapeHandleRect(const char *tag)
 {
     static char     xb[32], yb[32], wb[32], hb[32];
-    sword           x;
-    sword           y;
-    sword           x2;
-    sword           y2;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
+    WWFixedAsDWord  fx;
+    WWFixedAsDWord  fy;
+    WWFixedAsDWord  fw;
+    WWFixedAsDWord  fh;
+    SvgMatrix       ctm;
+    Point           pts[4];
+    WWFixedAsDWord  X, Y, Xp, Yp;
 
     if (SvgParserGetAttrBounded(tag, "x", xb, sizeof(xb)) &&
         SvgParserGetAttrBounded(tag, "y", yb, sizeof(yb)) &&
-        SvgParserGetAttrBounded(tag, "width", wb, sizeof(wb)) &&
+        SvgParserGetAttrBounded(tag, "width",  wb, sizeof(wb)) &&
         SvgParserGetAttrBounded(tag, "height", hb, sizeof(hb)))
     {
         SvgStyleApplyStrokeAndFill(tag);
+        SvgStyleApplyFillRule(tag);
         SvgStyleApplyStrokeWidth(tag);
 
-        {
-            WWFixedAsDWord f;
-            (void)SvgParserParseWWFixed16_16(xb, &f); x  = SvgViewMapPosX_F(f);
-            (void)SvgParserParseWWFixed16_16(yb, &f); y  = SvgViewMapPosY_F(f);
-            (void)SvgParserParseWWFixed16_16(wb, &f); x2 = (sword)(x + SvgViewMapLenX_F(f));
-            (void)SvgParserParseWWFixed16_16(hb, &f); y2 = (sword)(y + SvgViewMapLenY_F(f));
-        }
+        (void)SvgParserParseWWFixed16_16(xb, &fx);
+        (void)SvgParserParseWWFixed16_16(yb, &fy);
+        (void)SvgParserParseWWFixed16_16(wb, &fw);
+        (void)SvgParserParseWWFixed16_16(hb, &fh);
 
-        SvgShapeGetLocalScale(tag, &sx, &sy);
-        SvgShapeApplyScalePoint(&x,  &y,  sx, sy);
-        SvgShapeApplyScalePoint(&x2, &y2, sx, sy);
+        SvgXformBuildWorld(tag, NULL, &ctm);
 
-        if (y > y2) { sword t = y; y = y2; y2 = t; }
-        if (x > x2) { sword t = x; x = x2; x2 = t; }
+        /* p0 = (x,      y)      */
+        X = fx;            Y = fy;
+        Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+        Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+        pts[0].P_x = SvgGeomWWFixedToSWordRound(Xp);
+        pts[0].P_y = SvgGeomWWFixedToSWordRound(Yp);
 
-        Meta_Rect(x, y, x2, y2, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+        /* p1 = (x+w,    y)      */
+        X = GrAddWWFixed(fx, fw); Y = fy;
+        Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+        Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+        pts[1].P_x = SvgGeomWWFixedToSWordRound(Xp);
+        pts[1].P_y = SvgGeomWWFixedToSWordRound(Yp);
+
+        /* p2 = (x+w,    y+h)    */
+        X = GrAddWWFixed(fx, fw); Y = GrAddWWFixed(fy, fh);
+        Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+        Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+        pts[2].P_x = SvgGeomWWFixedToSWordRound(Xp);
+        pts[2].P_y = SvgGeomWWFixedToSWordRound(Yp);
+
+        /* p3 = (x,      y+h)    */
+        X = fx;            Y = GrAddWWFixed(fy, fh);
+        Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+        Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+        pts[3].P_x = SvgGeomWWFixedToSWordRound(Xp);
+        pts[3].P_y = SvgGeomWWFixedToSWordRound(Yp);
+
+        Meta_Polygon(pts, 4, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
     }
 }
+
 
 void SvgShapeHandleEllipse(const char *tag)
 {
     static char     cxb[32], cyb[32], rxb[32], ryb[32];
-    sword           cx;
-    sword           cy;
-    sword           rx;
-    sword           ry;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
+    WWFixedAsDWord  fcx;
+    WWFixedAsDWord  fcy;
+    WWFixedAsDWord  frx;
+    WWFixedAsDWord  fry;
+    SvgMatrix       ctm;
 
     if (SvgParserGetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
         SvgParserGetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
@@ -279,33 +318,84 @@ void SvgShapeHandleEllipse(const char *tag)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
+        (void)SvgParserParseWWFixed16_16(cxb, &fcx);
+        (void)SvgParserParseWWFixed16_16(cyb, &fcy);
+        (void)SvgParserParseWWFixed16_16(rxb, &frx);
+        (void)SvgParserParseWWFixed16_16(ryb, &fry);
+
+        SvgXformBuildWorld(tag, NULL, &ctm);
+
+        if ((sdword)ctm.b == 0 && (sdword)ctm.c == 0)
         {
-            WWFixedAsDWord f;
-            (void)SvgParserParseWWFixed16_16(cxb, &f); cx = SvgViewMapPosX_F(f);
-            (void)SvgParserParseWWFixed16_16(cyb, &f); cy = SvgViewMapPosY_F(f);
-            (void)SvgParserParseWWFixed16_16(rxb, &f); rx = SvgViewMapLenX_F(f);
-            (void)SvgParserParseWWFixed16_16(ryb, &f); ry = SvgViewMapLenY_F(f);
+            /* axis-aligned: center maps with point, radii map with vector */
+            WWFixedAsDWord X, Y, Xp, Yp;
+            sword          cxw, cyw, rxw, ryw;
+            WWFixedAsDWord vxX, vxY, vyX, vyY;
+
+            /* center */
+            X = fcx; Y = fcy;
+            Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+            Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+            cxw = SvgGeomWWFixedToSWordRound(Xp);
+            cyw = SvgGeomWWFixedToSWordRound(Yp);
+
+            /* vector (rx,0) -> (a*rx, b*rx); but b==0 here */
+            vxX = GrMulWWFixed(ctm.a, frx);
+            vxY = GrMulWWFixed(ctm.b, frx);
+            /* vector (0,ry) -> (c*ry, d*ry); but c==0 here */
+            vyX = GrMulWWFixed(ctm.c, fry);
+            vyY = GrMulWWFixed(ctm.d, fry);
+
+            rxw = SvgGeomWWFixedToSWordRound((sdword)vxX < 0 ? (WWFixedAsDWord)(-(sdword)vxX) : vxX);
+            ryw = SvgGeomWWFixedToSWordRound((sdword)vyY < 0 ? (WWFixedAsDWord)(-(sdword)vyY) : vyY);
+
+            Meta_Ellipse(cxw, cyw, rxw, ryw, 0, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
         }
+        else
+        {
+            /* rotated/sheared: flatten to polygon */
+            enum { NSEG = 48 };
+            Point          pts[NSEG];
+            word           i;
+            WWFixedAsDWord stepDeg;
+            WWFixedAsDWord tDeg;
 
-        SvgShapeGetLocalScale(tag, &sx, &sy);
-        SvgShapeApplyScalePoint(&cx, &cy, sx, sy);
-        rx = SvgShapeScaleLength(rx, sx);
-        ry = SvgShapeScaleLength(ry, sy);
+            stepDeg = GrSDivWWFixed(MakeWWFixed(360), MakeWWFixed(NSEG));
+            tDeg    = MakeWWFixed(0);
 
-        Meta_Ellipse(cx, cy, rx, ry, 0, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+            for (i = 0; i < NSEG; i++) {
+                WWFixedAsDWord cs, sn;
+                WWFixedAsDWord xu, yu;   /* user-space point on ellipse */
+                WWFixedAsDWord Xp, Yp;   /* world point after CTM */
+
+                cs = GrQuickCosine(tDeg);
+                sn = GrQuickSine(tDeg);
+
+                xu = GrAddWWFixed(fcx, GrMulWWFixed(frx, cs));
+                yu = GrAddWWFixed(fcy, GrMulWWFixed(fry, sn));
+
+                Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, xu), GrMulWWFixed(ctm.c, yu)), ctm.e);
+                Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, xu), GrMulWWFixed(ctm.d, yu)), ctm.f);
+
+                pts[i].P_x = SvgGeomWWFixedToSWordRound(Xp);
+                pts[i].P_y = SvgGeomWWFixedToSWordRound(Yp);
+
+                tDeg = GrAddWWFixed(tDeg, stepDeg);
+            }
+
+            Meta_Polygon(pts, NSEG, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+        }
     }
 }
+
 
 void SvgShapeHandleCircle(const char *tag)
 {
     static char     cxb[32], cyb[32], rb[32];
-    sword           cx;
-    sword           cy;
-    sword           r;
-    sword           rx;
-    sword           ry;
-    WWFixedAsDWord  sx;
-    WWFixedAsDWord  sy;
+    WWFixedAsDWord  fcx;
+    WWFixedAsDWord  fcy;
+    WWFixedAsDWord  fr;
+    SvgMatrix       ctm;
 
     if (SvgParserGetAttrBounded(tag, "cx", cxb, sizeof(cxb)) &&
         SvgParserGetAttrBounded(tag, "cy", cyb, sizeof(cyb)) &&
@@ -314,18 +404,67 @@ void SvgShapeHandleCircle(const char *tag)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
+        (void)SvgParserParseWWFixed16_16(cxb, &fcx);
+        (void)SvgParserParseWWFixed16_16(cyb, &fcy);
+        (void)SvgParserParseWWFixed16_16(rb,  &fr);
+
+        SvgXformBuildWorld(tag, NULL, &ctm);
+
+        if ((sdword)ctm.b == 0 && (sdword)ctm.c == 0)
         {
-            WWFixedAsDWord f;
-            (void)SvgParserParseWWFixed16_16(cxb, &f); cx = SvgViewMapPosX_F(f);
-            (void)SvgParserParseWWFixed16_16(cyb, &f); cy = SvgViewMapPosY_F(f);
-            (void)SvgParserParseWWFixed16_16(rb,  &f); r  = SvgViewMapLenX_F(f);
+            WWFixedAsDWord X, Y, Xp, Yp;
+            sword          cxw, cyw, rxw, ryw;
+            WWFixedAsDWord vxX, vyY;
+
+            /* center */
+            X = fcx; Y = fcy;
+            Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X), GrMulWWFixed(ctm.c, Y)), ctm.e);
+            Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X), GrMulWWFixed(ctm.d, Y)), ctm.f);
+            cxw = SvgGeomWWFixedToSWordRound(Xp);
+            cyw = SvgGeomWWFixedToSWordRound(Yp);
+
+            /* radii along axes (axis-aligned case) */
+            vxX = GrMulWWFixed(ctm.a, fr);
+            vyY = GrMulWWFixed(ctm.d, fr);
+            rxw = SvgGeomWWFixedToSWordRound((sdword)vxX < 0 ? (WWFixedAsDWord)(-(sdword)vxX) : vxX);
+            ryw = SvgGeomWWFixedToSWordRound((sdword)vyY < 0 ? (WWFixedAsDWord)(-(sdword)vyY) : vyY);
+
+            Meta_Ellipse(cxw, cyw, rxw, ryw, 0, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
         }
+        else
+        {
+            /* rotated/sheared: flatten to polygon */
+            enum { NSEG = 48 };
+            Point          pts[NSEG];
+            word           i;
+            WWFixedAsDWord stepDeg;
+            WWFixedAsDWord tDeg;
 
-        SvgShapeGetLocalScale(tag, &sx, &sy);
-        SvgShapeApplyScalePoint(&cx, &cy, sx, sy);
-        rx = SvgShapeScaleLength(r, sx);
-        ry = SvgShapeScaleLength(r, sy);
+            stepDeg = GrSDivWWFixed(MakeWWFixed(360), MakeWWFixed(NSEG));
+            tDeg    = MakeWWFixed(0);
 
-        Meta_Ellipse(cx, cy, rx, ry, 0, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+            for (i = 0; i < NSEG; i++) {
+                WWFixedAsDWord cs, sn;
+                WWFixedAsDWord xu, yu;
+                WWFixedAsDWord Xp, Yp;
+
+                cs = GrQuickCosine(tDeg);
+                sn = GrQuickSine(tDeg);
+
+                xu = GrAddWWFixed(fcx, GrMulWWFixed(fr, cs));
+                yu = GrAddWWFixed(fcy, GrMulWWFixed(fr, sn));
+
+                Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, xu), GrMulWWFixed(ctm.c, yu)), ctm.e);
+                Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, xu), GrMulWWFixed(ctm.d, yu)), ctm.f);
+
+                pts[i].P_x = SvgGeomWWFixedToSWordRound(Xp);
+                pts[i].P_y = SvgGeomWWFixedToSWordRound(Yp);
+
+                tDeg = GrAddWWFixed(tDeg, stepDeg);
+            }
+
+            Meta_Polygon(pts, NSEG, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+        }
     }
 }
+

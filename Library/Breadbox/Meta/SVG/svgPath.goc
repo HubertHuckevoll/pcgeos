@@ -82,7 +82,6 @@ static void SvgPathFlattenCubic(SVGScratch *sc, word *np,
 }
 
 /* ===== Elliptical-arc flattener (fixed-point) ===== */
-/* ===== Elliptical-arc flattener (fixed-point) ===== */
 static void
 SvgPathFlattenArc(SVGScratch *sc, word *pNp,
                   WWFixedAsDWord x0W, WWFixedAsDWord y0W,
@@ -755,6 +754,59 @@ SvgPathHandleUnknown(const char **sPP,
 
 /* ---- main <path> handler (coordinator) ---- */
 
+/* Emit current subpath; handles implicit close-on-fill per SVG spec */
+/* Emit current subpath; close-on-fill without duplicating the first point */
+static void
+SvgPathEmitSubpath(const char *tag,
+                   SVGScratch *sc, word *npP,
+                   Boolean closed,
+                   WWFixedAsDWord sx2, WWFixedAsDWord sy2)
+{
+    SvgMatrix elemOnWorld;
+    word i, np;
+    sword px, py;
+    Boolean doFill, doStroke;
+
+    (void)sx2; (void)sy2;   /* not used anymore */
+
+    np = *npP;
+    if (np < 2) { *npP = 0; return; }
+
+    /* Build matrix that acts on already-world points (no double view mapping) */
+    SvgXformBuildElemOnWorld(tag, &elemOnWorld);
+
+    /* Apply element transform in world space */
+    for (i = 0; i < np; i++) {
+        px = sc->pts[i].P_x;
+        py = sc->pts[i].P_y;
+        SvgXformApplyPoint(&px, &py, &elemOnWorld);
+        sc->pts[i].P_x = px;
+        sc->pts[i].P_y = py;
+    }
+
+    doFill   = SvgStyleHasFill(tag);
+    doStroke = SvgStyleHasStroke(tag);
+
+    if (doFill) {
+        /* SVG: fill implies a closed contour, but Meta_Polygon closes it
+           internally — do NOT append the first point again. */
+        Meta_Polygon(sc->pts, np, /*in=*/TRUE, /*edges=*/doStroke);
+    } else if (doStroke) {
+        if (closed) {
+            /* draw just the stroked closed outline */
+            Meta_Polygon(sc->pts, np, /*in=*/FALSE, /*edges=*/TRUE);
+        } else {
+            /* open stroked outline */
+            Meta_Polyline(sc->pts, np);
+        }
+    }
+    /* neither fill nor stroke => nothing to draw */
+
+    *npP = 0;
+}
+
+
+
 void SvgPathHandle(const char *tag, SVGScratch *sc)
 {
     const char     *sP;
@@ -766,18 +818,19 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     sword           subStartY;
     Boolean         lastWasCubic;
     Boolean         lastWasQuad;
-    sword           lastC2x, lastC2y;
-    sword           lastQcx, lastQcy;
+    sword           lastC2x;
+    sword           lastC2y;
+    sword           lastQcx;
+    sword           lastQcy;
     char            lastCmd;
     Boolean         haveCmd;
-    word            i;
-    WWFixedAsDWord  sx2, sy2;
 
     sc->db[0] = 0;
     if (!SvgParserGetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) {
         return;
     }
 
+    /* styles once per <path> (each flushed subpath inherits these) */
     SvgStyleApplyStrokeAndFill(tag);
     SvgStyleApplyFillRule(tag);
     SvgStyleApplyStrokeWidth(tag);
@@ -792,7 +845,10 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     haveCmd       = FALSE;
     lastWasCubic  = FALSE;
     lastWasQuad   = FALSE;
-    lastC2x = 0; lastC2y = 0; lastQcx = 0; lastQcy = 0;
+    lastC2x       = 0;
+    lastC2y       = 0;
+    lastQcx       = 0;
+    lastQcy       = 0;
 
     sP = sc->db;
 
@@ -804,7 +860,17 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         }
 
         if (isalpha(*sP)) {
-            lastCmd = *sP++;
+            /* starting a new command token */
+            char nextCmd;
+            nextCmd = *sP++;
+
+            /* if a new subpath begins, flush any pending one */
+            if ((nextCmd == 'M' || nextCmd == 'm') && (np > 1)) {
+                SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
+                closed = FALSE;
+            }
+
+            lastCmd = nextCmd;
             haveCmd = TRUE;
         } else if (!haveCmd) {
             break;
@@ -867,8 +933,13 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
 
         case 'Z':
         case 'z':
+            /* mark closed, then flush immediately; start fresh subpath */
             SvgPathHandleClose(&sP, &closed, &lastx, &lasty,
                                subStartX, subStartY, &lastWasCubic, &lastWasQuad);
+            if (np > 1) {
+                SvgPathEmitSubpath(tag, sc, &np, TRUE, WWFIXED_ONE, WWFIXED_ONE);
+            }
+            closed = FALSE;
             break;
 
         default:
@@ -877,22 +948,9 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         }
     }
 
-    if (np > 1)
-    {
-        SvgShapeGetLocalScale(tag, &sx2, &sy2);
-        for (i = 0; i < np; i++) {
-            sword px;
-            sword py;
-            px = sc->pts[i].P_x; py = sc->pts[i].P_y;
-            SvgShapeApplyScalePoint(&px, &py, sx2, sy2);
-            sc->pts[i].P_x = px;
-            sc->pts[i].P_y = py;
-        }
-        if (closed) {
-            Meta_Polygon(sc->pts, np, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
-        } else {
-            Meta_Polyline(sc->pts, np);
-        }
+    /* Flush any remaining open subpath */
+    if (np > 1) {
+        SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
     }
 }
 

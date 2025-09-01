@@ -229,3 +229,30 @@ sword SvgViewMapLenY_F(WWFixedAsDWord fy)
     v = GrMulWWFixed(v, g_invPow2);
     return SvgGeomWWFixedToSWordRound(v);
 }
+
+/* Return the viewBox->world affine as SVG-style 2x3:
+   [ a c e ]
+   [ b d f ]
+   s.t. x' = a*x + c*y + e; y' = b*x + d*y + f
+*/
+void SvgViewGetMatrix(WWFixedAsDWord *a, WWFixedAsDWord *b,
+                      WWFixedAsDWord *c, WWFixedAsDWord *d,
+                      WWFixedAsDWord *e, WWFixedAsDWord *f)
+{
+    WWFixedAsDWord aa, bb, cc, dd, ee, ff;
+    WWFixedAsDWord sxW, syW;
+    WWFixedAsDWord offX, offY;
+
+    /* scale in world units */
+    sxW = GrMulWWFixed(g_scaleX, g_invPow2);
+    syW = GrMulWWFixed(g_scaleY, g_invPow2);
+
+    /* offsets in world units: (+g_add?) then subtract min, then reduce */
+    offX = GrMulWWFixed(GrSubWWFixed(g_addX, GrMulWWFixed(g_vbMinX, g_scaleX)), g_invPow2);
+    offY = GrMulWWFixed(GrSubWWFixed(g_addY, GrMulWWFixed(g_vbMinY, g_scaleY)), g_invPow2);
+
+    aa = sxW;  bb = 0;    cc = 0;    dd = syW;
+    ee = offX; ff = offY;
+
+    *a = aa; *b = bb; *c = cc; *d = dd; *e = ee; *f = ff;
+}

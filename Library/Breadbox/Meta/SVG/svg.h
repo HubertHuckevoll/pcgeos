@@ -45,6 +45,9 @@ typedef struct _SVGScratch {
 
 /* ---- small utility (common) ---- */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
+/* ansi-compat: case-sensitive prefix compare (like strncmp) */
+int AnsiStrnCmp(const char *s1, const char *s2, word n);
+
 
 /* ---- geometry helpers (shared fixed-point math) ---- */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v);
@@ -77,11 +80,36 @@ sword  SvgViewMapPosY_F(WWFixedAsDWord fy);
 sword  SvgViewMapLenX_F(WWFixedAsDWord fx);
 sword  SvgViewMapLenY_F(WWFixedAsDWord fy);
 
-/* ---- element-local helpers used by shapes & path ---- */
-void  SvgShapeGetLocalScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut);
-void  SvgShapeApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWord sy);
+/* Provide the view matrix (world <- user) as SVG-style 2x3:
+   x' = a*x + c*y + e;  y' = b*x + d*y + f */
+void   SvgViewGetMatrix(WWFixedAsDWord *a, WWFixedAsDWord *b,
+                        WWFixedAsDWord *c, WWFixedAsDWord *d,
+                        WWFixedAsDWord *e, WWFixedAsDWord *f);
+
+
+/* Transform layer (CTM) */
+/* ---- transform layer (CTM) ---- */
+/* SVG 2x3 affine matrix in user units: [a c e; b d f] */
+typedef struct {
+    WWFixedAsDWord a, b, c, d, e, f;
+} SvgMatrix;
+
+void SvgXformApplyPoint(sword *xP, sword *yP, const SvgMatrix *m);
+void SvgXformApplyVector(sword *dxP, sword *dyP, const SvgMatrix *m);
+void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser);
+void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld);
+/* Conjugated element matrix that acts on points already in WORLD space:
+   ElemOnWorld = ViewMatrix ∘ Element ∘ ViewMatrix^{-1}  */
+void SvgXformBuildElemOnWorld(const char *tag, SvgMatrix *outElemWorld);
+
+
+
+/* ---- element-local helpers (legacy scale-only; now superseded by CTM) ---- */
+/* void  SvgShapeGetLocalScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut);
+   void  SvgShapeApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWord sy); */
 sword SvgShapeScaleLength(sword v, WWFixedAsDWord s);
 void  SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP);
+
 
 /* ---- tag handlers (dispatch targets) ---- */
 void SvgShapeHandleLine(const char *tag);

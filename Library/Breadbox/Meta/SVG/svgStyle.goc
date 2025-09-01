@@ -266,90 +266,181 @@ static Boolean SvgStyleFindNamedColor(const char *name, word *r, word *g, word *
     return FALSE;
 }
 
+
+/* -------- inline style="a:b; c:d" parser (case-insensitive) -------- */
+
+static Boolean SvgStyleKeyEqNoCase(const char *kb, const char *ke,
+                                   const char *prop)
+{
+    const char *p;
+    const char *k;
+
+    p = prop;
+    k = kb;
+    while (k < ke && *p) {
+        char kc, pc;
+        kc = *k++; pc = *p++;
+        if (kc >= 'A' && kc <= 'Z') kc = (char)(kc + ('a' - 'A'));
+        if (pc >= 'A' && pc <= 'Z') pc = (char)(pc + ('a' - 'A'));
+        if (kc != pc) return FALSE;
+    }
+    return (k == ke && *p == 0);
+}
+
+/* Extract a property value from style="..."; returns FALSE if absent. */
+static Boolean SvgStyleGetInlineProp(const char *tag,
+                                     const char *prop,
+                                     char *out, word outSize)
+{
+    char styleBuf[192];
+    const char *s;
+    const char *kb;  /* key begin   */
+    const char *ke;  /* key end     */
+    const char *vb;  /* value begin */
+    const char *ve;  /* value end   */
+    word n;
+
+    if (outSize == 0) return FALSE;
+    out[0] = 0;
+
+    if (!SvgParserGetAttrBounded(tag, "style", styleBuf, sizeof(styleBuf)))
+        return FALSE;
+
+    s = styleBuf;
+    for (;;) {
+        while (*s == ';' || isspace((byte)*s)) s++;
+        if (!*s) break;
+
+        kb = s;
+        while (*s && *s != ':' && *s != ';') s++;
+        if (*s != ':') {
+            while (*s && *s != ';') s++;
+            if (*s == ';') s++;
+            continue;
+        }
+        ke = s;
+        s++; /* past ':' */
+
+        while (*s && isspace((byte)*s)) s++;
+        vb = s;
+        while (*s && *s != ';') s++;
+        ve = s;
+        while (ve > vb && isspace((byte)ve[-1])) ve--;
+
+        if (SvgStyleKeyEqNoCase(kb, ke, prop)) {
+            n = (word)(ve - vb);
+            if (n >= outSize) n = (word)(outSize - 1);
+            if (n > 0) memcpy(out, vb, n);
+            out[n] = 0;
+            return TRUE;
+        }
+        if (*s == ';') s++;
+    }
+    return FALSE;
+}
+
+
+
 /* ---- public style API ---- */
 
 void SvgStyleApplyStrokeAndFill(const char *tag)
 {
     static char sFill[64];
     static char sStroke[64];
-    word r;
-    word g;
-    word b;
+    word r, g, b;
 
     sFill[0] = 0;
     sStroke[0] = 0;
 
     /* stroke */
-    if (SvgParserGetAttrBounded(tag, "stroke", sStroke, sizeof(sStroke))) {
-        if (strcmp(sStroke, "none") != 0) {
-            if (sStroke[0] == '#' && strlen(sStroke) >= 7) {
-                Meta_SetLineColor(CF_RGB,
-                    SvgStyleHexByte(sStroke+1), SvgStyleHexByte(sStroke+3), SvgStyleHexByte(sStroke+5));
-            }
-            else if (SvgStyleExpandShortHex(sStroke, &r,&g,&b) ||
-                     SvgStyleParseRGBFunc(sStroke, &r,&g,&b)   ||
-                     SvgStyleFindNamedColor(sStroke, &r,&g,&b))
-            {
-                Meta_SetLineColor(CF_RGB, r, g, b);
-            }
+    if (!SvgStyleGetInlineProp(tag, "stroke", sStroke, sizeof(sStroke))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke", sStroke, sizeof(sStroke));
+    }
+    if (sStroke[0] && strcmp(sStroke, "none") != 0) {
+        if (sStroke[0] == '#' && strlen(sStroke) >= 7) {
+            Meta_SetLineColor(CF_RGB,
+                SvgStyleHexByte(sStroke+1), SvgStyleHexByte(sStroke+3), SvgStyleHexByte(sStroke+5));
+        } else if (SvgStyleExpandShortHex(sStroke, &r,&g,&b) ||
+                   SvgStyleParseRGBFunc(sStroke, &r,&g,&b)   ||
+                   SvgStyleFindNamedColor(sStroke, &r,&g,&b)) {
+            Meta_SetLineColor(CF_RGB, r, g, b);
         }
     }
 
     /* fill */
-    if (SvgParserGetAttrBounded(tag, "fill", sFill, sizeof(sFill))) {
-        if (strcmp(sFill, "none") != 0) {
-            if (sFill[0] == '#' && strlen(sFill) >= 7) {
-                Meta_SetAreaColor(CF_RGB,
-                    SvgStyleHexByte(sFill+1), SvgStyleHexByte(sFill+3), SvgStyleHexByte(sFill+5));
-            } else if (SvgStyleExpandShortHex(sFill, &r,&g,&b) ||
-                       SvgStyleParseRGBFunc(sFill, &r,&g,&b)   ||
-                       SvgStyleFindNamedColor(sFill, &r,&g,&b))
-            {
-                Meta_SetAreaColor(CF_RGB, r, g, b);
-            }
+    if (!SvgStyleGetInlineProp(tag, "fill", sFill, sizeof(sFill))) {
+        (void)SvgParserGetAttrBounded(tag, "fill", sFill, sizeof(sFill));
+    }
+    if (sFill[0] && strcmp(sFill, "none") != 0) {
+        if (sFill[0] == '#' && strlen(sFill) >= 7) {
+            Meta_SetAreaColor(CF_RGB,
+                SvgStyleHexByte(sFill+1), SvgStyleHexByte(sFill+3), SvgStyleHexByte(sFill+5));
+        } else if (SvgStyleExpandShortHex(sFill, &r,&g,&b) ||
+                   SvgStyleParseRGBFunc(sFill, &r,&g,&b)   ||
+                   SvgStyleFindNamedColor(sFill, &r,&g,&b)) {
+            Meta_SetAreaColor(CF_RGB, r, g, b);
         }
     }
 }
 
 void SvgStyleApplyFillRule(const char *tag)
 {
-    static char buf[16];
+    static char buf[32];
 
     buf[0] = 0;
-    if (SvgParserGetAttrBounded(tag, "fill-rule", buf, sizeof(buf)))
-    {
-        if (!strcmp(buf, "evenodd")) {
-            Meta_SetFillRule(ODD_EVEN);
-        } else {
-            Meta_SetFillRule(WINDING); /* SVG default: nonzero */
-        }
+    if (!SvgStyleGetInlineProp(tag, "fill-rule", buf, sizeof(buf))) {
+        (void)SvgParserGetAttrBounded(tag, "fill-rule", buf, sizeof(buf));
+    }
+
+    if (buf[0] && !strcmp(buf, "evenodd")) {
+        Meta_SetFillRule(ODD_EVEN);
+    } else {
+        Meta_SetFillRule(WINDING); /* SVG default: nonzero */
     }
 }
 
 void SvgStyleApplyStrokeWidth(const char *tag)
 {
-    static char b[20];
-    if (SvgParserGetAttrBounded(tag, "stroke-width", b, sizeof(b)))
-    {
-        WWFixedAsDWord lw;
-        (void)SvgParserParseWWFixed16_16(b, &lw);          /* allow decimals */
-        Meta_SetLineWidth(lw);
+    static char b[24];
+    const char *pwalk;
+    char save;
+    WWFixedAsDWord lw;
+
+    b[0] = 0;
+    if (!SvgStyleGetInlineProp(tag, "stroke-width", b, sizeof(b))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-width", b, sizeof(b));
     }
+    if (!b[0]) return;
+
+    /* allow trailing units like "px" */
+    pwalk = b;
+    while (*pwalk && (isdigit((byte)*pwalk) || *pwalk=='+' || *pwalk=='-' || *pwalk=='.')) pwalk++;
+    save = *pwalk;
+    *(char*)pwalk = 0;
+    (void)SvgParserParseWWFixed16_16(b, &lw);
+    *(char*)pwalk = save;
+
+    Meta_SetLineWidth(lw);
 }
 
 Boolean SvgStyleHasStroke(const char *tag)
 {
     char b[32];
-    /* SVG default: stroke is none unless present and not "none" */
-    return SvgParserGetAttrBounded(tag, "stroke", b, sizeof(b)) && strcmp(b, "none") != 0;
+
+    if (SvgStyleGetInlineProp(tag, "stroke", b, sizeof(b)))
+        return strcmp(b, "none") != 0;
+    if (SvgParserGetAttrBounded(tag, "stroke", b, sizeof(b)))
+        return strcmp(b, "none") != 0;
+    return FALSE;
 }
 
 Boolean SvgStyleHasFill(const char *tag)
 {
     char b[32];
-    /* default fill applies when 'fill' missing for most shapes */
-    if (SvgParserGetAttrBounded(tag, "fill", b, sizeof(b))) {
+
+    if (SvgStyleGetInlineProp(tag, "fill", b, sizeof(b)))
         return strcmp(b, "none") != 0;
-    }
-    return TRUE;
+    if (SvgParserGetAttrBounded(tag, "fill", b, sizeof(b)))
+        return strcmp(b, "none") != 0;
+    return TRUE; /* SVG default */
 }
