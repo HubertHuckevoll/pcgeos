@@ -7,7 +7,7 @@
 #define SVG_COLOR_NAME_LEN   32
 #define MAX_SVG_POINTS       1024
 #define SVG_IO_BUF_SIZE      1024
-#define TAG_BUF_SIZE         512
+#define TAG_BUF_SIZE         4096  /* must hold entire tag */
 
 /* Convenient 16.16 one */
 #define WWFIXED_ONE      ((WWFixedAsDWord)(1UL << 16))
@@ -27,12 +27,12 @@ typedef struct {
     char SNC_name[SVG_COLOR_NAME_LEN + 1];   /* NUL-terminated */
 } SvgNamedColor;
 
-/* All sizeable scratch buffers kept on heap to keep stack tiny */
+/* All sizeable scratch buffers kept on heap to keep stack tiny - fixme: put in LMemHeap or something */
 typedef struct _SVGScratch {
     char    tag[TAG_BUF_SIZE];
 
     char    pb[256];
-    char    db[256];
+    char    db[4096];
     char    xb[32], yb[32], x2b[32], y2b[32];
     char    wb[32], hb[32];
     char    cxb[32], cyb[32], rxb[32], ryb[32];

@@ -754,53 +754,73 @@ SvgPathHandleUnknown(const char **sPP,
 
 /* ---- main <path> handler (coordinator) ---- */
 
-/* Emit current subpath; handles implicit close-on-fill per SVG spec */
-/* Emit current subpath; close-on-fill without duplicating the first point */
-/* Emit current subpath; always fill if 'fill' is present, even if not closed.
-   Stroke the closing edge only when 'Z/z' was used (closed==TRUE). */
 static void
 SvgPathEmitSubpath(const char *tag,
                    SVGScratch *sc, word *npP,
                    Boolean closed,
                    WWFixedAsDWord sx2, WWFixedAsDWord sy2)
 {
-    word      i, np;
-    sword     px, py;
+    word      i, np, emitN, w;
+    sword     px, py, lastx, lasty;
     SvgMatrix elemOnWorld;
     Boolean   hasFill, hasStroke;
+    Boolean   haveLast, needClose;
 
     (void)sx2; (void)sy2;
 
     np = *npP;
-    *npP = 0;                     /* we’re going to flush no matter what */
+    *npP = 0;
     if (np <= 1) return;
 
     hasFill   = SvgStyleHasFill(tag);
     hasStroke = SvgStyleHasStroke(tag);
 
-    /* Transform points from world→world using element-on-world CTM */
+    /* Transform points with Elem-on-World (VM ∘ E ∘ VM^{-1}) */
     SvgXformBuildElemOnWorld(tag, &elemOnWorld);
+
+    /* Compress adjacent duplicates after transform */
+    w = 0; haveLast = FALSE; lastx = 0; lasty = 0;
     for (i = 0; i < np; i++) {
         px = sc->pts[i].P_x;
         py = sc->pts[i].P_y;
         SvgXformApplyPoint(&px, &py, &elemOnWorld);
-        sc->pts[i].P_x = px;
-        sc->pts[i].P_y = py;
-    }
-
-    /* FILL: SVG fills *all* subpaths (implicitly closed). */
-    if (hasFill) {
-        /* Edges parameter: only draw a closing stroke when the author used Z/z. */
-        Meta_Polygon(sc->pts, np, /*in=*/TRUE, /*edges=*/(hasStroke && closed));
-        /* If stroke exists but subpath wasn’t explicitly closed, we still need
-           the outline without the implicit close: draw the polyline stroke now. */
-        if (hasStroke && !closed) {
-            Meta_Polyline(sc->pts, np);
+        if (!haveLast || px != lastx || py != lasty) {
+            sc->pts[w].P_x = px;
+            sc->pts[w].P_y = py;
+            w++;
+            lastx = px; lasty = py; haveLast = TRUE;
         }
+    }
+    np = w;
+    if (np <= 1) return;
+
+    /* If we’re filling and the author didn’t close, close for fill (SVG spec) */
+    needClose = (hasFill &&
+                 !closed &&
+                 (sc->pts[0].P_x != sc->pts[np-1].P_x ||
+                  sc->pts[0].P_y != sc->pts[np-1].P_y));
+
+    if (hasFill) {
+        /* Append this subpath to the *current* compound path.
+           We’re already inside Meta_BeginPath()/Meta_EndPath() at the <path> level. */
+        emitN = np;
+        if (needClose) {
+            /* add implicit closing vertex so the subpath is closed for filling */
+            if (emitN < MAX_SVG_POINTS) {
+                sc->pts[emitN] = sc->pts[0];
+                emitN++;
+            }
+        }
+        /* Use Meta_Polygon to append a CLOSED contour to the current path.
+           (We pass in=FALSE, edges=TRUE; since we’re nested in a path,
+           Meta_EndPath won’t render yet, it only appends the geometry.) */
+        Meta_Polygon(sc->pts, emitN, /*in=*/FALSE, /*edges=*/TRUE);
+
+        /* Do not render now; the final fill/stroke happens in SvgPathHandle(). */
         return;
     }
 
-    /* No fill: stroke only. Respect Z/z for closed outlines. */
+    /* No fill → stroke only, emit immediately (old behavior) */
     if (hasStroke) {
         if (closed) {
             Meta_Polygon(sc->pts, np, /*in=*/FALSE, /*edges=*/TRUE);
@@ -809,6 +829,7 @@ SvgPathEmitSubpath(const char *tag,
         }
     }
 }
+
 
 
 void SvgPathHandle(const char *tag, SVGScratch *sc)
@@ -829,15 +850,29 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     char            lastCmd;
     Boolean         haveCmd;
 
+    /* NEW: snapshot per-<path> style so we know whether to build a compound path */
+    Boolean         pathHasFill;
+    Boolean         pathHasStroke;
+    Boolean         buildingCompound;
+
     sc->db[0] = 0;
     if (!SvgParserGetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) {
         return;
     }
 
-    /* styles once per <path> (each flushed subpath inherits these) */
+    /* styles once per <path> */
     SvgStyleApplyStrokeAndFill(tag);
     SvgStyleApplyFillRule(tag);
     SvgStyleApplyStrokeWidth(tag);
+
+    /* NEW: decide upfront whether we’ll accumulate a compound path for fill */
+    pathHasFill   = SvgStyleHasFill(tag);
+    pathHasStroke = SvgStyleHasStroke(tag);
+    buildingCompound = FALSE;
+    if (pathHasFill) {
+        Meta_BeginPath();           /* all subpaths will be appended here */
+        buildingCompound = TRUE;
+    }
 
     np            = 0;
     closed        = FALSE;
@@ -864,11 +899,10 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         }
 
         if (isalpha(*sP)) {
-            /* starting a new command token */
             char nextCmd;
             nextCmd = *sP++;
 
-            /* if a new subpath begins, flush any pending one */
+            /* starting a new subpath? flush the previous one first */
             if ((nextCmd == 'M' || nextCmd == 'm') && (np > 1)) {
                 SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
                 closed = FALSE;
@@ -881,63 +915,52 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         }
 
         switch (lastCmd) {
-        case 'M':
-        case 'm':
+        case 'M': case 'm':
             SvgPathHandleMoveTo(&sP, &lastCmd, sc, &np, &lastx, &lasty,
                                 &subStartX, &subStartY, &lastWasCubic, &lastWasQuad);
             break;
 
-        case 'L':
-        case 'l':
+        case 'L': case 'l':
             SvgPathHandleLineTo(&sP, lastCmd, sc, &np, &lastx, &lasty,
                                 &lastWasCubic, &lastWasQuad);
             break;
 
-        case 'H':
-        case 'h':
+        case 'H': case 'h':
             SvgPathHandleHLineTo(&sP, lastCmd, sc, &np, &lastx, &lasty,
                                  &lastWasCubic, &lastWasQuad);
             break;
 
-        case 'V':
-        case 'v':
+        case 'V': case 'v':
             SvgPathHandleVLineTo(&sP, lastCmd, sc, &np, &lastx, &lasty,
                                  &lastWasCubic, &lastWasQuad);
             break;
 
-        case 'Q':
-        case 'q':
+        case 'Q': case 'q':
             SvgPathHandleQuadratic(&sP, lastCmd, sc, &np, &lastx, &lasty,
                                    &lastWasCubic, &lastWasQuad, &lastQcx, &lastQcy);
             break;
 
-        case 'T':
-        case 't':
+        case 'T': case 't':
             SvgPathHandleSmoothQuadratic(&sP, lastCmd, sc, &np, &lastx, &lasty,
                                          &lastWasCubic, &lastWasQuad, &lastQcx, &lastQcy);
             break;
 
-        case 'C':
-        case 'c':
+        case 'C': case 'c':
             SvgPathHandleCubic(&sP, lastCmd, sc, &np, &lastx, &lasty,
                                &lastWasCubic, &lastWasQuad, &lastC2x, &lastC2y);
             break;
 
-        case 'S':
-        case 's':
+        case 'S': case 's':
             SvgPathHandleSmoothCubic(&sP, lastCmd, sc, &np, &lastx, &lasty,
                                      &lastWasCubic, &lastWasQuad, &lastC2x, &lastC2y);
             break;
 
-        case 'A':
-        case 'a':
+        case 'A': case 'a':
             SvgPathHandleArc(&sP, lastCmd, sc, &np, &lastx, &lasty,
                              &lastWasCubic, &lastWasQuad);
             break;
 
-        case 'Z':
-        case 'z':
-            /* mark closed, then flush immediately; start fresh subpath */
+        case 'Z': case 'z':
             SvgPathHandleClose(&sP, &closed, &lastx, &lasty,
                                subStartX, subStartY, &lastWasCubic, &lastWasQuad);
             if (np > 1) {
@@ -952,9 +975,14 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         }
     }
 
-    /* Flush any remaining open subpath */
     if (np > 1) {
         SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
     }
+
+    /* NEW: finish the compound path (fill + optional stroke, once) */
+    if (buildingCompound) {
+        Meta_EndPath(/*in=*/pathHasFill, /*edges=*/pathHasStroke);
+    }
 }
+
 
