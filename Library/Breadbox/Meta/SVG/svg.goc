@@ -47,13 +47,15 @@ const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
     dword            scale;
     word             c;
     WWFixedAsDWord   result;
+    dword            fpart;    /* fractional part in 16.16 */
+    dword            num;      /* intermediate for safe scaling */
 
     sign  = 1;
     ip    = 0;
     frac  = 0;
     scale = 1;
 
-    while (*s && isspace(*s))
+    while (*s && isspace((unsigned char)*s))
     {
         s++;
     }
@@ -80,24 +82,32 @@ const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
         {
             if (scale < 1000000UL)
             {
-                frac = frac * 10 + (c - '0');
-                scale *= 10;
+                frac  = frac * 10 + (c - '0');
+                scale = scale * 10;
             }
             s++;
         }
     }
 
+    /* integer part (keep as-is to match existing behavior / 16-bit int helper) */
     result = SvgGeomMakeWWFixedFromInt((int)ip);
+
+    /* fractional part: compute (frac * 2^16) / scale without 32-bit overflow, with rounding */
+    fpart = 0;
     if (scale != 0)
     {
-        dword fpart;
-        fpart = ((frac << 16) / scale);
+        /* Two-stage scale: ((frac<<8)/scale)<<8, with rounding at the 8-bit stage */
+        num   = (frac << 8);                 /* <= 256,000,000 for our cap — safe in 32-bit */
+        num   = (num + (scale >> 1)) / scale;/* round-to-nearest at 8 fractional bits */
+        fpart = (num << 8);                  /* back to 16 fractional bits */
         result += (WWFixedAsDWord)fpart;
     }
+
     if (sign < 0)
     {
         result = (WWFixedAsDWord)(0 - (sdword)result);
     }
+
     *out = result;
     return s;
 }
