@@ -5,6 +5,7 @@
 
 #include <Ansi/string.h>
 #include <Ansi/stdlib.h>
+#include <Ansi/stdio.h>
 #include <Ansi/ctype.h>
 #include <file.h>
 #include <system.h>
@@ -12,18 +13,27 @@
 #include <gstring.h>
 #include <meta.h>
 #include <float.h>
-#include <dbglogmc.h>
 
 #include "SVG/svg.h"
 
 /* tiny helpers specific to path handling */
 static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)
 {
+#ifdef DEBUG_LOG
+    char dbgbuf[80];
+#endif
+
     if (*np < MAX_SVG_POINTS) {
         sc->pts[*np].P_x = x;
         sc->pts[*np].P_y = y;
         (*np)++;
     }
+#ifdef DEBUG_LOG
+    else {
+        sprintf(dbgbuf, "SvgPathAddPt: overflow drop x=%d y=%d", (int)x, (int)y);
+        LOG_STR("[PATH]", dbgbuf);
+    }
+#endif
 }
 
 static void SvgPathFlattenQuad(SVGScratch *sc, word *np,
@@ -31,6 +41,12 @@ static void SvgPathFlattenQuad(SVGScratch *sc, word *np,
                                word segs)
 {
     word i;
+#ifdef DEBUG_LOG
+    char dbgbuf[96];
+    sprintf(dbgbuf, "FlattenQuad segs=%u x0=%d y0=%d cx=%d cy=%d x1=%d y1=%d",
+            (unsigned)segs, (int)x0, (int)y0, (int)cx, (int)cy, (int)x1, (int)y1);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
     for (i = 1; i <= segs; i++) {
         WWFixedAsDWord t  = (WWFixedAsDWord)(((dword)i << 16) / segs);
         WWFixedAsDWord it = WWFIXED_ONE - t;
@@ -54,16 +70,22 @@ static void SvgPathFlattenCubic(SVGScratch *sc, word *np,
                                 word segs)
 {
     word i;
+#ifdef DEBUG_LOG
+    char dbgbuf[112];
+    sprintf(dbgbuf, "FlattenCubic segs=%u x0=%d y0=%d c1=%d,%d c2=%d,%d x1=%d y1=%d",
+            (unsigned)segs, (int)x0, (int)y0, (int)c1x, (int)c1y, (int)c2x, (int)c2y, (int)x1, (int)y1);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
     for (i = 1; i <= segs; i++) {
         WWFixedAsDWord t   = (WWFixedAsDWord)(((dword)i << 16) / segs);
         WWFixedAsDWord it  = WWFIXED_ONE - t;
         WWFixedAsDWord it2 = GrMulWWFixed(it, it);
         WWFixedAsDWord t2  = GrMulWWFixed(t, t);
 
-        WWFixedAsDWord k0 = GrMulWWFixed(it2, it);                            /* (1-t)^3 */
-        WWFixedAsDWord k1 = GrMulWWFixed(MakeWWFixed(3), GrMulWWFixed(it2, t)); /* 3(1-t)^2 t */
-        WWFixedAsDWord k2 = GrMulWWFixed(MakeWWFixed(3), GrMulWWFixed(it, t2));  /* 3(1-t) t^2 */
-        WWFixedAsDWord k3 = GrMulWWFixed(t2, t);                              /* t^3 */
+        WWFixedAsDWord k0 = GrMulWWFixed(it2, it);                                /* (1-t)^3 */
+        WWFixedAsDWord k1 = GrMulWWFixed(MakeWWFixed(3), GrMulWWFixed(it2, t));    /* 3(1-t)^2 t */
+        WWFixedAsDWord k2 = GrMulWWFixed(MakeWWFixed(3), GrMulWWFixed(it, t2));    /* 3(1-t) t^2 */
+        WWFixedAsDWord k3 = GrMulWWFixed(t2, t);                                   /* t^3 */
 
         WWFixedAsDWord X =
             GrMulWWFixed(k0, ((sdword)x0 << 16)) +
@@ -90,6 +112,9 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
                   int laf, int swf,
                   WWFixedAsDWord x1W, WWFixedAsDWord y1W)
 {
+#ifdef DEBUG_LOG
+    char dbgbuf[144];
+#endif
     WWFixedAsDWord zero, one, two;
     WWFixedAsDWord cphi, sphi;
     WWFixedAsDWord dx, dy, x1p, y1p;
@@ -112,6 +137,15 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     sword          xi, yi, exi, eyi;
     word           np, remaining, nSeg, k;
 
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "FlattenArc x0=%d y0=%d rx=%d ry=%d rot=%ld laf=%d sf=%d x1=%d y1=%d",
+            (int)(x0W>>16), (int)(y0W>>16),
+            (int)(rxW>>16), (int)(ryW>>16),
+            (long)rotW, laf, swf,
+            (int)(x1W>>16), (int)(y1W>>16));
+    LOG_STR("[PATH]", dbgbuf);
+#endif
+
     zero = MakeWWFixed(0);
     one  = MakeWWFixed(1);
     two  = MakeWWFixed(2);
@@ -122,10 +156,16 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
             sc->pts[*pNp].P_y = SvgGeomWWFixedToSWordRound(y1W);
             (*pNp)++;
         }
+#ifdef DEBUG_LOG
+        LOG_STR("[PATH]", "FlattenArc: zero radius -> straight line to end");
+#endif
         return;
     }
     if (SvgGeomWWFixedToSWordRound(x0W) == SvgGeomWWFixedToSWordRound(x1W) &&
         SvgGeomWWFixedToSWordRound(y0W) == SvgGeomWWFixedToSWordRound(y1W)) {
+#ifdef DEBUG_LOG
+        LOG_STR("[PATH]", "FlattenArc: start==end -> nothing");
+#endif
         return;
     }
 
@@ -211,9 +251,17 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
         nSeg = 1;
     }
 
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "FlattenArc segs=%u th1=%ld dth=%ld", (unsigned)nSeg, (long)th1, (long)dth);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
+
     np        = *pNp;
     remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
     if (remaining == 0) {
+#ifdef DEBUG_LOG
+        LOG_STR("[PATH]", "FlattenArc: no space for segments");
+#endif
         return;
     }
     if (nSeg > remaining) {
@@ -240,10 +288,7 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
 
         xi = SvgGeomWWFixedToSWordRound(x);
         yi = SvgGeomWWFixedToSWordRound(y);
-        if (k == nSeg) {
-            xi = exi;
-            yi = eyi;
-        }
+        if (k == nSeg) { xi = exi; yi = eyi; }
 
         if (np < MAX_SVG_POINTS) {
             sc->pts[np].P_x = xi;
@@ -270,6 +315,9 @@ SvgPathHandleMoveTo(const char **sPP, char *lastCmdP,
     sword x, y;
     WWFixedAsDWord f, fx, fy;
     sword dx, dy;
+#ifdef DEBUG_LOG
+    char dbgbuf[96];
+#endif
 
     sP = *sPP;
 
@@ -288,6 +336,11 @@ SvgPathHandleMoveTo(const char **sPP, char *lastCmdP,
         x = (sword)(*lastxP + dx);
         y = (sword)(*lastyP + dy);
     }
+
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "M to x=%d y=%d", (int)x, (int)y);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
 
     *lastxP = x; *lastyP = y;
     *subStartXP = x; *subStartYP = y;
@@ -312,6 +365,9 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
     sword lx, ly;
     WWFixedAsDWord f, fx, fy;
     sword dx, dy;
+#ifdef DEBUG_LOG
+    char dbgbuf[96];
+#endif
 
     sP = *sPP;
 
@@ -331,6 +387,11 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
         ly = (sword)(*lastyP + dy);
     }
 
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "L to x=%d y=%d", (int)lx, (int)ly);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
+
     if (*npP < MAX_SVG_POINTS) { sc->pts[*npP].P_x = lx; sc->pts[*npP].P_y = ly; (*npP)++; }
     *lastxP = lx; *lastyP = ly;
     *lastWasCubicP = FALSE;
@@ -349,6 +410,9 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
     sword lx;
     WWFixedAsDWord f, fx;
     sword dx;
+#ifdef DEBUG_LOG
+    char dbgbuf[80];
+#endif
 
     sP = *sPP;
 
@@ -360,6 +424,11 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
         sP = SvgParserParseWWFixed16_16(sP, &fx); dx = SvgViewMapLenX_F(fx);
         lx = (sword)(*lastxP + dx);
     }
+
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "H to x=%d y=%d", (int)lx, (int)(*lastyP));
+    LOG_STR("[PATH]", dbgbuf);
+#endif
 
     if (*npP < MAX_SVG_POINTS) { sc->pts[*npP].P_x = lx; sc->pts[*npP].P_y = *lastyP; (*npP)++; }
     *lastxP = lx;
@@ -379,6 +448,9 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
     sword ly;
     WWFixedAsDWord f, fy;
     sword dy;
+#ifdef DEBUG_LOG
+    char dbgbuf[80];
+#endif
 
     sP = *sPP;
 
@@ -390,6 +462,11 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
         sP = SvgParserParseWWFixed16_16(sP, &fy); dy = SvgViewMapLenY_F(fy);
         ly = (sword)(*lastyP + dy);
     }
+
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "V to x=%d y=%d", (int)(*lastxP), (int)ly);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
 
     if (*npP < MAX_SVG_POINTS) { sc->pts[*npP].P_x = *lastxP; sc->pts[*npP].P_y = ly; (*npP)++; }
     *lastyP = ly;
@@ -410,6 +487,9 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
     sword cx, cy, ex, ey;
     WWFixedAsDWord f;
     sword dcx, dcy, dex, dey;
+#ifdef DEBUG_LOG
+    char dbgbuf[112];
+#endif
 
     sP = *sPP;
 
@@ -443,6 +523,11 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
             ex = (sword)(*lastxP + dex); ey = (sword)(*lastyP + dey);
         }
 
+#ifdef DEBUG_LOG
+        sprintf(dbgbuf, "Q c=%d,%d e=%d,%d", (int)cx,(int)cy,(int)ex,(int)ey);
+        LOG_STR("[PATH]", dbgbuf);
+#endif
+
         SvgPathFlattenQuad(sc, npP, *lastxP, *lastyP, cx, cy, ex, ey, 8);
 
         *lastxP = ex; *lastyP = ey;
@@ -464,6 +549,9 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
     sword ex, ey, cx, cy;
     WWFixedAsDWord f;
     sword dex, dey;
+#ifdef DEBUG_LOG
+    char dbgbuf[112];
+#endif
 
     sP = *sPP;
 
@@ -491,6 +579,11 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
             cx = *lastxP; cy = *lastyP;
         }
 
+#ifdef DEBUG_LOG
+        sprintf(dbgbuf, "T c=%d,%d e=%d,%d", (int)cx,(int)cy,(int)ex,(int)ey);
+        LOG_STR("[PATH]", dbgbuf);
+#endif
+
         SvgPathFlattenQuad(sc, npP, *lastxP, *lastyP, cx, cy, ex, ey, 8);
 
         *lastxP = ex; *lastyP = ey;
@@ -512,6 +605,9 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
     sword c1x, c1y, c2x, c2y, ex, ey;
     WWFixedAsDWord f;
     sword dc1x, dc1y, dc2x, dc2y, dex, dey;
+#ifdef DEBUG_LOG
+    char dbgbuf[128];
+#endif
 
     sP = *sPP;
 
@@ -558,6 +654,12 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
             ex  = (sword)(*lastxP + dex);  ey  = (sword)(*lastyP + dey);
         }
 
+#ifdef DEBUG_LOG
+        sprintf(dbgbuf, "C c1=%d,%d c2=%d,%d e=%d,%d",
+                (int)c1x,(int)c1y,(int)c2x,(int)c2y,(int)ex,(int)ey);
+        LOG_STR("[PATH]", dbgbuf);
+#endif
+
         SvgPathFlattenCubic(sc, npP, *lastxP, *lastyP, c1x, c1y, c2x, c2y, ex, ey, 10);
 
         *lastxP = ex; *lastyP = ey;
@@ -580,6 +682,9 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
     sword c1x, c1y, c2x, c2y, ex, ey;
     WWFixedAsDWord f;
     sword dc2x, dc2y, dex, dey;
+#ifdef DEBUG_LOG
+    char dbgbuf[128];
+#endif
 
     sP = *sPP;
 
@@ -620,6 +725,12 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
             ex  = (sword)(*lastxP + dex);  ey  = (sword)(*lastyP + dey);
         }
 
+#ifdef DEBUG_LOG
+        sprintf(dbgbuf, "S c1=%d,%d c2=%d,%d e=%d,%d",
+                (int)c1x,(int)c1y,(int)c2x,(int)c2y,(int)ex,(int)ey);
+        LOG_STR("[PATH]", dbgbuf);
+#endif
+
         SvgPathFlattenCubic(sc, npP, *lastxP, *lastyP, c1x, c1y, c2x, c2y, ex, ey, 10);
 
         *lastxP = ex; *lastyP = ey;
@@ -643,6 +754,9 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
     WWFixedAsDWord x0W, y0W;
     int laf, swf;
     Boolean done;
+#ifdef DEBUG_LOG
+    char dbgbuf[128];
+#endif
 
     sP = *sPP;
 
@@ -686,6 +800,13 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
             eyW = SvgGeomMakeWWFixedFromInt(*lastyP) + dyW;
         }
 
+#ifdef DEBUG_LOG
+        sprintf(dbgbuf, "A rx=%d ry=%d rot=%ld laf=%d sf=%d ex=%d ey=%d",
+                (int)(rxW>>16),(int)(ryW>>16),(long)rotW, laf, swf,
+                (int)(exW>>16),(int)(eyW>>16));
+        LOG_STR("[PATH]", dbgbuf);
+#endif
+
         if ((SvgGeomWWFixedToSWordRound(rxW) == 0) || (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
             if (*npP < MAX_SVG_POINTS) {
                 sc->pts[*npP].P_x = SvgGeomWWFixedToSWordRound(exW);
@@ -694,9 +815,15 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
             }
             *lastxP = SvgGeomWWFixedToSWordRound(exW);
             *lastyP = SvgGeomWWFixedToSWordRound(eyW);
+#ifdef DEBUG_LOG
+            LOG_STR("[PATH]", "A: zero radius -> straight line");
+#endif
             continue;
         }
         if ((SvgGeomWWFixedToSWordRound(exW) == *lastxP) && (SvgGeomWWFixedToSWordRound(eyW) == *lastyP)) {
+#ifdef DEBUG_LOG
+            LOG_STR("[PATH]", "A: end equals current -> skip");
+#endif
             continue;
         }
 
@@ -722,29 +849,44 @@ SvgPathHandleClose(const char **sPP,
                    sword subStartX, sword subStartY,
                    Boolean *lastWasCubicP, Boolean *lastWasQuadP)
 {
-    const char *sP;
+#ifdef DEBUG_LOG
+    char dbgbuf[80];
+#endif
 
-    sP = *sPP;
+    const char *sP = *sPP;
 
     *closedP = TRUE;
-    sP++;
+    /* Do not advance sP here; command letter was already consumed */
     *lastxP = subStartX;
     *lastyP = subStartY;
     *lastWasCubicP = FALSE;
     *lastWasQuadP  = FALSE;
 
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "Z close to x=%d y=%d", (int)subStartX, (int)subStartY);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
+
     *sPP = sP;
 }
+
 
 static void
 SvgPathHandleUnknown(const char **sPP,
                      Boolean *lastWasCubicP, Boolean *lastWasQuadP)
 {
     const char *sP;
+#ifdef DEBUG_LOG
+    char dbgbuf[64];
+#endif
 
     sP = *sPP;
 
-    sP++;
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "unknown cmd 0x%02X", (unsigned char)(*sP));
+    LOG_STR("[PATH]", dbgbuf);
+#endif
+
     *lastWasCubicP = FALSE;
     *lastWasQuadP  = FALSE;
 
@@ -765,6 +907,9 @@ SvgPathEmitSubpath(const char *tag,
     SvgMatrix elemOnWorld;
     Boolean   hasFill, hasStroke;
     Boolean   haveLast, needClose;
+#ifdef DEBUG_LOG
+    char      dbgbuf[160];
+#endif
 
     (void)sx2; (void)sy2;
 
@@ -791,6 +936,11 @@ SvgPathEmitSubpath(const char *tag,
             lastx = px; lasty = py; haveLast = TRUE;
         }
     }
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "EmitSubpath in=%u afterDedup=%u closed=%d hasFill=%d hasStroke=%d",
+            (unsigned)np, (unsigned)w, (int)closed, (int)hasFill, (int)hasStroke);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
     np = w;
     if (np <= 1) return;
 
@@ -800,23 +950,26 @@ SvgPathEmitSubpath(const char *tag,
                  (sc->pts[0].P_x != sc->pts[np-1].P_x ||
                   sc->pts[0].P_y != sc->pts[np-1].P_y));
 
+#ifdef DEBUG_LOG
     if (hasFill) {
-        /* Append this subpath to the *current* compound path.
-           We’re already inside Meta_BeginPath()/Meta_EndPath() at the <path> level. */
+        sprintf(dbgbuf, "EmitSubpath needClose=%d", (int)needClose);
+        LOG_STR("[PATH]", dbgbuf);
+    }
+#endif
+
+    if (hasFill) {
         emitN = np;
         if (needClose) {
-            /* add implicit closing vertex so the subpath is closed for filling */
             if (emitN < MAX_SVG_POINTS) {
                 sc->pts[emitN] = sc->pts[0];
                 emitN++;
             }
         }
-        /* Use Meta_Polygon to append a CLOSED contour to the current path.
-           (We pass in=FALSE, edges=TRUE; since we’re nested in a path,
-           Meta_EndPath won’t render yet, it only appends the geometry.) */
         Meta_Polygon(sc->pts, emitN, /*in=*/FALSE, /*edges=*/TRUE);
-
-        /* Do not render now; the final fill/stroke happens in SvgPathHandle(). */
+#ifdef DEBUG_LOG
+        sprintf(dbgbuf, "Meta_Polygon append to compound, n=%u", (unsigned)emitN);
+        LOG_STR("[META]", dbgbuf);
+#endif
         return;
     }
 
@@ -824,8 +977,16 @@ SvgPathEmitSubpath(const char *tag,
     if (hasStroke) {
         if (closed) {
             Meta_Polygon(sc->pts, np, /*in=*/FALSE, /*edges=*/TRUE);
+#ifdef DEBUG_LOG
+            sprintf(dbgbuf, "Meta_Polygon stroke-only, n=%u (closed)", (unsigned)np);
+            LOG_STR("[META]", dbgbuf);
+#endif
         } else {
             Meta_Polyline(sc->pts, np);
+#ifdef DEBUG_LOG
+            sprintf(dbgbuf, "Meta_Polyline stroke-only, n=%u", (unsigned)np);
+            LOG_STR("[META]", dbgbuf);
+#endif
         }
     }
 }
@@ -837,23 +998,16 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     const char     *sP;
     word            np;
     Boolean         closed;
-    sword           lastx;
-    sword           lasty;
-    sword           subStartX;
-    sword           subStartY;
-    Boolean         lastWasCubic;
-    Boolean         lastWasQuad;
-    sword           lastC2x;
-    sword           lastC2y;
-    sword           lastQcx;
-    sword           lastQcy;
+    sword           lastx, lasty;
+    sword           subStartX, subStartY;
+    Boolean         lastWasCubic, lastWasQuad;
+    sword           lastC2x, lastC2y;
+    sword           lastQcx, lastQcy;
     char            lastCmd;
     Boolean         haveCmd;
 
-    /* NEW: snapshot per-<path> style so we know whether to build a compound path */
-    Boolean         pathHasFill;
-    Boolean         pathHasStroke;
-    Boolean         buildingCompound;
+    /* snapshot per-<path> style to decide compound path behavior */
+    Boolean         pathHasFill, pathHasStroke, buildingCompound;
 
     sc->db[0] = 0;
     if (!SvgParserGetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) {
@@ -865,7 +1019,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     SvgStyleApplyFillRule(tag);
     SvgStyleApplyStrokeWidth(tag);
 
-    /* NEW: decide upfront whether we’ll accumulate a compound path for fill */
+    /* decide upfront whether we’ll accumulate a compound path for fill */
     pathHasFill   = SvgStyleHasFill(tag);
     pathHasStroke = SvgStyleHasStroke(tag);
     buildingCompound = FALSE;
@@ -894,13 +1048,10 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     while (*sP)
     {
         sP = SvgParserSkipWS(sP);
-        if (!*sP) {
-            break;
-        }
+        if (!*sP) break;
 
-        if (isalpha(*sP)) {
-            char nextCmd;
-            nextCmd = *sP++;
+        if (isalpha((unsigned char)*sP)) {
+            char nextCmd = *sP++;   /* consume the command letter */
 
             /* starting a new subpath? flush the previous one first */
             if ((nextCmd == 'M' || nextCmd == 'm') && (np > 1)) {
@@ -960,17 +1111,28 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
                              &lastWasCubic, &lastWasQuad);
             break;
 
-        case 'Z': case 'z':
+        case 'Z':
+        case 'z':
+            /* Close current subpath and return to subpath start.
+               NOTE: SvgPathHandleClose must NOT advance *sPP; the 'z' was
+               already consumed above when we did *sP++. */
             SvgPathHandleClose(&sP, &closed, &lastx, &lasty,
                                subStartX, subStartY, &lastWasCubic, &lastWasQuad);
+
+            /* Flush the closed subpath now */
             if (np > 1) {
                 SvgPathEmitSubpath(tag, sc, &np, TRUE, WWFIXED_ONE, WWFIXED_ONE);
             }
-            closed = FALSE;
+            closed  = FALSE;
+            haveCmd = FALSE;   /* fetch next real command at top of loop */
+            lastCmd = 0;
             break;
 
         default:
+            /* Unknown command: handler must NOT advance *sPP either */
             SvgPathHandleUnknown(&sP, &lastWasCubic, &lastWasQuad);
+            haveCmd = FALSE;
+            lastCmd = 0;
             break;
         }
     }
@@ -979,7 +1141,6 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
     }
 
-    /* NEW: finish the compound path (fill + optional stroke, once) */
     if (buildingCompound) {
         Meta_EndPath(/*in=*/pathHasFill, /*edges=*/pathHasStroke);
     }

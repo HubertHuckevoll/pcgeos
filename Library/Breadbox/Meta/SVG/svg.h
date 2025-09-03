@@ -43,6 +43,9 @@ typedef struct _SVGScratch {
     Point   pts[MAX_SVG_POINTS];
 } SVGScratch;
 
+#define DEBUG_LOG
+#include <SVG/dbglog.h>
+
 /* ---- small utility (common) ---- */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
 /* ansi-compat: case-sensitive prefix compare (like strncmp) */

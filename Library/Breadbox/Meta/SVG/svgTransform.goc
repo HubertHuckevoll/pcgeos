@@ -5,6 +5,7 @@
 
 #include <Ansi/string.h>
 #include <Ansi/stdlib.h>
+#include <Ansi/stdio.h>
 #include <Ansi/ctype.h>
 #include <file.h>
 #include <system.h>
@@ -138,6 +139,8 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
         return;
     }
 
+    LOG_STR("[XFORM] attr", buf);
+
     s = buf;
     while (*s) {
         WWFixedAsDWord v1, v2, v3;
@@ -160,6 +163,14 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             t.a=a; t.b=b; t.c=c; t.d=d; t.e=e; t.f=f;
             SvgMatMul(&acc, &t, &acc);  /* left-to-right application */
             s = p;
+#ifdef DEBUG_LOG
+            if (!AnsiStrnCmp(s, "matrix(", 7)) {
+                char b[96];
+                sprintf(b, "matrix a=%ld b=%ld c=%ld d=%ld e=%ld f=%ld",
+                        (sdword)a,(sdword)b,(sdword)c,(sdword)d,(sdword)e,(sdword)f);
+                LOG_STR("[XFORM]", b);
+            }
+#endif
         } else if (!AnsiStrnCmp(s, "translate(", 10)) {
             p = s + 10;
             p = SvgParseNumber(p, &v1);
@@ -169,6 +180,12 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             SvgMatTranslate(&t, v1, v2);
             SvgMatMul(&acc, &t, &acc);
             s = p;
+#ifdef DEBUG_LOG
+            if (!AnsiStrnCmp(s, "translate(",10)) {
+                char b[64]; sprintf(b, "translate %ld,%ld",(sdword)v1,(sdword)v2);
+                LOG_STR("[XFORM]", b);
+            }
+#endif
         } else if (!AnsiStrnCmp(s, "scale(", 6)) {
             p = s + 6;
             p = SvgParseNumber(p, &v1);
@@ -178,6 +195,12 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             SvgMatScale(&t, v1, v2);
             SvgMatMul(&acc, &t, &acc);
             s = p;
+#ifdef DEBUG_LOG
+            if (!AnsiStrnCmp(s, "scale(",6)) {
+                char b[64]; sprintf(b, "scale %ld,%ld",(sdword)v1,(sdword)v2);
+                LOG_STR("[XFORM]", b);
+            }
+#endif
         } else if (!AnsiStrnCmp(s, "rotate(", 7)) {
             p = s + 7;
             p = SvgParseNumber(p, &v1); /* angle in degrees */
@@ -202,6 +225,13 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             }
             SvgMatMul(&acc, &t, &acc);
             s = p;
+#ifdef DEBUG_LOG
+            if (!AnsiStrnCmp(s, "rotate(",7)) {
+                char b[96];
+                sprintf(b, "rotate deg=%ld cx=%ld cy=%ld",(sdword)v1,(sdword)v2,(sdword)v3);
+                LOG_STR("[XFORM]", b);
+            }
+#endif
         } else if (!AnsiStrnCmp(s, "skewX(", 6)) {
             p = s + 6;
             p = SvgParseNumber(p, &v1);

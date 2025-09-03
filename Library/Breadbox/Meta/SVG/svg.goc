@@ -12,7 +12,6 @@
 #include <gstring.h>
 #include <meta.h>
 #include <float.h>
-#include <dbglogmc.h>
 
 #include "SVG/svg.h"
 
@@ -107,6 +106,15 @@ const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
     {
         result = (WWFixedAsDWord)(0 - (sdword)result);
     }
+
+#ifdef DEBUG_LOG
+    if (scale >= 1000000UL && frac != 0) {
+        LOG_STR("[SvgParserParseWWFixed16_16]", "fraction scale capped at 1e6");
+    }
+    if ((sdword)result == 0 && (ip!=0 || frac!=0)) {
+        LOG_STR("[SvgParserParseWWFixed16_16]", "result rounded to zero");
+    }
+#endif
 
     *out = result;
     return s;
@@ -329,8 +337,18 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     done    = 0;
     sawSvg  = FALSE;
 
+    LOG_INIT();
+    LOG_START();
+
     total = FilePos(srcFile, 0, FILE_POS_END);
     FilePos(srcFile, 0, FILE_POS_START);
+
+#ifdef DEBUG_LOG
+    LOG_STR("ReadSVG", "begin");
+    LOG_FILE("srcFile", srcFile);
+    LOG_DWORD("totalBytes", FilePos(srcFile, 0, FILE_POS_END));
+    FilePos(srcFile, 0, FILE_POS_START);
+#endif
 
     scH = MemAlloc((word)sizeof(SVGScratch), HF_DYNAMIC, HAF_ZERO_INIT);
     if (!scH)
@@ -374,6 +392,9 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
             break;
         }
 
+        /* Show the first ~96 chars of the tag text */
+        LOG_STR_HEAD("[TAG] head", (char*) scP->tag, 96);
+
         if (callback && total >= 2048)
         {
             done = (dword)FilePos(srcFile, 0, FILE_POS_RELATIVE);
@@ -397,6 +418,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
 
         if (SvgParserTagIs(scP->tag, "svg"))
         {
+            LOG_STR("[SVG]", "root");
             SvgViewInitFromSvgTag(scP->tag);
             sawSvg = TRUE;
             continue;
@@ -411,34 +433,47 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
 
         if (SvgParserTagIs(scP->tag, "line"))
         {
+            LOG_STR("[DISPATCH]", "line");
             SvgShapeHandleLine(scP->tag);
         }
         else if (SvgParserTagIs(scP->tag, "polyline"))
         {
+            LOG_STR("[DISPATCH]", "polyline");
             SvgShapeHandlePolyline(scP->tag, scP);
         }
         else if (SvgParserTagIs(scP->tag, "polygon"))
         {
+            LOG_STR("[DISPATCH]", "polygon");
             SvgShapeHandlePolygon(scP->tag, scP);
         }
         else if (SvgParserTagIs(scP->tag, "rect"))
         {
+            LOG_STR("[DISPATCH]", "rect");
             SvgShapeHandleRect(scP->tag);
         }
         else if (SvgParserTagIs(scP->tag, "ellipse"))
         {
+            LOG_STR("[DISPATCH]", "ellipse");
             SvgShapeHandleEllipse(scP->tag);
         }
         else if (SvgParserTagIs(scP->tag, "circle"))
         {
+            LOG_STR("[DISPATCH]", "circle");
             SvgShapeHandleCircle(scP->tag);
         }
         else if (SvgParserTagIs(scP->tag, "path"))
         {
+#ifdef DEBUG_LOG
+            char id[64]; id[0]=0;
+            SvgParserGetAttrBounded(scP->tag, "id", id, sizeof(id));
+            if (id[0]) LOG_STR("[DISPATCH] path id", id);
+            LOG_STR_HEAD("[path d]", scP->tag, 120); /* shows d=... head */
+#endif
             SvgPathHandle(scP->tag, scP);
         }
         else
         {
+            LOG_STR_HEAD("[UNHANDLED_TAG]", scP->tag, 96);
             /* unhandled: <g>, <title>, etc. */
         }
     }
@@ -452,6 +487,10 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     if (ioH) MemFree(ioH);
     if (scP) MemUnlock(scH);
     if (scH) MemFree(scH);
+
+#ifdef SVG_DEBUG
+    LOG_END();
+#endif
 
     return TE_NO_ERROR;
 }
