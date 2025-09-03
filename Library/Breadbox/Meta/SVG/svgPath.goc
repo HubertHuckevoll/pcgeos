@@ -991,8 +991,6 @@ SvgPathEmitSubpath(const char *tag,
     }
 }
 
-
-
 void SvgPathHandle(const char *tag, SVGScratch *sc)
 {
     const char     *sP;
@@ -1009,10 +1007,18 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     /* snapshot per-<path> style to decide compound path behavior */
     Boolean         pathHasFill, pathHasStroke, buildingCompound;
 
+#ifdef DEBUG_LOG
+    char            tmp[96];
+#endif
+
     sc->db[0] = 0;
     if (!SvgParserGetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) {
         return;
     }
+
+#ifdef DEBUG_LOG
+    LOG_STR_HEAD("[PATH d]", sc->db, 120);
+#endif
 
     /* styles once per <path> */
     SvgStyleApplyStrokeAndFill(tag);
@@ -1022,10 +1028,18 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     /* decide upfront whether we’ll accumulate a compound path for fill */
     pathHasFill   = SvgStyleHasFill(tag);
     pathHasStroke = SvgStyleHasStroke(tag);
+#ifdef DEBUG_LOG
+    sprintf(tmp, "style: fill=%d stroke=%d", (int)pathHasFill, (int)pathHasStroke);
+    LOG_STR("[STYLE]", tmp);
+#endif
+
     buildingCompound = FALSE;
     if (pathHasFill) {
         Meta_BeginPath();           /* all subpaths will be appended here */
         buildingCompound = TRUE;
+#ifdef DEBUG_LOG
+        LOG_STR("[META]", "BeginPath (compound fill)");
+#endif
     }
 
     np            = 0;
@@ -1050,15 +1064,41 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         sP = SvgParserSkipWS(sP);
         if (!*sP) break;
 
+#ifdef DEBUG_LOG
+        {
+            char dbg[64];
+            sprintf(dbg, "haveCmd=%d next='%c'(0x%02x)",
+                    (int)haveCmd, *sP ? *sP : '.', (unsigned)(byte)(*sP));
+            LOG_STR("[LOOP]", dbg);
+        }
+#endif
+
         if (isalpha((unsigned char)*sP)) {
             char nextCmd = *sP++;   /* consume the command letter */
 
             /* starting a new subpath? flush the previous one first */
             if ((nextCmd == 'M' || nextCmd == 'm') && (np > 1)) {
-                SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
+#ifdef DEBUG_LOG
+                LOG_STR("[FLUSH]", "flush-before-M");
+#endif
+                /* capture count for logging before it gets reset inside emit */
+                {
+                    word emitN = np;
+                    SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
+#ifdef DEBUG_LOG
+                    sprintf(tmp, "emit n=%u closed=%d", emitN, (int)closed);
+                    LOG_STR("[EMIT]", tmp);
+#endif
+                }
                 closed = FALSE;
             }
 
+#ifdef DEBUG_LOG
+            {
+                char cmdStr[4]; cmdStr[0] = nextCmd; cmdStr[1] = 0;
+                LOG_STR("[CMD]", cmdStr);
+            }
+#endif
             lastCmd = nextCmd;
             haveCmd = TRUE;
         } else if (!haveCmd) {
@@ -1113,23 +1153,29 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
 
         case 'Z':
         case 'z':
-            /* Close current subpath and return to subpath start.
-               NOTE: SvgPathHandleClose must NOT advance *sPP; the 'z' was
-               already consumed above when we did *sP++. */
+        {
+#ifdef DEBUG_LOG
+            sprintf(tmp, "close-subpath np=%u", np);
+            LOG_STR("[CLOSE]", tmp);
+#endif
             SvgPathHandleClose(&sP, &closed, &lastx, &lasty,
                                subStartX, subStartY, &lastWasCubic, &lastWasQuad);
 
-            /* Flush the closed subpath now */
             if (np > 1) {
+                word emitN = np;
                 SvgPathEmitSubpath(tag, sc, &np, TRUE, WWFIXED_ONE, WWFIXED_ONE);
+#ifdef DEBUG_LOG
+                sprintf(tmp, "emit n=%u closed=1", emitN);
+                LOG_STR("[EMIT]", tmp);
+#endif
             }
             closed  = FALSE;
             haveCmd = FALSE;   /* fetch next real command at top of loop */
             lastCmd = 0;
             break;
+        }
 
         default:
-            /* Unknown command: handler must NOT advance *sPP either */
             SvgPathHandleUnknown(&sP, &lastWasCubic, &lastWasQuad);
             haveCmd = FALSE;
             lastCmd = 0;
@@ -1138,12 +1184,25 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     }
 
     if (np > 1) {
+        word emitN = np;
         SvgPathEmitSubpath(tag, sc, &np, closed, WWFIXED_ONE, WWFIXED_ONE);
+#ifdef DEBUG_LOG
+        {
+            char fin[64];
+            sprintf(fin, "final-emit n=%u closed=%d", emitN, (int)closed);
+            LOG_STR("[EMIT]", fin);
+        }
+#endif
     }
 
     if (buildingCompound) {
         Meta_EndPath(/*in=*/pathHasFill, /*edges=*/pathHasStroke);
+#ifdef DEBUG_LOG
+        sprintf(tmp, "EndPath in=%d edges=%d", (int)pathHasFill, (int)pathHasStroke);
+        LOG_STR("[META]", tmp);
+#endif
     }
 }
+
 
 
