@@ -103,37 +103,7 @@ static void SvgPathFlattenCubic(SVGScratch *sc, word *np,
     }
 }
 
-/* Prevent near-360-degree arcs from collapsing after integer rounding.
- * If the rounded endpoint equals the current point, nudge the endpoint
- * by 1 device unit along the dominant radius axis, in sweep direction.
- */
-static void
-SvgPathFixCollapsedArcEndpoint(sword currx, sword curry,
-                               WWFixedAsDWord rxW, WWFixedAsDWord ryW,
-                               int sweepFlag,
-                               WWFixedAsDWord *exWP, WWFixedAsDWord *eyWP)
-{
-    sword exR;
-    sword eyR;
-    WWFixedAsDWord oneW;
-
-    exR = SvgGeomWWFixedToSWordRound(*exWP);
-    eyR = SvgGeomWWFixedToSWordRound(*eyWP);
-    if ((exR == currx) && (eyR == curry))
-    {
-        oneW = SvgGeomMakeWWFixedFromInt(1);
-        if (rxW >= ryW)
-        {
-            if (sweepFlag) { *exWP += oneW; } else { *exWP -= oneW; }
-        }
-        else
-        {
-            if (sweepFlag) { *eyWP += oneW; } else { *eyWP -= oneW; }
-        }
-    }
-}
-
-/* ===== Elliptical-arc flattener (fixed-point) ===== */
+/* C89-safe; keeps existing logging keys. */
 static void
 SvgPathFlattenArc(SVGScratch *sc, word *pNp,
                   WWFixedAsDWord x0W, WWFixedAsDWord y0W,
@@ -143,29 +113,29 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
                   WWFixedAsDWord x1W, WWFixedAsDWord y1W)
 {
 #ifdef DEBUG_LOG
-    char dbgbuf[144];
+    char dbgbuf[208];
 #endif
-    WWFixedAsDWord zero, one, two;
+    WWFixedAsDWord zero = MakeWWFixed(0);
+    WWFixedAsDWord one  = MakeWWFixed(1);
+    WWFixedAsDWord two  = MakeWWFixed(2);
+
     WWFixedAsDWord cphi, sphi;
     WWFixedAsDWord dx, dy, x1p, y1p;
     WWFixedAsDWord frx, fry;
-    WWFixedAsDWord u, v, u2, v2;
-    WWFixedAsDWord lam, scale;
-    WWFixedAsDWord s;
-    WWFixedAsDWord cxp, cyp;
-    WWFixedAsDWord mx, my;
-    WWFixedAsDWord cx, cy;
+    WWFixedAsDWord u2, v2, lam, scale;
+    WWFixedAsDWord num, den, s;
+    WWFixedAsDWord cxp, cyp, mx, my, cx, cy;
     WWFixedAsDWord ux, uy, vx, vy;
-    WWFixedAsDWord th1, dth;
-    WWFixedAsDWord cross, dot, absDth;
-    WWFixedAsDWord deltaMaxDeg, stepDeg, theta;
+    WWFixedAsDWord th1, dth, dth_raw, absDth;
+    WWFixedAsDWord deg360 = MakeWWFixed(360);
+    WWFixedAsDWord ddx, ddy, manhattan;
+    WWFixedAsDWord deltaMaxDeg = MakeWWFixed(12);
+    WWFixedAsDWord nSegWW, stepDeg, theta;
     WWFixedAsDWord xr, yr, xp, yp, x, y;
-    WWFixedAsDWord nSegWW;
-    WWFixedAsDWord u0, v0;
-    WWFixedAsDWord num, frac;
     WWFixedAsDWord cth, sth;
-    sword          xi, yi, exi, eyi;
-    word           np, remaining, nSeg, k;
+
+    sword xi, yi, exi, eyi;
+    word  np, remaining, nSeg, k;
 
 #ifdef DEBUG_LOG
     sprintf(dbgbuf, "FlattenArc x0=%d y0=%d rx=%d ry=%d rot=%ld laf=%d sf=%d x1=%d y1=%d",
@@ -176,127 +146,163 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     LOG_STR("[PATH]", dbgbuf);
 #endif
 
-    zero = MakeWWFixed(0);
-    one  = MakeWWFixed(1);
-    two  = MakeWWFixed(2);
+    /* Identical endpoints => nothing to draw (spec) */
+    if (x0W == x1W && y0W == y1W) {
+#ifdef DEBUG_LOG
+        LOG_STR("[PATH]", "A: end equals current (exact) -> skip");
+#endif
+        return;
+    }
 
-    if (SvgGeomWWFixedToSWordRound(rxW) == 0 || SvgGeomWWFixedToSWordRound(ryW) == 0) {
+    /* Degenerate radii => straight line */
+    if ((SvgGeomWWFixedToSWordRound(rxW) == 0) ||
+        (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
         if (*pNp < MAX_SVG_POINTS) {
             sc->pts[*pNp].P_x = SvgGeomWWFixedToSWordRound(x1W);
             sc->pts[*pNp].P_y = SvgGeomWWFixedToSWordRound(y1W);
             (*pNp)++;
         }
 #ifdef DEBUG_LOG
-        LOG_STR("[PATH]", "FlattenArc: zero radius -> straight line to end");
-#endif
-        return;
-    }
-    if (SvgGeomWWFixedToSWordRound(x0W) == SvgGeomWWFixedToSWordRound(x1W) &&
-        SvgGeomWWFixedToSWordRound(y0W) == SvgGeomWWFixedToSWordRound(y1W)) {
-#ifdef DEBUG_LOG
-        LOG_STR("[PATH]", "FlattenArc: start==end -> nothing");
+        LOG_STR("[PATH]", "A: zero radius -> straight line");
 #endif
         return;
     }
 
-    frx = SvgGeomWWAbs(rxW);
-    fry = SvgGeomWWAbs(ryW);
-
+    frx  = SvgGeomWWAbs(rxW);
+    fry  = SvgGeomWWAbs(ryW);
     cphi = GrQuickCosine(rotW);
     sphi = GrQuickSine(rotW);
 
-    dx = GrSDivWWFixed(GrSubWWFixed(x0W, x1W), two);
-    dy = GrSDivWWFixed(GrSubWWFixed(y0W, y1W), two);
+    /* Endpoint delta & quick chord metrics (for logs only) */
+    ddx = SvgGeomWWAbs(GrSubWWFixed(x1W, x0W));
+    ddy = SvgGeomWWAbs(GrSubWWFixed(y1W, y0W));
+    manhattan = GrAddWWFixed(ddx, ddy);
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "ArcChord dx=%.5f dy=%.5f L1=%.5f",
+            (double)ddx/65536.0, (double)ddy/65536.0, (double)manhattan/65536.0);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
 
-    x1p  = GrAddWWFixed(GrMulWWFixed(cphi, dx), GrMulWWFixed(sphi, dy));
-    y1p  = GrAddWWFixed((WWFixedAsDWord)(-(sdword)GrMulWWFixed(sphi, dx)),
-                        GrMulWWFixed(cphi, dy));
+    /* Transform into ellipse-aligned frame (primed) */
+    dx  = GrSDivWWFixed(GrSubWWFixed(x0W, x1W), two);
+    dy  = GrSDivWWFixed(GrSubWWFixed(y0W, y1W), two);
+    x1p = GrAddWWFixed(GrMulWWFixed(cphi, dx),  GrMulWWFixed(sphi, dy));
+    y1p = GrAddWWFixed((WWFixedAsDWord)(-(sdword)GrMulWWFixed(sphi, dx)),
+                       GrMulWWFixed(cphi, dy));
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "PrimedFrame x1p=%.5f y1p=%.5f",
+            (double)x1p/65536.0, (double)y1p/65536.0);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
 
-    u0  = GrSDivWWFixed(SvgGeomWWAbs(x1p), frx);
-    v0  = GrSDivWWFixed(SvgGeomWWAbs(y1p), fry);
-    u2  = GrMulWWFixed(u0, u0);
-    v2  = GrMulWWFixed(v0, v0);
+    /* Radius correction (λ = u^2 + v^2) */
+    u2  = GrSDivWWFixed(SvgGeomWWAbs(x1p), frx); u2 = GrMulWWFixed(u2, u2);
+    v2  = GrSDivWWFixed(SvgGeomWWAbs(y1p), fry); v2 = GrMulWWFixed(v2, v2);
     lam = GrAddWWFixed(u2, v2);
-
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "Lam before=%ld (%.6f) u2=%.6f v2=%.6f",
+            (long)lam,(double)lam/65536.0,(double)u2/65536.0,(double)v2/65536.0);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
     if ((sdword)lam > (sdword)one) {
         scale = SvgGeomWWSqrt(lam);
         frx   = GrMulWWFixed(frx, scale);
         fry   = GrMulWWFixed(fry, scale);
-        u     = GrSDivWWFixed(x1p, frx);
-        v     = GrSDivWWFixed(y1p, fry);
-        u2    = GrMulWWFixed(u, u);
-        v2    = GrMulWWFixed(v, v);
+#ifdef DEBUG_LOG
+        sprintf(dbgbuf, "RadiusCorrect scale=%.6f -> frx=%.5f fry=%.5f",
+                (double)scale/65536.0, (double)frx/65536.0, (double)fry/65536.0);
+        LOG_STR("[PATH]", dbgbuf);
+#endif
+    }
+
+    /* Center in primed frame (sign encodes large/small + sweep) */
+    u2  = GrSDivWWFixed(x1p, frx); u2 = GrMulWWFixed(u2, u2);
+    v2  = GrSDivWWFixed(y1p, fry); v2 = GrMulWWFixed(v2, v2);
+    lam = GrAddWWFixed(u2, v2);
+
+    num = GrSubWWFixed(one, lam); if ((sdword)num < 0) num = zero;
+    den = lam;
+    if ((sdword)den == 0) {
+        /* endpoints are effectively identical (should have returned above);
+           keep s=0 to avoid NaN; center falls back to midpoint below. */
+        s = zero;
     } else {
-        u  = GrSDivWWFixed(x1p, frx);
-        v  = GrSDivWWFixed(y1p, fry);
-        u2 = GrMulWWFixed(u, u);
-        v2 = GrMulWWFixed(v, v);
+        s = SvgGeomWWSqrt(GrSDivWWFixed(num, den));
     }
+    if (laf == swf) { s = (WWFixedAsDWord)(-(sdword)s); }
 
-    num  = GrSubWWFixed(one, GrAddWWFixed(u2, v2));
-    frac = GrSDivWWFixed((sdword)num < 0 ? zero : num, GrAddWWFixed(u2, v2));
-    s    = SvgGeomWWSqrt(frac);
-    if (laf == swf) {
-        s = (WWFixedAsDWord)(-(sdword)s);
-    }
+    cxp = GrMulWWFixed(s, GrMulWWFixed(frx, GrSDivWWFixed(y1p, fry)));
+    cyp = GrMulWWFixed(s, (WWFixedAsDWord)(-(sdword)GrMulWWFixed(fry, GrSDivWWFixed(x1p, frx))));
 
-    cxp = GrMulWWFixed(s, GrMulWWFixed(frx, v));
-    cyp = GrMulWWFixed(s, (WWFixedAsDWord)(-(sdword)GrMulWWFixed(fry, u)));
-
+    /* Back to original frame */
     mx = GrSDivWWFixed(GrAddWWFixed(x0W, x1W), two);
     my = GrSDivWWFixed(GrAddWWFixed(y0W, y1W), two);
-
     cx = GrAddWWFixed(GrSubWWFixed(GrMulWWFixed(cphi, cxp), GrMulWWFixed(sphi, cyp)), mx);
     cy = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(sphi, cxp), GrMulWWFixed(cphi, cyp)), my);
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "Centers cxp=%.5f cyp=%.5f  ->  cx=%.5f cy=%.5f",
+            (double)cxp/65536.0,(double)cyp/65536.0,(double)cx/65536.0,(double)cy/65536.0);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
 
+    /* u, v vectors per SVG spec */
     ux = GrSDivWWFixed(GrSubWWFixed(x1p, cxp), frx);
     uy = GrSDivWWFixed(GrSubWWFixed(y1p, cyp), fry);
     vx = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)x1p), cxp), frx);
     vy = GrSDivWWFixed(GrSubWWFixed((WWFixedAsDWord)(-(sdword)y1p), cyp), fry);
 
-    th1   = SvgGeomWWAtan2Deg(uy, ux);
-    cross = GrSubWWFixed(GrMulWWFixed(ux, vy), GrMulWWFixed(uy, vx));
-    dot   = GrAddWWFixed(GrMulWWFixed(ux, vx), GrMulWWFixed(uy, vy));
-    dth   = SvgGeomWWAtan2Deg(cross, dot);
+    th1     = SvgGeomWWAtan2Deg(uy, ux);
+    dth_raw = SvgGeomWWAtan2Deg(
+                  GrSubWWFixed(GrMulWWFixed(ux, vy), GrMulWWFixed(uy, vx)),
+                  GrAddWWFixed(GrMulWWFixed(ux, vx), GrMulWWFixed(uy, vy)));
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "Angles th1=%ld (%.3f°) dth_raw=%ld (%.3f°)",
+            (long)th1,(double)th1/65536.0,(long)dth_raw,(double)dth_raw/65536.0);
+    LOG_STR("[ARCDBG]", dbgbuf);
+#endif
 
-    if (!swf) {
-        if ((sdword)dth > 0) {
-            dth = GrSubWWFixed(dth, MakeWWFixed(360));
-        }
-    } else {
-        if ((sdword)dth < 0) {
-            dth = GrAddWWFixed(dth, MakeWWFixed(360));
-        }
-    }
+    /* Normalize sweep sign ONLY (do not clamp to 180 or 360) */
+    dth = dth_raw;
+    if (!swf) { if ((sdword)dth > 0) dth = GrSubWWFixed(dth, deg360); }
+    else      { if ((sdword)dth < 0) dth = GrAddWWFixed(dth, deg360); }
+
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "AfterSweep dth=%ld (%.3f°) sf=%d",
+            (long)dth, (double)dth/65536.0, swf);
+    LOG_STR("[ARCSEL]", dbgbuf);
+#endif
 
     absDth = SvgGeomWWAbs(dth);
 
-    deltaMaxDeg = MakeWWFixed(12);
-    nSegWW      = GrSDivWWFixed(absDth, deltaMaxDeg);
-    nSeg        = (word)SvgGeomWWFixedToSWordRound(nSegWW);
-    if (GrMulWWFixed(MakeWWFixed(nSeg), deltaMaxDeg) < absDth) {
-        nSeg++;
-    }
-    if (nSeg < 1) {
-        nSeg = 1;
-    }
-
 #ifdef DEBUG_LOG
-    sprintf(dbgbuf, "FlattenArc segs=%u th1=%ld dth=%ld", (unsigned)nSeg, (long)th1, (long)dth);
-    LOG_STR("[PATH]", dbgbuf);
+    sprintf(dbgbuf, "FinalAngles th1=%ld (%.3f°) dth=%ld (%.3f°) laf=%d sf=%d",
+            (long)th1,(double)th1/65536.0,(long)dth,(double)dth/65536.0, laf, swf);
+    LOG_STR("[ARCDBG]", dbgbuf);
 #endif
 
+    /* Segment count (<= ~12° per segment) */
+    nSegWW = GrSDivWWFixed(absDth, deltaMaxDeg);
+    nSeg   = (word)SvgGeomWWFixedToSWordRound(nSegWW);
+    if (GrMulWWFixed(MakeWWFixed(nSeg), deltaMaxDeg) < absDth) nSeg++;
+    if (nSeg < 1) nSeg = 1;
+
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "Segmentation absDth=%.3f° nSeg=%u (cap=12°)",
+            (double)absDth/65536.0, (unsigned)nSeg);
+    LOG_STR("[ARCDBG]", dbgbuf);
+    if (nSeg == 1) LOG_STR("[WARN]", "nSeg==1 (very short arc) — may look like a chord");
+#endif
+
+    /* Emit */
     np        = *pNp;
     remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
     if (remaining == 0) {
 #ifdef DEBUG_LOG
-        LOG_STR("[PATH]", "FlattenArc: no space for segments");
+        LOG_STR("[PATH]", "FlattenArc: no buffer space");
 #endif
         return;
     }
-    if (nSeg > remaining) {
-        nSeg = remaining;
-    }
+    if (nSeg > remaining) nSeg = remaining;
 
     exi = SvgGeomWWFixedToSWordRound(x1W);
     eyi = SvgGeomWWFixedToSWordRound(y1W);
@@ -318,7 +324,6 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
 
         xi = SvgGeomWWFixedToSWordRound(x);
         yi = SvgGeomWWFixedToSWordRound(y);
-        if (k == nSeg) { xi = exi; yi = eyi; }
 
         if (np < MAX_SVG_POINTS) {
             sc->pts[np].P_x = xi;
@@ -329,6 +334,12 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
         }
     }
     *pNp = np;
+
+#ifdef DEBUG_LOG
+    sprintf(dbgbuf, "Emit done: last=(%d,%d) endRound=(%d,%d) segs=%u",
+            (int)xi,(int)yi,(int)exi,(int)eyi,(unsigned)nSeg);
+    LOG_STR("[PATH]", dbgbuf);
+#endif
 }
 
 
@@ -772,6 +783,8 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
     *sPP = sP;
 }
 
+/* svgPath.goc */
+
 static void
 SvgPathHandleArc(const char **sPP, char lastCmd,
                  SVGScratch *sc, word *npP,
@@ -837,7 +850,8 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         LOG_STR("[PATH]", dbgbuf);
 #endif
 
-        if ((SvgGeomWWFixedToSWordRound(rxW) == 0) || (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
+        if ((SvgGeomWWFixedToSWordRound(rxW) == 0) ||
+            (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
             if (*npP < MAX_SVG_POINTS) {
                 sc->pts[*npP].P_x = SvgGeomWWFixedToSWordRound(exW);
                 sc->pts[*npP].P_y = SvgGeomWWFixedToSWordRound(eyW);
@@ -851,18 +865,16 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
             continue;
         }
 
-        /* Nudge degenerate near-360 arcs that collapse after rounding. */
-        SvgPathFixCollapsedArcEndpoint(*lastxP, *lastyP, rxW, ryW, swf, &exW, &eyW);
+        x0W = ((WWFixedAsDWord)(*lastxP)) << 16;
+        y0W = ((WWFixedAsDWord)(*lastyP)) << 16;
 
-        if ((SvgGeomWWFixedToSWordRound(exW) == *lastxP) && (SvgGeomWWFixedToSWordRound(eyW) == *lastyP)) {
+        /* Only skip truly degenerate arcs (exactly equal in WWFixed). */
+        if ((exW == x0W) && (eyW == y0W)) {
 #ifdef DEBUG_LOG
-            LOG_STR("[PATH]", "A: end equals current -> skip");
+            LOG_STR("[PATH]", "A: end equals current (exact) -> skip");
 #endif
             continue;
         }
-
-        x0W = ((WWFixedAsDWord)(*lastxP)) << 16;
-        y0W = ((WWFixedAsDWord)(*lastyP)) << 16;
 
         SvgPathFlattenArc(sc, npP, x0W, y0W, rxW, ryW, rotW, laf, swf, exW, eyW);
 
@@ -875,6 +887,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
 
     *sPP = sP;
 }
+
 
 static void
 SvgPathHandleClose(const char **sPP,
