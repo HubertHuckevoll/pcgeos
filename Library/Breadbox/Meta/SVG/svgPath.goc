@@ -138,6 +138,10 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     WWFixedAsDWord epsLam, eps360, minR, tinyThresh;
     Boolean nearCoinc, isFull;
 
+    /* snap last vertex to start for near-full arcs */
+    sword sxi, syi;
+    Boolean snappedToStart;
+
     sword xi, yi, exi, eyi;
     word  np, remaining, nSeg, k;
 
@@ -151,7 +155,8 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
 #endif
 
     /* Identical endpoints => nothing to draw (spec) */
-    if (x0W == x1W && y0W == y1W) {
+    if (x0W == x1W && y0W == y1W)
+    {
 #ifdef DEBUG_LOG
         LOG_STR("[PATH]", "A: end equals current (exact) -> skip");
 #endif
@@ -160,8 +165,10 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
 
     /* Degenerate radii => straight line */
     if ((SvgGeomWWFixedToSWordRound(rxW) == 0) ||
-        (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
-        if (*pNp < MAX_SVG_POINTS) {
+        (SvgGeomWWFixedToSWordRound(ryW) == 0))
+    {
+        if (*pNp < MAX_SVG_POINTS)
+        {
             sc->pts[*pNp].P_x = SvgGeomWWFixedToSWordRound(x1W);
             sc->pts[*pNp].P_y = SvgGeomWWFixedToSWordRound(y1W);
             (*pNp)++;
@@ -187,7 +194,7 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     LOG_STR("[PATH]", dbgbuf);
 #endif
 
-    /* Transform into ellipse-aligned frame (primed) */
+    /* Transform into ellipse-aligned frame (primed) — back to original sign */
     dx  = GrSDivWWFixed(GrSubWWFixed(x0W, x1W), two);
     dy  = GrSDivWWFixed(GrSubWWFixed(y0W, y1W), two);
     x1p = GrAddWWFixed(GrMulWWFixed(cphi, dx),  GrMulWWFixed(sphi, dy));
@@ -208,7 +215,8 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
             (long)lam,(double)lam/65536.0,(double)u2/65536.0,(double)v2/65536.0);
     LOG_STR("[PATH]", dbgbuf);
 #endif
-    if ((sdword)lam > (sdword)one) {
+    if ((sdword)lam > (sdword)one)
+    {
         scale = SvgGeomWWSqrt(lam);
         frx   = GrMulWWFixed(frx, scale);
         fry   = GrMulWWFixed(fry, scale);
@@ -224,11 +232,14 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     v2  = GrSDivWWFixed(y1p, fry); v2 = GrMulWWFixed(v2, v2);
     lam = GrAddWWFixed(u2, v2);
 
-    /* -------- Patch 1: clamp lam away from zero (fixed-point stability) -------- */
-    epsLam = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(4096)); /* 1/4096 */
-    if ((sdword)lam <= 0) {
+    /* Patch 1: clamp lam away from zero (smaller floor to avoid center bias) */
+    epsLam = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(16384)); /* 1/16384 ≈ 0.000061 */
+    if ((sdword)lam <= 0)
+    {
         lam = epsLam;
-    } else if ((sdword)lam < (sdword)epsLam) {
+    }
+    else if ((sdword)lam < (sdword)epsLam)
+    {
         lam = epsLam;
     }
 
@@ -278,15 +289,14 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     LOG_STR("[ARCSEL]", dbgbuf);
 #endif
 
-    /* -------- Patch 2: near-coincident chord ⇒ near-full sweep (center untouched) -------- */
-    /* Threshold: 1/64 of the smaller radius (16.16-safe). */
+    /* Patch 2: near-coincident chord ⇒ near-full sweep (center untouched) */
     minR = ((sdword)frx < (sdword)fry) ? frx : fry;
-    tinyThresh = GrSDivWWFixed(minR, MakeWWFixed(64));
+    tinyThresh = GrSDivWWFixed(minR, MakeWWFixed(64));        /* 1/64 of min radius */
     nearCoinc = ((sdword)manhattan <= (sdword)tinyThresh) ? TRUE : FALSE;
 
-    /* If near-coincident, set |dth| ≈ 360°−ε with sweep's sign. */
-    eps360 = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(10)); /* 0.1° */
-    if (nearCoinc) {
+    eps360 = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(10));  /* 0.1° */
+    if (nearCoinc)
+    {
         if ((sdword)dth >= 0) {
             dth = GrSubWWFixed(deg360, eps360);
         } else {
@@ -302,7 +312,6 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     LOG_STR("[PATH]", dbgbuf);
 #endif
 
-    /* Full/partial (for log only) */
     isFull = ((sdword)absDth >= (sdword)GrSubWWFixed(deg360, eps360)) ? TRUE : FALSE;
 #ifdef DEBUG_LOG
     LOG_STR("[PATH]", isFull ? "Decision isFull=1 (why: nearCoinc/eps360)"
@@ -328,10 +337,16 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     if (nSeg == 1) LOG_STR("[WARN]", "nSeg==1 (very short arc) — may look like a chord");
 #endif
 
+    /* Prepare snap-to-start info (device space) */
+    sxi = SvgGeomWWFixedToSWordRound(x0W);
+    syi = SvgGeomWWFixedToSWordRound(y0W);
+    snappedToStart = FALSE;
+
     /* Emit */
     np        = *pNp;
     remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
-    if (remaining == 0) {
+    if (remaining == 0)
+    {
 #ifdef DEBUG_LOG
         LOG_STR("[PATH]", "FlattenArc: no buffer space");
 #endif
@@ -343,7 +358,8 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     eyi = SvgGeomWWFixedToSWordRound(y1W);
 
     stepDeg = GrSDivWWFixed(dth, MakeWWFixed(nSeg));
-    for (k = 1; k <= nSeg; k++) {
+    for (k = 1; k <= nSeg; k++)
+    {
         theta = GrAddWWFixed(th1, GrMulWWFixed(stepDeg, MakeWWFixed(k)));
         cth   = GrQuickCosine(theta);
         sth   = GrQuickSine(theta);
@@ -360,19 +376,31 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
         xi = SvgGeomWWFixedToSWordRound(x);
         yi = SvgGeomWWFixedToSWordRound(y);
 
-        if (np < MAX_SVG_POINTS) {
+        /* eliminate tiny closing chord for near-full arcs */
+        if (nearCoinc && (k == nSeg))
+        {
+            xi = sxi;
+            yi = syi;
+            snappedToStart = TRUE;
+        }
+
+        if (np < MAX_SVG_POINTS)
+        {
             sc->pts[np].P_x = xi;
             sc->pts[np].P_y = yi;
             np++;
-        } else {
+        }
+        else
+        {
             break;
         }
     }
     *pNp = np;
 
 #ifdef DEBUG_LOG
-    sprintf(dbgbuf, "Emit done: last=(%d,%d) endRound=(%d,%d) segs=%u",
-            (int)xi,(int)yi,(int)exi,(int)eyi,(unsigned)nSeg);
+    sprintf(dbgbuf, "Emit done: last=(%d,%d) endRound=(%d,%d) segs=%u%s",
+            (int)xi,(int)yi,(int)exi,(int)eyi,(unsigned)nSeg,
+            snappedToStart ? " snappedToStart=1" : "");
     LOG_STR("[PATH]", dbgbuf);
 #endif
 }
