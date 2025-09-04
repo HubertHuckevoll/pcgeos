@@ -346,40 +346,65 @@ void SvgStyleApplyStrokeAndFill(const char *tag)
 {
     static char sFill[64];
     static char sStroke[64];
-    word r, g, b;
+    word r;
+    word g;
+    word b;
 
     sFill[0] = 0;
     sStroke[0] = 0;
 
-    /* stroke */
-    if (!SvgStyleGetInlineProp(tag, "stroke", sStroke, sizeof(sStroke))) {
+    /* stroke (SVG initial value: none) */
+    if (!SvgStyleGetInlineProp(tag, "stroke", sStroke, sizeof(sStroke)))
+    {
         (void)SvgParserGetAttrBounded(tag, "stroke", sStroke, sizeof(sStroke));
     }
-    if (sStroke[0] && strcmp(sStroke, "none") != 0) {
-        if (sStroke[0] == '#' && strlen(sStroke) >= 7) {
+    if (sStroke[0] && strcmp(sStroke, "none") != 0)
+    {
+        if (sStroke[0] == '#' && strlen(sStroke) >= 7)
+        {
             Meta_SetLineColor(CF_RGB,
-                SvgStyleHexByte(sStroke+1), SvgStyleHexByte(sStroke+3), SvgStyleHexByte(sStroke+5));
-        } else if (SvgStyleExpandShortHex(sStroke, &r,&g,&b) ||
-                   SvgStyleParseRGBFunc(sStroke, &r,&g,&b)   ||
-                   SvgStyleFindNamedColor(sStroke, &r,&g,&b)) {
+                              SvgStyleHexByte(sStroke + 1),
+                              SvgStyleHexByte(sStroke + 3),
+                              SvgStyleHexByte(sStroke + 5));
+        }
+        else if (SvgStyleExpandShortHex(sStroke, &r, &g, &b) ||
+                 SvgStyleParseRGBFunc(sStroke, &r, &g, &b) ||
+                 SvgStyleFindNamedColor(sStroke, &r, &g, &b))
+        {
             Meta_SetLineColor(CF_RGB, r, g, b);
         }
+        /* else: unparseable stroke -> leave as is */
     }
 
-    /* fill */
-    if (!SvgStyleGetInlineProp(tag, "fill", sFill, sizeof(sFill))) {
+    /* fill (SVG initial value: black) */
+    if (!SvgStyleGetInlineProp(tag, "fill", sFill, sizeof(sFill)))
+    {
         (void)SvgParserGetAttrBounded(tag, "fill", sFill, sizeof(sFill));
     }
-    if (sFill[0] && strcmp(sFill, "none") != 0) {
-        if (sFill[0] == '#' && strlen(sFill) >= 7) {
+
+    if (!sFill[0])
+    {
+        /* No fill specified -> apply SVG initial value (black) */
+        Meta_SetAreaColor(CF_RGB, 0, 0, 0);
+    }
+    else if (strcmp(sFill, "none") != 0)
+    {
+        if (sFill[0] == '#' && strlen(sFill) >= 7)
+        {
             Meta_SetAreaColor(CF_RGB,
-                SvgStyleHexByte(sFill+1), SvgStyleHexByte(sFill+3), SvgStyleHexByte(sFill+5));
-        } else if (SvgStyleExpandShortHex(sFill, &r,&g,&b) ||
-                   SvgStyleParseRGBFunc(sFill, &r,&g,&b)   ||
-                   SvgStyleFindNamedColor(sFill, &r,&g,&b)) {
+                              SvgStyleHexByte(sFill + 1),
+                              SvgStyleHexByte(sFill + 3),
+                              SvgStyleHexByte(sFill + 5));
+        }
+        else if (SvgStyleExpandShortHex(sFill, &r, &g, &b) ||
+                 SvgStyleParseRGBFunc(sFill, &r, &g, &b) ||
+                 SvgStyleFindNamedColor(sFill, &r, &g, &b))
+        {
             Meta_SetAreaColor(CF_RGB, r, g, b);
         }
+        /* else: unparseable fill -> leave as is */
     }
+    /* else: fill="none" -> do not set area color */
 }
 
 void SvgStyleApplyFillRule(const char *tag)
