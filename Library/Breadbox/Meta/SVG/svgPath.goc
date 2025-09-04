@@ -103,6 +103,36 @@ static void SvgPathFlattenCubic(SVGScratch *sc, word *np,
     }
 }
 
+/* Prevent near-360-degree arcs from collapsing after integer rounding.
+ * If the rounded endpoint equals the current point, nudge the endpoint
+ * by 1 device unit along the dominant radius axis, in sweep direction.
+ */
+static void
+SvgPathFixCollapsedArcEndpoint(sword currx, sword curry,
+                               WWFixedAsDWord rxW, WWFixedAsDWord ryW,
+                               int sweepFlag,
+                               WWFixedAsDWord *exWP, WWFixedAsDWord *eyWP)
+{
+    sword exR;
+    sword eyR;
+    WWFixedAsDWord oneW;
+
+    exR = SvgGeomWWFixedToSWordRound(*exWP);
+    eyR = SvgGeomWWFixedToSWordRound(*eyWP);
+    if ((exR == currx) && (eyR == curry))
+    {
+        oneW = SvgGeomMakeWWFixedFromInt(1);
+        if (rxW >= ryW)
+        {
+            if (sweepFlag) { *exWP += oneW; } else { *exWP -= oneW; }
+        }
+        else
+        {
+            if (sweepFlag) { *eyWP += oneW; } else { *eyWP -= oneW; }
+        }
+    }
+}
+
 /* ===== Elliptical-arc flattener (fixed-point) ===== */
 static void
 SvgPathFlattenArc(SVGScratch *sc, word *pNp,
@@ -820,6 +850,10 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
 #endif
             continue;
         }
+
+        /* Nudge degenerate near-360 arcs that collapse after rounding. */
+        SvgPathFixCollapsedArcEndpoint(*lastxP, *lastyP, rxW, ryW, swf, &exW, &eyW);
+
         if ((SvgGeomWWFixedToSWordRound(exW) == *lastxP) && (SvgGeomWWFixedToSWordRound(eyW) == *lastyP)) {
 #ifdef DEBUG_LOG
             LOG_STR("[PATH]", "A: end equals current -> skip");
@@ -895,8 +929,6 @@ SvgPathHandleUnknown(const char **sPP,
 
 
 /* ---- sub path emitter ---- */
-
-/* svgPath.goc */
 
 static void
 SvgPathEmitSubpath(const char *tag,
