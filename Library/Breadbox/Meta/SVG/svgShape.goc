@@ -72,43 +72,6 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
     }
 }
 
-/* element-local transform="scale(...)" (kept) */
-/*
-void SvgShapeGetLocalScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut)
-{
-    static char buf[96];
-    char *p;
-    const char *s;
-    WWFixedAsDWord sx;
-    WWFixedAsDWord sy;
-
-    sx = WWFIXED_ONE; sy = WWFIXED_ONE;
-    if (!SvgParserGetAttrBounded(tag, "transform", buf, sizeof(buf))) { *sxOut=sx; *syOut=sy; return; }
-    p = strstr(buf, "scale"); if (!p) { *sxOut=sx; *syOut=sy; return; }
-    p = strchr(p, '('); if (!p) { *sxOut=sx; *syOut=sy; return; }
-    s = p + 1;
-    s = SvgParserParseWWFixed16_16(s, &sx);
-    while (*s && isspace(*s)) s++;
-    if (*s == ',') { s++; (void)SvgParserParseWWFixed16_16(s, &sy); } else { sy = sx; }
-    if ((sdword)sx == 0) sx = (WWFixedAsDWord)1;
-    if ((sdword)sy == 0) sy = (WWFixedAsDWord)1;
-    *sxOut = sx; *syOut = sy;
-}
-
-void SvgShapeApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWord sy)
-{
-    WWFixedAsDWord X;
-    WWFixedAsDWord Y;
-
-    X = (WWFixedAsDWord)((sdword)(*x) << 16);
-    Y = (WWFixedAsDWord)((sdword)(*y) << 16);
-    X = GrMulWWFixed(X, sx);
-    Y = GrMulWWFixed(Y, sy);
-    *x = (sword)((sdword)X >> 16);
-    *y = (sword)((sdword)Y >> 16);
-}
-*/
-
 sword SvgShapeScaleLength(sword v, WWFixedAsDWord s)
 {
     WWFixedAsDWord V;
