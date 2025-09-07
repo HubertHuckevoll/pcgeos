@@ -487,70 +487,103 @@ REVISION HISTORY:
 	Chris	12/13/90	Initial version
 
 ------------------------------------------------------------------------------@
-NumericWriteFormats	proc	near
-	uses	dx, bp, di, es
-	.enter
 
-	sub	sp, CURRENCY_SYMBOL_LENGTH+1	; leave room for format string
-	mov	di, sp				; have di point to format buffer
-	segmov	es, ss				; have es point to format buffer
+iniZeroLiteral  char    '0', 0
+
+NumericWriteFormats    proc    near
+        uses    dx, bp, di, es
+        .enter
+
+        sub     sp, CURRENCY_SYMBOL_LENGTH+1        ; temp format buffer
+        mov     di, sp
+        segmov  es, ss
 
 doFormat:
-	push	cx				; save last entry, current
-	push	si
-	;
-	; Get resource string from the chunk indexed by si.
-	;
-	push	di
-	call	StoreResourceString		; string in es:di
-SBCS <	clr	al				; null terminate destination>
-DBCS <	clr	ax							>
-	LocalPutChar esdi, ax
-	pop	di				; point to beginning again
-	;
-	; Figure out what key to use for this format.
-	;
-	segmov	ds, cs, cx
-	assume	ds:ObscureInitExit
-	push	si
-	sub	si, offset symbolBeforeNumber
-	mov	dx, ds:numericFormatKeys[si]
-	pop	si
-	mov	bp, offset localizationCategory	;
-	cmp	si, LAST_BOOLEAN_FORMAT		; doing a boolean?
-	jbe	writeBoolean			; yes, branch
-	cmp	si, LAST_DATA_FORMAT		; doing straight data?
-	mov	si, bp				; (ds:si holds category string)
-	jbe	writeData			; yes, branch
+        push    cx
+        push    si
+
+        ; Copy resource string for this item into ES:DI and NUL-terminate
+        push    di
+        call    StoreResourceString
+if DBCS_PCGEOS
+        clr     ax
+else
+        clr     al
+endif
+        LocalPutChar esdi, ax
+        pop     di                                    ; ES:DI -> start
+
+        ; Map chunk index (SI) -> key pointer (DX)
+        segmov  ds, cs, cx
+        assume  ds:ObscureInitExit
+        push    si
+        sub     si, offset symbolBeforeNumber
+        mov     dx, ds:numericFormatKeys[si]
+        pop     si
+
+        mov     bp, offset localizationCategory       ; DS:SI will be set to BP
+
+        ; --------------------------------------------------------------------
+        ; Special case ONLY for thousandsSeparator:
+        ; If value string is empty, write literal "0" (as STRING), not data.
+        ; This avoids hex-encoding to "30" and yields INI: thousandsSeparator=0
+        ; --------------------------------------------------------------------
+        cmp     dx, offset thousandsSeparatorString
+        jne     notThousandsSep
+
+if DBCS_PCGEOS
+        cmp     {wchar} es:[di], 0
+else
+        cmp     {byte}  es:[di], 0
+endif
+        jne     notThousandsSep
+
+        ; Empty value -> write "0" using InitFileWriteString
+        mov     si, bp                                  ; DS:SI = category
+        push    es
+        push    di
+        segmov  es, cs
+        mov     di, offset iniZeroLiteral               ; ES:DI -> "0"
+        call    InitFileWriteString
+        pop     di
+        pop     es
+        jmp     short gotIt
+
+notThousandsSep:
+        ; ---------------- original routing (unchanged) ----------------
+        cmp     si, LAST_BOOLEAN_FORMAT                 ; boolean?
+        jbe     writeBoolean
+        cmp     si, LAST_DATA_FORMAT                    ; raw data?
+        mov     si, bp                                  ; DS:SI = category
+        jbe     writeData
 
 ;writeString:
-	call	InitFileWriteString		; store to .ini as a string
-	jmp	short gotIt
+        call    InitFileWriteString
+        jmp     short gotIt
 
 writeData:
-	call	LocalWriteStringAsData		; store to .ini as data
-	jmp	short gotIt
+        call    LocalWriteStringAsData
+        jmp     short gotIt
 
 writeBoolean:
-	mov	si, bp				; (ds:si holds category string)
-	mov	al, es:[di]			; 1st char of string, '0' or '1'
-	sub	al, '0'				; make 1 = true, 0 = false
-	clr	ah
-	neg	ax				; ax: -1 = true, 0 = false
-	call	InitFileWriteBoolean		; store to .ini as boolean
+        mov     si, bp                                  ; DS:SI = category
+        mov     al, es:[di]                             ; '0' or '1'
+        sub     al, '0'
+        clr     ah
+        neg     ax                                      ; -1 = true, 0 = false
+        call    InitFileWriteBoolean
 
 gotIt:
-	pop	si				; restore format
-	add	si, 2				; next format
-	pop	cx
-	cmp	si, cx				; see if we've gone far enough
-	jbe	doFormat			; do another format if not done
+        pop     si
+        add     si, 2
+        pop     cx
+        cmp     si, cx
+        jbe     doFormat
 
-	add	sp, CURRENCY_SYMBOL_LENGTH+1	; restore stack
-
-	.leave
-	ret
-NumericWriteFormats	endp
+        add     sp, CURRENCY_SYMBOL_LENGTH+1
+        .leave
+        ret
+NumericWriteFormats    endp
 
 	assume	ds:dgroup
 

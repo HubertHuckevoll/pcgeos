@@ -3,7 +3,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 1992 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:		
+MODULE:
 FILE:		prefintlDialog.asm
 
 AUTHOR:		Chris Boyke
@@ -18,7 +18,7 @@ REVISION HISTORY:
        chrisb	6/22/93   	Initial version.
 
 DESCRIPTION:
-	
+
 
 	$Id: prefintlDialog.asm,v 1.1 97/04/05 01:39:22 newdeal Exp $
 
@@ -54,20 +54,20 @@ REVISION HISTORY:
 ------------------------------------------------------------------------------@
 PrefIntlDialogInit	method dynamic	PrefIntlDialogClass,
 				MSG_PREF_INIT
-		
+
 		clr	es:formatsChanged		;nothing's changed
-	
+
 		mov	si, offset IntlList
 		mov	ax, MSG_GEN_ITEM_GROUP_GET_SELECTION
-		call	ObjCallInstanceNoLock 
+		call	ObjCallInstanceNoLock
 
 		mov_tr	cx, ax
 		call	PrefIntlDialogSelectFormat
 		call	PrefIntlUpdateCurrent
-		ret			
+		ret
 PrefIntlDialogInit	endp
-		
-			
+
+
 
 COMMENT @----------------------------------------------------------------------
 
@@ -112,7 +112,7 @@ SetFormatTitle	proc	near
 	cmp	cx, DTF_DECIMAL
 	je	setIt
 	mov	si, offset QuotesItemMkr
-setIt:	
+setIt:
 	mov	cx, si				;pass moniker in cx
 	mov	si, offset IntlEditTitle	;glyph to set
 	mov	dl, VUM_NOW
@@ -133,11 +133,11 @@ CALLED BY:	PrefIntlDialogSelectFormat
 
 PASS:		es - dgroup
 
-RETURN:		nothing 
+RETURN:		nothing
 
 DESTROYED:	ax,bx,cx,dx,si,di,bp
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -168,22 +168,22 @@ SetIntlEditHelpContext	proc near
 		mov	bx, size shortContext
 		cmp	cx, DTF_SHORT
 		je	setIt
-		
+
 		mov	ax, offset timeContext
 		mov	bx, size timeContext
 		cmp	cx, DTF_HMS
 		je	setIt
-		
+
 		mov	ax, offset currencyContext
 		mov	bx, size currencyContext
 		cmp	cx, DTF_CURRENCY
 		je	setIt
-		
+
 		mov	ax, offset numberContext
 		mov	bx, size numberContext
 		cmp	cx, DTF_DECIMAL
 		je	setIt
-		
+
 		mov	ax, offset quoteContext
 		mov	bx, size quoteContext
 
@@ -195,13 +195,13 @@ setIt:
 		mov	ss:[bp].AVDP_data.offset, ax
 		mov	ss:[bp].AVDP_dataSize, bx
 		mov	ss:[bp].AVDP_dataType, ATTR_GEN_HELP_CONTEXT
-		
+
 		mov	si, offset IntlEdit
 		mov	di, mask MF_CALL or mask MF_STACK
 		mov	ax, MSG_META_ADD_VAR_DATA
 		call	ObjCallInstanceNoLock
 		add	sp, size AddVarDataParams
-		
+
 		.leave
 		ret
 SetIntlEditHelpContext	endp
@@ -240,9 +240,9 @@ SetupDecimal	proc	near		uses	bx, cx
 	.enter
 	mov	si, offset DecimalInteraction
 	call	PrefIntlSetUsable		;use this!
-	
+
 	call	LocalGetNumericFormat		;see what we get here.
-	
+
 	;
 	; We need to copy this info into the original value locations.
 	; al - leading zero flag, bx - thousands separator,
@@ -268,7 +268,7 @@ else
 	mov	es:originalListSeparator+1, al		;null terminate
 	mov	es:originalDecimalDigits, ah
 endif
-	
+
 	call	LocalGetMeasurementType
 	mov	es:originalMeasurementType, al		;store measurement type
 
@@ -277,13 +277,13 @@ endif
 	;
 	push	ds
 	segmov	ds, es
-	mov	si, offset originalLeadingZeroFlag	
+	mov	si, offset originalLeadingZeroFlag
 	mov	di, offset currentLeadingZeroFlag
 	mov	cx, (offset currentLeadingZeroFlag - \
 		     offset originalLeadingZeroFlag)	;bytes to copy
 	rep	movsb
 	pop	ds
-	
+
 	;
 	; Now set all the appropriate gadgets.
 	;
@@ -291,27 +291,27 @@ endif
 	clr	ch
 	mov	si, offset DecimalDigitsValue
 	call	PrefIntlSetValue
-	
+
 	mov	cl, es:originalLeadingZeroFlag
 	mov	si, offset LeadingZeroSpin
 	call	PrefIntlSetSpin
-	
+
 	mov	cl, es:originalMeasurementType
 	mov	si, offset MeasurementSpin
 	call	PrefIntlSetSpin
-	
+
 	mov	bp, offset currentThousandsSeparator
 	mov	si, offset ThousandsSepText
 	call	PrefIntlSetText
-	
+
 	mov	bp, offset currentDecimalSeparator
 	mov	si, offset DecimalSepText
 	call	PrefIntlSetText
-	
+
 	mov	bp, offset currentListSeparator
 	mov	si, offset ListSeparatorText
 	call	PrefIntlSetText
-	
+
 	call	PrefIntlUpdateCurrent
 	.leave
 	ret
@@ -349,7 +349,7 @@ REVISION HISTORY:
 SetupCurrency	proc	near		uses	bx, cx
 	.enter
 	mov	si, offset CurrencyInteraction
-	call	PrefIntlSetUsable		
+	call	PrefIntlSetUsable
 
 	;
 	; Set this so we'll use the correct decimal point.  -cbh 1/25/93
@@ -359,18 +359,18 @@ DBCS <	mov	es:currentDecimalSeparator, cx				>
 DBCS <	mov	es:currentDecimalSeparator+2, 0		;null terminate	>
 SBCS <	mov	es:currentDecimalSeparator, cl				>
 SBCS <	mov	es:currentDecimalSeparator+1, 0		;null terminate	>
-	
+
 	mov	di, offset originalCurrencySymbol
 	call	LocalGetCurrencyFormat		;see what we get here.
-	
+
 	;
 	; Load up our local variables.  We already have the currency symbol,
 	; we need to set things in registers:  al -- CurrencyFormatFlags,
 	; ah - currency digits.
-	
+
 	mov	es:originalCurrencyFlags, al
 	mov	es:originalCurrencyDigits, ah	;store
-	
+
 	;
 	; Set current values to original values.
 	;
@@ -382,20 +382,20 @@ SBCS <	mov	es:currentDecimalSeparator+1, 0		;null terminate	>
 		     offset originalCurrencyFlags)	;bytes to copy
 	rep	movsb
 	pop	ds
-	
+
 	;
 	; Now set all the appropriate gadgets.
 	;
-	
+
 	mov	cl, es:originalCurrencyDigits		;get decimal digits
 	clr	ch
 	mov	si, offset CurrencyDigitsValue
 	call	PrefIntlSetValue
-	
+
 	mov	bp, offset originalCurrencySymbol
 	mov	si, offset SymbolText
 	call	PrefIntlSetText
-	
+
 	clr	cx					;assume no leading zero
 	mov	al, es:[currentCurrencyFlags]
 	test	al, mask CFF_LEADING_ZERO
@@ -404,7 +404,7 @@ SBCS <	mov	es:currentDecimalSeparator+1, 0		;null terminate	>
 10$:
 	mov	si, offset CurrLeadingZeroSpin
 	call	PrefIntlSetSpin
-	
+
 	clr	cx					;assume no leading zero
 	test	al, mask CFF_SPACE_AROUND_SYMBOL
 	jz	20$
@@ -412,7 +412,7 @@ SBCS <	mov	es:currentDecimalSeparator+1, 0		;null terminate	>
 20$:
 	mov	si, offset SpaceAroundSpin
 	call	PrefIntlSetSpin
-	
+
 	and	al, mask CFF_USE_NEGATIVE_SIGN or \
 		    mask CFF_SYMBOL_BEFORE_NUMBER or \
 		    mask CFF_NEGATIVE_SIGN_BEFORE_NUMBER or \
@@ -420,15 +420,15 @@ SBCS <	mov	es:currentDecimalSeparator+1, 0		;null terminate	>
 	call	CurrencyFlagsToOffset			;compute a spin offset
 	mov	cl, al
 	clr	ch
-	mov	si, offset PlacementSpin		
+	mov	si, offset PlacementSpin
 	call	PrefIntlSetSpin				;set our placement spin
-	
+
 	call	PrefIntlUpdateCurrent			;update current values
 	.leave
 	ret
 SetupCurrency	endp
-		
-		
+
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -460,24 +460,24 @@ REVISION HISTORY:
 SetupQuotes	proc	near		uses	bx, cx
 	.enter
 	mov	si, offset QuotesInteraction
-	call	PrefIntlSetUsable		
-	
-	; 
+	call	PrefIntlSetUsable
+
+	;
 	; Get quotes from localization driver.
 	;
 	call	LocalGetQuotes			;ax,bx,cx,dx hold quotes
-	
+
 if DBCS_PCGEOS
 	mov	es:originalSingleLeft, ax
 	mov	es:originalSingleRight, bx
 	mov	es:originalDoubleLeft, cx
 	mov	es:originalDoubleRight, dx
-	
+
 	mov	es:currentSingleLeft, ax
 	mov	es:currentSingleRight, bx
 	mov	es:currentDoubleLeft, cx
 	mov	es:currentDoubleRight, dx
-	
+
 	;
 	; Set our example string so we can display it.
 	;
@@ -490,12 +490,12 @@ else
 	mov	es:originalSingleRight, bl
 	mov	es:originalDoubleLeft, cl
 	mov	es:originalDoubleRight, dl
-	
+
 	mov	es:currentSingleLeft, al
 	mov	es:currentSingleRight, bl
 	mov	es:currentDoubleLeft, cl
 	mov	es:currentDoubleRight, dl
-	
+
 	;
 	; Set our example string so we can display it.
 	;
@@ -504,32 +504,32 @@ else
 	mov	es:exampleQuoteDoubleLeft, cl
 	mov	es:exampleQuoteDoubleRight, dl
 endif
-	
+
 	push	dx
 	push	cx
 	push	bx
 	mov	si, offset FirstSingleText
 	call	SetTextFromAL			;set single left quote obj
-	
+
 	pop	ax
 	mov	si, offset LastSingleText
 	call	SetTextFromAL			;set single right quote obj
-	
+
 	pop	ax				;restore double quotes
 	mov	si, offset FirstDoubleText
 	call	SetTextFromAL			;set left double quote obj
-	
+
 	pop	ax
 	mov	si, offset LastDoubleText
 	call	SetTextFromAL			;set double right quote obj
-	
+
 	call	PrefIntlUpdateCurrent		;update the example
 	.leave
 	ret
-	
+
 SetupQuotes	endp
 
-		
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -575,7 +575,7 @@ endif
 		.leave
 		ret
 SetTextFromAL	endp
-			
+
 
 COMMENT @----------------------------------------------------------------------
 
@@ -586,7 +586,7 @@ SYNOPSIS:	Sets spin minimum and maximum for all the spin gadgets.
 CALLED BY:	SetupTimeSpecificStuff, SetupDateSpecificStuff
 
 PASS:		ds -- dgroup
-		
+
 RETURN:		nothing
 
 DESTROYED:	ax, dx, di, si, bp
@@ -602,7 +602,7 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 
-SetAllSpinsMinMax	proc	near		
+SetAllSpinsMinMax	proc	near
 if PZ_PCGEOS	;Koji. Japanese or English spin.
 	mov	cx, es:formatToEdit		;see what we're doing
 	mov	di, offset shortValueTable
@@ -632,15 +632,15 @@ setValue:
 	mov	cx, {word} es:[di]			;get max,min from table
 	mov	si, offset FormatElement2
 	call	SetSpinMinMax
-	
+
 	mov	cx, {word} es:[di]+2			;get max,min from table
 	mov	si, offset FormatElement4
 	call	SetSpinMinMax
-	
+
 	mov	cx, {word} es:[di]+4			;get max,min from table
 	mov	si, offset FormatElement6
 	call	SetSpinMinMax
-	
+
 	mov	cx, {word} es:[di]+6			;get max,min from table
 	mov	si, offset FormatElement8
 	call	SetSpinMinMax
@@ -658,7 +658,7 @@ SYNOPSIS:	Get DateLanguageGroup item selection value
 CALLED BY:	INTERANAL
 
 PASS:		ds -- dgroup
-		
+
 RETURN:		ax - value
 			TRUE	- Japanese
 			FALSE	- English
@@ -718,7 +718,7 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 
-SetSpinMinMax	proc	near			
+SetSpinMinMax	proc	near
 	;
 	; Set the thing not usable if min and max are DTT_BLANK.
 	;
@@ -736,21 +736,21 @@ SetSpinMinMax	proc	near
 	sub	si, TIME_DATE_TEXT_TO_RANGE_OBJ	;delete preceding text object
 	call	SetIt
 	pop	si				;back to our range
-	
+
 	push	cx
 	clr	ch
 	mov	ax, MSG_CUSTOM_SPIN_SET_MIN_VALUE
-	call	ObjCallInstanceNoLock 
+	call	ObjCallInstanceNoLock
 
 	pop	dx
-	mov	cl, dh				
+	mov	cl, dh
 	clr	ch
 	mov	ax, MSG_CUSTOM_SPIN_SET_MAX_VALUE
 	call	ObjCallInstanceNoLock
 	ret
 SetSpinMinMax	endp
 
-	
+
 
 COMMENT @----------------------------------------------------------------------
 
@@ -801,7 +801,7 @@ endif
 	;
 	mov	di, offset dgroup:[formatOriginal]
 	mov	si, es:formatToEdit
-	call	LocalGetDateTimeFormat			
+	call	LocalGetDateTimeFormat
 	call	ResetCurrentAndParse	;set current string to original,
 					;  and parse into UI objects.
 
@@ -823,7 +823,7 @@ SYNOPSIS:	Sets DateLanguageGroup to usable or unusable.
 CALLED BY:	SetupTimeDateCommon
 
 PASS:		ds -- dgroup
-		
+
 RETURN:		nothing
 
 DESTROYED:	ax, cx, dx, si, di, bp
@@ -906,7 +906,7 @@ ResetCurrentAndParse	proc	near
 		.leave
 
 		FALL_THRU	ParseDateFormat
-	
+
 ResetCurrentAndParse	endp
 
 
@@ -932,7 +932,7 @@ PSEUDO CODE/STRATEGY:
 
 REGISTER USAGE:
 	 	dl -- keep number of character-spin gadget pairs we've done
-		
+
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
 REVISION HISTORY:
@@ -964,14 +964,14 @@ CheckHack <TIME_DATE_TEXT_TO_RANGE_OBJ eq (offset FormatElement6 - \
 	  	offset FormatElement5)
 CheckHack <TIME_DATE_TEXT_TO_RANGE_OBJ eq (offset FormatElement8 - \
 	  	offset FormatElement7)
-		
+
 CheckHack <TIME_DATE_RANGE_TO_TEXT_OBJ eq (offset FormatElement3 - \
 	  	offset FormatElement2)
 CheckHack <TIME_DATE_RANGE_TO_TEXT_OBJ eq (offset FormatElement5 - \
 	  	offset FormatElement4)
 CheckHack <TIME_DATE_RANGE_TO_TEXT_OBJ eq (offset FormatElement7 - \
 	  	offset FormatElement6)
-	
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -1088,7 +1088,7 @@ SYNOPSIS:	Parse the next date token, if any, and set a UI object.
 CALLED BY:	ParseDateFormat
 
 PASS:		es:si   -- pointer to source text to parse, pointing at the
-			   start of a 4-character token, if we're 
+			   start of a 4-character token, if we're
 			   lucky.
 		*ds:ax --  UI object to dump into
 
@@ -1125,7 +1125,7 @@ if DBCS_PCGEOS
 	mov	di, offset dateTokenTable
 	repne	scasw			   ;see if it's around
 	mov	cx, 0			   ;assume no luck (may be unnecessary)
-	jne	done			   ;we failed here, get out 
+	jne	done			   ;we failed here, get out
 	sub	di, offset dateTokenTable  ;else get offset
 	shr	di, 1			   ;divide by 2 to get element number
 	mov	cx, di			   ;
@@ -1133,7 +1133,7 @@ if DBCS_PCGEOS
 	; Find trailing '|' wherever it is.  If it ain't the next character,
 	; we'll forget about our original token idea.
 	;
-	
+
 findDelimiter:
 	cmp	{wchar} es:[si], 0	   ;null terminated here?
 	jz	done			   ;yes, get out, not sweating the lack
@@ -1149,7 +1149,7 @@ else
 	mov	di, offset dateTokenTable
 	repne	scasw			   ;see if it's around
 	mov	cx, 0			   ;assume no luck (may be unnecessary)
-	jne	done			   ;we failed here, get out 
+	jne	done			   ;we failed here, get out
 	sub	di, offset dateTokenTable  ;else get offset
 	shr	di, 1			   ;divide by 2 to get element number
 	mov	cx, di			   ;
@@ -1157,7 +1157,7 @@ else
 	; Find trailing '|' wherever it is.  If it ain't the next character,
 	; we'll forget about our original token idea.
 	;
-	
+
 findDelimiter:
 	cmp	{byte} es:[si], 0	   ;null terminated here?
 	jz	done			   ;yes, get out, not sweating the lack
@@ -1179,11 +1179,11 @@ done:
 ParseDateToken	endp
 
 
-		
+
 
 COMMENT @----------------------------------------------------------------------
 
-METHOD:		PrefIntlApply -- 
+METHOD:		PrefIntlApply --
 		MSG_PREF_INTL_EDIT_APPLY for PrefIntlDialogClass
 
 DESCRIPTION:	Handles an apply for the edit box.
@@ -1208,16 +1208,16 @@ REVISION HISTORY:
 ------------------------------------------------------------------------------@
 
 PrefIntlApply	method PrefIntlDialogClass, MSG_PREF_INTL_EDIT_APPLY
-	
+
 	call	PrefIntlUpdateCurrent	;set current values
-	
+
 	mov	cx, es:formatToEdit	;get our formatting choice
-	cmp	cx, DTF_CURRENCY	;doing currency?	
+	cmp	cx, DTF_CURRENCY	;doing currency?
 	jne	10$
 	call	ApplyCurrency		;do apply on currency stuff
 	jmp	short dismiss		;and skip to next choice
 10$:
-	cmp	cx, DTF_DECIMAL		
+	cmp	cx, DTF_DECIMAL
 	jne	20$
 	call	ApplyDecimal		;do apply on decimal stuff
 	jc	exit			;don't dismiss if error
@@ -1231,16 +1231,16 @@ PrefIntlApply	method PrefIntlDialogClass, MSG_PREF_INTL_EDIT_APPLY
 	;
 	; Make sure something changed.  If not, nothing to write back.
 	;
-	mov	si, offset formatCurrent	
+	mov	si, offset formatCurrent
 	mov	di, offset formatOriginal
-	call	CmpString	
+	call	CmpString
 	je	dismiss
 
 	call	CheckForBadFormats		;multiple tokens?
 	jc	exit				;yes, complain and exit
-	
+
 	mov	es:formatsChanged, TRUE		;set this flag
-	
+
 	;
 	; Write the new date format to the .ini file.
 	;
@@ -1274,7 +1274,7 @@ MyDismissInteraction	proc	near
 	ret
 MyDismissInteraction	endp
 
-			
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -1294,7 +1294,7 @@ DESTROYED:	si, cx, dx, bp
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-        Assumes only the last token can be zero, or empty.	
+        Assumes only the last token can be zero, or empty.
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1346,14 +1346,14 @@ endif
 error:
 	mov	si, offset badFormatString
 	jmp	short doError
-	
+
 check12HourAMPM:
 	cmp	es:firstTokenSuffix, 'H'	;see if 12 hour format
 	jne	OK
 	cmp	es:fourthTokenSuffix, 'p'	;using am/pm?
 	je	OK				;yes, exit OK
 	cmp	es:fourthTokenSuffix, 'P'	;using AM/PM?
-	je	OK				;yes, exit OK	
+	je	OK				;yes, exit OK
 	mov	si, offset noAMPMString		;else say no AM or PM
 doError:
 	mov	bx, handle Strings
@@ -1444,11 +1444,11 @@ doFormat:
 	call	UpdateDateFormat		;format in currentFormat
 	pop	si
 	pop	cx
-	
+
 	push	si
 	mov	di, offset formatCurrent	;new format
 	mov	si, cx				;format enum into si
-	call	LocalSetDateTimeFormat			
+	call	LocalSetDateTimeFormat
 	pop	si
 	inc	si				;next format to do
 	jmp	short doFormat			;loop to do another
@@ -1489,16 +1489,16 @@ GetRelatedFormatList	proc	near
 	mov	si, offset longFormats
 	cmp	cx, DTF_LONG
 	je	exit
-	
+
 	mov	si, offset shortFormats
 	cmp	cx, DTF_SHORT
 	je	exit
-	
+
 	mov	si, offset timeFormats
 	cmp	cx, DTF_HMS
 	je	exit
 	clr	si				;return null if none of these
-exit:	
+exit:
 	ret
 GetRelatedFormatList	endp
 
@@ -1507,7 +1507,7 @@ GetRelatedFormatList	endp
 
 COMMENT @----------------------------------------------------------------------
 
-METHOD:		PrefIntlDone -- 
+METHOD:		PrefIntlDone --
 		MSG_PREF_INTL_DIALOG_DONE for PrefIntlDialogClass
 
 DESCRIPTION:	Called when user finally exists from the formats list box.
@@ -1536,7 +1536,7 @@ PrefIntlDone	method PrefIntlDialogClass, MSG_PREF_INTL_DIALOG_DONE
 	tst	es:formatsChanged		;see if anything`s changed
 	jz	done				;no, just dismiss
 
-	push	si	
+	push	si
 	mov	bx, handle formatChangeConfirmation
 	mov	si, offset formatChangeConfirmation
 	call	ConfirmDialog
@@ -1561,7 +1561,7 @@ COMMENT @----------------------------------------------------------------------
 
 FUNCTION:	ConfirmDialog
 
-CALLED BY:	
+CALLED BY:
 
 PASS:		^lbx:si - string to display
 
@@ -1593,7 +1593,7 @@ ConfirmDialog	proc	near
 		push	ax, ax		; SDOP_stringArg1
 		push	bx, si		; SDOP_customString
 
-	
+
 		mov	ax, (CDT_QUESTION shl offset CDBF_DIALOG_TYPE) or \
 			(GIT_AFFIRMATION shl offset CDBF_INTERACTION_TYPE)
 
@@ -1652,7 +1652,7 @@ ApplyCurrency	proc	near
 	pop	ds
 
 	je	exit					;still the same, exit
-	
+
 	mov	es:formatsChanged, TRUE		;set this flag
 	;
 	; Set the new currency formats, using our current values.
@@ -1660,14 +1660,14 @@ ApplyCurrency	proc	near
 	mov	al, es:currentCurrencyFlags
 	mov	ah, es:currentCurrencyDigits
 	mov	di, offset currentCurrencySymbol
-	
+
 	call	LocalSetCurrencyFormat		;see what we get here.
 exit:
 	ret
 ApplyCurrency	endp
 
-		
-		
+
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -1702,11 +1702,11 @@ UpdateCurrencyValues	proc	near
 	mov	si, offset CurrencyDigitsValue
 	call	PrefIntlGetValue
 	mov	es:currentCurrencyDigits, cl
-	
+
 	mov	dx, offset currentCurrencySymbol
 	mov	si, offset SymbolText
 	call	PrefIntlGetTextIntoBuffer
-	
+
 	clr	es:currentCurrencyFlags
 	mov	si, offset CurrLeadingZeroSpin
 	call	PrefIntlGetSpin
@@ -1720,7 +1720,7 @@ UpdateCurrencyValues	proc	near
 	jz	20$
 	or	es:currentCurrencyFlags, mask CFF_SPACE_AROUND_SYMBOL
 20$:
-	mov	si, offset PlacementSpin		
+	mov	si, offset PlacementSpin
 	call	PrefIntlGetSpin				;get offset
 	mov	al, cl
 	call	CurrencyOffsetToFlags			;compute a spin offset
@@ -1805,7 +1805,7 @@ ApplyDecimal	proc	near
 
 	push	ds
 	segmov	ds, es
-	mov	si, offset originalLeadingZeroFlag	
+	mov	si, offset originalLeadingZeroFlag
 	mov	di, offset currentLeadingZeroFlag
 	mov	cx, (offset currentLeadingZeroFlag - \
 		     offset originalLeadingZeroFlag)	;bytes to copy
@@ -1848,7 +1848,7 @@ else
 	mov	al, es:currentLeadingZeroFlag
 endif
 	call	LocalSetNumericFormat		;set in localization driver
-	
+
 	mov	al, es:currentMeasurementType
 	call	LocalSetMeasurementType		;set in localization driver
 	clc					;no error
@@ -1870,7 +1870,7 @@ PASS:		es - dgroup
 
 RETURN:		nothing
 
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 
@@ -1890,23 +1890,23 @@ UpdateDecimalValues	proc	near
 	mov	si, offset DecimalDigitsValue
 	call	PrefIntlGetValue
 	mov	es:currentDecimalDigits, cl		;get decimal digits
-	
+
 	mov	si, offset LeadingZeroSpin
 	call	PrefIntlGetSpin
 	mov	es:currentLeadingZeroFlag, cl
-	
+
 	mov	si, offset MeasurementSpin
 	call	PrefIntlGetSpin
 	mov	es:currentMeasurementType, cl
-	
+
 	mov	si, offset ThousandsSepText
 	mov	dx, offset currentThousandsSeparator
 	call	PrefIntlGetTextIntoBuffer
-	
+
 	mov	si, offset DecimalSepText
 	mov	dx, offset currentDecimalSeparator
 	call	PrefIntlGetTextIntoBuffer
-	
+
 	mov	si, offset ListSeparatorText
 	mov	dx, offset currentListSeparator
 	call	PrefIntlGetTextIntoBuffer
@@ -1959,16 +1959,16 @@ if DBCS_PCGEOS
 else
 	mov	bx, {word} es:currentDoubleLeft
 	mov	ax, {word} es:currentSingleLeft
-	
-	cmp	bx, {word} es:originalDoubleLeft  
+
+	cmp	bx, {word} es:originalDoubleLeft
 	jne	updateThings			;something changed, branch
-	cmp	ax, {word} es:originalSingleLeft  
+	cmp	ax, {word} es:originalSingleLeft
 	jz	updateThings			;nothing changed, exit
 endif
-	
-updateThings:	
+
+updateThings:
 	mov	es:formatsChanged, TRUE		  ;set this flag
-	
+
 if DBCS_PCGEOS
 	mov	es:originalSingleLeft, ax
 	mov	es:originalSingleRight, bx
@@ -1978,8 +1978,8 @@ else
 	mov	{word} es:originalSingleLeft, ax  ;store new originals
 	mov	{word} es:originalDoubleLeft, bx
 endif
-	
-	; 
+
+	;
 	; Set quotes in localization driver.
 	;
 if not DBCS_PCGEOS
@@ -2009,7 +2009,7 @@ PASS:		es -- dgroup
 
 RETURN:		nothing
 
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 
@@ -2028,34 +2028,34 @@ UpdateQuoteValues	proc	near
 if DBCS_PCGEOS
 	mov	es:currentSingleRight, ax
 	mov	es:exampleQuoteSingleRight, ax	;update example quotes in text
-	
+
 	mov	si, offset FirstSingleText
 	call	GetTextIntoAL
 	mov	es:currentSingleLeft, ax
 	mov	es:exampleQuoteSingleLeft, ax
-	
+
 	mov	si, offset LastDoubleText
 	call	GetTextIntoAL
 	mov	es:currentDoubleRight, ax
 	mov	es:exampleQuoteDoubleRight, ax	;update example quote in text
-	
+
 	mov	si, offset FirstDoubleText
 	call	GetTextIntoAL
 	mov	es:currentDoubleLeft, ax
 	mov	es:exampleQuoteDoubleLeft, ax
 else
 	mov	ah, al				;put right single quote in ah
-	
+
 	mov	si, offset FirstSingleText
 	call	GetTextIntoAL
 	mov	{word} es:currentSingleLeft, ax
 	mov	es:exampleQuoteSingleLeft, al	;update example quotes in text
 	mov	es:exampleQuoteSingleRight, ah
-	
+
 	mov	si, offset LastDoubleText
 	call	GetTextIntoAL
 	mov	ah, al				;put right single quote in ah
-	
+
 	mov	si, offset FirstDoubleText
 	call	GetTextIntoAL
 	mov	{word} es:currentDoubleLeft, ax
@@ -2077,7 +2077,7 @@ SYNOPSIS:	Reads text from object, putting first character in AL.
 CALLED BY:	ApplyQuotes
 
 PASS:		*ds:si  -- object to read from
-		es - dgroup 
+		es - dgroup
 
 RETURN:		al -- first text character
 			(ax for DBCS)
@@ -2118,10 +2118,10 @@ CALLED BY:	PrefIntlApply
 
 PASS:		cx -- format to build
 		es -- dgroup
-		
+
 RETURN:		es:formatCurrent -- set to built out string
 
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
        Uses:
@@ -2142,7 +2142,7 @@ UpdateDateFormat	proc	near
 	mov	di, offset formatCurrent	;destination buffer
 	mov	ax, offset FormatElement1	;first element to dump from
 	mov	bp, cx
-	
+
 	mov	cx, DATE_FORMAT_GADGET_PAIRS	;do four pairs of gadgets
 
 	push	si
@@ -2194,7 +2194,7 @@ CALLED BY:	UpdateDateFormat
 
 PASS:		es:di   -- buffer pointer to copy to
 		*ds:ax -- UI element to get text from
-		bp      -- format being built out, with 
+		bp      -- format being built out, with
 				IGNORE_TEXT_ON_THIS_PASS if we're to ignore
 				the text.
 
@@ -2221,14 +2221,14 @@ UpdateDateText	proc	near
 	;
 	; Copy text from UI object into the parse buffer.
 	;
-		
+
 	mov	si, ax				;object in *ds:si
 	mov     ax, MSG_VIS_TEXT_GET_ALL_PTR
 	mov	dx, es				;cx:dx is destination
 	mov	bp, offset parseBuffer		;  (the parse buffer)
-	call	ObjCallInstanceNoLock 
+	call	ObjCallInstanceNoLock
 	mov	ax, si			  	;restore object handle
-	
+
 	;
 	; Now character by character, copy the parse buffer stuff into
 	; our destination.
@@ -2261,7 +2261,7 @@ else
 endif
 	loop	doChar				;do another char if necessary
 exit:
-		
+
 	.leave
 	ret
 UpdateDateText	endp
@@ -2309,25 +2309,25 @@ UpdateDateToken	proc	near		uses	ax, bp
 	push	di
 	call	PrefIntlGetSpin
 	pop	di
-	
+
 	clr	ax				 ;set to no token
 	tst	cx				 ;"none" chosen?
 	jz	exit				 ;yes, exit, no token
 	cmp	cx, TIME_TOKEN_START		 ;the other "none" chosen?
 	je	exit				 ;yes, exit, no token
-	
+
 	mov	si, cx				 ;put token index in si
 	dec	si				 ;subtract off the "none"
 	shl	si, 1				 ;double for word offset
 	mov	ax, {word} es:dateTokenTable[si] ;get token for it from table
-	
+
 	call	CheckForFormatModifications	 ;do any necessary modifications
 	jnc	storeToken			 ;everything's cool, store token
 	cmp	ah, 's'				 ;seconds being removed?
 	je	exitKeepTrailingText		 ;yes,want to keep text after it
 	stc					 ;else we'll remove next text
 	jmp	short exit
-		
+
 storeToken:
 if DBCS_PCGEOS
 	mov	{wchar} es:[di], TOKEN_DELIMITER ;store starting delimiter
@@ -2352,7 +2352,7 @@ else
 	mov	{byte} es:[di], TOKEN_DELIMITER	 ;store ending delimiter
 	inc	di
 endif
-	
+
 exitKeepTrailingText:
 	clc					 ;say we stored the token
 exit:
@@ -2362,7 +2362,7 @@ exit:
 	;
 	pop	cx				 ;restore tokens-to-do
 	pushf					 ;save carry
-	mov	bp, DATE_FORMAT_GADGET_PAIRS	 ;index into table = 
+	mov	bp, DATE_FORMAT_GADGET_PAIRS	 ;index into table =
 	sub	bp, cx				 ;  (4-tokensLeft)*2
 	shl	bp, 1				 ;double for word offset
 	mov	es:firstToken[bp], ax		 ;we save all the tokens
@@ -2373,7 +2373,7 @@ exit:
 UpdateDateToken	endp
 
 
-		
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -2431,7 +2431,7 @@ CheckForFormatModifications	proc	near
 	; appropriate modification routine for those bits that are set.
 	;
 	mov	bx, offset modificationRoutines
-	
+
 filterLoop:
 	rcr	dx, 1				 ;rotate a flag into carry
 	jnc	10$				 ;not filtering this, branch
@@ -2447,7 +2447,7 @@ exit:
 	ret
 CheckForFormatModifications	endp
 
-				
+
 modificationRoutines		word		\
 	offset	ModRemoveWeekday,		;FAF_REMOVE_WEEKDAY
 	offset	ModRemoveYear,			;FAF_REMOVE_YEAR
@@ -2462,7 +2462,7 @@ modificationRoutines		word		\
 	offset	ModConvertTo24Hour,		;FAF_CONVERT_TO_24_HOUR
 	offset	ModUseFirstTokenInMinutes	;FAF_USE_FIRST_TOKEN_IN_MINUTES
 eModificationRoutines		label	word
-	
+
 
 
 
@@ -2553,7 +2553,7 @@ if PZ_PCGEOS	;Koji
 	clc					;assume not
 	jne	exit				;branch if not
 removeIt:
-	stc					;now we'll remove it	
+	stc					;now we'll remove it
 else
 	cmp	ah, 'Y'				;year token?
 	clc					;assume not
@@ -2775,7 +2775,7 @@ exit:
 	ret
 ModRemoveHours	endp
 
-			
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -2820,7 +2820,7 @@ ignore:
 exit:
 	ret
 ModRemoveAMPM	endp
-		
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -3014,7 +3014,7 @@ PASS:		es:di -- pointing past last character deposited
 				= 1 if we've done the fourth token
 				= 2 if we've done the third token
 		bp    -- format being built out
-				
+
 RETURN:		es:di -- possibly changed
 
 DESTROYED:	nothing
@@ -3040,12 +3040,12 @@ CheckForTextTrimming	proc	near
 	jne	10$
 	test	dx, mask FAF_CLEAN_UP_AFTER_FOUR_TOKENS
 	jnz	cleanup					;cleaning up, exit
-	
+
 	test	dx, mask FAF_CLEAN_UP_SPACES_AFTER_FOUR_TOKENS
 	jz	exit					;not doing spaces, exit
 	call	RemovePrecedingSpaces			;remove spaces
 	jmp	short exit				;else go do cleanup
-10$:			
+10$:
 	cmp	cx, 2					;on third token?
 	jne	exit					;no, exit
 	test	dx, mask FAF_CLEAN_UP_AFTER_THREE_TOKENS
@@ -3067,11 +3067,11 @@ endif
 	call	RemovePrecedingText			;remove any prev text
 exit:
 	pop	si
-	
+
 	ret
 CheckForTextTrimming	endp
 
-			
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -3177,7 +3177,7 @@ RemovePrecedingSpaces	endp
 
 COMMENT @----------------------------------------------------------------------
 
-METHOD:		PrefIntlReset -- 
+METHOD:		PrefIntlReset --
 		MSG_PREF_INTL_DIALOG_RESET for PrefIntlDialogClass
 
 DESCRIPTION:	Resets the formats entries.
@@ -3204,15 +3204,15 @@ REVISION HISTORY:
 ------------------------------------------------------------------------------@
 
 PrefIntlReset	method PrefIntlDialogClass, MSG_PREF_INTL_DIALOG_RESET
-	mov	cx, es:[formatToEdit]		
+	mov	cx, es:[formatToEdit]
 	call	PrefIntlDialogSelectFormat
 	call	PrefIntlUpdateCurrent	;set the example
-	
+
 	ret
 PrefIntlReset	endm
 
-			
-			
+
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -3243,16 +3243,16 @@ REVISION HISTORY:
 ------------------------------------------------------------------------------@
 
 PrefIntlDialogSelectFormat	method PrefIntlDialogClass,
-					MSG_PREF_INTL_DIALOG_SELECT_FORMAT 
+					MSG_PREF_INTL_DIALOG_SELECT_FORMAT
 
 	mov	es:formatToEdit, cx	;store the format to use.
-	
-	call	SetFormatTitle		;set a nice title at the top	
+
+	call	SetFormatTitle		;set a nice title at the top
 
 	call	SetIntlEditHelpContext
-		
+
 	mov	cx, es:formatToEdit	;get our formatting choice
-	cmp	cx, DTF_CURRENCY	;doing currency?	
+	cmp	cx, DTF_CURRENCY	;doing currency?
 	jne	10$
 	call	SetupCurrency		;else set up currency box
 	jmp	short 20$		;and skip to next choice
@@ -3275,7 +3275,7 @@ PrefIntlDialogSelectFormat	method PrefIntlDialogClass,
 50$:
 	mov	si, offset QuotesInteraction
 	call	PrefIntlSetNotUsable		;don't use quotes stuff
-	
+
 	cmp	cx, DTF_END_DATE_FORMATS
 	jb	setTimeDate
 
@@ -3289,7 +3289,7 @@ setTimeDate:
 	mov	si, offset TimeDateInteraction
 	call	PrefIntlSetNotUsable		;don't use time date stuff
 exit:
-	;	
+	;
 	; Reset the window so it redoes its size after all this.
 	;
 	mov	si, offset IntlEdit
@@ -3299,7 +3299,7 @@ exit:
 PrefIntlDialogSelectFormat	endm
 
 
-			
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -3331,12 +3331,12 @@ PrefIntlSetUsable	proc	near
 	mov	ax, MSG_GEN_SET_USABLE
 	GOTO	SetIt
 PrefIntlSetUsable	endp
-		
+
 PrefIntlSetNotUsable	proc	near
 	mov	ax, MSG_GEN_SET_NOT_USABLE
 	FALL_THRU	SetIt
 PrefIntlSetNotUsable	endp
-		
+
 SetIt		proc	near
 		push	cx
 		mov	dl, VUM_DELAYED_VIA_UI_QUEUE
@@ -3350,7 +3350,7 @@ SetIt		endp
 
 COMMENT @----------------------------------------------------------------------
 
-METHOD:		PrefIntlUpdateCurrent -- 
+METHOD:		PrefIntlUpdateCurrent --
 		MSG_PREF_INTL_DIALOG_UPDATE_CURRENT for PrefIntlDialogClass
 
 SYNOPSIS:	Updates the current values from the appropriate UI gadgets,
@@ -3375,14 +3375,14 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 
-PrefIntlUpdateCurrent	method PrefIntlDialogClass, 
+PrefIntlUpdateCurrent	method PrefIntlDialogClass,
 				       MSG_PREF_INTL_DIALOG_UPDATE_CURRENT
 	uses	ax, cx
 	.enter
 
 	mov	cx, es:formatToEdit		;get the current format
-	
-	cmp	cx, DTF_CURRENCY		;doing currency?	
+
+	cmp	cx, DTF_CURRENCY		;doing currency?
 	jne	checkDecimal
 
 	;
@@ -3416,7 +3416,7 @@ checkQuotes:
 	mov	di, offset tempExampleBuffer
 	LocalCopyString
 	pop	ds
-		
+
 	jmp	setFullExample
 
 checkTimeDate:
@@ -3428,7 +3428,7 @@ checkTimeDate:
 	;
 	mov	cx, es:formatToEdit		;this is the format we'll use
 	call	UpdateDateFormat
-	
+
 ;	call	TimerGetDateAndTime		;use today's date
 
 	mov	ax, 1994			;use my own example now:
@@ -3446,9 +3446,9 @@ checkTimeDate:
 setFullExample:
 	mov	si, offset tempExampleBuffer
 	mov	di, offset exampleBuffer	;example changed?
-	call	CmpString	
+	call	CmpString
 	je	exit				;no, exit
-	
+
 	;
 	; Set the example in the edit dialog box.
 	;
@@ -3458,7 +3458,7 @@ setFullExample:
 	push	bp
 	call	PrefIntlSetText			;set it
 	pop	bp
-	
+
 	;
 	; Set the example in the format list dialog box.  We're hoping that
 	; example buffer has been set up at this point.
@@ -3467,12 +3467,12 @@ setFullExample:
 	mov	si, offset IntlExample	;object to set
 	call	PrefIntlSetText			;set it
 
-	
+
 	;
 	; For time and date, we have other format examples to show.
 	;
 	call	DoOtherExamples			;do examples of related formats
-	
+
 	;
 	; Formally set the exampleBuffer now.
 	;
@@ -3486,7 +3486,7 @@ setFullExample:
 exit:
 	.leave
 	ret
-	
+
 PrefIntlUpdateCurrent	endm
 
 CmpString	proc	near
@@ -3500,14 +3500,14 @@ CmpString	proc	near
 CmpString	endp
 
 
-				
+
 
 
 COMMENT @----------------------------------------------------------------------
 
 ROUTINE:	DoOtherExamples
 
-SYNOPSIS:	If doing date or time, put up other examples.  Will avoid 
+SYNOPSIS:	If doing date or time, put up other examples.  Will avoid
 		setting an object with the main format here.
 
 CALLED BY:	PrefIntlUpdateCurrent
@@ -3516,7 +3516,7 @@ PASS:		 -- dgroup
 
 RETURN:		es:otherExampleBuffer -- should match tempExampleBuffer
 
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
        set the text for all related formats, example the last one in the list
@@ -3533,7 +3533,7 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 DISTANCE_BETWEEN_EXAMPLES = 2
-			  
+
 DoOtherExamples	proc	near
 	CheckHack <DISTANCE_BETWEEN_EXAMPLES eq (offset IntlExample4 - \
 			offset IntlExample3)>
@@ -3543,14 +3543,14 @@ DoOtherExamples	proc	near
 			offset IntlExample5)>
 	CheckHack <DISTANCE_BETWEEN_EXAMPLES eq (offset IntlExample7 - \
 			offset IntlExample6)>
-		
+
 	call	GetRelatedFormatList		;es:si <- list of formats
 	tst	si				;anything to do?
 	jnz	10$				;yes, branch
 	mov	si, offset otherFormats		;else pass this hack that
 10$:						;   will null out all examples
 	mov	di, offset IntlExample2	;first place to put example
-	
+
 doExample:
 	mov	cl, es:[si]			;get a format
 	clr	ch
@@ -3558,7 +3558,7 @@ doExample:
 	je	nextExample
 	cmp	cl, DTF_WEEKDAY
 	je	nextExample
-	
+
 	push	si
 
 	mov	si, cx				;keep format in si
@@ -3566,36 +3566,36 @@ doExample:
 	mov	bx, 9 shl 8 or 3		;Monday, 9 Mar 1994
 	mov	cx, 8 shl 8 or 1		; 8:05:04
 	mov	dx, 4 shl 8 or 5
-	
+
 	push	di
 	mov	di, offset otherExampleBuffer	;es:di - place to store string
 	call	LocalFormatDateTime		;get localized date/time
 	pop	di
 
 	pop	si
-	
+
 	cmp	di, offset IntlExample7		;past the last example?
 	ja	exit				;yes, we're all done now
-	
+
 	push	si
 	mov	bp, offset otherExampleBuffer	;here's our text
-	
+
 	cmp	{byte} es:[si]+1, -1		;are we on the last example?
 	jnz	setObject			;no, set object
-	mov	bp, offset nullTerminator 	;else store a null string 
-	
+	mov	bp, offset nullTerminator 	;else store a null string
+
 setObject:
 	mov	si, di				;pass object to set
 	call	PrefIntlSetText			;set it
 	pop	si				;restore pointer
-	
+
 nextExample:
 	cmp	{byte} es:[si]+1, -1		;are we on the last example?
 	jz	nextObject			;yes, stay there, we
 						;won't use it
 
 	inc	si				;else move to next exmaple
-	
+
 nextObject:
 	add	di, DISTANCE_BETWEEN_EXAMPLES	;next object
 	jmp	doExample			;do another one
@@ -3619,7 +3619,7 @@ PASS:		es -- dgroup
 
 RETURN:		nothing
 
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
         if !useNegativeSign
@@ -3629,7 +3629,7 @@ PSEUDO CODE/STRATEGY:
 	if symInFront
 		add symbol
 	if symInFront & spaceAroundSymbol
-		add ' ' 
+		add ' '
 	if useNegativeSign & negativeInFront & !negativeBeforeSymbol
 		add '-'
 	if leadingZero
@@ -3655,35 +3655,35 @@ REVISION HISTORY:
 	Chris	1/ 3/91		Initial version
 
 ------------------------------------------------------------------------------@
-	
+
 UpdateCurrencyExample	proc	near
 	mov	di, offset tempExampleBuffer	;place to put new example
-	
+
 	mov	cx, (mask CFF_USE_NEGATIVE_SIGN) shl 8
 	mov	al, '('
-	call	AddToExampleIfNeeded		
-	
+	call	AddToExampleIfNeeded
+
 	mov	cx, mask CFF_USE_NEGATIVE_SIGN or \
 		    mask CFF_NEGATIVE_SIGN_BEFORE_NUMBER or \
 		    mask CFF_NEGATIVE_SIGN_BEFORE_SYMBOL
 	mov	al, '-'
 	call	AddToExampleIfNeeded
-	
+
 	mov	cx, mask CFF_SYMBOL_BEFORE_NUMBER
 	clr	al				;this means add the symbol
 	call	AddToExampleIfNeeded
-	
+
 	mov	cx, mask CFF_SYMBOL_BEFORE_NUMBER or \
 		    mask CFF_SPACE_AROUND_SYMBOL
 	mov	al, ' '
 	call	AddToExampleIfNeeded
-	
+
 	mov	cx, mask CFF_USE_NEGATIVE_SIGN or \
 		    mask CFF_NEGATIVE_SIGN_BEFORE_NUMBER or \
 		    (mask CFF_NEGATIVE_SIGN_BEFORE_SYMBOL shl 8)
 	mov	al, '-'
 	call	AddToExampleIfNeeded
-	
+
 SBCS <	mov	ax, '3' shl 8 or '1'					>
 SBCS <	stosw								>
 DBCS <	mov	ax, '1'							>
@@ -3699,7 +3699,7 @@ SBCS <	mov	al, es:currentDecimalSeparator				>
 SBCS <	stosb								>
 DBCS <	mov	ax, es:currentDecimalSeparator				>
 DBCS <	stosw								>
-	
+
 SBCS <	mov	al, '2'				;fill out after decimal with 9's>
 DBCS <	mov	ax, '2'				;fill out after decimal with 9's>
 	cmp	cx, 10				;don't print too many digits
@@ -3714,26 +3714,26 @@ DBCS <	rep	stosw							>
 		    mask CFF_NEGATIVE_SIGN_BEFORE_SYMBOL
 	mov	al, '-'
 	call	AddToExampleIfNeeded
-	
+
 	mov	cx, (mask CFF_SYMBOL_BEFORE_NUMBER shl 8) or \
 		    mask CFF_SPACE_AROUND_SYMBOL
 	mov	al, ' '
 	call	AddToExampleIfNeeded
-	
+
 	mov	cx, (mask CFF_SYMBOL_BEFORE_NUMBER shl 8)
 	clr	al				;this means add the symbol
 	call	AddToExampleIfNeeded
-	
+
 	mov	cx, mask CFF_USE_NEGATIVE_SIGN or \
 		    (mask CFF_NEGATIVE_SIGN_BEFORE_NUMBER shl 8) or \
 		    (mask CFF_NEGATIVE_SIGN_BEFORE_SYMBOL shl 8)
 	mov	al, '-'
 	call	AddToExampleIfNeeded
-	
+
 	mov	cx, (mask CFF_USE_NEGATIVE_SIGN) shl 8
 	mov	al, ')'
-	call	AddToExampleIfNeeded		
-	
+	call	AddToExampleIfNeeded
+
 DBCS <	clr	ax							>
 DBCS <	stosw					;null byte		>
 SBCS <	clr	al							>
@@ -3779,12 +3779,12 @@ AddToExampleIfNeeded	proc	near
 	and	dl, dh				;AND with flags
 	cmp	dl, cl				;still all set?
 	jne	exit				;no, get out
-	
+
 	not	dh				;invert current flags
 	and	dh, ch				;AND with flags to be cleared
 	cmp	dh, ch				;are they all there?
 	jne	exit				;no, get out
-	
+
  	tst	al				;do we want to store
 						;the symbol?
 	jz	doSymbol			;yes, go do it
@@ -3807,7 +3807,7 @@ exit:
 AddToExampleIfNeeded	endp
 
 
-			
+
 
 
 COMMENT @----------------------------------------------------------------------
@@ -3820,7 +3820,7 @@ CALLED BY:	PrefIntlUpdateCurrent
 
 PASS:		es -- dgroup
 
-RETURN:		nothing 
+RETURN:		nothing
 
 DESTROYED:	ax,bx,cx,dx,di,si
 
@@ -3838,14 +3838,17 @@ REVISION HISTORY:
 UpdateDecimalExample	proc	near
 
 	mov	di, offset tempExampleBuffer	;place to put new example
-	
+
 if DBCS_PCGEOS
 	mov	ax, '1'
 	stosw
 	mov	ax, '3'
 	stosw
 	mov	ax, es:currentThousandsSeparator
+	cmp	ax, 0			;no thousands separator?
+	jz	thousandsSeparatorSkipDB
 	stosw
+thousandsSeparatorSkipDB:
 	mov	ax, '1'
 	stosw
 	mov	ax, '4'
@@ -3856,7 +3859,10 @@ else
 	mov	ax, '3' shl 8 or '1'
 	stosw
 	mov	al, es:currentThousandsSeparator
+	cmp	al, 0			;no thousands separator?
+	jz	thousandsSeparatorSkipSB
 	stosb
+thousandsSeparatorSkipSB:
 	mov	ax, '4' shl 8 or '1'
 	stosw
 	mov	al, '5'
@@ -3893,12 +3899,12 @@ else
 	mov	al, ' '				;stick in a space
 	stosb
 endif
-	
+
 	push	ds
 	mov	bx, handle Strings
 	call	MemLock
 	mov	ds, ax				;ds points to Strings chunk
-	
+
 	mov	si, offset inText		;assume inches
 	tst	es:currentMeasurementType
 	jz	20$				;we are doing US, branch
@@ -3928,11 +3934,11 @@ CALLED BY:	SetupDecimal, SetupCurrency, SetTextFromAL
 PASS:		*ds:si - text object
 		bp - offset in dgroup to text buffer
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -3945,14 +3951,14 @@ REVISION HISTORY:
 PrefIntlSetText		proc near
 		uses	ax,cx,dx
 		.enter
-		
+
 		mov	dx, segment dgroup
 		mov	ax, MSG_VIS_TEXT_REPLACE_ALL_PTR
 		clr	cx			;specify null termination
 		call	ObjCallInstanceNoLock
 		.leave
 		ret
-		
+
 PrefIntlSetText		endp
 
 
@@ -3963,16 +3969,16 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Set the GenValue
 
-CALLED BY:	
+CALLED BY:
 
 PASS:		*ds:si - GenValue object
 		cx - value to set
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -4001,15 +4007,15 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Set the value for a Custom Spin object
 
-CALLED BY:	
+CALLED BY:
 
 PASS:		cx - value to store
 
-RETURN:		nothing 
+RETURN:		nothing
 
-DESTROYED:	nothing 
+DESTROYED:	nothing
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
@@ -4039,7 +4045,7 @@ COMMENT @----------------------------------------------------------------------
 
 FUNCTION:	PrefIntlGetValue
 
-DESCRIPTION:	
+DESCRIPTION:
 
 CALLED BY:	INTERNAL ()
 
@@ -4076,12 +4082,12 @@ COMMENT @----------------------------------------------------------------------
 
 FUNCTION:	PrefIntlGetTextIntoBuffer
 
-DESCRIPTION:	
+DESCRIPTION:
 
 CALLED BY:	INTERNAL ()
 
 PASS:		*ds:si - text object
-		es:dx - pointer to buffer 
+		es:dx - pointer to buffer
 
 RETURN:		cx - number of characters retrieved (not including null term)
 
@@ -4107,7 +4113,7 @@ PrefIntlGetTextIntoBuffer	proc	near
 	mov	bp, dx
 	mov	dx, es
 	mov	ax, MSG_VIS_TEXT_GET_ALL_PTR
-	call	ObjCallInstanceNoLock 
+	call	ObjCallInstanceNoLock
 
 	.leave
 	ret
@@ -4120,7 +4126,7 @@ COMMENT @----------------------------------------------------------------------
 
 FUNCTION:	PrefIntlGetSpin
 
-DESCRIPTION:	
+DESCRIPTION:
 
 CALLED BY:	INTERNAL ()
 
@@ -4193,7 +4199,7 @@ DoError	proc	near
 
 		mov	ax, (CDT_ERROR shl offset CDBF_DIALOG_TYPE) or \
 		    (GIT_NOTIFICATION shl offset CDBF_INTERACTION_TYPE)
-	
+
 
 		push	ax		; SDOP_customFlags
 
@@ -4446,11 +4452,11 @@ CALLED BY:	setDateDefault
 PASS:		*ds:si - text object
 		bp - offset in String block to chunk
 
-RETURN:		nothing 
+RETURN:		nothing
 
 DESTROYED:	ax, cx, dx
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 
