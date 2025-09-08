@@ -343,12 +343,9 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     total = FilePos(srcFile, 0, FILE_POS_END);
     FilePos(srcFile, 0, FILE_POS_START);
 
-#ifdef DEBUG_LOG
     LOG_STR("ReadSVG", "begin");
     LOG_FILE("srcFile", srcFile);
-    LOG_DWORD("totalBytes", FilePos(srcFile, 0, FILE_POS_END));
-    FilePos(srcFile, 0, FILE_POS_START);
-#endif
+    LOG_DWORD("totalBytes", total);
 
     scH = MemAlloc((word)sizeof(SVGScratch), HF_DYNAMIC, HAF_ZERO_INIT);
     if (!scH)
@@ -463,12 +460,8 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
         }
         else if (SvgParserTagIs(scP->tag, "path"))
         {
-#ifdef DEBUG_LOG
-            char id[64]; id[0]=0;
-            SvgParserGetAttrBounded(scP->tag, "id", id, sizeof(id));
-            if (id[0]) LOG_STR("[DISPATCH] path id", id);
+            LOG_STR("[DISPATCH]", "path");
             LOG_STR_HEAD("[path d]", scP->tag, 120); /* shows d=... head */
-#endif
             SvgPathHandle(scP->tag, scP);
         }
         else

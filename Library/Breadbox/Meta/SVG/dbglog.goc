@@ -1,0 +1,372 @@
+#ifdef DEBUG_LOG
+
+#include <geos.h>
+#include <file.h>
+#include <timedate.h>
+#include <Ansi/stdio.h>
+#include <Ansi/string.h>
+#include <Ansi/stdarg.h>
+#include <localize.h>
+
+#ifndef DBG_PASCAL
+#define DBG_PASCAL   _pascal
+#endif
+#ifndef DBG_CDECL
+#define DBG_CDECL    _cdecl
+#endif
+
+#define LOG_FILENAME "dbglog.txt"
+
+/* Internal helpers */
+static FileHandle
+_DbgOpen(Boolean truncate)
+{
+    FileHandle fh;
+
+    fh = NullHandle;
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
+
+    if (truncate)
+    {
+        FileDelete(LOG_FILENAME);
+    }
+
+    fh = FileOpen(LOG_FILENAME, FILE_ACCESS_RW | FILE_DENY_W);
+    if (fh == NullHandle)
+    {
+        fh = FileCreate(LOG_FILENAME,
+                        FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_W,
+                        0);
+    }
+
+    FilePopDir();
+    return fh;
+}
+
+static void
+_DbgWriteLine(const char *s)
+{
+    FileHandle fh;
+    word len;
+
+    if (s == 0)
+    {
+        return;
+    }
+
+    fh = _DbgOpen(FALSE);
+    if (fh == NullHandle)
+    {
+        return;
+    }
+
+    FilePos(fh, 0L, FILE_POS_END);
+
+    len = (word)strlen(s);
+    if (len != 0)
+    {
+        FileWrite(fh, (void *)s, len, FALSE);
+    }
+    FileWrite(fh, (void *)"\r\n", 2, FALSE);
+
+    FileClose(fh, FALSE);
+}
+
+/* Public API — calling conventions match header */
+
+void DBG_PASCAL
+DbgLogInit(void)
+{
+    FileHandle fh;
+
+    fh = _DbgOpen(TRUE);
+    if (fh != NullHandle)
+    {
+        FileClose(fh, FALSE);
+    }
+}
+
+void DBG_PASCAL
+DbgLogStart(void)
+{
+    TimerDateAndTime now;
+    char timeBuf[64];
+    char lineBuf[96];
+
+    timeBuf[0] = 0;
+    lineBuf[0] = 0;
+
+    TimerGetDateAndTime(&now);
+    LocalFormatDateTime(timeBuf, DTF_HMS_24HOUR, &now);
+    sprintf(lineBuf, "=== LOG START: %s ===", timeBuf);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogEnd(void)
+{
+    _DbgWriteLine("=== LOG END ===");
+}
+
+/* Varargs must be cdecl */
+
+void DBG_CDECL
+DbgPrintf(const char *fmt, ...)
+{
+    char lineBuf[256];
+    va_list ap;
+    word len;
+
+    lineBuf[0] = 0;
+
+    if (fmt == 0)
+    {
+        return;
+    }
+
+    va_start(ap, fmt);
+    (void)vsprintf(lineBuf, fmt, ap);
+    va_end(ap);
+
+    len = (word)strlen(lineBuf);
+    if (len != 0)
+    {
+        _DbgWriteLine(lineBuf);
+    }
+}
+
+void DBG_CDECL
+DbgLogPrintf(const char *label, const char *fmt, ...)
+{
+    char msgBuf[256];
+    char lineBuf[320];
+    const char *lbl;
+    va_list ap;
+    word len;
+
+    msgBuf[0] = 0;
+    lineBuf[0] = 0;
+    lbl = (label ? label : "");
+
+    if (fmt == 0)
+    {
+        return;
+    }
+
+    va_start(ap, fmt);
+    (void)vsprintf(msgBuf, fmt, ap);
+    va_end(ap);
+
+    if (lbl[0] != '\0')
+    {
+        (void)sprintf(lineBuf, "%s: %s", lbl, msgBuf);
+    }
+    else
+    {
+        (void)sprintf(lineBuf, "%s", msgBuf);
+    }
+
+    len = (word)strlen(lineBuf);
+    if (len != 0)
+    {
+        _DbgWriteLine(lineBuf);
+    }
+}
+
+/* Typed helpers (Pascal) */
+
+void DBG_PASCAL
+DbgLogByte(const char *label, word val)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: %u", (label ? label : ""), (word)val);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogSByte(const char *label, sword val)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: %d", (label ? label : ""), (sword)val);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogWord(const char *label, word val)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: %u (0x%04x)", (label ? label : ""), (word)val, (word)val);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogSWord(const char *label, sword val)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: %d", (label ? label : ""), (sword)val);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogDWord(const char *label, dword val)
+{
+    char lineBuf[80];
+
+    sprintf(lineBuf, "%s: %lu (0x%08lx)", (label ? label : ""),
+            (unsigned long)val, (unsigned long)val);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogSDWord(const char *label, sdword val)
+{
+    char lineBuf[80];
+
+    sprintf(lineBuf, "%s: %ld", (label ? label : ""), (long)val);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogBool(const char *label, Boolean val)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: %s", (label ? label : ""), val ? "TRUE" : "FALSE");
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogPtr(const char *label, const void *ptrP)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: %Fp", (label ? label : ""), ptrP);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogChunk(const char *label, word ch)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: chunk 0x%04x", (label ? label : ""), (word)ch);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogMem(const char *label, word mh)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: mem handle 0x%04x", (label ? label : ""), (word)mh);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogFile(const char *label, word fh)
+{
+    char lineBuf[64];
+
+    sprintf(lineBuf, "%s: file handle 0x%04x", (label ? label : ""), (word)fh);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogOptr(const char *label, dword o)
+{
+    char lineBuf[80];
+
+    sprintf(lineBuf, "%s: optr 0x%08lx", (label ? label : ""), (unsigned long)o);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogStr(const char *label, const char *val)
+{
+    char lineBuf[256];
+    const char *s;
+
+    s = (val ? val : "");
+    sprintf(lineBuf, "%s: \"%s\"", (label ? label : ""), s);
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogStrSegment(const char *label, const char *str, word from, word to)
+{
+    char seg[256];
+    char lineBuf[320];
+    const char *s;
+    word len;
+    word f;
+    word t;
+    word n;
+
+    s = str;
+    len = (s ? (word)strlen(s) : 0);
+    f = (from < len) ? from : 0;
+    t = (to < len) ? to : len;
+    n = (t > f) ? (t - f) : 0;
+
+    if (n >= (word)sizeof(seg))
+    {
+        n = (word)sizeof(seg) - 1;
+    }
+
+    if (n > 0 && s)
+    {
+        memcpy(seg, s + f, n);
+        seg[n] = 0;
+        sprintf(lineBuf, "%s: \"%s\"", (label ? label : ""), seg);
+    }
+    else
+    {
+        sprintf(lineBuf, "%s: [string empty or out of bounds]", (label ? label : ""));
+    }
+
+    _DbgWriteLine(lineBuf);
+}
+
+void DBG_PASCAL
+DbgLogStrHead(const char *label, const char *str, word len)
+{
+    DbgLogStrSegment(label, str, 0, len);
+}
+
+void DBG_PASCAL
+DbgLogStrTail(const char *label, const char *str, word len)
+{
+    const char *s;
+    word n;
+    word from;
+
+    s = str;
+    n = (s ? (word)strlen(s) : 0);
+    from = (n > len) ? (n - len) : 0;
+
+    DbgLogStrSegment(label, str, from, n);
+}
+
+void DBG_PASCAL
+DbgLogStrRange(const char *label, const char *str, word from, word to)
+{
+    DbgLogStrSegment(label, str, from, to);
+}
+
+void DBG_PASCAL
+DbgLogStrAll(const char *label, const char *str)
+{
+    const char *s;
+    word n;
+
+    s = str;
+    n = (s ? (word)strlen(s) : 0);
+    DbgLogStrSegment(label, str, 0, n);
+}
+
+#endif /* DEBUG_LOG */

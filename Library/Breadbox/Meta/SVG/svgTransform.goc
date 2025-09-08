@@ -165,10 +165,8 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             s = p;
 #ifdef DEBUG_LOG
             if (!AnsiStrnCmp(s, "matrix(", 7)) {
-                char b[96];
-                sprintf(b, "matrix a=%ld b=%ld c=%ld d=%ld e=%ld f=%ld",
-                        (sdword)a,(sdword)b,(sdword)c,(sdword)d,(sdword)e,(sdword)f);
-                LOG_STR("[XFORM]", b);
+                LOGF(("[XFORM]", "matrix a=%ld b=%ld c=%ld d=%ld e=%ld f=%ld",
+                        (sdword)a,(sdword)b,(sdword)c,(sdword)d,(sdword)e,(sdword)f));
             }
 #endif
         } else if (!AnsiStrnCmp(s, "translate(", 10)) {
@@ -182,8 +180,7 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             s = p;
 #ifdef DEBUG_LOG
             if (!AnsiStrnCmp(s, "translate(",10)) {
-                char b[64]; sprintf(b, "translate %ld,%ld",(sdword)v1,(sdword)v2);
-                LOG_STR("[XFORM]", b);
+                LOGF(("[XFORM]", "translate %ld,%ld",(sdword)v1,(sdword)v2));
             }
 #endif
         } else if (!AnsiStrnCmp(s, "scale(", 6)) {
@@ -197,8 +194,7 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             s = p;
 #ifdef DEBUG_LOG
             if (!AnsiStrnCmp(s, "scale(",6)) {
-                char b[64]; sprintf(b, "scale %ld,%ld",(sdword)v1,(sdword)v2);
-                LOG_STR("[XFORM]", b);
+                LOGF(("[XFORM]", "scale %ld,%ld",(sdword)v1,(sdword)v2));
             }
 #endif
         } else if (!AnsiStrnCmp(s, "rotate(", 7)) {
@@ -227,9 +223,7 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             s = p;
 #ifdef DEBUG_LOG
             if (!AnsiStrnCmp(s, "rotate(",7)) {
-                char b[96];
-                sprintf(b, "rotate deg=%ld cx=%ld cy=%ld",(sdword)v1,(sdword)v2,(sdword)v3);
-                LOG_STR("[XFORM]", b);
+                LOGF(("[XFORM]", "rotate deg=%ld cx=%ld cy=%ld",(sdword)v1,(sdword)v2,(sdword)v3));
             }
 #endif
         } else if (!AnsiStrnCmp(s, "skewX(", 6)) {

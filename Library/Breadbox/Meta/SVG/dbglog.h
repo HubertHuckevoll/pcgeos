@@ -1,9 +1,11 @@
 #ifndef __DBGLOG_H
 #define __DBGLOG_H
-/*
- * Debug logging header.
- * Macros compile to real logging code only when DEBUG_LOG is defined;
- * otherwise they expand to no-ops without evaluating their arguments.
+
+/* Call-site UX:
+ *   LOG_INIT(); LOG_START();
+ *   LOGF(("[PATH]", "Emit done: last=(%d,%d) ...", (int)x, (int)y, ...));
+ *   LOGF0(("created %u nodes", (unsigned)n));
+ * All compile to nothing when DEBUG_LOG is undefined.
  */
 
 #ifdef DEBUG_LOG
@@ -13,242 +15,88 @@
 #include <timedate.h>
 #include <Ansi/stdio.h>
 #include <Ansi/string.h>
+#include <stdarg.h>
 #include <localize.h>
 
-#define LOG_FILENAME "dbglog.txt"
+/* Export/calling-convention helpers (safe defaults if not set) */
+#ifndef DBG_PASCAL
+#define DBG_PASCAL   _pascal
+#endif
+#ifndef DBG_CDECL
+#define DBG_CDECL    _cdecl      /* required for varargs */
+#endif
+#ifdef DBGLOG_BUILD
+#   define DBG_EXP   _export
+#else
+#   define DBG_EXP
+#endif
 
-/* --- unique-name helpers for static buffers (no stack usage) --- */
-#define _DBG_JOIN(a,b) a##b
-#define _DBG_UNIQUE(base) _DBG_JOIN(base,__LINE__)
+/* Non-varargs API can remain Pascal if you prefer */
+DBG_EXP void DBG_PASCAL DbgLogInit(void);
+DBG_EXP void DBG_PASCAL DbgLogStart(void);
+DBG_EXP void DBG_PASCAL DbgLogEnd(void);
 
-/*
- * Open (or create) the log file in SP_DOCUMENT and optionally truncate it.
- * Returns the FileHandle via 'fh'; leaves current dir unchanged.
- */
-#define _DBG_OPEN_LOG_FILE(truncate, fh) \
-    do { \
-        FileHandle _dbg_fh; \
-        FilePushDir(); \
-        FileSetStandardPath(SP_DOCUMENT); \
-        if (truncate) { FileDelete(LOG_FILENAME); } \
-        _dbg_fh = FileOpen(LOG_FILENAME, FILE_ACCESS_RW | FILE_DENY_W); \
-        if (_dbg_fh == NullHandle) { \
-            _dbg_fh = FileCreate(LOG_FILENAME, FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_W, 0); \
-        } \
-        (fh) = _dbg_fh; \
-        FilePopDir(); \
-    } while (0)
+/* Varargs MUST be cdecl on Watcom */
+DBG_EXP void DBG_CDECL  DbgPrintf(const char *fmt, ...);
+DBG_EXP void DBG_CDECL  DbgLogPrintf(const char *label, const char *fmt, ...);
 
-/*
- * Append a single line to the log file and add CRLF.
- * Creates the file if needed; closes it after the write.
- */
-#define _WRITE_TO_FILE(str) \
-    do { \
-        FileHandle _dbg_fh2; \
-        _DBG_OPEN_LOG_FILE(FALSE, _dbg_fh2); \
-        if (_dbg_fh2 != NullHandle) { \
-            FilePos(_dbg_fh2, 0L, FILE_POS_END); \
-            FileWrite(_dbg_fh2, (void *)(str), strlen(str), FALSE); \
-            FileWrite(_dbg_fh2, (void *)"\r\n", 2, FALSE); \
-            FileClose(_dbg_fh2, FALSE); \
-        } \
-    } while (0)
+/* Typed helpers (kept for compatibility) */
+DBG_EXP void DBG_PASCAL DbgLogByte(const char *label, word val);
+DBG_EXP void DBG_PASCAL DbgLogSByte(const char *label, sword val);
+DBG_EXP void DBG_PASCAL DbgLogWord(const char *label, word val);
+DBG_EXP void DBG_PASCAL DbgLogSWord(const char *label, sword val);
+DBG_EXP void DBG_PASCAL DbgLogDWord(const char *label, dword val);
+DBG_EXP void DBG_PASCAL DbgLogSDWord(const char *label, sdword val);
+DBG_EXP void DBG_PASCAL DbgLogBool(const char *label, Boolean val);
+DBG_EXP void DBG_PASCAL DbgLogPtr(const char *label, const void *ptrP);
+DBG_EXP void DBG_PASCAL DbgLogChunk(const char *label, word ch);
+DBG_EXP void DBG_PASCAL DbgLogMem(const char *label, word mh);
+DBG_EXP void DBG_PASCAL DbgLogFile(const char *label, word fh);
+DBG_EXP void DBG_PASCAL DbgLogOptr(const char *label, dword o);
+DBG_EXP void DBG_PASCAL DbgLogStr(const char *label, const char *val);
+DBG_EXP void DBG_PASCAL DbgLogStrSegment(const char *label, const char *str, word from, word to);
+DBG_EXP void DBG_PASCAL DbgLogStrHead(const char *label, const char *str, word len);
+DBG_EXP void DBG_PASCAL DbgLogStrTail(const char *label, const char *str, word len);
+DBG_EXP void DBG_PASCAL DbgLogStrRange(const char *label, const char *str, word from, word to);
+DBG_EXP void DBG_PASCAL DbgLogStrAll(const char *label, const char *str);
 
-/*
- * Initialize a fresh log by truncating/creating the file.
- * Does not write any content.
- */
-#define LOG_INIT() \
-    do { \
-        FileHandle _dbg_fh3; \
-        _DBG_OPEN_LOG_FILE(TRUE, _dbg_fh3); \
-        if (_dbg_fh3 != NullHandle) { FileClose(_dbg_fh3, FALSE); } \
-    } while (0)
+/* Macros: real calls in debug builds; no evaluation when off */
+#define LOG_INIT()                                  DbgLogInit()
+#define LOG_START()                                 DbgLogStart()
+#define LOG_END()                                   DbgLogEnd()
 
-/*
- * Write a timestamped "LOG START" line using current time.
- */
-#define LOG_START() \
-    do { \
-        static char _DBG_UNIQUE(_dbg_time_)[64]; \
-        static char _DBG_UNIQUE(_dbg_line_)[96]; \
-        char * _dbg_time = _DBG_UNIQUE(_dbg_time_); \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        TimerDateAndTime _dbg_now; \
-        TimerGetDateAndTime(&_dbg_now); \
-        LocalFormatDateTime(_dbg_time, DTF_HMS_24HOUR, &_dbg_now); \
-        sprintf(_dbg_line, "=== LOG START: %s ===", _dbg_time); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
+/* printf-style (double-paren C89 idiom) */
+#define LOGF0(args)                                 DbgPrintf args
+#define LOGF(args)                                  DbgLogPrintf args
 
-/*
- * Write a simple "LOG END" terminator line.
- */
-#define LOG_END() \
-    _WRITE_TO_FILE("=== LOG END ===")
-
-/* ---------- value/pointer logging (static buffers, no stack) ---------- */
-
-#define LOG_BYTE(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %u", (label), (word)(val)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_SBYTE(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %d", (label), (sword)(val)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_WORD(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %u (0x%04x)", (label), (word)(val), (word)(val)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_SWORD(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %d", (label), (sword)(val)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_DWORD(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[80]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %lu (0x%08lx)", (label), (unsigned long)(val), (unsigned long)(val)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_SDWORD(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[80]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %ld", (label), (long)(sdword)(val)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_BOOL(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %s", (label), (val) ? "TRUE" : "FALSE"); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_PTR(label, ptr) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: %Fp", (label), (ptr)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_CHUNK(label, ch) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: chunk 0x%04x", (label), (word)(ch)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_MEM(label, mh) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: mem handle 0x%04x", (label), (word)(mh)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_FILE(label, fh) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[64]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: file handle 0x%04x", (label), (word)(fh)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_OPTR(label, o) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[80]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        sprintf(_dbg_line, "%s: optr 0x%08lx", (label), (unsigned long)(o)); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-/* ---------- string logging (static buffers, unique per call site) ---------- */
-
-#define LOG_STR(label, val) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_line_)[256]; \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        const char *_dbg_s = (val) ? (val) : ""; \
-        sprintf(_dbg_line, "%s: \"%s\"", (label), _dbg_s); \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-/* String segment logging (no stack usage, safe bounds) */
-#define LOG_STR_SEGMENT(label, str, from, to) \
-    do { \
-        static char _DBG_UNIQUE(_dbg_seg_)[256]; \
-        static char _DBG_UNIQUE(_dbg_line_)[320]; \
-        char * _dbg_seg  = _DBG_UNIQUE(_dbg_seg_); \
-        char * _dbg_line = _DBG_UNIQUE(_dbg_line_); \
-        const char *_dbg_s = (str); \
-        word _dbg_len = _dbg_s ? (word)strlen(_dbg_s) : 0; \
-        word _dbg_f = ((from) < _dbg_len) ? (from) : 0; \
-        word _dbg_t = ((to)   < _dbg_len) ? (to)   : _dbg_len; \
-        word _dbg_n = (_dbg_t > _dbg_f) ? (_dbg_t - _dbg_f) : 0; \
-        if (_dbg_n >= (word)sizeof(_DBG_UNIQUE(_dbg_seg_))) _dbg_n = (word)sizeof(_DBG_UNIQUE(_dbg_seg_)) - 1; \
-        if (_dbg_n > 0 && _dbg_s) { \
-            memcpy(_dbg_seg, _dbg_s + _dbg_f, _dbg_n); \
-            _dbg_seg[_dbg_n] = 0; \
-            sprintf(_dbg_line, "%s: \"%s\"", (label), _dbg_seg); \
-        } else { \
-            sprintf(_dbg_line, "%s: [string empty or out of bounds]", (label)); \
-        } \
-        _WRITE_TO_FILE(_dbg_line); \
-    } while (0)
-
-#define LOG_STR_HEAD(label, str, len) \
-    LOG_STR_SEGMENT(label, str, 0, (len))
-
-#define LOG_STR_TAIL(label, str, len) \
-    do { \
-        const char *_dbg_s = (str); \
-        word _dbg_len = _dbg_s ? (word)strlen(_dbg_s) : 0; \
-        word _dbg_from = (_dbg_len > (len)) ? (_dbg_len - (len)) : 0; \
-        LOG_STR_SEGMENT(label, str, _dbg_from, _dbg_len); \
-    } while (0)
-
-#define LOG_STR_RANGE(label, str, from, to) \
-    LOG_STR_SEGMENT(label, str, (from), (to))
-
-#define LOG_STR_ALL(label, str) \
-    do { \
-        const char *_dbg_s = (str); \
-        word _dbg_len = _dbg_s ? (word)strlen(_dbg_s) : 0; \
-        LOG_STR_SEGMENT(label, str, 0, _dbg_len); \
-    } while (0)
+/* Typed convenience (compatible with your existing code) */
+#define LOG_BYTE(label, val)                        DbgLogByte((const char*)(label),(word)(val))
+#define LOG_SBYTE(label, val)                       DbgLogSByte((const char*)(label),(sword)(val))
+#define LOG_WORD(label, val)                        DbgLogWord((const char*)(label),(word)(val))
+#define LOG_SWORD(label, val)                       DbgLogSWord((const char*)(label),(sword)(val))
+#define LOG_DWORD(label, val)                       DbgLogDWord((const char*)(label),(dword)(val))
+#define LOG_SDWORD(label, val)                      DbgLogSDWord((const char*)(label),(sdword)(val))
+#define LOG_BOOL(label, val)                        DbgLogBool((const char*)(label),(Boolean)(val))
+#define LOG_PTR(label, ptr)                         DbgLogPtr((const char*)(label),(const void*)(ptr))
+#define LOG_CHUNK(label, ch)                        DbgLogChunk((const char*)(label),(word)(ch))
+#define LOG_MEM(label, mh)                          DbgLogMem((const char*)(label),(word)(mh))
+#define LOG_FILE(label, fh)                         DbgLogFile((const char*)(label),(word)(fh))
+#define LOG_OPTR(label, o)                          DbgLogOptr((const char*)(label),(dword)(o))
+#define LOG_STR(label, val)                         DbgLogStr((const char*)(label),(const char*)(val))
+#define LOG_STR_SEGMENT(label, str, from, to)       DbgLogStrSegment((const char*)(label),(const char*)(str),(word)(from),(word)(to))
+#define LOG_STR_HEAD(label, str, len)               DbgLogStrHead((const char*)(label),(const char*)(str),(word)(len))
+#define LOG_STR_TAIL(label, str, len)               DbgLogStrTail((const char*)(label),(const char*)(str),(word)(len))
+#define LOG_STR_RANGE(label, str, from, to)         DbgLogStrRange((const char*)(label),(const char*)(str),(word)(from),(word)(to))
+#define LOG_STR_ALL(label, str)                     DbgLogStrAll((const char*)(label),(const char*)(str))
 
 #else   /* !DEBUG_LOG */
 
-/* All stubs: no evaluation of args, no code emitted. */
-#define _DBG_OPEN_LOG_FILE(truncate, fh)            do { } while (0)
-#define _WRITE_TO_FILE(str)                         do { } while (0)
+/* All stubs compile to nothing; args not evaluated */
 #define LOG_INIT()                                  do { } while (0)
 #define LOG_START()                                 do { } while (0)
 #define LOG_END()                                   do { } while (0)
+#define LOGF0(args)                                 ((void)0)
+#define LOGF(args)                                  ((void)0)
 
 #define LOG_BYTE(label, val)                        do { } while (0)
 #define LOG_SBYTE(label, val)                       do { } while (0)
@@ -257,13 +105,11 @@
 #define LOG_DWORD(label, val)                       do { } while (0)
 #define LOG_SDWORD(label, val)                      do { } while (0)
 #define LOG_BOOL(label, val)                        do { } while (0)
-
 #define LOG_PTR(label, ptr)                         do { } while (0)
 #define LOG_CHUNK(label, ch)                        do { } while (0)
 #define LOG_MEM(label, mh)                          do { } while (0)
 #define LOG_FILE(label, fh)                         do { } while (0)
 #define LOG_OPTR(label, o)                          do { } while (0)
-
 #define LOG_STR(label, val)                         do { } while (0)
 #define LOG_STR_SEGMENT(label, str, from, to)       do { } while (0)
 #define LOG_STR_HEAD(label, str, len)               do { } while (0)

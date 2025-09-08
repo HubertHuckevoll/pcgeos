@@ -1,6 +1,8 @@
 /*--------------------------------------------------------------------
  * svg.h — Master public header for the Meta SVG renderer (GEOS/GOC)
  *------------------------------------------------------------------*/
+#define DEBUG_LOG
+#include <SVG/dbglog.h>
 
 
 /* ---- global compile-time constants ---- */
@@ -42,9 +44,6 @@ typedef struct _SVGScratch {
 
     Point   pts[MAX_SVG_POINTS];
 } SVGScratch;
-
-#define DEBUG_LOG
-#include <SVG/dbglog.h>
 
 /* ---- small utility (common) ---- */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
