@@ -8,13 +8,14 @@ CGM             = cgm.h cgm.goc cgmraw.goc
 HPGL            = hpgl.goc
 META            = meta.goc
 SPLINEOP        = splineop.goc
-SVG             = dbglog.h svg.h dbglog.goc svg.goc svgGeom.goc svgPath.goc\
+SVG             = dbglog.h svg.h dbglog.goc svgGeom.goc svgPath.goc\
                   svgShape.goc svgStyle.goc svgTransform.goc svgUtil.goc\
-                  svgView.goc
+                  svgView.goc svg.goc
 UI_TO_RDFS      =
 OBJS            = cgm.obj cgmraw.obj hpgl.obj meta.obj splineop.obj\
-                  dbglog.obj svg.obj svgGeom.obj svgPath.obj svgShape.obj\
-                  svgStyle.obj svgTransform.obj svgUtil.obj svgView.obj
+                  dbglog.obj svgGeom.obj svgPath.obj svgShape.obj\
+                  svgStyle.obj svgTransform.obj svgUtil.obj svgView.obj\
+                  svg.obj
 COMMON          = metaint.h
 MODULES         =
 CMODULES        = CGM HPGL meta splineop SVG

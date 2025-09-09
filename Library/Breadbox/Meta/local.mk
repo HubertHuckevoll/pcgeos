@@ -9,3 +9,4 @@ XGOCFLAGS = -L meta
 # Set Copyright notice
 # XLINKFLAGS = -N Copyright\20Marcus\20Groeber
 
+dbglog.cpp: ;
