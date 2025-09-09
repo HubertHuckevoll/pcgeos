@@ -149,7 +149,8 @@ splineop.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
 dbglog.obj \
 dbglog.eobj: 
 dbglog.obj \
-dbglog.eobj: dbglog.cpp
+dbglog.eobj: SVG/dbglog.h geos.h file.h timedate.h Ansi/stdio.h \
+                Ansi/string.h localize.h Ansi/ctype.h sllang.h
 svgGeom.obj \
 svgGeom.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \

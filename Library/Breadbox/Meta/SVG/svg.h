@@ -1,7 +1,6 @@
 /*--------------------------------------------------------------------
  * svg.h — Master public header for the Meta SVG renderer (GEOS/GOC)
  *------------------------------------------------------------------*/
-#define DEBUG_LOG
 
 /* ---- global compile-time constants ---- */
 #define SVG_COLOR_NAME_LEN   32
