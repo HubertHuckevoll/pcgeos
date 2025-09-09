@@ -481,9 +481,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     if (scP) MemUnlock(scH);
     if (scH) MemFree(scH);
 
-#ifdef SVG_DEBUG
     LOG_END();
-#endif
 
     return TE_NO_ERROR;
 }
