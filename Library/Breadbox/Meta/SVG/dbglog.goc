@@ -1,13 +1,6 @@
 #ifdef DEBUG_LOG
 
-#include <dbglog.h>
-
-#ifndef DBG_PASCAL
-#define DBG_PASCAL   _pascal
-#endif
-#ifndef DBG_CDECL
-#define DBG_CDECL    _cdecl
-#endif
+#include "SVG/dbglog.h"
 
 #define LOG_FILENAME "dbglog.txt"
 
@@ -69,7 +62,7 @@ _DbgWriteLine(const char *s)
 
 /* Public API — calling conventions match header */
 
-void DBG_PASCAL
+void _pascal
 DbgLogInit(void)
 {
     FileHandle fh;
@@ -81,7 +74,7 @@ DbgLogInit(void)
     }
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogStart(void)
 {
     TimerDateAndTime now;
@@ -97,7 +90,7 @@ DbgLogStart(void)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogEnd(void)
 {
     _DbgWriteLine("=== LOG END ===");
@@ -105,7 +98,7 @@ DbgLogEnd(void)
 
 /* Varargs must be cdecl */
 
-void DBG_CDECL
+void _cdecl
 DbgPrintf(const char *fmt, ...)
 {
     char lineBuf[256];
@@ -130,7 +123,7 @@ DbgPrintf(const char *fmt, ...)
     }
 }
 
-void DBG_CDECL
+void _cdecl
 DbgLogPrintf(const char *label, const char *fmt, ...)
 {
     char msgBuf[256];
@@ -170,7 +163,7 @@ DbgLogPrintf(const char *label, const char *fmt, ...)
 
 /* Typed helpers (Pascal) */
 
-void DBG_PASCAL
+void _pascal
 DbgLogByte(const char *label, word val)
 {
     char lineBuf[64];
@@ -179,7 +172,7 @@ DbgLogByte(const char *label, word val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogSByte(const char *label, sword val)
 {
     char lineBuf[64];
@@ -188,7 +181,7 @@ DbgLogSByte(const char *label, sword val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogWord(const char *label, word val)
 {
     char lineBuf[64];
@@ -197,7 +190,7 @@ DbgLogWord(const char *label, word val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogSWord(const char *label, sword val)
 {
     char lineBuf[64];
@@ -206,7 +199,7 @@ DbgLogSWord(const char *label, sword val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogDWord(const char *label, dword val)
 {
     char lineBuf[80];
@@ -216,7 +209,7 @@ DbgLogDWord(const char *label, dword val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogSDWord(const char *label, sdword val)
 {
     char lineBuf[80];
@@ -225,7 +218,7 @@ DbgLogSDWord(const char *label, sdword val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogBool(const char *label, Boolean val)
 {
     char lineBuf[64];
@@ -234,7 +227,7 @@ DbgLogBool(const char *label, Boolean val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogPtr(const char *label, const void *ptrP)
 {
     char lineBuf[64];
@@ -243,7 +236,7 @@ DbgLogPtr(const char *label, const void *ptrP)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogChunk(const char *label, word ch)
 {
     char lineBuf[64];
@@ -252,7 +245,7 @@ DbgLogChunk(const char *label, word ch)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogMem(const char *label, word mh)
 {
     char lineBuf[64];
@@ -261,7 +254,7 @@ DbgLogMem(const char *label, word mh)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogFile(const char *label, word fh)
 {
     char lineBuf[64];
@@ -270,7 +263,7 @@ DbgLogFile(const char *label, word fh)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogOptr(const char *label, dword o)
 {
     char lineBuf[80];
@@ -279,7 +272,7 @@ DbgLogOptr(const char *label, dword o)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogStr(const char *label, const char *val)
 {
     char lineBuf[256];
@@ -290,7 +283,7 @@ DbgLogStr(const char *label, const char *val)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogStrSegment(const char *label, const char *str, word from, word to)
 {
     char seg[256];
@@ -326,13 +319,13 @@ DbgLogStrSegment(const char *label, const char *str, word from, word to)
     _DbgWriteLine(lineBuf);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogStrHead(const char *label, const char *str, word len)
 {
     DbgLogStrSegment(label, str, 0, len);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogStrTail(const char *label, const char *str, word len)
 {
     const char *s;
@@ -346,13 +339,13 @@ DbgLogStrTail(const char *label, const char *str, word len)
     DbgLogStrSegment(label, str, from, n);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogStrRange(const char *label, const char *str, word from, word to)
 {
     DbgLogStrSegment(label, str, from, to);
 }
 
-void DBG_PASCAL
+void _pascal
 DbgLogStrAll(const char *label, const char *str)
 {
     const char *s;

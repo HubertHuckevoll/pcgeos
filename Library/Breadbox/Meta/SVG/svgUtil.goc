@@ -14,6 +14,7 @@
 #include <float.h>
 
 #include "SVG/svg.h"
+#include "SVG/dbglog.h"
 
 /* small ASCII case-insensitive compare */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b)

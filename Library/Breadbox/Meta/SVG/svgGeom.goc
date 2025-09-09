@@ -14,6 +14,7 @@
 #include <float.h>
 
 #include "SVG/svg.h"
+#include "SVG/dbglog.h"
 
 /* 16.16 from int */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v)

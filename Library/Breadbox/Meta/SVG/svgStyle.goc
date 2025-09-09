@@ -14,6 +14,7 @@
 #include <float.h>
 
 #include "SVG/svg.h"
+#include "SVG/dbglog.h"
 
 /* ---------- tiny hex helpers (style-local) ---------- */
 static word SvgStyleHexNibble(char c)

@@ -1,5 +1,5 @@
-#ifndef __DBGLOG_H
-#define __DBGLOG_H
+// #ifndef __DBGLOG_H
+// #define __DBGLOG_H
 
 /* Call-site UX:
  *   LOG_INIT(); LOG_START();
@@ -18,48 +18,34 @@
 #include <stdarg.h>
 #include <localize.h>
 
-
-/* Export/calling-convention helpers (safe defaults if not set) */
-#ifndef DBG_PASCAL
-#define DBG_PASCAL   _pascal
-#endif
-#ifndef DBG_CDECL
-#define DBG_CDECL    _cdecl      /* required for varargs */
-#endif
-#ifdef DBGLOG_BUILD
-#   define DBG_EXP   _export
-#else
-#   define DBG_EXP
-#endif
-
 /* Non-varargs API can remain Pascal if you prefer */
-DBG_EXP void DBG_PASCAL DbgLogInit(void);
-DBG_EXP void DBG_PASCAL DbgLogStart(void);
-DBG_EXP void DBG_PASCAL DbgLogEnd(void);
+void _export _pascal DbgLogInit(void);
+void _export _pascal DbgLogStart(void);
+void _export _pascal DbgLogEnd(void);
 
 /* Varargs MUST be cdecl on Watcom */
-DBG_EXP void DBG_CDECL  DbgPrintf(const char *fmt, ...);
-DBG_EXP void DBG_CDECL  DbgLogPrintf(const char *label, const char *fmt, ...);
+void _export _cdecl  DbgPrintf(const char *fmt, ...);
+void _export _cdecl  DbgLogPrintf(const char *label, const char *fmt, ...);
 
 /* Typed helpers (kept for compatibility) */
-DBG_EXP void DBG_PASCAL DbgLogByte(const char *label, word val);
-DBG_EXP void DBG_PASCAL DbgLogSByte(const char *label, sword val);
-DBG_EXP void DBG_PASCAL DbgLogWord(const char *label, word val);
-DBG_EXP void DBG_PASCAL DbgLogSWord(const char *label, sword val);
-DBG_EXP void DBG_PASCAL DbgLogDWord(const char *label, dword val);
-DBG_EXP void DBG_PASCAL DbgLogSDWord(const char *label, sdword val);
-DBG_EXP void DBG_PASCAL DbgLogBool(const char *label, Boolean val);
-DBG_EXP void DBG_PASCAL DbgLogPtr(const char *label, const void *ptrP);
-DBG_EXP void DBG_PASCAL DbgLogChunk(const char *label, word ch);
-DBG_EXP void DBG_PASCAL DbgLogMem(const char *label, word mh);
-DBG_EXP void DBG_PASCAL DbgLogFile(const char *label, word fh);
-DBG_EXP void DBG_PASCAL DbgLogOptr(const char *label, dword o);
-DBG_EXP void DBG_PASCAL DbgLogStr(const char *label, const char *val);
-DBG_EXP void DBG_PASCAL DbgLogStrSegment(const char *label, const char *str, word from, word to);
-DBG_EXP void DBG_PASCAL DbgLogStrHead(const char *label, const char *str, word len);
-DBG_EXP void DBG_PASCAL DbgLogStrTail(const char *label, const char *str, word len);
-DBG_EXP void DBG_PASCAL DbgLogStrRange(const char *label, const char *str, word from, word to);
-DBG_EXP void DBG_PASCAL DbgLogStrAll(const char *label, const char *str);
+void _export _pascal DbgLogByte(const char *label, word val);
+void _export _pascal DbgLogSByte(const char *label, sword val);
+void _export _pascal DbgLogWord(const char *label, word val);
+void _export _pascal DbgLogSWord(const char *label, sword val);
+void _export _pascal DbgLogDWord(const char *label, dword val);
+void _export _pascal DbgLogSDWord(const char *label, sdword val);
+void _export _pascal DbgLogBool(const char *label, Boolean val);
+void _export _pascal DbgLogPtr(const char *label, const void *ptrP);
+void _export _pascal DbgLogChunk(const char *label, word ch);
+void _export _pascal DbgLogMem(const char *label, word mh);
+void _export _pascal DbgLogFile(const char *label, word fh);
+void _export _pascal DbgLogOptr(const char *label, dword o);
+void _export _pascal DbgLogStr(const char *label, const char *val);
+void _export _pascal DbgLogStrSegment(const char *label, const char *str, word from, word to);
+void _export _pascal DbgLogStrHead(const char *label, const char *str, word len);
+void _export _pascal DbgLogStrTail(const char *label, const char *str, word len);
+void _export _pascal DbgLogStrRange(const char *label, const char *str, word from, word to);
+void _export _pascal DbgLogStrAll(const char *label, const char *str);
 
 /* Macros: real calls in debug builds; no evaluation when off */
 #define LOG_INIT()                                  DbgLogInit()
@@ -119,4 +105,4 @@ DBG_EXP void DBG_PASCAL DbgLogStrAll(const char *label, const char *str);
 #define LOG_STR_ALL(label, str)                     do { } while (0)
 
 #endif /* DEBUG_LOG */
-#endif /* __DBGLOG_H */
+//#endif /* __DBGLOG_H */

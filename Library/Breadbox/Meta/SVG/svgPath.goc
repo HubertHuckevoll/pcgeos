@@ -15,6 +15,7 @@
 #include <float.h>
 
 #include "SVG/svg.h"
+#include "SVG/dbglog.h"
 
 /* tiny helpers specific to path handling */
 static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)
