@@ -3,10 +3,8 @@
 # The manual says I should do this... ;-)
 XGOCFLAGS = -L meta
 
-# Force Borland C to create code that loads DS in function entry
+# Turn on/off logging
 XCCOMFLAGS += -DDEBUG_LOG
 
 # Set Copyright notice
 # XLINKFLAGS = -N Copyright\20Marcus\20Groeber
-
-dbglog.cpp: ;
