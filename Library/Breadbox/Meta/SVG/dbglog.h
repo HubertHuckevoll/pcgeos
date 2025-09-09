@@ -1,5 +1,5 @@
-// #ifndef __DBGLOG_H
-// #define __DBGLOG_H
+#ifndef __DBGLOG_H
+#define __DBGLOG_H
 
 /* Call-site UX:
  *   LOG_INIT(); LOG_START();
@@ -105,4 +105,4 @@ void _export _pascal DbgLogStrAll(const char *label, const char *str);
 #define LOG_STR_ALL(label, str)                     do { } while (0)
 
 #endif /* DEBUG_LOG */
-//#endif /* __DBGLOG_H */
+#endif /* __DBGLOG_H */
