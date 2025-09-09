@@ -1,12 +1,6 @@
 #ifdef DEBUG_LOG
 
-#include <geos.h>
-#include <file.h>
-#include <timedate.h>
-#include <Ansi/stdio.h>
-#include <Ansi/string.h>
-#include <Ansi/stdarg.h>
-#include <localize.h>
+#include <dbglog.h>
 
 #ifndef DBG_PASCAL
 #define DBG_PASCAL   _pascal

@@ -146,6 +146,10 @@ splineop.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h float.h metaint.h
+dbglog.obj \
+dbglog.eobj: 
+dbglog.obj \
+dbglog.eobj: dbglog.cpp
 svg.obj \
 svg.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -386,9 +390,5 @@ svgView.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdlib.h Ansi/stdio.h meta.h xlatLib.h float.h \
                 SVG/svg.h SVG/dbglog.h
-dbglog.obj \
-dbglog.eobj: 
-dbglog.obj \
-dbglog.eobj: dbglog.cpp
 
 metaEC.geo meta.geo : geos.ldf ui.ldf ansic.ldf grobj.ldf math.ldf 

@@ -4,7 +4,6 @@
 #define DEBUG_LOG
 #include <SVG/dbglog.h>
 
-
 /* ---- global compile-time constants ---- */
 #define SVG_COLOR_NAME_LEN   32
 #define MAX_SVG_POINTS       1024
