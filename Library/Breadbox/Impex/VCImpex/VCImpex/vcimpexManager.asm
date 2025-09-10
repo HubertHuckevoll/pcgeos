@@ -172,6 +172,11 @@ InfoResource    segment lmem LMEM_TYPE_GENERAL,mask LMF_IN_RESOURCE
           dw      0,0
           dw      8000h                 ; Currently we only support import
 
+        dw      fmt_3_name,fmt_3_mask
+          D_OPTR  _ImportSettings
+          dw      0,0
+          dw      8000h                 ; Currently we only support import
+
         dw      0
 
 fmt_1_name      chunk   char
@@ -189,5 +194,13 @@ fmt_2_name      endc
 fmt_2_mask      chunk   char
         char    "*.plt",0
 fmt_2_mask      endc
+
+fmt_3_name      chunk   char
+        char    "SVG",0
+fmt_3_name      endc
+
+fmt_3_mask      chunk   char
+        char    "*.svg",0
+fmt_3_mask      endc
 
 InfoResource    ends

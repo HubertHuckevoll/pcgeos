@@ -40,19 +40,22 @@ dword _export _pascal ImportProcedure(ImportFrame *ieb,VMChain *vmc)
 
         uidata = (struct ie_uidata *)MemLock( ieb->IF_importOptions );
 
+        if (ieb->IF_formatNumber==FORMAT_SVG) uidata->booleanOptions |= SETTINGS_INPUT_Y_DOWN;    /* SVG is Y-down */
+
         tempGS = GrCreateGString( ieb->IF_transferVMFile, GST_VMEM, &gsblock );
         Meta_Start( uidata->booleanOptions, tempGS, NULL,
           ieb->IF_transferVMFile );     /* initialize drawing system */
 
         switch( ieb->IF_formatNumber )
         {
-          case 0:
-            ret = ReadCGM( ieb->IF_sourceFile, uidata->booleanOptions,
-	      UpdateProgressPct );
+          case FORMAT_CGM:
+            ret = ReadCGM( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
             break;
-          case 1:
-            ret = ReadHPGL( ieb->IF_sourceFile, uidata->booleanOptions,
-	      UpdateProgressPct );
+          case FORMAT_HPGL:
+            ret = ReadHPGL( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
+            break;
+          case FORMAT_SVG:
+            ret = ReadSVG( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
             break;
           default:
             ret = TE_INVALID_FORMAT;
