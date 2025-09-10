@@ -24,12 +24,16 @@ WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v)
     return f;
 }
 
-/* round signed 16.16 to signed 16-bit */
+/* 16.16 -> signed 16-bit, symmetric round-to-nearest */
 sword SvgGeomWWFixedToSWordRound(WWFixedAsDWord w)
 {
     sdword v;
     v = (sdword)w;
-    if (v >= 0) v += 0x8000; else v -= 0x8000;   /* ±0.5 */
+
+    /* Add +0x8000 for both signs, then arithmetic shift.
+       This yields correct rounding for negatives: -36.0 -> -36, -36.75 -> -37. */
+    v += 0x8000;
+
     return (sword)(v >> 16);
 }
 
