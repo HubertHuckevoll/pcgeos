@@ -30,6 +30,7 @@ static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)
     }
 }
 
+/* the flatterners */
 static void SvgPathFlattenQuad(SVGScratch *sc, word *np,
                                sword x0, sword y0, sword cx, sword cy, sword x1, sword y1,
                                word segs)
@@ -753,68 +754,119 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
 
 /* svgPath.goc */
 
+/* -------- svgPath.goc : local helpers for A/a parsing (file-local) -------- */
+static const char*
+SvgSkipCommaWS(const char *s)
+{
+    while (*s==' ' || *s=='\t' || *s=='\r' || *s=='\n') { s++; }
+    if (*s==',')
+    {
+        s++;
+        while (*s==' ' || *s=='\t' || *s=='\r' || *s=='\n') { s++; }
+    }
+    return s;
+}
+
+static Boolean
+SvgIsNumStart(char c)
+{
+    return (c=='+' || c=='-' || c=='.' || (c>='0' && c<='9'));
+}
+
+static Boolean
+SvgReadFlag(const char **sPP, byte *out)
+{
+    const char *s;
+    s = SvgSkipCommaWS(*sPP);
+    if (*s=='0' || *s=='1')
+    {
+        *out = (byte)(*s - '0');
+        s++;
+        *sPP = SvgSkipCommaWS(s);
+        return TRUE;
+    }
+    return FALSE; /* do not consume on failure */
+}
+
+/* ------------------------------ patched function -------------------------- */
 static void
 SvgPathHandleArc(const char **sPP, char lastCmd,
                  SVGScratch *sc, word *npP,
                  sword *lastxP, sword *lastyP,
                  Boolean *lastWasCubicP, Boolean *lastWasQuadP)
 {
-    const char *sP;
-    WWFixedAsDWord rxW, ryW, rotW, tmpW;
-    WWFixedAsDWord exW, eyW, dxW, dyW;
-    WWFixedAsDWord x0W, y0W;
-    int laf, swf;
-    Boolean done;
+    const char      *sP;
+    WWFixedAsDWord   rxW, ryW, rotW;
+    WWFixedAsDWord   exW, eyW, dxW, dyW;
+    WWFixedAsDWord   x0W, y0W;
+    int              laf, swf;
+    byte             lafB, swfB;
+    Boolean          done;
+    const char      *probeP;
 
-    sP = *sPP;
-
+    sP   = *sPP;
     done = FALSE;
-    while (!done) {
-        sP = SvgParserSkipWS(sP);
-        if (!*sP || isalpha(*sP) || *sP=='Z' || *sP=='z') {
+
+    while (!done)
+    {
+        /* Repeat-guard: only continue if the next token can start a number. */
+        sP = SvgSkipCommaWS(sP);
+        if (!*sP) { break; }
+        if (!SvgIsNumStart(*sP))
+        {
+            /* Next is a command letter (e.g., h/v/z/M...) or something else. Stop repeating. */
             done = TRUE;
             continue;
         }
 
+        /* rx, ry, rot */
         sP = SvgParserParseWWFixed16_16(sP, &rxW);
-        if (*sP == ',') sP++;
-        sP = SvgParserSkipWS(sP);
+        sP = SvgSkipCommaWS(sP);
         sP = SvgParserParseWWFixed16_16(sP, &ryW);
-        sP = SvgParserSkipWS(sP);
+        sP = SvgSkipCommaWS(sP);
         sP = SvgParserParseWWFixed16_16(sP, &rotW);
-        if (*sP == ',') sP++;
-        sP = SvgParserSkipWS(sP);
 
-        sP = SvgParserParseWWFixed16_16(sP, &tmpW);
-        laf = (SvgGeomWWFixedToSWordRound(tmpW) != 0);
-        if (*sP == ',') sP++;
-        sP = SvgParserSkipWS(sP);
-        sP = SvgParserParseWWFixed16_16(sP, &tmpW);
-        swf = (SvgGeomWWFixedToSWordRound(tmpW) != 0);
-        if (*sP == ',') sP++;
-        sP = SvgParserSkipWS(sP);
+        /* flags (must be single '0'/'1', with comma+WS skipping) */
+        if (!SvgReadFlag(&sP, &lafB)) { done = TRUE; continue; }
+        if (!SvgReadFlag(&sP, &swfB)) { done = TRUE; continue; }
+        laf  = (int)lafB;
+        swf  = (int)swfB;
 
-        if (lastCmd == 'A') {
+        /* end point (absolute for 'A', relative for 'a') */
+        if (lastCmd == 'A')
+        {
+            sP = SvgSkipCommaWS(sP);
             sP = SvgParserParseWWFixed16_16(sP, &exW);
-            if (*sP == ',') sP++;
-            sP = SvgParserSkipWS(sP);
+            sP = SvgSkipCommaWS(sP);
             sP = SvgParserParseWWFixed16_16(sP, &eyW);
-        } else {
-            sP = SvgParserParseWWFixed16_16(sP, &dxW);
-            if (*sP == ',') sP++;
-            sP = SvgParserSkipWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &dyW);
-            exW = SvgGeomMakeWWFixedFromInt(*lastxP) + dxW;
-            eyW = SvgGeomMakeWWFixedFromInt(*lastyP) + dyW;
         }
+        else /* 'a' */
+        {
+            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &dxW);
+            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserParseWWFixed16_16(sP, &dyW);
+
+            exW = SvgGeomMakeWWFixedFromInt(*lastxP);
+            eyW = SvgGeomMakeWWFixedFromInt(*lastyP);
+            exW = GrAddWWFixed(exW, dxW);
+            eyW = GrAddWWFixed(eyW, dyW);
+        }
+
+        /* Per spec, radii are non-negative; clamp just in case. */
+        if ((sdword)rxW < 0) { rxW = (WWFixedAsDWord)-(sdword)rxW; }
+        if ((sdword)ryW < 0) { ryW = (WWFixedAsDWord)-(sdword)ryW; }
 
         LOGF(("[PATH]", "A rx=%d ry=%d rot=%ld laf=%d sf=%d ex=%d ey=%d",
                 (int)(rxW>>16),(int)(ryW>>16),(long)rotW, laf, swf,
                 (int)(exW>>16),(int)(eyW>>16)));
 
+        /* Degenerate: zero radius -> straight line */
         if ((SvgGeomWWFixedToSWordRound(rxW) == 0) ||
-            (SvgGeomWWFixedToSWordRound(ryW) == 0)) {
-            if (*npP < MAX_SVG_POINTS) {
+            (SvgGeomWWFixedToSWordRound(ryW) == 0))
+        {
+            if (*npP < MAX_SVG_POINTS)
+            {
                 sc->pts[*npP].P_x = SvgGeomWWFixedToSWordRound(exW);
                 sc->pts[*npP].P_y = SvgGeomWWFixedToSWordRound(eyW);
                 (*npP)++;
@@ -824,17 +876,22 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
 
             LOG_STR("[PATH]", "A: zero radius -> straight line");
 
+            /* Decide if more arcs follow */
+            probeP = SvgSkipCommaWS(sP);
+            if (!SvgIsNumStart(*probeP)) { done = TRUE; }
             continue;
         }
 
         x0W = ((WWFixedAsDWord)(*lastxP)) << 16;
         y0W = ((WWFixedAsDWord)(*lastyP)) << 16;
 
-        /* Only skip truly degenerate arcs (exactly equal in WWFixed). */
-        if ((exW == x0W) && (eyW == y0W)) {
-
+        /* Skip truly degenerate arcs (exact equality in WWFixed). */
+        if ((exW == x0W) && (eyW == y0W))
+        {
             LOG_STR("[PATH]", "A: end equals current (exact) -> skip");
 
+            probeP = SvgSkipCommaWS(sP);
+            if (!SvgIsNumStart(*probeP)) { done = TRUE; }
             continue;
         }
 
@@ -842,9 +899,12 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
 
         *lastxP = SvgGeomWWFixedToSWordRound(exW);
         *lastyP = SvgGeomWWFixedToSWordRound(eyW);
-
         *lastWasCubicP = FALSE;
         *lastWasQuadP  = FALSE;
+
+        /* Repeat only if another numeric set follows */
+        probeP = SvgSkipCommaWS(sP);
+        if (!SvgIsNumStart(*probeP)) { done = TRUE; }
     }
 
     *sPP = sP;
