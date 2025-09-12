@@ -315,28 +315,27 @@ static Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc
 /*---------------------------------------------------------------
  * ReadSVG -- streamed, SAX-like; callback(last param) is percent
  *---------------------------------------------------------------*/
-TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
-                                            ProgressCallback *callback)
+TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCallback *callback)
 {
-    SvgScanCtx     scan;
-    SVGScratch    *scP;
-    MemHandle      scH;
-    dword          total;
-    dword          done;
-    word           lastPct;
-    MemHandle      ioH;
-    char          *ioP;
-    Boolean        sawSvg;
+    SvgScanCtx scan;
+    SVGScratch *scP;
+    MemHandle scH;
+    dword total;
+    dword done;
+    word lastPct;
+    MemHandle ioH;
+    char *ioP;
+    Boolean sawSvg;
 
     (void)settings;
 
-    scH     = 0;
-    scP     = NULL;
-    ioH     = 0;
-    ioP     = NULL;
+    scH = 0;
+    scP = NULL;
+    ioH = 0;
+    ioP = NULL;
     lastPct = 0;
-    done    = 0;
-    sawSvg  = FALSE;
+    done = 0;
+    sawSvg = FALSE;
 
     LOG_INIT();
     LOG_START();
@@ -349,68 +348,48 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     LOG_DWORD("totalBytes", total);
 
     scH = MemAlloc((word)sizeof(SVGScratch), HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!scH)
-    {
-        return TE_OUT_OF_MEMORY;
-    }
+    if (!scH) { return TE_OUT_OF_MEMORY; }
     scP = (SVGScratch*) MemLock(scH);
-    if (!scP)
-    {
-        MemFree(scH);
-        return TE_OUT_OF_MEMORY;
-    }
+    if (!scP) { MemFree(scH); return TE_OUT_OF_MEMORY; }
 
     ioH = MemAlloc(SVG_IO_BUF_SIZE, HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!ioH)
-    {
-        MemUnlock(scH);
-        MemFree(scH);
-        return TE_OUT_OF_MEMORY;
-    }
+    if (!ioH) { MemUnlock(scH); MemFree(scH); return TE_OUT_OF_MEMORY; }
     ioP = (char*) MemLock(ioH);
-    if (!ioP)
-    {
-        MemFree(ioH);
-        MemUnlock(scH);
-        MemFree(scH);
-        return TE_OUT_OF_MEMORY;
-    }
+    if (!ioP) { MemFree(ioH); MemUnlock(scH); MemFree(scH); return TE_OUT_OF_MEMORY; }
 
     SvgParserScanInit(&scan);
     scan.ioH = ioH;
     scan.ioP = ioP;
 
-    /* world will be initialized when we see <svg>; or fallback later */
-    /* g_vbInited is internal to svgView; we drive via calls only */
-
     for (;;)
     {
-        if (!SvgParserScanNextTag(srcFile, &scan, scP))
-        {
-            break;
-        }
+        if (!SvgParserScanNextTag(srcFile, &scan, scP)) { break; }
 
-        /* Show the first ~96 chars of the tag text */
         LOG_STR_HEAD("[TAG] head", (char*) scP->tag, 96);
 
         if (callback && total >= 2048)
         {
             done = (dword)FilePos(srcFile, 0, FILE_POS_RELATIVE);
             if (done > total) done = total;
-
             {
                 word pct;
                 pct = (word)((done * 100UL) / total);
-                if (pct != lastPct)
-                {
-                    lastPct = pct;
-                    /* if ((*callback)(pct)) break; */
-                }
+                if (pct != lastPct) { lastPct = pct; /* if ((*callback)(pct)) break; */ }
             }
         }
 
-        if (scP->tag[0] == '/' || scP->tag[0] == '!' || scP->tag[0] == '?')
+        /* handle comments/declarations, but DO NOT drop close tags blindly */
+        if (scP->tag[0] == '!' || scP->tag[0] == '?')
         {
+            continue;
+        }
+
+        /* group close: </g> */
+        if (scP->tag[0] == '/' && SvgParserTagIs(scP->tag + 1, "g"))
+        {
+            LOG_STR("[DISPATCH]", "/g");
+            SvgXformGroupPop();
+            SvgStyleGroupPop();
             continue;
         }
 
@@ -422,11 +401,19 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
             continue;
         }
 
-        /* in case this is a fragment without <svg> root */
         if (!sawSvg)
         {
             SvgViewInitDefault();
-            sawSvg = TRUE; /* only once */
+            sawSvg = TRUE;
+        }
+
+        /* group open: <g ...> — no drawing */
+        if (SvgParserTagIs(scP->tag, "g"))
+        {
+            LOG_STR("[DISPATCH]", "g");
+            SvgStyleGroupPush(scP->tag);
+            SvgXformGroupPush(scP->tag);
+            continue;
         }
 
         if (SvgParserTagIs(scP->tag, "line"))
@@ -462,13 +449,12 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
         else if (SvgParserTagIs(scP->tag, "path"))
         {
             LOG_STR("[DISPATCH]", "path");
-            LOG_STR_HEAD("[path d]", scP->tag, 120); /* shows d=... head */
+            LOG_STR_HEAD("[path d]", scP->tag, 120);
             SvgPathHandle(scP->tag, scP);
         }
         else
         {
             LOG_STR_HEAD("[UNHANDLED_TAG]", scP->tag, 96);
-            /* unhandled: <g>, <title>, etc. */
         }
     }
 
@@ -483,6 +469,6 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings,
     if (scH) MemFree(scH);
 
     LOG_END();
-
     return TE_NO_ERROR;
 }
+

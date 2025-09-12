@@ -16,7 +16,26 @@
 #include "SVG/svg.h"
 #include "SVG/dbglog.h"
 
+
+/* ---- group CTM stack ---- */
+#define SVG_XFORM_GSTACK_MAX 16
+static SvgMatrix gCTMStack[SVG_XFORM_GSTACK_MAX];
+static int gCTMDepth = 0;
+
+static void SvgMatIdentity(SvgMatrix *m);
+
+static void SvgMatMul(const SvgMatrix *m1, const SvgMatrix *m2, SvgMatrix *r);
+
+
 /* ---- constructors ---- */
+
+
+/* Current group CTM pointer, or NULL if empty */
+static const SvgMatrix* SvgXformGroupCurrent(void)
+{
+    if (gCTMDepth > 0) return &gCTMStack[gCTMDepth-1];
+    return NULL;
+}
 
 static void SvgMatIdentity(SvgMatrix *m)
 {
@@ -250,24 +269,54 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
     *outUser = acc;
 }
 
-/* Build WORLD-SPACE CTM = ViewMatrix ∘ Parent ∘ Element */
-void SvgXformBuildWorld(const char *tag,
-                        const SvgMatrix *parentCTM, /* can be NULL */
-                        SvgMatrix *outWorld)
+/* ------- group stuff -----------*/
+
+/* Called on <g ...> */
+void SvgXformGroupPush(const char *tag)
+{
+    SvgMatrix parent;
+    SvgMatrix self;
+    SvgMatrix out;
+
+    if (gCTMDepth > 0) parent = gCTMStack[gCTMDepth-1];
+    else SvgMatIdentity(&parent);
+
+    SvgXformParseAttrUser(tag, &self);         /* user-space element matrix */
+    SvgMatMul(&self, &parent, &out);           /* out = parent ∘ self */
+    if (gCTMDepth < SVG_XFORM_GSTACK_MAX)
+    {
+        gCTMStack[gCTMDepth++] = out;
+    }
+}
+
+/* Called on </g> */
+void SvgXformGroupPop(void)
+{
+    if (gCTMDepth > 0) gCTMDepth--;
+}
+
+/* Build WORLD-SPACE CTM = ViewMatrix ∘ Parent ∘ Element
+   If parentCTM==NULL, use current group CTM (if any). */
+void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld)
 {
     SvgMatrix vm, elem, tmp;
+    const SvgMatrix *par;
 
     SvgViewGetMatrix(&vm.a, &vm.b, &vm.c, &vm.d, &vm.e, &vm.f);
     SvgXformParseAttrUser(tag, &elem);
 
-    /* Want: out = VM ∘ Parent ∘ Element */
-    if (parentCTM) {
-        SvgMatMul(&elem, parentCTM, &tmp);  /* tmp = parent ∘ elem */
-        SvgMatMul(&tmp, &vm, outWorld);     /* out = vm ∘ (parent ∘ elem) */
-    } else {
-        SvgMatMul(&elem, &vm, outWorld);    /* out = vm ∘ elem */
-    }
+    par = parentCTM;
+    if (!par) par = SvgXformGroupCurrent();
 
+    if (par)
+    {
+        SvgMatMul(&elem, par, &tmp);  /* tmp = parent ∘ elem */
+        SvgMatMul(&tmp, &vm, outWorld);
+    }
+    else
+    {
+        SvgMatMul(&elem, &vm, outWorld);
+    }
 }
 
 void

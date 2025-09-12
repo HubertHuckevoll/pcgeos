@@ -16,6 +16,21 @@
 #include "SVG/svg.h"
 #include "SVG/dbglog.h"
 
+
+/* ---- group style stack (fill/stroke/stroke-width) ---- */
+#define SVG_STYLE_GSTACK_MAX 16
+
+typedef struct {
+    Boolean fillSet, strokeSet, swSet;
+    char fillVal[64];
+    char strokeVal[64];
+    WWFixedAsDWord strokeWidth;
+} SvgGroupStyle;
+
+static SvgGroupStyle gStyleStack[SVG_STYLE_GSTACK_MAX];
+static int gStyleDepth = 0;
+
+
 /* ---------- tiny hex helpers (style-local) ---------- */
 static word SvgStyleHexNibble(char c)
 {
@@ -339,6 +354,103 @@ static Boolean SvgStyleGetInlineProp(const char *tag,
     return FALSE;
 }
 
+/* ---- group style stuff ---- */
+
+/* Called on <g ...> */
+void SvgStyleGroupPush(const char *tag)
+{
+    SvgGroupStyle st;
+    char buf[64];
+    const char *pwalk;
+
+    st.fillSet = FALSE;
+    st.strokeSet = FALSE;
+    st.swSet = FALSE;
+    st.fillVal[0] = 0;
+    st.strokeVal[0] = 0;
+    st.strokeWidth = SvgGeomMakeWWFixedFromInt(1);
+
+    /* inline style= takes precedence within the tag, so read both */
+    if (SvgStyleGetInlineProp(tag, "fill", st.fillVal, sizeof(st.fillVal)) ||
+        SvgParserGetAttrBounded(tag, "fill", st.fillVal, sizeof(st.fillVal)))
+    {
+        st.fillSet = TRUE;
+    }
+    if (SvgStyleGetInlineProp(tag, "stroke", st.strokeVal, sizeof(st.strokeVal)) ||
+        SvgParserGetAttrBounded(tag, "stroke", st.strokeVal, sizeof(st.strokeVal)))
+    {
+        st.strokeSet = TRUE;
+    }
+    buf[0] = 0;
+    if (!SvgStyleGetInlineProp(tag, "stroke-width", buf, sizeof(buf)))
+    {
+        (void)SvgParserGetAttrBounded(tag, "stroke-width", buf, sizeof(buf));
+    }
+    if (buf[0])
+    {
+        pwalk = buf;
+        while (*pwalk && (isdigit((byte)*pwalk) || *pwalk=='+' || *pwalk=='-' || *pwalk=='.')) pwalk++;
+        if (pwalk != buf)
+        {
+            char save;
+            save = *pwalk;
+            *(char*)pwalk = 0;
+            (void)SvgParserParseWWFixed16_16(buf, &st.strokeWidth);
+            *(char*)pwalk = save;
+            st.swSet = TRUE;
+        }
+    }
+
+    if (gStyleDepth < SVG_STYLE_GSTACK_MAX)
+    {
+        gStyleStack[gStyleDepth++] = st;
+    }
+}
+
+/* Called on </g> */
+void SvgStyleGroupPop(void)
+{
+    if (gStyleDepth > 0) gStyleDepth--;
+}
+
+/* resolve property with group fallback */
+static Boolean SvgStyleResolvePropWithGroups(const char *tag, const char *prop, char *out, word outSize)
+{
+    if (outSize == 0) return FALSE;
+    out[0] = 0;
+
+    if (SvgStyleGetInlineProp(tag, prop, out, outSize)) return TRUE;
+    if (SvgParserGetAttrBounded(tag, prop, out, outSize)) return TRUE;
+
+    if (gStyleDepth > 0)
+    {
+        const SvgGroupStyle *gs;
+        gs = &gStyleStack[gStyleDepth-1];
+        if (!AnsiStrnCmp(prop, "fill", 4) && gs->fillSet)
+        {
+            strncpy(out, gs->fillVal, outSize-1);
+            out[outSize-1] = 0;
+            return TRUE;
+        }
+        if (!AnsiStrnCmp(prop, "stroke", 6) && gs->strokeSet)
+        {
+            strncpy(out, gs->strokeVal, outSize-1);
+            out[outSize-1] = 0;
+            return TRUE;
+        }
+        if (!AnsiStrnCmp(prop, "stroke-width", 12) && gs->swSet)
+        {
+            /* serialize fixed to decimal minimally; consumers only test presence */
+            WWFixedAsDWord w;
+            int v;
+            w = gs->strokeWidth;
+            v = SvgGeomWWFixedToSWordRound(w);
+            sprintf(out, outSize, "%d", (int)v);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 
 
 /* ---- public style API ---- */
@@ -354,74 +466,53 @@ void SvgStyleApplyStrokeAndFill(const char *tag)
     sFill[0] = 0;
     sStroke[0] = 0;
 
-    /* stroke (SVG initial value: none) */
-    if (!SvgStyleGetInlineProp(tag, "stroke", sStroke, sizeof(sStroke)))
+    /* stroke; initial value none */
+    if (!SvgStyleResolvePropWithGroups(tag, "stroke", sStroke, sizeof(sStroke)))
     {
-        (void)SvgParserGetAttrBounded(tag, "stroke", sStroke, sizeof(sStroke));
+        sStroke[0] = 0; /* remains none */
     }
     if (sStroke[0] && strcmp(sStroke, "none") != 0)
     {
         if (sStroke[0] == '#' && strlen(sStroke) >= 7)
         {
-            Meta_SetLineColor(CF_RGB,
-                              SvgStyleHexByte(sStroke + 1),
-                              SvgStyleHexByte(sStroke + 3),
-                              SvgStyleHexByte(sStroke + 5));
+            Meta_SetLineColor(CF_RGB, SvgStyleHexByte(sStroke + 1), SvgStyleHexByte(sStroke + 3), SvgStyleHexByte(sStroke + 5));
         }
-        else if (SvgStyleExpandShortHex(sStroke, &r, &g, &b) ||
-                 SvgStyleParseRGBFunc(sStroke, &r, &g, &b) ||
-                 SvgStyleFindNamedColor(sStroke, &r, &g, &b))
+        else if (SvgStyleExpandShortHex(sStroke, &r, &g, &b) || SvgStyleParseRGBFunc(sStroke, &r, &g, &b) || SvgStyleFindNamedColor(sStroke, &r, &g, &b))
         {
             Meta_SetLineColor(CF_RGB, r, g, b);
         }
-        /* else: unparseable stroke -> leave as is */
     }
 
-    /* fill (SVG initial value: black) */
-    if (!SvgStyleGetInlineProp(tag, "fill", sFill, sizeof(sFill)))
+    /* fill; initial value black */
+    if (!SvgStyleResolvePropWithGroups(tag, "fill", sFill, sizeof(sFill)))
     {
-        (void)SvgParserGetAttrBounded(tag, "fill", sFill, sizeof(sFill));
-    }
-
-    if (!sFill[0])
-    {
-        /* No fill specified -> apply SVG initial value (black) */
+        /* default */
         Meta_SetAreaColor(CF_RGB, 0, 0, 0);
     }
     else if (strcmp(sFill, "none") != 0)
     {
         if (sFill[0] == '#' && strlen(sFill) >= 7)
         {
-            Meta_SetAreaColor(CF_RGB,
-                              SvgStyleHexByte(sFill + 1),
-                              SvgStyleHexByte(sFill + 3),
-                              SvgStyleHexByte(sFill + 5));
+            Meta_SetAreaColor(CF_RGB, SvgStyleHexByte(sFill + 1), SvgStyleHexByte(sFill + 3), SvgStyleHexByte(sFill + 5));
         }
-        else if (SvgStyleExpandShortHex(sFill, &r, &g, &b) ||
-                 SvgStyleParseRGBFunc(sFill, &r, &g, &b) ||
-                 SvgStyleFindNamedColor(sFill, &r, &g, &b))
+        else if (SvgStyleExpandShortHex(sFill, &r, &g, &b) || SvgStyleParseRGBFunc(sFill, &r, &g, &b) || SvgStyleFindNamedColor(sFill, &r, &g, &b))
         {
             Meta_SetAreaColor(CF_RGB, r, g, b);
         }
-        /* else: unparseable fill -> leave as is */
     }
-    /* else: fill="none" -> do not set area color */
+    /* else: fill="none" -> no area color set */
 }
 
 void SvgStyleApplyFillRule(const char *tag)
 {
     static char buf[32];
-
     buf[0] = 0;
-    if (!SvgStyleGetInlineProp(tag, "fill-rule", buf, sizeof(buf))) {
+    if (!SvgStyleGetInlineProp(tag, "fill-rule", buf, sizeof(buf)))
+    {
         (void)SvgParserGetAttrBounded(tag, "fill-rule", buf, sizeof(buf));
     }
-
-    if (buf[0] && !strcmp(buf, "evenodd")) {
-        Meta_SetFillRule(ODD_EVEN);
-    } else {
-        Meta_SetFillRule(WINDING); /* SVG default: nonzero */
-    }
+    if (buf[0] && !strcmp(buf, "evenodd")) { Meta_SetFillRule(ODD_EVEN); }
+    else { Meta_SetFillRule(WINDING); }
 }
 
 void SvgStyleApplyStrokeWidth(const char *tag)
@@ -432,40 +523,31 @@ void SvgStyleApplyStrokeWidth(const char *tag)
     WWFixedAsDWord lw;
 
     b[0] = 0;
-    if (!SvgStyleGetInlineProp(tag, "stroke-width", b, sizeof(b))) {
-        (void)SvgParserGetAttrBounded(tag, "stroke-width", b, sizeof(b));
+    if (!SvgStyleResolvePropWithGroups(tag, "stroke-width", b, sizeof(b)))
+    {
+        return; /* leave engine default */
     }
-    if (!b[0]) return;
-
-    /* allow trailing units like "px" */
     pwalk = b;
     while (*pwalk && (isdigit((byte)*pwalk) || *pwalk=='+' || *pwalk=='-' || *pwalk=='.')) pwalk++;
     save = *pwalk;
     *(char*)pwalk = 0;
     (void)SvgParserParseWWFixed16_16(b, &lw);
     *(char*)pwalk = save;
-
     Meta_SetLineWidth(lw);
 }
 
 Boolean SvgStyleHasStroke(const char *tag)
 {
-    char b[32];
-
-    if (SvgStyleGetInlineProp(tag, "stroke", b, sizeof(b)))
+    char b[64];
+    if (SvgStyleResolvePropWithGroups(tag, "stroke", b, sizeof(b)))
         return strcmp(b, "none") != 0;
-    if (SvgParserGetAttrBounded(tag, "stroke", b, sizeof(b)))
-        return strcmp(b, "none") != 0;
-    return FALSE;
+    return FALSE; /* SVG initial */
 }
 
 Boolean SvgStyleHasFill(const char *tag)
 {
-    char b[32];
-
-    if (SvgStyleGetInlineProp(tag, "fill", b, sizeof(b)))
+    char b[64];
+    if (SvgStyleResolvePropWithGroups(tag, "fill", b, sizeof(b)))
         return strcmp(b, "none") != 0;
-    if (SvgParserGetAttrBounded(tag, "fill", b, sizeof(b)))
-        return strcmp(b, "none") != 0;
-    return TRUE; /* SVG default */
+    return TRUE; /* SVG initial */
 }
