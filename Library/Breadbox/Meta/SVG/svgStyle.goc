@@ -18,15 +18,6 @@
 
 
 /* ---- group style stack (fill/stroke/stroke-width) ---- */
-#define SVG_STYLE_GSTACK_MAX 16
-
-typedef struct {
-    Boolean fillSet, strokeSet, swSet;
-    char fillVal[64];
-    char strokeVal[64];
-    WWFixedAsDWord strokeWidth;
-} SvgGroupStyle;
-
 static SvgGroupStyle gStyleStack[SVG_STYLE_GSTACK_MAX];
 static int gStyleDepth = 0;
 
@@ -356,6 +347,17 @@ static Boolean SvgStyleGetInlineProp(const char *tag,
 
 /* ---- group style stuff ---- */
 
+Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW)
+{
+    if (outW == NULL) { return FALSE; }
+    if (gStyleDepth > 0 && gStyleStack[gStyleDepth-1].swSet)
+    {
+        *outW = gStyleStack[gStyleDepth-1].strokeWidth;
+        return TRUE;
+    }
+    return FALSE;
+}
+
 /* Called on <g ...> */
 void SvgStyleGroupPush(const char *tag)
 {
@@ -426,19 +428,19 @@ static Boolean SvgStyleResolvePropWithGroups(const char *tag, const char *prop, 
     {
         const SvgGroupStyle *gs;
         gs = &gStyleStack[gStyleDepth-1];
-        if (!AnsiStrnCmp(prop, "fill", 4) && gs->fillSet)
+        if (!strncmp(prop, "fill", 4) && gs->fillSet)
         {
             strncpy(out, gs->fillVal, outSize-1);
             out[outSize-1] = 0;
             return TRUE;
         }
-        if (!AnsiStrnCmp(prop, "stroke", 6) && gs->strokeSet)
+        if (!strncmp(prop, "stroke", 6) && gs->strokeSet)
         {
             strncpy(out, gs->strokeVal, outSize-1);
             out[outSize-1] = 0;
             return TRUE;
         }
-        if (!AnsiStrnCmp(prop, "stroke-width", 12) && gs->swSet)
+        if (!strncmp(prop, "stroke-width", 12) && gs->swSet)
         {
             /* serialize fixed to decimal minimally; consumers only test presence */
             WWFixedAsDWord w;
@@ -517,24 +519,50 @@ void SvgStyleApplyFillRule(const char *tag)
 
 void SvgStyleApplyStrokeWidth(const char *tag)
 {
-    static char b[24];
+    WWFixedAsDWord lw;
+    char b[24];
     const char *pwalk;
     char save;
-    WWFixedAsDWord lw;
+    Boolean haveWidth;
 
+    /* Try element-local width first */
     b[0] = 0;
-    if (!SvgStyleResolvePropWithGroups(tag, "stroke-width", b, sizeof(b)))
+    haveWidth = FALSE;
+
+    if (SvgStyleGetInlineProp(tag, "stroke-width", b, sizeof(b)) ||
+        SvgParserGetAttrBounded(tag, "stroke-width", b, sizeof(b)))
     {
-        return; /* leave engine default */
+        pwalk = b;
+        while (*pwalk &&
+               (isdigit((byte)*pwalk) || *pwalk=='+' || *pwalk=='-' || *pwalk=='.'))
+        {
+            pwalk++;
+        }
+        save = *pwalk;
+        *(char*)pwalk = 0;
+        (void)SvgParserParseWWFixed16_16(b, &lw);
+        *(char*)pwalk = save;
+        haveWidth = TRUE;
     }
-    pwalk = b;
-    while (*pwalk && (isdigit((byte)*pwalk) || *pwalk=='+' || *pwalk=='-' || *pwalk=='.')) pwalk++;
-    save = *pwalk;
-    *(char*)pwalk = 0;
-    (void)SvgParserParseWWFixed16_16(b, &lw);
-    *(char*)pwalk = save;
+
+    /* Else inherit from group */
+    if (!haveWidth)
+    {
+        if (SvgStyleGroupStrokeWidthGet(&lw))
+        {
+            haveWidth = TRUE;
+        }
+    }
+
+    /* Else default per SVG */
+    if (!haveWidth)
+    {
+        lw = SvgGeomMakeWWFixedFromInt(1);
+    }
+
     Meta_SetLineWidth(lw);
 }
+
 
 Boolean SvgStyleHasStroke(const char *tag)
 {

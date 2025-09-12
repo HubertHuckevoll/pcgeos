@@ -18,6 +18,16 @@
 #define GrSubWWFixed(a,b) ((WWFixedAsDWord)((sdword)(a) - (sdword)(b)))
 #endif
 
+/* ---- group style stack (fill/stroke/stroke-width) ---- */
+#define SVG_STYLE_GSTACK_MAX 16
+
+typedef struct {
+    Boolean fillSet, strokeSet, swSet;
+    char fillVal[64];
+    char strokeVal[64];
+    WWFixedAsDWord strokeWidth;
+} SvgGroupStyle;
+
 /* ---- shared data types ---- */
 typedef struct {
     byte SNC_r;
@@ -44,9 +54,6 @@ typedef struct _SVGScratch {
 
 /* ---- small utility (common) ---- */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
-/* ansi-compat: case-sensitive prefix compare (like strncmp) */
-int AnsiStrnCmp(const char *s1, const char *s2, word n);
-
 
 /* ---- geometry helpers (shared fixed-point math) ---- */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v);

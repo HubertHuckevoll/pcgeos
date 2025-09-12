@@ -33,30 +33,3 @@ Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b)
     return TRUE;
 }
 
-
-int AnsiStrnCmp(const char *s1, const char *s2, word n)
-{
-    const unsigned char *a;
-    const unsigned char *b;
-    unsigned char ca;
-    unsigned char cb;
-    word i;
-
-    a = (const unsigned char *)s1;
-    b = (const unsigned char *)s2;
-
-    for (i = 0; i < n; i++) {
-        ca = a[i];
-        cb = b[i];
-
-        if (ca != cb) {
-            return (int)((int)ca - (int)cb);
-        }
-        if (ca == 0) {
-            /* both are NUL here, so equal up to this point */
-            return 0;
-        }
-    }
-    return 0;
-}
-

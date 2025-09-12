@@ -170,7 +170,7 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
         s = SvgParserSkipWS(s);
         if (!*s) break;
 
-        if (!AnsiStrnCmp(s, "matrix(", 7)) {
+        if (!strncmp(s, "matrix(", 7)) {
             WWFixedAsDWord a,b,c,d,e,f;
             p = s + 7;
             p = SvgParseNumber(p, &a);
@@ -184,12 +184,12 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             SvgMatMul(&acc, &t, &acc);  /* left-to-right application */
             s = p;
 #ifdef DEBUG_LOG
-            if (!AnsiStrnCmp(s, "matrix(", 7)) {
+            if (!strncmp(s, "matrix(", 7)) {
                 LOGF(("[XFORM]", "matrix a=%ld b=%ld c=%ld d=%ld e=%ld f=%ld",
                         (sdword)a,(sdword)b,(sdword)c,(sdword)d,(sdword)e,(sdword)f));
             }
 #endif
-        } else if (!AnsiStrnCmp(s, "translate(", 10)) {
+        } else if (!strncmp(s, "translate(", 10)) {
             p = s + 10;
             p = SvgParseNumber(p, &v1);
             p = SvgParserSkipWS(p);
@@ -199,11 +199,11 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             SvgMatMul(&acc, &t, &acc);
             s = p;
 #ifdef DEBUG_LOG
-            if (!AnsiStrnCmp(s, "translate(",10)) {
+            if (!strncmp(s, "translate(",10)) {
                 LOGF(("[XFORM]", "translate %ld,%ld",(sdword)v1,(sdword)v2));
             }
 #endif
-        } else if (!AnsiStrnCmp(s, "scale(", 6)) {
+        } else if (!strncmp(s, "scale(", 6)) {
             p = s + 6;
             p = SvgParseNumber(p, &v1);
             p = SvgParserSkipWS(p);
@@ -213,11 +213,11 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             SvgMatMul(&acc, &t, &acc);
             s = p;
 #ifdef DEBUG_LOG
-            if (!AnsiStrnCmp(s, "scale(",6)) {
+            if (!strncmp(s, "scale(",6)) {
                 LOGF(("[XFORM]", "scale %ld,%ld",(sdword)v1,(sdword)v2));
             }
 #endif
-        } else if (!AnsiStrnCmp(s, "rotate(", 7)) {
+        } else if (!strncmp(s, "rotate(", 7)) {
             p = s + 7;
             p = SvgParseNumber(p, &v1); /* angle in degrees */
             p = SvgParserSkipWS(p);
@@ -242,18 +242,18 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
             SvgMatMul(&acc, &t, &acc);
             s = p;
 #ifdef DEBUG_LOG
-            if (!AnsiStrnCmp(s, "rotate(",7)) {
+            if (!strncmp(s, "rotate(",7)) {
                 LOGF(("[XFORM]", "rotate deg=%ld cx=%ld cy=%ld",(sdword)v1,(sdword)v2,(sdword)v3));
             }
 #endif
-        } else if (!AnsiStrnCmp(s, "skewX(", 6)) {
+        } else if (!strncmp(s, "skewX(", 6)) {
             p = s + 6;
             p = SvgParseNumber(p, &v1);
             if (*p == ')') p++;
             SvgMatSkewX(&t, v1);
             SvgMatMul(&acc, &t, &acc);
             s = p;
-        } else if (!AnsiStrnCmp(s, "skewY(", 6)) {
+        } else if (!strncmp(s, "skewY(", 6)) {
             p = s + 6;
             p = SvgParseNumber(p, &v1);
             if (*p == ')') p++;
