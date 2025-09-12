@@ -1126,8 +1126,7 @@ SvgPathHandleUnknown(const char **sPP,
 
 /* ---- sub path emitter ---- */
 static void
-SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP,
-                   Boolean closed, Boolean inCompound)
+SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
 {
     word i, np, w;
     sword px, py, firstx, firsty, lastx, lasty;
@@ -1265,7 +1264,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
                 LOG_STR("[FLUSH]", "flush-before-M");
 
                 emitN = np;
-                SvgPathEmitSubpath(tag, sc, &np, closed, buildingCompound);
+                SvgPathEmitSubpath(tag, sc, &np, closed);
                 LOGF(("[EMIT]", "emit n=%u closed=%d", emitN, (int)closed));
 
                 closed = FALSE;
@@ -1334,7 +1333,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
 
             if (np > 1) {
                 word emitN = np;
-                SvgPathEmitSubpath(tag, sc, &np, TRUE, buildingCompound);
+                SvgPathEmitSubpath(tag, sc, &np, TRUE);
 
                 LOGF(("[EMIT]", "emit n=%u closed=1", emitN));
             }
@@ -1354,7 +1353,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
 
     if (np > 1) {
         word emitN = np;
-        SvgPathEmitSubpath(tag, sc, &np, closed, buildingCompound);
+        SvgPathEmitSubpath(tag, sc, &np, closed);
 
         LOGF(("[EMIT]", "final-emit n=%u closed=%d", emitN, (int)closed));
     }
