@@ -1086,7 +1086,6 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
     *sPP = sP;
 }
 
-
 static void
 SvgPathHandleClose(const char **sPP,
                    Boolean *closedP,
@@ -1107,7 +1106,6 @@ SvgPathHandleClose(const char **sPP,
 
     *sPP = sP;
 }
-
 
 static void
 SvgPathHandleUnknown(const char **sPP,
