@@ -1125,7 +1125,6 @@ SvgPathHandleUnknown(const char **sPP,
 
 
 /* ---- sub path emitter ---- */
-/* ---- sub path emitter ---- */
 static void
 SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP,
                    Boolean closed, Boolean inCompound)

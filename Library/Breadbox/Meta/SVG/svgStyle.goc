@@ -22,19 +22,6 @@ static SvgGroupStyle gStyleStack[SVG_STYLE_GSTACK_MAX];
 static int gStyleDepth = 0;
 
 
-/* ---------- tiny hex helpers (style-local) ---------- */
-static word SvgStyleHexNibble(char c)
-{
-    if (c >= '0' && c <= '9') return (word)(c - '0');
-    if (c >= 'A' && c <= 'F') return (word)(10 + (c - 'A'));
-    if (c >= 'a' && c <= 'f') return (word)(10 + (c - 'a'));
-    return 0;
-}
-static word SvgStyleHexByte(const char *p)
-{
-    return (word)((SvgStyleHexNibble(p[0]) << 4) | SvgStyleHexNibble(p[1]));
-}
-
 /* ---- color keyword resource ---- */
 @start MetaSvgNamedColorRes, data;
 
@@ -189,6 +176,20 @@ static word SvgStyleHexByte(const char *p)
 };
 
 @end MetaSvgNamedColorRes;
+
+/* ---------- tiny hex helpers (style-local) ---------- */
+static word SvgStyleHexNibble(char c)
+{
+    if (c >= '0' && c <= '9') return (word)(c - '0');
+    if (c >= 'A' && c <= 'F') return (word)(10 + (c - 'A'));
+    if (c >= 'a' && c <= 'f') return (word)(10 + (c - 'a'));
+    return 0;
+}
+
+static word SvgStyleHexByte(const char *p)
+{
+    return (word)((SvgStyleHexNibble(p[0]) << 4) | SvgStyleHexNibble(p[1]));
+}
 
 /* ---- color parsing helpers ---- */
 static Boolean SvgStyleExpandShortHex(const char *s, word *r, word *g, word *b)
