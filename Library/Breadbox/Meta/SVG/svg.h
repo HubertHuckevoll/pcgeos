@@ -22,12 +22,19 @@
 /* ---- group style stack (fill/stroke/stroke-width) ---- */
 #define SVG_STYLE_GSTACK_MAX 16 /* max group nesting depth */
 
+/* per-group style state */
 typedef struct {
-    Boolean fillSet, strokeSet, swSet;
-    char fillVal[64];
-    char strokeVal[64];
-    WWFixedAsDWord strokeWidth;
-} SvgGroupStyle; // FIXME: make this dynamic!, it is stored in an array
+    Boolean         fillSet;
+    Boolean         strokeSet;
+    Boolean         swSet;
+    char            fillVal[64];
+    char            strokeVal[64];
+    WWFixedAsDWord  strokeWidth;
+    /* NEW: inherited fill-rule for descendants */
+    Boolean         frSet;      /* TRUE if a concrete rule is in effect here */
+    byte            fr;         /* 0 = nonzero/winding, 1 = evenodd */
+} SvgGroupStyle;
+
 
 /* ---- shared data types ---- */
 typedef struct {

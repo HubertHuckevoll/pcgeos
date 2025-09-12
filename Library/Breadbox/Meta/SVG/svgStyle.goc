@@ -455,6 +455,7 @@ void SvgStyleGroupPush(const char *tag)
 {
     SvgGroupStyle st;
     char buf[64];
+    char frBuf[24];
     const char *pwalk;
 
     st.fillSet = FALSE;
@@ -463,6 +464,14 @@ void SvgStyleGroupPush(const char *tag)
     st.fillVal[0] = 0;
     st.strokeVal[0] = 0;
     st.strokeWidth = SvgGeomMakeWWFixedFromInt(1);
+
+    /* inherit group's fill-rule from parent by default */
+    st.frSet = FALSE;
+    st.fr = 0; /* nonzero/winding */
+    if (gStyleDepth > 0) {
+        st.frSet = gStyleStack[gStyleDepth-1].frSet;
+        st.fr    = gStyleStack[gStyleDepth-1].fr;
+    }
 
     /* inline style= takes precedence within the tag, so read both */
     if (SvgStyleGetInlineProp(tag, "fill", st.fillVal, sizeof(st.fillVal)) ||
@@ -475,6 +484,7 @@ void SvgStyleGroupPush(const char *tag)
     {
         st.strokeSet = TRUE;
     }
+
     buf[0] = 0;
     if (!SvgStyleGetInlineProp(tag, "stroke-width", buf, sizeof(buf)))
     {
@@ -495,17 +505,33 @@ void SvgStyleGroupPush(const char *tag)
         }
     }
 
+    /* NEW: parse group fill-rule and override inherited value */
+    frBuf[0] = 0;
+    if (!SvgStyleGetInlineProp(tag, "fill-rule", frBuf, sizeof(frBuf)))
+    {
+        (void)SvgParserGetAttrBounded(tag, "fill-rule", frBuf, sizeof(frBuf));
+    }
+    if (frBuf[0])
+    {
+        if (SvgUtilAsciiNoCaseEq(frBuf, "evenodd")) { st.fr = 1; st.frSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(frBuf, "nonzero") || SvgUtilAsciiNoCaseEq(frBuf, "winding")) { st.fr = 0; st.frSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(frBuf, "inherit")) {
+            /* keep inherited st.fr/st.frSet as-is */
+        }
+        /* anything else: ignore */
+    }
+
     if (gStyleDepth < SVG_STYLE_GSTACK_MAX)
     {
         gStyleStack[gStyleDepth++] = st;
     }
 }
 
-/* Called on </g> */
 void SvgStyleGroupPop(void)
 {
     if (gStyleDepth > 0) gStyleDepth--;
 }
+
 
 /* resolve property with group fallback — strings only (fill/stroke) */
 static Boolean SvgStyleResolvePropWithGroups(const char *tag,
@@ -579,14 +605,35 @@ void SvgStyleApplyStrokeAndFill(const char *tag)
 void SvgStyleApplyFillRule(const char *tag)
 {
     static char buf[32];
+    int useEvenOdd;
     buf[0] = 0;
+
+    /* element-local value wins */
     if (!SvgStyleGetInlineProp(tag, "fill-rule", buf, sizeof(buf)))
     {
         (void)SvgParserGetAttrBounded(tag, "fill-rule", buf, sizeof(buf));
     }
-    if (buf[0] && !strcmp(buf, "evenodd")) { Meta_SetFillRule(ODD_EVEN); }
-    else { Meta_SetFillRule(WINDING); }
+
+    if (buf[0])
+    {
+        if (SvgUtilAsciiNoCaseEq(buf, "evenodd")) { Meta_SetFillRule(ODD_EVEN); return; }
+        if (SvgUtilAsciiNoCaseEq(buf, "nonzero") || SvgUtilAsciiNoCaseEq(buf, "winding")) { Meta_SetFillRule(WINDING); return; }
+        if (SvgUtilAsciiNoCaseEq(buf, "inherit")) { buf[0] = 0; } /* fall through to group */
+    }
+
+    /* inherit from current group if present */
+    if (gStyleDepth > 0 && gStyleStack[gStyleDepth-1].frSet)
+    {
+        useEvenOdd = (int)gStyleStack[gStyleDepth-1].fr;
+        if (useEvenOdd) { Meta_SetFillRule(ODD_EVEN); }
+        else { Meta_SetFillRule(WINDING); }
+        return;
+    }
+
+    /* initial */
+    Meta_SetFillRule(WINDING);
 }
+
 
 void SvgStyleApplyStrokeWidth(const char *tag)
 {
