@@ -272,6 +272,98 @@ static Boolean SvgStyleFindNamedColor(const char *name, word *r, word *g, word *
     return FALSE;
 }
 
+/* ---- paint resolution: url(#id) fallback or none; solid colors only ---- */
+
+static const char*
+SvgStyleSkipSpace(const char *p)
+{
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') { p++; }
+    return p;
+}
+
+/* Returns TRUE if 'raw' resolves to a solid color and sets r,g,b.
+   Returns FALSE if the used value is NONE (includes unresolved url()).
+   Supports: "none", "#rgb/#rrggbb", "rgb(...)", named colors,
+             "url(#id)" [optional fallback color after ')'].
+   Gradients/patterns are not implemented, so any url() without fallback => NONE. */
+static Boolean
+SvgStyleResolvePaintToSolidOrNone(const char *raw, word *r, word *g, word *b)
+{
+    const char *p;
+    const char *rp;
+    word rr;
+    word gg;
+    word bb;
+
+    if (raw == NULL) { return FALSE; }
+
+    p = SvgStyleSkipSpace(raw);
+
+    if (SvgUtilAsciiNoCaseEq(p, "none")) {
+        return FALSE;
+    }
+
+    /* url(...)[ fallback]?  Case-insensitive check for "url(" at start */
+    if ((p[0]=='u' || p[0]=='U') &&
+        (p[1]=='r' || p[1]=='R') &&
+        (p[2]=='l' || p[2]=='L') &&
+        p[3]=='(')
+    {
+        /* find ')' */
+        rp = p + 4;
+        while (*rp && *rp != ')') { rp++; }
+        if (*rp == ')') {
+            const char *after;
+            after = SvgStyleSkipSpace(rp + 1);
+
+            /* No fallback token -> NONE per spec */
+            if (*after == 0) {
+                return FALSE;
+            }
+
+            /* Fallback is present: try to parse as color */
+            if (SvgStyleExpandShortHex(after, &rr, &gg, &bb) ||
+                (after[0] == '#' && strlen(after) >= 7 &&
+                 (rr = SvgStyleHexByte(after + 1), gg = SvgStyleHexByte(after + 3), bb = SvgStyleHexByte(after + 5), 1)) ||
+                SvgStyleParseRGBFunc(after, &rr, &gg, &bb) ||
+                SvgStyleFindNamedColor(after, &rr, &gg, &bb))
+            {
+                *r = rr; *g = gg; *b = bb;
+                return TRUE;
+            }
+
+            /* Fallback token not a color, treat as NONE */
+            return FALSE;
+        }
+
+        /* Malformed url( -> NONE */
+        return FALSE;
+    }
+
+    /* direct color */
+    if (SvgStyleExpandShortHex(p, &rr, &gg, &bb)) {
+        *r = rr; *g = gg; *b = bb;
+        return TRUE;
+    }
+    if (p[0] == '#' && strlen(p) >= 7) {
+        *r = SvgStyleHexByte(p + 1);
+        *g = SvgStyleHexByte(p + 3);
+        *b = SvgStyleHexByte(p + 5);
+        return TRUE;
+    }
+    if (SvgStyleParseRGBFunc(p, &rr, &gg, &bb)) {
+        *r = rr; *g = gg; *b = bb;
+        return TRUE;
+    }
+    if (SvgStyleFindNamedColor(p, &rr, &gg, &bb)) {
+        *r = rr; *g = gg; *b = bb;
+        return TRUE;
+    }
+
+    /* Unknown token -> NONE */
+    return FALSE;
+}
+
 
 /* -------- inline style="a:b; c:d" parser (case-insensitive) -------- */
 
@@ -455,46 +547,34 @@ void SvgStyleApplyStrokeAndFill(const char *tag)
     word r;
     word g;
     word b;
+    Boolean have;
 
     sFill[0] = 0;
     sStroke[0] = 0;
 
-    /* stroke; initial value none */
-    if (!SvgStyleResolvePropWithGroups(tag, "stroke", sStroke, sizeof(sStroke)))
-    {
-        sStroke[0] = 0; /* remains none */
-    }
-    if (sStroke[0] && strcmp(sStroke, "none") != 0)
-    {
-        if (sStroke[0] == '#' && strlen(sStroke) >= 7)
-        {
-            Meta_SetLineColor(CF_RGB, SvgStyleHexByte(sStroke + 1), SvgStyleHexByte(sStroke + 3), SvgStyleHexByte(sStroke + 5));
-        }
-        else if (SvgStyleExpandShortHex(sStroke, &r, &g, &b) || SvgStyleParseRGBFunc(sStroke, &r, &g, &b) || SvgStyleFindNamedColor(sStroke, &r, &g, &b))
-        {
+    /* stroke; initial = none */
+    have = SvgStyleResolvePropWithGroups(tag, "stroke", sStroke, sizeof(sStroke));
+    if (have) {
+        if (SvgStyleResolvePaintToSolidOrNone(sStroke, &r, &g, &b)) {
             Meta_SetLineColor(CF_RGB, r, g, b);
         }
+        /* else NONE: do not set a line color */
     }
+    /* else: no property anywhere -> stays NONE */
 
-    /* fill; initial value black */
-    if (!SvgStyleResolvePropWithGroups(tag, "fill", sFill, sizeof(sFill)))
-    {
-        /* default */
+    /* fill; initial = black */
+    have = SvgStyleResolvePropWithGroups(tag, "fill", sFill, sizeof(sFill));
+    if (!have) {
+        /* property absent -> initial black */
         Meta_SetAreaColor(CF_RGB, 0, 0, 0);
-    }
-    else if (strcmp(sFill, "none") != 0)
-    {
-        if (sFill[0] == '#' && strlen(sFill) >= 7)
-        {
-            Meta_SetAreaColor(CF_RGB, SvgStyleHexByte(sFill + 1), SvgStyleHexByte(sFill + 3), SvgStyleHexByte(sFill + 5));
-        }
-        else if (SvgStyleExpandShortHex(sFill, &r, &g, &b) || SvgStyleParseRGBFunc(sFill, &r, &g, &b) || SvgStyleFindNamedColor(sFill, &r, &g, &b))
-        {
+    } else {
+        if (SvgStyleResolvePaintToSolidOrNone(sFill, &r, &g, &b)) {
             Meta_SetAreaColor(CF_RGB, r, g, b);
         }
+        /* else NONE: do not set an area color */
     }
-    /* else: fill="none" -> no area color set */
 }
+
 
 void SvgStyleApplyFillRule(const char *tag)
 {
@@ -558,15 +638,24 @@ void SvgStyleApplyStrokeWidth(const char *tag)
 Boolean SvgStyleHasStroke(const char *tag)
 {
     char b[64];
-    if (SvgStyleResolvePropWithGroups(tag, "stroke", b, sizeof(b)))
-        return strcmp(b, "none") != 0;
-    return FALSE; /* SVG initial */
+    word r;
+    word g;
+    word bb;
+    if (SvgStyleResolvePropWithGroups(tag, "stroke", b, sizeof(b))) {
+        return SvgStyleResolvePaintToSolidOrNone(b, &r, &g, &bb);
+    }
+    return FALSE; /* initial */
 }
 
 Boolean SvgStyleHasFill(const char *tag)
 {
     char b[64];
-    if (SvgStyleResolvePropWithGroups(tag, "fill", b, sizeof(b)))
-        return strcmp(b, "none") != 0;
-    return TRUE; /* SVG initial */
+    word r;
+    word g;
+    word bb;
+    if (SvgStyleResolvePropWithGroups(tag, "fill", b, sizeof(b))) {
+        return SvgStyleResolvePaintToSolidOrNone(b, &r, &g, &bb);
+    }
+    return TRUE; /* initial */
 }
+
