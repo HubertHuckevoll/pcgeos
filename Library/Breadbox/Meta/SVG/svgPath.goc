@@ -1125,60 +1125,62 @@ SvgPathHandleUnknown(const char **sPP,
 
 
 /* ---- sub path emitter ---- */
+/* ---- sub path emitter ---- */
 static void
-SvgPathEmitSubpath(const char *tag,
-                   SVGScratch *sc,
-                   word *npP,
-                   Boolean closed,
-                   Boolean inCompound)
+SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP,
+                   Boolean closed, Boolean inCompound)
 {
     word i, np, w;
     sword px, py, firstx, firsty, lastx, lasty;
     Boolean hasStroke;
     Boolean needStrokeClose;
-    SvgMatrix elemOnWorld;
+    SvgMatrix worldM;
 
-    firstx = 0; firsty = 0;
-    lastx  = 0; lasty  = 0;
+    firstx = 0;
+    firsty = 0;
+    lastx  = 0;
+    lasty  = 0;
 
     np = *npP;
     *npP = 0;
-    if (np <= 1)
-    {
+    if (np <= 1) {
         return;
     }
 
     hasStroke = SvgStyleHasStroke(tag);
 
-    SvgXformBuildElemOnWorld(tag, &elemOnWorld);
+    /* Build WORLD matrix = VM ∘ currentGroup ∘ element(tag) */
+    SvgXformBuildWorld(tag, NULL, &worldM);   /* ← applies <g> transform too */
+
     w = 0;
-    for (i = 0; i < np; i++)
-    {
+    for (i = 0; i < np; i++) {
         px = sc->pts[i].P_x;
         py = sc->pts[i].P_y;
-        SvgXformApplyPoint(&px, &py, &elemOnWorld);
 
-        if (w == 0 || px != lastx || py != lasty)
-        {
+        /* apply full world transform to path vertices */
+        SvgXformApplyPoint(&px, &py, &worldM);
+
+        if (w == 0 || px != lastx || py != lasty) {
             sc->pts[w].P_x = px;
             sc->pts[w].P_y = py;
             w++;
-            if (w == 1) { firstx = px; firsty = py; }
-            lastx = px; lasty = py;
+            if (w == 1) {
+                firstx = px;
+                firsty = py;
+            }
+            lastx = px;
+            lasty = py;
         }
     }
-
     np = w;
-    if (np <= 1)
-    {
+    if (np <= 1) {
         return;
     }
 
     /* No explicit close for fill while building the compound path. */
     needStrokeClose = (closed && hasStroke &&
-                       ((firstx != lastx) || (firsty != lasty)));
-    if (needStrokeClose && (np < MAX_SVG_POINTS))
-    {
+                      ((firstx != lastx) || (firsty != lasty)));
+    if (needStrokeClose && (np < MAX_SVG_POINTS)) {
         sc->pts[np].P_x = firstx;
         sc->pts[np].P_y = firsty;
         np++;

@@ -143,7 +143,7 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
 {
     word      np;
     word      i;
-    SvgMatrix elemOnWorld;
+    SvgMatrix worldM;
 
     sc->pb[0] = 0;
     if (SvgParserGetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
@@ -151,16 +151,17 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
-        /* points parsed into WORLD space */
+        /* parse points in user space */
         SvgShapeParsePoints(sc->pb, sc->pts, &np);
         if (np > 1)
         {
-            SvgXformBuildElemOnWorld(tag, &elemOnWorld);
+            /* use full world CTM: View ∘ Group ∘ Element */
+            SvgXformBuildWorld(tag, NULL, &worldM);
 
             for (i = 0; i < np; i++) {
                 sword px = sc->pts[i].P_x;
                 sword py = sc->pts[i].P_y;
-                SvgXformApplyPoint(&px, &py, &elemOnWorld);
+                SvgXformApplyPoint(&px, &py, &worldM);
                 sc->pts[i].P_x = px;
                 sc->pts[i].P_y = py;
             }
@@ -175,7 +176,7 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
 {
     word      np;
     word      i;
-    SvgMatrix elemOnWorld;
+    SvgMatrix worldM;
 
     sc->pb[0] = 0;
     if (SvgParserGetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
@@ -184,16 +185,17 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
         SvgStyleApplyFillRule(tag);
         SvgStyleApplyStrokeWidth(tag);
 
-        /* points parsed into WORLD space */
+        /* parse points in user space */
         SvgShapeParsePoints(sc->pb, sc->pts, &np);
         if (np > 2)
         {
-            SvgXformBuildElemOnWorld(tag, &elemOnWorld);
+            /* use full world CTM: View ∘ Group ∘ Element */
+            SvgXformBuildWorld(tag, NULL, &worldM);
 
             for (i = 0; i < np; i++) {
                 sword px = sc->pts[i].P_x;
                 sword py = sc->pts[i].P_y;
-                SvgXformApplyPoint(&px, &py, &elemOnWorld);
+                SvgXformApplyPoint(&px, &py, &worldM);
                 sc->pts[i].P_x = px;
                 sc->pts[i].P_y = py;
             }
