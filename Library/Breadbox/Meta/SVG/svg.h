@@ -4,7 +4,7 @@
 
 /* ---- global compile-time constants ---- */
 #define SVG_COLOR_NAME_LEN   32
-#define MAX_SVG_POINTS       1024
+#define MAX_SVG_POINTS       2048
 #define SVG_IO_BUF_SIZE      1024
 #define TAG_BUF_SIZE         4096  /* must hold entire tag */
 

@@ -415,45 +415,36 @@ void SvgStyleGroupPop(void)
     if (gStyleDepth > 0) gStyleDepth--;
 }
 
-/* resolve property with group fallback */
-static Boolean SvgStyleResolvePropWithGroups(const char *tag, const char *prop, char *out, word outSize)
+/* resolve property with group fallback — strings only (fill/stroke) */
+static Boolean SvgStyleResolvePropWithGroups(const char *tag,
+                                             const char *prop,
+                                             char *out, word outSize)
 {
+    const SvgGroupStyle *gs;
+
     if (outSize == 0) return FALSE;
     out[0] = 0;
 
     if (SvgStyleGetInlineProp(tag, prop, out, outSize)) return TRUE;
     if (SvgParserGetAttrBounded(tag, prop, out, outSize)) return TRUE;
 
-    if (gStyleDepth > 0)
+    if (gStyleDepth == 0) return FALSE;
+    gs = &gStyleStack[gStyleDepth-1];
+
+    if (!strncmp(prop, "fill", 4) && gs->fillSet)
     {
-        const SvgGroupStyle *gs;
-        gs = &gStyleStack[gStyleDepth-1];
-        if (!strncmp(prop, "fill", 4) && gs->fillSet)
-        {
-            strncpy(out, gs->fillVal, outSize-1);
-            out[outSize-1] = 0;
-            return TRUE;
-        }
-        if (!strncmp(prop, "stroke", 6) && gs->strokeSet)
-        {
-            strncpy(out, gs->strokeVal, outSize-1);
-            out[outSize-1] = 0;
-            return TRUE;
-        }
-        if (!strncmp(prop, "stroke-width", 12) && gs->swSet)
-        {
-            /* serialize fixed to decimal minimally; consumers only test presence */
-            WWFixedAsDWord w;
-            int v;
-            w = gs->strokeWidth;
-            v = SvgGeomWWFixedToSWordRound(w);
-            sprintf(out, outSize, "%d", (int)v);
-            return TRUE;
-        }
+        strncpy(out, gs->fillVal, outSize-1);
+        out[outSize-1] = 0;
+        return TRUE;
+    }
+    if (!strncmp(prop, "stroke", 6) && gs->strokeSet)
+    {
+        strncpy(out, gs->strokeVal, outSize-1);
+        out[outSize-1] = 0;
+        return TRUE;
     }
     return FALSE;
 }
-
 
 /* ---- public style API ---- */
 
