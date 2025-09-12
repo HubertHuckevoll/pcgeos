@@ -77,6 +77,10 @@ void    SvgStyleApplyStrokeWidth(const char *tag);
 void    SvgStyleApplyFillRule(const char *tag);
 Boolean SvgStyleHasStroke(const char *tag);
 Boolean SvgStyleHasFill(const char *tag);
+/* groups */
+void    SvgStyleGroupPush(const char *tag);
+void    SvgStyleGroupPop(void);
+Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW);
 
 /* ---- viewBox/viewport mapping ---- */
 void   SvgViewInitFromSvgTag(const char *tag);
@@ -107,15 +111,13 @@ void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *
 /* Conjugated element matrix that acts on points already in WORLD space:
    ElemOnWorld = ViewMatrix ∘ Element ∘ ViewMatrix^{-1}  */
 void SvgXformBuildElemOnWorld(const char *tag, SvgMatrix *outElemWorld);
-
-
+/* groups */
+void SvgXformGroupPush(const char *tag);
+void SvgXformGroupPop(void);
 
 /* ---- element-local helpers (legacy scale-only; now superseded by CTM) ---- */
-/* void  SvgShapeGetLocalScale(const char *tag, WWFixedAsDWord *sxOut, WWFixedAsDWord *syOut);
-   void  SvgShapeApplyScalePoint(sword *x, sword *y, WWFixedAsDWord sx, WWFixedAsDWord sy); */
 sword SvgShapeScaleLength(sword v, WWFixedAsDWord s);
 void  SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP);
-
 
 /* ---- tag handlers (dispatch targets) ---- */
 void SvgShapeHandleLine(const char *tag);
