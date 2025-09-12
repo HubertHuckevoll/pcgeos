@@ -4,9 +4,10 @@
 
 /* ---- global compile-time constants ---- */
 #define SVG_COLOR_NAME_LEN   32
-#define MAX_SVG_POINTS       2048
+#define MAX_SVG_POINTS       4096
 #define SVG_IO_BUF_SIZE      1024
-#define TAG_BUF_SIZE         4096  /* must hold entire tag */
+#define TAG_BUF_SIZE         8192  /* must hold entire tag */
+#define MAX_PATH_ATTR_SIZE    8192   /* must hold entire attribute value - FIXME: can't be bigger or equal to tag size but is needed to be big for complex SVGs */
 
 /* Convenient 16.16 one */
 #define WWFIXED_ONE      ((WWFixedAsDWord)(1UL << 16))
@@ -19,14 +20,14 @@
 #endif
 
 /* ---- group style stack (fill/stroke/stroke-width) ---- */
-#define SVG_STYLE_GSTACK_MAX 16
+#define SVG_STYLE_GSTACK_MAX 16 /* max group nesting depth */
 
 typedef struct {
     Boolean fillSet, strokeSet, swSet;
     char fillVal[64];
     char strokeVal[64];
     WWFixedAsDWord strokeWidth;
-} SvgGroupStyle;
+} SvgGroupStyle; // FIXME: make this dynamic!, it is stored in an array
 
 /* ---- shared data types ---- */
 typedef struct {
@@ -38,10 +39,10 @@ typedef struct {
 
 /* All sizeable scratch buffers kept on heap to keep stack tiny - fixme: put in LMemHeap or something */
 typedef struct _SVGScratch {
-    char    tag[TAG_BUF_SIZE];
+    char    tag[TAG_BUF_SIZE];         // FIXME: make this dynamic!
 
     char    pb[256];
-    char    db[4096];
+    char    db[MAX_PATH_ATTR_SIZE];   // FIXME: make this dynamic!
     char    xb[32], yb[32], x2b[32], y2b[32];
     char    wb[32], hb[32];
     char    cxb[32], cyb[32], rxb[32], ryb[32];
@@ -49,7 +50,7 @@ typedef struct _SVGScratch {
     char    col[64];
     char    tbuf[96];
 
-    Point   pts[MAX_SVG_POINTS];
+    Point   pts[MAX_SVG_POINTS];    // FIXME: make this dynamic!
 } SVGScratch;
 
 /* ---- small utility (common) ---- */

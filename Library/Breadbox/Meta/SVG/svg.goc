@@ -449,7 +449,6 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         else if (SvgParserTagIs(scP->tag, "path"))
         {
             LOG_STR("[DISPATCH]", "path");
-            LOG_STR_HEAD("[path d]", scP->tag, 120);
             SvgPathHandle(scP->tag, scP);
         }
         else

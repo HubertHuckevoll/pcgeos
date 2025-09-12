@@ -6,16 +6,15 @@
 GEODE           = meta
 CGM             = cgm.h cgm.goc cgmraw.goc
 HPGL            = hpgl.goc
-SVG             = dbglog.h svg.h dbglog.goc svg.goc svgGeom.goc svgPath.goc\
+SVG             = dbglog.h svg.h dbglog.goc svg.goc svgGeom.goc\
                   svgShape.goc svgStyle.goc svgTransform.goc svgUtil.goc\
-                  svgView.goc
+                  svgView.goc svgPath.goc
 META            = meta.goc
 SPLINEOP        = splineop.goc
 UI_TO_RDFS      =
 OBJS            = cgm.obj cgmraw.obj hpgl.obj dbglog.obj svg.obj\
-                  svgGeom.obj svgPath.obj svgShape.obj svgStyle.obj\
-                  svgTransform.obj svgUtil.obj svgView.obj meta.obj\
-                  splineop.obj
+                  svgGeom.obj svgShape.obj svgStyle.obj svgTransform.obj\
+                  svgUtil.obj svgView.obj svgPath.obj meta.obj splineop.obj
 COMMON          = metaint.h
 MODULES         =
 CMODULES        = CGM HPGL SVG meta splineop
