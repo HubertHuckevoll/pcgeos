@@ -982,20 +982,10 @@ Meta_ArcThreePoint(Point *p,ArcCloseType act,Boolean in,Boolean edges)
 void _export _pascal Meta_BeginPath(void)
 {
     if (meta_GrObj) return;
-
-    /* If this is the outermost path, apply env + line state now */
-    if (_meta_in_path == 0) {
-        _Meta_UpdateEnvironment();
-        _Meta_UpdateLine();   /* <-- ensure width/style/color are live */
-    }
-
-    if (_meta_in_path++)      /* now increment; nested paths still ok */
-        return;
-
-    /* was: _Meta_UpdateEnvironment(); -- already done above */
+    if (_meta_in_path++) return;          /* nested paths ok; do nothing */
+    _Meta_UpdateEnvironment();            /* scale/clip transforms */
     GrBeginPath(meta_GS, PCT_REPLACE);
 }
-
 
 void _export _pascal Meta_EndPath(Boolean in,Boolean edges)
 {
