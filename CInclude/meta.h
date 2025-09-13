@@ -78,6 +78,9 @@ void _export _pascal Meta_EndPath(Boolean in,Boolean edges);
 
 void _export _pascal Meta_TextAt(int x,int y,char *s,WWFixedAsDWord size,sword angle);
 
+void _export _pascal Meta_SetLineJoin(LineJoin lj);
+void _export _pascal Meta_SetLineEnd(LineEnd le);
+
 word _export _pascal Meta_Start(
   word settings,GStateHandle gs,optr body,VMFileHandle vmf);
 int _export _pascal Meta_End(void);

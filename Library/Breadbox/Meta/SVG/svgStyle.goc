@@ -466,39 +466,39 @@ void SvgStyleGroupPush(const char *tag)
     st.strokeVal[0] = 0;
     st.strokeWidth = SvgGeomMakeWWFixedFromInt(1);
 
-    /* inherit group's fill-rule from parent by default */
-    st.frSet = FALSE;
-    st.fr = 0; /* nonzero/winding */
+    /* inherit from parent */
+    st.frSet = FALSE; st.fr = 0;
+    st.lcSet = FALSE; st.lc = 0;
+    st.ljSet = FALSE; st.lj = 0;
     if (gStyleDepth > 0) {
         st.frSet = gStyleStack[gStyleDepth-1].frSet;
         st.fr    = gStyleStack[gStyleDepth-1].fr;
+        st.lcSet = gStyleStack[gStyleDepth-1].lcSet;
+        st.lc    = gStyleStack[gStyleDepth-1].lc;
+        st.ljSet = gStyleStack[gStyleDepth-1].ljSet;
+        st.lj    = gStyleStack[gStyleDepth-1].lj;
     }
 
-    /* inline style= takes precedence within the tag, so read both */
+    /* inline style/attributes: fill, stroke */
     if (SvgStyleGetInlineProp(tag, "fill", st.fillVal, sizeof(st.fillVal)) ||
-        SvgParserGetAttrBounded(tag, "fill", st.fillVal, sizeof(st.fillVal)))
-    {
+        SvgParserGetAttrBounded(tag, "fill", st.fillVal, sizeof(st.fillVal))) {
         st.fillSet = TRUE;
     }
     if (SvgStyleGetInlineProp(tag, "stroke", st.strokeVal, sizeof(st.strokeVal)) ||
-        SvgParserGetAttrBounded(tag, "stroke", st.strokeVal, sizeof(st.strokeVal)))
-    {
+        SvgParserGetAttrBounded(tag, "stroke", st.strokeVal, sizeof(st.strokeVal))) {
         st.strokeSet = TRUE;
     }
 
+    /* stroke-width */
     buf[0] = 0;
-    if (!SvgStyleGetInlineProp(tag, "stroke-width", buf, sizeof(buf)))
-    {
+    if (!SvgStyleGetInlineProp(tag, "stroke-width", buf, sizeof(buf))) {
         (void)SvgParserGetAttrBounded(tag, "stroke-width", buf, sizeof(buf));
     }
-    if (buf[0])
-    {
+    if (buf[0]) {
         pwalk = buf;
         while (*pwalk && (isdigit((byte)*pwalk) || *pwalk=='+' || *pwalk=='-' || *pwalk=='.')) pwalk++;
-        if (pwalk != buf)
-        {
-            char save;
-            save = *pwalk;
+        if (pwalk != buf) {
+            char save = *pwalk;
             *(char*)pwalk = 0;
             (void)SvgParserParseWWFixed16_16(buf, &st.strokeWidth);
             *(char*)pwalk = save;
@@ -506,27 +506,49 @@ void SvgStyleGroupPush(const char *tag)
         }
     }
 
-    /* NEW: parse group fill-rule and override inherited value */
+    /* fill-rule */
     frBuf[0] = 0;
-    if (!SvgStyleGetInlineProp(tag, "fill-rule", frBuf, sizeof(frBuf)))
-    {
+    if (!SvgStyleGetInlineProp(tag, "fill-rule", frBuf, sizeof(frBuf))) {
         (void)SvgParserGetAttrBounded(tag, "fill-rule", frBuf, sizeof(frBuf));
     }
-    if (frBuf[0])
-    {
+    if (frBuf[0]) {
         if (SvgUtilAsciiNoCaseEq(frBuf, "evenodd")) { st.fr = 1; st.frSet = TRUE; }
         else if (SvgUtilAsciiNoCaseEq(frBuf, "nonzero") || SvgUtilAsciiNoCaseEq(frBuf, "winding")) { st.fr = 0; st.frSet = TRUE; }
-        else if (SvgUtilAsciiNoCaseEq(frBuf, "inherit")) {
-            /* keep inherited st.fr/st.frSet as-is */
-        }
-        /* anything else: ignore */
+        /* inherit/other -> keep */
     }
 
-    if (gStyleDepth < SVG_STYLE_GSTACK_MAX)
-    {
+    /* >>> ADD HERE: stroke-linecap / stroke-linejoin <<< */
+
+    /* stroke-linecap */
+    buf[0] = 0;
+    if (!SvgStyleGetInlineProp(tag, "stroke-linecap", buf, sizeof(buf))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-linecap", buf, sizeof(buf));
+    }
+    if (buf[0]) {
+        if (SvgUtilAsciiNoCaseEq(buf, "round"))   { st.lc = 1; st.lcSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "square")) { st.lc = 2; st.lcSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "butt"))   { st.lc = 0; st.lcSet = TRUE; }
+        /* inherit/other -> keep */
+    }
+
+    /* stroke-linejoin */
+    buf[0] = 0;
+    if (!SvgStyleGetInlineProp(tag, "stroke-linejoin", buf, sizeof(buf))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-linejoin", buf, sizeof(buf));
+    }
+    if (buf[0]) {
+        if (SvgUtilAsciiNoCaseEq(buf, "round"))  { st.lj = 1; st.ljSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "bevel")) { st.lj = 2; st.ljSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "miter")) { st.lj = 0; st.ljSet = TRUE; }
+        /* inherit/other -> keep */
+    }
+
+    /* push */
+    if (gStyleDepth < SVG_STYLE_GSTACK_MAX) {
         gStyleStack[gStyleDepth++] = st;
     }
 }
+
 
 void SvgStyleGroupPop(void)
 {
@@ -680,8 +702,51 @@ void SvgStyleApplyStrokeWidth(const char *tag)
     }
 
     Meta_SetLineWidth(lw);
+    SvgStyleApplyStrokeCapJoin(tag);
 }
 
+void SvgStyleApplyStrokeCapJoin(const char *tag)
+{
+    char  b[32];
+    byte  lc;
+    byte  lj;
+
+    /* linecap: element > group > initial(butt) */
+    lc = 0;
+    b[0] = 0;
+    if (!SvgStyleGetInlineProp(tag, "stroke-linecap", b, sizeof(b))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-linecap", b, sizeof(b));
+    }
+    if (b[0]) {
+        if (SvgUtilAsciiNoCaseEq(b, "round")) lc = 1;
+        else if (SvgUtilAsciiNoCaseEq(b, "square")) lc = 2;
+        else if (SvgUtilAsciiNoCaseEq(b, "inherit")) b[0] = 0;
+        /* else butt or unknown -> lc stays 0 */
+    }
+    if (!b[0] && gStyleDepth>0 && gStyleStack[gStyleDepth-1].lcSet) {
+        lc = gStyleStack[gStyleDepth-1].lc;
+    }
+    Meta_SetLineEnd( (lc==1)? LE_ROUNDCAP : (lc==2)? LE_SQUARECAP : LE_BUTTCAP );
+
+    /* linejoin: element > group > initial(miter) */
+    lj = 0;
+    b[0] = 0;
+    if (!SvgStyleGetInlineProp(tag, "stroke-linejoin", b, sizeof(b))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-linejoin", b, sizeof(b));
+    }
+    if (b[0]) {
+        if (SvgUtilAsciiNoCaseEq(b, "round")) lj = 1;
+        else if (SvgUtilAsciiNoCaseEq(b, "bevel")) lj = 2;
+        else if (SvgUtilAsciiNoCaseEq(b, "inherit")) b[0] = 0;
+        /* else miter or unknown -> lj stays 0 */
+    }
+    if (!b[0] && gStyleDepth>0 && gStyleStack[gStyleDepth-1].ljSet) {
+        lj = gStyleStack[gStyleDepth-1].lj;
+    }
+
+    Meta_SetLineJoin( (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
+    Meta_SetLineEnd( (lc==1)? LE_ROUNDCAP : (lc==2)? LE_SQUARECAP : LE_BUTTCAP );
+}
 
 Boolean SvgStyleHasStroke(const char *tag)
 {

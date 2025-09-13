@@ -1052,6 +1052,23 @@ void _export _pascal Meta_TextAt(int x,int y,char *s,WWFixedAsDWord size,sword a
         GrRestoreState(meta_GS);
 }
 
+void _export _pascal Meta_SetLineJoin(LineJoin lj)
+{
+    if(!meta_GrObj)                 /* only for GStrings */
+    {
+      GrSetLineJoin(meta_GS, lj);
+    }
+}
+
+void _export _pascal Meta_SetLineEnd(LineEnd le)
+{
+    if(!meta_GrObj)                 /* only for GStrings */
+    {
+      GrSetLineEnd(meta_GS, le);
+    }
+}
+
+
 /*----------------------------------------------------------------------------*/
 word _export _pascal Meta_Start(
   word settings,GStateHandle gs,optr body,VMFileHandle vmf)

@@ -24,16 +24,14 @@
 
 /* per-group style state */
 typedef struct {
-    Boolean         fillSet;
-    Boolean         strokeSet;
-    Boolean         swSet;
-    char            fillVal[64];
-    char            strokeVal[64];
+    Boolean         fillSet, strokeSet, swSet;
+    char            fillVal[64], strokeVal[64];
     WWFixedAsDWord  strokeWidth;
-    /* NEW: inherited fill-rule for descendants */
-    Boolean         frSet;      /* TRUE if a concrete rule is in effect here */
-    byte            fr;         /* 0 = nonzero/winding, 1 = evenodd */
+    Boolean         frSet;  byte fr;      /* 0=nonzero, 1=evenodd */
+    Boolean         lcSet;  byte lc;      /* 0=butt, 1=round, 2=square */
+    Boolean         ljSet;  byte lj;      /* 0=miter, 1=round, 2=bevel */
 } SvgGroupStyle;
+
 
 
 /* ---- shared data types ---- */
@@ -83,6 +81,7 @@ Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
 void    SvgStyleApplyStrokeAndFill(const char *tag);
 void    SvgStyleApplyStrokeWidth(const char *tag);
 void    SvgStyleApplyFillRule(const char *tag);
+void    SvgStyleApplyStrokeCapJoin(const char *tag);
 Boolean SvgStyleHasStroke(const char *tag);
 Boolean SvgStyleHasFill(const char *tag);
 /* groups */

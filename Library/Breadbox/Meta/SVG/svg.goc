@@ -384,6 +384,14 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
             continue;
         }
 
+        /* root close: </svg> */
+        if (scP->tag[0] == '/' && SvgParserTagIs(scP->tag + 1, "svg"))
+        {
+            LOG_STR("[DISPATCH]", "/svg");
+            SvgStyleGroupPop();
+            continue;
+        }
+
         /* group close: </g> */
         if (scP->tag[0] == '/' && SvgParserTagIs(scP->tag + 1, "g"))
         {
@@ -396,6 +404,8 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         if (SvgParserTagIs(scP->tag, "svg"))
         {
             LOG_STR("[SVG]", "root");
+            /* inherit root style like a group */
+            SvgStyleGroupPush(scP->tag);
             SvgViewInitFromSvgTag(scP->tag);
             sawSvg = TRUE;
             continue;
