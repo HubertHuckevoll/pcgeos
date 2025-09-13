@@ -745,7 +745,6 @@ void SvgStyleApplyStrokeCapJoin(const char *tag)
     }
 
     Meta_SetLineJoin( (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
-    Meta_SetLineEnd( (lc==1)? LE_ROUNDCAP : (lc==2)? LE_SQUARECAP : LE_BUTTCAP );
 }
 
 Boolean SvgStyleHasStroke(const char *tag)

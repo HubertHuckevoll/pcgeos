@@ -496,28 +496,35 @@ void _export _pascal Meta_SetTransparency(Boolean flag)
 }
 
 /*----------------------------------------------------------------------------*/
+
 void _export _pascal Meta_Line(sword x1,sword y1,sword x2,sword y2)
 {
-        optr obj;
+    optr obj;
 
-        _Meta_chk(x1,y1,&x1,&y1);       /* check point */
-        _Meta_chk(x2,y2,&x2,&y2);       /* check point */
+    _Meta_chk(x1,y1,&x1,&y1);
+    _Meta_chk(x2,y2,&x2,&y2);
 
-        if(meta_GrObj) {                /*** GrObj output */
-          obj = Create_GrObj(x1,y1,x2,y2,(ClassStruct *)&LineClass,
-            FALSE,FALSE,FALSE);
-          Add_GrObj(obj);
-        }
-        else {                          /*** GString output */
-          _Meta_UpdateEnvironment();    /* update general data */
-          if(!_meta_transparency && !_meta_in_path &&
-             (meta_LineFill!=SDM_100 || meta_LineStyle!=LS_SOLID)) {
-            _Meta_UpdateLineBack();     /* affected by line settings */
-            _Meta_optimizedLine(meta_GS,x1,y1,x2,y2);
-          }
-          _Meta_UpdateLine();           /* affected by line settings */
-          _Meta_optimizedLine(meta_GS,x1,y1,x2,y2);
-        }
+    if (meta_GrObj) {
+        obj = Create_GrObj(x1,y1,x2,y2,(ClassStruct *)&LineClass, FALSE,FALSE,FALSE);
+        Add_GrObj(obj);
+        return;
+    }
+
+    _Meta_UpdateEnvironment();
+
+    /* NEW: when building a path, just append geometry; do not draw now */
+    if (_meta_in_path) {
+        GrMoveTo(meta_GS, x1, y1);
+        GrDrawLineTo(meta_GS, x2, y2);
+        return;
+    }
+
+    if(!_meta_transparency && (meta_LineFill!=SDM_100 || meta_LineStyle!=LS_SOLID)) {
+        _Meta_UpdateLineBack();
+        _Meta_optimizedLine(meta_GS,x1,y1,x2,y2);
+    }
+    _Meta_UpdateLine();
+    _Meta_optimizedLine(meta_GS,x1,y1,x2,y2);
 }
 
 /*
@@ -570,8 +577,12 @@ void _export _pascal Meta_Polyline(Point *p,word np)
         optr obj,obj2;
         SplineSetPointParams params;
 
-        if(np==2)                       /* exactly two points: make a line */
-        {
+        if (np==2) {
+          if (_meta_in_path) {                /* NEW: append to current path */
+            GrMoveTo(meta_GS, p[0].P_x, p[0].P_y);
+            GrDrawLineTo(meta_GS, p[1].P_x, p[1].P_y);
+            return;
+          }
           Meta_Line(p[0].P_x,p[0].P_y,p[1].P_x,p[1].P_y);
           return;
         }
@@ -970,12 +981,21 @@ Meta_ArcThreePoint(Point *p,ArcCloseType act,Boolean in,Boolean edges)
 
 void _export _pascal Meta_BeginPath(void)
 {
-        if(meta_GrObj) return;          /* not implemented for GrObj's yet */
-        if(_meta_in_path++)             /* yes, we're drawing a path */
-          return;                       /* no nested paths, please */
+    if (meta_GrObj) return;
+
+    /* If this is the outermost path, apply env + line state now */
+    if (_meta_in_path == 0) {
         _Meta_UpdateEnvironment();
-        GrBeginPath(meta_GS,PCT_REPLACE);
+        _Meta_UpdateLine();   /* <-- ensure width/style/color are live */
+    }
+
+    if (_meta_in_path++)      /* now increment; nested paths still ok */
+        return;
+
+    /* was: _Meta_UpdateEnvironment(); -- already done above */
+    GrBeginPath(meta_GS, PCT_REPLACE);
 }
+
 
 void _export _pascal Meta_EndPath(Boolean in,Boolean edges)
 {
