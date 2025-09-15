@@ -61,6 +61,11 @@ Boolean _meta_transparency;
 RegionFillRule meta_windingRule;
 
 /*----------------------------------------------------------------------------*/
+/*
+ * Compute the vector length as a WWFixed value.
+ *
+ * Returns sqrt(vx^2 + vy^2) in 16.16 fixed-point (WWFixedAsDWord).
+ */
 WWFixedAsDWord _export _pascal rad(sword vx,sword vy)
 {
             FloatWordToFloat(vx);
@@ -74,6 +79,11 @@ WWFixedAsDWord _export _pascal rad(sword vx,sword vy)
         return (WWFixedAsDWord)FloatFloatToDword();
 }
 
+/*
+ * Compute the polar angle of a vector in degrees (WWFixed).
+ *
+ * Returns atan2(vy, vx) converted to degrees in 16.16 fixed-point.
+ */
 WWFixedAsDWord _export _pascal phi(sword vx,sword vy)
 {
                 FloatWordToFloat(vx);
@@ -88,6 +98,12 @@ WWFixedAsDWord _export _pascal phi(sword vx,sword vy)
         return (WWFixedAsDWord)FloatFloatToDword();
 }
 
+/*
+ * Adjust an angle for non-uniform Y scaling.
+ *
+ * Given an input angle (degrees) and a Y/X scale ratio sc, translate the
+ * angle as it appears after scaling a circle into an ellipse.
+ */
 sword _xlate_angle2(sword angle,WWFixedAsDWord sc)
 {
         if(angle==0 || abs(angle)==90 || sc==MakeWWFixed(sc))
@@ -111,6 +127,12 @@ sword _xlate_angle2(sword angle,WWFixedAsDWord sc)
         return (sword)FloatFloatToDword();
 }
 
+/*
+ * Normalize and adjust an angle for non-uniform Y scaling.
+ *
+ * Wraps the angle to [0,360) and maps quadrants to preserve direction
+ * while delegating the math to _xlate_angle2.
+ */
 sword _xlate_angle(sword angle,WWFixedAsDWord sc)
 {
         if(angle<0) angle+=360;
@@ -122,6 +144,14 @@ sword _xlate_angle(sword angle,WWFixedAsDWord sc)
         return _xlate_angle2(angle-360,sc)+360;
 }
 
+/*
+ * Validate and normalize an input point into meta space.
+ *
+ * - Fixes coordinates that wrapped into the negative range (seen in some
+ *   emitters), by clipping to the configured world rectangle.
+ * - Applies underscaling (\*_meta_undersc) to avoid issues in some drawing
+ *   routines and returns the adjusted values via vx/vy.
+ */
 void _Meta_chk(sword x,sword y,sword *vx,sword *vy)
 {
         Point p;
@@ -147,6 +177,12 @@ void _Meta_chk(sword x,sword y,sword *vx,sword *vy)
         *vy=p.P_y/_meta_undersc;        /* return modified coordinates */
 }
 
+/*
+ * Sanitize a polyline in-place and return the new point count.
+ *
+ * Removes consecutive duplicate points and normalizes each point through
+ * _Meta_chk(). Returns the number of valid points now in p[].
+ */
 word _Meta_chkPolyline(Point *p,word np)
 {
         word n_poly,n;
@@ -163,6 +199,12 @@ word _Meta_chkPolyline(Point *p,word np)
         return n_poly;
 }
 
+/*
+ * Compare the visible components of two ColorQuad values.
+ *
+ * Returns non-zero if they differ in info/index or any RGB components that
+ * affect rendering; zero otherwise.
+ */
 int cq_compare(ColorQuad *q1,ColorQuad *q2)
 {
         return q1->CQ_info!=q2->CQ_info || q1->CQ_redOrIndex!=q2->CQ_redOrIndex
@@ -171,6 +213,11 @@ int cq_compare(ColorQuad *q1,ColorQuad *q2)
                                         /* compare relevant parts of cquad */
 }
 
+/*
+ * Convert ColorQuad to RGB if it is INDEX or GRAY.
+ *
+ * Ensures colors are in a mixable RGB form for attribute assignment.
+ */
 void ConvertToRGB(ColorQuad *cq)
 {
     if(cq->CQ_info==CF_INDEX)           /* convert INDEX to "mixable" RGB */
@@ -204,6 +251,12 @@ SystemDrawMask meta_c_LineFill;
 ColorQuad meta_c_AreaColor;
 SystemDrawMask meta_c_AreaFill;
 
+/*
+ * Push background line attributes to the GState if needed.
+ *
+ * Uses the pattern background color and resets style/mask to solid so that
+ * subsequent background passes (for masked/hatched outlines) render correctly.
+ */
 void static _Meta_UpdateLineBack(void)
 {
         if(cq_compare(&meta_c_LineColor,&meta_PatternBack)
@@ -228,6 +281,11 @@ void static _Meta_UpdateLineBack(void)
         meta_line_indef=FALSE;          /* line state is known now */
 }
 
+/*
+ * Push requested line attributes to the GState if needed.
+ *
+ * No-ops while inside a path (deferred until Meta_EndPath).
+ */
 void static _Meta_UpdateLine(void)
 {
         if(_meta_in_path) return;       /* delay updates while drawing a path */
@@ -257,6 +315,11 @@ void static _Meta_UpdateLine(void)
         meta_line_indef=FALSE;          /* line state is known now */
 }
 
+/*
+ * Push background area attributes to the GState if needed.
+ *
+ * Uses the pattern background color and solid mask for background fills.
+ */
 void static _Meta_UpdateAreaBack(void)
 {
         if(cq_compare(&meta_c_AreaColor,&meta_PatternBack)
@@ -273,6 +336,11 @@ void static _Meta_UpdateAreaBack(void)
         meta_area_indef=FALSE;          /* area state is known now */
 }
 
+/*
+ * Push requested area attributes to the GState if needed.
+ *
+ * No-ops while inside a path (deferred until Meta_EndPath).
+ */
 void static _Meta_UpdateArea(void)
 {
         if(_meta_in_path) return;       /* delay updates while drawing a path */
@@ -292,6 +360,12 @@ void static _Meta_UpdateArea(void)
         meta_area_indef=FALSE;          /* area state is known now */
 }
 
+/*
+ * Apply pending environment updates (scale and clip) to the GState.
+ *
+ * - Applies scaling using the current meta scale and Y direction.
+ * - Sets or clears the clip rectangle if it has changed.
+ */
 void static _Meta_UpdateEnvironment(void)
 {
         if(meta_scale_c) {
@@ -314,6 +388,13 @@ void static _Meta_UpdateEnvironment(void)
 /*----------------------------------------------------------------------------
    Utility routines for GrObj output
   ----------------------------------------------------------------------------*/
+/*
+ * Instantiate a GrObj with current meta attributes and bounds.
+ *
+ * Creates an object of the given class, sets its position/size to the
+ * bounding box, and applies line and area attributes derived from the
+ * current meta settings. Returns the new object optr.
+ */
 optr Create_GrObj(sword x1,sword y1,sword x2,sword y2,ClassStruct *class,
                   Boolean area,Boolean area_in,Boolean area_edges)
 {
@@ -380,6 +461,12 @@ optr Create_GrObj(sword x1,sword y1,sword x2,sword y2,ClassStruct *class,
         return obj;                     /* return newly created object */
 }
 
+/*
+ * Add the given GrObj to the current body with meta transforms.
+ *
+ * Applies the meta scale (and Y-direction) as a transform, adds the object
+ * to the body, and selects it. Returns 0 on success.
+ */
 int Add_GrObj(optr obj)
 {
         TransMatrix tm;
@@ -399,6 +486,9 @@ int Add_GrObj(optr obj)
 }
 
 /*----------------------------------------------------------------------------*/
+/*
+ * Set the current line color for all subsequent drawing.
+ */
 void _export _pascal
 Meta_SetLineColor(ColorFlag flag,word redOrIndex,word green,word blue)
 {
@@ -408,6 +498,9 @@ Meta_SetLineColor(ColorFlag flag,word redOrIndex,word green,word blue)
         meta_LineColor.CQ_blue=(byte)blue;
 }
 
+/*
+ * Set the current area (fill) color for subsequent fills.
+ */
 void _export _pascal
 Meta_SetAreaColor(ColorFlag flag,word redOrIndex,word green,word blue)
 {
@@ -417,31 +510,58 @@ Meta_SetAreaColor(ColorFlag flag,word redOrIndex,word green,word blue)
         meta_AreaColor.CQ_blue=(byte)blue;
 }
 
-void _export _pascal Meta_SetFillRule(RegionFillRule windingRule)
+/*
+ * Set the fill rule used when filling polygons/paths.
+ */
+void _export _pascal
+Meta_SetFillRule(RegionFillRule windingRule)
 {
         meta_windingRule=windingRule;   /* store fill rule for polygons */
 }
 
-void _export _pascal Meta_SetLineStyle(LineStyle ls)
+/*
+ * Set the current line style (solid, dashed, etc.).
+ */
+void _export _pascal
+Meta_SetLineStyle(LineStyle ls)
 {
         meta_LineStyle=ls;              /* store line style */
 }
 
-void _export _pascal Meta_SetLineWidth(WWFixedAsDWord lw)
+/*
+ * Set the current line width (WWFixed 16.16).
+ */
+void _export _pascal
+Meta_SetLineWidth(WWFixedAsDWord lw)
 {
         meta_LineWidth=lw;              /* store line width */
 }
 
-void _export _pascal Meta_SetAreaFill(SystemDrawMask sdm)
+/*
+ * Set the current area fill mask (pattern density).
+ */
+void _export _pascal
+Meta_SetAreaFill(SystemDrawMask sdm)
 {
         meta_AreaFill=sdm;              /* store draw mask */
 }
 
-void _export _pascal Meta_SetLineFill(SystemDrawMask sdm)
+/*
+ * Set the current line mask (pattern density for outlines).
+ */
+void _export _pascal
+Meta_SetLineFill(SystemDrawMask sdm)
 {
         meta_LineFill=sdm;              /* store draw mask */
 }
 
+/*
+ * Define world-to-output scaling based on a world rect and output size.
+ *
+ * Stores the world rectangle, computes an underscale factor to avoid
+ * drawing bugs, and derives the main X scale to map world width to g_x.
+ * The Y direction may be inverted based on SETTINGS_INPUT_Y_DOWN.
+ */
 void _export _pascal
 Meta_SetScaling(sword w_x1,sword w_y1,sword w_x2,sword w_y2,
                 word g_x,word g_y)
@@ -469,18 +589,28 @@ Meta_SetScaling(sword w_x1,sword w_y1,sword w_x2,sword w_y2,
         meta_scale_c=TRUE;
 }
 
+/*
+ * Get the current main meta scale (WWFixed 16.16).
+ */
 WWFixedAsDWord _export _pascal Meta_GetScaling(void)
 {
         return _meta_scale;             /* return main scaling factor */
 }
 
-void _export _pascal Meta_SetClipRect(sword x1,sword y1,sword x2,sword y2)
+/*
+ * Set the current clip rectangle in meta coordinates.
+ */
+void _export _pascal
+Meta_SetClipRect(sword x1,sword y1,sword x2,sword y2)
 {
         _Meta_chk(x1,y1,&_meta_clip_x1,&_meta_clip_y1);
         _Meta_chk(x2,y2,&_meta_clip_x2,&_meta_clip_y2);
         meta_clip_c=TRUE;               /* clipping mode has changed */
 }
 
+/*
+ * Set the pattern background color used for masked draws.
+ */
 void _export _pascal
 Meta_SetPatternBack(ColorFlag flag,word redOrIndex,word green,word blue)
 {
@@ -490,14 +620,27 @@ Meta_SetPatternBack(ColorFlag flag,word redOrIndex,word green,word blue)
         meta_PatternBack.CQ_blue=(byte)blue;
 }
 
-void _export _pascal Meta_SetTransparency(Boolean flag)
+/*
+ * Enable or disable transparency for background passes.
+ */
+void _export _pascal
+Meta_SetTransparency(Boolean flag)
 {
         _meta_transparency=flag;
 }
 
 /*----------------------------------------------------------------------------*/
 
-void _export _pascal Meta_Line(sword x1,sword y1,sword x2,sword y2)
+/*
+ * Draw a line segment.
+ *
+ * - In GrObj mode, creates a Line object and adds it to the body.
+ * - In GString mode, updates env/attributes and draws, handling background
+ *   passes for masked/hatched lines. When inside a path, only appends
+ *   geometry to the current path.
+ */
+void _export _pascal
+Meta_Line(sword x1,sword y1,sword x2,sword y2)
 {
     optr obj;
 
@@ -572,7 +715,15 @@ void _export _pascal Meta_Line(sword x1,sword y1,sword x2,sword y2)
     _optimize(_in,_edges,_cmdDraw);\
 }
 
-void _export _pascal Meta_Polyline(Point *p,word np)
+/*
+ * Draw an open polyline.
+ *
+ * - With two points, forwards to Meta_Line (or appends to a path).
+ * - In GrObj mode, creates an open Spline curve.
+ * - In GString mode, draws directly when possible or via a path otherwise.
+ */
+void _export _pascal
+Meta_Polyline(Point *p,word np)
 {
         optr obj,obj2;
         SplineSetPointParams params;
@@ -620,7 +771,15 @@ void _export _pascal Meta_Polyline(Point *p,word np)
         }
 }
 
-void _export _pascal Meta_Polygon(Point *p,word np,Boolean in,Boolean edges)
+/*
+ * Draw a closed polygon with optional fill and/or edges.
+ *
+ * - Degenerates to a line for two points when only edges matter.
+ * - In GrObj mode, creates a closed Spline curve.
+ * - In GString mode, uses the optimization macros to stroke/fill.
+ */
+void _export _pascal
+Meta_Polygon(Point *p,word np,Boolean in,Boolean edges)
 {
         optr obj,obj2;
         SplineSetPointParams params;
@@ -652,6 +811,9 @@ void _export _pascal Meta_Polygon(Point *p,word np,Boolean in,Boolean edges)
             _Meta_optimizedPolyline(meta_GS,p,np,TRUE));
 }
 
+/*
+ * Draw a rectangle with optional fill and/or edges.
+ */
 void _export _pascal
 Meta_Rect(sword x1,sword y1,sword x2,sword y2,Boolean in,Boolean edges)
 {
@@ -671,6 +833,12 @@ Meta_Rect(sword x1,sword y1,sword x2,sword y2,Boolean in,Boolean edges)
             GrFillRect(meta_GS,x1,y1,x2,y2));
 }
 
+/*
+ * Draw an ellipse (or circle) with optional fill and/or edges.
+ *
+ * Supports rotation for non-circular ellipses by applying a temporary
+ * transform in GString mode or rotating the object in GrObj mode.
+ */
 void _export _pascal
 Meta_Ellipse(sword cex,sword cey,sword rx,sword ry,sword angle,
              Boolean in,Boolean edges)
@@ -713,6 +881,12 @@ Meta_Ellipse(sword cex,sword cey,sword rx,sword ry,sword angle,
         }
 }
 
+/*
+ * Draw an elliptical arc with optional closure/fill/edges.
+ *
+ * Adjusts start/end angles for non-uniform scaling. Uses Arc GrObj where
+ * available, or applies transforms and draws a 3-point arc in GString mode.
+ */
 void _export _pascal
 Meta_EllipticalArc(sword cex,sword cey,sword rx,sword ry,sword angle,
                    sword sa,sword ea,ArcCloseType act,
@@ -814,6 +988,12 @@ Meta_EllipticalArc(sword cex,sword cey,sword rx,sword ry,sword angle,
         }
 }
 
+/*
+ * Draw a circular arc defined by three points.
+ *
+ * In GrObj mode, computes the circle center/radius and calls Meta_EllipticalArc.
+ * In GString mode, uses GrDraw/FillArc3Point via optimization macros.
+ */
 void _export _pascal
 Meta_ArcThreePoint(Point *p,ArcCloseType act,Boolean in,Boolean edges)
 {
@@ -979,7 +1159,14 @@ Meta_ArcThreePoint(Point *p,ArcCloseType act,Boolean in,Boolean edges)
         #undef y3
 }
 
-void _export _pascal Meta_BeginPath(void)
+/*
+ * Begin accumulating a path for subsequent fill/stroke.
+ *
+ * Nestable. Applies environment transforms and starts a GState path when
+ * not in GrObj mode.
+ */
+void _export _pascal
+Meta_BeginPath(void)
 {
     if (meta_GrObj) return;
     if (_meta_in_path++) return;          /* nested paths ok; do nothing */
@@ -987,7 +1174,14 @@ void _export _pascal Meta_BeginPath(void)
     GrBeginPath(meta_GS, PCT_REPLACE);
 }
 
-void _export _pascal Meta_EndPath(Boolean in,Boolean edges)
+/*
+ * End the current path and optionally fill and/or stroke it.
+ *
+ * Performs background and foreground passes for area/line attributes as
+ * required. Closes only at the outermost nesting level.
+ */
+void _export _pascal
+Meta_EndPath(Boolean in,Boolean edges)
 {
         if(meta_GrObj) return;          /* not implemented for GrObj's yet */
         GrEndPath(meta_GS);
@@ -1022,7 +1216,15 @@ void _export _pascal Meta_EndPath(Boolean in,Boolean edges)
         }
 }
 
-void _export _pascal Meta_TextAt(int x,int y,char *s,WWFixedAsDWord size,sword angle)
+/*
+ * Draw text at device coordinates (x,y) with size and rotation.
+ *
+ * Only in GString mode (text suppressed for GrObj). Applies transforms to
+ * neutralize meta scaling so size is in text coordinates, converts string
+ * encoding, and draws using a fixed font.
+ */
+void _export _pascal
+Meta_TextAt(int x,int y,char *s,WWFixedAsDWord size,sword angle)
 {
         TextAttr ta={C_BLACK,CF_INDEX,0,0,
                      SDM_100,
@@ -1062,7 +1264,11 @@ void _export _pascal Meta_TextAt(int x,int y,char *s,WWFixedAsDWord size,sword a
         GrRestoreState(meta_GS);
 }
 
-void _export _pascal Meta_SetLineJoin(LineJoin lj)
+/*
+ * Set the line join style (GString mode only).
+ */
+void _export _pascal
+Meta_SetLineJoin(LineJoin lj)
 {
     if(!meta_GrObj)                 /* only for GStrings */
     {
@@ -1070,7 +1276,11 @@ void _export _pascal Meta_SetLineJoin(LineJoin lj)
     }
 }
 
-void _export _pascal Meta_SetLineEnd(LineEnd le)
+/*
+ * Set the line end cap style (GString mode only).
+ */
+void _export _pascal
+Meta_SetLineEnd(LineEnd le)
 {
     if(!meta_GrObj)                 /* only for GStrings */
     {
@@ -1080,6 +1290,13 @@ void _export _pascal Meta_SetLineEnd(LineEnd le)
 
 
 /*----------------------------------------------------------------------------*/
+/*
+ * Initialize meta state for a conversion session.
+ *
+ * Applies settings flags (see meta.h), stores context (GState, body, VM),
+ * initializes default attributes, clears transforms/clip, and prepares
+ * GString line/area defaults when not in GrObj mode. Returns 0.
+ */
 word _export _pascal Meta_Start(
   word settings,GStateHandle gs,optr body,VMFileHandle vmf)
 {
@@ -1103,9 +1320,9 @@ word _export _pascal Meta_Start(
         Meta_SetAreaColor(CF_INDEX,0,0,0);      /* set default area color */
         Meta_SetLineWidth(MakeWWFixed(1));      /* Liniendicke: 1 pt */
         Meta_SetLineColor(CF_INDEX,0,0,0);      /* default-Pen: Schwarz */
-        Meta_SetAreaFill(SDM_100);              /* Solid-F�llung */
+        Meta_SetAreaFill(SDM_100);              /* Solid-Füllung */
         Meta_SetLineStyle(LS_SOLID);            /* default linestyle */
-        Meta_SetLineFill(SDM_100);              /* Solid-F�llung */
+        Meta_SetLineFill(SDM_100);              /* Solid-Füllung */
         Meta_SetFillRule(ODD_EVEN);     /* default filling rule for polygons */
         meta_line_indef=meta_area_indef=TRUE;   /* current states are unknown */
 
@@ -1129,6 +1346,9 @@ word _export _pascal Meta_Start(
         return 0;                       /* no errors */
 }
 
+/*
+ * Finish the conversion session, closing any open path. Returns 0.
+ */
 int _export _pascal Meta_End(void)
 {
         if(_meta_in_path)               /* close any open path */
