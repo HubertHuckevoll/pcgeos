@@ -456,6 +456,11 @@ DIR (ensemble) {
 		Library/PngLib/pnglib{ec}.geo GFS LOCALPC
 
 		#
+		# for vector (SVG) import
+		#
+		Library/Breadbox/Meta/meta{ec}.geo GFS LOCALPC
+
+		#
 		# for Global Email
 		#
 		Library/Mail/MailHub/{dbcs}/mailhub{ec}.geo GFS LOCALPC
@@ -491,7 +496,7 @@ DIR (ensemble) {
 		#
 		# RabeSoft Libraries
 		#
-		Library/RabeSoft/rsftool/rsftool{ec}.geo GFS LOCALPC	
+		Library/RabeSoft/rsftool/rsftool{ec}.geo GFS LOCALPC
 		Library/RabeSoft/bmptools/bmptools{ec}.geo GFS LOCALPC
 
 		DIR (font) {
@@ -515,10 +520,11 @@ DIR (ensemble) {
 			#
 			# BreadBox Libraries
 			#
-			Library/Breadbox/Impex/GIF/gif{ec}.geo
-			Library/Breadbox/Impex/PNG/png{ec}.geo
-			# Library/Breadbox/Impex/HTML/htmlimpx.GEO
-			Library/Breadbox/Impex/JPEG/jpeg{ec}.geo
+			Library/Breadbox/Impex/GIF/gif{ec}.geo GFS LOCALPC
+			Library/Breadbox/Impex/PNG/png{ec}.geo GFS LOCALPC
+			# Library/Breadbox/Impex/HTML/htmlimpx.geo GFS LOCALPC
+			Library/Breadbox/Impex/JPEG/jpeg{ec}.geo GFS LOCALPC
+			Library/Breadbox/Impex/VCImpex/vcimpex{ec}.geo GFS LOCALPC
 
 			# RTF for Help Files if tools build
 			# I'm not sure what this was - I think a special deal for
