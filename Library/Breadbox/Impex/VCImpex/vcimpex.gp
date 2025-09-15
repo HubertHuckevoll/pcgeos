@@ -1,6 +1,6 @@
 name vcimpex.lib
 
-longname        "VConvert CGM/HPGL/SVG Translator"
+longname        "CGM/HPGL/SVG Translator"
 tokenchars      "TLGR"
 tokenid		0
 

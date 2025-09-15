@@ -29,7 +29,7 @@
     GI_visMoniker = "by Marcus Groeber 1995-97";
 }
 @object GenBooleanGroupClass booleanOptions = {
-    GI_visMoniker = "General Options: ";
+    GI_visMoniker = "HPGL/CGM Options: ";
     GBGI_selectedBooleans = 32769;
     GI_comp = @vcimpex_obj0003, @vcimpex_obj0004, @vcimpex_obj0005, @vcimpex_obj0006;
     HINT_ORIENT_CHILDREN_VERTICALLY;
@@ -43,7 +43,7 @@
 
 @object GenInteractionClass ImportSettings = {
     GI_states = @default & ~GS_USABLE;
-    GI_comp = @booleanOptions, @vcimpex_obj0007;
+    GI_comp = @booleanOptions /*, @vcimpex_obj0007*/; // sorry Marcus - we are not naming programmers in FreeGEOS, maybe we should?
     HINT_ORIENT_CHILDREN_VERTICALLY;
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
 }
