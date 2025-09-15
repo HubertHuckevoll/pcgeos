@@ -4,6 +4,8 @@
  * FILE:          ImpTProc.goc
  *
  * AUTHOR:        Marcus Groeber
+ * DESCRIPTION:   ImpEx developed with V-Convert project (V-Convert ImpEx Translator)
+ * NOTES:         "by Marcus Groeber 1995-97"
  *
  ***********************************************************************/
 
@@ -25,54 +27,53 @@
 
 Boolean _export _pascal UpdateProgressPct(word pct)
 {
-        return !ImpexUpdateImportExportStatus(NULL,pct);
+    return !ImpexUpdateImportExportStatus(NULL,pct);
 }
 
 dword _export _pascal ImportProcedure(ImportFrame *ieb,VMChain *vmc)
 {
-        word cif;
-        int ret;
-        struct ie_uidata *uidata;
-        VMBlockHandle gsblock;
-        GStateHandle tempGS;
+    word cif;
+    int ret;
+    struct ie_uidata *uidata;
+    VMBlockHandle gsblock;
+    GStateHandle tempGS;
 
-        ImpexUpdateImportExportStatus("File is being converted",-1);
+    ImpexUpdateImportExportStatus("File is being converted",-1);
 
-        uidata = (struct ie_uidata *)MemLock( ieb->IF_importOptions );
+    uidata = (struct ie_uidata *)MemLock( ieb->IF_importOptions );
 
-        if (ieb->IF_formatNumber==FORMAT_SVG) uidata->booleanOptions |= SETTINGS_INPUT_Y_DOWN;    /* SVG is Y-down */
+    if (ieb->IF_formatNumber==FORMAT_SVG) uidata->booleanOptions |= SETTINGS_INPUT_Y_DOWN;    /* SVG is Y-down */
 
-        tempGS = GrCreateGString( ieb->IF_transferVMFile, GST_VMEM, &gsblock );
-        Meta_Start( uidata->booleanOptions, tempGS, NULL,
-          ieb->IF_transferVMFile );     /* initialize drawing system */
+    tempGS = GrCreateGString( ieb->IF_transferVMFile, GST_VMEM, &gsblock );
+    Meta_Start( uidata->booleanOptions, tempGS, NULL, ieb->IF_transferVMFile );     /* initialize drawing system */
 
-        switch( ieb->IF_formatNumber )
-        {
-          case FORMAT_CGM:
-            ret = ReadCGM( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
-            break;
-          case FORMAT_HPGL:
-            ret = ReadHPGL( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
-            break;
-          case FORMAT_SVG:
-            ret = ReadSVG( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
-            break;
-          default:
-            ret = TE_INVALID_FORMAT;
-        }
+    switch( ieb->IF_formatNumber )
+    {
+        case FORMAT_CGM:
+        ret = ReadCGM( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
+        break;
+        case FORMAT_HPGL:
+        ret = ReadHPGL( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
+        break;
+        case FORMAT_SVG:
+        ret = ReadSVG( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
+        break;
+        default:
+        ret = TE_INVALID_FORMAT;
+    }
 
-        Meta_End();                     /* closing drawing system */
-        GrEndGString(tempGS);           /* close target gstring */
-        GrDestroyGString( tempGS, 0, GSKT_LEAVE_DATA );
+    Meta_End();                     /* closing drawing system */
+    GrEndGString(tempGS);           /* close target gstring */
+    GrDestroyGString( tempGS, 0, GSKT_LEAVE_DATA );
 
-        cif = CIF_GRAPHICS_STRING;      /* we have created a gstring */
+    cif = CIF_GRAPHICS_STRING;      /* we have created a gstring */
 
-        MemUnlock( ieb->IF_importOptions );
-        *vmc = VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock);
-                                        /* return head of VMChain for item */
+    MemUnlock( ieb->IF_importOptions );
+    *vmc = VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock);
+                                    /* return head of VMChain for item */
 
-        if(ret!=TE_NO_ERROR) {
-	  return ret;
-	}
-        return TE_NO_ERROR+(((dword)cif)<<16);
+    if(ret!=TE_NO_ERROR) {
+        return ret;
+    }
+    return TE_NO_ERROR+(((dword)cif)<<16);
 }
