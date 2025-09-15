@@ -290,7 +290,6 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 /********************************************************************
  ImpPNG
  *******************************************************************/
-
 #if PROGRESS_DISPLAY
 ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
@@ -520,8 +519,8 @@ void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle 
  */
 VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFlags)
 {
-	Boolean locAllowAnimations;
-	Boolean locCompress;
+    Boolean locAllowAnimations;
+    Boolean locCompress;
     ImpBmpParams params;
     ImpBmpStatus status;
     VMBlockHandle dataVMBlock,bmVMBlock = NullHandle;
@@ -533,39 +532,38 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 
     InitGlobals();                      /* Handled cached INI entries */
 
-	locAllowAnimations = allowAnimations;
-	locCompress = doCompress;
+    locAllowAnimations = allowAnimations;
+    locCompress = doCompress;
 
-	if(extFlags & MIME_GREX_NO_ANIMATIONS) {
-
-		locAllowAnimations = FALSE;
-	}
-	if(extFlags & MIME_GREX_NO_SCANLINE_COMPRESS) {
-
-		locCompress = FALSE;
-	}
+    if(extFlags & MIME_GREX_NO_ANIMATIONS) {
+        locAllowAnimations = FALSE;
+    }
+    if(extFlags & MIME_GREX_NO_SCANLINE_COMPRESS) {
+        locCompress = FALSE;
+    }
 
     params.IBP_mimeStatus = mimeStatus ;
 #if PROGRESS_DISPLAY
     /* use local work file, if available */
     if (importProgressDataP && importProgressDataP->IPD_callback) {
-	/* must use actual dest file */
-	importProgressDataP->IPD_vmFile = vmf;
-	if (importProgressDataP->IPD_vmFile) {
-	    vmf = importProgressDataP->IPD_vmFile;
-	} else {
-	    /* make sure progress handler knows we're using this file */
-	    importProgressDataP->IPD_vmFile = vmf;
-	}
+        /* must use actual dest file */
+        importProgressDataP->IPD_vmFile = vmf;
+        if (importProgressDataP->IPD_vmFile) {
+            vmf = importProgressDataP->IPD_vmFile;
+        } else {
+            /* make sure progress handler knows we're using this file */
+            importProgressDataP->IPD_vmFile = vmf;
+        }
 
         /* initialize complete structure for standard case: */
         importProgressDataP->IPD_iad.IAD_type = IAD_TYPE_BITMAP;
         importProgressDataP->IPD_iad.IAD_origin.P_x =
-          importProgressDataP->IPD_iad.IAD_origin.P_y = 0;
+        importProgressDataP->IPD_iad.IAD_origin.P_y = 0;
         importProgressDataP->IPD_iad.IAD_completeGraphic = FALSE;
     }
 #endif  /* PROGRESS_DISPLAY */
 
+/* Define macros to add parameters only if PROGRESS_DISPLAY is set */
 #if PROGRESS_DISPLAY
   #define IMP_DESTFILE_PARAM , destFile
   #define IMP_PROGRESS_PARAM , importProgressDataP
@@ -574,6 +572,8 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
   #define IMP_PROGRESS_PARAM
 #endif
 
+/* Define parameter lists for each import routine to make the calls below
+   easier to read and maintain. */
 #define IMP_GIF_PARAMS file, vmf, iad, resolution, watcher, usedMem, \
           &params, &isAnimation, &isCompacted, &bmVMBlock \
           IMP_DESTFILE_PARAM IMP_PROGRESS_PARAM, locAllowAnimations
@@ -588,6 +588,7 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
         locCompress, &params, &isCompacted, &bmVMBlock IMP_PROGRESS_PARAM \
         , mimeStatus
 
+    /* Call the appropriate import routine based on the MIME type */
     if (strcmp(mimeType, _TEXT("image/gif")) == 0)
     {
         status = ImpGIF(IMP_GIF_PARAMS);
@@ -595,6 +596,8 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
             status = ImpJPG(IMP_JPG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpPNG(IMP_PNG_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpSVG(IMP_SVG_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/jpeg")) == 0)
     {
@@ -603,6 +606,8 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
             status = ImpGIF(IMP_GIF_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpPNG(IMP_PNG_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpSVG(IMP_SVG_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/png")) == 0)
     {
@@ -611,50 +616,51 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
             status = ImpJPG(IMP_JPG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpGIF(IMP_GIF_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpSVG(IMP_SVG_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/svg+xml")) == 0)
     {
         status = ImpSVG(IMP_SVG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
-            status = ImpPNG(IMP_PNG_PARAMS);   /* permissive fallback */
+            status = ImpPNG(IMP_PNG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpJPG(IMP_JPG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpGIF(IMP_GIF_PARAMS);
     }
 
-
-
     if (bmVMBlock)                       /* check if import successful */
     {
-      /* Compress and convert the bitmap to a GString if not an animation */
-      if (!isAnimation)  {
-	  /* Compact the bitmap if not already */
-	  if (!isCompacted && locCompress)  {
-	      VMBlockHandle bmCompacted;
+        /* Compress and convert the bitmap to a GString if not an animation */
+        if (!isAnimation) {
+            /* Compact the bitmap if not already */
+            if (!isCompacted && locCompress) {
+                VMBlockHandle bmCompacted;
 
-	      bmCompacted = GrCompactBitmap(vmf, bmVMBlock, vmf);
-	      if(bmCompacted)
-	      {
+                bmCompacted = GrCompactBitmap(vmf, bmVMBlock, vmf);
+                if(bmCompacted)
+                {
 #if PROGRESS_DISPLAY
-		  FreeViaProgress(importProgressDataP, vmf, bmVMBlock);
+                    FreeViaProgress(importProgressDataP, vmf, bmVMBlock);
 #else
-		  VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmVMBlock));
+                    VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmVMBlock));
 #endif
-		  bmVMBlock = bmCompacted;
-	      }
-	  }
-
-	  dataVMBlock = bmVMBlock;
-	  iad->IAD_type = IAD_TYPE_BITMAP;
-      } else {
-          iad->IAD_type = IAD_TYPE_ANIMATION; /* returned data is an animation */
-          dataVMBlock = bmVMBlock ;
-      }
-      iad->IAD_origin.P_x = iad->IAD_origin.P_y = 0;
+                    bmVMBlock = bmCompacted;
+                }
+            }
+            dataVMBlock = bmVMBlock;
+            iad->IAD_type = IAD_TYPE_BITMAP;
+        } else {
+            iad->IAD_type = IAD_TYPE_ANIMATION; /* returned data is an animation */
+            dataVMBlock = bmVMBlock ;
+        }
+        iad->IAD_origin.P_x = iad->IAD_origin.P_y = 0;
     }
     else
-      dataVMBlock = 0;                  /* import did not succeed */
+    {
+        dataVMBlock = 0;                  /* import did not succeed */
+    }
 
     return dataVMBlock;
 }
@@ -692,7 +698,7 @@ char * _pascal _export MimeDrvText(_MimeTextParams_)
 
 VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
 {
-	return MimeDrvGraphicEx(
+    return MimeDrvGraphicEx(
             mimeType,
             file,
             vmf,
@@ -702,10 +708,10 @@ VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
             usedMem,
             mimeStatus,
 #ifdef PROGRESS_DISPLAY
-			importProgressDataP,
+            importProgressDataP,
 #endif
-			0		// no specific flags here
-	);
+            0   // no specific flags here
+    );
 }
 
 

@@ -326,6 +326,8 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     MemHandle ioH;
     char *ioP;
     Boolean sawSvg;
+    word pct;
+    Boolean abort=FALSE;
 
     (void)settings;
 
@@ -372,9 +374,14 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
             done = (dword)FilePos(srcFile, 0, FILE_POS_RELATIVE);
             if (done > total) done = total;
             {
-                word pct;
                 pct = (word)((done * 100UL) / total);
                 if (pct != lastPct) { lastPct = pct; /* if ((*callback)(pct)) break; */ }
+
+                if (((pcfm_ProgressCallback *)ProcCallFixedOrMovable_pascal)(pct, callback))
+                {
+                  abort = TRUE;               /* aborted? set flag... */
+                  break;
+                }
             }
         }
 
@@ -476,6 +483,11 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     if (ioH) MemFree(ioH);
     if (scP) MemUnlock(scH);
     if (scH) MemFree(scH);
+
+    if (abort) {
+      LOG_STR("ReadSVG", "User aborted!");
+      return TE_ERROR;
+    }
 
     LOG_END();
     return TE_NO_ERROR;
