@@ -114,9 +114,9 @@ void SvgViewInitFromSvgTag(const char *tag)
     if (SvgParserGetAttrBounded(tag, "viewBox", vb, sizeof(vb))) {
         s = vb;
         s = SvgParserParseWWFixed16_16(s, &g_vbMinX);
-        s = SvgParserSkipWS(s); s = SvgParserParseWWFixed16_16(s, &g_vbMinY);
-        s = SvgParserSkipWS(s); s = SvgParserParseWWFixed16_16(s, &g_vbW);
-        s = SvgParserSkipWS(s); s = SvgParserParseWWFixed16_16(s, &g_vbH);
+        s = SvgUtilSkipSpace(s); s = SvgParserParseWWFixed16_16(s, &g_vbMinY);
+        s = SvgUtilSkipSpace(s); s = SvgParserParseWWFixed16_16(s, &g_vbW);
+        s = SvgUtilSkipSpace(s); s = SvgParserParseWWFixed16_16(s, &g_vbH);
     }
     if ((sdword)g_vbW <= 0 || (sdword)g_vbH <= 0) {
         if (SvgParserGetAttrBounded(tag, "width",  wb, sizeof(wb)))  (void)SvgParserParseWWFixed16_16(wb, &g_vpW);

@@ -77,7 +77,7 @@ WWFixedAsDWord SvgGeomWWMax(WWFixedAsDWord a, WWFixedAsDWord b);
 WWFixedAsDWord SvgGeomWWAtan2Deg(WWFixedAsDWord y, WWFixedAsDWord x);
 
 /* ---- parser-layer helpers (raw text scan) ---- */
-const char* SvgParserSkipWS(const char *s);
+const char* SvgUtilSkipSpace(const char *s);
 const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out);
 Boolean     SvgParserTagIs(const char *tag, const char *name);
 Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,

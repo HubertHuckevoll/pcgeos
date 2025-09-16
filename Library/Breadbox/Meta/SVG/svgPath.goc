@@ -1249,7 +1249,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
 
     while (*sP)
     {
-        sP = SvgParserSkipWS(sP);
+        sP = SvgUtilSkipSpace(sP);
         if (!*sP) break;
 
         LOGF(("[LOOP]", "haveCmd=%d next='%c'(0x%02x)",
