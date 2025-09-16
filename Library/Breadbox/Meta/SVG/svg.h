@@ -2,6 +2,8 @@
  * svg.h — Master public header for the Meta SVG renderer (GEOS/GOC)
  *------------------------------------------------------------------*/
 
+#include <xlatLib.h>
+
 /* ---- global compile-time constants ---- */
 #define SVG_COLOR_NAME_LEN   32
 #define MAX_SVG_POINTS       4096
@@ -56,6 +58,17 @@ typedef struct _SVGScratch {
     Point   pts[MAX_SVG_POINTS];    // FIXME: make this dynamic!
 } SVGScratch;
 
+typedef struct {
+    MemHandle  ioH;
+    char      *ioP;
+    word       bytes;
+    word       pos;
+    Boolean    inTag;
+    Boolean    inQuote;
+    char       quoteCh;
+    word       tagLen;
+} SvgScanCtx;
+
 /* ---- small utility (common) ---- */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
 const char* SvgUtilSkipSpace(const char *p);
@@ -77,11 +90,14 @@ WWFixedAsDWord SvgGeomWWMax(WWFixedAsDWord a, WWFixedAsDWord b);
 WWFixedAsDWord SvgGeomWWAtan2Deg(WWFixedAsDWord y, WWFixedAsDWord x);
 
 /* ---- parser-layer helpers (raw text scan) ---- */
-const char* SvgUtilSkipSpace(const char *s);
+const char* SvgParserSkipWS(const char *s);
 const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out);
 Boolean     SvgParserTagIs(const char *tag, const char *name);
 Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
                                     char *out, word outSize);
+void        SvgParserScanInit(SvgScanCtx *c);
+Boolean     SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c,
+                                 SVGScratch *sc);
 
 /* ----- style stack API ------ */
 Boolean SvgStyleStackInit(void);
