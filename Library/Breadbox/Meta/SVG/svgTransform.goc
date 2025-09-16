@@ -194,7 +194,7 @@ void SvgXformApplyVector(sword *dxP, sword *dyP, const SvgMatrix *m)
 
 /* ---- parse transform attribute into USER-SPACE matrix ---- */
 
-static const char* SvgParseNumber(const char *s, WWFixedAsDWord *out)
+static const char* SvgXformParseNumber(const char *s, WWFixedAsDWord *out)
 {
     s = SvgUtilSkipSpace(s);
     s = SvgUtilParseWWFixed16_16(s, out);
@@ -232,12 +232,12 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
         if (!strncmp(s, "matrix(", 7)) {
             WWFixedAsDWord a,b,c,d,e,f;
             p = s + 7;
-            p = SvgParseNumber(p, &a);
-            p = SvgParseNumber(p, &b);
-            p = SvgParseNumber(p, &c);
-            p = SvgParseNumber(p, &d);
-            p = SvgParseNumber(p, &e);
-            p = SvgParseNumber(p, &f);
+            p = SvgXformParseNumber(p, &a);
+            p = SvgXformParseNumber(p, &b);
+            p = SvgXformParseNumber(p, &c);
+            p = SvgXformParseNumber(p, &d);
+            p = SvgXformParseNumber(p, &e);
+            p = SvgXformParseNumber(p, &f);
             if (*p == ')') p++;
             t.a=a; t.b=b; t.c=c; t.d=d; t.e=e; t.f=f;
             SvgMatMul(&acc, &t, &acc);  /* left-to-right application */
@@ -250,9 +250,9 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
 #endif
         } else if (!strncmp(s, "translate(", 10)) {
             p = s + 10;
-            p = SvgParseNumber(p, &v1);
+            p = SvgXformParseNumber(p, &v1);
             p = SvgUtilSkipSpace(p);
-            if (*p != ')') { p = SvgParseNumber(p, &v2); } else { v2 = MakeWWFixed(0); }
+            if (*p != ')') { p = SvgXformParseNumber(p, &v2); } else { v2 = MakeWWFixed(0); }
             if (*p == ')') p++;
             SvgMatTranslate(&t, v1, v2);
             SvgMatMul(&acc, &t, &acc);
@@ -264,9 +264,9 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
 #endif
         } else if (!strncmp(s, "scale(", 6)) {
             p = s + 6;
-            p = SvgParseNumber(p, &v1);
+            p = SvgXformParseNumber(p, &v1);
             p = SvgUtilSkipSpace(p);
-            if (*p != ')') { p = SvgParseNumber(p, &v2); } else { v2 = v1; }
+            if (*p != ')') { p = SvgXformParseNumber(p, &v2); } else { v2 = v1; }
             if (*p == ')') p++;
             SvgMatScale(&t, v1, v2);
             SvgMatMul(&acc, &t, &acc);
@@ -278,13 +278,13 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
 #endif
         } else if (!strncmp(s, "rotate(", 7)) {
             p = s + 7;
-            p = SvgParseNumber(p, &v1); /* angle in degrees */
+            p = SvgXformParseNumber(p, &v1); /* angle in degrees */
             p = SvgUtilSkipSpace(p);
             if (*p != ')') {
                 /* rotate(a, cx, cy) == T(cx,cy) * R(a) * T(-cx,-cy) */
                 SvgMatrix T1, R, T2, tmp;
-                p = SvgParseNumber(p, &v2); /* cx */
-                p = SvgParseNumber(p, &v3); /* cy */
+                p = SvgXformParseNumber(p, &v2); /* cx */
+                p = SvgXformParseNumber(p, &v3); /* cy */
                 if (*p == ')') p++;
 
                 SvgMatTranslate(&T1, v2, v3);
@@ -307,14 +307,14 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
 #endif
         } else if (!strncmp(s, "skewX(", 6)) {
             p = s + 6;
-            p = SvgParseNumber(p, &v1);
+            p = SvgXformParseNumber(p, &v1);
             if (*p == ')') p++;
             SvgMatSkewX(&t, v1);
             SvgMatMul(&acc, &t, &acc);
             s = p;
         } else if (!strncmp(s, "skewY(", 6)) {
             p = s + 6;
-            p = SvgParseNumber(p, &v1);
+            p = SvgXformParseNumber(p, &v1);
             if (*p == ')') p++;
             SvgMatSkewY(&t, v1);
             SvgMatMul(&acc, &t, &acc);
