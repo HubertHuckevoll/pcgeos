@@ -173,17 +173,13 @@ void SvgViewInitFromSvgTag(const char *tag)
     if (worldW < 1) worldW = 1;
     if (worldH < 1) worldH = 1;
 
-#ifdef DEBUG_LOG
-    {
-        LOGF(("[VIEW]", "vb=(%ld,%ld %ldx%ld) vp=%ldx%ld par:%s slice:%s",
-                (sdword)g_vbMinX,(sdword)g_vbMinY,(sdword)g_vbW,(sdword)g_vbH,
-                (sdword)g_vpW,(sdword)g_vpH,
-                g_parNone?"none":"align", g_parSlice?"true":"false"));
+    LOGF(("[VIEW]", "vb=(%ld,%ld %ldx%ld) vp=%ldx%ld par:%s slice:%s",
+            (sdword)g_vbMinX,(sdword)g_vbMinY,(sdword)g_vbW,(sdword)g_vbH,
+            (sdword)g_vpW,(sdword)g_vpH,
+            g_parNone?"none":"align", g_parSlice?"true":"false"));
 
-        LOGF(("[VIEW]", "scaleX=%ld scaleY=%ld addX=%ld addY=%ld invPow2=%ld",
-                (sdword)g_scaleX,(sdword)g_scaleY,(sdword)g_addX,(sdword)g_addY,(sdword)g_invPow2));
-    }
-#endif
+    LOGF(("[VIEW]", "scaleX=%ld scaleY=%ld addX=%ld addY=%ld invPow2=%ld",
+            (sdword)g_scaleX,(sdword)g_scaleY,(sdword)g_addX,(sdword)g_addY,(sdword)g_invPow2));
 
     Meta_SetScaling(0, 0, worldW, worldH, worldW, worldH);
 
@@ -205,7 +201,6 @@ void SvgViewInitDefault(void)
     g_addY   = 0;
     g_invPow2= WWFIXED_ONE;
 
-#ifdef DEBUG_LOG
     LOGF(("[VIEW]", "vb=(%ld,%ld %ldx%ld) vp=%ldx%ld par:%s slice:%s",
             (sdword)g_vbMinX,(sdword)g_vbMinY,(sdword)g_vbW,(sdword)g_vbH,
             (sdword)g_vpW,(sdword)g_vpH,
@@ -213,7 +208,6 @@ void SvgViewInitDefault(void)
 
     LOGF(("[VIEW]", "scaleX=%ld scaleY=%ld addX=%ld addY=%ld invPow2=%ld",
             (sdword)g_scaleX,(sdword)g_scaleY,(sdword)g_addX,(sdword)g_addY,(sdword)g_invPow2));
-#endif
 
     Meta_SetScaling(0, 0, 1024, 1024, 1024, 1024);
     g_vbInited = TRUE;
@@ -278,7 +272,6 @@ void SvgViewGetMatrix(WWFixedAsDWord *a, WWFixedAsDWord *b,
     ee = offX; ff = offY;
 
     *a = aa; *b = bb; *c = cc; *d = dd; *e = ee; *f = ff;
-
 
     LOGF(("[VIEW] matrix", "VM a=%ld b=%ld c=%ld d=%ld e=%ld f=%ld", (sdword)*a,(sdword)*b,(sdword)*c,(sdword)*d,(sdword)*e,(sdword)*f));
 }
