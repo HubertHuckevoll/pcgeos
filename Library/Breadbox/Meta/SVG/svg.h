@@ -144,6 +144,8 @@ void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *
 /* Conjugated element matrix that acts on points already in WORLD space:
    ElemOnWorld = ViewMatrix ∘ Element ∘ ViewMatrix^{-1}  */
 void SvgXformBuildElemOnWorld(const char *tag, SvgMatrix *outElemWorld);
+Boolean SvgXformStackInit(void);
+void    SvgXformStackFree(void);
 /* groups */
 void SvgXformGroupPush(const char *tag);
 void SvgXformGroupPop(void);

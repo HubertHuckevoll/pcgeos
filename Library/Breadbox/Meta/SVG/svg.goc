@@ -55,6 +55,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     LOG_FILE("srcFile", srcFile);
     LOG_DWORD("totalBytes", total);
 
+    if (!SvgXformStackInit()) { status = TE_OUT_OF_MEMORY; goto cleanup; }
     if (!SvgStyleStackInit()) { status = TE_OUT_OF_MEMORY; goto cleanup; }
 
     scH = MemAlloc((word)sizeof(SVGScratch), HF_DYNAMIC, HAF_ZERO_INIT);
@@ -193,6 +194,7 @@ cleanup:
     if (scP) MemUnlock(scH);
     if (scH) MemFree(scH);
     SvgStyleStackFree();
+    SvgXformStackFree();
 
     if (abort && status == TE_NO_ERROR) {
       LOG_STR("ReadSVG", "User aborted!");

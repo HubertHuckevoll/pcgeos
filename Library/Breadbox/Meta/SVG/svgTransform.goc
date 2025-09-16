@@ -19,23 +19,82 @@
 
 /* ---- group CTM stack ---- */
 #define SVG_XFORM_GSTACK_MAX 16
-static SvgMatrix gCTMStack[SVG_XFORM_GSTACK_MAX];
+static MemHandle gCTMStackH = NullHandle;
 static int gCTMDepth = 0;
+
+Boolean SvgXformStackInit(void)
+{
+    SvgMatrix *stack;
+    word bytes;
+
+    gCTMDepth = 0;
+    bytes = (word)(SVG_XFORM_GSTACK_MAX * sizeof(SvgMatrix));
+
+    if (gCTMStackH == NullHandle) {
+        gCTMStackH = MemAlloc(bytes, HF_DYNAMIC, 0);
+        if (gCTMStackH == NullHandle) {
+            return FALSE;
+        }
+    }
+
+    stack = (SvgMatrix *)MemLock(gCTMStackH);
+    if (stack == NULL) {
+        SvgXformStackFree();
+        return FALSE;
+    }
+
+    memset(stack, 0, bytes);
+    MemUnlock(gCTMStackH);
+    return TRUE;
+}
+
+void SvgXformStackFree(void)
+{
+    if (gCTMStackH != NullHandle) {
+        MemFree(gCTMStackH);
+        gCTMStackH = NullHandle;
+    }
+    gCTMDepth = 0;
+}
+
+static SvgMatrix* SvgXformStackLock(void)
+{
+    if (gCTMStackH == NullHandle) {
+        return NULL;
+    }
+    return (SvgMatrix *)MemLock(gCTMStackH);
+}
+
+static void SvgXformStackUnlock(SvgMatrix *stack)
+{
+    if (stack != NULL && gCTMStackH != NullHandle) {
+        MemUnlock(gCTMStackH);
+    }
+}
 
 static void SvgMatIdentity(SvgMatrix *m);
 
 static void SvgMatMul(const SvgMatrix *m1, const SvgMatrix *m2, SvgMatrix *r);
 
+static Boolean SvgXformGroupPeek(SvgMatrix *out)
+{
+    SvgMatrix *stack;
+
+    if (gCTMDepth <= 0) {
+        return FALSE;
+    }
+
+    stack = SvgXformStackLock();
+    if (stack == NULL) {
+        return FALSE;
+    }
+
+    *out = stack[gCTMDepth-1];
+    SvgXformStackUnlock(stack);
+    return TRUE;
+}
 
 /* ---- constructors ---- */
-
-
-/* Current group CTM pointer, or NULL if empty */
-static const SvgMatrix* SvgXformGroupCurrent(void)
-{
-    if (gCTMDepth > 0) return &gCTMStack[gCTMDepth-1];
-    return NULL;
-}
 
 static void SvgMatIdentity(SvgMatrix *m)
 {
@@ -277,16 +336,22 @@ void SvgXformGroupPush(const char *tag)
     SvgMatrix parent;
     SvgMatrix self;
     SvgMatrix out;
+    SvgMatrix *stack;
 
-    if (gCTMDepth > 0) parent = gCTMStack[gCTMDepth-1];
-    else SvgMatIdentity(&parent);
+    stack = SvgXformStackLock();
+    if (gCTMDepth > 0 && stack != NULL) {
+        parent = stack[gCTMDepth-1];
+    } else {
+        SvgMatIdentity(&parent);
+    }
 
     SvgXformParseAttrUser(tag, &self);         /* user-space element matrix */
     SvgMatMul(&self, &parent, &out);           /* out = parent ∘ self */
-    if (gCTMDepth < SVG_XFORM_GSTACK_MAX)
+    if (stack != NULL && gCTMDepth < SVG_XFORM_GSTACK_MAX)
     {
-        gCTMStack[gCTMDepth++] = out;
+        stack[gCTMDepth++] = out;
     }
+    SvgXformStackUnlock(stack);
 }
 
 /* Called on </g> */
@@ -301,12 +366,17 @@ void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *
 {
     SvgMatrix vm, elem, tmp;
     const SvgMatrix *par;
+    SvgMatrix stackParent;
 
     SvgViewGetMatrix(&vm.a, &vm.b, &vm.c, &vm.d, &vm.e, &vm.f);
     SvgXformParseAttrUser(tag, &elem);
 
     par = parentCTM;
-    if (!par) par = SvgXformGroupCurrent();
+    if (!par) {
+        if (SvgXformGroupPeek(&stackParent)) {
+            par = &stackParent;
+        }
+    }
 
     if (par)
     {
@@ -354,5 +424,4 @@ SvgXformBuildElemOnWorld(const char *tag, SvgMatrix *outElemWorld)
     SvgMatMul(&inv, &elem, &tmp);        /* tmp = Element ∘ VM^{-1} */
     SvgMatMul(&tmp, &vm, outElemWorld);  /* out = VM ∘ tmp */
 }
-
 
