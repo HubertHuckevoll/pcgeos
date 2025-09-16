@@ -34,7 +34,7 @@ Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b)
 }
 
 /* skip common ASCII whitespace characters */
-const char* SvgUtilSkipSpace(const char *p)
+const char* SvgParserSkipWS(const char *p)
 {
     while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') { p++; }
     return p;
@@ -127,56 +127,6 @@ Boolean SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop)
         if (kc != pc) return FALSE;
     }
     return (k == ke && *p == 0);
-}
-
-Boolean SvgUtilGetInlineProp(const char *tag, const char *prop,
-                             char *out, word outSize)
-{
-    char styleBuf[192];
-    const char *s;
-    const char *kb;
-    const char *ke;
-    const char *vb;
-    const char *ve;
-    word n;
-
-    if (outSize == 0) return FALSE;
-    out[0] = 0;
-
-    if (!SvgParserGetAttrBounded(tag, "style", styleBuf, sizeof(styleBuf)))
-        return FALSE;
-
-    s = styleBuf;
-    for (;;) {
-        while (*s == ';' || isspace((byte)*s)) s++;
-        if (!*s) break;
-
-        kb = s;
-        while (*s && *s != ':' && *s != ';') s++;
-        if (*s != ':') {
-            while (*s && *s != ';') s++;
-            if (*s == ';') s++;
-            continue;
-        }
-        ke = s;
-        s++;
-
-        while (*s && isspace((byte)*s)) s++;
-        vb = s;
-        while (*s && *s != ';') s++;
-        ve = s;
-        while (ve > vb && isspace((byte)ve[-1])) ve--;
-
-        if (SvgUtilKeyEqNoCase(kb, ke, prop)) {
-            n = (word)(ve - vb);
-            if (n >= outSize) n = (word)(outSize - 1);
-            if (n > 0) memcpy(out, vb, n);
-            out[n] = 0;
-            return TRUE;
-        }
-        if (*s == ';') s++;
-    }
-    return FALSE;
 }
 
 const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)

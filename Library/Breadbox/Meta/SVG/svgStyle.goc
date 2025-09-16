@@ -119,7 +119,7 @@ SvgStyleResolvePaintToSolidOrNone(const char *raw, word *r, word *g, word *b)
 
     if (raw == NULL) { return FALSE; }
 
-    p = SvgUtilSkipSpace(raw);
+    p = SvgParserSkipWS(raw);
 
     if (SvgUtilAsciiNoCaseEq(p, "none")) {
         return FALSE;
@@ -136,7 +136,7 @@ SvgStyleResolvePaintToSolidOrNone(const char *raw, word *r, word *g, word *b)
         while (*rp && *rp != ')') { rp++; }
         if (*rp == ')') {
             const char *after;
-            after = SvgUtilSkipSpace(rp + 1);
+            after = SvgParserSkipWS(rp + 1);
 
             /* No fallback token -> NONE per spec */
             if (*after == 0) {
@@ -245,18 +245,18 @@ void SvgStyleGroupPush(const char *tag)
     }
 
     /* inline style/attributes: fill, stroke */
-    if (SvgUtilGetInlineProp(tag, "fill", st.fillVal, sizeof(st.fillVal)) ||
+    if (SvgParseGetInlineStyleProp(tag, "fill", st.fillVal, sizeof(st.fillVal)) ||
         SvgParserGetAttrBounded(tag, "fill", st.fillVal, sizeof(st.fillVal))) {
         st.fillSet = TRUE;
     }
-    if (SvgUtilGetInlineProp(tag, "stroke", st.strokeVal, sizeof(st.strokeVal)) ||
+    if (SvgParseGetInlineStyleProp(tag, "stroke", st.strokeVal, sizeof(st.strokeVal)) ||
         SvgParserGetAttrBounded(tag, "stroke", st.strokeVal, sizeof(st.strokeVal))) {
         st.strokeSet = TRUE;
     }
 
     /* stroke-width */
     buf[0] = 0;
-    if (!SvgUtilGetInlineProp(tag, "stroke-width", buf, sizeof(buf))) {
+    if (!SvgParseGetInlineStyleProp(tag, "stroke-width", buf, sizeof(buf))) {
         (void)SvgParserGetAttrBounded(tag, "stroke-width", buf, sizeof(buf));
     }
     if (buf[0]) {
@@ -273,7 +273,7 @@ void SvgStyleGroupPush(const char *tag)
 
     /* fill-rule */
     frBuf[0] = 0;
-    if (!SvgUtilGetInlineProp(tag, "fill-rule", frBuf, sizeof(frBuf))) {
+    if (!SvgParseGetInlineStyleProp(tag, "fill-rule", frBuf, sizeof(frBuf))) {
         (void)SvgParserGetAttrBounded(tag, "fill-rule", frBuf, sizeof(frBuf));
     }
     if (frBuf[0]) {
@@ -286,7 +286,7 @@ void SvgStyleGroupPush(const char *tag)
 
     /* stroke-linecap */
     buf[0] = 0;
-    if (!SvgUtilGetInlineProp(tag, "stroke-linecap", buf, sizeof(buf))) {
+    if (!SvgParseGetInlineStyleProp(tag, "stroke-linecap", buf, sizeof(buf))) {
         (void)SvgParserGetAttrBounded(tag, "stroke-linecap", buf, sizeof(buf));
     }
     if (buf[0]) {
@@ -298,7 +298,7 @@ void SvgStyleGroupPush(const char *tag)
 
     /* stroke-linejoin */
     buf[0] = 0;
-    if (!SvgUtilGetInlineProp(tag, "stroke-linejoin", buf, sizeof(buf))) {
+    if (!SvgParseGetInlineStyleProp(tag, "stroke-linejoin", buf, sizeof(buf))) {
         (void)SvgParserGetAttrBounded(tag, "stroke-linejoin", buf, sizeof(buf));
     }
     if (buf[0]) {
@@ -335,7 +335,7 @@ static Boolean SvgStyleResolvePropWithGroups(const char *tag,
     if (outSize == 0) return FALSE;
     out[0] = 0;
 
-    if (SvgUtilGetInlineProp(tag, prop, out, outSize)) return TRUE;
+    if (SvgParseGetInlineStyleProp(tag, prop, out, outSize)) return TRUE;
     if (SvgParserGetAttrBounded(tag, prop, out, outSize)) return TRUE;
 
     if (gStyleDepth == 0) return FALSE;
@@ -402,7 +402,6 @@ void SvgStyleApplyStrokeAndFill(const char *tag)
     }
 }
 
-
 void SvgStyleApplyFillRule(const char *tag)
 {
     static char buf[32];
@@ -410,7 +409,7 @@ void SvgStyleApplyFillRule(const char *tag)
     buf[0] = 0;
 
     /* element-local value wins */
-    if (!SvgUtilGetInlineProp(tag, "fill-rule", buf, sizeof(buf)))
+    if (!SvgParseGetInlineStyleProp(tag, "fill-rule", buf, sizeof(buf)))
     {
         (void)SvgParserGetAttrBounded(tag, "fill-rule", buf, sizeof(buf));
     }
@@ -454,7 +453,7 @@ void SvgStyleApplyStrokeWidth(const char *tag)
     b[0] = 0;
     haveWidth = FALSE;
 
-    if (SvgUtilGetInlineProp(tag, "stroke-width", b, sizeof(b)) ||
+    if (SvgParseGetInlineStyleProp(tag, "stroke-width", b, sizeof(b)) ||
         SvgParserGetAttrBounded(tag, "stroke-width", b, sizeof(b)))
     {
         pwalk = b;
@@ -500,7 +499,7 @@ void SvgStyleApplyStrokeCapJoin(const char *tag)
     /* linecap: element > group > initial(butt) */
     lc = 0;
     b[0] = 0;
-    if (!SvgUtilGetInlineProp(tag, "stroke-linecap", b, sizeof(b))) {
+    if (!SvgParseGetInlineStyleProp(tag, "stroke-linecap", b, sizeof(b))) {
         (void)SvgParserGetAttrBounded(tag, "stroke-linecap", b, sizeof(b));
     }
     if (b[0]) {
@@ -517,7 +516,7 @@ void SvgStyleApplyStrokeCapJoin(const char *tag)
     /* linejoin: element > group > initial(miter) */
     lj = 0;
     b[0] = 0;
-    if (!SvgUtilGetInlineProp(tag, "stroke-linejoin", b, sizeof(b))) {
+    if (!SvgParseGetInlineStyleProp(tag, "stroke-linejoin", b, sizeof(b))) {
         (void)SvgParserGetAttrBounded(tag, "stroke-linejoin", b, sizeof(b));
     }
     if (b[0]) {

@@ -69,16 +69,25 @@ typedef struct {
     word       tagLen;
 } SvgScanCtx;
 
+/* ---- parser-layer (raw text scan) ---- */
+const char* SvgParserSkipWS(const char *p);
+Boolean     SvgParserTagIs(const char *tag, const char *name);
+Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
+                                    char *out, word outSize);
+void        SvgParserScanInit(SvgScanCtx *c);
+Boolean     SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c,
+                                 SVGScratch *sc);
+Boolean     SvgParseGetInlineStyleProp(const char *tag, const char *prop,
+                                       char *out, word outSize);
+
 /* ---- small utility (common) ---- */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
-const char* SvgUtilSkipSpace(const char *p);
 word    SvgUtilHexNibble(char c);
 word    SvgUtilHexByte(const char *p);
 Boolean SvgUtilExpandShortHex(const char *s, word *r, word *g, word *b);
 Boolean SvgUtilParseRGBFunc(const char *s, word *r, word *g, word *b);
 Boolean SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop);
-Boolean SvgUtilGetInlineProp(const char *tag, const char *prop,
-                             char *out, word outSize);
+const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out);
 
 /* ---- geometry helpers (shared fixed-point math) ---- */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v);
@@ -88,16 +97,6 @@ WWFixedAsDWord SvgGeomWWAbs(WWFixedAsDWord x);
 WWFixedAsDWord SvgGeomWWMin(WWFixedAsDWord a, WWFixedAsDWord b);
 WWFixedAsDWord SvgGeomWWMax(WWFixedAsDWord a, WWFixedAsDWord b);
 WWFixedAsDWord SvgGeomWWAtan2Deg(WWFixedAsDWord y, WWFixedAsDWord x);
-
-/* ---- parser-layer helpers (raw text scan) ---- */
-const char* SvgParserSkipWS(const char *s);
-const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out);
-Boolean     SvgParserTagIs(const char *tag, const char *name);
-Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
-                                    char *out, word outSize);
-void        SvgParserScanInit(SvgScanCtx *c);
-Boolean     SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c,
-                                 SVGScratch *sc);
 
 /* ----- style stack API ------ */
 Boolean SvgStyleStackInit(void);

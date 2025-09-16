@@ -29,7 +29,7 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
 
     while (*s && *numPointsP < MAX_SVG_POINTS)
     {
-        s = SvgUtilSkipSpace(s);
+        s = SvgParserSkipWS(s);
         if (!*s) break;
 
         {
@@ -48,7 +48,7 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
         }
 
         if (*s == ',') s++;
-        s = SvgUtilSkipSpace(s);
+        s = SvgParserSkipWS(s);
 
         {
             WWFixedAsDWord f;
