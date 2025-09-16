@@ -58,6 +58,14 @@ typedef struct _SVGScratch {
 
 /* ---- small utility (common) ---- */
 Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
+const char* SvgUtilSkipSpace(const char *p);
+word    SvgUtilHexNibble(char c);
+word    SvgUtilHexByte(const char *p);
+Boolean SvgUtilExpandShortHex(const char *s, word *r, word *g, word *b);
+Boolean SvgUtilParseRGBFunc(const char *s, word *r, word *g, word *b);
+Boolean SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop);
+Boolean SvgUtilGetInlineProp(const char *tag, const char *prop,
+                             char *out, word outSize);
 
 /* ---- geometry helpers (shared fixed-point math) ---- */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v);

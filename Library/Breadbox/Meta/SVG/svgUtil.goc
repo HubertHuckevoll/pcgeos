@@ -33,3 +33,148 @@ Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b)
     return TRUE;
 }
 
+/* skip common ASCII whitespace characters */
+const char* SvgUtilSkipSpace(const char *p)
+{
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') { p++; }
+    return p;
+}
+
+word SvgUtilHexNibble(char c)
+{
+    if (c >= '0' && c <= '9') return (word)(c - '0');
+    if (c >= 'A' && c <= 'F') return (word)(10 + (c - 'A'));
+    if (c >= 'a' && c <= 'f') return (word)(10 + (c - 'a'));
+    return 0;
+}
+
+word SvgUtilHexByte(const char *p)
+{
+    return (word)((SvgUtilHexNibble(p[0]) << 4) | SvgUtilHexNibble(p[1]));
+}
+
+Boolean SvgUtilExpandShortHex(const char *s, word *r, word *g, word *b)
+{
+    if (s[0] == '#' && strlen(s) == 4) {
+        char hh[7];
+        hh[0] = '#';
+        hh[1] = s[1]; hh[2] = s[1];
+        hh[3] = s[2]; hh[4] = s[2];
+        hh[5] = s[3]; hh[6] = s[3];
+        *r = SvgUtilHexByte(hh + 1);
+        *g = SvgUtilHexByte(hh + 3);
+        *b = SvgUtilHexByte(hh + 5);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+Boolean SvgUtilParseRGBFunc(const char *s, word *r, word *g, word *b)
+{
+    const char *p;
+    int v1;
+    int v2;
+    int v3;
+    int isPct;
+
+    p = strstr(s, "rgb(");
+    if (!p) {
+        return FALSE;
+    }
+    p += 4;
+
+    isPct = 0;
+    v1 = atoi(p);
+    while (*p && *p != ',' && *p != ')' && *p != '%') p++;
+    if (*p == '%') { isPct = 1; p++; }
+    if (*p == ',') p++;
+    v2 = atoi(p);
+    while (*p && *p != ',' && *p != ')' && *p != '%') p++;
+    if (*p == '%') { isPct = 1; p++; }
+    if (*p == ',') p++;
+    v3 = atoi(p);
+    while (*p && *p != ')' && *p != '%') p++;
+    if (*p == '%') { isPct = 1; }
+
+    if (isPct) {
+        if (v1 < 0) v1 = 0; if (v1 > 100) v1 = 100;
+        if (v2 < 0) v2 = 0; if (v2 > 100) v2 = 100;
+        if (v3 < 0) v3 = 0; if (v3 > 100) v3 = 100;
+        *r = (word)((v1 * 255) / 100);
+        *g = (word)((v2 * 255) / 100);
+        *b = (word)((v3 * 255) / 100);
+    } else {
+        if (v1 < 0) v1 = 0; if (v1 > 255) v1 = 255;
+        if (v2 < 0) v2 = 0; if (v2 > 255) v2 = 255;
+        if (v3 < 0) v3 = 0; if (v3 > 255) v3 = 255;
+        *r = (word)v1; *g = (word)v2; *b = (word)v3;
+    }
+    return TRUE;
+}
+
+Boolean SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop)
+{
+    const char *p;
+    const char *k;
+
+    p = prop;
+    k = kb;
+    while (k < ke && *p) {
+        char kc, pc;
+        kc = *k++; pc = *p++;
+        if (kc >= 'A' && kc <= 'Z') kc = (char)(kc + ('a' - 'A'));
+        if (pc >= 'A' && pc <= 'Z') pc = (char)(pc + ('a' - 'A'));
+        if (kc != pc) return FALSE;
+    }
+    return (k == ke && *p == 0);
+}
+
+Boolean SvgUtilGetInlineProp(const char *tag, const char *prop,
+                             char *out, word outSize)
+{
+    char styleBuf[192];
+    const char *s;
+    const char *kb;
+    const char *ke;
+    const char *vb;
+    const char *ve;
+    word n;
+
+    if (outSize == 0) return FALSE;
+    out[0] = 0;
+
+    if (!SvgParserGetAttrBounded(tag, "style", styleBuf, sizeof(styleBuf)))
+        return FALSE;
+
+    s = styleBuf;
+    for (;;) {
+        while (*s == ';' || isspace((byte)*s)) s++;
+        if (!*s) break;
+
+        kb = s;
+        while (*s && *s != ':' && *s != ';') s++;
+        if (*s != ':') {
+            while (*s && *s != ';') s++;
+            if (*s == ';') s++;
+            continue;
+        }
+        ke = s;
+        s++;
+
+        while (*s && isspace((byte)*s)) s++;
+        vb = s;
+        while (*s && *s != ';') s++;
+        ve = s;
+        while (ve > vb && isspace((byte)ve[-1])) ve--;
+
+        if (SvgUtilKeyEqNoCase(kb, ke, prop)) {
+            n = (word)(ve - vb);
+            if (n >= outSize) n = (word)(outSize - 1);
+            if (n > 0) memcpy(out, vb, n);
+            out[n] = 0;
+            return TRUE;
+        }
+        if (*s == ';') s++;
+    }
+    return FALSE;
+}
