@@ -3,6 +3,8 @@
  ***********************************************************************/
 @include <stdapp.goh>
 
+@include <SVG/colors.goh>
+
 #include <Ansi/string.h>
 #include <Ansi/stdlib.h>
 #include <Ansi/ctype.h>
@@ -16,166 +18,66 @@
 #include "SVG/svg.h"
 #include "SVG/dbglog.h"
 
-
 /* ---- group style stack (fill/stroke/stroke-width) ---- */
-static SvgGroupStyle gStyleStack[SVG_STYLE_GSTACK_MAX];
-static int gStyleDepth = 0;
+static MemHandle gStyleStackH = NullHandle;
+static byte gStyleDepth = 0;
 
+Boolean SvgStyleStackInit(void)
+{
+    SvgGroupStyle *stack;
+    word bytes;
 
-/* ---- color keyword resource ---- */
-@start MetaSvgNamedColorRes, data;
+    gStyleDepth = 0;
+    bytes = (word)(SVG_STYLE_GSTACK_MAX * sizeof(SvgGroupStyle));
 
-@chunkArray SvgNamedColor SvgNamedColors = {
-    {240,248,255,"aliceblue"},
-    {250,235,215,"antiquewhite"},
-    {  0,255,255,"aqua"},
-    {127,255,212,"aquamarine"},
-    {240,255,255,"azure"},
-    {245,245,220,"beige"},
-    {255,228,196,"bisque"},
-    {  0,  0,  0,"black"},
-    {255,235,205,"blanchedalmond"},
-    {  0,  0,255,"blue"},
-    {138, 43,226,"blueviolet"},
-    {165, 42, 42,"brown"},
-    {222,184,135,"burlywood"},
-    { 95,158,160,"cadetblue"},
-    {127,255,  0,"chartreuse"},
-    {210,105, 30,"chocolate"},
-    {255,127, 80,"coral"},
-    {100,149,237,"cornflowerblue"},
-    {255,248,220,"cornsilk"},
-    {220, 20, 60,"crimson"},
-    {  0,255,255,"cyan"},
-    {  0,  0,139,"darkblue"},
-    {  0,139,139,"darkcyan"},
-    {184,134, 11,"darkgoldenrod"},
-    {169,169,169,"darkgray"},
-    {  0,100,  0,"darkgreen"},
-    {169,169,169,"darkgrey"},
-    {189,183,107,"darkkhaki"},
-    {139,  0,139,"darkmagenta"},
-    { 85,107, 47,"darkolivegreen"},
-    {255,140,  0,"darkorange"},
-    {153, 50,204,"darkorchid"},
-    {139,  0,  0,"darkred"},
-    {233,150,122,"darksalmon"},
-    {143,188,143,"darkseagreen"},
-    { 72, 61,139,"darkslateblue"},
-    { 47, 79, 79,"darkslategray"},
-    { 47, 79, 79,"darkslategrey"},
-    {  0,206,209,"darkturquoise"},
-    {148,  0,211,"darkviolet"},
-    {255, 20,147,"deeppink"},
-    {  0,191,255,"deepskyblue"},
-    {105,105,105,"dimgray"},
-    {105,105,105,"dimgrey"},
-    { 30,144,255,"dodgerblue"},
-    {178, 34, 34,"firebrick"},
-    {255,250,240,"floralwhite"},
-    { 34,139, 34,"forestgreen"},
-    {255,  0,255,"fuchsia"},
-    {220,220,220,"gainsboro"},
-    {248,248,255,"ghostwhite"},
-    {255,215,  0,"gold"},
-    {218,165, 32,"goldenrod"},
-    {128,128,128,"gray"},
-    {128,128,128,"grey"},
-    {  0,128,  0,"green"},
-    {173,255, 47,"greenyellow"},
-    {240,255,240,"honeydew"},
-    {255,105,180,"hotpink"},
-    {205, 92, 92,"indianred"},
-    { 75,  0,130,"indigo"},
-    {255,255,240,"ivory"},
-    {240,230,140,"khaki"},
-    {230,230,250,"lavender"},
-    {255,240,245,"lavenderblush"},
-    {124,252,  0,"lawngreen"},
-    {255,250,205,"lemonchiffon"},
-    {173,216,230,"lightblue"},
-    {240,128,128,"lightcoral"},
-    {224,255,255,"lightcyan"},
-    {250,250,210,"lightgoldenrodyellow"},
-    {211,211,211,"lightgray"},
-    {144,238,144,"lightgreen"},
-    {211,211,211,"lightgrey"},
-    {255,182,193,"lightpink"},
-    {255,160,122,"lightsalmon"},
-    { 32,178,170,"lightseagreen"},
-    {135,206,250,"lightskyblue"},
-    {119,136,153,"lightslategray"},
-    {119,136,153,"lightslategrey"},
-    {176,196,222,"lightsteelblue"},
-    {255,255,224,"lightyellow"},
-    {  0,255,  0,"lime"},
-    { 50,205, 50,"limegreen"},
-    {250,240,230,"linen"},
-    {255,  0,255,"magenta"},
-    {128,  0,  0,"maroon"},
-    {102,205,170,"mediumaquamarine"},
-    {  0,  0,205,"mediumblue"},
-    {186, 85,211,"mediumorchid"},
-    {147,112,219,"mediumpurple"},
-    { 60,179,113,"mediumseagreen"},
-    {123,104,238,"mediumslateblue"},
-    {  0,250,154,"mediumspringgreen"},
-    { 72,209,204,"mediumturquoise"},
-    {199, 21,133,"mediumvioletred"},
-    { 25, 25,112,"midnightblue"},
-    {245,255,250,"mintcream"},
-    {255,228,225,"mistyrose"},
-    {255,228,181,"moccasin"},
-    {255,222,173,"navajowhite"},
-    {  0,  0,128,"navy"},
-    {253,245,230,"oldlace"},
-    {128,128,  0,"olive"},
-    {107,142, 35,"olivedrab"},
-    {255,165,  0,"orange"},
-    {255, 69,  0,"orangered"},
-    {218,112,214,"orchid"},
-    {238,232,170,"palegoldenrod"},
-    {152,251,152,"palegreen"},
-    {175,238,238,"paleturquoise"},
-    {219,112,147,"palevioletred"},
-    {255,239,213,"papayawhip"},
-    {255,218,185,"peachpuff"},
-    {205,133, 63,"peru"},
-    {255,192,203,"pink"},
-    {221,160,221,"plum"},
-    {176,224,230,"powderblue"},
-    {128,  0,128,"purple"},
-    {255,  0,  0,"red"},
-    {188,143,143,"rosybrown"},
-    { 65,105,225,"royalblue"},
-    {139, 69, 19,"saddlebrown"},
-    {250,128,114,"salmon"},
-    {244,164, 96,"sandybrown"},
-    { 46,139, 87,"seagreen"},
-    {255,245,238,"seashell"},
-    {160, 82, 45,"sienna"},
-    {192,192,192,"silver"},
-    {135,206,235,"skyblue"},
-    {106, 90,205,"slateblue"},
-    {112,128,144,"slategray"},
-    {112,128,144,"slategrey"},
-    {255,250,250,"snow"},
-    {  0,255,127,"springgreen"},
-    { 70,130,180,"steelblue"},
-    {210,180,140,"tan"},
-    {  0,128,128,"teal"},
-    {216,191,216,"thistle"},
-    {255, 99, 71,"tomato"},
-    { 64,224,208,"turquoise"},
-    {238,130,238,"violet"},
-    {245,222,179,"wheat"},
-    {255,255,255,"white"},
-    {245,245,245,"whitesmoke"},
-    {255,255,  0,"yellow"},
-    {154,205, 50,"yellowgreen"}
-};
+    if (gStyleStackH == NullHandle) {
+        gStyleStackH = MemAlloc(bytes, HF_DYNAMIC, HAF_ZERO_INIT);
+        if (gStyleStackH == NullHandle) {
+            return FALSE;
+        }
+    }
 
-@end MetaSvgNamedColorRes;
+    stack = (SvgGroupStyle *)MemLock(gStyleStackH);
+    if (stack == NULL) {
+        SvgStyleStackFree();
+        return FALSE;
+    }
+
+    MemUnlock(gStyleStackH);
+    return TRUE;
+}
+
+void SvgStyleStackFree(void)
+{
+    if (gStyleStackH != NullHandle) {
+        MemFree(gStyleStackH);
+        gStyleStackH = NullHandle;
+    }
+    gStyleDepth = 0;
+}
+
+/* Maintain the group style stack in movable heap memory. */
+static SvgGroupStyle* SvgStyleStackLock(void)
+{
+    SvgGroupStyle *stack;
+
+    if (gStyleStackH == NullHandle) {
+        return NULL;
+    }
+
+    stack = (SvgGroupStyle *)MemLock(gStyleStackH);
+    if (stack == NULL) {
+        SvgStyleStackFree();
+    }
+    return stack;
+}
+
+static void SvgStyleStackUnlock(void)
+{
+    if (gStyleStackH != NullHandle) {
+        MemUnlock(gStyleStackH);
+    }
+}
 
 /* ---------- tiny hex helpers (style-local) ---------- */
 static word SvgStyleHexNibble(char c)
@@ -442,13 +344,23 @@ static Boolean SvgStyleGetInlineProp(const char *tag,
 
 Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW)
 {
+    SvgGroupStyle *stack;
+    Boolean haveWidth;
+
     if (outW == NULL) { return FALSE; }
-    if (gStyleDepth > 0 && gStyleStack[gStyleDepth-1].swSet)
+
+    stack = SvgStyleStackLock();
+    if (stack == NULL) { return FALSE; }
+
+    haveWidth = FALSE;
+    if (gStyleDepth > 0 && stack[gStyleDepth-1].swSet)
     {
-        *outW = gStyleStack[gStyleDepth-1].strokeWidth;
-        return TRUE;
+        *outW = stack[gStyleDepth-1].strokeWidth;
+        haveWidth = TRUE;
     }
-    return FALSE;
+
+    SvgStyleStackUnlock();
+    return haveWidth;
 }
 
 /* Called on <g ...> */
@@ -458,6 +370,12 @@ void SvgStyleGroupPush(const char *tag)
     char buf[64];
     char frBuf[24];
     const char *pwalk;
+    SvgGroupStyle *stack;
+
+    stack = SvgStyleStackLock();
+    if (stack == NULL) {
+        return;
+    }
 
     st.fillSet = FALSE;
     st.strokeSet = FALSE;
@@ -471,12 +389,12 @@ void SvgStyleGroupPush(const char *tag)
     st.lcSet = FALSE; st.lc = 0;
     st.ljSet = FALSE; st.lj = 0;
     if (gStyleDepth > 0) {
-        st.frSet = gStyleStack[gStyleDepth-1].frSet;
-        st.fr    = gStyleStack[gStyleDepth-1].fr;
-        st.lcSet = gStyleStack[gStyleDepth-1].lcSet;
-        st.lc    = gStyleStack[gStyleDepth-1].lc;
-        st.ljSet = gStyleStack[gStyleDepth-1].ljSet;
-        st.lj    = gStyleStack[gStyleDepth-1].lj;
+        st.frSet = stack[gStyleDepth-1].frSet;
+        st.fr    = stack[gStyleDepth-1].fr;
+        st.lcSet = stack[gStyleDepth-1].lcSet;
+        st.lc    = stack[gStyleDepth-1].lc;
+        st.ljSet = stack[gStyleDepth-1].ljSet;
+        st.lj    = stack[gStyleDepth-1].lj;
     }
 
     /* inline style/attributes: fill, stroke */
@@ -545,8 +463,10 @@ void SvgStyleGroupPush(const char *tag)
 
     /* push */
     if (gStyleDepth < SVG_STYLE_GSTACK_MAX) {
-        gStyleStack[gStyleDepth++] = st;
+        stack[gStyleDepth++] = st;
     }
+
+    SvgStyleStackUnlock();
 }
 
 
@@ -562,6 +482,8 @@ static Boolean SvgStyleResolvePropWithGroups(const char *tag,
                                              char *out, word outSize)
 {
     const SvgGroupStyle *gs;
+    SvgGroupStyle *stack;
+    Boolean result;
 
     if (outSize == 0) return FALSE;
     out[0] = 0;
@@ -570,21 +492,30 @@ static Boolean SvgStyleResolvePropWithGroups(const char *tag,
     if (SvgParserGetAttrBounded(tag, prop, out, outSize)) return TRUE;
 
     if (gStyleDepth == 0) return FALSE;
-    gs = &gStyleStack[gStyleDepth-1];
+    stack = SvgStyleStackLock();
+    if (stack == NULL) return FALSE;
+
+    gs = &stack[gStyleDepth-1];
+    result = FALSE;
 
     if (!strncmp(prop, "fill", 4) && gs->fillSet)
     {
         strncpy(out, gs->fillVal, outSize-1);
         out[outSize-1] = 0;
-        return TRUE;
+        result = TRUE;
+        goto done;
     }
     if (!strncmp(prop, "stroke", 6) && gs->strokeSet)
     {
         strncpy(out, gs->strokeVal, outSize-1);
         out[outSize-1] = 0;
-        return TRUE;
+        result = TRUE;
+        goto done;
     }
-    return FALSE;
+
+done:
+    SvgStyleStackUnlock();
+    return result;
 }
 
 /* ---- public style API ---- */
@@ -645,12 +576,18 @@ void SvgStyleApplyFillRule(const char *tag)
     }
 
     /* inherit from current group if present */
-    if (gStyleDepth > 0 && gStyleStack[gStyleDepth-1].frSet)
+    if (gStyleDepth > 0)
     {
-        useEvenOdd = (int)gStyleStack[gStyleDepth-1].fr;
-        if (useEvenOdd) { Meta_SetFillRule(ODD_EVEN); }
-        else { Meta_SetFillRule(WINDING); }
-        return;
+        SvgGroupStyle *stack = SvgStyleStackLock();
+        if (stack != NULL && stack[gStyleDepth-1].frSet)
+        {
+            useEvenOdd = (int)stack[gStyleDepth-1].fr;
+            SvgStyleStackUnlock();
+            if (useEvenOdd) { Meta_SetFillRule(ODD_EVEN); }
+            else { Meta_SetFillRule(WINDING); }
+            return;
+        }
+        SvgStyleStackUnlock();
     }
 
     /* initial */
@@ -710,7 +647,9 @@ void SvgStyleApplyStrokeCapJoin(const char *tag)
     char  b[32];
     byte  lc;
     byte  lj;
+    SvgGroupStyle *stack;
 
+    stack = (gStyleDepth > 0) ? SvgStyleStackLock() : NULL;
     /* linecap: element > group > initial(butt) */
     lc = 0;
     b[0] = 0;
@@ -723,8 +662,8 @@ void SvgStyleApplyStrokeCapJoin(const char *tag)
         else if (SvgUtilAsciiNoCaseEq(b, "inherit")) b[0] = 0;
         /* else butt or unknown -> lc stays 0 */
     }
-    if (!b[0] && gStyleDepth>0 && gStyleStack[gStyleDepth-1].lcSet) {
-        lc = gStyleStack[gStyleDepth-1].lc;
+    if (!b[0] && stack != NULL && stack[gStyleDepth-1].lcSet) {
+        lc = stack[gStyleDepth-1].lc;
     }
     Meta_SetLineEnd( (lc==1)? LE_ROUNDCAP : (lc==2)? LE_SQUARECAP : LE_BUTTCAP );
 
@@ -740,8 +679,12 @@ void SvgStyleApplyStrokeCapJoin(const char *tag)
         else if (SvgUtilAsciiNoCaseEq(b, "inherit")) b[0] = 0;
         /* else miter or unknown -> lj stays 0 */
     }
-    if (!b[0] && gStyleDepth>0 && gStyleStack[gStyleDepth-1].ljSet) {
-        lj = gStyleStack[gStyleDepth-1].lj;
+    if (!b[0] && stack != NULL && stack[gStyleDepth-1].ljSet) {
+        lj = stack[gStyleDepth-1].lj;
+    }
+
+    if (stack != NULL) {
+        SvgStyleStackUnlock();
     }
 
     Meta_SetLineJoin( (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
@@ -770,4 +713,3 @@ Boolean SvgStyleHasFill(const char *tag)
     }
     return TRUE; /* initial */
 }
-

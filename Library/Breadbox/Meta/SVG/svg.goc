@@ -328,6 +328,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     Boolean sawSvg;
     word pct;
     Boolean abort=FALSE;
+    TransError status;
 
     (void)settings;
 
@@ -338,6 +339,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     lastPct = 0;
     done = 0;
     sawSvg = FALSE;
+    status = TE_NO_ERROR;
 
     LOG_INIT();
     LOG_START();
@@ -349,15 +351,17 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     LOG_FILE("srcFile", srcFile);
     LOG_DWORD("totalBytes", total);
 
+    if (!SvgStyleStackInit()) { status = TE_OUT_OF_MEMORY; goto cleanup; }
+
     scH = MemAlloc((word)sizeof(SVGScratch), HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!scH) { return TE_OUT_OF_MEMORY; }
+    if (!scH) { status = TE_OUT_OF_MEMORY; goto cleanup; }
     scP = (SVGScratch*) MemLock(scH);
-    if (!scP) { MemFree(scH); return TE_OUT_OF_MEMORY; }
+    if (!scP) { status = TE_OUT_OF_MEMORY; goto cleanup; }
 
     ioH = MemAlloc(SVG_IO_BUF_SIZE, HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!ioH) { MemUnlock(scH); MemFree(scH); return TE_OUT_OF_MEMORY; }
+    if (!ioH) { status = TE_OUT_OF_MEMORY; goto cleanup; }
     ioP = (char*) MemLock(ioH);
-    if (!ioP) { MemFree(ioH); MemUnlock(scH); MemFree(scH); return TE_OUT_OF_MEMORY; }
+    if (!ioP) { status = TE_OUT_OF_MEMORY; goto cleanup; }
 
     SvgParserScanInit(&scan);
     scan.ioH = ioH;
@@ -479,17 +483,18 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         SvgViewInitDefault();
     }
 
+cleanup:
     if (ioP) MemUnlock(ioH);
     if (ioH) MemFree(ioH);
     if (scP) MemUnlock(scH);
     if (scH) MemFree(scH);
+    SvgStyleStackFree();
 
-    if (abort) {
+    if (abort && status == TE_NO_ERROR) {
       LOG_STR("ReadSVG", "User aborted!");
-      return TE_ERROR;
+      status = TE_ERROR;
     }
 
     LOG_END();
-    return TE_NO_ERROR;
+    return status;
 }
-

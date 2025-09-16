@@ -32,8 +32,6 @@ typedef struct {
     Boolean         ljSet;  byte lj;      /* 0=miter, 1=round, 2=bevel */
 } SvgGroupStyle;
 
-
-
 /* ---- shared data types ---- */
 typedef struct {
     byte SNC_r;
@@ -76,6 +74,10 @@ const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out);
 Boolean     SvgParserTagIs(const char *tag, const char *name);
 Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
                                     char *out, word outSize);
+
+/* ----- style stack API ------ */
+Boolean SvgStyleStackInit(void);
+void    SvgStyleStackFree(void);
 
 /* ---- style (stroke/fill/colors) ---- */
 void    SvgStyleApplyStrokeAndFill(const char *tag);

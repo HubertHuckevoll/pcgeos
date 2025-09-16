@@ -8,7 +8,7 @@ CGM             = cgm.h cgm.goc cgmraw.goc
 HPGL            = hpgl.goc
 SVG             = dbglog.h svg.h dbglog.goc svg.goc svgGeom.goc\
                   svgShape.goc svgTransform.goc svgUtil.goc svgView.goc\
-                  svgStyle.goc svgPath.goc
+                  svgStyle.goc svgPath.goc colors.goh
 META            = meta.goc
 SPLINEOP        = splineop.goc
 UI_TO_RDFS      =
