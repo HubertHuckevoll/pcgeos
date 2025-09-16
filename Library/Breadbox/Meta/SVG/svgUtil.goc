@@ -33,13 +33,6 @@ Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b)
     return TRUE;
 }
 
-/* skip common ASCII whitespace characters */
-const char* SvgParserSkipWS(const char *p)
-{
-    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') { p++; }
-    return p;
-}
-
 word SvgUtilHexNibble(char c)
 {
     if (c >= '0' && c <= '9') return (word)(c - '0');
