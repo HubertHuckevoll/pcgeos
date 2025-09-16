@@ -113,14 +113,14 @@ void SvgViewInitFromSvgTag(const char *tag)
 
     if (SvgParserGetAttrBounded(tag, "viewBox", vb, sizeof(vb))) {
         s = vb;
-        s = SvgParserParseWWFixed16_16(s, &g_vbMinX);
-        s = SvgUtilSkipSpace(s); s = SvgParserParseWWFixed16_16(s, &g_vbMinY);
-        s = SvgUtilSkipSpace(s); s = SvgParserParseWWFixed16_16(s, &g_vbW);
-        s = SvgUtilSkipSpace(s); s = SvgParserParseWWFixed16_16(s, &g_vbH);
+        s = SvgUtilParseWWFixed16_16(s, &g_vbMinX);
+        s = SvgUtilSkipSpace(s); s = SvgUtilParseWWFixed16_16(s, &g_vbMinY);
+        s = SvgUtilSkipSpace(s); s = SvgUtilParseWWFixed16_16(s, &g_vbW);
+        s = SvgUtilSkipSpace(s); s = SvgUtilParseWWFixed16_16(s, &g_vbH);
     }
     if ((sdword)g_vbW <= 0 || (sdword)g_vbH <= 0) {
-        if (SvgParserGetAttrBounded(tag, "width",  wb, sizeof(wb)))  (void)SvgParserParseWWFixed16_16(wb, &g_vpW);
-        if (SvgParserGetAttrBounded(tag, "height", hb, sizeof(hb)))  (void)SvgParserParseWWFixed16_16(hb, &g_vpH);
+        if (SvgParserGetAttrBounded(tag, "width",  wb, sizeof(wb)))  (void)SvgUtilParseWWFixed16_16(wb, &g_vpW);
+        if (SvgParserGetAttrBounded(tag, "height", hb, sizeof(hb)))  (void)SvgUtilParseWWFixed16_16(hb, &g_vpH);
         if ((sdword)g_vpW <= 0) g_vpW = SvgGeomMakeWWFixedFromInt(100);
         if ((sdword)g_vpH <= 0) g_vpH = SvgGeomMakeWWFixedFromInt(100);
         g_vbMinX = 0; g_vbMinY = 0;

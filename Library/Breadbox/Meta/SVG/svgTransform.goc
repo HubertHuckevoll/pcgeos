@@ -138,7 +138,7 @@ void SvgXformApplyVector(sword *dxP, sword *dyP, const SvgMatrix *m)
 static const char* SvgParseNumber(const char *s, WWFixedAsDWord *out)
 {
     s = SvgUtilSkipSpace(s);
-    s = SvgParserParseWWFixed16_16(s, out);
+    s = SvgUtilParseWWFixed16_16(s, out);
     s = SvgUtilSkipSpace(s);
     if (*s == ',') { s++; }
     return s;

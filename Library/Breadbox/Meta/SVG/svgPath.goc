@@ -416,21 +416,21 @@ SvgPathHandleMoveTo(const char **sPP, char *lastCmdP,
 
     if (*lastCmdP == 'M')
     {
-        sP = SvgParserParseWWFixed16_16(sP, &f);
+        sP = SvgUtilParseWWFixed16_16(sP, &f);
         x  = SvgViewMapPosX_F(f);
 
         sP = SvgSkipCommaWS(sP);
-        sP = SvgParserParseWWFixed16_16(sP, &f);
+        sP = SvgUtilParseWWFixed16_16(sP, &f);
         y  = SvgViewMapPosY_F(f);
     }
     else /* 'm' */
     {
         sP = SvgSkipCommaWS(sP);
-        sP = SvgParserParseWWFixed16_16(sP, &fx);
+        sP = SvgUtilParseWWFixed16_16(sP, &fx);
         dx = SvgViewMapLenX_F(fx);
 
         sP = SvgSkipCommaWS(sP);
-        sP = SvgParserParseWWFixed16_16(sP, &fy);
+        sP = SvgUtilParseWWFixed16_16(sP, &fy);
         dy = SvgViewMapLenY_F(fy);
 
         x = (sword)(*lastxP + dx);
@@ -484,20 +484,20 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
 
         if (isAbs)
         {
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             lx = SvgViewMapPosX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             ly = SvgViewMapPosY_F(f);
         }
         else /* 'l' */
         {
-            sP = SvgParserParseWWFixed16_16(sP, &fx);
+            sP = SvgUtilParseWWFixed16_16(sP, &fx);
             dx = SvgViewMapLenX_F(fx);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &fy);
+            sP = SvgUtilParseWWFixed16_16(sP, &fy);
             dy = SvgViewMapLenY_F(fy);
 
             lx = (sword)(*lastxP + dx);
@@ -555,12 +555,12 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
 
         if (isAbs)
         {
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             lx = SvgViewMapPosX_F(f);
         }
         else /* 'h' */
         {
-            sP = SvgParserParseWWFixed16_16(sP, &fx);
+            sP = SvgUtilParseWWFixed16_16(sP, &fx);
             dx = SvgViewMapLenX_F(fx);
             lx = (sword)(*lastxP + dx);
         }
@@ -616,12 +616,12 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
 
         if (isAbs)
         {
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             ly = SvgViewMapPosY_F(f);
         }
         else /* 'v' */
         {
-            sP = SvgParserParseWWFixed16_16(sP, &fy);
+            sP = SvgUtilParseWWFixed16_16(sP, &fy);
             dy = SvgViewMapLenY_F(fy);
             ly = (sword)(*lastyP + dy);
         }
@@ -674,36 +674,36 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
 
         if (isAbs)
         {
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             cx = SvgViewMapPosX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             cy = SvgViewMapPosY_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             ex = SvgViewMapPosX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             ey = SvgViewMapPosY_F(f);
         }
         else /* 'q' */
         {
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             dcx = SvgViewMapLenX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             dcy = SvgViewMapLenY_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             dex = SvgViewMapLenX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             dey = SvgViewMapLenY_F(f);
 
             cx = (sword)(*lastxP + dcx);
@@ -756,20 +756,20 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
 
         if (isAbs)
         {
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             ex = SvgViewMapPosX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             ey = SvgViewMapPosY_F(f);
         }
         else /* 't' */
         {
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             dex = SvgViewMapLenX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &f);
+            sP = SvgUtilParseWWFixed16_16(sP, &f);
             dey = SvgViewMapLenY_F(f);
 
             ex = (sword)(*lastxP + dex);
@@ -833,52 +833,52 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
 
         if (isAbs)
         {
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c1x = SvgViewMapPosX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c1y = SvgViewMapPosY_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c2x = SvgViewMapPosX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c2y = SvgViewMapPosY_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             ex  = SvgViewMapPosX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             ey  = SvgViewMapPosY_F(f);
         }
         else /* 'c' */
         {
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc1x = SvgViewMapLenX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc1y = SvgViewMapLenY_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc2x = SvgViewMapLenX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc2y = SvgViewMapLenY_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dex  = SvgViewMapLenX_F(f);
 
             sP = SvgSkipCommaWS(sP);
-            before = sP; sP = SvgParserParseWWFixed16_16(sP, &f); if (sP == before) { break; }
+            before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dey  = SvgViewMapLenY_F(f);
 
             c1x = (sword)(*lastxP + dc1x);
@@ -932,21 +932,21 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
         }
 
         if (isAbs) {
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; c2x = SvgViewMapPosX_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; c2x = SvgViewMapPosX_F(f);
             sP=SvgSkipCommaWS(sP);
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; c2y = SvgViewMapPosY_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; c2y = SvgViewMapPosY_F(f);
             sP=SvgSkipCommaWS(sP);
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; ex  = SvgViewMapPosX_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; ex  = SvgViewMapPosX_F(f);
             sP=SvgSkipCommaWS(sP);
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; ey  = SvgViewMapPosY_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; ey  = SvgViewMapPosY_F(f);
         } else {
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; dc2x = SvgViewMapLenX_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dc2x = SvgViewMapLenX_F(f);
             sP=SvgSkipCommaWS(sP);
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; dc2y = SvgViewMapLenY_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dc2y = SvgViewMapLenY_F(f);
             sP=SvgSkipCommaWS(sP);
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; dex  = SvgViewMapLenX_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dex  = SvgViewMapLenX_F(f);
             sP=SvgSkipCommaWS(sP);
-            before=sP; sP=SvgParserParseWWFixed16_16(sP,&f); if (sP==before) break; dey  = SvgViewMapLenY_F(f);
+            before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dey  = SvgViewMapLenY_F(f);
             c2x = (sword)(*lastxP + dc2x);
             c2y = (sword)(*lastyP + dc2y);
             ex  = (sword)(*lastxP + dex);
@@ -996,11 +996,11 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         }
 
         /* rx, ry, rot */
-        sP = SvgParserParseWWFixed16_16(sP, &rxW);
+        sP = SvgUtilParseWWFixed16_16(sP, &rxW);
         sP = SvgSkipCommaWS(sP);
-        sP = SvgParserParseWWFixed16_16(sP, &ryW);
+        sP = SvgUtilParseWWFixed16_16(sP, &ryW);
         sP = SvgSkipCommaWS(sP);
-        sP = SvgParserParseWWFixed16_16(sP, &rotW);
+        sP = SvgUtilParseWWFixed16_16(sP, &rotW);
 
         /* flags (must be single '0'/'1', with comma+WS skipping) */
         if (!SvgReadFlag(&sP, &lafB)) { done = TRUE; continue; }
@@ -1012,16 +1012,16 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         if (lastCmd == 'A')
         {
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &exW);
+            sP = SvgUtilParseWWFixed16_16(sP, &exW);
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &eyW);
+            sP = SvgUtilParseWWFixed16_16(sP, &eyW);
         }
         else /* 'a' */
         {
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &dxW);
+            sP = SvgUtilParseWWFixed16_16(sP, &dxW);
             sP = SvgSkipCommaWS(sP);
-            sP = SvgParserParseWWFixed16_16(sP, &dyW);
+            sP = SvgUtilParseWWFixed16_16(sP, &dyW);
 
             exW = SvgGeomMakeWWFixedFromInt(*lastxP);
             eyW = SvgGeomMakeWWFixedFromInt(*lastyP);

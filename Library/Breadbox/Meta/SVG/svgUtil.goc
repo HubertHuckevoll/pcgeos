@@ -179,7 +179,7 @@ Boolean SvgUtilGetInlineProp(const char *tag, const char *prop,
     return FALSE;
 }
 
-const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
+const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
 {
     sdword           sign;
     dword            ip;
@@ -247,10 +247,10 @@ const char* SvgParserParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
 
 #ifdef DEBUG_LOG
     if (scale >= 1000000UL && frac != 0) {
-        LOG_STR("[SvgParserParseWWFixed16_16]", "fraction scale capped at 1e6");
+        LOG_STR("[SvgUtilParseWWFixed16_16]", "fraction scale capped at 1e6");
     }
     if ((sdword)result == 0 && (ip!=0 || frac!=0)) {
-        LOG_STR("[SvgParserParseWWFixed16_16]", "result rounded to zero");
+        LOG_STR("[SvgUtilParseWWFixed16_16]", "result rounded to zero");
     }
 #endif
 

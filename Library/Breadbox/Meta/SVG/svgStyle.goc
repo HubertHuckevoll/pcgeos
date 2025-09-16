@@ -265,7 +265,7 @@ void SvgStyleGroupPush(const char *tag)
         if (pwalk != buf) {
             char save = *pwalk;
             *(char*)pwalk = 0;
-            (void)SvgParserParseWWFixed16_16(buf, &st.strokeWidth);
+            (void)SvgUtilParseWWFixed16_16(buf, &st.strokeWidth);
             *(char*)pwalk = save;
             st.swSet = TRUE;
         }
@@ -465,7 +465,7 @@ void SvgStyleApplyStrokeWidth(const char *tag)
         }
         save = *pwalk;
         *(char*)pwalk = 0;
-        (void)SvgParserParseWWFixed16_16(b, &lw);
+        (void)SvgUtilParseWWFixed16_16(b, &lw);
         *(char*)pwalk = save;
         haveWidth = TRUE;
     }

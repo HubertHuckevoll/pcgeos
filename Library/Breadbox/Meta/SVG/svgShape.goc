@@ -35,7 +35,7 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
         {
             WWFixedAsDWord f;
             const char *p;
-            p = SvgParserParseWWFixed16_16(s, &f);
+            p = SvgUtilParseWWFixed16_16(s, &f);
             x = SvgViewMapPosX_F(f);
             while (*p) {
                 if (*p == ' ' || *p == ',' || *p == '\t' ||
@@ -53,7 +53,7 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
         {
             WWFixedAsDWord f;
             const char *p;
-            p = SvgParserParseWWFixed16_16(s, &f);
+            p = SvgUtilParseWWFixed16_16(s, &f);
             y = SvgViewMapPosY_F(f);
             while (*p) {
                 if (*p == ' ' || *p == ',' || *p == '\t' ||
@@ -109,10 +109,10 @@ void SvgShapeHandleLine(const char *tag)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
-        (void)SvgParserParseWWFixed16_16(xb,  &fx1);
-        (void)SvgParserParseWWFixed16_16(yb,  &fy1);
-        (void)SvgParserParseWWFixed16_16(x2b, &fx2);
-        (void)SvgParserParseWWFixed16_16(y2b, &fy2);
+        (void)SvgUtilParseWWFixed16_16(xb,  &fx1);
+        (void)SvgUtilParseWWFixed16_16(yb,  &fy1);
+        (void)SvgUtilParseWWFixed16_16(x2b, &fx2);
+        (void)SvgUtilParseWWFixed16_16(y2b, &fy2);
 
         /* world CTM = View ∘ Element (parent CTM omitted here) */
         SvgXformBuildWorld(tag, NULL, &ctm);
@@ -226,10 +226,10 @@ void SvgShapeHandleRect(const char *tag)
         SvgStyleApplyFillRule(tag);
         SvgStyleApplyStrokeWidth(tag);
 
-        (void)SvgParserParseWWFixed16_16(xb, &fx);
-        (void)SvgParserParseWWFixed16_16(yb, &fy);
-        (void)SvgParserParseWWFixed16_16(wb, &fw);
-        (void)SvgParserParseWWFixed16_16(hb, &fh);
+        (void)SvgUtilParseWWFixed16_16(xb, &fx);
+        (void)SvgUtilParseWWFixed16_16(yb, &fy);
+        (void)SvgUtilParseWWFixed16_16(wb, &fw);
+        (void)SvgUtilParseWWFixed16_16(hb, &fh);
 
         SvgXformBuildWorld(tag, NULL, &ctm);
 
@@ -283,10 +283,10 @@ void SvgShapeHandleEllipse(const char *tag)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
-        (void)SvgParserParseWWFixed16_16(cxb, &fcx);
-        (void)SvgParserParseWWFixed16_16(cyb, &fcy);
-        (void)SvgParserParseWWFixed16_16(rxb, &frx);
-        (void)SvgParserParseWWFixed16_16(ryb, &fry);
+        (void)SvgUtilParseWWFixed16_16(cxb, &fcx);
+        (void)SvgUtilParseWWFixed16_16(cyb, &fcy);
+        (void)SvgUtilParseWWFixed16_16(rxb, &frx);
+        (void)SvgUtilParseWWFixed16_16(ryb, &fry);
 
         SvgXformBuildWorld(tag, NULL, &ctm);
 
@@ -369,9 +369,9 @@ void SvgShapeHandleCircle(const char *tag)
         SvgStyleApplyStrokeAndFill(tag);
         SvgStyleApplyStrokeWidth(tag);
 
-        (void)SvgParserParseWWFixed16_16(cxb, &fcx);
-        (void)SvgParserParseWWFixed16_16(cyb, &fcy);
-        (void)SvgParserParseWWFixed16_16(rb,  &fr);
+        (void)SvgUtilParseWWFixed16_16(cxb, &fcx);
+        (void)SvgUtilParseWWFixed16_16(cyb, &fcy);
+        (void)SvgUtilParseWWFixed16_16(rb,  &fr);
 
         SvgXformBuildWorld(tag, NULL, &ctm);
 
