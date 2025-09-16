@@ -32,10 +32,7 @@ typedef struct {
 
 const char* SvgParserSkipWS(const char *s)
 {
-    while (*s && isspace(*s)) {
-        s++;
-    }
-    return s;
+    return SvgUtilSkipSpace(s);
 }
 
 /* Parse "-12.34" → 16.16; returns pointer after number */
