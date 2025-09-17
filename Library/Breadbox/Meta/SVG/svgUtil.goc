@@ -200,3 +200,9 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
     *out = result;
     return s;
 }
+
+Boolean SvgUtilIsNumStart(char c)
+{
+    return (c=='+' || c=='-' || c=='.' || (c>='0' && c<='9'));
+}
+

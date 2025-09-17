@@ -31,12 +31,6 @@ static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)
 }
 
 static Boolean
-SvgIsNumStart(char c)
-{
-    return (c=='+' || c=='-' || c=='.' || (c>='0' && c<='9'));
-}
-
-static Boolean
 SvgReadFlag(const char **sPP, byte *out)
 {
     const char *s;
@@ -467,7 +461,7 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
     {
         sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
-        if (!SvgIsNumStart(*sP)) { break; }
+        if (!SvgUtilIsNumStart(*sP)) { break; }
 
         if (isAbs)
         {
@@ -507,7 +501,7 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
 
         /* repeat only if another number really follows */
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) { break; }
+        if (!SvgUtilIsNumStart(*probeP)) { break; }
     }
 
     *sPP = sP;
@@ -536,7 +530,7 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
         if (!*sP) {
             break;
         }
-        if (!SvgIsNumStart(*sP)) {
+        if (!SvgUtilIsNumStart(*sP)) {
             break;
         }
 
@@ -567,7 +561,7 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
 
         /* repeat only if another number really follows */
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) {
+        if (!SvgUtilIsNumStart(*probeP)) {
             break;
         }
     }
@@ -597,7 +591,7 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
         if (!*sP) {
             break;
         }
-        if (!SvgIsNumStart(*sP)) {
+        if (!SvgUtilIsNumStart(*sP)) {
             break;
         }
 
@@ -628,7 +622,7 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
 
         /* repeat only if another number really follows */
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) {
+        if (!SvgUtilIsNumStart(*probeP)) {
             break;
         }
     }
@@ -657,7 +651,7 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
     {
         sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
-        if (!SvgIsNumStart(*sP)) { break; }
+        if (!SvgUtilIsNumStart(*sP)) { break; }
 
         if (isAbs)
         {
@@ -712,7 +706,7 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
 
         /* repeat only if another number really follows */
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) { break; }
+        if (!SvgUtilIsNumStart(*probeP)) { break; }
     }
 
     *sPP = sP;
@@ -739,7 +733,7 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
     {
         sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
-        if (!SvgIsNumStart(*sP)) { break; }
+        if (!SvgUtilIsNumStart(*sP)) { break; }
 
         if (isAbs)
         {
@@ -787,7 +781,7 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
 
         /* repeat only if another number really follows */
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) { break; }
+        if (!SvgUtilIsNumStart(*probeP)) { break; }
     }
 
     *sPP = sP;
@@ -816,7 +810,7 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
     {
         sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
-        if (!SvgIsNumStart(*sP)) { break; }
+        if (!SvgUtilIsNumStart(*sP)) { break; }
 
         if (isAbs)
         {
@@ -886,7 +880,7 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
         *lastWasQuadP  = FALSE;
 
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) { break; }
+        if (!SvgUtilIsNumStart(*probeP)) { break; }
     }
 
     *sPP = sP;
@@ -907,7 +901,7 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
 
     for (;;) {
         sP = SvgParserSkipCommaWS(sP);
-        if (!*sP || !SvgIsNumStart(*sP)) break;
+        if (!*sP || !SvgUtilIsNumStart(*sP)) break;
 
         /* reflect previous C2 if last segment was cubic, else use current point */
         if (*lastWasCubicP) {
@@ -947,7 +941,7 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
         *lastWasCubicP = TRUE; *lastWasQuadP = FALSE;
 
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) break;
+        if (!SvgUtilIsNumStart(*probeP)) break;
     }
     *sPP = sP;
 }
@@ -975,7 +969,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         /* Repeat-guard: only continue if the next token can start a number. */
         sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
-        if (!SvgIsNumStart(*sP))
+        if (!SvgUtilIsNumStart(*sP))
         {
             /* Next is a command letter (e.g., h/v/z/M...) or something else. Stop repeating. */
             done = TRUE;
@@ -1041,7 +1035,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
 
             /* Decide if more arcs follow */
             probeP = SvgParserSkipCommaWS(sP);
-            if (!SvgIsNumStart(*probeP)) { done = TRUE; }
+            if (!SvgUtilIsNumStart(*probeP)) { done = TRUE; }
             continue;
         }
 
@@ -1054,7 +1048,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
             LOG_STR("[PATH]", "A: end equals current (exact) -> skip");
 
             probeP = SvgParserSkipCommaWS(sP);
-            if (!SvgIsNumStart(*probeP)) { done = TRUE; }
+            if (!SvgUtilIsNumStart(*probeP)) { done = TRUE; }
             continue;
         }
 
@@ -1067,7 +1061,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
 
         /* Repeat only if another numeric set follows */
         probeP = SvgParserSkipCommaWS(sP);
-        if (!SvgIsNumStart(*probeP)) { done = TRUE; }
+        if (!SvgUtilIsNumStart(*probeP)) { done = TRUE; }
     }
 
     *sPP = sP;

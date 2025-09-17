@@ -82,13 +82,14 @@ Boolean     SvgParseGetInlineStyleProp(const char *tag, const char *prop,
                                        char *out, word outSize);
 
 /* ---- small utility (common) ---- */
-Boolean SvgUtilAsciiNoCaseEq(const char *a, const char *b);
-word    SvgUtilHexNibble(char c);
-word    SvgUtilHexByte(const char *p);
-Boolean SvgUtilExpandShortHex(const char *s, word *r, word *g, word *b);
-Boolean SvgUtilParseRGBFunc(const char *s, word *r, word *g, word *b);
-Boolean SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop);
+Boolean     SvgUtilAsciiNoCaseEq(const char *a, const char *b);
+word        SvgUtilHexNibble(char c);
+word        SvgUtilHexByte(const char *p);
+Boolean     SvgUtilExpandShortHex(const char *s, word *r, word *g, word *b);
+Boolean     SvgUtilParseRGBFunc(const char *s, word *r, word *g, word *b);
+Boolean     SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop);
 const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out);
+Boolean     SvgIsNumStart(char c);
 
 /* ---- geometry helpers (shared fixed-point math) ---- */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v);
