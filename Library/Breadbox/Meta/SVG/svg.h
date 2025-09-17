@@ -21,6 +21,9 @@
 #define GrSubWWFixed(a,b) ((WWFixedAsDWord)((sdword)(a) - (sdword)(b)))
 #endif
 
+/* ---- transform stack (CTM) size ---- */
+#define SVG_XFORM_GSTACK_MAX 16
+
 /* ---- group style stack (fill/stroke/stroke-width) ---- */
 #define SVG_STYLE_GSTACK_MAX 16 /* max group nesting depth */
 

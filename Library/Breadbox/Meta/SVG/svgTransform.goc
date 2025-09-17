@@ -18,7 +18,6 @@
 
 
 /* ---- group CTM stack ---- */
-#define SVG_XFORM_GSTACK_MAX 16
 static MemHandle gCTMStackH = NullHandle;
 static int gCTMDepth = 0;
 
