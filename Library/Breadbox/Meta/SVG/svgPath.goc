@@ -1197,6 +1197,8 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
                       ((firstx != lastx) || (firsty != lasty)));
     if (needStrokeClose)
     {
+        LOGF(("[EMIT]", "needStrokeClose tagHasStroke=1 first=(%d,%d) last=(%d,%d)",
+                (int)firstx, (int)firsty, (int)lastx, (int)lasty));
         if (!SvgScratchEnsurePointCapacity(sc, (word)(np + 1)))
         {
             LOG_STR("[PATH]", "EmitSubpath: ensure failed for close");
@@ -1209,7 +1211,29 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
         }
     }
 
-    Meta_Polyline(sc->ptsP, np);
+    if (closed && hasStroke)
+    {
+        /* Drop the synthetic closing point (if any); Meta_Polygon closes it. */
+        if (np > 1 && sc->ptsP[np-1].P_x == firstx && sc->ptsP[np-1].P_y == firsty)
+        {
+            LOGF(("[EMIT]", "dropDuplicateClose np=%u first=(%d,%d)",
+                    (unsigned)np, (int)firstx, (int)firsty));
+            np--;
+        }
+        LOGF(("[EMIT]", "Meta_Polygon closed=1 np=%u first=(%d,%d) last=(%d,%d)",
+                (unsigned)np,
+                (int)sc->ptsP[0].P_x, (int)sc->ptsP[0].P_y,
+                (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
+        Meta_Polygon(sc->ptsP, np, FALSE, TRUE);
+    }
+    else
+    {
+        LOGF(("[EMIT]", "Meta_Polyline closed=%d np=%u first=(%d,%d) last=(%d,%d)",
+                (int)closed, (unsigned)np,
+                (int)sc->ptsP[0].P_x, (int)sc->ptsP[0].P_y,
+                (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
+        Meta_Polyline(sc->ptsP, np);
+    }
 }
 
 void SvgPathHandle(const char *tag, SVGScratch *sc)
