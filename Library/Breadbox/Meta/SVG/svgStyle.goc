@@ -109,6 +109,11 @@ static Boolean SvgStyleFindNamedColor(const char *name, word *r, word *g, word *
              "url(#id)" [optional fallback color after ')'].
    Gradients/patterns are not implemented, so any url() without fallback => NONE. */
 static Boolean SvgStyleResolveCurrentColor(const char *tag, word *r, word *g, word *b);
+static Boolean SvgStyleResolvePropWithGroups(const char *tag,
+                                             const char *prop,
+                                             char *out,
+                                             word outSize,
+                                             Boolean skipLocal);
 
 static Boolean
 SvgStyleResolvePaintToSolidOrNone(const char *tag,
@@ -775,3 +780,111 @@ Boolean SvgStyleHasFill(const char *tag)
     }
     return TRUE; /* initial */
 }
+
+#ifdef SVG_STYLE_ENABLE_SELF_TEST
+Boolean SvgStyleRunSelfTest(void)
+{
+    Boolean ok;
+    Boolean have;
+    char buf[64];
+    word r;
+    word g;
+    word b;
+    MemHandle savedHandle;
+    byte savedDepth;
+    SvgGroupStyle savedStack[SVG_STYLE_GSTACK_MAX];
+    Boolean savedStackValid;
+
+    savedHandle = gStyleStackH;
+    savedDepth = gStyleDepth;
+    savedStackValid = FALSE;
+
+    if (savedHandle != NullHandle) {
+        SvgGroupStyle *existing = (SvgGroupStyle *)MemLock(savedHandle);
+        if (existing != NULL) {
+            memcpy(savedStack, existing, sizeof(savedStack));
+            savedStackValid = TRUE;
+            MemUnlock(savedHandle);
+        }
+    }
+
+    gStyleStackH = NullHandle;
+    gStyleDepth = 0;
+
+    if (!SvgStyleStackInit()) {
+        gStyleStackH = savedHandle;
+        gStyleDepth = savedDepth;
+        return FALSE;
+    }
+
+    ok = TRUE;
+
+    SvgStyleGroupPush("<g fill='#010203' color='#445566'>");
+    if (gStyleDepth != 1) {
+        ok = FALSE;
+        goto cleanup;
+    }
+
+    SvgStyleGroupPush("<g fill='inherit' stroke='currentColor'>");
+    if (gStyleDepth != 2) {
+        ok = FALSE;
+        goto cleanup;
+    }
+
+    have = SvgStyleResolvePropWithGroups("<rect fill='inherit' stroke='currentColor'>",
+                                         "fill", buf, sizeof(buf), FALSE);
+    if (!have ||
+        !SvgStyleResolvePaintToSolidOrNone("<rect fill='inherit' stroke='currentColor'>",
+                                           "fill", buf, &r, &g, &b) ||
+        r != 0x01 || g != 0x02 || b != 0x03) {
+        ok = FALSE;
+    }
+
+    have = SvgStyleResolvePropWithGroups("<rect fill='inherit' stroke='currentColor'>",
+                                         "stroke", buf, sizeof(buf), FALSE);
+    if (!have ||
+        !SvgStyleResolvePaintToSolidOrNone("<rect fill='inherit' stroke='currentColor'>",
+                                           "stroke", buf, &r, &g, &b) ||
+        r != 0x44 || g != 0x55 || b != 0x66) {
+        ok = FALSE;
+    }
+
+    SvgStyleGroupPop();
+    SvgStyleGroupPop();
+
+    SvgStyleGroupPush("<g>");
+    if (gStyleDepth != 1) {
+        ok = FALSE;
+        goto cleanup;
+    }
+
+    have = SvgStyleResolvePropWithGroups("<line stroke='currentColor'>",
+                                         "stroke", buf, sizeof(buf), FALSE);
+    if (!have ||
+        !SvgStyleResolvePaintToSolidOrNone("<line stroke='currentColor'>",
+                                           "stroke", buf, &r, &g, &b) ||
+        r != 0 || g != 0 || b != 0) {
+        ok = FALSE;
+    }
+
+cleanup:
+    while (gStyleDepth > 0) {
+        SvgStyleGroupPop();
+    }
+    SvgStyleStackFree();
+
+    if (savedHandle != NullHandle) {
+        gStyleStackH = savedHandle;
+        gStyleDepth = savedDepth;
+        if (savedStackValid) {
+            SvgGroupStyle *restore = (SvgGroupStyle *)MemLock(savedHandle);
+            if (restore != NULL) {
+                memcpy(restore, savedStack, sizeof(savedStack));
+                MemUnlock(savedHandle);
+            }
+        }
+    }
+
+    return ok;
+}
+#endif /* SVG_STYLE_ENABLE_SELF_TEST */

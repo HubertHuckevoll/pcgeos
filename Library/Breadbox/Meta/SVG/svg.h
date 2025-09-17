@@ -145,6 +145,9 @@ Boolean SvgStyleHasFill(const char *tag);
 void    SvgStyleGroupPush(const char *tag);
 void    SvgStyleGroupPop(void);
 Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW);
+#ifdef SVG_STYLE_ENABLE_SELF_TEST
+Boolean SvgStyleRunSelfTest(void);
+#endif
 
 /* ---- viewBox/viewport mapping ---- */
 void   SvgViewInitFromSvgTag(const char *tag);
