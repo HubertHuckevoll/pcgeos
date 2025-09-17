@@ -35,6 +35,8 @@ typedef struct {
     Boolean         frSet;  byte fr;      /* 0=nonzero, 1=evenodd */
     Boolean         lcSet;  byte lc;      /* 0=butt, 1=round, 2=square */
     Boolean         ljSet;  byte lj;      /* 0=miter, 1=round, 2=bevel */
+    Boolean         colorSet;             /* CSS color property (for currentColor) */
+    char            colorVal[64];
 } SvgGroupStyle;
 
 /* ---- shared data types ---- */
