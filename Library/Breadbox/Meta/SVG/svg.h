@@ -47,12 +47,13 @@ typedef struct {
     char SNC_name[SVG_COLOR_NAME_LEN + 1];   /* NUL-terminated */
 } SvgNamedColor;
 
-/* All sizeable scratch buffers kept on heap to keep stack tiny - fixme: put in LMemHeap or something */
+/* WWPoint in 16.16 */
 typedef struct {
     WWFixedAsDWord x;
     WWFixedAsDWord y;
 } SvgWWPoint;
 
+/* All sizeable scratch buffers kept on heap to keep stack tiny */
 typedef struct _SVGScratch {
     MemHandle   tagH;
     char       *tagP;
