@@ -71,6 +71,7 @@ typedef struct {
 
 /* ---- parser-layer (raw text scan) ---- */
 const char* SvgParserSkipWS(const char *p);
+const char* SvgParserSkipCommaWS(const char *p);
 Boolean     SvgParserTagIs(const char *tag, const char *name);
 Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
                                     char *out, word outSize);

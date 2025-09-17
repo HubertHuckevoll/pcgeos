@@ -17,6 +17,18 @@ const char* SvgParserSkipWS(const char *p)
     return p;
 }
 
+/* skip whitespace, optional comma, then whitespace again */
+const char* SvgParserSkipCommaWS(const char *p)
+{
+    p = SvgParserSkipWS(p);
+    if (*p == ',')
+    {
+        p++;
+        p = SvgParserSkipWS(p);
+    }
+    return p;
+}
+
 Boolean SvgParserGetAttrBounded(const char *tag, const char *name,
                                 char *out, word outSize)
 {
@@ -253,4 +265,3 @@ Boolean SvgParseGetInlineStyleProp(const char *tag, const char *prop,
     }
     return FALSE;
 }
-

@@ -30,19 +30,6 @@ static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)
     }
 }
 
-/* -------- svgPath.goc : local helpers for A/a parsing (file-local) -------- */
-static const char*
-SvgSkipCommaWS(const char *s)
-{
-    while (*s==' ' || *s=='\t' || *s=='\r' || *s=='\n') { s++; }
-    if (*s==',')
-    {
-        s++;
-        while (*s==' ' || *s=='\t' || *s=='\r' || *s=='\n') { s++; }
-    }
-    return s;
-}
-
 static Boolean
 SvgIsNumStart(char c)
 {
@@ -53,12 +40,12 @@ static Boolean
 SvgReadFlag(const char **sPP, byte *out)
 {
     const char *s;
-    s = SvgSkipCommaWS(*sPP);
+    s = SvgParserSkipCommaWS(*sPP);
     if (*s=='0' || *s=='1')
     {
         *out = (byte)(*s - '0');
         s++;
-        *sPP = SvgSkipCommaWS(s);
+        *sPP = SvgParserSkipCommaWS(s);
         return TRUE;
     }
     return FALSE; /* do not consume on failure */
@@ -412,24 +399,24 @@ SvgPathHandleMoveTo(const char **sPP, char *lastCmdP,
     sP = *sPP;
 
     /* Allow optional comma before numbers (spec permits it) */
-    sP = SvgSkipCommaWS(sP);
+    sP = SvgParserSkipCommaWS(sP);
 
     if (*lastCmdP == 'M')
     {
         sP = SvgUtilParseWWFixed16_16(sP, &f);
         x  = SvgViewMapPosX_F(f);
 
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         sP = SvgUtilParseWWFixed16_16(sP, &f);
         y  = SvgViewMapPosY_F(f);
     }
     else /* 'm' */
     {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         sP = SvgUtilParseWWFixed16_16(sP, &fx);
         dx = SvgViewMapLenX_F(fx);
 
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         sP = SvgUtilParseWWFixed16_16(sP, &fy);
         dy = SvgViewMapLenY_F(fy);
 
@@ -478,7 +465,7 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
 
     for (;;)
     {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
         if (!SvgIsNumStart(*sP)) { break; }
 
@@ -487,7 +474,7 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             lx = SvgViewMapPosX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             ly = SvgViewMapPosY_F(f);
         }
@@ -496,7 +483,7 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
             sP = SvgUtilParseWWFixed16_16(sP, &fx);
             dx = SvgViewMapLenX_F(fx);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &fy);
             dy = SvgViewMapLenY_F(fy);
 
@@ -519,7 +506,7 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
         *lastWasQuadP  = FALSE;
 
         /* repeat only if another number really follows */
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) { break; }
     }
 
@@ -545,7 +532,7 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
 
     for (;;)
     {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP) {
             break;
         }
@@ -579,7 +566,7 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
         *lastWasQuadP  = FALSE;
 
         /* repeat only if another number really follows */
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) {
             break;
         }
@@ -606,7 +593,7 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
 
     for (;;)
     {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP) {
             break;
         }
@@ -640,7 +627,7 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
         *lastWasQuadP  = FALSE;
 
         /* repeat only if another number really follows */
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) {
             break;
         }
@@ -668,7 +655,7 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
 
     for (;;)
     {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
         if (!SvgIsNumStart(*sP)) { break; }
 
@@ -677,15 +664,15 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             cx = SvgViewMapPosX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             cy = SvgViewMapPosY_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             ex = SvgViewMapPosX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             ey = SvgViewMapPosY_F(f);
         }
@@ -694,15 +681,15 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             dcx = SvgViewMapLenX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             dcy = SvgViewMapLenY_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             dex = SvgViewMapLenX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             dey = SvgViewMapLenY_F(f);
 
@@ -724,7 +711,7 @@ SvgPathHandleQuadratic(const char **sPP, char lastCmd,
         *lastWasCubicP = FALSE;
 
         /* repeat only if another number really follows */
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) { break; }
     }
 
@@ -750,7 +737,7 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
 
     for (;;)
     {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
         if (!SvgIsNumStart(*sP)) { break; }
 
@@ -759,7 +746,7 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             ex = SvgViewMapPosX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             ey = SvgViewMapPosY_F(f);
         }
@@ -768,7 +755,7 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             dex = SvgViewMapLenX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &f);
             dey = SvgViewMapLenY_F(f);
 
@@ -799,7 +786,7 @@ SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
         *lastWasCubicP = FALSE;
 
         /* repeat only if another number really follows */
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) { break; }
     }
 
@@ -827,7 +814,7 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
 
     for (;;)
     {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
         if (!SvgIsNumStart(*sP)) { break; }
 
@@ -836,23 +823,23 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c1x = SvgViewMapPosX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c1y = SvgViewMapPosY_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c2x = SvgViewMapPosX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             c2y = SvgViewMapPosY_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             ex  = SvgViewMapPosX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             ey  = SvgViewMapPosY_F(f);
         }
@@ -861,23 +848,23 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc1x = SvgViewMapLenX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc1y = SvgViewMapLenY_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc2x = SvgViewMapLenX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dc2y = SvgViewMapLenY_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dex  = SvgViewMapLenX_F(f);
 
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             before = sP; sP = SvgUtilParseWWFixed16_16(sP, &f); if (sP == before) { break; }
             dey  = SvgViewMapLenY_F(f);
 
@@ -898,7 +885,7 @@ SvgPathHandleCubic(const char **sPP, char lastCmd,
         *lastWasCubicP = TRUE;
         *lastWasQuadP  = FALSE;
 
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) { break; }
     }
 
@@ -919,7 +906,7 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
     WWFixedAsDWord  f;
 
     for (;;) {
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP || !SvgIsNumStart(*sP)) break;
 
         /* reflect previous C2 if last segment was cubic, else use current point */
@@ -933,19 +920,19 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
 
         if (isAbs) {
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; c2x = SvgViewMapPosX_F(f);
-            sP=SvgSkipCommaWS(sP);
+            sP=SvgParserSkipCommaWS(sP);
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; c2y = SvgViewMapPosY_F(f);
-            sP=SvgSkipCommaWS(sP);
+            sP=SvgParserSkipCommaWS(sP);
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; ex  = SvgViewMapPosX_F(f);
-            sP=SvgSkipCommaWS(sP);
+            sP=SvgParserSkipCommaWS(sP);
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; ey  = SvgViewMapPosY_F(f);
         } else {
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dc2x = SvgViewMapLenX_F(f);
-            sP=SvgSkipCommaWS(sP);
+            sP=SvgParserSkipCommaWS(sP);
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dc2y = SvgViewMapLenY_F(f);
-            sP=SvgSkipCommaWS(sP);
+            sP=SvgParserSkipCommaWS(sP);
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dex  = SvgViewMapLenX_F(f);
-            sP=SvgSkipCommaWS(sP);
+            sP=SvgParserSkipCommaWS(sP);
             before=sP; sP=SvgUtilParseWWFixed16_16(sP,&f); if (sP==before) break; dey  = SvgViewMapLenY_F(f);
             c2x = (sword)(*lastxP + dc2x);
             c2y = (sword)(*lastyP + dc2y);
@@ -959,7 +946,7 @@ SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
         *lastC2xP = c2x; *lastC2yP = c2y;
         *lastWasCubicP = TRUE; *lastWasQuadP = FALSE;
 
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) break;
     }
     *sPP = sP;
@@ -986,7 +973,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
     while (!done)
     {
         /* Repeat-guard: only continue if the next token can start a number. */
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         if (!*sP) { break; }
         if (!SvgIsNumStart(*sP))
         {
@@ -997,9 +984,9 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
 
         /* rx, ry, rot */
         sP = SvgUtilParseWWFixed16_16(sP, &rxW);
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         sP = SvgUtilParseWWFixed16_16(sP, &ryW);
-        sP = SvgSkipCommaWS(sP);
+        sP = SvgParserSkipCommaWS(sP);
         sP = SvgUtilParseWWFixed16_16(sP, &rotW);
 
         /* flags (must be single '0'/'1', with comma+WS skipping) */
@@ -1011,16 +998,16 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         /* end point (absolute for 'A', relative for 'a') */
         if (lastCmd == 'A')
         {
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &exW);
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &eyW);
         }
         else /* 'a' */
         {
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &dxW);
-            sP = SvgSkipCommaWS(sP);
+            sP = SvgParserSkipCommaWS(sP);
             sP = SvgUtilParseWWFixed16_16(sP, &dyW);
 
             exW = SvgGeomMakeWWFixedFromInt(*lastxP);
@@ -1053,7 +1040,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
             LOG_STR("[PATH]", "A: zero radius -> straight line");
 
             /* Decide if more arcs follow */
-            probeP = SvgSkipCommaWS(sP);
+            probeP = SvgParserSkipCommaWS(sP);
             if (!SvgIsNumStart(*probeP)) { done = TRUE; }
             continue;
         }
@@ -1066,7 +1053,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         {
             LOG_STR("[PATH]", "A: end equals current (exact) -> skip");
 
-            probeP = SvgSkipCommaWS(sP);
+            probeP = SvgParserSkipCommaWS(sP);
             if (!SvgIsNumStart(*probeP)) { done = TRUE; }
             continue;
         }
@@ -1079,7 +1066,7 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         *lastWasQuadP  = FALSE;
 
         /* Repeat only if another numeric set follows */
-        probeP = SvgSkipCommaWS(sP);
+        probeP = SvgParserSkipCommaWS(sP);
         if (!SvgIsNumStart(*probeP)) { done = TRUE; }
     }
 
@@ -1364,6 +1351,3 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         LOGF(("[META]", "EndPath in=%d edges=%d", (int)pathHasFill, (int)pathHasStroke));
     }
 }
-
-
-
