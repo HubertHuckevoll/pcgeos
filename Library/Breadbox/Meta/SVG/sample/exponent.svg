@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="140" viewBox="0 0 200 140"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Path data exercising exponent-form numbers -->
+  <path d="M1e1 1.5e1 L6.5e1 2.8e1 9.5e1 7.5e1 z"
+        fill="#88c" stroke="#000" stroke-width="1.5"/>
+
+  <!-- Mixed-sign exponents in transforms and path coordinates -->
+  <g transform="translate(1.2e2,-3.5e1) scale(5e-1,2.5e-1)">
+    <path d="M0 0 L2E2 0 2E2 4.0e1 z"
+          fill="#c88" stroke="#000" stroke-width="2.0E-1"/>
+  </g>
+
+  <!-- Uppercase exponent and explicit plus sign -->
+  <rect x="1.05E2" y="2.2E1" width="3.2e1" height="2.4e1"
+        transform="rotate(4.5e1,1.16e2,3.7e1) translate(1E+1,-2E+0)"
+        fill="#8c8" stroke="#000" stroke-width="1"/>
+</svg>
