@@ -46,6 +46,11 @@ typedef struct {
 } SvgNamedColor;
 
 /* All sizeable scratch buffers kept on heap to keep stack tiny - fixme: put in LMemHeap or something */
+typedef struct {
+    WWFixedAsDWord x;
+    WWFixedAsDWord y;
+} SvgWWPoint;
+
 typedef struct _SVGScratch {
     MemHandle   tagH;
     char       *tagP;
@@ -58,6 +63,10 @@ typedef struct _SVGScratch {
     MemHandle   ptsH;
     Point      *ptsP;
     word        ptsCapacity;
+
+    MemHandle   ptsWWFH;
+    SvgWWPoint *ptsWWFP;
+    word        ptsWWFCapacity;
 
     Boolean     allocFailed;
 
@@ -98,6 +107,7 @@ void        SvgScratchFree(SVGScratch *sc);
 Boolean     SvgScratchEnsureTagCapacity(SVGScratch *sc, word neededBytes);
 Boolean     SvgScratchEnsurePathBuf(SVGScratch *sc, word neededBytes);
 Boolean     SvgScratchEnsurePointCapacity(SVGScratch *sc, word neededPoints);
+Boolean     SvgScratchEnsureWWPointCapacity(SVGScratch *sc, word neededPoints);
 
 /* ---- small utility (common) ---- */
 Boolean     SvgUtilAsciiNoCaseEq(const char *a, const char *b);
@@ -185,49 +195,49 @@ void SvgShapeHandleCircle(const char *tag);
 void SvgPathHandle(const char *tag, SVGScratch *sc);
 static void SvgPathHandleMoveTo   (const char **sPP, char *lastCmdP,
                                    SVGScratch *sc, word *npP,
-                                   sword *lastxP, sword *lastyP,
-                                   sword *subStartXP, sword *subStartYP,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
+                                   WWFixedAsDWord *subStartXWP, WWFixedAsDWord *subStartYWP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP);
 static void SvgPathHandleLineTo   (const char **sPP, char lastCmd,
                                    SVGScratch *sc, word *npP,
-                                   sword *lastxP, sword *lastyP,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP);
 static void SvgPathHandleHLineTo  (const char **sPP, char lastCmd,
                                    SVGScratch *sc, word *npP,
-                                   sword *lastxP, sword *lastyP,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP);
 static void SvgPathHandleVLineTo  (const char **sPP, char lastCmd,
                                    SVGScratch *sc, word *npP,
-                                   sword *lastxP, sword *lastyP,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP);
 static void SvgPathHandleQuadratic(const char **sPP, char lastCmd,
                                    SVGScratch *sc, word *npP,
-                                   sword *lastxP, sword *lastyP,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP,
-                                   sword *lastQcxP, sword *lastQcyP);
+                                   WWFixedAsDWord *lastQcxWP, WWFixedAsDWord *lastQcyWP);
 static void SvgPathHandleSmoothQuadratic(const char **sPP, char lastCmd,
                                          SVGScratch *sc, word *npP,
-                                         sword *lastxP, sword *lastyP,
+                                         WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                          Boolean *lastWasCubicP, Boolean *lastWasQuadP,
-                                         sword *lastQcxP, sword *lastQcyP);
+                                         WWFixedAsDWord *lastQcxWP, WWFixedAsDWord *lastQcyWP);
 static void SvgPathHandleCubic    (const char **sPP, char lastCmd,
                                    SVGScratch *sc, word *npP,
-                                   sword *lastxP, sword *lastyP,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP,
-                                   sword *lastC2xP, sword *lastC2yP);
+                                   WWFixedAsDWord *lastC2xWP, WWFixedAsDWord *lastC2yWP);
 static void SvgPathHandleSmoothCubic(const char **sPP, char lastCmd,
                                      SVGScratch *sc, word *npP,
-                                     sword *lastxP, sword *lastyP,
+                                     WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                      Boolean *lastWasCubicP, Boolean *lastWasQuadP,
-                                     sword *lastC2xP, sword *lastC2yP);
+                                     WWFixedAsDWord *lastC2xWP, WWFixedAsDWord *lastC2yWP);
 static void SvgPathHandleArc      (const char **sPP, char lastCmd,
                                    SVGScratch *sc, word *npP,
-                                   sword *lastxP, sword *lastyP,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP);
 static void SvgPathHandleClose    (const char **sPP,
                                    Boolean *closedP,
-                                   sword *lastxP, sword *lastyP,
-                                   sword subStartX, sword subStartY,
+                                   WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,
+                                   WWFixedAsDWord subStartXW, WWFixedAsDWord subStartYW,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP);
 static void SvgPathHandleUnknown  (const char **sPP,
                                    Boolean *lastWasCubicP, Boolean *lastWasQuadP);

@@ -26,6 +26,7 @@ Boolean SvgScratchInit(SVGScratch *sc)
     word dbSize;
     word ptsSize;
     word ptsBytes;
+    word ptsWWFBytes;
 
     if (!sc)
     {
@@ -41,6 +42,9 @@ Boolean SvgScratchInit(SVGScratch *sc)
     sc->ptsH = 0;
     sc->ptsP = NULL;
     sc->ptsCapacity = 0;
+    sc->ptsWWFH = 0;
+    sc->ptsWWFP = NULL;
+    sc->ptsWWFCapacity = 0;
     sc->allocFailed = FALSE;
 
     tagSize = TAG_BUF_SIZE;
@@ -95,6 +99,23 @@ Boolean SvgScratchInit(SVGScratch *sc)
     }
     sc->ptsCapacity = ptsSize;
 
+    ptsWWFBytes = (word)(ptsSize * sizeof(SvgWWPoint));
+    sc->ptsWWFH = MemAlloc(ptsWWFBytes, HF_DYNAMIC, HAF_ZERO_INIT);
+    if (!sc->ptsWWFH)
+    {
+        sc->allocFailed = TRUE;
+        SvgScratchFree(sc);
+        return FALSE;
+    }
+    sc->ptsWWFP = (SvgWWPoint*)MemLock(sc->ptsWWFH);
+    if (!sc->ptsWWFP)
+    {
+        sc->allocFailed = TRUE;
+        SvgScratchFree(sc);
+        return FALSE;
+    }
+    sc->ptsWWFCapacity = ptsSize;
+
     return TRUE;
 }
 
@@ -140,6 +161,18 @@ void SvgScratchFree(SVGScratch *sc)
         sc->ptsH = 0;
     }
     sc->ptsCapacity = 0;
+
+    if (sc->ptsWWFP)
+    {
+        MemUnlock(sc->ptsWWFH);
+        sc->ptsWWFP = NULL;
+    }
+    if (sc->ptsWWFH)
+    {
+        MemFree(sc->ptsWWFH);
+        sc->ptsWWFH = 0;
+    }
+    sc->ptsWWFCapacity = 0;
 }
 
 Boolean SvgScratchEnsureTagCapacity(SVGScratch *sc, word neededBytes)
@@ -161,6 +194,13 @@ Boolean SvgScratchEnsurePointCapacity(SVGScratch *sc, word neededPoints)
     return SvgScratchEnsureCapacityCommon(sc, &sc->ptsH, (void**)&sc->ptsP,
                                           &sc->ptsCapacity, neededPoints,
                                           (word)sizeof(Point));
+}
+
+Boolean SvgScratchEnsureWWPointCapacity(SVGScratch *sc, word neededPoints)
+{
+    return SvgScratchEnsureCapacityCommon(sc, &sc->ptsWWFH, (void**)&sc->ptsWWFP,
+                                          &sc->ptsWWFCapacity, neededPoints,
+                                          (word)sizeof(SvgWWPoint));
 }
 
 static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP,
