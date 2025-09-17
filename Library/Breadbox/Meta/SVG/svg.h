@@ -47,18 +47,27 @@ typedef struct {
 
 /* All sizeable scratch buffers kept on heap to keep stack tiny - fixme: put in LMemHeap or something */
 typedef struct _SVGScratch {
-    char    tag[TAG_BUF_SIZE];         // FIXME: make this dynamic!
+    MemHandle   tagH;
+    char       *tagP;
+    word        tagCapacity;
 
-    char    pb[256];
-    char    db[MAX_PATH_ATTR_SIZE];   // FIXME: make this dynamic!
-    char    xb[32], yb[32], x2b[32], y2b[32];
-    char    wb[32], hb[32];
-    char    cxb[32], cyb[32], rxb[32], ryb[32];
-    char    rb[32];
-    char    col[64];
-    char    tbuf[96];
+    MemHandle   dbH;
+    char       *dbP;
+    word        dbCapacity;
 
-    Point   pts[MAX_SVG_POINTS];    // FIXME: make this dynamic!
+    MemHandle   ptsH;
+    Point      *ptsP;
+    word        ptsCapacity;
+
+    Boolean     allocFailed;
+
+    char        pb[256];
+    char        xb[32], yb[32], x2b[32], y2b[32];
+    char        wb[32], hb[32];
+    char        cxb[32], cyb[32], rxb[32], ryb[32];
+    char        rb[32];
+    char        col[64];
+    char        tbuf[96];
 } SVGScratch;
 
 typedef struct {
@@ -83,6 +92,12 @@ Boolean     SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c,
                                  SVGScratch *sc);
 Boolean     SvgParseGetInlineStyleProp(const char *tag, const char *prop,
                                        char *out, word outSize);
+
+Boolean     SvgScratchInit(SVGScratch *sc);
+void        SvgScratchFree(SVGScratch *sc);
+Boolean     SvgScratchEnsureTagCapacity(SVGScratch *sc, word neededBytes);
+Boolean     SvgScratchEnsurePathBuf(SVGScratch *sc, word neededBytes);
+Boolean     SvgScratchEnsurePointCapacity(SVGScratch *sc, word neededPoints);
 
 /* ---- small utility (common) ---- */
 Boolean     SvgUtilAsciiNoCaseEq(const char *a, const char *b);
@@ -156,7 +171,7 @@ void SvgXformGroupPop(void);
 
 /* ---- element-local helpers (legacy scale-only; now superseded by CTM) ---- */
 sword SvgShapeScaleLength(sword v, WWFixedAsDWord s);
-void  SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP);
+void  SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP);
 
 /* ---- tag handlers (dispatch targets) ---- */
 void SvgShapeHandleLine(const char *tag);

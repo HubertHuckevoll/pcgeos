@@ -190,7 +190,14 @@ Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
             if (c->inQuote)
             {
                 if (ch == c->quoteCh) c->inQuote = FALSE;
-                if (c->tagLen < (TAG_BUF_SIZE-1)) sc->tag[c->tagLen++] = ch;
+                if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
+                {
+                    c->inTag = FALSE;
+                    c->inQuote = FALSE;
+                    c->tagLen = 0;
+                    return FALSE;
+                }
+                sc->tagP[c->tagLen++] = ch;
                 continue;
             }
             else
@@ -199,16 +206,37 @@ Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
                 {
                     c->inQuote = TRUE;
                     c->quoteCh = ch;
-                    if (c->tagLen < (TAG_BUF_SIZE-1)) sc->tag[c->tagLen++] = ch;
+                    if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
+                    {
+                        c->inTag = FALSE;
+                        c->inQuote = FALSE;
+                        c->tagLen = 0;
+                        return FALSE;
+                    }
+                    sc->tagP[c->tagLen++] = ch;
                     continue;
                 }
                 if (ch != '>')
                 {
-                    if (c->tagLen < (TAG_BUF_SIZE-1)) sc->tag[c->tagLen++] = ch;
+                    if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
+                    {
+                        c->inTag = FALSE;
+                        c->inQuote = FALSE;
+                        c->tagLen = 0;
+                        return FALSE;
+                    }
+                    sc->tagP[c->tagLen++] = ch;
                     continue;
                 }
 
-                sc->tag[c->tagLen] = 0;
+                if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 1)))
+                {
+                    c->inTag = FALSE;
+                    c->inQuote = FALSE;
+                    c->tagLen = 0;
+                    return FALSE;
+                }
+                sc->tagP[c->tagLen] = 0;
                 c->inTag = FALSE;
                 return TRUE;
             }
