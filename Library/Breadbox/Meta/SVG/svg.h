@@ -119,7 +119,7 @@ Boolean     SvgUtilExpandShortHex(const char *s, word *r, word *g, word *b);
 Boolean     SvgUtilParseRGBFunc(const char *s, word *r, word *g, word *b);
 Boolean     SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop);
 const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out);
-Boolean     SvgIsNumStart(char c);
+Boolean     SvgUtilIsNumStart(char c);
 
 /* ---- geometry helpers (shared fixed-point math) ---- */
 WWFixedAsDWord SvgGeomMakeWWFixedFromInt(int v);
