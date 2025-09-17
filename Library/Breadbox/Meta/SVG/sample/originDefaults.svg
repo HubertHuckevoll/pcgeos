@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80">
+  <!-- default origin line: x1/y1/y2 omitted -->
+  <line x2="40" stroke="#ff0000" stroke-width="3"/>
+
+  <!-- translated default-origin line: only y2 provided -->
+  <line y2="35" stroke="#0000ff" stroke-width="3" transform="translate(60,0)"/>
+
+  <!-- rectangle with implicit x/y -->
+  <rect width="30" height="20" fill="#c0ffc0" stroke="#006400" stroke-width="2" transform="translate(10,40)"/>
+
+  <!-- ellipse with implicit cx/cy -->
+  <ellipse rx="15" ry="10" fill="#ffff80" stroke="#000000" stroke-width="2" transform="translate(60,45)"/>
+
+  <!-- circle with implicit cx/cy -->
+  <circle r="12" fill="none" stroke="#ffa500" stroke-width="3" transform="translate(95,55)"/>
+</svg>
