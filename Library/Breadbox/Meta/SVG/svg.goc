@@ -358,7 +358,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
 
         LOG_STR_HEAD("[TAG] head", scP->tagP, 96);
 
-        if (callback && total >= 2048)
+        if (callback)
         {
             done = (dword)FilePos(srcFile, 0, FILE_POS_RELATIVE);
             if (done > total) done = total;

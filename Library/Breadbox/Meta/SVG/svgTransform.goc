@@ -176,21 +176,6 @@ void SvgXformApplyPoint(sword *xP, sword *yP, const SvgMatrix *m)
     *yP = SvgGeomWWFixedToSWordRound(yw);
 }
 
-/* apply to a VECTOR (ignores translation) — use for lengths/radii */
-void SvgXformApplyVector(sword *dxP, sword *dyP, const SvgMatrix *m)
-{
-    WWFixedAsDWord X, Y, xw, yw;
-
-    X = ((WWFixedAsDWord)((sdword)(*dxP))) << 16;
-    Y = ((WWFixedAsDWord)((sdword)(*dyP))) << 16;
-
-    xw = GrAddWWFixed(GrMulWWFixed(m->a, X), GrMulWWFixed(m->c, Y));
-    yw = GrAddWWFixed(GrMulWWFixed(m->b, X), GrMulWWFixed(m->d, Y));
-
-    *dxP = SvgGeomWWFixedToSWordRound(xw);
-    *dyP = SvgGeomWWFixedToSWordRound(yw);
-}
-
 /* ---- parse transform attribute into USER-SPACE matrix ---- */
 
 static const char* SvgXformParseNumber(const char *s, WWFixedAsDWord *out)
@@ -387,40 +372,3 @@ void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *
         SvgMatMul(&elem, &vm, outWorld);
     }
 }
-
-void
-SvgXformBuildElemOnWorld(const char *tag, SvgMatrix *outElemWorld)
-{
-    SvgMatrix vm;
-    SvgMatrix inv;
-    SvgMatrix elem;
-    SvgMatrix tmp;
-    WWFixedAsDWord one;
-
-    one = MakeWWFixed(1);
-
-    /* VM: world <- user */
-    SvgViewGetMatrix(&vm.a, &vm.b, &vm.c, &vm.d, &vm.e, &vm.f);
-
-    /* element: user <- user */
-    SvgXformParseAttrUser(tag, &elem);
-
-    /* VM^{-1}; VM is scale+translate (b=c=0) */
-    if ((sdword)vm.a == 0 || (sdword)vm.d == 0) {
-        /* degenerate; fall back to element only */
-        *outElemWorld = elem;
-        return;
-    }
-    inv.a = GrSDivWWFixed(one, vm.a);
-    inv.b = MakeWWFixed(0);
-    inv.c = MakeWWFixed(0);
-    inv.d = GrSDivWWFixed(one, vm.d);
-    inv.e = (WWFixedAsDWord)(-(sdword)GrMulWWFixed(inv.a, vm.e)); /* -e/a */
-    inv.f = (WWFixedAsDWord)(-(sdword)GrMulWWFixed(inv.d, vm.f)); /* -f/d */
-
-    /* out = VM ∘ Element ∘ VM^{-1}
-       SvgMatMul(r = m2 ∘ m1), i.e., apply m1 then m2 */
-    SvgMatMul(&inv, &elem, &tmp);        /* tmp = Element ∘ VM^{-1} */
-    SvgMatMul(&tmp, &vm, outElemWorld);  /* out = VM ∘ tmp */
-}
-

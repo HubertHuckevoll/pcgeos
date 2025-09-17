@@ -17,7 +17,6 @@
 #include "SVG/dbglog.h"
 
 /* ---- points parser (axis-aware) ---- */
-
 void SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP)
 {
     const char *s;
@@ -77,19 +76,6 @@ void SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP)
 
         while (*s && (isspace(*s) || *s == ',')) s++;
     }
-}
-
-sword SvgShapeScaleLength(sword v, WWFixedAsDWord s)
-{
-    WWFixedAsDWord V;
-    WWFixedAsDWord R;
-    sword out;
-
-    V = (WWFixedAsDWord)((sdword)v << 16);
-    R = GrMulWWFixed(V, s);
-    out = (sword)((sdword)R >> 16);
-    if (out < 0) out = (sword)(-out);
-    return out;
 }
 
 /* ---- simple tag handlers ---- */

@@ -223,6 +223,7 @@ sword SvgViewMapPosX_F(WWFixedAsDWord fx)
     v  = GrMulWWFixed(v, g_invPow2);
     return SvgGeomWWFixedToSWordRound(v);
 }
+
 sword SvgViewMapPosY_F(WWFixedAsDWord fy)
 {
     WWFixedAsDWord v;
@@ -230,20 +231,6 @@ sword SvgViewMapPosY_F(WWFixedAsDWord fy)
     v  = GrMulWWFixed(v, g_scaleY);
     v += g_addY;
     v  = GrMulWWFixed(v, g_invPow2);
-    return SvgGeomWWFixedToSWordRound(v);
-}
-sword SvgViewMapLenX_F(WWFixedAsDWord fx)
-{
-    WWFixedAsDWord v;
-    v = GrMulWWFixed(fx, g_scaleX);
-    v = GrMulWWFixed(v, g_invPow2);
-    return SvgGeomWWFixedToSWordRound(v);
-}
-sword SvgViewMapLenY_F(WWFixedAsDWord fy)
-{
-    WWFixedAsDWord v;
-    v = GrMulWWFixed(fy, g_scaleY);
-    v = GrMulWWFixed(v, g_invPow2);
     return SvgGeomWWFixedToSWordRound(v);
 }
 

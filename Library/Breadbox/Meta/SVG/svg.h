@@ -154,8 +154,7 @@ void   SvgViewInitFromSvgTag(const char *tag);
 void   SvgViewInitDefault(void);
 sword  SvgViewMapPosX_F(WWFixedAsDWord fx);
 sword  SvgViewMapPosY_F(WWFixedAsDWord fy);
-sword  SvgViewMapLenX_F(WWFixedAsDWord fx);
-sword  SvgViewMapLenY_F(WWFixedAsDWord fy);
+
 
 /* Provide the view matrix (world <- user) as SVG-style 2x3:
    x' = a*x + c*y + e;  y' = b*x + d*y + f */
@@ -171,22 +170,13 @@ typedef struct {
     WWFixedAsDWord a, b, c, d, e, f;
 } SvgMatrix;
 
-void SvgXformApplyPoint(sword *xP, sword *yP, const SvgMatrix *m);
-void SvgXformApplyVector(sword *dxP, sword *dyP, const SvgMatrix *m);
-void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser);
-void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld);
-/* Conjugated element matrix that acts on points already in WORLD space:
-   ElemOnWorld = ViewMatrix ∘ Element ∘ ViewMatrix^{-1}  */
-void SvgXformBuildElemOnWorld(const char *tag, SvgMatrix *outElemWorld);
 Boolean SvgXformStackInit(void);
 void    SvgXformStackFree(void);
-/* groups */
+void SvgXformApplyPoint(sword *xP, sword *yP, const SvgMatrix *m);
+void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser);
+void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld);
 void SvgXformGroupPush(const char *tag);
 void SvgXformGroupPop(void);
-
-/* ---- element-local helpers (legacy scale-only; now superseded by CTM) ---- */
-sword SvgShapeScaleLength(sword v, WWFixedAsDWord s);
-void  SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP);
 
 /* ---- tag handlers (dispatch targets) ---- */
 void SvgShapeHandleLine(const char *tag);
