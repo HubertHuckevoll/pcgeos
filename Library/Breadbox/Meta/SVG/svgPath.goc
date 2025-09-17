@@ -31,7 +31,7 @@ static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)
 }
 
 static Boolean
-SvgReadFlag(const char **sPP, byte *out)
+SvgPathReadFlag(const char **sPP, byte *out)
 {
     const char *s;
     s = SvgParserSkipCommaWS(*sPP);
@@ -984,8 +984,8 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         sP = SvgUtilParseWWFixed16_16(sP, &rotW);
 
         /* flags (must be single '0'/'1', with comma+WS skipping) */
-        if (!SvgReadFlag(&sP, &lafB)) { done = TRUE; continue; }
-        if (!SvgReadFlag(&sP, &swfB)) { done = TRUE; continue; }
+        if (!SvgPathReadFlag(&sP, &lafB)) { done = TRUE; continue; }
+        if (!SvgPathReadFlag(&sP, &swfB)) { done = TRUE; continue; }
         laf  = (int)lafB;
         swf  = (int)swfB;
 
