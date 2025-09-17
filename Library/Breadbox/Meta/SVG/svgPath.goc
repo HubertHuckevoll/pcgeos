@@ -20,14 +20,14 @@
 /* -------- tiny helpers specific to path handling --------- */
 static void SvgPathAddPt(SVGScratch *sc, word *np, sword x, sword y)
 {
-    if (*np < MAX_SVG_POINTS) {
-        sc->pts[*np].P_x = x;
-        sc->pts[*np].P_y = y;
-        (*np)++;
+    if (!SvgScratchEnsurePointCapacity(sc, (word)(*np + 1)))
+    {
+        LOGF(("[PATH]", "SvgPathAddPt: ensure failed x=%d y=%d", (int)x, (int)y));
+        return;
     }
-    else {
-        LOGF(("[PATH]", "SvgPathAddPt: overflow drop x=%d y=%d", (int)x, (int)y));
-    }
+    sc->ptsP[*np].P_x = x;
+    sc->ptsP[*np].P_y = y;
+    (*np)++;
 }
 
 static Boolean
@@ -148,7 +148,7 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     Boolean snappedToStart;
 
     sword xi, yi, exi, eyi;
-    word  np, remaining, nSeg, k;
+    word  np, nSeg, k;
 
     LOGF(("[PATH]", "FlattenArc x0=%d y0=%d rx=%d ry=%d rot=%ld laf=%d sf=%d x1=%d y1=%d",
             (int)(x0W>>16), (int)(y0W>>16),
@@ -167,11 +167,15 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     if ((SvgGeomWWFixedToSWordRound(rxW) == 0) ||
         (SvgGeomWWFixedToSWordRound(ryW) == 0))
     {
-        if (*pNp < MAX_SVG_POINTS)
+        if (SvgScratchEnsurePointCapacity(sc, (word)(*pNp + 1)))
         {
-            sc->pts[*pNp].P_x = SvgGeomWWFixedToSWordRound(x1W);
-            sc->pts[*pNp].P_y = SvgGeomWWFixedToSWordRound(y1W);
+            sc->ptsP[*pNp].P_x = SvgGeomWWFixedToSWordRound(x1W);
+            sc->ptsP[*pNp].P_y = SvgGeomWWFixedToSWordRound(y1W);
             (*pNp)++;
+        }
+        else
+        {
+            LOG_STR("[PATH]", "A: ensure failed for zero radius");
         }
         LOG_STR("[PATH]", "A: zero radius -> straight line");
         return;
@@ -318,13 +322,6 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
 
     /* Emit */
     np        = *pNp;
-    remaining = (MAX_SVG_POINTS > np) ? (MAX_SVG_POINTS - np) : 0;
-    if (remaining == 0)
-    {
-        LOG_STR("[PATH]", "FlattenArc: no buffer space");
-        return;
-    }
-    if (nSeg > remaining) nSeg = remaining;
 
     exi = SvgGeomWWFixedToSWordRound(x1W);
     eyi = SvgGeomWWFixedToSWordRound(y1W);
@@ -356,16 +353,14 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
             snappedToStart = TRUE;
         }
 
-        if (np < MAX_SVG_POINTS)
+        if (!SvgScratchEnsurePointCapacity(sc, (word)(np + 1)))
         {
-            sc->pts[np].P_x = xi;
-            sc->pts[np].P_y = yi;
-            np++;
-        }
-        else
-        {
+            LOG_STR("[PATH]", "FlattenArc: ensure failed");
             break;
         }
+        sc->ptsP[np].P_x = xi;
+        sc->ptsP[np].P_y = yi;
+        np++;
     }
     *pNp = np;
 
@@ -425,11 +420,15 @@ SvgPathHandleMoveTo(const char **sPP, char *lastCmdP,
     *subStartXP = x;
     *subStartYP = y;
 
-    if (*npP < MAX_SVG_POINTS)
+    if (SvgScratchEnsurePointCapacity(sc, (word)(*npP + 1)))
     {
-        sc->pts[*npP].P_x = x;
-        sc->pts[*npP].P_y = y;
+        sc->ptsP[*npP].P_x = x;
+        sc->ptsP[*npP].P_y = y;
         (*npP)++;
+    }
+    else
+    {
+        LOG_STR("[PATH]", "MoveTo: ensure failed");
     }
 
     /* Per SVG spec, any additional coordinate pairs after M/m are L/l */
@@ -487,11 +486,16 @@ SvgPathHandleLineTo(const char **sPP, char lastCmd,
 
         LOGF(("[PATH]", "L to x=%d y=%d", (int)lx, (int)ly));
 
-        if (*npP < MAX_SVG_POINTS)
+        if (SvgScratchEnsurePointCapacity(sc, (word)(*npP + 1)))
         {
-            sc->pts[*npP].P_x = lx;
-            sc->pts[*npP].P_y = ly;
+            sc->ptsP[*npP].P_x = lx;
+            sc->ptsP[*npP].P_y = ly;
             (*npP)++;
+        }
+        else
+        {
+            LOG_STR("[PATH]", "LineTo: ensure failed");
+            break;
         }
 
         *lastxP = lx;
@@ -548,11 +552,16 @@ SvgPathHandleHLineTo(const char **sPP, char lastCmd,
 
         LOGF(("[PATH]", "H to x=%d y=%d", (int)lx, (int)(*lastyP)));
 
-        if (*npP < MAX_SVG_POINTS)
+        if (SvgScratchEnsurePointCapacity(sc, (word)(*npP + 1)))
         {
-            sc->pts[*npP].P_x = lx;
-            sc->pts[*npP].P_y = *lastyP;
+            sc->ptsP[*npP].P_x = lx;
+            sc->ptsP[*npP].P_y = *lastyP;
             (*npP)++;
+        }
+        else
+        {
+            LOG_STR("[PATH]", "HLineTo: ensure failed");
+            break;
         }
 
         *lastxP = lx;
@@ -609,11 +618,16 @@ SvgPathHandleVLineTo(const char **sPP, char lastCmd,
 
         LOGF(("[PATH]", "V to x=%d y=%d", (int)(*lastxP), (int)ly));
 
-        if (*npP < MAX_SVG_POINTS)
+        if (SvgScratchEnsurePointCapacity(sc, (word)(*npP + 1)))
         {
-            sc->pts[*npP].P_x = *lastxP;
-            sc->pts[*npP].P_y = ly;
+            sc->ptsP[*npP].P_x = *lastxP;
+            sc->ptsP[*npP].P_y = ly;
             (*npP)++;
+        }
+        else
+        {
+            LOG_STR("[PATH]", "VLineTo: ensure failed");
+            break;
         }
 
         *lastyP = ly;
@@ -1022,11 +1036,15 @@ SvgPathHandleArc(const char **sPP, char lastCmd,
         if ((SvgGeomWWFixedToSWordRound(rxW) == 0) ||
             (SvgGeomWWFixedToSWordRound(ryW) == 0))
         {
-            if (*npP < MAX_SVG_POINTS)
+            if (SvgScratchEnsurePointCapacity(sc, (word)(*npP + 1)))
             {
-                sc->pts[*npP].P_x = SvgGeomWWFixedToSWordRound(exW);
-                sc->pts[*npP].P_y = SvgGeomWWFixedToSWordRound(eyW);
+                sc->ptsP[*npP].P_x = SvgGeomWWFixedToSWordRound(exW);
+                sc->ptsP[*npP].P_y = SvgGeomWWFixedToSWordRound(eyW);
                 (*npP)++;
+            }
+            else
+            {
+                LOG_STR("[PATH]", "Arc degenerate: ensure failed");
             }
             *lastxP = SvgGeomWWFixedToSWordRound(exW);
             *lastyP = SvgGeomWWFixedToSWordRound(eyW);
@@ -1133,15 +1151,15 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
 
     w = 0;
     for (i = 0; i < np; i++) {
-        px = sc->pts[i].P_x;
-        py = sc->pts[i].P_y;
+        px = sc->ptsP[i].P_x;
+        py = sc->ptsP[i].P_y;
 
         /* apply full world transform to path vertices */
         SvgXformApplyPoint(&px, &py, &worldM);
 
         if (w == 0 || px != lastx || py != lasty) {
-            sc->pts[w].P_x = px;
-            sc->pts[w].P_y = py;
+            sc->ptsP[w].P_x = px;
+            sc->ptsP[w].P_y = py;
             w++;
             if (w == 1) {
                 firstx = px;
@@ -1159,13 +1177,21 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
     /* No explicit close for fill while building the compound path. */
     needStrokeClose = (closed && hasStroke &&
                       ((firstx != lastx) || (firsty != lasty)));
-    if (needStrokeClose && (np < MAX_SVG_POINTS)) {
-        sc->pts[np].P_x = firstx;
-        sc->pts[np].P_y = firsty;
-        np++;
+    if (needStrokeClose)
+    {
+        if (SvgScratchEnsurePointCapacity(sc, (word)(np + 1)))
+        {
+            sc->ptsP[np].P_x = firstx;
+            sc->ptsP[np].P_y = firsty;
+            np++;
+        }
+        else
+        {
+            LOG_STR("[PATH]", "EmitSubpath: ensure failed for close");
+        }
     }
 
-    Meta_Polyline(sc->pts, np);
+    Meta_Polyline(sc->ptsP, np);
 }
 
 void SvgPathHandle(const char *tag, SVGScratch *sc)
@@ -1182,16 +1208,22 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     Boolean         haveCmd;
     word            emitN;
     char            nextCmd;
+    word            pathBufNeed;
 
     /* snapshot per-<path> style to decide compound path behavior */
     Boolean         pathHasFill, pathHasStroke, buildingCompound;
 
-    sc->db[0] = 0;
-    if (!SvgParserGetAttrBounded(tag, "d", sc->db, sizeof(sc->db))) {
+    pathBufNeed = (word)(strlen(tag) + 1);
+    if (!SvgScratchEnsurePathBuf(sc, pathBufNeed)) {
         return;
     }
 
-    LOG_STR_HEAD("[PATH d]", sc->db, strlen(sc->db));
+    sc->dbP[0] = 0;
+    if (!SvgParserGetAttrBounded(tag, "d", sc->dbP, sc->dbCapacity)) {
+        return;
+    }
+
+    LOG_STR_HEAD("[PATH d]", sc->dbP, strlen(sc->dbP));
 
     /* styles once per <path> */
     SvgStyleApplyStrokeAndFill(tag);
@@ -1226,7 +1258,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     lastQcx       = 0;
     lastQcy       = 0;
 
-    sP = sc->db;
+    sP = sc->dbP;
 
     while (*sP)
     {

@@ -18,7 +18,7 @@
 
 /* ---- points parser (axis-aware) ---- */
 
-void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
+void SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP)
 {
     const char *s;
     sword       x;
@@ -27,7 +27,7 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
     s = points;
     *numPointsP = 0;
 
-    while (*s && *numPointsP < MAX_SVG_POINTS)
+    while (*s)
     {
         s = SvgParserSkipWS(s);
         if (!*s) break;
@@ -65,8 +65,14 @@ void SvgShapeParsePoints(const char *points, Point *pointsP, word *numPointsP)
             s = p;
         }
 
-        pointsP[*numPointsP].P_x = x;
-        pointsP[*numPointsP].P_y = y;
+        if (!SvgScratchEnsurePointCapacity(sc, (word)(*numPointsP + 1)))
+        {
+            LOG_STR("[SHAPE]", "ParsePoints: ensure failed");
+            break;
+        }
+
+        sc->ptsP[*numPointsP].P_x = x;
+        sc->ptsP[*numPointsP].P_y = y;
         (*numPointsP)++;
 
         while (*s && (isspace(*s) || *s == ',')) s++;
@@ -152,21 +158,21 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
         SvgStyleApplyStrokeWidth(tag);
 
         /* parse points in user space */
-        SvgShapeParsePoints(sc->pb, sc->pts, &np);
+        SvgShapeParsePoints(sc->pb, sc, &np);
         if (np > 1)
         {
             /* use full world CTM: View ∘ Group ∘ Element */
             SvgXformBuildWorld(tag, NULL, &worldM);
 
             for (i = 0; i < np; i++) {
-                sword px = sc->pts[i].P_x;
-                sword py = sc->pts[i].P_y;
+                sword px = sc->ptsP[i].P_x;
+                sword py = sc->ptsP[i].P_y;
                 SvgXformApplyPoint(&px, &py, &worldM);
-                sc->pts[i].P_x = px;
-                sc->pts[i].P_y = py;
+                sc->ptsP[i].P_x = px;
+                sc->ptsP[i].P_y = py;
             }
 
-            Meta_Polyline(sc->pts, np);
+            Meta_Polyline(sc->ptsP, np);
         }
     }
 }
@@ -186,21 +192,21 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
         SvgStyleApplyStrokeWidth(tag);
 
         /* parse points in user space */
-        SvgShapeParsePoints(sc->pb, sc->pts, &np);
+        SvgShapeParsePoints(sc->pb, sc, &np);
         if (np > 2)
         {
             /* use full world CTM: View ∘ Group ∘ Element */
             SvgXformBuildWorld(tag, NULL, &worldM);
 
             for (i = 0; i < np; i++) {
-                sword px = sc->pts[i].P_x;
-                sword py = sc->pts[i].P_y;
+                sword px = sc->ptsP[i].P_x;
+                sword py = sc->ptsP[i].P_y;
                 SvgXformApplyPoint(&px, &py, &worldM);
-                sc->pts[i].P_x = px;
-                sc->pts[i].P_y = py;
+                sc->ptsP[i].P_x = px;
+                sc->ptsP[i].P_y = py;
             }
 
-            Meta_Polygon(sc->pts, np, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+            Meta_Polygon(sc->ptsP, np, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
         }
     }
 }
