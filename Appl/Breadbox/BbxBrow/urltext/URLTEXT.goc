@@ -57,6 +57,7 @@
 /* abort handling */
 extern Boolean UserAbortCheck(void);
 extern void UserAbortEnd(void);
+extern Boolean G_decodeUtf8;
 
 /***************************************************************************
  *              URL-aware HTML page class
@@ -1827,6 +1828,7 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
     /* set code page */
     pself->HTI_codePage = G_codePage;
 #endif
+    pself->HTI_decodeUtf8 = G_decodeUtf8;
 
     /* Reset the status bar for javascript messages */
     @SendStatusUpdateOptr(

@@ -131,9 +131,8 @@ static word scriptCount;
    (used in ApplyFontWeightWidthAndSpacingAdjustment, set in ParseHTMLFile,
    ParsePlainFile, and MSG_VIS_TEXT_GRAPHIC_VARIABLE_DRAW) */
 DosCodePage G_htmlCodePage;
-#else
-Boolean G_decodeUtf8;
 #endif
+Boolean G_decodeUtf8;
 
 /***************************************************************************
  *              Translate between style sheet and Geos attributes
@@ -695,6 +694,7 @@ void CleanupJavaScript(long pos1, long pos2)
 
 void SetDocumentCharset(char *p)
 {
+    Boolean isUtf8;
 @ifdef DO_DBCS
     int i, j;
     char buf[15];
@@ -704,38 +704,39 @@ void SetDocumentCharset(char *p)
     DosCodePage cp;
     word size;
     Boolean found = FALSE;
+@endif
 
+    isUtf8 = (!STRCMPISB(p, "UTF-8")) ? TRUE : FALSE;
+    HTMLext->HE_decodeUtf8 = isUtf8;
+    G_decodeUtf8 = isUtf8;
+
+@ifdef DO_DBCS
     /* this should only happen once per page, so we'll just read
     the .ini file directly (instead of buffering .ini data) */
     for (i = 0; i < NUM_CODE_PAGE_FONT_ADJ_ENTRIES; i++) {
       sprintfsbcs(buf, "cp-%d", i);
       if (!InitFileReadInteger("HTMLView", buf, (word*)&cp)) {
-	sprintfsbcs(buf, "cp%uid", cp);
-	j = 0;
-	while (!InitFileReadStringSectionBuffer("HTMLView", buf,
-						j++, (char*)id,
-						sizeof(id)/sizeof(TCHAR),
-						&size)) {
-	  /* convert ASCII-only id string to single-byte */
-	  idTP = id; idCP = (char *)id;
-	  while(*idTP) *idCP++ = *idTP++; *idCP = 0;
-	  if (!strncmpisb(p, (char*)id, 0)) {
-	    /* set new code page */
-	    HTMLext->HE_codePage = cp;
-	    G_htmlCodePage = cp;
-	    /* update base font */
-	    ApplyFontWeightWidthAndSpacingAdjustment(&vcaBase, TRUE);
-	    found = TRUE;
-	    break;
-	  }
-	}
+        sprintfsbcs(buf, "cp%uid", cp);
+        j = 0;
+        while (!InitFileReadStringSectionBuffer("HTMLView", buf,
+                                                j++, (char*)id,
+                                                sizeof(id)/sizeof(TCHAR),
+                                                &size)) {
+          /* convert ASCII-only id string to single-byte */
+          idTP = id; idCP = (char *)id;
+          while(*idTP) *idCP++ = *idTP++; *idCP = 0;
+          if (!strncmpisb(p, (char*)id, 0)) {
+            /* set new code page */
+            HTMLext->HE_codePage = cp;
+            G_htmlCodePage = cp;
+            /* update base font */
+            ApplyFontWeightWidthAndSpacingAdjustment(&vcaBase, TRUE);
+            found = TRUE;
+            break;
+          }
+        }
       }
       if (found) break;
-    }
-@else
-    if (!strcmp(p, "UTF-8")) {
-      HTMLext->HE_decodeUtf8 = TRUE;
-      G_decodeUtf8 = TRUE;
     }
 @endif
 }
@@ -2220,9 +2221,8 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
     HTMLext = ext;                      /* Make extra data available globally */
 #ifdef DO_DBCS
     G_htmlCodePage = HTMLext->HE_codePage;
-#else
-    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
 #endif
+    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
     *item = InitTransferItem();         /* initialize & return transfer item */
     InitTagStacks(localHeap);           /* set up tag stacks */
 
@@ -2435,9 +2435,8 @@ int EXPORT ParsePlainFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
     HTMLext = ext;                      /* Make extra data available globally */
 #ifdef DO_DBCS
     G_htmlCodePage = HTMLext->HE_codePage;
-#else
-    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
 #endif
+    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
     *item = InitTransferItem();         /* initialize & return transfer item */
     InitTagStacks(localHeap);           /* set up tag stacks */
 

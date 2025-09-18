@@ -40,6 +40,7 @@
 
 #define INITIAL_TEXTAREA_BLOCK_SIZE    300
 
+extern Boolean G_decodeUtf8;
 @ifdef DO_DBCS
 extern DosCodePage G_htmlCodePage;
 @endif
@@ -649,10 +650,11 @@ static dword FormStringLengthMulti(T_formString *postData);
     word imageSubmit = 0xffff;  /* nothing yet */
     word argsOffset = 0xffff;
 
-@ifdef DO_DBCS
+    G_decodeUtf8 = pself->HTI_decodeUtf8;
+#ifdef DO_DBCS
     /* set code page for form submit */
     G_htmlCodePage = pself->HTI_codePage;
-@endif
+#endif
 
     array = pself->HTI_formArray ;
     if (array)  {

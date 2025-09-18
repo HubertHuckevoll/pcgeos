@@ -729,9 +729,8 @@ typedef struct {
 
 @ifdef DO_DBCS
   DosCodePage    HE_codePage;
-@else
-  Boolean        HE_decodeUtf8;
 @endif
+  Boolean        HE_decodeUtf8;
 } HTMLextra;
 
 @ifdef JAVASCRIPT_SUPPORT
@@ -1178,4 +1177,5 @@ typedef dword T_tableArrayHandle ;
 @ifdef DO_DBCS
   @instance DosCodePage HTI_codePage = 0;
 @endif
+  @instance Boolean HTI_decodeUtf8 = FALSE;
 @endc;
