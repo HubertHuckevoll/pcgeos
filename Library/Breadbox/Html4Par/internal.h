@@ -119,6 +119,7 @@ typedef struct
   } CSD_fontOrBase;
   sword       CSD_pointSize;            /* point size (1..7) */
   ColorQuad CSD_color;
+  ColorQuad CSD_bgColor;
   TextStyle CSD_textStyles;             /* style flags - added to current */
   VisTextExtendedStyles CSD_extendedStyles ;
 } CharStyleDelta;

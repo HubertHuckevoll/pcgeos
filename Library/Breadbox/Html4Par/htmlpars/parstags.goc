@@ -51,7 +51,7 @@ void LOCAL PopStyle(word n) ;
  *              Style constants
  ***************************************************************************/
 
-const CharStyleDelta vcdImage = {CSD_COLOR,0,0,{C_DARK_GRAY,CF_INDEX,0,0},0,0};
+const CharStyleDelta vcdImage = {CSD_COLOR,0,0,{C_DARK_GRAY,CF_INDEX,0,0},{0,0,0,0},0,0};
 
 /* Character used to represent an embedded graphic, in string-ized form... */
 @ifdef DO_DBCS

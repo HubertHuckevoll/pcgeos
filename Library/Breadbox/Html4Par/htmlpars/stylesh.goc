@@ -33,7 +33,279 @@
 
 #include "internal.h"
 
+#define CSS_VALUE_BUFFER_SIZE 128
+
+static Boolean CSSMatchKeyword(const char *start, word length, const char *keyword)
+{
+    word i;
+    unsigned char source;
+    unsigned char target;
+
+    for (i = 0; i < length; i++)
+    {
+        if (keyword[i] == 0)
+        {
+            return FALSE;
+        }
+
+        source = (unsigned char)start[i];
+        target = (unsigned char)keyword[i];
+        if (tolower(source) != tolower(target))
+        {
+            return FALSE;
+        }
+    }
+
+    if (keyword[i] != 0)
+    {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 void InterpretCSS(char *p, ParaStyleDelta *psd, CharStyleDelta *csd)
 {
-    
+    char *cur;
+    char *propStart;
+    char *propEnd;
+    char *valueStart;
+    char *valueEnd;
+    char *bang;
+    char *found;
+    word propLen;
+    word valueLen;
+    word copyLen;
+    word i;
+    word stringLen;
+    sword numericWeight;
+    ColorQuad color;
+    VisTextParaAttrAttributes attr;
+    char valueBuf[CSS_VALUE_BUFFER_SIZE];
+    char lowerBuf[CSS_VALUE_BUFFER_SIZE];
+
+    if (!p || !psd || !csd)
+    {
+        return;
+    }
+
+    cur = p;
+    while (*cur)
+    {
+        while (*cur && (isspace((unsigned char)*cur) || (*cur == ';')))
+        {
+            cur++;
+        }
+
+        if (!*cur)
+        {
+            break;
+        }
+
+        propStart = cur;
+        while (*cur && (*cur != ':') && (*cur != ';'))
+        {
+            cur++;
+        }
+
+        if (*cur != ':')
+        {
+            while (*cur && (*cur != ';'))
+            {
+                cur++;
+            }
+            if (*cur == ';')
+            {
+                cur++;
+            }
+            continue;
+        }
+
+        propEnd = cur;
+        cur++;
+        valueStart = cur;
+        while (*cur && (*cur != ';'))
+        {
+            cur++;
+        }
+        valueEnd = cur;
+        if (*cur == ';')
+        {
+            cur++;
+        }
+
+        while ((propEnd > propStart) && isspace((unsigned char)*(propEnd - 1)))
+        {
+            propEnd--;
+        }
+        while ((valueStart < valueEnd) && isspace((unsigned char)*valueStart))
+        {
+            valueStart++;
+        }
+        while ((valueEnd > valueStart) && isspace((unsigned char)*(valueEnd - 1)))
+        {
+            valueEnd--;
+        }
+
+        propLen = (word)(propEnd - propStart);
+        valueLen = (word)(valueEnd - valueStart);
+        if ((propLen == 0) || (valueLen == 0))
+        {
+            continue;
+        }
+
+        copyLen = valueLen;
+        if (copyLen >= CSS_VALUE_BUFFER_SIZE)
+        {
+            copyLen = CSS_VALUE_BUFFER_SIZE - 1;
+        }
+        for (i = 0; i < copyLen; i++)
+        {
+            valueBuf[i] = valueStart[i];
+        }
+        valueBuf[copyLen] = 0;
+
+        bang = valueBuf;
+        while (*bang)
+        {
+            if (*bang == '!')
+            {
+                *bang = 0;
+                break;
+            }
+            bang++;
+        }
+
+        stringLen = strlen(valueBuf);
+        while ((stringLen > 0) && isspace((unsigned char)valueBuf[stringLen - 1]))
+        {
+            valueBuf[stringLen - 1] = 0;
+            stringLen--;
+        }
+
+        if ((stringLen >= 2) && ((valueBuf[0] == '"') || (valueBuf[0] == '\'')))
+        {
+            if (valueBuf[stringLen - 1] == valueBuf[0])
+            {
+                for (i = 0; i < stringLen - 1; i++)
+                {
+                    valueBuf[i] = valueBuf[i + 1];
+                }
+                valueBuf[stringLen - 2] = 0;
+                stringLen -= 2;
+            }
+        }
+
+        if (valueBuf[0] == 0)
+        {
+            continue;
+        }
+
+        copyLen = strlen(valueBuf);
+        if (copyLen >= CSS_VALUE_BUFFER_SIZE)
+        {
+            copyLen = CSS_VALUE_BUFFER_SIZE - 1;
+        }
+        for (i = 0; i < copyLen; i++)
+        {
+            lowerBuf[i] = (char)tolower((unsigned char)valueBuf[i]);
+        }
+        lowerBuf[copyLen] = 0;
+
+        if (CSSMatchKeyword(propStart, propLen, "color"))
+        {
+            if ((HTMLext->HE_options & HTML_MONOCHROME) == 0)
+            {
+                if (TranslateColor(valueBuf, &color))
+                {
+                    csd->CSD_color = color;
+                    csd->CSD_which |= CSD_COLOR;
+                }
+            }
+        }
+        else if (CSSMatchKeyword(propStart, propLen, "background-color"))
+        {
+            if (((HTMLext->HE_options & HTML_NO_BACKGROUND) == 0) &&
+                ((HTMLext->HE_options & HTML_MONOCHROME) == 0))
+            {
+                if (strcmp(lowerBuf, "transparent") != 0)
+                {
+                    if (TranslateColor(valueBuf, &color))
+                    {
+                        csd->CSD_bgColor = color;
+                        csd->CSD_extendedStyles |= VTES_BACKGROUND_COLOR;
+                    }
+                }
+            }
+        }
+        else if (CSSMatchKeyword(propStart, propLen, "font-weight"))
+        {
+            if (strstr(lowerBuf, "bold"))
+            {
+                csd->CSD_textStyles |= TS_BOLD;
+            }
+            else if (isdigit((unsigned char)lowerBuf[0]))
+            {
+                numericWeight = ATOISB(lowerBuf);
+                if (numericWeight >= 600)
+                {
+                    csd->CSD_textStyles |= TS_BOLD;
+                }
+            }
+        }
+        else if (CSSMatchKeyword(propStart, propLen, "font-style"))
+        {
+            if (strstr(lowerBuf, "italic") || strstr(lowerBuf, "oblique"))
+            {
+                csd->CSD_textStyles |= TS_ITALIC;
+            }
+        }
+        else if (CSSMatchKeyword(propStart, propLen, "text-decoration"))
+        {
+            if (strcmp(lowerBuf, "none") == 0)
+            {
+                continue;
+            }
+
+            found = strstr(lowerBuf, "underline");
+            if (found)
+            {
+                csd->CSD_textStyles |= TS_UNDERLINE;
+            }
+
+            if (strstr(lowerBuf, "line-through") || strstr(lowerBuf, "line through") ||
+                strstr(lowerBuf, "strikethrough"))
+            {
+                csd->CSD_textStyles |= TS_STRIKE_THRU;
+            }
+        }
+        else if (CSSMatchKeyword(propStart, propLen, "text-align"))
+        {
+            attr = psd->PSD_attributes;
+            attr &= ~VTPAA_JUSTIFICATION;
+            if ((strcmp(lowerBuf, "center") == 0) || (strcmp(lowerBuf, "middle") == 0))
+            {
+                attr |= (J_CENTER << VTPAA_JUSTIFICATION_OFFSET);
+            }
+            else if (strcmp(lowerBuf, "right") == 0)
+            {
+                attr |= (J_RIGHT << VTPAA_JUSTIFICATION_OFFSET);
+            }
+            else if (strcmp(lowerBuf, "justify") == 0)
+            {
+                attr |= (J_FULL << VTPAA_JUSTIFICATION_OFFSET);
+            }
+            else if ((strcmp(lowerBuf, "left") == 0) || (strcmp(lowerBuf, "start") == 0))
+            {
+                attr |= (J_LEFT << VTPAA_JUSTIFICATION_OFFSET);
+            }
+            else
+            {
+                continue;
+            }
+
+            psd->PSD_attributes = attr;
+            psd->PSD_which |= PSD_JUSTIFY;
+        }
+    }
 }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Inline CSS Regression</title>
+    <style>
+        body {
+            font-family: serif;
+        }
+        .sample-block {
+            border: 1px dashed #888;
+            margin: 8px 0;
+            padding: 4px;
+        }
+        .note {
+            font-size: 80%;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Inline CSS Regression Samples</h1>
+    <p class="note">These samples exercise inline style parsing for color, background-color, font-weight, font-style, text-decoration, and text-align.</p>
+
+    <div class="sample-block" style="color: #0033cc; font-weight: bold; text-align: center;">
+        Centered bold blue text via inline CSS.
+    </div>
+
+    <div class="sample-block" style="background-color: rgb(240, 248, 255); color: #000; text-align: left;">
+        <span style="font-style: italic;">Left aligned italic text with light background.</span>
+    </div>
+
+    <div class="sample-block" style="background-color: #222; color: white; font-weight: 700; text-decoration: underline line-through; text-align: right;">
+        Right aligned white text with underline and strike-through on dark background.
+    </div>
+
+    <p class="note">Inspect each block to confirm that inline styles are reflected in the rendered output.</p>
+</body>
+</html>
