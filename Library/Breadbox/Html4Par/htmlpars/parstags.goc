@@ -588,6 +588,10 @@ void LOCAL PopStyle(word n)
       }
       break;
 
+    case SPEC_TABLE_SECTION:
+      /* layout-neutral table section wrapper */
+      break;
+
     /*------------------------------------------------------------------------*/
     case SPEC_TD:                       /* closing table cell */
       while(tagStackPtr-1 > n)          /* close all things opened within */
