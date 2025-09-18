@@ -102,8 +102,7 @@ word LengthResolve(word total, HTMLmultiLength length);
 #define CSD_FONT   0x01                 /* change font */
 #define CSD_SIZE   0x02                 /* change character size */
 #define CSD_COLOR  0x04                 /* change color */
-#define CSD_BASE   0x08                 /* revert to a basic font (cannot be
-                                           used together with CSD_FONT) */
+#define CSD_BASE   0x08                 /* revert to a basic font (cannot be used together with CSD_FONT) */
 #define CSD_EXTENDED 0x10               /* Change extended flags */
 #define CSD_RESET  0x80                 /* reset everything to default */
 
@@ -256,7 +255,7 @@ typedef struct {
 #endif
 
 /* Interpret the passed string and parse the applicable attributes into
-   our own style structures */ 
+   our own style structures */
 void InterpretCSS(char *p, ParaStyleDelta *psd, CharStyleDelta *csd);
 
 /***************************************************************************
@@ -528,7 +527,7 @@ typedef struct {
   byte currentCol;
 
   /* Last column with span consideration */
-  byte lastCol ;         
+  byte lastCol ;
 
   /* global attributes specified in cell header */
   HTMLtableData tableData;

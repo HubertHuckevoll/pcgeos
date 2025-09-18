@@ -234,6 +234,7 @@ void InterpretCSS(char *p, ParaStyleDelta *psd, CharStyleDelta *csd)
                     {
                         csd->CSD_bgColor = color;
                         csd->CSD_extendedStyles |= VTES_BACKGROUND_COLOR;
+                        csd->CSD_which |= CSD_EXTENDED;
                     }
                 }
             }

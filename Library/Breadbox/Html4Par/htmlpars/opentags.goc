@@ -245,22 +245,185 @@ extern word currentMenu;
 
 @end ColorResource;
 
+static void SkipCSSWhitespace(char **cursor)
+{
+    while (**cursor && isspace((unsigned char)**cursor))  {
+        (*cursor)++;
+    }
+}
+
+static Boolean ParseCSSRGBComponent(char **cursor, byte *component)
+{
+    long value = 0;
+    Boolean sawDigit = FALSE;
+
+    SkipCSSWhitespace(cursor);
+
+    while (**cursor && isdigit((unsigned char)**cursor))  {
+        sawDigit = TRUE;
+        value = (value * 10) + (**cursor - '0');
+        (*cursor)++;
+    }
+
+    if (!sawDigit)  {
+        return FALSE;
+    }
+
+    SkipCSSWhitespace(cursor);
+
+    if (**cursor == '%')  {
+        (*cursor)++;
+        if (value < 0)  {
+            value = 0;
+        }
+        if (value > 100)  {
+            value = 100;
+        }
+        value = (value * 255 + 50) / 100;
+    } else  {
+        if (value < 0)  {
+            value = 0;
+        }
+        if (value > 255)  {
+            value = 255;
+        }
+    }
+
+    *component = (byte)value;
+    SkipCSSWhitespace(cursor);
+    return TRUE;
+}
+
+static Boolean SkipCSSAlphaValue(char **cursor)
+{
+    Boolean sawDigit = FALSE;
+
+    SkipCSSWhitespace(cursor);
+
+    if (**cursor == '+' || **cursor == '-')  {
+        if (**cursor == '-')  {
+            return FALSE;
+        }
+        (*cursor)++;
+    }
+
+    while (**cursor && isdigit((unsigned char)**cursor))  {
+        sawDigit = TRUE;
+        (*cursor)++;
+    }
+
+    if (**cursor == '.')  {
+        (*cursor)++;
+        while (**cursor && isdigit((unsigned char)**cursor))  {
+            sawDigit = TRUE;
+            (*cursor)++;
+        }
+    }
+
+    SkipCSSWhitespace(cursor);
+
+    if (**cursor == '%')  {
+        (*cursor)++;
+    }
+
+    SkipCSSWhitespace(cursor);
+    return sawDigit;
+}
+
+static Boolean ParseCSSRGB(char *p, ColorQuad *qc)
+{
+    char *cursor = p;
+    char keyword[5];
+    int keywordLen = 0;
+    Boolean hasAlpha = FALSE;
+    byte components[3];
+    int i;
+
+    while (*cursor && (keywordLen < 4) && isalpha((unsigned char)*cursor))  {
+        keyword[keywordLen++] = (char)tolower((unsigned char)*cursor);
+        cursor++;
+    }
+    keyword[keywordLen] = 0;
+
+    if (strcmp(keyword, "rgb") != 0)  {
+        if (strcmp(keyword, "rgba") != 0)  {
+            return FALSE;
+        }
+        hasAlpha = TRUE;
+    }
+
+    SkipCSSWhitespace(&cursor);
+    if (*cursor != '(')  {
+        return FALSE;
+    }
+    cursor++;
+
+    for (i = 0; i < 3; i++)  {
+        if (!ParseCSSRGBComponent(&cursor, &components[i]))  {
+            return FALSE;
+        }
+        if (i < 2)  {
+            if (*cursor != ',')  {
+                return FALSE;
+            }
+            cursor++;
+        }
+    }
+
+    if (hasAlpha)  {
+        if (*cursor != ',')  {
+            return FALSE;
+        }
+        cursor++;
+        if (!SkipCSSAlphaValue(&cursor))  {
+            return FALSE;
+        }
+    }
+
+    SkipCSSWhitespace(&cursor);
+    if (*cursor != ')')  {
+        return FALSE;
+    }
+
+    qc->CQ_info = CF_RGB;
+    qc->CQ_redOrIndex = components[0];
+    qc->CQ_green = components[1];
+    qc->CQ_blue = components[2];
+    return TRUE;
+}
+
 Boolean TranslateColor(char *p,ColorQuad *qc)
 {
-    char c;
-    int i;
+    word i;
     unsigned long cval;
     HTMLColorTable *color_table;
     Boolean hadPound = FALSE ;
     Boolean isColorConverted = FALSE ;
+    Boolean shouldTryHex = FALSE;
     word numHexDigits ;
+    char *cursor;
 
     qc->CQ_info = CF_INDEX;             /* any color as long as its black */
     qc->CQ_redOrIndex = C_BLACK;
 
-    if(*p=='\x23')  {                   /* skip over "#" sign */
-      p++;
+    if (!p)  {
+        return FALSE;
+    }
+
+    cursor = p;
+    while (*cursor && isspace((unsigned char)*cursor))  {
+        cursor++;
+    }
+
+    if (!*cursor)  {
+        return FALSE;
+    }
+
+    if (*cursor == '\x23')  {          /* skip over "#" sign */
+      cursor++;
       hadPound = TRUE ;
+    } else if (ParseCSSRGB(cursor, qc))  {
+        return TRUE;
     }
 
     /* Only search if we DON'T have a pound (optimization) */
@@ -268,47 +431,67 @@ Boolean TranslateColor(char *p,ColorQuad *qc)
         MemLock( OptrToHandle(@colorTable) );
         color_table = LMemDeref(@colorTable);
         for(i=0; i<NUM_COLOR_ENTRIES; i++)
-          if( !STRCMPISB(color_table[i].name,p) )
+          if( !STRCMPISB(color_table[i].name,cursor) )
           {                                 /* found color id in table? */
             *qc = color_table[i].qc;        /* use associated color quad */
             isColorConverted = TRUE ;
             break;
           }
         MemUnlock( OptrToHandle(@colorTable) );
+        shouldTryHex = !isColorConverted;
+    } else {
+        shouldTryHex = TRUE;
     }
 
     /* If the name doesn't match or we started with a #, then */
     /* try converting into a hex number */
-    if ((i>=NUM_COLOR_ENTRIES) || (hadPound))
+    if (shouldTryHex)
     {
       cval = 0;
 
-      /* Count the digits -- should be six.  If its a non-hex value, */
-      /* we ignore it and use zero for that hex spot. */
+      /* Count the digits -- should be either three or six. */
       numHexDigits = 0 ;
-      while( (c=toupper(*(p++)))!=0 && (numHexDigits < 6))
+      while ((*cursor != 0) && (numHexDigits < 6))
       {
-        cval<<=4;
-        if(isdigit(c))  {
-          cval |= (c-'0');
-        } else  {
-          if (isxdigit(c))
-              cval |= (c-'A'+10);
+        int ch;
+
+        ch = (unsigned char)*cursor;
+        cursor++;
+
+        if (isspace(ch))  {
+            continue;
         }
-        numHexDigits++ ;
-      }
 
-      while (numHexDigits < 6)  {
-          cval <<= 4 ;
+        ch = toupper(ch);
+
+        if(isdigit(ch))  {
+          cval = (cval << 4) | (ch-'0');
           numHexDigits++ ;
+        } else if (isxdigit(ch)) {
+          cval = (cval << 4) | (ch-'A'+10);
+          numHexDigits++ ;
+        }
       }
 
-      /* Well, we got something to use.  Use it */
-      qc->CQ_redOrIndex = (byte)(cval>>16);
-      qc->CQ_green = (byte)(cval>>8);
-      qc->CQ_blue = (byte)cval;
-      qc->CQ_info = CF_RGB;
-      isColorConverted = TRUE ;
+      if (numHexDigits == 3)  {
+          /* Expand shorthand form (#RGB => #RRGGBB) */
+          qc->CQ_redOrIndex = (byte)(((cval >> 8) & 0xF) * 17);
+          qc->CQ_green = (byte)(((cval >> 4) & 0xF) * 17);
+          qc->CQ_blue = (byte)((cval & 0xF) * 17);
+          qc->CQ_info = CF_RGB;
+          isColorConverted = TRUE ;
+      } else if (numHexDigits > 0)  {
+          while (numHexDigits < 6)  {
+              cval <<= 4 ;
+              numHexDigits++ ;
+          }
+
+          qc->CQ_redOrIndex = (byte)(cval>>16);
+          qc->CQ_green = (byte)(cval>>8);
+          qc->CQ_blue = (byte)cval;
+          qc->CQ_info = CF_RGB;
+          isColorConverted = TRUE ;
+      }
     }
 
     /* If no color is converted, use black (indexed) as the default */

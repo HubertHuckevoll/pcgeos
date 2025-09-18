@@ -401,7 +401,12 @@ void ApplyCharacterDelta(VisTextCharAttr *cs,CharStyleDelta *cd)
         cs->VTCA_color = cd->CSD_color;
 
       if(cd->CSD_extendedStyles & VTES_BACKGROUND_COLOR)
+      {
         cs->VTCA_bgColor = cd->CSD_bgColor;
+        cs->VTCA_bgGrayScreen = SDM_100;
+        cs->VTCA_bgPattern.HP_type = PT_SOLID;
+        cs->VTCA_bgPattern.HP_data = 0;
+      }
 
       cs->VTCA_textStyles |= cd->CSD_textStyles;
       cs->VTCA_extendedStyles |= cd->CSD_extendedStyles ;
