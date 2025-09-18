@@ -12,24 +12,24 @@
 
 @start StyleResource, data;
 
-@chunk CharStyleDelta vcdNone =        {0,0,0,{0,0,0,0},0,0};
-@chunk CharStyleDelta vcdReset =       {CSD_RESET,0,0,{0,0,0,0},0,0};
-@chunk CharStyleDelta vcdH1 =          {CSD_SIZE,0,7,{0,0,0,0},TS_BOLD,0};
-@chunk CharStyleDelta vcdH2 =          {CSD_SIZE,0,6,{0,0,0,0},TS_BOLD,0};
-@chunk CharStyleDelta vcdH3 =          {CSD_SIZE,0,5,{0,0,0,0},TS_BOLD,0};
-@chunk CharStyleDelta vcdH4 =          {CSD_SIZE,0,4,{0,0,0,0},TS_BOLD,0};
-@chunk CharStyleDelta vcdH5 =          {CSD_SIZE,0,3,{0,0,0,0},TS_BOLD,0};
-@chunk CharStyleDelta vcdH6 =          {CSD_SIZE,0,2,{0,0,0,0},TS_BOLD,0};
-@chunk CharStyleDelta vcdBold =        {0,0,0,{0,0,0,0},TS_BOLD,0};
-@chunk CharStyleDelta vcdItalic =      {0,0,0,{0,0,0,0},TS_ITALIC,0};
-@chunk CharStyleDelta vcdUnderline =   {0,0,0,{0,0,0,0},TS_UNDERLINE,0};
-@chunk CharStyleDelta vcdStrike =      {0,0,0,{0,0,0,0},TS_STRIKE_THRU,0};
-@chunk CharStyleDelta vcdSuperscript = {0,0,0,{0,0,0,0},TS_SUPERSCRIPT,0};
-@chunk CharStyleDelta vcdSubscript =   {0,0,0,{0,0,0,0},TS_SUBSCRIPT,0};
-@chunk CharStyleDelta vcdBig =         {CSD_SIZE,0,4,{0,0,0,0},0,0};
-@chunk CharStyleDelta vcdSmall =       {CSD_SIZE,0,2,{0,0,0,0},0,0};
-@chunk CharStyleDelta vcdMono =  {CSD_BASE,CSD_BASE_EXAMPLE,0,{0,0,0,0},0,0};
-@chunk CharStyleDelta vcdNOBR =  {CSD_EXTENDED,0,0,{0,0,0,0},0,VTES_NOWRAP};
+@chunk CharStyleDelta vcdNone =        {0,0,0,{0,0,0,0},{0,0,0,0},0,0};
+@chunk CharStyleDelta vcdReset =       {CSD_RESET,0,0,{0,0,0,0},{0,0,0,0},0,0};
+@chunk CharStyleDelta vcdH1 =          {CSD_SIZE,0,7,{0,0,0,0},{0,0,0,0},TS_BOLD,0};
+@chunk CharStyleDelta vcdH2 =          {CSD_SIZE,0,6,{0,0,0,0},{0,0,0,0},TS_BOLD,0};
+@chunk CharStyleDelta vcdH3 =          {CSD_SIZE,0,5,{0,0,0,0},{0,0,0,0},TS_BOLD,0};
+@chunk CharStyleDelta vcdH4 =          {CSD_SIZE,0,4,{0,0,0,0},{0,0,0,0},TS_BOLD,0};
+@chunk CharStyleDelta vcdH5 =          {CSD_SIZE,0,3,{0,0,0,0},{0,0,0,0},TS_BOLD,0};
+@chunk CharStyleDelta vcdH6 =          {CSD_SIZE,0,2,{0,0,0,0},{0,0,0,0},TS_BOLD,0};
+@chunk CharStyleDelta vcdBold =        {0,0,0,{0,0,0,0},{0,0,0,0},TS_BOLD,0};
+@chunk CharStyleDelta vcdItalic =      {0,0,0,{0,0,0,0},{0,0,0,0},TS_ITALIC,0};
+@chunk CharStyleDelta vcdUnderline =   {0,0,0,{0,0,0,0},{0,0,0,0},TS_UNDERLINE,0};
+@chunk CharStyleDelta vcdStrike =      {0,0,0,{0,0,0,0},{0,0,0,0},TS_STRIKE_THRU,0};
+@chunk CharStyleDelta vcdSuperscript = {0,0,0,{0,0,0,0},{0,0,0,0},TS_SUPERSCRIPT,0};
+@chunk CharStyleDelta vcdSubscript =   {0,0,0,{0,0,0,0},{0,0,0,0},TS_SUBSCRIPT,0};
+@chunk CharStyleDelta vcdBig =         {CSD_SIZE,0,4,{0,0,0,0},{0,0,0,0},0,0};
+@chunk CharStyleDelta vcdSmall =       {CSD_SIZE,0,2,{0,0,0,0},{0,0,0,0},0,0};
+@chunk CharStyleDelta vcdMono =  {CSD_BASE,CSD_BASE_EXAMPLE,0,{0,0,0,0},{0,0,0,0},0,0};
+@chunk CharStyleDelta vcdNOBR =  {CSD_EXTENDED,0,0,{0,0,0,0},{0,0,0,0},0,VTES_NOWRAP};
 
 /******************************************************************************/
 
