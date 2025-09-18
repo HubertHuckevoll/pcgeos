@@ -409,6 +409,27 @@ void FormElementRemoveSelectList(void);
 /* Routines for handling FormStrings: */
 /*------------------------------------------------------------------------*/
 
+@ifndef DO_DBCS
+static word HtmlFormEncodeLatin1ToUtf8(byte value, byte *buffer)
+{
+    word count;
+
+    if (value < 0x80)
+    {
+        buffer[0] = value;
+        count = 1;
+    }
+    else
+    {
+        buffer[0] = (byte)(0xC0 | (value >> 6));
+        buffer[1] = (byte)(0x80 | (value & 0x3F));
+        count = 2;
+    }
+
+    return count;
+}
+@endif
+
 #define FORM_STRING_INITIALIZE_SIZE   (256 - sizeof(T_formString))
 #define FORM_STRING_ALLOCATE_SIZE     128
 
@@ -464,26 +485,52 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
     TCHAR c, d;
     word status;
 @else
-    byte c ;
+    TCHAR c;
+    Boolean useUtf8 = FALSE;
+    byte latin;
+    byte utf8Bytes[2];
+    word utf8Count;
+    word utf8Index;
 @endif
     TCHAR *p_char ;
     T_formString *p_formString ;
     char *p_dest ;
     static char hexTable[16] = "0123456789ABCDEF" ;
 
+@ifdef DO_DBCS
+@else
+    p_formString = MemLock(mem) ;
+    if (p_formString->flags & FORM_STRING_FLAG_UTF8_ENCODING)
+    {
+        useUtf8 = TRUE;
+    }
+    MemUnlock(mem) ;
+@endif
+
     /* Determine the new length of the string */
     for (len=0, p_char = p_string; *p_char; p_char++)  {
         c = *p_char ;
         if (c == 13) {
-	    /* CRs becomes CRLFs */
-	    len += 6;
-	} else if (((c < 64) || (c >= 91 && c <= 96) || (c >= 123)) && (c != 32) && (c != '.') && ((c<'0') || (c>'9')) && (c != '-') && (c != '_') && (c != '*'))  {
-            len += 3 ;   /* Will be %XX per irregular character */
+            /* CRs becomes CRLFs */
+            len += 6;
+        } else if (((c < 64) || (c >= 91 && c <= 96) || (c >= 123)) && (c != 32) && (c != '.') && ((c<'0') || (c>'9')) && (c != '-') && (c != '_') && (c != '*'))  {
 @ifdef DO_DBCS
+            len += 3 ;   /* Will be %XX per irregular character */
             /* conversion of Unicode to form submission data */
             d = c;
             LocalGeosToDosChar((unsigned int*)&d, G_htmlCodePage, 0, (DosToGeosStringStatus*)&status);
-	    if (d > 255) len += 3;  /* %XX%XX for double-byte */
+            if (d > 255) len += 3;  /* %XX%XX for double-byte */
+@else
+            if (useUtf8)
+            {
+                latin = (byte)LocalGeosToCodePageChar(c, CODE_PAGE_LATIN_1, '.');
+                utf8Count = HtmlFormEncodeLatin1ToUtf8(latin, utf8Bytes);
+                len += utf8Count * 3;
+            }
+            else
+            {
+                len += 3 ;   /* Will be %XX per irregular character */
+            }
 @endif
         } else {
             len++ ;
@@ -501,10 +548,10 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
         if (c == 32)  {
             /* Spaces become pluses */
             *p_dest = '+' ;
-	} else if (c == 13) {
-	    /* CRs becomes CRLFs */
-	    STRCPYSB(p_dest, "%0D%0A");
-	    p_dest += 5;  /* inc'd again in loop */
+        } else if (c == 13) {
+            /* CRs becomes CRLFs */
+            STRCPYSB(p_dest, "%0D%0A");
+            p_dest += 5;  /* inc'd again in loop */
         } else if (((c>='0') && (c <='9')) || (c == '.') || (c == '-') || (c == '_') || (c == '*'))  {
             *p_dest = c ;
         } else {
@@ -513,25 +560,46 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
             if ((c < 64) || (c >= 91 && c <= 96) || (c >= 123))  {
 @ifdef DO_DBCS
                LocalGeosToDosChar((unsigned int*)&c, G_htmlCodePage, 0, (DosToGeosStringStatus*)&status);
-@else
-               c = LocalGeosToCodePageChar(c, CODE_PAGE_LATIN_1, '.');
-@endif
                p_dest[0] = '%' ;
-@ifdef DO_DBCS
                /* conversion of Unicode to form submission data */
-	       /* do high word */
-	       if (c > 255) {
-		   p_dest[1] = hexTable[(c>>8)>>4] ;
-		   p_dest[2] = hexTable[(c>>8)&15] ;
-		   p_dest[3] = '%';
-		   p_dest += 3;
-		   /* continue with low word */
-		   c &= 255;
-	       }
-@endif
+               /* do high word */
+               if (c > 255) {
+                   p_dest[1] = hexTable[(c>>8)>>4] ;
+                   p_dest[2] = hexTable[(c>>8)&15] ;
+                   p_dest[3] = '%';
+                   p_dest += 3;
+                   /* continue with low word */
+                   c &= 255;
+               }
                p_dest[1] = hexTable[c>>4] ;
                p_dest[2] = hexTable[c&15] ;
                p_dest += 2 ;
+@else
+               latin = (byte)LocalGeosToCodePageChar(c, CODE_PAGE_LATIN_1, '.');
+               if (useUtf8)
+               {
+                   utf8Count = HtmlFormEncodeLatin1ToUtf8(latin, utf8Bytes);
+                   for (utf8Index = 0; utf8Index < utf8Count; utf8Index++)
+                   {
+                       byte encodedValue = utf8Bytes[utf8Index];
+                       p_dest[0] = '%' ;
+                       p_dest[1] = hexTable[encodedValue>>4] ;
+                       p_dest[2] = hexTable[encodedValue&15] ;
+                       if (utf8Index < (utf8Count - 1))
+                       {
+                           p_dest += 3;
+                       }
+                   }
+                   p_dest += 2 ;
+               }
+               else
+               {
+                   p_dest[0] = '%' ;
+                   p_dest[1] = hexTable[latin>>4] ;
+                   p_dest[2] = hexTable[latin&15] ;
+                   p_dest += 2 ;
+               }
+@endif
             } else {
                /* Everything else is copied */
                *p_dest = c ;
@@ -553,10 +621,52 @@ void _export FormStringAppend(MemHandle mem, TCHAR *p_string)
 @ifdef DO_DBCS
     DosCodePage cp = CODE_PAGE_LATIN_1;
     word status, backup;
+@else
+    Boolean useUtf8 = FALSE;
+    word index;
+    word encodedLen = 0;
+    word encodedCount;
+    word utf8Index;
+    byte latin;
+    byte utf8Bytes[2];
 @endif
 
     /* Determine the new length of the string */
     len = strlen(p_string) ;
+
+@ifdef DO_DBCS
+@else
+    p_formString = MemLock(mem) ;
+    if (p_formString->flags & FORM_STRING_FLAG_UTF8_ENCODING)
+    {
+        useUtf8 = TRUE;
+    }
+    MemUnlock(mem) ;
+    if (useUtf8)
+    {
+        for (index = 0; index < len; index++)
+        {
+            latin = (byte)LocalGeosToCodePageChar(p_string[index], CODE_PAGE_LATIN_1, '.');
+            encodedCount = HtmlFormEncodeLatin1ToUtf8(latin, utf8Bytes);
+            encodedLen += encodedCount;
+        }
+        p_formString = FormStringLockAndGrow(mem, encodedLen);
+        p_dest = p_formString->data + p_formString->numChars - 1 ;
+        for (index = 0; index < len; index++)
+        {
+            latin = (byte)LocalGeosToCodePageChar(p_string[index], CODE_PAGE_LATIN_1, '.');
+            encodedCount = HtmlFormEncodeLatin1ToUtf8(latin, utf8Bytes);
+            for (utf8Index = 0; utf8Index < encodedCount; utf8Index++)
+            {
+                *p_dest++ = utf8Bytes[utf8Index];
+            }
+        }
+        *p_dest = '\0';
+        p_formString->numChars += encodedLen;
+        MemUnlock(mem) ;
+        return;
+    }
+@endif
 
     /* enough for full two-byte DBCS expansion */
     p_formString = FormStringLockAndGrow(mem, len*sizeof(TCHAR));
@@ -648,6 +758,7 @@ static dword FormStringLengthMulti(T_formString *postData);
     T_formString *p_formString ;
     word imageSubmit = 0xffff;  /* nothing yet */
     word argsOffset = 0xffff;
+    Boolean useUtf8 = FALSE;
 
 @ifdef DO_DBCS
     /* set code page for form submit */
@@ -655,10 +766,18 @@ static dword FormStringLengthMulti(T_formString *postData);
 @endif
 
     array = pself->HTI_formArray ;
+    useUtf8 = pself->HTI_useUtf8;
     if (array)  {
         /* Create a string to hold all the form information */
         formString = FormStringCreate() ;
         if (formString)  {
+            p_formString = MemLock(formString);
+            if (useUtf8) {
+                p_formString->flags |= FORM_STRING_FLAG_UTF8_ENCODING;
+            } else {
+                p_formString->flags &= ~FORM_STRING_FLAG_UTF8_ENCODING;
+            }
+            MemUnlock(formString);
             MemLock(OptrToHandle(array)) ;
             num = ChunkArrayGetCount(array) ;
             for(i=0; i<num; i++)  {
@@ -719,17 +838,18 @@ static dword FormStringLengthMulti(T_formString *postData);
                                        formString,
                                        i,
                                        prefix,
-				       enctype) ;
+                                       enctype,
+                                       useUtf8) ;
                     }
                 }
             }
-	    /* now, add the nameless submit image info, if any */
-	    if (imageSubmit != 0xffff) {
-		p_formData = ChunkArrayElementToPtr(array, i, &size);
-		/* don't need final prefix */
-		(void)(@call oself::MSG_HTML_TEXT_FORM_APPEND_ELEMENT(
-		    formString, imageSubmit, prefix, enctype));
-	    }
+            /* now, add the nameless submit image info, if any */
+            if (imageSubmit != 0xffff) {
+                p_formData = ChunkArrayElementToPtr(array, i, &size);
+                /* don't need final prefix */
+                (void)(@call oself::MSG_HTML_TEXT_FORM_APPEND_ELEMENT(
+                    formString, imageSubmit, prefix, enctype, useUtf8));
+            }
             MemUnlock(OptrToHandle(array)) ;
 
             /* Send the block */
@@ -804,9 +924,9 @@ static dword FormStringLengthMulti(T_formString *postData);
     optr array ;
     HTMLformData *p_formData, *p_nameData ;
     TCHAR buf[50], *bufP = 0 ;  /* commonly small (ATTRs),
-				  will be dynamic if needed */
+                                  will be dynamic if needed */
     TCHAR name[200], *nameP = 0 ;  /* commonly large (i.e. FORM action),
-				     will be dynamic if needed */
+                                     will be dynamic if needed */
     TCHAR itoaBuf[50];  /* max for itoa */
     TCHAR prefixNulled[2];
     TCHAR nextPrefix = prefix ;   /* Always assume same prefix */
@@ -820,9 +940,18 @@ static dword FormStringLengthMulti(T_formString *postData);
     MemHandle mem ;
     Boolean isFile = FALSE ;
     Boolean notMulti = (enctype != HTML_OPT_ENCODING_MULTI);
+    T_formString *p_formStringHeader;
 
     prefixNulled[0] = prefix ;
     prefixNulled[1] = '\0' ;
+
+    p_formStringHeader = MemLock(formString);
+    if (useUtf8) {
+        p_formStringHeader->flags |= FORM_STRING_FLAG_UTF8_ENCODING;
+    } else {
+        p_formStringHeader->flags &= ~FORM_STRING_FLAG_UTF8_ENCODING;
+    }
+    MemUnlock(formString);
 
     array = pself->HTI_formArray ;
     NamePool = pself->HTI_namePool ;

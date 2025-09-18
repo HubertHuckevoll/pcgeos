@@ -1035,7 +1035,8 @@ typedef dword T_tableArrayHandle ;
                        MemHandle formString,
                        word formElement,
                        TCHAR prefix,
-		       WordFlags enctype) ;
+                       WordFlags enctype,
+                       Boolean useUtf8) ;
   @message void MSG_HTML_TEXT_RECALC_PAGE();
   @message void MSG_HTML_TEXT_RECALC_COLUMNS();
   @message void MSG_HTML_TEXT_INITIALIZE_LAYOUT() ;
@@ -1178,4 +1179,5 @@ typedef dword T_tableArrayHandle ;
 @ifdef DO_DBCS
   @instance DosCodePage HTI_codePage = 0;
 @endif
+  @instance Boolean HTI_useUtf8 = FALSE;
 @endc;

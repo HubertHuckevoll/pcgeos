@@ -23,6 +23,7 @@ typedef struct {
       #define FORM_STRING_ENCODING_URL          1
       #define FORM_STRING_ENCODING_MULTI        2
     word flags ;
+      #define FORM_STRING_FLAG_UTF8_ENCODING    0x4000
       #define FORM_STRING_FLAG_IS_GET_METHOD    0x8000
     
     cb_FormStringCallback *callback;	/* vfptr to callback function  */
