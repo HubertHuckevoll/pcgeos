@@ -131,8 +131,25 @@ static word scriptCount;
    (used in ApplyFontWeightWidthAndSpacingAdjustment, set in ParseHTMLFile,
    ParsePlainFile, and MSG_VIS_TEXT_GRAPHIC_VARIABLE_DRAW) */
 DosCodePage G_htmlCodePage;
-#else
+#endif
 Boolean G_decodeUtf8;
+
+#ifdef EC
+typedef struct {
+    const byte *bytes;
+    word length;
+    word index;
+} Utf8FixtureState;
+
+#define UTF8_FIXTURE_MAX 8
+
+static Boolean G_utf8FixturesRan = FALSE;
+
+int LOCAL Utf8FixtureGetc(dword data);
+static void LOCAL RunUtf8DecoderFixture(const byte *fixtureBytes,
+    word fixtureLength, const unsigned int *expectedCodepoints,
+    word expectedCount, Boolean decodeFlag);
+void LOCAL RunUtf8DecoderFixtures(void);
 #endif
 
 /***************************************************************************
@@ -705,6 +722,14 @@ void SetDocumentCharset(char *p)
     word size;
     Boolean found = FALSE;
 
+    HTMLext->HE_decodeUtf8 = FALSE;
+    G_decodeUtf8 = FALSE;
+    if (!strcmp(p, "UTF-8")) {
+        HTMLext->HE_decodeUtf8 = TRUE;
+        G_decodeUtf8 = TRUE;
+        return;
+    }
+
     /* this should only happen once per page, so we'll just read
     the .ini file directly (instead of buffering .ini data) */
     for (i = 0; i < NUM_CODE_PAGE_FONT_ADJ_ENTRIES; i++) {
@@ -733,6 +758,8 @@ void SetDocumentCharset(char *p)
       if (found) break;
     }
 @else
+    HTMLext->HE_decodeUtf8 = FALSE;
+    G_decodeUtf8 = FALSE;
     if (!strcmp(p, "UTF-8")) {
       HTMLext->HE_decodeUtf8 = TRUE;
       G_decodeUtf8 = TRUE;
@@ -1352,49 +1379,104 @@ int LOCAL HTMLgetcLow()
 int LOCAL HTMLgetc(void)
 {
     int c = HTMLgetcLow();
+    int c2Byte;
+    int c3Byte;
+    int c4Byte;
+    dword codepoint;
+    word leadByte;
 
-#ifndef DO_DBCS
-    if(G_decodeUtf8) {
-      if(c!=EOF && c>0x7F) {
-	if((c & 0xE0)==0xC0) {
-	  int c2 = HTMLgetcLow();
-	  if (c2!=EOF) {
-	    if ((c2 & 0xc0)==0x80) {
-	      c &= 0x1F;
-	      c <<= 6;
-	      c |= (c2 & 0x3f);
-	    }
-	    else
-	      c = '?';
-	  }
-	  else
-	    c = EOF;
-	}
-	else if((c & 0xF0)==0xE0) {
-	  int c2 = HTMLgetcLow();
-	  if (c2!=EOF) {
-	    int c3 = HTMLgetcLow();
-	    if (c3!=EOF) {
-	      if ((c2 & 0xc0)==0x80 && (c3 & 0xc0)==0x80) {
-	        c &= 0x0f;
-	        c <<= 12;
-	        c |= (c2 & 0x3f) << 6;
-	        c |= (c3 & 0x3f);
-	      }
-	      else
-	        c = '?';
-	    }
-	    else
-	      c = EOF;
-	  }
-	  else
-	    c = EOF;
-	}
-	else
-	  c = '?';
-      }
+    /*
+     * UTF-8 decoding now runs for all builds, including DO_DBCS.  The check
+     * for high-bit characters keeps the ASCII fast path intact whenever
+     * G_decodeUtf8 is FALSE.
+     */
+    if(G_decodeUtf8 && c != EOF) {
+        leadByte = (word)(c & 0xff);
+        if(leadByte & 0x80) {
+            if((leadByte & 0xE0) == 0xC0) {
+                c2Byte = HTMLgetcLow();
+                if(c2Byte != EOF) {
+                    if(((c2Byte & 0xC0) == 0x80) && (leadByte >= 0xC2)) {
+                        codepoint = (dword)(leadByte & 0x1f);
+                        codepoint <<= 6;
+                        codepoint |= (dword)(c2Byte & 0x3f);
+                        c = (int)codepoint;
+                    } else {
+                        c = '?';
+                    }
+                } else {
+                    c = '?';
+                }
+            } else if((leadByte & 0xF0) == 0xE0) {
+                c2Byte = HTMLgetcLow();
+                if(c2Byte != EOF) {
+                    c3Byte = HTMLgetcLow();
+                    if(c3Byte != EOF) {
+                        if(((c2Byte & 0xC0) == 0x80) && ((c3Byte & 0xC0) == 0x80)) {
+                            if((leadByte == 0xE0 && c2Byte < 0xA0) ||
+                               (leadByte == 0xED && c2Byte > 0x9F)) {
+                                c = '?';
+                            } else {
+                                codepoint = (dword)(leadByte & 0x0f);
+                                codepoint <<= 12;
+                                codepoint |= (dword)(c2Byte & 0x3f) << 6;
+                                codepoint |= (dword)(c3Byte & 0x3f);
+                                if(codepoint >= 0xD800 && codepoint <= 0xDFFF) {
+                                    c = '?';
+                                } else {
+                                    c = (int)codepoint;
+                                }
+                            }
+                        } else {
+                            c = '?';
+                        }
+                    } else {
+                        c = '?';
+                    }
+                } else {
+                    c = '?';
+                }
+            } else if(((leadByte & 0xF8) == 0xF0) && (leadByte <= 0xF4)) {
+                c2Byte = HTMLgetcLow();
+                if(c2Byte != EOF) {
+                    c3Byte = HTMLgetcLow();
+                    if(c3Byte != EOF) {
+                        c4Byte = HTMLgetcLow();
+                        if(c4Byte != EOF) {
+                            if(((c2Byte & 0xC0) == 0x80) &&
+                               ((c3Byte & 0xC0) == 0x80) &&
+                               ((c4Byte & 0xC0) == 0x80) &&
+                               !((leadByte == 0xF0 && c2Byte < 0x90) ||
+                                 (leadByte == 0xF4 && c2Byte > 0x8F))) {
+                                codepoint = (dword)(leadByte & 0x07);
+                                codepoint <<= 18;
+                                codepoint |= (dword)(c2Byte & 0x3f) << 12;
+                                codepoint |= (dword)(c3Byte & 0x3f) << 6;
+                                codepoint |= (dword)(c4Byte & 0x3f);
+                                if(codepoint <= 0x10FFFF && codepoint > 0xFFFF) {
+                                    c = '?';
+                                } else if(codepoint <= 0xFFFF) {
+                                    c = (int)codepoint;
+                                } else {
+                                    c = '?';
+                                }
+                            } else {
+                                c = '?';
+                            }
+                        } else {
+                            c = '?';
+                        }
+                    } else {
+                        c = '?';
+                    }
+                } else {
+                    c = '?';
+                }
+            } else {
+                c = '?';
+            }
+        }
     }
-#endif
 
     /* "CR after LF" or "LF after CF": skip over "the other one" */
     if( (c=='\n' && lc=='\r') || (c=='\r' && lc=='\n') )
@@ -1412,6 +1494,136 @@ int LOCAL HTMLgetc(void)
 
     return c;
 }
+
+#ifdef EC
+int LOCAL Utf8FixtureGetc(dword data)
+{
+    Utf8FixtureState *state;
+    int value;
+
+    state = (Utf8FixtureState *)(void *)data;
+    if(state->index >= state->length) {
+        return EOF;
+    }
+
+    value = state->bytes[state->index];
+    state->index++;
+    return value;
+}
+
+static void LOCAL RunUtf8DecoderFixture(const byte *fixtureBytes,
+    word fixtureLength, const unsigned int *expectedCodepoints,
+    word expectedCount, Boolean decodeFlag)
+{
+    Utf8FixtureState state;
+    ReadHTML_getc *savedGc;
+    dword savedData;
+    int savedLc;
+    int savedC2;
+    Boolean savedDecode;
+    HTMLextra *savedExt;
+    unsigned int actualCodepoints[UTF8_FIXTURE_MAX];
+    unsigned int insertedChars[UTF8_FIXTURE_MAX];
+    word actualCount;
+    word i;
+    unsigned int expectedChar;
+    int ch;
+
+    EC_ERROR_IF(expectedCount > UTF8_FIXTURE_MAX,
+        ERROR_UTF8_DECODER_FIXTURE_FAILED);
+
+    state.bytes = fixtureBytes;
+    state.length = fixtureLength;
+    state.index = 0;
+
+    savedGc = gc;
+    savedData = data;
+    savedLc = lc;
+    savedC2 = c2;
+    savedDecode = G_decodeUtf8;
+    savedExt = HTMLext;
+
+    gc = Utf8FixtureGetc;
+    data = (dword)(void *)&state;
+    lc = 0;
+    c2 = 0;
+    G_decodeUtf8 = decodeFlag;
+    HTMLext = NULL;
+
+    actualCount = 0;
+    while(actualCount < expectedCount) {
+        ch = HTMLgetc();
+        if(ch == EOF) {
+            break;
+        }
+        actualCodepoints[actualCount] = (unsigned int)ch;
+        insertedChars[actualCount] = (unsigned int)ch;
+        if(insertedChars[actualCount] >= 128) {
+            insertedChars[actualCount] = TranslateCharNum(insertedChars[actualCount]);
+            if(insertedChars[actualCount] == 0) {
+                insertedChars[actualCount] = '?';
+            }
+        }
+        actualCount++;
+    }
+
+    EC_ERROR_IF(actualCount != expectedCount,
+        ERROR_UTF8_DECODER_FIXTURE_FAILED);
+
+    for(i = 0; i < expectedCount; i++) {
+        EC_ERROR_IF(actualCodepoints[i] != expectedCodepoints[i],
+            ERROR_UTF8_DECODER_FIXTURE_FAILED);
+        expectedChar = expectedCodepoints[i];
+        if(expectedChar >= 128) {
+            expectedChar = TranslateCharNum(expectedChar);
+            if(expectedChar == 0) {
+                expectedChar = '?';
+            }
+        }
+        EC_ERROR_IF(insertedChars[i] != expectedChar,
+            ERROR_UTF8_DECODER_FIXTURE_FAILED);
+    }
+
+    ch = HTMLgetc();
+    EC_ERROR_IF(ch != EOF, ERROR_UTF8_DECODER_FIXTURE_FAILED);
+
+    gc = savedGc;
+    data = savedData;
+    lc = savedLc;
+    c2 = savedC2;
+    G_decodeUtf8 = savedDecode;
+    HTMLext = savedExt;
+}
+
+void LOCAL RunUtf8DecoderFixtures(void)
+{
+    static const byte asciiFixture[] = { 'H', 'T', 'M', 'L' };
+    static const unsigned int asciiExpected[] = { 'H', 'T', 'M', 'L' };
+    static const byte bmpFixture[] =
+        { 'A', 0xC3, 0xA9, 0xE2, 0x82, 0xAC, 'B' };
+    static const unsigned int bmpExpected[] =
+        { 'A', 0x00E9, 0x20AC, 'B' };
+    static const byte nonBmpFixture[] = { 0xF0, 0x9F, 0x98, 0x80 };
+    static const unsigned int nonBmpExpected[] = { '?' };
+    static const byte invalidFixture[] = { 0xE2, 0x28, 0xA1 };
+    static const unsigned int invalidExpected[] = { '?' };
+
+    if(G_utf8FixturesRan) {
+        return;
+    }
+
+    G_utf8FixturesRan = TRUE;
+
+    RunUtf8DecoderFixture(asciiFixture, sizeof(asciiFixture), asciiExpected,
+        sizeof(asciiExpected) / sizeof(unsigned int), FALSE);
+    RunUtf8DecoderFixture(bmpFixture, sizeof(bmpFixture), bmpExpected,
+        sizeof(bmpExpected) / sizeof(unsigned int), TRUE);
+    RunUtf8DecoderFixture(nonBmpFixture, sizeof(nonBmpFixture),
+        nonBmpExpected, sizeof(nonBmpExpected) / sizeof(unsigned int), TRUE);
+    RunUtf8DecoderFixture(invalidFixture, sizeof(invalidFixture),
+        invalidExpected, sizeof(invalidExpected) / sizeof(unsigned int), TRUE);
+}
+#endif
 
 /*
  *  Get a string of consecutive characters into buffer buf[]. This
@@ -2190,6 +2402,12 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
 
     ignoreTags = 0;  /* allow tags on startup */
 
+#ifdef EC
+    if(!G_utf8FixturesRan) {
+        RunUtf8DecoderFixtures();
+    }
+#endif
+
     EC_BOUNDS(ext);
 
     /*
@@ -2220,9 +2438,8 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
     HTMLext = ext;                      /* Make extra data available globally */
 #ifdef DO_DBCS
     G_htmlCodePage = HTMLext->HE_codePage;
-#else
-    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
 #endif
+    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
     *item = InitTransferItem();         /* initialize & return transfer item */
     InitTagStacks(localHeap);           /* set up tag stacks */
 
@@ -2407,6 +2624,12 @@ int EXPORT ParsePlainFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
 
     G_isParsing = TRUE ;
 
+#ifdef EC
+    if(!G_utf8FixturesRan) {
+        RunUtf8DecoderFixtures();
+    }
+#endif
+
     /*
      * Initialize local memory
      */
@@ -2435,9 +2658,8 @@ int EXPORT ParsePlainFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
     HTMLext = ext;                      /* Make extra data available globally */
 #ifdef DO_DBCS
     G_htmlCodePage = HTMLext->HE_codePage;
-#else
-    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
 #endif
+    G_decodeUtf8 = HTMLext->HE_decodeUtf8;
     *item = InitTransferItem();         /* initialize & return transfer item */
     InitTagStacks(localHeap);           /* set up tag stacks */
 
