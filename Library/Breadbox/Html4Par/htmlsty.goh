@@ -399,7 +399,10 @@
         TAG_IS_PAR_STYLE,
         },
 
-  /*** TBODY: to be implemented ***/
+  {"TBODY",     OptrToChunk(@vcdNone), OptrToChunk(@vpdNone),
+        SPEC_TABLE_SECTION,
+        TAG_IS_PAR_STYLE|TAG_NO_FORMATTING,
+        },
 
   {"TD",        OptrToChunk(@vcdNone), OptrToChunk(@vpdNone),
         SPEC_TD,
@@ -414,14 +417,20 @@
         TAG_IS_PAR_STYLE|TAG_NO_FORMATTING|TAG_FLUSH_TEXT,
         },
 
-  /*** TFOOT: to be implemented ***/
+  {"TFOOT",     OptrToChunk(@vcdNone), OptrToChunk(@vpdNone),
+        SPEC_TABLE_SECTION,
+        TAG_IS_PAR_STYLE|TAG_NO_FORMATTING,
+        },
 
   {"TH",        OptrToChunk(@vcdBold), OptrToChunk(@vpdCenter),
         SPEC_TD,
         TAG_PAR_SPACING|TAG_IS_PAR_STYLE|TAG_IS_CHAR_STYLE,
         },
 
-  /*** THEAD: to be implemented ***/
+  {"THEAD",     OptrToChunk(@vcdNone), OptrToChunk(@vpdNone),
+        SPEC_TABLE_SECTION,
+        TAG_IS_PAR_STYLE|TAG_NO_FORMATTING,
+        },
 
   {"TITLE",     OptrToChunk(@vcdNone), OptrToChunk(@vpdNone),
     SPEC_TITLE,
