@@ -412,6 +412,58 @@ void FormElementRemoveSelectList(void);
 #define FORM_STRING_INITIALIZE_SIZE   (256 - sizeof(T_formString))
 #define FORM_STRING_ALLOCATE_SIZE     128
 
+static word FormStringEmitUtf8Char(char *p_dest, TCHAR value)
+{
+    dword codePoint;
+    word byteCount;
+    char buffer[4];
+    int index;
+    char prefix;
+
+    codePoint = (dword)value;
+    if (codePoint < 0x80)
+    {
+        if (p_dest)
+        {
+            p_dest[0] = (char)codePoint;
+        }
+        return 1;
+    }
+
+    if (codePoint < 0x800)
+    {
+        byteCount = 2;
+        prefix = (char)0xC0;
+    }
+    else if (codePoint < 0x10000)
+    {
+        byteCount = 3;
+        prefix = (char)0xE0;
+    }
+    else
+    {
+        byteCount = 4;
+        prefix = (char)0xF0;
+    }
+
+    for (index = byteCount - 1; index > 0; index--)
+    {
+        buffer[index] = (char)((codePoint & 0x3f) | 0x80);
+        codePoint >>= 6;
+    }
+    buffer[0] = (char)(prefix | codePoint);
+
+    if (p_dest)
+    {
+        for (index = 0; index < byteCount; index++)
+        {
+            p_dest[index] = buffer[index];
+        }
+    }
+
+    return byteCount;
+}
+
 MemHandle _export FormStringCreate(void)
 {
     MemHandle mem ;
@@ -470,6 +522,98 @@ void _export FormStringConvertAndAppend(MemHandle mem, TCHAR *p_string)
     T_formString *p_formString ;
     char *p_dest ;
     static char hexTable[16] = "0123456789ABCDEF" ;
+    word flags;
+    char utf8Buffer[4];
+    word utf8Count;
+    int byteIndex;
+    byte byteValue;
+
+    p_formString = MemLock(mem);
+    flags = p_formString->flags;
+    MemUnlock(mem);
+
+    if (flags & FORM_STRING_FLAG_UTF8)
+    {
+        len = 0;
+        for (p_char = p_string; *p_char; p_char++)
+        {
+            if (*p_char == 13)
+            {
+                len += 6;
+            }
+            else
+            {
+                utf8Count = FormStringEmitUtf8Char(utf8Buffer, *p_char);
+                for (byteIndex = 0; byteIndex < utf8Count; byteIndex++)
+                {
+                    byteValue = (byte)utf8Buffer[byteIndex];
+                    if (byteValue == 32)
+                    {
+                        len++;
+                    }
+                    else if (((byteValue < 64) || (byteValue >= 91 && byteValue <= 96) ||
+                             (byteValue >= 123)) && (byteValue != '.') &&
+                             ((byteValue<'0') || (byteValue>'9')) &&
+                             (byteValue != '-') && (byteValue != '_') &&
+                             (byteValue != '*'))
+                    {
+                        len += 3;
+                    }
+                    else
+                    {
+                        len++;
+                    }
+                }
+            }
+        }
+
+        p_formString = FormStringLockAndGrow(mem, len);
+        p_dest = p_formString->data + p_formString->numChars - 1;
+
+        for (p_char = p_string; *p_char; p_char++)
+        {
+            if (*p_char == 13)
+            {
+                STRCPYSB(p_dest, "%0D%0A");
+                p_dest += 6;
+            }
+            else
+            {
+                utf8Count = FormStringEmitUtf8Char(utf8Buffer, *p_char);
+                for (byteIndex = 0; byteIndex < utf8Count; byteIndex++)
+                {
+                    byteValue = (byte)utf8Buffer[byteIndex];
+                    if (byteValue == 32)
+                    {
+                        *p_dest = '+';
+                        p_dest++;
+                    }
+                    else if (((byteValue < 64) || (byteValue >= 91 && byteValue <= 96) ||
+                             (byteValue >= 123)) && (byteValue != '.') &&
+                             ((byteValue<'0') || (byteValue>'9')) &&
+                             (byteValue != '-') && (byteValue != '_') &&
+                             (byteValue != '*'))
+                    {
+                        p_dest[0] = '%';
+                        p_dest[1] = hexTable[byteValue >> 4];
+                        p_dest[2] = hexTable[byteValue & 15];
+                        p_dest += 3;
+                    }
+                    else
+                    {
+                        *p_dest = byteValue;
+                        p_dest++;
+                    }
+                }
+            }
+        }
+
+        *p_dest = '\0';
+        p_formString->numChars += len;
+
+        MemUnlock(mem);
+        return;
+    }
 
     /* Determine the new length of the string */
     for (len=0, p_char = p_string; *p_char; p_char++)  {
@@ -554,6 +698,39 @@ void _export FormStringAppend(MemHandle mem, TCHAR *p_string)
     DosCodePage cp = CODE_PAGE_LATIN_1;
     word status, backup;
 @endif
+    word flags;
+    char utf8Buffer[4];
+    word utf8Count;
+    TCHAR *p_char;
+
+    p_formString = MemLock(mem);
+    flags = p_formString->flags;
+    MemUnlock(mem);
+
+    if (flags & FORM_STRING_FLAG_UTF8)
+    {
+        len = 0;
+        for (p_char = p_string; *p_char; p_char++)
+        {
+            utf8Count = FormStringEmitUtf8Char(utf8Buffer, *p_char);
+            len += utf8Count;
+        }
+
+        p_formString = FormStringLockAndGrow(mem, len);
+        p_dest = p_formString->data + p_formString->numChars - 1;
+
+        for (p_char = p_string; *p_char; p_char++)
+        {
+            utf8Count = FormStringEmitUtf8Char(p_dest, *p_char);
+            p_dest += utf8Count;
+        }
+
+        *p_dest = '\0';
+        p_formString->numChars += len;
+
+        MemUnlock(mem);
+        return;
+    }
 
     /* Determine the new length of the string */
     len = strlen(p_string) ;
