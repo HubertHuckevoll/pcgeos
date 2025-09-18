@@ -36,6 +36,10 @@
 @include "htmlview.goh"
 @include "importg.goh"
 
+#ifndef DO_DBCS
+extern Boolean G_decodeUtf8;
+#endif
+
 #if PROGRESS_DISPLAY
 #include <sem.h>
 #endif
@@ -1826,6 +1830,9 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
 #ifdef DO_DBCS
     /* set code page */
     pself->HTI_codePage = G_codePage;
+    pself->HTI_useUtf8 = FALSE;
+#else
+    pself->HTI_useUtf8 = G_decodeUtf8;
 #endif
 
     /* Reset the status bar for javascript messages */
