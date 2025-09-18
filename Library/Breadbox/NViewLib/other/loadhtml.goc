@@ -40,6 +40,7 @@ NViewStatus LoadHTMLDoc(FDocumentDir dir, char *file, optr text)
     ext.HE_plainFont = FID_DTC_URW_SANS;
     ext.HE_exampleFont = FID_DTC_URW_MONO;
     ext.HE_options = HTML_MONOCHROME;   /* default options */
+    ext.HE_decodeUtf8 = FALSE;
 
     mh = MemAllocLMem(LMEM_TYPE_GENERAL,0);
                                         /* allocate block for more data */
