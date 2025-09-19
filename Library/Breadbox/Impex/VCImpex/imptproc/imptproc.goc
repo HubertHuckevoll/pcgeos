@@ -27,8 +27,7 @@
 
 #define VCIMPEX_DETECTION_BUFFER_SIZE   512
 
-static char
-VCImpexToUpper(char value)
+char VCImpexToUpper(char value)
 {
     char uppercaseValue;
 
@@ -40,8 +39,7 @@ VCImpexToUpper(char value)
     return uppercaseValue;
 }
 
-static Boolean
-VCImpexIsHpglCommand(char firstChar, char secondChar)
+Boolean VCImpexIsHpglCommand(char firstChar, char secondChar)
 {
     Boolean result;
 
