@@ -112,30 +112,49 @@ dword _export _pascal ImportProcedure(ImportFrame *ieb,VMChain *vmc)
     struct ie_uidata *uidata;
     VMBlockHandle gsblock;
     GStateHandle tempGS;
+    struct ie_uidata defaultUidata;
+    word resolvedOptions;
+    Boolean optionsLocked;
 
     ImpexUpdateImportExportStatus("File is being converted",-1);
 
-    uidata = (struct ie_uidata *)MemLock( ieb->IF_importOptions );
-
-    if (ieb->IF_formatNumber==FORMAT_SVG)
+    optionsLocked = FALSE;
+    defaultUidata.booleanOptions = SETTINGS_DOTEXT | SETTINGS_DOARCS;
+    uidata = &defaultUidata;
+    if (ieb->IF_importOptions != NullHandle)
     {
-        uidata->booleanOptions = 0;
-        uidata->booleanOptions |= SETTINGS_INPUT_Y_DOWN;    /* SVG is Y-down */
+        uidata = (struct ie_uidata *)MemLock( ieb->IF_importOptions );
+        if (uidata != NULL)
+        {
+            optionsLocked = TRUE;
+        }
+        else
+        {
+            uidata = &defaultUidata;
+        }
     }
 
+    resolvedOptions = uidata->booleanOptions;
+    if (ieb->IF_formatNumber==FORMAT_SVG)
+    {
+        resolvedOptions |= SETTINGS_INPUT_Y_DOWN;    /* SVG is Y-down */
+    }
+
+    uidata->booleanOptions = resolvedOptions;
+
     tempGS = GrCreateGString( ieb->IF_transferVMFile, GST_VMEM, &gsblock );
-    Meta_Start( uidata->booleanOptions, tempGS, NULL, ieb->IF_transferVMFile );     /* initialize drawing system */
+    Meta_Start( resolvedOptions, tempGS, NULL, ieb->IF_transferVMFile );     /* initialize drawing system */
 
     switch( ieb->IF_formatNumber )
     {
         case FORMAT_CGM:
-        ret = ReadCGM( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
+        ret = ReadCGM( ieb->IF_sourceFile, resolvedOptions, UpdateProgressPct );
         break;
         case FORMAT_HPGL:
-        ret = ReadHPGL( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
+        ret = ReadHPGL( ieb->IF_sourceFile, resolvedOptions, UpdateProgressPct );
         break;
         case FORMAT_SVG:
-        ret = ReadSVG( ieb->IF_sourceFile, uidata->booleanOptions, UpdateProgressPct );
+        ret = ReadSVG( ieb->IF_sourceFile, resolvedOptions, UpdateProgressPct );
         break;
         default:
         ret = TE_INVALID_FORMAT;
@@ -147,7 +166,10 @@ dword _export _pascal ImportProcedure(ImportFrame *ieb,VMChain *vmc)
 
     cif = CIF_GRAPHICS_STRING;      /* we have created a gstring */
 
-    MemUnlock( ieb->IF_importOptions );
+    if (optionsLocked != FALSE)
+    {
+        MemUnlock( ieb->IF_importOptions );
+    }
     *vmc = VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock);
                                     /* return head of VMChain for item */
 

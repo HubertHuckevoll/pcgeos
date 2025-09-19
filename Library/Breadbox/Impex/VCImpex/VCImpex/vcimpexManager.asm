@@ -121,19 +121,25 @@ TransGetImportOptions proc far
         push    di
         push    ds
 
+        cmp     dx,0
+        jne     iopt_query_ui
+        mov     ax,8001h                 ; SETTINGS_DOARCS | SETTINGS_DOTEXT defaults
+        jmp     short iopt_have_options
+iopt_query_ui:
         mov     ax,MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS
         mov     bx,dx
         mov     si,offset _booleanOptions
         mov     di,mask MF_CALL
         call    ObjMessage
 
+iopt_have_options:
         push    ax
         mov     ax,00002h
         mov     cl,050h
         mov     ch,040h
         call    MemAlloc
         xor     dx,dx
-        jc      iopt_err
+        jc      iopt_discard_saved
         push    ax
         pop     ds
         pop     ax
@@ -141,7 +147,10 @@ TransGetImportOptions proc far
         call    MemUnlock
         mov     dx,bx
         clc
-iopt_err:
+        jmp     short iopt_exit
+iopt_discard_saved:
+        pop     ax
+iopt_exit:
         pop     ds
         pop     di
         pop     si
