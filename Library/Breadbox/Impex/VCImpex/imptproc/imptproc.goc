@@ -25,6 +25,83 @@
 #include <meta.h>
 #include "vconv_ui.h"
 
+#define VCIMPEX_DETECTION_BUFFER_SIZE   512
+
+static char
+VCImpexToUpper(char value)
+{
+    char uppercaseValue;
+
+    uppercaseValue = value;
+    if ((uppercaseValue >= 'a') && (uppercaseValue <= 'z'))
+    {
+        uppercaseValue -= ('a' - 'A');
+    }
+    return uppercaseValue;
+}
+
+static Boolean
+VCImpexIsHpglCommand(char firstChar, char secondChar)
+{
+    Boolean result;
+
+    result = FALSE;
+    switch (firstChar)
+    {
+        case 'A':
+            if ((secondChar == 'A') || (secondChar == 'R'))
+            {
+                result = TRUE;
+            }
+            break;
+        case 'C':
+            if ((secondChar == 'I') || (secondChar == 'A'))
+            {
+                result = TRUE;
+            }
+            break;
+        case 'D':
+            if (secondChar == 'C')
+            {
+                result = TRUE;
+            }
+            break;
+        case 'I':
+            if ((secondChar == 'N') || (secondChar == 'P') || (secondChar == 'W'))
+            {
+                result = TRUE;
+            }
+            break;
+        case 'L':
+            if (secondChar == 'T')
+            {
+                result = TRUE;
+            }
+            break;
+        case 'P':
+            if ((secondChar == 'U') || (secondChar == 'D') || (secondChar == 'A') || (secondChar == 'R'))
+            {
+                result = TRUE;
+            }
+            break;
+        case 'S':
+            if ((secondChar == 'P') || (secondChar == 'C'))
+            {
+                result = TRUE;
+            }
+            break;
+        case 'V':
+            if (secondChar == 'S')
+            {
+                result = TRUE;
+            }
+            break;
+        default:
+            break;
+    }
+    return result;
+}
+
 Boolean _export _pascal UpdateProgressPct(word pct)
 {
     return !ImpexUpdateImportExportStatus(NULL,pct);
@@ -80,4 +157,218 @@ dword _export _pascal ImportProcedure(ImportFrame *ieb,VMChain *vmc)
         return ret;
     }
     return TE_NO_ERROR+(((dword)cif)<<16);
+}
+
+sword _pascal GetFormat(FileHandle fh)
+{
+    MemHandle sampleH;
+    char *sampleP;
+    byte *sampleByteP;
+    word bytesRead;
+    sword format;
+    Boolean hasBinary;
+    Boolean foundSvg;
+    Boolean foundCgmToken;
+    Boolean hasHpglKeyword;
+    word index;
+    word startIndex;
+    Boolean startOfCommand;
+    char firstCommandChar;
+    word commandLetterCount;
+    word hpglCommandCount;
+    byte currentByte;
+    char uppercaseChar;
+    word svgIndex;
+    char svgChar1;
+    char svgChar2;
+    char svgChar3;
+    char svgChar4;
+    char svgChar5;
+
+    sampleH = MemAlloc(VCIMPEX_DETECTION_BUFFER_SIZE, HF_DYNAMIC, HAF_STANDARD | HAF_ZERO_INIT);
+    if (sampleH == NullHandle)
+    {
+        return NO_IDEA_FORMAT;
+    }
+
+    sampleP = (char *)MemLock(sampleH);
+    if (sampleP == NULL)
+    {
+        MemFree(sampleH);
+        return NO_IDEA_FORMAT;
+    }
+
+    sampleByteP = (byte *)sampleP;
+    bytesRead = FileRead(fh, (void *)sampleP, VCIMPEX_DETECTION_BUFFER_SIZE, FALSE);
+    if (bytesRead == 0xffff)
+    {
+        bytesRead = 0;
+    }
+    FilePos(fh, 0L, FILE_POS_START);
+
+    format = NO_IDEA_FORMAT;
+    hasBinary = FALSE;
+    foundSvg = FALSE;
+    foundCgmToken = FALSE;
+    hasHpglKeyword = FALSE;
+    startIndex = 0;
+    startOfCommand = TRUE;
+    firstCommandChar = 0;
+    commandLetterCount = 0;
+    hpglCommandCount = 0;
+
+    if (bytesRead >= 3)
+    {
+        if ((sampleByteP[0] == 0xef) && (sampleByteP[1] == 0xbb) && (sampleByteP[2] == 0xbf))
+        {
+            startIndex = 3;
+        }
+    }
+
+    if ((startIndex == 0) && (bytesRead >= 2))
+    {
+        if (((sampleByteP[0] == 0xff) && (sampleByteP[1] == 0xfe)) ||
+            ((sampleByteP[0] == 0xfe) && (sampleByteP[1] == 0xff)))
+        {
+            hasBinary = TRUE;
+        }
+    }
+
+    for (index = startIndex; index < bytesRead; index++)
+    {
+        currentByte = sampleByteP[index];
+
+        if ((currentByte < 0x20) && (currentByte != 0x09) && (currentByte != 0x0a) &&
+            (currentByte != 0x0d) && (currentByte != 0x0c))
+        {
+            hasBinary = TRUE;
+        }
+
+        if (!foundSvg && (currentByte == '<'))
+        {
+            svgIndex = index + 1;
+            while ((svgIndex < bytesRead) &&
+                   ((sampleByteP[svgIndex] == ' ') || (sampleByteP[svgIndex] == '\t') ||
+                    (sampleByteP[svgIndex] == '\r') || (sampleByteP[svgIndex] == '\n')))
+            {
+                svgIndex++;
+            }
+            if ((svgIndex + 2) < bytesRead)
+            {
+                svgChar1 = VCImpexToUpper((char)sampleByteP[svgIndex]);
+                svgChar2 = VCImpexToUpper((char)sampleByteP[svgIndex + 1]);
+                svgChar3 = VCImpexToUpper((char)sampleByteP[svgIndex + 2]);
+                if ((svgChar1 == 'S') && (svgChar2 == 'V') && (svgChar3 == 'G'))
+                {
+                    foundSvg = TRUE;
+                }
+            }
+        }
+
+        if (!foundCgmToken)
+        {
+            uppercaseChar = VCImpexToUpper((char)currentByte);
+            if ((uppercaseChar == 'B') && ((index + 4) < bytesRead))
+            {
+                svgChar1 = VCImpexToUpper((char)sampleByteP[index + 1]);
+                svgChar2 = VCImpexToUpper((char)sampleByteP[index + 2]);
+                svgChar3 = VCImpexToUpper((char)sampleByteP[index + 3]);
+                svgChar4 = VCImpexToUpper((char)sampleByteP[index + 4]);
+                if ((svgChar1 == 'E') && (svgChar2 == 'G') && (svgChar3 == 'M') && (svgChar4 == 'F'))
+                {
+                    foundCgmToken = TRUE;
+                }
+                else if ((svgChar1 == 'E') && (svgChar2 == 'G') && (svgChar3 == 'P') && (svgChar4 == 'I') &&
+                         ((index + 5) < bytesRead))
+                {
+                    svgChar5 = VCImpexToUpper((char)sampleByteP[index + 5]);
+                    if (svgChar5 == 'C')
+                    {
+                        foundCgmToken = TRUE;
+                    }
+                }
+            }
+            if (!foundCgmToken && (uppercaseChar == 'E') && ((index + 4) < bytesRead))
+            {
+                svgChar1 = VCImpexToUpper((char)sampleByteP[index + 1]);
+                svgChar2 = VCImpexToUpper((char)sampleByteP[index + 2]);
+                svgChar3 = VCImpexToUpper((char)sampleByteP[index + 3]);
+                svgChar4 = VCImpexToUpper((char)sampleByteP[index + 4]);
+                if ((svgChar1 == 'N') && (svgChar2 == 'D') && (svgChar3 == 'M') && (svgChar4 == 'F'))
+                {
+                    foundCgmToken = TRUE;
+                }
+            }
+        }
+
+        if (!hasHpglKeyword && ((index + 3) < bytesRead))
+        {
+            svgChar1 = VCImpexToUpper((char)sampleByteP[index]);
+            svgChar2 = VCImpexToUpper((char)sampleByteP[index + 1]);
+            svgChar3 = VCImpexToUpper((char)sampleByteP[index + 2]);
+            svgChar4 = VCImpexToUpper((char)sampleByteP[index + 3]);
+            if ((svgChar1 == 'H') && (svgChar2 == 'P') && (svgChar3 == 'G') && (svgChar4 == 'L'))
+            {
+                hasHpglKeyword = TRUE;
+            }
+        }
+
+        if (startOfCommand)
+        {
+            if ((currentByte == ' ') || (currentByte == '\t') ||
+                (currentByte == '\r') || (currentByte == '\n'))
+            {
+                continue;
+            }
+            uppercaseChar = VCImpexToUpper((char)currentByte);
+            if ((uppercaseChar >= 'A') && (uppercaseChar <= 'Z'))
+            {
+                if (commandLetterCount == 0)
+                {
+                    firstCommandChar = uppercaseChar;
+                    commandLetterCount = 1;
+                }
+                else
+                {
+                    if (VCImpexIsHpglCommand(firstCommandChar, uppercaseChar))
+                    {
+                        hpglCommandCount++;
+                    }
+                    startOfCommand = FALSE;
+                    commandLetterCount = 0;
+                }
+            }
+            else
+            {
+                startOfCommand = FALSE;
+                commandLetterCount = 0;
+            }
+        }
+        else
+        {
+            if ((currentByte == ';') || (currentByte == '\n') || (currentByte == '\r'))
+            {
+                startOfCommand = TRUE;
+                commandLetterCount = 0;
+            }
+        }
+    }
+
+    MemUnlock(sampleH);
+    MemFree(sampleH);
+
+    if (foundSvg)
+    {
+        format = FORMAT_SVG;
+    }
+    else if (hasBinary || foundCgmToken)
+    {
+        format = FORMAT_CGM;
+    }
+    else if ((hpglCommandCount >= 2) || hasHpglKeyword)
+    {
+        format = FORMAT_HPGL;
+    }
+
+    return format;
 }

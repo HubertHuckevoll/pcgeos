@@ -12,6 +12,7 @@ global _ImportSettings: nptr
 
 imptproc_TEXT   segment public 'CODE'
   extrn  IMPORTPROCEDURE: far
+  extrn  GETFORMAT: far
 imptproc_TEXT   ends
 
 
@@ -73,8 +74,15 @@ _vmc    local   dword
 TransImport endp
 
 TransGetFormat proc far
-        mov     cx,0FFFFh               ; don't know...
-        xor     ax,ax
+        uses    es,ds,si,di,bx,dx
+        .enter
+          push    si                    ; handle of file to be tested
+          mov     ax,idata              ; DS=dgroup for GOC code
+          mov     ds,ax
+          call    GETFORMAT             ; Call high-level procedure to do work
+          mov     cx,ax                 ; return format number
+          xor     ax,ax                 ; no error
+        .leave
         retf
 TransGetFormat endp
 
