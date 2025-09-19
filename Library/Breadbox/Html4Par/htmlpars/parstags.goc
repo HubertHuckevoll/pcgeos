@@ -1023,6 +1023,11 @@ void OpenTag(word tagStyle, HTMLStylesTable *tagStyleEntry, optr paramArray)
 
     /* Parse generic style attributes */
     ParseStyle(paramArray, &arg.pa, &arg.ca);
+    if(!(tagStyleEntry->flags & TAG_IS_PAR_STYLE))
+    {
+        arg.pa.PSD_which &= ~PSD_JUSTIFY;
+        arg.pa.PSD_attributes &= ~VTPAA_JUSTIFICATION;
+    }
 
     /* Initialize arguments for tag handler */
     arg.spec = tagStyleEntry->spec;
