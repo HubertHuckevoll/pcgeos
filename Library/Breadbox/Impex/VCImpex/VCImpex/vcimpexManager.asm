@@ -32,7 +32,7 @@ INIT    segment resource
 
         db      "OK"
         dw      InfoResource            ; resource containing format names
-        dw      4                       ; contains four sub-formats
+        dw      3                       ; contains three sub-formats
         dw      4000h                   ; this is a graphics translator
         db      "OK"
 
@@ -173,7 +173,7 @@ InfoResource    segment lmem LMEM_TYPE_GENERAL,mask LMF_IN_RESOURCE
           dw      8000h                 ; Currently we only support import
 
         dw      fmt_3_name,fmt_3_mask
-          D_OPTR  _ImportSettings
+          D_OPTR  0
           dw      0,0
           dw      8000h                 ; Currently we only support import
 
