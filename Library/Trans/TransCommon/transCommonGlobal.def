@@ -1,33 +1,96 @@
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (c) GeoWorks 1992 -- All Rights Reserved
+        Copyright (c) GeoWorks 1992 -- All Rights Reserved
 
-PROJECT:	PC GEOS
-MODULE:		Impex-pcx Graphics Translation Library
-FILE:		transCommonGlobal.def
+PROJECT:        PC GEOS
+MODULE:         Impex-pcx Graphics Translation Library
+FILE:           transCommonGlobal.def
 
-AUTHOR:		Jenny Greenwood, 4 May, 1992
-	
+AUTHOR:         Jenny Greenwood, 4 May, 1992
+
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	Jenny	5/4/92		Initial version
+        Name    Date            Description
+        ----    ----            -----------
+        Jenny   5/4/92          Initial version
+        ChatGPT 4/3/24          Document shared veneer helpers
 
 
 DESCRIPTION:
-	This file contains symbol definitions global to all
-	translation libraries.
+        This file contains symbol definitions global to all
+        translation libraries.
 
-	$Id: transCommonGlobal.def,v 1.1 97/04/07 11:42:24 newdeal Exp $
+        $Id: transCommonGlobal.def,v 1.1 97/04/07 11:42:24 newdeal Exp $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 ;-----------------------------------------------------------------------------
 
-ResidentCode	segment	resource
+ResidentCode    segment resource
 
-global	TransLibraryEntry:far
-global	TransLibraryThreadPSem:far
-global	TransLibraryThreadVSem:far
+global  TransLibraryEntry:far
+global  TransLibraryThreadPSem:far
+global  TransLibraryThreadVSem:far
 
-ResidentCode	ends
+ResidentCode    ends
+
+;-----------------------------------------------------------------------------
+;       Common veneer configuration helpers
+;-----------------------------------------------------------------------------
+;
+; Translators that reuse Library/Trans/TransCommon/transCStub.asm can set the
+; header fields and helper bindings purely with assembler equates/macros.  The
+; veneer expects the following constants to be defined before it is included:
+;
+;       TRANS_STRINGS_RESOURCE   - resource handle containing format strings
+;       TRANS_FORMAT_COUNT       - number of formats exported by the library
+;       TRANS_DATA_CLASS         - ImpexDataClasses mask supported
+;
+; The helper entry points default to the legacy uppercase names produced by
+; Watcom (_pascal _export ImportProcedure, etc.).  These macros provide a
+; readable way to redirect the veneer to alternate helper functions when
+; necessary.
+;
+; Example usage:
+;
+;       TransVeneerHeader InfoResource, 1, mask IDC_TEXT
+;       TransVeneerHelpers EXPORTPROCEDURE, IMPORTPROCEDURE, GETFORMAT
+;       TransVeneerImportUI  MyGetImportUI
+;
+; The optional hooks default to internal no-ops; specify only the helpers that
+; your translator actually implements.
+;
+TransVeneerHeader        macro   stringsRes, formatCount, dataClass
+        TRANS_STRINGS_RESOURCE   equ     stringsRes
+        TRANS_FORMAT_COUNT       equ     formatCount
+        TRANS_DATA_CLASS         equ     dataClass
+        endm
+
+TransVeneerHelpers       macro   exportProc, importProc, getFormatProc
+        TRANS_EXPORT_HELPER      textequ <exportProc>
+        TRANS_IMPORT_HELPER      textequ <importProc>
+        TRANS_GETFORMAT_HELPER   textequ <getFormatProc>
+        endm
+
+TransVeneerImportUI      macro   helper
+        TRANS_IMPORT_UI_HELPER   textequ <helper>
+        endm
+
+TransVeneerExportUI      macro   helper
+        TRANS_EXPORT_UI_HELPER   textequ <helper>
+        endm
+
+TransVeneerInitImportUI  macro   helper
+        TRANS_INIT_IMPORT_UI_HELPER     textequ <helper>
+        endm
+
+TransVeneerInitExportUI  macro   helper
+        TRANS_INIT_EXPORT_UI_HELPER     textequ <helper>
+        endm
+
+TransVeneerImportOptions macro   helper
+        TRANS_IMPORT_OPTIONS_HELPER     textequ <helper>
+        endm
+
+TransVeneerExportOptions macro   helper
+        TRANS_EXPORT_OPTIONS_HELPER     textequ <helper>
+        endm

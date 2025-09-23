@@ -1,0 +1,72 @@
+/***********************************************************************
+ *
+ * PROJECT:       PC GEOS Translation Libraries
+ * FILE:          transCommonVeneer.goh
+ *
+ * DESCRIPTION:
+ *      Prototypes and helper documentation for the shared Impex veneer.
+ *
+ ***********************************************************************/
+
+#ifndef __TRANSCOMMON_VENEER_GOH
+#define __TRANSCOMMON_VENEER_GOH
+
+/* Import the standard Impex structures used by the veneers */
+@include <impex.goh>
+@include <Objects/gCtrlC.goh>
+
+/*----------------------------------------------------------------------
+ *  Mandatory helpers (names match the defaults expected by the veneer)
+ *----------------------------------------------------------------------*/
+
+word _pascal _export ExportProcedure(ExportFrame *frame);
+dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain);
+
+/*
+ * GetFormat helper
+ *
+ *  Return value   = low word holds the TransError (TE_NO_ERROR on success)
+ *                   high word holds the matched format number or
+ *                   NO_IDEA_FORMAT when the translator cannot identify
+ *                   the file.
+ */
+dword _pascal _export GetFormat(FileHandle file);
+
+/*----------------------------------------------------------------------
+ *  Optional helpers
+ *----------------------------------------------------------------------*/
+
+/*
+ * TransGetImportUIHelper / TransGetExportUIHelper
+ *
+ *  format        = enumeration index supplied by Impex
+ *  outTree       = pointer to an optr that receives the root of the UI tree
+ *  outClass      = pointer to a ClassStruct far pointer (may be NULL)
+ */
+void _pascal _export TransGetImportUIHelper(word format, optr *outTree,
+    ClassStruct **outClass);
+void _pascal _export TransGetExportUIHelper(word format, optr *outTree,
+    ClassStruct **outClass);
+
+/*
+ * TransInitImportUIHelper / TransInitExportUIHelper
+ *
+ *  duplicatedUI  = optr returned by the corresponding Get*UI helper.
+ */
+void _pascal _export TransInitImportUIHelper(optr duplicatedUI);
+void _pascal _export TransInitExportUIHelper(optr duplicatedUI);
+
+/*
+ * TransGetImportOptionsHelper / TransGetExportOptionsHelper
+ *
+ *  format        = enumeration index supplied by Impex
+ *  uiHandle      = handle of the duplicated UI block (0 if no UI)
+ *
+ * Return value   = MemHandle with serialized options (0 for "no options").
+ */
+MemHandle _pascal _export TransGetImportOptionsHelper(word format,
+    MemHandle uiHandle);
+MemHandle _pascal _export TransGetExportOptionsHelper(word format,
+    MemHandle uiHandle);
+
+#endif /* __TRANSCOMMON_VENEER_GOH */
