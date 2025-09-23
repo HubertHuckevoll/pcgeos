@@ -11,9 +11,21 @@
 @include <stdapp.goh>
 @include <Objects/clipbrd.goh>
 @include <impex.goh>
+#include <lmem.h>
 #include <vm.h>
 #include <xlatLib.h>
 #include <transCommonVeneer.goh>
+
+#define VENEER_FORMAT_INFO_FLAGS 0xC000
+
+typedef struct
+{
+    ChunkHandle formatName;
+    ChunkHandle formatMask;
+    optr importUI;
+    optr exportUI;
+    word formatInfo;
+} VeneerFormatInfoEntry;
 
 #define VENEER_IMPORT_BOOLEAN_UPPERCASE 0
 #define VENEER_IMPORT_BOOLEAN_TRIM 1
@@ -43,6 +55,22 @@ static VeneerSampleOptionsCache veneerOptionsCache =
     { FALSE, TRUE },
     { TRUE, TRUE }
 };
+
+@start InfoResource;
+
+@chunk char VeneerFormatName[] = "Veneer sample";
+@chunk char VeneerFormatMask[] = "*.txt";
+
+@chunk VeneerFormatInfoEntry VeneerInfoTable =
+{
+    @VeneerFormatName,
+    @VeneerFormatMask,
+    @VeneerImportDialog,
+    @VeneerExportDialog,
+    VENEER_FORMAT_INFO_FLAGS
+};
+
+@end InfoResource;
 
 @start VeneerUI;
 
