@@ -13,10 +13,13 @@
 @include <impex.goh>
 #include <lmem.h>
 #include <vm.h>
+#include <file.h>
+#include <localize.h>
 #include <xlatLib.h>
 #include <transCommonVeneer.goh>
 
 #define VENEER_FORMAT_INFO_FLAGS 0xC000
+#define VENEER_FORMAT_COUNT 2
 
 typedef struct
 {
@@ -46,28 +49,83 @@ typedef struct
 
 typedef struct
 {
+    ChunkHandle defaultMask;
+    ChunkHandle maskTable;
+    word maskCount;
+} VeneerFormatExtensionInfoEntry;
+
+typedef struct
+{
     VeneerImportOptions importOptions;
     VeneerExportOptions exportOptions;
-} VeneerSampleOptionsCache;
+} VeneerFormatOptionsCacheEntry;
 
-static VeneerSampleOptionsCache veneerOptionsCache =
+static VeneerFormatOptionsCacheEntry veneerOptionsCache[VENEER_FORMAT_COUNT] =
 {
-    { FALSE, TRUE },
-    { TRUE, TRUE }
+    {
+        { FALSE, TRUE },
+        { TRUE, TRUE }
+    },
+    {
+        { FALSE, FALSE },
+        { FALSE, TRUE }
+    }
 };
 
 @start InfoResource;
 
-@chunk char VeneerFormatName[] = "Veneer sample";
-@chunk char VeneerFormatMask[] = "*.txt";
+@chunk char VeneerPlainTextName[] = "Plain text";
+@chunk char VeneerPlainTextMaskTxt[] = "*.txt";
+@chunk char VeneerPlainTextMaskText[] = "*.text";
+@chunk char VeneerPlainTextMaskAsc[] = "*.asc";
 
-@chunk VeneerFormatInfoEntry VeneerInfoTable =
+@chunk char VeneerMarkdownName[] = "Markdown";
+@chunk char VeneerMarkdownMaskMd[] = "*.md";
+@chunk char VeneerMarkdownMaskMarkdown[] = "*.markdown";
+
+@chunk ChunkHandle VeneerPlainTextMaskHandles[] =
 {
-    @VeneerFormatName,
-    @VeneerFormatMask,
-    @VeneerImportDialog,
-    @VeneerExportDialog,
-    VENEER_FORMAT_INFO_FLAGS
+    @VeneerPlainTextMaskTxt,
+    @VeneerPlainTextMaskText,
+    @VeneerPlainTextMaskAsc
+};
+
+@chunk ChunkHandle VeneerMarkdownMaskHandles[] =
+{
+    @VeneerMarkdownMaskMd,
+    @VeneerMarkdownMaskMarkdown
+};
+
+@chunk VeneerFormatExtensionInfoEntry VeneerFormatExtensionInfoTable[] =
+{
+    {
+        @VeneerPlainTextMaskTxt,
+        @VeneerPlainTextMaskHandles,
+        3
+    },
+    {
+        @VeneerMarkdownMaskMd,
+        @VeneerMarkdownMaskHandles,
+        2
+    }
+};
+
+@chunk VeneerFormatInfoEntry VeneerInfoTable[] =
+{
+    {
+        @VeneerPlainTextName,
+        @VeneerPlainTextMaskTxt,
+        @VeneerImportDialog,
+        @VeneerExportDialog,
+        VENEER_FORMAT_INFO_FLAGS
+    },
+    {
+        @VeneerMarkdownName,
+        @VeneerMarkdownMaskMd,
+        @VeneerImportDialog,
+        @VeneerExportDialog,
+        VENEER_FORMAT_INFO_FLAGS
+    }
 };
 
 @end InfoResource;
@@ -147,15 +205,177 @@ static VeneerSampleOptionsCache veneerOptionsCache =
 
 @end VeneerUI;
 
+static word VeneerClampFormatIndex(word requestedFormat)
+{
+    word formatIndex;
+
+    formatIndex = requestedFormat;
+    if (formatIndex >= VENEER_FORMAT_COUNT)
+    {
+        formatIndex = 0;
+    }
+    return formatIndex;
+}
+
+static const char *VeneerFindExtensionStart(const char *fileName)
+{
+    const char *extensionP;
+    const char *scanP;
+
+    extensionP = (const char *)(void *)NULL;
+    scanP = fileName;
+    if (scanP == (const char *)(void *)NULL)
+    {
+        return (const char *)(void *)NULL;
+    }
+
+    while (*scanP != '\0')
+    {
+        if (*scanP == '.')
+        {
+            extensionP = scanP + 1;
+        }
+        scanP++;
+    }
+
+    if (extensionP == (const char *)(void *)NULL)
+    {
+        return (const char *)(void *)NULL;
+    }
+
+    if (*extensionP == '\0')
+    {
+        return (const char *)(void *)NULL;
+    }
+
+    return extensionP;
+}
+
+static Boolean VeneerMaskMatchesExtension(const char *maskString, const char *extensionString)
+{
+    const char *maskExtensionP;
+    const char *scanP;
+    Boolean result;
+
+    result = FALSE;
+    if ((maskString == (const char *)(void *)NULL) || (extensionString == (const char *)(void *)NULL))
+    {
+        return result;
+    }
+
+    maskExtensionP = maskString;
+    scanP = maskString;
+    while (*scanP != '\0')
+    {
+        if (*scanP == '.')
+        {
+            maskExtensionP = scanP + 1;
+        }
+        scanP++;
+    }
+
+    if (maskExtensionP == maskString)
+    {
+        if ((maskExtensionP[0] == '*') && (maskExtensionP[1] == '\0'))
+        {
+            return TRUE;
+        }
+    }
+
+    if (maskExtensionP[0] == '*')
+    {
+        if (maskExtensionP[1] == '\0')
+        {
+            return TRUE;
+        }
+    }
+
+    if (*maskExtensionP == '\0')
+    {
+        return result;
+    }
+
+    if (LocalCmpStringsNoCase(maskExtensionP, extensionString, 0) == 0)
+    {
+        result = TRUE;
+    }
+
+    return result;
+}
+
+static sword VeneerResolveFormatFromExtension(const char *extensionString)
+{
+    MemHandle infoResourceH;
+    void *lockedResourceP;
+    VeneerFormatExtensionInfoEntry *extensionInfoP;
+    ChunkHandle *maskHandleListP;
+    char *maskStringP;
+    word formatIndex;
+    word maskIndex;
+    sword result;
+
+    result = NO_IDEA_FORMAT;
+    if (extensionString == (const char *)(void *)NULL)
+    {
+        return result;
+    }
+
+    infoResourceH = HandleOf(@VeneerFormatExtensionInfoTable);
+    lockedResourceP = (void *)MemLock(infoResourceH);
+    if (lockedResourceP == (void *)NULL)
+    {
+        return result;
+    }
+
+    extensionInfoP = (VeneerFormatExtensionInfoEntry *)(void *)LMemDerefHandles(infoResourceH, @VeneerFormatExtensionInfoTable);
+    if (extensionInfoP == (VeneerFormatExtensionInfoEntry *)(void *)NULL)
+    {
+        MemUnlock(infoResourceH);
+        return result;
+    }
+
+    formatIndex = 0;
+    while (formatIndex < VENEER_FORMAT_COUNT)
+    {
+        maskHandleListP = (ChunkHandle *)(void *)NULL;
+        if (extensionInfoP[formatIndex].maskTable != NullChunk)
+        {
+            maskHandleListP = (ChunkHandle *)(void *)LMemDerefHandles(infoResourceH, extensionInfoP[formatIndex].maskTable);
+        }
+        if (maskHandleListP != (ChunkHandle *)(void *)NULL)
+        {
+            maskIndex = 0;
+            while (maskIndex < extensionInfoP[formatIndex].maskCount)
+            {
+                maskStringP = (char *)(void *)LMemDerefHandles(infoResourceH, maskHandleListP[maskIndex]);
+                if ((maskStringP != (char *)(void *)NULL) &&
+                    (VeneerMaskMatchesExtension(maskStringP, extensionString) == TRUE))
+                {
+                    MemUnlock(infoResourceH);
+                    return (sword)formatIndex;
+                }
+                maskIndex++;
+            }
+        }
+        formatIndex++;
+    }
+
+    MemUnlock(infoResourceH);
+    return result;
+}
+
 word _pascal _export ExportProcedure(ExportFrame *frame)
 {
     VeneerExportOptions activeOptions;
     VeneerExportOptions *optionsP;
     MemHandle optionsH;
+    word formatIndex;
     word result;
 
     optionsP = (VeneerExportOptions *)(void *)NULL;
     optionsH = frame->EF_exportOptions;
+    formatIndex = VeneerClampFormatIndex(frame->EF_formatNumber);
+    activeOptions = veneerOptionsCache[formatIndex].exportOptions;
     if (optionsH != NullHandle)
     {
         optionsP = (VeneerExportOptions *)(void *)MemLock(optionsH);
@@ -164,17 +384,11 @@ word _pascal _export ExportProcedure(ExportFrame *frame)
             activeOptions = *optionsP;
             MemUnlock(optionsH);
         }
-        else
-        {
-            activeOptions = veneerOptionsCache.exportOptions;
-        }
         MemFree(optionsH);
         frame->EF_exportOptions = NullHandle;
     }
-    else
-    {
-        activeOptions = veneerOptionsCache.exportOptions;
-    }
+
+    veneerOptionsCache[formatIndex].exportOptions = activeOptions;
 
     (void)activeOptions;
 
@@ -190,9 +404,12 @@ dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain)
     VMChain emptyChain;
     word clipboardFormat;
     dword result;
+    word formatIndex;
 
     optionsP = (VeneerImportOptions *)(void *)NULL;
     optionsH = frame->IF_importOptions;
+    formatIndex = VeneerClampFormatIndex(frame->IF_formatNumber);
+    activeOptions = veneerOptionsCache[formatIndex].importOptions;
     if (optionsH != NullHandle)
     {
         optionsP = (VeneerImportOptions *)(void *)MemLock(optionsH);
@@ -201,17 +418,11 @@ dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain)
             activeOptions = *optionsP;
             MemUnlock(optionsH);
         }
-        else
-        {
-            activeOptions = veneerOptionsCache.importOptions;
-        }
         MemFree(optionsH);
         frame->IF_importOptions = NullHandle;
     }
-    else
-    {
-        activeOptions = veneerOptionsCache.importOptions;
-    }
+
+    veneerOptionsCache[formatIndex].importOptions = activeOptions;
 
     emptyChain = 0L;
     *resultChain = emptyChain;
@@ -225,10 +436,19 @@ dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain)
 
 sword _pascal _export GetFormat(FileHandle file)
 {
+    FileLongName fileName;
+    word attributeError;
+    const char *extensionP;
     sword result;
 
-    (void)file;
-    result = 0;
+    attributeError = FileGetHandleExtAttributes(file, FEA_NAME, (void *)fileName, sizeof(FileLongName));
+    if (attributeError != 0)
+    {
+        return NO_IDEA_FORMAT;
+    }
+
+    extensionP = VeneerFindExtensionStart((const char *)(void *)fileName);
+    result = VeneerResolveFormatFromExtension(extensionP);
     return result;
 }
 
@@ -292,12 +512,12 @@ MemHandle _pascal _export TransGetImportOptionsHelper(word format, MemHandle uiH
     VeneerImportOptions *optionsP;
     MemHandle optionsH;
     word selectedBooleans;
+    word formatIndex;
 
-    (void)format;
     optionsP = (VeneerImportOptions *)(void *)NULL;
     selectedBooleans = 0;
-    options.uppercase = FALSE;
-    options.trimWhitespace = TRUE;
+    formatIndex = VeneerClampFormatIndex(format);
+    options = veneerOptionsCache[formatIndex].importOptions;
 
     if (uiHandle != NullHandle)
     {
@@ -309,7 +529,7 @@ MemHandle _pascal _export TransGetImportOptionsHelper(word format, MemHandle uiH
     optionsH = MemAlloc(sizeof(VeneerImportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
     if (optionsH == NullHandle)
     {
-        veneerOptionsCache.importOptions = options;
+        veneerOptionsCache[formatIndex].importOptions = options;
         return NullHandle;
     }
 
@@ -320,7 +540,7 @@ MemHandle _pascal _export TransGetImportOptionsHelper(word format, MemHandle uiH
         MemUnlock(optionsH);
     }
 
-    veneerOptionsCache.importOptions = options;
+    veneerOptionsCache[formatIndex].importOptions = options;
     return optionsH;
 }
 
@@ -330,12 +550,12 @@ MemHandle _pascal _export TransGetExportOptionsHelper(word format, MemHandle uiH
     VeneerExportOptions *optionsP;
     MemHandle optionsH;
     word selectedBooleans;
+    word formatIndex;
 
-    (void)format;
     optionsP = (VeneerExportOptions *)(void *)NULL;
     selectedBooleans = 0;
-    options.includeHeader = TRUE;
-    options.wrapLines = TRUE;
+    formatIndex = VeneerClampFormatIndex(format);
+    options = veneerOptionsCache[formatIndex].exportOptions;
 
     if (uiHandle != NullHandle)
     {
@@ -347,7 +567,7 @@ MemHandle _pascal _export TransGetExportOptionsHelper(word format, MemHandle uiH
     optionsH = MemAlloc(sizeof(VeneerExportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
     if (optionsH == NullHandle)
     {
-        veneerOptionsCache.exportOptions = options;
+        veneerOptionsCache[formatIndex].exportOptions = options;
         return NullHandle;
     }
 
@@ -358,6 +578,6 @@ MemHandle _pascal _export TransGetExportOptionsHelper(word format, MemHandle uiH
         MemUnlock(optionsH);
     }
 
-    veneerOptionsCache.exportOptions = options;
+    veneerOptionsCache[formatIndex].exportOptions = options;
     return optionsH;
 }
