@@ -21,7 +21,16 @@
 
 word _pascal _export ExportProcedure(ExportFrame *frame);
 dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain);
-sword _pascal _export GetFormat(FileHandle file);
+
+/*
+ * GetFormat helper
+ *
+ *  Return value   = low word holds the TransError (TE_NO_ERROR on success)
+ *                   high word holds the matched format number or
+ *                   NO_IDEA_FORMAT when the translator cannot identify
+ *                   the file.
+ */
+dword _pascal _export GetFormat(FileHandle file);
 
 /*----------------------------------------------------------------------
  *  Optional helpers

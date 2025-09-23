@@ -434,21 +434,28 @@ dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain)
     return result;
 }
 
-sword _pascal _export GetFormat(FileHandle file)
+dword _pascal _export GetFormat(FileHandle file)
 {
     FileLongName fileName;
     word attributeError;
     const char *extensionP;
-    sword result;
+    sword format;
+    TransError error;
+    dword result;
 
     attributeError = FileGetHandleExtAttributes(file, FEA_NAME, (void *)fileName, sizeof(FileLongName));
     if (attributeError != 0)
     {
-        return NO_IDEA_FORMAT;
+        format = NO_IDEA_FORMAT;
+        error = TE_FILE_ERROR;
+        result = ((dword)((word)format) << 16) | (dword)error;
+        return result;
     }
 
     extensionP = VeneerFindExtensionStart((const char *)(void *)fileName);
-    result = VeneerResolveFormatFromExtension(extensionP);
+    format = VeneerResolveFormatFromExtension(extensionP);
+    error = TE_NO_ERROR;
+    result = ((dword)((word)format) << 16) | (dword)error;
     return result;
 }
 

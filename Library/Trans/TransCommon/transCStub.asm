@@ -172,8 +172,7 @@ _vmResult       local   dword
                 mov     ds, ax
                 call    TRANS_IMPORT_HELPER
                 mov     bx, dx
-                mov     dx, word ptr _vmResult
-                mov     cx, word ptr _vmResult+2
+                movdw   dxcx, _vmResult
         .leave
         ret
 TransImport     endp
@@ -193,8 +192,7 @@ TransGetFormat  proc    far
                 mov     ax, idata
                 mov     ds, ax
                 call    TRANS_GETFORMAT_HELPER
-                mov     cx, ax
-                xor     ax, ax
+                mov     cx, dx
         .leave
         retf
 TransGetFormat  endp
