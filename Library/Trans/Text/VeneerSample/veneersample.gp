@@ -14,6 +14,11 @@ library impex
 library text
 library ansic
 
+nosort
+resource ResidentCode code read-only shared
+resource InfoResource lmem read-only shared
+resource VeneerUI ui-object read-only
+
 export TransGetImportUI
 export TransGetExportUI
 export TransInitImportUI

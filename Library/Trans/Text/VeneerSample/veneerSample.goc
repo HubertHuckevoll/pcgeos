@@ -15,25 +15,182 @@
 #include <xlatLib.h>
 #include <transCommonVeneer.goh>
 
+#define VENEER_IMPORT_BOOLEAN_UPPERCASE 0
+#define VENEER_IMPORT_BOOLEAN_TRIM 1
+#define VENEER_EXPORT_BOOLEAN_HEADER 0
+#define VENEER_EXPORT_BOOLEAN_WRAP 1
+
+typedef struct
+{
+    Boolean uppercase;
+    Boolean trimWhitespace;
+} VeneerImportOptions;
+
+typedef struct
+{
+    Boolean includeHeader;
+    Boolean wrapLines;
+} VeneerExportOptions;
+
+typedef struct
+{
+    VeneerImportOptions importOptions;
+    VeneerExportOptions exportOptions;
+} VeneerSampleOptionsCache;
+
+static VeneerSampleOptionsCache veneerOptionsCache =
+{
+    { FALSE, TRUE },
+    { TRUE, TRUE }
+};
+
+@start VeneerUI;
+
+@visMoniker VeneerImportDialogMoniker = "Import sample options";
+@visMoniker VeneerExportDialogMoniker = "Export sample options";
+@visMoniker VeneerImportUppercaseMoniker = "Convert imported text to uppercase";
+@visMoniker VeneerImportTrimMoniker = "Trim leading and trailing whitespace";
+@visMoniker VeneerExportHeaderMoniker = "Write a header comment";
+@visMoniker VeneerExportWrapMoniker = "Wrap long lines at column 72";
+
+@object GenInteractionClass VeneerImportDialog =
+{
+    GI_visMoniker = @VeneerImportDialogMoniker;
+    GI_comp = @VeneerImportOptionsGroup;
+    GII_type = GIT_PROPERTIES;
+    GII_visibility = GIV_DIALOG;
+    GII_attrs = @default | GIA_MODAL;
+    HINT_CENTER_CHILDREN_HORIZONTALLY;
+    HINT_CENTER_CHILDREN_VERTICALLY;
+    HINT_INTERACTION_SIMPLE_PROPERTIES;
+}
+
+@object GenBooleanGroupClass VeneerImportOptionsGroup =
+{
+    GI_comp =
+        @VeneerImportUppercase,
+        @VeneerImportTrimWhitespace;
+    HINT_BOOLEAN_GROUP_CHECKBOX_STYLE;
+}
+
+@object GenBooleanClass VeneerImportUppercase =
+{
+    GI_visMoniker = @VeneerImportUppercaseMoniker;
+    GBI_identifier = VENEER_IMPORT_BOOLEAN_UPPERCASE;
+}
+
+@object GenBooleanClass VeneerImportTrimWhitespace =
+{
+    GI_visMoniker = @VeneerImportTrimMoniker;
+    GBI_identifier = VENEER_IMPORT_BOOLEAN_TRIM;
+}
+
+@object GenInteractionClass VeneerExportDialog =
+{
+    GI_visMoniker = @VeneerExportDialogMoniker;
+    GI_comp = @VeneerExportOptionsGroup;
+    GII_type = GIT_PROPERTIES;
+    GII_visibility = GIV_DIALOG;
+    GII_attrs = @default | GIA_MODAL;
+    HINT_CENTER_CHILDREN_HORIZONTALLY;
+    HINT_CENTER_CHILDREN_VERTICALLY;
+    HINT_INTERACTION_SIMPLE_PROPERTIES;
+}
+
+@object GenBooleanGroupClass VeneerExportOptionsGroup =
+{
+    GI_comp =
+        @VeneerExportHeader,
+        @VeneerExportWrapLines;
+    HINT_BOOLEAN_GROUP_CHECKBOX_STYLE;
+}
+
+@object GenBooleanClass VeneerExportHeader =
+{
+    GI_visMoniker = @VeneerExportHeaderMoniker;
+    GBI_identifier = VENEER_EXPORT_BOOLEAN_HEADER;
+}
+
+@object GenBooleanClass VeneerExportWrapLines =
+{
+    GI_visMoniker = @VeneerExportWrapMoniker;
+    GBI_identifier = VENEER_EXPORT_BOOLEAN_WRAP;
+}
+
+@end VeneerUI;
+
 word _pascal _export ExportProcedure(ExportFrame *frame)
 {
+    VeneerExportOptions activeOptions;
+    VeneerExportOptions *optionsP;
+    MemHandle optionsH;
     word result;
 
-    frame = frame;
+    optionsP = (VeneerExportOptions *)(void *)NULL;
+    optionsH = frame->EF_exportOptions;
+    if (optionsH != NullHandle)
+    {
+        optionsP = (VeneerExportOptions *)(void *)MemLock(optionsH);
+        if (optionsP != (VeneerExportOptions *)(void *)NULL)
+        {
+            activeOptions = *optionsP;
+            MemUnlock(optionsH);
+        }
+        else
+        {
+            activeOptions = veneerOptionsCache.exportOptions;
+        }
+        MemFree(optionsH);
+        frame->EF_exportOptions = NullHandle;
+    }
+    else
+    {
+        activeOptions = veneerOptionsCache.exportOptions;
+    }
+
+    (void)activeOptions;
+
     result = TE_NO_ERROR;
     return result;
 }
 
 dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain)
 {
+    VeneerImportOptions activeOptions;
+    VeneerImportOptions *optionsP;
+    MemHandle optionsH;
     VMChain emptyChain;
     word clipboardFormat;
     dword result;
 
-    frame = frame;
-    clipboardFormat = CIF_TEXT;
+    optionsP = (VeneerImportOptions *)(void *)NULL;
+    optionsH = frame->IF_importOptions;
+    if (optionsH != NullHandle)
+    {
+        optionsP = (VeneerImportOptions *)(void *)MemLock(optionsH);
+        if (optionsP != (VeneerImportOptions *)(void *)NULL)
+        {
+            activeOptions = *optionsP;
+            MemUnlock(optionsH);
+        }
+        else
+        {
+            activeOptions = veneerOptionsCache.importOptions;
+        }
+        MemFree(optionsH);
+        frame->IF_importOptions = NullHandle;
+    }
+    else
+    {
+        activeOptions = veneerOptionsCache.importOptions;
+    }
+
     emptyChain = 0L;
     *resultChain = emptyChain;
+    clipboardFormat = CIF_TEXT;
+
+    (void)activeOptions;
+
     result = ((dword)clipboardFormat << 16) | (dword)TE_NO_ERROR;
     return result;
 }
@@ -42,7 +199,137 @@ sword _pascal _export GetFormat(FileHandle file)
 {
     sword result;
 
-    file = file;
+    (void)file;
     result = 0;
     return result;
+}
+
+void _pascal _export TransGetImportUIHelper(word format, optr *outTree, ClassStruct **outClass)
+{
+    (void)format;
+    if (outTree != (optr *)(void *)NULL)
+    {
+        *outTree = @VeneerImportDialog;
+    }
+    if (outClass != (ClassStruct **)(void *)NULL)
+    {
+        *outClass = (ClassStruct *)(void *)0;
+    }
+}
+
+void _pascal _export TransGetExportUIHelper(word format, optr *outTree, ClassStruct **outClass)
+{
+    (void)format;
+    if (outTree != (optr *)(void *)NULL)
+    {
+        *outTree = @VeneerExportDialog;
+    }
+    if (outClass != (ClassStruct **)(void *)NULL)
+    {
+        *outClass = (ClassStruct *)(void *)0;
+    }
+}
+
+void _pascal _export TransInitImportUIHelper(optr duplicatedUI)
+{
+    optr booleanGroup;
+    word defaultMask;
+
+    if (duplicatedUI == NullOptr)
+    {
+        return;
+    }
+    booleanGroup = ConstructOptr(OptrToHandle(duplicatedUI), OptrToChunk(@VeneerImportOptionsGroup));
+    defaultMask = (word)(1 << VENEER_IMPORT_BOOLEAN_TRIM);
+    @call booleanGroup::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(defaultMask, 0);
+}
+
+void _pascal _export TransInitExportUIHelper(optr duplicatedUI)
+{
+    optr booleanGroup;
+    word defaultMask;
+
+    if (duplicatedUI == NullOptr)
+    {
+        return;
+    }
+    booleanGroup = ConstructOptr(OptrToHandle(duplicatedUI), OptrToChunk(@VeneerExportOptionsGroup));
+    defaultMask = (word)((1 << VENEER_EXPORT_BOOLEAN_HEADER) | (1 << VENEER_EXPORT_BOOLEAN_WRAP));
+    @call booleanGroup::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(defaultMask, 0);
+}
+
+MemHandle _pascal _export TransGetImportOptionsHelper(word format, MemHandle uiHandle)
+{
+    VeneerImportOptions options;
+    VeneerImportOptions *optionsP;
+    MemHandle optionsH;
+    word selectedBooleans;
+
+    (void)format;
+    optionsP = (VeneerImportOptions *)(void *)NULL;
+    selectedBooleans = 0;
+    options.uppercase = FALSE;
+    options.trimWhitespace = TRUE;
+
+    if (uiHandle != NullHandle)
+    {
+        selectedBooleans = @call ConstructOptr(uiHandle, OptrToChunk(@VeneerImportOptionsGroup))::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
+        options.uppercase = (selectedBooleans & (1 << VENEER_IMPORT_BOOLEAN_UPPERCASE)) ? TRUE : FALSE;
+        options.trimWhitespace = (selectedBooleans & (1 << VENEER_IMPORT_BOOLEAN_TRIM)) ? TRUE : FALSE;
+    }
+
+    optionsH = MemAlloc(sizeof(VeneerImportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (optionsH == NullHandle)
+    {
+        veneerOptionsCache.importOptions = options;
+        return NullHandle;
+    }
+
+    optionsP = (VeneerImportOptions *)(void *)MemLock(optionsH);
+    if (optionsP != (VeneerImportOptions *)(void *)NULL)
+    {
+        *optionsP = options;
+        MemUnlock(optionsH);
+    }
+
+    veneerOptionsCache.importOptions = options;
+    return optionsH;
+}
+
+MemHandle _pascal _export TransGetExportOptionsHelper(word format, MemHandle uiHandle)
+{
+    VeneerExportOptions options;
+    VeneerExportOptions *optionsP;
+    MemHandle optionsH;
+    word selectedBooleans;
+
+    (void)format;
+    optionsP = (VeneerExportOptions *)(void *)NULL;
+    selectedBooleans = 0;
+    options.includeHeader = TRUE;
+    options.wrapLines = TRUE;
+
+    if (uiHandle != NullHandle)
+    {
+        selectedBooleans = @call ConstructOptr(uiHandle, OptrToChunk(@VeneerExportOptionsGroup))::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
+        options.includeHeader = (selectedBooleans & (1 << VENEER_EXPORT_BOOLEAN_HEADER)) ? TRUE : FALSE;
+        options.wrapLines = (selectedBooleans & (1 << VENEER_EXPORT_BOOLEAN_WRAP)) ? TRUE : FALSE;
+    }
+
+    optionsH = MemAlloc(sizeof(VeneerExportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (optionsH == NullHandle)
+    {
+        veneerOptionsCache.exportOptions = options;
+        return NullHandle;
+    }
+
+    optionsP = (VeneerExportOptions *)(void *)MemLock(optionsH);
+    if (optionsP != (VeneerExportOptions *)(void *)NULL)
+    {
+        *optionsP = options;
+        MemUnlock(optionsH);
+    }
+
+    veneerOptionsCache.exportOptions = options;
+    return optionsH;
 }
