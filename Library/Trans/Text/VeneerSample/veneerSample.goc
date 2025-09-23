@@ -222,13 +222,13 @@ static const char *VeneerFindExtensionStart(const char *fileName)
     const char *extensionP;
     const char *scanP;
 
-    extensionP = (const char *)(void *)NULL;
-    scanP = fileName;
-    if (scanP == (const char *)(void *)NULL)
+    if (fileName == NULL)
     {
-        return (const char *)(void *)NULL;
+        return NULL;
     }
 
+    extensionP = NULL;
+    scanP = fileName;
     while (*scanP != '\0')
     {
         if (*scanP == '.')
@@ -238,14 +238,9 @@ static const char *VeneerFindExtensionStart(const char *fileName)
         scanP++;
     }
 
-    if (extensionP == (const char *)(void *)NULL)
+    if ((extensionP == NULL) || (*extensionP == '\0'))
     {
-        return (const char *)(void *)NULL;
-    }
-
-    if (*extensionP == '\0')
-    {
-        return (const char *)(void *)NULL;
+        return NULL;
     }
 
     return extensionP;
@@ -255,12 +250,10 @@ static Boolean VeneerMaskMatchesExtension(const char *maskString, const char *ex
 {
     const char *maskExtensionP;
     const char *scanP;
-    Boolean result;
 
-    result = FALSE;
-    if ((maskString == (const char *)(void *)NULL) || (extensionString == (const char *)(void *)NULL))
+    if ((maskString == NULL) || (extensionString == NULL))
     {
-        return result;
+        return FALSE;
     }
 
     maskExtensionP = maskString;
@@ -274,33 +267,17 @@ static Boolean VeneerMaskMatchesExtension(const char *maskString, const char *ex
         scanP++;
     }
 
-    if (maskExtensionP == maskString)
+    if ((*maskExtensionP == '*') && (maskExtensionP[1] == '\0'))
     {
-        if ((maskExtensionP[0] == '*') && (maskExtensionP[1] == '\0'))
-        {
-            return TRUE;
-        }
-    }
-
-    if (maskExtensionP[0] == '*')
-    {
-        if (maskExtensionP[1] == '\0')
-        {
-            return TRUE;
-        }
+        return TRUE;
     }
 
     if (*maskExtensionP == '\0')
     {
-        return result;
+        return FALSE;
     }
 
-    if (LocalCmpStringsNoCase(maskExtensionP, extensionString, 0) == 0)
-    {
-        result = TRUE;
-    }
-
-    return result;
+    return (LocalCmpStringsNoCase(maskExtensionP, extensionString, 0) == 0) ? TRUE : FALSE;
 }
 
 static sword VeneerResolveFormatFromExtension(const char *extensionString)
@@ -315,7 +292,7 @@ static sword VeneerResolveFormatFromExtension(const char *extensionString)
     sword result;
 
     result = NO_IDEA_FORMAT;
-    if (extensionString == (const char *)(void *)NULL)
+    if (extensionString == NULL)
     {
         return result;
     }
@@ -328,7 +305,7 @@ static sword VeneerResolveFormatFromExtension(const char *extensionString)
     }
 
     extensionInfoP = (VeneerFormatExtensionInfoEntry *)(void *)LMemDerefHandles(infoResourceH, @VeneerFormatExtensionInfoTable);
-    if (extensionInfoP == (VeneerFormatExtensionInfoEntry *)(void *)NULL)
+    if (extensionInfoP == NULL)
     {
         MemUnlock(infoResourceH);
         return result;
@@ -337,19 +314,14 @@ static sword VeneerResolveFormatFromExtension(const char *extensionString)
     formatIndex = 0;
     while (formatIndex < VENEER_FORMAT_COUNT)
     {
-        maskHandleListP = (ChunkHandle *)(void *)NULL;
         if (extensionInfoP[formatIndex].maskTable != NullChunk)
         {
-            maskHandleListP = (ChunkHandle *)(void *)LMemDerefHandles(infoResourceH, extensionInfoP[formatIndex].maskTable);
-        }
-        if (maskHandleListP != (ChunkHandle *)(void *)NULL)
-        {
             maskIndex = 0;
-            while (maskIndex < extensionInfoP[formatIndex].maskCount)
+            maskHandleListP = (ChunkHandle *)(void *)LMemDerefHandles(infoResourceH, extensionInfoP[formatIndex].maskTable);
+            while ((maskHandleListP != NULL) && (maskIndex < extensionInfoP[formatIndex].maskCount))
             {
                 maskStringP = (char *)(void *)LMemDerefHandles(infoResourceH, maskHandleListP[maskIndex]);
-                if ((maskStringP != (char *)(void *)NULL) &&
-                    (VeneerMaskMatchesExtension(maskStringP, extensionString) == TRUE))
+                if ((maskStringP != NULL) && (VeneerMaskMatchesExtension(maskStringP, extensionString) == TRUE))
                 {
                     MemUnlock(infoResourceH);
                     return (sword)formatIndex;
@@ -372,14 +344,14 @@ word _pascal _export ExportProcedure(ExportFrame *frame)
     word formatIndex;
     word result;
 
-    optionsP = (VeneerExportOptions *)(void *)NULL;
+    optionsP = NULL;
     optionsH = frame->EF_exportOptions;
     formatIndex = VeneerClampFormatIndex(frame->EF_formatNumber);
     activeOptions = veneerOptionsCache[formatIndex].exportOptions;
     if (optionsH != NullHandle)
     {
         optionsP = (VeneerExportOptions *)(void *)MemLock(optionsH);
-        if (optionsP != (VeneerExportOptions *)(void *)NULL)
+        if (optionsP != NULL)
         {
             activeOptions = *optionsP;
             MemUnlock(optionsH);
@@ -406,14 +378,14 @@ dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain)
     dword result;
     word formatIndex;
 
-    optionsP = (VeneerImportOptions *)(void *)NULL;
+    optionsP = NULL;
     optionsH = frame->IF_importOptions;
     formatIndex = VeneerClampFormatIndex(frame->IF_formatNumber);
     activeOptions = veneerOptionsCache[formatIndex].importOptions;
     if (optionsH != NullHandle)
     {
         optionsP = (VeneerImportOptions *)(void *)MemLock(optionsH);
-        if (optionsP != (VeneerImportOptions *)(void *)NULL)
+        if (optionsP != NULL)
         {
             activeOptions = *optionsP;
             MemUnlock(optionsH);
@@ -452,7 +424,7 @@ dword _pascal _export GetFormat(FileHandle file)
         return result;
     }
 
-    extensionP = VeneerFindExtensionStart((const char *)(void *)fileName);
+    extensionP = VeneerFindExtensionStart(fileName);
     format = VeneerResolveFormatFromExtension(extensionP);
     error = TE_NO_ERROR;
     result = ((dword)((word)format) << 16) | (dword)error;
@@ -462,26 +434,26 @@ dword _pascal _export GetFormat(FileHandle file)
 void _pascal _export TransGetImportUIHelper(word format, optr *outTree, ClassStruct **outClass)
 {
     (void)format;
-    if (outTree != (optr *)(void *)NULL)
+    if (outTree != NULL)
     {
         *outTree = @VeneerImportDialog;
     }
-    if (outClass != (ClassStruct **)(void *)NULL)
+    if (outClass != NULL)
     {
-        *outClass = (ClassStruct *)(void *)0;
+        *outClass = NULL;
     }
 }
 
 void _pascal _export TransGetExportUIHelper(word format, optr *outTree, ClassStruct **outClass)
 {
     (void)format;
-    if (outTree != (optr *)(void *)NULL)
+    if (outTree != NULL)
     {
         *outTree = @VeneerExportDialog;
     }
-    if (outClass != (ClassStruct **)(void *)NULL)
+    if (outClass != NULL)
     {
-        *outClass = (ClassStruct *)(void *)0;
+        *outClass = NULL;
     }
 }
 
@@ -513,6 +485,19 @@ void _pascal _export TransInitExportUIHelper(optr duplicatedUI)
     @call booleanGroup::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(defaultMask, 0);
 }
 
+static word VeneerReadBooleanSelections(MemHandle uiHandle, ChunkHandle groupChunk)
+{
+    optr groupOptr;
+
+    if (uiHandle == NullHandle)
+    {
+        return 0;
+    }
+
+    groupOptr = ConstructOptr(uiHandle, groupChunk);
+    return @call groupOptr::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
+}
+
 MemHandle _pascal _export TransGetImportOptionsHelper(word format, MemHandle uiHandle)
 {
     VeneerImportOptions options;
@@ -521,17 +506,13 @@ MemHandle _pascal _export TransGetImportOptionsHelper(word format, MemHandle uiH
     word selectedBooleans;
     word formatIndex;
 
-    optionsP = (VeneerImportOptions *)(void *)NULL;
-    selectedBooleans = 0;
+    optionsP = NULL;
     formatIndex = VeneerClampFormatIndex(format);
     options = veneerOptionsCache[formatIndex].importOptions;
 
-    if (uiHandle != NullHandle)
-    {
-        selectedBooleans = @call ConstructOptr(uiHandle, OptrToChunk(@VeneerImportOptionsGroup))::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
-        options.uppercase = (selectedBooleans & (1 << VENEER_IMPORT_BOOLEAN_UPPERCASE)) ? TRUE : FALSE;
-        options.trimWhitespace = (selectedBooleans & (1 << VENEER_IMPORT_BOOLEAN_TRIM)) ? TRUE : FALSE;
-    }
+    selectedBooleans = VeneerReadBooleanSelections(uiHandle, OptrToChunk(@VeneerImportOptionsGroup));
+    options.uppercase = (selectedBooleans & (1 << VENEER_IMPORT_BOOLEAN_UPPERCASE)) ? TRUE : FALSE;
+    options.trimWhitespace = (selectedBooleans & (1 << VENEER_IMPORT_BOOLEAN_TRIM)) ? TRUE : FALSE;
 
     optionsH = MemAlloc(sizeof(VeneerImportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
     if (optionsH == NullHandle)
@@ -541,7 +522,7 @@ MemHandle _pascal _export TransGetImportOptionsHelper(word format, MemHandle uiH
     }
 
     optionsP = (VeneerImportOptions *)(void *)MemLock(optionsH);
-    if (optionsP != (VeneerImportOptions *)(void *)NULL)
+    if (optionsP != NULL)
     {
         *optionsP = options;
         MemUnlock(optionsH);
@@ -559,17 +540,13 @@ MemHandle _pascal _export TransGetExportOptionsHelper(word format, MemHandle uiH
     word selectedBooleans;
     word formatIndex;
 
-    optionsP = (VeneerExportOptions *)(void *)NULL;
-    selectedBooleans = 0;
+    optionsP = NULL;
     formatIndex = VeneerClampFormatIndex(format);
     options = veneerOptionsCache[formatIndex].exportOptions;
 
-    if (uiHandle != NullHandle)
-    {
-        selectedBooleans = @call ConstructOptr(uiHandle, OptrToChunk(@VeneerExportOptionsGroup))::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
-        options.includeHeader = (selectedBooleans & (1 << VENEER_EXPORT_BOOLEAN_HEADER)) ? TRUE : FALSE;
-        options.wrapLines = (selectedBooleans & (1 << VENEER_EXPORT_BOOLEAN_WRAP)) ? TRUE : FALSE;
-    }
+    selectedBooleans = VeneerReadBooleanSelections(uiHandle, OptrToChunk(@VeneerExportOptionsGroup));
+    options.includeHeader = (selectedBooleans & (1 << VENEER_EXPORT_BOOLEAN_HEADER)) ? TRUE : FALSE;
+    options.wrapLines = (selectedBooleans & (1 << VENEER_EXPORT_BOOLEAN_WRAP)) ? TRUE : FALSE;
 
     optionsH = MemAlloc(sizeof(VeneerExportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
     if (optionsH == NullHandle)
@@ -579,7 +556,7 @@ MemHandle _pascal _export TransGetExportOptionsHelper(word format, MemHandle uiH
     }
 
     optionsP = (VeneerExportOptions *)(void *)MemLock(optionsH);
-    if (optionsP != (VeneerExportOptions *)(void *)NULL)
+    if (optionsP != NULL)
     {
         *optionsP = options;
         MemUnlock(optionsH);

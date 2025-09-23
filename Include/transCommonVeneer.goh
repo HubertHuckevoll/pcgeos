@@ -11,7 +11,7 @@
 #ifndef __TRANSCOMMON_VENEER_GOH
 #define __TRANSCOMMON_VENEER_GOH
 
-@comment("Import the standard Impex structures used by the veneers")
+/* Import the standard Impex structures used by the veneers */
 @include <impex.goh>
 @include <Objects/gCtrlC.goh>
 
