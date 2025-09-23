@@ -163,6 +163,8 @@ TransImport     proc    far
         uses    es, ds, si, di
 _vmResult       local   dword
         .enter
+                mov     word ptr _vmResult, 0
+                mov     word ptr _vmResult+2, 0
                 push    ds
                 push    si
                 push    ss
@@ -218,10 +220,10 @@ _uiClass        local   dword
                 mov     ds, ax
                 push    cx
                 push    ss
-                lea     ax, _uiRoot
+                lea     ax, _uiClass
                 push    ax
                 push    ss
-                lea     ax, _uiClass
+                lea     ax, _uiRoot
                 push    ax
                 call    TRANS_IMPORT_UI_HELPER
                 mov     dx, word ptr _uiRoot
@@ -253,10 +255,10 @@ _uiClass        local   dword
                 mov     ds, ax
                 push    cx
                 push    ss
-                lea     ax, _uiRoot
+                lea     ax, _uiClass
                 push    ax
                 push    ss
-                lea     ax, _uiClass
+                lea     ax, _uiRoot
                 push    ax
                 call    TRANS_EXPORT_UI_HELPER
                 mov     dx, word ptr _uiRoot
@@ -280,8 +282,8 @@ TransInitImportUI       proc    far
         .enter
                 mov     ax, idata
                 mov     ds, ax
-                push    dx
                 push    cx
+                push    dx
                 call    TRANS_INIT_IMPORT_UI_HELPER
         .leave
         ret
@@ -300,8 +302,8 @@ TransInitExportUI       proc    far
         .enter
                 mov     ax, idata
                 mov     ds, ax
-                push    dx
                 push    cx
+                push    dx
                 call    TRANS_INIT_EXPORT_UI_HELPER
         .leave
         ret
