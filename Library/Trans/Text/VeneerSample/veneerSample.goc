@@ -1,0 +1,48 @@
+/***********************************************************************
+ *
+ * PROJECT:       Veneer Sample Translator
+ * FILE:          veneerSample.goc
+ *
+ * DESCRIPTION:
+ *      Minimal helpers that demonstrate the shared Impex veneer.
+ *
+ ***********************************************************************/
+
+@include <stdapp.goh>
+@include <Objects/clipbrd.goh>
+@include <impex.goh>
+#include <vm.h>
+#include <xlatLib.h>
+#include <transCommonVeneer.goh>
+
+word _pascal _export ExportProcedure(ExportFrame *frame)
+{
+    word result;
+
+    frame = frame;
+    result = TE_NO_ERROR;
+    return result;
+}
+
+dword _pascal _export ImportProcedure(ImportFrame *frame, VMChain *resultChain)
+{
+    VMChain emptyChain;
+    word clipboardFormat;
+    dword result;
+
+    frame = frame;
+    clipboardFormat = CIF_TEXT;
+    emptyChain = 0L;
+    *resultChain = emptyChain;
+    result = ((dword)clipboardFormat << 16) | (dword)TE_NO_ERROR;
+    return result;
+}
+
+sword _pascal _export GetFormat(FileHandle file)
+{
+    sword result;
+
+    file = file;
+    result = 0;
+    return result;
+}
