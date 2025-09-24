@@ -4,13 +4,11 @@
 #include <geoworks.h>
 #include <xlatLib.h>
 
-#define IFI_IMPORT_CAPABLE 0x8000
-#define IFI_EXPORT_CAPABLE 0x4000
+#define TRANS_IFI_IMPORT_CAPABLE 0x8000
+#define TRANS_IFI_EXPORT_CAPABLE 0x4000
 
 typedef struct
 {
-    const char _far *formatName;
-    const char _far *fileMask;
     optr importUI;
     optr exportUI;
     word formatFlags;
@@ -35,9 +33,6 @@ typedef struct
     TransInitUICallback initImportUICallback;
     TransInitUICallback initExportUICallback;
 } TransDescriptor;
-
-#define XLAT_DESCRIPTOR_FORMAT_ENTRY(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
-    { (const char _far *)(nameLiteral), (const char _far *)(maskLiteral), (importUIOptr), (exportUIOptr), (word)(flagsValue) }
 
 TransDescriptor _far * _pascal XLAT_GetDescriptor(void);
 

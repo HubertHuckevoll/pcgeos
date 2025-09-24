@@ -1,0 +1,6 @@
+XLAT_FORMAT(VeneerFormat,
+            "Veneer Exchange",
+            "*.vnr",
+            ImportGroup,
+            ExportGroup,
+            (TRANS_IFI_IMPORT_CAPABLE | TRANS_IFI_EXPORT_CAPABLE))

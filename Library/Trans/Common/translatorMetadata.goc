@@ -10,30 +10,28 @@
 #error "XLAT_DATA_CLASS must be defined before including translatorMetadata.goc"
 #endif
 
-#ifndef XLAT_FORMAT_LIST
-#error "XLAT_FORMAT_LIST must be defined before including translatorMetadata.goc"
+#ifndef XLAT_FORMAT_FILE
+#error "XLAT_FORMAT_FILE must be defined before including translatorMetadata.goc"
 #endif
-
-#define XLAT_MARKER_VALUE ((word)(('O') | (('K') << 8)))
 
 @start ResidentCode, data;
 
 typedef struct
 {
-    word marker;
+    char marker[2];
     word stringsResource;
     word numberOfFormats;
     word dataClass;
-    word marker2;
+    char marker2[2];
 } XLAT_TranslationLibraryHeaderRecord;
 
 const XLAT_TranslationLibraryHeaderRecord XLAT_libraryHeader =
 {
-    XLAT_MARKER_VALUE,
+    { 'O', 'K' },
     InfoResource,
     (word)(XLAT_FORMAT_COUNT),
     (word)(XLAT_DATA_CLASS),
-    XLAT_MARKER_VALUE
+    { 'O', 'K' }
 };
 
 @end ResidentCode;
@@ -42,29 +40,27 @@ const XLAT_TranslationLibraryHeaderRecord XLAT_libraryHeader =
 
 typedef struct
 {
-    word formatName;
-    word fileMask;
+    word formatNameChunk;
+    word fileMaskChunk;
     optr importUI;
     optr exportUI;
     word formatInfo;
-} XLAT_FormatRecord;
+} XLAT_ImpexFormatGeodeInfoRecord;
 
-const XLAT_FormatRecord XLAT_formatTable[] =
+const XLAT_ImpexFormatGeodeInfoRecord XLAT_formatTable[] =
 {
-#define XLAT_FORMAT_ENTRY(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
     { symbol##Name, symbol##Mask, (importUI), (exportUI), (word)(flagsValue) },
-    XLAT_FORMAT_LIST(XLAT_FORMAT_ENTRY)
-#undef XLAT_FORMAT_ENTRY
+#include XLAT_FORMAT_FILE
+#undef XLAT_FORMAT
 };
 
 word XLAT_formatTableTerminator = 0;
 
-#define XLAT_STRING_CHUNKS(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
     @chunk symbol##Name char[] = nameLiteral; \
     @chunk symbol##Mask char[] = maskLiteral;
-XLAT_FORMAT_LIST(XLAT_STRING_CHUNKS)
-#undef XLAT_STRING_CHUNKS
+#include XLAT_FORMAT_FILE
+#undef XLAT_FORMAT
 
 @end InfoResource;
-
-#undef XLAT_MARKER_VALUE

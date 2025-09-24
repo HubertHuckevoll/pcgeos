@@ -4,8 +4,6 @@ include geos.def
 include resource.def
 
 TransFormatInfo struct
-    TFI_formatName      dword
-    TFI_fileMask        dword
     TFI_importUI        dword
     TFI_exportUI        dword
     TFI_formatFlags     word

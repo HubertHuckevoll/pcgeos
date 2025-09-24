@@ -10,17 +10,17 @@ extern MemHandle _far _pascal VeneerGatherExportOptions(Handle dialogH);
 extern void _far _pascal VeneerInitImportUI(Handle dialogH);
 extern void _far _pascal VeneerInitExportUI(Handle dialogH);
 
-#define XLAT_DESCRIPTOR_SYMBOL kVeneerDescriptor
+extern optr ImportGroup;
+extern optr ExportGroup;
 
-#define XLAT_FORMAT_LIST(entry) \
-    entry(VeneerFormat, "Veneer Exchange", "*.vnr", NullOptr, NullOptr, (IFI_IMPORT_CAPABLE | IFI_EXPORT_CAPABLE))
+#define XLAT_FORMAT_FILE "formats.def"
 
 static const TransFormatInfo kVeneerFormats[] =
 {
-#define XLAT_FORMAT_ENTRY(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
-    XLAT_DESCRIPTOR_FORMAT_ENTRY(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue),
-    XLAT_FORMAT_LIST(XLAT_FORMAT_ENTRY)
-#undef XLAT_FORMAT_ENTRY
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
+    { (importUIOptr), (exportUIOptr), (word)(flagsValue) },
+#include "formats.def"
+#undef XLAT_FORMAT
 };
 
 #define XLAT_FORMAT_COUNT ((word)(sizeof(kVeneerFormats) / sizeof(kVeneerFormats[0])))
@@ -45,10 +45,11 @@ TransDescriptor _far * _pascal XLAT_GetDescriptor(void)
     return (TransDescriptor _far *)&kVeneerDescriptor;
 }
 
+#define XLAT_DESCRIPTOR_SYMBOL kVeneerDescriptor
 #include <Trans/translatorMetadata.goh>
 
-#undef XLAT_FORMAT_LIST
-#undef XLAT_FORMAT_COUNT
-#undef XLAT_DATA_CLASS
 #undef XLAT_DESCRIPTOR_SYMBOL
+#undef XLAT_DATA_CLASS
+#undef XLAT_FORMAT_COUNT
+#undef XLAT_FORMAT_FILE
 #undef IDC_GRAPHICS

@@ -4,16 +4,40 @@
 
 @include <stdapp.goh>
 @include <impex.goh>
+@include <Objects/gItemGC.goh>
+@include <Objects/gValueC.goh>
+@include <Objects/gBoolGC.goh>
+@include <object.h>
 
 #include <geoworks.h>
 #include <xlatLib.h>
 #include <Trans/translatorDescriptor.h>
+
+#define VENEER_IMPORT_METHOD_PLACE 0
+#define VENEER_IMPORT_METHOD_LAYER 1
+
+#define VENEER_EXPORT_FLAG_PREVIEW 0x0001
+#define VENEER_EXPORT_FLAG_METADATA 0x0002
+
+typedef struct
+{
+    word method;
+    WWFixedAsDWord scale;
+} VeneerImportOptions;
+
+typedef struct
+{
+    word palette;
+    word flags;
+    WWFixedAsDWord quality;
+} VeneerExportOptions;
 
 dword _far _pascal
 VeneerImportProcedure(ImportFrame *frameP, VMChain *chainP)
 {
     dword result;
 
+    (void)frameP;
     result = (dword)TE_IMPORT_NOT_SUPPORTED;
     *chainP = 0;
 
@@ -25,6 +49,7 @@ VeneerExportProcedure(ExportFrame *frameP)
 {
     dword result;
 
+    (void)frameP;
     result = (dword)TE_EXPORT_NOT_SUPPORTED;
 
     return result;
@@ -35,6 +60,7 @@ VeneerTestFile(FileHandle file)
 {
     word result;
 
+    (void)file;
     result = NO_IDEA_FORMAT;
 
     return result;
@@ -43,35 +69,106 @@ VeneerTestFile(FileHandle file)
 MemHandle _far _pascal
 VeneerGatherImportOptions(Handle dialogH)
 {
-    MemHandle result;
+    MemHandle optionsH;
+    VeneerImportOptions _far *optionsP;
+    optr methodGroupOptr;
+    optr scaleValueOptr;
+    WWFixedAsDWord scaleValue;
 
-    (void)dialogH;
-    result = NullHandle;
+    optionsH = MemAlloc(sizeof(VeneerImportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (optionsH == NullHandle)
+    {
+        return NullHandle;
+    }
 
-    return result;
+    optionsP = (VeneerImportOptions _far *)(void _far *)MemLock(optionsH);
+    if (optionsP == (VeneerImportOptions _far *)NULL)
+    {
+        MemFree(optionsH);
+        return NullHandle;
+    }
+
+    methodGroupOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerImportMethodGroup));
+    scaleValueOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerImportScaleValue));
+
+    optionsP->method = @call methodGroupOptr::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+    scaleValue = @call scaleValueOptr::MSG_GEN_VALUE_GET_VALUE();
+    optionsP->scale = scaleValue;
+
+    MemUnlock(optionsH);
+
+    return optionsH;
 }
 
 MemHandle _far _pascal
 VeneerGatherExportOptions(Handle dialogH)
 {
-    MemHandle result;
+    MemHandle optionsH;
+    VeneerExportOptions _far *optionsP;
+    optr paletteGroupOptr;
+    optr extrasGroupOptr;
+    optr qualityValueOptr;
+    word selectedFlags;
+    WWFixedAsDWord qualityValue;
 
-    (void)dialogH;
-    result = NullHandle;
+    optionsH = MemAlloc(sizeof(VeneerExportOptions), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (optionsH == NullHandle)
+    {
+        return NullHandle;
+    }
 
-    return result;
+    optionsP = (VeneerExportOptions _far *)(void _far *)MemLock(optionsH);
+    if (optionsP == (VeneerExportOptions _far *)NULL)
+    {
+        MemFree(optionsH);
+        return NullHandle;
+    }
+
+    paletteGroupOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerExportPaletteGroup));
+    extrasGroupOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerExportExtrasGroup));
+    qualityValueOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerExportQualityValue));
+
+    optionsP->palette = @call paletteGroupOptr::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+    selectedFlags = @call extrasGroupOptr::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
+    optionsP->flags = selectedFlags;
+    qualityValue = @call qualityValueOptr::MSG_GEN_VALUE_GET_VALUE();
+    optionsP->quality = qualityValue;
+
+    MemUnlock(optionsH);
+
+    return optionsH;
 }
 
 void _far _pascal
 VeneerInitImportUI(Handle dialogH)
 {
-    (void)dialogH;
-    /* No initialization required. */
+    optr methodGroupOptr;
+    optr scaleValueOptr;
+
+    methodGroupOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerImportMethodGroup));
+    scaleValueOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerImportScaleValue));
+
+    @call methodGroupOptr::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(VENEER_IMPORT_METHOD_PLACE, FALSE);
+    @call scaleValueOptr::MSG_GEN_VALUE_SET_INTEGER_VALUE(100, FALSE);
 }
 
 void _far _pascal
 VeneerInitExportUI(Handle dialogH)
 {
-    (void)dialogH;
-    /* No initialization required. */
+    optr paletteGroupOptr;
+    optr extrasGroupOptr;
+    optr qualityValueOptr;
+
+    paletteGroupOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerExportPaletteGroup));
+    extrasGroupOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerExportExtrasGroup));
+    qualityValueOptr = ConstructOptr(dialogH, OptrToChunk(@VeneerExportQualityValue));
+
+    @call paletteGroupOptr::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(0, FALSE);
+    @call extrasGroupOptr::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(VENEER_EXPORT_FLAG_PREVIEW, 0);
+    @call qualityValueOptr::MSG_GEN_VALUE_SET_INTEGER_VALUE(75, FALSE);
 }
+
+#undef VENEER_IMPORT_METHOD_PLACE
+#undef VENEER_IMPORT_METHOD_LAYER
+#undef VENEER_EXPORT_FLAG_PREVIEW
+#undef VENEER_EXPORT_FLAG_METADATA

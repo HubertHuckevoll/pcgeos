@@ -15,6 +15,8 @@ library impex
 
 resource ResidentCode read-only data shared
 resource InfoResource lmem read-only shared
+resource ImportInterface object
+resource ExportInterface object
 
 export TransGetImportUI
 export TransGetExportUI
