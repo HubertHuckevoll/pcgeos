@@ -14,6 +14,26 @@ typedef struct
     word formatFlags;
 } TransFormatInfo;
 
+#pragma pack(1)
+typedef struct
+{
+    char marker[2];
+    word stringsResource;
+    word numberOfFormats;
+    word dataClass;
+    char marker2[2];
+} TransLibraryHeaderRecord;
+
+typedef struct
+{
+    word formatNameChunk;
+    word fileMaskChunk;
+    optr importUI;
+    optr exportUI;
+    word formatInfo;
+} TransImpexFormatRecord;
+#pragma pack()
+
 typedef dword (_far _pascal *TransImportCallback)(ImportFrame *frameP, VMChain *chainP);
 typedef dword (_far _pascal *TransExportCallback)(ExportFrame *frameP);
 typedef word (_far _pascal *TransTestCallback)(FileHandle file);

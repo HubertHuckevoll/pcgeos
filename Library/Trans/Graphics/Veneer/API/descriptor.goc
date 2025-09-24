@@ -13,24 +13,22 @@ extern void _far _pascal VeneerInitExportUI(Handle dialogH);
 extern optr ImportGroup;
 extern optr ExportGroup;
 
-#define XLAT_FORMAT_FILE "formats.def"
-
 static const TransFormatInfo kVeneerFormats[] =
 {
 #define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
-    { (importUIOptr), (exportUIOptr), (word)(flagsValue) },
+    { (optr)(importUIOptr), (optr)(exportUIOptr), (word)(flagsValue) },
 #include "formats.def"
 #undef XLAT_FORMAT
 };
 
-#define XLAT_FORMAT_COUNT ((word)(sizeof(kVeneerFormats) / sizeof(kVeneerFormats[0])))
-#define XLAT_DATA_CLASS IDC_GRAPHICS
+#define VENEER_FORMAT_COUNT ((word)(sizeof(kVeneerFormats) / sizeof(kVeneerFormats[0])))
+#define VENEER_DATA_CLASS IDC_GRAPHICS
 
 const TransDescriptor kVeneerDescriptor =
 {
     kVeneerFormats,
-    XLAT_FORMAT_COUNT,
-    XLAT_DATA_CLASS,
+    VENEER_FORMAT_COUNT,
+    VENEER_DATA_CLASS,
     VeneerImportProcedure,
     VeneerExportProcedure,
     VeneerTestFile,
@@ -45,11 +43,39 @@ TransDescriptor _far * _pascal XLAT_GetDescriptor(void)
     return (TransDescriptor _far *)&kVeneerDescriptor;
 }
 
-#define XLAT_DESCRIPTOR_SYMBOL kVeneerDescriptor
-#include <Trans/translatorMetadata.goh>
+@start ResidentCode, data;
 
-#undef XLAT_DESCRIPTOR_SYMBOL
-#undef XLAT_DATA_CLASS
-#undef XLAT_FORMAT_COUNT
-#undef XLAT_FORMAT_FILE
+const TransLibraryHeaderRecord XLAT_libraryHeader =
+{
+    { 'O', 'K' },
+    InfoResource,
+    (word)(VENEER_FORMAT_COUNT),
+    (word)(VENEER_DATA_CLASS),
+    { 'O', 'K' }
+};
+
+@end ResidentCode;
+
+@start InfoResource, lmem, LMEM_TYPE_GENERAL, mask LMF_IN_RESOURCE;
+
+TransImpexFormatRecord XLAT_formatTable[] =
+{
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
+    { (word)(@symbol##Name), (word)(@symbol##Mask), (optr)(importUIOptr), (optr)(exportUIOptr), (word)(flagsValue) },
+#include "formats.def"
+#undef XLAT_FORMAT
+};
+
+word XLAT_formatTableTerminator = 0;
+
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
+    @chunk char symbol##Name[] = nameLiteral; \
+    @chunk char symbol##Mask[] = maskLiteral;
+#include "formats.def"
+#undef XLAT_FORMAT
+
+@end InfoResource;
+
+#undef VENEER_DATA_CLASS
+#undef VENEER_FORMAT_COUNT
 #undef IDC_GRAPHICS
