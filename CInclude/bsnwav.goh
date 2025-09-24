@@ -270,7 +270,6 @@ int _pascal _export BSNWaveGetPlayState( BSWavPlayStates *playStates);
 
 extern  Boolean _pascal LibRecEntry(    LibraryCallType type,
 					GeodeHandle     client);
-extern  void    _pascal BSCallDriver (void);            //intern
 extern  Boolean _pascal _export BSNWavLoadDriver(GeodeLoadError *gle,
 					 char           *name);
 

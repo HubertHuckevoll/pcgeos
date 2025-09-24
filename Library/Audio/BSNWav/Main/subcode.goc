@@ -71,6 +71,29 @@ REVISION HISTORY:
 #define FP_OFF(fp) ((unsigned short)(fp))
 #define MK_FP(seg, ofs) ((void far *)(((unsigned long)(seg) << 16) | (unsigned)(ofs)))
 
+/******************** Assembly helpers ************************/
+
+extern word _pascal BSNWAsmSecondAlloc(GeodeHandle driverHandle,
+                                       word driverInfoPtrOff,
+                                       word driverInfoPtrSeg,
+                                       word len,
+                                       word offsetOff,
+                                       word offsetSeg,
+                                       word segmentOff,
+                                       word segmentSeg);
+extern word _pascal BSNWAsmStartPlay(GeodeHandle driverHandle,
+                                     word driverInfoPtrOff,
+                                     word driverInfoPtrSeg);
+extern word _pascal BSNWAsmGetAIState(GeodeHandle driverHandle,
+                                      word driverInfoPtrOff,
+                                      word driverInfoPtrSeg,
+                                      word options);
+extern word _pascal BSNWAsmSetSampling(GeodeHandle driverHandle,
+                                       word driverInfoPtrOff,
+                                       word driverInfoPtrSeg,
+                                       word rate,
+                                       word bits,
+                                       word channels);
 
 /******************** Strings / Globals ***********************/
 
@@ -258,85 +281,6 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
         return (demoMode);
 }
 
-/**********************************************************
-
-    BSCallDriver
-
-    C-Subroutine for calling driverfunction
-
- IN	di	Routine number
-
-
- **********************************************************/
-
-void _pascal BSCallDriver ()
-{
-    int segm;
-    int offs;
-    int axsave;
-
-    __asm {
-        push ds
-        push bp
-        push si
-        push ax
-        push bx
-        push cx
-        push dx
-        push di
-    }
-
-    //search entrypoint
-    if (!driverInfo)
-    {
-        driverInfo = GeodeInfoDriver(sampleDriver);
-    }
-
-    segm = FP_SEG(driverInfo) ;
-    offs = FP_OFF(driverInfo) ;
-
-    __asm {
-        pop  di
-        pop  dx
-        pop  cx
-        pop  bx
-        pop  ax
-        mov	 axsave,ax		// "if" will destroy ax
-    };
-
-    // call to entrypoint
-    if ((segm | offs) > 0)
-    {
-        __asm {
-            mov  ax,axsave
-            mov  si, offs
-            mov  ds, segm
-            db   0x3e, 0xff, 0x1c	/* call far ds:[si] */
-        }
-    };
-
-    __asm {
-        pop  si
-        pop  bp
-        pop  ds
-    }
-}
-
-/**********************************************************
-
-    BSNWAllocSecBuffer
-
-        Allocate Secondarybuffer
-
-
- IN:	word		len
-     (glob)simFlags 	> 0	for test purpose only !
-
- OUT:	**ptr	Pointer to Buffer
-        word	real length
-
- **********************************************************/
-
 word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
 {
     byte		*ptr2;
@@ -371,32 +315,15 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
     }
     else
     {
-        // call driver
+        len = BSNWAsmSecondAlloc(sampleDriver,
+                                 FP_OFF(&driverInfo),
+                                 FP_SEG(&driverInfo),
+                                 len2,
+                                 FP_OFF(&off),
+                                 FP_SEG(&off),
+                                 FP_OFF(&segm),
+                                 FP_SEG(&segm));
 
-        __asm {
-            push ax
-            push bx
-            push cx
-            push dx
-            push di
-            mov  cx,len2
-            mov  di,DRE_BSNWAV_SECOND_ALLOC
-        }
-
-        BSCallDriver();
-
-        __asm {
-            mov  len,cx
-            mov  off,dx
-            mov  segm,ax
-            pop  di
-            pop  dx
-            pop  cx
-            pop  bx
-            pop  ax
-        }
-
-        // store Pointer
         ptr2 = MK_FP(segm,off);
         *ptr = ptr2;
     };
@@ -989,21 +916,9 @@ Boolean	_pascal	_export BSNWStartPlay(void)
         }
         else
         {
-            __asm {
-                push ax
-                push dx
-                push di
-                mov  di,DRE_BSNWAV_START_PLAY
-            }
-
-            BSCallDriver();
-
-            __asm {
-                pop  di
-                pop  dx
-                pop  ax
-                mov  back2,cx		// retVal
-            }
+                back2 = BSNWAsmStartPlay(sampleDriver,
+                                         FP_OFF(&driverInfo),
+                                         FP_SEG(&driverInfo));
         };
 
         // errorflag
@@ -1033,29 +948,11 @@ word	_pascal _export BSNWaveGetAIState(word options)
 
     if (compatFlag)
     {
-        // call driver
-        __asm {
-            push ax
-            push bx
-            push cx
-            push dx
-            push di
-            mov  di,DRE_BSNWAV_GET_AI_STATE
-            mov  cx,options
-        }
-
-        BSCallDriver();
-
-        __asm {
-            mov  state,cx
-            pop  di
-            pop  dx
-            pop  cx
-            pop  bx
-            pop  ax
-        }
-    };
-
+        state = BSNWAsmGetAIState(sampleDriver,
+                                   FP_OFF(&driverInfo),
+                                   FP_SEG(&driverInfo),
+                                   options);
+    }
     return (state);
 }
 
@@ -1514,26 +1411,12 @@ int	_pascal BSNWSetParams(word rate,word bits,word channels)
 {
         int	back;
 
-        __asm {
-            push ax
-            push dx
-            push di
-            mov  di,DRE_BSNWAV_SET_SAMPLING
-            mov  bx,rate			/* value number */
-            mov  cx,channels
-            mov  ch,0
-            mov  dx,bits
-            mov  dh,0
-        }
-
-        BSCallDriver();
-
-        __asm {
-            pop  di
-            pop  dx
-            pop  ax
-            mov  back,cx		// retVal
-        }
+        back = BSNWAsmSetSampling(sampleDriver,
+                                   FP_OFF(&driverInfo),
+                                   FP_SEG(&driverInfo),
+                                   rate,
+                                   bits,
+                                   channels);
 
     return(back);
 }
