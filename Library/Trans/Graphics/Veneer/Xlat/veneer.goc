@@ -1,0 +1,77 @@
+/***********************************************************************
+ * Veneer translator sample implementation.
+ ***********************************************************************/
+
+@include <stdapp.goh>
+@include <impex.goh>
+
+#include <geoworks.h>
+#include <xlatLib.h>
+#include <Trans/translatorDescriptor.h>
+
+dword _far _pascal
+VeneerImportProcedure(ImportFrame *frameP, VMChain *chainP)
+{
+    dword result;
+
+    result = (dword)TE_IMPORT_NOT_SUPPORTED;
+    *chainP = 0;
+
+    return result;
+}
+
+dword _far _pascal
+VeneerExportProcedure(ExportFrame *frameP)
+{
+    dword result;
+
+    result = (dword)TE_EXPORT_NOT_SUPPORTED;
+
+    return result;
+}
+
+word _far _pascal
+VeneerTestFile(FileHandle file)
+{
+    word result;
+
+    result = NO_IDEA_FORMAT;
+
+    return result;
+}
+
+MemHandle _far _pascal
+VeneerGatherImportOptions(Handle dialogH)
+{
+    MemHandle result;
+
+    (void)dialogH;
+    result = NullHandle;
+
+    return result;
+}
+
+MemHandle _far _pascal
+VeneerGatherExportOptions(Handle dialogH)
+{
+    MemHandle result;
+
+    (void)dialogH;
+    result = NullHandle;
+
+    return result;
+}
+
+void _far _pascal
+VeneerInitImportUI(Handle dialogH)
+{
+    (void)dialogH;
+    /* No initialization required. */
+}
+
+void _far _pascal
+VeneerInitExportUI(Handle dialogH)
+{
+    (void)dialogH;
+    /* No initialization required. */
+}

@@ -1,0 +1,54 @@
+#include <Trans/translatorDescriptor.h>
+
+#define IDC_GRAPHICS 0x4000
+
+extern dword _far _pascal VeneerImportProcedure(ImportFrame *frameP, VMChain *chainP);
+extern dword _far _pascal VeneerExportProcedure(ExportFrame *frameP);
+extern word _far _pascal VeneerTestFile(FileHandle file);
+extern MemHandle _far _pascal VeneerGatherImportOptions(Handle dialogH);
+extern MemHandle _far _pascal VeneerGatherExportOptions(Handle dialogH);
+extern void _far _pascal VeneerInitImportUI(Handle dialogH);
+extern void _far _pascal VeneerInitExportUI(Handle dialogH);
+
+#define XLAT_DESCRIPTOR_SYMBOL kVeneerDescriptor
+
+#define XLAT_FORMAT_LIST(entry) \
+    entry(VeneerFormat, "Veneer Exchange", "*.vnr", NullOptr, NullOptr, (IFI_IMPORT_CAPABLE | IFI_EXPORT_CAPABLE))
+
+static const TransFormatInfo kVeneerFormats[] =
+{
+#define XLAT_FORMAT_ENTRY(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
+    XLAT_DESCRIPTOR_FORMAT_ENTRY(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue),
+    XLAT_FORMAT_LIST(XLAT_FORMAT_ENTRY)
+#undef XLAT_FORMAT_ENTRY
+};
+
+#define XLAT_FORMAT_COUNT ((word)(sizeof(kVeneerFormats) / sizeof(kVeneerFormats[0])))
+#define XLAT_DATA_CLASS IDC_GRAPHICS
+
+const TransDescriptor kVeneerDescriptor =
+{
+    kVeneerFormats,
+    XLAT_FORMAT_COUNT,
+    XLAT_DATA_CLASS,
+    VeneerImportProcedure,
+    VeneerExportProcedure,
+    VeneerTestFile,
+    VeneerGatherImportOptions,
+    VeneerGatherExportOptions,
+    VeneerInitImportUI,
+    VeneerInitExportUI
+};
+
+TransDescriptor _far * _pascal XLAT_GetDescriptor(void)
+{
+    return (TransDescriptor _far *)&kVeneerDescriptor;
+}
+
+#include <Trans/translatorMetadata.goh>
+
+#undef XLAT_FORMAT_LIST
+#undef XLAT_FORMAT_COUNT
+#undef XLAT_DATA_CLASS
+#undef XLAT_DESCRIPTOR_SYMBOL
+#undef IDC_GRAPHICS
