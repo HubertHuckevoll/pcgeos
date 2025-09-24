@@ -1,3 +1,5 @@
+#include <geos.h>
+
 #ifndef XLAT_DESCRIPTOR_SYMBOL
 #error "XLAT_DESCRIPTOR_SYMBOL must be defined before including translatorMetadata.goc"
 #endif
@@ -14,8 +16,7 @@
 #error "XLAT_FORMAT_FILE must be defined before including translatorMetadata.goc"
 #endif
 
-@start ResidentCode, data;
-
+#pragma pack(1)
 typedef struct
 {
     char marker[2];
@@ -24,6 +25,18 @@ typedef struct
     word dataClass;
     char marker2[2];
 } XLAT_TranslationLibraryHeaderRecord;
+
+typedef struct
+{
+    word formatNameChunk;
+    word fileMaskChunk;
+    optr importUI;
+    optr exportUI;
+    word formatInfo;
+} XLAT_ImpexFormatGeodeInfoRecord;
+#pragma pack()
+
+@start ResidentCode, data;
 
 const XLAT_TranslationLibraryHeaderRecord XLAT_libraryHeader =
 {
@@ -38,19 +51,10 @@ const XLAT_TranslationLibraryHeaderRecord XLAT_libraryHeader =
 
 @start InfoResource, lmem, LMEM_TYPE_GENERAL, mask LMF_IN_RESOURCE;
 
-typedef struct
-{
-    word formatNameChunk;
-    word fileMaskChunk;
-    optr importUI;
-    optr exportUI;
-    word formatInfo;
-} XLAT_ImpexFormatGeodeInfoRecord;
-
-const XLAT_ImpexFormatGeodeInfoRecord XLAT_formatTable[] =
+XLAT_ImpexFormatGeodeInfoRecord XLAT_formatTable[] =
 {
 #define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
-    { symbol##Name, symbol##Mask, (importUI), (exportUI), (word)(flagsValue) },
+    { (word)(@symbol##Name), (word)(@symbol##Mask), (optr)(importUI), (optr)(exportUI), (word)(flagsValue) },
 #include XLAT_FORMAT_FILE
 #undef XLAT_FORMAT
 };
@@ -58,8 +62,8 @@ const XLAT_ImpexFormatGeodeInfoRecord XLAT_formatTable[] =
 word XLAT_formatTableTerminator = 0;
 
 #define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUI, exportUI, flagsValue) \
-    @chunk symbol##Name char[] = nameLiteral; \
-    @chunk symbol##Mask char[] = maskLiteral;
+    @chunk char symbol##Name[] = nameLiteral; \
+    @chunk char symbol##Mask[] = maskLiteral;
 #include XLAT_FORMAT_FILE
 #undef XLAT_FORMAT
 
