@@ -440,7 +440,7 @@ END {
 
 create_basebox_config()
 {
-    local drivec_abs_path basebox_binary_rel basebox_binary tmp_conf patched_conf newline_style autoexec_payload
+    local drivec_abs_path basebox_binary_rel basebox_binary xdg_root config_output config_line config_path config_dir newline_style patched_conf autoexec_payload tmp_conf
 
     drivec_abs_path="$(absolute_path "${DRIVEC_DIR}")"
 
@@ -457,13 +457,49 @@ create_basebox_config()
 
     log "Generating Basebox configuration from ${basebox_binary_rel}"
 
-    tmp_conf="$(mktemp)"
-    if ! SDL_VIDEODRIVER=dummy "${basebox_binary}" -writeconf "${tmp_conf}" >/dev/null 2>&1; then
-        if ! "${basebox_binary}" -writeconf "${tmp_conf}" >/dev/null 2>&1; then
-            rm -f "${tmp_conf}"
-            fail "Failed to generate Basebox configuration using ${basebox_binary_rel}."
+    xdg_root="$(mktemp -d)"
+    mkdir -p "${xdg_root}/config"
+
+    config_output="$(XDG_CONFIG_HOME="${xdg_root}/config" "${basebox_binary}" --printconf 2>/dev/null || true)"
+    config_line="$(printf '%s\n' "${config_output}" | awk 'NF { last=$0 } END { print last }')"
+    config_line="${config_line%$'\r'}"
+
+    if [ -z "${config_line}" ]; then
+        rm -rf "${xdg_root}"
+        fail "Failed to determine the Basebox configuration path via --printconf."
+    fi
+
+    if [[ "${config_line}" == *:* ]]; then
+        config_path="${config_line##*:}"
+    else
+        config_path="${config_line}"
+    fi
+
+    config_path="$(printf '%s' "${config_path}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+    if [ -z "${config_path}" ]; then
+        rm -rf "${xdg_root}"
+        fail "Unable to parse the Basebox configuration path from --printconf output."
+    fi
+
+    config_dir="$(dirname "${config_path}")"
+    mkdir -p "${config_dir}"
+    rm -f "${config_path}"
+
+    if ! SDL_VIDEODRIVER=dummy XDG_CONFIG_HOME="${xdg_root}/config" "${basebox_binary}" -c exit >/dev/null 2>&1; then
+        if ! XDG_CONFIG_HOME="${xdg_root}/config" "${basebox_binary}" -c exit >/dev/null 2>&1; then
+            rm -rf "${xdg_root}"
+            fail "Basebox failed to generate its default configuration."
         fi
     fi
+
+    if [ ! -f "${config_path}" ]; then
+        rm -rf "${xdg_root}"
+        fail "Basebox did not create a configuration file at ${config_path}."
+    fi
+
+    tmp_conf="$(mktemp)"
+    cp "${config_path}" "${tmp_conf}"
 
     newline_style=$'\n'
     if LC_ALL=C grep -q $'\r' "${tmp_conf}"; then
@@ -515,6 +551,7 @@ BEGIN {
 
     mv "${patched_conf}" "${BASEBOX_CONFIG}"
     rm -f "${tmp_conf}"
+    rm -rf "${xdg_root}"
 }
 
 create_launcher()
