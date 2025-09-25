@@ -157,8 +157,13 @@ prepare_environment()
 
 extract_archives()
 {
-    local temp_dir geos_zip basebox_zip
+    local temp_dir geos_zip basebox_zip previous_exit_trap
+
+    previous_exit_trap="$(trap -p EXIT || true)"
+
     temp_dir="$(mktemp -d)"
+    trap 'rm -rf "${temp_dir}"' EXIT
+
     geos_zip="${temp_dir}/pcgeos-ensemble.zip"
     basebox_zip="${temp_dir}/pcgeos-basebox.zip"
 
@@ -194,6 +199,12 @@ extract_archives()
     fi
 
     rm -rf "${temp_dir}"
+
+    if [ -n "${previous_exit_trap}" ]; then
+        eval "${previous_exit_trap}"
+    else
+        trap - EXIT
+    fi
 }
 
 ensure_user_state()
