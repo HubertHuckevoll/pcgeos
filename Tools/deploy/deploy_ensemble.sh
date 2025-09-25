@@ -11,7 +11,7 @@
 #
 # Supported environments: Debian, Fedora, and Windows Subsystem for Linux.
 # The script relies only on standard Unix tooling available on these
-# platforms (bash, curl/wget, unzip, python3).
+# platforms (bash, curl/wget, unzip).
 
 set -euo pipefail
 
@@ -140,7 +140,6 @@ prepare_environment()
 {
     log "Checking prerequisites"
     require_command unzip
-    require_command python3
 
     if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
         fail "Either curl or wget must be installed to download release archives."
@@ -219,10 +218,17 @@ patch_geos_ini()
 
     log "Patching Ensemble geos.ini"
 
-    local paths_payload ini_payload key
-    paths_payload=""
+    # The GEOS documentation explains that entries under [paths] map
+    # directories inside the Ensemble tree to DOS paths exposed by the
+    # runtime. The "ini" key lists GEOS.INI files in load order: the base
+    # configuration is read first and any later entries receive user changes.
+    # We merge the shipped ensemble\geos.ini with user\geos.ini so that
+    # personal settings persist across deployments.
+
+    local path_payload ini_payload newline_style tmp_ini tmp_converted key
+    path_payload=""
     for key in "${!PATH_MAPPINGS[@]}"; do
-        paths_payload+="${key}=${PATH_MAPPINGS[$key]}\n"
+        path_payload+="${key}|${PATH_MAPPINGS[$key]}\n"
     done
 
     ini_payload=""
@@ -230,104 +236,191 @@ patch_geos_ini()
         ini_payload="$(printf '%s\n' "${ADDITIONAL_INIS[@]}")"
     fi
 
-    GEOS_PATH_MAPPINGS="${paths_payload}" \
+    newline_style=$'\n'
+    if LC_ALL=C grep -q $'\r' "${GEOS_INI_PATH}"; then
+        newline_style=$'\r\n'
+    fi
+
+    tmp_ini="$(mktemp)"
+    GEOS_PATH_MAPPINGS="${path_payload}" \
     GEOS_INI_FILES="${ini_payload}" \
-    GEOS_INI_TARGET="${GEOS_INI_PATH}" \
-    python3 <<'PY'
-import os
-import pathlib
+    awk '
+BEGIN {
+    pathCountRaw = split(ENVIRON["GEOS_PATH_MAPPINGS"], pathLines, "\n")
+    storedPathCount = 0
+    for (i = 1; i <= pathCountRaw; i++) {
+        line = pathLines[i]
+        if (line == "") {
+            continue
+        }
+        split(line, pair, "|")
+        keyOrig = pair[1]
+        keyLower = tolower(keyOrig)
+        pathKeys[++storedPathCount] = keyOrig
+        pathLower[storedPathCount] = keyLower
+        pathValues[keyLower] = pair[2]
+    }
 
-geos_ini_path = pathlib.Path(os.environ['GEOS_INI_TARGET'])
-paths_env = os.environ.get('GEOS_PATH_MAPPINGS', '')
-ini_env = os.environ.get('GEOS_INI_FILES', '')
+    iniCountRaw = split(ENVIRON["GEOS_INI_FILES"], iniLines, "\n")
+    storedIniCount = 0
+    for (i = 1; i <= iniCountRaw; i++) {
+        entry = iniLines[i]
+        if (entry == "") {
+            continue
+        }
+        iniList[++storedIniCount] = entry
+    }
+}
+{
+    line = $0
+    sub(/\r$/, "", line)
+    lastLine = line
 
-path_mappings = {}
-for line in paths_env.splitlines():
-    if not line.strip() or '=' not in line:
-        continue
-    key, value = line.split('=', 1)
-    path_mappings[key.strip()] = value.strip()
+    if (match(line, /^[ \t]*\[[Pp][Aa][Tt][Hh][Ss]\][ \t]*$/)) {
+        inPaths = 1
+        pathsSeen = 1
+        print line
+        next
+    }
 
-ini_files = [entry.strip() for entry in ini_env.splitlines() if entry.strip()]
+    if (inPaths) {
+        if (match(line, /^[ \t]*\[/)) {
+            output_missing_paths()
+            output_ini_line()
+            inPaths = 0
+        } else if (match(line, /^[ \t]*([^=; \t]+)[ \t]*=[ \t]*(.*)$/, matchArr)) {
+            keyRaw = matchArr[1]
+            keyLower = tolower(keyRaw)
+            valuePart = matchArr[2]
 
-text = geos_ini_path.read_text()
-newline = '\r\n' if '\r\n' in text else '\n'
-lines = text.replace('\r\n', '\n').split('\n')
+            comment = ""
+            commentPos = index(valuePart, ";")
+            if (commentPos > 0) {
+                comment = substr(valuePart, commentPos)
+                valuePart = substr(valuePart, 1, commentPos - 1)
+            }
 
-if lines and lines[-1] != '':
-    lines.append('')
+            gsub(/^[ \t]+/, "", valuePart)
+            gsub(/[ \t]+$/, "", valuePart)
 
-paths_start = None
-for idx, line in enumerate(lines):
-    if line.strip().lower() == '[paths]':
-        paths_start = idx
-        break
+            if (keyLower == "ini") {
+                iniWritten = 1
+                delete iniSeen
+                delete iniOrder
+                iniOrderCount = 0
 
-if paths_start is None:
-    if lines and lines[-1] != '':
-        lines.append('')
-    paths_start = len(lines)
-    lines.append('[paths]')
-    for key, value in path_mappings.items():
-        lines.append(f"{key} = {value}")
-    if ini_files:
-        lines.append('ini = ' + ' '.join(ini_files))
-    if lines[-1] != '':
-        lines.append('')
-else:
-    paths_end = len(lines)
-    for idx in range(paths_start + 1, len(lines)):
-        if lines[idx].startswith('[') and lines[idx].strip().endswith(']'):
-            paths_end = idx
-            break
+                existingCount = split(valuePart, existingTokens, /[ \t]+/)
+                for (idx = 1; idx <= existingCount; idx++) {
+                    token = existingTokens[idx]
+                    if (token == "") {
+                        continue
+                    }
+                    if (!(token in iniSeen)) {
+                        iniOrder[++iniOrderCount] = token
+                        iniSeen[token] = 1
+                    }
+                }
+                for (i = 1; i <= storedIniCount; i++) {
+                    token = iniList[i]
+                    if (!(token in iniSeen)) {
+                        iniOrder[++iniOrderCount] = token
+                        iniSeen[token] = 1
+                    }
+                }
+                if (iniOrderCount > 0) {
+                    iniLine = "ini ="
+                    for (i = 1; i <= iniOrderCount; i++) {
+                        iniLine = iniLine " " iniOrder[i]
+                    }
+                    if (comment != "") {
+                        iniLine = iniLine " " comment
+                    }
+                    print iniLine
+                } else if (comment != "") {
+                    print "ini =" comment
+                }
+                next
+            }
 
-    def set_or_update(key, value):
-        nonlocal paths_end
-        key_lower = key.lower()
-        for i in range(paths_start + 1, paths_end):
-            if '=' not in lines[i]:
-                continue
-            existing_key, _ = lines[i].split('=', 1)
-            if existing_key.strip().lower() == key_lower:
-                lines[i] = f"{key} = {value}"
-                return
-        lines.insert(paths_end, f"{key} = {value}")
-        paths_end += 1
+            if (keyLower in pathValues) {
+                pathWritten[keyLower] = 1
+                replacementKey = keyRaw
+                for (idx = 1; idx <= storedPathCount; idx++) {
+                    if (pathLower[idx] == keyLower) {
+                        replacementKey = pathKeys[idx]
+                        break
+                    }
+                }
+                printf "%s = %s", replacementKey, pathValues[keyLower]
+                if (comment != "") {
+                    printf " %s", comment
+                }
+                printf "\n"
+                next
+            }
+        }
+    }
 
-    for key, value in path_mappings.items():
-        set_or_update(key, value)
+    print line
+}
 
-    if ini_files:
-        existing_files = []
-        ini_line_index = None
-        for i in range(paths_start + 1, paths_end):
-            if '=' not in lines[i]:
-                continue
-            existing_key, existing_value = lines[i].split('=', 1)
-            if existing_key.strip().lower() == 'ini':
-                ini_line_index = i
-                existing_files = existing_value.strip().split()
-                break
-        for filename in ini_files:
-            if filename not in existing_files:
-                existing_files.append(filename)
-        if existing_files:
-            new_line = 'ini = ' + ' '.join(existing_files)
-            if ini_line_index is not None:
-                lines[ini_line_index] = new_line
-            else:
-                lines.insert(paths_end, new_line)
-                paths_end += 1
+function output_missing_paths(    idx, lowerKey) {
+    for (idx = 1; idx <= storedPathCount; idx++) {
+        lowerKey = pathLower[idx]
+        if (!(lowerKey in pathWritten)) {
+            print pathKeys[idx] " = " pathValues[lowerKey]
+            pathWritten[lowerKey] = 1
+        }
+    }
+}
 
-    if lines and lines[-1] != '':
-        lines.append('')
+function output_ini_line(    idx, token, line) {
+    if (storedIniCount == 0 || iniWritten) {
+        return
+    }
+    delete iniSeen
+    delete iniOrder
+    iniOrderCount = 0
+    for (idx = 1; idx <= storedIniCount; idx++) {
+        token = iniList[idx]
+        if (!(token in iniSeen)) {
+            iniOrder[++iniOrderCount] = token
+            iniSeen[token] = 1
+        }
+    }
+    if (iniOrderCount > 0) {
+        line = "ini ="
+        for (idx = 1; idx <= iniOrderCount; idx++) {
+            line = line " " iniOrder[idx]
+        }
+        print line
+        iniWritten = 1
+    }
+}
 
-output = '\n'.join(lines)
-if newline == '\r\n':
-    output = output.replace('\n', '\r\n')
+END {
+    if (inPaths) {
+        output_missing_paths()
+        output_ini_line()
+    }
+    if (!pathsSeen) {
+        if (NR > 0 && lastLine != "") {
+            print ""
+        }
+        print "[paths]"
+        output_missing_paths()
+        output_ini_line()
+    }
+}
+' "${GEOS_INI_PATH}" >"${tmp_ini}"
 
-geos_ini_path.write_text(output)
-PY
+    if [ "${newline_style}" = $'\r\n' ]; then
+        tmp_converted="$(mktemp)"
+        awk '{ printf "%s\r\n", $0 } END { if (NR == 0) { printf "\r\n" } }' "${tmp_ini}" >"${tmp_converted}"
+        mv "${tmp_converted}" "${tmp_ini}"
+    fi
+
+    mv "${tmp_ini}" "${GEOS_INI_PATH}"
 }
 
 create_basebox_config()
