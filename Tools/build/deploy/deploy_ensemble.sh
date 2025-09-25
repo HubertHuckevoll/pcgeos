@@ -493,6 +493,7 @@ mount c "${drivec_abs_path}" -t dir
 c:
 cd ensemble
 loader
+exit
 CONFIG
 }
 
