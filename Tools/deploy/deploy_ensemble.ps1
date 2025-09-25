@@ -5,9 +5,8 @@
 .DESCRIPTION
     Downloads the latest PC/GEOS Ensemble build alongside the Basebox DOSBox fork,
     refreshes the installation under $env:USERPROFILE\geospc while preserving the
-    user configuration directory, patches Ensemble's GEOS.INI so that documents and
-    overrides are redirected into the user tree, and installs launch helpers that
-    expose a global `pcgeos-ensemble` command.
+    user configuration directory, and installs launch helpers that expose a global
+    `pcgeos-ensemble` command.
 
 .NOTES
     Designed for PowerShell 5.1+ on Windows. Requires built-in tooling only
@@ -30,22 +29,12 @@ $DriveCDir = Join-Path -Path $InstallRoot -ChildPath 'drivec'
 $BaseboxDir = Join-Path -Path $InstallRoot -ChildPath 'basebox'
 $UserDir = Join-Path -Path $DriveCDir -ChildPath 'user'
 $UserDocumentDir = Join-Path -Path $UserDir -ChildPath 'document'
-$UserGeosIni = Join-Path -Path $UserDir -ChildPath 'geos.ini'
 $GeosInstallDir = Join-Path -Path $DriveCDir -ChildPath 'ensemble'
-$GeosIniPath = Join-Path -Path $GeosInstallDir -ChildPath 'geos.ini'
 $BaseboxConfigPath = Join-Path -Path $BaseboxDir -ChildPath 'basebox-geos.conf'
 $LocalLauncherPath = Join-Path -Path $BaseboxDir -ChildPath 'run-ensemble.ps1'
 $GlobalLauncherDir = Join-Path -Path ([Environment]::GetFolderPath('LocalApplicationData')) -ChildPath 'Microsoft\WindowsApps'
 $GlobalLauncherCmd = Join-Path -Path $GlobalLauncherDir -ChildPath 'pcgeos-ensemble.cmd'
 $GlobalLauncherPs1 = Join-Path -Path $GlobalLauncherDir -ChildPath 'pcgeos-ensemble.ps1'
-
-$PathMappings = [ordered]@{
-    document = 'C:\\USER\\DOCUMENT'
-}
-
-$AdditionalIniFiles = @(
-    'C:\\USER\\GEOS.INI'
-)
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -224,221 +213,6 @@ function Extract-Packages
 function Ensure-UserState
 {
     Ensure-Directory -Path $UserDocumentDir
-    if (-not (Test-Path -LiteralPath $UserGeosIni))
-    {
-        Write-Log 'Creating user geos.ini placeholder'
-        $header = @(
-            '; User-specific GEOS settings are stored here. This file is merged via',
-            '; the [paths] ini directive added by the deployment script. Feel free to',
-            '; customize it without worrying about future deployments overwriting it.',
-            ''
-        )
-        Set-Content -Path $UserGeosIni -Value $header -Encoding ASCII
-    }
-}
-
-function Update-GeosIni
-{
-    if (-not (Test-Path -LiteralPath $GeosIniPath))
-    {
-        throw "Expected GEOS.INI at $GeosIniPath not found"
-    }
-
-    Write-Log 'Patching Ensemble geos.ini'
-
-    $rawContent = Get-Content -LiteralPath $GeosIniPath -Raw -Encoding Byte
-    $textContent = [System.Text.Encoding]::ASCII.GetString($rawContent)
-    $newline = if ($textContent -match "`r`n") { "`r`n" } else { "`n" }
-
-    $lines = $textContent -split "`r?`n"
-
-    $processed = New-Object System.Collections.Generic.List[string]
-    $pathsSectionSeen = $false
-    $inPaths = $false
-    $iniLineWritten = $false
-
-    $mappingState = @{}
-    foreach ($key in $PathMappings.Keys)
-    {
-        $mappingState[$key.ToLowerInvariant()] = [pscustomobject]@{
-            Name    = $key
-            Value   = $PathMappings[$key]
-            Written = $false
-        }
-    }
-
-    $addMissingPaths = {
-        param (
-            [System.Collections.Generic.List[string]] $Target
-        )
-
-        foreach ($entry in $mappingState.GetEnumerator())
-        {
-            if (-not $entry.Value.Written)
-            {
-                $Target.Add("{0} = {1}" -f $entry.Value.Name, $entry.Value.Value)
-                $entry.Value.Written = $true
-            }
-        }
-    }
-
-    $writeIniLine = {
-        param (
-            [System.Collections.Generic.List[string]] $Target,
-            [ref] $IniFlag
-        )
-
-        if ($IniFlag.Value -or $AdditionalIniFiles.Count -eq 0)
-        {
-            return
-        }
-
-        $unique = New-Object System.Collections.Generic.List[string]
-        $seen = New-Object System.Collections.Generic.HashSet[string]([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($item in $AdditionalIniFiles)
-        {
-            if ($seen.Add($item))
-            {
-                $unique.Add($item)
-            }
-        }
-
-        if ($unique.Count -gt 0)
-        {
-            $Target.Add('ini = ' + ($unique -join ' '))
-            $IniFlag.Value = $true
-        }
-    }
-
-    for ($i = 0; $i -lt $lines.Length; $i++)
-    {
-        $line = $lines[$i]
-
-        if ($line -match '^[ \t]*\[[Pp][Aa][Tt][Hh][Ss]\][ \t]*$')
-        {
-            $pathsSectionSeen = $true
-            $inPaths = $true
-            $processed.Add($line)
-            continue
-        }
-
-        if ($inPaths)
-        {
-            if ($line -match '^[ \t]*\[')
-            {
-                & $addMissingPaths $processed
-                & $writeIniLine $processed ([ref]$iniLineWritten)
-                $inPaths = $false
-            }
-            else
-            {
-                $assignmentPattern = '^[ \t]*([^=; \t]+)[ \t]*=[ \t]*(.*)$'
-                if ($line -match $assignmentPattern)
-                {
-                    $keyRaw = $Matches[1]
-                    $valuePart = $Matches[2]
-                    $comment = ''
-                    $commentIndex = $valuePart.IndexOf(';')
-                    if ($commentIndex -ge 0)
-                    {
-                        $comment = $valuePart.Substring($commentIndex)
-                        $valuePart = $valuePart.Substring(0, $commentIndex)
-                    }
-
-                    $valueTrim = $valuePart.Trim()
-                    $keyLower = $keyRaw.ToLowerInvariant()
-
-                    if ($keyLower -eq 'ini')
-                    {
-                        $tokens = @()
-                        if ($valueTrim.Length -gt 0)
-                        {
-                            $tokens = $valueTrim -split '[ \t]+' | Where-Object { $_ }
-                        }
-
-                        $seenTokens = New-Object System.Collections.Generic.HashSet[string]([System.StringComparer]::OrdinalIgnoreCase)
-                        $orderedTokens = New-Object System.Collections.Generic.List[string]
-                        foreach ($token in $tokens)
-                        {
-                            if ($seenTokens.Add($token))
-                            {
-                                $orderedTokens.Add($token)
-                            }
-                        }
-
-                        foreach ($extra in $AdditionalIniFiles)
-                        {
-                            if ($seenTokens.Add($extra))
-                            {
-                                $orderedTokens.Add($extra)
-                            }
-                        }
-
-                        if ($orderedTokens.Count -gt 0)
-                        {
-                            $newlineValue = 'ini = ' + ($orderedTokens -join ' ')
-                            if ($comment)
-                            {
-                                $newlineValue += ' ' + $comment.TrimStart()
-                            }
-                            $processed.Add($newlineValue)
-                        }
-                        elseif ($comment)
-                        {
-                            $processed.Add('ini = ' + $comment.TrimStart())
-                        }
-
-                        $iniLineWritten = $true
-                        continue
-                    }
-
-                    if ($mappingState.ContainsKey($keyLower))
-                    {
-                        $entry = $mappingState[$keyLower]
-                        $entry.Written = $true
-                        $replacement = '{0} = {1}' -f $entry.Name, $entry.Value
-                        if ($comment)
-                        {
-                            $replacement += ' ' + $comment.TrimStart()
-                        }
-                        $processed.Add($replacement)
-                        continue
-                    }
-                }
-            }
-        }
-
-        if (-not $inPaths)
-        {
-            $processed.Add($line)
-        }
-    }
-
-    if ($inPaths)
-    {
-        & $addMissingPaths $processed
-        & $writeIniLine $processed ([ref]$iniLineWritten)
-    }
-    elseif (-not $pathsSectionSeen)
-    {
-        if ($processed.Count -gt 0 -and $processed[$processed.Count - 1] -ne '')
-        {
-            $processed.Add('')
-        }
-
-        $processed.Add('[paths]')
-        & $addMissingPaths $processed
-        & $writeIniLine $processed ([ref]$iniLineWritten)
-    }
-
-    $output = ($processed -join $newline)
-    if (-not $output.EndsWith($newline))
-    {
-        $output += $newline
-    }
-
-    $bytes = [System.Text.Encoding]::ASCII.GetBytes($output)
-    [IO.File]::WriteAllBytes($GeosIniPath, $bytes)
 }
 
 function Write-BaseboxConfig
@@ -497,52 +271,32 @@ function Write-BaseboxConfig
         $raw = Get-Content -LiteralPath $tempConfig -Raw -Encoding Byte
         $text = [System.Text.Encoding]::ASCII.GetString($raw)
         $newline = if ($text -match "`r`n") { "`r`n" } else { "`n" }
-        $lines = $text -split "`r?`n"
 
-        $autoexecLines = @(
+        $autoexecBlock = @(
+            '[autoexec]',
             '@echo off',
             "mount c \"$drivecAbsolute\" -t dir",
             'c:',
             'cd ensemble',
-            'loader'
-        )
+            'loader',
+            'exit'
+        ) -join $newline
 
-        $output = New-Object System.Collections.Generic.List[string]
-        $inAutoexec = $false
-
-        foreach ($line in $lines)
+        if (-not $autoexecBlock.EndsWith($newline))
         {
-            if ([Text.RegularExpressions.Regex]::IsMatch($line, '^\s*\[autoexec\]\s*$', [Text.RegularExpressions.RegexOptions]::IgnoreCase))
-            {
-                $output.Add($line)
-                foreach ($entry in $autoexecLines)
-                {
-                    $output.Add($entry)
-                }
-                $inAutoexec = $true
-                continue
-            }
-
-            if ($inAutoexec)
-            {
-                if ([Text.RegularExpressions.Regex]::IsMatch($line, '^\s*\[', [Text.RegularExpressions.RegexOptions]::IgnoreCase))
-                {
-                    $inAutoexec = $false
-                    $output.Add($line)
-                }
-                continue
-            }
-
-            $output.Add($line)
+            $autoexecBlock += $newline
         }
 
-        $final = ($output -join $newline)
-        if (-not $final.EndsWith($newline))
+        $pattern = '^[\s]*\[autoexec\][^\r\n]*(?:\r?\n(?!\s*\[).*)*'
+        $options = [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Multiline
+        $updated = [Text.RegularExpressions.Regex]::Replace($text, $pattern, $autoexecBlock, $options)
+
+        if (-not $updated.EndsWith($newline))
         {
-            $final += $newline
+            $updated += $newline
         }
 
-        [IO.File]::WriteAllText($BaseboxConfigPath, $final, [System.Text.Encoding]::ASCII)
+        [IO.File]::WriteAllText($BaseboxConfigPath, $updated, [System.Text.Encoding]::ASCII)
     }
     finally
     {
@@ -624,7 +378,6 @@ function Invoke-Main
     Preserve-UserData
     Extract-Packages
     Ensure-UserState
-    Update-GeosIni
     Write-BaseboxConfig
     Write-Launchers
 

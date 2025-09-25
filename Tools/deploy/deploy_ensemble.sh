@@ -4,11 +4,10 @@
 #
 # This script downloads the latest PC/GEOS Ensemble build together with the
 # matching Basebox DOSBox fork, prepares a runnable environment under
-# "$HOME/geospc", patches configuration files, and provides an Ensemble
-# launcher within that directory that boots Ensemble inside Basebox. The script
-# is designed to be
-# idempotent: running it again refreshes the installation while preserving
-# user-specific configuration inside the "user" directory.
+# "$HOME/geospc", and provides an Ensemble launcher within that directory that
+# boots Ensemble inside Basebox. The script is designed to be idempotent:
+# running it again refreshes the installation while preserving user-specific
+# configuration inside the "user" directory.
 #
 # Supported environments: Debian, Fedora, and Windows Subsystem for Linux.
 # The script relies only on standard Unix tooling available on these
@@ -28,26 +27,11 @@ DRIVEC_DIR="${INSTALL_ROOT}/drivec"
 BASEBOX_DIR="${INSTALL_ROOT}/basebox"
 USER_DIR="${DRIVEC_DIR}/user"
 USER_DOCUMENT_DIR="${USER_DIR}/document"
-USER_GEOS_INI="${USER_DIR}/geos.ini"
 GEOS_INSTALL_DIR="${DRIVEC_DIR}/ensemble"
-GEOS_INI_PATH="${GEOS_INSTALL_DIR}/geos.ini"
 BASEBOX_CONFIG="${BASEBOX_DIR}/basebox-geos.conf"
 LOCAL_LAUNCHER="${INSTALL_ROOT}/ensemble.sh"
 
 DETECTED_BASEBOX_BINARY=""
-
-# Paths to merge into GEOS standard paths. Extend PATH_MAPPINGS for future
-# directory mappings (e.g. "fonts", "userdata", etc.). Values must use DOS
-# style paths because they are interpreted inside the DOSBox guest.
-declare -A PATH_MAPPINGS=(
-    [DOCUMENT]="C:\\USER\\DOCUMENT"
-)
-
-# Additional INI files to load through the [paths] "ini" key. The order is
-# significant: user overrides are appended after existing entries.
-ADDITIONAL_INIS=(
-    "C:\\USER\\GEOS.INI"
-)
 
 # -----------------------------------------------------------------------------
 # Utility helpers
@@ -215,232 +199,11 @@ ensure_user_state()
 {
     log "Preserving user configuration"
     mkdir -p "${USER_DOCUMENT_DIR}"
-    if [ ! -f "${USER_GEOS_INI}" ]; then
-        cat >"${USER_GEOS_INI}" <<'EOC'
-; User-specific GEOS settings are stored here. This file is merged via
-; the [paths] ini directive added by the deployment script. Feel free to
-; customize it without worrying about future deployments overwriting it.
-
-EOC
-    fi
-}
-
-patch_geos_ini()
-{
-    if [ ! -f "${GEOS_INI_PATH}" ]; then
-        fail "Expected GEOS.INI at ${GEOS_INI_PATH} not found."
-    fi
-
-    log "Patching Ensemble geos.ini"
-
-    # The GEOS documentation explains that entries under [paths] map
-    # directories inside the Ensemble tree to DOS paths exposed by the
-    # runtime. The "ini" key lists GEOS.INI files in load order: the base
-    # configuration is read first and any later entries receive user changes.
-    # We merge the shipped ensemble\geos.ini with user\geos.ini so that
-    # personal settings persist across deployments.
-
-    local path_payload ini_payload newline_style tmp_ini tmp_converted key
-    path_payload=""
-    for key in "${!PATH_MAPPINGS[@]}"; do
-        printf -v path_payload '%s%s|%s\n' "${path_payload}" "${key}" "${PATH_MAPPINGS[$key]}"
-    done
-
-    ini_payload=""
-    if [ "${#ADDITIONAL_INIS[@]}" -gt 0 ]; then
-        ini_payload="$(printf '%s\n' "${ADDITIONAL_INIS[@]}")"
-    fi
-
-    newline_style=$'\n'
-    if LC_ALL=C grep -q $'\r' "${GEOS_INI_PATH}"; then
-        newline_style=$'\r\n'
-    fi
-
-    tmp_ini="$(mktemp)"
-    GEOS_PATH_MAPPINGS="${path_payload}" \
-    GEOS_INI_FILES="${ini_payload}" \
-    awk '
-BEGIN {
-    pathCountRaw = split(ENVIRON["GEOS_PATH_MAPPINGS"], pathLines, "\n")
-    storedPathCount = 0
-    for (i = 1; i <= pathCountRaw; i++) {
-        line = pathLines[i]
-        if (line == "") {
-            continue
-        }
-        split(line, pair, "|")
-        keyOrig = pair[1]
-        keyLower = tolower(keyOrig)
-        pathKeys[++storedPathCount] = keyOrig
-        pathLower[storedPathCount] = keyLower
-        pathValues[keyLower] = pair[2]
-    }
-
-    iniCountRaw = split(ENVIRON["GEOS_INI_FILES"], iniLines, "\n")
-    storedIniCount = 0
-    for (i = 1; i <= iniCountRaw; i++) {
-        entry = iniLines[i]
-        if (entry == "") {
-            continue
-        }
-        iniList[++storedIniCount] = entry
-    }
-}
-{
-    line = $0
-    sub(/\r$/, "", line)
-    lastLine = line
-
-    if (match(line, /^[ \t]*\[[Pp][Aa][Tt][Hh][Ss]\][ \t]*$/)) {
-        inPaths = 1
-        pathsSeen = 1
-        print line
-        next
-    }
-
-    if (inPaths) {
-        if (match(line, /^[ \t]*\[/)) {
-            output_missing_paths()
-            output_ini_line()
-            inPaths = 0
-        } else if (match(line, /^[ \t]*([^=; \t]+)[ \t]*=[ \t]*(.*)$/, matchArr)) {
-            keyRaw = matchArr[1]
-            keyLower = tolower(keyRaw)
-            valuePart = matchArr[2]
-
-            comment = ""
-            commentPos = index(valuePart, ";")
-            if (commentPos > 0) {
-                comment = substr(valuePart, commentPos)
-                valuePart = substr(valuePart, 1, commentPos - 1)
-            }
-
-            gsub(/^[ \t]+/, "", valuePart)
-            gsub(/[ \t]+$/, "", valuePart)
-
-            if (keyLower == "ini") {
-                iniWritten = 1
-                delete iniSeen
-                delete iniOrder
-                iniOrderCount = 0
-
-                existingCount = split(valuePart, existingTokens, /[ \t]+/)
-                for (idx = 1; idx <= existingCount; idx++) {
-                    token = existingTokens[idx]
-                    if (token == "") {
-                        continue
-                    }
-                    if (!(token in iniSeen)) {
-                        iniOrder[++iniOrderCount] = token
-                        iniSeen[token] = 1
-                    }
-                }
-                for (i = 1; i <= storedIniCount; i++) {
-                    token = iniList[i]
-                    if (!(token in iniSeen)) {
-                        iniOrder[++iniOrderCount] = token
-                        iniSeen[token] = 1
-                    }
-                }
-                if (iniOrderCount > 0) {
-                    iniLine = "ini ="
-                    for (i = 1; i <= iniOrderCount; i++) {
-                        iniLine = iniLine " " iniOrder[i]
-                    }
-                    if (comment != "") {
-                        iniLine = iniLine " " comment
-                    }
-                    print iniLine
-                } else if (comment != "") {
-                    print "ini =" comment
-                }
-                next
-            }
-
-            if (keyLower in pathValues) {
-                pathWritten[keyLower] = 1
-                replacementKey = keyRaw
-                for (idx = 1; idx <= storedPathCount; idx++) {
-                    if (pathLower[idx] == keyLower) {
-                        replacementKey = pathKeys[idx]
-                        break
-                    }
-                }
-                printf "%s = %s", replacementKey, pathValues[keyLower]
-                if (comment != "") {
-                    printf " %s", comment
-                }
-                printf "\n"
-                next
-            }
-        }
-    }
-
-    print line
-}
-
-function output_missing_paths(    idx, lowerKey) {
-    for (idx = 1; idx <= storedPathCount; idx++) {
-        lowerKey = pathLower[idx]
-        if (!(lowerKey in pathWritten)) {
-            print pathKeys[idx] " = " pathValues[lowerKey]
-            pathWritten[lowerKey] = 1
-        }
-    }
-}
-
-function output_ini_line(    idx, token, line) {
-    if (storedIniCount == 0 || iniWritten) {
-        return
-    }
-    delete iniSeen
-    delete iniOrder
-    iniOrderCount = 0
-    for (idx = 1; idx <= storedIniCount; idx++) {
-        token = iniList[idx]
-        if (!(token in iniSeen)) {
-            iniOrder[++iniOrderCount] = token
-            iniSeen[token] = 1
-        }
-    }
-    if (iniOrderCount > 0) {
-        line = "ini ="
-        for (idx = 1; idx <= iniOrderCount; idx++) {
-            line = line " " iniOrder[idx]
-        }
-        print line
-        iniWritten = 1
-    }
-}
-
-END {
-    if (inPaths) {
-        output_missing_paths()
-        output_ini_line()
-    }
-    if (!pathsSeen) {
-        if (NR > 0 && lastLine != "") {
-            print ""
-        }
-        print "[paths]"
-        output_missing_paths()
-        output_ini_line()
-    }
-}
-' "${GEOS_INI_PATH}" >"${tmp_ini}"
-
-    if [ "${newline_style}" = $'\r\n' ]; then
-        tmp_converted="$(mktemp)"
-        awk '{ printf "%s\r\n", $0 } END { if (NR == 0) { printf "\r\n" } }' "${tmp_ini}" >"${tmp_converted}"
-        mv "${tmp_converted}" "${tmp_ini}"
-    fi
-
-    mv "${tmp_ini}" "${GEOS_INI_PATH}"
 }
 
 create_basebox_config()
 {
-    local drivec_abs_path basebox_binary_rel basebox_binary xdg_root config_output config_line config_path config_dir newline_style patched_conf autoexec_payload tmp_conf
+    local drivec_abs_path basebox_binary_rel basebox_binary xdg_root config_output config_line config_path config_dir tmp_conf autoexec_file
 
     drivec_abs_path="$(absolute_path "${DRIVEC_DIR}")"
 
@@ -501,78 +264,32 @@ create_basebox_config()
     tmp_conf="$(mktemp)"
     cp "${config_path}" "${tmp_conf}"
 
-    newline_style=$'\n'
-    if LC_ALL=C grep -q $'\r' "${tmp_conf}"; then
-        newline_style=$'\r\n'
-    fi
-
-    patched_conf="$(mktemp)"
-    autoexec_payload="$(printf '%s\n' \
+    autoexec_file="$(mktemp)"
+    printf '%s\n' \
         "@echo off" \
         "mount c \"${drivec_abs_path}\" -t dir" \
         "c:" \
         "cd ensemble" \
         "loader" \
-        "exit")"
-    autoexec_payload="${autoexec_payload%$'\n'}"
+        "exit" >"${autoexec_file}"
 
-    BASEBOX_AUTOEXEC_PAYLOAD="${autoexec_payload}" \
-    BASEBOX_CPU_CYCLES="auto" \
-    awk '
-BEGIN {
-    autoexecCount = split(ENVIRON["BASEBOX_AUTOEXEC_PAYLOAD"], autoexecLines, "\n")
-    desiredCycles = ENVIRON["BASEBOX_CPU_CYCLES"]
+    sed -n "
+/^[[:space:]]*\[autoexec\][[:space:]]*\$/I{
+    p
+    r ${autoexec_file}
+    n
+    :skip
+    /^[[:space:]]*\[/I{
+        p
+        b
+    }
+    n
+    b skip
 }
-{
-    if (match($0, /^[ \t]*\[[Aa][Uu][Tt][Oo][Ee][Xx][Ee][Cc]\][ \t]*$/)) {
-        print $0
-        for (idx = 1; idx <= autoexecCount; idx++) {
-            print autoexecLines[idx]
-        }
-        inAutoexec = 1
-        next
-    }
+p
+" "${tmp_conf}" >"${BASEBOX_CONFIG}"
 
-    if (inAutoexec) {
-        if (match($0, /^[ \t]*\[/)) {
-            inAutoexec = 0
-            print $0
-        }
-        next
-    }
-
-    if (match($0, /^[ \t]*\[[Cc][Pp][Uu]\][ \t]*$/)) {
-        inCpu = 1
-        print $0
-        next
-    }
-
-    if (inCpu) {
-        if (match($0, /^[ \t]*\[/)) {
-            inCpu = 0
-            print $0
-            next
-        }
-
-        if (match($0, /^[ \t]*cycles[ \t]*=.*$/i)) {
-            printf "cycles = %s\n", desiredCycles
-            next
-        }
-    }
-
-    print $0
-}
-' "${tmp_conf}" >"${patched_conf}"
-
-    if [ "${newline_style}" = $'\r\n' ]; then
-        local converted
-        converted="$(mktemp)"
-        awk '{ printf "%s\r\n", $0 } END { if (NR == 0) { printf "\r\n" } }' "${patched_conf}" >"${converted}"
-        mv "${converted}" "${patched_conf}"
-    fi
-
-    mv "${patched_conf}" "${BASEBOX_CONFIG}"
-    rm -f "${tmp_conf}"
+    rm -f "${tmp_conf}" "${autoexec_file}"
     rm -rf "${xdg_root}"
 }
 
@@ -627,7 +344,6 @@ main()
     prepare_environment
     extract_archives
     ensure_user_state
-    patch_geos_ini
     create_basebox_config
     create_launcher
 
