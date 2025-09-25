@@ -38,7 +38,7 @@ GLOBAL_LAUNCHER="${HOME}/.local/bin/pcgeos-ensemble"
 # directory mappings (e.g. "fonts", "userdata", etc.). Values must use DOS
 # style paths because they are interpreted inside the DOSBox guest.
 declare -A PATH_MAPPINGS=(
-    [document]="C:\\USER\\DOCUMENT"
+    [DOCUMENT]="C:\\USER\\DOCUMENT"
 )
 
 # Additional INI files to load through the [paths] "ini" key. The order is
@@ -239,7 +239,7 @@ patch_geos_ini()
     local path_payload ini_payload newline_style tmp_ini tmp_converted key
     path_payload=""
     for key in "${!PATH_MAPPINGS[@]}"; do
-        path_payload+="${key}|${PATH_MAPPINGS[$key]}\n"
+        path_payload+="${key}|${PATH_MAPPINGS[$key]}"
     done
 
     ini_payload=""
