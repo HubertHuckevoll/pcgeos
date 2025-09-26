@@ -211,9 +211,20 @@ update_geos_ini_paths()
     }
 
     {
-        line = $0
-        sub(/\r$/, "", line)
+        raw = $0
+        sub(/\r$/, "", raw)
+
+        ctrl_z_pos = index(raw, "\032")
+        if (ctrl_z_pos) {
+            line = substr(raw, 1, ctrl_z_pos - 1)
+            exit_after = 1
+        } else {
+            line = raw
+            exit_after = 0
+        }
+
         lower = tolower(line)
+        should_emit = 1
 
         if (lower ~ /^[[:space:]]*\[paths\][[:space:]]*$/) {
             if (in_paths) {
@@ -224,6 +235,9 @@ update_geos_ini_paths()
             have_token = 0
             seen_paths = 1
             emit(line)
+            if (exit_after) {
+                exit
+            }
             next
         }
 
@@ -233,6 +247,9 @@ update_geos_ini_paths()
                 in_paths = 0
             }
             emit(line)
+            if (exit_after) {
+                exit
+            }
             next
         }
 
@@ -245,7 +262,17 @@ update_geos_ini_paths()
             }
         }
 
-        emit(line)
+        if (ctrl_z_pos == 1 && length(line) == 0) {
+            should_emit = 0
+        }
+
+        if (should_emit) {
+            emit(line)
+        }
+
+        if (exit_after) {
+            exit
+        }
     }
 
     END {
