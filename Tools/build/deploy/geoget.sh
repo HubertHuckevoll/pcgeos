@@ -26,7 +26,7 @@ INSTALL_ROOT="${HOME}/geospc"
 DRIVEC_DIR="${INSTALL_ROOT}/drivec"
 GEOS_INSTALL_DIR="${DRIVEC_DIR}/ensemble"
 GEOS_FIX_DIR="${DRIVEC_DIR}/ENSEMBLE.FIX"
-GEOS_ARCHIVE_ROOT="ensemble/ensemble"
+GEOS_ARCHIVE_ROOT="ensemble"
 BASEBOX_DIR="${INSTALL_ROOT}/basebox"
 BASEBOX_BASE_CONFIG="${BASEBOX_DIR}/basebox-geos.conf"
 BASEBOX_USER_CONFIG="${BASEBOX_DIR}/basebox.conf"
@@ -122,6 +122,33 @@ detect_basebox_binary()
     else
         printf ''
     fi
+}
+
+resolve_geos_archive_root()
+{
+    local base_dir default_root candidate
+
+    base_dir="$1"
+    default_root="${base_dir}/${GEOS_ARCHIVE_ROOT}"
+
+    if [ -d "${default_root}" ]; then
+        printf '%s\n' "${default_root}"
+        return
+    fi
+
+    candidate="$(find "${base_dir}" -maxdepth 2 -type f -iname 'geos.ini' -print -quit 2>/dev/null || true)"
+    if [ -n "${candidate}" ]; then
+        dirname "${candidate}"
+        return
+    fi
+
+    candidate="$(find "${base_dir}" -maxdepth 1 -type d -iname 'ensemble' -print -quit 2>/dev/null || true)"
+    if [ -n "${candidate}" ]; then
+        printf '%s\n' "${candidate}"
+        return
+    fi
+
+    printf '%s\n' ''
 }
 
 process_geos_exception_files()
@@ -278,11 +305,11 @@ extract_archives()
 
     log "Installing Ensemble into ${GEOS_INSTALL_DIR}"
     local geos_source
-    geos_source="${temp_dir}/ensemble/${GEOS_ARCHIVE_ROOT}"
+    geos_source="$(resolve_geos_archive_root "${temp_dir}/ensemble")"
 
-    if [ ! -d "${geos_source}" ]; then
+    if [ -z "${geos_source}" ] || [ ! -d "${geos_source}" ]; then
         rm -rf "${temp_dir}"
-        fail "Unable to locate Ensemble archive root at ${geos_source}."
+        fail "Unable to locate Ensemble archive root inside ${temp_dir}/ensemble."
     fi
 
     local -a rsync_args
