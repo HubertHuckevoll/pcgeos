@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# deploy_ensemble.sh - Preliminary deployment script for PC/GEOS Ensemble Alpha
+# geoget.sh - Preliminary deployment script for PC/GEOS Ensemble Alpha
 #
 # This script downloads the latest PC/GEOS Ensemble build together with the
-# matching Basebox DOSBox fork, prepares a runnable environment under
+# matching Basebox DOSBox Staging fork, prepares a runnable environment under
 # "$HOME/geospc", and provides an Ensemble launcher within that directory that
 # boots Ensemble inside Basebox. The script is designed to be idempotent:
 # running it again refreshes the installation while preserving user-created
