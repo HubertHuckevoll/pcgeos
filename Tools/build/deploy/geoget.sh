@@ -6,8 +6,8 @@
 # matching Basebox DOSBox fork, prepares a runnable environment under
 # "$HOME/geospc", and provides an Ensemble launcher within that directory that
 # boots Ensemble inside Basebox. The script is designed to be idempotent:
-# running it again refreshes the installation while preserving user-specific
-# configuration inside the "user" directory.
+# running it again refreshes the installation while preserving user-created
+# files and redirecting configurable data into ENSEMBLE.FIX for safe updates.
 #
 # Supported environments: Debian, Fedora, and Windows Subsystem for Linux.
 # The script relies only on standard Unix tooling available on these
@@ -24,12 +24,20 @@ BASEBOX_RELEASE_URL="https://github.com/bluewaysw/pcgeos-basebox/releases/downlo
 
 INSTALL_ROOT="${HOME}/geospc"
 DRIVEC_DIR="${INSTALL_ROOT}/drivec"
-BASEBOX_DIR="${INSTALL_ROOT}/basebox"
-USER_DIR="${DRIVEC_DIR}/user"
-USER_DOCUMENT_DIR="${USER_DIR}/document"
 GEOS_INSTALL_DIR="${DRIVEC_DIR}/ensemble"
-BASEBOX_CONFIG="${BASEBOX_DIR}/basebox-geos.conf"
+GEOS_FIX_DIR="${DRIVEC_DIR}/ENSEMBLE.FIX"
+# Optional relative path pointing at the Ensemble root inside the archive.
+# Leave empty to auto-detect the proper location.
+GEOS_ARCHIVE_ROOT=""
+BASEBOX_DIR="${INSTALL_ROOT}/basebox"
+BASEBOX_BASE_CONFIG="${BASEBOX_DIR}/basebox-geos.conf"
+BASEBOX_USER_CONFIG="${BASEBOX_DIR}/basebox.conf"
 LOCAL_LAUNCHER="${INSTALL_ROOT}/ensemble.sh"
+
+declare -a GEOS_EXCEPTION_RULES=(
+    "geos.ini|${GEOS_FIX_DIR}|NET.INI"
+    "privdata/token_da.000|${GEOS_FIX_DIR}|token_da.000"
+)
 
 DETECTED_BASEBOX_BINARY=""
 
@@ -118,6 +126,136 @@ detect_basebox_binary()
     fi
 }
 
+locate_geos_archive_root()
+{
+    local archive_root="$1"
+    local hint="$2"
+    local candidate
+
+    if [ -n "${hint}" ]; then
+        candidate="${archive_root}/${hint}"
+        if [ -d "${candidate}" ]; then
+            printf '%s' "${candidate}"
+            return
+        fi
+    fi
+
+    while IFS= read -r -d '' candidate; do
+        if [ -f "${candidate}/GEOS.INI" ] || [ -f "${candidate}/geos.ini" ] || [ -d "${candidate}/PRIVDATA" ]; then
+            printf '%s' "${candidate}"
+            return
+        fi
+    done < <(find "${archive_root}" -mindepth 1 -maxdepth 5 -type d -name ensemble -print0)
+
+    fail "Unable to locate Ensemble archive root inside ${archive_root}."
+}
+
+process_geos_exception_files()
+{
+    local source_root="$1"
+    local rule src_rel dest_dir dest_name src_path dest_path
+
+    for rule in "${GEOS_EXCEPTION_RULES[@]}"; do
+        IFS='|' read -r src_rel dest_dir dest_name <<<"${rule}"
+        src_path="${source_root}/${src_rel}"
+        dest_path="${dest_dir}/${dest_name}"
+
+        mkdir -p "${dest_dir}"
+
+        if [ -f "${src_path}" ]; then
+            cp -f "${src_path}" "${dest_path}"
+        else
+            log "Warning: expected exception file '${src_rel}' not found in archive"
+        fi
+    done
+}
+
+update_geos_ini_paths()
+{
+    local geos_ini
+    geos_ini="${GEOS_INSTALL_DIR}/GEOS.INI"
+
+    if [ ! -f "${geos_ini}" ]; then
+        cat >"${geos_ini}" <<'EOF'
+[paths]
+ini=C:\ENSEMBLE.FIX\NET.INI
+sharedTokenDatabase=C:\ENSEMBLE.FIX
+EOF
+        return
+    fi
+
+    local tmp_file
+    tmp_file="$(mktemp)"
+
+    awk -v ini_line='ini=C:\ENSEMBLE.FIX\NET.INI' -v token_line='sharedTokenDatabase=C:\ENSEMBLE.FIX' '
+    function flush_pending() {
+        if (in_paths) {
+            if (!have_ini) {
+                print ini_line
+                have_ini = 1
+            }
+            if (!have_token) {
+                print token_line
+                have_token = 1
+            }
+        }
+    }
+
+    {
+        line = $0
+        lower = tolower(line)
+
+        if (lower ~ /^[[:space:]]*\[paths\][[:space:]]*$/) {
+            if (in_paths) {
+                flush_pending()
+            }
+            in_paths = 1
+            have_ini = 0
+            have_token = 0
+            seen_paths = 1
+            print line
+            next
+        }
+
+        if (lower ~ /^[[:space:]]*\[/) {
+            if (in_paths) {
+                flush_pending()
+                in_paths = 0
+            }
+            print line
+            next
+        }
+
+        if (in_paths) {
+            if (lower ~ /^[[:space:]]*ini[[:space:]]*=/) {
+                have_ini = 1
+            }
+            if (lower ~ /^[[:space:]]*sharedtokendatabase[[:space:]]*=/) {
+                have_token = 1
+            }
+        }
+
+        print line
+    }
+
+    END {
+        if (in_paths) {
+            flush_pending()
+            in_paths = 0
+            seen_paths = 1
+        }
+
+        if (!seen_paths) {
+            print "[paths]"
+            print ini_line
+            print token_line
+        }
+    }
+    ' "${geos_ini}" >"${tmp_file}"
+
+    mv "${tmp_file}" "${geos_ini}"
+}
+
 # -----------------------------------------------------------------------------
 # Installation steps
 # -----------------------------------------------------------------------------
@@ -126,6 +264,7 @@ prepare_environment()
 {
     log "Checking prerequisites"
     require_command unzip
+    require_command rsync
 
     if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
         fail "Either curl or wget must be installed to download release archives."
@@ -134,11 +273,9 @@ prepare_environment()
     log "Preparing installation directories under ${INSTALL_ROOT}"
     mkdir -p "${INSTALL_ROOT}"
     mkdir -p "${DRIVEC_DIR}"
-    mkdir -p "${USER_DOCUMENT_DIR}"
-
-    # Preserve the user tree but refresh everything else for a clean update.
-    find "${INSTALL_ROOT}" -mindepth 1 -maxdepth 1 -not -name "drivec" -exec rm -rf {} +
-    find "${DRIVEC_DIR}" -mindepth 1 -maxdepth 1 -not -name "user" -exec rm -rf {} +
+    mkdir -p "${GEOS_INSTALL_DIR}"
+    mkdir -p "${GEOS_FIX_DIR}"
+    mkdir -p "${BASEBOX_DIR}"
 }
 
 extract_archives()
@@ -166,14 +303,24 @@ extract_archives()
     unzip -q "${basebox_zip}" -d "${temp_dir}/basebox"
 
     log "Installing Ensemble into ${GEOS_INSTALL_DIR}"
-    rm -rf "${GEOS_INSTALL_DIR}"
-    mkdir -p "${GEOS_INSTALL_DIR}"
-    cp -a "${temp_dir}/ensemble/ensemble/." "${GEOS_INSTALL_DIR}/"
+    local geos_source
+    geos_source="$(locate_geos_archive_root "${temp_dir}/ensemble" "${GEOS_ARCHIVE_ROOT}")"
+
+    local -a rsync_args
+    rsync_args=("-a" "--update")
+    local rule src_rel
+    for rule in "${GEOS_EXCEPTION_RULES[@]}"; do
+        src_rel="${rule%%|*}"
+        rsync_args+=("--exclude=${src_rel}")
+    done
+
+    rsync "${rsync_args[@]}" "${geos_source}/" "${GEOS_INSTALL_DIR}/"
+
+    process_geos_exception_files "${geos_source}"
+    update_geos_ini_paths
 
     log "Installing Basebox into ${BASEBOX_DIR}"
-    rm -rf "${BASEBOX_DIR}"
-    mkdir -p "${BASEBOX_DIR}"
-    cp -a "${temp_dir}/basebox/pcgeos-basebox/." "${BASEBOX_DIR}/"
+    rsync -a --update "${temp_dir}/basebox/pcgeos-basebox/" "${BASEBOX_DIR}/"
 
     log "Ensuring Basebox executables are marked executable"
     find "${BASEBOX_DIR}" -type f \( -name 'basebox' -o -name 'basebox.exe' -o -name '*.sh' \) -exec chmod +x {} +
@@ -193,12 +340,6 @@ extract_archives()
     else
         trap - EXIT
     fi
-}
-
-ensure_user_state()
-{
-    log "Preserving user configuration"
-    mkdir -p "${USER_DOCUMENT_DIR}"
 }
 
 create_basebox_config()
@@ -287,10 +428,14 @@ create_basebox_config()
     b skip
 }
 p
-" "${tmp_conf}" >"${BASEBOX_CONFIG}"
+" "${tmp_conf}" >"${BASEBOX_BASE_CONFIG}"
 
     rm -f "${tmp_conf}" "${autoexec_file}"
     rm -rf "${xdg_root}"
+
+    if [ ! -f "${BASEBOX_USER_CONFIG}" ]; then
+        : >"${BASEBOX_USER_CONFIG}"
+    fi
 }
 
 create_launcher()
@@ -327,14 +472,19 @@ select_basebox_binary()
 }
 
 BASEBOX_EXEC="$(select_basebox_binary)"
-CONFIG_FILE="${BASEBOX_DIR}/basebox-geos.conf"
+BASE_CONFIG_FILE="${BASEBOX_DIR}/basebox-geos.conf"
+USER_CONFIG_FILE="${BASEBOX_DIR}/basebox.conf"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-    printf 'Error: Missing Basebox configuration at %s\n' "$CONFIG_FILE" >&2
+if [ ! -f "$BASE_CONFIG_FILE" ]; then
+    printf 'Error: Missing Basebox configuration at %s\n' "$BASE_CONFIG_FILE" >&2
     exit 1
 fi
 
-exec "$BASEBOX_EXEC" -conf "$CONFIG_FILE" "$@"
+if [ ! -f "$USER_CONFIG_FILE" ]; then
+    : >"$USER_CONFIG_FILE"
+fi
+
+exec "$BASEBOX_EXEC" -conf "$BASE_CONFIG_FILE" -conf "$USER_CONFIG_FILE" "$@"
 LAUNCH
     chmod +x "${LOCAL_LAUNCHER}"
 }
@@ -343,7 +493,6 @@ main()
 {
     prepare_environment
     extract_archives
-    ensure_user_state
     create_basebox_config
     create_launcher
 
