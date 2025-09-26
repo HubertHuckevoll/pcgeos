@@ -35,8 +35,8 @@ BASEBOX_USER_CONFIG="${BASEBOX_DIR}/basebox.conf"
 LOCAL_LAUNCHER="${INSTALL_ROOT}/ensemble.sh"
 
 declare -a GEOS_EXCEPTION_RULES=(
-    "geos.ini|${GEOS_FIX_DIR}|NET.INI"
-    "privdata/token_da.000|${GEOS_FIX_DIR}|token_da.000"
+    "GEOS.INI|${GEOS_FIX_DIR}|NET.INI"
+    "PRIVDATA/TOKEN_DA.000|${GEOS_FIX_DIR}|token_da.000"
 )
 
 DETECTED_BASEBOX_BINARY=""
@@ -153,21 +153,80 @@ locate_geos_archive_root()
 process_geos_exception_files()
 {
     local source_root="$1"
-    local rule src_rel dest_dir dest_name src_path dest_path
+    local rule src_rel dest_dir dest_name requirement src_path dest_path
 
     for rule in "${GEOS_EXCEPTION_RULES[@]}"; do
-        IFS='|' read -r src_rel dest_dir dest_name <<<"${rule}"
-        src_path="${source_root}/${src_rel}"
+        IFS='|' read -r src_rel dest_dir dest_name requirement <<<"${rule}"
+
+        if [ -z "${dest_name}" ]; then
+            dest_name="$(basename "${src_rel}")"
+        fi
+
+        if [ -z "${requirement}" ]; then
+            requirement="required"
+        fi
+
+        src_path="$(find_case_insensitive_path "${source_root}" "${src_rel}")"
         dest_path="${dest_dir}/${dest_name}"
 
         mkdir -p "${dest_dir}"
 
-        if [ -f "${src_path}" ]; then
+        if [ -n "${src_path}" ] && [ -e "${src_path}" ]; then
             cp -f "${src_path}" "${dest_path}"
-        else
+        elif [ "${requirement}" = "required" ]; then
             log "Warning: expected exception file '${src_rel}' not found in archive"
         fi
     done
+}
+
+find_case_insensitive_path()
+{
+    local base_dir="$1"
+    local relative_path="$2"
+    local search_root search_path found_path
+
+    search_root="${base_dir}"
+    search_path="${base_dir}/${relative_path}"
+
+    found_path="$(find "${search_root}" -type f -ipath "${search_path}" -print -quit)"
+
+    if [ -z "${found_path}" ]; then
+        found_path="$(find "${search_root}" -type d -ipath "${search_path}" -print -quit)"
+    fi
+
+    printf '%s' "${found_path}"
+}
+
+casefold_rsync_pattern()
+{
+    local input="$1"
+    local length
+    local i
+    local char lower upper pattern
+
+    pattern=""
+    length="${#input}"
+
+    for (( i = 0; i < length; i++ )); do
+        char="${input:i:1}"
+        case "${char}" in
+            [A-Z])
+                upper="${char}"
+                lower="$(printf '%s' "${char}" | tr 'A-Z' 'a-z')"
+                pattern+="[${lower}${upper}]"
+                ;;
+            [a-z])
+                lower="${char}"
+                upper="$(printf '%s' "${char}" | tr 'a-z' 'A-Z')"
+                pattern+="[${lower}${upper}]"
+                ;;
+            *)
+                pattern+="${char}"
+                ;;
+        esac
+    done
+
+    printf '%s' "${pattern}"
 }
 
 update_geos_ini_paths()
@@ -308,10 +367,11 @@ extract_archives()
 
     local -a rsync_args
     rsync_args=("-a" "--update")
-    local rule src_rel
+    local rule src_rel exclude_pattern
     for rule in "${GEOS_EXCEPTION_RULES[@]}"; do
         src_rel="${rule%%|*}"
-        rsync_args+=("--exclude=${src_rel}")
+        exclude_pattern="$(casefold_rsync_pattern "${src_rel}")"
+        rsync_args+=("--exclude=${exclude_pattern}")
     done
 
     rsync "${rsync_args[@]}" "${geos_source}/" "${GEOS_INSTALL_DIR}/"
