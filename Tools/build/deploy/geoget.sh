@@ -177,26 +177,34 @@ update_geos_ini_paths()
     geos_ini="${GEOS_INSTALL_DIR}/GEOS.INI"
 
     if [ ! -f "${geos_ini}" ]; then
-        cat >"${geos_ini}" <<'EOF'
-[paths]
-ini=C:\ENSEMBLE.FIX\NET.INI
-sharedTokenDatabase=C:\ENSEMBLE.FIX
-EOF
+        {
+            printf '[paths]\r\n'
+            printf 'ini=C:\\ENSEMBLE.FIX\\NET.INI\r\n'
+            printf 'sharedTokenDatabase=C:\\ENSEMBLE.FIX\r\n'
+        } >"${geos_ini}"
         return
     fi
 
     local tmp_file
     tmp_file="$(mktemp)"
 
-    awk -v ini_line='ini=C:\ENSEMBLE.FIX\NET.INI' -v token_line='sharedTokenDatabase=C:\ENSEMBLE.FIX' '
+    local ini_line token_line
+    ini_line='ini=C:\\ENSEMBLE.FIX\\NET.INI'
+    token_line='sharedTokenDatabase=C:\\ENSEMBLE.FIX'
+
+    LC_ALL=C awk -v ini_line="${ini_line}" -v token_line="${token_line}" '
+    function emit(text) {
+        printf "%s\r\n", text
+    }
+
     function flush_pending() {
         if (in_paths) {
             if (!have_ini) {
-                print ini_line
+                emit(ini_line)
                 have_ini = 1
             }
             if (!have_token) {
-                print token_line
+                emit(token_line)
                 have_token = 1
             }
         }
@@ -204,6 +212,7 @@ EOF
 
     {
         line = $0
+        sub(/\r$/, "", line)
         lower = tolower(line)
 
         if (lower ~ /^[[:space:]]*\[paths\][[:space:]]*$/) {
@@ -214,7 +223,7 @@ EOF
             have_ini = 0
             have_token = 0
             seen_paths = 1
-            print line
+            emit(line)
             next
         }
 
@@ -223,7 +232,7 @@ EOF
                 flush_pending()
                 in_paths = 0
             }
-            print line
+            emit(line)
             next
         }
 
@@ -236,7 +245,7 @@ EOF
             }
         }
 
-        print line
+        emit(line)
     }
 
     END {
@@ -247,9 +256,9 @@ EOF
         }
 
         if (!seen_paths) {
-            print "[paths]"
-            print ini_line
-            print token_line
+            emit("[paths]")
+            emit(ini_line)
+            emit(token_line)
         }
     }
     ' "${geos_ini}" >"${tmp_file}"
@@ -396,7 +405,18 @@ create_basebox_config()
     mkdir -p "${config_dir}"
     rm -f "${config_path}"
 
-    if ! SDL_VIDEODRIVER=dummy XDG_CONFIG_HOME="${xdg_root}/config" "${basebox_binary}" -c exit >/dev/null 2>&1; then
+    local generated_config="false"
+
+    if [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+        if SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+            XDG_CONFIG_HOME="${xdg_root}/config" "${basebox_binary}" -c exit >/dev/null 2>&1; then
+            generated_config="true"
+        else
+            log "Warning: Basebox failed with SDL_VIDEODRIVER=dummy, retrying with host display"
+        fi
+    fi
+
+    if [ "${generated_config}" != "true" ]; then
         if ! XDG_CONFIG_HOME="${xdg_root}/config" "${basebox_binary}" -c exit >/dev/null 2>&1; then
             rm -rf "${xdg_root}"
             fail "Basebox failed to generate its default configuration."
