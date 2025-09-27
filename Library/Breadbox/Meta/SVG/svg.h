@@ -142,6 +142,7 @@ void    SvgStyleApplyFillRule(const char *tag);
 void    SvgStyleApplyStrokeCapJoin(const char *tag);
 Boolean SvgStyleHasStroke(const char *tag);
 Boolean SvgStyleHasFill(const char *tag);
+Boolean SvgStyleIsLineJoinExplicit(const char *tag);
 /* groups */
 void    SvgStyleGroupPush(const char *tag);
 void    SvgStyleGroupPop(void);

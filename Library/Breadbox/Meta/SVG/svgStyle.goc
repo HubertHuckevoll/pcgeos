@@ -662,6 +662,38 @@ void SvgStyleApplyFillRule(const char *tag)
 }
 
 
+Boolean SvgStyleIsLineJoinExplicit(const char *tag)
+{
+    SvgGroupStyle *stack;
+    Boolean        inherited;
+    char           buf[32];
+
+    buf[0] = 0;
+
+    if (SvgParseGetInlineStyleProp(tag, "stroke-linejoin", buf, sizeof(buf)) ||
+        SvgParserGetAttrBounded(tag, "stroke-linejoin", buf, sizeof(buf)))
+    {
+        if (buf[0] && !SvgUtilAsciiNoCaseEq(buf, "inherit"))
+        {
+            return TRUE;
+        }
+        /* explicit inherit falls through to the group stack */
+    }
+
+    inherited = FALSE;
+    if (gStyleDepth > 0)
+    {
+        stack = SvgStyleStackLock();
+        if (stack != NULL)
+        {
+            inherited = stack[gStyleDepth-1].ljSet;
+            SvgStyleStackUnlock();
+        }
+    }
+
+    return inherited;
+}
+
 void SvgStyleApplyStrokeWidth(const char *tag)
 {
     WWFixedAsDWord lw;
