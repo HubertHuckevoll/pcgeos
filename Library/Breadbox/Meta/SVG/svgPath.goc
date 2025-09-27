@@ -1235,6 +1235,7 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
     sword px, py, firstx, firsty, lastx, lasty;
     Boolean hasStroke;
     Boolean needStrokeClose;
+    Boolean forcedRoundJoin;
     SvgMatrix worldM;
     WWFixedAsDWord X;
     WWFixedAsDWord Y;
@@ -1295,6 +1296,8 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
         return;
     }
 
+    forcedRoundJoin = hasStroke ? SvgStyleForceRoundJoinForSegments(tag, np) : FALSE;
+
     /* No explicit close for fill while building the compound path. */
     needStrokeClose = (closed && hasStroke &&
                       ((firstx != lastx) || (firsty != lasty)));
@@ -1328,6 +1331,7 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
                 (int)sc->ptsP[0].P_x, (int)sc->ptsP[0].P_y,
                 (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
         Meta_Polygon(sc->ptsP, np, FALSE, TRUE);
+        SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
     }
     else
     {
@@ -1336,6 +1340,7 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
                 (int)sc->ptsP[0].P_x, (int)sc->ptsP[0].P_y,
                 (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
         Meta_Polyline(sc->ptsP, np);
+        SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
     }
 }
 

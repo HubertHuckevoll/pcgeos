@@ -26,6 +26,7 @@
 
 /* ---- group style stack (fill/stroke/stroke-width) ---- */
 #define SVG_STYLE_GSTACK_MAX 16 /* max group nesting depth */
+#define SVG_STYLE_APPROX_JOIN_SEG_THRESHOLD 12
 
 /* per-group style state */
 typedef struct {
@@ -35,6 +36,7 @@ typedef struct {
     Boolean         frSet;  byte fr;      /* 0=nonzero, 1=evenodd */
     Boolean         lcSet;  byte lc;      /* 0=butt, 1=round, 2=square */
     Boolean         ljSet;  byte lj;      /* 0=miter, 1=round, 2=bevel */
+    Boolean         mlSet;  WWFixedAsDWord miterLimit; /* stroke-miterlimit */
     Boolean         colorSet;             /* CSS color property (for currentColor) */
     char            colorVal[64];
 } SvgGroupStyle;
@@ -143,10 +145,14 @@ void    SvgStyleApplyStrokeCapJoin(const char *tag);
 Boolean SvgStyleHasStroke(const char *tag);
 Boolean SvgStyleHasFill(const char *tag);
 Boolean SvgStyleIsLineJoinExplicit(const char *tag);
+Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW);
+Boolean SvgStyleGroupMiterLimitGet(WWFixedAsDWord *outLimit);
+Boolean SvgStyleForceRoundJoin(const char *tag);
+Boolean SvgStyleForceRoundJoinForSegments(const char *tag, word segmentCount);
+void    SvgStyleRestoreForcedJoin(const char *tag, Boolean forced);
 /* groups */
 void    SvgStyleGroupPush(const char *tag);
 void    SvgStyleGroupPop(void);
-Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW);
 #ifdef SVG_STYLE_ENABLE_SELF_TEST
 Boolean SvgStyleRunSelfTest(void);
 #endif

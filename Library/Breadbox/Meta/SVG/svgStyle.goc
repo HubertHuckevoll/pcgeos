@@ -275,6 +275,63 @@ SvgStyleResolveCurrentColor(const char *tag, word *r, word *g, word *b)
 }
 
 
+static WWFixedAsDWord SvgStyleDefaultMiterLimit(void)
+{
+    return SvgGeomMakeWWFixedFromInt(4);
+}
+
+static Boolean SvgStyleParseMiterLimitToken(const char *token, WWFixedAsDWord *out)
+{
+    WWFixedAsDWord value;
+    char work[32];
+    char *p;
+
+    if (token == NULL || out == NULL)
+    {
+        return FALSE;
+    }
+
+    while (*token && isspace((byte)*token)) token++;
+    if (*token == 0)
+    {
+        return FALSE;
+    }
+
+    strncpy(work, token, sizeof(work) - 1);
+    work[sizeof(work) - 1] = 0;
+
+    p = work;
+    while (*p && (isdigit((byte)*p) || *p=='+' || *p=='-' || *p=='.'))
+    {
+        p++;
+    }
+
+    if (p == work)
+    {
+        return FALSE;
+    }
+
+    *p = 0;
+    (void)SvgUtilParseWWFixed16_16(work, &value);
+
+    if ((sdword)value < 0)
+    {
+        value = (WWFixedAsDWord)(-(sdword)value);
+    }
+
+    {
+        WWFixedAsDWord minVal = SvgGeomMakeWWFixedFromInt(1);
+        if (value < minVal)
+        {
+            value = minVal;
+        }
+    }
+
+    *out = value;
+    return TRUE;
+}
+
+
 /* ---- group style stuff ---- */
 
 Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW)
@@ -298,12 +355,72 @@ Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW)
     return haveWidth;
 }
 
+Boolean SvgStyleGroupMiterLimitGet(WWFixedAsDWord *outLimit)
+{
+    SvgGroupStyle *stack;
+    Boolean haveLimit;
+
+    if (outLimit == NULL) { return FALSE; }
+
+    stack = SvgStyleStackLock();
+    if (stack == NULL) { return FALSE; }
+
+    haveLimit = FALSE;
+    if (gStyleDepth > 0 && stack[gStyleDepth-1].mlSet)
+    {
+        *outLimit = stack[gStyleDepth-1].miterLimit;
+        haveLimit = TRUE;
+    }
+
+    SvgStyleStackUnlock();
+    return haveLimit;
+}
+
+static void SvgStyleApplyStrokeMiterLimit(const char *tag)
+{
+    WWFixedAsDWord limit;
+    Boolean haveLimit;
+    char buf[32];
+
+    haveLimit = FALSE;
+    buf[0] = 0;
+
+    if (SvgParseGetInlineStyleProp(tag, "stroke-miterlimit", buf, sizeof(buf)) ||
+        SvgParserGetAttrBounded(tag, "stroke-miterlimit", buf, sizeof(buf)))
+    {
+        if (buf[0])
+        {
+            if (SvgUtilAsciiNoCaseEq(buf, "inherit"))
+            {
+                haveLimit = SvgStyleGroupMiterLimitGet(&limit);
+            }
+            else if (SvgStyleParseMiterLimitToken(buf, &limit))
+            {
+                haveLimit = TRUE;
+            }
+        }
+    }
+
+    if (!haveLimit)
+    {
+        haveLimit = SvgStyleGroupMiterLimitGet(&limit);
+    }
+
+    if (!haveLimit)
+    {
+        limit = SvgStyleDefaultMiterLimit();
+    }
+
+    Meta_SetMiterLimit(limit);
+}
+
 /* Called on <g ...> */
 void SvgStyleGroupPush(const char *tag)
 {
     SvgGroupStyle st;
     char buf[64];
     char frBuf[24];
+    char mlBuf[24];
     const char *pwalk;
     SvgGroupStyle *stack;
     word depth;
@@ -326,6 +443,8 @@ void SvgStyleGroupPush(const char *tag)
     st.frSet = FALSE; st.fr = 0;
     st.lcSet = FALSE; st.lc = 0;
     st.ljSet = FALSE; st.lj = 0;
+    st.mlSet = FALSE;
+    st.miterLimit = SvgStyleDefaultMiterLimit();
     if (gStyleDepth > 0) {
         st.frSet = stack[gStyleDepth-1].frSet;
         st.fr    = stack[gStyleDepth-1].fr;
@@ -333,6 +452,8 @@ void SvgStyleGroupPush(const char *tag)
         st.lc    = stack[gStyleDepth-1].lc;
         st.ljSet = stack[gStyleDepth-1].ljSet;
         st.lj    = stack[gStyleDepth-1].lj;
+        st.mlSet = stack[gStyleDepth-1].mlSet;
+        st.miterLimit = stack[gStyleDepth-1].miterLimit;
     }
 
     /* inline style/attributes: fill, stroke */
@@ -439,6 +560,45 @@ void SvgStyleGroupPush(const char *tag)
         }
     }
 
+    /* stroke-miterlimit */
+    mlBuf[0] = 0;
+    if (SvgParseGetInlineStyleProp(tag, "stroke-miterlimit", mlBuf, sizeof(mlBuf)) ||
+        SvgParserGetAttrBounded(tag, "stroke-miterlimit", mlBuf, sizeof(mlBuf)))
+    {
+        if (SvgUtilAsciiNoCaseEq(mlBuf, "inherit"))
+        {
+            st.mlSet = FALSE;
+            if (gStyleDepth > 0)
+            {
+                depth = gStyleDepth;
+                while (depth > 0)
+                {
+                    depth--;
+                    if (stack[depth].mlSet)
+                    {
+                        st.miterLimit = stack[depth].miterLimit;
+                        st.mlSet = TRUE;
+                        break;
+                    }
+                }
+            }
+            if (!st.mlSet)
+            {
+                st.miterLimit = SvgStyleDefaultMiterLimit();
+                st.mlSet = TRUE;
+            }
+        }
+        else
+        {
+            WWFixedAsDWord mlVal;
+            if (SvgStyleParseMiterLimitToken(mlBuf, &mlVal))
+            {
+                st.miterLimit = mlVal;
+                st.mlSet = TRUE;
+            }
+        }
+    }
+
     /* fill-rule */
     frBuf[0] = 0;
     if (!SvgParseGetInlineStyleProp(tag, "fill-rule", frBuf, sizeof(frBuf))) {
@@ -449,8 +609,6 @@ void SvgStyleGroupPush(const char *tag)
         else if (SvgUtilAsciiNoCaseEq(frBuf, "nonzero") || SvgUtilAsciiNoCaseEq(frBuf, "winding")) { st.fr = 0; st.frSet = TRUE; }
         /* inherit/other -> keep */
     }
-
-    /* >>> ADD HERE: stroke-linecap / stroke-linejoin <<< */
 
     /* stroke-linecap */
     buf[0] = 0;
@@ -694,6 +852,79 @@ Boolean SvgStyleIsLineJoinExplicit(const char *tag)
     return inherited;
 }
 
+Boolean SvgStyleForceRoundJoin(const char *tag)
+{
+    if (!SvgStyleHasStroke(tag)) {
+        return FALSE;
+    }
+    if (SvgStyleIsLineJoinExplicit(tag)) {
+        return FALSE;
+    }
+
+    Meta_SetLineJoin(LJ_ROUND);
+    return TRUE;
+}
+
+Boolean SvgStyleForceRoundJoinForSegments(const char *tag, word segmentCount)
+{
+    if (segmentCount < SVG_STYLE_APPROX_JOIN_SEG_THRESHOLD) {
+        return FALSE;
+    }
+    return SvgStyleForceRoundJoin(tag);
+}
+
+void SvgStyleRestoreForcedJoin(const char *tag, Boolean forced)
+{
+    if (!forced) {
+        return;
+    }
+
+    {
+        char  b[32];
+        byte  lj;
+        Boolean haveJoin;
+        SvgGroupStyle *stack;
+
+        lj = 0;
+        haveJoin = FALSE;
+        b[0] = 0;
+
+        if (tag != NULL)
+        {
+            if (!SvgParseGetInlineStyleProp(tag, "stroke-linejoin", b, sizeof(b))) {
+                (void)SvgParserGetAttrBounded(tag, "stroke-linejoin", b, sizeof(b));
+            }
+            if (b[0]) {
+                if (SvgUtilAsciiNoCaseEq(b, "round"))      { lj = 1; haveJoin = TRUE; }
+                else if (SvgUtilAsciiNoCaseEq(b, "bevel")) { lj = 2; haveJoin = TRUE; }
+                else if (SvgUtilAsciiNoCaseEq(b, "miter")) { lj = 0; haveJoin = TRUE; }
+                else if (SvgUtilAsciiNoCaseEq(b, "inherit")) { b[0] = 0; }
+            }
+        }
+
+        if (!haveJoin && gStyleDepth > 0)
+        {
+            stack = SvgStyleStackLock();
+            if (stack != NULL)
+            {
+                if (stack[gStyleDepth-1].ljSet)
+                {
+                    lj = stack[gStyleDepth-1].lj;
+                    haveJoin = TRUE;
+                }
+                SvgStyleStackUnlock();
+            }
+        }
+
+        if (!haveJoin)
+        {
+            lj = 0; /* default miter */
+        }
+
+        Meta_SetLineJoin( (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
+    }
+}
+
 void SvgStyleApplyStrokeWidth(const char *tag)
 {
     WWFixedAsDWord lw;
@@ -739,6 +970,7 @@ void SvgStyleApplyStrokeWidth(const char *tag)
 
     Meta_SetLineWidth(lw);
     SvgStyleApplyStrokeCapJoin(tag);
+    SvgStyleApplyStrokeMiterLimit(tag);
 }
 
 void SvgStyleApplyStrokeCapJoin(const char *tag)

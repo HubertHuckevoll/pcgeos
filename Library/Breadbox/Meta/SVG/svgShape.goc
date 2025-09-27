@@ -169,7 +169,11 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
                 sc->ptsP[i].P_y = py;
             }
 
-            Meta_Polyline(sc->ptsP, np);
+            {
+                Boolean forcedRoundJoin = SvgStyleForceRoundJoinForSegments(tag, np);
+                Meta_Polyline(sc->ptsP, np);
+                SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
+            }
         }
     }
 }
@@ -203,7 +207,13 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
                 sc->ptsP[i].P_y = py;
             }
 
-            Meta_Polygon(sc->ptsP, np, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+            {
+                Boolean fillPresent = SvgStyleHasFill(tag);
+                Boolean strokePresent = SvgStyleHasStroke(tag);
+                Boolean forcedRoundJoin = SvgStyleForceRoundJoinForSegments(tag, np);
+                Meta_Polygon(sc->ptsP, np, fillPresent, strokePresent);
+                SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
+            }
         }
     }
 }
@@ -326,13 +336,7 @@ void SvgShapeHandleEllipse(const char *tag)
 
     fillPresent = SvgStyleHasFill(tag);
     strokePresent = SvgStyleHasStroke(tag);
-    forcedRoundJoin = FALSE;
-
-    if (strokePresent && !SvgStyleIsLineJoinExplicit(tag))
-    {
-        Meta_SetLineJoin(LJ_ROUND);
-        forcedRoundJoin = TRUE;
-    }
+    forcedRoundJoin = SvgStyleForceRoundJoin(tag);
 
     SvgXformBuildWorld(tag, NULL, &ctm);
 
@@ -397,10 +401,7 @@ void SvgShapeHandleEllipse(const char *tag)
         Meta_Polygon(pts, NSEG, fillPresent, strokePresent);
     }
 
-    if (forcedRoundJoin)
-    {
-        Meta_SetLineJoin(LJ_MITERED);
-    }
+    SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
 }
 
 
@@ -443,13 +444,7 @@ void SvgShapeHandleCircle(const char *tag)
 
     fillPresent = SvgStyleHasFill(tag);
     strokePresent = SvgStyleHasStroke(tag);
-    forcedRoundJoin = FALSE;
-
-    if (strokePresent && !SvgStyleIsLineJoinExplicit(tag))
-    {
-        Meta_SetLineJoin(LJ_ROUND);
-        forcedRoundJoin = TRUE;
-    }
+    forcedRoundJoin = SvgStyleForceRoundJoin(tag);
 
     SvgXformBuildWorld(tag, NULL, &ctm);
 
@@ -509,8 +504,5 @@ void SvgShapeHandleCircle(const char *tag)
         Meta_Polygon(pts, NSEG, fillPresent, strokePresent);
     }
 
-    if (forcedRoundJoin)
-    {
-        Meta_SetLineJoin(LJ_MITERED);
-    }
+    SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
 }

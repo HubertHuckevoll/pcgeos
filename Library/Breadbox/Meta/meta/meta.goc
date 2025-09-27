@@ -46,6 +46,7 @@ ColorQuad meta_PatternBack;
 ColorQuad meta_LineColor;
 LineStyle meta_LineStyle;
 WWFixedAsDWord meta_LineWidth;
+WWFixedAsDWord meta_MiterLimit;
 SystemDrawMask meta_LineFill;
 ColorQuad meta_AreaColor;
 SystemDrawMask meta_AreaFill;
@@ -247,6 +248,7 @@ ColorQuad meta_c_PatternBack;
 ColorQuad meta_c_LineColor;
 LineStyle meta_c_LineStyle;
 WWFixedAsDWord meta_c_LineWidth;
+WWFixedAsDWord meta_c_MiterLimit;
 SystemDrawMask meta_c_LineFill;
 ColorQuad meta_c_AreaColor;
 SystemDrawMask meta_c_AreaFill;
@@ -273,6 +275,10 @@ void static _Meta_UpdateLineBack(void)
         if(meta_c_LineWidth!=meta_LineWidth || meta_line_indef) {
           GrSetLineWidth(meta_GS,meta_LineWidth);
           meta_c_LineWidth=meta_LineWidth;
+        }
+        if(meta_c_MiterLimit!=meta_MiterLimit || meta_line_indef) {
+          GrSetMiterLimit(meta_GS, meta_MiterLimit);
+          meta_c_MiterLimit = meta_MiterLimit;
         }
         if(meta_c_LineFill!=meta_LineFill || meta_line_indef) {
           GrSetLineMaskSys(meta_GS,SDM_100);
@@ -307,6 +313,10 @@ void static _Meta_UpdateLine(void)
           GrSetLineWidth(meta_GS,meta_LineWidth);
           meta_c_LineWidth=meta_LineWidth;
                                         /* line style has been updated */
+        }
+        if(meta_c_MiterLimit!=meta_MiterLimit || meta_line_indef) {
+          GrSetMiterLimit(meta_GS, meta_MiterLimit);
+          meta_c_MiterLimit = meta_MiterLimit;
         }
         if(meta_c_LineFill!=meta_LineFill || meta_line_indef) {
           GrSetLineMaskSys(meta_GS,meta_LineFill);
@@ -1289,6 +1299,24 @@ Meta_SetLineEnd(LineEnd le)
     }
 }
 
+void _export _pascal
+Meta_SetMiterLimit(WWFixedAsDWord limit)
+{
+    if ((sdword)limit < 0)
+    {
+        limit = (WWFixedAsDWord)(-(sdword)limit);
+    }
+
+    meta_MiterLimit = limit;
+
+    if(!meta_GrObj)
+    {
+      GrSetMiterLimit(meta_GS, limit);
+    }
+
+    meta_c_MiterLimit = limit;
+}
+
 
 /*----------------------------------------------------------------------------*/
 /*
@@ -1324,6 +1352,7 @@ word _export _pascal Meta_Start(
         Meta_SetAreaFill(SDM_100);              /* Solid fill */
         Meta_SetLineStyle(LS_SOLID);            /* default linestyle */
         Meta_SetLineFill(SDM_100);              /* Solid fill */
+        Meta_SetMiterLimit(MakeWWFixed(4));     /* default SVG miter limit */
         Meta_SetFillRule(ODD_EVEN);     /* default filling rule for polygons */
         meta_line_indef=meta_area_indef=TRUE;   /* current states are unknown */
 

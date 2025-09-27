@@ -40,6 +40,7 @@ void _export _pascal Meta_SetLineStyle(LineStyle ls);
 void _export _pascal Meta_SetLineWidth(WWFixedAsDWord lw);
 void _export _pascal Meta_SetAreaFill(SystemDrawMask sdm);
 void _export _pascal Meta_SetLineFill(SystemDrawMask sdm);
+void _export _pascal Meta_SetMiterLimit(WWFixedAsDWord limit);
 
 void _export _pascal
 Meta_SetScaling(sword w_x1,sword w_y1,sword w_x2,sword w_y2,
