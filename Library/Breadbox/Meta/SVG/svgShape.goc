@@ -293,6 +293,9 @@ void SvgShapeHandleEllipse(const char *tag)
 
     Boolean        hasRx;
     Boolean        hasRy;
+    Boolean        strokePresent;
+    Boolean        fillPresent;
+    Boolean        forcedRoundJoin;
 
     fcx = MakeWWFixed(0);
     fcy = MakeWWFixed(0);
@@ -321,6 +324,16 @@ void SvgShapeHandleEllipse(const char *tag)
     SvgStyleApplyStrokeAndFill(tag);
     SvgStyleApplyStrokeWidth(tag);
 
+    fillPresent = SvgStyleHasFill(tag);
+    strokePresent = SvgStyleHasStroke(tag);
+    forcedRoundJoin = FALSE;
+
+    if (strokePresent && !SvgStyleIsLineJoinExplicit(tag))
+    {
+        Meta_SetLineJoin(LJ_ROUND);
+        forcedRoundJoin = TRUE;
+    }
+
     SvgXformBuildWorld(tag, NULL, &ctm);
 
     if ((sdword)ctm.b == 0 && (sdword)ctm.c == 0)
@@ -347,7 +360,7 @@ void SvgShapeHandleEllipse(const char *tag)
         rxw = SvgGeomWWFixedToSWordRound((sdword)vxX < 0 ? (WWFixedAsDWord)(-(sdword)vxX) : vxX);
         ryw = SvgGeomWWFixedToSWordRound((sdword)vyY < 0 ? (WWFixedAsDWord)(-(sdword)vyY) : vyY);
 
-        Meta_Ellipse(cxw, cyw, rxw, ryw, 0, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+        Meta_Ellipse(cxw, cyw, rxw, ryw, 0, fillPresent, strokePresent);
     }
     else
     {
@@ -381,7 +394,12 @@ void SvgShapeHandleEllipse(const char *tag)
             tDeg = GrAddWWFixed(tDeg, stepDeg);
         }
 
-        Meta_Polygon(pts, NSEG, SvgStyleHasFill(tag), SvgStyleHasStroke(tag));
+        Meta_Polygon(pts, NSEG, fillPresent, strokePresent);
+    }
+
+    if (forcedRoundJoin)
+    {
+        Meta_SetLineJoin(LJ_MITERED);
     }
 }
 
