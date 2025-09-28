@@ -365,17 +365,10 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
         EC_WARNING_IF(sampleDriver == NullHandle, -1);
         EC_WARNING_IF(driverInfo == NULL, -2);
         len = BSNWAsmSecondAlloc(sampleDriver,
-<<<<<<< Updated upstream
-                                 (DriverInfoStruct*) &driverInfo,
-                                 len2,
-                                 (word) &off,
-                                 (word) &segm);
-=======
                                  (DriverInfoStruct**) &driverInfo,
                                  len2,
                                  (word*) &off,
                                  (word*) &segm);
->>>>>>> Stashed changes
 
         ptr2 = MK_FP(segm,off);
         *ptr = ptr2;
@@ -969,15 +962,10 @@ Boolean	_pascal	_export BSNWStartPlay(void)
         }
         else
         {
-<<<<<<< Updated upstream
-            back2 = BSNWAsmStartPlay(sampleDriver,
-                                     (DriverInfoStruct*) &driverInfo);
-=======
         EC_WARNING_IF(sampleDriver == NullHandle, -1);
         EC_WARNING_IF(driverInfo == NULL, -2);
         back2 = BSNWAsmStartPlay(sampleDriver,
                                      (DriverInfoStruct**) &driverInfo);
->>>>>>> Stashed changes
         };
 
         // errorflag
@@ -1010,11 +998,7 @@ word	_pascal _export BSNWaveGetAIState(word options)
         EC_WARNING_IF(sampleDriver == NullHandle, -1);
         EC_WARNING_IF(driverInfo == NULL, -2);
         state = BSNWAsmGetAIState(sampleDriver,
-<<<<<<< Updated upstream
-                                   (DriverInfoStruct*) &driverInfo,
-=======
                                    (DriverInfoStruct**) &driverInfo,
->>>>>>> Stashed changes
                                    options);
     }
     return (state);
@@ -1494,11 +1478,7 @@ int	_pascal BSNWSetParams(word rate,word bits,word channels)
         EC_WARNING_IF(driverInfo == NULL, -2);
 
         back = BSNWAsmSetSampling(sampleDriver,
-<<<<<<< Updated upstream
-                                   (DriverInfoStruct*) &driverInfo,
-=======
                                    (DriverInfoStruct**) &driverInfo,
->>>>>>> Stashed changes
                                    rate,
                                    bits,
                                    channels);

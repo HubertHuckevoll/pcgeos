@@ -90,11 +90,7 @@ Secondarybuffer:
 //#define BSNWAsmGetStatus        BSNWASMGETSTATUS
 //#define BSNWAsmStartPlay        BSNWASMSTARTPLAY
 //#define BSNWAsmGetAIState       BSNWASMGETAISTATE
-<<<<<<< Updated upstream
-#define BSNWAsmSetSampling      BSNWASMSETSAMPLING
-=======
 // #define BSNWAsmSetSampling      BSNWASMSETSAMPLING
->>>>>>> Stashed changes
 
 extern void _far _pascal BSNWAsmGetMaxProperties(GeodeHandle driverHandle,
                                             DriverInfoStruct **infoPtr,
@@ -105,11 +101,7 @@ extern void _far _pascal BSNWAsmGetMaxProperties(GeodeHandle driverHandle,
 extern word _far _pascal BSNWAsmStopRecOrPlay(GeodeHandle driverHandle,
                                          DriverInfoStruct **infoPtr);
 extern byte _far _pascal BSNWAsmSetPause(GeodeHandle driverHandle,
-<<<<<<< Updated upstream
-                                    DriverInfoStruct far * far *infoPtr,
-=======
                                     DriverInfoStruct **infoPtr,
->>>>>>> Stashed changes
                                     byte mode);
 extern word _far _pascal BSNWAsmQueryDeviceCapability(GeodeHandle driverHandle,
                                                  DriverInfoStruct **infoPtr);
@@ -266,19 +258,11 @@ Boolean	_pascal	_export BSNWavGetMaxProperties(word *maxRate, byte *maxChannels,
         if (compatFlag)
         {
                 BSNWAsmGetMaxProperties(sampleDriver,
-<<<<<<< Updated upstream
-                                        (DriverInfoStruct*) &driverInfo,
-                                        (word*) &rate,
-                                        (byte) &channels,
-                                        (byte) &bits,
-                                        (byte) &reverseByte);
-=======
                                         (DriverInfoStruct**) &driverInfo,
                                         (word*) &rate,
                                         (byte*) &channels,
                                         (byte*) &bits,
                                         (byte*) &reverseByte);
->>>>>>> Stashed changes
         };
 
         // retVal
@@ -318,11 +302,7 @@ Boolean	  _pascal  _export BSNWaveStopRecOrPlay(void *secPtr)
                 EC_WARNING_IF(sampleDriver == NullHandle, -1);
                 EC_WARNING_IF(driverInfo == NULL, -2);
                 back2 = BSNWAsmStopRecOrPlay(sampleDriver,
-<<<<<<< Updated upstream
-                                             (DriverInfoStruct*) &driverInfo);
-=======
                                              (DriverInfoStruct**) &driverInfo);
->>>>>>> Stashed changes
         };
 
         // Errorflag
@@ -589,11 +569,7 @@ byte  _pascal  _export BSNWaveSetPause(byte mode)
                 EC_WARNING_IF(sampleDriver == NullHandle, -1);
                 EC_WARNING_IF(driverInfo == NULL, -2);
                 back = BSNWAsmSetPause(sampleDriver,
-<<<<<<< Updated upstream
-                                         (DriverInfoStruct*) &driverInfo,
-=======
                                          (DriverInfoStruct**) &driverInfo,
->>>>>>> Stashed changes
                                          mode);
         };
 
@@ -994,12 +970,7 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
     EC_WARNING_IF(driverInfo == NULL, -2);
 
     // First see is there a driver with DAC-capability
-<<<<<<< Updated upstream
-    numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver,
-                                             (DriverInfoStruct*) &driverInfo);
-=======
     BSNWDebugNotifyWord("query driverHandle", sampleDriver);
->>>>>>> Stashed changes
     BSNWDebugNotifyWord("query driverInfoSeg", FP_SEG(driverInfo));
     BSNWDebugNotifyWord("query driverInfoOff", FP_OFF(driverInfo));
     numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver,
@@ -1009,13 +980,7 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
     if (numOfDACs > 0)
     {
         // Check the BestSound Capability of the driver
-<<<<<<< Updated upstream
-        state = BSNWAsmCheckSampleRate(sampleDriver,
-                                      (DriverInfoStruct *) &driverInfo,
-                                      testValue);
-=======
         BSNWDebugNotifyWord("check driverHandle", sampleDriver);
->>>>>>> Stashed changes
         BSNWDebugNotifyWord("check driverInfoSeg", FP_SEG(driverInfo));
         BSNWDebugNotifyWord("check driverInfoOff", FP_OFF(driverInfo));
         state = BSNWAsmCheckSampleRate(sampleDriver,
@@ -1083,11 +1048,7 @@ word	_pascal _export BSNWaveGetStatus(void)
                 EC_WARNING_IF(sampleDriver == NullHandle, -1);
                 EC_WARNING_IF(driverInfo == NULL, -2);
                 state = BSNWAsmGetStatus(sampleDriver,
-<<<<<<< Updated upstream
-                                     (DriverInfoStruct*) &driverInfo);
-=======
                                      (DriverInfoStruct**) &driverInfo);
->>>>>>> Stashed changes
         };
 
         return (state);
