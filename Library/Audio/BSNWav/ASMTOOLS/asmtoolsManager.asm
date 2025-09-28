@@ -8,6 +8,7 @@ include geos.def
 include driver.def
 include geode.def
 include library.def
+include ec.def
 
 include dirk.def
 include dirksnd.def
@@ -91,17 +92,33 @@ endm
 ; BSNWASMGETMAXPROPERTIES
 ;--------------------------------------------------------------------------
 BSNWASMGETMAXPROPERTIES proc far    driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr,
+=======
+                                    infoPtr:fptr.fptr,
+>>>>>>> Stashed changes
                                     ratePtr:fptr,
                                     channelsPtr:fptr,
                                     bitsPtr:fptr,
                                     reversePtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
+<<<<<<< Updated upstream
+=======
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_GET_MAX_PROPERTIES
         call    es:[si]
+        cld
 
         les     bx, reversePtr
         mov     es:[bx], al
@@ -123,13 +140,28 @@ BSNWASMGETMAXPROPERTIES endp
 ; BSNWASMSTOPRECORPLAY
 ;--------------------------------------------------------------------------
 BSNWASMSTOPRECORPLAY proc far       driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
+=======
+                                    infoPtr:fptr.fptr
+        uses    bx, cx, dx, si, di, es
+        .enter
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_STOP_REC_OR_PLAY
         call    es:[si]
+        cld
         mov     ax, cx
 
         .leave
@@ -140,16 +172,32 @@ BSNWASMSTOPRECORPLAY endp
 ; BSNWASMSETPAUSE
 ;--------------------------------------------------------------------------
 BSNWASMSETPAUSE proc far            driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr,
                                     mode:word
         uses    bx, cx, dx, si, di, es
         .enter
+=======
+                                    infoPtr:fptr.fptr,
+                                    mode:word
+        uses    bx, cx, dx, si, di, es
+        .enter
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, mode
         mov     ch, 0
         mov     di, DRE_BSNWAV_SET_PAUSE
         call    es:[si]
+        cld
         mov     al, ch
         xor     ah, ah
 
@@ -161,13 +209,28 @@ BSNWASMSETPAUSE endp
 ; BSNWASMQUERYDEVICECAPABILITY
 ;--------------------------------------------------------------------------
 BSNWASMQUERYDEVICECAPABILITY proc far       driverHandle:word,
+<<<<<<< Updated upstream
                                             infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
+=======
+                                            infoPtr:fptr.fptr
+        uses    bx, cx, dx, si, di, es
+        .enter
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
         call    es:[si]
+        cld
         mov     ax, dx
 
         .leave
@@ -178,10 +241,25 @@ BSNWASMQUERYDEVICECAPABILITY endp
 ; BSNWASMCHECKSAMPLERATE
 ;--------------------------------------------------------------------------
 BSNWASMCHECKSAMPLERATE proc far     driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr,
                                     testValue:word
         uses    bx, cx, dx, si, di, es
         .enter
+=======
+                                    infoPtr:fptr.fptr,
+                                    testValue:word
+        uses    bx, cx, dx, si, di, es
+        .enter
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, 0
@@ -190,6 +268,7 @@ BSNWASMCHECKSAMPLERATE proc far     driverHandle:word,
         mov     dx, testValue
         mov     di, DRE_SOUND_DAC_CHECK_SAMPLE_RATE_AND_FORMAT
         call    es:[si]
+        cld
         mov     ax, dx
 
         .leave
@@ -200,13 +279,28 @@ BSNWASMCHECKSAMPLERATE endp
 ; BSNWASMGETSTATUS
 ;--------------------------------------------------------------------------
 BSNWASMGETSTATUS proc far           driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
+=======
+                                    infoPtr:fptr.fptr
+        uses    bx, cx, dx, si, di, es
+        .enter
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_GET_STATUS
         call    es:[si]
+        cld
         mov     ax, cx
 
         .leave
@@ -217,17 +311,33 @@ BSNWASMGETSTATUS endp
 ; BSNWASMSECONDALLOC
 ;--------------------------------------------------------------------------
 BSNWASMSECONDALLOC proc far         driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr,
+=======
+                                    infoPtr:fptr.fptr,
+>>>>>>> Stashed changes
                                     bufLength:word,
                                     offsetPtr:fptr,
                                     segmentPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
+<<<<<<< Updated upstream
+=======
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, bufLength
         mov     di, DRE_BSNWAV_SECOND_ALLOC
         call    es:[si]
+        cld
 
         mov     si, ax                        ; save segment
 
@@ -247,13 +357,28 @@ BSNWASMSECONDALLOC endp
 ; BSNWASMSTARTPLAY
 ;--------------------------------------------------------------------------
 BSNWASMSTARTPLAY proc far           driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
+=======
+                                    infoPtr:fptr.fptr
+        uses    bx, cx, dx, si, di, es
+        .enter
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_START_PLAY
         call    es:[si]
+        cld
         mov     ax, cx
 
         .leave
@@ -264,15 +389,31 @@ BSNWASMSTARTPLAY endp
 ; BSNWASMGETAISTATE
 ;--------------------------------------------------------------------------
 BSNWASMGETAISTATE proc far          driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr,
                                     options:word
         uses    bx, cx, dx, si, di, es
         .enter
+=======
+                                    infoPtr:fptr.fptr,
+                                    options:word
+        uses    bx, cx, dx, si, di, es
+        .enter
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, options
         mov     di, DRE_BSNWAV_GET_AI_STATE
         call    es:[si]
+        cld
         mov     ax, cx
 
         .leave
@@ -283,12 +424,27 @@ BSNWASMGETAISTATE endp
 ; BSNWASMSETSAMPLING
 ;--------------------------------------------------------------------------
 BSNWASMSETSAMPLING proc far         driverHandle:word,
+<<<<<<< Updated upstream
                                     infoPtr:fptr,
+=======
+                                    infoPtr:fptr.fptr,
+>>>>>>> Stashed changes
                                     rate:word,
                                     bits:word,
                                     channels:word
         uses    bx, cx, dx, si, di, es
         .enter
+<<<<<<< Updated upstream
+=======
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
+>>>>>>> Stashed changes
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     bx, rate
@@ -298,6 +454,7 @@ BSNWASMSETSAMPLING proc far         driverHandle:word,
         mov     dh, 0
         mov     di, DRE_BSNWAV_SET_SAMPLING
         call    es:[si]
+        cld
         mov     ax, cx
 
         .leave
