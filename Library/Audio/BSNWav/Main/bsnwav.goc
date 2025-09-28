@@ -93,11 +93,11 @@ Secondarybuffer:
 // #define BSNWAsmSetSampling      BSNWASMSETSAMPLING
 
 extern void _far _pascal BSNWAsmGetMaxProperties(GeodeHandle driverHandle,
-                                            DriverInfoStruct **infoPtr,
-                                            word far *ratePtr,
-                                            byte far *channelsPtr,
-                                            byte far *bitsPtr,
-                                            byte far *reversePtr);
+                                            DriverInfoStruct** infoPtr,
+                                            word* ratePtr,
+                                            byte* channelsPtr,
+                                            byte* bitsPtr,
+                                            byte* reversePtr);
 extern word _far _pascal BSNWAsmStopRecOrPlay(GeodeHandle driverHandle,
                                          DriverInfoStruct **infoPtr);
 extern byte _far _pascal BSNWAsmSetPause(GeodeHandle driverHandle,
@@ -136,7 +136,7 @@ const char 	*synthDriverIT 	= "synthDriver";	//INI Entry
 
 GeodeLoadError 	gle;
 Boolean		driverUsed	= FALSE;	// driver loaded by BSNWAV
-DriverInfoStruct far *driverInfo;        // driver address
+DriverInfoStruct far *driverInfo = {0};        // driver address
 
 //
 // for NewWave-Play
