@@ -73,6 +73,57 @@ Secondarybuffer:
 
 @include "bsnwav.goh"
 
+/******************** Constants/Macros ************************/
+
+// Watcom C 16 bit compatible macros
+#define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
+#define FP_OFF(fp) ((unsigned short)(fp))
+#define MK_FP(seg, ofs) ((void far *)(((unsigned long)(seg) << 16) | (unsigned)(ofs)))
+
+/******************** Assembly helpers ************************/
+
+extern void _pascal BSNWAsmGetMaxProperties(GeodeHandle driverHandle,
+                                            word driverInfoPtrOff,
+                                            word driverInfoPtrSeg,
+                                            word rateOff,
+                                            word rateSeg,
+                                            word channelsOff,
+                                            word channelsSeg,
+                                            word bitsOff,
+                                            word bitsSeg,
+                                            word reverseOff,
+                                            word reverseSeg);
+extern word _pascal BSNWAsmStopRecOrPlay(GeodeHandle driverHandle,
+                                         word driverInfoPtrOff,
+                                         word driverInfoPtrSeg);
+extern byte _pascal BSNWAsmSetPause(GeodeHandle driverHandle,
+                                    word driverInfoPtrOff,
+                                    word driverInfoPtrSeg,
+                                    byte mode);
+extern word _pascal BSNWAsmQueryDeviceCapability(GeodeHandle driverHandle,
+                                                 word driverInfoPtrOff,
+                                                 word driverInfoPtrSeg);
+extern word _pascal BSNWAsmCheckSampleRate(GeodeHandle driverHandle,
+                                           word driverInfoPtrOff,
+                                           word driverInfoPtrSeg,
+                                           word testValue);
+extern word _pascal BSNWAsmGetStatus(GeodeHandle driverHandle,
+                                     word driverInfoPtrOff,
+                                     word driverInfoPtrSeg);
+extern word _pascal BSNWAsmStartPlay(GeodeHandle driverHandle,
+                                     word driverInfoPtrOff,
+                                     word driverInfoPtrSeg);
+extern word _pascal BSNWAsmGetAIState(GeodeHandle driverHandle,
+                                      word driverInfoPtrOff,
+                                      word driverInfoPtrSeg,
+                                      word options);
+extern word _pascal BSNWAsmSetSampling(GeodeHandle driverHandle,
+                                       word driverInfoPtrOff,
+                                       word driverInfoPtrSeg,
+                                       word rate,
+                                       word bits,
+                                       word channels);
+
 /******************** Const / Makros ************************/
 
 
@@ -196,36 +247,35 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent);
 
 Boolean	_pascal	_export BSNWavGetMaxProperties(word *maxRate, byte *maxChannels, byte *maxBits)
 {
-        byte	reverseByte;
+        byte    reverseByte;
 	word	rate = 22050;
-        byte	channels = 1;
-        byte	bits = 8;
+        byte    channels = 1;
+        byte    bits = 8;
+
+        reverseByte = 0;
 
         // Is driver New-Wave compatible ?
         if (compatFlag)
         {
-    	    __asm {
-                push di;
-                mov  di,DRE_BSNWAV_GET_MAX_PROPERTIES;	/* get value */
-    	    }
-
-    	    BSCallDriver();
-
-            __asm {
-                pop  di;
-                mov  rate,cx;
-                mov	 channels,dl;
-                mov	 bits,dh;
-                mov	 reverseByte,al;
-            }
-    	};
+                BSNWAsmGetMaxProperties(sampleDriver,
+                                        FP_OFF(&driverInfo),
+                                        FP_SEG(&driverInfo),
+                                        FP_OFF(&rate),
+                                        FP_SEG(&rate),
+                                        FP_OFF(&channels),
+                                        FP_SEG(&channels),
+                                        FP_OFF(&bits),
+                                        FP_SEG(&bits),
+                                        FP_OFF(&reverseByte),
+                                        FP_SEG(&reverseByte));
+        };
 
         // retVal
         *maxRate = rate;
 	*maxChannels = channels;
         *maxBits = bits;
 
-	return (reverseByte > 0);
+        return (reverseByte > 0);
 }
 
 /*************************************
@@ -241,41 +291,28 @@ Boolean	_pascal	_export BSNWavGetMaxProperties(word *maxRate, byte *maxChannels,
 
 Boolean	  _pascal  _export BSNWaveStopRecOrPlay(void *secPtr)
 {
-        Boolean	back;
-        word	back2;
+        Boolean back;
+        word    back2;
 
-    	// Clear Secondarybuffer
+        back2 = 0;
+
+        // Clear Secondarybuffer
         if (secPtr)
-	{
-    	    BSNWFillSilence(secPtr,secBufLen);
+        {
+                BSNWFillSilence(secPtr,secBufLen);
         };
 
-    	if ( (simFlags == 0) && (compatFlag) )
-    	{
-
-        // Stopping driver
-
-    	  __asm {
-                push ax
-                push dx
-                push di
-                mov  di,DRE_STOP_REC_OR_PLAY
-    	  }
-
-          BSCallDriver();
-
-          __asm {
-                pop  di
-                pop  dx
-                pop  ax
-                mov  back2,cx		// R�ckgabewert
-    	    }
-    	};
+        if ( (simFlags == 0) && (compatFlag) )
+        {
+                back2 = BSNWAsmStopRecOrPlay(sampleDriver,
+                                             FP_OFF(&driverInfo),
+                                             FP_SEG(&driverInfo));
+        };
 
         // Errorflag
-	back = (back2 > 0);
+        back = (back2 > 0);
 
-	return (back);
+        return (back);
 }
 
 /***************************************************************
@@ -501,30 +538,19 @@ void 	_pascal _export BSNWaveStop(void)
 
 byte  _pascal  _export BSNWaveSetPause(byte mode)
 {
-        byte	back;
+        byte    back;
 
-    	if (simFlags == 0 && compatFlag)
-    	{
+        back = 0;
 
-    	  __asm {
-      	    push ax
-      	    push dx
-      	    push di
-            mov	 cl,mode
-      	    mov  di,DRE_BSNWAV_SET_PAUSE
-    	  }
+        if (simFlags == 0 && compatFlag)
+        {
+                back = BSNWAsmSetPause(sampleDriver,
+                                         FP_OFF(&driverInfo),
+                                         FP_SEG(&driverInfo),
+                                         mode);
+        };
 
-          BSCallDriver();
-
-          __asm {
-      	    pop  di
-      	    pop  dx
-      	    pop  ax
-            mov  back,ch		// Rückgabewert
-    	  }
-    	};
-
-	return (back);
+        return (back);
 }
 
 /***************************************************************
@@ -900,9 +926,13 @@ optr _pascal _export BSCNCreateStatusBox(optr parent)
 
 Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
 {
-	word	state;
-        word	numOfDACs;
-        Boolean	respond;
+        word    state;
+        word    numOfDACs;
+        Boolean respond;
+
+        state = 0;
+        numOfDACs = 0;
+        respond = FALSE;
 
         // TestValue = 0 --> BSNW_DRIVER_TEST_VALUE (5)
         if (!testValue)
@@ -911,53 +941,17 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
         };
 
         // First see is there a driver with DAC-capability
+        numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver,
+                                                 FP_OFF(&driverInfo),
+                                                 FP_SEG(&driverInfo));
 
-    	__asm {
-      	    push ax
-            push bx
-            push cx
-      	    push dx
-      	    push di
-            mov  di,DRE_SOUND_QUERY_DEVICE_CAPABILITY
-    	}
-
-    	BSCallDriver();
-
-        __asm {
-            mov	 numOfDACs,dx
-      	    pop  di
-      	    pop  dx
-            pop  cx
-            pop  bx
-      	    pop  ax
-    	}
-
-	if (numOfDACs>0)
+        if (numOfDACs > 0)
         {
             // Check the BestSound Capability of the driver
-    	    __asm {
-      	        push ax
-                push bx
-                push cx
-      	        push dx
-      	        push di
-                mov  cx,0			// DAC to check
-                mov  ax,MANUFACTURER_ID_BSW
-                mov  bx,DACSF_MIXER_TEST
-                mov  dx,testValue		// sample rate (in Hz)
-                mov  di,DRE_SOUND_DAC_CHECK_SAMPLE_RATE_AND_FORMAT
-    	    }
-
-    	    BSCallDriver();
-
-            __asm {
-                mov  state,dx
-      	        pop  di
-      	        pop  dx
-                pop  cx
-                pop  bx
-      	        pop  ax
-    	    }
+            state = BSNWAsmCheckSampleRate(sampleDriver,
+                                          FP_OFF(&driverInfo),
+                                          FP_SEG(&driverInfo),
+                                          testValue);
             respond = (state == testValue);
         }
         else
@@ -969,12 +963,12 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
         };
 
         // Errormessage
-@ifndef	BSNWAV_NO_UI
-	if ((!respond) && (flags & BSNW_SHOW_ERROR_MSG) )
+@ifndef BSNWAV_NO_UI
+        if ((!respond) && (flags & BSNW_SHOW_ERROR_MSG) )
         {
 
-	    (void)UserStandardDialog(	0,              //helpContext,
-            				0,              //customTriggers,
+            (void)UserStandardDialog(   0,              //helpContext,
+                                        0,              //customTriggers,
                                         0,              //arg2,
                                         0,              //arg1,
                                         TEXT_WRONG_DRIVER,
@@ -1015,32 +1009,15 @@ word	_pascal _export BSNWaveGetStatus(void)
 	word	state = 0;
 
         if (compatFlag)
-	{
-            // call driver
-
-    	    __asm {
-      	    	push ax
-                push bx
-                push cx
-      	    	push dx
-      	    	push di
-                mov  di,DRE_BSNWAV_GET_STATUS
-    	    }
-
-    	    BSCallDriver();
-
-            __asm {
-            	mov  state,cx
-      	    	pop  di
-      	    	pop  dx
-                pop  cx
-                pop  bx
-		pop  ax
-    	    }
+        {
+                state = BSNWAsmGetStatus(sampleDriver,
+                                     FP_OFF(&driverInfo),
+                                     FP_SEG(&driverInfo));
         };
 
         return (state);
 }
+
 
 /******************************************************************
 
