@@ -29,10 +29,6 @@ DRE_BSNWAV_START_PLAY         equ     040h
 DRE_BSNWAV_GET_AI_STATE       equ     042h
 DRE_BSNWAV_SET_PAUSE          equ     044h
 
-SetGeosConvention
-
-ASMTOOLS_TEXT   segment resource
-
 global  BSNWASMGETMAXPROPERTIES:far
 global  BSNWASMSTOPRECORPLAY:far
 global  BSNWASMSETPAUSE:far
@@ -44,88 +40,79 @@ global  BSNWASMSTARTPLAY:far
 global  BSNWASMGETAISTATE:far
 global  BSNWASMSETSAMPLING:far
 
-FETCH_STRATEGY macro handle, infoOff, infoSeg
-    local   havePointer, loadStrategy
-    mov     bx, infoOff
-    mov     ax, infoSeg
-    mov     es, ax
-    mov     si, es:[bx]
-    mov     dx, es:[bx+2]
-    or      si, dx
+SetGeosConvention
+
+ASMTOOLS_TEXT   segment resource
+
+FETCH_STRATEGY macro handle, infoPtr
+    local   havePointer, done
+    les     di, infoPtr               ; ES:DI -> storage for driver info ptr
+    mov     bx, es:[di]
+    mov     cx, es:[di+2]
+    or      bx, cx
     jnz     havePointer
 
     push    ds
+    push    es
+    push    di
     mov     bx, handle
-    call    GeodeInfoDriver
-    mov     es, infoSeg
-    mov     bx, infoOff
-    mov     es:[bx], si
-    mov     es:[bx+2], ds
-    mov     dx, ds
+    call    GeodeInfoDriver           ; DS:SI -> DriverInfoStruct
+    mov     ax, ds                    ; cache segment
+    mov     dx, si                    ; cache offset
+    pop     di                        ; restore pointer storage offset
+    pop     es                        ; restore pointer storage segment
+    mov     es:[di], dx               ; remember pointer for next call
+    mov     es:[di+2], ax
+    mov     si, dx
+    mov     es, ax
     pop     ds
-    jmp     short loadStrategy
+    jmp     short done
 
 havePointer:
-loadStrategy:
-    push    ds
-    mov     ds, dx
-    mov     bx, [si]
-    mov     cx, [si+2]
-    pop     ds
     mov     si, bx
-    mov     es, cx
+    mov     ax, cx
+    mov     es, ax
+
+done:
 endm
 
 ;--------------------------------------------------------------------------
-BSNWAsmGetMaxProperties          equ     BSNWASMGETMAXPROPERTIES
-BSNWAsmStopRecOrPlay             equ     BSNWASMSTOPRECORPLAY
-BSNWAsmSetPause                  equ     BSNWASMSETPAUSE
-BSNWAsmQueryDeviceCapability     equ     BSNWASMQUERYDEVICECAPABILITY
-BSNWAsmCheckSampleRate           equ     BSNWASMCHECKSAMPLERATE
-BSNWAsmGetStatus                 equ     BSNWASMGETSTATUS
-BSNWAsmSecondAlloc               equ     BSNWASMSECONDALLOC
-BSNWAsmStartPlay                 equ     BSNWASMSTARTPLAY
-BSNWAsmGetAIState                equ     BSNWASMGETAISTATE
-BSNWAsmSetSampling               equ     BSNWASMSETSAMPLING
+; BSNWAsmGetMaxProperties          equ     BSNWASMGETMAXPROPERTIES
+; BSNWAsmStopRecOrPlay             equ     BSNWASMSTOPRECORPLAY
+; BSNWAsmSetPause                  equ     BSNWASMSETPAUSE
+; BSNWAsmQueryDeviceCapability     equ     BSNWASMQUERYDEVICECAPABILITY
+; BSNWAsmCheckSampleRate           equ     BSNWASMCHECKSAMPLERATE
+; BSNWAsmGetStatus                 equ     BSNWASMGETSTATUS
+; BSNWAsmSecondAlloc               equ     BSNWASMSECONDALLOC
+; BSNWAsmStartPlay                 equ     BSNWASMSTARTPLAY
+; BSNWAsmGetAIState                equ     BSNWASMGETAISTATE
+; BSNWAsmSetSampling               equ     BSNWASMSETSAMPLING
 
 ; BSNWASMGETMAXPROPERTIES
 ;--------------------------------------------------------------------------
 BSNWASMGETMAXPROPERTIES proc far    driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word,
-                                    rateOff:word,
-                                    rateSeg:word,
-                                    channelsOff:word,
-                                    channelsSeg:word,
-                                    bitsOff:word,
-                                    bitsSeg:word,
-                                    reverseOff:word,
-                                    reverseSeg:word
+                                    infoPtr:fptr,
+                                    ratePtr:fptr,
+                                    channelsPtr:fptr,
+                                    bitsPtr:fptr,
+                                    reversePtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_GET_MAX_PROPERTIES
         call    es:[si]
 
-        mov     bx, reverseOff
-        mov     ax, reverseSeg
-        mov     es, ax
+        les     bx, reversePtr
         mov     es:[bx], al
 
-        mov     bx, rateOff
-        mov     ax, rateSeg
-        mov     es, ax
+        les     bx, ratePtr
         mov     es:[bx], cx
 
-        mov     bx, channelsOff
-        mov     ax, channelsSeg
-        mov     es, ax
+        les     bx, channelsPtr
         mov     es:[bx], dl
 
-        mov     bx, bitsOff
-        mov     ax, bitsSeg
-        mov     es, ax
+        les     bx, bitsPtr
         mov     es:[bx], dh
 
         .leave
@@ -136,11 +123,10 @@ BSNWASMGETMAXPROPERTIES endp
 ; BSNWASMSTOPRECORPLAY
 ;--------------------------------------------------------------------------
 BSNWASMSTOPRECORPLAY proc far       driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word
+                                    infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_STOP_REC_OR_PLAY
         call    es:[si]
@@ -154,12 +140,11 @@ BSNWASMSTOPRECORPLAY endp
 ; BSNWASMSETPAUSE
 ;--------------------------------------------------------------------------
 BSNWASMSETPAUSE proc far            driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word,
+                                    infoPtr:fptr,
                                     mode:word
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, mode
         mov     ch, 0
@@ -176,11 +161,10 @@ BSNWASMSETPAUSE endp
 ; BSNWASMQUERYDEVICECAPABILITY
 ;--------------------------------------------------------------------------
 BSNWASMQUERYDEVICECAPABILITY proc far       driverHandle:word,
-                                            driverInfoPtrOff:word,
-                                            driverInfoPtrSeg:word
+                                            infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
         call    es:[si]
@@ -194,12 +178,11 @@ BSNWASMQUERYDEVICECAPABILITY endp
 ; BSNWASMCHECKSAMPLERATE
 ;--------------------------------------------------------------------------
 BSNWASMCHECKSAMPLERATE proc far     driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word,
+                                    infoPtr:fptr,
                                     testValue:word
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, 0
         mov     ax, MANUFACTURER_ID_BSW
@@ -217,11 +200,10 @@ BSNWASMCHECKSAMPLERATE endp
 ; BSNWASMGETSTATUS
 ;--------------------------------------------------------------------------
 BSNWASMGETSTATUS proc far           driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word
+                                    infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_GET_STATUS
         call    es:[si]
@@ -235,16 +217,13 @@ BSNWASMGETSTATUS endp
 ; BSNWASMSECONDALLOC
 ;--------------------------------------------------------------------------
 BSNWASMSECONDALLOC proc far         driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word,
+                                    infoPtr:fptr,
                                     bufLength:word,
-                                    offsetPtrOff:word,
-                                    offsetPtrSeg:word,
-                                    segmentPtrOff:word,
-                                    segmentPtrSeg:word
+                                    offsetPtr:fptr,
+                                    segmentPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, bufLength
         mov     di, DRE_BSNWAV_SECOND_ALLOC
@@ -252,15 +231,11 @@ BSNWASMSECONDALLOC proc far         driverHandle:word,
 
         mov     si, ax                        ; save segment
 
-        mov     bx, offsetPtrOff
-        mov     ax, offsetPtrSeg
-        mov     es, ax
-        mov     word ptr es:[bx], dx
+        les     bx, offsetPtr
+        mov     es:[bx], dx
 
-        mov     bx, segmentPtrOff
-        mov     ax, segmentPtrSeg
-        mov     es, ax
-        mov     word ptr es:[bx], si
+        les     bx, segmentPtr
+        mov     es:[bx], si
 
         mov     ax, cx
 
@@ -272,11 +247,10 @@ BSNWASMSECONDALLOC endp
 ; BSNWASMSTARTPLAY
 ;--------------------------------------------------------------------------
 BSNWASMSTARTPLAY proc far           driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word
+                                    infoPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_START_PLAY
         call    es:[si]
@@ -290,12 +264,11 @@ BSNWASMSTARTPLAY endp
 ; BSNWASMGETAISTATE
 ;--------------------------------------------------------------------------
 BSNWASMGETAISTATE proc far          driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word,
+                                    infoPtr:fptr,
                                     options:word
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     cx, options
         mov     di, DRE_BSNWAV_GET_AI_STATE
@@ -310,14 +283,13 @@ BSNWASMGETAISTATE endp
 ; BSNWASMSETSAMPLING
 ;--------------------------------------------------------------------------
 BSNWASMSETSAMPLING proc far         driverHandle:word,
-                                    driverInfoPtrOff:word,
-                                    driverInfoPtrSeg:word,
+                                    infoPtr:fptr,
                                     rate:word,
                                     bits:word,
                                     channels:word
         uses    bx, cx, dx, si, di, es
         .enter
-        FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
+        FETCH_STRATEGY driverHandle, infoPtr
 
         mov     bx, rate
         mov     cx, channels
@@ -334,4 +306,4 @@ BSNWASMSETSAMPLING endp
 
 ASMTOOLS_TEXT   ends
 
-end
+        SetDefaultConvention             ;restores calling conventions

@@ -71,13 +71,14 @@ REVISION HISTORY:
 #define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
 #define FP_OFF(fp) ((unsigned short)(fp))
 #define MK_FP(seg, ofs) ((void far *)(((unsigned long)(seg) << 16) | (unsigned)(ofs)))
+#define BSNW_FARPTR(type, ptr) ((type far *)MK_FP(FP_SEG(ptr), FP_OFF(ptr)))
 
 /******************** Assembly helpers ************************/
 
-#define BSNWAsmSecondAlloc BSNWASMSECONDALLOC
-#define BSNWAsmStartPlay   BSNWASMSTARTPLAY
-#define BSNWAsmGetAIState  BSNWASMGETAISTATE
-#define BSNWAsmSetSampling BSNWASMSETSAMPLING
+// #define BSNWAsmSecondAlloc BSNWASMSECONDALLOC
+// #define BSNWAsmStartPlay   BSNWASMSTARTPLAY
+// #define BSNWAsmGetAIState  BSNWASMGETAISTATE
+// #define BSNWAsmSetSampling BSNWASMSETSAMPLING
 
 static void BSNWDebugNotifyWord(const char *label, word value)
 {
@@ -105,24 +106,18 @@ static void BSNWDebugNotifyWord(const char *label, word value)
     SysNotify(SNF_CONTINUE, buf, 0);
 }
 
-extern word _pascal BSNWAsmSecondAlloc(GeodeHandle driverHandle,
-                                       word driverInfoPtrOff,
-                                       word driverInfoPtrSeg,
+extern word _far _pascal BSNWAsmSecondAlloc(GeodeHandle driverHandle,
+                                       DriverInfoStruct **infoPtr,
                                        word bufLength,
-                                       word offsetPtrOff,
-                                       word offsetPtrSeg,
-                                       word segmentPtrOff,
-                                       word segmentPtrSeg);
-extern word _pascal BSNWAsmStartPlay(GeodeHandle driverHandle,
-                                     word driverInfoPtrOff,
-                                     word driverInfoPtrSeg);
-extern word _pascal BSNWAsmGetAIState(GeodeHandle driverHandle,
-                                      word driverInfoPtrOff,
-                                      word driverInfoPtrSeg,
+                                       word far *offsetPtr,
+                                       word far *segmentPtr);
+extern word _far _pascal BSNWAsmStartPlay(GeodeHandle driverHandle,
+                                     DriverInfoStruct **infoPtr);
+extern word _far _pascal BSNWAsmGetAIState(GeodeHandle driverHandle,
+                                      DriverInfoStruct **infoPtr,
                                       word options);
-extern word _pascal BSNWAsmSetSampling(GeodeHandle driverHandle,
-                                       word driverInfoPtrOff,
-                                       word driverInfoPtrSeg,
+extern word _far _pascal BSNWAsmSetSampling(GeodeHandle driverHandle,
+                                       DriverInfoStruct **infoPtr,
                                        word rate,
                                        word bits,
                                        word channels);
@@ -312,6 +307,8 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
 
         if (!demoMode)
         {
+            driverInfo = GeodeInfoDriver(sampleDriver);
+
             BSNWDebugNotifyWord("Load sampleDriver", sampleDriver);
             BSNWDebugNotifyWord("Load driverInfoSeg", FP_SEG(driverInfo));
             BSNWDebugNotifyWord("Load driverInfoOff", FP_OFF(driverInfo));
@@ -365,13 +362,10 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
         }
 
         len = BSNWAsmSecondAlloc(sampleDriver,
-                                 FP_OFF(&driverInfo),
-                                 FP_SEG(&driverInfo),
+                                 (DriverInfoStruct*) &driverInfo,
                                  len2,
-                                 FP_OFF(&off),
-                                 FP_SEG(&off),
-                                 FP_OFF(&segm),
-                                 FP_SEG(&segm));
+                                 (word) &off,
+                                 (word) &segm);
 
         ptr2 = MK_FP(segm,off);
         *ptr = ptr2;
@@ -965,9 +959,8 @@ Boolean	_pascal	_export BSNWStartPlay(void)
         }
         else
         {
-                back2 = BSNWAsmStartPlay(sampleDriver,
-                                         FP_OFF(&driverInfo),
-                                         FP_SEG(&driverInfo));
+            back2 = BSNWAsmStartPlay(sampleDriver,
+                                     (DriverInfoStruct*) &driverInfo);
         };
 
         // errorflag
@@ -998,8 +991,7 @@ word	_pascal _export BSNWaveGetAIState(word options)
     if (compatFlag)
     {
         state = BSNWAsmGetAIState(sampleDriver,
-                                   FP_OFF(&driverInfo),
-                                   FP_SEG(&driverInfo),
+                                   (DriverInfoStruct*) &driverInfo,
                                    options);
     }
     return (state);
@@ -1476,8 +1468,7 @@ int	_pascal BSNWSetParams(word rate,word bits,word channels)
         }
 
         back = BSNWAsmSetSampling(sampleDriver,
-                                   FP_OFF(&driverInfo),
-                                   FP_SEG(&driverInfo),
+                                   (DriverInfoStruct*) &driverInfo,
                                    rate,
                                    bits,
                                    channels);
