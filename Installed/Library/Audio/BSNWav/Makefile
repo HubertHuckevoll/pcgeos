@@ -5,12 +5,13 @@
 #
 GEODE           = bsnwav
 MAIN            = bsnwav.goc subcode.goc subcode.goh
+ASMTOOLS        = asmtoolsManager.asm
 UI_TO_RDFS      =
 OBJS            = bsnwav.obj subcode.obj
 COMMON          =
-MODULES         =
+MODULES         = ASMTOOLS
 CMODULES        = Main
-SRCS            = $(MAIN) $(COMMON)
+SRCS            = $(MAIN) $(ASMTOOLS) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = bsnwav

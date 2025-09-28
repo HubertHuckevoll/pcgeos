@@ -44,6 +44,7 @@ Secondarybuffer:
 /*
 @define	GERMAN
 #define	GERMAN
+*/
 
 /*-----------------------------------*/
 /* Switching off the use of UI-Lib   */
@@ -56,10 +57,7 @@ Secondarybuffer:
 
 @include <stdapp.goh>
 
-// @ifndef BSNWAV_NO_UI
-#include <Ansi/stdio.h>
 #include <Ansi/string.h>
-// @endif
 
 #include <gstring.h>
 #include <library.h>
@@ -82,6 +80,16 @@ Secondarybuffer:
 
 /******************** Assembly helpers ************************/
 
+#define BSNWAsmGetMaxProperties BSNWASMGETMAXPROPERTIES
+#define BSNWAsmStopRecOrPlay    BSNWASMSTOPRECORPLAY
+#define BSNWAsmSetPause         BSNWASMSETPAUSE
+#define BSNWAsmQueryDeviceCapability BSNWASMQUERYDEVICECAPABILITY
+#define BSNWAsmCheckSampleRate  BSNWASMCHECKSAMPLERATE
+#define BSNWAsmGetStatus        BSNWASMGETSTATUS
+#define BSNWAsmStartPlay        BSNWASMSTARTPLAY
+#define BSNWAsmGetAIState       BSNWASMGETAISTATE
+#define BSNWAsmSetSampling      BSNWASMSETSAMPLING
+
 extern void _pascal BSNWAsmGetMaxProperties(GeodeHandle driverHandle,
                                             word driverInfoPtrOff,
                                             word driverInfoPtrSeg,
@@ -101,8 +109,8 @@ extern byte _pascal BSNWAsmSetPause(GeodeHandle driverHandle,
                                     word driverInfoPtrSeg,
                                     byte mode);
 extern word _pascal BSNWAsmQueryDeviceCapability(GeodeHandle driverHandle,
-                                                 word driverInfoPtrOff,
-                                                 word driverInfoPtrSeg);
+                                                  word driverInfoPtrOff,
+                                                  word driverInfoPtrSeg);
 extern word _pascal BSNWAsmCheckSampleRate(GeodeHandle driverHandle,
                                            word driverInfoPtrOff,
                                            word driverInfoPtrSeg,
@@ -139,7 +147,7 @@ const char 	*synthDriverIT 	= "synthDriver";	//INI Entry
 
 GeodeLoadError 	gle;
 Boolean		driverUsed	= FALSE;	// driver loaded by BSNWAV
-DriverInfoStruct *driverInfo;			// driver address
+DriverInfoStruct far *driverInfo;        // driver address
 
 //
 // for NewWave-Play
@@ -521,6 +529,32 @@ void 	_pascal _export BSNWaveStop(void)
 {
         // set Stopflag
         playStopFlag = TRUE;
+}
+
+static void BSNWDebugNotifyWord(const char *label, word value)
+{
+    const char hex[] = "0123456789ABCDEF";
+    char      buf[32];
+    char     *ptr = buf;
+
+    if (label != NULL)
+    {
+        while (*label && ptr < (buf + 24))
+        {
+            *ptr++ = *label++;
+        }
+        *ptr++ = '=';
+    }
+
+    *ptr++ = '0';
+    *ptr++ = 'x';
+    *ptr++ = hex[(value >> 12) & 0xF];
+    *ptr++ = hex[(value >> 8) & 0xF];
+    *ptr++ = hex[(value >> 4) & 0xF];
+    *ptr++ = hex[value & 0xF];
+    *ptr   = '\0';
+
+    SysNotify(SNF_CONTINUE, buf, 0);
 }
 
 /*************************************
@@ -932,28 +966,37 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
 
         state = 0;
         numOfDACs = 0;
-        respond = FALSE;
+    respond = FALSE;
 
-        // TestValue = 0 --> BSNW_DRIVER_TEST_VALUE (5)
-        if (!testValue)
-        {
+    if (sampleDriver == NullHandle) {
+        return respond;
+    }
+
+    // TestValue = 0 --> BSNW_DRIVER_TEST_VALUE (5)
+    if (!testValue)
+    {
             testValue = BSNW_DRIVER_TEST_VALUE;
         };
 
-        // First see is there a driver with DAC-capability
-        numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver,
-                                                 FP_OFF(&driverInfo),
-                                                 FP_SEG(&driverInfo));
+    // First see is there a driver with DAC-capability
+    numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver,
+                                             FP_OFF(&driverInfo),
+                                             FP_SEG(&driverInfo));
+    BSNWDebugNotifyWord("query driverInfoSeg", FP_SEG(driverInfo));
+    BSNWDebugNotifyWord("query driverInfoOff", FP_OFF(driverInfo));
+    BSNWDebugNotifyWord("query driverInfoOff", FP_OFF(driverInfo));
 
-        if (numOfDACs > 0)
-        {
-            // Check the BestSound Capability of the driver
-            state = BSNWAsmCheckSampleRate(sampleDriver,
-                                          FP_OFF(&driverInfo),
-                                          FP_SEG(&driverInfo),
-                                          testValue);
-            respond = (state == testValue);
-        }
+    if (numOfDACs > 0)
+    {
+        // Check the BestSound Capability of the driver
+        state = BSNWAsmCheckSampleRate(sampleDriver,
+                                      FP_OFF(&driverInfo),
+                                      FP_SEG(&driverInfo),
+                                      testValue);
+        BSNWDebugNotifyWord("check driverInfoSeg", FP_SEG(driverInfo));
+        BSNWDebugNotifyWord("check driverInfoOff", FP_OFF(driverInfo));
+        respond = (state == testValue);
+    }
         else
         {
             // The driver has no DAC-Channel

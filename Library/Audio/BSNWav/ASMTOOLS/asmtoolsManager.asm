@@ -9,10 +9,40 @@ include driver.def
 include geode.def
 include library.def
 
-include bsnwav.def
+include dirk.def
 include dirksnd.def
 
+UseDriver Internal/soundDrv.def
+
+DefLib  bsnwav.def
+
+;-----------------------------------------------------------------------
+; Driver request identifiers shared with BestSound drivers
+;-----------------------------------------------------------------------
+
+DRE_BSNWAV_SET_SAMPLING       equ     032h
+DRE_STOP_REC_OR_PLAY          equ     036h
+DRE_BSNWAV_GET_MAX_PROPERTIES equ     03Ah
+DRE_BSNWAV_SECOND_ALLOC       equ     03Ch
+DRE_BSNWAV_GET_STATUS         equ     03Eh
+DRE_BSNWAV_START_PLAY         equ     040h
+DRE_BSNWAV_GET_AI_STATE       equ     042h
+DRE_BSNWAV_SET_PAUSE          equ     044h
+
 SetGeosConvention
+
+ASMTOOLS_TEXT   segment resource
+
+global  BSNWASMGETMAXPROPERTIES:far
+global  BSNWASMSTOPRECORPLAY:far
+global  BSNWASMSETPAUSE:far
+global  BSNWASMQUERYDEVICECAPABILITY:far
+global  BSNWASMCHECKSAMPLERATE:far
+global  BSNWASMGETSTATUS:far
+global  BSNWASMSECONDALLOC:far
+global  BSNWASMSTARTPLAY:far
+global  BSNWASMGETAISTATE:far
+global  BSNWASMSETSAMPLING:far
 
 FETCH_STRATEGY macro handle, infoOff, infoSeg
     local   havePointer, loadStrategy
@@ -47,10 +77,20 @@ loadStrategy:
 endm
 
 ;--------------------------------------------------------------------------
-; BSNWAsmGetMaxProperties
+BSNWAsmGetMaxProperties          equ     BSNWASMGETMAXPROPERTIES
+BSNWAsmStopRecOrPlay             equ     BSNWASMSTOPRECORPLAY
+BSNWAsmSetPause                  equ     BSNWASMSETPAUSE
+BSNWAsmQueryDeviceCapability     equ     BSNWASMQUERYDEVICECAPABILITY
+BSNWAsmCheckSampleRate           equ     BSNWASMCHECKSAMPLERATE
+BSNWAsmGetStatus                 equ     BSNWASMGETSTATUS
+BSNWAsmSecondAlloc               equ     BSNWASMSECONDALLOC
+BSNWAsmStartPlay                 equ     BSNWASMSTARTPLAY
+BSNWAsmGetAIState                equ     BSNWASMGETAISTATE
+BSNWAsmSetSampling               equ     BSNWASMSETSAMPLING
+
+; BSNWASMGETMAXPROPERTIES
 ;--------------------------------------------------------------------------
-public  BSNWAsmGetMaxProperties
-BSNWAsmGetMaxProperties proc far    driverHandle:word,
+BSNWASMGETMAXPROPERTIES proc far    driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word,
                                     rateOff:word,
@@ -90,13 +130,12 @@ BSNWAsmGetMaxProperties proc far    driverHandle:word,
 
         .leave
         ret
-BSNWAsmGetMaxProperties endp
+BSNWASMGETMAXPROPERTIES endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmStopRecOrPlay
+; BSNWASMSTOPRECORPLAY
 ;--------------------------------------------------------------------------
-public  BSNWAsmStopRecOrPlay
-BSNWAsmStopRecOrPlay proc far       driverHandle:word,
+BSNWASMSTOPRECORPLAY proc far       driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word
         uses    bx, cx, dx, si, di, es
@@ -109,13 +148,12 @@ BSNWAsmStopRecOrPlay proc far       driverHandle:word,
 
         .leave
         ret
-BSNWAsmStopRecOrPlay endp
+BSNWASMSTOPRECORPLAY endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmSetPause
+; BSNWASMSETPAUSE
 ;--------------------------------------------------------------------------
-public  BSNWAsmSetPause
-BSNWAsmSetPause proc far            driverHandle:word,
+BSNWASMSETPAUSE proc far            driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word,
                                     mode:word
@@ -132,13 +170,12 @@ BSNWAsmSetPause proc far            driverHandle:word,
 
         .leave
         ret
-BSNWAsmSetPause endp
+BSNWASMSETPAUSE endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmQueryDeviceCapability
+; BSNWASMQUERYDEVICECAPABILITY
 ;--------------------------------------------------------------------------
-public  BSNWAsmQueryDeviceCapability
-BSNWAsmQueryDeviceCapability proc far       driverHandle:word,
+BSNWASMQUERYDEVICECAPABILITY proc far       driverHandle:word,
                                             driverInfoPtrOff:word,
                                             driverInfoPtrSeg:word
         uses    bx, cx, dx, si, di, es
@@ -151,13 +188,12 @@ BSNWAsmQueryDeviceCapability proc far       driverHandle:word,
 
         .leave
         ret
-BSNWAsmQueryDeviceCapability endp
+BSNWASMQUERYDEVICECAPABILITY endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmCheckSampleRate
+; BSNWASMCHECKSAMPLERATE
 ;--------------------------------------------------------------------------
-public  BSNWAsmCheckSampleRate
-BSNWAsmCheckSampleRate proc far     driverHandle:word,
+BSNWASMCHECKSAMPLERATE proc far     driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word,
                                     testValue:word
@@ -175,13 +211,12 @@ BSNWAsmCheckSampleRate proc far     driverHandle:word,
 
         .leave
         ret
-BSNWAsmCheckSampleRate endp
+BSNWASMCHECKSAMPLERATE endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmGetStatus
+; BSNWASMGETSTATUS
 ;--------------------------------------------------------------------------
-public  BSNWAsmGetStatus
-BSNWAsmGetStatus proc far           driverHandle:word,
+BSNWASMGETSTATUS proc far           driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word
         uses    bx, cx, dx, si, di, es
@@ -194,51 +229,49 @@ BSNWAsmGetStatus proc far           driverHandle:word,
 
         .leave
         ret
-BSNWAsmGetStatus endp
+BSNWASMGETSTATUS endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmSecondAlloc
+; BSNWASMSECONDALLOC
 ;--------------------------------------------------------------------------
-public  BSNWAsmSecondAlloc
-BSNWAsmSecondAlloc proc far         driverHandle:word,
+BSNWASMSECONDALLOC proc far         driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word,
-                                    length:word,
-                                    offsetOff:word,
-                                    offsetSeg:word,
-                                    segmentOff:word,
-                                    segmentSeg:word
+                                    bufLength:word,
+                                    offsetPtrOff:word,
+                                    offsetPtrSeg:word,
+                                    segmentPtrOff:word,
+                                    segmentPtrSeg:word
         uses    bx, cx, dx, si, di, es
         .enter
         FETCH_STRATEGY driverHandle, driverInfoPtrOff, driverInfoPtrSeg
 
-        mov     cx, length
+        mov     cx, bufLength
         mov     di, DRE_BSNWAV_SECOND_ALLOC
         call    es:[si]
 
         mov     si, ax                        ; save segment
 
-        mov     bx, offsetOff
-        mov     ax, offsetSeg
+        mov     bx, offsetPtrOff
+        mov     ax, offsetPtrSeg
         mov     es, ax
-        mov     es:[bx], dx
+        mov     word ptr es:[bx], dx
 
-        mov     bx, segmentOff
-        mov     ax, segmentSeg
+        mov     bx, segmentPtrOff
+        mov     ax, segmentPtrSeg
         mov     es, ax
-        mov     es:[bx], si
+        mov     word ptr es:[bx], si
 
         mov     ax, cx
 
         .leave
         ret
-BSNWAsmSecondAlloc endp
+BSNWASMSECONDALLOC endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmStartPlay
+; BSNWASMSTARTPLAY
 ;--------------------------------------------------------------------------
-public  BSNWAsmStartPlay
-BSNWAsmStartPlay proc far           driverHandle:word,
+BSNWASMSTARTPLAY proc far           driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word
         uses    bx, cx, dx, si, di, es
@@ -251,13 +284,12 @@ BSNWAsmStartPlay proc far           driverHandle:word,
 
         .leave
         ret
-BSNWAsmStartPlay endp
+BSNWASMSTARTPLAY endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmGetAIState
+; BSNWASMGETAISTATE
 ;--------------------------------------------------------------------------
-public  BSNWAsmGetAIState
-BSNWAsmGetAIState proc far          driverHandle:word,
+BSNWASMGETAISTATE proc far          driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word,
                                     options:word
@@ -272,13 +304,12 @@ BSNWAsmGetAIState proc far          driverHandle:word,
 
         .leave
         ret
-BSNWAsmGetAIState endp
+BSNWASMGETAISTATE endp
 
 ;--------------------------------------------------------------------------
-; BSNWAsmSetSampling
+; BSNWASMSETSAMPLING
 ;--------------------------------------------------------------------------
-public  BSNWAsmSetSampling
-BSNWAsmSetSampling proc far         driverHandle:word,
+BSNWASMSETSAMPLING proc far         driverHandle:word,
                                     driverInfoPtrOff:word,
                                     driverInfoPtrSeg:word,
                                     rate:word,
@@ -299,6 +330,8 @@ BSNWAsmSetSampling proc far         driverHandle:word,
 
         .leave
         ret
-BSNWAsmSetSampling endp
+BSNWASMSETSAMPLING endp
+
+ASMTOOLS_TEXT   ends
 
 end

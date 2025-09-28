@@ -8,8 +8,8 @@ ASM_TO_OBJS     = manager.asm
 UI_TO_RDFS      =
 SRCS            = bsdac.asm bsdelay.asm bserror.asm bsinit.asm bsint.asm\
                   bsmixer.asm bsnwav.asm bsrecord.asm bsregs.asm\
-                  bsstrate.asm bsstream.asm bstimer.asm bsvoice.asm\
-                  bswav.asm manager.asm bsconst.def bserror.def
+                  bsstrate.asm bsstream.asm bstimer.asm bswav.asm\
+                  bsvoice.asm manager.asm bsconst.def bserror.def
 OBJS            = manager.obj
 LOBJS           =
 

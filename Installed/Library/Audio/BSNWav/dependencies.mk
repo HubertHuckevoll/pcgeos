@@ -1,3 +1,7 @@
+ASMTOOLS.obj \
+ASMTOOLS.eobj: ASMTOOLS/asmtoolsManager.asm \
+                geos.def driver.def lmem.def geode.def library.def \
+                dirk.def dirksnd.def Internal/soundDrv.def bsnwav.def
 bsnwav.obj \
 bsnwav.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -26,9 +30,8 @@ bsnwav.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h Ansi/stdio.h \
-                Ansi/string.h library.h initfile.h dirksnd.h riff.h \
-                sound.h
+                parallDr.h hugearr.h fileEnum.h Ansi/string.h library.h \
+                initfile.h dirksnd.h riff.h sound.h
 subcode.obj \
 subcode.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -58,5 +61,8 @@ subcode.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
                 initfile.h dirksnd.h riff.h
+ASMTOOLS/asmtoolsManager.obj \
+ASMTOOLS/asmtoolsManager.eobj: geos.def driver.def lmem.def geode.def library.def \
+                dirk.def dirksnd.def Internal/soundDrv.def bsnwav.def
 
 bsnwavEC.geo bsnwav.geo : geos.ldf ansic.ldf 

@@ -50,6 +50,7 @@ REVISION HISTORY:
 #include <driver.h>
 #include <initfile.h>
 #include <geode.h>
+#include <system.h>
 #include <resource.h>
 
 #include <dirksnd.h>
@@ -73,14 +74,45 @@ REVISION HISTORY:
 
 /******************** Assembly helpers ************************/
 
+#define BSNWAsmSecondAlloc BSNWASMSECONDALLOC
+#define BSNWAsmStartPlay   BSNWASMSTARTPLAY
+#define BSNWAsmGetAIState  BSNWASMGETAISTATE
+#define BSNWAsmSetSampling BSNWASMSETSAMPLING
+
+static void BSNWDebugNotifyWord(const char *label, word value)
+{
+    const char hex[] = "0123456789ABCDEF";
+    char      buf[32];
+    char     *ptr = buf;
+
+    if (label != NULL)
+    {
+        while (*label && ptr < (buf + 24))
+        {
+            *ptr++ = *label++;
+        }
+        *ptr++ = '=';
+    }
+
+    *ptr++ = '0';
+    *ptr++ = 'x';
+    *ptr++ = hex[(value >> 12) & 0xF];
+    *ptr++ = hex[(value >> 8) & 0xF];
+    *ptr++ = hex[(value >> 4) & 0xF];
+    *ptr++ = hex[value & 0xF];
+    *ptr   = '\0';
+
+    SysNotify(SNF_CONTINUE, buf, 0);
+}
+
 extern word _pascal BSNWAsmSecondAlloc(GeodeHandle driverHandle,
                                        word driverInfoPtrOff,
                                        word driverInfoPtrSeg,
-                                       word len,
-                                       word offsetOff,
-                                       word offsetSeg,
-                                       word segmentOff,
-                                       word segmentSeg);
+                                       word bufLength,
+                                       word offsetPtrOff,
+                                       word offsetPtrSeg,
+                                       word segmentPtrOff,
+                                       word segmentPtrSeg);
 extern word _pascal BSNWAsmStartPlay(GeodeHandle driverHandle,
                                      word driverInfoPtrOff,
                                      word driverInfoPtrSeg);
@@ -278,6 +310,15 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
             };
         };
 
+        if (!demoMode)
+        {
+            BSNWDebugNotifyWord("Load sampleDriver", sampleDriver);
+            BSNWDebugNotifyWord("Load driverInfoSeg", FP_SEG(driverInfo));
+            BSNWDebugNotifyWord("Load driverInfoOff", FP_OFF(driverInfo));
+            BSNWDebugNotifyWord("Load driverInfoAddrSeg", FP_SEG(&driverInfo));
+            BSNWDebugNotifyWord("Load driverInfoAddrOff", FP_OFF(&driverInfo));
+        }
+
         return (demoMode);
 }
 
@@ -315,6 +356,14 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
     }
     else
     {
+        if (sampleDriver != NullHandle && FP_OFF(driverInfo) == 0)
+        {
+            BSNWDebugNotifyWord("Alloc driverInfoSeg", FP_SEG(driverInfo));
+            BSNWDebugNotifyWord("Alloc driverInfoOff", FP_OFF(driverInfo));
+            BSNWDebugNotifyWord("Alloc driverInfoAddrSeg", FP_SEG(&driverInfo));
+            BSNWDebugNotifyWord("Alloc driverInfoAddrOff", FP_OFF(&driverInfo));
+        }
+
         len = BSNWAsmSecondAlloc(sampleDriver,
                                  FP_OFF(&driverInfo),
                                  FP_SEG(&driverInfo),
@@ -1300,6 +1349,13 @@ int	_pascal BSNWPreCheck(word playFlags)
         };
 
         // check Hardware
+        if (sampleDriver != NullHandle && FP_OFF(driverInfo) == 0)
+        {
+            BSNWDebugNotifyWord("Pre driverInfoSeg", FP_SEG(driverInfo));
+            BSNWDebugNotifyWord("Pre driverInfoOff", FP_OFF(driverInfo));
+            BSNWDebugNotifyWord("Pre driverInfoAddrSeg", FP_SEG(&driverInfo));
+            BSNWDebugNotifyWord("Pre driverInfoAddrOff", FP_OFF(&driverInfo));
+        }
         if (!BSNWaveCheckDriver(playFlags,0))
         {
             // No NewWave-support by driver
@@ -1410,6 +1466,14 @@ void	BSNWLoadIniSettings(void)
 int	_pascal BSNWSetParams(word rate,word bits,word channels)
 {
         int	back;
+
+        if (sampleDriver != NullHandle && FP_OFF(driverInfo) == 0)
+        {
+            BSNWDebugNotifyWord("Set driverInfoSeg", FP_SEG(driverInfo));
+            BSNWDebugNotifyWord("Set driverInfoOff", FP_OFF(driverInfo));
+            BSNWDebugNotifyWord("Set driverInfoAddrSeg", FP_SEG(&driverInfo));
+            BSNWDebugNotifyWord("Set driverInfoAddrOff", FP_OFF(&driverInfo));
+        }
 
         back = BSNWAsmSetSampling(sampleDriver,
                                    FP_OFF(&driverInfo),
@@ -1779,4 +1843,3 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
 
         return (respond);
 }
-

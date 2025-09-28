@@ -34,7 +34,7 @@ extern	byte		valNum;
 extern	GeodeLoadError 	gle;
 extern	Boolean		driverUsed;
 extern	int		counter;
-extern	DriverInfoStruct *driverInfo;
+extern	DriverInfoStruct far *driverInfo;
 
 extern	int		playStatus;	// 0 = System ready (idle state)
 					// 1 = PlayFile active
