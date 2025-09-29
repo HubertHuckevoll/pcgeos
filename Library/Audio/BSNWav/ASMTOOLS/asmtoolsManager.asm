@@ -172,24 +172,19 @@ BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word,
                                         infoPtr:fptr.fptr
         uses    bx, dx, si, di, es
         .enter
-
+EC <    push    bx                                                     >
+EC <    mov     bx, driverHandle                                       >
+EC <    call    ECCheckDriverHandle                                    >
+EC <    pop     bx                                                     >
+EC <    pushdw  bxsi                                                   >
+EC <    movdw   bxsi, infoPtr                                          >
+EC <    call    ECAssertValidFarPointerXIP                             >
+EC <    popdw   bxsi                                                   >
         FETCH_STRATEGY driverHandle, infoPtr
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
         call    es:[si].DIS_strategy
         cld
         mov     ax, dx
-
-        ; Legacy direct-GeodeInfoDriver variant kept for reference:
-;       push    ds                              ; GeodeInfoDriver switches DS,
-;                                               ; restore DGROUP before returning
-;       mov     bx, driverHandle
-;       call    GeodeInfoDriver           ; DS:SI -> DriverInfoStruct
-;
-;       mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
-;       call    ds:[si].DIS_strategy
-;       cld
-;       mov     ax, dx
-;       pop     ds
 
         .leave
         ret
