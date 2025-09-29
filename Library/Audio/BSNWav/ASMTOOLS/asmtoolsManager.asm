@@ -110,7 +110,7 @@ EC <    popdw   bxsi                                                   >
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_GET_MAX_PROPERTIES
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
 
         les     bx, reversePtr
@@ -147,7 +147,7 @@ EC <    popdw   bxsi                                                   >
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_STOP_REC_OR_PLAY
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     ax, cx
 
@@ -176,7 +176,7 @@ EC <    popdw   bxsi                                                   >
         mov     cx, mode
         mov     ch, 0
         mov     di, DRE_BSNWAV_SET_PAUSE
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     al, ch
         xor     ah, ah
@@ -203,7 +203,7 @@ EC <    popdw   bxsi                                                   >
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     ax, dx
 
@@ -234,7 +234,7 @@ EC <    popdw   bxsi                                                   >
         mov     bx, DACSF_MIXER_TEST
         mov     dx, testValue
         mov     di, DRE_SOUND_DAC_CHECK_SAMPLE_RATE_AND_FORMAT
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     ax, dx
 
@@ -260,7 +260,7 @@ EC <    popdw   bxsi                                                   >
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_GET_STATUS
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     ax, cx
 
@@ -290,7 +290,7 @@ EC <    popdw   bxsi                                                   >
 
         mov     cx, bufLength
         mov     di, DRE_BSNWAV_SECOND_ALLOC
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
 
         mov     si, ax                        ; save segment
@@ -325,7 +325,7 @@ EC <    popdw   bxsi                                                   >
         FETCH_STRATEGY driverHandle, infoPtr
 
         mov     di, DRE_BSNWAV_START_PLAY
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     ax, cx
 
@@ -353,7 +353,7 @@ EC <    popdw   bxsi                                                   >
 
         mov     cx, options
         mov     di, DRE_BSNWAV_GET_AI_STATE
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     ax, cx
 
@@ -387,7 +387,7 @@ EC <    popdw   bxsi                                                   >
         mov     ch, 0
         mov     dh, 0
         mov     di, DRE_BSNWAV_SET_SAMPLING
-        call    es:[si]
+        call    es:[si].DIS_strategy
         cld
         mov     ax, cx
 
