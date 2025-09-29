@@ -104,24 +104,25 @@ static void BSNWDebugNotifyWord(const char *label, word value)
     *ptr++ = hex[value & 0xF];
     *ptr   = '\0';
 
-    SysNotify(SNF_CONTINUE, buf, 0);
+    // SysNotify(SNF_CONTINUE, buf, 0);
 }
 
 extern word _far _pascal BSNWAsmSecondAlloc(GeodeHandle driverHandle,
-                                       DriverInfoStruct **infoPtr,
+                                       DriverInfoStruct _far* _far* infoPtr,
                                        word bufLength,
-                                       word far *offsetPtr,
-                                       word far *segmentPtr);
+                                       word _far *offsetPtr,
+                                       word _far *segmentPtr);
 extern word _far _pascal BSNWAsmStartPlay(GeodeHandle driverHandle,
-                                     DriverInfoStruct **infoPtr);
+                                     DriverInfoStruct _far* _far* infoPtr);
 extern word _far _pascal BSNWAsmGetAIState(GeodeHandle driverHandle,
-                                      DriverInfoStruct **infoPtr,
+                                      DriverInfoStruct _far* _far* infoPtr,
                                       word options);
 extern word _far _pascal BSNWAsmSetSampling(GeodeHandle driverHandle,
-                                       DriverInfoStruct **infoPtr,
+                                       DriverInfoStruct _far* _far* infoPtr,
                                        word rate,
                                        word bits,
                                        word channels);
+extern DriverInfoStruct _far* _pascal BSNWAsmGetDriverInfo(GeodeHandle driverHandle);
 
 /******************** Strings / Globals ***********************/
 
@@ -308,13 +309,13 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
 
         if (!demoMode)
         {
-            driverInfo = GeodeInfoDriver(sampleDriver);
+            driverInfo = BSNWAsmGetDriverInfo(sampleDriver);
 
-            BSNWDebugNotifyWord("Load sampleDriver", sampleDriver);
-            BSNWDebugNotifyWord("Load driverInfoSeg", FP_SEG(driverInfo));
-            BSNWDebugNotifyWord("Load driverInfoOff", FP_OFF(driverInfo));
-            BSNWDebugNotifyWord("Load driverInfoAddrSeg", FP_SEG(&driverInfo));
-            BSNWDebugNotifyWord("Load driverInfoAddrOff", FP_OFF(&driverInfo));
+            //BSNWDebugNotifyWord("Load sampleDriver", sampleDriver);
+            //BSNWDebugNotifyWord("Load driverInfoSeg", FP_SEG(driverInfo));
+            //BSNWDebugNotifyWord("Load driverInfoOff", FP_OFF(driverInfo));
+            //BSNWDebugNotifyWord("Load driverInfoAddrSeg", FP_SEG(&driverInfo));
+            //BSNWDebugNotifyWord("Load driverInfoAddrOff", FP_OFF(&driverInfo));
         }
 
         return (demoMode);
@@ -364,11 +365,11 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
 
         EC_WARNING_IF(sampleDriver == NullHandle, -1);
         EC_WARNING_IF(driverInfo == NULL, -2);
-        len = BSNWAsmSecondAlloc(sampleDriver,
-                                 (DriverInfoStruct**) &driverInfo,
+       len = BSNWAsmSecondAlloc(sampleDriver,
+                                 BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo),
                                  len2,
-                                 (word*) &off,
-                                 (word*) &segm);
+                                 BSNW_FARPTR(word, &off),
+                                 BSNW_FARPTR(word, &segm));
 
         ptr2 = MK_FP(segm,off);
         *ptr = ptr2;
@@ -964,8 +965,8 @@ Boolean	_pascal	_export BSNWStartPlay(void)
         {
         EC_WARNING_IF(sampleDriver == NullHandle, -1);
         EC_WARNING_IF(driverInfo == NULL, -2);
-        back2 = BSNWAsmStartPlay(sampleDriver,
-                                     (DriverInfoStruct**) &driverInfo);
+       back2 = BSNWAsmStartPlay(sampleDriver,
+                                     BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo));
         };
 
         // errorflag
@@ -997,8 +998,8 @@ word	_pascal _export BSNWaveGetAIState(word options)
     {
         EC_WARNING_IF(sampleDriver == NullHandle, -1);
         EC_WARNING_IF(driverInfo == NULL, -2);
-        state = BSNWAsmGetAIState(sampleDriver,
-                                   (DriverInfoStruct**) &driverInfo,
+       state = BSNWAsmGetAIState(sampleDriver,
+                                   BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo),
                                    options);
     }
     return (state);
@@ -1477,8 +1478,8 @@ int	_pascal BSNWSetParams(word rate,word bits,word channels)
         EC_WARNING_IF(sampleDriver == NullHandle, -1);
         EC_WARNING_IF(driverInfo == NULL, -2);
 
-        back = BSNWAsmSetSampling(sampleDriver,
-                                   (DriverInfoStruct**) &driverInfo,
+       back = BSNWAsmSetSampling(sampleDriver,
+                                   BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo),
                                    rate,
                                    bits,
                                    channels);

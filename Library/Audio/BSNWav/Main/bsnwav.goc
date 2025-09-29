@@ -82,41 +82,32 @@ Secondarybuffer:
 
 /******************** Assembly helpers ************************/
 
-//#define BSNWAsmGetMaxProperties BSNWASMGETMAXPROPERTIES
-//#define BSNWAsmStopRecOrPlay    BSNWASMSTOPRECORPLAY
-//#define BSNWAsmSetPause         BSNWASMSETPAUSE
-//#define BSNWAsmQueryDeviceCapability BSNWASMQUERYDEVICECAPABILITY
-//#define BSNWAsmCheckSampleRate  BSNWASMCHECKSAMPLERATE
-//#define BSNWAsmGetStatus        BSNWASMGETSTATUS
-//#define BSNWAsmStartPlay        BSNWASMSTARTPLAY
-//#define BSNWAsmGetAIState       BSNWASMGETAISTATE
-// #define BSNWAsmSetSampling      BSNWASMSETSAMPLING
-
 extern void _far _pascal BSNWAsmGetMaxProperties(GeodeHandle driverHandle,
-                                            DriverInfoStruct** infoPtr,
-                                            word* ratePtr,
-                                            byte* channelsPtr,
-                                            byte* bitsPtr,
-                                            byte* reversePtr);
+                                            DriverInfoStruct _far* _far* infoPtr,
+                                            word _far* ratePtr,
+                                            byte _far* channelsPtr,
+                                            byte _far* bitsPtr,
+                                            byte _far* reversePtr);
+extern DriverInfoStruct _far* _pascal BSNWAsmGetDriverInfo(GeodeHandle driverHandle);
 extern word _far _pascal BSNWAsmStopRecOrPlay(GeodeHandle driverHandle,
-                                         DriverInfoStruct **infoPtr);
+                                         DriverInfoStruct _far* _far* infoPtr);
 extern byte _far _pascal BSNWAsmSetPause(GeodeHandle driverHandle,
-                                    DriverInfoStruct **infoPtr,
+                                    DriverInfoStruct _far* _far* infoPtr,
                                     byte mode);
 extern word _far _pascal BSNWAsmQueryDeviceCapability(GeodeHandle driverHandle,
-                                                 DriverInfoStruct **infoPtr);
+                                                 DriverInfoStruct _far* _far* infoPtr);
 extern word _far _pascal BSNWAsmCheckSampleRate(GeodeHandle driverHandle,
-                                           DriverInfoStruct **infoPtr,
+                                           DriverInfoStruct _far* _far* infoPtr,
                                            word testValue);
 extern word _far _pascal BSNWAsmGetStatus(GeodeHandle driverHandle,
-                                     DriverInfoStruct **infoPtr);
+                                     DriverInfoStruct _far* _far* infoPtr);
 extern word _far _pascal BSNWAsmStartPlay(GeodeHandle driverHandle,
-                                     DriverInfoStruct **infoPtr);
+                                     DriverInfoStruct _far* _far* infoPtr);
 extern word _far _pascal BSNWAsmGetAIState(GeodeHandle driverHandle,
-                                      DriverInfoStruct **infoPtr,
+                                      DriverInfoStruct _far* _far* infoPtr,
                                       word options);
 extern word _far _pascal BSNWAsmSetSampling(GeodeHandle driverHandle,
-                                       DriverInfoStruct **infoPtr,
+                                       DriverInfoStruct _far* _far* infoPtr,
                                        word rate,
                                        word bits,
                                        word channels);
@@ -258,11 +249,11 @@ Boolean	_pascal	_export BSNWavGetMaxProperties(word *maxRate, byte *maxChannels,
         if (compatFlag)
         {
                 BSNWAsmGetMaxProperties(sampleDriver,
-                                        (DriverInfoStruct**) &driverInfo,
-                                        (word*) &rate,
-                                        (byte*) &channels,
-                                        (byte*) &bits,
-                                        (byte*) &reverseByte);
+                                        BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo),
+                                        BSNW_FARPTR(word, &rate),
+                                        BSNW_FARPTR(byte, &channels),
+                                        BSNW_FARPTR(byte, &bits),
+                                        BSNW_FARPTR(byte, &reverseByte));
         };
 
         // retVal
@@ -302,7 +293,7 @@ Boolean	  _pascal  _export BSNWaveStopRecOrPlay(void *secPtr)
                 EC_WARNING_IF(sampleDriver == NullHandle, -1);
                 EC_WARNING_IF(driverInfo == NULL, -2);
                 back2 = BSNWAsmStopRecOrPlay(sampleDriver,
-                                             (DriverInfoStruct**) &driverInfo);
+                                             BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo));
         };
 
         // Errorflag
@@ -522,7 +513,7 @@ void 	_pascal _export BSNWaveStop(void)
 static void BSNWDebugNotifyWord(const char *label, word value)
 {
     const char hex[] = "0123456789ABCDEF";
-    char      buf[32];
+    char      buf[32] = {0};
     char     *ptr = buf;
 
     if (label != NULL)
@@ -542,7 +533,7 @@ static void BSNWDebugNotifyWord(const char *label, word value)
     *ptr++ = hex[value & 0xF];
     *ptr   = '\0';
 
-    SysNotify(SNF_CONTINUE, buf, 0);
+    // SysNotify(SNF_CONTINUE, buf, 0);
 }
 
 /*************************************
@@ -569,8 +560,8 @@ byte  _pascal  _export BSNWaveSetPause(byte mode)
                 EC_WARNING_IF(sampleDriver == NullHandle, -1);
                 EC_WARNING_IF(driverInfo == NULL, -2);
                 back = BSNWAsmSetPause(sampleDriver,
-                                         (DriverInfoStruct**) &driverInfo,
-                                         mode);
+                                       BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo),
+                                       mode);
         };
 
         return (back);
@@ -974,7 +965,9 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
     BSNWDebugNotifyWord("query driverInfoSeg", FP_SEG(driverInfo));
     BSNWDebugNotifyWord("query driverInfoOff", FP_OFF(driverInfo));
     numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver,
-                                             (DriverInfoStruct**) &driverInfo);
+                                             BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo));
+
+
     BSNWDebugNotifyWord("query numDACs", numOfDACs);
 
     if (numOfDACs > 0)
@@ -984,7 +977,7 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
         BSNWDebugNotifyWord("check driverInfoSeg", FP_SEG(driverInfo));
         BSNWDebugNotifyWord("check driverInfoOff", FP_OFF(driverInfo));
         state = BSNWAsmCheckSampleRate(sampleDriver,
-                                      (DriverInfoStruct**) &driverInfo,
+                                      BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo),
                                       testValue);
         BSNWDebugNotifyWord("check result", state);
         respond = (state == testValue);
@@ -1048,7 +1041,7 @@ word	_pascal _export BSNWaveGetStatus(void)
                 EC_WARNING_IF(sampleDriver == NullHandle, -1);
                 EC_WARNING_IF(driverInfo == NULL, -2);
                 state = BSNWAsmGetStatus(sampleDriver,
-                                     (DriverInfoStruct**) &driverInfo);
+                                        BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo));
         };
 
         return (state);

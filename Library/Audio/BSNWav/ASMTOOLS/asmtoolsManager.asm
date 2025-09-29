@@ -40,54 +40,34 @@ global  BSNWASMSECONDALLOC:far
 global  BSNWASMSTARTPLAY:far
 global  BSNWASMGETAISTATE:far
 global  BSNWASMSETSAMPLING:far
+global  BSNWASMGETDRIVERINFO:far
 
 SetGeosConvention
 
 ASMTOOLS_TEXT   segment resource
 
 FETCH_STRATEGY macro handle, infoPtr
-    local   havePointer, done
     les     di, infoPtr               ; ES:DI -> storage for driver info ptr
-    mov     bx, es:[di]
-    mov     cx, es:[di+2]
-    or      bx, cx
-    jnz     havePointer
-
-    push    ds
-    push    es
-    push    di
-    mov     bx, handle
-    call    GeodeInfoDriver           ; DS:SI -> DriverInfoStruct
-    mov     ax, ds                    ; cache segment
-    mov     dx, si                    ; cache offset
-    pop     di                        ; restore pointer storage offset
-    pop     es                        ; restore pointer storage segment
-    mov     es:[di], dx               ; remember pointer for next call
-    mov     es:[di+2], ax
-    mov     si, dx
+    mov     si, es:[di]
+    mov     ax, es:[di+2]
     mov     es, ax
-    pop     ds
-    jmp     short done
-
-havePointer:
-    mov     si, bx
-    mov     ax, cx
-    mov     es, ax
-
-done:
 endm
 
 ;--------------------------------------------------------------------------
-; BSNWAsmGetMaxProperties          equ     BSNWASMGETMAXPROPERTIES
-; BSNWAsmStopRecOrPlay             equ     BSNWASMSTOPRECORPLAY
-; BSNWAsmSetPause                  equ     BSNWASMSETPAUSE
-; BSNWAsmQueryDeviceCapability     equ     BSNWASMQUERYDEVICECAPABILITY
-; BSNWAsmCheckSampleRate           equ     BSNWASMCHECKSAMPLERATE
-; BSNWAsmGetStatus                 equ     BSNWASMGETSTATUS
-; BSNWAsmSecondAlloc               equ     BSNWASMSECONDALLOC
-; BSNWAsmStartPlay                 equ     BSNWASMSTARTPLAY
-; BSNWAsmGetAIState                equ     BSNWASMGETAISTATE
-; BSNWAsmSetSampling               equ     BSNWASMSETSAMPLING
+; BSNWASMGETDRIVERINFO
+;--------------------------------------------------------------------------
+BSNWASMGETDRIVERINFO proc far        driverHandle:word
+        uses    bx, si, ds
+        .enter
+
+        mov     bx, driverHandle
+        call    GeodeInfoDriver           ; DS:SI -> DriverInfoStruct
+        mov     dx, ds                    ; return segment in DX
+        mov     ax, si                    ; return offset in AX
+
+        .leave
+        ret
+BSNWASMGETDRIVERINFO endp
 
 ; BSNWASMGETMAXPROPERTIES
 ;--------------------------------------------------------------------------
@@ -188,24 +168,28 @@ BSNWASMSETPAUSE endp
 ;--------------------------------------------------------------------------
 ; BSNWASMQUERYDEVICECAPABILITY
 ;--------------------------------------------------------------------------
-BSNWASMQUERYDEVICECAPABILITY proc far       driverHandle:word,
-                                            infoPtr:fptr.fptr
-        uses    bx, cx, dx, si, di, es
+BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word,
+                                        infoPtr:fptr.fptr
+        uses    bx, dx, si, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
 
+        FETCH_STRATEGY driverHandle, infoPtr
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
         call    es:[si].DIS_strategy
         cld
         mov     ax, dx
+
+        ; Legacy direct-GeodeInfoDriver variant kept for reference:
+;       push    ds                              ; GeodeInfoDriver switches DS,
+;                                               ; restore DGROUP before returning
+;       mov     bx, driverHandle
+;       call    GeodeInfoDriver           ; DS:SI -> DriverInfoStruct
+;
+;       mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
+;       call    ds:[si].DIS_strategy
+;       cld
+;       mov     ax, dx
+;       pop     ds
 
         .leave
         ret
