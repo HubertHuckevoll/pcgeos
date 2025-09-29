@@ -46,7 +46,11 @@ SetGeosConvention
 
 ASMTOOLS_TEXT   segment resource
 
-FETCH_STRATEGY macro handle, infoPtr
+;--------------------------------------------------------------------------
+; FETCH_STRATEGY macro
+;--------------------------------------------------------------------------
+FETCH_STRATEGY macro infoPtr
+    local haveStrategy
     les     di, infoPtr               ; ES:DI -> storage for driver info ptr
     mov     si, es:[di]
     mov     ax, es:[di+2]
@@ -69,6 +73,7 @@ BSNWASMGETDRIVERINFO proc far        driverHandle:word
         ret
 BSNWASMGETDRIVERINFO endp
 
+;--------------------------------------------------------------------------
 ; BSNWASMGETMAXPROPERTIES
 ;--------------------------------------------------------------------------
 BSNWASMGETMAXPROPERTIES proc far    driverHandle:word,
@@ -87,7 +92,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     di, DRE_BSNWAV_GET_MAX_PROPERTIES
         call    es:[si].DIS_strategy
@@ -124,7 +129,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     di, DRE_STOP_REC_OR_PLAY
         call    es:[si].DIS_strategy
@@ -151,7 +156,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     cx, mode
         mov     ch, 0
@@ -180,7 +185,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
         call    es:[si].DIS_strategy
         cld
@@ -206,7 +211,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     cx, 0
         mov     ax, MANUFACTURER_ID_BSW
@@ -236,7 +241,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     di, DRE_BSNWAV_GET_STATUS
         call    es:[si].DIS_strategy
@@ -265,7 +270,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     cx, bufLength
         mov     di, DRE_BSNWAV_SECOND_ALLOC
@@ -301,7 +306,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     di, DRE_BSNWAV_START_PLAY
         call    es:[si].DIS_strategy
@@ -328,7 +333,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     cx, options
         mov     di, DRE_BSNWAV_GET_AI_STATE
@@ -358,7 +363,7 @@ EC <    pushdw  bxsi                                                   >
 EC <    movdw   bxsi, infoPtr                                          >
 EC <    call    ECAssertValidFarPointerXIP                             >
 EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY driverHandle, infoPtr
+        FETCH_STRATEGY infoPtr
 
         mov     bx, rate
         mov     cx, channels
