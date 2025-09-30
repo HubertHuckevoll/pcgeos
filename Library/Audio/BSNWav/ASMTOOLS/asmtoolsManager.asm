@@ -199,23 +199,12 @@ BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word
         uses    bx, dx, di, es
         .enter
 
-        ; ES:BX -> DriverInfoStruct (from the C global)
-        les     bx, _driverInfo
-        ;or      bx, bx
-        ;jnz     haveInfo
-        ;or      es, es
-        ;jnz     haveInfo
-        ;xor     ax, ax                    ; driverInfo == 0:0 → return 0
-        ;jmp     short done
-
-;haveInfo:
+        les     bx, _driverInfo         ; ES:BX -> DriverInfoStruct (from the C global)
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
         call    es:[bx].DIS_strategy      ; jump via first field of struct
-
         cld
-        mov     ax, dx                    ; adjust if this request returns elsewhere
+        mov     ax, dx                    ; return dx in ax
 
-done:
         .leave
         retf
 BSNWASMQUERYDEVICECAPABILITY endp

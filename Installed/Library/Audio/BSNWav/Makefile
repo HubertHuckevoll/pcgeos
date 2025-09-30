@@ -4,10 +4,10 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = bsnwav
-MAIN            = bsnwav.goc subcode.goc subcode.goh
+MAIN            = subcode.goc bsnwav.goc subcode.goh
 ASMTOOLS        = asmtoolsManager.asm
 UI_TO_RDFS      =
-OBJS            = bsnwav.obj subcode.obj
+OBJS            = subcode.obj bsnwav.obj
 COMMON          =
 MODULES         = ASMTOOLS
 CMODULES        = Main
