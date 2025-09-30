@@ -34,7 +34,10 @@ extern	byte		valNum;
 extern	GeodeLoadError 	gle;
 extern	Boolean		driverUsed;
 extern	int		counter;
+
+typedef void (far *StrategyRoutine)(void);
 extern	DriverInfoStruct far *driverInfo;
+extern	StrategyRoutine strat;
 
 extern	int		playStatus;	// 0 = System ready (idle state)
 					// 1 = PlayFile active

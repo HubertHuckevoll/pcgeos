@@ -82,6 +82,12 @@ Secondarybuffer:
 
 /******************** Assembly helpers ************************/
 
+typedef void (far *StrategyRoutine)(void);
+
+static DriverInfoStruct far *driverInfo = 0;   /* <-- no braces */
+static StrategyRoutine strat = (StrategyRoutine)0;
+
+
 extern void _far _pascal BSNWAsmGetMaxProperties(GeodeHandle driverHandle,
                                             DriverInfoStruct _far* _far* infoPtr,
                                             word _far* ratePtr,
@@ -94,8 +100,7 @@ extern word _far _pascal BSNWAsmStopRecOrPlay(GeodeHandle driverHandle,
 extern byte _far _pascal BSNWAsmSetPause(GeodeHandle driverHandle,
                                     DriverInfoStruct _far* _far* infoPtr,
                                     byte mode);
-extern word _far _pascal BSNWAsmQueryDeviceCapability(GeodeHandle driverHandle,
-                                                 DriverInfoStruct _far* _far* infoPtr);
+extern word _far _pascal BSNWAsmQueryDeviceCapability(GeodeHandle driverHandle);
 extern word _far _pascal BSNWAsmCheckSampleRate(GeodeHandle driverHandle,
                                            DriverInfoStruct _far* _far* infoPtr,
                                            word testValue);
@@ -127,7 +132,7 @@ const char 	*synthDriverIT 	= "synthDriver";	//INI Entry
 
 GeodeLoadError 	gle;
 Boolean		driverUsed	= FALSE;	// driver loaded by BSNWAV
-DriverInfoStruct far *driverInfo = {0};        // driver address
+
 
 //
 // for NewWave-Play
@@ -533,7 +538,7 @@ static void BSNWDebugNotifyWord(const char *label, word value)
     *ptr++ = hex[value & 0xF];
     *ptr   = '\0';
 
-    // SysNotify(SNF_CONTINUE, buf, 0);
+    SysNotify(SNF_CONTINUE, buf, 0);
 }
 
 /*************************************
@@ -961,21 +966,18 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
     EC_WARNING_IF(driverInfo == NULL, -2);
 
     // First see is there a driver with DAC-capability
-    BSNWDebugNotifyWord("query driverHandle", sampleDriver);
-    BSNWDebugNotifyWord("query driverInfoSeg", FP_SEG(driverInfo));
-    BSNWDebugNotifyWord("query driverInfoOff", FP_OFF(driverInfo));
-    numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver,
-                                             BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo));
-
-
+    // BSNWDebugNotifyWord("query driverHandle", sampleDriver);
+    // BSNWDebugNotifyWord("query driverInfoSeg", FP_SEG(driverInfo));
+    // BSNWDebugNotifyWord("query driverInfoOff", FP_OFF(driverInfo));
+    numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver);
     BSNWDebugNotifyWord("query numDACs", numOfDACs);
 
     if (numOfDACs > 0)
     {
         // Check the BestSound Capability of the driver
-        BSNWDebugNotifyWord("check driverHandle", sampleDriver);
-        BSNWDebugNotifyWord("check driverInfoSeg", FP_SEG(driverInfo));
-        BSNWDebugNotifyWord("check driverInfoOff", FP_OFF(driverInfo));
+        // BSNWDebugNotifyWord("check driverHandle", sampleDriver);
+        // BSNWDebugNotifyWord("check driverInfoSeg", FP_SEG(driverInfo));
+        // BSNWDebugNotifyWord("check driverInfoOff", FP_OFF(driverInfo));
         state = BSNWAsmCheckSampleRate(sampleDriver,
                                       BSNW_FARPTR(DriverInfoStruct _far*, &driverInfo),
                                       testValue);

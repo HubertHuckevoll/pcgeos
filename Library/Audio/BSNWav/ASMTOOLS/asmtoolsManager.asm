@@ -42,6 +42,10 @@ global  BSNWASMGETAISTATE:far
 global  BSNWASMSETSAMPLING:far
 global  BSNWASMGETDRIVERINFO:far
 
+global _driverInfo: fptr
+; extrn   _driverInfo:fptr          ; far ptr to DriverInfoStruct
+
+
 SetGeosConvention
 
 ASMTOOLS_TEXT   segment resource
@@ -173,27 +177,49 @@ BSNWASMSETPAUSE endp
 ;--------------------------------------------------------------------------
 ; BSNWASMQUERYDEVICECAPABILITY
 ;--------------------------------------------------------------------------
-BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word,
-                                        infoPtr:fptr.fptr
-        uses    bx, dx, si, di, es
-        .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
-        mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
-        call    es:[si].DIS_strategy
-        cld
-        mov     ax, dx
+; expects: stratPtr = far pointer to the driver's strategy entry (DIS_strategy)
+;BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word
+;        uses    ds, bx, dx, si, di
+;        .enter
+;
+;        mov     bx, driverHandle
+;        call    GeodeInfoDriver        ; DS:SI -> DriverInfoStruct
+;        mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY  ; driver request code
+;        call    ds:[si].DIS_strategy
+;
+;        cld
+;
+;        mov     ax, dx                  ; return value in AX
+;
+;        .leave
+;        ret
+;BSNWASMQUERYDEVICECAPABILITY endp
 
+BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word
+        uses    bx, dx, di, es
+        .enter
+
+        ; ES:BX -> DriverInfoStruct (from the C global)
+        les     bx, _driverInfo
+        ;or      bx, bx
+        ;jnz     haveInfo
+        ;or      es, es
+        ;jnz     haveInfo
+        ;xor     ax, ax                    ; driverInfo == 0:0 → return 0
+        ;jmp     short done
+
+;haveInfo:
+        mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
+        call    es:[bx].DIS_strategy      ; jump via first field of struct
+
+        cld
+        mov     ax, dx                    ; adjust if this request returns elsewhere
+
+done:
         .leave
-        ret
+        retf
 BSNWASMQUERYDEVICECAPABILITY endp
+
 
 ;--------------------------------------------------------------------------
 ; BSNWASMCHECKSAMPLERATE

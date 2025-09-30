@@ -104,7 +104,7 @@ static void BSNWDebugNotifyWord(const char *label, word value)
     *ptr++ = hex[value & 0xF];
     *ptr   = '\0';
 
-    // SysNotify(SNF_CONTINUE, buf, 0);
+    SysNotify(SNF_CONTINUE, buf, 0);
 }
 
 extern word _far _pascal BSNWAsmSecondAlloc(GeodeHandle driverHandle,
@@ -310,6 +310,8 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
         if (!demoMode)
         {
             driverInfo = BSNWAsmGetDriverInfo(sampleDriver);
+            strat = (StrategyRoutine)(driverInfo->DIS_strategy);
+
 
             //BSNWDebugNotifyWord("Load sampleDriver", sampleDriver);
             //BSNWDebugNotifyWord("Load driverInfoSeg", FP_SEG(driverInfo));
