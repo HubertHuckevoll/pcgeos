@@ -123,6 +123,7 @@ extern word _far _pascal BSNWAsmSetSampling(GeodeHandle driverHandle,
                                        word bits,
                                        word channels);
 extern DriverInfoStruct _far* _pascal BSNWAsmGetDriverInfo(GeodeHandle driverHandle);
+extern _pascal BSNWAsmSetDriverInfo(GeodeHandle driverHandle);
 
 /******************** Strings / Globals ***********************/
 
@@ -312,6 +313,7 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
             driverInfo = BSNWAsmGetDriverInfo(sampleDriver);
             strat = (StrategyRoutine)(driverInfo->DIS_strategy);
 
+            BSNWAsmSetDriverInfo(sampleDriver);
 
             //BSNWDebugNotifyWord("Load sampleDriver", sampleDriver);
             //BSNWDebugNotifyWord("Load driverInfoSeg", FP_SEG(driverInfo));

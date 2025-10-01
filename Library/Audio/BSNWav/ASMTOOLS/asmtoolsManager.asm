@@ -41,14 +41,27 @@ global  BSNWASMSTARTPLAY:far
 global  BSNWASMGETAISTATE:far
 global  BSNWASMSETSAMPLING:far
 global  BSNWASMGETDRIVERINFO:far
-
-; global _driverInfo: fptr
-extrn   _driverInfo:fptr          ; far ptr to DriverInfoStruct
+global  BSNWASMSETDRIVERINFO:far
 
 
 SetGeosConvention
 
+
+; global _driverInfo: fptr
+;extrn   _driverInfo:fptr          ; far ptr to DriverInfoStruct
+
+udata segment
+
+        driverInfo fptr          ; far ptr to DriverInfoStruct
+
+udata ends
+
+
+
 ASMTOOLS_TEXT   segment resource
+
+;                assume  ds:dgroup       ; dgroup loaded on call of MyMonitor
+
 
 ;--------------------------------------------------------------------------
 ; FETCH_STRATEGY macro
@@ -76,6 +89,25 @@ BSNWASMGETDRIVERINFO proc far        driverHandle:word
         .leave
         ret
 BSNWASMGETDRIVERINFO endp
+
+BSNWASMSETDRIVERINFO proc far        driverHandle:word
+        uses    bx, dx, di, es, cx, bp, si
+        .enter
+
+        push    ds
+        mov     bx, driverHandle
+        call    GeodeInfoDriver                 ; DS:SI -> DriverInfoStruct
+        mov     dx, ds                          ; put segment in DX
+        mov     ax, si                          ; put offset in AX
+        pop     ds                              ; restore DS to point to udata
+
+        mov     ds:[driverInfo].segment, dx     ; store segment and offset in driverInfo
+        mov     ds:[driverInfo].offset, ax
+
+        .leave
+        ret
+BSNWASMSETDRIVERINFO endp
+
 
 ;--------------------------------------------------------------------------
 ; BSNWASMGETMAXPROPERTIES
@@ -199,7 +231,7 @@ BSNWASMQUERYDEVICECAPABILITY proc far
         uses    bx, dx, di, es, cx, bp, si
         .enter
 
-        les     bx, _driverInfo         ; ES:BX -> DriverInfoStruct (from the C global)
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY
         call    es:[bx].DIS_strategy      ; jump via first field of struct
         cld
