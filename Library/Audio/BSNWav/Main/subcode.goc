@@ -4,38 +4,38 @@
 
     Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound NewWave-Library
+PROJECT:    BestSound NewWave-Library
 
-DATEI:		SUBCODE.GOC
+DATEI:      SUBCODE.GOC
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 Routines:
-    BSNWAllocSecBuffer	Allocate Secondarybuffer by driver
-    BSNWavLoadDriver	Load driver
-        BSNWGetData		Get Data from source
-    BSNWLoadCache		Fill cache with data
-    BSNWLoadData		Get Data from source into Playcache and copy
+    BSNWAllocSecBuffer  Allocate Secondarybuffer by driver
+    BSNWavLoadDriver    Load driver
+        BSNWGetData     Get Data from source
+    BSNWLoadCache       Fill cache with data
+    BSNWLoadData        Get Data from source into Playcache and copy
                 them with the Konverter to the Secondarybuffer
-    BSNWPlay		Read Data from source and play it
-     BSNWFillSilence		Fill Secondarybuffer with silence
+    BSNWPlay        Read Data from source and play it
+     BSNWFillSilence        Fill Secondarybuffer with silence
 
 
 REVISION HISTORY:
 
-    Name	Datum		Beschreibung
-    ----	-----		------------
-    DL	20.02.2000	neuer Header
-        DL	23.02.2000	interne Subroutinen -> SUBCODE.GOC
-        DL	07.08.2000	Translation of the comments
+    Name    Datum       Beschreibung
+    ----    -----       ------------
+    DL  20.02.2000  neuer Header
+        DL  23.02.2000  interne Subroutinen -> SUBCODE.GOC
+        DL  07.08.2000  Translation of the comments
 
 ***************************************************************/
 
-@define	BSNWAV_NO_UI
+@define BSNWAV_NO_UI
 
 /*
-@define	GERMAN
-#define	GERMAN
+@define GERMAN
+#define GERMAN
 /* Compiler switch for german version */
 
 @include <stdapp.goh>
@@ -118,15 +118,15 @@ void BSNWDebugNotifyWord(const char *label, word value)
 
 /******************** Strings / Globals ***********************/
 
-const char 	playKeyIT[] 	= "PlayBufferSize";
-const char 	secondKeyIT[] 	= "SecondBufferSize";
-const char 	reverseKeyIT[] 	= "OutputChannelReverse";
-word		peakLevel2 = 0;		// helper for peak level
+const char  playKeyIT[]     = "PlayBufferSize";
+const char  secondKeyIT[]   = "SecondBufferSize";
+const char  reverseKeyIT[]  = "OutputChannelReverse";
+word        peakLevel2 = 0;     // helper for peak level
 
 
 /**************************** Funktionen ************************/
 
-void	MyBreak(void)
+void    MyBreak(void)
 {
 
 }
@@ -136,17 +136,17 @@ void	MyBreak(void)
     BSNWLibEntry
 
   IN:
-  LibraryCallType	type
-  GeodeHandle		client
+  LibraryCallType   type
+  GeodeHandle       client
 
   OUT:
-  TRUE		error
-  FALSE		no error
+  TRUE      error
+  FALSE     no error
 
  ****************************/
 #pragma argsused
 
-Boolean	_pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
+Boolean _pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 {
         switch (type)
         {
@@ -201,7 +201,7 @@ Boolean	_pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
             case LCT_NEW_CLIENT:
             {
 
-            }; break;		/* A new client of the library was just loaded. */
+            }; break;       /* A new client of the library was just loaded. */
 
             case LCT_NEW_CLIENT_THREAD:
             {
@@ -214,7 +214,7 @@ Boolean	_pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
                     attachGeode = client;
                 };
 
-            }; break;		/* A new thread was just created for a
+            }; break;       /* A new thread was just created for a
                                              * current client of the library. */
             case LCT_CLIENT_THREAD_EXIT:
             {
@@ -246,16 +246,16 @@ Boolean	_pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 
     Search/Load Driver
  IN:
- * gle	     Ablage Fehlercode
+ * gle       Ablage Fehlercode
  [sampleDriver] = Treibername
- OUT	Boolean	demoMode
- * name	     Treibername
+ OUT    Boolean demoMode
+ * name      Treibername
 
  **********************************/
 
-Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
+Boolean _pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
 {
-        Boolean	demoMode;
+        Boolean demoMode;
 
         // read drivername from INI
         demoMode = FALSE;
@@ -279,7 +279,7 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
         {   // Search driver
             sampleDriver = GeodeFind (name,GEODE_NAME_SIZE,0,0);
             if (!sampleDriver)
-            {	//sampleDriver not in memory !
+            {   //sampleDriver not in memory !
 
                 // Move to the SYSTEM directory (that's where the libraries are)
                 FilePushDir ();
@@ -307,10 +307,10 @@ Boolean	_pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
 
 word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
 {
-    byte		*ptr2;
-    word		segm;
-    word		off;
-    word		len2;
+    byte        *ptr2;
+    word        segm;
+    word        off;
+    word        len2;
 
     // Optimize bufferlen
     // LA 04.01.2001
@@ -357,17 +357,17 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
 
         Allocate Playcache
 
- IN:	word	len
-     ds	dgroup
+ IN:    word    len
+     ds dgroup
 
- OUT:	*void	Pointer Playcache
-     (glob)	playCacheHandle
+ OUT:   *void   Pointer Playcache
+     (glob) playCacheHandle
 
  ********************************************/
 
-void	* _pascal BSNWAllocPlayCache(word len)
+void    * _pascal BSNWAllocPlayCache(word len)
 {
-    void	*ptr;
+    void    *ptr;
 
     // Alloc
     playCacheHandle = MemAlloc(len,HF_SWAPABLE,HAF_ZERO_INIT);
@@ -392,17 +392,17 @@ void	* _pascal BSNWAllocPlayCache(word len)
 
     Search for WAV-File Header with Formatinfo
 
- IN:	*BSWavFileHeader   		 Pointer to Headerdataspace
- OUT:	word	BSNW_STATUS_OK		 Format will be supported
+ IN:    *BSWavFileHeader         Pointer to Headerdataspace
+ OUT:   word    BSNW_STATUS_OK       Format will be supported
          BSNW_UNKNOWN_WAVE_FORMAT Unknown Format
-                BSNW_MEMORY_ERROR	 Error
+                BSNW_MEMORY_ERROR    Error
 
  ****************************************************************/
-int	_pascal BSNWReadWaveFormat(BSWavFileHeader *bw)
+int _pascal BSNWReadWaveFormat(BSWavFileHeader *bw)
 {
-    dword	chunkType = 0;	// Chunktype
-    dword	rl = 0;		// Reminding len
-    Boolean	error;		// errorflag
+    dword   chunkType = 0;  // Chunktype
+    dword   rl = 0;     // Reminding len
+    Boolean error;      // errorflag
 
     int respond = BSNW_STATUS_OK;
 
@@ -498,17 +498,17 @@ int	_pascal BSNWReadWaveFormat(BSWavFileHeader *bw)
 
         Read data from source
 
- IN:    (glob)	playSourceType	Sourcetype
-     void	*dest		Pointer for data
-    word	len		Length
- OUT:	Boolean	error		errorflag
+ IN:    (glob)  playSourceType  Sourcetype
+     void   *dest       Pointer for data
+    word    len     Length
+ OUT:   Boolean error       errorflag
 
  *********************************************************/
 
 Boolean  _pascal BSNWGetData(void *dest,word len)
 {
-    Boolean		error = FALSE;
-    word		count = 0;
+    Boolean     error = FALSE;
+    word        count = 0;
 
     switch (playSourceType)
     {
@@ -560,15 +560,15 @@ Boolean  _pascal BSNWGetData(void *dest,word len)
 
          Set Read-Position
 
- IN:	dword	pos	new absolute Position
- OUT	Boolean		errorflag
-     (glob)	playSourcePos
+ IN:    dword   pos new absolute Position
+ OUT    Boolean     errorflag
+     (glob) playSourcePos
 
  *********************************************************/
 
 Boolean  _pascal BSNWSetSourcePosition(dword pos)
 {
-        Boolean		error = FALSE;
+        Boolean     error = FALSE;
 
         // save New Position in global Var.
         playSourcePos = pos;
@@ -614,14 +614,14 @@ Boolean  _pascal BSNWSetSourcePosition(dword pos)
 
       Search for chunk type
 
- IN:	dword	type	Chunktype (Example: CODE_fmt)
- OUT:	Boolean	TRUE	Chunk found
+ IN:    dword   type    Chunktype (Example: CODE_fmt)
+ OUT:   Boolean TRUE    Chunk found
 
  *********************************************************/
 
-Boolean	_pascal BSNWSearchChunk(dword type)
+Boolean _pascal BSNWSearchChunk(dword type)
 {
-    Boolean	foundFlag = TRUE;
+    Boolean foundFlag = TRUE;
 
         do
         {
@@ -664,18 +664,18 @@ Boolean	_pascal BSNWSearchChunk(dword type)
 
         Prepare Konverter and soundcard for output
 
- IN:	word	sampleRate
-     word	channels
-        word	bits
+ IN:    word    sampleRate
+     word   channels
+        word    bits
 
- OUT:	int	respond		BSNW_STATUS_OK
+ OUT:   int respond     BSNW_STATUS_OK
                  BSNW_HARDWARE_NOT_READY
-     (glob)	playSampleRate
-        (glob)	playChannels
-        (glob)	playBits
-        (glob)	konvRateRed	Factor Sampleratereduction
-        (glob)	konvBitsRed	Factor Bitdephtreduction
-        (glob)	konvChanRed	Factor Channelreduction
+     (glob) playSampleRate
+        (glob)  playChannels
+        (glob)  playBits
+        (glob)  konvRateRed Factor Sampleratereduction
+        (glob)  konvBitsRed Factor Bitdephtreduction
+        (glob)  konvChanRed Factor Channelreduction
 
 
  1. Get max. values from soundcard and compare with needed params.
@@ -685,12 +685,12 @@ Boolean	_pascal BSNWSearchChunk(dword type)
 
  *********************************************************/
 
-int	_pascal  BSNWPrepKS(word sampleRate,
+int _pascal  BSNWPrepKS(word sampleRate,
                 byte channels,
                         byte bits)
 {
-        word	back;		// retVal driver
-        int	respond = BSNW_STATUS_OK;
+        word    back;       // retVal driver
+        int respond = BSNW_STATUS_OK;
 
         // Get max. values from soundcard
         stereoToggle = BSNWavGetMaxProperties(&playMaxRate, &playMaxChannels, &playMaxBits);
@@ -759,12 +759,12 @@ int	_pascal  BSNWPrepKS(word sampleRate,
       Get Data from source into Playcache and
       copy them with the Konverter to the Secondarybuffer
 
- IN:	void	*cachePtr
-    void	*secPtr
-        (glob)	secondFree	free Bytes
+ IN:    void    *cachePtr
+    void    *secPtr
+        (glob)  secondFree  free Bytes
                     in Secondarybuffer
 
- OUT:	int	respond		BSNW_STATUS_OK
+ OUT:   int respond     BSNW_STATUS_OK
                  BSNW_HARDWARE_NOT_READY
                                 BSNW_PLAY_FINISHED
 
@@ -774,10 +774,10 @@ int	_pascal  BSNWPrepKS(word sampleRate,
 
  *********************************************************/
 
-int	_pascal BSNWLoadData(void *cachePtr,
+int _pascal BSNWLoadData(void *cachePtr,
                  void *secPtr)
 {
-        int	respond = BSNW_STATUS_OK;
+        int respond = BSNW_STATUS_OK;
 
         // read from source until buffer is filled
         // or the source go out of data
@@ -824,23 +824,23 @@ int	_pascal BSNWLoadData(void *cachePtr,
 
       Read data from source to cache
 
- IN:	void	*cachePtr
-     (glob)	cacheOffset
-     (glob)	cacheFree
-        (glob)	bytesToPlay
+ IN:    void    *cachePtr
+     (glob) cacheOffset
+     (glob) cacheFree
+        (glob)  bytesToPlay
 
 
- OUT:	int	respond		BSNW_STATUS_OK
+ OUT:   int respond     BSNW_STATUS_OK
                  BSNW_HARDWARE_NOT_READY
                                 BSNW_PLAY_FINISHED
 
  *********************************************************/
 
-int	_pascal BSNWLoadCache(void *cachePtr)
+int _pascal BSNWLoadCache(void *cachePtr)
 {
-        int	respond = BSNW_STATUS_OK;
-        word	len,len2 = 0;
-        byte	*ptr;
+        int respond = BSNW_STATUS_OK;
+        word    len,len2 = 0;
+        byte    *ptr;
 
         if ( ((dword)cacheFree) < bytesToPlay)
         {
@@ -915,19 +915,19 @@ int	_pascal BSNWLoadCache(void *cachePtr)
 
 /*************************************
  *
- *    	BSNWStartPlay
+ *      BSNWStartPlay
  *
- * 	Start NewWave-Play
+ *  Start NewWave-Play
  *
  * IN:  -
- * OUT:	TRUE	error
+ * OUT: TRUE    error
  *
  *************************************/
 
-Boolean	_pascal	_export BSNWStartPlay(void)
+Boolean _pascal _export BSNWStartPlay(void)
 {
-        Boolean		back = FALSE;
-        word		back2 = 0;
+        Boolean     back = FALSE;
+        word        back2 = 0;
 
         if(simFlags || !compatFlag)
         {
@@ -950,18 +950,18 @@ Boolean	_pascal	_export BSNWStartPlay(void)
 
         Request state of AutoInit-Output
 
- IN:		options	    Highbyte > 0 --> Lowbyte valid
+ IN:        options     Highbyte > 0 --> Lowbyte valid
                  Lowbyte = bsOptions
      (global)compatFlag
 
- OUT:	word	high  Byte = 0 -> lower Bufferhalf
+ OUT:   word    high  Byte = 0 -> lower Bufferhalf
          low   Byte = INT Counter
 
  ***********************************************************/
 
-word	_pascal _export BSNWaveGetAIState(word options)
+word    _pascal _export BSNWaveGetAIState(word options)
 {
-    word	state = 0;
+    word    state = 0;
 
     if (compatFlag)
     {
@@ -976,18 +976,18 @@ word	_pascal _export BSNWaveGetAIState(word options)
 
      Fill Secondarybuffer with silence
 
- IN:	byte	secPtr
-        (glob)	secondKOffset
-        (glob)	secondFree
-        (glob)	secBufLen
-        (glob)	playBits
+ IN:    byte    secPtr
+        (glob)  secondKOffset
+        (glob)  secondFree
+        (glob)  secBufLen
+        (glob)  playBits
 
  ***********************************************************/
 
-void	_pascal BSNWFillSilence(void *secPtr,word len)
+void    _pascal BSNWFillSilence(void *secPtr,word len)
 {
-        byte	*ptr;
-        byte	fill;
+        byte    *ptr;
+        byte    fill;
 
         // test pointer
         if (secPtr)
@@ -1030,25 +1030,25 @@ void	_pascal BSNWFillSilence(void *secPtr,word len)
 
       Cachedata --> Konverter --> Secondarybuffer
 
- IN:	void	*cachePtr
-     void	*secPtr
-     (glob)	cacheFull
-     (glob)	cacheKOffset
-        (glob)	secondKOffset
+ IN:    void    *cachePtr
+     void   *secPtr
+     (glob) cacheFull
+     (glob) cacheKOffset
+        (glob)  secondKOffset
 
- OUT:	(glob)	peakLevel
+ OUT:   (glob)  peakLevel
 
  *********************************************************/
 
-void	_pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
+void    _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
 {
-        byte	*dest;
-        byte	*src;
-        byte	b;
-        word	sample;
-        dword	level = 0;
-        dword	div = 0;
-        int	i;
+        byte    *dest;
+        byte    *src;
+        byte    b;
+        word    sample;
+        dword   level = 0;
+        dword   div = 0;
+        int i;
 
         dest = secPtr + secondKOffset;
         src =  cachePtr  + cacheKOffset;
@@ -1155,27 +1155,27 @@ void	_pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
       Cachedata --> Konverter --> Secondarybuffer
       Konverting 16 Bit WAV to 8 Bit WAV
 
- IN:	void	*cachePtr
-     void	*secPtr
-     (glob)	cacheFull
-     (glob)	cacheKOffset
-        (glob)	secondKOffset
+ IN:    void    *cachePtr
+     void   *secPtr
+     (glob) cacheFull
+     (glob) cacheKOffset
+        (glob)  secondKOffset
 
- OUT:	(glob)	peakLevel
+ OUT:   (glob)  peakLevel
 
  *********************************************************/
 
-extern	byte		konvRateRed;
-extern	byte		konvBitsRed;
-extern	byte		konvChanRed;
+extern  byte        konvRateRed;
+extern  byte        konvBitsRed;
+extern  byte        konvChanRed;
 
-void	_pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
+void    _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
 {
-        byte	*dest;
-        byte	b,bs;
-        int	*src;
-        long	sample;
-        int	i;
+        byte    *dest;
+        byte    b,bs;
+        int *src;
+        long    sample;
+        int i;
 
         dest = secPtr;
         src =  cachePtr;
@@ -1265,15 +1265,15 @@ void	_pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
   Checking: 1. Library used by another thread ?
           2. Support the driver NewWave ?
 
- IN:	playFlags	Parameter
- OUT:	int		0 = OK
+ IN:    playFlags   Parameter
+ OUT:   int     0 = OK
 
  ************************************************/
 
-int	_pascal BSNWPreCheck(word playFlags)
+int _pascal BSNWPreCheck(word playFlags)
 {
-        int	respond;
-        word	i;
+        int respond;
+        word    i;
 
         if (playStatus != BSNW_STATUS_OK)
         {
@@ -1282,7 +1282,7 @@ int	_pascal BSNWPreCheck(word playFlags)
             // waiting some seconds
             if (playFlags & BSNW_WAIT_FOR_FREE)
             {
-                i = 0;		// Timeoutcounter
+                i = 0;      // Timeoutcounter
 
                 do
                 {
@@ -1331,10 +1331,10 @@ int	_pascal BSNWPreCheck(word playFlags)
 
  ************************************************/
 
-void	_pascal BSNWInsertSample(void *ptr,byte bits)
+void    _pascal BSNWInsertSample(void *ptr,byte bits)
 {
-            byte	*bPtr;
-            word	*wPtr;
+            byte    *bPtr;
+            word    *wPtr;
 
             if (bits > 8)
             {
@@ -1373,7 +1373,7 @@ void	_pascal BSNWInsertSample(void *ptr,byte bits)
 
  **********************************************************/
 
-void	BSNWLoadIniSettings(void)
+void    BSNWLoadIniSettings(void)
 {
          if (InitFileReadInteger(soundCatIT,playKeyIT,&playCacheLen))
         {
@@ -1414,16 +1414,16 @@ void	BSNWLoadIniSettings(void)
 
   Send Play-params to driver
 
-  IN:	word	rate
-      word	bits
-        word	channels
-  OUT:	int	0 --> OK
+  IN:   word    rate
+      word  bits
+        word    channels
+  OUT:  int 0 --> OK
 
  **********************************************************/
 
-int	_pascal BSNWSetParams(word rate,word bits,word channels)
+int _pascal BSNWSetParams(word rate,word bits,word channels)
 {
-    int	back;
+    int back;
 
     back = BSNWAsmSetSampling(rate,
                               bits,
@@ -1438,31 +1438,31 @@ int	_pascal BSNWSetParams(word rate,word bits,word channels)
 
     Preparing Output
 
- IN:	word	playFlags
-     optr	parent
+ IN:    word    playFlags
+     optr   parent
 
  ******************************************************************/
 
-int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
+int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
 {
-        int	respond = 0;
-        word	bits,rate;
-        word	konvertFaktor;
-        char	*ptr;
-        word	size;
+        int respond = 0;
+        word    bits,rate;
+        word    konvertFaktor;
+        char    *ptr;
+        word    size;
 
         // Delete Flags
         playStopFlag = FALSE;
         statusBox = 0;
         respond = BSNW_STATUS_OK;
         playCachePtr = 0;
-        secondPtr = 0;			// Pointer Secondarybuffer
+        secondPtr = 0;          // Pointer Secondarybuffer
         fullLen = 0;
         timeOutCounter = 0;
 
     // Prepare UI (Statusbox) if:
         if ( (playFlags & BSNW_SHOW_STATUS) // 1. requested
-        && (parent != NullOptr))	    // 2. parent-obj defined
+        && (parent != NullOptr))        // 2. parent-obj defined
         {
             // Attach Statusbox to Tree and enable
             statusBox = BSCNCreateStatusBox(parent);
@@ -1476,7 +1476,7 @@ int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
         };
 
         // Allocate Playcache if:
-        if ( respond == BSNW_STATUS_OK )	// 1. Soundcard is ready
+        if ( respond == BSNW_STATUS_OK )    // 1. Soundcard is ready
         {
             // Allocate Playcache
 
@@ -1522,7 +1522,7 @@ int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
         if (statusGlyphOptr1)
         {
 
-@ifndef	BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
 
             rate = (word)(bfc->BWFC_sampleRate);
             bits = (word)(bfc->BWFC_bitsPerSample);
@@ -1565,7 +1565,7 @@ int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
         {
             // Allocate Secondarybuffer
             secBufLen  = BSNWAllocSecBuffer(&secondPtr,secBufLenSoll);
-            secBufL2   = secBufLen>>1;		// halbe Pufferl�nge
+            secBufL2   = secBufLen>>1;      // halbe Pufferl�nge
             secondFree = secBufLen;
         };
 
@@ -1578,7 +1578,7 @@ int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
         cacheKOffset = 0;
 
         // Toggle channels if :
-        if (  ( stereoToggle && (stereoToggleIni==0) )	// 1. driver request this
+        if (  ( stereoToggle && (stereoToggleIni==0) )  // 1. driver request this
         ||(!stereoToggle && (stereoToggleIni >0) ) )// 2. INI request this
         {
             BSNWInsertSample(secondPtr,playBits);
@@ -1593,26 +1593,26 @@ int	_pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
 
         Read Data from source and play it
 
- IN:	bytesToPlay
- OUT:	respond
+ IN:    bytesToPlay
+ OUT:   respond
 
  **********************************************************/
 
-int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
+int _pascal BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
 {
-        int	respond = BSNW_STATUS_OK;
-        dword	i;
-        word	aiState,aiState2;
-        dword	newSec,lastSec = 0;		// Sekundenwerte
+        int respond = BSNW_STATUS_OK;
+        dword   i;
+        word    aiState,aiState2;
+        dword   newSec,lastSec = 0;     // Sekundenwerte
 
 
-        peakLevel2 = 0;				// reset helper
+        peakLevel2 = 0;             // reset helper
 
         if(BSNW_PLAY_FINISHED==BSNWLoadData(playCachePtr,secondPtr))
         {
             // extreme short WAV-file
             BSNWStartPlay();
-            aiState2 = BSNWaveGetAIState(0xFF01);	// FF01 --> ISR clear the buffer
+            aiState2 = BSNWaveGetAIState(0xFF01);   // FF01 --> ISR clear the buffer
 
             do
             {
@@ -1624,13 +1624,13 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
         {
 
 /////////////////////////////////////////////////
-//	PLAYLOOP
+//  PLAYLOOP
 //
 // No data to play --> respond = BSNW_PLAY_FINISHED
 //
 /////////////////////////////////////////////////
 
-            i = 0;		// loopcounter
+            i = 0;      // loopcounter
 
             // loop until end
             while (respond == BSNW_STATUS_OK)
@@ -1639,7 +1639,7 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
                 if (i==0)
                 {
                     BSNWStartPlay();
-                    aiState2 = BSNWaveGetAIState(0xFF01);	// FF01 --> ISR clear the buffer
+                    aiState2 = BSNWaveGetAIState(0xFF01);   // FF01 --> ISR clear the buffer
                 };
 
                 aiState = BSNWaveGetAIState(0);
@@ -1655,7 +1655,7 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
                     {
                         // Timeout !
                         timeOutCounter++;
-@ifndef	BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
                         sprintf(playStatusText,"%u Timeout(s)",(word)timeOutCounter);
                         @call statusGlyphOptr1::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_NOW); /**/
 @endif
@@ -1711,15 +1711,15 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
 
                 ////////////// Display if: /////////////
 
-                if ( (statusGlyphOptr2) 		// 1. requested
-                && (secondFree == 0)		// 2. Buffers are filled
-                && ((i&0x001F) == 0x0007)	)	// 3. 8th loop
+                if ( (statusGlyphOptr2)         // 1. requested
+                && (secondFree == 0)        // 2. Buffers are filled
+                && ((i&0x001F) == 0x0007)   )   // 3. 8th loop
                 {
                     newSec = BSNWaveCalcPlaytimeText(playStatusText,playedBytes,fullLen,bfc->BWFC_avgRate,BSCPT_REST_TIME);
-                    if ( (newSec != lastSec)	// 4. new SECOND or
-                        || (newSec < 5 ) )		//    SECOND lower 5
+                    if ( (newSec != lastSec)    // 4. new SECOND or
+                        || (newSec < 5 ) )      //    SECOND lower 5
                     {
-@ifndef	BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
                         @send statusGlyphOptr2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_DELAYED_VIA_UI_QUEUE);
 @endif
                         lastSec = newSec;
@@ -1742,7 +1742,7 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
                     respond = BSNW_ABORT;
                 };
 
-                i++;		// loopcounter
+                i++;        // loopcounter
             };
         };
 
@@ -1773,11 +1773,11 @@ int	_pascal	BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent)
             MemFree(playCacheHandle);
         };
 
-@ifndef	BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
         // Disable Statusbox and remove from tree if:
-        if (    (playFlags &  BSNW_SHOW_STATUS)	// 1. Display was visible
-         && (parent    != NullOptr)		// 2. parent was defined
-         && (statusBox != NullOptr) )	// 3. statusBox was defined
+        if (    (playFlags &  BSNW_SHOW_STATUS) // 1. Display was visible
+         && (parent    != NullOptr)     // 2. parent was defined
+         && (statusBox != NullOptr) )   // 3. statusBox was defined
         {
             @call statusBox::MSG_GEN_SET_NOT_USABLE(VUM_NOW);
             @call parent::MSG_GEN_REMOVE_CHILD(statusBox,0);
