@@ -41,14 +41,10 @@ global  BSNWASMSTARTPLAY:far
 global  BSNWASMGETAISTATE:far
 global  BSNWASMSETSAMPLING:far
 global  BSNWASMGETDRIVERINFO:far
-global  BSNWASMSETDRIVERINFO:far
 
 
-SetGeosConvention
+        SetGeosConvention       ; set calling convention
 
-
-; global _driverInfo: fptr
-;extrn   _driverInfo:fptr          ; far ptr to DriverInfoStruct
 
 udata segment
 
@@ -60,38 +56,11 @@ udata ends
 
 ASMTOOLS_TEXT   segment resource
 
-;                assume  ds:dgroup       ; dgroup loaded on call of MyMonitor
-
-
-;--------------------------------------------------------------------------
-; FETCH_STRATEGY macro
-;--------------------------------------------------------------------------
-FETCH_STRATEGY macro infoPtr
-    local haveStrategy
-    les     di, infoPtr               ; ES:DI -> storage for driver info ptr
-    mov     si, es:[di]
-    mov     ax, es:[di+2]
-    mov     es, ax
-endm
-
 ;--------------------------------------------------------------------------
 ; BSNWASMGETDRIVERINFO
 ;--------------------------------------------------------------------------
 BSNWASMGETDRIVERINFO proc far        driverHandle:word
-        uses    bx, si, ds
-        .enter
-
-        mov     bx, driverHandle
-        call    GeodeInfoDriver           ; DS:SI -> DriverInfoStruct
-        mov     dx, ds                    ; return segment in DX
-        mov     ax, si                    ; return offset in AX
-
-        .leave
-        ret
-BSNWASMGETDRIVERINFO endp
-
-BSNWASMSETDRIVERINFO proc far        driverHandle:word
-        uses    bx, dx, di, es, cx, bp, si
+        uses    bx, dx, si
         .enter
 
         push    ds
@@ -106,32 +75,22 @@ BSNWASMSETDRIVERINFO proc far        driverHandle:word
 
         .leave
         ret
-BSNWASMSETDRIVERINFO endp
+BSNWASMGETDRIVERINFO endp
 
 
 ;--------------------------------------------------------------------------
 ; BSNWASMGETMAXPROPERTIES
 ;--------------------------------------------------------------------------
-BSNWASMGETMAXPROPERTIES proc far    driverHandle:word,
-                                    infoPtr:fptr.fptr,
-                                    ratePtr:fptr,
+BSNWASMGETMAXPROPERTIES proc far    ratePtr:fptr,
                                     channelsPtr:fptr,
                                     bitsPtr:fptr,
                                     reversePtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     di, DRE_BSNWAV_GET_MAX_PROPERTIES
-        call    es:[si].DIS_strategy
+        call    es:[bx].DIS_strategy
         cld
 
         les     bx, reversePtr
@@ -153,22 +112,13 @@ BSNWASMGETMAXPROPERTIES endp
 ;--------------------------------------------------------------------------
 ; BSNWASMSTOPRECORPLAY
 ;--------------------------------------------------------------------------
-BSNWASMSTOPRECORPLAY proc far       driverHandle:word,
-                                    infoPtr:fptr.fptr
-        uses    bx, cx, dx, si, di, es
+BSNWASMSTOPRECORPLAY proc far
+        uses    bx, cx, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     di, DRE_STOP_REC_OR_PLAY
-        call    es:[si].DIS_strategy
+        call    es:[bx].DIS_strategy
         cld
         mov     ax, cx
 
@@ -179,25 +129,15 @@ BSNWASMSTOPRECORPLAY endp
 ;--------------------------------------------------------------------------
 ; BSNWASMSETPAUSE
 ;--------------------------------------------------------------------------
-BSNWASMSETPAUSE proc far            driverHandle:word,
-                                    infoPtr:fptr.fptr,
-                                    mode:word
-        uses    bx, cx, dx, si, di, es
+BSNWASMSETPAUSE proc far            mode:word
+        uses    bx, cx, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     cx, mode
         mov     ch, 0
         mov     di, DRE_BSNWAV_SET_PAUSE
-        call    es:[si].DIS_strategy
+        call    es:[bx].DIS_strategy
         cld
         mov     al, ch
         xor     ah, ah
@@ -209,26 +149,8 @@ BSNWASMSETPAUSE endp
 ;--------------------------------------------------------------------------
 ; BSNWASMQUERYDEVICECAPABILITY
 ;--------------------------------------------------------------------------
-; expects: stratPtr = far pointer to the driver's strategy entry (DIS_strategy)
-;BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word
-;        uses    ds, bx, dx, si, di
-;        .enter
-;
-;        mov     bx, driverHandle
-;        call    GeodeInfoDriver        ; DS:SI -> DriverInfoStruct
-;        mov     di, DRE_SOUND_QUERY_DEVICE_CAPABILITY  ; driver request code
-;        call    ds:[si].DIS_strategy
-;
-;        cld
-;
-;        mov     ax, dx                  ; return value in AX
-;
-;        .leave
-;        ret
-;BSNWASMQUERYDEVICECAPABILITY endp
-
 BSNWASMQUERYDEVICECAPABILITY proc far
-        uses    bx, dx, di, es, cx, bp, si
+        uses    bx, dx, di, es, bp ; ...why is bp getting trashed if we don't save it here?
         .enter
 
         les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
@@ -241,25 +163,14 @@ BSNWASMQUERYDEVICECAPABILITY proc far
         ret
 BSNWASMQUERYDEVICECAPABILITY endp
 
-
 ;--------------------------------------------------------------------------
 ; BSNWASMCHECKSAMPLERATE
 ;--------------------------------------------------------------------------
-BSNWASMCHECKSAMPLERATE proc far     driverHandle:word,
-                                    infoPtr:fptr.fptr,
-                                    testValue:word
+BSNWASMCHECKSAMPLERATE proc far     testValue:word
         uses    bx, cx, dx, si, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     si, ds:[driverInfo]         ; ES:SI -> DriverInfoStruct
         mov     cx, 0
         mov     ax, MANUFACTURER_ID_BSW
         mov     bx, DACSF_MIXER_TEST
@@ -276,22 +187,13 @@ BSNWASMCHECKSAMPLERATE endp
 ;--------------------------------------------------------------------------
 ; BSNWASMGETSTATUS
 ;--------------------------------------------------------------------------
-BSNWASMGETSTATUS proc far           driverHandle:word,
-                                    infoPtr:fptr.fptr
-        uses    bx, cx, dx, si, di, es
+BSNWASMGETSTATUS proc far
+        uses    bx, cx, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     di, DRE_BSNWAV_GET_STATUS
-        call    es:[si].DIS_strategy
+        call    es:[bx].DIS_strategy
         cld
         mov     ax, cx
 
@@ -302,26 +204,16 @@ BSNWASMGETSTATUS endp
 ;--------------------------------------------------------------------------
 ; BSNWASMSECONDALLOC
 ;--------------------------------------------------------------------------
-BSNWASMSECONDALLOC proc far         driverHandle:word,
-                                    infoPtr:fptr.fptr,
-                                    bufLength:word,
+BSNWASMSECONDALLOC proc far         bufLength:word,
                                     offsetPtr:fptr,
                                     segmentPtr:fptr
         uses    bx, cx, dx, si, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     cx, bufLength
         mov     di, DRE_BSNWAV_SECOND_ALLOC
-        call    es:[si].DIS_strategy
+        call    es:[bx].DIS_strategy
         cld
 
         mov     si, ax                        ; save segment
@@ -341,22 +233,13 @@ BSNWASMSECONDALLOC endp
 ;--------------------------------------------------------------------------
 ; BSNWASMSTARTPLAY
 ;--------------------------------------------------------------------------
-BSNWASMSTARTPLAY proc far           driverHandle:word,
-                                    infoPtr:fptr.fptr
-        uses    bx, cx, dx, si, di, es
+BSNWASMSTARTPLAY proc far
+        uses    bx, cx, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     di, DRE_BSNWAV_START_PLAY
-        call    es:[si].DIS_strategy
+        call    es:[bx].DIS_strategy
         cld
         mov     ax, cx
 
@@ -367,24 +250,14 @@ BSNWASMSTARTPLAY endp
 ;--------------------------------------------------------------------------
 ; BSNWASMGETAISTATE
 ;--------------------------------------------------------------------------
-BSNWASMGETAISTATE proc far          driverHandle:word,
-                                    infoPtr:fptr.fptr,
-                                    options:word
-        uses    bx, cx, dx, si, di, es
+BSNWASMGETAISTATE proc far          options:word
+        uses    bx, cx, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     cx, options
         mov     di, DRE_BSNWAV_GET_AI_STATE
-        call    es:[si].DIS_strategy
+        call    es:[bx].DIS_strategy
         cld
         mov     ax, cx
 
@@ -395,23 +268,13 @@ BSNWASMGETAISTATE endp
 ;--------------------------------------------------------------------------
 ; BSNWASMSETSAMPLING
 ;--------------------------------------------------------------------------
-BSNWASMSETSAMPLING proc far         driverHandle:word,
-                                    infoPtr:fptr.fptr,
-                                    rate:word,
+BSNWASMSETSAMPLING proc far         rate:word,
                                     bits:word,
                                     channels:word
         uses    bx, cx, dx, si, di, es
         .enter
-EC <    push    bx                                                     >
-EC <    mov     bx, driverHandle                                       >
-EC <    call    ECCheckDriverHandle                                    >
-EC <    pop     bx                                                     >
-EC <    pushdw  bxsi                                                   >
-EC <    movdw   bxsi, infoPtr                                          >
-EC <    call    ECAssertValidFarPointerXIP                             >
-EC <    popdw   bxsi                                                   >
-        FETCH_STRATEGY infoPtr
 
+        les     si, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
         mov     bx, rate
         mov     cx, channels
         mov     dx, bits
