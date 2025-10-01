@@ -1,119 +1,119 @@
 /**************************************************************
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+        Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound NewWave-Library
+PROJECT:        BestSound NewWave-Library
 
-DATEI:		SUBCODE.GOH
+DATEI:          SUBCODE.GOH
 
-AUTOR:		Dirk Lausecker
+AUTOR:          Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
-	----	-----		------------
-	DL	28.02.2000	Init
-        DL	08.08.2000	Translation german --> english
+        Name    Datum           Beschreibung
+        ----    -----           ------------
+        DL      28.02.2000      Init
+        DL      08.08.2000      Translation german --> english
 
 Beschreibung:
-	Headerfile for SUBCODE.GOC
+        Headerfile for SUBCODE.GOC
 
 *****************************************************************/
 
 /*********************************
-    	Globals
+        Globals
  *********************************/
 
-extern	word		datasize;
-extern	Handle		sampleDriver;
-extern	const char 	*soundCatIT;
-extern	const char 	*sampleDriverIT;
-extern	const char 	*synthDriverIT;
+extern  word            datasize;
+extern  Handle          sampleDriver;
+extern  const char      *soundCatIT;
+extern  const char      *sampleDriverIT;
+extern  const char      *synthDriverIT;
 
-extern	Boolean		demoModus;
-extern	byte		valNum;
-extern	GeodeLoadError 	gle;
-extern	Boolean		driverUsed;
-extern	int		counter;
+extern  Boolean         demoModus;
+extern  byte            valNum;
+extern  GeodeLoadError  gle;
+extern  Boolean         driverUsed;
+extern  int             counter;
 
 typedef void (far *StrategyRoutine)(void);
-extern	DriverInfoStruct far *driverInfo;
-extern	StrategyRoutine strat;
+extern  DriverInfoStruct far *driverInfo;
+extern  StrategyRoutine strat;
 
-extern	int		playStatus;	// 0 = System ready (idle state)
-					// 1 = PlayFile active
-                                	// 2 = PlayMemory activ
-extern	int		playStopFlag;	// <>0 --> Abort
-extern	dword		playedBytes;
-extern	dword		bytesToPlay;
-extern	optr		statusGlyphOptr;
-extern	char		playStatusText[];
-extern	MemHandle	playCacheHandle;
-extern	BSWavFileHeader	bwfh;
-extern	word		playSourceType;
-extern	FileHandle	playSourceFH;	// FileHandle Source
-extern	dword   	chunkType;
-extern	dword		chunkLen;
-extern	dword		playSourcePos;	// Current Position in WAV-Source
-extern	word		playSampleRate;
-extern	byte		playChannels;	// channels
-extern	byte		playBits;	// Bits
-extern	word		playMaxRate;
-extern	byte		playMaxChannels;
-extern	byte		playMaxBits;
-extern	byte		konvRateRed;
-extern	byte		konvBitsRed;
-extern	byte		konvChanRed;
+extern  int             playStatus;     // 0 = System ready (idle state)
+                                        // 1 = PlayFile active
+                                        // 2 = PlayMemory activ
+extern  int             playStopFlag;   // <>0 --> Abort
+extern  dword           playedBytes;
+extern  dword           bytesToPlay;
+extern  optr            statusGlyphOptr;
+extern  char            playStatusText[];
+extern  MemHandle       playCacheHandle;
+extern  BSWavFileHeader bwfh;
+extern  word            playSourceType;
+extern  FileHandle      playSourceFH;   // FileHandle Source
+extern  dword           chunkType;
+extern  dword           chunkLen;
+extern  dword           playSourcePos;  // Current Position in WAV-Source
+extern  word            playSampleRate;
+extern  byte            playChannels;   // channels
+extern  byte            playBits;       // Bits
+extern  word            playMaxRate;
+extern  byte            playMaxChannels;
+extern  byte            playMaxBits;
+extern  byte            konvRateRed;
+extern  byte            konvBitsRed;
+extern  byte            konvChanRed;
 
-extern	word		playCacheLen;
-extern	word		secBufLen;	// Length Secondarybuffer
-extern	word		secBufLenSoll;
-extern	word		cacheOffset;	// Offset PlayCache
-extern	word		secondOffset;	// Offset Secondbuffer
-extern	word		cacheFree;	// Free space in PlayCache
-extern	word		secondKOffset;	// SecondPointerOffset Reader
-extern	word		cacheFull;	// in Cache waiting Bytes
-extern	word		secondFree;     // Free space in Secondarybuffer
-extern	word		cacheKOffset;	// Cacheoffset Reader
-extern	word		secondHandle;	// for test purpose only (SecondAlloc)
-extern	word		peakLevel;	// RMS-level (Konverter)
-extern	word		simFlags;	// Bit0->simulate Soundcard
-extern	Boolean		stereoToggle;	// Soundkarte toggle Left/Right
-extern	word		stereoToggleIni;
+extern  word            playCacheLen;
+extern  word            secBufLen;      // Length Secondarybuffer
+extern  word            secBufLenSoll;
+extern  word            cacheOffset;    // Offset PlayCache
+extern  word            secondOffset;   // Offset Secondbuffer
+extern  word            cacheFree;      // Free space in PlayCache
+extern  word            secondKOffset;  // SecondPointerOffset Reader
+extern  word            cacheFull;      // in Cache waiting Bytes
+extern  word            secondFree;     // Free space in Secondarybuffer
+extern  word            cacheKOffset;   // Cacheoffset Reader
+extern  word            secondHandle;   // for test purpose only (SecondAlloc)
+extern  word            peakLevel;      // RMS-level (Konverter)
+extern  word            simFlags;       // Bit0->simulate Soundcard
+extern  Boolean         stereoToggle;   // Soundkarte toggle Left/Right
+extern  word            stereoToggleIni;
 
-extern	Boolean		compatFlag;	// TRUE = driver is NewWave-kompatibel
-extern	byte		*playCachePtr;		// Pointer to Playcache
-extern	void		*playCBPtr;		// Pointer Callbackroutine
-extern	optr		statusGlyphOptr1;	// 1. line Statusbox
-extern	optr		statusGlyphOptr2;
-extern	optr		statusRightBoxOptr;
-extern	byte		*secondPtr;		// Pointer Secondarybuffer
-extern	optr		statusBox;
-extern	word		secBufL2;
-extern	dword		fullLen;
-extern	dword		timeOutCounter;
-extern	word		playLen2;
-extern	GeodeHandle	attachGeode;
+extern  Boolean         compatFlag;     // TRUE = driver is NewWave-kompatibel
+extern  byte            *playCachePtr;          // Pointer to Playcache
+extern  void            *playCBPtr;             // Pointer Callbackroutine
+extern  optr            statusGlyphOptr1;       // 1. line Statusbox
+extern  optr            statusGlyphOptr2;
+extern  optr            statusRightBoxOptr;
+extern  byte            *secondPtr;             // Pointer Secondarybuffer
+extern  optr            statusBox;
+extern  word            secBufL2;
+extern  dword           fullLen;
+extern  dword           timeOutCounter;
+extern  word            playLen2;
+extern  GeodeHandle     attachGeode;
 
 /********************** Functions ******************/
 
-int	_pascal BSNWSetParams(word rate,word bits,word channels);
-void	BSNWLoadIniSettings(void);
-void	_pascal BSNWInsertSample(void *ptr,byte bits);
-int	_pascal BSNWPreCheck(word playFlags);
-void	_pascal BSNWKonvert16To8(void *cachePtr, void *secPtr);
-Boolean	_pascal	_export BSNWStartPlay(void);
-void	_pascal BSNWFillSilence(void *secPtr,word len);
-word	_pascal BSNWGetAIState(void);
-void	_pascal BSNWKonvertData(byte *cachePtr, byte *secPtr);
-int	_pascal BSNWLoadCache(void *cachePtr);
-int	_pascal BSNWLoadData(void *cachePtr,
-			     void *secPtr);
-int	_pascal  BSNWPrepKS(word sampleRate,
-				   byte channels,
-            			   byte bits);
-Boolean	_pascal BSNWSearchChunk(dword type);
+int     _pascal BSNWSetParams(word rate,word bits,word channels);
+void    BSNWLoadIniSettings(void);
+void    _pascal BSNWInsertSample(void *ptr,byte bits);
+int     _pascal BSNWPreCheck(word playFlags);
+void    _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr);
+Boolean _pascal _export BSNWStartPlay(void);
+void    _pascal BSNWFillSilence(void *secPtr,word len);
+word    _pascal BSNWGetAIState(void);
+void    _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr);
+int     _pascal BSNWLoadCache(void *cachePtr);
+int     _pascal BSNWLoadData(void *cachePtr,
+                             void *secPtr);
+int     _pascal  BSNWPrepKS(word sampleRate,
+                                   byte channels,
+                                   byte bits);
+Boolean _pascal BSNWSearchChunk(dword type);
 Boolean _pascal BSNWSetSourcePosition(dword pos);
 Boolean _pascal BSNWGetData(void *dest,word len);
-int	_pascal BSNWReadWaveFormat(BSWavFileHeader *bw);
-void	* _pascal BSNWAllocPlayCache(word len);
-optr 	_pascal _export BSCNCreateStatusBox(optr parent);
+int     _pascal BSNWReadWaveFormat(BSWavFileHeader *bw);
+void    * _pascal BSNWAllocPlayCache(word len);
+optr    _pascal _export BSCNCreateStatusBox(optr parent);
