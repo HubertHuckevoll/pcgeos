@@ -42,8 +42,8 @@ global  BSNWASMGETAISTATE:far
 global  BSNWASMSETSAMPLING:far
 global  BSNWASMGETDRIVERINFO:far
 
-global _driverInfo: fptr
-; extrn   _driverInfo:fptr          ; far ptr to DriverInfoStruct
+; global _driverInfo: fptr
+extrn   _driverInfo:fptr          ; far ptr to DriverInfoStruct
 
 
 SetGeosConvention
@@ -195,8 +195,8 @@ BSNWASMSETPAUSE endp
 ;        ret
 ;BSNWASMQUERYDEVICECAPABILITY endp
 
-BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word
-        uses    bx, dx, di, es
+BSNWASMQUERYDEVICECAPABILITY proc far
+        uses    bx, dx, di, es, cx, bp, si
         .enter
 
         les     bx, _driverInfo         ; ES:BX -> DriverInfoStruct (from the C global)
@@ -206,7 +206,7 @@ BSNWASMQUERYDEVICECAPABILITY proc far   driverHandle:word
         mov     ax, dx                    ; return dx in ax
 
         .leave
-        retf
+        ret
 BSNWASMQUERYDEVICECAPABILITY endp
 
 
@@ -238,7 +238,7 @@ EC <    popdw   bxsi                                                   >
         mov     ax, dx
 
         .leave
-        ret
+        retf
 BSNWASMCHECKSAMPLERATE endp
 
 ;--------------------------------------------------------------------------

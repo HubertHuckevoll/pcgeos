@@ -100,7 +100,7 @@ extern word _far _pascal BSNWAsmStopRecOrPlay(GeodeHandle driverHandle,
 extern byte _far _pascal BSNWAsmSetPause(GeodeHandle driverHandle,
                                     DriverInfoStruct _far* _far* infoPtr,
                                     byte mode);
-extern word _far _pascal BSNWAsmQueryDeviceCapability(GeodeHandle driverHandle);
+extern word _far _pascal BSNWAsmQueryDeviceCapability();
 extern word _far _pascal BSNWAsmCheckSampleRate(GeodeHandle driverHandle,
                                            DriverInfoStruct _far* _far* infoPtr,
                                            word testValue);
@@ -969,7 +969,7 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
     // BSNWDebugNotifyWord("query driverHandle", sampleDriver);
     // BSNWDebugNotifyWord("query driverInfoSeg", FP_SEG(driverInfo));
     // BSNWDebugNotifyWord("query driverInfoOff", FP_OFF(driverInfo));
-    numOfDACs = BSNWAsmQueryDeviceCapability(sampleDriver);
+    numOfDACs = BSNWAsmQueryDeviceCapability();
     BSNWDebugNotifyWord("query numDACs", numOfDACs);
 
     if (numOfDACs > 0)
