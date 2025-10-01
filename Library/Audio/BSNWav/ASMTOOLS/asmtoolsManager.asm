@@ -1,6 +1,8 @@
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        BestSound NewWave assembly helpers
+        BestSound NewWave assembly helpers -
+        Basically all the code that is needed to talk to the sound driver
+        directly.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
@@ -48,7 +50,8 @@ global  BSNWASMGETDRIVERINFO:far
 
 udata segment
 
-        driverInfo fptr          ; far ptr to DriverInfoStruct
+        driverInfo fptr          ; far ptr to the sound driver's DriverInfoStruct
+                                 ; make sure the driver is loaded before aquiring this
 
 udata ends
 
@@ -65,7 +68,7 @@ BSNWASMGETDRIVERINFO proc far        driverHandle:word
 
         push    ds
         mov     bx, driverHandle
-        call    GeodeInfoDriver                 ; DS:SI -> DriverInfoStruct
+        call    GeodeInfoDriver                 ; DS:SI -> pointer to DriverInfoStruct
         mov     dx, ds                          ; put segment in DX
         mov     ax, si                          ; put offset in AX
         pop     ds                              ; restore DS to point to udata
