@@ -1,22 +1,22 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		Soundcheck
-FILE:		subcode.goc
+PROJECT:    BestSound
+MODULE:     Soundcheck
+FILE:       subcode.goc
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	12.03.2000   	Initial version.
-        DL	15.08.2000	Translation for ND
+    Name    Date        Description
+    ----    ----        -----------
+    DL  12.03.2000      Initial version.
+        DL  15.08.2000  Translation for ND
 
 DESCRIPTION:
 
@@ -58,342 +58,351 @@ DESCRIPTION:
 #define  SB_IO_STATUS                  0x0E
 
 /// SoundBlaster Commands to pass via SB_IO_COMMAND (0xc)
-#define  SB_COMMAND_SET_MONO		0xA0
-#define  SB_COMMAND_SET_STEREO		0xA8
-#define  SB_COMMAND_SPEAKER_ON		0xD1
-#define  SB_COMMAND_SPEAKER_OFF		0xD3
-#define  SB_COMMAND_GET_VERSION		0xE1
+#define  SB_COMMAND_SET_MONO        0xA0
+#define  SB_COMMAND_SET_STEREO      0xA8
+#define  SB_COMMAND_SPEAKER_ON      0xD1
+#define  SB_COMMAND_SPEAKER_OFF     0xD3
+#define  SB_COMMAND_GET_VERSION     0xE1
 
-#define  OPL3_REG_TIMER_CONTROL		0x04
+#define  OPL3_REG_TIMER_CONTROL     0x04
 
-#define  IRQ_RESET			0x80
-#define  TIMER1_MASK			0x40
-#define  TIMER2_MASK			0x20
+#define  IRQ_RESET          0x80
+#define  TIMER1_MASK            0x40
+#define  TIMER2_MASK            0x20
 
 
 ///////////////////////////////////////////////////////////////////
 
 /************************************************
 
- 	SC_CreatePlayThread
+    SC_CreatePlayThread
 
  ************************************************/
 
-void	_pascal SC_CreatePlayThread(void)
+void    _pascal SC_CreatePlayThread(void)
 {
 
     playThreadRunState = PLAY_THREAD_RUN;
 
     if(!ThreadCreate(PRIORITY_HIGH,
-    		     (word)0,
-		     PlayThreadLoop,   // Pointer to entry routine
-		     3000,             // Size of the stack for the new thread
-		     GeodeGetProcessHandle()))
+                     (word)0,
+                     PlayThreadLoop,   // Pointer to entry routine
+                     3000,             // Size of the stack for the new thread
+                     GeodeGetProcessHandle()))
     {
-    	// error
+        // error
         SysNotify(SNF_CONTINUE,"Playthread","could not be created !");
     };
 }
 
 /************************************************
 
- 	SC_ControlTimer
+    SC_ControlTimer
 
-  	Play-Timer init. / disable
+    Play-Timer init. / disable
 
-   IN:	playTimerID
+   IN:  playTimerID
 
  ************************************************/
 
-void	_pascal SC_ControlTimer(word flags)
+void    _pascal SC_ControlTimer(word flags)
 {
-        // detect Mode (Init/Disable)
-	if (flags & PLAY_TIMER_ON)
+    // detect Mode (Init/Disable)
+    if (flags & PLAY_TIMER_ON)
+    {
+        // Timer init.
+        if (playTH==NullHandle)
         {
-            // Timer init.
-            if (playTH==NullHandle)
-            {
-            	// TimerID is zero -> OK
-                playTH = TimerStart(TIMER_EVENT_CONTINUAL,
-                		   HandleToOptr(GeodeGetProcessHandle()),
-                           	   1,
-                           	   MSG_SC_PROCESS_PLAY_TIMER,
-                           	   30,
-                           	   &playTimerID);
-            };
-        }
-        else
-        {
-            // disable Timer
-            if (playTH)
-            {
-                TimerStop(playTH,playTimerID);
-                playTimerID = 0;
-                playTH = NullHandle;
-            };
+            // TimerID is zero -> OK
+            playTH = TimerStart(TIMER_EVENT_CONTINUAL,
+                                HandleToOptr(GeodeGetProcessHandle()),
+                                1,
+                                MSG_SC_PROCESS_PLAY_TIMER,
+                                30,
+                                &playTimerID);
         };
+    }
+    else
+    {
+        // disable Timer
+        if (playTH)
+        {
+            TimerStop(playTH,playTimerID);
+            playTimerID = 0;
+            playTH = NullHandle;
+        };
+    };
 }
 
 /************************************************
 
- 	PlayThreadLoop
+    PlayThreadLoop
 
-  	Mainloop for PLAY
+    Mainloop for PLAY
 
 
- IN:	statusFlags     playFlag
+ IN:    statusFlags     playFlag
 
- OUT:	playThreadRunState = PLAY_THREAD_OFF
+ OUT:   playThreadRunState = PLAY_THREAD_OFF
 
  ************************************************/
 
 #pragma argsused
-word	PlayThreadLoop(word	dummy)
+word    PlayThreadLoop(word dummy)
 {
 
-        char		fileName[13];
-        word		output;
-        word		error;
+    char        fileName[13];
+    word        output;
+    word        error;
 
-	while (playThreadRunState == PLAY_THREAD_RUN)
+    while (playThreadRunState == PLAY_THREAD_RUN)
+    {
+        // PLAY
+        // If playThreadFlag is not zero, the parameters
+        // for rate, bits, channel will be read and a
+        // WAV-file with the testsignal will be created.
+
+        if (playThreadFlag)
         {
-	    // PLAY
-            // If playThreadFlag is not zero, the parameters
-            // for rate, bits, channel will be read and a
-            // WAV-file with the testsignal will be created.
-
-            if (playThreadFlag)
+            if (lastFlag != playThreadFlag)
             {
-                if (lastFlag != playThreadFlag)
+                // get parameters from UI
+                sampleRate = @call WAVSamplerateItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+                bits       = @call WAVBitsItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+                channels   = @call WAVChannelsItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+
+                // create filename
+                if (channels == 1)
                 {
-            	    // get parameters from UI
-                    sampleRate = @call WAVSamplerateItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
-                    bits       = @call WAVBitsItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
-                    channels   = @call WAVChannelsItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
-
-                    // create filename
-                    if (channels == 1)
-                    {
-                    	sprintf(fileName,"SC%dM%d.WAV",sampleRate,bits);
-                    }
-                    else
-                    {
-                    	sprintf(fileName,"SC%dST%d.WAV",sampleRate,bits);
-                    };
-
-                    // delete old file (not in endless mode !)
-        	    FilePushDir();
-        	    FileSetStandardPath(SP_DOCUMENT);
-
-                    if (playThreadFlag != PLAY_CONT)
-		    {
-                    	error = FileDelete(fileName);
-                    };
-
-                    // if the deleting was not successful,
-                    // the old file will be used
-                    if (error == ERROR_FILE_IN_USE)
-                    {
-                    	scfh = FileOpen(fileName,(FILE_ACCESS_R | FILE_DENY_NONE));
-        	    	FilePopDir();
-                    }
-                    else
-                    {
-                    	scfh = 0;
-                    };
-
-                    // close the file if opened
-                    if (scfh)
-                    {
-                        (void)FileClose(scfh,FALSE);
-                    }
-
-                    // scfh indicates the existence of an file
-                    // that can not be deleted and must be used
-                    // for the playing
-
-
-                    // create new testfile
-                    if ((scfh == 0) || (playThreadFlag == PLAY_FILE) )
-                    {
-                	switch (sampleRate)
-                	{
-                    	    case 11 : sampleRate = 11025; break;
-                    	    case 22 : sampleRate = 22050; break;
-                    	    case 44 : sampleRate = 44100; break;
-                    	    default : sampleRate = 44100; break;
-                	};
-
-                	SC_CreateWaveFile(fileName);
-                        scfh = 0;
-                    };
-
-                    // rename "Play (endless)" into STOP
-                    if (playThreadFlag == PLAY_CONT)
-                    {
-                    	@send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("STOP",VUM_NOW);
-                    };
+                    sprintf(fileName,"SC%dM%d.WAV",sampleRate,bits);
+                }
+                else
+                {
+                    sprintf(fileName,"SC%dST%d.WAV",sampleRate,bits);
                 };
 
-                // save state for next loop
-                lastFlag = playThreadFlag;
+                // delete old file (not in endless mode !)
+                FilePushDir();
+                FileSetStandardPath(SP_DOCUMENT);
 
-                // open testfile (not in "file mode")
-                if (playThreadFlag != PLAY_FILE)
+                if (playThreadFlag != PLAY_CONT)
                 {
-        	    FilePushDir();
-        	    FileSetStandardPath(SP_DOCUMENT);
+                    error = FileDelete(fileName);
+                };
+
+                // if the deleting was not successful,
+                // the old file will be used
+                if (error == ERROR_FILE_IN_USE)
+                {
                     scfh = FileOpen(fileName,(FILE_ACCESS_R | FILE_DENY_NONE));
-        	    FilePopDir();
-
-                    // read current selection
-                    output = @call OutputItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
-
-                    // output
-                    switch (output)
-		    {
-                        case 1 : PlaySoundFromFile(scfh) ; break;
-                        case 2 : BSNWavePlayFile(scfh,
-					         (BSNW_WAIT_FOR_FREE|BSNW_SHOW_ERROR_MSG),
-                                                 0); break;
-		        default: break;
-		    };
-
-                    (void)FileClose(scfh,FALSE);
+                    FilePopDir();
+                }
+                else
+                {
                     scfh = 0;
                 };
 
-                // reset Flag
-                if (playThreadFlag != PLAY_CONT)
+                // close the file if opened
+                if (scfh)
                 {
-                    playThreadFlag = 0;
-                    lastFlag = 0;
-                };
-            }
-            else
-            {
-                // idle
-                TimerSleep(30);
-            };
-        };
+                    (void)FileClose(scfh,FALSE);
+                }
 
-	playThreadRunState = PLAY_THREAD_OFF;
-	ThreadDestroy(0, 0, 0);
-        return (0);
+                // scfh indicates the existence of an file
+                // that can not be deleted and must be used
+                // for the playing
+
+
+                // create new testfile
+                if ((scfh == 0) || (playThreadFlag == PLAY_FILE) )
+                {
+                    switch (sampleRate)
+                    {
+                        case 11 : sampleRate = 11025; break;
+                        case 22 : sampleRate = 22050; break;
+                        case 44 : sampleRate = 44100; break;
+                        default : sampleRate = 44100; break;
+                    };
+
+                    SC_CreateWaveFile(fileName);
+                    scfh = 0;
+                };
+
+                // rename "Play (endless)" into STOP
+                if (playThreadFlag == PLAY_CONT)
+                {
+                    @send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("STOP",VUM_NOW);
+                };
+            };
+
+            // save state for next loop
+            lastFlag = playThreadFlag;
+
+            // open testfile (not in "file mode")
+            if (playThreadFlag != PLAY_FILE)
+            {
+                FilePushDir();
+                FileSetStandardPath(SP_DOCUMENT);
+                scfh = FileOpen(fileName,(FILE_ACCESS_R | FILE_DENY_NONE));
+                FilePopDir();
+
+                // read current selection
+                output = @call OutputItemGroup::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+
+                // output
+                switch (output)
+                {
+                    case 1 : PlaySoundFromFile(scfh) ; break;
+                    case 2 : BSNWavePlayFile(scfh,
+                                                 (BSNW_WAIT_FOR_FREE|BSNW_SHOW_ERROR_MSG),
+                                                 0); break;
+                    default: break;
+                };
+
+                (void)FileClose(scfh,FALSE);
+                scfh = 0;
+            };
+
+            // reset Flag
+            if (playThreadFlag != PLAY_CONT)
+            {
+                playThreadFlag = 0;
+                lastFlag = 0;
+            };
+        }
+        else
+        {
+            // idle
+            TimerSleep(30);
+        };
+    };
+
+    playThreadRunState = PLAY_THREAD_OFF;
+    ThreadDestroy(0, 0, 0);
+    return (0);
 }
 
 /**********************************************************
 
         SC_SetAnswerGlyph
 
- IN:	op	optr to GenGlyph obj
- 	bool	TRUE --> OK	FALSE --> X
+ IN:    op  optr to GenGlyph obj
+    bool    TRUE --> OK FALSE --> X
 
  **********************************************************/
 
-void	_pascal	SC_SetAnswerGlyph(optr op,Boolean bool)
+void    _pascal SC_SetAnswerGlyph(optr op,Boolean bool)
 {
-        optr	vm;		// VisMoniker
+    optr    vm;     // VisMoniker
 
-        if (colorFlag)
+    if (colorFlag)
+    {
+        if (bool)
         {
-	    if (bool)
-            {
-            	vm = @OKVGAMoniker;
-            }
-            else
-            {
-            	vm = @ErrorVGAMoniker;
-            };
+            vm = @OKVGAMoniker;
         }
         else
         {
-	    if (bool)
-            {
-            	vm = @OKMonoMoniker;
-            }
-            else
-            {
-            	vm = @ErrorMonoMoniker;
-            };
+            vm = @ErrorVGAMoniker;
+        };
+    }
+    else
+    {
+        if (bool)
+        {
+            vm = @OKMonoMoniker;
         }
+        else
+        {
+            vm = @ErrorMonoMoniker;
+        };
+    }
 
-	(void)@call op::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(vm,VUM_DELAYED_VIA_APP_QUEUE);
+    (void)@call op::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(vm,VUM_DELAYED_VIA_APP_QUEUE);
 
 }
 
-#define	SC_DELAY       6
-#define	SC_LONG_DELAY  36
+#define SC_DELAY       6
+#define SC_LONG_DELAY  36
 
 /***********************************************************************
- *		SC_Delay
+ *      SC_Delay
  ***********************************************************************
  * SYNOPSIS:        Wait for a low-level Sound Card (OPL3) register.
- * PARAMETERS:	    int  addr   = base address for card communication (0x220|0x240|0x388)
+ * PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
  *                  uint reg    = OPL3 register sub-address to call on card
  *                  return      = data to pass to OPL3 card function
  * SIDE EFFECTS:
  * STRATEGY:
  *
  * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	martin	2001/2/6   	Initial version
+ *  Name    Date        Description
+ *  ----    ----        -----------
+ *  martin  2001/2/6    Initial version
  *
  ***********************************************************************/
 byte SC_Delay(word addr, word length)
 {
+    byte result;
+
     __asm {
         mov     dx, addr
         mov     cx, length
-    }
-    delay: __asm {
+
+        delay:
         in      al, dx
         loop    delay
+
+        mov     result, al
     }
-    return _AL;
+
+    return result;
 }
 
 /***********************************************************************
- *		SC_In
+ *      SC_In
  ***********************************************************************
  * SYNOPSIS:        Read a low-level Sound Card DMA hardware register.
- * PARAMETERS:	    int  addr   = base address for card communication (0x220|0x240|0x388)
+ * PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
  *                  uint reg    = OPL3 register sub-address to call on card
  *                  return      = data to pass to OPL3 card function
  * SIDE EFFECTS:
  * STRATEGY:
  *
  * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	martin	2001/2/6   	Initial version
+ *  Name    Date        Description
+ *  ----    ----        -----------
+ *  martin  2001/2/6    Initial version
  *
  ***********************************************************************/
 byte SC_In(word addr)
 {
+    byte result;
+
     /* Drop to assembly and output the command to the card. */
     __asm {
-        mov	dx, addr
+        mov     dx, addr
         in      al, dx
+        mov     result, al
     }
-    return _AL;
+
+    return result;
 }
 
 /***********************************************************************
- *		SC_Out
+ *      SC_Out
  ***********************************************************************
  * SYNOPSIS:        Write a low-level Sound Card DMA hardware register.
- * PARAMETERS:	    int  addr   = base address for card communication (0x220|0x240|0x388)
+ * PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
  *                  uint reg    = OPL3 register sub-address to call on card
  *                  return      = data to pass to OPL3 card function
  * SIDE EFFECTS:
  * STRATEGY:
  *
  * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	martin	2001/2/6   	Initial version
+ *  Name    Date        Description
+ *  ----    ----        -----------
+ *  martin  2001/2/6    Initial version
  *
  ***********************************************************************/
 void SC_Out(int addr, byte value)
@@ -408,10 +417,10 @@ void SC_Out(int addr, byte value)
 
 
 /***********************************************************************
- *		SC_Reset
+ *      SC_Reset
  ***********************************************************************
  * SYNOPSIS:        Reset a SoundBlaster Card.
- * PARAMETERS:	    int  addr   = base address for card communication (0x220|0x240|0x388)
+ * PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
  * SIDE EFFECTS:
  * STRATEGY:        1) Write "1" to SB_IO_RESET
  *                  2) Delay 100 ms
@@ -420,9 +429,9 @@ void SC_Out(int addr, byte value)
  *                  5) Read "AAh" from SB_IO_READ
  *
  * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	martin	2001/2/7   	Initial version
+ *  Name    Date        Description
+ *  ----    ----        -----------
+ *  martin  2001/2/7    Initial version
  *
  ***********************************************************************/
 void SC_Reset(int addr)
@@ -433,14 +442,14 @@ void SC_Reset(int addr)
         mov    al, 1
         out    dx, al
         sub    al, al    // delay
-    }
-    delay: __asm {
+
+        delay:
         dec    al
         jnz    delay     // loop 65535 times
         out    dx, al
         sub    cx, cx
-    }
-    empty: __asm {
+
+        empty:
         mov    dx, addr
         add    dl, SB_IO_STATUS
         in     al, dx
@@ -450,20 +459,20 @@ void SC_Reset(int addr)
         in     al, dx
         cmp    al, 0xAA
         je     reset
-    }
-    next: __asm {
+
+        next:
         loop   empty
+        reset:
     }
-    reset:
 }
 
 
 /***********************************************************************
- *		SC_FMCommand
+ *      SC_FMCommand
  ***********************************************************************
  * SYNOPSIS:        Issue a low-level Sound Card OPL3 FM command
  *                  and return the result.
- * PARAMETERS:	    int  addr   = base address for card communication (0x220|0x240|0x388)
+ * PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
  *                  uint reg    = OPL3 register sub-address to call on card
  *                  uint value  = data to pass to OPL3 card function
  * SIDE EFFECTS:
@@ -472,9 +481,9 @@ void SC_Reset(int addr)
  *                  Add delays for proper timing on old hardware.
  *
  * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	martin	2001/2/6   	Initial version
+ *  Name    Date        Description
+ *  ----    ----        -----------
+ *  martin  2001/2/6    Initial version
  *
  ***********************************************************************/
 byte SC_FMCommand(int addr, byte reg, byte value)
@@ -500,7 +509,7 @@ byte SC_FMCommand(int addr, byte reg, byte value)
 
 /**********************************************************
 
-	SC_TestSoundcard
+    SC_TestSoundcard
 
         Searching for  soundblasterkompatible Soundcard
 
@@ -510,21 +519,21 @@ byte SC_FMCommand(int addr, byte reg, byte value)
  **********************************************************/
 
 /***********************************************************************
- *		SC_TestSoundcard
+ *      SC_TestSoundcard
  ***********************************************************************
  * SYNOPSIS:    Test for a Yamaha OPL2, OPL3, or OPL4 audio chipset on card.
  * PARAMETERS:
- *    IN:	-
- *    OUT:	word	address / 0 --> no soundcard found
+ *    IN:   -
+ *    OUT:  word    address / 0 --> no soundcard found
  *
  * SIDE EFFECTS:
  * STRATEGY:
  *
  * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	DL	2000/12/3   	Initial version
- *	martin	2001/2/6   	Added OPL2 check, and increased address range
+ *  Name    Date        Description
+ *  ----    ----        -----------
+ *  DL  2000/12/3       Initial version
+ *  martin  2001/2/6    Added OPL2 check, and increased address range
  *
  ***********************************************************************/
 word _pascal SC_TestSoundcard(void)
@@ -537,40 +546,40 @@ word _pascal SC_TestSoundcard(void)
     // And at:  388h..3a8h (Yamaha OPL3 FM interface)
     do {
         // This is the official detection sequence for OPL2 cards.
-	// 1) Reset Timer 1 and Timer 2 by writing 60h to register 4.
-	// 2) Reset the IRQ by writing 80h to register 4.
+        // 1) Reset Timer 1 and Timer 2 by writing 60h to register 4.
+        // 2) Reset the IRQ by writing 80h to register 4.
         // 3) Read status register.
-	foundFlag = SC_FMCommand(addr, OPL3_REG_TIMER_CONTROL, TIMER1_MASK | TIMER2_MASK);
-	foundFlag = SC_FMCommand(addr, OPL3_REG_TIMER_CONTROL, IRQ_RESET);
-	switch (foundFlag) {
-	    case 0x06:  /* OPL2 found! SoundBlaster (up to Pro I) */
-	    case 0x00:  /* OPL3 found! SoundBlaster 16/Pro II */
-	    case 0x0f:  /* OPL4 found! */
-	    case 0x02:  /* OPL4 found! */
-	         foundFlag = 1;
-		 break;
+        foundFlag = SC_FMCommand(addr, OPL3_REG_TIMER_CONTROL, TIMER1_MASK | TIMER2_MASK);
+        foundFlag = SC_FMCommand(addr, OPL3_REG_TIMER_CONTROL, IRQ_RESET);
+        switch (foundFlag) {
+            case 0x06:  /* OPL2 found! SoundBlaster (up to Pro I) */
+            case 0x00:  /* OPL3 found! SoundBlaster 16/Pro II */
+            case 0x0f:  /* OPL4 found! */
+            case 0x02:  /* OPL4 found! */
+                foundFlag = 1;
+                break;
 
-	    default:
-	         // If we didn't find the OPL2, then do a quick check
-	         // of the SB command register to make sure an older
-	         // card isn't skipped.
-	         foundFlag = SC_WaitDSP(addr + SB_IO_COMMAND, DSP_WAIT_WRITE);
-	         if (foundFlag) break;
+            default:
+                // If we didn't find the OPL2, then do a quick check
+                // of the SB command register to make sure an older
+                // card isn't skipped.
+                foundFlag = SC_WaitDSP(addr + SB_IO_COMMAND, DSP_WAIT_WRITE);
+                if (foundFlag) break;
 
-		 // Well, no card is at the current address, so reset "foundFlag"
-		 // and forward to the next address in the search range.
-		 foundFlag = 0;
-		 addr = addr + inc;
-		 if (addr == 0x2a0) {
-		     addr = 0x388;
-		     inc  = 0x010;
-		 }
-	}
+                // Well, no card is at the current address, so reset "foundFlag"
+                // and forward to the next address in the search range.
+                foundFlag = 0;
+                addr = addr + inc;
+                if (addr == 0x2a0) {
+                    addr = 0x388;
+                    inc  = 0x010;
+                }
+        }
 
     } while ( (addr < 0x3a9) && (!foundFlag) );
 
     if (!foundFlag) {
-        addr = 0;		// no SB-komp. soundcard found
+        addr = 0;       // no SB-komp. soundcard found
     } else {
         foundFlag = SC_GetDSPVersion(addr);
     }
@@ -582,234 +591,235 @@ word _pascal SC_TestSoundcard(void)
 
 /**********************************************************
 
-	SC_WaitDSP
+    SC_WaitDSP
 
- 	check statusregister
+    check statusregister
 
- IN:	adr	2xc
- OUT:	Boolean		TRUE --> DSP is ready
+ IN:    adr 2xc
+ OUT:   Boolean     TRUE --> DSP is ready
 
- 	READ	2xe	Bit 7=H ->data ready
- 	WRITE	2xc	Bit 7=L ->ready for write
+    READ    2xe Bit 7=H ->data ready
+    WRITE   2xc Bit 7=L ->ready for write
 
  **********************************************************/
 
-#define	SC_WAIT_TIMEOUT	30
+#define SC_WAIT_TIMEOUT 30
 
-Boolean	_pascal SC_WaitDSP(word addr, Boolean direction)
+Boolean _pascal SC_WaitDSP(word addr, Boolean direction)
 {
-        byte	input;
-        int	i = 0;
+    byte    input;
+    int i = 0;
 
-        if (direction == DSP_WAIT_READ)
-        {
-            addr = addr + 2;
-        }
-        do
-        {
-            TimerSleep(1);
-            i++;
+    if (direction == DSP_WAIT_READ)
+    {
+        addr = addr + 2;
+    }
+    do
+    {
+        TimerSleep(1);
+        i++;
 
-            // request state until:
-            // 1. Bit 7 not set / reset (Read/Write)
-            // 2. Timeoutlimit OK
-            input = SC_In(addr);
+        // request state until:
+        // 1. Bit 7 not set / reset (Read/Write)
+        // 2. Timeoutlimit OK
+        input = SC_In(addr);
 
-        } while (   (i<SC_WAIT_TIMEOUT)
-          && ((input > 128) != (direction == DSP_WAIT_READ)));
+    } while (   (i<SC_WAIT_TIMEOUT)
+                && ((input > 128) != (direction == DSP_WAIT_READ)));
 
-        return(i<SC_WAIT_TIMEOUT);
+    return(i<SC_WAIT_TIMEOUT);
 }
 
 /**********************************************************
 
-	SC_GetDSPVersion
+    SC_GetDSPVersion
 
-	request DSP-Version
+    request DSP-Version
 
- OUT:	word		DSP-Version
+ OUT:   word        DSP-Version
 
   REVISION HISTORY:
- 	Name	Date		Description
- 	----	----		-----------
- 	DL	2000/12/3   	Initial version.
- 	martin	2001/2/5   	Revised to use SC_Out, SC_In
- 	martin	2001/2/7   	Fixed bad detection by adding reset
+    Name    Date        Description
+    ----    ----        -----------
+    DL  2000/12/3       Initial version.
+    martin  2001/2/5    Revised to use SC_Out, SC_In
+    martin  2001/2/7    Fixed bad detection by adding reset
 
 ***********************************************************/
-word	_pascal SC_GetDSPVersion(word addr)
+word    _pascal SC_GetDSPVersion(word addr)
 {
-        byte    major = 0, minor = 0;
-        word	ver = 0;	// Version
+    byte    major = 0, minor = 0;
+    word    ver = 0;    // Version
 
-	// Reset the card first so we don't get the wrong version.
-	SC_Reset(addr);
+    // Reset the card first so we don't get the wrong version.
+    SC_Reset(addr);
 
-	// Now query the version number.
-	SC_Out(addr + SB_IO_COMMAND, SB_COMMAND_GET_VERSION);
-        SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
-	major = SC_In(addr + SB_IO_READ);
-        SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
-	minor = SC_In(addr + SB_IO_READ);
+    // Now query the version number.
+    SC_Out(addr + SB_IO_COMMAND, SB_COMMAND_GET_VERSION);
+    SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
+    major = SC_In(addr + SB_IO_READ);
+    SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
+    minor = SC_In(addr + SB_IO_READ);
 
-	ver = ((major << 8) | minor);
-        if ((ver > 0x500) || (ver < 0x0100))
-	{
-		ver = 0;
-	};
-        dspVersion = ver;
+    ver = ((major << 8) | minor);
+    if ((ver > 0x500) || (ver < 0x0100))
+    {
+        ver = 0;
+    };
+    dspVersion = ver;
 
-	return (ver);
+    return (ver);
 }
 
 /**********************************************************
 
-	SC_Create_Viertel
+    SC_Create_Viertel
 
- IN	*char	fileName
- 	word	sampleRate
-        word	bits
-        word	channels
+ IN *char   fileName
+    word    sampleRate
+        word    bits
+        word    channels
 
  **********************************************************/
 
-#define	SC_SCHWINGUNG	48		//JMG 12/24/00
-#define	SC_CR_POSITIV	TRUE
-#define	SC_CR_NEGATIV	FALSE
-#define	SC_CR_STEIG	TRUE
-#define	SC_CR_FALLEND	FALSE
+#define SC_SCHWINGUNG   48      //JMG 12/24/00
+#define SC_CR_POSITIV   TRUE
+#define SC_CR_NEGATIV   FALSE
+#define SC_CR_STEIG TRUE
+#define SC_CR_FALLEND   FALSE
 
 
-//word	sinus[]={ {    0},{ 4663},{ 9232},{13612},{17716}, \
+//word  sinus[]={ {    0},{ 4663},{ 9232},{13612},{17716}, \
 //                    {21458},{24764},{27566},{29807},{31441}, \
-//		    {32434},{32767} };
+//          {32434},{32767} };
 
 // JM 12/24/00 expanded sample list to 13 values, either used 0 to 11 or 12 to 1,
 // to avoid first and last value being used twice.
 // Now all three sample rates result in ~920Hz pure sinus
-word	sinus[]={ 	{    0},{ 4277},{ 8480},{12539},{16384},{19947},
-					{23170},{25996},{28377},{30273},{31651},{32487},{32767} };
-byte	sampArray[100];
+word    sinus[]= {   {    0},{ 4277},{ 8480},{12539},{16384},{19947},
+    {23170},{25996},{28377},{30273},{31651},{32487},{32767}
+};
+byte    sampArray[100];
 
-word	SC_Create_Viertel(word index,word interleave,Boolean positiv, Boolean steigend, word samples)
+word    SC_Create_Viertel(word index,word interleave,Boolean positiv, Boolean steigend, word samples)
 {
-	int	i=0,k,ind;
-        dword	value;
+    int i=0,k,ind;
+    dword   value;
 
 
-	if (steigend)
+    if (steigend)
+    {
+        ind = 0;
+        k = interleave;
+    }
+    else
+    {
+        ind = 12;       // JMG 12/24/00 (runs 12 to 1 instead of 11 to 0)
+        k = 0 - interleave;
+    };
+
+
+    for (i=0; i<samples; i++)
+    {
+        value = (dword)sinus[ind];
+
+        if (bits==8)
         {
-            ind = 0;
-            k = interleave;
-        }
-        else
-        {
-            ind = 12;		// JMG 12/24/00 (runs 12 to 1 instead of 11 to 0)
-            k = 0 - interleave;
-        };
-
-
-	for (i=0;i<samples;i++)
-        {
-   	    value = (dword)sinus[ind];
-
-            if (bits==8)
+            if (positiv)
             {
-            	if (positiv)
-                {
-                    value = value + (128 * 256);
-                }
-                else
-                {
-                    value = (128 * 256) - value;
-                }
-
+                value = value + (128 * 256);
             }
             else
             {
+                value = (128 * 256) - value;
+            }
 
-            	if (!positiv)
-            	{
-		    value = 0 - value;
-            	};
+        }
+        else
+        {
+
+            if (!positiv)
+            {
+                value = 0 - value;
             };
+        };
 
-            // save Samples
-            ind = ind + k;
+        // save Samples
+        ind = ind + k;
+
+        if (bits == 16)
+        {
+            sampArray[index] = (byte)(value& 0x00ff);
+            index++;
+        };
+
+        sampArray[index] = (byte)(value>>8);
+        index++;
+
+        if (channels == 2)
+        {
+// LA 19.12.2000 Bugfix for Stereo WAV's
+//              ind = ind + k;
 
             if (bits == 16)
             {
-            	sampArray[index] = (byte)(value& 0x00ff);
+                sampArray[index] = (byte)(value& 0x00ff);
                 index++;
             };
 
             sampArray[index] = (byte)(value>>8);
             index++;
-
-            if (channels == 2)
-            {
-// LA 19.12.2000 Bugfix for Stereo WAV's
-//            	ind = ind + k;
-
-            	if (bits == 16)
-            	{
-            	    sampArray[index] = (byte)(value& 0x00ff);
-                    index++;
-            	};
-
-            	sampArray[index] = (byte)(value>>8);
-            	index++;
-            };
         };
+    };
 
-	return(index);
+    return(index);
 }
 
 /**********************************************************
 
-	SC_CreateWaveFile
+    SC_CreateWaveFile
 
- 	create WAV-file with test signal (sine wave)
+    create WAV-file with test signal (sine wave)
 
 
- IN:	fileName	Name of file to be created
- 	(global)	sampleRate
+ IN:    fileName    Name of file to be created
+    (global)    sampleRate
 
  **********************************************************/
 
-#ifdef	GERMAN
-char	completeString[] = "Eine WAV-Datei mit dem Namen \x01 wurde im DOCUMENT-Verzeichnis angelegt !";
-char	errorString[] = "An error occurred while creating the .WAV file.";
+#ifdef  GERMAN
+char    completeString[] = "Eine WAV-Datei mit dem Namen \x01 wurde im DOCUMENT-Verzeichnis angelegt !";
+char    errorString[] = "An error occurred while creating the .WAV file.";
 
 
 #else
-char	completeString[] = "A .WAV file with the name \x01 was created in the Document folder.";
-char	errorString[] = "An error occurred while creating the .WAV file.";
+char    completeString[] = "A .WAV file with the name \x01 was created in the Document folder.";
+char    errorString[] = "An error occurred while creating the .WAV file.";
 
 #endif
 
-void	SC_CreateWaveFile(char *fileName)
+void    SC_CreateWaveFile(char *fileName)
 {
-    word	error = 0;
-    dword	len,fullLen;
-    word	samples,j,interleave;
-    char	tempText[30];
-    word	prozent;
-    word	oldprozent = 0;
+    word    error = 0;
+    dword   len,fullLen;
+    word    samples,j,interleave;
+    char    tempText[30];
+    word    prozent;
+    word    oldprozent = 0;
 
     // create Header
     len  = @call LenValue::MSG_GEN_VALUE_GET_INTEGER_VALUE();
 
     if (SC_CreateHeader(fileName, len))
     {
-    	// error !
+        // error !
     }
     else
     {
         /////////// fill WAV-files //////////////
 
         // initiate statusdisplay
-	@call CreateProgressBox::MSG_GEN_INTERACTION_INITIATE();
+        @call CreateProgressBox::MSG_GEN_INTERACTION_INITIATE();
         TimerSleep(20);
 
         // calculate number of samples
@@ -817,47 +827,47 @@ void	SC_CreateWaveFile(char *fileName)
 
         // create wave
         interleave = (44100/sampleRate);
-	samples = (word)SC_SCHWINGUNG/interleave;
-	samples = samples/4;
+        samples = (word)SC_SCHWINGUNG/interleave;
+        samples = samples/4;
 
         j = 0;
-	j = SC_Create_Viertel(j,interleave,SC_CR_POSITIV,SC_CR_STEIG,samples);
-	j = SC_Create_Viertel(j,interleave,SC_CR_POSITIV,SC_CR_FALLEND,samples);
-	j = SC_Create_Viertel(j,interleave,SC_CR_NEGATIV,SC_CR_STEIG,samples);
-	j = SC_Create_Viertel(j,interleave,SC_CR_NEGATIV,SC_CR_FALLEND,samples);
+        j = SC_Create_Viertel(j,interleave,SC_CR_POSITIV,SC_CR_STEIG,samples);
+        j = SC_Create_Viertel(j,interleave,SC_CR_POSITIV,SC_CR_FALLEND,samples);
+        j = SC_Create_Viertel(j,interleave,SC_CR_NEGATIV,SC_CR_STEIG,samples);
+        j = SC_Create_Viertel(j,interleave,SC_CR_NEGATIV,SC_CR_FALLEND,samples);
 
         // createloop
         fullLen = byteLen;
-	while (byteLen>0 && !error)
+        while (byteLen>0 && !error)
         {
             // (Statusdisplay: (len go down to zero) )
-	    prozent = 100-(word)((byteLen*100)/fullLen);
+            prozent = 100-(word)((byteLen*100)/fullLen);
             if (prozent > (oldprozent+9))
             {
-	        sprintf (tempText,"%d%%",prozent);
-	        @call CreateProgressGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(tempText,VUM_NOW);
+                sprintf (tempText,"%d%%",prozent);
+                @call CreateProgressGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(tempText,VUM_NOW);
                 oldprozent = prozent;
             };
 
             if (byteLen<(dword)j)
             {
                 j = byteLen;
-            	byteLen = 0;
+                byteLen = 0;
             }
             else
             {
-            	byteLen = byteLen - (dword)j;
+                byteLen = byteLen - (dword)j;
             };
 
             error = FileWrite(scfh,
-            		      sampArray,
-                      	      j,
+                              sampArray,
+                              j,
                               FALSE);
             error = 0;
         };
 
         // (shutdown statusdisplay)
-	@call CreateProgressBox::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
+        @call CreateProgressBox::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
 
         // "file create" mode
         if (playThreadFlag == PLAY_FILE)
@@ -865,24 +875,24 @@ void	SC_CreateWaveFile(char *fileName)
             if (error)
             {
                 // error
-	        (void) UserStandardDialog((char *)0,
-				          (char *)0,
-				          (char *)0,
-				          0,		// arg1
-				          errorString,	// string
-				          (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
-				          (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+                (void) UserStandardDialog((char *)0,
+                                          (char *)0,
+                                          (char *)0,
+                                          0,        // arg1
+                                          errorString,  // string
+                                          (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
+                                          (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
             }
             else
-	    {
+            {
                 // Complete message
-	        (void) UserStandardDialog((char *)0,
-				          (char *)0,
-				          (char *)0,
-				          fileName,	// arg1
-				          completeString,		// string
-				          (CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
-				          (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+                (void) UserStandardDialog((char *)0,
+                                          (char *)0,
+                                          (char *)0,
+                                          fileName, // arg1
+                                          completeString,       // string
+                                          (CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
+                                          (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
             };
         };
 
@@ -894,69 +904,69 @@ void	SC_CreateWaveFile(char *fileName)
 
 /*************************************
  *
- *    	SC_CreateHeader
+ *      SC_CreateHeader
  *
- * 	Tempfile anlegen
+ *  Tempfile anlegen
  *
  * IN:  -
- * OUT:	TRUE	Fehler aufgetreten
- *	recTempFileHandle
+ * OUT: TRUE    Fehler aufgetreten
+ *  recTempFileHandle
  *
  *************************************/
 
-Boolean	_pascal	SC_CreateHeader(char *fileName, dword len)
+Boolean _pascal SC_CreateHeader(char *fileName, dword len)
 {
-        Boolean		back = FALSE;	// Fehlerflag
-        word		error;
-        dword		avgRate;
+    Boolean     back = FALSE;   // Fehlerflag
+    word        error;
+    dword       avgRate;
 
-        // initial. structure
-        strncpy(bwfh.BWFH_typRIFF,"RIFF",4);
-	strncpy(bwfh.BWFH_formName,"WAVE",4);		//"WAVE"
-	strncpy(bwfh.BWFH_typFMT,"fmt ",4);		//"fmt "
-	bwfh.BWFH_fmtLen = sizeof(BSWavFormChunk);	//16
-	bwfh.BWFH_fmtChunk.BWFC_dataFormat = 1;
-	strncpy(bwfh.BWFH_typData,"data",4);		//"data"
+    // initial. structure
+    strncpy(bwfh.BWFH_typRIFF,"RIFF",4);
+    strncpy(bwfh.BWFH_formName,"WAVE",4);       //"WAVE"
+    strncpy(bwfh.BWFH_typFMT,"fmt ",4);     //"fmt "
+    bwfh.BWFH_fmtLen = sizeof(BSWavFormChunk);  //16
+    bwfh.BWFH_fmtChunk.BWFC_dataFormat = 1;
+    strncpy(bwfh.BWFH_typData,"data",4);        //"data"
 
-        // update Header
-        avgRate = (dword)sampleRate;
-        avgRate = avgRate * (dword)channels;
-        avgRate = avgRate * (dword)(bits/8);
-	bwfh.BWFH_fmtChunk.BWFC_sampleRate = (dword)sampleRate;
-	bwfh.BWFH_fmtChunk.BWFC_avgRate = avgRate;
-	bwfh.BWFH_fmtChunk.BWFC_blockAlign = (channels*(bits/8));
-        bwfh.BWFH_fmtChunk.BWFC_channels = (word)channels;		// channels
-	bwfh.BWFH_fmtChunk.BWFC_bitsPerSample = (word)bits;
-	byteLen = len * (dword)sampleRate * (bwfh.BWFH_fmtChunk.BWFC_blockAlign);	//Chunkl�nge in Bytes
-	bwfh.BWFH_datLen = byteLen;
-	bwfh.BWFH_fullLen = byteLen + 36;
+    // update Header
+    avgRate = (dword)sampleRate;
+    avgRate = avgRate * (dword)channels;
+    avgRate = avgRate * (dword)(bits/8);
+    bwfh.BWFH_fmtChunk.BWFC_sampleRate = (dword)sampleRate;
+    bwfh.BWFH_fmtChunk.BWFC_avgRate = avgRate;
+    bwfh.BWFH_fmtChunk.BWFC_blockAlign = (channels*(bits/8));
+    bwfh.BWFH_fmtChunk.BWFC_channels = (word)channels;      // channels
+    bwfh.BWFH_fmtChunk.BWFC_bitsPerSample = (word)bits;
+    byteLen = len * (dword)sampleRate * (bwfh.BWFH_fmtChunk.BWFC_blockAlign);   //Chunkl�nge in Bytes
+    bwfh.BWFH_datLen = byteLen;
+    bwfh.BWFH_fullLen = byteLen + 36;
 
-        // create file
-        FilePushDir();
-        FileSetStandardPath(SP_DOCUMENT);
-        scfh = FileCreate( fileName,
-        		  (FILE_CREATE_TRUNCATE|FCF_NATIVE|FILE_ACCESS_RW|FILE_DENY_RW),
-			  FA_ARCHIVE);	/**/
-        FilePopDir();
+    // create file
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
+    scfh = FileCreate( fileName,
+                       (FILE_CREATE_TRUNCATE|FCF_NATIVE|FILE_ACCESS_RW|FILE_DENY_RW),
+                       FA_ARCHIVE);  /**/
+    FilePopDir();
 
-        if (scfh == NullHandle)
-        {
-            // error reading file
-            back = TRUE;
-        }
-        else
-        {
-            // file creating OK
+    if (scfh == NullHandle)
+    {
+        // error reading file
+        back = TRUE;
+    }
+    else
+    {
+        // file creating OK
 
-            // Headerstructure
+        // Headerstructure
 
-            error = FileWrite(scfh,
-            		      &bwfh,
-                      	      sizeof(BSWavFileHeader),
-                              FALSE);
+        error = FileWrite(scfh,
+                          &bwfh,
+                          sizeof(BSWavFileHeader),
+                          FALSE);
 
-             	back = (error==0);
-            };
+        back = (error==0);
+    };
 
-	return (back);
+    return (back);
 }

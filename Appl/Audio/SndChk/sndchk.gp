@@ -40,9 +40,9 @@ library sound
 #exempt wav
 
 
-resource APPRESOURCE 		ui-object
-resource INTERFACE 		ui-object
-resource UIMAININFORESOURCE 	ui-object
+resource AppResource 		ui-object
+resource Interface 		ui-object
+resource UIMainInfoResource 	ui-object
 resource APPLMONIKERRESOURCE 	data object read-only
 resource MONIKERRESOURCE 	data object read-only
 resource MAINGROUPRESOURCE	ui-object
