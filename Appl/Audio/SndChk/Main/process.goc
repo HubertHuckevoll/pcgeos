@@ -1,25 +1,25 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		Soundcheck
-FILE:		process.goc
+PROJECT:    BestSound
+MODULE:     Soundcheck
+FILE:       process.goc
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	12.03.2000   	Initial version.
-        DL	15.08.2000	Translation for ND
+    Name    Date        Description
+    ----    ----        -----------
+    DL  12.03.2000      Initial version.
+    DL  15.08.2000      Translation for ND
 
 DESCRIPTION:
-	Application for testing the sound capabilities of the system
+    Application for testing the sound capabilities of the system
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
@@ -41,309 +41,287 @@ DESCRIPTION:
 
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- %		Class & Message Definitions
+ %      Class & Message Definitions
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
 /*
- *	Class declarations
+ *  Class declarations
  */
 
-@classdecl	SDCKProcessClass, neverSaved;
+@classdecl  SDCKProcessClass, neverSaved;
 
 /********************************************************
 
-	MSG_GEN_PROCESS_OPEN_APPLICATION
+    MSG_GEN_PROCESS_OPEN_APPLICATION
 
- IN:	 AppAttachFlags		attachFlags
-         MemHandle		launchBlock
-         MemHandle 		extraState
+ IN:     AppAttachFlags     attachFlags
+         MemHandle      launchBlock
+         MemHandle      extraState
  ********************************************************/
 
-@method SDCKProcessClass , MSG_GEN_PROCESS_OPEN_APPLICATION
+@method SDCKProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
 {
-  	GeodeHandle	gh;
-        ReleaseNumber	version;
-        DisplayScheme	displayScheme;
+    GeodeHandle gh;
+    ReleaseNumber   version;
+    DisplayScheme   displayScheme;
 
-  	@callsuper();
+    @callsuper();
 
-    	// detect colormode
-    	@call SDCKApp::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME( &displayScheme );
+    // detect colormode
+    @call SDCKApp::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME( &displayScheme );
 
-    	if( ((byte)(displayScheme.DS_displayType) & DT_DISP_CLASS) > DC_GRAY_8)//Farbe?
-        {
-      	    colorFlag = TRUE;
-        }
-      	else
-        {
-      	    colorFlag = FALSE;
-        };
+    if( ((byte)(displayScheme.DS_displayType) & DT_DISP_CLASS) > DC_GRAY_8)//Farbe?
+    {
+        colorFlag = TRUE;
+    }
+    else
+    {
+        colorFlag = FALSE;
+    };
 
-  	// display Version in Infobox
-  	gh = GeodeGetProcessHandle();
-  	(void)GeodeGetInfo(gh,GGIT_GEODE_RELEASE,&version);
-  	sprintf(globalText,"Version %u.%u - %u.%u",version.RN_major,version.RN_minor,version.RN_change,version.RN_engineering);
-  	@call InfoGlyph6::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    // display Version in Infobox
+    gh = GeodeGetProcessHandle();
+    (void)GeodeGetInfo(gh,GGIT_GEODE_RELEASE,&version);
+    sprintf(globalText,"Version %u.%u - %u.%u",version.RN_major,version.RN_minor,version.RN_change,version.RN_engineering);
+    @call InfoGlyph6::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
 
-	// Playthread
-	SC_CreatePlayThread();
+    // Playthread
+    SC_CreatePlayThread();
 
-	// check the system automatically after start
-        @send oself::MSG_SNDCHK_CHECK_SYSTEM();
+    // check the system automatically after start
+    @send oself::MSG_SNDCHK_CHECK_SYSTEM();
 }
 
 /************************************************************
 
-	MSG_GEN_PROCESS_CLOSE_APPLICATION
+    MSG_GEN_PROCESS_CLOSE_APPLICATION
 
-	Funktion:       Timer stoppen
+    Funktion:       Timer stoppen
 
-	IN:     -
+    IN:     -
 
-	OUT:    -
+    OUT:    -
 
-	Aufruf durch :	-
+    Aufruf durch :  -
 
  -----------------------------------------------------------*/
 
-@method SDCKProcessClass , MSG_GEN_PROCESS_CLOSE_APPLICATION
+@method SDCKProcessClass, MSG_GEN_PROCESS_CLOSE_APPLICATION
 {
-        // stop PlayThread
-	if (playThreadRunState != PLAY_THREAD_OFF)
+    // stop PlayThread
+    if (playThreadRunState != PLAY_THREAD_OFF)
+    {
+        word    timeOut = 600;  // Timeout 1 min
+
+        playThreadRunState = PLAY_THREAD_DESTROY;
+
+        while ((playThreadRunState == PLAY_THREAD_DESTROY) && (timeOut > 0))
         {
-            word	timeOut = 600;	// Timeout 1 min
-
-	    playThreadRunState = PLAY_THREAD_DESTROY;
-
-            while ((playThreadRunState == PLAY_THREAD_DESTROY) && (timeOut > 0))
-            {
-            	TimerSleep(5);
-                timeOut--;
-            };
+            TimerSleep(5);
+            timeOut--;
         };
+    };
 
-  	return (@callsuper());
+    return (@callsuper());
 }
 
 /************************************************************
 
-	MSG_SNDCHK_PROCESS_HINWEISTON
+    MSG_SNDCHK_PROCESS_HINWEISTON
 
  ************************************************************/
 
-@method SDCKProcessClass , MSG_SNDCHK_PROCESS_HINWEISTON
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_HINWEISTON
 {
-	UserStandardSound(SST_NOTIFY);
+    UserStandardSound(SST_NOTIFY);
 }
 
 /************************************************************
 
-	MSG_SNDCHK_PROCESS_WARNTON
+    MSG_SNDCHK_PROCESS_WARNTON
 
  ************************************************************/
 
-@method SDCKProcessClass , MSG_SNDCHK_PROCESS_WARNTON
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_WARNTON
 {
-	UserStandardSound(SST_WARNING);
-
-}
-
-/************************************************************
-
-	MSG_SNDCHK_PROCESS_FEHLERTON
-
- ************************************************************/
-
-@method SDCKProcessClass , MSG_SNDCHK_PROCESS_FEHLERTON
-{
-	UserStandardSound(SST_ERROR);
+    UserStandardSound(SST_WARNING);
 
 }
 
 /************************************************************
 
-	MSG_SNDCHK_PROCESS_OUTPUT_STATUS
-
- IN:	word	selection
- 	word	numSelections
-        byte	stateFlags
+    MSG_SNDCHK_PROCESS_FEHLERTON
 
  ************************************************************/
 
-@method SDCKProcessClass , MSG_SNDCHK_PROCESS_OUTPUT_STATUS
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_FEHLERTON
 {
-	if (selection == 3)
+    UserStandardSound(SST_ERROR);
+
+}
+
+/************************************************************
+
+    MSG_SNDCHK_PROCESS_OUTPUT_STATUS
+
+ IN:    word    selection
+        word    numSelections
+        byte    stateFlags
+
+ ************************************************************/
+
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_OUTPUT_STATUS
+{
+    if (selection == 3)
+    {
+        // save to file
+        @send MainSub3Trigger1::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+        @send MainSub3Trigger2::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+        @send MainSub3Trigger3::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+    }
+    else
+    {
+        @send MainSub3Trigger3::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+        @send MainSub3Trigger1::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+        @send MainSub3Trigger2::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+    };
+
+}
+
+/************************************************************
+
+    MSG_SNDCHK_PROCESS_PLAY_ONCE
+
+ ************************************************************/
+
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_PLAY_ONCE
+{
+    playThreadFlag = PLAY_ONCE;
+}
+
+/************************************************************
+
+    MSG_SNDCHK_PROCESS_PLAY_CONT
+
+ ************************************************************/
+@ifdef  GERMAN
+    @define TEXT_PLAY_ENDLESS   "PLAY (endlos)"
+@else
+    @define TEXT_PLAY_ENDLESS   "Play Repeatedly"
+@endif
+
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_PLAY_CONT
+{
+    if (playThreadFlag == PLAY_CONT)
+    {
+        playThreadFlag = PLAY_OFF;
+        @send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(@TEXT_PLAY_ENDLESS,VUM_NOW);
+        @send MainSub3Trigger1::MSG_GEN_SET_ENABLED(VUM_NOW);
+        @send MainSub3Trigger3::MSG_GEN_SET_ENABLED(VUM_NOW);
+    }
+    else
+    {
+        playThreadFlag = PLAY_CONT;
+        @send MainSub3Trigger1::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+        @send MainSub3Trigger3::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+    };
+}
+
+/************************************************************
+
+    MSG_SNDCHK_PROCESS_PLAY_FILE
+
+ ************************************************************/
+
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_PLAY_FILE
+{
+    playThreadFlag = PLAY_FILE;
+}
+
+/************************************************************
+
+    MSG_SNDCHK_CHECK_SYSTEM
+
+    Main method for checking checklist
+
+ ************************************************************/
+@ifdef  GERMAN
+    @define TEXT_FOUND_SB_MONO  "Mono-Soundblaster bei Adresse %X gefunden"
+    @define TEXT_FOUND_SB_PRO   "Soundblaster-Pro bei Adresse %X gefunden"
+    @define TEXT_FOUND_SB_16    "SB16 (oder besser) bei Adresse %X gefunden"
+    @define TEXT_FOUND_SB_NONE  "Keine SB-kompatible Soundkarte gefunden !"
+@else
+    @define TEXT_FOUND_SB_MONO  "Mono Sound Blaster found at address %X"
+    @define TEXT_FOUND_SB_PRO   "Sound Blaster Pro found at address %X"
+    @define TEXT_FOUND_SB_16    "Sound Blaster 16 found at address %X"
+    @define TEXT_FOUND_SB_NONE  "No Sound Blaster-compatible sound card found."
+@endif
+
+@method SDCKProcessClass, MSG_SNDCHK_CHECK_SYSTEM
+{
+    Boolean     result;
+    word        addr;
+    const   char    dmaName[] = "dosrdma";
+    const   char    ecDmaName[] = "dosrdmae";
+
+    // Reset
+    sprintf (globalText,"?");
+    @call MSG1_1GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    @call MSG1_2GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    @call MSG1_3GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    @call MSG1_4GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    @call MSG1_5GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+
+    // Soundblasterkompatible Soundcard
+    addr = SC_TestSoundcard();
+    result = addr > 0;
+    SC_SetAnswerGlyph(@MSG1_1GlyphR,result);
+    if (result)
+    {
+        if (dspVersion < 0x0201)
         {
-            // save to file
-            @send MainSub3Trigger1::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
-            @send MainSub3Trigger2::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
-            @send MainSub3Trigger3::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+            sprintf (globalText,@TEXT_FOUND_SB_MONO,(addr));
         }
         else
         {
-            @send MainSub3Trigger3::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
-            @send MainSub3Trigger1::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
-            @send MainSub3Trigger2::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
-        };
-
-}
-
-/************************************************************
-
-	MSG_SNDCHK_PROCESS_PLAY_ONCE
-
- ************************************************************/
-
-@method SDCKProcessClass , MSG_SNDCHK_PROCESS_PLAY_ONCE
-{
-	playThreadFlag = PLAY_ONCE;
-}
-
-/************************************************************
-
-	MSG_SNDCHK_PROCESS_PLAY_CONT
-
- ************************************************************/
-@ifdef	GERMAN
-@define	TEXT_PLAY_ENDLESS	"PLAY (endlos)"
-@else
-@define	TEXT_PLAY_ENDLESS	"Play Repeatedly"
-@endif
-
-@method SDCKProcessClass , MSG_SNDCHK_PROCESS_PLAY_CONT
-{
-	if (playThreadFlag == PLAY_CONT)
-        {
-	    playThreadFlag = PLAY_OFF;
-            @send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(@TEXT_PLAY_ENDLESS,VUM_NOW);
-            @send MainSub3Trigger1::MSG_GEN_SET_ENABLED(VUM_NOW);
-            @send MainSub3Trigger3::MSG_GEN_SET_ENABLED(VUM_NOW);
-        }
-        else
-        {
-	    playThreadFlag = PLAY_CONT;
-            @send MainSub3Trigger1::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
-            @send MainSub3Trigger3::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
-        };
-}
-
-/************************************************************
-
-	MSG_SNDCHK_PROCESS_PLAY_FILE
-
- ************************************************************/
-
-@method SDCKProcessClass , MSG_SNDCHK_PROCESS_PLAY_FILE
-{
-	playThreadFlag = PLAY_FILE;
-}
-
-/************************************************************
-
-	MSG_SNDCHK_CHECK_SYSTEM
-
-        Main method for checking checklist
-
- ************************************************************/
-@ifdef	GERMAN
-@define	TEXT_FOUND_SB_MONO	"Mono-Soundblaster bei Adresse %X gefunden"
-@define	TEXT_FOUND_SB_PRO	"Soundblaster-Pro bei Adresse %X gefunden"
-@define	TEXT_FOUND_SB_16	"SB16 (oder besser) bei Adresse %X gefunden"
-@define	TEXT_FOUND_SB_NONE	"Keine SB-kompatible Soundkarte gefunden !"
-
-@else
-
-@define	TEXT_FOUND_SB_MONO	"Mono Sound Blaster found at address %X"
-@define	TEXT_FOUND_SB_PRO	"Sound Blaster Pro found at address %X"
-@define	TEXT_FOUND_SB_16	"Sound Blaster 16 found at address %X"
-@define	TEXT_FOUND_SB_NONE	"No Sound Blaster-compatible sound card found."
-
-@endif
-
-@method SDCKProcessClass , MSG_SNDCHK_CHECK_SYSTEM
-{
-        Boolean		result;
-        word		addr;
-	const 	char	dmaName[] = "dosrdma";
-	const 	char	ecDmaName[] = "dosrdmae";
-
-        // Reset
-        sprintf (globalText,"?");
-        @call MSG1_1GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
-        @call MSG1_2GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
-        @call MSG1_3GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
-        @call MSG1_4GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
-        @call MSG1_5GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
-
-	// Soundblasterkompatible Soundcard
-        addr = SC_TestSoundcard();
-        result = addr > 0;
-	SC_SetAnswerGlyph(@MSG1_1GlyphR,result);
-        if (result)
-        {
-            if (dspVersion < 0x0201)
+            if (dspVersion < 0x0400)
             {
-            	sprintf (globalText,@TEXT_FOUND_SB_MONO,(addr));
+                sprintf (globalText,@TEXT_FOUND_SB_PRO,(addr));
             }
             else
             {
-            	if (dspVersion < 0x0400)
-            	{
-            	    sprintf (globalText,@TEXT_FOUND_SB_PRO,(addr));
-            	}
-            	else
-                {
-            	    sprintf (globalText,@TEXT_FOUND_SB_16,(addr));
-                };
-
+                sprintf (globalText,@TEXT_FOUND_SB_16,(addr));
             };
-        }
-        else
-        {
-            sprintf (globalText,@TEXT_FOUND_SB_NONE);
+
         };
+    }
+    else
+    {
+        sprintf (globalText,@TEXT_FOUND_SB_NONE);
+    };
 
-        @call PrimaryGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
-        TimerSleep(30);
+    @call PrimaryGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    TimerSleep(30);
 
-        // DMA driver found
-	result = (GeodeFind(dmaName,GEODE_NAME_SIZE-1,0,0) != NullHandle);
-        if (!result)
-        {
-            // 2nd try
-	    result = (GeodeFind(ecDmaName,GEODE_NAME_SIZE,0,0) != NullHandle);
-        };
+    // DMA driver found
+    result = (GeodeFind(dmaName,GEODE_NAME_SIZE-1,0,0) != NullHandle);
+    if (!result)
+    {
+        // 2nd try
+        result = (GeodeFind(ecDmaName,GEODE_NAME_SIZE,0,0) != NullHandle);
+    };
 
-	SC_SetAnswerGlyph(@MSG1_2GlyphR,result);
+    SC_SetAnswerGlyph(@MSG1_2GlyphR,result);
 
-        // BestSound-driver active
-        result = BSNWaveCheckDriver(0, 3);
-	SC_SetAnswerGlyph(@MSG1_3GlyphR,result);
+    // BestSound-driver active
+    result = BSNWaveCheckDriver(0, 3);
+    SC_SetAnswerGlyph(@MSG1_3GlyphR,result);
 
-        // BestSound Recording
-        result = BSNWaveCheckDriver(0, 4);
-	SC_SetAnswerGlyph(@MSG1_4GlyphR,result);
+    // BestSound Recording
+    result = BSNWaveCheckDriver(0, 4);
+    SC_SetAnswerGlyph(@MSG1_4GlyphR,result);
 
-        // BestSound NewWave
-        result = BSNWaveCheckDriver(0, 5);
-	SC_SetAnswerGlyph(@MSG1_5GlyphR,result);
-
+    // BestSound NewWave
+    result = BSNWaveCheckDriver(0, 5);
+    SC_SetAnswerGlyph(@MSG1_5GlyphR,result);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,66 +1,66 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		Soundcheck
-FILE:		subcode.goh
+PROJECT:    BestSound
+MODULE:     Soundcheck
+FILE:       subcode.goh
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	12.03.1999   	Initial version.
+    Name    Date        Description
+    ----    ----        -----------
+    DL  12.03.1999      Initial version.
 
 DESCRIPTION:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
-#define DSP_WAIT_READ		FALSE
-#define	DSP_WAIT_WRITE		TRUE
+#define DSP_WAIT_READ       FALSE
+#define DSP_WAIT_WRITE      TRUE
 
-#define	PLAY_STATE_OFF		1	/* idle  */
-#define	PLAY_STATE_RUN		2	/* PLAY  */
-#define	PLAY_STATE_ERROR	3	/* error */
+#define PLAY_STATE_OFF      1   /* idle  */
+#define PLAY_STATE_RUN      2   /* PLAY  */
+#define PLAY_STATE_ERROR    3   /* error */
 
-#define	PLAY_TIMER_OFF		0
-#define	PLAY_TIMER_ON		1
+#define PLAY_TIMER_OFF      0
+#define PLAY_TIMER_ON       1
 
-#define	PLAY_THREAD_OFF		0
-#define	PLAY_THREAD_RUN		1
-#define	PLAY_THREAD_DESTROY	2
+#define PLAY_THREAD_OFF     0
+#define PLAY_THREAD_RUN     1
+#define PLAY_THREAD_DESTROY 2
 
-#define	PLAY_OFF	0
-#define	PLAY_ONCE	1
-#define	PLAY_CONT	2
-#define	PLAY_FILE	3
+#define PLAY_OFF    0
+#define PLAY_ONCE   1
+#define PLAY_CONT   2
+#define PLAY_FILE   3
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- %			Functions
+ %          Functions
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
-Boolean	_pascal	SC_CreateHeader(char *fileName, dword len);
+Boolean _pascal SC_CreateHeader(char *fileName, dword len);
 // create WAV-file with header
 
-void	SC_CreateWaveFile(char *fileName);
+void    SC_CreateWaveFile(char *fileName);
 // create WAV-file with Testsignal
 
-word	_pascal SC_GetDSPVersion(word adr);
+word    _pascal SC_GetDSPVersion(word adr);
 // request DSP-version
 
-Boolean	_pascal SC_WaitDSP(word adr, Boolean direction);
+Boolean _pascal SC_WaitDSP(word adr, Boolean direction);
 // subfunction for SC_TestSoundcard()
 
-word	_pascal SC_TestSoundcard(void);
+word    _pascal SC_TestSoundcard(void);
 // search for soundcard
 
-void	_pascal	SC_SetAnswerGlyph(optr op,Boolean bool);
-void	_pascal SC_CreatePlayThread(void);
-void	_pascal SC_ControlTimer(word flags);
-word	PlayThreadLoop(word dummy);
+void    _pascal SC_SetAnswerGlyph(optr op,Boolean bool);
+void    _pascal SC_CreatePlayThread(void);
+void    _pascal SC_ControlTimer(word flags);
+word    PlayThreadLoop(word dummy);
 

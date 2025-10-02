@@ -1,52 +1,49 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		Soundcheck
-FILE:		globals.goh
+PROJECT:    BestSound
+MODULE:     Soundcheck
+FILE:       globals.goh
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	13.03.2000   	Initial version.
-        DL	14.03.2000	Umbenennung
-        DL	16.08.2000	Translation for ND
+    Name    Date        Description
+    ----    ----        -----------
+    DL  13.03.2000      Initial version.
+    DL  14.03.2000      Umbenennung
+    DL  16.08.2000      Translation for ND
 
 DESCRIPTION:
-	Globals
+    Globals
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
 // code-switch for german/english version
 
 /*
-@define	GERMAN
-#define	GERMAN
+@define GERMAN
+#define GERMAN
 /* german version */
 
-
 // global var.
-extern	char		globalText[];
-extern	GeodeLoadError  gle;
-extern	word		playThreadRunState;
-extern	word		playTimerID;
-extern	TimerHandle     playTH;
-extern	word		playThreadFlag;
-extern	Boolean		colorFlag;
-extern	word		dspVersion;
-extern	word		sampleRate;
-extern  word		bits;
-extern	word		channels;
-extern	FileHandle	scfh;
-extern	BSWavFileHeader	bwfh;
-extern	dword		byteLen;
-extern	word		lastFlag;
-
-
+extern  char            globalText[];
+extern  GeodeLoadError  gle;
+extern  word            playThreadRunState;
+extern  word            playTimerID;
+extern  TimerHandle     playTH;
+extern  word            playThreadFlag;
+extern  Boolean         colorFlag;
+extern  word            dspVersion;
+extern  word            sampleRate;
+extern  word            bits;
+extern  word            channels;
+extern  FileHandle      scfh;
+extern  BSWavFileHeader bwfh;
+extern  dword           byteLen;
+extern  word            lastFlag;

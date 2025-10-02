@@ -1,45 +1,45 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+        Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		Soundcheck
-FILE:		globals.goc
+PROJECT:        BestSound
+MODULE:         Soundcheck
+FILE:           globals.goc
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:         Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+        Name                    Description
+        ----                    -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	13.03.2000   	Initial version.
-        DL	14.03.2000	Umbenennung
+        Name    Date            Description
+        ----    ----            -----------
+        DL      13.03.2000      Initial version.
+        DL      14.03.2000      Umbenennung
 
 DESCRIPTION:
-	Globale Variable
+        Globale Variable
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
-@define	MAIN_GLOBALS_GOC
+@define MAIN_GLOBALS_GOC
 
 @include <bsnwav.goh>
 @include <stdapp.goh>
 
-char		globalText[80];
+char            globalText[80];
 GeodeLoadError  gle;
-word		playThreadRunState;
-word		playTimerID;
+word            playThreadRunState;
+word            playTimerID;
 TimerHandle     playTH;
-word		playThreadFlag;
-Boolean		colorFlag;
-word		dspVersion = 0;
-word		sampleRate = 22050;
-word		bits = 8;
-word		channels = 1;
-FileHandle	scfh;
-BSWavFileHeader	bwfh;
-dword		byteLen;
-word		lastFlag = 0;
+word            playThreadFlag;
+Boolean         colorFlag;
+word            dspVersion = 0;
+word            sampleRate = 22050;
+word            bits = 8;
+word            channels = 1;
+FileHandle      scfh;
+BSWavFileHeader bwfh;
+dword           byteLen;
+word            lastFlag = 0;

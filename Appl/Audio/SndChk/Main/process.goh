@@ -1,21 +1,21 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 1999 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 1999 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		Soundcheck
-FILE:		process.goh
+PROJECT:    BestSound
+MODULE:     Soundcheck
+FILE:       process.goh
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	12.03.2000   	Initial version.
+    Name    Date        Description
+    ----    ----        -----------
+    DL  12.03.2000      Initial version.
 
 DESCRIPTION:
 
@@ -23,24 +23,24 @@ DESCRIPTION:
 
 @include <stdapp.goh>
 
-@ifndef	MAIN_PROCESS_GOH
-@define	MAIN_PROCESS_GOH
+@ifndef MAIN_PROCESS_GOH
+@define MAIN_PROCESS_GOH
 
 /*
- * 	SDCKProcessClass
+ *  SDCKProcessClass
  */
-@class	SDCKProcessClass, GenProcessClass;
+@class  SDCKProcessClass, GenProcessClass;
 
-	@message void MSG_SNDCHK_PROCESS_HINWEISTON();
-	@message void MSG_SNDCHK_PROCESS_WARNTON();
-	@message void MSG_SNDCHK_PROCESS_FEHLERTON();
-	@message (GEN_ITEM_GROUP_STATUS_MSG) MSG_SNDCHK_PROCESS_OUTPUT_STATUS;
+@message void MSG_SNDCHK_PROCESS_HINWEISTON();
+@message void MSG_SNDCHK_PROCESS_WARNTON();
+@message void MSG_SNDCHK_PROCESS_FEHLERTON();
+@message (GEN_ITEM_GROUP_STATUS_MSG) MSG_SNDCHK_PROCESS_OUTPUT_STATUS;
 
-	@message void MSG_SNDCHK_PROCESS_PLAY_ONCE();
-	@message void MSG_SNDCHK_PROCESS_PLAY_CONT();
-	@message void MSG_SNDCHK_PROCESS_PLAY_FILE();
-	@message void MSG_SC_PROCESS_PLAY_TIMER();
-	@message void MSG_SNDCHK_CHECK_SYSTEM();
+@message void MSG_SNDCHK_PROCESS_PLAY_ONCE();
+@message void MSG_SNDCHK_PROCESS_PLAY_CONT();
+@message void MSG_SNDCHK_PROCESS_PLAY_FILE();
+@message void MSG_SC_PROCESS_PLAY_TIMER();
+@message void MSG_SNDCHK_CHECK_SYSTEM();
 
 @endc
 
