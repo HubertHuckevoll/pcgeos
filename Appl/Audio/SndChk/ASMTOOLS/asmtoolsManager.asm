@@ -11,10 +11,10 @@ SB_IO_RESET      equ     06h
 SB_IO_STATUS     equ     0Eh
 SB_IO_READ       equ     0Ah
 
-global  SCASMDELAY:far
-global  SCASMIN:far
-global  SCASMOUT:far
-global  SCASMRESET:far
+global  SC_ASMDELAY:far
+global  SC_ASMIN:far
+global  SC_ASMOUT:far
+global  SC_ASMRESET:far
 
 .ioenable
 
@@ -25,7 +25,7 @@ ASMTOOLS_TEXT segment resource
 ;--------------------------------------------------------------------------
 ; SC_Delay
 ;--------------------------------------------------------------------------
-SCASMDELAY proc far ioAddr:word, delayCount:word
+SC_ASMDELAY proc far ioAddr:word, delayCount:word
         uses    dx, cx
         .enter
 
@@ -38,12 +38,12 @@ DelayLoop:
 
         .leave
         ret
-SCASMDELAY endp
+SC_ASMDELAY endp
 
 ;--------------------------------------------------------------------------
 ; SC_In
 ;--------------------------------------------------------------------------
-SCASMIN proc far ioAddr:word
+SC_ASMIN proc far ioAddr:word
         uses    dx
         .enter
 
@@ -52,12 +52,12 @@ SCASMIN proc far ioAddr:word
 
         .leave
         ret
-SCASMIN endp
+SC_ASMIN endp
 
 ;--------------------------------------------------------------------------
 ; SC_Out
 ;--------------------------------------------------------------------------
-SCASMOUT proc far ioAddr:word, value:byte
+SC_ASMOUT proc far ioAddr:word, value:byte
         uses    dx
         .enter
 
@@ -67,12 +67,12 @@ SCASMOUT proc far ioAddr:word, value:byte
 
         .leave
         ret
-SCASMOUT endp
+SC_ASMOUT endp
 
 ;--------------------------------------------------------------------------
 ; SC_Reset
 ;--------------------------------------------------------------------------
-SCASMRESET proc far ioAddr:word
+SC_ASMRESET proc far ioAddr:word
         uses    ax, dx, cx
         .enter
 
@@ -105,7 +105,7 @@ ResetDone:
 
         .leave
         ret
-SCASMRESET endp
+SC_ASMRESET endp
 
 ASMTOOLS_TEXT ends
 

@@ -432,11 +432,11 @@ byte SC_FMCommand(int addr, byte reg, byte value)
     addr += SB_IO_FM_REG;
 
     /* Output the OPL3 command through the SoundBlaster IO register. */
-    SCASMOUT (addr + SB_IO_FM_REG_A,  reg);
-    SCASMDELAY (addr + SB_IO_FM_REG_A,  SC_DELAY);
-    SCASMOUT (addr + SB_IO_FM_DATA_A, value);
-    SCASMDELAY (addr + SB_IO_FM_REG_A,  SC_LONG_DELAY);
-    result = SCASMIN (addr + SB_IO_FM_REG_A);
+    SC_AsmOut (addr + SB_IO_FM_REG_A,  reg);
+    SC_AsmDelay (addr + SB_IO_FM_REG_A,  SC_DELAY);
+    SC_AsmOut (addr + SB_IO_FM_DATA_A, value);
+    SC_AsmDelay (addr + SB_IO_FM_REG_A,  SC_LONG_DELAY);
+    result = SC_AsmIn (addr + SB_IO_FM_REG_A);
 
     return result;
 }
@@ -556,7 +556,7 @@ Boolean _pascal SC_WaitDSP(word addr, Boolean direction)
         // request state until:
         // 1. Bit 7 not set / reset (Read/Write)
         // 2. Timeoutlimit OK
-        input = SCASMIN(addr);
+        input = SC_AsmIn(addr);
 
     } while (   (i<SC_WAIT_TIMEOUT)
                 && ((input > 128) != (direction == DSP_WAIT_READ)));
@@ -586,14 +586,14 @@ word    _pascal SC_GetDSPVersion(word addr)
     word    ver = 0;    // Version
 
     // Reset the card first so we don't get the wrong version.
-    SCASMRESET(addr);
+    SC_AsmReset(addr);
 
     // Now query the version number.
-    SCASMOUT(addr + SB_IO_COMMAND, SB_COMMAND_GET_VERSION);
+    SC_AsmOut(addr + SB_IO_COMMAND, SB_COMMAND_GET_VERSION);
     SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
-    major = SCASMIN(addr + SB_IO_READ);
+    major = SC_AsmIn(addr + SB_IO_READ);
     SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
-    minor = SCASMIN(addr + SB_IO_READ);
+    minor = SC_AsmIn(addr + SB_IO_READ);
 
     ver = ((major << 8) | minor);
     if ((ver > 0x500) || (ver < 0x0100))
