@@ -135,11 +135,15 @@ SC_ASMRESET proc far ioAddr:word
         add     dl, SB_IO_RESET
         mov     al, 1
         out     dx, al
-        sub     al, al
 
-Delay:
-        dec     al
-        jnz     Delay
+        ; A short delay is required here (>= 3 microseconds). The original
+        ; loop was too short on modern CPUs. This nested loop provides a
+        ; more substantial, though still uncalibrated, delay.
+        mov     cx, 1000  ; Outer loop
+Delay:  nop
+        loop    Delay
+
+        mov     al, 0
         out     dx, al
         sub     cx, cx
 
