@@ -31,6 +31,8 @@
 
 #include <dirksnd.h>
 
+@include "mixlib.goh"
+
 /**************************** Konstanten ************************/
 
 // #define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
@@ -40,23 +42,42 @@
 #define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
 #define FP_OFF(fp) ((unsigned short)(fp))
 #define MK_FP(seg, ofs) ((void far *)(((unsigned long)(seg) << 16) | (unsigned)(ofs)))
+#define MIX_FARPTR(type, ptr) ((type far *)MK_FP(FP_SEG(ptr), FP_OFF(ptr)))
 
 
+/******************** Assembly helpers ************************/
 
+extern void _far _pascal MixAsmSetDriverInfo(GeodeHandle driverHandle);
+extern void _far _pascal MixAsmSetValue(word token, word valueLeft, word valueRight);
+extern word _far _pascal MixAsmGetValue(word token);
+extern word _far _pascal MixAsmGetCap(word _far *dspPtr);
+extern void _far _pascal MixAsmTokenToText(word token, char _far *dest);
+extern word _far _pascal MixAsmGetSubToken(word token, word identifier);
+extern void _far _pascal MixAsmSpecValue(
+    word valNum,
+    word _far *rangePtr,
+    word _far *tokenPtr,
+    byte _far *targetPtr,
+    byte _far *typePtr,
+    byte _far *sliderPtr,
+    byte _far *visiblePtr,
+    byte _far *stereoPtr
+);
+extern word _far _pascal MixAsmGetState(void);
+
+
+/********************** Globals ******************/
 word        datasize    = 0;        //Buffer for ReadIni
 Handle      mixerDriver = NullHandle;
-const char  *soundCatIT     = "sound";      //INI Entry
-const char  *mixerDriverIT  = "mixerDriver";    //INI Entry
-const char  *synthDriverIT  = "synthDriver";    //INI Entry
+const char  soundCatIT[]     = "sound";      //INI Entry
+const char  mixerDriverIT[]  = "mixerDriver";    //INI Entry
+const char  synthDriverIT[]  = "synthDriver";    //INI Entry
 //char      driverName[32]  = "sblaster.geo";
 Boolean     demoModus   = TRUE;
 byte        valNum      = 0;
 GeodeLoadError  gle;
 Boolean     driverUsed  = FALSE;    //Treiber wurde extra geladen
 
-/********************** Funktionsdeklarationen ******************/
-
-@include "mixlib.goh"
 
 /**************************** Funktionen ************************/
 
@@ -81,9 +102,22 @@ Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
         switch (type) {
             case LCT_ATTACH:                /* The library was just loaded. */
               {
+                  char driverName[GEODE_NAME_SIZE];
+
                   //Init
                   mixerDriver = NullHandle;
+                  driverUsed  = FALSE;
                   demoModus = TRUE;
+                  driverName[0] = '\0';
+
+                  if (BSMixerLoadDriver(&gle, driverName))
+                  {
+                      // demo mode, assembly helper already reset
+                  }
+                  else
+                  {
+                      // driver ready, MixAsmSetDriverInfo called by loader
+                  }
               };
               break;
 
@@ -96,6 +130,7 @@ Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
                   GeodeFreeDriver (mixerDriver);
                   mixerDriver = NullHandle;
                 };
+                MixAsmSetDriverInfo(NullHandle);
             };
 
               break;
@@ -168,6 +203,15 @@ Boolean _pascal _export BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
 
         demoModus = demoMode;
 
+        if (demoMode)
+        {
+            MixAsmSetDriverInfo(NullHandle);
+        }
+        else
+        {
+            MixAsmSetDriverInfo(mixerDriver);
+        }
+
         return (demoMode);
 }
 
@@ -216,23 +260,7 @@ void    _pascal _export BSMixerSetValue (word token, byte dataType, byte value1,
             };
 
                 //Treiber aufrufen
-            __asm {
-                push di
-                push ax
-                push dx
-                mov  di,DRE_BSMIXER_SET_VALUE /* get value */
-                mov  al,value1            //Links
-                mov  ah,value2            //Rechts
-                mov  dx,token         /* value number */
-            }
-
-            BSCallDriver();
-
-            __asm {
-                pop  dx
-                pop  ax
-                pop  di
-            }
+            MixAsmSetValue(token, value1, value2);
         };
 }
 
@@ -259,22 +287,7 @@ word    _pascal _export BSMixerGetValue (word token, byte dataType)
         }
         else
         {
-            __asm {
-                push ax
-                push dx
-                push di
-                mov  di,DRE_BSMIXER_GET_VALUE /* get value */
-                mov  dx,token         /* value number */
-            }
-
-            BSCallDriver();
-
-            __asm {
-                pop  di
-                mov  value,ax
-                pop  dx
-                pop  ax
-            }
+            value = MixAsmGetValue(token);
 
             //Datentyp interpretieren
             val1 = value & 0x00ff;
@@ -334,85 +347,12 @@ word    _pascal _export BSMixerGetCap (word *dsp)
         }
         else
         {
-
-            __asm {
-                push di
-                mov  di,DRE_BSMIXER_GET_CAP         /* get number of values */
-            }
-
-            BSCallDriver();
-
-            __asm {
-                pop  di
-                mov  valNum,cx
-                mov  DSPVersion,dx
-            }
+            valNum = MixAsmGetCap(MIX_FARPTR(word, &DSPVersion));
         }
 
         *dsp    = DSPVersion;
 
         return (valNum);
-}
-
-/********************************
- *  BSCallDriver        *
- *              *
- * IN   di  Routinennummer  *
- *              *
- * C-Routine mit ASMCode zum    *
- * Aufrufen einer Treiberroutine*
- ********************************/
-
-void _pascal BSCallDriver ()
-{
-        DriverInfoStruct * driverInfo;
-        int segm;
-        int offs;
-        int axsave;
-
-        __asm {
-          push ds
-          push si
-          push ax
-          push bx
-          push cx
-          push dx
-          push di
-        }
-
-        //Treibereinsprung ermitteln
-        driverInfo = GeodeInfoDriver(mixerDriver);
-        segm = FP_SEG(driverInfo) ;
-        offs = FP_OFF(driverInfo) ;
-
-        __asm {
-          pop  di
-          pop  dx
-          pop  cx
-          pop  bx
-          pop  ax
-          mov    axsave,ax      //folgende if-Verzweigung zerstoert ax
-        }
-
-        //Sprungverteiler-Routine aufrufen
-        if ((segm | offs) > 0)
-        {
-            __asm {
-                mov  ax,axsave
-                mov  si, offs
-                mov  ds, segm
-                DB   03eh, 0ffh, 01ch   /* call far ds:[si] */
-            }
-        }
-        else
-        {
-            demoModus = TRUE;       //Bei Fehler DEMOMODUS !
-        };
-
-        __asm {
-              pop  si
-              pop  ds
-        }
 }
 
 @start  STRINGRESOURCE, data;
@@ -512,8 +452,6 @@ void _pascal BSCallDriver ()
 
 void _pascal _export BSMixerGetTokenText (word token,char *tokenText)
 {
-        int  segment;
-        int  offsett;
         char *textPtr;
         optr op;
 
@@ -566,27 +504,7 @@ void _pascal _export BSMixerGetTokenText (word token,char *tokenText)
         //String von Treiber geben lassen wenn Token nicht bekannt war
         if ((token > 49) && (demoModus == 0))
         {
-            segment = FP_SEG(tokenText) ;
-            offsett = FP_OFF(tokenText) ;
-            __asm {
-                push ax
-                push bx
-                push cx
-                push di
-                mov  ax,segment      //Textzeiger
-                mov bx,offsett
-                mov  cx,token
-                mov  di,DRE_BSMIXER_TOKEN_TO_TEXT
-            }
-
-            BSCallDriver();
-
-            __asm {
-                pop di
-                pop  cx
-                pop bx
-                pop ax
-            }
+            MixAsmTokenToText(token, MIX_FARPTR(char, tokenText));
         }
         else
         {
@@ -623,25 +541,7 @@ word _pascal _export BSMixerGetSubToken(word token, word identifier)
         else
         {
             //Treiber aufrufen
-            __asm {
-                push ax
-                push bx
-                push cx
-                push dx
-                push di
-                mov  cx,token
-                mov  dx,identifier
-                mov  di,DRE_BSMIXER_GET_SUB_TOKEN
-            }
-            BSCallDriver();
-            __asm {
-                mov  subToken,ax
-                pop  di
-                pop  dx
-                pop  cx
-                pop  bx
-                pop  ax
-            }
+            subToken = MixAsmGetSubToken(token, identifier);
         };
 
         //Ende
@@ -658,14 +558,6 @@ word _pascal _export BSMixerGetSubToken(word token, word identifier)
 
 void _pascal _export BSMixerSpecValue(word valNum, MixerValue *value)
 {
-    word    Range;
-    word    Token;
-    byte    Type;
-    byte    Slider;
-    byte    Target;
-    byte    Visible;
-    byte    StereoFlag;
-
         //demoModus = keine Aufrufe an Treiber
         if (demoModus)
         {
@@ -681,45 +573,16 @@ void _pascal _export BSMixerSpecValue(word valNum, MixerValue *value)
         }
         else
         {
-            //Treiber aufrufen
-            __asm {
-                push ax
-                push bx
-                push cx
-                push dx
-                push di
-                mov  di,DRE_BSMIXER_SPEC_VALUE
-                mov  dx,valNum
-            }
-
-            BSCallDriver();
-
-            __asm {
-                mov  Range,ax
-                mov  Token,bx
-                mov  Target,dl
-                mov  Type,cl
-                mov  Slider,ch
-                mov  al,80h         //MSB = Visible
-                and  al,dh
-                mov  Visible,al
-                mov  al,40h         //Bit 14 = Stereo
-                and  al,dh
-                mov  StereoFlag,al      /* */
-                pop  di
-                pop  dx
-                pop  cx
-                pop  bx
-                pop  ax
-            }
-            //Specification �bertragen
-            value->valVisible = Visible;    //Sichtbarkeit
-            value->valStereoFlag = StereoFlag;  //TRUE = Stereo */
-            value->valTarget = Target;      //1=Mixer 2=Record 3=Other
-            value->valRange = Range;        //(word)Wertebereich
-            value->valToken = Token;        //(word)Texttoken 1,2,3,...32
-            value->valType = Type;          //0=none 1=Slider 2=Item 3=Boolean
-            value->valPos = Slider;     //Position des Sliders 0,1,2...
+            MixAsmSpecValue(
+                valNum,
+                MIX_FARPTR(word, &value->valRange),
+                MIX_FARPTR(word, &value->valToken),
+                MIX_FARPTR(byte, &value->valTarget),
+                MIX_FARPTR(byte, &value->valType),
+                MIX_FARPTR(byte, &value->valPos),
+                MIX_FARPTR(byte, &value->valVisible),
+                MIX_FARPTR(byte, &value->valStereoFlag)
+            );
         };
 
         //Ende
@@ -748,30 +611,7 @@ word _pascal _export BSMixerGetState(void)
     }
     else
     {
-        //Treiber aufrufen
-        __asm {
-            push ax
-            push bx
-            push cx
-            push dx
-            push di
-            mov  cx,0           // DAC to check
-            mov  ax,MANUFACTURER_ID_BSW
-            mov  bx,DACSF_MIXER_TEST
-            mov  dx,2           // sample rate (in Hz)
-            mov  di,DRE_SOUND_DAC_CHECK_SAMPLE_RATE_AND_FORMAT
-        }
-
-        BSCallDriver();
-
-        __asm {
-            mov  state,dx
-            pop  di
-            pop  dx
-            pop  cx
-            pop  bx
-            pop  ax
-        }
+        state = MixAsmGetState();
 
         //Antwort auswerten
         if (state == 2)

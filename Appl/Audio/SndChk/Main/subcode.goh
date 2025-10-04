@@ -59,6 +59,7 @@ Boolean _pascal SC_WaitDSP(word adr, Boolean direction);
 word    _pascal SC_TestSoundcard(void);
 // search for soundcard
 
+// assembler functions for direct port I/O
 extern byte    _pascal SC_AsmDelay(word addr, word length);
 extern byte    _pascal SC_AsmIn(word addr);
 extern void    _pascal SC_AsmOut(word addr, byte value);
@@ -68,4 +69,3 @@ void    _pascal SC_SetAnswerGlyph(optr op,Boolean bool);
 void    _pascal SC_CreatePlayThread(void);
 void    _pascal SC_ControlTimer(word flags);
 word    PlayThreadLoop(word dummy);
-

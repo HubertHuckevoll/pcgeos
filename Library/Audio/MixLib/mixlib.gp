@@ -29,7 +29,7 @@ tokenid 16427
 
 type    library, single, c-api
 
-platform geos20
+#platform geos20
 
 #
 # Libraries: list which libraries are used by the application.
@@ -39,19 +39,16 @@ library ui
 library ansic
 library sound
 
-exempt ansic
-exempt sound
-
-entry	LIBMIXENTRY
+#exempt ansic
+#exempt sound
 
 resource STRINGRESOURCE	data, lmem, read-only, shared
 
+entry	LIBMIXENTRY
 #
 # Export classes
 #       These are the classes exported by the library
 #
-
-
 
 #
 # Routines
@@ -68,4 +65,4 @@ export	BSMIXERGETVALUE
 export	BSMIXERSETVALUE
 export	BSMIXERGETTOKENTEXT
 
-usernotes "Mixerlibrary to control the soundcard levels \xa9 1998-2000 Dirk Lausecker"
+#usernotes "Mixerlibrary to control the soundcard levels \xa9 1998-2000 Dirk Lausecker"

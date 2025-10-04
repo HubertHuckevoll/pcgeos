@@ -25,9 +25,9 @@ REVISION HISTORY:
 
     Name    Datum       Beschreibung
     ----    -----       ------------
-    DL  20.02.2000  neuer Header
-        DL  23.02.2000  interne Subroutinen -> SUBCODE.GOC
-        DL  07.08.2000  Translation of the comments
+    DL      20.02.2000  neuer Header
+    DL      23.02.2000  interne Subroutinen -> SUBCODE.GOC
+    DL      07.08.2000  Translation of the comments
 
 ***************************************************************/
 
@@ -63,11 +63,6 @@ REVISION HISTORY:
 
 /******************** Constants/Makros ************************/
 
-// Old Borland C macros
-// #define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
-// #define FP_OFF( fp )( (unsigned )( fp ))
-// #define MK_FP( seg,ofs )( (void _seg * )( seg ) +( void near * )( ofs ))
-
 // Watcom C 16 bit compatible macros
 #define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
 #define FP_OFF(fp) ((unsigned short)(fp))
@@ -90,8 +85,7 @@ extern word _far _pascal BSNWAsmSetSampling(
 );
 extern void _far _pascal BSNWAsmGetDriverInfo(GeodeHandle driverHandle);
 
-void
-BSNWDebugNotifyWord(const char *label, word value)
+void BSNWDebugNotifyWord(const char *label, word value)
 {
     const char hex[] = "0123456789ABCDEF";
     char      buf[32] = {0};
@@ -148,8 +142,7 @@ MyBreak(void)
  ****************************/
 #pragma argsused
 
-Boolean _pascal _export
-BSNWLibEntry(LibraryCallType type,GeodeHandle client)
+Boolean _pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 {
     switch (type)
     {
@@ -253,8 +246,7 @@ BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 
  **********************************/
 
-Boolean _pascal _export
-BSNWavLoadDriver(GeodeLoadError *gle, char *name)
+Boolean _pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
 {
     Boolean demoMode;
 
@@ -306,8 +298,7 @@ BSNWavLoadDriver(GeodeLoadError *gle, char *name)
     return (demoMode);
 }
 
-word _pascal _export
-BSNWAllocSecBuffer(byte **ptr,word len)
+word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
 {
     byte        *ptr2;
     word        segm;
@@ -367,8 +358,7 @@ BSNWAllocSecBuffer(byte **ptr,word len)
 
  ********************************************/
 
-void* _pascal
-BSNWAllocPlayCache(word len)
+void* _pascal BSNWAllocPlayCache(word len)
 {
     void    *ptr;
 
@@ -401,8 +391,7 @@ BSNWAllocPlayCache(word len)
         BSNW_MEMORY_ERROR           Error
 
  ****************************************************************/
-int _pascal
-BSNWReadWaveFormat(BSWavFileHeader *bw)
+int _pascal BSNWReadWaveFormat(BSWavFileHeader *bw)
 {
     dword   chunkType = 0;  // Chunktype
     dword   rl = 0;     // Reminding len
@@ -509,8 +498,7 @@ BSNWReadWaveFormat(BSWavFileHeader *bw)
 
  *********************************************************/
 
-Boolean  _pascal
-BSNWGetData(void *dest,word len)
+Boolean _pascal BSNWGetData(void *dest,word len)
 {
     Boolean     error = FALSE;
     word        count = 0;
@@ -571,8 +559,7 @@ BSNWGetData(void *dest,word len)
 
  *********************************************************/
 
-Boolean  _pascal
-BSNWSetSourcePosition(dword pos)
+Boolean _pascal BSNWSetSourcePosition(dword pos)
 {
     Boolean     error = FALSE;
 
@@ -625,8 +612,7 @@ BSNWSetSourcePosition(dword pos)
 
  *********************************************************/
 
-Boolean _pascal
-BSNWSearchChunk(dword type)
+Boolean _pascal BSNWSearchChunk(dword type)
 {
     Boolean foundFlag = TRUE;
 
@@ -692,10 +678,7 @@ BSNWSearchChunk(dword type)
 
  *********************************************************/
 
-int _pascal
-BSNWPrepKS(word sampleRate,
-           byte channels,
-           byte bits)
+int _pascal BSNWPrepKS(word sampleRate, byte channels, byte bits)
 {
     word    back;       // retVal driver
     int respond = BSNW_STATUS_OK;
@@ -782,8 +765,7 @@ BSNWPrepKS(word sampleRate,
 
  *********************************************************/
 
-int _pascal
-BSNWLoadData(void *cachePtr, void *secPtr)
+int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
 {
     int respond = BSNW_STATUS_OK;
 
@@ -844,8 +826,7 @@ BSNWLoadData(void *cachePtr, void *secPtr)
 
  *********************************************************/
 
-int _pascal
-BSNWLoadCache(void *cachePtr)
+int _pascal BSNWLoadCache(void *cachePtr)
 {
     int respond = BSNW_STATUS_OK;
     word    len,len2 = 0;
@@ -933,8 +914,7 @@ BSNWLoadCache(void *cachePtr)
  *
  *************************************/
 
-Boolean _pascal _export
-BSNWStartPlay(void)
+Boolean _pascal _export BSNWStartPlay(void)
 {
     Boolean     back = FALSE;
     word        back2 = 0;
@@ -969,8 +949,7 @@ BSNWStartPlay(void)
 
  ***********************************************************/
 
-word    _pascal _export
-BSNWaveGetAIState(word options)
+word _pascal _export BSNWaveGetAIState(word options)
 {
     word    state = 0;
 
@@ -995,8 +974,7 @@ BSNWaveGetAIState(word options)
 
  ***********************************************************/
 
-void    _pascal
-BSNWFillSilence(void *secPtr, word len)
+void _pascal BSNWFillSilence(void *secPtr, word len)
 {
     byte    *ptr;
     byte    fill;
@@ -1052,8 +1030,7 @@ BSNWFillSilence(void *secPtr, word len)
 
  *********************************************************/
 
-void    _pascal
-BSNWKonvertData(byte *cachePtr, byte *secPtr)
+void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
 {
     byte    *dest;
     byte    *src;
@@ -1182,8 +1159,7 @@ extern  byte        konvRateRed;
 extern  byte        konvBitsRed;
 extern  byte        konvChanRed;
 
-void    _pascal
-BSNWKonvert16To8(void *cachePtr, void *secPtr)
+void _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
 {
     byte    *dest;
     byte    b,bs;
@@ -1284,8 +1260,7 @@ BSNWKonvert16To8(void *cachePtr, void *secPtr)
 
  ************************************************/
 
-int _pascal
-BSNWPreCheck(word playFlags)
+int _pascal BSNWPreCheck(word playFlags)
 {
     int respond;
     word    i;
@@ -1346,8 +1321,7 @@ BSNWPreCheck(word playFlags)
 
  ************************************************/
 
-void    _pascal
-BSNWInsertSample(void *ptr,byte bits)
+void _pascal BSNWInsertSample(void *ptr,byte bits)
 {
     byte    *bPtr;
     word    *wPtr;
@@ -1389,8 +1363,7 @@ BSNWInsertSample(void *ptr,byte bits)
 
  **********************************************************/
 
-void
-BSNWLoadIniSettings(void)
+void BSNWLoadIniSettings(void)
 {
     if (InitFileReadInteger(soundCatIT,playKeyIT,&playCacheLen))
     {
@@ -1438,8 +1411,7 @@ BSNWLoadIniSettings(void)
 
  **********************************************************/
 
-int _pascal
-BSNWSetParams(word rate,word bits,word channels)
+int _pascal BSNWSetParams(word rate,word bits,word channels)
 {
     int back;
 
@@ -1461,8 +1433,7 @@ BSNWSetParams(word rate,word bits,word channels)
 
  ******************************************************************/
 
-int _pascal
-BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
+int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
 {
     int respond = 0;
     word    bits,rate;
@@ -1617,8 +1588,7 @@ BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
 
  **********************************************************/
 
-int _pascal
-BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
+int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
 {
     int respond = BSNW_STATUS_OK;
     dword   i;

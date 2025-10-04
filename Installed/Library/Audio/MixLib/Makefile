@@ -4,10 +4,14 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = mixlib
-ASM_TO_OBJS     =
+ASMTOOLS        = asmtoolsManager.asm
+MAIN            = mixlib.goc
 UI_TO_RDFS      =
-SRCS            = mixlib.def mixlib.goc
 OBJS            = mixlib.obj
+COMMON          = mixlib.def
+MODULES         = ASMTOOLS
+CMODULES        = Main
+SRCS            = $(ASMTOOLS) $(MAIN) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = mixlib

@@ -24,7 +24,7 @@
 ########################################################################
 
 name bsnwav.lib
-longname "BestSound NewWave-Library"
+longname "BestSound Wave Library"
 tokenchars "BSNW"
 tokenid 16427
 

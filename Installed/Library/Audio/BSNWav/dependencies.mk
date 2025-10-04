@@ -61,8 +61,5 @@ subcode.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
                 initfile.h dirksnd.h riff.h
-ASMTOOLS/asmtoolsManager.obj \
-ASMTOOLS/asmtoolsManager.eobj: geos.def driver.def lmem.def geode.def library.def ec.def \
-                dirk.def dirksnd.def Internal/soundDrv.def bsnwav.def
 
 bsnwavEC.geo bsnwav.geo : geos.ldf ansic.ldf 

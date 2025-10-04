@@ -26,9 +26,9 @@
 #include <$(SYSMAKEFILE)>
 
 GOCFLAGS += -L bsnwav
-ASM_TO_OBJS    += ASMTOOLS/asmtoolsManager.asm
-OBJS            += ASMTOOLS/asmtoolsManager.obj
-SRCS            += ASMTOOLS/asmtoolsManager.asm
+# ASM_TO_OBJS    += ASMTOOLS/asmtoolsManager.asm
+# OBJS            += ASMTOOLS/asmtoolsManager.obj
+# SRCS            += ASMTOOLS/asmtoolsManager.asm
 
 # CCOMFLAGS += -WDE -w
 # CCOMFLAGS += -O2 -w -w-amp -w-cln -w-pin

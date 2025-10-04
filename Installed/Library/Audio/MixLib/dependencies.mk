@@ -1,3 +1,7 @@
+ASMTOOLS.obj \
+ASMTOOLS.eobj: ASMTOOLS/asmtoolsManager.asm \
+                geos.def driver.def lmem.def geode.def library.def ec.def \
+                dirk.def dirksnd.def Internal/soundDrv.def mixlib.def
 mixlib.obj \
 mixlib.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
