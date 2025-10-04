@@ -34,7 +34,7 @@ library wav
 library	ansic
 library sound
 #
-# vor Pr�fung gesch�tzte Libraries
+# Libraries exempt from checking
 #
 #exempt bsnwav
 #exempt wav
