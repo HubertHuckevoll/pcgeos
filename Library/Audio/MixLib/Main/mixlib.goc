@@ -1,23 +1,18 @@
 /************************************************
- *                      *
- *  Project:    BestSound       *
- *                      *
- *  Module:     Mixer library       *
- *                      *
- *  File:       MIXLIB.GOC      *
- *                      *
- *  Author:     Dirk Lausecker      *
- *                      *
- * BSMixerLoadDriver    Load and prepare mixer driver  *
- * BSMixerGetCap    Out: valNum number of values *
- * BSMixerGetValue              *
- *                      *
+ *
+ *  Project:    BestSound
+ *
+ *  Module:     Mixer library
+ *
+ *  File:       MIXLIB.GOC
+ *
+ *  Author:     Dirk Lausecker
+ *
+ * BSMixerLoadDriver    Load and prepare mixer driver
+ * BSMixerGetCap    Out: valNum number of values
+ * BSMixerGetValue
+ *
  ************************************************/
-
-/*
-@define GERMAN
-#define GERMAN
-/* */
 
 @include <stdapp.goh>
 @include <Ansi/stdio.h>
@@ -34,9 +29,6 @@
 @include "mixlib.goh"
 
 /**************************** Konstanten ************************/
-
-// #define FP_SEG( fp )( (unsigned )( void _seg * )( void far * )( fp ))
-// #define FP_OFF( fp )( (unsigned )( fp ))
 
 // Watcom C 16 bit compatible macros
 #define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
@@ -102,22 +94,14 @@ Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
         switch (type) {
             case LCT_ATTACH:                /* The library was just loaded. */
               {
-                  char driverName[GEODE_NAME_SIZE];
+                  char driverName[GEODE_NAME_SIZE] = {0};
 
                   //Init
                   mixerDriver = NullHandle;
                   driverUsed  = FALSE;
                   demoModus = TRUE;
-                  driverName[0] = '\0';
 
-                  if (BSMixerLoadDriver(&gle, driverName))
-                  {
-                      // demo mode, assembly helper already reset
-                  }
-                  else
-                  {
-                      // driver ready, MixAsmSetDriverInfo called by loader
-                  }
+                  (void) BSMixerLoadDriver(&gle, driverName);
               };
               break;
 
@@ -354,47 +338,43 @@ word _pascal _export BSMixerGetCap (word *dsp)
 
 @start  STRINGRESOURCE, data;
 
-@ifdef  GERMAN
-
-@chunk  char bsmText1[] = "SUMME";
-@chunk  char bsmText2[] = "FM";
-@chunk  char bsmText3[] = "CD";
-@chunk  char bsmText4[] = "WAV";
-@chunk  char bsmText5[] = "LINE";
-@chunk  char bsmText6[] = "Mikro";
-@chunk  char bsmText7[] = "PC-Lspr";
-@chunk  char bsmText8[] = "H�hen";
-@chunk  char bsmText9[] = "Tiefen";
-@chunk  char bsmText10[] = "Aufnahmefilter";
-@chunk  char bsmText11[] = "Tiefpass";
-@chunk  char bsmText12[] = "Aufnahmequelle";
-@chunk  char bsmText13[] = "Wiedergabefilter";
-@chunk  char bsmText14[] = "Stereo";
-@chunk  char bsmText15[] = "Quelle f�r Wiedergabe";
-@chunk  char bsmText16[] = "Aufnahmequelle Links";
-@chunk  char bsmText17[] = "Aufnahmequelle Rechts";
-@chunk  char bsmText18[] = "Aufnahmeverst�rkung Links";
-@chunk  char bsmText19[] = "Aufnahmeverst�rkung Rechts";
-@chunk  char bsmText20[] = "Wiedergabeverst�rkung Links";
-@chunk  char bsmText21[] = "Wiedergabeverst�rkung Rechts";
-@chunk  char bsmText22[] = "Automatische Verst�rkungsregelung";
-@chunk  char bsmText23[] = "FM-L";
-@chunk  char bsmText24[] = "FM-R";
-@chunk  char bsmText25[] = "LINE-L";
-@chunk  char bsmText26[] = "LINE-R";
-@chunk  char bsmText27[] = "CD-L";
-@chunk  char bsmText28[] = "CD-R";
-@chunk  char bsmText29[] = "1 fach";
-@chunk  char bsmText30[] = "2 fach";
-@chunk  char bsmText31[] = "4 fach";
-@chunk  char bsmText32[] = "8 fach";
-@chunk  char bsmText33[] = "aus";
-@chunk  char bsmText34[] = "ein";
-@chunk  char bsmText35[] = "aktiv";
-@chunk  char bsmText36[] = "inaktiv";
-@chunk  char bsmText0[]  = "???";
-
-@else
+// @chunk  char bsmText1[] = "SUMME";
+// @chunk  char bsmText2[] = "FM";
+// @chunk  char bsmText3[] = "CD";
+// @chunk  char bsmText4[] = "WAV";
+// @chunk  char bsmText5[] = "LINE";
+// @chunk  char bsmText6[] = "Mikro";
+// @chunk  char bsmText7[] = "PC-Lspr";
+// @chunk  char bsmText8[] = "H�hen";
+// @chunk  char bsmText9[] = "Tiefen";
+// @chunk  char bsmText10[] = "Aufnahmefilter";
+// @chunk  char bsmText11[] = "Tiefpass";
+// @chunk  char bsmText12[] = "Aufnahmequelle";
+// @chunk  char bsmText13[] = "Wiedergabefilter";
+// @chunk  char bsmText14[] = "Stereo";
+// @chunk  char bsmText15[] = "Quelle f�r Wiedergabe";
+// @chunk  char bsmText16[] = "Aufnahmequelle Links";
+// @chunk  char bsmText17[] = "Aufnahmequelle Rechts";
+// @chunk  char bsmText18[] = "Aufnahmeverst�rkung Links";
+// @chunk  char bsmText19[] = "Aufnahmeverst�rkung Rechts";
+// @chunk  char bsmText20[] = "Wiedergabeverst�rkung Links";
+// @chunk  char bsmText21[] = "Wiedergabeverst�rkung Rechts";
+// @chunk  char bsmText22[] = "Automatische Verst�rkungsregelung";
+// @chunk  char bsmText23[] = "FM-L";
+// @chunk  char bsmText24[] = "FM-R";
+// @chunk  char bsmText25[] = "LINE-L";
+// @chunk  char bsmText26[] = "LINE-R";
+// @chunk  char bsmText27[] = "CD-L";
+// @chunk  char bsmText28[] = "CD-R";
+// @chunk  char bsmText29[] = "1 fach";
+// @chunk  char bsmText30[] = "2 fach";
+// @chunk  char bsmText31[] = "4 fach";
+// @chunk  char bsmText32[] = "8 fach";
+// @chunk  char bsmText33[] = "aus";
+// @chunk  char bsmText34[] = "ein";
+// @chunk  char bsmText35[] = "aktiv";
+// @chunk  char bsmText36[] = "inaktiv";
+// @chunk  char bsmText0[]  = "???";
 
 @chunk  char bsmText1[] = "MASTER";
 @chunk  char bsmText2[] = "FM";
@@ -433,8 +413,6 @@ word _pascal _export BSMixerGetCap (word *dsp)
 @chunk  char bsmText35[] = "active";
 @chunk  char bsmText36[] = "inactive";
 @chunk  char bsmText0[]  = "???";
-
-@endif
 
 @end    STRINGRESOURCE;
 

@@ -33,11 +33,6 @@ REVISION HISTORY:
 
 @define BSNWAV_NO_UI
 
-/*
-@define GERMAN
-#define GERMAN
-/* Compiler switch for german version */
-
 @include <stdapp.goh>
 
 @ifndef BSNWAV_NO_UI

@@ -40,17 +40,10 @@ Secondarybuffer:
 
 ***************************************************************/
 
-/* Flag for german localized version */
-/*
-@define GERMAN
-#define GERMAN
-*/
-
 /*-----------------------------------*/
 /* Switching off the use of UI-Lib   */
 @define BSNWAV_NO_UI
 /*-----------------------------------*/
-
 
 #define SIM_VALUE   0
 // 1 --> for testing purpose only / Allocating Secbuffer by library
@@ -658,27 +651,21 @@ dword _pascal BSNWaveCalcPlaytimeText(  char    *textBuffer,
 
  ***************************************************************/
 
-#ifdef GERMAN
-#define TEXT_UNKNOWN_WAV_FORMAT "Unbekanntes Waveformat (0x\01) !"
-#define TEXT_UNKNOWN_WAV_FORMAT_2   "Unbekanntes Waveformat (%04X)"
-#define TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI "Unbekanntes Waveformat"
-#else
+// #define TEXT_UNKNOWN_WAV_FORMAT "Unbekanntes Waveformat (0x\01) !"
+// #define TEXT_UNKNOWN_WAV_FORMAT_2   "Unbekanntes Waveformat (%04X)"
+// #define TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI "Unbekanntes Waveformat"
 #define TEXT_UNKNOWN_WAV_FORMAT "Unknown Waveformat (0x\01) !"
 #define TEXT_UNKNOWN_WAV_FORMAT_2   "Unknown Waveformat (%04X)"
 #define TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI "Unknown Waveformat"
-#endif
 
 void BSNWaveDialogUnknownFormat(word formatID)
 {
 
 @ifdef  BSNWAV_NO_UI
-
 //  sprintf(playStatusText,TEXT_UNKNOWN_WAV_FORMAT_2,formatID);
 //  (void)SysNotify(SNF_CONTINUE,playStatusText,0);
 //  sorry: no UI, no sprintf
     (void)SysNotify(SNF_CONTINUE,TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI,0);
-
-
 @else
     sprintf(playStatusText,"%04X",formatID);
     (void)UserStandardDialog(0,              //helpContext,
@@ -706,11 +693,9 @@ void BSNWaveDialogUnknownFormat(word formatID)
 
 @start STATUSBOXRESOURCE;
 
-@ifdef  GERMAN
-    @visMoniker StatusBoxMoniker = "WAV-Ausgabe";
-@else
-    @visMoniker StatusBoxMoniker = "OUTPUT";
-@endif
+
+// @visMoniker StatusBoxMoniker = "WAV-Ausgabe";
+@visMoniker StatusBoxMoniker = "OUTPUT";
 
 @object StatusInteractionClass StatusBox =
 {
@@ -876,11 +861,8 @@ optr _pascal _export BSCNCreateStatusBox(optr parent)
 #define DRE_SOUND_QUERY_DEVICE_CAPABILITY   12
 #endif
 
-#ifdef GERMAN
-#define TEXT_WRONG_DRIVER   "Der Soundkartentreiber ist nicht NewWave-kompatibel !\rBitte einen geeigneten BestSound-Treiber installieren oder per eMail anfordern (dlausecker\x40snafu.de)."
-#else
-#define TEXT_WRONG_DRIVER   "The sound driver is not compatible with this program!"
-#endif
+// #define TEXT_WRONG_DRIVER   "Der Soundkartentreiber ist nicht NewWave-kompatibel !\rBitte einen geeigneten BestSound-Treiber installieren oder per eMail anfordern (dlausecker\x40snafu.de)."
+#define TEXT_WRONG_DRIVER "The sound driver is not compatible with this program!"
 
 Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
 {
