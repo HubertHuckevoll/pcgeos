@@ -18,7 +18,7 @@ global  SC_ASMRESET:far
 
 .ioenable
 
-SetGeosConvention
+        SetGeosConvention       ; set calling convention
 
 ASMTOOLS_TEXT segment resource
 
@@ -168,4 +168,5 @@ SC_ASMRESET endp
 
 ASMTOOLS_TEXT ends
 
-end
+        SetDefaultConvention             ;restores calling conventions
+
