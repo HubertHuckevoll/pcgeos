@@ -25,19 +25,15 @@ Beschreibung:
 
 extern  word            datasize;
 extern  Handle          sampleDriver;
-extern  const char      *soundCatIT;
-extern  const char      *sampleDriverIT;
-extern  const char      *synthDriverIT;
+extern  const char      soundCatIT[];
+extern  const char      sampleDriverIT[];
+extern  const char      synthDriverIT[];
 
 extern  Boolean         demoModus;
 extern  byte            valNum;
 extern  GeodeLoadError  gle;
 extern  Boolean         driverUsed;
 extern  int             counter;
-
-typedef void (far *StrategyRoutine)(void);
-extern  DriverInfoStruct far *driverInfo;
-extern  StrategyRoutine strat;
 
 extern  int             playStatus;     // 0 = System ready (idle state)
                                         // 1 = PlayFile active

@@ -7,12 +7,13 @@ GEODE           = sndchk
 MAIN            = globals.goc process.goc subcode.goc globals.goh\
                   process.goh subcode.goh
 UI              = uimain.goc uimain.goh
+ASMTOOLS        = asmtoolsManager.asm
 UI_TO_RDFS      =
 OBJS            = globals.obj process.obj subcode.obj uimain.obj
 COMMON          =
-MODULES         =
+MODULES         = ASMTOOLS
 CMODULES        = Main UI
-SRCS            = $(MAIN) $(UI) $(COMMON)
+SRCS            = $(MAIN) $(UI) $(ASMTOOLS) $(COMMON)
 LOBJS           =
 
 SYSMAKEFILE     = geode.mk

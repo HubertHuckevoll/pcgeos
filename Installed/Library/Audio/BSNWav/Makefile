@@ -4,14 +4,14 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = bsnwav
-MAIN            = subcode.goc bsnwav.goc subcode.goh
 ASMTOOLS        = asmtoolsManager.asm
+MAIN            = bsnwav.goc subcode.goc subcode.goh
 UI_TO_RDFS      =
-OBJS            = subcode.obj bsnwav.obj
+OBJS            = bsnwav.obj subcode.obj
 COMMON          =
 MODULES         = ASMTOOLS
 CMODULES        = Main
-SRCS            = $(MAIN) $(ASMTOOLS) $(COMMON)
+SRCS            = $(ASMTOOLS) $(MAIN) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = bsnwav

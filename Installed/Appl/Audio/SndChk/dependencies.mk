@@ -1,3 +1,6 @@
+ASMTOOLS.obj \
+ASMTOOLS.eobj: ASMTOOLS/asmtoolsManager.asm \
+                geos.def resource.def
 globals.obj \
 globals.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \

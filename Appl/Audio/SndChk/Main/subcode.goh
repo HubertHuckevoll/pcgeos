@@ -59,6 +59,11 @@ Boolean _pascal SC_WaitDSP(word adr, Boolean direction);
 word    _pascal SC_TestSoundcard(void);
 // search for soundcard
 
+extern byte    _pascal SCASMDELAY(word addr, word length);
+extern byte    _pascal SCASMIN(word addr);
+extern void    _pascal SCASMOUT(word addr, byte value);
+extern void    _pascal SCASMRESET(word addr);
+
 void    _pascal SC_SetAnswerGlyph(optr op,Boolean bool);
 void    _pascal SC_CreatePlayThread(void);
 void    _pascal SC_ControlTimer(word flags);

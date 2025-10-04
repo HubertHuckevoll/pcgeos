@@ -130,9 +130,9 @@ BSNWAsmSetSampling(
 
 word        datasize    = 0;        //Buffer for ReadIni
 Handle      sampleDriver    = NullHandle;
-const char  *soundCatIT     = "sound";      //INI Entry
-const char  *sampleDriverIT = "sampleDriver";   //INI Entry
-const char  *synthDriverIT  = "synthDriver";    //INI Entry
+const char  soundCatIT[]     = "sound";      //INI Entry
+const char  sampleDriverIT[] = "sampleDriver";   //INI Entry
+const char  synthDriverIT[]  = "synthDriver";    //INI Entry
 
 GeodeLoadError  gle;
 Boolean     driverUsed  = FALSE;    // driver loaded by BSNWAV

@@ -341,23 +341,7 @@ void    _pascal SC_SetAnswerGlyph(optr op,Boolean bool)
  *  martin  2001/2/6    Initial version
  *
  ***********************************************************************/
-byte SC_Delay(word addr, word length)
-{
-    byte result;
-
-    __asm {
-        mov     dx, addr
-        mov     cx, length
-
-        delay:
-        in      al, dx
-        loop    delay
-
-        mov     result, al
-    }
-
-    return result;
-}
+/* Implemented in ASMTOOLS/asmtoolsManager.asm */
 
 /***********************************************************************
  *      SC_In
@@ -375,19 +359,7 @@ byte SC_Delay(word addr, word length)
  *  martin  2001/2/6    Initial version
  *
  ***********************************************************************/
-byte SC_In(word addr)
-{
-    byte result;
-
-    /* Drop to assembly and output the command to the card. */
-    __asm {
-        mov     dx, addr
-        in      al, dx
-        mov     result, al
-    }
-
-    return result;
-}
+/* Implemented in ASMTOOLS/asmtoolsManager.asm */
 
 /***********************************************************************
  *      SC_Out
@@ -405,15 +377,7 @@ byte SC_In(word addr)
  *  martin  2001/2/6    Initial version
  *
  ***********************************************************************/
-void SC_Out(int addr, byte value)
-{
-    /* Drop to assembly and output the command to the card. */
-    __asm {
-        mov    dx, addr
-        mov    al, value
-        out    dx, al
-    }
-}
+/* Implemented in ASMTOOLS/asmtoolsManager.asm */
 
 
 /***********************************************************************
@@ -434,37 +398,7 @@ void SC_Out(int addr, byte value)
  *  martin  2001/2/7    Initial version
  *
  ***********************************************************************/
-void SC_Reset(int addr)
-{
-    __asm {
-        mov    dx, addr
-        add    dl, SB_IO_RESET
-        mov    al, 1
-        out    dx, al
-        sub    al, al    // delay
-
-        delay:
-        dec    al
-        jnz    delay     // loop 65535 times
-        out    dx, al
-        sub    cx, cx
-
-        empty:
-        mov    dx, addr
-        add    dl, SB_IO_STATUS
-        in     al, dx
-        or     al, al
-        jns    next
-        sub    dl, 4     // dx = base + SB_IO_READ
-        in     al, dx
-        cmp    al, 0xAA
-        je     reset
-
-        next:
-        loop   empty
-        reset:
-    }
-}
+/* Implemented in ASMTOOLS/asmtoolsManager.asm */
 
 
 /***********************************************************************
@@ -498,11 +432,11 @@ byte SC_FMCommand(int addr, byte reg, byte value)
     addr += SB_IO_FM_REG;
 
     /* Output the OPL3 command through the SoundBlaster IO register. */
-    SC_Out   (addr + SB_IO_FM_REG_A,  reg);
-    SC_Delay (addr + SB_IO_FM_REG_A,  SC_DELAY);
-    SC_Out   (addr + SB_IO_FM_DATA_A, value);
-    SC_Delay (addr + SB_IO_FM_REG_A,  SC_LONG_DELAY);
-    result = SC_In (addr + SB_IO_FM_REG_A);
+    SCASMOUT (addr + SB_IO_FM_REG_A,  reg);
+    SCASMDELAY (addr + SB_IO_FM_REG_A,  SC_DELAY);
+    SCASMOUT (addr + SB_IO_FM_DATA_A, value);
+    SCASMDELAY (addr + SB_IO_FM_REG_A,  SC_LONG_DELAY);
+    result = SCASMIN (addr + SB_IO_FM_REG_A);
 
     return result;
 }
@@ -622,7 +556,7 @@ Boolean _pascal SC_WaitDSP(word addr, Boolean direction)
         // request state until:
         // 1. Bit 7 not set / reset (Read/Write)
         // 2. Timeoutlimit OK
-        input = SC_In(addr);
+        input = SCASMIN(addr);
 
     } while (   (i<SC_WAIT_TIMEOUT)
                 && ((input > 128) != (direction == DSP_WAIT_READ)));
@@ -652,14 +586,14 @@ word    _pascal SC_GetDSPVersion(word addr)
     word    ver = 0;    // Version
 
     // Reset the card first so we don't get the wrong version.
-    SC_Reset(addr);
+    SCASMRESET(addr);
 
     // Now query the version number.
-    SC_Out(addr + SB_IO_COMMAND, SB_COMMAND_GET_VERSION);
+    SCASMOUT(addr + SB_IO_COMMAND, SB_COMMAND_GET_VERSION);
     SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
-    major = SC_In(addr + SB_IO_READ);
+    major = SCASMIN(addr + SB_IO_READ);
     SC_WaitDSP(addr + SB_IO_READ, DSP_WAIT_READ);
-    minor = SC_In(addr + SB_IO_READ);
+    minor = SCASMIN(addr + SB_IO_READ);
 
     ver = ((major << 8) | minor);
     if ((ver > 0x500) || (ver < 0x0100))
