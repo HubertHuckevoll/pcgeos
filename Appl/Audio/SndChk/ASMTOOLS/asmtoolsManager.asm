@@ -22,9 +22,23 @@ SetGeosConvention
 
 ASMTOOLS_TEXT segment resource
 
-;--------------------------------------------------------------------------
-; SC_Delay
-;--------------------------------------------------------------------------
+
+;***********************************************************************
+;*      SC_Delay
+;***********************************************************************
+;* SYNOPSIS:        Wait for a low-level Sound Card (OPL3) register.
+;* PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
+;*                  uint reg    = OPL3 register sub-address to call on card
+;*                  return      = data to pass to OPL3 card function
+;* SIDE EFFECTS:
+;* STRATEGY:
+;*
+;* REVISION HISTORY:
+;*  Name    Date        Description
+;*  ----    ----        -----------
+;*  martin  2001/2/6    Initial version
+;*
+;***********************************************************************/
 SC_ASMDELAY proc far ioAddr:word, delayCount:word
         uses    dx, cx
         .enter
@@ -40,9 +54,22 @@ DelayLoop:
         ret
 SC_ASMDELAY endp
 
-;--------------------------------------------------------------------------
-; SC_In
-;--------------------------------------------------------------------------
+;***********************************************************************
+;*      SC_In
+;***********************************************************************
+;* SYNOPSIS:        Read a low-level Sound Card DMA hardware register.
+;* PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
+;*                  uint reg    = OPL3 register sub-address to call on card
+;*                  return      = data to pass to OPL3 card function
+;* SIDE EFFECTS:
+;* STRATEGY:
+;*
+;* REVISION HISTORY:
+;*  Name    Date        Description
+;*  ----    ----        -----------
+;*  martin  2001/2/6    Initial version
+;*
+;***********************************************************************/
 SC_ASMIN proc far ioAddr:word
         uses    dx
         .enter
@@ -54,9 +81,22 @@ SC_ASMIN proc far ioAddr:word
         ret
 SC_ASMIN endp
 
-;--------------------------------------------------------------------------
-; SC_Out
-;--------------------------------------------------------------------------
+;***********************************************************************
+;*      SC_Out
+;***********************************************************************
+;* SYNOPSIS:        Write a low-level Sound Card DMA hardware register.
+;* PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
+;*                  uint reg    = OPL3 register sub-address to call on card
+;*                  return      = data to pass to OPL3 card function
+;* SIDE EFFECTS:
+;* STRATEGY:
+;*
+;* REVISION HISTORY:
+;*  Name    Date        Description
+;*  ----    ----        -----------
+;*  martin  2001/2/6    Initial version
+;*
+;***********************************************************************/
 SC_ASMOUT proc far ioAddr:word, value:byte
         uses    dx
         .enter
@@ -69,9 +109,24 @@ SC_ASMOUT proc far ioAddr:word, value:byte
         ret
 SC_ASMOUT endp
 
-;--------------------------------------------------------------------------
-; SC_Reset
-;--------------------------------------------------------------------------
+;***********************************************************************
+;*      SC_Reset
+;***********************************************************************
+;* SYNOPSIS:        Reset a SoundBlaster Card.
+;* PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
+;* SIDE EFFECTS:
+;* STRATEGY:        1) Write "1" to SB_IO_RESET
+;*                  2) Delay 100 ms
+;*                  3) Write "0" to SB_IO_RESET
+;*                  4) Wait for status bit
+;*                  5) Read "AAh" from SB_IO_READ
+;*
+;* REVISION HISTORY:
+;*  Name    Date        Description
+;*  ----    ----        -----------
+;*  martin  2001/2/7    Initial version
+;*
+;***********************************************************************/
 SC_ASMRESET proc far ioAddr:word
         uses    ax, dx, cx
         .enter
