@@ -26,7 +26,6 @@ word        MPI_currentVolume = MIXER_VOLUME_MAX;
 word        MPI_previousVolume = MIXER_DEFAULT_VOLUME;
 Boolean     MPI_muted = FALSE;
 Boolean     MPI_demoMode = TRUE;
-Boolean     MPI_updatingUI = FALSE;
 
 
 /****************************************************************************
@@ -102,7 +101,6 @@ static void MixerDisableControls(Boolean disable);
     ATTR_GEN_VALUE_STATUS_MSG = MSG_MIXER_VOLUME_CHANGED;
     HINT_VALUE_ANALOG_DISPLAY;
     HINT_VALUE_ORIENT_VERTICALLY;
-    HINT_VALUE_NO_DIGITAL_DISPLAY;
     HINT_VALUE_IMMEDIATE_DRAG_NOTIFICATION;
     HINT_VALUE_CONSTRAIN_TO_INTERVALS;
     HINT_VALUE_DISPLAY_INTERVALS = {8, 0};
@@ -136,18 +134,16 @@ static void MixerSetHardwareVolume(word volume)
 
 static void MixerApplyMute(Boolean muted)
 {
-//    if (muted) {
-//        MixerSetHardwareVolume(0);
-//    } else {
-//        MixerSetHardwareVolume(MPI_previousVolume ? MPI_previousVolume : MIXER_DEFAULT_VOLUME);
-//    }
+    if (muted) {
+        MixerSetHardwareVolume(0);
+    } else {
+        MixerSetHardwareVolume(MPI_previousVolume ? MPI_previousVolume : MIXER_DEFAULT_VOLUME);
+    }
 }
 
 static void MixerUpdateMuteBoolean(Boolean muted)
 {
-    //MPI_updatingUI = TRUE;
     @send MixerMuteGroup::MSG_GEN_BOOLEAN_GROUP_SET_BOOLEAN_STATE(MIXER_MUTE_IDENTIFIER, muted);
-    //MPI_updatingUI = FALSE;
 }
 
 static void MixerUpdateSlider(word volume)
@@ -155,15 +151,19 @@ static void MixerUpdateSlider(word volume)
     if (volume > MIXER_VOLUME_MAX) {
         volume = MIXER_VOLUME_MAX;
     }
-    //MPI_updatingUI = TRUE;
     @send MixerVolumeValue::MSG_GEN_VALUE_SET_INTEGER_VALUE(volume, FALSE);
-    //MPI_updatingUI = FALSE;
 }
 
 static void MixerDisableControls(Boolean disable)
 {
-    @send MixerVolumeValue::MSG_GEN_SET_USABLE(VUM_NOW);
-    @send MixerMuteGroup::MSG_GEN_SET_USABLE(VUM_NOW);
+    if (disable) {
+        @send MixerVolumeValue::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+        @send MixerMuteGroup::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+    }
+    else {
+        @send MixerVolumeValue::MSG_GEN_SET_ENABLED(VUM_NOW);
+        @send MixerMuteGroup::MSG_GEN_SET_ENABLED(VUM_NOW);
+    }
 }
 
 /****************************************************************************
@@ -176,35 +176,33 @@ static void MixerDisableControls(Boolean disable)
 
     @callsuper();
 
-    // GeodeLoadError gle;
-    // char driverName[GEODE_NAME_SIZE];
-
-    // driverName[0] = '\0';
-    // BSMixerLoadDriver(&gle, driverName);
-
     state = BSMixerGetState();
-    //MPI_demoMode = ((state & 0x8000) != 0) || ((state & 0x4000) != 0);
+    MPI_demoMode = ((state & 0x8000) != 0) || ((state & 0x4000) != 0);
 
-    //if (MPI_demoMode) {
-    //    MixerDisableControls(TRUE);
-    //} else {
+    if (MPI_demoMode) {
+        MixerDisableControls(TRUE);
+    } else {
         MixerDisableControls(FALSE);
         @call self::MSG_MIXER_REFRESH_UI();
-    //}
+    }
 }
 
 @method MixerProcessClass, MSG_MIXER_REFRESH_UI
 {
-    //if (MPI_demoMode) {
-    //    return;
-    //}
-
     Boolean muted = FALSE;
+    word raw = 0;
+    word left = 0;
+    word right = 0;
+    word volume = 0;
 
-    word raw = BSMixerGetValue(BSMX_TOKEN_MASTER, 3);
-    word left = raw & 0x00ff;
-    word right = (raw >> 8) & 0x00ff;
-    word volume = (left + right) / 2;
+    if (MPI_demoMode) {
+        return;
+    }
+
+    raw = BSMixerGetValue(BSMX_TOKEN_MASTER, 3);
+    left = raw & 0x00ff;
+    right = (raw >> 8) & 0x00ff;
+    volume = (left + right) / 2;
 
     if (volume > MIXER_VOLUME_MAX) {
         volume = MIXER_VOLUME_MAX;
@@ -228,10 +226,9 @@ static void MixerDisableControls(Boolean disable)
     Boolean muted = FALSE;
     word volume = 0;
 
-    //if (MPI_updatingUI || MPI_demoMode) {
-    //    MPI_updatingUI = FALSE;
-    //    return;
-    //}
+    if (MPI_demoMode) {
+        return;
+    }
 
     volume = WWFixedToInt(value);
     if (volume > MIXER_VOLUME_MAX) {
@@ -257,8 +254,7 @@ static void MixerDisableControls(Boolean disable)
     word restore = 0;
     Boolean muted = FALSE;
 
-    if (MPI_updatingUI || MPI_demoMode) {
-        MPI_updatingUI = FALSE;
+    if (MPI_demoMode) {
         return;
     }
 
