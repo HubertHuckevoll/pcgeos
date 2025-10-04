@@ -26,10 +26,10 @@ ASMTOOLS_TEXT segment resource
 ;***********************************************************************
 ;*      SC_Delay
 ;***********************************************************************
-;* SYNOPSIS:        Wait for a low-level Sound Card (OPL3) register.
-;* PARAMETERS:      int  addr   = base address for card communication (0x220|0x240|0x388)
-;*                  uint reg    = OPL3 register sub-address to call on card
-;*                  return      = data to pass to OPL3 card function
+;* SYNOPSIS:        Provides a short, uncalibrated delay by repeatedly
+;*                  reading from an I/O port.
+;* PARAMETERS:      word ioAddr     = I/O address to read from.
+;*                  word delayCount = Number of times to loop.
 ;* SIDE EFFECTS:
 ;* STRATEGY:
 ;*
