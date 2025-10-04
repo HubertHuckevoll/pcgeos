@@ -1,0 +1,282 @@
+/**********************************************************************
+ *
+ *  Simple BestSound Mixer application
+ *
+ **********************************************************************/
+
+@include <stdapp.goh>
+
+#include <geode.h>
+#include <geos.h>
+#include <mixlib.goh>
+
+/****************************************************************************
+ * Constants
+ ****************************************************************************/
+
+#define MIXER_VOLUME_MAX             255
+#define MIXER_DEFAULT_VOLUME         200
+#define MIXER_MUTE_IDENTIFIER        0x0001
+
+/****************************************************************************
+ * Globals
+ ****************************************************************************/
+
+word        MPI_currentVolume = MIXER_VOLUME_MAX;
+word        MPI_previousVolume = MIXER_DEFAULT_VOLUME;
+Boolean     MPI_muted = FALSE;
+Boolean     MPI_demoMode = TRUE;
+Boolean     MPI_updatingUI = FALSE;
+
+
+/****************************************************************************
+ * Class definition
+ ****************************************************************************/
+
+@class MixerProcessClass, GenProcessClass;
+
+@message void MSG_MIXER_REFRESH_UI();
+@message (GEN_VALUE_STATUS_MSG) MSG_MIXER_VOLUME_CHANGED;
+@message (GEN_BOOLEAN_GROUP_APPLY_MSG) MSG_MIXER_MUTE_APPLY;
+
+@endc;
+
+@classdecl MixerProcessClass, neverSaved;
+
+/****************************************************************************
+ * Forward declarations
+ ****************************************************************************/
+
+static void MixerSetHardwareVolume(word volume);
+static void MixerApplyMute(Boolean muted);
+static void MixerUpdateMuteBoolean(Boolean muted);
+static void MixerUpdateSlider(word volume);
+static void MixerDisableControls(Boolean disable);
+
+/****************************************************************************
+ * UI Resources
+ ****************************************************************************/
+
+@start AppResource;
+
+@visMoniker MixerTextMoniker = "Mixer";
+@visMoniker MixerVolumeMoniker = "Volume";
+@visMoniker MixerMuteMoniker = "Mute";
+
+@object GenApplicationClass MixerApp = {
+    GI_visMoniker = list { @MixerTextMoniker };
+    GI_comp = @MixerPrimary;
+    gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) = @MixerPrimary;
+}
+
+@end AppResource;
+
+@start Interface;
+
+@object GenPrimaryClass MixerPrimary = {
+    GI_comp = @MixerMainGroup;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_CENTER_CHILDREN_HORIZONTALLY;
+    HINT_SIZE_WINDOW_AS_DESIRED;
+}
+
+@object GenInteractionClass MixerMainGroup = {
+    GI_comp = @MixerVolumeGroup, @MixerMuteGroup;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_CENTER_CHILDREN_HORIZONTALLY;
+}
+
+@object GenInteractionClass MixerVolumeGroup = {
+    GI_visMoniker = list { @MixerVolumeMoniker };
+    GI_comp = @MixerVolumeValue;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_CENTER_CHILDREN_HORIZONTALLY;
+}
+
+@object GenValueClass MixerVolumeValue = {
+    GVLI_value = MakeWWFixed(255.0);
+    GVLI_minimum = MakeWWFixed(0.0);
+    GVLI_maximum = MakeWWFixed(255.0);
+    GVLI_increment = MakeWWFixed(1.0);
+    GVLI_destination = process;
+    ATTR_GEN_VALUE_STATUS_MSG = MSG_MIXER_VOLUME_CHANGED;
+    HINT_VALUE_ANALOG_DISPLAY;
+    HINT_VALUE_ORIENT_VERTICALLY;
+    HINT_VALUE_NO_DIGITAL_DISPLAY;
+    HINT_VALUE_IMMEDIATE_DRAG_NOTIFICATION;
+    HINT_VALUE_CONSTRAIN_TO_INTERVALS;
+    HINT_VALUE_DISPLAY_INTERVALS = {8, 0};
+}
+
+@object GenBooleanGroupClass MixerMuteGroup = {
+    GI_comp = @MixerMuteBoolean;
+    GBGI_destination = process;
+    GBGI_applyMsg = MSG_MIXER_MUTE_APPLY;
+    ATTR_GEN_SEND_APPLY_MSG_ON_APPLY_EVEN_IF_NOT_MODIFIED;
+}
+
+@object GenBooleanClass MixerMuteBoolean = {
+    GI_visMoniker = list { @MixerMuteMoniker };
+    GBI_identifier = MIXER_MUTE_IDENTIFIER;
+}
+
+@end Interface;
+
+/****************************************************************************
+ * Helper routines
+ ****************************************************************************/
+
+static void MixerSetHardwareVolume(word volume)
+{
+    if (volume > MIXER_VOLUME_MAX) {
+        volume = MIXER_VOLUME_MAX;
+    }
+    BSMixerSetValue(BSMX_TOKEN_MASTER, 2, (byte)volume, (byte)volume);
+}
+
+static void MixerApplyMute(Boolean muted)
+{
+//    if (muted) {
+//        MixerSetHardwareVolume(0);
+//    } else {
+//        MixerSetHardwareVolume(MPI_previousVolume ? MPI_previousVolume : MIXER_DEFAULT_VOLUME);
+//    }
+}
+
+static void MixerUpdateMuteBoolean(Boolean muted)
+{
+    //MPI_updatingUI = TRUE;
+    @send MixerMuteGroup::MSG_GEN_BOOLEAN_GROUP_SET_BOOLEAN_STATE(MIXER_MUTE_IDENTIFIER, muted);
+    //MPI_updatingUI = FALSE;
+}
+
+static void MixerUpdateSlider(word volume)
+{
+    if (volume > MIXER_VOLUME_MAX) {
+        volume = MIXER_VOLUME_MAX;
+    }
+    //MPI_updatingUI = TRUE;
+    @send MixerVolumeValue::MSG_GEN_VALUE_SET_INTEGER_VALUE(volume, FALSE);
+    //MPI_updatingUI = FALSE;
+}
+
+static void MixerDisableControls(Boolean disable)
+{
+    @send MixerVolumeValue::MSG_GEN_SET_USABLE(VUM_NOW);
+    @send MixerMuteGroup::MSG_GEN_SET_USABLE(VUM_NOW);
+}
+
+/****************************************************************************
+ * Process methods
+ ****************************************************************************/
+
+@method MixerProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
+{
+    word state = 0;
+
+    @callsuper();
+
+    // GeodeLoadError gle;
+    // char driverName[GEODE_NAME_SIZE];
+
+    // driverName[0] = '\0';
+    // BSMixerLoadDriver(&gle, driverName);
+
+    state = BSMixerGetState();
+    //MPI_demoMode = ((state & 0x8000) != 0) || ((state & 0x4000) != 0);
+
+    //if (MPI_demoMode) {
+    //    MixerDisableControls(TRUE);
+    //} else {
+        MixerDisableControls(FALSE);
+        @call self::MSG_MIXER_REFRESH_UI();
+    //}
+}
+
+@method MixerProcessClass, MSG_MIXER_REFRESH_UI
+{
+    //if (MPI_demoMode) {
+    //    return;
+    //}
+
+    Boolean muted = FALSE;
+
+    word raw = BSMixerGetValue(BSMX_TOKEN_MASTER, 3);
+    word left = raw & 0x00ff;
+    word right = (raw >> 8) & 0x00ff;
+    word volume = (left + right) / 2;
+
+    if (volume > MIXER_VOLUME_MAX) {
+        volume = MIXER_VOLUME_MAX;
+    }
+
+    muted = (volume == 0);
+
+    if (!muted) {
+        MPI_previousVolume = volume;
+    }
+
+    MPI_currentVolume = volume;
+    MPI_muted = muted;
+
+    MixerUpdateSlider(volume);
+    MixerUpdateMuteBoolean(muted);
+}
+
+@method MixerProcessClass, MSG_MIXER_VOLUME_CHANGED
+{
+    Boolean muted = FALSE;
+    word volume = 0;
+
+    //if (MPI_updatingUI || MPI_demoMode) {
+    //    MPI_updatingUI = FALSE;
+    //    return;
+    //}
+
+    volume = WWFixedToInt(value);
+    if (volume > MIXER_VOLUME_MAX) {
+        volume = MIXER_VOLUME_MAX;
+    }
+
+    MixerSetHardwareVolume(volume);
+
+    MPI_currentVolume = volume;
+    if (volume > 0) {
+        MPI_previousVolume = volume;
+    }
+
+    muted = (volume == 0);
+    if (muted != MPI_muted) {
+        MPI_muted = muted;
+        MixerUpdateMuteBoolean(muted);
+    }
+}
+
+@method MixerProcessClass, MSG_MIXER_MUTE_APPLY
+{
+    word restore = 0;
+    Boolean muted = FALSE;
+
+    if (MPI_updatingUI || MPI_demoMode) {
+        MPI_updatingUI = FALSE;
+        return;
+    }
+
+    muted = ((selectedBooleans & MIXER_MUTE_IDENTIFIER) != 0);
+
+    if (muted) {
+        if (MPI_currentVolume > 0) {
+            MPI_previousVolume = MPI_currentVolume;
+        }
+        MixerUpdateSlider(0);
+        MixerSetHardwareVolume(0);
+        MPI_currentVolume = 0;
+        MPI_muted = TRUE;
+    } else {
+        restore = MPI_previousVolume ? MPI_previousVolume : MIXER_DEFAULT_VOLUME;
+        MPI_currentVolume = restore;
+        MPI_muted = FALSE;
+        MixerUpdateSlider(restore);
+        MixerSetHardwareVolume(restore);
+    }
+}

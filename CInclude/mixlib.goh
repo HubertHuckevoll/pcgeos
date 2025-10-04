@@ -27,11 +27,11 @@
 
  **********************************************************/
 
-@include <stdapp.goh>
+//@include <stdapp.goh>
 #include "sound.h"
-#include <library.h>
+#include "library.h"
 
-@deflib mixlib
+//@deflib mixlib
 
 /*-----------------------------------------------
 
@@ -157,7 +157,8 @@ extern  Boolean _pascal _export LibMixEntry(LibraryCallType     type,
 extern  Boolean _pascal _export BSMixerLoadDriver(GeodeLoadError *gle,
         char       *name);
 // Store the handle of the soundcard driver in a global variable
-#ifdef  __HIGHC__
+
+#ifdef  __HIGHC__
 
 pragma Alias(BSMixerGetState,"BSMIXERGETSTATE");
 pragma Alias(BSMixerGetSubToken,"BSMIXERGETSUBTOKEN");
@@ -168,7 +169,8 @@ pragma Alias(BSMixerSetValue,"BSMIXERSETVALUE");
 pragma Alias(BSMixerGetValue,"BSMIXERGETVALUE");
 pragma Alias(BSMixerGetCap,"BSMIXERGETCAP");
 pragma Alias(LibMixEntry,"LIBMIXENTRY");
-#endif
 
-@endlib
+#endif
+
+//@endlib
 
