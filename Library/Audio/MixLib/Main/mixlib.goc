@@ -1,15 +1,15 @@
 /************************************************
  *                      *
- *  Projekt:    BestSound       *
+ *  Project:    BestSound       *
  *                      *
- *  Module:     Mixer-Library       *
+ *  Module:     Mixer library       *
  *                      *
  *  File:       MIXLIB.GOC      *
  *                      *
- *  Autor:      Dirk Lausecker      *
+ *  Author:     Dirk Lausecker      *
  *                      *
- * BSMixerLoadDriver    Mixertreiber laden  *
- * BSMixerGetCap    Out: valNum Anzahl Val. *
+ * BSMixerLoadDriver    Load and prepare mixer driver  *
+ * BSMixerGetCap    Out: valNum number of values *
  * BSMixerGetValue              *
  *                      *
  ************************************************/
@@ -76,7 +76,7 @@ const char  synthDriverIT[]  = "synthDriver";    //INI Entry
 Boolean     demoModus   = TRUE;
 byte        valNum      = 0;
 GeodeLoadError  gle;
-Boolean     driverUsed  = FALSE;    //Treiber wurde extra geladen
+Boolean     driverUsed  = FALSE;    //Driver was loaded explicitly
 
 
 /**************************** Funktionen ************************/
@@ -87,12 +87,12 @@ Boolean     driverUsed  = FALSE;    //Treiber wurde extra geladen
 
   IN:
   LibraryCallType   type
-  (warum wurde Library gerufen)
+  (reason the library was invoked)
   GeodeHandle       client
-  (evtl. aufrufendes Programm)
+  (calling geode, if any)
 
   OUT:
-  TRUE      Fehler
+  TRUE      error
   FALSE     no error
 
  ****************************/
@@ -123,8 +123,7 @@ Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
 
             case LCT_DETACH:                /* The library is about to be unloaded. */
             {
-                //Treiber freigeben wenn er mit
-                //GeodeUseDriver geladen wurde
+                //Release driver if it was loaded with GeodeUseDriver
                 if (mixerDriver && driverUsed)
                 {
                   GeodeFreeDriver (mixerDriver);
@@ -149,14 +148,13 @@ Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
 
     BSMixerLoadDriver
 
- Mixertreiber laden bzw. fuer
- Benutzung vorbereiten
+ Load the mixer driver and prepare it for usage
 
  IN
- * gle       Ablage Fehlercode
- [mixerDriver] = Treibername
+ * gle       location to store the error code
+ [mixerDriver] = driver name
  OUT    Boolean demoMode
- * name      Treibername
+ * name      driver name
 
  ****************************/
 
@@ -164,26 +162,26 @@ Boolean _pascal _export BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
 {
         Boolean demoMode;
 
-     /* Treibername aus INI lesen */
+     /* Read driver name from INI */
         demoMode = FALSE;
         driverUsed = FALSE;
 
         if(InitFileReadStringBuffer(soundCatIT,mixerDriverIT,name,32,&datasize))
-        {   //mixerDriver-Eintrag nicht gefunden
-            //synthDriver versuchen, wenn nicht gefunden
+        {   //mixerDriver entry not found
+            //Try synthDriver if mixerDriver is missing
             demoMode = (InitFileReadStringBuffer(soundCatIT,synthDriverIT,name,32,&datasize));
         };
 
-        //Fehlercode reset
+        //Reset error code
         *gle = 0;
 
-        //Treiber suchen/laden
+        //Locate/load driver
         if (demoMode)
         {
-            //Demomode = load no driver
+            //Demo mode = load no driver
         }
         else
-        {   //Treibereintrag in INI gefunden, jetzt Mixertreiber laden
+        {   //Entry found in INI, now load mixer driver
             mixerDriver = GeodeFind (name,GEODE_NAME_SIZE,0,0);
             if (!mixerDriver)
             {   //mixerDriver not in memory - must be loaded
@@ -218,13 +216,13 @@ Boolean _pascal _export BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
 /********************************
  *    BSMixerSetValue       *
  *              *
- * Mixerkanal setzen        *
+ * Set mixer channel        *
  *              *
  * IN:  word    token       *
  *      0 = Reset   *
  *  byte    datatype    *
- *  1       Pegel,Balance   *
- *  2   Pegel_L,Pegel_R *
+ *  1       Volume,Balance   *
+ *  2   Volume_L,Volume_R *
  *  byte    value1,value2   *
  *              *
  ********************************/
@@ -236,12 +234,12 @@ void    _pascal _export BSMixerSetValue (word token, byte dataType, byte value1,
 
         if (demoModus)
         {
-        //im Demomodus keine Daten an Treiber senden !
+        //Do not send data to the driver while in demo mode
         }
         else
         {
-            //kein Demomodus !
-            //Pegel/Balance in Pegel_L/Pegel_R umrechnen
+            //Not in demo mode
+            //Convert volume/balance into left/right levels
             if (dataType == 1)
             {
                 if ((value2 >127))
@@ -259,7 +257,7 @@ void    _pascal _export BSMixerSetValue (word token, byte dataType, byte value1,
                 value2 = (byte)val_L;
             };
 
-                //Treiber aufrufen
+                //Call driver
             MixAsmSetValue(token, value1, value2);
         };
 }
@@ -268,15 +266,15 @@ void    _pascal _export BSMixerSetValue (word token, byte dataType, byte value1,
  *          *
  *    BSMixerGetValue   *
  *          *
- * Mixerkanal lesen *
+ * Read mixer channel *
  *          *
  * dataType     *
- * 1 = Pegel            *
+ * 1 = Volume           *
  * 2 = Balance          *
- * 3 = Rohdaten         *
+ * 3 = Raw data         *
  ************************/
 
-word    _pascal _export BSMixerGetValue (word token, byte dataType)
+word _pascal _export BSMixerGetValue (word token, byte dataType)
 {
     word    value;
     byte    val1,val2;
@@ -289,14 +287,14 @@ word    _pascal _export BSMixerGetValue (word token, byte dataType)
         {
             value = MixAsmGetValue(token);
 
-            //Datentyp interpretieren
+            //Interpret data type
             val1 = value & 0x00ff;
             val2 = (value>>8) & 0x00ff;
             if (!val1)
             val1 = 1;
             switch (dataType)
             {
-                case 1 : {    //Pegel
+                case 1 : {    //Volume
                     if (val1 > val2)
                     { value = val1; }
                     else
@@ -315,7 +313,7 @@ word    _pascal _export BSMixerGetValue (word token, byte dataType)
                     if ((val1|val2)<2) value = 128;
                 }; break;
             };
-              //Volume 0 -> Balance = Middle;
+              //Volume 0 -> Balance equals center
         };
 
         return(value);
@@ -324,16 +322,15 @@ word    _pascal _export BSMixerGetValue (word token, byte dataType)
 /********************************
  *      BSMixerGetCap   *
  *              *
- *  Anzahl Einstellkan�le  *
- *  ermitteln       *
+ *  Determine number of adjustable channels  *
  *              *
- *  IN  word    *dsp  Adresse V.*
+ *  IN  word    *dsp  address of DSP version *
  *                              *
- * OUT  word    Anzahl Kan�le  *
- *  *dsp    DSP Version *
+ * OUT  word    number of channels  *
+ *  *dsp    DSP version *
  ********************************/
 
-word    _pascal _export BSMixerGetCap (word *dsp)
+word _pascal _export BSMixerGetCap (word *dsp)
 {
         word    valNum,DSPVersion;
 
@@ -341,7 +338,7 @@ word    _pascal _export BSMixerGetCap (word *dsp)
 
         if (demoModus)
         {
-            //im Demomodus keine Daten an Treiber senden !
+            //Do not send data to the driver while in demo mode
             valNum = 5;
             DSPVersion = 0;
         }
@@ -455,10 +452,10 @@ void _pascal _export BSMixerGetTokenText (word token,char *tokenText)
         char *textPtr;
         optr op;
 
-        //Textresource locken
+        //Lock text resource
         MemLock(OptrToHandle(@bsmText1));
 
-        //Token --> Text
+        //Convert token to text
         switch (token)
         {
             case BSMX_TOKEN_MASTER   : op = @bsmText1 ; break;
@@ -501,27 +498,27 @@ void _pascal _export BSMixerGetTokenText (word token,char *tokenText)
 
         };
 
-        //String von Treiber geben lassen wenn Token nicht bekannt war
+        //Ask the driver for the string if the token was unknown
         if ((token > 49) && (demoModus == 0))
         {
             MixAsmTokenToText(token, MIX_FARPTR(char, tokenText));
         }
         else
         {
-            //bekannter Token / demoModus
-            //String kopieren
+            //Known token or demo mode
+            //Copy string
             textPtr = LMemDeref(op);
             strcpy (tokenText,textPtr);
         };
 
-        //TokenTextresource freigeben
+        //Unlock token text resource
         MemUnlock(OptrToHandle(@bsmText1));
 }
 
 /********************************
  *  BSMixerGetSubToken  *
  *              *
- * Token f�r Bool/Item ermitt. *
+ * Determine token for boolean/item *
  *              *
  * IN   word    token       *
  *  word    identifier  *
@@ -532,19 +529,19 @@ word _pascal _export BSMixerGetSubToken(word token, word identifier)
 {
         word    subToken;
 
-        //demoModus = keine Aufrufe an Treiber
+        //demo mode = no calls to the driver
         if (demoModus)
         {
-            //demoModus
+            //demo mode
             subToken = 0;
         }
         else
         {
-            //Treiber aufrufen
+            //Call driver
             subToken = MixAsmGetSubToken(token, identifier);
         };
 
-        //Ende
+        //End
         return (subToken);
 }
 
@@ -558,17 +555,17 @@ word _pascal _export BSMixerGetSubToken(word token, word identifier)
 
 void _pascal _export BSMixerSpecValue(word valNum, MixerValue *value)
 {
-        //demoModus = keine Aufrufe an Treiber
+        //demo mode = no calls to the driver
         if (demoModus)
         {
-            //demoModus
-            value->valVisible = TRUE;       //Sichtbarkeit
+            //demo mode
+            value->valVisible = TRUE;       //Visibility
             value->valStereoFlag = FALSE;   //FALSE = mono
             value->valTarget = 1;       //1=Mixer 2=Record 3=Other
-            value->valRange = 255;      //(word)Wertebereich
-            value->valToken = valNum+1;     //(word)Texttoken 1,2,3,...32
+            value->valRange = 255;      //(word)Value range
+            value->valToken = valNum+1;     //(word)Text token 1,2,3,...32
             value->valType = 1;         //0=none 1=Slider 2=Item 3=Boolean
-            value->valPos = valNum;     //Position des Sliders 0,1,2...
+            value->valPos = valNum;     //Slider position 0,1,2...
             /* */
         }
         else
@@ -585,17 +582,17 @@ void _pascal _export BSMixerSpecValue(word valNum, MixerValue *value)
             );
         };
 
-        //Ende
+        //End
 }
 
 /********************************
  *  BSMixerGetState     *
  *              *
- * Treiberanbindung pruefen *
+ * Check driver connectivity *
  *              *
  * OUT  word    state       *
- *  0x8000  demoModus   *
- *  0x4000  no Mixersupport *
+ *  0x8000  demo mode    *
+ *  0x4000  no mixer support *
  *              *
  ********************************/
 
@@ -603,29 +600,29 @@ word _pascal _export BSMixerGetState(void)
 {
     word    state;
 
-    //demoModus = keine Aufrufe an Treiber
+    //demo mode = no calls to the driver
     if (demoModus)
     {
-        //demoModus
+        //demo mode
         state = 0x8000;
     }
     else
     {
         state = MixAsmGetState();
 
-        //Antwort auswerten
+        //Evaluate response
         if (state == 2)
         {
-            state = 0;      //Treiber unterstuetzt Mixer !
+            state = 0;      //Driver supports the mixer!
         }
         else
         {
-            state = 0x4000;     //keine Mixerunterst�tzung !
-            demoModus = TRUE;   //deshalb Demomodus !
+            state = 0x4000;     //No mixer support!
+            demoModus = TRUE;   //Therefore, demo mode!
         };
     };
 
-    //Ende
+    //End
     return (state);
 }
 

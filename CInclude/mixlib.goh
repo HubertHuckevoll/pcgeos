@@ -27,11 +27,14 @@
 
  **********************************************************/
 
+
+
+//@deflib mixlib
 //@include <stdapp.goh>
+
 #include "sound.h"
 #include "library.h"
 
-//@deflib mixlib
 
 /*-----------------------------------------------
 
@@ -173,4 +176,3 @@ pragma Alias(LibMixEntry,"LIBMIXENTRY");
 #endif
 
 //@endlib
-
