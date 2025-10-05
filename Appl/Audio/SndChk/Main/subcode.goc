@@ -631,15 +631,11 @@ word    SC_Create_Viertel(word index,word interleave,Boolean positiv, Boolean st
     (global)    sampleRate
 
  **********************************************************/
-#ifdef  GERMAN
-char    completeString[] = "Eine WAV-Datei mit dem Namen \x01 wurde im DOCUMENT-Verzeichnis angelegt !";
-char    errorString[] = "An error occurred while creating the .WAV file.";
 
-#else
+// char    completeString[] = "Eine WAV-Datei mit dem Namen \x01 wurde im DOCUMENT-Verzeichnis angelegt !";
+// char    errorString[] = "An error occurred while creating the .WAV file.";
 char    completeString[] = "A .WAV file with the name \x01 was created in the Document folder.";
 char    errorString[] = "An error occurred while creating the .WAV file.";
-
-#endif
 
 void    SC_CreateWaveFile(char *fileName)
 {

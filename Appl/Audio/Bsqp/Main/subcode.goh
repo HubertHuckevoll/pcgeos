@@ -1,22 +1,22 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		BestSound Quickplayer
-FILE:		subcode.goh
+PROJECT:    BestSound
+MODULE:     BestSound Quickplayer
+FILE:       subcode.goh
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	12.03.1999   	Initial version.
-        DL      14.08.2000	Translation for ND
+    Name    Date        Description
+    ----    ----        -----------
+    DL      12.03.1999  Initial version.
+    DL      14.08.2000  Translation for ND
 
 DESCRIPTION:
 
@@ -28,27 +28,27 @@ DESCRIPTION:
 
 /************* functions ****************/
 
-Boolean	_pascal BQ_CheckForPlay(void);
+Boolean _pascal BQ_CheckForPlay(void);
 // check WAV-file for playing
 
-void	_pascal BQ_DrawCenterText(GStateHandle	gstate,
-				  char		*text,
-        			  word		x,
-        			  word		y,
-        			  word		max);
+void _pascal BQ_DrawCenterText(GStateHandle  gstate,
+                               char      *text,
+                               word      x,
+                               word      y,
+                               word      max);
 // draw centered text
 
-void	_pascal	BQ_StartPlay(void);
+void _pascal BQ_StartPlay(void);
 // Start playing in sep. thread
 
-word	BQ_PlayThread(word wavFile);
+word BQ_PlayThread(word wavFile);
 // called by ThreadCreate
 // wavFile is a filehandle !
 
 // Display
 void RedrawStatus (GStateHandle gstate);
 void RedrawTime (GStateHandle gstate);
-Boolean	_pascal RedrawSettings (GStateHandle gstate);
+Boolean _pascal RedrawSettings (GStateHandle gstate);
 // returns TRUE if settings OK
 
 void RedrawRMS (GStateHandle gstate);

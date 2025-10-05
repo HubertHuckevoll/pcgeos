@@ -4,16 +4,16 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = sndchk
+ASMTOOLS        = asmtoolsManager.asm
 MAIN            = globals.goc process.goc subcode.goc globals.goh\
                   process.goh subcode.goh
 UI              = uimain.goc uimain.goh
-ASMTOOLS        = asmtoolsManager.asm
 UI_TO_RDFS      =
 OBJS            = globals.obj process.obj subcode.obj uimain.obj
 COMMON          =
 MODULES         = ASMTOOLS
 CMODULES        = Main UI
-SRCS            = $(MAIN) $(UI) $(ASMTOOLS) $(COMMON)
+SRCS            = $(ASMTOOLS) $(MAIN) $(UI) $(COMMON)
 LOBJS           =
 
 SYSMAKEFILE     = geode.mk

@@ -61,8 +61,8 @@ DESCRIPTION:
 
 @method SDCKProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
 {
-    GeodeHandle gh;
-    ReleaseNumber   version;
+    //GeodeHandle gh;
+    //ReleaseNumber   version;
     DisplayScheme   displayScheme;
 
     @callsuper();
@@ -80,10 +80,10 @@ DESCRIPTION:
     };
 
     // display Version in Infobox
-    gh = GeodeGetProcessHandle();
-    (void)GeodeGetInfo(gh,GGIT_GEODE_RELEASE,&version);
-    sprintf(globalText,"Version %u.%u - %u.%u",version.RN_major,version.RN_minor,version.RN_change,version.RN_engineering);
-    @call InfoGlyph6::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    // gh = GeodeGetProcessHandle();
+    // (void)GeodeGetInfo(gh,GGIT_GEODE_RELEASE,&version);
+    // sprintf(globalText,"Version %u.%u - %u.%u",version.RN_major,version.RN_minor,version.RN_change,version.RN_engineering);
+    // @call InfoGlyph6::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
 
     // Playthread
     SC_CreatePlayThread();
@@ -204,11 +204,9 @@ DESCRIPTION:
     MSG_SNDCHK_PROCESS_PLAY_CONT
 
  ************************************************************/
-@ifdef  GERMAN
-    @define TEXT_PLAY_ENDLESS   "PLAY (endlos)"
-@else
-    @define TEXT_PLAY_ENDLESS   "Play Repeatedly"
-@endif
+
+// @define TEXT_PLAY_ENDLESS   "PLAY (endlos)"
+@define TEXT_PLAY_ENDLESS   "Play Repeatedly"
 
 @method SDCKProcessClass, MSG_SNDCHK_PROCESS_PLAY_CONT
 {
@@ -245,17 +243,14 @@ DESCRIPTION:
     Main method for checking checklist
 
  ************************************************************/
-@ifdef  GERMAN
-    @define TEXT_FOUND_SB_MONO  "Mono-Soundblaster bei Adresse %X gefunden"
-    @define TEXT_FOUND_SB_PRO   "Soundblaster-Pro bei Adresse %X gefunden"
-    @define TEXT_FOUND_SB_16    "SB16 (oder besser) bei Adresse %X gefunden"
-    @define TEXT_FOUND_SB_NONE  "Keine SB-kompatible Soundkarte gefunden !"
-@else
-    @define TEXT_FOUND_SB_MONO  "Mono Sound Blaster found at address %X"
-    @define TEXT_FOUND_SB_PRO   "Sound Blaster Pro found at address %X"
-    @define TEXT_FOUND_SB_16    "Sound Blaster 16 found at address %X"
-    @define TEXT_FOUND_SB_NONE  "No Sound Blaster-compatible sound card found."
-@endif
+// @define TEXT_FOUND_SB_MONO  "Mono-Soundblaster bei Adresse %X gefunden"
+// @define TEXT_FOUND_SB_PRO   "Soundblaster-Pro bei Adresse %X gefunden"
+// @define TEXT_FOUND_SB_16    "SB16 (oder besser) bei Adresse %X gefunden"
+// @define TEXT_FOUND_SB_NONE  "Keine SB-kompatible Soundkarte gefunden !"
+@define TEXT_FOUND_SB_MONO  "Mono Sound Blaster found at address %X"
+@define TEXT_FOUND_SB_PRO   "Sound Blaster Pro found at address %X"
+@define TEXT_FOUND_SB_16    "Sound Blaster 16 found at address %X"
+@define TEXT_FOUND_SB_NONE  "No Sound Blaster-compatible sound card found."
 
 @method SDCKProcessClass, MSG_SNDCHK_CHECK_SYSTEM
 {

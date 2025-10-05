@@ -32,7 +32,7 @@ DESCRIPTION:
 
 
 @extern	object	SDCKApp;
-@extern object	InfoGlyph6;
+// @extern object	InfoGlyph6;
 @extern object	PrimaryGlyph;
 @extern object	MainSub3Trigger1;
 @extern object	MainSub3Trigger2;

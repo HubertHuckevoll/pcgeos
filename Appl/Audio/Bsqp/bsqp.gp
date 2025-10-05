@@ -1,12 +1,12 @@
 ##############################################################################
 #
-#	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+#   Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 #
-# PROJECT:	BestSound
-# MODULE:	BestSound QuickPlayer
-# FILE:		bsqp.gp
+# PROJECT:  BestSound
+# MODULE:   BestSound QuickPlayer
+# FILE:     bsqp.gp
 #
-# AUTHOR:	Dirk Lausecker
+# AUTHOR:   Dirk Lausecker
 #
 # DESCRIPTION:
 #
@@ -16,39 +16,38 @@ name bsqp.app
 
 longname "WAV QuickPlayer"
 
-type	appl, process, single
+type    appl, process, single
 
-class	BSQPProcessClass
+class   BSQPProcessClass
 
 
-appobj	BSQPApp
+appobj  BSQPApp
 
 tokenchars "BSQP"
 tokenid 16427
 
-heapspace 	10000
-stack		5000
+heapspace   10000
+stack       5000
 
-library	geos
-library	ui
+library geos
+library ui
 library bsnwav
-# library bswav
-library	ansic
+library ansic
 library sound
 
 #exempt bsnwav
 #exempt bswav
 
-resource AppResource 		ui-object
-resource Interface 		ui-object
-resource UIMainInfoResource 	ui-object
-resource DISPLAYRESOURCE	ui-object
-resource SELECTORRESOURCE	ui-object
-resource OPTIONSMENURESOURCE	ui-object
+resource AppResource        ui-object
+resource Interface      ui-object
+# resource UIMainInfoResource   ui-object
+resource DISPLAYRESOURCE    ui-object
+resource SELECTORRESOURCE   ui-object
+resource OPTIONSMENURESOURCE    ui-object
 
-resource APPLMONIKERRESOURCE 	data object read-only
+resource APPLMONIKERRESOURCE    data object read-only
 
-export	BSQPApplicationClass
-export	BSQPPrimaryClass
+export  BSQPApplicationClass
+export  BSQPPrimaryClass
 
 # usernotes "� D.Lausecker\x0dWAV-Quickplayer is licensed to NewDeal and is subject to its conditions of use."

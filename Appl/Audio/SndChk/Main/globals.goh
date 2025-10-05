@@ -24,13 +24,6 @@ DESCRIPTION:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
-// code-switch for german/english version
-
-/*
-@define GERMAN
-#define GERMAN
-/* german version */
-
 // global var.
 extern  char            globalText[];
 extern  GeodeLoadError  gle;

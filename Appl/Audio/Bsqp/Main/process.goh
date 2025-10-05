@@ -1,21 +1,21 @@
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 1999 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 1999 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		BestSound QuickPlayer
-FILE:		process.goh
+PROJECT:    BestSound
+MODULE:     BestSound QuickPlayer
+FILE:       process.goh
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	12.03.2000   	Initial version.
+    Name    Date        Description
+    ----    ----        -----------
+    DL  12.03.2000      Initial version.
 
 DESCRIPTION:
 
@@ -23,24 +23,23 @@ DESCRIPTION:
 
 @include <stdapp.goh>
 
-@ifndef	MAIN_PROCESS_GOH
-@define	MAIN_PROCESS_GOH
+@ifndef MAIN_PROCESS_GOH
+@define MAIN_PROCESS_GOH
 
 /*
- * 	BSQPProcessClass
+ *  BSQPProcessClass
  */
 
-@class	BSQPProcessClass, GenProcessClass;
+@class  BSQPProcessClass, GenProcessClass;
 
-	@message (GEN_BOOLEAN_GROUP_APPLY_MSG) MSG_BSQP_OPTIONS_APPLY;
-	@message (GEN_ITEM_GROUP_APPLY_MSG) MSG_BSQP_TIME_DISP_LIST_APPLY;
-	@message void MSG_PROCESS_TIMER_EVENT();
-	@message void MSG_PROCESS_BSQP_STOP();
-	@message void MSG_PROCESS_BSQP_PLAY();
-	@message void MSG_PROCESS_BSQP_OPEN();
-  	@message (GEN_FILE_SELECTOR_NOTIFICATION_MSG) MSG_BSQP_FILE_SELECTED;
+    @message (GEN_BOOLEAN_GROUP_APPLY_MSG) MSG_BSQP_OPTIONS_APPLY;
+    @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_BSQP_TIME_DISP_LIST_APPLY;
+    @message void MSG_PROCESS_TIMER_EVENT();
+    @message void MSG_PROCESS_BSQP_STOP();
+    @message void MSG_PROCESS_BSQP_PLAY();
+    @message void MSG_PROCESS_BSQP_OPEN();
+    @message (GEN_FILE_SELECTOR_NOTIFICATION_MSG) MSG_BSQP_FILE_SELECTED;
 
 @endc;
 
 @endif
-

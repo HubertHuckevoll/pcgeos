@@ -1,6 +1,11 @@
 /**********************************************************************
  *
- *  Simple BestSound Mixer application
+ * Simple Mixer application for the BestSound drivers
+ * Prompted by MeyerK in 10/2025 as the original mixer
+ * application was not part of the repo, because it was never
+ * licensed to NewDeal.
+ * Note: this was probably the first GEOS app that was
+ * created by AI and worked instantly, including UI etc.
  *
  **********************************************************************/
 
@@ -15,7 +20,7 @@
  ****************************************************************************/
 
 #define MIXER_VOLUME_MAX             255
-#define MIXER_DEFAULT_VOLUME         200
+#define MIXER_DEFAULT_VOLUME         255
 #define MIXER_MUTE_IDENTIFIER        0x0001
 
 /****************************************************************************

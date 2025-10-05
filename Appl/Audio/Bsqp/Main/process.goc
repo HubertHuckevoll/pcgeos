@@ -2,30 +2,30 @@
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
+    Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound
-MODULE:		BestSound Quickplayer
-FILE:		process.goc
+PROJECT:    BestSound
+MODULE:     BestSound Quickplayer
+FILE:       process.goc
 
-AUTHOR:		Dirk Lausecker
+AUTHOR:     Dirk Lausecker
 
 ROUTINES:
-	Name			Description
-	----			-----------
+    Name            Description
+    ----            -----------
 
 REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-	DL	12.03.2000   	Initial version.
-        DL	14.08.2000	Translation for ND
+    Name    Date        Description
+    ----    ----        -----------
+    DL      12.03.2000  Initial version.
+    DL      14.08.2000  Translation for ND
 
 DESCRIPTION:
-	Application play WAV-file after double click in NewManager
+    Application play WAV-file after double click in NewManager
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
-@include <bsnwav.goh>		/* dont place this line behind the other includes ! */
+@include <bsnwav.goh>       /* dont place this line behind the other includes ! */
 #include <gstring.h>
 #include <Ansi/stdio.h>
 #include <Ansi/string.h>
@@ -44,278 +44,275 @@ DESCRIPTION:
 
 /////////////// Textchunks ////////////////////
 
-@start	TEXTCHUNKRESOURCE,data;
+@start  TEXTCHUNKRESOURCE,data;
 
-@chunk	char	category[] = "QuickPlayer";
-@chunk	char	optionsKey[] = "options";
-@chunk	char	displayKey[] = "timeDisplay";
+@chunk  char    category[] = "QuickPlayer";
+@chunk  char    optionsKey[] = "options";
+@chunk  char    displayKey[] = "timeDisplay";
 
-@end	TEXTCHUNKRESOURCE;
+@end    TEXTCHUNKRESOURCE;
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- %		Class & Message Definitions
+ %      Class & Message Definitions
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
 /*
- *	Class declarations
+ *  Class declarations
  */
 
-@classdecl	BSQPProcessClass, neverSaved;
+@classdecl  BSQPProcessClass, neverSaved;
 
 /********************************************************
 
-	MSG_GEN_PROCESS_OPEN_APPLICATION
+    MSG_GEN_PROCESS_OPEN_APPLICATION
 
- IN:	 AppAttachFlags		attachFlags
-         MemHandle		launchBlock
-         MemHandle 		extraState
+ IN:     AppAttachFlags     attachFlags
+         MemHandle      launchBlock
+         MemHandle      extraState
  ********************************************************/
 
-@method BSQPProcessClass , MSG_GEN_PROCESS_OPEN_APPLICATION
+@method BSQPProcessClass, MSG_GEN_PROCESS_OPEN_APPLICATION
 {
-  	GeodeHandle	gh;
-        ReleaseNumber	version;
-        AppLaunchBlock	*aplb;
-	DiskHandle	dh = 0;
-        char		*pB = &fullPath,c;
-        char		*cat;
-        DisplayScheme	displayScheme;
+    // GeodeHandle gh;
+    // ReleaseNumber   version;
+    AppLaunchBlock  *aplb;
+    DiskHandle  dh = 0;
+    char        *pB = &fullPath,c;
+    char        *cat;
+    DisplayScheme   displayScheme;
 
-  	@callsuper();
+    @callsuper();
 
-        capabFlag = BSNWaveCheckDriver(0,5);
+    capabFlag = BSNWaveCheckDriver(0,5);
 
-        // Overwrite old Filename in Primary
-  	@call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("QuickPlayer",VUM_NOW);/**/
+    // Overwrite old Filename in Primary
+    @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("QuickPlayer",VUM_NOW);/**/
 
-        // detect Datafile
-        if (launchBlock)
+    // detect Datafile
+    if (launchBlock)
+    {
+        // set Quickplaymode
+        // Quickplaymode --> 1. Play WAV-file 2. shutdown BSQP
+        quickMode = BQ_QUICK_START;
+
+        aplb = MemLock(launchBlock);
+        dh = aplb->ALB_diskHandle;
+        dh = FileConstructFullPath(&pB, // pointer to pointer
+                                   256,    // Length of buffer
+                                   dh, // This can be a disk or
+                                   // standard path
+                                   aplb->ALB_path,
+                                   TRUE);  // Prepend drive name
+
+        strcat(fullPath,"\\");
+        strcat(fullPath,aplb->ALB_dataFile);
+
+        // check filename
+        c = aplb->ALB_dataFile[0];
+        if (c)
         {
-            // set Quickplaymode
-            // Quickplaymode --> 1. Play WAV-file 2. shutdown BSQP
-            quickMode = BQ_QUICK_START;
+            // Display WAV-Name
+            @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(aplb->ALB_dataFile,VUM_NOW);/**/
 
-            aplb = MemLock(launchBlock);
-            dh = aplb->ALB_diskHandle;
-            dh = FileConstructFullPath(&pB,	// pointer to pointer
-            				256, 	// Length of buffer
-                                        dh,	// This can be a disk or
-                                        	// standard path
-                                        aplb->ALB_path,
-                                        TRUE);	// Prepend drive name
-
-            strcat(fullPath,"\\");
-            strcat(fullPath,aplb->ALB_dataFile);
-
-            // check filename
-	    c = aplb->ALB_dataFile[0];
-            if (c)
-            {
-            	// Display WAV-Name
-  		@call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(aplb->ALB_dataFile,VUM_NOW);/**/
-
-                // Start playing
-                BQ_CheckForPlay();
-                BQ_StartPlay();
-            }
-            else
-            {
-            	// no WAV-file -> Normalmode
-                fullPath[0] = 0;
-            	quickMode = BQ_QUICK_OFF;
-            };
-
-            MemUnlock(launchBlock);
+            // Start playing
+            BQ_CheckForPlay();
+            BQ_StartPlay();
         }
         else
         {
-            // no file -> Normalmode
+            // no WAV-file -> Normalmode
+            fullPath[0] = 0;
             quickMode = BQ_QUICK_OFF;
         };
 
-        ///////////// Loading settings from INI ////////////////////
-	MemLock(HandleOf(@category));
-	cat = LMemDeref(@category);
+        MemUnlock(launchBlock);
+    }
+    else
+    {
+        // no file -> Normalmode
+        quickMode = BQ_QUICK_OFF;
+    };
 
-        // Options
-	if (!InitFileReadInteger(cat,LMemDeref(@optionsKey),&bqOptions))
-	{
-	    @call OptionsBooleans::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(bqOptions,FALSE);
-	};
+    ///////////// Loading settings from INI ////////////////////
+    MemLock(HandleOf(@category));
+    cat = LMemDeref(@category);
 
-        // Display
-	if (!InitFileReadInteger(cat,LMemDeref(@displayKey),&bqDispStyle))
-	{
-	    @call TimeDispList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(bqDispStyle,FALSE);
-	};
+    // Options
+    if (!InitFileReadInteger(cat,LMemDeref(@optionsKey),&bqOptions))
+    {
+        @call OptionsBooleans::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(bqOptions,FALSE);
+    };
 
-        MemUnlock(HandleOf(@category));
+    // Display
+    if (!InitFileReadInteger(cat,LMemDeref(@displayKey),&bqDispStyle))
+    {
+        @call TimeDispList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(bqDispStyle,FALSE);
+    };
 
+    MemUnlock(HandleOf(@category));
 
+    // Display Releasenumber in Infobox
+    // gh = GeodeGetProcessHandle();
+    // (void)GeodeGetInfo(gh,GGIT_GEODE_RELEASE,&version);
+    // sprintf(globalText,"Version %u.%u - %u.%u",version.RN_major,version.RN_minor,version.RN_change,version.RN_engineering);
+    // @call InfoGlyph6::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
 
-  	// Display Releasenumber in Infobox
-  	gh = GeodeGetProcessHandle();
-  	(void)GeodeGetInfo(gh,GGIT_GEODE_RELEASE,&version);
-  	sprintf(globalText,"Version %u.%u - %u.%u",version.RN_major,version.RN_minor,version.RN_change,version.RN_engineering);
-  	@call InfoGlyph6::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
+    // Backgroundcolor
+    @call BSQPApp::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME( &displayScheme );
+    if( ((byte)(displayScheme.DS_displayType) & DT_DISP_CLASS) > DC_GRAY_8)
+    {
+        backGroundColor = C_BLUE;
+    }
+    else
+    {
+        backGroundColor = C_BLACK;
+    };
 
-        // Backgroundcolor
-    	@call BSQPApp::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME( &displayScheme );
-        if( ((byte)(displayScheme.DS_displayType) & DT_DISP_CLASS) > DC_GRAY_8)
-        {
-            backGroundColor = C_BLUE;
-        }
-        else
-	{
-            backGroundColor = C_BLACK;
-        };
-
-        // Start timer for display
-	tih=TimerStart( TIMER_EVENT_CONTINUAL,
-		oself,
-		20,
-		MSG_PROCESS_TIMER_EVENT,
-		10,
-		&tid);
+    // Start timer for display
+    tih=TimerStart( TIMER_EVENT_CONTINUAL,
+                    oself,
+                    20,
+                    MSG_PROCESS_TIMER_EVENT,
+                    10,
+                    &tid);
 
 }
 
 /************************************************************
 
-	MSG_GEN_PROCESS_CLOSE_APPLICATION
+    MSG_GEN_PROCESS_CLOSE_APPLICATION
 
-	Funktion:
+    Funktion:
 
-	IN:     -
+    IN:     -
 
-	OUT:    -
+    OUT:    -
 
  -----------------------------------------------------------*/
 
-@method BSQPProcessClass , MSG_GEN_PROCESS_CLOSE_APPLICATION
+@method BSQPProcessClass, MSG_GEN_PROCESS_CLOSE_APPLICATION
 {
-        // disable endless playing
-        bqOptions = 0;
+    // disable endless playing
+    bqOptions = 0;
 
-	// stop current paying
-        switch (playFlag)
+    // stop current paying
+    switch (playFlag)
+    {
+        case BQ_PLAYFLAG_PLAY:
         {
-	    case BQ_PLAYFLAG_PLAY:
-            {
-		BSNWaveStop();
-            }; break;
+            BSNWaveStop();
+        }; break;
 
-	    case BQ_PLAYFLAG_PAUSE:
-            {
-	    	(void)BSNWaveSetPause(2);
-		BSNWaveStop();
-            }; break;
-
-            default: break;
-        }
-
-	// wait until playing finished
-        // ATTENTION: Could be reason for deadlock
-        // if the playFlag will not be resetted by
-        // the Play-Thread
-        while (playFlag)
+        case BQ_PLAYFLAG_PAUSE:
         {
-            TimerSleep(10);
-        };
+            (void)BSNWaveSetPause(2);
+            BSNWaveStop();
+        }; break;
 
-        // Stop timer
-        if (tih)
-        {
-  	    TimerStop(tih,tid);
-        };
+        default: break;
+    }
 
-  	return (@callsuper());
+    // wait until playing finished
+    // ATTENTION: Could be reason for deadlock
+    // if the playFlag will not be resetted by
+    // the Play-Thread
+    while (playFlag)
+    {
+        TimerSleep(10);
+    };
+
+    // Stop timer
+    if (tih)
+    {
+        TimerStop(tih,tid);
+    };
+
+    return (@callsuper());
 }
 
 /***********************************************************************
- 	MSG_PROCESS_TIMER_EVENT for BSQPProcessClass
+    MSG_PROCESS_TIMER_EVENT for BSQPProcessClass
 
 typedef struct {
-	dword		BWPS_current;		// played Bytes
-        dword		BWPS_full;		// Bytes to play
-	byte		BWPS_level;		// "Levelmeter"
+    dword       BWPS_current;       // played Bytes
+    dword       BWPS_full;      // Bytes to play
+    byte        BWPS_level;     // "Levelmeter"
 } BSWavPlayStates;
 
  ***********************************************************************/
 
 @method BSQPProcessClass, MSG_PROCESS_TIMER_EVENT
 {
-	BSWavPlayStates	states;
-        word		level;
+    BSWavPlayStates states;
+    word        level;
 
-        // request data about playing from library
-        if (playFlag)
-        {
-	    (void)BSNWaveGetPlayState(&states);
-        }
-        else
-        {
-	    states.BWPS_level = 0;
-            states.BWPS_current = 0;
-            states.BWPS_full = 0;
-        }
+    // request data about playing from library
+    if (playFlag)
+    {
+        (void)BSNWaveGetPlayState(&states);
+    }
+    else
+    {
+        states.BWPS_level = 0;
+        states.BWPS_current = 0;
+        states.BWPS_full = 0;
+    }
 
-	// Timedisplay
-        if (bqSampleBytes != states.BWPS_current)
-        {
-            bqSampleBytes = states.BWPS_current;
+    // Timedisplay
+    if (bqSampleBytes != states.BWPS_current)
+    {
+        bqSampleBytes = states.BWPS_current;
 //            bqAllBytes = states.BWPS_full;
 
-            if (bqSampleBytes>bqAllBytes)
-            {
-		bqSampleBytes = bqAllBytes;
-            };
-
-	    RedrawTime(0);
+        if (bqSampleBytes>bqAllBytes)
+        {
+            bqSampleBytes = bqAllBytes;
         };
 
-        // Levelmeter
-        if (bqOptions & BQ_OPTION_LEVELMETER)
+        RedrawTime(0);
+    };
+
+    // Levelmeter
+    if (bqOptions & BQ_OPTION_LEVELMETER)
+    {
+        level = states.BWPS_level;
+        if (level != rmsValue)
         {
-            level = states.BWPS_level;
-            if (level != rmsValue)
-            {
-	        rmsValue = level<<1;
-	        RedrawRMS(0);
-            };
-	};
+            rmsValue = level<<1;
+            RedrawRMS(0);
+        };
+    };
 }
 
 /***********************************************************************
 
-	MSG_PROCESS_BSQP_STOP for BSQPProcessClass
+    MSG_PROCESS_BSQP_STOP for BSQPProcessClass
 
- 	called by STOP-Trigger
+    called by STOP-Trigger
 
  ***********************************************************************/
 
 @method BSQPProcessClass, MSG_PROCESS_BSQP_STOP
 {
-        word	status;
+    word    status;
 
-        status = BSNWaveGetStatus();
+    status = BSNWaveGetStatus();
 
-        if (BSEXBSSTATUS(status))
-        {
-            // Set stopflag for NewWave Output
-	    BSNWaveStop();
-        };
+    if (BSEXBSSTATUS(status))
+    {
+        // Set stopflag for NewWave Output
+        BSNWaveStop();
+    };
 
-        // set stopflag on old BSWAV-Library
-        // its not necessary if only BSNWAV will
-        // be used for playing the WAV's
-//	BSWavStop(1);
-
+    // set stopflag on old BSWAV-Library
+    // its not necessary if only BSNWAV will
+    // be used for playing the WAV's
+//  BSWavStop(1);
 }
 
 /**********************************************
 
-	MSG_META_CONTENT_VIEW_WIN_OPENED
+    MSG_META_CONTENT_VIEW_WIN_OPENED
 
  Funktion:  store WindowHandle for display
 
@@ -325,31 +322,31 @@ typedef struct {
 
  **********************************************/
 
-@method BSQPProcessClass , MSG_META_CONTENT_VIEW_WIN_OPENED
+@method BSQPProcessClass, MSG_META_CONTENT_VIEW_WIN_OPENED
 {
-	winHan = viewWindow;
+    winHan = viewWindow;
 }
 
 /**********************************************
 
-	MSG_META_CONTENT_VIEW_WIN_CLOSED
+    MSG_META_CONTENT_VIEW_WIN_CLOSED
 
-	Funktion:  delete WindowHandle
+    Funktion:  delete WindowHandle
 
-	IN:     -
+    IN:     -
 
-	OUT:    -
+    OUT:    -
 
  **********************************************/
 
-@method BSQPProcessClass , MSG_META_CONTENT_VIEW_WIN_CLOSED
+@method BSQPProcessClass, MSG_META_CONTENT_VIEW_WIN_CLOSED
 {
-	winHan = 0;
+    winHan = 0;
 }
 
 /**********************************************
 
-	MSG_META_EXPOSED
+    MSG_META_EXPOSED
 
  Funktion:  redraw content of GenView
 
@@ -361,77 +358,76 @@ typedef struct {
 
 @method BSQPProcessClass, MSG_META_EXPOSED
 {
-  	GStateHandle gstate;
+    GStateHandle gstate;
 
-  	gstate = GrCreateState(win);
-  	GrBeginUpdate(gstate);
+    gstate = GrCreateState(win);
+    GrBeginUpdate(gstate);
 
-	(void)RedrawSettings (gstate);
-  	RedrawRMS (gstate) ;
-        RedrawTime (gstate);
-	RedrawStatus(gstate);
-        RedrawFileName(gstate);
+    (void)RedrawSettings (gstate);
+    RedrawRMS (gstate) ;
+    RedrawTime (gstate);
+    RedrawStatus(gstate);
+    RedrawFileName(gstate);
 
-  	GrEndUpdate(gstate);
-  	GrDestroyState(gstate);
-
+    GrEndUpdate(gstate);
+    GrDestroyState(gstate);
 }
 
 /**********************************************
 
-	MSG_PROCESS_BSQP_PLAY
+    MSG_PROCESS_BSQP_PLAY
 
- 	Handler for PLAY/PAUSE-Trigger
+    Handler for PLAY/PAUSE-Trigger
 
 
- IN:	(glob)	playFlag
- 		1 = PLAY
+ IN:    (glob)  playFlag
+        1 = PLAY
                 2 = PAUSE
 
  **********************************************/
 
 @method BSQPProcessClass, MSG_PROCESS_BSQP_PLAY
 {
-        char	*ptr = playText;
+    char    *ptr = playText;
 
-        if (playFlag)
+    if (playFlag)
+    {
+        // PAUSE on/off
+        // the value of the playFlag is identically
+        // to the mode parameter so we can use
+        // the playflag for switching on/off
+        (void)BSNWaveSetPause(playFlag);
+
+        // toggle state
+        if (playFlag == BQ_PLAYFLAG_PLAY)
         {
-            // PAUSE on/off
-            // the value of the playFlag is identically
-            // to the mode parameter so we can use
-            // the playflag for switching on/off
-	    (void)BSNWaveSetPause(playFlag);
-
-            // toggle state
-            if (playFlag == BQ_PLAYFLAG_PLAY)
-            {
-                // PLAY --> PAUSE
-            	playFlag = BQ_PLAYFLAG_PAUSE;
-                ptr = playText;
-            }
-            else
-            {
-                // PAUSE --> PLAY
-            	playFlag = BQ_PLAYFLAG_PLAY;
-                ptr = pauseText;
-            };
-
-            // update text of PLAYTrigger
-            @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(ptr,VUM_NOW);
-
-            // update display
-            RedrawStatus(0);
+            // PLAY --> PAUSE
+            playFlag = BQ_PLAYFLAG_PAUSE;
+            ptr = playText;
         }
         else
         {
-	    // Start playing
-            BQ_StartPlay();
+            // PAUSE --> PLAY
+            playFlag = BQ_PLAYFLAG_PLAY;
+            ptr = pauseText;
         };
+
+        // update text of PLAYTrigger
+        @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(ptr,VUM_NOW);
+
+        // update display
+        RedrawStatus(0);
+    }
+    else
+    {
+        // Start playing
+        BQ_StartPlay();
+    };
 }
 
 /**********************************************
 
-	MSG_PROCESS_BSQP_OPEN
+    MSG_PROCESS_BSQP_OPEN
 
         Handler for "Open..." trigger
 
@@ -439,185 +435,181 @@ typedef struct {
 
 @method BSQPProcessClass, MSG_PROCESS_BSQP_OPEN
 {
-        char		pathBuffer[256];
-        char		*pB = &pathBuffer;
-        DiskHandle 	WCI_soundDiskHandle;
-        Message		msg = MSG_GEN_SET_NOT_ENABLED;
+    char        pathBuffer[256];
+    char        *pB = &pathBuffer;
+    DiskHandle  WCI_soundDiskHandle;
+    Message     msg = MSG_GEN_SET_NOT_ENABLED;
 
-        // Set point to WAV-path
-        pB = &fullPath;
+    // Set point to WAV-path
+    pB = &fullPath;
 
-	// File name
-	(void) @call WavFileSelector::
-	    MSG_GEN_FILE_SELECTOR_GET_SELECTION(WCI_soundName);
+    // File name
+    (void) @call WavFileSelector::
+    MSG_GEN_FILE_SELECTOR_GET_SELECTION(WCI_soundName);
 
-        // Display Name in Primary
-  	@call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(WCI_soundName,VUM_NOW);/**/
+    // Display Name in Primary
+    @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(WCI_soundName,VUM_NOW);/**/
 
-	// Path
-	(void) @call WavFileSelector::
-	    MSG_GEN_FILE_SELECTOR_GET_FULL_SELECTION_PATH(&WCI_soundPath);
+    // Path
+    (void) @call WavFileSelector::
+    MSG_GEN_FILE_SELECTOR_GET_FULL_SELECTION_PATH(&WCI_soundPath);
 
-	// Disk Handle
-	WCI_soundDiskHandle = @call WavFileSelector::
-	    MSG_GEN_PATH_GET_DISK_HANDLE();	/**/
+    // Disk Handle
+    WCI_soundDiskHandle = @call WavFileSelector::
+    MSG_GEN_PATH_GET_DISK_HANDLE(); /**/
 
-        // Create full path
-        (void)FileConstructFullPath(&pB,
-				   256,
-                                   WCI_soundDiskHandle,
-                                   WCI_soundPath,
-                                   TRUE);
+    // Create full path
+    (void)FileConstructFullPath(&pB,
+                                256,
+                                WCI_soundDiskHandle,
+                                WCI_soundPath,
+                                TRUE);
 
+    // check WAV-file
+    if (BQ_CheckForPlay())
+    {
+        msg = MSG_GEN_SET_ENABLED;
+    };
 
-        // check WAV-file
-        if (BQ_CheckForPlay())
-        {
-	    msg = MSG_GEN_SET_ENABLED;
-        };
+    // update PLAYTrigger
+    @send PLAYTrigger::{MSG_GEN_SET_ENABLED} msg(VUM_NOW);
 
-        // update PLAYTrigger
-    	@send PLAYTrigger::{MSG_GEN_SET_ENABLED}msg(VUM_NOW);
-
-	// update Display
-        RedrawFileName(0);
+    // update Display
+    RedrawFileName(0);
 }
 
 /**********************************************
 
-	MSG_BSQP_FILE_SELECTED
+    MSG_BSQP_FILE_SELECTED
 
         Handler for Fileselector
         (user has changed the selection)
 
-	IN:     dword	entryFlags
+    IN:     dword   entryFlags
 
-	OUT:    -
+    OUT:    -
 
-	called by :  WavFileSelector
+    called by :  WavFileSelector
 
  **********************************************/
 
-@method BSQPProcessClass , MSG_BSQP_FILE_SELECTED
+@method BSQPProcessClass, MSG_BSQP_FILE_SELECTED
 {
-        Message	msg = MSG_GEN_SET_ENABLED;
+    Message msg = MSG_GEN_SET_ENABLED;
 
-
-        // file selected ?
-        // PLAY not active ?
-        if (GFS_GET_ENTRY_TYPE(entryFlags) == GFSET_FILE)
+    // file selected ?
+    // PLAY not active ?
+    if (GFS_GET_ENTRY_TYPE(entryFlags) == GFSET_FILE)
+    {
+        if (playFlag)
         {
-            if (playFlag)
-            {
-		// PLAY
+            // PLAY
 
-                // Doubleclick ?
-                if (GFS_GET_ENTRY_FLAGS(entryFlags) & GFSEF_OPEN)
+            // Doubleclick ?
+            if (GFS_GET_ENTRY_FLAGS(entryFlags) & GFSEF_OPEN)
+            {
+                // Closing FileSelectorBox
+                if (bqOptions & BQ_OPTION_CLOSE_SELECTOR)
                 {
-                    // Closing FileSelectorBox
-                    if (bqOptions & BQ_OPTION_CLOSE_SELECTOR)
-                    {
-		        @call FileSelectorBox::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
-                        TimerSleep(20);
-                    };
+                    @call FileSelectorBox::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
+                    TimerSleep(20);
+                };
 
-                    // Stopping, Displaying, Playing
-		    BSNWaveStop();
-                    @call oself::MSG_PROCESS_BSQP_OPEN();
-		    BQ_StartPlay();
-	        };
-            }
-            else
-            {
-                // no PLAY
+                // Stopping, Displaying, Playing
+                BSNWaveStop();
                 @call oself::MSG_PROCESS_BSQP_OPEN();
-
-    	        // Enabling Select-Trigger
-	        msg = MSG_GEN_SET_ENABLED;
-
-                // Doubleclick ?
-                if (GFS_GET_ENTRY_FLAGS(entryFlags) & GFSEF_OPEN)
-                {
-                    // Closing FileSelectorBox
-                    if (bqOptions & BQ_OPTION_CLOSE_SELECTOR)
-                    {
-		        @call FileSelectorBox::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
-                        TimerSleep(20);
-                    };
-
-		    BQ_StartPlay();
-	        };
+                BQ_StartPlay();
             };
-
-
         }
         else
         {
-            // No file selected !
-    	    // Disabling Select-Trigger
-	    msg = MSG_GEN_SET_NOT_ENABLED;
+            // no PLAY
+            @call oself::MSG_PROCESS_BSQP_OPEN();
+
+            // Enabling Select-Trigger
+            msg = MSG_GEN_SET_ENABLED;
+
+            // Doubleclick ?
+            if (GFS_GET_ENTRY_FLAGS(entryFlags) & GFSEF_OPEN)
+            {
+                // Closing FileSelectorBox
+                if (bqOptions & BQ_OPTION_CLOSE_SELECTOR)
+                {
+                    @call FileSelectorBox::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
+                    TimerSleep(20);
+                };
+
+                BQ_StartPlay();
+            };
         };
+    }
+    else
+    {
+        // No file selected !
+        // Disabling Select-Trigger
+        msg = MSG_GEN_SET_NOT_ENABLED;
+    };
 
-        // disable/enable "Select" Trigger
-    	@send FileSelectorOpenTrigger::{MSG_GEN_SET_ENABLED}msg(VUM_NOW);
+    // disable/enable "Select" Trigger
+    @send FileSelectorOpenTrigger::{MSG_GEN_SET_ENABLED} msg(VUM_NOW);
 }
 
 
 /**********************************************
 
-	MSG_BSQP_TIME_DISP_LIST_APPLY
+    MSG_BSQP_TIME_DISP_LIST_APPLY
 
- IN:	word	selection
- 	word	numSelections
-        byte	stateFlags
+    IN: word    selection
+        word    numSelections
+        byte    stateFlags
 
  **********************************************/
 
-@method BSQPProcessClass , MSG_BSQP_TIME_DISP_LIST_APPLY
+@method BSQPProcessClass, MSG_BSQP_TIME_DISP_LIST_APPLY
 {
-	bqDispStyle = selection;
+    bqDispStyle = selection;
 
-	RedrawTime(0);
+    RedrawTime(0);
 }
 
 /**********************************************
 
-	MSG_BSQP_OPTIONS_APPLY
+    MSG_BSQP_OPTIONS_APPLY
 
- IN:	word	selectedBoolean
- 	word	indeterminateBooleans
-        word	modifiedBooleans
+ IN:    word    selectedBoolean
+        word    indeterminateBooleans
+        word    modifiedBooleans
 
  **********************************************/
 
-@method BSQPProcessClass , MSG_BSQP_OPTIONS_APPLY
+@method BSQPProcessClass, MSG_BSQP_OPTIONS_APPLY
 {
-	bqOptions = selectedBooleans;
+    bqOptions = selectedBooleans;
 }
 
 /**********************************************
 
-	MSG_META_SAVE_OPTIONS
+    MSG_META_SAVE_OPTIONS
 
  **********************************************/
 
-@method BSQPProcessClass , MSG_META_SAVE_OPTIONS
+@method BSQPProcessClass, MSG_META_SAVE_OPTIONS
 {
-        char	*cat;
-        char	*key;
+    char    *cat;
+    char    *key;
 
-	MemLock(HandleOf(@category));
+    MemLock(HandleOf(@category));
 
-	// Options
-        cat = LMemDeref(@category);
-        key = LMemDeref(@optionsKey);
-	InitFileWriteInteger(cat,key,bqOptions);
+    // Options
+    cat = LMemDeref(@category);
+    key = LMemDeref(@optionsKey);
+    InitFileWriteInteger(cat,key,bqOptions);
 
-        // Timedisplay
-	InitFileWriteInteger(cat,LMemDeref(@displayKey),bqDispStyle);
+    // Timedisplay
+    InitFileWriteInteger(cat,LMemDeref(@displayKey),bqDispStyle);
 
-	MemUnlock(HandleOf(@category));
+    MemUnlock(HandleOf(@category));
 
-	InitFileSave();
+    InitFileSave();
 }
 
