@@ -67,7 +67,7 @@ DESCRIPTION:
     ATTR_GEN_HELP_FILE = @TEXT_HELP_FILE;
 }
 
-@visMoniker BSQPTextMoniker = "WAV-QuickPlayer";
+@visMoniker BSQPTextMoniker = "Audio QuickPlayer";
 
 @end    AppResource;
 
@@ -212,11 +212,11 @@ DESCRIPTION:
 }
 
 @object GenGlyphClass InfoGlyph1 = {
-    GI_visMoniker = "WAV QuickPlayer";
+    GI_visMoniker = "Audio QuickPlayer";
 }
 
 @object GenGlyphClass InfoGlyph2 = {
-    GI_visMoniker = "Play WAV files by double-clicking them.";
+    GI_visMoniker = "Play audio files (WAV/QOA) by double-clicking them.";
 }
 
 @object GenGlyphClass InfoGlyph3 = {
@@ -272,7 +272,8 @@ DESCRIPTION:
 {
     GFSI_destination = process;
     GFSI_notificationMsg = MSG_BSQP_FILE_SELECTED;
-    ATTR_GEN_FILE_SELECTOR_NAME_MASK = {"*.WAV"};
+    //ATTR_GEN_FILE_SELECTOR_NAME_MASK = {"*.WAV","*.QOA"};
+    ATTR_GEN_FILE_SELECTOR_NAME_MASK = {"*.*"};
     ATTR_GEN_PATH_DATA = {SP_DOCUMENT,0};
     HINT_FILE_SELECTOR_NUMBER_OF_FILES_TO_SHOW = 15;
 }
@@ -445,7 +446,7 @@ DESCRIPTION:
         c = aplb->ALB_dataFile[0];
         if (c)
         {
-            // Display WAV-Name
+            // Display file name
             @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(aplb->ALB_dataFile,VUM_NOW);
 
             // Play File

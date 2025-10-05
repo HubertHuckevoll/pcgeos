@@ -31,6 +31,6 @@ qoa_decode.obj \
 qoa_decode.eobj: qoa.goh
 qoa_decode.obj \
 qoa_decode.eobj: geos.h geoworks.h file.h library.h geode.h driver.h lmem.h \
-                initfile.h ec.h Ansi/string.h heap.h
+                initfile.h ec.h system.h Ansi/string.h heap.h
 
 qoaEC.geo qoa.geo : geos.ldf ansic.ldf bsnwav.ldf 

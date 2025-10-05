@@ -21,7 +21,7 @@ REVISION HISTORY:
     DL      14.08.2000  Translation for ND
 
 DESCRIPTION:
-    Application play WAV-file after double click in NewManager
+    Application play audio files after double click in NewManager
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
@@ -86,13 +86,13 @@ DESCRIPTION:
     capabFlag = BSNWaveCheckDriver(0,5);
 
     // Overwrite old Filename in Primary
-    @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("QuickPlayer",VUM_NOW);/**/
+    @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("Audio QuickPlayer",VUM_NOW);/**/
 
     // detect Datafile
     if (launchBlock)
     {
         // set Quickplaymode
-        // Quickplaymode --> 1. Play WAV-file 2. shutdown BSQP
+        // Quickplaymode --> 1. Play audio file 2. shutdown BSQP
         quickMode = BQ_QUICK_START;
 
         aplb = MemLock(launchBlock);
@@ -111,7 +111,7 @@ DESCRIPTION:
         c = aplb->ALB_dataFile[0];
         if (c)
         {
-            // Display WAV-Name
+            // Display file name
             @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(aplb->ALB_dataFile,VUM_NOW);/**/
 
             // Start playing
@@ -120,7 +120,7 @@ DESCRIPTION:
         }
         else
         {
-            // no WAV-file -> Normalmode
+            // no file -> Normalmode
             fullPath[0] = 0;
             quickMode = BQ_QUICK_OFF;
         };
@@ -306,7 +306,7 @@ typedef struct {
 
     // set stopflag on old BSWAV-Library
     // its not necessary if only BSNWAV will
-    // be used for playing the WAV's
+    // be used for playing audio files
 //  BSWavStop(1);
 }
 
@@ -440,7 +440,7 @@ typedef struct {
     DiskHandle  WCI_soundDiskHandle;
     Message     msg = MSG_GEN_SET_NOT_ENABLED;
 
-    // Set point to WAV-path
+    // Set point to file path
     pB = &fullPath;
 
     // File name
@@ -465,7 +465,7 @@ typedef struct {
                                 WCI_soundPath,
                                 TRUE);
 
-    // check WAV-file
+    // check selected file
     if (BQ_CheckForPlay())
     {
         msg = MSG_GEN_SET_ENABLED;

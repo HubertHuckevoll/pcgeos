@@ -23,6 +23,8 @@ DESCRIPTION:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
+@include <qoa.goh>
+
 // Timedisplaymode
 #define BQ_TIME_DISP_NORMAL 1
 #define BQ_TIME_DISP_REMAIN 2
@@ -36,6 +38,10 @@ DESCRIPTION:
 #define BQ_QUICK_OFF    0
 #define BQ_QUICK_START  1
 #define BQ_QUICK_END    2
+
+// File types
+#define BQ_FILE_TYPE_WAV    0
+#define BQ_FILE_TYPE_QOA    1
 
 // Playstate
 #define BQ_PLAYFLAG_PLAY    1
@@ -70,3 +76,5 @@ extern  Color       backGroundColor;
 extern  word        bqOptions;  // global value for options
 extern  word        bqDispStyle;    // 1=normal 2=remaining
 extern  Boolean     bqMinimizedState;
+extern  word        bqFileType;
+extern  QOAInfo     bqQoaInfo;

@@ -23,6 +23,8 @@ DESCRIPTION:
 
 @include <bsnwav.goh>       /* this include-line must be the first ! */
 
+@include "Main/bsqp.goh"
+
 @include <stdapp.goh>
 
 char            fullPath[250];
@@ -50,4 +52,7 @@ dword           bqAllBytes = 0;
 word            bqOptions = 0;      // global value for options
 word            bqDispStyle = 1;    // 1=normal 2=remaining
 Boolean         bqMinimizedState = FALSE;
+
+word            bqFileType = BQ_FILE_TYPE_WAV;
+QOAInfo         bqQoaInfo;
 

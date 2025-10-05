@@ -7,12 +7,21 @@
 
 #include <Ansi/string.h>
 #include <library.h>
+#include <system.h>
 
 
 /* ------------ Internal static playback context ------------ */
 /* BSNWAV's callback type has no user-data -> keep a static handle. */
 static QOAHandle *s_qoaHandle = 0;
 static word       s_qoaChannels = 1;
+static dword      s_totalFramesDecoded = 0;
+
+static void QOA_ResetStaticState(void)
+{
+    s_qoaHandle = 0;
+    s_qoaChannels = 1;
+    s_totalFramesDecoded = 0;
+}
 
 /* BSNWAV will invoke this: PCB(word,routine,(void *,word)) */
 static word _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
@@ -33,44 +42,66 @@ static word _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
         return 1;
     }
 
-    framesReq = (dword)wantBytes / (dword)blockAlign;
     dst = (signed short*)dstBuf;
 
-    if (framesReq == 0)
+    if (wantBytes == 0)
     {
-        memset(dstBuf, 0, wantBytes);
         return 0;
     }
-    framesGot = qoaReadS16(s_qoaHandle, framesReq, dst);
-    if (framesGot > framesReq)
-    {
-        framesGot = framesReq;
-    }
 
     {
+        signed short *writePtr;
         dword producedBytes;
-        dword zeroBytes;
-        byte  *fill;
 
-        producedBytes = framesGot * (dword)blockAlign;
-        if (producedBytes > (dword)wantBytes)
+        writePtr = dst;
+        producedBytes = 0;
+
+        while (producedBytes + (dword)blockAlign <= (dword)wantBytes)
         {
-            producedBytes = wantBytes;
+            dword framesDesired;
+            dword framesGot;
+
+            framesDesired = ((dword)wantBytes - producedBytes) / blockAlign;
+            if (framesDesired == 0)
+            {
+                break;
+            }
+
+            framesGot = qoaReadS16(s_qoaHandle, framesDesired, writePtr);
+            if (framesGot == 0)
+            {
+                SysNotify(SNF_CONTINUE, "QOA cb: EOF", 0);
+                break;
+            }
+
+            s_totalFramesDecoded += framesGot;
+
+            writePtr      += framesGot * (dword)s_qoaChannels;
+            producedBytes += framesGot * blockAlign;
+            {
+                char dbg[50];
+                sprintf(dbg, "QOA cb: got=%lu bytes=%lu", framesGot, producedBytes);
+                SysNotify(SNF_CONTINUE, dbg, 0);
+            }
+
+            if (framesGot < framesDesired)
+            {
+                break;
+            }
         }
 
-        zeroBytes = (dword)wantBytes - producedBytes;
-        if (zeroBytes > 0)
+        if (producedBytes < (dword)wantBytes)
         {
-            if (zeroBytes > 0xffffUL)
-            {
-                zeroBytes = 0xffffUL;
-            }
-            fill = (byte *)dstBuf + producedBytes;
-            memset(fill, 0, (word)zeroBytes);
+            byte *fill;
+            dword remaining;
+
+            remaining = (dword)wantBytes - producedBytes;
+            fill = (byte *)writePtr;
+            memset(fill, 0, (word)remaining);
         }
     }
 
-    return 0; /* 0 == success for BSNW */
+    return 0;
 }
 
 /* ------------ Public player API ------------ */
@@ -106,17 +137,22 @@ int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
                                  playFlags,
                                  parent,
                                  (word (_pascal *)(void *, word))QOA_BSNW_Callback);
-
-    s_qoaHandle = 0;
-    s_qoaChannels = 1;
-
     qoaClose(qh);
+
+    {
+        char dbg[40];
+        sprintf(dbg, "QOA frames=%lu", s_totalFramesDecoded);
+        SysNotify(SNF_CONTINUE, dbg, 0);
+    }
+
+    QOA_ResetStaticState();
     return status;
 }
 
 void _pascal _export QOAStop(void)
 {
     BSNWaveStop();
+    QOA_ResetStaticState();
 }
 
 #ifdef __HIGHC__
@@ -129,8 +165,7 @@ Boolean _pascal _export QOALibEntry(LibraryCallType call, GeodeHandle client)
 
     if (call == LCT_DETACH)
     {
-        s_qoaHandle = 0;
-        s_qoaChannels = 1;
+        QOA_ResetStaticState();
     }
 
     return FALSE;

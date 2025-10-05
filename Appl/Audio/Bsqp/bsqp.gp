@@ -14,7 +14,7 @@
 
 name bsqp.app
 
-longname "WAV QuickPlayer"
+longname "Audio QuickPlayer"
 
 type    appl, process, single
 
@@ -32,6 +32,7 @@ stack       5000
 library geos
 library ui
 library bsnwav
+library qoa
 library ansic
 library sound
 

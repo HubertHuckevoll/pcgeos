@@ -6,7 +6,7 @@
 
 name            qoa.lib
 longname        "QOA Audio Decoder"
-tokenchars      "QOA "
+tokenchars      "QOA0"
 tokenid         0
 
 type            library, single, c-api
@@ -19,4 +19,4 @@ entry           QOALIBENTRY
 
 export          QOAPLAYFILE
 export          QOASTOP
-
+export          QOAPROBEFILE

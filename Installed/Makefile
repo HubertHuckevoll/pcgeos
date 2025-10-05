@@ -1786,7 +1786,7 @@ bsd8st	: Installed/Driver/Sound/BSD8ST
 Installed/Driver/Sound/BSD8ST:			kernel stream MAKEDRV
 
 bsqp	: Installed/Appl/Audio/Bsqp
-Installed/Appl/Audio/Bsqp:			bsnwav ansic ui MAKEAPPL
+Installed/Appl/Audio/Bsqp:			bsnwav qoa ansic ui MAKEAPPL
 
 sndchk	: Installed/Appl/Audio/SndChk
 Installed/Appl/Audio/SndChk:			bsnwav wav ansic ui MAKEAPPL

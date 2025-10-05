@@ -10,6 +10,7 @@
 #include <initfile.h>
 #include <geode.h>
 #include <ec.h>
+#include <system.h>
 
 #include <Ansi/string.h>
 #include <file.h>
@@ -268,18 +269,21 @@ static int  QOA_LoadNextFrame(QOAHandle *q)
 
     if ((word)channels != q->info.channels || samplerate != q->info.sampleRate)
     {
+        SysNotify(SNF_CONTINUE, "QOA frame mismatch", 0);
         q->eofReached = TRUE;
         return 0;
     }
 
     if (fsamples == 0 || fsamples > (QOA_SLICES_PER_FRAME * QOA_SLICE_LEN))
     {
+        SysNotify(SNF_CONTINUE, "QOA fsamples invalid", 0);
         q->eofReached = TRUE;
         return 0;
     }
 
     if (fsize < (word)(8 + QOA_LMS_LEN * 4 * (word)channels))
     {
+        SysNotify(SNF_CONTINUE, "QOA fsize too small", 0);
         q->eofReached = TRUE;
         return 0;
     }
@@ -291,6 +295,7 @@ static int  QOA_LoadNextFrame(QOAHandle *q)
 
     if (dataBytes != expectedBytes)
     {
+        SysNotify(SNF_CONTINUE, "QOA data len mismatch", 0);
         q->eofReached = TRUE;
         return 0;
     }
@@ -346,12 +351,14 @@ static int  QOA_LoadNextSliceGroup(QOAHandle *q)
     {
         if (q->frameDataBytesLeft < 8)
         {
+            SysNotify(SNF_CONTINUE, "QOA slice: not enough bytes", 0);
             q->eofReached = TRUE;
             return 0;
         }
 
         if (!QOA_Read8(q->fileH, slice8, 8))
         {
+            SysNotify(SNF_CONTINUE, "QOA slice: read failure", 0);
             q->eofReached = TRUE;
             return 0;
         }
@@ -363,6 +370,7 @@ static int  QOA_LoadNextSliceGroup(QOAHandle *q)
         q->scalefactor[c] = (byte)QBR_Get(&q->sliceBits[c], 4, &ok);
         if (!ok)
         {
+            SysNotify(SNF_CONTINUE, "QOA slice: scalefactor error", 0);
             q->eofReached = TRUE;
             return 0;
         }
@@ -388,6 +396,7 @@ static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *out
         {
             if (!QOA_LoadNextSliceGroup(q))
             {
+                SysNotify(SNF_CONTINUE, "QOA: failed to load slice group", 0);
                 break;
             }
         }
@@ -413,6 +422,7 @@ static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *out
                 code3 = QBR_Get(&q->sliceBits[ch], 3, &ok);
                 if (!ok)
                 {
+                    SysNotify(SNF_CONTINUE, "QOA bits read error", 0);
                     q->eofReached = TRUE;
                     return produced;
                 }
@@ -526,12 +536,18 @@ dword _pascal qoaReadS16(QOAHandle *q, dword framesToRead, signed short *dst)
         {
             if (!QOA_LoadNextFrame(q))
             {
+                SysNotify(SNF_CONTINUE, "qoaReadS16: no more frames", 0);
                 break;
             }
         }
 
         chunk = (framesToRead > 512UL) ? 512 : (word)framesToRead;
         got = QOA_ProduceFromFrame(q, chunk, dst);
+        {
+            char dbg[60];
+            sprintf(dbg, "qoaReadS16: want=%lu got=%u left=%u", framesToRead, got, q->frameSamplesLeft);
+            SysNotify(SNF_CONTINUE, dbg, 0);
+        }
         if (got == 0)
         {
             break;
@@ -607,6 +623,38 @@ int _pascal qoaSeek(QOAHandle *q, dword frameIndex)
 
     q->pcmCursor = frameIndex;
     return 1;
+}
+
+Boolean _pascal _export QOAProbeFile(FileHandle fh, QOAInfo *outInfo)
+{
+    QOAHandle *qh;
+    QOAInfo    tmp;
+    Boolean    ok;
+
+    if (!fh)
+    {
+        return FALSE;
+    }
+
+    FilePos(fh, 0, FILE_POS_START);
+
+    qh = qoaOpenGEOS(fh, &tmp);
+    if (!qh)
+    {
+        FilePos(fh, 0, FILE_POS_START);
+        return FALSE;
+    }
+
+    if (outInfo)
+    {
+        *outInfo = tmp;
+    }
+
+    qoaClose(qh);
+    ok = TRUE;
+
+    FilePos(fh, 0, FILE_POS_START);
+    return ok;
 }
 
 void _pascal qoaClose(QOAHandle *q)

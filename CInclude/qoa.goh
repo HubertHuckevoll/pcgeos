@@ -33,6 +33,9 @@ int  _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent);
 /* Convenience stop — just forwards to BSNWaveStop() */
 void _pascal _export QOAStop(void);
 
+/* Quick probe: read metadata without keeping decoder open. */
+Boolean _pascal _export QOAProbeFile(FileHandle fh, QOAInfo *outInfo);
+
 /* -------- Decoder (standalone pull API) -------- */
 /* These are provided by qoa_decode.c. Keep them non-export by default. */
 
@@ -46,6 +49,7 @@ void        _pascal qoaClose(QOAHandle *q);
 #ifdef __HIGHC__
 pragma Alias(QOAPlayFile, "QOAPLAYFILE");
 pragma Alias(QOAStop, "QOASTOP");
+pragma Alias(QOAProbeFile, "QOAPROBEFILE");
 #endif
 
 #endif /* __QOA_GOH__ */

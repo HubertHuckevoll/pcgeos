@@ -26,10 +26,12 @@ DESCRIPTION:
 @ifndef __MAIN_SUBCODE_GOH
 @define __MAIN_SUBCODE_GOH
 
+@include <qoa.goh>
+
 /************* functions ****************/
 
 Boolean _pascal BQ_CheckForPlay(void);
-// check WAV-file for playing
+// check selected audio file for playing
 
 void _pascal BQ_DrawCenterText(GStateHandle  gstate,
                                char      *text,
@@ -41,9 +43,9 @@ void _pascal BQ_DrawCenterText(GStateHandle  gstate,
 void _pascal BQ_StartPlay(void);
 // Start playing in sep. thread
 
-word BQ_PlayThread(word wavFile);
+word BQ_PlayThread(word fileWord);
 // called by ThreadCreate
-// wavFile is a filehandle !
+// fileWord carries the FileHandle
 
 // Display
 void RedrawStatus (GStateHandle gstate);

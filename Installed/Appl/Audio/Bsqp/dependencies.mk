@@ -16,7 +16,7 @@ bsqp.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gItemC.goh Objects/gBoolC.goh \
                 Objects/gGadgetC.goh Objects/gToolCC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh
+                Objects/helpCC.goh Main/bsqp.goh qoa.goh
 bsqp.obj \
 bsqp.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -46,7 +46,7 @@ process.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gGadgetC.goh Objects/gToolCC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh UI/uimain.goh Main/process.goh \
-                Main/subcode.goh Main/bsqp.goh
+                Main/subcode.goh qoa.goh Main/bsqp.goh
 process.obj \
 process.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -75,7 +75,7 @@ subcode.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gItemC.goh Objects/gBoolC.goh \
                 Objects/gGadgetC.goh Objects/gToolCC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh UI/uimain.goh Main/process.goh \
+                Objects/helpCC.goh qoa.goh UI/uimain.goh Main/process.goh \
                 Main/subcode.goh Main/bsqp.goh
 subcode.obj \
 subcode.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
@@ -106,7 +106,7 @@ uimain.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gGadgetC.goh Objects/gToolCC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh UI/uimain.goh Main/process.goh \
-                Main/subcode.goh Main/bsqp.goh Art/appmkr.goh
+                Main/subcode.goh qoa.goh Main/bsqp.goh Art/appmkr.goh
 uimain.obj \
 uimain.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -118,4 +118,4 @@ uimain.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
                 dirksnd.h Ansi/stdio.h Ansi/string.h
 
-bsqpEC.geo bsqp.geo : geos.ldf ui.ldf bsnwav.ldf ansic.ldf sound.ldf 
+bsqpEC.geo bsqp.geo : geos.ldf ui.ldf bsnwav.ldf qoa.ldf ansic.ldf sound.ldf 
