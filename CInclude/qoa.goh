@@ -1,0 +1,51 @@
+/****************************************************************
+ *  qoa.goh — Public header for the QOA decoder/player (PC/GEOS)
+ *
+ *  Surface:
+ *      - QOAPlayFile(): play a .qoa file through BSNWAV
+ *      - QOAStop(): stop current QOA playback (forwards to BSNWAV)
+ *
+ *  Optional (decoder-only) API if a client wants raw PCM:
+ *      - qoaOpenGEOS(), qoaReadS16(), qoaSeek(), qoaClose()
+ ****************************************************************/
+
+#ifndef __QOA_GOH__
+#define __QOA_GOH__
+
+#include <geos.h>
+#include <geoworks.h>
+#include <file.h>
+
+// @deflib qoa
+
+typedef struct {
+    word    channels;       /* 1..8 */
+    dword   sampleRate;     /* Hz */
+    dword   totalFrames;    /* samples per channel in the file */
+    word    bitsPerSample;  /* always 16 for decoded PCM */
+} QOAInfo;
+
+/* -------- Player (uses BSNWAV under the hood) -------- */
+
+/* Play a QOA file via BSNWAV. Same calling pattern as BSNWavePlayFile. */
+int  _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent);
+
+/* Convenience stop — just forwards to BSNWaveStop() */
+void _pascal _export QOAStop(void);
+
+/* -------- Decoder (standalone pull API) -------- */
+/* These are provided by qoa_decode.c. Keep them non-export by default. */
+
+typedef struct _QOAHandle QOAHandle;
+
+QOAHandle * _pascal qoaOpenGEOS(FileHandle fh, QOAInfo *outInfo);
+dword       _pascal qoaReadS16(QOAHandle *q, dword framesToRead, signed short *dst);
+int         _pascal qoaSeek(QOAHandle *q, dword frameIndex);
+void        _pascal qoaClose(QOAHandle *q);
+
+#ifdef __HIGHC__
+pragma Alias(QOAPlayFile, "QOAPLAYFILE");
+pragma Alias(QOAStop, "QOASTOP");
+#endif
+
+#endif /* __QOA_GOH__ */

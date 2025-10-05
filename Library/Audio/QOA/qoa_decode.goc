@@ -1,0 +1,627 @@
+/***************************************************************
+ *  qoa_decode.goc — Pure QOA decoder (no sound output)
+ *  PC/GEOS, GOC/C89, small memory footprint, streaming decode.
+ ***************************************************************/
+
+@include <qoa.goh>
+
+#include <library.h>
+#include <driver.h>
+#include <initfile.h>
+#include <geode.h>
+#include <ec.h>
+
+#include <Ansi/string.h>
+#include <file.h>
+#include <heap.h>
+
+/* ---------- QOA on-wire constants ---------- */
+#define QOA_MAGIC               0x716f6166UL /* 'qoaf' big-endian */
+#define QOA_MAX_CHANNELS        8
+#define QOA_LMS_LEN             4
+#define QOA_SLICE_LEN           20          /* samples per slice */
+#define QOA_SLICES_PER_FRAME    256         /* maximum slices in a frame */
+
+/* ---------- Dequantization table (from reference) ---------- */
+static const int qoa_dequant_tab[16][8] = {
+    {   1,   -1,    3,   -3,    5,   -5,    7,   -7},
+    {   5,   -5,   18,  -18,   32,  -32,   49,  -49},
+    {  16,  -16,   53,  -53,   95,  -95,  147, -147},
+    {  34,  -34,  113, -113,  203, -203,  315, -315},
+    {  63,  -63,  210, -210,  378, -378,  588, -588},
+    { 104, -104,  345, -345,  621, -621,  966, -966},
+    { 158, -158,  528, -528,  950, -950, 1477,-1477},
+    { 228, -228,  760, -760, 1368,-1368, 2128,-2128},
+    { 316, -316, 1053,-1053, 1895,-1895, 2947,-2947},
+    { 422, -422, 1405,-1405, 2529,-2529, 3934,-3934},
+    { 548, -548, 1828,-1828, 3290,-3290, 5117,-5117},
+    { 696, -696, 2320,-2320, 4176,-4176, 6496,-6496},
+    { 868, -868, 2893,-2893, 5207,-5207, 8099,-8099},
+    {1064,-1064, 3548,-3548, 6386,-6386, 9933,-9933},
+    {1286,-1286, 4288,-4288, 7718,-7718,12005,-12005},
+    {1536,-1536, 5120,-5120, 9216,-9216,14336,-14336},
+};
+
+/* ---------- LMS predictor ---------- */
+typedef struct
+{
+    int history[QOA_LMS_LEN];
+    int weights[QOA_LMS_LEN];
+} QOALMS;
+
+static int QOA_LMS_Predict(QOALMS *l)
+{
+    int p;
+    int i;
+    p = 0;
+    for (i = 0; i < QOA_LMS_LEN; i++)
+    {
+        p += l->weights[i] * l->history[i];
+    }
+    return p >> 13;
+}
+
+static void QOA_LMS_Update(QOALMS *l, int sample, int residual)
+{
+    int delta;
+    int i;
+    delta = residual >> 4;
+    for (i = 0; i < QOA_LMS_LEN; i++)
+    {
+        l->weights[i] += (l->history[i] < 0) ? -delta : delta;
+    }
+    for (i = 0; i < (QOA_LMS_LEN - 1); i++)
+    {
+        l->history[i] = l->history[i + 1];
+    }
+    l->history[QOA_LMS_LEN - 1] = sample;
+}
+
+static int QOA_ClampS16(int v)
+{
+    if (v < -32768)
+    {
+        return -32768;
+    }
+    if (v > 32767)
+    {
+        return 32767;
+    }
+    return v;
+}
+
+/* ---------- 8-byte MSB-first slice bit reader ---------- */
+typedef struct
+{
+    byte data[8];
+    byte bytePos; /* 0..7 */
+    byte bitPos;  /* 0..7, 0 = MSB */
+} QOABitsBE;
+
+static void QBR_Init(QOABitsBE *br, const byte *src8)
+{
+    (void)memcpy((void*)br->data, (const void*)src8, 8);
+    br->bytePos = 0;
+    br->bitPos = 0;
+}
+
+static unsigned long QBR_Get(QOABitsBE *br, word nbits, int *ok)
+{
+    unsigned long val;
+    word n;
+    val = 0;
+    n = nbits;
+
+    while (n > 0)
+    {
+        byte cur;
+        byte avail;
+        byte take;
+        byte mask;
+        byte shift;
+        byte bitsVal;
+
+        if (br->bytePos >= 8)
+        {
+            *ok = 0;
+            return 0;
+        }
+
+        cur = br->data[br->bytePos];
+        avail = (byte)(8 - br->bitPos);
+        take = (n < avail) ? (byte)n : avail;
+
+        shift = (byte)(8 - br->bitPos - take);
+        mask = (byte)(((1u << take) - 1u) << shift);
+        bitsVal = (byte)((cur & mask) >> shift);
+
+        val = (val << take) | bitsVal;
+
+        br->bitPos += take;
+        if (br->bitPos == 8)
+        {
+            br->bitPos = 0;
+            br->bytePos++;
+        }
+
+        n -= take;
+    }
+
+    *ok = 1;
+    return val;
+}
+
+/* ---------- Decoder state ---------- */
+struct _QOAHandle
+{
+    MemHandle   selfHandle;
+    FileHandle  fileH;
+    QOAInfo     info;
+
+    /* File-global */
+    dword       pcmCursor;             /* frames output so far */
+    Boolean     eofReached;
+
+    /* Current frame header */
+    word        frameChannels;
+    dword       frameSampleRate;
+    word        frameSamplesTotal;     /* fsamples for this frame */
+    word        frameSamplesLeft;      /* remaining in this frame */
+    word        frameDataBytesLeft;    /* bytes of slices remaining */
+
+    QOALMS      lms[QOA_MAX_CHANNELS];
+
+    /* Current slice group (one 8B slice per channel) */
+    Boolean     sliceGroupActive;
+    word        sliceGroupLen;         /* 1..20 */
+    word        sliceGroupPos;         /* 0..sliceGroupLen */
+
+    byte        scalefactor[QOA_MAX_CHANNELS];
+    QOABitsBE   sliceBits[QOA_MAX_CHANNELS];
+};
+
+/* ---------- Local helpers ---------- */
+static int  QOA_Read8(FileHandle fh, byte *dst, word len)
+{
+    word rd;
+    rd = FileRead(fh, dst, len, FALSE);
+    return (rd == len);
+}
+
+static int  QOA_ReadFileHeader(QOAHandle *q, dword *samplesOut)
+{
+    byte  hdr[8];
+    dword magic;
+    dword samples;
+
+    if (!QOA_Read8(q->fileH, hdr, 8)) return 0;
+
+    magic = ((dword)hdr[0] << 24) | ((dword)hdr[1] << 16) | ((dword)hdr[2] << 8) | (dword)hdr[3];
+    if (magic != QOA_MAGIC) return 0;
+
+    samples = ((dword)hdr[4] << 24) | ((dword)hdr[5] << 16) | ((dword)hdr[6] << 8) | (dword)hdr[7];
+    *samplesOut = samples;
+    return 1;
+}
+
+static int  QOA_PeekFirstFrameHeader(QOAHandle *q, word *channelsOut, dword *rateOut)
+{
+    byte  fh[8];
+    dword savedPos;
+    word  ch;
+    dword sr;
+
+    savedPos = FilePos(q->fileH, 0, FILE_POS_RELATIVE);
+    FilePos(q->fileH, 8, FILE_POS_START);
+
+    if (!QOA_Read8(q->fileH, fh, 8))
+    {
+        FilePos(q->fileH, savedPos, FILE_POS_START);
+        return 0;
+    }
+
+    ch = (word)fh[0];
+    sr = ((dword)fh[1] << 16) | ((dword)fh[2] << 8) | (dword)fh[3];
+
+    *channelsOut = ch;
+    *rateOut     = sr;
+
+    FilePos(q->fileH, savedPos, FILE_POS_START);
+    return 1;
+}
+
+static int  QOA_LoadNextFrame(QOAHandle *q)
+{
+    byte fh[8];
+    dword channels;
+    dword samplerate;
+    word  fsamples;
+    word  fsize;
+    word  dataBytes;
+    word  expectedBytes;
+    word  slices;
+    word  c;
+    byte  buf[8];
+
+    if (!QOA_Read8(q->fileH, fh, 8))
+    {
+        q->eofReached = TRUE;
+        return 0;
+    }
+
+    channels   = (dword)fh[0];
+    samplerate = ((dword)fh[1] << 16) | ((dword)fh[2] << 8) | (dword)fh[3];
+    fsamples   = (word)(((dword)fh[4] << 8) | (dword)fh[5]);
+    fsize      = (word)(((dword)fh[6] << 8) | (dword)fh[7]);
+
+    if (channels == 0 || channels > QOA_MAX_CHANNELS)
+    {
+        q->eofReached = TRUE;
+        return 0;
+    }
+
+    if (samplerate == 0)
+    {
+        q->eofReached = TRUE;
+        return 0;
+    }
+
+    if ((word)channels != q->info.channels || samplerate != q->info.sampleRate)
+    {
+        q->eofReached = TRUE;
+        return 0;
+    }
+
+    if (fsamples == 0 || fsamples > (QOA_SLICES_PER_FRAME * QOA_SLICE_LEN))
+    {
+        q->eofReached = TRUE;
+        return 0;
+    }
+
+    if (fsize < (word)(8 + QOA_LMS_LEN * 4 * (word)channels))
+    {
+        q->eofReached = TRUE;
+        return 0;
+    }
+
+    dataBytes = (word)(fsize - 8 - QOA_LMS_LEN * 4 * (word)channels);
+
+    slices = (word)((fsamples + (QOA_SLICE_LEN - 1)) / QOA_SLICE_LEN);
+    expectedBytes = (word)(slices * (word)channels * 8);
+
+    if (dataBytes != expectedBytes)
+    {
+        q->eofReached = TRUE;
+        return 0;
+    }
+
+    for (c = 0; c < (word)channels; c++)
+    {
+        word i;
+        short v;
+
+        if (!QOA_Read8(q->fileH, buf, 8)) { q->eofReached = TRUE; return 0; }
+        for (i = 0; i < QOA_LMS_LEN; i++)
+        {
+            v = (short)(((word)buf[i*2] << 8) | (word)buf[i*2 + 1]);
+            q->lms[c].history[i] = (int)v;
+        }
+
+        if (!QOA_Read8(q->fileH, buf, 8)) { q->eofReached = TRUE; return 0; }
+        for (i = 0; i < QOA_LMS_LEN; i++)
+        {
+            v = (short)(((word)buf[i*2] << 8) | (word)buf[i*2 + 1]);
+            q->lms[c].weights[i] = (int)v;
+        }
+    }
+
+    q->frameChannels      = (word)channels;
+    q->frameSampleRate    = samplerate;
+    q->frameSamplesTotal  = fsamples;
+    q->frameSamplesLeft   = fsamples;
+    q->frameDataBytesLeft = dataBytes;
+
+    q->sliceGroupActive   = FALSE;
+    q->sliceGroupLen      = 0;
+    q->sliceGroupPos      = 0;
+
+    return 1;
+}
+
+static int  QOA_LoadNextSliceGroup(QOAHandle *q)
+{
+    word c;
+    byte slice8[8];
+    int  ok;
+
+    if (q->frameSamplesLeft == 0)
+    {
+        return 0;
+    }
+
+    q->sliceGroupLen = (q->frameSamplesLeft > QOA_SLICE_LEN) ? QOA_SLICE_LEN : q->frameSamplesLeft;
+    q->sliceGroupPos = 0;
+
+    for (c = 0; c < q->frameChannels; c++)
+    {
+        if (q->frameDataBytesLeft < 8)
+        {
+            q->eofReached = TRUE;
+            return 0;
+        }
+
+        if (!QOA_Read8(q->fileH, slice8, 8))
+        {
+            q->eofReached = TRUE;
+            return 0;
+        }
+
+        q->frameDataBytesLeft -= 8;
+
+        QBR_Init(&q->sliceBits[c], slice8);
+        ok = 1;
+        q->scalefactor[c] = (byte)QBR_Get(&q->sliceBits[c], 4, &ok);
+        if (!ok)
+        {
+            q->eofReached = TRUE;
+            return 0;
+        }
+    }
+
+    q->sliceGroupActive = TRUE;
+    return 1;
+}
+
+static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *outPCM)
+{
+    word produced;
+    word ch;
+
+    produced = 0;
+
+    while ((produced < maxFrames) && (q->frameSamplesLeft > 0))
+    {
+        word framesThis;
+        word i;
+
+        if (!q->sliceGroupActive)
+        {
+            if (!QOA_LoadNextSliceGroup(q))
+            {
+                break;
+            }
+        }
+
+        framesThis = q->sliceGroupLen - q->sliceGroupPos;
+        if (framesThis > (word)(maxFrames - produced))
+        {
+            framesThis = (word)(maxFrames - produced);
+        }
+
+        for (i = 0; i < framesThis; i++)
+        {
+            for (ch = 0; ch < q->frameChannels; ch++)
+            {
+                int ok;
+                unsigned long code3;
+                int deq;
+                int pred;
+                int recon;
+                signed short s;
+
+                ok = 1;
+                code3 = QBR_Get(&q->sliceBits[ch], 3, &ok);
+                if (!ok)
+                {
+                    q->eofReached = TRUE;
+                    return produced;
+                }
+
+                deq  = qoa_dequant_tab[q->scalefactor[ch] & 0x0f][(int)(code3 & 7)];
+                pred = QOA_LMS_Predict(&q->lms[ch]);
+                recon = QOA_ClampS16(pred + deq);
+                s = (signed short)recon;
+
+                outPCM[(produced + i) * q->frameChannels + ch] = s;
+
+                QOA_LMS_Update(&q->lms[ch], (int)s, deq);
+            }
+        }
+
+        q->sliceGroupPos    += framesThis;
+        q->frameSamplesLeft -= framesThis;
+        produced            += framesThis;
+
+        if (q->sliceGroupPos >= q->sliceGroupLen)
+        {
+            q->sliceGroupActive = FALSE;
+        }
+    }
+
+    return produced;
+}
+
+/* ---------- Public decoder API ---------- */
+
+QOAHandle * _pascal qoaOpenGEOS(FileHandle fh, QOAInfo *outInfo)
+{
+    QOAHandle *q;
+    MemHandle  h;
+    dword      samples;
+    word       ch;
+    dword      sr;
+
+    h = MemAlloc((word)sizeof(QOAHandle), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (h == NullHandle)
+    {
+        return 0;
+    }
+
+    q = (QOAHandle*)MemLock(h);
+    if (!q)
+    {
+        MemFree(h);
+        return 0;
+    }
+
+    q->selfHandle = h;
+    q->fileH      = fh;
+    q->eofReached = FALSE;
+    q->pcmCursor  = 0;
+
+    if (!QOA_ReadFileHeader(q, &samples))
+    {
+        MemUnlock(h);
+        MemFree(h);
+        return 0;
+    }
+
+    if (!QOA_PeekFirstFrameHeader(q, &ch, &sr))
+    {
+        MemUnlock(h);
+        MemFree(h);
+        return 0;
+    }
+
+    q->info.channels      = ch;
+    q->info.sampleRate    = sr;
+    q->info.totalFrames   = samples;
+    q->info.bitsPerSample = 16;
+
+    FilePos(q->fileH, 8, FILE_POS_START);
+
+    if (!QOA_LoadNextFrame(q))
+    {
+        MemUnlock(h);
+        MemFree(h);
+        return 0;
+    }
+
+    if (outInfo)
+    {
+        *outInfo = q->info;
+    }
+
+    /* Keep locked for simplicity; this object is small. */
+    return q;
+}
+
+dword _pascal qoaReadS16(QOAHandle *q, dword framesToRead, signed short *dst)
+{
+    dword produced;
+    word  chunk;
+
+    produced = 0;
+
+    if (!q || !dst || framesToRead == 0)
+    {
+        return 0;
+    }
+
+    while (framesToRead > 0)
+    {
+        word got;
+
+        if (q->frameSamplesLeft == 0)
+        {
+            if (!QOA_LoadNextFrame(q))
+            {
+                break;
+            }
+        }
+
+        chunk = (framesToRead > 512UL) ? 512 : (word)framesToRead;
+        got = QOA_ProduceFromFrame(q, chunk, dst);
+        if (got == 0)
+        {
+            break;
+        }
+
+        dst          += (dword)got * (dword)q->info.channels;
+        framesToRead -= got;
+        produced     += got;
+        q->pcmCursor += got;
+    }
+
+    return produced;
+}
+
+int _pascal qoaSeek(QOAHandle *q, dword frameIndex)
+{
+    dword remaining;
+    MemHandle scratchH;
+    signed short *scratchP;
+
+    if (!q)
+    {
+        return 0;
+    }
+
+    if (frameIndex > q->info.totalFrames)
+    {
+        frameIndex = q->info.totalFrames;
+    }
+
+    /* Reset to first frame */
+    FilePos(q->fileH, 8, FILE_POS_START);
+
+    q->eofReached = FALSE;
+    q->pcmCursor  = 0;
+
+    if (!QOA_LoadNextFrame(q))
+    {
+        return 0;
+    }
+
+    remaining = frameIndex;
+
+    scratchH = MemAlloc((word)(512U * q->info.channels * sizeof(signed short)),
+                        HF_SWAPABLE, HAF_ZERO_INIT);
+    if (scratchH == NullHandle)
+    {
+        return 0;
+    }
+    scratchP = (signed short*)MemLock(scratchH);
+    if (!scratchP)
+    {
+        MemFree(scratchH);
+        return 0;
+    }
+
+    while (remaining > 0)
+    {
+        word want;
+        word got;
+
+        want = (remaining > 512UL) ? 512 : (word)remaining;
+        got  = (word)qoaReadS16(q, (dword)want, scratchP);
+        if (got == 0)
+        {
+            break;
+        }
+        remaining -= got;
+    }
+
+    MemUnlock(scratchH);
+    MemFree(scratchH);
+
+    q->pcmCursor = frameIndex;
+    return 1;
+}
+
+void _pascal qoaClose(QOAHandle *q)
+{
+    MemHandle h;
+
+    if (!q) return;
+
+    h = q->selfHandle;
+    if (h == NullHandle)
+    {
+        return;
+    }
+
+    q->selfHandle = NullHandle;
+    MemUnlock(h);
+    MemFree(h);
+}

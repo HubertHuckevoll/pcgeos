@@ -1,0 +1,137 @@
+/***************************************************************
+ *  qoa_play.goc — QOA player that uses BSNWAV internally
+ *  App calls QOAPlayFile(); this feeds PCM to BSNWAV via callback.
+ ***************************************************************/
+@include <qoa.goh>
+@include <bsnwav.goh>
+
+#include <Ansi/string.h>
+#include <library.h>
+
+
+/* ------------ Internal static playback context ------------ */
+/* BSNWAV's callback type has no user-data -> keep a static handle. */
+static QOAHandle *s_qoaHandle = 0;
+static word       s_qoaChannels = 1;
+
+/* BSNWAV will invoke this: PCB(word,routine,(void *,word)) */
+static word _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
+{
+    signed short *dst;
+    dword framesReq;
+    dword framesGot;
+    word  blockAlign;
+
+    if (!s_qoaHandle || !dstBuf || wantBytes == 0 || s_qoaChannels == 0)
+    {
+        return 1; /* signal error -> BSNW stops */
+    }
+
+    blockAlign = (word)(s_qoaChannels * 2u);
+    if (blockAlign == 0)
+    {
+        return 1;
+    }
+
+    framesReq = (dword)wantBytes / (dword)blockAlign;
+    dst = (signed short*)dstBuf;
+
+    if (framesReq == 0)
+    {
+        memset(dstBuf, 0, wantBytes);
+        return 0;
+    }
+    framesGot = qoaReadS16(s_qoaHandle, framesReq, dst);
+    if (framesGot > framesReq)
+    {
+        framesGot = framesReq;
+    }
+
+    {
+        dword producedBytes;
+        dword zeroBytes;
+        byte  *fill;
+
+        producedBytes = framesGot * (dword)blockAlign;
+        if (producedBytes > (dword)wantBytes)
+        {
+            producedBytes = wantBytes;
+        }
+
+        zeroBytes = (dword)wantBytes - producedBytes;
+        if (zeroBytes > 0)
+        {
+            if (zeroBytes > 0xffffUL)
+            {
+                zeroBytes = 0xffffUL;
+            }
+            fill = (byte *)dstBuf + producedBytes;
+            memset(fill, 0, (word)zeroBytes);
+        }
+    }
+
+    return 0; /* 0 == success for BSNW */
+}
+
+/* ------------ Public player API ------------ */
+
+int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
+{
+    QOAHandle      *qh;
+    QOAInfo         info;
+    BSWavFormChunk  fmt;
+    dword           totalBytes;
+    int             status;
+
+    qh = qoaOpenGEOS(fh, &info);
+    if (!qh)
+    {
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+
+    s_qoaHandle   = qh;
+    s_qoaChannels = info.channels;
+
+    fmt.BWFC_dataFormat    = 1; /* PCM */
+    fmt.BWFC_channels      = info.channels;
+    fmt.BWFC_sampleRate    = info.sampleRate;
+    fmt.BWFC_bitsPerSample = 16;
+    fmt.BWFC_blockAlign    = (word)(info.channels * 2);
+    fmt.BWFC_avgRate       = (dword)fmt.BWFC_blockAlign * info.sampleRate;
+
+    totalBytes = (dword)info.totalFrames * (dword)fmt.BWFC_blockAlign;
+
+    status = BSNWavePlayCallback(&fmt,
+                                 totalBytes,
+                                 playFlags,
+                                 parent,
+                                 (word (_pascal *)(void *, word))QOA_BSNW_Callback);
+
+    s_qoaHandle = 0;
+    s_qoaChannels = 1;
+
+    qoaClose(qh);
+    return status;
+}
+
+void _pascal _export QOAStop(void)
+{
+    BSNWaveStop();
+}
+
+#ifdef __HIGHC__
+pragma Alias(QOALibEntry, "QOALIBENTRY");
+#endif
+
+Boolean _pascal _export QOALibEntry(LibraryCallType call, GeodeHandle client)
+{
+    (void)client;
+
+    if (call == LCT_DETACH)
+    {
+        s_qoaHandle = 0;
+        s_qoaChannels = 1;
+    }
+
+    return FALSE;
+}
