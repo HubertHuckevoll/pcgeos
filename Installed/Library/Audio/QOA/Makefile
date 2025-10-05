@@ -6,8 +6,8 @@
 GEODE           = qoa
 ASM_TO_OBJS     =
 UI_TO_RDFS      =
-SRCS            = qoa_play.goc qoa_decode.goc
-OBJS            = qoa_play.obj qoa_decode.obj
+SRCS            = qoa_decode.goc qoa_play.goc
+OBJS            = qoa_decode.obj qoa_play.obj
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = qoa

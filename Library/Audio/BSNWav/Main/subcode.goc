@@ -778,16 +778,46 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
         // Cachedata --> Konverter --> Secondarybuffer
         if (cacheFull)
         {
+            word    consumed = 0;
+            word    secondFreeBefore = secondFree;
+
             // Konvert Cachedata
             if (konvBitsRed == 1)
             {
                 // no reduction of bitdepth
-                BSNWKonvertData(cachePtr,secPtr);
+                consumed = BSNWKonvertData(cachePtr,secPtr);
             }
             else
             {
                 // 16 --> 8 Bit
-                BSNWKonvert16To8(cachePtr,secPtr);
+                consumed = BSNWKonvert16To8(cachePtr,secPtr);
+            }
+
+            if (consumed)
+            {
+                word produced = secondFreeBefore - secondFree;
+                BSNWDebugNotifyWord("consumed", consumed);
+                BSNWDebugNotifyWord("produced", produced);
+
+                if (produced)
+                {
+                    if (secBufL2 && (produced >= secBufL2))
+                    {
+                        dword scaled = ((dword)consumed * (dword)secBufL2);
+                        playLen2 = (word)(scaled / produced);
+                    }
+                    else
+                    {
+                        playLen2 = consumed;
+                    }
+                }
+                else
+                {
+                    playLen2 = consumed;
+                }
+
+                BSNWDebugNotifyWord("playLen2", playLen2);
+                BSNWDebugNotifyWord("cacheK", cacheKOffset);
             }
         }
         else
@@ -1025,7 +1055,7 @@ void _pascal BSNWFillSilence(void *secPtr, word len)
 
  *********************************************************/
 
-void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
+word _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
 {
     byte    *dest;
     byte    *src;
@@ -1034,7 +1064,9 @@ void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
     dword   level = 0;
     dword   div = 0;
     int i;
+    word    startFull;
 
+    startFull = cacheFull;
     dest = secPtr + secondKOffset;
     src =  cachePtr  + cacheKOffset;
     b = 0x80;
@@ -1131,6 +1163,13 @@ void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
     // signal level
     peakLevel2 = (word)(b - 0x80);
     peakLevel = peakLevel2;
+
+    if (startFull >= cacheFull)
+    {
+        return (word)(startFull - cacheFull);
+    }
+
+    return 0;
 }
 
 /*********************************************************
@@ -1154,19 +1193,21 @@ extern  byte        konvRateRed;
 extern  byte        konvBitsRed;
 extern  byte        konvChanRed;
 
-void _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
+word _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
 {
     byte    *dest;
     byte    b,bs;
     int *src;
     long    sample;
     int i;
+    word    startFull;
 
     dest = secPtr;
     src =  cachePtr;
     dest = dest + secondKOffset;
     src =  src  + (cacheKOffset>>1);
     b = 0x80;
+    startFull = cacheFull;
 
     while ( (cacheFull) && (secondFree) )
     {
@@ -1241,6 +1282,13 @@ void _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
     // peak level (7 Bit)
     peakLevel2 = (word)(b - 0x80);
     peakLevel = peakLevel2;
+
+    if (startFull >= cacheFull)
+    {
+        return (word)(startFull - cacheFull);
+    }
+
+    return 0;
 }
 
 /************************************************
@@ -1620,6 +1668,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
         // loop until end
         while (respond == BSNW_STATUS_OK)
         {
+            BSNWDebugNotifyWord("loopFree", secondFree);
             // 1st loop --> start
             if (i==0)
             {
@@ -1671,6 +1720,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
             if(secondFree)
             {
                 respond = BSNWLoadData(playCachePtr,secondPtr);
+                BSNWDebugNotifyWord("loadResp", respond);
 
                 if (bytesToPlay)
                 {
@@ -1724,6 +1774,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
             // Stopflag (Abort by user)
             if (playStopFlag)
             {
+                BSNWDebugNotifyWord("abortFlag", playStopFlag);
                 respond = BSNW_ABORT;
             };
 
