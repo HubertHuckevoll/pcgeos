@@ -62,7 +62,7 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
     Boolean        success;
     char           dbg[80];
 
-    framesRequested = 64;
+    framesRequested = 4096;
     success = FALSE;
 
     if (!info || info->channels == 0)
@@ -96,8 +96,51 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
     framesDecoded = qoaReadS16(qh, framesRequested, bufferP);
     if (framesDecoded > 0)
     {
+        FileHandle      dumpH;
+        FileCreateFlags createFlags;
+        word            dumpBytes;
+        signed short    minSample;
+        signed short    maxSample;
+        dword           sampleCount;
+
         sprintf(dbg, "QOA verify: decoded %lu frames", framesDecoded);
         QOA_LogMessage(dbg);
+
+        sampleCount = framesDecoded * (dword)info->channels;
+        minSample = bufferP[0];
+        maxSample = bufferP[0];
+        if (sampleCount > 1)
+        {
+            dword idx;
+            for (idx = 1; idx < sampleCount; idx++)
+            {
+                signed short s;
+                s = bufferP[idx];
+                if (s < minSample)
+                {
+                    minSample = s;
+                }
+                if (s > maxSample)
+                {
+                    maxSample = s;
+                }
+            }
+        }
+        sprintf(dbg, "QOA verify: sample range %d..%d", (int)minSample, (int)maxSample);
+        QOA_LogMessage(dbg);
+
+        createFlags = (FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
+        dumpH = FileCreate("qoadump.bin", createFlags, FA_ARCHIVE);
+        if (dumpH)
+        {
+            dumpBytes = (word)(sampleCount * (dword)sizeof(signed short));
+            if (dumpBytes > 0)
+            {
+                FileWrite(dumpH, (void*)bufferP, dumpBytes, FALSE);
+            }
+            FileClose(dumpH, TRUE);
+        }
+
         success = TRUE;
     }
     else
@@ -125,7 +168,7 @@ static void QOA_ResetStaticState(void)
 }
 
 /* BSNWAV will invoke this: PCB(word,routine,(void *,word)) */
-static word _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
+word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
 {
     signed short *dst;
     dword framesReq;
@@ -136,6 +179,8 @@ static word _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
     {
         return 1; /* signal error -> BSNW stops */
     }
+
+    // QOA_LogMessage("We are now IN the callback function.");
 
     blockAlign = (word)(s_qoaChannels * 2u);
     if (blockAlign == 0)
@@ -171,7 +216,7 @@ static word _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
             framesGot = qoaReadS16(s_qoaHandle, framesDesired, writePtr);
             if (framesGot == 0)
             {
-                QOA_LogMessage("QOA cb: EOF");
+                // QOA_LogMessage("QOA cb: EOF");
                 break;
             }
 
@@ -179,16 +224,16 @@ static word _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
 
             writePtr      += framesGot * (dword)s_qoaChannels;
             producedBytes += framesGot * blockAlign;
-            {
-                char dbg[50];
-                sprintf(dbg, "QOA cb: got=%lu bytes=%lu", framesGot, producedBytes);
-                QOA_LogMessage(dbg);
-            }
+            //{
+            //    char dbg[50];
+            //    sprintf(dbg, "QOA cb: got=%lu bytes=%lu", framesGot, producedBytes);
+            //    QOA_LogMessage(dbg);
+            //}
 
-            if (framesGot < framesDesired)
-            {
-                break;
-            }
+            //if (framesGot < framesDesired)
+            //{
+            //    break;
+            //}
         }
 
         if (producedBytes < (dword)wantBytes)
@@ -246,8 +291,10 @@ int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
                                  totalBytes,
                                  playFlags,
                                  parent,
-                                 (word (_pascal *)(void *, word))QOA_BSNW_Callback);
+                                 (PlayCallbackFunctionType*) QOA_BSNW_Callback);
     qoaClose(qh);
+
+    QOA_LogMessage("After callback.");
 
     {
         char dbg[40];

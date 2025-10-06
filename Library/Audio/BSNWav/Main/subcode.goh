@@ -78,7 +78,7 @@ extern  word            stereoToggleIni;
 
 extern  Boolean         compatFlag;     // TRUE = driver is NewWave-kompatibel
 extern  byte            *playCachePtr;          // Pointer to Playcache
-extern  void            *playCBPtr;             // Pointer Callbackroutine
+extern  PlayCallbackFunctionType* playCBPtr;    // Pointer Callbackroutine
 extern  optr            statusGlyphOptr1;       // 1. line Statusbox
 extern  optr            statusGlyphOptr2;
 extern  optr            statusRightBoxOptr;

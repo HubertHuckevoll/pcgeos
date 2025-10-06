@@ -1,3 +1,9 @@
+qoa_decode.obj \
+qoa_decode.eobj: qoa.goh
+qoa_decode.obj \
+qoa_decode.eobj: geos.h geoworks.h file.h library.h geode.h driver.h lmem.h \
+                initfile.h ec.h system.h Ansi/string.h Ansi/stdio.h \
+                heap.h
 qoa_play.obj \
 qoa_play.eobj: qoa.goh bsnwav.goh stdapp.goh object.goh ui.goh \
                 Objects/metaC.goh Objects/inputC.goh Objects/clipbrd.goh \
@@ -26,11 +32,6 @@ qoa_play.eobj: geos.h geoworks.h file.h heap.h geode.h resource.h ec.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                dirksnd.h Ansi/string.h
-qoa_decode.obj \
-qoa_decode.eobj: qoa.goh
-qoa_decode.obj \
-qoa_decode.eobj: geos.h geoworks.h file.h library.h geode.h driver.h lmem.h \
-                initfile.h ec.h system.h Ansi/string.h heap.h
+                dirksnd.h Ansi/string.h Ansi/stdio.h
 
 qoaEC.geo qoa.geo : geos.ldf ansic.ldf bsnwav.ldf 

@@ -8,7 +8,7 @@
  *                                              *
  *      Autor:          Dirk Lausecker          *
  *                                              *
- * 28.07.2000   DL      F�r ND �berarbeitet     *
+ *      28.07.2000      DL, reworked for ND     *
  *                                              *
  ************************************************/
 
@@ -68,12 +68,12 @@
 // Endless playing until BSNWaveStop() will be called
 // CURRENTLY NOT SUPPORTED !!!
 
-#define	BSNW_TEST_ONLY		0x10
+#define BSNW_TEST_ONLY      0x10
 // No playing ! Use this flag if you want check the playability
 // of a file or for detecting the format (samplerate,bits,channels)
 // with the function BSNWaveGetLastFormat()
 
-#define BSNW_PLAY_POS		0x20
+#define BSNW_PLAY_POS       0x20
 // Play FROM/TO  The pointer in parent must point to a structure
 // from the type BSWavPlayPositions defining the startpoint (ms)
 // and the time (ms) to be played
@@ -128,24 +128,27 @@
 #define BSNW_BUFFER_SIZE        8192
 // default buffer size for Playcache and DMA-buffer
 
- /*-----------------------------------------------
+/*-----------------------------------------------
 
-		Structures
+   Structures
 
-  -----------------------------------------------*/
+ -----------------------------------------------*/
 
 typedef struct {
-	dword		BWPS_current;		// played Bytes
-        dword		BWPS_full;		// Bytes to play
-	word		BWPS_level;		// "Levelmeter"
+    dword       BWPS_current;       // played Bytes
+    dword       BWPS_full;          // Bytes to play
+    word        BWPS_level;         // "Levelmeter"
 } BSWavPlayStates;
 
 typedef struct {
-	dword		BWPP_start;		// Startposition (ms)
-	dword		BWPP_stop;		// Stopposition  (ms)
+    dword       BWPP_start;     // Startposition (ms)
+    dword       BWPP_stop;      // Stopposition  (ms)
 
 } BSWavPlayPositions;
 
+typedef Boolean _pascal PlayCallbackFunctionType(void *dstBuf, word wantBytes);
+typedef Boolean _pascal pcfm_PlayCallbackFunctionType(void *dstBuf, word wantBytes, void* pcf);
+// typedefs for callback function work better for Watcom than PCB macro
 
 /*-----------------------------------------------
 
@@ -153,22 +156,20 @@ typedef struct {
 
  *-----------------------------------------------*/
 
-
 extern  int _pascal _export BSNWavePlayFile(FileHandle  fh,
-				    word        playFlags,
-				    optr        parent);
+        word        playFlags,
+        optr        parent);
 // Playing  WAV-file with/without Statebox (Rate, Bits, Channels, Time)
 // returns Returnvalue of type RespondTypes
 
 /*-----------------------------------------------*/
 
-
 extern int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
-				       dword       bytes,
-				       word        playFlags,
-				       optr        parent,
-				       PCB(word,routine,(void *,word)));
-// Play Sampledata continuosly (Receiving data per Callback-function)
+        dword       bytes,
+        word        playFlags,
+        optr        parent,
+        PlayCallbackFunctionType *routine);
+// Play Sampledata continuously (Receiving data per Callback-function)
 // returns Returnvalue from type RespondTypes
 // Interface for MP3-Player !!!
 
@@ -190,26 +191,26 @@ extern  byte  _pascal  _export BSNWaveSetPause(byte mode);
 
 /*-----------------------------------------------*/
 
-dword _pascal _export BSNWaveGetLastFormat(dword 	*sampleRate,
-				   word 	*channels,
-				   word 	*bits);
+dword _pascal _export BSNWaveGetLastFormat(dword    *sampleRate,
+        word     *channels,
+        word     *bits);
 // returns the format of the last played WAV-file
 // dword --> size of data (bytes)
 
 /*-----------------------------------------------*/
 
 extern  Boolean _pascal _export BSNWaveCheckDriver(word flags,
-					   word testValue);
+        word testValue);
 // checking driver for NewWave capability
 // returns TRUE if the driver support BS-NewWave
 
 /*-----------------------------------------------*/
 
 extern int _pascal BSNWavePlayMemory(   BSWavFormChunk  *bfc,
-					void            *buffer,
-					word            len,
-					word            playFlags);
-// kurzes Sample einmal oder dauerhaft abspielen
+                                        void            *buffer,
+                                        word            len,
+                                        word            playFlags);
+// play a brief sample once or continuously
 // NOT IMPLEMENTED !
 
 /*-----------------------------------------------*/
@@ -222,8 +223,8 @@ extern  word    _pascal _export BSNWaveGetAIState(word options);
 /*-----------------------------------------------*/
 
 extern  Boolean _pascal _export BSNWavGetMaxProperties( word *maxRate,
-							byte *maxChannels,
-							byte *maxBits);
+        byte *maxChannels,
+        byte *maxBits);
 // Getting max. Samplerate, Channels, Bitdepth from driver
 // returns TRUE if the L/R-channels must be swapped
 // Workaround for a bug in the SB-Pro hardware
@@ -238,7 +239,7 @@ extern word     _pascal _export BSNWaveGetStatus(void);
 /*-----------------------------------------------*/
 
 extern word     _pascal _export BSNWAllocSecBuffer(byte **ptr,
-					   word len);
+        word len);
 // Allocating Secondarybuffer for AI-Playback
 // returns the real size of the allocated buffer
 
@@ -251,10 +252,10 @@ extern  Boolean _pascal  _export BSNWaveStopRecOrPlay(void *secBuf);
 /*-----------------------------------------------*/
 
 dword   _pascal BSNWaveCalcPlaytimeText(char    *textBuffer,
-					dword   current,
-					dword   full,
-					dword   rate,
-					int     mode);
+                                        dword   current,
+                                        dword   full,
+                                        dword   rate,
+                                        int     mode);
 // Create String for Timedisplay
 
 /*-----------------------------------------------*/
@@ -266,12 +267,12 @@ int _pascal _export BSNWaveGetPlayState( BSWavPlayStates *playStates);
 
 /*-----------------------------------------------*/
 
-// for internal use only (Exportnotwendigkeit pruefen !)
+// for internal use only (export needed?)
 
 extern  Boolean _pascal LibRecEntry(    LibraryCallType type,
-					GeodeHandle     client);
+                                        GeodeHandle     client);
 extern  Boolean _pascal _export BSNWavLoadDriver(GeodeLoadError *gle,
-					 char           *name);
+        char           *name);
 
 /*-----------------------------------------------*/
 
@@ -297,8 +298,8 @@ pragma Alias(BSNWaveSetPause,           "BSNWAVESETPAUSE");
 pragma Alias(BSNWavePlayCallback,       "BSNWAVEPLAYCALLBACK");
 pragma Alias(BSNWaveCheckDriver,        "BSNWAVECHECKDRIVER");
 pragma Alias(BSNWaveCalcPlaytimeText,   "BSNWAVECALCPLAYTIMETEXT");
-pragma Alias(BSNWaveGetPlayState,   	"BSNWAVEGETPLAYSTATE");
-pragma Alias(BSNWaveGetLastFormat,   	"BSNWAVEGETLASTFORMAT");
+pragma Alias(BSNWaveGetPlayState,       "BSNWAVEGETPLAYSTATE");
+pragma Alias(BSNWaveGetLastFormat,      "BSNWAVEGETLASTFORMAT");
 
 #endif
 

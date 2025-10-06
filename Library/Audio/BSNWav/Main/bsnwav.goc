@@ -189,7 +189,7 @@ word            secondHandle = 0;   // test purpose only (SecondAlloc)
 word            peakLevel = 0;      // signal level (calculated by Konverter)
 word            playLen2 = 0;       // needed samples from Cache
 // for filling Secondarybufferhalf
-void            *playCBPtr;     // Callback pointer
+PlayCallbackFunctionType *playCBPtr;     // Callback pointer
 Boolean         stereoToggle = FALSE;   // Soundcard toggle Left/Right
 word            stereoToggleIni = 0;    // INI-Value
 
@@ -1000,11 +1000,11 @@ word _pascal _export BSNWaveGetStatus(void)
         word                    playFlags
 
  ******************************************************************/
-int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
-                                        dword      bytes,
-                                        word       playFlags,
-                                        optr       parent,
-                                        PCB(word,routine,(void *,word)))
+extern int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
+                       dword       bytes,
+                       word        playFlags,
+                       optr        parent,
+                       PlayCallbackFunctionType* routine)
 {
     int respond;        // retVal
 

@@ -555,7 +555,7 @@ Boolean _pascal BSNWGetData(void *dest,word len)
             if (playCBPtr)
             {
                 // call Callbackroutine
-                error = (Boolean)ProcCallFixedOrMovable_pascal(dest,len,playCBPtr);
+                error = (Boolean) ((pcfm_PlayCallbackFunctionType*) ProcCallFixedOrMovable_pascal)(dest,len,playCBPtr);
             }
             else
             {

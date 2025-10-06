@@ -20,3 +20,4 @@ entry           QOALIBENTRY
 export          QOAPLAYFILE
 export          QOASTOP
 export          QOAPROBEFILE
+export          QOA_BSNW_CALLBACK

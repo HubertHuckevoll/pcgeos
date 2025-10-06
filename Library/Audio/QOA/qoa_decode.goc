@@ -430,7 +430,7 @@ static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *out
         {
             if (!QOA_LoadNextSliceGroup(q))
             {
-                QOA_LogMessage("QOA: failed to load slice group");
+                //QOA_LogMessage("QOA: failed to load slice group");
                 break;
             }
         }
@@ -456,7 +456,7 @@ static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *out
                 code3 = QBR_Get(&q->sliceBits[ch], 3, &ok);
                 if (!ok)
                 {
-                    QOA_LogMessage("QOA bits read error");
+                    // QOA_LogMessage("QOA bits read error");
                     q->eofReached = TRUE;
                     return produced;
                 }
@@ -570,18 +570,18 @@ dword _pascal qoaReadS16(QOAHandle *q, dword framesToRead, signed short *dst)
         {
             if (!QOA_LoadNextFrame(q))
             {
-                QOA_LogMessage("qoaReadS16: no more frames");
+                //QOA_LogMessage("qoaReadS16: no more frames");
                 break;
             }
         }
 
         chunk = (framesToRead > 512UL) ? 512 : (word)framesToRead;
         got = QOA_ProduceFromFrame(q, chunk, dst);
-        {
-            char dbg[60];
-            sprintf(dbg, "qoaReadS16: want=%lu got=%u left=%u", framesToRead, got, q->frameSamplesLeft);
-            QOA_LogMessage(dbg);
-        }
+        // {
+        //     char dbg[60];
+        //     sprintf(dbg, "qoaReadS16: want=%lu got=%u left=%u", framesToRead, got, q->frameSamplesLeft);
+        //     QOA_LogMessage(dbg);
+        // }
         if (got == 0)
         {
             break;
