@@ -51,6 +51,7 @@ Secondarybuffer:
 @include <stdapp.goh>
 
 #include <Ansi/string.h>
+#include <Ansi/stdio.h>
 
 #include <gstring.h>
 #include <library.h>
@@ -64,6 +65,39 @@ Secondarybuffer:
 #include <riff.h>
 
 @include "bsnwav.goh"
+
+static const char gBSNWavLogFileName[] = "qoa.log";
+
+static void BSNWav_LogMessage(const char *message)
+{
+    FileHandle      logFileH;
+    FileCreateFlags createFlags;
+    word            messageLen;
+    char            newlineStr[2];
+    word            newlineLen;
+
+    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
+    logFileH = FileCreate(gBSNWavLogFileName, createFlags, FA_ARCHIVE);
+    if (!logFileH)
+    {
+        return;
+    }
+
+    FilePos(logFileH, 0, FILE_POS_END);
+
+    messageLen = (word)strlen(message);
+    if (messageLen > 0)
+    {
+        FileWrite(logFileH, (void*)message, messageLen, FALSE);
+    }
+
+    newlineStr[0] = '\r';
+    newlineStr[1] = '\n';
+    newlineLen = 2;
+    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
+
+    FileClose(logFileH, TRUE);
+}
 
 /******************** Constants/Macros ************************/
 
@@ -660,13 +694,12 @@ dword _pascal BSNWaveCalcPlaytimeText(  char    *textBuffer,
 
 void BSNWaveDialogUnknownFormat(word formatID)
 {
+    char logBuf[64];
 
-@ifdef  BSNWAV_NO_UI
-//  sprintf(playStatusText,TEXT_UNKNOWN_WAV_FORMAT_2,formatID);
-//  (void)SysNotify(SNF_CONTINUE,playStatusText,0);
-//  sorry: no UI, no sprintf
-    (void)SysNotify(SNF_CONTINUE,TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI,0);
-@else
+    sprintf(logBuf, TEXT_UNKNOWN_WAV_FORMAT_2, formatID);
+    BSNWav_LogMessage(logBuf);
+
+@ifndef BSNWAV_NO_UI
     sprintf(playStatusText,"%04X",formatID);
     (void)UserStandardDialog(0,              //helpContext,
                              0,              //customTriggers,

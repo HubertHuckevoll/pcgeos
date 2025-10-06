@@ -47,6 +47,39 @@ DESCRIPTION:
 #include <ec.h>
 #include <geode.h>
 
+static const char gBQLogFileName[] = "qoa.log";
+
+static void BQ_LogMessage(const char *message)
+{
+    FileHandle      logFileH;
+    FileCreateFlags createFlags;
+    word            messageLen;
+    char            newlineStr[2];
+    word            newlineLen;
+
+    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
+    logFileH = FileCreate(gBQLogFileName, createFlags, FA_ARCHIVE);
+    if (!logFileH)
+    {
+        return;
+    }
+
+    FilePos(logFileH, 0, FILE_POS_END);
+
+    messageLen = (word)strlen(message);
+    if (messageLen > 0)
+    {
+        FileWrite(logFileH, (void*)message, messageLen, FALSE);
+    }
+
+    newlineStr[0] = '\r';
+    newlineStr[1] = '\n';
+    newlineLen = 2;
+    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
+
+    FileClose(logFileH, TRUE);
+}
+
 
 /**********************************************************************/
 
@@ -692,7 +725,7 @@ void    _pascal BQ_StartPlay(void)
                                  GeodeGetProcessHandle()))
                 {
                     // Error
-                    SysNotify(SNF_CONTINUE,"Playthread","could not be created !");
+                    BQ_LogMessage("Playthread: could not be created");
                     (void) FileClose(fh, TRUE);
                     playFlag = 0;
                 }
@@ -742,7 +775,7 @@ word    BQ_PlayThread(word fileWord)
                 {
                     char dbg[40];
                     sprintf(dbg, "QOAPlayFile ret=%d", playState);
-                    SysNotify(SNF_CONTINUE, dbg, 0);
+                    BQ_LogMessage(dbg);
                 }
             }
             else
@@ -893,7 +926,7 @@ Boolean _pascal BQ_CheckForPlay(void)
                 {
                     char dbg[96];
                     sprintf(dbg, "QOA meta ch=%u rate=%lu frames=%lu", bqQoaInfo.channels, bqQoaInfo.sampleRate, bqQoaInfo.totalFrames);
-                    SysNotify(SNF_CONTINUE, dbg, 0);
+                    BQ_LogMessage(dbg);
                 }
                 retVal = RedrawSettings(0);
             }
