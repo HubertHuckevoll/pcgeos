@@ -67,29 +67,29 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
 
     if (!info || info->channels == 0)
     {
-        QOA_LogMessage("QOA verify: invalid decoder info");
+        // invalid decoder info
         return FALSE;
     }
 
     bufferSize = (word)(framesRequested * (dword)info->channels * sizeof(signed short));
     if (bufferSize == 0)
     {
-        QOA_LogMessage("QOA verify: calculated buffer size is zero");
+        // calculated buffer size is zero
         return FALSE;
     }
 
     bufferH = MemAlloc(bufferSize, HF_SWAPABLE, HAF_ZERO_INIT);
     if (bufferH == NullHandle)
     {
-        QOA_LogMessage("QOA verify: MemAlloc failed");
+        // MemAlloc failed
         return FALSE;
     }
 
     bufferP = (signed short*)MemLock(bufferH);
     if (!bufferP)
     {
+        // MemLock failed
         MemFree(bufferH);
-        QOA_LogMessage("QOA verify: MemLock failed");
         return FALSE;
     }
 
@@ -103,9 +103,7 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
         signed short    maxSample;
         dword           sampleCount;
 
-        sprintf(dbg, "QOA verify: decoded %lu frames", framesDecoded);
-        QOA_LogMessage(dbg);
-
+        // decoded %lu frames", framesDecoded
         sampleCount = framesDecoded * (dword)info->channels;
         minSample = bufferP[0];
         maxSample = bufferP[0];
@@ -126,26 +124,12 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
                 }
             }
         }
-        sprintf(dbg, "QOA verify: sample range %d..%d", (int)minSample, (int)maxSample);
-        QOA_LogMessage(dbg);
-
-        createFlags = (FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
-        dumpH = FileCreate("qoadump.bin", createFlags, FA_ARCHIVE);
-        if (dumpH)
-        {
-            dumpBytes = (word)(sampleCount * (dword)sizeof(signed short));
-            if (dumpBytes > 0)
-            {
-                FileWrite(dumpH, (void*)bufferP, dumpBytes, FALSE);
-            }
-            FileClose(dumpH, TRUE);
-        }
 
         success = TRUE;
     }
     else
     {
-        QOA_LogMessage("QOA verify: decoder produced zero frames");
+        // QOA verify: decoder produced zero frames
     }
 
     MemUnlock(bufferH);
@@ -153,7 +137,7 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
 
     if (!qoaSeek(qh, 0))
     {
-        QOA_LogMessage("QOA verify: failed to seek to start");
+        // failed to seek to start
         success = FALSE;
     }
 
@@ -167,7 +151,7 @@ static void QOA_ResetStaticState(void)
     s_totalFramesDecoded = 0;
 }
 
-/* BSNWAV will invoke this: PCB(word,routine,(void *,word)) */
+/* BSNWAV will invoke this */
 word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
 {
     signed short *dst;
@@ -179,8 +163,6 @@ word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
     {
         return 1; /* signal error -> BSNW stops */
     }
-
-    // QOA_LogMessage("We are now IN the callback function.");
 
     blockAlign = (word)(s_qoaChannels * 2u);
     if (blockAlign == 0)
@@ -216,7 +198,7 @@ word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
             framesGot = qoaReadS16(s_qoaHandle, framesDesired, writePtr);
             if (framesGot == 0)
             {
-                // QOA_LogMessage("QOA cb: EOF");
+                // QOA cb: EOF
                 break;
             }
 
@@ -224,16 +206,11 @@ word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
 
             writePtr      += framesGot * (dword)s_qoaChannels;
             producedBytes += framesGot * blockAlign;
-            //{
-            //    char dbg[50];
-            //    sprintf(dbg, "QOA cb: got=%lu bytes=%lu", framesGot, producedBytes);
-            //    QOA_LogMessage(dbg);
-            //}
 
-            //if (framesGot < framesDesired)
-            //{
-            //    break;
-            //}
+            if (framesGot == 0)
+            {
+                break;
+            }
         }
 
         if (producedBytes < (dword)wantBytes)
@@ -263,7 +240,7 @@ int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
     qh = qoaOpenGEOS(fh, &info);
     if (!qh)
     {
-        QOA_LogMessage("QOAPlayFile: qoaOpenGEOS failed");
+        // qoaOpenGEOS failed
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
 
@@ -272,7 +249,7 @@ int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
 
     if (!QOA_VerifyDecoder(qh, &info))
     {
-        QOA_LogMessage("QOAPlayFile: decoder verification failed");
+        // decoder verification failed
         qoaClose(qh);
         QOA_ResetStaticState();
         return BSNW_UNKNOWN_WAVE_FORMAT;
@@ -294,14 +271,6 @@ int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
                                  (PlayCallbackFunctionType*) QOA_BSNW_Callback);
     qoaClose(qh);
 
-    QOA_LogMessage("After callback.");
-
-    {
-        char dbg[40];
-        sprintf(dbg, "QOA frames=%lu", s_totalFramesDecoded);
-        QOA_LogMessage(dbg);
-    }
-
     QOA_ResetStaticState();
     return status;
 }
@@ -311,10 +280,6 @@ void _pascal _export QOAStop(void)
     BSNWaveStop();
     QOA_ResetStaticState();
 }
-
-#ifdef __HIGHC__
-pragma Alias(QOALibEntry, "QOALIBENTRY");
-#endif
 
 Boolean _pascal _export QOALibEntry(LibraryCallType call, GeodeHandle client)
 {
