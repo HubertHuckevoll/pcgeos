@@ -60,7 +60,6 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
     dword          framesDecoded;
     word           bufferSize;
     Boolean        success;
-    char           dbg[80];
 
     framesRequested = 4096;
     success = FALSE;
@@ -96,9 +95,6 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
     framesDecoded = qoaReadS16(qh, framesRequested, bufferP);
     if (framesDecoded > 0)
     {
-        FileHandle      dumpH;
-        FileCreateFlags createFlags;
-        word            dumpBytes;
         signed short    minSample;
         signed short    maxSample;
         dword           sampleCount;
@@ -155,9 +151,9 @@ static void QOA_ResetStaticState(void)
 word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
 {
     signed short *dst;
-    dword framesReq;
     dword framesGot;
     word  blockAlign;
+    dword framesDesired;
 
     if (!s_qoaHandle || !dstBuf || wantBytes == 0 || s_qoaChannels == 0)
     {
@@ -186,9 +182,6 @@ word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
 
         while (producedBytes + (dword)blockAlign <= (dword)wantBytes)
         {
-            dword framesDesired;
-            dword framesGot;
-
             framesDesired = ((dword)wantBytes - producedBytes) / blockAlign;
             if (framesDesired == 0)
             {
