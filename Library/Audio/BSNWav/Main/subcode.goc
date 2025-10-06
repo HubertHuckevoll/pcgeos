@@ -797,6 +797,10 @@ int _pascal BSNWPrepKS(word sampleRate, byte channels, byte bits)
 int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
 {
     int respond = BSNW_STATUS_OK;
+    word produced = 0;
+    word consumed = 0;
+    word secondFreeBefore = 0;
+    dword scaled = 0;
 
     // read from source until buffer is filled
     // or the source go out of data
@@ -812,8 +816,8 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
         // Cachedata --> Konverter --> Secondarybuffer
         if (cacheFull)
         {
-            word    consumed = 0;
-            word    secondFreeBefore = secondFree;
+            consumed = 0;
+            secondFreeBefore = secondFree;
 
             // Konvert Cachedata
             if (konvBitsRed == 1)
@@ -829,15 +833,13 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
 
             if (consumed)
             {
-                word produced = secondFreeBefore - secondFree;
-                BSNWDebugNotifyWord("consumed", consumed);
-                BSNWDebugNotifyWord("produced", produced);
+                produced = secondFreeBefore - secondFree;
 
                 if (produced)
                 {
                     if (secBufL2 && (produced >= secBufL2))
                     {
-                        dword scaled = ((dword)consumed * (dword)secBufL2);
+                        scaled = ((dword)consumed * (dword)secBufL2);
                         playLen2 = (word)(scaled / produced);
                     }
                     else
@@ -849,9 +851,6 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
                 {
                     playLen2 = consumed;
                 }
-
-                BSNWDebugNotifyWord("playLen2", playLen2);
-                BSNWDebugNotifyWord("cacheK", cacheKOffset);
             }
         }
         else
@@ -1589,7 +1588,7 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
     if (statusGlyphOptr1)
     {
 
-        @ifndef BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
 
         rate = (word)(bfc->BWFC_sampleRate);
         bits = (word)(bfc->BWFC_bitsPerSample);
@@ -1622,7 +1621,7 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
 
         @call statusGlyphOptr1::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_DELAYED_VIA_UI_QUEUE); /**/
 
-        @endif
+@endif
 
     };
 
@@ -1672,7 +1671,6 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
     word    aiState,aiState2;
     dword   newSec,lastSec = 0;     // Sekundenwerte
 
-
     peakLevel2 = 0;             // reset helper
 
     if (BSNW_PLAY_FINISHED==BSNWLoadData(playCachePtr,secondPtr))
@@ -1702,7 +1700,6 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
         // loop until end
         while (respond == BSNW_STATUS_OK)
         {
-            BSNWDebugNotifyWord("loopFree", secondFree);
             // 1st loop --> start
             if (i==0)
             {
@@ -1723,10 +1720,10 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
                 {
                     // Timeout !
                     timeOutCounter++;
-                    @ifndef BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
                     sprintf(playStatusText,"%u Timeout(s)",(word)timeOutCounter);
                     @call statusGlyphOptr1::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_NOW); /**/
-                    @endif
+@endif
                 };
                 // update globals
                 secondFree = secondFree + secBufL2;
@@ -1754,7 +1751,6 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
             if(secondFree)
             {
                 respond = BSNWLoadData(playCachePtr,secondPtr);
-                BSNWDebugNotifyWord("loadResp", respond);
 
                 if (bytesToPlay)
                 {
@@ -1788,9 +1784,9 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
                 if ( (newSec != lastSec)    // 4. new SECOND or
                         || (newSec < 5 ) )      //    SECOND lower 5
                 {
-                    @ifndef BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
                     @send statusGlyphOptr2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_DELAYED_VIA_UI_QUEUE);
-                    @endif
+@endif
                     lastSec = newSec;
                 };
             };
@@ -1808,7 +1804,6 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
             // Stopflag (Abort by user)
             if (playStopFlag)
             {
-                BSNWDebugNotifyWord("abortFlag", playStopFlag);
                 respond = BSNW_ABORT;
             };
 
@@ -1843,7 +1838,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
         MemFree(playCacheHandle);
     };
 
-    @ifndef BSNWAV_NO_UI
+@ifndef BSNWAV_NO_UI
     // Disable Statusbox and remove from tree if:
     if (    (playFlags &  BSNW_SHOW_STATUS) // 1. Display was visible
             && (parent    != NullOptr)     // 2. parent was defined
@@ -1853,7 +1848,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
         @call parent::MSG_GEN_REMOVE_CHILD(statusBox,0);
         @call statusBox::MSG_META_BLOCK_FREE();
     };
-    @endif
+@endif
 
     // reset internal state
     playStatus = BSNW_STATUS_OK;
