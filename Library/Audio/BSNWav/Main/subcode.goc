@@ -37,8 +37,9 @@ REVISION HISTORY:
 
 @ifndef BSNWAV_NO_UI
 #include <Ansi/stdio.h>
-#include <Ansi/string.h>
 @endif
+
+#include <Ansi/string.h>
 
 #include <sound.h>
 #include <library.h>
@@ -55,6 +56,39 @@ REVISION HISTORY:
 
 @include "bsnwav.goh"
 @include "Main/subcode.goh"
+
+static const char gBSNWavSubLogFileName[] = "qoa.log";
+
+static void BSNWavSub_LogMessage(const char *message)
+{
+    FileHandle      logFileH;
+    FileCreateFlags createFlags;
+    word            messageLen;
+    char            newlineStr[2];
+    word            newlineLen;
+
+    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
+    logFileH = FileCreate(gBSNWavSubLogFileName, createFlags, FA_ARCHIVE);
+    if (!logFileH)
+    {
+        return;
+    }
+
+    FilePos(logFileH, 0, FILE_POS_END);
+
+    messageLen = (word)strlen(message);
+    if (messageLen > 0)
+    {
+        FileWrite(logFileH, (void*)message, messageLen, FALSE);
+    }
+
+    newlineStr[0] = '\r';
+    newlineStr[1] = '\n';
+    newlineLen = 2;
+    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
+
+    FileClose(logFileH, TRUE);
+}
 
 /******************** Constants/Makros ************************/
 
@@ -103,7 +137,7 @@ void BSNWDebugNotifyWord(const char *label, word value)
     *ptr++ = hex[value & 0xF];
     *ptr   = '\0';
 
-    SysNotify(SNF_CONTINUE, buf, 0);
+    BSNWavSub_LogMessage(buf);
 }
 
 /******************** Strings / Globals ***********************/

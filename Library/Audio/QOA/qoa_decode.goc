@@ -13,8 +13,42 @@
 #include <system.h>
 
 #include <Ansi/string.h>
+#include <Ansi/stdio.h>
 #include <file.h>
 #include <heap.h>
+
+static const char gQOADecodeLogFileName[] = "qoa.log";
+
+static void QOA_LogMessage(const char *message)
+{
+    FileHandle      logFileH;
+    FileCreateFlags createFlags;
+    word            messageLen;
+    char            newlineStr[2];
+    word            newlineLen;
+
+    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
+    logFileH = FileCreate(gQOADecodeLogFileName, createFlags, FA_ARCHIVE);
+    if (!logFileH)
+    {
+        return;
+    }
+
+    FilePos(logFileH, 0, FILE_POS_END);
+
+    messageLen = (word)strlen(message);
+    if (messageLen > 0)
+    {
+        FileWrite(logFileH, (void*)message, messageLen, FALSE);
+    }
+
+    newlineStr[0] = '\r';
+    newlineStr[1] = '\n';
+    newlineLen = 2;
+    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
+
+    FileClose(logFileH, TRUE);
+}
 
 /* ---------- QOA on-wire constants ---------- */
 #define QOA_MAGIC               0x716f6166UL /* 'qoaf' big-endian */
@@ -269,21 +303,21 @@ static int  QOA_LoadNextFrame(QOAHandle *q)
 
     if ((word)channels != q->info.channels || samplerate != q->info.sampleRate)
     {
-        SysNotify(SNF_CONTINUE, "QOA frame mismatch", 0);
+        QOA_LogMessage("QOA frame mismatch");
         q->eofReached = TRUE;
         return 0;
     }
 
     if (fsamples == 0 || fsamples > (QOA_SLICES_PER_FRAME * QOA_SLICE_LEN))
     {
-        SysNotify(SNF_CONTINUE, "QOA fsamples invalid", 0);
+        QOA_LogMessage("QOA fsamples invalid");
         q->eofReached = TRUE;
         return 0;
     }
 
     if (fsize < (word)(8 + QOA_LMS_LEN * 4 * (word)channels))
     {
-        SysNotify(SNF_CONTINUE, "QOA fsize too small", 0);
+        QOA_LogMessage("QOA fsize too small");
         q->eofReached = TRUE;
         return 0;
     }
@@ -295,7 +329,7 @@ static int  QOA_LoadNextFrame(QOAHandle *q)
 
     if (dataBytes != expectedBytes)
     {
-        SysNotify(SNF_CONTINUE, "QOA data len mismatch", 0);
+        QOA_LogMessage("QOA data len mismatch");
         q->eofReached = TRUE;
         return 0;
     }
@@ -351,14 +385,14 @@ static int  QOA_LoadNextSliceGroup(QOAHandle *q)
     {
         if (q->frameDataBytesLeft < 8)
         {
-            SysNotify(SNF_CONTINUE, "QOA slice: not enough bytes", 0);
+            QOA_LogMessage("QOA slice: not enough bytes");
             q->eofReached = TRUE;
             return 0;
         }
 
         if (!QOA_Read8(q->fileH, slice8, 8))
         {
-            SysNotify(SNF_CONTINUE, "QOA slice: read failure", 0);
+            QOA_LogMessage("QOA slice: read failure");
             q->eofReached = TRUE;
             return 0;
         }
@@ -370,7 +404,7 @@ static int  QOA_LoadNextSliceGroup(QOAHandle *q)
         q->scalefactor[c] = (byte)QBR_Get(&q->sliceBits[c], 4, &ok);
         if (!ok)
         {
-            SysNotify(SNF_CONTINUE, "QOA slice: scalefactor error", 0);
+            QOA_LogMessage("QOA slice: scalefactor error");
             q->eofReached = TRUE;
             return 0;
         }
@@ -396,7 +430,7 @@ static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *out
         {
             if (!QOA_LoadNextSliceGroup(q))
             {
-                SysNotify(SNF_CONTINUE, "QOA: failed to load slice group", 0);
+                QOA_LogMessage("QOA: failed to load slice group");
                 break;
             }
         }
@@ -422,7 +456,7 @@ static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *out
                 code3 = QBR_Get(&q->sliceBits[ch], 3, &ok);
                 if (!ok)
                 {
-                    SysNotify(SNF_CONTINUE, "QOA bits read error", 0);
+                    QOA_LogMessage("QOA bits read error");
                     q->eofReached = TRUE;
                     return produced;
                 }
@@ -536,7 +570,7 @@ dword _pascal qoaReadS16(QOAHandle *q, dword framesToRead, signed short *dst)
         {
             if (!QOA_LoadNextFrame(q))
             {
-                SysNotify(SNF_CONTINUE, "qoaReadS16: no more frames", 0);
+                QOA_LogMessage("qoaReadS16: no more frames");
                 break;
             }
         }
@@ -546,7 +580,7 @@ dword _pascal qoaReadS16(QOAHandle *q, dword framesToRead, signed short *dst)
         {
             char dbg[60];
             sprintf(dbg, "qoaReadS16: want=%lu got=%u left=%u", framesToRead, got, q->frameSamplesLeft);
-            SysNotify(SNF_CONTINUE, dbg, 0);
+            QOA_LogMessage(dbg);
         }
         if (got == 0)
         {
