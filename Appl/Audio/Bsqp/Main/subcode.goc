@@ -718,7 +718,7 @@ void    _pascal BQ_StartPlay(void)
                 bqSampleBytes = 0;
 
                 // create Playthread
-                if(!ThreadCreate(PRIORITY_TIME_CRITICAL, // PRIORITY_HIGH, PRIORITY_TIME_CRITICAL
+                if(!ThreadCreate(PRIORITY_HIGH, // PRIORITY_HIGH, PRIORITY_TIME_CRITICAL
                                  (word)fh,
                                  BQ_PlayThread,
                                  3000,
