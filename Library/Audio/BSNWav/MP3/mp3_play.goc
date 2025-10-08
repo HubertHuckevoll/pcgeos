@@ -60,13 +60,17 @@ MP3_WWFixedFromPercent(word pct)
 int
 MP3PlayFileBSN(const char *pathP, MP3PlayOptions *optsP)
 {
-    MP3Ctx ctx;
+    Handle ctxH;
+    MP3Ctx *ctxP;
     BSWavFormChunk bfc;
     WWFixed vol;
     Boolean mono;
     word flags;
     optr parent;
     int rc;
+
+    ctxH = 0;
+    ctxP = (MP3Ctx *)(void *)0;
 
     if (optsP == (MP3PlayOptions *)(void *)0) {
         vol.FXwhole = 1;
@@ -81,21 +85,35 @@ MP3PlayFileBSN(const char *pathP, MP3PlayOptions *optsP)
         parent = optsP->parent;
     }
 
-    if (!MP3_InitContextAndPrime((void *)&ctx, pathP, vol, mono)) {
+    ctxH = MemAlloc(sizeof(MP3Ctx), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (ctxH == 0) {
+        return BSNW_MEMORY_ERROR;
+    }
+
+    ctxP = (MP3Ctx *)MemLock(ctxH);
+    if (ctxP == (MP3Ctx *)(void *)0) {
+        MemFree(ctxH);
+        return BSNW_MEMORY_ERROR;
+    }
+
+    if (!MP3_InitContextAndPrime((void *)ctxP, pathP, vol, mono)) {
+        MP3_SetActiveCtxInternal((void *)0);
+        MemUnlock(ctxH);
+        MemFree(ctxH);
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
 
     _fmemset(&bfc, 0, sizeof(bfc));
     bfc.wFormatTag      = BSWN_FORMAT_PCM;
-    bfc.nChannels       = ctx.outCh;
-    bfc.nSamplesPerSec  = ctx.outRate;
+    bfc.nChannels       = ctxP->outCh;
+    bfc.nSamplesPerSec  = ctxP->outRate;
     bfc.wBitsPerSample  = 16;
     bfc.nBlockAlign     = (word)((bfc.nChannels * bfc.wBitsPerSample) / 8);
     bfc.nAvgBytesPerSec = (dword)((dword)bfc.nSamplesPerSec * (dword)bfc.nBlockAlign);
     bfc.cbSize          = 0;
 
     /* Ensure the active context is set for the callback session */
-    MP3_SetActiveCtxInternal((void *)&ctx);
+    MP3_SetActiveCtxInternal((void *)ctxP);
 
     /* bytes=0 => length unknown; BSNWav will pull until callback returns FALSE */
     rc = BSNWavePlayCallback(&bfc,
@@ -104,6 +122,8 @@ MP3PlayFileBSN(const char *pathP, MP3PlayOptions *optsP)
                              parent,
                              MP3_BSNWavFill);
 
-    MP3_CleanupContext((void *)&ctx);
+    MP3_CleanupContext((void *)ctxP);
+    MemUnlock(ctxH);
+    MemFree(ctxH);
     return rc;
 }
