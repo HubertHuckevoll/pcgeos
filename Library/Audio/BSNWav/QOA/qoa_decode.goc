@@ -655,7 +655,7 @@ int _pascal qoaSeek(QOAHandle *q, dword frameIndex)
     return 1;
 }
 
-Boolean _pascal _export QOAProbeFile(FileHandle fh, QOAInfo *outInfo)
+Boolean _pascal _export BSNWavProbeQOAFile(FileHandle fh, QOAInfo *outInfo)
 {
     QOAHandle *qh;
     QOAInfo    tmp;

@@ -42,6 +42,7 @@ DESCRIPTION:
 // File types
 #define BQ_FILE_TYPE_WAV    0
 #define BQ_FILE_TYPE_QOA    1
+#define BQ_FILE_TYPE_MP3    2
 
 // Playstate
 #define BQ_PLAYFLAG_PLAY    1

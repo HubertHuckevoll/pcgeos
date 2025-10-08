@@ -6,48 +6,21 @@
 
 #include <geos.h>
 #include <geoworks.h>
-#include <object.h>
-#include <heap.h>
-#include <mem.h>
 #include <file.h>
 #include <sound.h>
-#include <string.h>
-#include <stdlib.h>
+#include <Ansi/string.h>
 
-#include "../BSNWav.goh"
-#include "mp3.goh"
-#include "minimp3_conf.h"
+@include <bsnwav.goh>
+@include <mp3.goh>
 
-/* Opaque to this TU, implemented in mp3_decode.goc */
-typedef struct {
-    FileHandle              fh;
-    Handle                  inBufH;
-    byte                   *inBufP;
-    word                    inFill;
-    word                    inPos;
-    Boolean                 eofSeen;
-    Handle                  frameH;
-    sword                  *frameP;
-    word                    frameBytes;
-    word                    frameOff;
-    word                    outRate;
-    word                    outCh;
-    WWFixed                 volume;
-    Boolean                 forceMono;
-    mp3dec_t                dec;
-    mp3dec_frame_info_t     fi;
-} MP3Ctx;
+#include "mp3_internal.h"
 
-extern Boolean MP3_InitContextAndPrime(void *opaqueCtx, const char *pathP, WWFixed volume, Boolean forceMono);
-extern void    MP3_CleanupContext(void *opaqueCtx);
-extern void    MP3_SetActiveCtxInternal(void *opaqueCtx);
-extern Boolean _pascal MP3_BSNWavFill(void *dstBuf, word wantBytes);
-
-WWFixed
-MP3_WWFixedFromPercent(word pct)
+static WWFixed _pascal
+BSNWavMP3VolumeFromPercent(word pct)
 {
     WWFixed w;
-    if (pct >= 100) {
+    if (pct >= 100)
+    {
         w.FXwhole = 1;
         w.FXfrac = 0;
         return w;
@@ -57,8 +30,8 @@ MP3_WWFixedFromPercent(word pct)
     return w;
 }
 
-int
-MP3PlayFileBSN(const char *pathP, MP3PlayOptions *optsP)
+int _pascal _export
+BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
 {
     MP3Ctx ctx;
     BSWavFormChunk bfc;
@@ -68,20 +41,28 @@ MP3PlayFileBSN(const char *pathP, MP3PlayOptions *optsP)
     optr parent;
     int rc;
 
-    if (optsP == (MP3PlayOptions *)(void *)0) {
-        vol.FXwhole = 1;
-        vol.FXfrac = 0;
+    if ((pathP == (const char *)(void *)0) || (*pathP == '\0'))
+    {
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+
+    if (optsP == (MP3PlayOptions *)(void *)0)
+    {
+        vol = BSNWavMP3VolumeFromPercent(100);
         mono = FALSE;
         flags = 0;
         parent = NullOptr;
-    } else {
+    }
+    else
+    {
         vol = optsP->volume;
         mono = optsP->forceMono;
         flags = optsP->playFlags;
         parent = optsP->parent;
     }
 
-    if (!MP3_InitContextAndPrime((void *)&ctx, pathP, vol, mono)) {
+    if (!MP3_InitContextAndPrime(&ctx, pathP, vol, mono))
+    {
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
 
@@ -94,16 +75,14 @@ MP3PlayFileBSN(const char *pathP, MP3PlayOptions *optsP)
     bfc.nAvgBytesPerSec = (dword)((dword)bfc.nSamplesPerSec * (dword)bfc.nBlockAlign);
     bfc.cbSize          = 0;
 
-    /* Ensure the active context is set for the callback session */
-    MP3_SetActiveCtxInternal((void *)&ctx);
+    MP3_SetActiveCtxInternal(&ctx);
 
-    /* bytes=0 => length unknown; BSNWav will pull until callback returns FALSE */
     rc = BSNWavePlayCallback(&bfc,
                              (dword)0,
                              flags,
                              parent,
                              MP3_BSNWavFill);
 
-    MP3_CleanupContext((void *)&ctx);
+    MP3_CleanupContext(&ctx);
     return rc;
 }
