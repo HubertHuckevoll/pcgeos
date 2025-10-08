@@ -274,14 +274,12 @@ void _pascal _export QOAStop(void)
     QOA_ResetStaticState();
 }
 
-Boolean _pascal _export QOALibEntry(LibraryCallType call, GeodeHandle client)
+void _pascal QOAHandleLibraryCall(LibraryCallType call, GeodeHandle client)
 {
     (void)client;
 
-    if (call == LCT_DETACH)
+    if ((call == LCT_ATTACH) || (call == LCT_DETACH))
     {
         QOA_ResetStaticState();
     }
-
-    return FALSE;
 }
