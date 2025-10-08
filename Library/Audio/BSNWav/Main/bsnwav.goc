@@ -152,6 +152,7 @@ int             playStatus = 0;     // 0 = System ready (default)
 int             playStopFlag = 0;   // <>0 --> Abort
 dword           playedBytes = 0;    // played Bytes
 dword           bytesToPlay = 0;    // Bytes to play
+Boolean         playStreaming = FALSE;   // TRUE if callback streams until stop
 optr            statusGlyphOptr1 = 0;   // 1. col Statusbox
 optr            statusGlyphOptr2 = 0;
 optr            statusRightBoxOptr = 0;
@@ -390,6 +391,7 @@ int _pascal _export BSNWavePlayFile(FileHandle fh,
 
         // Data sourcetype
         playSourceType = BSNW_SOURCE_FILE;      // Datenquelle = File
+        playStreaming = FALSE;
         // FileHandle of WAV-file
         playSourceFH = fh;
 
@@ -475,6 +477,7 @@ int _pascal _export BSNWavePlayFile(FileHandle fh,
                 // data-Chunk not found
                 bwfh.BWFH_datLen = 0;
                 bytesToPlay = 0;
+                playStreaming = FALSE;
                 playSampleRate = 0;
                 playChannels = 0;
                 playBits = 0;
@@ -603,7 +606,14 @@ dword _pascal BSNWaveCalcPlaytimeText(  char    *textBuffer,
         case BSCPT_REST_TIME:
         {
             // Reminding time
-            time = full - current;
+            if (full > current)
+            {
+                time = full - current;
+            }
+            else
+            {
+                time = 0;
+            }
 
             if (ptr)
             {
@@ -1015,7 +1025,10 @@ extern int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
     {
         playCBPtr = routine;
         playSourceType = BSNW_SOURCE_CALL;      // Sourcetype = Callback
+        playStreaming = (Boolean)((bytes == 0) ? TRUE : FALSE);
         bytesToPlay = bytes;
+        bwfh.BWFH_fmtChunk = *bfc;
+        bwfh.BWFH_datLen = bytes;
 
         // Preparing soundcard
         respond = BSNWPrepare(bfc,playFlags,parent);

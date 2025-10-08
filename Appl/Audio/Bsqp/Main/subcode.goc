@@ -26,6 +26,7 @@ DESCRIPTION:
 
 @include <bsnwav.goh>       /* this include-line must be the first ! */
 @include <qoa.goh>
+@include <mp3.goh>
 
 #include <gstring.h>
 #include <Ansi/stdio.h>
@@ -46,39 +47,6 @@ DESCRIPTION:
 
 #include <ec.h>
 #include <geode.h>
-
-static const char gBQLogFileName[] = "qoa.log";
-
-static void BQ_LogMessage(const char *message)
-{
-    FileHandle      logFileH;
-    FileCreateFlags createFlags;
-    word            messageLen;
-    char            newlineStr[2];
-    word            newlineLen;
-
-    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
-    logFileH = FileCreate(gBQLogFileName, createFlags, FA_ARCHIVE);
-    if (!logFileH)
-    {
-        return;
-    }
-
-    FilePos(logFileH, 0, FILE_POS_END);
-
-    messageLen = (word)strlen(message);
-    if (messageLen > 0)
-    {
-        FileWrite(logFileH, (void*)message, messageLen, FALSE);
-    }
-
-    newlineStr[0] = '\r';
-    newlineStr[1] = '\n';
-    newlineLen = 2;
-    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
-
-    FileClose(logFileH, TRUE);
-}
 
 
 /**********************************************************************/
@@ -151,6 +119,11 @@ static Boolean BQ_PathHasExtension(const char *path, const char *ext)
 static Boolean BQ_IsQOAPath(const char *path)
 {
     return BQ_PathHasExtension(path, "QOA");
+}
+
+static Boolean BQ_IsMP3Path(const char *path)
+{
+    return BQ_PathHasExtension(path, "MP3");
 }
 
 static Boolean BQ_LoadQOAInfo(FileHandle fh, QOAInfo *info)
@@ -353,7 +326,14 @@ void RedrawTime (GStateHandle gstate)
             // remaining if option or system idle
             if ((bqDispStyle == BQ_TIME_DISP_REMAIN)||(playFlag == FALSE ))
             {
-                len = (bqAllBytes-bqSampleBytes)/((dword)(bqBits/8) * bqChannels * bqSampleRate );
+                if ((bqAllBytes != 0) && (bqAllBytes >= bqSampleBytes))
+                {
+                    len = (bqAllBytes-bqSampleBytes)/((dword)(bqBits/8) * bqChannels * bqSampleRate );
+                }
+                else
+                {
+                    len = 0;
+                }
             }
             else
             {
@@ -631,6 +611,8 @@ void    _pascal BQ_StartPlay(void)
 {
     FileHandle  fh;
     word        timeout;
+    Boolean     needHandle;
+    Boolean     playable;
 
     // set next level of quickmode
     if (quickMode == BQ_QUICK_START)
@@ -666,12 +648,18 @@ void    _pascal BQ_StartPlay(void)
     else
     {
         // Open file and testing
-        fh = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W);
+        needHandle = (bqFileType != BQ_FILE_TYPE_MP3);
+        fh = needHandle ? FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W) : (FileHandle)0;
 
-        if (fh)
+        playable = TRUE;
+
+        if (needHandle && !fh)
         {
-            Boolean playable = TRUE;
+            playable = FALSE;
+        }
 
+        if (playable)
+        {
             if (bqFileType == BQ_FILE_TYPE_QOA)
             {
                 if (!BQ_LoadQOAInfo(fh, &bqQoaInfo))
@@ -681,6 +669,26 @@ void    _pascal BQ_StartPlay(void)
                 else
                 {
                     BQ_ApplyQOAInfo(&bqQoaInfo);
+                }
+            }
+            else if (bqFileType == BQ_FILE_TYPE_MP3)
+            {
+                MP3PlayOptions opts;
+
+                _fmemset(&opts, 0, sizeof(opts));
+                opts.volume.FXwhole = 1;
+                opts.volume.FXfrac = 0;
+                opts.forceMono = FALSE;
+                opts.playFlags = BSNW_SHOW_ERROR_MSG | BSNW_TEST_ONLY;
+                opts.parent = NullOptr;
+
+                if (BSNW_STATUS_OK != BSNWavPlayMP3File(fullPath, &opts))
+                {
+                    playable = FALSE;
+                }
+                else
+                {
+                    (void)BSNWaveGetLastFormat(&bqSampleRate, &bqChannels, &bqBits);
                 }
             }
             else
@@ -697,11 +705,14 @@ void    _pascal BQ_StartPlay(void)
 
             if (!playable)
             {
-                FileClose(fh, TRUE);
-                fh = 0;
+                if (fh)
+                {
+                    FileClose(fh, TRUE);
+                    fh = 0;
+                }
             }
 
-            if (fh)
+            if (playable)
             {
                 /////// successfull opening /////////
 
@@ -725,7 +736,10 @@ void    _pascal BQ_StartPlay(void)
                                  GeodeGetProcessHandle()))
                 {
                     // Error
-                    (void) FileClose(fh, TRUE);
+                    if (fh)
+                    {
+                        (void) FileClose(fh, TRUE);
+                    }
                     playFlag = 0;
                 }
                 else
@@ -734,7 +748,11 @@ void    _pascal BQ_StartPlay(void)
                     // Look at BQ_PlayThread() for the next steps !
                 };
             };
-        };
+        }
+        else if (fh)
+        {
+            FileClose(fh, TRUE);
+        }
     };
 }
 
@@ -752,9 +770,11 @@ word    BQ_PlayThread(word fileWord)
 {
     FileHandle  fh;
     int     playState = 1;
+    Boolean     needHandle;
 
     // casting FileHandle
-    fh = (FileHandle)fileWord;
+    needHandle = (bqFileType != BQ_FILE_TYPE_MP3);
+    fh = needHandle ? (FileHandle)fileWord : (FileHandle)0;
 
     // Show Playstate
     RedrawStatus(0);
@@ -766,11 +786,27 @@ word    BQ_PlayThread(word fileWord)
     {
         if (capabFlag)
         {
-            FilePos(fh, 0, FILE_POS_START);
+            if (needHandle)
+            {
+                FilePos(fh, 0, FILE_POS_START);
+            }
 
             if (bqFileType == BQ_FILE_TYPE_QOA)
             {
-                playState = QOAPlayFile(fh, BSNW_SHOW_ERROR_MSG, 0);
+                playState = BSNWavPlayQOAFile(fh, BSNW_SHOW_ERROR_MSG, 0);
+            }
+            else if (bqFileType == BQ_FILE_TYPE_MP3)
+            {
+                MP3PlayOptions opts;
+
+                _fmemset(&opts, 0, sizeof(opts));
+                opts.volume.FXwhole = 1;
+                opts.volume.FXfrac = 0;
+                opts.forceMono = FALSE;
+                opts.playFlags = BSNW_SHOW_ERROR_MSG;
+                opts.parent = NullOptr;
+
+                playState = BSNWavPlayMP3File(fullPath, &opts);
             }
             else
             {
@@ -790,7 +826,10 @@ word    BQ_PlayThread(word fileWord)
              && (playState == 0));
 
     // Close File
-    (void) FileClose(fh, TRUE);
+    if (needHandle && fh)
+    {
+        (void) FileClose(fh, TRUE);
+    }
 
     // update PLAYTrigger
     @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playText,VUM_NOW);
@@ -897,6 +936,7 @@ Boolean _pascal BQ_CheckForPlay(void)
     FileHandle  fh;
     Boolean     retVal;
     Boolean     isQOA;
+    Boolean     isMP3;
 
     retVal = FALSE;
     bqSampleBytes = 0;
@@ -906,13 +946,26 @@ Boolean _pascal BQ_CheckForPlay(void)
     bqBits        = 0;
 
     isQOA = BQ_IsQOAPath(fullPath);
-    bqFileType = isQOA ? BQ_FILE_TYPE_QOA : BQ_FILE_TYPE_WAV;
-
-    fh = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W);
-
-    if (fh)
+    isMP3 = (!isQOA) ? BQ_IsMP3Path(fullPath) : FALSE;
+    if (isQOA)
     {
-        if (isQOA)
+        bqFileType = BQ_FILE_TYPE_QOA;
+    }
+    else if (isMP3)
+    {
+        bqFileType = BQ_FILE_TYPE_MP3;
+    }
+    else
+    {
+        bqFileType = BQ_FILE_TYPE_WAV;
+    }
+
+    fh = (bqFileType == BQ_FILE_TYPE_MP3) ? (FileHandle)0 :
+         FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W);
+
+    if ((bqFileType == BQ_FILE_TYPE_MP3) || fh)
+    {
+        if (bqFileType == BQ_FILE_TYPE_QOA)
         {
             if (BQ_LoadQOAInfo(fh, &bqQoaInfo))
             {
@@ -921,6 +974,25 @@ Boolean _pascal BQ_CheckForPlay(void)
             }
 
             FileClose(fh, TRUE);
+        }
+        else if (bqFileType == BQ_FILE_TYPE_MP3)
+        {
+            MP3PlayOptions opts;
+
+            _fmemset(&opts, 0, sizeof(opts));
+            opts.volume.FXwhole = 1;
+            opts.volume.FXfrac = 0;
+            opts.forceMono = FALSE;
+            opts.playFlags = BSNW_TEST_ONLY;
+            opts.parent = NullOptr;
+
+            if (BSNW_STATUS_OK == BSNWavPlayMP3File(fullPath, &opts))
+            {
+                bqAllBytes = BSNWaveGetLastFormat(&bqSampleRate,
+                                                  &bqChannels,
+                                                  &bqBits);
+                retVal = RedrawSettings(0);
+            }
         }
         else
         {

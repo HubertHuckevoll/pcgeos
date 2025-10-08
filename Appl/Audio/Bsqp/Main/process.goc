@@ -245,6 +245,7 @@ typedef struct {
 {
     BSWavPlayStates states;
     word        level;
+    dword       newBytes;
 
     // request data about playing from library
     if (playFlag)
@@ -258,16 +259,21 @@ typedef struct {
         states.BWPS_full = 0;
     }
 
+    if ((states.BWPS_full != 0) && (states.BWPS_full != bqAllBytes))
+    {
+        bqAllBytes = states.BWPS_full;
+    }
+
     // Timedisplay
     if (bqSampleBytes != states.BWPS_current)
     {
-        bqSampleBytes = states.BWPS_current;
-//            bqAllBytes = states.BWPS_full;
-
-        if (bqSampleBytes>bqAllBytes)
+        newBytes = states.BWPS_current;
+        if ((bqAllBytes != 0) && (newBytes > bqAllBytes))
         {
-            bqSampleBytes = bqAllBytes;
-        };
+            newBytes = bqAllBytes;
+        }
+
+        bqSampleBytes = newBytes;
 
         RedrawTime(0);
     };

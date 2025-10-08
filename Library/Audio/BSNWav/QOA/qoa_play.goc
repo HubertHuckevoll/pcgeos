@@ -1,12 +1,11 @@
 /***************************************************************
  *  qoa_play.goc — QOA player that uses BSNWAV internally
- *  App calls QOAPlayFile(); this feeds PCM to BSNWAV via callback.
+ *  App calls BSNWavPlayQOAFile(); this feeds PCM to BSNWAV via callback.
  ***************************************************************/
 @include <qoa.goh>
 @include <bsnwav.goh>
 
 #include <Ansi/string.h>
-#include <Ansi/stdio.h>
 #include <library.h>
 #include <system.h>
 #include <file.h>
@@ -18,39 +17,6 @@
 static QOAHandle *s_qoaHandle = 0;
 static word       s_qoaChannels = 1;
 static dword      s_totalFramesDecoded = 0;
-
-static const char gQOALogFileName[] = "qoa.log";
-
-static void QOA_LogMessage(const char *message)
-{
-    FileHandle      logFileH;
-    FileCreateFlags createFlags;
-    word            messageLen;
-    char            newlineStr[2];
-    word            newlineLen;
-
-    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
-    logFileH = FileCreate(gQOALogFileName, createFlags, FA_ARCHIVE);
-    if (!logFileH)
-    {
-        return;
-    }
-
-    FilePos(logFileH, 0, FILE_POS_END);
-
-    messageLen = (word)strlen(message);
-    if (messageLen > 0)
-    {
-        FileWrite(logFileH, (void*)message, messageLen, FALSE);
-    }
-
-    newlineStr[0] = '\r';
-    newlineStr[1] = '\n';
-    newlineLen = 2;
-    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
-
-    FileClose(logFileH, TRUE);
-}
 
 static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
 {
@@ -95,32 +61,6 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
     framesDecoded = qoaReadS16(qh, framesRequested, bufferP);
     if (framesDecoded > 0)
     {
-        signed short    minSample;
-        signed short    maxSample;
-        dword           sampleCount;
-
-        // decoded %lu frames", framesDecoded
-        sampleCount = framesDecoded * (dword)info->channels;
-        minSample = bufferP[0];
-        maxSample = bufferP[0];
-        if (sampleCount > 1)
-        {
-            dword idx;
-            for (idx = 1; idx < sampleCount; idx++)
-            {
-                signed short s;
-                s = bufferP[idx];
-                if (s < minSample)
-                {
-                    minSample = s;
-                }
-                if (s > maxSample)
-                {
-                    maxSample = s;
-                }
-            }
-        }
-
         success = TRUE;
     }
     else
@@ -148,12 +88,15 @@ static void QOA_ResetStaticState(void)
 }
 
 /* BSNWAV will invoke this */
-word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
+static word _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
 {
     signed short *dst;
+    signed short *writePtr;
     dword framesGot;
     word  blockAlign;
     dword framesDesired;
+    dword producedBytes;
+    word  sampleAdvance;
 
     if (!s_qoaHandle || !dstBuf || wantBytes == 0 || s_qoaChannels == 0)
     {
@@ -167,54 +110,39 @@ word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
     }
 
     dst = (signed short*)dstBuf;
+    writePtr = dst;
+    producedBytes = 0;
 
-    if (wantBytes == 0)
+    while (producedBytes + (dword)blockAlign <= (dword)wantBytes)
     {
-        return 0;
+        framesDesired = ((dword)wantBytes - producedBytes) / blockAlign;
+        if (framesDesired == 0)
+        {
+            break;
+        }
+
+        framesGot = qoaReadS16(s_qoaHandle, framesDesired, writePtr);
+        if (framesGot == 0)
+        {
+            // QOA cb: EOF
+            break;
+        }
+
+        s_totalFramesDecoded += framesGot;
+
+        sampleAdvance = (word)(framesGot * (dword)s_qoaChannels);
+        writePtr += sampleAdvance;
+        producedBytes += framesGot * blockAlign;
     }
 
+    if (producedBytes < (dword)wantBytes)
     {
-        signed short *writePtr;
-        dword producedBytes;
+        byte *fill;
+        dword remaining;
 
-        writePtr = dst;
-        producedBytes = 0;
-
-        while (producedBytes + (dword)blockAlign <= (dword)wantBytes)
-        {
-            framesDesired = ((dword)wantBytes - producedBytes) / blockAlign;
-            if (framesDesired == 0)
-            {
-                break;
-            }
-
-            framesGot = qoaReadS16(s_qoaHandle, framesDesired, writePtr);
-            if (framesGot == 0)
-            {
-                // QOA cb: EOF
-                break;
-            }
-
-            s_totalFramesDecoded += framesGot;
-
-            writePtr      += framesGot * (dword)s_qoaChannels;
-            producedBytes += framesGot * blockAlign;
-
-            if (framesGot == 0)
-            {
-                break;
-            }
-        }
-
-        if (producedBytes < (dword)wantBytes)
-        {
-            byte *fill;
-            dword remaining;
-
-            remaining = (dword)wantBytes - producedBytes;
-            fill = (byte *)writePtr;
-            memset(fill, 0, (word)remaining);
-        }
+        remaining = (dword)wantBytes - producedBytes;
+        fill = (byte *)writePtr;
+        _fmemset(fill, 0, (word)remaining);
     }
 
     return 0;
@@ -222,7 +150,7 @@ word _export _pascal QOA_BSNW_Callback(void *dstBuf, word wantBytes)
 
 /* ------------ Public player API ------------ */
 
-int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
+int _pascal _export BSNWavPlayQOAFile(FileHandle fh, word playFlags, optr parent)
 {
     QOAHandle      *qh;
     QOAInfo         info;
@@ -261,14 +189,14 @@ int _pascal _export QOAPlayFile(FileHandle fh, word playFlags, optr parent)
                                  totalBytes,
                                  playFlags,
                                  parent,
-                                 (PlayCallbackFunctionType*) QOA_BSNW_Callback);
+                                 (PlayCallbackFunctionType*) BSNWavQOACallback);
     qoaClose(qh);
 
     QOA_ResetStaticState();
     return status;
 }
 
-void _pascal _export QOAStop(void)
+void _pascal _export BSNWavStopQOA(void)
 {
     BSNWaveStop();
     QOA_ResetStaticState();

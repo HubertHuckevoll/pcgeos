@@ -1,0 +1,32 @@
+/****************************************************************
+ *  mp3.goh — Public API for MP3 playback through BSNWAV
+ *
+ *  Surface:
+ *      - BSNWavPlayMP3File(): play an MP3 file (by DOS path) using BSNWAV
+ ****************************************************************/
+#ifndef __MP3_GOH__
+#define __MP3_GOH__
+
+#include <geos.h>
+#include <geoworks.h>
+#include <file.h>
+
+@deflib bsnwav
+
+typedef struct {
+    WWFixed     volume;     /* 0.0 .. 1.0 */
+    Boolean     forceMono;  /* downmix to mono if TRUE */
+    word        playFlags;  /* pass to BSNWavePlayCallback */
+    optr        parent;     /* UI parent for BSNWav dialog, or NullOptr */
+} MP3PlayOptions;
+
+/* High-level entry: play one MP3 file by DOS path via BSNWav.
+ * Returns RespondTypes (see bsnwav.goh), e.g., BSNW_STATUS_OK == 0.
+ */
+int    _pascal _export BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP);
+
+#ifdef __HIGHC__
+pragma Alias(BSNWavPlayMP3File, "BSNWAVPLAYMP3FILE");
+#endif
+
+#endif /* __MP3_GOH__ */
