@@ -207,11 +207,16 @@ MP3_BSNWavFill(void *dstBuf, word wantBytes)
 
     if (dstBuf == (void *)0)
     {
+        return TRUE;
+    }
+    if (wantBytes == 0)
+    {
         return FALSE;
     }
     if (g_activeCtxP == (MP3Ctx *)(void *)0)
     {
-        return FALSE;
+        _fmemset(dstBuf, 0, wantBytes);
+        return TRUE;
     }
     ctxP = g_activeCtxP;
     produced = 0;
@@ -235,17 +240,14 @@ MP3_BSNWavFill(void *dstBuf, word wantBytes)
         {
             if (!MP3_DecodeNextFrame(ctxP))
             {
-                if (produced > 0)
-                {
-                    _fmemset((byte *)dstBuf + produced,
-                             0,
-                             (word)(wantBytes - produced));
-                }
-                return FALSE;
+                _fmemset((byte *)dstBuf + produced,
+                         0,
+                         (word)(wantBytes - produced));
+                return TRUE;
             }
         }
     }
-    return TRUE;
+    return FALSE;
 }
 
 void _pascal

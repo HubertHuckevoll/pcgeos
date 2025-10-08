@@ -48,39 +48,6 @@ DESCRIPTION:
 #include <ec.h>
 #include <geode.h>
 
-static const char gBQLogFileName[] = "qoa.log";
-
-static void BQ_LogMessage(const char *message)
-{
-    FileHandle      logFileH;
-    FileCreateFlags createFlags;
-    word            messageLen;
-    char            newlineStr[2];
-    word            newlineLen;
-
-    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
-    logFileH = FileCreate(gBQLogFileName, createFlags, FA_ARCHIVE);
-    if (!logFileH)
-    {
-        return;
-    }
-
-    FilePos(logFileH, 0, FILE_POS_END);
-
-    messageLen = (word)strlen(message);
-    if (messageLen > 0)
-    {
-        FileWrite(logFileH, (void*)message, messageLen, FALSE);
-    }
-
-    newlineStr[0] = '\r';
-    newlineStr[1] = '\n';
-    newlineLen = 2;
-    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
-
-    FileClose(logFileH, TRUE);
-}
-
 
 /**********************************************************************/
 

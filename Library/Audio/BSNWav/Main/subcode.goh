@@ -41,6 +41,7 @@ extern  int             playStatus;     // 0 = System ready (idle state)
 extern  int             playStopFlag;   // <>0 --> Abort
 extern  dword           playedBytes;
 extern  dword           bytesToPlay;
+extern  Boolean         playStreaming;
 extern  optr            statusGlyphOptr;
 extern  char            playStatusText[];
 extern  MemHandle       playCacheHandle;
