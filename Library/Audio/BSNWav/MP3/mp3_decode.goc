@@ -60,12 +60,20 @@ MP3_ScalePcmWithWWFixed(sword *samplesP, word sampleCount, WWFixed volume)
     long prod;
     sword s;
 
+    if ((volume.FXwhole == 0) && (volume.FXfrac == 0)) {
+        _fmemset(samplesP, 0, (word)(sampleCount * sizeof(sword)));
+        return;
+    }
     if ((volume.FXwhole == 1) && (volume.FXfrac == 0)) {
         return;
     }
     for (i = 0; i < sampleCount; i++) {
         s = samplesP[i];
-        prod = ((long)s * (long)volume.FXwhole) << 16;
+        if (volume.FXwhole != 0) {
+            prod = ((long)s << 16);
+        } else {
+            prod = 0;
+        }
         prod += ((long)s * (long)volume.FXfrac);
         prod >>= 16;
         if (prod > 32767) prod = 32767;
