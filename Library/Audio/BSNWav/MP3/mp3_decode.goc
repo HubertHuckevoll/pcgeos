@@ -86,9 +86,9 @@ MP3_MixStereoToMonoInPlace(sword *pcmP, word stereoSamples)
     for (i = 0; i < stereoSamples; i++) {
         L = (long)pcmP[2*i + 0];
         R = (long)pcmP[2*i + 1];
-        m = (L + R) / 2;
+        m = (L + R) >> 1;
         if (m > 32767) m = 32767;
-        if (m < -32768) m = -32768;
+        if (m < -32767) m = -32767;
         pcmP[i] = (sword)m;
     }
     return (word)(stereoSamples * 2); /* mono bytes */
