@@ -1,0 +1,26 @@
+/************************************************
+ * MP3 playback API (minimp3 + BSNWav callback)
+ * - GOC header, C89 friendly
+ ************************************************/
+@include <geos.h>
+@include <stdapp.goh>
+
+#ifndef MP3_GOH
+#define MP3_GOH
+
+typedef struct {
+    WWFixed     volume;     /* 0.0 .. 1.0 */
+    Boolean     forceMono;  /* downmix to mono if TRUE */
+    word        playFlags;  /* pass to BSNWavePlayCallback */
+    optr        parent;     /* UI parent for BSNWav dialog, or NullOptr */
+} MP3PlayOptions;
+
+/* Build a WWFixed from integer percent (0..100) */
+WWFixed MP3_WWFixedFromPercent(word pct);
+
+/* High-level entry: play one MP3 file by DOS path via BSNWav.
+ * Returns RespondTypes (see BSNWav.goh), e.g., BSNW_STATUS_OK == 0.
+ */
+int MP3PlayFileBSN(const char *pathP, MP3PlayOptions *optsP);
+
+#endif /* MP3_GOH */
