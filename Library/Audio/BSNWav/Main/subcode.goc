@@ -57,6 +57,9 @@ REVISION HISTORY:
 @include "bsnwav.goh"
 @include "Main/subcode.goh"
 
+#define BSNW_TICKS_PER_SECOND                60
+#define BSNW_MIN_TICKS_PER_HALF_BUFFER       2
+
 static const char gBSNWavSubLogFileName[] = "qoa.log";
 
 static void BSNWavSub_LogMessage(const char *message)
@@ -146,6 +149,51 @@ const char  playKeyIT[]     = "PlayBufferSize";
 const char  secondKeyIT[]   = "SecondBufferSize";
 const char  reverseKeyIT[]  = "OutputChannelReverse";
 word        peakLevel2 = 0;     // helper for peak level
+
+static word BSNWDetermineSecondaryBufferLength(const BSWavFormChunk *fmt,
+                                               word configuredLength)
+{
+    dword   avgRate;
+    dword   minHalfBytes;
+    dword   requiredLen;
+    word    computedLen;
+
+    avgRate = fmt->BWFC_avgRate;
+    if (avgRate == 0)
+    {
+        return configuredLength;
+    }
+
+    minHalfBytes = avgRate * BSNW_MIN_TICKS_PER_HALF_BUFFER;
+    minHalfBytes = (minHalfBytes + (BSNW_TICKS_PER_SECOND - 1))
+                   / BSNW_TICKS_PER_SECOND;
+
+    if (minHalfBytes < 256)
+    {
+        minHalfBytes = 256;
+    }
+
+    requiredLen = minHalfBytes << 1;
+    if (requiredLen > 0x0000FFF8UL)
+    {
+        requiredLen = 0x0000FFF8UL;
+    }
+
+    computedLen = (word)requiredLen;
+    computedLen = (word)((computedLen + 7) & ~7);
+
+    if (computedLen < 512)
+    {
+        computedLen = 512;
+    }
+
+    if (configuredLength >= computedLen)
+    {
+        return configuredLength;
+    }
+
+    return computedLen;
+}
 
 
 /**************************** Funktionen ************************/
@@ -1516,6 +1564,7 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
     word    konvertFaktor;
     char    *ptr;
     word    size;
+    word    secBufRequest;
 
     // Delete Flags
     playStopFlag = FALSE;
@@ -1630,7 +1679,8 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
     if (respond == BSNW_STATUS_OK)
     {
         // Allocate Secondarybuffer
-        secBufLen  = BSNWAllocSecBuffer(&secondPtr,secBufLenSoll);
+        secBufRequest = BSNWDetermineSecondaryBufferLength(bfc, secBufLenSoll);
+        secBufLen  = BSNWAllocSecBuffer(&secondPtr,secBufRequest);
         secBufL2   = secBufLen>>1;      // halbe Pufferl�nge
         secondFree = secBufLen;
     };
