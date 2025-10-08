@@ -26,6 +26,7 @@
 #include <$(SYSMAKEFILE)>
 
 GOCFLAGS += -L bsnwav
+GOCFLAGS += -O
 # GOCFLAGS += -L bsnwav/QOA
 # GOCFLAGS += -L bsnwav/MP3
 # ASM_TO_OBJS    += ASMTOOLS/asmtoolsManager.asm
@@ -35,4 +36,3 @@ GOCFLAGS += -L bsnwav
 # CCOMFLAGS += -WDE -w
 # CCOMFLAGS += -O2 -w -w-amp -w-cln -w-pin
 # LINKFLAGS += -N Copyright\20Dirk\20Lausecker\202000
-

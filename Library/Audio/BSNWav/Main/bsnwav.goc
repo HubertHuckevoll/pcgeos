@@ -65,39 +65,7 @@ Secondarybuffer:
 #include <riff.h>
 
 @include "bsnwav.goh"
-
-static const char gBSNWavLogFileName[] = "qoa.log";
-
-static void BSNWav_LogMessage(const char *message)
-{
-    FileHandle      logFileH;
-    FileCreateFlags createFlags;
-    word            messageLen;
-    char            newlineStr[2];
-    word            newlineLen;
-
-    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
-    logFileH = FileCreate(gBSNWavLogFileName, createFlags, FA_ARCHIVE);
-    if (!logFileH)
-    {
-        return;
-    }
-
-    FilePos(logFileH, 0, FILE_POS_END);
-
-    messageLen = (word)strlen(message);
-    if (messageLen > 0)
-    {
-        FileWrite(logFileH, (void*)message, messageLen, FALSE);
-    }
-
-    newlineStr[0] = '\r';
-    newlineStr[1] = '\n';
-    newlineLen = 2;
-    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
-
-    FileClose(logFileH, TRUE);
-}
+#include "../QOA/qoa_debug.h"
 
 /******************** Constants/Macros ************************/
 
@@ -704,10 +672,12 @@ dword _pascal BSNWaveCalcPlaytimeText(  char    *textBuffer,
 
 void BSNWaveDialogUnknownFormat(word formatID)
 {
-    char logBuf[64];
-
-    sprintf(logBuf, TEXT_UNKNOWN_WAV_FORMAT_2, formatID);
-    BSNWav_LogMessage(logBuf);
+//    char logBuf[64] = {0};
+//
+//#if QOA_DEBUG_LOGGING
+//    sprintf(logBuf, TEXT_UNKNOWN_WAV_FORMAT_2, formatID);
+//    QOADebug_Log("%s", logBuf);
+//#endif
 
 @ifndef BSNWAV_NO_UI
     sprintf(playStatusText,"%04X",formatID);

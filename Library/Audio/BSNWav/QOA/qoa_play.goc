@@ -6,17 +6,126 @@
 @include <bsnwav.goh>
 
 #include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <stdarg.h>
 #include <library.h>
 #include <system.h>
 #include <file.h>
 #include <heap.h>
 #include "../fmem_compat.h"
+#include "qoa_debug.h"
 
 /* ------------ Internal static playback context ------------ */
 /* BSNWAV's callback type has no user-data -> keep a static handle. */
-static QOAHandle *s_qoaHandle = 0;
-static word       s_qoaChannels = 1;
-static dword      s_totalFramesDecoded = 0;
+#define QOA_SCRATCH_FRAMES          2048
+
+static QOAHandle     *s_qoaHandle = 0;
+static word           s_qoaChannels = 1;
+static dword          s_totalFramesDecoded = 0;
+static MemHandle      s_qoaScratchH = NullHandle;
+static signed short  *s_qoaScratchP = 0;
+static word           s_qoaScratchCapacityBytes = 0;
+#if QOA_DEBUG_VERBOSE
+#ifndef QOA_VERBOSE_CALLBACK_BUDGET
+#define QOA_VERBOSE_CALLBACK_BUDGET        8
+#endif
+static word           s_qoaVerboseCallbacksRemaining = QOA_VERBOSE_CALLBACK_BUDGET;
+#endif
+
+static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info);
+static void    QOA_FreeScratch(void);
+static Boolean QOA_EnsureScratch(word channels);
+
+static void QOA_Play_Log(const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    QOADebug_LogV(fmt, ap);
+    va_end(ap);
+}
+
+static void QOA_Play_LogVerbose(const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    QOADebug_LogVerboseV(fmt, ap);
+    va_end(ap);
+}
+
+static void QOA_FreeScratch(void)
+{
+    if (s_qoaScratchH != NullHandle)
+    {
+        //QOA_Play_Log("QOA_FreeScratch: freeing %u bytes", s_qoaScratchCapacityBytes);
+
+        if (s_qoaScratchP)
+        {
+            MemUnlock(s_qoaScratchH);
+        }
+        MemFree(s_qoaScratchH);
+    }
+    else
+    {
+        //QOA_Play_Log("QOA_FreeScratch: nothing to free");
+    }
+
+    s_qoaScratchH = NullHandle;
+    s_qoaScratchP = 0;
+    s_qoaScratchCapacityBytes = 0;
+}
+
+static Boolean QOA_EnsureScratch(word channels)
+{
+    word neededBytes;
+    MemHandle scratchH;
+    signed short *scratchP;
+
+    if (channels == 0)
+    {
+        return FALSE;
+    }
+
+    neededBytes = (word)(QOA_SCRATCH_FRAMES * (word)channels * (word)sizeof(signed short));
+    if (neededBytes == 0)
+    {
+        neededBytes = (word)((word)channels * (word)sizeof(signed short));
+    }
+
+    if (s_qoaScratchH != NullHandle &&
+        s_qoaScratchP &&
+        s_qoaScratchCapacityBytes >= neededBytes)
+    {
+        //QOA_Play_LogVerbose("QOA_EnsureScratch: reusing buffer (%u bytes >= %u)",
+        //                     s_qoaScratchCapacityBytes,
+        //                     neededBytes);
+        return TRUE;
+    }
+
+    QOA_FreeScratch();
+
+    scratchH = MemAlloc(neededBytes, HF_SWAPABLE, HAF_ZERO_INIT);
+    if (scratchH == NullHandle)
+    {
+        //QOA_Play_Log("QOA_EnsureScratch: MemAlloc failed for %u bytes", neededBytes);
+        return FALSE;
+    }
+
+    scratchP = (signed short *)MemLock(scratchH);
+    if (!scratchP)
+    {
+        //QOA_Play_Log("QOA_EnsureScratch: MemLock failed for %u bytes", neededBytes);
+        MemFree(scratchH);
+        return FALSE;
+    }
+
+    s_qoaScratchH = scratchH;
+    s_qoaScratchP = scratchP;
+    s_qoaScratchCapacityBytes = neededBytes;
+    //QOA_Play_Log("QOA_EnsureScratch: allocated new buffer (%u bytes)", neededBytes);
+    return TRUE;
+}
 
 static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
 {
@@ -77,76 +186,192 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
         success = FALSE;
     }
 
+    //QOA_Play_Log("QOA_VerifyDecoder: result=%u channels=%u rate=%lu totalFrames=%lu",
+    //             (word)success,
+    //             (info ? info->channels : 0),
+    //             (info ? info->sampleRate : 0),
+    //             (info ? info->totalFrames : 0));
+
     return success;
 }
 
 void _pascal QOA_ResetStaticState(void)
 {
+    //QOA_Play_Log("QOA_ResetStaticState: handle=%04x channels=%u totalFramesDecoded=%lu",
+    //             (word)s_qoaHandle,
+    //             s_qoaChannels,
+    //             s_totalFramesDecoded);
+
+    QOA_FreeScratch();
+
     s_qoaHandle = 0;
     s_qoaChannels = 1;
     s_totalFramesDecoded = 0;
+
+    QOADebug_Flush();
+#if QOA_DEBUG_VERBOSE
+    s_qoaVerboseCallbacksRemaining = QOADebug_IsVerbose()
+                                     ? QOA_VERBOSE_CALLBACK_BUDGET
+                                     : 0;
+#endif
 }
 
 /* BSNWAV will invoke this */
 static Boolean _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
 {
-    signed short *dst;
-    signed short *writePtr;
-    dword framesGot;
-    word  blockAlign;
-    dword framesDesired;
-    dword producedBytes;
-    word  sampleAdvance;
+    byte far *dstFar;
+    word blockAlign;
+    word totalFramesWanted;
+    word framesProduced;
     Boolean finished;
+    Boolean verboseActive;
 
     if (!s_qoaHandle || !dstBuf || wantBytes == 0 || s_qoaChannels == 0)
     {
+        //QOA_Play_Log("BSNWavQOACallback: guard failed (handle=%04x dst=%p want=%u channels=%u)",
+        //             (word)s_qoaHandle,
+        //             dstBuf,
+        //             wantBytes,
+        //             s_qoaChannels);
         return 1; /* signal error -> BSNW stops */
     }
 
     blockAlign = (word)(s_qoaChannels * 2u);
     if (blockAlign == 0)
     {
+        //QOA_Play_Log("BSNWavQOACallback: blockAlign is zero (channels=%u)", s_qoaChannels);
         return 1;
     }
 
-    dst = (signed short*)dstBuf;
-    writePtr = dst;
-    producedBytes = 0;
+    if (!QOA_EnsureScratch(s_qoaChannels))
+    {
+        //QOA_Play_Log("BSNWavQOACallback: QOA_EnsureScratch failed");
+        return 1;
+    }
+
+    dstFar = (byte far *)dstBuf;
+    totalFramesWanted = (word)(wantBytes / blockAlign);
+#if QOA_DEBUG_VERBOSE
+
+    verboseActive = (s_qoaVerboseCallbacksRemaining > 0) &&
+                    QOADebug_IsVerbose();
+
+    if (verboseActive)
+    {
+        //QOA_Play_LogVerbose("BSNWavQOACallback: wantBytes=%u blockAlign=%u totalFramesWanted=%u",
+        //                    wantBytes,
+        //                    blockAlign,
+        //                    totalFramesWanted);
+    }
+#endif
+    framesProduced = 0;
     finished = FALSE;
 
-    while (producedBytes + (dword)blockAlign <= (dword)wantBytes)
+    while (framesProduced < totalFramesWanted)
     {
-        framesDesired = ((dword)wantBytes - producedBytes) / blockAlign;
-        if (framesDesired == 0)
-        {
-            break;
-        }
+        word framesRemaining;
+        word scratchFrames;
+        dword framesDecoded;
+        word bytesToCopy;
+        word producedBytes;
 
-        framesGot = qoaReadS16(s_qoaHandle, framesDesired, writePtr);
-        if (framesGot == 0)
+        scratchFrames = (word)(s_qoaScratchCapacityBytes / blockAlign);
+        if (scratchFrames == 0)
         {
-            // QOA cb: EOF
             finished = TRUE;
             break;
         }
 
-        s_totalFramesDecoded += framesGot;
+        framesRemaining = (word)(totalFramesWanted - framesProduced);
+        if (scratchFrames > framesRemaining)
+        {
+            scratchFrames = framesRemaining;
+        }
 
-        sampleAdvance = (word)(framesGot * (dword)s_qoaChannels);
-        writePtr += sampleAdvance;
-        producedBytes += framesGot * blockAlign;
+#if QOA_DEBUG_VERBOSE
+        if (verboseActive)
+        {
+            //QOA_Play_LogVerbose("BSNWavQOACallback: requesting up to %u frames (remaining=%u)",
+            //                    scratchFrames,
+            //                    framesRemaining);
+        }
+#endif
+        framesDecoded = qoaReadS16(s_qoaHandle,
+                                   (dword)scratchFrames,
+                                   s_qoaScratchP);
+        if (framesDecoded == 0)
+        {
+            //QOA_Play_Log("BSNWavQOACallback: decoder returned 0 frames");
+            finished = TRUE;
+            break;
+        }
+
+#if QOA_DEBUG_VERBOSE
+        if (verboseActive)
+        {
+            //QOA_Play_LogVerbose("BSNWavQOACallback: decoder produced %lu frames", framesDecoded);
+        }
+#endif
+        bytesToCopy = (word)(framesDecoded * (dword)blockAlign);
+        producedBytes = (word)(framesProduced * blockAlign);
+
+        _fmemcpy(dstFar + producedBytes,
+                 s_qoaScratchP,
+                 bytesToCopy);
+#if QOA_DEBUG_VERBOSE
+        if (verboseActive)
+        {
+            //QOA_Play_LogVerbose("BSNWavQOACallback: copied %u bytes at offset %u",
+            //                    bytesToCopy,
+            //                    producedBytes);
+        }
+#endif
+
+        framesProduced += (word)framesDecoded;
+        s_totalFramesDecoded += framesDecoded;
+
+        if (framesDecoded < (dword)scratchFrames)
+        {
+            //QOA_Play_Log("BSNWavQOACallback: short read (%lu < %u) -> finishing", framesDecoded, scratchFrames);
+            finished = TRUE;
+            break;
+        }
     }
 
-    if (producedBytes < (dword)wantBytes)
     {
-        byte *fill;
-        dword remaining;
-
-        remaining = (dword)wantBytes - producedBytes;
-        fill = (byte *)writePtr;
-        _fmemset(fill, 0, (word)remaining);
+        word producedBytes = (word)(framesProduced * blockAlign);
+        if ((dword)producedBytes < (dword)wantBytes)
+        {
+            _fmemset(dstFar + producedBytes,
+                     0,
+                     (word)((dword)wantBytes - producedBytes));
+            //QOA_Play_Log("BSNWavQOACallback: padded %u bytes of silence",
+            //             (word)((dword)wantBytes - producedBytes));
+        }
+        if (finished || ((dword)producedBytes != (dword)wantBytes))
+        {
+            //QOA_Play_Log("BSNWavQOACallback: producedBytes=%u wantBytes=%u finished=%u",
+            //             producedBytes,
+            //             wantBytes,
+            //             finished);
+        }
+#if QOA_DEBUG_VERBOSE
+        else if (verboseActive)
+        {
+            //QOA_Play_LogVerbose("BSNWavQOACallback: producedBytes=%u wantBytes=%u finished=%u",
+            //                    producedBytes,
+            //                    wantBytes,
+            //                    finished);
+        }
+#endif
     }
+
+#if QOA_DEBUG_VERBOSE
+    if (verboseActive && (s_qoaVerboseCallbacksRemaining > 0))
+    {
+        s_qoaVerboseCallbacksRemaining--;
+    }
+#endif
 
     return finished;
 }
@@ -161,9 +386,15 @@ int _pascal _export BSNWavPlayQOAFile(FileHandle fh, word playFlags, optr parent
     dword           totalBytes;
     int             status;
 
+    //QOA_Play_Log("BSNWavPlayQOAFile: fh=%04x flags=%u parent=%04x",
+    //             (word)fh,
+    //             playFlags,
+    //             (word)parent);
+
     qh = qoaOpenGEOS(fh, &info);
     if (!qh)
     {
+        //QOA_Play_Log("BSNWavPlayQOAFile: qoaOpenGEOS failed");
         // qoaOpenGEOS failed
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
@@ -174,9 +405,23 @@ int _pascal _export BSNWavPlayQOAFile(FileHandle fh, word playFlags, optr parent
     if (!QOA_VerifyDecoder(qh, &info))
     {
         // decoder verification failed
+        //QOA_Play_Log("BSNWavPlayQOAFile: QOA_VerifyDecoder failed");
         qoaClose(qh);
         QOA_ResetStaticState();
         return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+
+    //QOA_Play_Log("BSNWavPlayQOAFile: info channels=%u rate=%lu totalFrames=%lu",
+    //             info.channels,
+    //             info.sampleRate,
+    //             info.totalFrames);
+
+    if (!QOA_EnsureScratch(info.channels))
+    {
+        //QOA_Play_Log("BSNWavPlayQOAFile: QOA_EnsureScratch failed");
+        qoaClose(qh);
+        QOA_ResetStaticState();
+        return BSNW_MEMORY_ERROR;
     }
 
     fmt.BWFC_dataFormat    = 1; /* PCM */
@@ -188,11 +433,14 @@ int _pascal _export BSNWavPlayQOAFile(FileHandle fh, word playFlags, optr parent
 
     totalBytes = (dword)info.totalFrames * (dword)fmt.BWFC_blockAlign;
 
+    //QOA_Play_Log("BSNWavPlayQOAFile: starting playback totalBytes=%lu", totalBytes);
+
     status = BSNWavePlayCallback(&fmt,
                                  totalBytes,
                                  playFlags,
                                  parent,
                                  (PlayCallbackFunctionType*) BSNWavQOACallback);
+    //QOA_Play_Log("BSNWavPlayQOAFile: BSNWavePlayCallback returned %d", status);
     qoaClose(qh);
 
     QOA_ResetStaticState();

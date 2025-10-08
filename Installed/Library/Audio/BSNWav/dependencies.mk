@@ -32,7 +32,7 @@ bsnwav.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h library.h initfile.h dirksnd.h riff.h \
-                sound.h
+                sound.h Main/../QOA/qoa_debug.h
 subcode.obj \
 subcode.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -61,7 +61,8 @@ subcode.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h sound.h \
-                library.h initfile.h dirksnd.h riff.h
+                library.h initfile.h dirksnd.h riff.h \
+                Main/../QOA/qoa_debug.h
 mp3_decode.obj \
 mp3_decode.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -156,7 +157,12 @@ qoa_play.eobj: geos.h geoworks.h file.h heap.h geode.h resource.h ec.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                dirksnd.h Ansi/string.h QOA/../fmem_compat.h
+                dirksnd.h Ansi/string.h Ansi/stdio.h QOA/../fmem_compat.h \
+                QOA/qoa_debug.h
+qoa_debug.obj \
+qoa_debug.eobj: 
+qoa_debug.obj \
+qoa_debug.eobj: QOA/qoa_debug.h geos.h Ansi/string.h Ansi/stdio.h file.h
 minimp3_port.obj \
 minimp3_port.eobj: MP3/minimp3.h Ansi/stdlib.h geos.h Ansi/string.h
 

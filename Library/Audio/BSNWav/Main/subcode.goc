@@ -56,43 +56,11 @@ REVISION HISTORY:
 
 @include "bsnwav.goh"
 @include "Main/subcode.goh"
+#include "../QOA/qoa_debug.h"
 
 #define BSNW_TICKS_PER_SECOND                60
 #define BSNW_MIN_TICKS_PER_HALF_BUFFER       2
 extern void _pascal QOA_ResetStaticState();
-
-static const char gBSNWavSubLogFileName[] = "qoa.log";
-
-static void BSNWavSub_LogMessage(const char *message)
-{
-    FileHandle      logFileH;
-    FileCreateFlags createFlags;
-    word            messageLen;
-    char            newlineStr[2];
-    word            newlineLen;
-
-    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
-    logFileH = FileCreate(gBSNWavSubLogFileName, createFlags, FA_ARCHIVE);
-    if (!logFileH)
-    {
-        return;
-    }
-
-    FilePos(logFileH, 0, FILE_POS_END);
-
-    messageLen = (word)strlen(message);
-    if (messageLen > 0)
-    {
-        FileWrite(logFileH, (void*)message, messageLen, FALSE);
-    }
-
-    newlineStr[0] = '\r';
-    newlineStr[1] = '\n';
-    newlineLen = 2;
-    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
-
-    FileClose(logFileH, TRUE);
-}
 
 /******************** Constants/Makros ************************/
 
@@ -120,28 +88,33 @@ extern void _far _pascal BSNWAsmGetDriverInfo(GeodeHandle driverHandle);
 
 void BSNWDebugNotifyWord(const char *label, word value)
 {
-    const char hex[] = "0123456789ABCDEF";
-    char      buf[32] = {0};
-    char     *ptr = buf;
-
-    if (label != NULL)
-    {
-        while (*label && ptr < (buf + 24))
-        {
-            *ptr++ = *label++;
-        }
-        *ptr++ = '=';
-    }
-
-    *ptr++ = '0';
-    *ptr++ = 'x';
-    *ptr++ = hex[(value >> 12) & 0xF];
-    *ptr++ = hex[(value >> 8) & 0xF];
-    *ptr++ = hex[(value >> 4) & 0xF];
-    *ptr++ = hex[value & 0xF];
-    *ptr   = '\0';
-
-    BSNWavSub_LogMessage(buf);
+//#if QOA_DEBUG_LOGGING
+//    const char hex[] = "0123456789ABCDEF";
+//    char      buf[32] = {0};
+//    char     *ptr = buf;
+//
+//    if (label != NULL)
+//    {
+//        while (*label && ptr < (buf + 24))
+//        {
+//            *ptr++ = *label++;
+//        }
+//        *ptr++ = '=';
+//    }
+//
+//    *ptr++ = '0';
+//    *ptr++ = 'x';
+//    *ptr++ = hex[(value >> 12) & 0xF];
+//    *ptr++ = hex[(value >> 8) & 0xF];
+//    *ptr++ = hex[(value >> 4) & 0xF];
+//    *ptr++ = hex[value & 0xF];
+//    *ptr   = '\0';
+//
+//    QOADebug_Log("%s", buf);
+//#else
+//    (void)label;
+//    (void)value;
+//#endif
 }
 
 /******************** Strings / Globals ***********************/
@@ -230,6 +203,8 @@ Boolean _pascal _export BSNWLibEntry(LibraryCallType type, GeodeHandle client)
 
             //Init
             sampleDriver = NullHandle;
+            QOADebug_Reset("QOA.LOG");
+            QOADebug_SetVerbose(FALSE);
 
             // Connect to Soundcard driver
             // Set Compatibilityflag to FALSE
@@ -272,6 +247,7 @@ Boolean _pascal _export BSNWLibEntry(LibraryCallType type, GeodeHandle client)
                 sampleDriver = NullHandle;
             };
 
+            QOADebug_EndSession();
             QOA_ResetStaticState();
         }; break;
 

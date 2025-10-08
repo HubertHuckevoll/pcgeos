@@ -17,39 +17,6 @@
 #include <file.h>
 #include <heap.h>
 
-static const char gQOADecodeLogFileName[] = "qoa.log";
-
-static void QOA_LogMessage(const char *message)
-{
-    FileHandle      logFileH;
-    FileCreateFlags createFlags;
-    word            messageLen;
-    char            newlineStr[2];
-    word            newlineLen;
-
-    createFlags = (FILE_CREATE_NO_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_NONE);
-    logFileH = FileCreate(gQOADecodeLogFileName, createFlags, FA_ARCHIVE);
-    if (!logFileH)
-    {
-        return;
-    }
-
-    FilePos(logFileH, 0, FILE_POS_END);
-
-    messageLen = (word)strlen(message);
-    if (messageLen > 0)
-    {
-        FileWrite(logFileH, (void*)message, messageLen, FALSE);
-    }
-
-    newlineStr[0] = '\r';
-    newlineStr[1] = '\n';
-    newlineLen = 2;
-    FileWrite(logFileH, (void*)newlineStr, newlineLen, FALSE);
-
-    FileClose(logFileH, TRUE);
-}
-
 /* ---------- QOA on-wire constants ---------- */
 #define QOA_MAGIC               0x716f6166UL /* 'qoaf' big-endian */
 #define QOA_MAX_CHANNELS        8
@@ -86,30 +53,31 @@ typedef struct
 
 static long QOA_LMS_Predict(QOALMS *l)
 {
-    long p;
-    int i;
-    p = 0;
-    for (i = 0; i < QOA_LMS_LEN; i++)
-    {
-        p += l->weights[i] * l->history[i];
-    }
-    return p >> 13;
+    return (  (l->weights[0] * l->history[0])
+            + (l->weights[1] * l->history[1])
+            + (l->weights[2] * l->history[2])
+            + (l->weights[3] * l->history[3]) ) >> 13;
 }
 
 static void QOA_LMS_Update(QOALMS *l, long sample, long residual)
 {
     long delta;
-    int  i;
-    delta = residual >> 4;
-    for (i = 0; i < (int)QOA_LMS_LEN; i++)
-    {
-        l->weights[i] += (l->history[i] < 0) ? -delta : delta;
-    }
-    for (i = 0; i < (QOA_LMS_LEN - 1); i++)
-    {
-        l->history[i] = l->history[i + 1];
-    }
-    l->history[QOA_LMS_LEN - 1] = sample;
+    long *weights;
+    long *history;
+
+    delta   = residual >> 4;
+    weights = l->weights;
+    history = l->history;
+
+    weights[0] += (history[0] < 0) ? -delta : delta;
+    weights[1] += (history[1] < 0) ? -delta : delta;
+    weights[2] += (history[2] < 0) ? -delta : delta;
+    weights[3] += (history[3] < 0) ? -delta : delta;
+
+    history[0] = history[1];
+    history[1] = history[2];
+    history[2] = history[3];
+    history[3] = sample;
 }
 
 static int QOA_ClampS16(long v)
@@ -417,9 +385,18 @@ static int  QOA_LoadNextSliceGroup(QOAHandle *q)
 static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *outPCM)
 {
     word produced;
-    word ch;
+    word channels;
+    signed short *frameDst;
+    QOABitsBE    *sliceBits;
+    QOALMS       *lms;
+    byte         *scaleFactors;
 
     produced = 0;
+    channels = q->frameChannels;
+    frameDst = outPCM;
+    sliceBits = q->sliceBits;
+    lms = q->lms;
+    scaleFactors = q->scalefactor;
 
     while ((produced < maxFrames) && (q->frameSamplesLeft > 0))
     {
@@ -441,34 +418,103 @@ static word QOA_ProduceFromFrame(QOAHandle *q, word maxFrames, signed short *out
             framesThis = (word)(maxFrames - produced);
         }
 
-        for (i = 0; i < framesThis; i++)
+        if (channels == 2)
         {
-            for (ch = 0; ch < q->frameChannels; ch++)
+            QOABitsBE *bits0;
+            QOABitsBE *bits1;
+            QOALMS    *lms0;
+            QOALMS    *lms1;
+            byte       scale0;
+            byte       scale1;
+            signed short *dstPtr;
+
+            bits0  = &sliceBits[0];
+            bits1  = &sliceBits[1];
+            lms0   = &lms[0];
+            lms1   = &lms[1];
+            scale0 = scaleFactors[0];
+            scale1 = scaleFactors[1];
+            dstPtr = frameDst;
+
+            for (i = 0; i < framesThis; i++)
             {
                 int            ok;
                 unsigned long  code3;
                 long           deq;
                 long           pred;
                 long           recon;
-                signed short   s;
+                signed short   s0;
+                signed short   s1;
 
                 ok = 1;
-                code3 = QBR_Get(&q->sliceBits[ch], 3, &ok);
+                code3 = QBR_Get(bits0, 3, &ok);
                 if (!ok)
                 {
-                    // bits read error
                     q->eofReached = TRUE;
                     return produced;
                 }
-
-                deq  = (long)qoa_dequant_tab[q->scalefactor[ch] & 0x0f][(int)(code3 & 7)];
-                pred = QOA_LMS_Predict(&q->lms[ch]);
+                deq  = (long)qoa_dequant_tab[scale0 & 0x0f][(int)(code3 & 7)];
+                pred = QOA_LMS_Predict(lms0);
                 recon = (long)QOA_ClampS16(pred + deq);
-                s = (signed short)recon;
+                s0 = (signed short)recon;
+                QOA_LMS_Update(lms0, (long)s0, deq);
 
-                outPCM[(produced + i) * q->frameChannels + ch] = s;
+                ok = 1;
+                code3 = QBR_Get(bits1, 3, &ok);
+                if (!ok)
+                {
+                    q->eofReached = TRUE;
+                    return produced;
+                }
+                deq  = (long)qoa_dequant_tab[scale1 & 0x0f][(int)(code3 & 7)];
+                pred = QOA_LMS_Predict(lms1);
+                recon = (long)QOA_ClampS16(pred + deq);
+                s1 = (signed short)recon;
+                QOA_LMS_Update(lms1, (long)s1, deq);
 
-                QOA_LMS_Update(&q->lms[ch], (long)s, deq);
+                dstPtr[0] = s0;
+                dstPtr[1] = s1;
+                dstPtr   += 2;
+            }
+
+            frameDst = dstPtr;
+        }
+        else
+        {
+            for (i = 0; i < framesThis; i++)
+            {
+                word ch;
+                signed short *dstPtr;
+
+                dstPtr = frameDst;
+                for (ch = 0; ch < channels; ch++)
+                {
+                    int            ok;
+                    unsigned long  code3;
+                    long           deq;
+                    long           pred;
+                    long           recon;
+                    signed short   s;
+
+                    ok = 1;
+                    code3 = QBR_Get(&sliceBits[ch], 3, &ok);
+                    if (!ok)
+                    {
+                        // bits read error
+                        q->eofReached = TRUE;
+                        return produced;
+                    }
+
+                    deq  = (long)qoa_dequant_tab[scaleFactors[ch] & 0x0f][(int)(code3 & 7)];
+                    pred = QOA_LMS_Predict(&lms[ch]);
+                    recon = (long)QOA_ClampS16(pred + deq);
+                    s = (signed short)recon;
+
+                    *dstPtr++ = s;
+
+                    QOA_LMS_Update(&lms[ch], (long)s, deq);
+                }
+                frameDst += channels;
             }
         }
 
