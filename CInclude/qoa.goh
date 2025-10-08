@@ -16,7 +16,7 @@
 #include <geoworks.h>
 #include <file.h>
 
-// @deflib qoa
+// @deflib bsnwav
 
 typedef struct {
     word    channels;       /* 1..8 */

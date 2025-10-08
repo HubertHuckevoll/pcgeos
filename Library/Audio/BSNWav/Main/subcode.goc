@@ -60,6 +60,8 @@ REVISION HISTORY:
 #define BSNW_TICKS_PER_SECOND                60
 #define BSNW_MIN_TICKS_PER_HALF_BUFFER       2
 
+extern void _pascal QOAHandleLibraryCall(LibraryCallType call, GeodeHandle client);
+
 static const char gBSNWavSubLogFileName[] = "qoa.log";
 
 static void BSNWavSub_LogMessage(const char *message)
@@ -221,6 +223,8 @@ MyBreak(void)
 
 Boolean _pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 {
+    QOAHandleLibraryCall(type, client);
+
     switch (type)
     {
         case LCT_ATTACH:

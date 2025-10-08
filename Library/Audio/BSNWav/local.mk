@@ -26,6 +26,7 @@
 #include <$(SYSMAKEFILE)>
 
 GOCFLAGS += -L bsnwav
+GOCFLAGS += -L bsnwav/QOA
 # ASM_TO_OBJS    += ASMTOOLS/asmtoolsManager.asm
 # OBJS            += ASMTOOLS/asmtoolsManager.obj
 # SRCS            += ASMTOOLS/asmtoolsManager.asm

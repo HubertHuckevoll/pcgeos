@@ -79,6 +79,10 @@ export	BSNWAVECHECKDRIVER
 export	BSNWAVECALCPLAYTIMETEXT
 export	BSNWAVEGETPLAYSTATE
 export	BSNWAVEGETLASTFORMAT
+export	QOAPLAYFILE
+export	QOASTOP
+export	QOAPROBEFILE
+export	QOA_BSNW_CALLBACK
 
 # usernotes "NewWave-Library for best sound. \xa9 2000 Dirk Lausecker"
 
