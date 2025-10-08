@@ -8,6 +8,7 @@
 #include <file.h>
 #include <sound.h>
 #include "minimp3_conf.h"
+#include "../fmem_compat.h"
 
 typedef struct {
     FileHandle              fh;

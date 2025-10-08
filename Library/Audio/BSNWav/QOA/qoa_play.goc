@@ -10,7 +10,7 @@
 #include <system.h>
 #include <file.h>
 #include <heap.h>
-
+#include "../fmem_compat.h"
 
 /* ------------ Internal static playback context ------------ */
 /* BSNWAV's callback type has no user-data -> keep a static handle. */
@@ -80,7 +80,7 @@ static Boolean QOA_VerifyDecoder(QOAHandle *qh, const QOAInfo *info)
     return success;
 }
 
-static void QOA_ResetStaticState(void)
+void _pascal QOA_ResetStaticState(void)
 {
     s_qoaHandle = 0;
     s_qoaChannels = 1;
@@ -88,7 +88,7 @@ static void QOA_ResetStaticState(void)
 }
 
 /* BSNWAV will invoke this */
-static word _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
+static Boolean _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
 {
     signed short *dst;
     signed short *writePtr;
@@ -97,6 +97,7 @@ static word _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
     dword framesDesired;
     dword producedBytes;
     word  sampleAdvance;
+    Boolean finished;
 
     if (!s_qoaHandle || !dstBuf || wantBytes == 0 || s_qoaChannels == 0)
     {
@@ -112,6 +113,7 @@ static word _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
     dst = (signed short*)dstBuf;
     writePtr = dst;
     producedBytes = 0;
+    finished = FALSE;
 
     while (producedBytes + (dword)blockAlign <= (dword)wantBytes)
     {
@@ -125,6 +127,7 @@ static word _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
         if (framesGot == 0)
         {
             // QOA cb: EOF
+            finished = TRUE;
             break;
         }
 
@@ -145,7 +148,7 @@ static word _pascal BSNWavQOACallback(void *dstBuf, word wantBytes)
         _fmemset(fill, 0, (word)remaining);
     }
 
-    return 0;
+    return finished;
 }
 
 /* ------------ Public player API ------------ */
@@ -200,14 +203,4 @@ void _pascal _export BSNWavStopQOA(void)
 {
     BSNWaveStop();
     QOA_ResetStaticState();
-}
-
-void _pascal QOAHandleLibraryCall(LibraryCallType call, GeodeHandle client)
-{
-    (void)client;
-
-    if ((call == LCT_ATTACH) || (call == LCT_DETACH))
-    {
-        QOA_ResetStaticState();
-    }
 }

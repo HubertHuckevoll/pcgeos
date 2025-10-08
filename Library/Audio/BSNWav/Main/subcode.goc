@@ -18,7 +18,7 @@ Routines:
     BSNWLoadData        Get Data from source into Playcache and copy
                         them with the Konverter to the Secondarybuffer
     BSNWPlay            Read Data from source and play it
-     BSNWFillSilence    Fill Secondarybuffer with silence
+    BSNWFillSilence     Fill Secondarybuffer with silence
 
 
 REVISION HISTORY:
@@ -59,8 +59,7 @@ REVISION HISTORY:
 
 #define BSNW_TICKS_PER_SECOND                60
 #define BSNW_MIN_TICKS_PER_HALF_BUFFER       2
-
-extern void _pascal QOAHandleLibraryCall(LibraryCallType call, GeodeHandle client);
+extern void _pascal QOA_ResetStaticState();
 
 static const char gBSNWavSubLogFileName[] = "qoa.log";
 
@@ -221,10 +220,8 @@ MyBreak(void)
  ****************************/
 #pragma argsused
 
-Boolean _pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
+Boolean _pascal _export BSNWLibEntry(LibraryCallType type, GeodeHandle client)
 {
-    QOAHandleLibraryCall(type, client);
-
     switch (type)
     {
         case LCT_ATTACH:
@@ -249,6 +246,8 @@ Boolean _pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
                 // check driver
                 compatFlag = BSNWaveCheckDriver(0,0);
             };
+
+            QOA_ResetStaticState();
         }; break;
 
         case LCT_DETACH:
@@ -272,11 +271,13 @@ Boolean _pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
                 GeodeFreeDriver (sampleDriver);
                 sampleDriver = NullHandle;
             };
+
+            QOA_ResetStaticState();
         }; break;
 
         case LCT_NEW_CLIENT:
         {
-            }; break;       /* A new client of the library was just loaded. */
+        }; break;       /* A new client of the library was just loaded. */
 
         case LCT_NEW_CLIENT_THREAD:
         {

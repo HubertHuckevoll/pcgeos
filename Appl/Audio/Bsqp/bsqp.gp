@@ -32,7 +32,6 @@ stack       5000
 library geos
 library ui
 library bsnwav
-library qoa
 library ansic
 library sound
 

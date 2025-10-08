@@ -4,8 +4,8 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = bsqp
-MAIN            = bsqp.goc process.goc subcode.goc bsqp.goh process.goh\
-                  subcode.goh
+MAIN            = bsqp.goc process.goc subcode.goc process.goh subcode.goh\
+                  bsqp.goh
 UI              = uimain.goc uimain.goh
 UI_TO_RDFS      =
 OBJS            = bsqp.obj process.obj subcode.obj uimain.obj

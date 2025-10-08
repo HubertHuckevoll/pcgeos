@@ -675,9 +675,9 @@ void    _pascal BQ_StartPlay(void)
             {
                 MP3PlayOptions opts;
 
-                _fmemset(&opts, 0, sizeof(opts));
-                opts.volume.FXwhole = 1;
-                opts.volume.FXfrac = 0;
+                memset(&opts, 0, sizeof(opts));
+                WWFixedToInt(opts.volume) = 1;
+                WWFixedToFrac(opts.volume) = 0;
                 opts.forceMono = FALSE;
                 opts.playFlags = BSNW_SHOW_ERROR_MSG | BSNW_TEST_ONLY;
                 opts.parent = NullOptr;
@@ -729,7 +729,7 @@ void    _pascal BQ_StartPlay(void)
                 bqSampleBytes = 0;
 
                 // create Playthread
-                if(!ThreadCreate(PRIORITY_TIME_CRITICAL, // PRIORITY_HIGH, PRIORITY_TIME_CRITICAL
+                if(!ThreadCreate(PRIORITY_HIGH, // PRIORITY_HIGH, PRIORITY_TIME_CRITICAL
                                  (word)fh,
                                  BQ_PlayThread,
                                  3000,
@@ -799,9 +799,9 @@ word    BQ_PlayThread(word fileWord)
             {
                 MP3PlayOptions opts;
 
-                _fmemset(&opts, 0, sizeof(opts));
-                opts.volume.FXwhole = 1;
-                opts.volume.FXfrac = 0;
+                memset(&opts, 0, sizeof(opts));
+                WWFixedToInt(opts.volume) = 1;
+                WWFixedToFrac(opts.volume) = 0;
                 opts.forceMono = FALSE;
                 opts.playFlags = BSNW_SHOW_ERROR_MSG;
                 opts.parent = NullOptr;
@@ -979,9 +979,9 @@ Boolean _pascal BQ_CheckForPlay(void)
         {
             MP3PlayOptions opts;
 
-            _fmemset(&opts, 0, sizeof(opts));
-            opts.volume.FXwhole = 1;
-            opts.volume.FXfrac = 0;
+            memset(&opts, 0, sizeof(opts));
+            WWFixedToInt(opts.volume) = 1;
+            WWFixedToFrac(opts.volume) = 0;
             opts.forceMono = FALSE;
             opts.playFlags = BSNW_TEST_ONLY;
             opts.parent = NullOptr;

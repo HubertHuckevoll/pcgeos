@@ -7,6 +7,7 @@
 #include <geos.h>
 #include <geoworks.h>
 #include <file.h>
+#include <mem.h>
 #include <sound.h>
 #include <Ansi/string.h>
 
@@ -21,19 +22,20 @@ BSNWavMP3VolumeFromPercent(word pct)
     WWFixed w;
     if (pct >= 100)
     {
-        w.FXwhole = 1;
-        w.FXfrac = 0;
+        WWFixedToInt(w) = 1;
+        WWFixedToFrac(w) = 0;
         return w;
     }
-    w.FXwhole = 0;
-    w.FXfrac = (word)((pct * 655u) + ((pct >= 50) ? 36u : 0u));
+    WWFixedToInt(w) = 0;
+    WWFixedToFrac(w) = (word)((pct * 655u) + ((pct >= 50) ? 36u : 0u));
     return w;
 }
 
 int _pascal _export
 BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
 {
-    MP3Ctx ctx;
+    Handle ctxH;
+    MP3Ctx *ctxP;
     BSWavFormChunk bfc;
     WWFixed vol;
     Boolean mono;
@@ -61,21 +63,35 @@ BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
         parent = optsP->parent;
     }
 
-    if (!MP3_InitContextAndPrime(&ctx, pathP, vol, mono))
+    ctxH = MemAlloc((word)sizeof(MP3Ctx), HF_SWAPABLE, 0);
+    if (ctxH == NullHandle)
     {
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
 
-    _fmemset(&bfc, 0, sizeof(bfc));
-    bfc.wFormatTag      = BSWN_FORMAT_PCM;
-    bfc.nChannels       = ctx.outCh;
-    bfc.nSamplesPerSec  = ctx.outRate;
-    bfc.wBitsPerSample  = 16;
-    bfc.nBlockAlign     = (word)((bfc.nChannels * bfc.wBitsPerSample) / 8);
-    bfc.nAvgBytesPerSec = (dword)((dword)bfc.nSamplesPerSec * (dword)bfc.nBlockAlign);
-    bfc.cbSize          = 0;
+    ctxP = (MP3Ctx *)MemLock(ctxH);
+    if (ctxP == (MP3Ctx *)(void *)0)
+    {
+        MemFree(ctxH);
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
 
-    MP3_SetActiveCtxInternal(&ctx);
+    if (!MP3_InitContextAndPrime(ctxP, pathP, vol, mono))
+    {
+        MemUnlock(ctxH);
+        MemFree(ctxH);
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+
+    _fmemset(&bfc, 0, sizeof(bfc));
+    bfc.BWFC_dataFormat   = BSWN_FORMAT_PCM;
+    bfc.BWFC_channels     = ctxP->outCh;
+    bfc.BWFC_sampleRate   = (dword)ctxP->outRate;
+    bfc.BWFC_bitsPerSample = 16;
+    bfc.BWFC_blockAlign   = (word)((bfc.BWFC_channels * bfc.BWFC_bitsPerSample) / 8);
+    bfc.BWFC_avgRate      = (dword)bfc.BWFC_sampleRate * (dword)bfc.BWFC_blockAlign;
+
+    MP3_SetActiveCtxInternal(ctxP);
 
     rc = BSNWavePlayCallback(&bfc,
                              (dword)0,
@@ -83,6 +99,8 @@ BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
                              parent,
                              MP3_BSNWavFill);
 
-    MP3_CleanupContext(&ctx);
+    MP3_CleanupContext(ctxP);
+    MemUnlock(ctxH);
+    MemFree(ctxH);
     return rc;
 }

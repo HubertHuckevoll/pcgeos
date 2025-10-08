@@ -16,10 +16,10 @@
 #   --------  --------  -----------
 #   21.06.98  DirkL     Initial Version.
 #   06.10.98    DL      Ableitung von Template
-#   08.10.99	DL	Ableitung von Mixer Library
-#   27.12.99	DL	Ableitung von Recordlibrary
-#   20.02.2000	DL	NewWave Routinen
-#   08.08.2000	DL	Translating for ND
+#   08.10.99    DL      Ableitung von Mixer Library
+#   27.12.99    DL      Ableitung von Recordlibrary
+#   20.02.2000  DL      NewWave Routinen
+#   08.08.2000  DL      Translating for ND
 #
 ########################################################################
 
@@ -44,8 +44,8 @@ library geos
 library ansic
 # library ui
 
-# resource STATUSBOXRESOURCE	ui-object
-# resource MONIKERRESOURCE	data object read-only
+# resource STATUSBOXRESOURCE    ui-object
+# resource MONIKERRESOURCE  data object read-only
 
 #
 # Export classes
@@ -65,24 +65,24 @@ entry   BSNWLIBENTRY
 incminor
 
 export  BSNWAVLOADDRIVER
-export	BSNWAVGETMAXPROPERTIES
-export	BSNWALLOCSECBUFFER
-export	BSNWAVEPLAYFILE
-export	BSNWAVEGETSTATUS
-export	BSNWAVEGETAISTATE
-export	BSNWAVESTOPRECORPLAY
-export	BSNWAVEPLAYMEMORY
-export	BSNWAVESTOP
-export	BSNWAVESETPAUSE
-export	BSNWAVEPLAYCALLBACK
-export	BSNWAVECHECKDRIVER
-export	BSNWAVECALCPLAYTIMETEXT
-export	BSNWAVEGETPLAYSTATE
-export	BSNWAVEGETLASTFORMAT
-export	BSNWAVPLAYQOAFILE
-export	BSNWAVSTOPQOA
-export	BSNWAVPROBEQOAFILE
-export	BSNWAVPLAYMP3FILE
+export  BSNWAVGETMAXPROPERTIES
+export  BSNWALLOCSECBUFFER
+export  BSNWAVEPLAYFILE
+export  BSNWAVEGETSTATUS
+export  BSNWAVEGETAISTATE
+export  BSNWAVESTOPRECORPLAY
+export  BSNWAVEPLAYMEMORY
+export  BSNWAVESTOP
+export  BSNWAVESETPAUSE
+export  BSNWAVEPLAYCALLBACK
+export  BSNWAVECHECKDRIVER
+export  BSNWAVECALCPLAYTIMETEXT
+export  BSNWAVEGETPLAYSTATE
+export  BSNWAVEGETLASTFORMAT
+export  BSNWAVPLAYQOAFILE
+export  BSNWAVSTOPQOA
+export  BSNWAVPROBEQOAFILE
+export  BSNWAVPLAYMP3FILE
 
 # usernotes "NewWave-Library for best sound. \xa9 2000 Dirk Lausecker"
 

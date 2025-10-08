@@ -32,15 +32,15 @@ MP3_ScalePcmWithWWFixed(sword *samplesP, word sampleCount, WWFixed volume)
     long prod;
     sword s;
 
-    if ((volume.FXwhole == 1) && (volume.FXfrac == 0))
+    if ((WWFixedToInt(volume) == 1) && (WWFixedToFrac(volume) == 0))
     {
         return;
     }
     for (i = 0; i < sampleCount; i++)
     {
         s = samplesP[i];
-        prod = ((long)s * (long)volume.FXwhole) << 16;
-        prod += ((long)s * (long)volume.FXfrac);
+        prod = ((long)s * (long)WWFixedToInt(volume)) << 16;
+        prod += ((long)s * (long)WWFixedToFrac(volume));
         prod >>= 16;
         if (prod > 32767)
         {
@@ -104,7 +104,7 @@ MP3_RefillInput(MP3Ctx *ctxP)
     need = (word)(MP3_INBUF_SIZE - ctxP->inFill);
     if (need > 0)
     {
-        got = FileRead(ctxP->fh, ctxP->inBufP + ctxP->inFill, need);
+        got = FileRead(ctxP->fh, ctxP->inBufP + ctxP->inFill, need, FALSE);
         ctxP->inFill += got;
         if (got == 0)
         {
@@ -269,7 +269,7 @@ MP3_InitContextAndPrime(MP3Ctx *ctxP,
 
     _fmemset(ctxP, 0, sizeof(MP3Ctx));
 
-    ctxP->fh = FileOpen(pathP, FO_READ_ONLY);
+    ctxP->fh = FileOpen(pathP, FILE_ACCESS_R | FILE_DENY_NONE);
     if (ctxP->fh == 0)
     {
         return FALSE;
@@ -292,7 +292,7 @@ MP3_InitContextAndPrime(MP3Ctx *ctxP,
     }
     ctxP->inBufH = inH;
     ctxP->inBufP = inP;
-    ctxP->inFill = (word)FileRead(ctxP->fh, inP, MP3_INBUF_SIZE);
+    ctxP->inFill = (word)FileRead(ctxP->fh, inP, MP3_INBUF_SIZE, FALSE);
     ctxP->inPos  = 0;
     ctxP->eofSeen = (ctxP->inFill == 0) ? TRUE : FALSE;
 
