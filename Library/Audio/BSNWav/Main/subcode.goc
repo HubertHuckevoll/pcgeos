@@ -853,13 +853,16 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
     word consumed = 0;
     word secondFreeBefore = 0;
     dword scaled = 0;
+    Boolean streaming;
+
+    streaming = playStreaming;
 
     // read from source until buffer is filled
     // or the source go out of data
     while ( (secondFree) && (respond == BSNW_STATUS_OK) )
     {
         // Fill Cache
-        if ( (cacheFree) && (bytesToPlay) )
+        if ( (cacheFree) && (streaming || (bytesToPlay != 0)) )
         {
             respond = BSNWLoadCache(cachePtr);
             // bytesToPlay,cacheFull will be updated
@@ -941,8 +944,15 @@ int _pascal BSNWLoadCache(void *cachePtr)
     int respond = BSNW_STATUS_OK;
     word    len,len2 = 0;
     byte    *ptr;
+    Boolean streaming;
 
-    if ( ((dword)cacheFree) < bytesToPlay)
+    streaming = playStreaming;
+
+    if (streaming)
+    {
+        len = cacheFree;
+    }
+    else if ( ((dword)cacheFree) < bytesToPlay)
     {
         // enough data ready
         len = cacheFree;
@@ -966,7 +976,17 @@ int _pascal BSNWLoadCache(void *cachePtr)
         {
             // Error
             respond = BSNW_PLAY_FINISHED;
-            bytesToPlay = 0;
+            if (!streaming)
+            {
+                bytesToPlay = 0;
+            }
+            else
+            {
+                len = len - len2;
+                cacheFree = cacheFree - len2;
+                cacheFull = cacheFull + len2;
+                cacheOffset = 0;
+            }
         }
         else
         {
@@ -974,7 +994,10 @@ int _pascal BSNWLoadCache(void *cachePtr)
             len = len - len2;
             cacheFree = cacheFree - len2;
             cacheFull = cacheFull + len2;
-            bytesToPlay = bytesToPlay - (dword)len2;
+            if (!streaming)
+            {
+                bytesToPlay = bytesToPlay - (dword)len2;
+            }
 
             // Pointer = Start of Cachebuffer
             cacheOffset = 0;
@@ -993,7 +1016,20 @@ int _pascal BSNWLoadCache(void *cachePtr)
         {
             // error
             respond = BSNW_PLAY_FINISHED;
-            bytesToPlay = 0;
+            if (!streaming)
+            {
+                bytesToPlay = 0;
+            }
+            else
+            {
+                cacheOffset = cacheOffset + len;
+                if (!(cacheOffset<playCacheLen))
+                {
+                    cacheOffset = 0;
+                };
+                cacheFree = cacheFree - len;
+                cacheFull = cacheFull + len;
+            }
         }
         else
         {
@@ -1005,7 +1041,10 @@ int _pascal BSNWLoadCache(void *cachePtr)
             };
             cacheFree = cacheFree - len;
             cacheFull = cacheFull + len;
-            bytesToPlay = bytesToPlay - (dword)len;
+            if (!streaming)
+            {
+                bytesToPlay = bytesToPlay - (dword)len;
+            }
         };
     };
 
@@ -1569,6 +1608,7 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
     char    *ptr;
     word    size;
     word    secBufRequest;
+    Boolean streaming;
 
     // Delete Flags
     playStopFlag = FALSE;
@@ -1578,6 +1618,7 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
     secondPtr = 0;          // Pointer Secondarybuffer
     fullLen = 0;
     timeOutCounter = 0;
+    streaming = playStreaming;
 
     // Prepare UI (Statusbox) if:
     if ( (playFlags & BSNW_SHOW_STATUS) // 1. requested
@@ -1600,7 +1641,11 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
         // Allocate Playcache
 
         // Optimize buffersize
-        if (bytesToPlay>(dword)playCacheLen)
+        if (streaming)
+        {
+            size = playCacheLen;
+        }
+        else if (bytesToPlay>(dword)playCacheLen)
         {
             size = playCacheLen;
         }
@@ -1806,9 +1851,9 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
             {
                 respond = BSNWLoadData(playCachePtr,secondPtr);
 
-                if (bytesToPlay)
+                if (bytesToPlay || playStreaming)
                 {
-                    // "some" bytes left
+                    // bytes remaining or streaming callback keeps supplying data
                 }
                 else
                 {
@@ -1906,6 +1951,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
 
     // reset internal state
     playStatus = BSNW_STATUS_OK;
+    playStreaming = FALSE;
 
     return (respond);
 }
