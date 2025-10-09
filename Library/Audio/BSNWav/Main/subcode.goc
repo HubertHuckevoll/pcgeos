@@ -59,7 +59,7 @@ REVISION HISTORY:
 #include "../QOA/qoa_debug.h"
 
 #define BSNW_TICKS_PER_SECOND                60
-#define BSNW_MIN_TICKS_PER_HALF_BUFFER       2
+#define BSNW_MIN_TICKS_PER_HALF_BUFFER       4
 extern void _pascal QOA_ResetStaticState();
 
 /******************** Constants/Makros ************************/

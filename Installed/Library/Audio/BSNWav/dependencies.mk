@@ -123,6 +123,10 @@ mp3_play.eobj: geos.h geoworks.h file.h Ansi/string.h sound.h driver.h \
                 Internal/spoolInt.h serialDr.h parallDr.h hugearr.h \
                 fileEnum.h library.h dirksnd.h MP3/mp3_internal.h \
                 MP3/minimp3_conf.h MP3/minimp3.h MP3/../fmem_compat.h
+qoa_debug.obj \
+qoa_debug.eobj: 
+qoa_debug.obj \
+qoa_debug.eobj: QOA/qoa_debug.h geos.h Ansi/string.h Ansi/stdio.h file.h
 qoa_decode.obj \
 qoa_decode.eobj: qoa.goh
 qoa_decode.obj \
@@ -159,10 +163,6 @@ qoa_play.eobj: geos.h geoworks.h file.h heap.h geode.h resource.h ec.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
                 dirksnd.h Ansi/string.h Ansi/stdio.h QOA/../fmem_compat.h \
                 QOA/qoa_debug.h
-qoa_debug.obj \
-qoa_debug.eobj: 
-qoa_debug.obj \
-qoa_debug.eobj: QOA/qoa_debug.h geos.h Ansi/string.h Ansi/stdio.h file.h
 minimp3_port.obj \
 minimp3_port.eobj: MP3/minimp3.h Ansi/stdlib.h geos.h Ansi/string.h
 

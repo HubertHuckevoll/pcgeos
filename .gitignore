@@ -64,3 +64,8 @@ Makefile
 # Standard locations for targets
 Local/gbuild
 Local/gbuild.ec
+
+# no AGENTS.md for now
+AGENTS.md
+agents.md
+AGENTS.MD
