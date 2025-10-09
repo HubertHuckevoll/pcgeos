@@ -65,7 +65,6 @@ Secondarybuffer:
 #include <riff.h>
 
 @include "bsnwav.goh"
-#include "../QOA/qoa_debug.h"
 
 /******************** Constants/Macros ************************/
 
@@ -175,10 +174,6 @@ GeodeHandle     attachGeode = 0;
 
 int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent);
 int _pascal BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent);
-
-// from subcode.goc
-extern void BSNWDebugNotifyWord(const char *label, word value);
-
 
 /*
  *      MONIKER
@@ -672,13 +667,6 @@ dword _pascal BSNWaveCalcPlaytimeText(  char    *textBuffer,
 
 void BSNWaveDialogUnknownFormat(word formatID)
 {
-//    char logBuf[64] = {0};
-//
-//#if QOA_DEBUG_LOGGING
-//    sprintf(logBuf, TEXT_UNKNOWN_WAV_FORMAT_2, formatID);
-//    QOADebug_Log("%s", logBuf);
-//#endif
-
 @ifndef BSNWAV_NO_UI
     sprintf(playStatusText,"%04X",formatID);
     (void)UserStandardDialog(0,              //helpContext,

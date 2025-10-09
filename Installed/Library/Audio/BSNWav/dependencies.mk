@@ -32,7 +32,7 @@ bsnwav.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h library.h initfile.h dirksnd.h riff.h \
-                sound.h Main/../QOA/qoa_debug.h
+                sound.h
 subcode.obj \
 subcode.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -61,8 +61,7 @@ subcode.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h sound.h \
-                library.h initfile.h dirksnd.h riff.h \
-                Main/../QOA/qoa_debug.h
+                library.h initfile.h dirksnd.h riff.h
 mp3_decode.obj \
 mp3_decode.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -123,10 +122,6 @@ mp3_play.eobj: geos.h geoworks.h file.h Ansi/string.h sound.h driver.h \
                 Internal/spoolInt.h serialDr.h parallDr.h hugearr.h \
                 fileEnum.h library.h dirksnd.h MP3/mp3_internal.h \
                 MP3/minimp3_conf.h MP3/minimp3.h MP3/../fmem_compat.h
-qoa_debug.obj \
-qoa_debug.eobj: 
-qoa_debug.obj \
-qoa_debug.eobj: QOA/qoa_debug.h geos.h Ansi/string.h Ansi/stdio.h file.h
 qoa_decode.obj \
 qoa_decode.eobj: qoa.goh
 qoa_decode.obj \
@@ -161,8 +156,7 @@ qoa_play.eobj: geos.h geoworks.h file.h heap.h geode.h resource.h ec.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                dirksnd.h Ansi/string.h Ansi/stdio.h QOA/../fmem_compat.h \
-                QOA/qoa_debug.h
+                dirksnd.h Ansi/string.h Ansi/stdio.h QOA/../fmem_compat.h
 minimp3_port.obj \
 minimp3_port.eobj: MP3/minimp3.h Ansi/stdlib.h geos.h Ansi/string.h
 

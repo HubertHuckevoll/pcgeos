@@ -1,0 +1,962 @@
+*** Attempting to clean from Installed directory ***
+Continue? [y/n] , default = n: ./ASMTOOLS.eobj
+./ASMTOOLS.obj
+./minimp3_port.err
+./minimp3_port.obj
+./minimp3_port.eobj
+./mp3_decode.eobj
+./mp3_decode.obj
+./mp3_play.obj
+./mp3_play.eobj
+./qoa_decode.eobj
+./qoa_decode.obj
+./qoa_play.err
+./qoa_play.eobj
+./qoa_play.obj
+Makefile generation complete.
+Don't forget to run "pmake depend".
+--- ASMTOOLS.obj ---
+--- ASMTOOLS.eobj ---
+--- minimp3_port.eobj ---
+--- minimp3_port.obj ---
+--- ASMTOOLS.obj ---
+esp -L 4 -Wall `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags esp ` -DREL=0.0.0.0 -DPROTO=0.0 -l ASMTOOLS.rsc -n bsnwav       -IASMTOOLS -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS  -I/home/konstantinmeyer/pcgeos/Installed/Include -I/home/konstantinmeyer/pcgeos/Include  -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS/asmtoolsManager.asm  -o ASMTOOLS.obj
+--- ASMTOOLS.eobj ---
+esp -L 4 -Wall `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags esp ` -DREL=0.0.0.0 -DPROTO=0.0 -n bsnwav  -DDO_ERROR_CHECKING     -IASMTOOLS -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS  -I/home/konstantinmeyer/pcgeos/Installed/Include -I/home/konstantinmeyer/pcgeos/Include  -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS/asmtoolsManager.asm  -o ASMTOOLS.eobj
+--- minimp3_port.eobj ---
+wcc -DDO_ERROR_CHECKING -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3  -fo="minimp3_port.eobj" "/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3_port.c" 
+--- minimp3_port.obj ---
+wcc -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3 -ox -fo="minimp3_port.obj" "/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3_port.c" 
+--- minimp3_port.eobj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- minimp3_port.obj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- minimp3_port.eobj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3.h(379): Warning! W135: Shift amount too large
+--- minimp3_port.obj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3.h(379): Warning! W135: Shift amount too large
+--- minimp3_port.eobj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3.h(651): Warning! W135: Shift amount too large
+--- minimp3_port.obj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3.h(651): Warning! W135: Shift amount too large
+--- minimp3_port.eobj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3_port.c: 8 lines, included 3630, 2 warnings, 0 errors
+--- mp3_decode.eobj ---
+--- minimp3_port.obj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/minimp3_port.c: 8 lines, included 3630, 2 warnings, 0 errors
+--- mp3_decode.eobj ---
+goc -DDO_ERROR_CHECKING -D__GEOS__ -Imp3_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Imp3_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -o mp3_decode.ec /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/mp3_decode.goc 
+--- mp3_decode.obj ---
+goc -D__GEOS__ -Imp3_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Imp3_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -l -o mp3_decode.nc /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/mp3_decode.goc 
+--- mp3_decode.eobj ---
+wcc -DDO_ERROR_CHECKING -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3  -fo="mp3_decode.eobj" "mp3_decode.ec" 
+--- mp3_play.eobj ---
+--- mp3_decode.obj ---
+wcc -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3 -ox -fo="mp3_decode.obj" "mp3_decode.nc" 
+--- mp3_play.eobj ---
+goc -DDO_ERROR_CHECKING -D__GEOS__ -Imp3_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Imp3_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -o mp3_play.ec /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/mp3_play.goc 
+--- mp3_decode.obj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- mp3_decode.eobj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- mp3_decode.obj ---
+mp3_decode.nc: 17427 lines, included 60142, 0 warnings, 0 errors
+--- mp3_play.obj ---
+--- mp3_play.eobj ---
+wcc -DDO_ERROR_CHECKING -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3  -fo="mp3_play.eobj" "mp3_play.ec" 
+--- mp3_play.obj ---
+goc -D__GEOS__ -Imp3_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Imp3_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/mp3_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -l -o mp3_play.nc /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3/mp3_play.goc 
+--- mp3_decode.eobj ---
+mp3_decode.ec: 17427 lines, included 60142, 0 warnings, 0 errors
+--- mp3_play.eobj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- mp3_decode.eobj ---
+rm mp3_decode.ec
+--- mp3_decode.obj ---
+rm mp3_decode.nc
+--- mp3_play.eobj ---
+mp3_play.ec: 17195 lines, included 61878, 0 warnings, 0 errors
+--- qoa_decode.eobj ---
+--- qoa_decode.obj ---
+--- qoa_decode.eobj ---
+goc -DDO_ERROR_CHECKING -D__GEOS__ -Iqoa_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Iqoa_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -o qoa_decode.ec /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA/qoa_decode.goc 
+--- mp3_play.eobj ---
+rm mp3_play.ec
+--- qoa_decode.obj ---
+goc -D__GEOS__ -Iqoa_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Iqoa_decode -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_decode  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -l -o qoa_decode.nc /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA/qoa_decode.goc 
+--- qoa_decode.eobj ---
+wcc -DDO_ERROR_CHECKING -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3  -fo="qoa_decode.eobj" "qoa_decode.ec" 
+--- qoa_play.eobj ---
+--- qoa_decode.obj ---
+wcc -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3 -ox -fo="qoa_decode.obj" "qoa_decode.nc" 
+--- qoa_play.eobj ---
+goc -DDO_ERROR_CHECKING -D__GEOS__ -Iqoa_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Iqoa_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -o qoa_play.ec /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA/qoa_play.goc 
+--- mp3_play.obj ---
+wcc -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3 -ox -fo="mp3_play.obj" "mp3_play.nc" 
+--- qoa_decode.eobj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- qoa_decode.obj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- mp3_play.obj ---
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- qoa_decode.eobj ---
+qoa_decode.ec: 785 lines, included 7224, 0 warnings, 0 errors
+--- qoa_decode.obj ---
+qoa_decode.nc: 785 lines, included 7224, 0 warnings, 0 errors
+--- qoa_decode.eobj ---
+rm qoa_decode.ec
+--- qoa_decode.obj ---
+rm qoa_decode.nc
+--- qoa_play.obj ---
+goc -D__GEOS__ -Iqoa_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -I- -Iqoa_play -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/qoa_play  -I/home/konstantinmeyer/pcgeos/Installed/CInclude -I/home/konstantinmeyer/pcgeos/CInclude -I/home/konstantinmeyer/pcgeos/CInclude/Ansi -I. -I/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags goc `   -w -L bsnwav -cw -L bsnwav -O -l -o qoa_play.nc /home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA/qoa_play.goc 
+--- qoa_play.eobj ---
+wcc -DDO_ERROR_CHECKING -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3  -fo="qoa_play.eobj" "qoa_play.ec" 
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- mp3_play.obj ---
+mp3_play.nc: 17195 lines, included 61878, 0 warnings, 0 errors
+rm mp3_play.nc
+--- qoa_play.obj ---
+wcc -D__GEOS__ -D__WATCOM__ -w4 -fpc  -zu -of -of+ -ol -ol+ -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/ASMTOOLS -i=. -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/Main -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/MP3 -i=/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA -i=/home/konstantinmeyer/pcgeos/CInclude -i=/home/konstantinmeyer/pcgeos/CInclude/Objects -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/Text -i=/home/konstantinmeyer/pcgeos/CInclude/Objects/FlatFile -i=/home/konstantinmeyer/pcgeos/CInclude/Ansi  -i="/home/konstantinmeyer/watcom/h"  `perl /home/konstantinmeyer/pcgeos/Tools/scripts/perl/product_flags highc `   -3 -ox -fo="qoa_play.obj" "qoa_play.nc" 
+Open Watcom C x86 16-bit Optimizing Compiler
+Version 2.0 beta Dec  1 2020 00:27:38 (32-bit)
+Copyright (c) 2002-2020 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1984-2002 Sybase, Inc. All Rights Reserved.
+Source code is available under the Sybase Open Watcom Public License.
+See http://www.openwatcom.org/ for details.
+--- qoa_play.eobj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA/qoa_play.goc(228): Warning! W202: Symbol 'verboseActive' has been defined, but not referenced
+qoa_play.ec: 17545 lines, included 57004, 1 warnings, 0 errors
+rm qoa_play.ec
+--- qoa_play.obj ---
+/home/konstantinmeyer/pcgeos/Library/Audio/BSNWav/QOA/qoa_play.goc(228): Warning! W202: Symbol 'verboseActive' has been defined, but not referenced
+qoa_play.nc: 17545 lines, included 57004, 1 warnings, 0 errors
+rm qoa_play.nc
+`bsnwav.gp' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Art/moniker.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`Ansi/stdio.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`sound.h' is up to date.
+`bsnwav.goc' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`sound.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`subcode.goc' is up to date.
+`bsnwav.gp' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Art/moniker.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`Ansi/stdio.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`sound.h' is up to date.
+`bsnwav.goc' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`sound.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`subcode.goc' is up to date.
+`geos.ldf' is up to date.
+`ansic.ldf' is up to date.
+`bsnwav.gp' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Art/moniker.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`Ansi/stdio.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`sound.h' is up to date.
+`bsnwav.goc' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`sound.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`subcode.goc' is up to date.
+`bsnwav.gp' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Art/moniker.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`Ansi/stdio.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`sound.h' is up to date.
+`bsnwav.goc' is up to date.
+`stdapp.goh' is up to date.
+`object.goh' is up to date.
+`ui.goh' is up to date.
+`Objects/metaC.goh' is up to date.
+`Objects/inputC.goh' is up to date.
+`Objects/clipbrd.goh' is up to date.
+`Objects/uiInputC.goh' is up to date.
+`iacp.goh' is up to date.
+`Objects/winC.goh' is up to date.
+`Objects/gProcC.goh' is up to date.
+`alb.goh' is up to date.
+`Objects/processC.goh' is up to date.
+`Objects/visC.goh' is up to date.
+`Objects/vCompC.goh' is up to date.
+`Objects/vCntC.goh' is up to date.
+`Objects/gAppC.goh' is up to date.
+`Objects/genC.goh' is up to date.
+`Objects/gInterC.goh' is up to date.
+`Objects/gPrimC.goh' is up to date.
+`Objects/gDispC.goh' is up to date.
+`Objects/gTrigC.goh' is up to date.
+`Objects/gViewC.goh' is up to date.
+`Objects/gTextC.goh' is up to date.
+`Objects/vTextC.goh' is up to date.
+`Objects/gCtrlC.goh' is up to date.
+`gcnlist.goh' is up to date.
+`spool.goh' is up to date.
+`Objects/gFSelC.goh' is up to date.
+`Objects/gGlyphC.goh' is up to date.
+`Objects/gDocCtrl.goh' is up to date.
+`Objects/gDocGrpC.goh' is up to date.
+`Objects/gDocC.goh' is up to date.
+`Objects/gContC.goh' is up to date.
+`Objects/gDCtrlC.goh' is up to date.
+`Objects/gEditCC.goh' is up to date.
+`Objects/gBoolGC.goh' is up to date.
+`Objects/gItemGC.goh' is up to date.
+`Objects/gDListC.goh' is up to date.
+`Objects/gItemC.goh' is up to date.
+`Objects/gBoolC.goh' is up to date.
+`Objects/gGadgetC.goh' is up to date.
+`Objects/gToolCC.goh' is up to date.
+`Objects/gValueC.goh' is up to date.
+`Objects/gToolGC.goh' is up to date.
+`Objects/helpCC.goh' is up to date.
+`bsnwav.goh' is up to date.
+`Main/subcode.goh' is up to date.
+`geos.h' is up to date.
+`heap.h' is up to date.
+`geode.h' is up to date.
+`resource.h' is up to date.
+`ec.h' is up to date.
+`object.h' is up to date.
+`lmem.h' is up to date.
+`graphics.h' is up to date.
+`fontID.h' is up to date.
+`font.h' is up to date.
+`color.h' is up to date.
+`gstring.h' is up to date.
+`timer.h' is up to date.
+`vm.h' is up to date.
+`dbase.h' is up to date.
+`localize.h' is up to date.
+`Ansi/ctype.h' is up to date.
+`timedate.h' is up to date.
+`file.h' is up to date.
+`sllang.h' is up to date.
+`system.h' is up to date.
+`geoworks.h' is up to date.
+`chunkarr.h' is up to date.
+`Objects/helpCC.h' is up to date.
+`disk.h' is up to date.
+`drive.h' is up to date.
+`input.h' is up to date.
+`char.h' is up to date.
+`hwr.h' is up to date.
+`win.h' is up to date.
+`uDialog.h' is up to date.
+`Objects/gInterC.h' is up to date.
+`Objects/Text/tCommon.h' is up to date.
+`stylesh.h' is up to date.
+`driver.h' is up to date.
+`thread.h' is up to date.
+`print.h' is up to date.
+`Internal/spoolInt.h' is up to date.
+`serialDr.h' is up to date.
+`parallDr.h' is up to date.
+`hugearr.h' is up to date.
+`fileEnum.h' is up to date.
+`Ansi/string.h' is up to date.
+`sound.h' is up to date.
+`library.h' is up to date.
+`initfile.h' is up to date.
+`dirksnd.h' is up to date.
+`riff.h' is up to date.
+`subcode.goc' is up to date.
+`geos.ldf' is up to date.
+`ansic.ldf' is up to date.

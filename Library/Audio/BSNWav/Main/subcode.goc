@@ -56,7 +56,6 @@ REVISION HISTORY:
 
 @include "bsnwav.goh"
 @include "Main/subcode.goh"
-#include "../QOA/qoa_debug.h"
 
 #define BSNW_TICKS_PER_SECOND                60
 #define BSNW_MIN_TICKS_PER_HALF_BUFFER       4
@@ -86,36 +85,6 @@ extern word _far _pascal BSNWAsmSetSampling(
 );
 extern void _far _pascal BSNWAsmGetDriverInfo(GeodeHandle driverHandle);
 
-void BSNWDebugNotifyWord(const char *label, word value)
-{
-//#if QOA_DEBUG_LOGGING
-//    const char hex[] = "0123456789ABCDEF";
-//    char      buf[32] = {0};
-//    char     *ptr = buf;
-//
-//    if (label != NULL)
-//    {
-//        while (*label && ptr < (buf + 24))
-//        {
-//            *ptr++ = *label++;
-//        }
-//        *ptr++ = '=';
-//    }
-//
-//    *ptr++ = '0';
-//    *ptr++ = 'x';
-//    *ptr++ = hex[(value >> 12) & 0xF];
-//    *ptr++ = hex[(value >> 8) & 0xF];
-//    *ptr++ = hex[(value >> 4) & 0xF];
-//    *ptr++ = hex[value & 0xF];
-//    *ptr   = '\0';
-//
-//    QOADebug_Log("%s", buf);
-//#else
-//    (void)label;
-//    (void)value;
-//#endif
-}
 
 /******************** Strings / Globals ***********************/
 
@@ -203,8 +172,6 @@ Boolean _pascal _export BSNWLibEntry(LibraryCallType type, GeodeHandle client)
 
             //Init
             sampleDriver = NullHandle;
-            QOADebug_Reset("QOA.LOG");
-            QOADebug_SetVerbose(FALSE);
 
             // Connect to Soundcard driver
             // Set Compatibilityflag to FALSE
@@ -247,7 +214,6 @@ Boolean _pascal _export BSNWLibEntry(LibraryCallType type, GeodeHandle client)
                 sampleDriver = NullHandle;
             };
 
-            QOADebug_EndSession();
             QOA_ResetStaticState();
         }; break;
 
