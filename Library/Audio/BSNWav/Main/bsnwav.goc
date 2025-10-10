@@ -975,28 +975,46 @@ extern int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
                        PlayCallbackFunctionType* routine)
 {
     int respond;        // retVal
+    Boolean streaming;
+    Boolean testOnly;
 
     // PLAY by another thread ?
     respond = BSNWPreCheck(playFlags);
 
     if (respond == BSNW_STATUS_OK)
     {
+        streaming = (Boolean)((bytes == 0) ? TRUE : FALSE);
+        testOnly  = (Boolean)((playFlags & BSNW_TEST_ONLY) ? TRUE : FALSE);
+
         playCBPtr = routine;
         playSourceType = BSNW_SOURCE_CALL;      // Sourcetype = Callback
-        playStreaming = (Boolean)((bytes == 0) ? TRUE : FALSE);
+        playStreaming = streaming;
         bytesToPlay = bytes;
         bwfh.BWFH_fmtChunk = *bfc;
         bwfh.BWFH_datLen = bytes;
 
-        // Preparing soundcard
-        respond = BSNWPrepare(bfc,playFlags,parent);
-
-        if (respond == BSNW_STATUS_OK)
+        if (!testOnly)
         {
-            // Playloop
-            respond = BSNWPlay(bfc,playFlags,parent);
-        };
+            playStatus = BSNW_STATUS_PLAY_MEM;
 
+            // Preparing soundcard
+            respond = BSNWPrepare(bfc,playFlags,parent);
+
+            if (respond == BSNW_STATUS_OK)
+            {
+                // Playloop
+                respond = BSNWPlay(bfc,playFlags,parent);
+            }
+
+            if (respond != BSNW_STATUS_OK)
+            {
+                playStatus = BSNW_STATUS_OK;
+            }
+        }
+        else
+        {
+            playStatus = BSNW_STATUS_OK;
+        }
     };
 
     return(respond);
