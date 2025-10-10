@@ -7,13 +7,11 @@
 
 #include <Ansi/string.h>
 #include <Ansi/stdio.h>
-// #include <stdarg.h>
 #include <library.h>
 #include <system.h>
 #include <file.h>
 #include <heap.h>
 #include "../fmem_compat.h"
-// #include "qoa_debug.h"
 
 /* ------------ Internal static playback context ------------ */
 /* BSNWAV's callback type has no user-data -> keep a static handle. */

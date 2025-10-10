@@ -1,7 +1,7 @@
-#pragma noroot
+// #pragma noroot
 /************************************************
  * mp3_play.goc
- * - Open file, prime minimp3, run BSNWav callback
+ * - Open file, prime minimp3 stream, run BSNWav callback
  ************************************************/
 
 #include <geos.h>
@@ -16,10 +16,26 @@
 
 #include "mp3_internal.h"
 
+#define MP3_SCRATCH_FRAMES         2048
+
+static MP3Handle    *s_mp3Handle       = 0;
+static word          s_mp3Channels     = 0;
+static MemHandle     s_mp3ScratchH     = NullHandle;
+static sword        *s_mp3ScratchP     = 0;
+static word          s_mp3ScratchBytes = 0;
+
+static WWFixed   _pascal BSNWavMP3VolumeFromPercent(word pct);
+static Boolean          MP3_VerifyStream(MP3Handle *handleP);
+static Boolean          MP3_EnsureScratch(word channels);
+static void             MP3_FreeScratch(void);
+static void             MP3_ResetStaticState(void);
+static Boolean _pascal  BSNWavMP3Callback(void *dstBuf, word wantBytes);
+
 static WWFixed _pascal
 BSNWavMP3VolumeFromPercent(word pct)
 {
     WWFixed w;
+
     if (pct >= 100)
     {
         WWFixedToInt(w) = 1;
@@ -31,16 +47,226 @@ BSNWavMP3VolumeFromPercent(word pct)
     return w;
 }
 
+static Boolean
+MP3_VerifyStream(MP3Handle *handleP)
+{
+    MemHandle scratchH;
+    sword *scratchP;
+    dword framesRequested;
+    dword framesDecoded;
+    word bufferBytes;
+    Boolean success;
+
+    if (handleP == (MP3Handle *)0)
+    {
+        return FALSE;
+    }
+
+    framesRequested = 4096;
+    bufferBytes = (word)(framesRequested *
+                         (dword)MP3_StreamBlockAlign(handleP));
+    if (bufferBytes == 0)
+    {
+        return FALSE;
+    }
+
+    scratchH = MemAlloc(bufferBytes, HF_SWAPABLE, HAF_ZERO_INIT);
+    if (scratchH == NullHandle)
+    {
+        return FALSE;
+    }
+    scratchP = (sword *)MemLock(scratchH);
+    if (!scratchP)
+    {
+        MemFree(scratchH);
+        return FALSE;
+    }
+
+    framesDecoded = MP3_ReadS16(handleP, framesRequested, scratchP);
+    success = (framesDecoded > 0);
+
+    MemUnlock(scratchH);
+    MemFree(scratchH);
+
+    if (!MP3_RewindStream(handleP))
+    {
+        success = FALSE;
+    }
+    return success;
+}
+
+static Boolean
+MP3_EnsureScratch(word channels)
+{
+    word neededBytes;
+    MemHandle scratchH;
+    sword *scratchP;
+
+    if (channels == 0)
+    {
+        return FALSE;
+    }
+
+    neededBytes = (word)(MP3_SCRATCH_FRAMES *
+                         (word)channels *
+                         (word)sizeof(sword));
+    if (neededBytes == 0)
+    {
+        neededBytes = (word)((word)channels * (word)sizeof(sword));
+    }
+
+    if (s_mp3ScratchH != NullHandle &&
+        s_mp3ScratchP != (sword *)0 &&
+        s_mp3ScratchBytes >= neededBytes)
+    {
+        return TRUE;
+    }
+
+    MP3_FreeScratch();
+
+    scratchH = MemAlloc(neededBytes, HF_SWAPABLE, HAF_ZERO_INIT);
+    if (scratchH == NullHandle)
+    {
+        return FALSE;
+    }
+
+    scratchP = (sword *)MemLock(scratchH);
+    if (!scratchP)
+    {
+        MemFree(scratchH);
+        return FALSE;
+    }
+
+    s_mp3ScratchH = scratchH;
+    s_mp3ScratchP = scratchP;
+    s_mp3ScratchBytes = neededBytes;
+    return TRUE;
+}
+
+static void
+MP3_FreeScratch(void)
+{
+    if (s_mp3ScratchH != NullHandle)
+    {
+        if (s_mp3ScratchP != (sword *)0)
+        {
+            MemUnlock(s_mp3ScratchH);
+        }
+        MemFree(s_mp3ScratchH);
+    }
+    s_mp3ScratchH = NullHandle;
+    s_mp3ScratchP = (sword *)0;
+    s_mp3ScratchBytes = 0;
+}
+
+static void
+MP3_ResetStaticState(void)
+{
+    MP3_FreeScratch();
+    s_mp3Handle   = 0;
+    s_mp3Channels = 0;
+}
+
+static Boolean _pascal
+BSNWavMP3Callback(void *dstBuf, word wantBytes)
+{
+    word blockAlign;
+    word totalFramesWanted;
+    word framesProduced;
+    Boolean finished;
+    byte far *dstFar;
+
+    if (!s_mp3Handle || !dstBuf || wantBytes == 0 || s_mp3Channels == 0)
+    {
+        return TRUE;
+    }
+
+    blockAlign = MP3_StreamBlockAlign(s_mp3Handle);
+    if (blockAlign == 0)
+    {
+        return TRUE;
+    }
+
+    if (!MP3_EnsureScratch(s_mp3Channels))
+    {
+        return TRUE;
+    }
+
+    totalFramesWanted = (word)(wantBytes / blockAlign);
+    framesProduced = 0;
+    finished = FALSE;
+    dstFar = (byte far *)dstBuf;
+
+    while (framesProduced < totalFramesWanted)
+    {
+        word framesRemaining;
+        word scratchFrames;
+        dword framesDecoded;
+        word bytesToCopy;
+        word producedBytes;
+
+        scratchFrames = (word)(s_mp3ScratchBytes / blockAlign);
+        if (scratchFrames == 0)
+        {
+            finished = TRUE;
+            break;
+        }
+
+        framesRemaining = (word)(totalFramesWanted - framesProduced);
+        if (scratchFrames > framesRemaining)
+        {
+            scratchFrames = framesRemaining;
+        }
+
+        framesDecoded = MP3_ReadS16(s_mp3Handle,
+                                    (dword)scratchFrames,
+                                    s_mp3ScratchP);
+        if (framesDecoded == 0)
+        {
+            finished = TRUE;
+            break;
+        }
+
+        bytesToCopy = (word)(framesDecoded * (dword)blockAlign);
+        producedBytes = (word)(framesProduced * blockAlign);
+
+        _fmemcpy(dstFar + producedBytes,
+                 s_mp3ScratchP,
+                 bytesToCopy);
+
+        framesProduced += (word)framesDecoded;
+
+        if (framesDecoded < (dword)scratchFrames)
+        {
+            finished = TRUE;
+            break;
+        }
+    }
+
+    {
+        word producedBytes;
+
+        producedBytes = (word)(framesProduced * blockAlign);
+        if (producedBytes < wantBytes)
+        {
+            _fmemset(dstFar + producedBytes,
+                     0,
+                     (word)(wantBytes - producedBytes));
+        }
+    }
+
+    return finished;
+}
+
 int _pascal _export
 BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
 {
-    Handle ctxH;
-    MP3Ctx *ctxP;
-    BSWavFormChunk bfc;
     WWFixed vol;
     Boolean mono;
     word flags;
     optr parent;
+    MP3Handle *handleP;
+    BSWavFormChunk fmt;
     int rc;
 
     if ((pathP == (const char *)(void *)0) || (*pathP == '\0'))
@@ -63,44 +289,43 @@ BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
         parent = optsP->parent;
     }
 
-    ctxH = MemAlloc((word)sizeof(MP3Ctx), HF_SWAPABLE, 0);
-    if (ctxH == NullHandle)
+    handleP = MP3_OpenStream(pathP, vol, mono);
+    if (!handleP)
     {
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
 
-    ctxP = (MP3Ctx *)MemLock(ctxH);
-    if (ctxP == (MP3Ctx *)(void *)0)
+    if (!MP3_VerifyStream(handleP))
     {
-        MemFree(ctxH);
+        MP3_CloseStream(handleP);
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
 
-    if (!MP3_InitContextAndPrime(ctxP, pathP, vol, mono))
+    if (!MP3_EnsureScratch(MP3_StreamChannels(handleP)))
     {
-        MemUnlock(ctxH);
-        MemFree(ctxH);
-        return BSNW_UNKNOWN_WAVE_FORMAT;
+        MP3_CloseStream(handleP);
+        MP3_ResetStaticState();
+        return BSNW_MEMORY_ERROR;
     }
 
-    _fmemset(&bfc, 0, sizeof(bfc));
-    bfc.BWFC_dataFormat   = BSWN_FORMAT_PCM;
-    bfc.BWFC_channels     = ctxP->outCh;
-    bfc.BWFC_sampleRate   = (dword)ctxP->outRate;
-    bfc.BWFC_bitsPerSample = 16;
-    bfc.BWFC_blockAlign   = (word)((bfc.BWFC_channels * bfc.BWFC_bitsPerSample) / 8);
-    bfc.BWFC_avgRate      = (dword)bfc.BWFC_sampleRate * (dword)bfc.BWFC_blockAlign;
+    _fmemset(&fmt, 0, sizeof(fmt));
+    fmt.BWFC_dataFormat    = BSWN_FORMAT_PCM;
+    fmt.BWFC_channels      = MP3_StreamChannels(handleP);
+    fmt.BWFC_sampleRate    = (dword)MP3_StreamSampleRate(handleP);
+    fmt.BWFC_bitsPerSample = 16;
+    fmt.BWFC_blockAlign    = MP3_StreamBlockAlign(handleP);
+    fmt.BWFC_avgRate       = (dword)fmt.BWFC_blockAlign * fmt.BWFC_sampleRate;
 
-    MP3_SetActiveCtxInternal(ctxP);
+    s_mp3Handle   = handleP;
+    s_mp3Channels = fmt.BWFC_channels;
 
-    rc = BSNWavePlayCallback(&bfc,
+    rc = BSNWavePlayCallback(&fmt,
                              (dword)0,
                              flags,
                              parent,
-                             MP3_BSNWavFill);
+                             (PlayCallbackFunctionType *)BSNWavMP3Callback);
 
-    MP3_CleanupContext(ctxP);
-    MemUnlock(ctxH);
-    MemFree(ctxH);
+    MP3_CloseStream(handleP);
+    MP3_ResetStaticState();
     return rc;
 }

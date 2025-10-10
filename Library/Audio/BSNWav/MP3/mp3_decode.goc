@@ -1,30 +1,377 @@
-#pragma noroot
+// #pragma noroot
 /************************************************
  * mp3_decode.goc
- * - Minimp3 integration + BSNWav pull-callback
- * - Small, swappable buffers; C89; early returns
+ * - Minimp3 streaming helpers for BSNWav glue
  ************************************************/
 
 #include <geos.h>
 #include <geoworks.h>
 #include <mem.h>
+#include <heap.h>
 #include <file.h>
 #include <sound.h>
 #include <Ansi/string.h>
 
-@include <bsnwav.goh>
-
 #include "mp3_internal.h"
 
-/* ---- Buffer sizing under 8 KB ---- */
-#define MP3_INBUF_SIZE              6144
-#define MP3_FRAME_SAMPLES_MAX       (MINIMP3_MAX_SAMPLES_PER_FRAME) /* ~2304 int16 */
-#define MP3_PCM_FRAME_BYTES         (MP3_FRAME_SAMPLES_MAX * 2)     /* ~4608 B */
+/* ---- Local helpers ---- */
+static void     MP3_ResetDecoderState(MP3Handle *handleP);
+static void     MP3_RefillInput(MP3Handle *handleP);
+static Boolean  MP3_PrimeStream(MP3Handle *handleP);
+static Boolean  MP3_DecodeNextFrame(MP3Handle *handleP);
+static void     MP3_ScalePcmWithWWFixed(sword *samplesP,
+                                        word sampleCount,
+                                        WWFixed volume);
+static word     MP3_MixStereoToMonoInPlace(sword *pcmP,
+                                           word stereoSamples);
 
-/* One active session (simple) */
-static MP3Ctx *g_activeCtxP = (MP3Ctx *)(void *)0;
+/* ---- Implementation ---- */
 
-/* ---- WWFixed volume scaling (in-place int16) ---- */
+MP3Handle * _pascal
+MP3_OpenStream(const char *pathP, WWFixed volume, Boolean forceMono)
+{
+    MemHandle memH;
+    MP3Handle *handleP;
+
+    if ((pathP == (const char *)(void *)0) || (*pathP == '\0'))
+    {
+        return (MP3Handle *)0;
+    }
+
+    memH = MemAlloc((word)sizeof(MP3Handle), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (memH == NullHandle)
+    {
+        return (MP3Handle *)0;
+    }
+
+    handleP = (MP3Handle *)MemLock(memH);
+    if (handleP == (MP3Handle *)0)
+    {
+        MemFree(memH);
+        return (MP3Handle *)0;
+    }
+
+    _fmemset(handleP, 0, (word)sizeof(MP3Handle));
+    handleP->selfHandle = memH;
+    handleP->volume     = volume;
+    handleP->forceMono  = forceMono;
+
+    handleP->fh = FileOpen(pathP, FILE_ACCESS_R | FILE_DENY_NONE);
+    if (handleP->fh == 0)
+    {
+        MP3_CloseStream(handleP);
+        return (MP3Handle *)0;
+    }
+
+    MP3_ResetDecoderState(handleP);
+
+    if (!MP3_PrimeStream(handleP))
+    {
+        MP3_CloseStream(handleP);
+        return (MP3Handle *)0;
+    }
+
+    return handleP;
+}
+
+void _pascal
+MP3_CloseStream(MP3Handle *handleP)
+{
+    MemHandle memH;
+
+    if (handleP == (MP3Handle *)0)
+    {
+        return;
+    }
+
+    if (handleP->fh != 0)
+    {
+        FileClose(handleP->fh, TRUE);
+        handleP->fh = 0;
+    }
+
+    memH = handleP->selfHandle;
+    handleP->selfHandle = NullHandle;
+
+    if (memH != NullHandle)
+    {
+        MemUnlock(memH);
+        MemFree(memH);
+    }
+}
+
+Boolean _pascal
+MP3_RewindStream(MP3Handle *handleP)
+{
+    if (handleP == (MP3Handle *)0 || handleP->fh == 0)
+    {
+        return FALSE;
+    }
+
+    FilePos(handleP->fh, 0L, FILE_POS_START);
+    MP3_ResetDecoderState(handleP);
+
+    return MP3_PrimeStream(handleP);
+}
+
+word _pascal
+MP3_StreamChannels(const MP3Handle *handleP)
+{
+    if (handleP == (const MP3Handle *)0)
+    {
+        return 0;
+    }
+    return handleP->outCh;
+}
+
+word _pascal
+MP3_StreamSampleRate(const MP3Handle *handleP)
+{
+    if (handleP == (const MP3Handle *)0)
+    {
+        return 0;
+    }
+    return handleP->outRate;
+}
+
+word _pascal
+MP3_StreamBlockAlign(const MP3Handle *handleP)
+{
+    word ch;
+
+    ch = MP3_StreamChannels(handleP);
+    return (word)(ch * 2u);
+}
+
+dword _pascal
+MP3_ReadS16(MP3Handle *handleP, dword framesToRead, sword *dst)
+{
+    dword producedFrames;
+    dword producedBytes;
+    word blockAlign;
+    byte far *dstFar;
+
+    if ((handleP == (MP3Handle *)0) ||
+        (dst == (sword *)0) ||
+        (framesToRead == 0))
+    {
+        return 0;
+    }
+
+    blockAlign = MP3_StreamBlockAlign(handleP);
+    if (blockAlign == 0)
+    {
+        return 0;
+    }
+
+    producedFrames = 0;
+    producedBytes  = 0;
+    dstFar = (byte far *)dst;
+
+    while (framesToRead > 0)
+    {
+        word availableBytes;
+        word availableFrames;
+        word framesNow;
+        word bytesNow;
+
+        if (handleP->frameOff >= handleP->frameBytes)
+        {
+            if (!MP3_DecodeNextFrame(handleP))
+            {
+                break;
+            }
+        }
+
+        availableBytes = (word)(handleP->frameBytes - handleP->frameOff);
+        availableFrames = (word)(availableBytes / blockAlign);
+        if (availableFrames == 0)
+        {
+            handleP->frameOff = handleP->frameBytes;
+            continue;
+        }
+
+        framesNow = availableFrames;
+        if ((dword)framesNow > framesToRead)
+        {
+            framesNow = (word)framesToRead;
+        }
+        bytesNow = (word)(framesNow * blockAlign);
+
+        _fmemcpy(dstFar + producedBytes,
+                 (byte far *)(handleP->frameBuf) + handleP->frameOff,
+                 bytesNow);
+
+        handleP->frameOff += bytesNow;
+        producedFrames += framesNow;
+        producedBytes  += bytesNow;
+        framesToRead   -= framesNow;
+    }
+
+    return producedFrames;
+}
+
+/* ---- Static helpers ---- */
+
+static void
+MP3_ResetDecoderState(MP3Handle *handleP)
+{
+    handleP->inPos      = 0;
+    handleP->inFill     = 0;
+    handleP->eofSeen    = FALSE;
+    handleP->frameBytes = 0;
+    handleP->frameOff   = 0;
+    handleP->outRate    = 0;
+    handleP->outCh      = 0;
+    handleP->primed     = FALSE;
+
+    _fmemset(&(handleP->fi), 0, sizeof(handleP->fi));
+    mp3dec_init(&(handleP->dec));
+}
+
+static Boolean
+MP3_PrimeStream(MP3Handle *handleP)
+{
+    if (handleP == (MP3Handle *)0)
+    {
+        return FALSE;
+    }
+
+    while (!handleP->primed)
+    {
+        if (!MP3_DecodeNextFrame(handleP))
+        {
+            if (handleP->eofSeen && handleP->frameBytes == 0)
+            {
+                break;
+            }
+        }
+    }
+    return handleP->primed;
+}
+
+static void
+MP3_RefillInput(MP3Handle *handleP)
+{
+    word moveLen;
+    word need;
+    word got;
+
+    if (handleP->inFill > handleP->inPos)
+    {
+        moveLen = (word)(handleP->inFill - handleP->inPos);
+        _fmemmove(handleP->inBuf,
+                  handleP->inBuf + handleP->inPos,
+                  moveLen);
+        handleP->inFill = moveLen;
+    }
+    else
+    {
+        handleP->inFill = 0;
+    }
+    handleP->inPos = 0;
+
+    need = (word)(MP3_INBUF_SIZE - handleP->inFill);
+    if (need > 0)
+    {
+        got = FileRead(handleP->fh,
+                       handleP->inBuf + handleP->inFill,
+                       need,
+                       FALSE);
+        handleP->inFill += got;
+        if (got == 0)
+        {
+            handleP->eofSeen = TRUE;
+        }
+    }
+    else
+    {
+        handleP->eofSeen = TRUE;
+    }
+}
+
+static Boolean
+MP3_DecodeNextFrame(MP3Handle *handleP)
+{
+    int decodedSamples;
+    word avail;
+
+    avail = (word)(handleP->inFill - handleP->inPos);
+    if ((avail < 64) && !handleP->eofSeen)
+    {
+        MP3_RefillInput(handleP);
+        avail = (word)(handleP->inFill - handleP->inPos);
+    }
+    if ((avail == 0) && handleP->eofSeen)
+    {
+        handleP->frameBytes = 0;
+        handleP->frameOff = 0;
+        return FALSE;
+    }
+
+    _fmemset(&(handleP->fi), 0, sizeof(handleP->fi));
+
+    decodedSamples = mp3dec_decode_frame(&(handleP->dec),
+                        (const unsigned char *)(handleP->inBuf + handleP->inPos),
+                        (int)avail,
+                        handleP->frameBuf,
+                        &(handleP->fi));
+
+    if (handleP->fi.frame_bytes > 0)
+    {
+        handleP->inPos += (word)handleP->fi.frame_bytes;
+        if (handleP->inPos > handleP->inFill)
+        {
+            handleP->inPos = handleP->inFill;
+        }
+    }
+    else
+    {
+        if (avail > 0)
+        {
+            handleP->inPos += 1;
+        }
+        handleP->frameBytes = 0;
+        handleP->frameOff = 0;
+        return FALSE;
+    }
+
+    if (decodedSamples <= 0)
+    {
+        handleP->frameBytes = 0;
+        handleP->frameOff = 0;
+        return FALSE;
+    }
+
+    if (handleP->outRate == 0)
+    {
+        handleP->outRate = (word)handleP->fi.hz;
+        handleP->outCh   = (word)handleP->fi.channels;
+        if (handleP->forceMono && (handleP->outCh == 2))
+        {
+            handleP->outCh = 1;
+        }
+    }
+
+    if (handleP->forceMono && (handleP->fi.channels == 2))
+    {
+        handleP->frameBytes = MP3_MixStereoToMonoInPlace(handleP->frameBuf,
+                                                         (word)(decodedSamples / 2));
+    }
+    else
+    {
+        handleP->frameBytes = (word)(decodedSamples * 2);
+    }
+
+    MP3_ScalePcmWithWWFixed(handleP->frameBuf,
+                            (word)(handleP->frameBytes / 2),
+                            handleP->volume);
+
+    handleP->frameOff = 0;
+    handleP->primed = TRUE;
+    return TRUE;
+}
+
 static void
 MP3_ScalePcmWithWWFixed(sword *samplesP, word sampleCount, WWFixed volume)
 {
@@ -54,7 +401,6 @@ MP3_ScalePcmWithWWFixed(sword *samplesP, word sampleCount, WWFixed volume)
     }
 }
 
-/* stereo (interleaved) -> mono in-place, returns new byte length */
 static word
 MP3_MixStereoToMonoInPlace(sword *pcmP, word stereoSamples)
 {
@@ -78,342 +424,5 @@ MP3_MixStereoToMonoInPlace(sword *pcmP, word stereoSamples)
         }
         pcmP[i] = (sword)m;
     }
-    return (word)(stereoSamples * 2); /* mono bytes */
-}
-
-/* Compact + refill input window */
-static void
-MP3_RefillInput(MP3Ctx *ctxP)
-{
-    word moveLen;
-    word need;
-    word got;
-
-    if (ctxP->inFill > ctxP->inPos)
-    {
-        moveLen = (word)(ctxP->inFill - ctxP->inPos);
-        _fmemmove(ctxP->inBufP, ctxP->inBufP + ctxP->inPos, moveLen);
-        ctxP->inFill = moveLen;
-    }
-    else
-    {
-        ctxP->inFill = 0;
-    }
-    ctxP->inPos = 0;
-
-    need = (word)(MP3_INBUF_SIZE - ctxP->inFill);
-    if (need > 0)
-    {
-        got = FileRead(ctxP->fh, ctxP->inBufP + ctxP->inFill, need, FALSE);
-        ctxP->inFill += got;
-        if (got == 0)
-        {
-            ctxP->eofSeen = TRUE;
-        }
-    }
-    else
-    {
-        ctxP->eofSeen = TRUE;
-    }
-}
-
-/* Decode one frame; TRUE if PCM produced into frameP/frameBytes */
-static Boolean
-MP3_DecodeNextFrame(MP3Ctx *ctxP)
-{
-    int decodedSamples;
-    word avail;
-
-    avail = (word)(ctxP->inFill - ctxP->inPos);
-    if ((avail < 64) && !ctxP->eofSeen)
-    {
-        MP3_RefillInput(ctxP);
-        avail = (word)(ctxP->inFill - ctxP->inPos);
-    }
-    if ((avail == 0) && ctxP->eofSeen)
-    {
-        ctxP->frameBytes = 0;
-        ctxP->frameOff = 0;
-        return FALSE;
-    }
-
-    _fmemset(&(ctxP->fi), 0, sizeof(ctxP->fi));
-    decodedSamples = mp3dec_decode_frame(&(ctxP->dec),
-                        (const unsigned char *)(ctxP->inBufP + ctxP->inPos),
-                        (int)avail,
-                        ctxP->frameP,
-                        &(ctxP->fi));
-
-    if (ctxP->fi.frame_bytes > 0)
-    {
-        ctxP->inPos += (word)ctxP->fi.frame_bytes;
-        if (ctxP->inPos > ctxP->inFill)
-        {
-            ctxP->inPos = ctxP->inFill;
-        }
-    }
-    else
-    {
-        if (avail > 0)
-        {
-            ctxP->inPos += 1; /* resync */
-        }
-        ctxP->frameBytes = 0;
-        ctxP->frameOff = 0;
-        return FALSE;
-    }
-
-    if (decodedSamples <= 0)
-    {
-        ctxP->frameBytes = 0;
-        ctxP->frameOff = 0;
-        return FALSE;
-    }
-
-    if (ctxP->outRate == 0)
-    {
-        ctxP->outRate = (word)ctxP->fi.hz;
-        ctxP->outCh   = (word)ctxP->fi.channels;
-        if (ctxP->forceMono && (ctxP->outCh == 2))
-        {
-            ctxP->outCh = 1;
-        }
-    }
-
-    if (ctxP->forceMono && (ctxP->fi.channels == 2))
-    {
-        ctxP->frameBytes = MP3_MixStereoToMonoInPlace(ctxP->frameP,
-                                                      (word)(decodedSamples / 2));
-    }
-    else
-    {
-        ctxP->frameBytes = (word)(decodedSamples * 2);
-    }
-
-    MP3_ScalePcmWithWWFixed(ctxP->frameP,
-                            (word)(ctxP->frameBytes / 2),
-                            ctxP->volume);
-    ctxP->frameOff = 0;
-    return TRUE;
-}
-
-/* ---- BSNWav callback: must fill exactly wantBytes per call. TRUE=continue, FALSE=stop ---- */
-Boolean _pascal
-MP3_BSNWavFill(void *dstBuf, word wantBytes)
-{
-    MP3Ctx *ctxP;
-    word produced;
-    word toCopy;
-
-    if (dstBuf == (void *)0)
-    {
-        return TRUE;
-    }
-    if (wantBytes == 0)
-    {
-        return FALSE;
-    }
-    if (g_activeCtxP == (MP3Ctx *)(void *)0)
-    {
-        _fmemset(dstBuf, 0, wantBytes);
-        return TRUE;
-    }
-    ctxP = g_activeCtxP;
-    produced = 0;
-
-    while (produced < wantBytes)
-    {
-        if (ctxP->frameOff < ctxP->frameBytes)
-        {
-            toCopy = (word)(ctxP->frameBytes - ctxP->frameOff);
-            if ((word)(wantBytes - produced) < toCopy)
-            {
-                toCopy = (word)(wantBytes - produced);
-            }
-            _fmemcpy((byte *)dstBuf + produced,
-                     (byte *)(ctxP->frameP) + ctxP->frameOff,
-                     toCopy);
-            ctxP->frameOff += toCopy;
-            produced += toCopy;
-        }
-        else
-        {
-            if (!MP3_DecodeNextFrame(ctxP))
-            {
-                _fmemset((byte *)dstBuf + produced,
-                         0,
-                         (word)(wantBytes - produced));
-                return TRUE;
-            }
-        }
-    }
-    return FALSE;
-}
-
-void _pascal
-MP3_SetActiveCtxInternal(MP3Ctx *ctxP)
-{
-    g_activeCtxP = ctxP;
-}
-
-Boolean _pascal
-MP3_InitContextAndPrime(MP3Ctx *ctxP,
-                        const char *pathP,
-                        WWFixed volume,
-                        Boolean forceMono)
-{
-    Handle inH;
-    Handle frH;
-    byte *inP;
-    sword *frP;
-
-    _fmemset(ctxP, 0, sizeof(MP3Ctx));
-
-    ctxP->fh = FileOpen(pathP, FILE_ACCESS_R | FILE_DENY_NONE);
-    if (ctxP->fh == 0)
-    {
-        return FALSE;
-    }
-
-    inH = MemAlloc(MP3_INBUF_SIZE, HF_SWAPABLE, HAF_ZERO_INIT);
-    if (inH == 0)
-    {
-        FileClose(ctxP->fh, TRUE);
-        ctxP->fh = 0;
-        return FALSE;
-    }
-    inP = (byte *)MemLock(inH);
-    if (inP == (byte *)(void *)0)
-    {
-        MemFree(inH);
-        FileClose(ctxP->fh, TRUE);
-        ctxP->fh = 0;
-        return FALSE;
-    }
-    ctxP->inBufH = inH;
-    ctxP->inBufP = inP;
-    ctxP->inFill = (word)FileRead(ctxP->fh, inP, MP3_INBUF_SIZE, FALSE);
-    ctxP->inPos  = 0;
-    ctxP->eofSeen = (ctxP->inFill == 0) ? TRUE : FALSE;
-
-    frH = MemAlloc(MP3_PCM_FRAME_BYTES, HF_SWAPABLE, HAF_ZERO_INIT);
-    if (frH == 0)
-    {
-        MemUnlock(inH);
-        MemFree(inH);
-        ctxP->inBufH = 0;
-        ctxP->inBufP = (byte *)(void *)0;
-        FileClose(ctxP->fh, TRUE);
-        ctxP->fh = 0;
-        return FALSE;
-    }
-    frP = (sword *)MemLock(frH);
-    if (frP == (sword *)(void *)0)
-    {
-        MemFree(frH);
-        MemUnlock(inH);
-        MemFree(inH);
-        ctxP->frameH = 0;
-        ctxP->frameP = (sword *)(void *)0;
-        ctxP->inBufH = 0;
-        ctxP->inBufP = (byte *)(void *)0;
-        FileClose(ctxP->fh, TRUE);
-        ctxP->fh = 0;
-        return FALSE;
-    }
-    ctxP->frameH = frH;
-    ctxP->frameP = frP;
-
-    ctxP->volume    = volume;
-    ctxP->forceMono = forceMono;
-
-    mp3dec_init(&(ctxP->dec));
-
-    {
-        Boolean gotPcm;
-
-        gotPcm = FALSE;
-        while (!gotPcm)
-        {
-            word prevPos;
-
-            if (ctxP->eofSeen)
-            {
-                break;
-            }
-
-            prevPos = ctxP->inPos;
-            if (MP3_DecodeNextFrame(ctxP))
-            {
-                gotPcm = TRUE;
-                break;
-            }
-
-            if (ctxP->fi.frame_bytes > 0)
-            {
-                dword expectedPosD;
-                word expectedPos;
-
-                expectedPosD = (dword)prevPos + (dword)ctxP->fi.frame_bytes;
-                if (expectedPosD > (dword)ctxP->inFill)
-                {
-                    expectedPos = ctxP->inFill;
-                }
-                else
-                {
-                    expectedPos = (word)expectedPosD;
-                }
-                if (ctxP->inPos < expectedPos)
-                {
-                    ctxP->inPos = expectedPos;
-                }
-            }
-        }
-
-        if (!gotPcm)
-        {
-            MemUnlock(ctxP->frameH);
-            MemFree(ctxP->frameH);
-            MemUnlock(ctxP->inBufH);
-            MemFree(ctxP->inBufH);
-            ctxP->frameH = 0;
-            ctxP->frameP = (sword *)(void *)0;
-            ctxP->inBufH = 0;
-            ctxP->inBufP = (byte *)(void *)0;
-            FileClose(ctxP->fh, TRUE);
-            ctxP->fh = 0;
-            return FALSE;
-        }
-    }
-
-    MP3_SetActiveCtxInternal(ctxP);
-    return TRUE;
-}
-
-void _pascal
-MP3_CleanupContext(MP3Ctx *ctxP)
-{
-    g_activeCtxP = (MP3Ctx *)(void *)0;
-
-    if (ctxP->fh != 0)
-    {
-        FileClose(ctxP->fh, TRUE);
-        ctxP->fh = 0;
-    }
-    if (ctxP->frameH != 0)
-    {
-        MemUnlock(ctxP->frameH);
-        MemFree(ctxP->frameH);
-        ctxP->frameH = 0;
-        ctxP->frameP = (sword *)(void *)0;
-    }
-    if (ctxP->inBufH != 0)
-    {
-        MemUnlock(ctxP->inBufH);
-        MemFree(ctxP->inBufH);
-        ctxP->inBufH = 0;
-        ctxP->inBufP = (byte *)(void *)0;
-    }
-    ctxP->frameBytes = 0;
-    ctxP->frameOff = 0;
+    return (word)(stereoSamples * 2);
 }
