@@ -128,67 +128,28 @@ static Boolean BQ_IsMP3Path(const char *path)
 
 static Boolean BQ_LoadQOAInfo(FileHandle fh, QOAInfo *info)
 {
-    byte header[8];
-    byte frameHdr[8];
-    dword magic;
-    dword totalFrames;
-    word  channels;
-    dword sampleRate;
-    word  frameSamples;
+    Boolean ok;
 
-    if (!info)
+    if (!fh || !info)
     {
         return FALSE;
     }
+
+    ok = BSNWavProbeQOAFile(fh, info);
 
     FilePos(fh, 0, FILE_POS_START);
 
-    if (FileRead(fh, header, sizeof(header), TRUE) != sizeof(header))
+    if (!ok)
     {
-        FilePos(fh, 0, FILE_POS_START);
         return FALSE;
     }
 
-    magic = ((dword)header[0] << 24) |
-            ((dword)header[1] << 16) |
-            ((dword)header[2] << 8)  |
-             (dword)header[3];
-
-    if (magic != 0x716f6166UL) /* 'qoaf' */
+    if (!info->channels || !info->sampleRate || !info->totalFrames)
     {
-        FilePos(fh, 0, FILE_POS_START);
         return FALSE;
     }
 
-    totalFrames = ((dword)header[4] << 24) |
-                  ((dword)header[5] << 16) |
-                  ((dword)header[6] << 8)  |
-                   (dword)header[7];
-
-    if (FileRead(fh, frameHdr, sizeof(frameHdr), TRUE) != sizeof(frameHdr))
-    {
-        FilePos(fh, 0, FILE_POS_START);
-        return FALSE;
-    }
-
-    channels = (word)frameHdr[0];
-    sampleRate = ((dword)frameHdr[1] << 16) |
-                 ((dword)frameHdr[2] << 8)  |
-                  (dword)frameHdr[3];
-    frameSamples = (word)(((word)frameHdr[4] << 8) | (word)frameHdr[5]);
-
-    if (channels == 0 || sampleRate == 0 || frameSamples == 0)
-    {
-        FilePos(fh, 0, FILE_POS_START);
-        return FALSE;
-    }
-
-    info->channels      = channels;
-    info->sampleRate    = sampleRate;
-    info->totalFrames   = totalFrames;
     info->bitsPerSample = 16;
-
-    FilePos(fh, 0, FILE_POS_START);
     return TRUE;
 }
 
