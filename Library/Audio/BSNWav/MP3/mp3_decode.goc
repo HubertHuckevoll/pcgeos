@@ -329,19 +329,61 @@ MP3_InitContextAndPrime(MP3Ctx *ctxP,
 
     mp3dec_init(&(ctxP->dec));
 
-    if (!MP3_DecodeNextFrame(ctxP))
     {
-        MemUnlock(ctxP->frameH);
-        MemFree(ctxP->frameH);
-        MemUnlock(ctxP->inBufH);
-        MemFree(ctxP->inBufH);
-        ctxP->frameH = 0;
-        ctxP->frameP = (sword *)(void *)0;
-        ctxP->inBufH = 0;
-        ctxP->inBufP = (byte *)(void *)0;
-        FileClose(ctxP->fh, TRUE);
-        ctxP->fh = 0;
-        return FALSE;
+        Boolean gotPcm;
+
+        gotPcm = FALSE;
+        while (!gotPcm)
+        {
+            word prevPos;
+
+            if (ctxP->eofSeen)
+            {
+                break;
+            }
+
+            prevPos = ctxP->inPos;
+            if (MP3_DecodeNextFrame(ctxP))
+            {
+                gotPcm = TRUE;
+                break;
+            }
+
+            if (ctxP->fi.frame_bytes > 0)
+            {
+                dword expectedPosD;
+                word expectedPos;
+
+                expectedPosD = (dword)prevPos + (dword)ctxP->fi.frame_bytes;
+                if (expectedPosD > (dword)ctxP->inFill)
+                {
+                    expectedPos = ctxP->inFill;
+                }
+                else
+                {
+                    expectedPos = (word)expectedPosD;
+                }
+                if (ctxP->inPos < expectedPos)
+                {
+                    ctxP->inPos = expectedPos;
+                }
+            }
+        }
+
+        if (!gotPcm)
+        {
+            MemUnlock(ctxP->frameH);
+            MemFree(ctxP->frameH);
+            MemUnlock(ctxP->inBufH);
+            MemFree(ctxP->inBufH);
+            ctxP->frameH = 0;
+            ctxP->frameP = (sword *)(void *)0;
+            ctxP->inBufH = 0;
+            ctxP->inBufP = (byte *)(void *)0;
+            FileClose(ctxP->fh, TRUE);
+            ctxP->fh = 0;
+            return FALSE;
+        }
     }
 
     MP3_SetActiveCtxInternal(ctxP);

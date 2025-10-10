@@ -535,10 +535,24 @@ QOAHandle * _pascal qoaOpenGEOS(FileHandle fh, QOAInfo *outInfo)
         return 0;
     }
 
+    if (ch == 0)
+    {
+        MemUnlock(h);
+        MemFree(h);
+        return 0;
+    }
+
     q->info.channels      = ch;
     q->info.sampleRate    = sr;
-    q->info.totalFrames   = samples;
     q->info.bitsPerSample = 16;
+    q->info.totalFrames   = 0;
+
+    /* Convert total sample count to per-channel frame count, rounding down.
+     * Leave totalFrames at zero if the metadata is malformed so later checks fail. */
+    if (samples >= (dword)ch)
+    {
+        q->info.totalFrames = samples / (dword)ch;
+    }
 
     FilePos(q->fileH, 8, FILE_POS_START);
 
