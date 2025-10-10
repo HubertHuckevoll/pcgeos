@@ -9,6 +9,7 @@
 #include <file.h>
 #include <mem.h>
 #include <sound.h>
+#include <system.h>
 #include <Ansi/string.h>
 
 @include <bsnwav.goh>
@@ -259,7 +260,7 @@ BSNWavMP3Callback(void *dstBuf, word wantBytes)
 }
 
 int _pascal _export
-BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
+BSNWavPlayMP3FileHandle(FileHandle fh, MP3PlayOptions *optsP)
 {
     WWFixed vol;
     Boolean mono;
@@ -269,7 +270,7 @@ BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
     BSWavFormChunk fmt;
     int rc;
 
-    if ((pathP == (const char *)(void *)0) || (*pathP == '\0'))
+    if (fh == 0)
     {
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
@@ -289,7 +290,7 @@ BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
         parent = optsP->parent;
     }
 
-    handleP = MP3_OpenStream(pathP, vol, mono);
+    handleP = MP3_OpenStream(fh, vol, mono);
     if (!handleP)
     {
         return BSNW_UNKNOWN_WAVE_FORMAT;
@@ -298,6 +299,7 @@ BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
     if (!MP3_VerifyStream(handleP))
     {
         MP3_CloseStream(handleP);
+        MP3_ResetStaticState();
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
 
@@ -327,5 +329,28 @@ BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
 
     MP3_CloseStream(handleP);
     MP3_ResetStaticState();
+    return rc;
+}
+
+int _pascal _export
+BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP)
+{
+    FileHandle fh;
+    int rc;
+
+    if ((pathP == (const char *)(void *)0) || (*pathP == '\0'))
+    {
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+
+    fh = FileOpen(pathP, FILE_ACCESS_R | FILE_DENY_NONE);
+    if (fh == 0)
+    {
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+
+    rc = BSNWavPlayMP3FileHandle(fh, optsP);
+
+    FileClose(fh, TRUE);
     return rc;
 }

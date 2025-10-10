@@ -83,6 +83,7 @@ export  BSNWAVPLAYQOAFILE
 export  BSNWAVSTOPQOA
 export  BSNWAVPROBEQOAFILE
 export  BSNWAVPLAYMP3FILE
+export  BSNWAVPLAYMP3FILEHANDLE
 
 # usernotes "NewWave-Library for best sound. \xa9 2000 Dirk Lausecker"
 

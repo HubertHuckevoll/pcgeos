@@ -20,12 +20,16 @@ typedef struct {
     optr        parent;     /* UI parent for BSNWav dialog, or NullOptr */
 } MP3PlayOptions;
 
-/* High-level entry: play one MP3 file by DOS path via BSNWav.
+/* High-level entry: play one MP3 file that is already opened by the caller.
  * Returns RespondTypes (see bsnwav.goh), e.g., BSNW_STATUS_OK == 0.
  */
+int    _pascal _export BSNWavPlayMP3FileHandle(FileHandle fh, MP3PlayOptions *optsP);
+
+/* Convenience wrapper that opens/closes the DOS path internally. */
 int    _pascal _export BSNWavPlayMP3File(const char *pathP, MP3PlayOptions *optsP);
 
 #ifdef __HIGHC__
+pragma Alias(BSNWavPlayMP3FileHandle, "BSNWAVPLAYMP3FILEHANDLE");
 pragma Alias(BSNWavPlayMP3File, "BSNWAVPLAYMP3FILE");
 #endif
 

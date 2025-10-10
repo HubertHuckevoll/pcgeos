@@ -609,14 +609,52 @@ void    _pascal BQ_StartPlay(void)
     else
     {
         // Open file and testing
-        needHandle = (bqFileType != BQ_FILE_TYPE_MP3);
-        fh = needHandle ? FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W) : (FileHandle)0;
-
+        needHandle = TRUE;
+        fh = 0;
         playable = TRUE;
 
-        if (needHandle && !fh)
+        if (bqFileType == BQ_FILE_TYPE_MP3)
         {
-            playable = FALSE;
+            MP3PlayOptions opts;
+
+            memset(&opts, 0, sizeof(opts));
+            WWFixedToInt(opts.volume) = 1;
+            WWFixedToFrac(opts.volume) = 0;
+            opts.forceMono = FALSE;
+            opts.playFlags = BSNW_SHOW_ERROR_MSG | BSNW_TEST_ONLY;
+            opts.parent = NullOptr;
+
+            fh = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_NONE);
+            if (fh == 0)
+            {
+                playable = FALSE;
+            }
+            else
+            {
+                if (BSNW_STATUS_OK != BSNWavPlayMP3FileHandle(fh, &opts))
+                {
+                    playable = FALSE;
+                }
+                FileClose(fh, TRUE);
+                fh = 0;
+            }
+
+            if (playable)
+            {
+                fh = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_NONE);
+                if (fh == 0)
+                {
+                    playable = FALSE;
+                }
+            }
+        }
+        else
+        {
+            fh = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W);
+            if (fh == 0)
+            {
+                playable = FALSE;
+            }
         }
 
         if (playable)
@@ -634,23 +672,7 @@ void    _pascal BQ_StartPlay(void)
             }
             else if (bqFileType == BQ_FILE_TYPE_MP3)
             {
-                MP3PlayOptions opts;
-
-                memset(&opts, 0, sizeof(opts));
-                WWFixedToInt(opts.volume) = 1;
-                WWFixedToFrac(opts.volume) = 0;
-                opts.forceMono = FALSE;
-                opts.playFlags = BSNW_SHOW_ERROR_MSG | BSNW_TEST_ONLY;
-                opts.parent = NullOptr;
-
-                if (BSNW_STATUS_OK != BSNWavPlayMP3File(fullPath, &opts))
-                {
-                    playable = FALSE;
-                }
-                else
-                {
-                    (void)BSNWaveGetLastFormat(&bqSampleRate, &bqChannels, &bqBits);
-                }
+                (void)BSNWaveGetLastFormat(&bqSampleRate, &bqChannels, &bqBits);
             }
             else
             {
@@ -663,58 +685,59 @@ void    _pascal BQ_StartPlay(void)
                     (void)BSNWaveGetLastFormat(&bqSampleRate, &bqChannels, &bqBits);
                 }
             }
+        }
 
-            if (!playable)
+        if (!playable)
+        {
+            if (fh)
             {
+                FileClose(fh, TRUE);
+                fh = 0;
+            }
+        }
+
+        if (playable)
+        {
+            /////// successfull opening /////////
+
+            // update triggers & display
+            RedrawSettings(0);
+            RedrawTime(0);
+
+            @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(pauseText,VUM_NOW);
+            @send PLAYTrigger::MSG_GEN_SET_ENABLED(VUM_NOW);
+            RedrawFileName(0);
+
+            // Set Flag
+            playFlag = BQ_PLAYFLAG_PLAY;
+            bqSampleBytes = 0;
+
+            // create Playthread
+            if(!ThreadCreate(PRIORITY_HIGH, // PRIORITY_HIGH, PRIORITY_TIME_CRITICAL
+                                (word)fh,
+                                BQ_PlayThread,
+                                3000,
+                                GeodeGetProcessHandle()))
+            {
+                // Error
                 if (fh)
                 {
-                    FileClose(fh, TRUE);
-                    fh = 0;
+                    (void) FileClose(fh, TRUE);
                 }
+                playFlag = 0;
             }
-
-            if (playable)
+            else
             {
-                /////// successfull opening /////////
-
-                // update triggers & display
-                RedrawSettings(0);
-                RedrawTime(0);
-
-                @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(pauseText,VUM_NOW);
-                @send PLAYTrigger::MSG_GEN_SET_ENABLED(VUM_NOW);
-                RedrawFileName(0);
-
-                // Set Flag
-                playFlag = BQ_PLAYFLAG_PLAY;
-                bqSampleBytes = 0;
-
-                // create Playthread
-                if(!ThreadCreate(PRIORITY_HIGH, // PRIORITY_HIGH, PRIORITY_TIME_CRITICAL
-                                 (word)fh,
-                                 BQ_PlayThread,
-                                 3000,
-                                 GeodeGetProcessHandle()))
-                {
-                    // Error
-                    if (fh)
-                    {
-                        (void) FileClose(fh, TRUE);
-                    }
-                    playFlag = 0;
-                }
-                else
-                {
-                    // no error
-                    // Look at BQ_PlayThread() for the next steps !
-                };
+                // no error
+                // Look at BQ_PlayThread() for the next steps !
             };
-        }
-        else if (fh)
-        {
-            FileClose(fh, TRUE);
-        }
-    };
+        };
+    }
+
+    if (fh)
+    {
+        FileClose(fh, TRUE);
+    }
 }
 
 /************************************************
@@ -730,27 +753,25 @@ OUT:   playFlag ->     NULL if finished
 word    BQ_PlayThread(word fileWord)
 {
     FileHandle  fh;
-    int     playState = 1;
-    Boolean     needHandle;
+    int         playState = 1;
 
-    // casting FileHandle
-    needHandle = (bqFileType != BQ_FILE_TYPE_MP3);
-    fh = needHandle ? (FileHandle)fileWord : (FileHandle)0;
+    fh = (FileHandle)fileWord;
+    if (fh == 0)
+    {
+        playFlag = 0;
+        return 0;
+    }
 
     // Show Playstate
     RedrawStatus(0);
     @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(pauseText,VUM_NOW);
 
     // Play file
-    // play endless if allowed
     do
     {
         if (capabFlag)
         {
-            if (needHandle)
-            {
-                FilePos(fh, 0, FILE_POS_START);
-            }
+            FilePos(fh, 0, FILE_POS_START);
 
             if (bqFileType == BQ_FILE_TYPE_QOA)
             {
@@ -767,7 +788,7 @@ word    BQ_PlayThread(word fileWord)
                 opts.playFlags = BSNW_SHOW_ERROR_MSG;
                 opts.parent = NullOptr;
 
-                playState = BSNWavPlayMP3File(fullPath, &opts);
+                playState = BSNWavPlayMP3FileHandle(fh, &opts);
             }
             else
             {
@@ -787,10 +808,7 @@ word    BQ_PlayThread(word fileWord)
              && (playState == 0));
 
     // Close File
-    if (needHandle && fh)
-    {
-        (void) FileClose(fh, TRUE);
-    }
+    FileClose(fh, TRUE);
 
     // update PLAYTrigger
     @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playText,VUM_NOW);
@@ -946,12 +964,17 @@ Boolean _pascal BQ_CheckForPlay(void)
             opts.playFlags = BSNW_TEST_ONLY;
             opts.parent = NullOptr;
 
-            if (BSNW_STATUS_OK == BSNWavPlayMP3File(fullPath, &opts))
+            fh = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_NONE);
+            if (fh)
             {
-                bqAllBytes = BSNWaveGetLastFormat(&bqSampleRate,
-                                                  &bqChannels,
-                                                  &bqBits);
-                retVal = RedrawSettings(0);
+                if (BSNW_STATUS_OK == BSNWavPlayMP3FileHandle(fh, &opts))
+                {
+                    bqAllBytes = BSNWaveGetLastFormat(&bqSampleRate,
+                                                      &bqChannels,
+                                                      &bqBits);
+                    retVal = RedrawSettings(0);
+                }
+                FileClose(fh, TRUE);
             }
         }
         else

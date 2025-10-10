@@ -41,7 +41,7 @@ typedef struct _MP3Handle {
     Boolean                primed;
 } MP3Handle;
 
-MP3Handle * _pascal MP3_OpenStream(const char *pathP,
+MP3Handle * _pascal MP3_OpenStream(FileHandle fh,
                                    WWFixed volume,
                                    Boolean forceMono);
 void        _pascal MP3_CloseStream(MP3Handle *handleP);

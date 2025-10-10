@@ -10,6 +10,7 @@
 #include <heap.h>
 #include <file.h>
 #include <sound.h>
+#include <system.h>
 #include <Ansi/string.h>
 
 #include "mp3_internal.h"
@@ -28,12 +29,12 @@ static word     MP3_MixStereoToMonoInPlace(sword *pcmP,
 /* ---- Implementation ---- */
 
 MP3Handle * _pascal
-MP3_OpenStream(const char *pathP, WWFixed volume, Boolean forceMono)
+MP3_OpenStream(FileHandle fh, WWFixed volume, Boolean forceMono)
 {
     MemHandle memH;
     MP3Handle *handleP;
 
-    if ((pathP == (const char *)(void *)0) || (*pathP == '\0'))
+    if (fh == 0)
     {
         return (MP3Handle *)0;
     }
@@ -56,12 +57,7 @@ MP3_OpenStream(const char *pathP, WWFixed volume, Boolean forceMono)
     handleP->volume     = volume;
     handleP->forceMono  = forceMono;
 
-    handleP->fh = FileOpen(pathP, FILE_ACCESS_R | FILE_DENY_NONE);
-    if (handleP->fh == 0)
-    {
-        MP3_CloseStream(handleP);
-        return (MP3Handle *)0;
-    }
+    handleP->fh = fh;
 
     MP3_ResetDecoderState(handleP);
 
@@ -82,12 +78,6 @@ MP3_CloseStream(MP3Handle *handleP)
     if (handleP == (MP3Handle *)0)
     {
         return;
-    }
-
-    if (handleP->fh != 0)
-    {
-        FileClose(handleP->fh, TRUE);
-        handleP->fh = 0;
     }
 
     memH = handleP->selfHandle;
@@ -247,6 +237,7 @@ MP3_PrimeStream(MP3Handle *handleP)
             }
         }
     }
+
     return handleP->primed;
 }
 
