@@ -37,11 +37,6 @@ void mp3dec_f32_to_s16(const float *in, int16_t *out, int num_samples);
 #endif /* MINIMP3_FLOAT_OUTPUT */
 int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info);
 
-#ifdef MINIMP3_GEOS_PORT
-int mp3dec_get_scratch_size(void);
-void mp3dec_assign_scratch(void *scratchMem);
-#endif
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -246,17 +241,9 @@ typedef struct
 } mp3dec_scratch_t;
 
 #ifdef MINIMP3_GEOS_PORT
-static mp3dec_scratch_t *g_minimp3_scratch_ptr = (mp3dec_scratch_t *)0;
-
-int mp3dec_get_scratch_size(void)
-{
-    return (int)sizeof(mp3dec_scratch_t);
-}
-
-void mp3dec_assign_scratch(void *scratchMem)
-{
-    g_minimp3_scratch_ptr = (mp3dec_scratch_t *)scratchMem;
-}
+int mp3dec_get_scratch_size(void);
+void mp3dec_assign_scratch(void *scratchMem);
+mp3dec_scratch_t *mp3dec_get_scratch_ptr(void);
 #endif
 
 static void bs_init(bs_t *bs, const uint8_t *data, int bytes)
@@ -1740,8 +1727,9 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     const uint8_t *hdr;
     bs_t bs_frame[1];
 #ifdef MINIMP3_GEOS_PORT
-    #define SCRATCH_STRUCT g_minimp3_scratch_ptr->
-    #define SCRATCH_PTR g_minimp3_scratch_ptr
+    mp3dec_scratch_t *scratch = mp3dec_get_scratch_ptr();
+    #define SCRATCH_STRUCT scratch->
+    #define SCRATCH_PTR scratch
 #else
     mp3dec_scratch_t scratch;
     #define SCRATCH_STRUCT scratch.
@@ -1749,7 +1737,7 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 #endif
 
 #ifdef MINIMP3_GEOS_PORT
-    if (g_minimp3_scratch_ptr == (mp3dec_scratch_t *)0)
+    if (scratch == (mp3dec_scratch_t *)0)
     {
         info->frame_bytes = 0;
         return 0;
