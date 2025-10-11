@@ -39,6 +39,9 @@ typedef struct _MP3Handle {
     mp3dec_frame_info_t    fi;
 
     Boolean                primed;
+
+    MemHandle              scratchMemH;
+    void                  *scratchMemP;
 } MP3Handle;
 
 MP3Handle * _pascal MP3_OpenStream(FileHandle fh,

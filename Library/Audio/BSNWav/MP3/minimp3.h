@@ -37,6 +37,11 @@ void mp3dec_f32_to_s16(const float *in, int16_t *out, int num_samples);
 #endif /* MINIMP3_FLOAT_OUTPUT */
 int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info);
 
+#ifdef MINIMP3_GEOS_PORT
+int mp3dec_get_scratch_size(void);
+void mp3dec_assign_scratch(void *scratchMem);
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -239,6 +244,20 @@ typedef struct
     float grbuf[2][576], scf[40], syn[18 + 15][2*32];
     uint8_t ist_pos[2][39];
 } mp3dec_scratch_t;
+
+#ifdef MINIMP3_GEOS_PORT
+static mp3dec_scratch_t *g_minimp3_scratch_ptr = (mp3dec_scratch_t *)0;
+
+int mp3dec_get_scratch_size(void)
+{
+    return (int)sizeof(mp3dec_scratch_t);
+}
+
+void mp3dec_assign_scratch(void *scratchMem)
+{
+    g_minimp3_scratch_ptr = (mp3dec_scratch_t *)scratchMem;
+}
+#endif
 
 static void bs_init(bs_t *bs, const uint8_t *data, int bytes)
 {
@@ -1721,10 +1740,8 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     const uint8_t *hdr;
     bs_t bs_frame[1];
 #ifdef MINIMP3_GEOS_PORT
-    MemHandle scratchH = NullHandle;
-    mp3dec_scratch_t* scratch = {0};
-    #define SCRATCH_STRUCT scratch->
-    #define SCRATCH_PTR scratch
+    #define SCRATCH_STRUCT g_minimp3_scratch_ptr->
+    #define SCRATCH_PTR g_minimp3_scratch_ptr
 #else
     mp3dec_scratch_t scratch;
     #define SCRATCH_STRUCT scratch.
@@ -1732,8 +1749,11 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 #endif
 
 #ifdef MINIMP3_GEOS_PORT
-    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_FIXED, HAF_ZERO_INIT);
-    //scratch = MemLock(scratchH);
+    if (g_minimp3_scratch_ptr == (mp3dec_scratch_t *)0)
+    {
+        info->frame_bytes = 0;
+        return 0;
+    }
 #endif
 
     if (mp3_bytes > 4 && dec->header[0] == 0xff && hdr_compare(dec->header, mp3))
@@ -1821,11 +1841,6 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
         }
 #endif /* MINIMP3_ONLY_MP3 */
     }
-
-#ifdef MINIMP3_GEOS_PORT
-    // MemUnlock(scratchH);
-    MemFree(scratchH);
-#endif
 
     return success*hdr_frame_samples(dec->header);
 }

@@ -331,7 +331,11 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
 
     // Optimize bufferlen
     // LA 04.01.2001
-    if (bytesToPlay>(dword)len)
+    if (playStreaming || (bytesToPlay == 0))
+    {
+        len2 = len;
+    }
+    else if (bytesToPlay>(dword)len)
     {
         len2 = len;
     }

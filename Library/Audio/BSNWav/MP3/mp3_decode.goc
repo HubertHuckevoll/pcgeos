@@ -25,6 +25,8 @@ static void     MP3_ScalePcmWithWWFixed(sword *samplesP,
                                         WWFixed volume);
 static word     MP3_MixStereoToMonoInPlace(sword *pcmP,
                                            word stereoSamples);
+static Boolean  MP3_EnsureDecoderScratch(MP3Handle *handleP);
+static void     MP3_FreeDecoderScratch(MP3Handle *handleP);
 
 /* ---- Implementation ---- */
 
@@ -60,6 +62,11 @@ MP3_OpenStream(FileHandle fh, WWFixed volume, Boolean forceMono)
     handleP->fh = fh;
 
     MP3_ResetDecoderState(handleP);
+    if (!MP3_EnsureDecoderScratch(handleP))
+    {
+        MP3_CloseStream(handleP);
+        return (MP3Handle *)0;
+    }
 
     if (!MP3_PrimeStream(handleP))
     {
@@ -80,6 +87,8 @@ MP3_CloseStream(MP3Handle *handleP)
         return;
     }
 
+    MP3_FreeDecoderScratch(handleP);
+
     memH = handleP->selfHandle;
     handleP->selfHandle = NullHandle;
 
@@ -94,6 +103,11 @@ Boolean _pascal
 MP3_RewindStream(MP3Handle *handleP)
 {
     if (handleP == (MP3Handle *)0 || handleP->fh == 0)
+    {
+        return FALSE;
+    }
+
+    if (!MP3_EnsureDecoderScratch(handleP))
     {
         return FALSE;
     }
@@ -203,6 +217,73 @@ MP3_ReadS16(MP3Handle *handleP, dword framesToRead, sword *dst)
 
 /* ---- Static helpers ---- */
 
+static Boolean
+MP3_EnsureDecoderScratch(MP3Handle *handleP)
+{
+    int scratchSize;
+
+    if (handleP == (MP3Handle *)0)
+    {
+        return FALSE;
+    }
+
+    if ((handleP->scratchMemH != NullHandle) &&
+        (handleP->scratchMemP != (void *)0))
+    {
+        mp3dec_assign_scratch(handleP->scratchMemP);
+        return TRUE;
+    }
+
+    scratchSize = mp3dec_get_scratch_size();
+    if (scratchSize <= 0 || scratchSize > 0xFFFF)
+    {
+        return FALSE;
+    }
+
+    handleP->scratchMemH = MemAlloc((word)scratchSize,
+                                    HF_SWAPABLE,
+                                    HAF_ZERO_INIT);
+    if (handleP->scratchMemH == NullHandle)
+    {
+        return FALSE;
+    }
+
+    handleP->scratchMemP = (void *)MemLock(handleP->scratchMemH);
+    if (handleP->scratchMemP == (void *)0)
+    {
+        MemFree(handleP->scratchMemH);
+        handleP->scratchMemH = NullHandle;
+        return FALSE;
+    }
+
+    mp3dec_assign_scratch(handleP->scratchMemP);
+
+    return TRUE;
+}
+
+static void
+MP3_FreeDecoderScratch(MP3Handle *handleP)
+{
+    if (handleP == (MP3Handle *)0)
+    {
+        return;
+    }
+
+    if (handleP->scratchMemH != NullHandle)
+    {
+        if (handleP->scratchMemP != (void *)0)
+        {
+            MemUnlock(handleP->scratchMemH);
+        }
+        MemFree(handleP->scratchMemH);
+    }
+
+    handleP->scratchMemH = NullHandle;
+    handleP->scratchMemP = (void *)0;
+
+    mp3dec_assign_scratch((void *)0);
+}
+
 static void
 MP3_ResetDecoderState(MP3Handle *handleP)
 {
@@ -286,6 +367,12 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
 {
     int decodedSamples;
     word avail;
+
+    if (!MP3_EnsureDecoderScratch(handleP))
+    {
+        return FALSE;
+    }
+    mp3dec_assign_scratch(handleP->scratchMemP);
 
     avail = (word)(handleP->inFill - handleP->inPos);
     if ((avail < 64) && !handleP->eofSeen)

@@ -733,11 +733,6 @@ void    _pascal BQ_StartPlay(void)
             };
         };
     }
-
-    if (fh)
-    {
-        FileClose(fh, TRUE);
-    }
 }
 
 /************************************************
