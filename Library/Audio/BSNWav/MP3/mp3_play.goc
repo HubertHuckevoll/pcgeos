@@ -63,7 +63,7 @@ MP3_VerifyStream(MP3Handle *handleP)
         return FALSE;
     }
 
-    framesRequested = 4096;
+    framesRequested = 16;
     bufferBytes = (word)(framesRequested *
                          (dword)MP3_StreamBlockAlign(handleP));
     if (bufferBytes == 0)
@@ -239,8 +239,7 @@ BSNWavMP3Callback(void *dstBuf, word wantBytes)
 
         if (framesDecoded < (dword)scratchFrames)
         {
-            finished = TRUE;
-            break;
+            /* still data buffered or request trimmed; keep looping */
         }
     }
 

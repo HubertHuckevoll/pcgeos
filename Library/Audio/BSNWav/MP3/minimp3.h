@@ -14,14 +14,21 @@
 
 typedef struct
 {
-    int frame_bytes, frame_offset, channels, hz, layer, bitrate_kbps;
+    uint32_t frame_bytes;
+    uint32_t frame_offset;
+    uint16_t channels;
+    uint32_t hz;
+    uint16_t layer;
+    uint32_t bitrate_kbps;
 } mp3dec_frame_info_t;
 
 typedef struct
 {
     float mdct_overlap[2][9*32], qmf_state[15*2*32];
-    int reserv, free_format_bytes;
+    uint32_t reserv, free_format_bytes;
     unsigned char header[4], reserv_buf[511];
+    uint32_t debug_main_data_begin;
+    uint32_t debug_part23_sum;
 } mp3dec_t;
 
 #ifdef __cplusplus
@@ -157,7 +164,7 @@ static int have_simd(void)
     if (CPUInfo[0] > 0)
     {
         minimp3_cpuid(CPUInfo, 1);
-        g_have_simd = (CPUInfo[3] & (1 << 26)) + 1; /* SSE2 */
+    g_have_simd = (CPUInfo[3] & (1L << 26)) + 1; /* SSE2 */
     }
 end:
     return g_have_simd - 1;
@@ -208,7 +215,7 @@ static __inline__ __attribute__((always_inline)) int32_t minimp3_clip_int16_arm(
 typedef struct
 {
     const uint8_t *buf;
-    int pos, limit;
+    uint32_t pos, limit;
 } bs_t;
 
 typedef struct
@@ -241,17 +248,14 @@ typedef struct
 } mp3dec_scratch_t;
 
 #ifdef MINIMP3_GEOS_PORT
-mp3dec_scratch_t *g_minimp3_scratch_ptr = (mp3dec_scratch_t *)0;
-// int mp3dec_get_scratch_size(void);
-// void mp3dec_assign_scratch(void *scratchMem);
-// mp3dec_scratch_t *mp3dec_get_scratch_ptr(void);
+mp3dec_scratch_t _far *g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)0;
 #endif
 
-static void bs_init(bs_t *bs, const uint8_t *data, int bytes)
+static void bs_init(bs_t *bs, const uint8_t *data, uint32_t bytes)
 {
     bs->buf   = data;
     bs->pos   = 0;
-    bs->limit = bytes*8;
+    bs->limit = bytes * 8u;
 }
 
 static uint32_t get_bits(bs_t *bs, int n)
@@ -259,7 +263,7 @@ static uint32_t get_bits(bs_t *bs, int n)
     uint32_t next, cache = 0, s = bs->pos & 7;
     int shl = n + s;
     const uint8_t *p = bs->buf + (bs->pos >> 3);
-    if ((bs->pos += n) > bs->limit)
+    if ((bs->pos += (uint32_t)n) > bs->limit)
         return 0;
     next = *p++ & (255 >> s);
     while ((shl -= 8) > 0)
@@ -309,12 +313,17 @@ static unsigned hdr_frame_samples(const uint8_t *h)
 
 static int hdr_frame_bytes(const uint8_t *h, int free_format_size)
 {
-    int frame_bytes = hdr_frame_samples(h)*hdr_bitrate_kbps(h)*125/hdr_sample_rate_hz(h);
+    long frame_bytes;
+
+    frame_bytes = (long)hdr_frame_samples(h) *
+                  (long)hdr_bitrate_kbps(h) *
+                  125L;
+    frame_bytes /= (long)hdr_sample_rate_hz(h);
     if (HDR_IS_LAYER_1(h))
     {
         frame_bytes &= ~3; /* slot align */
     }
-    return frame_bytes ? frame_bytes : free_format_size;
+    return frame_bytes ? (int)frame_bytes : free_format_size;
 }
 
 static int hdr_padding(const uint8_t *h)
@@ -385,7 +394,7 @@ static void L12_read_scalefactors(bs_t *bs, uint8_t *pba, uint8_t *scfcod, int b
             if (mask & m)
             {
                 int b = get_bits(bs, 6);
-                s = g_deq_L12[ba*3 - 6 + b % 3]*(1 << 21 >> b/3);
+                s = g_deq_L12[ba*3 - 6 + b % 3]*((1L << 21) >> (b/3));
             }
             *scf++ = s;
         }
@@ -453,7 +462,7 @@ static int L12_dequantize_granule(float *grbuf, bs_t *bs, L12_scale_info *sci, i
             {
                 if (ba < 17)
                 {
-                    int half = (1 << (ba - 1)) - 1;
+                    int half = (1L << (ba - 1)) - 1;
                     for (k = 0; k < group_size; k++)
                     {
                         dst[k] = (float)((int)get_bits(bs, ba) - half);
@@ -490,7 +499,7 @@ static void L12_apply_scf_384(L12_scale_info *sci, const float *scf, float *dst)
 }
 #endif /* MINIMP3_ONLY_MP3 */
 
-static int L3_read_side_info(bs_t *bs, L3_gr_info_t *gr, const uint8_t *hdr)
+static uint32_t L3_read_side_info(bs_t *bs, L3_gr_info_t *gr, const uint8_t *hdr, uint32_t *part23_sum_out)
 {
     static const uint8_t g_scf_long[8][23] = {
         { 6,6,6,6,6,6,8,10,12,14,16,20,24,28,32,38,46,52,60,68,58,54,0 },
@@ -524,7 +533,8 @@ static int L3_read_side_info(bs_t *bs, L3_gr_info_t *gr, const uint8_t *hdr)
     };
 
     unsigned tables, scfsi = 0;
-    int main_data_begin, part_23_sum = 0;
+    uint32_t main_data_begin = 0;
+    uint32_t part_23_sum = 0;
     int sr_idx = HDR_GET_MY_SAMPLE_RATE(hdr);
     int gr_count = HDR_IS_MONO(hdr) ? 1 : 2;
 
@@ -551,7 +561,7 @@ static int L3_read_side_info(bs_t *bs, L3_gr_info_t *gr, const uint8_t *hdr)
         gr->big_values = (uint16_t)get_bits(bs,  9);
         if (gr->big_values > 288)
         {
-            return -1;
+            return UINT32_MAX;
         }
         gr->global_gain = (uint8_t)get_bits(bs, 8);
         gr->scalefac_compress = (uint16_t)get_bits(bs, HDR_TEST_MPEG1(hdr) ? 4 : 9);
@@ -563,7 +573,7 @@ static int L3_read_side_info(bs_t *bs, L3_gr_info_t *gr, const uint8_t *hdr)
             gr->block_type = (uint8_t)get_bits(bs, 2);
             if (!gr->block_type)
             {
-                return -1;
+            return UINT32_MAX;
             }
             gr->mixed_block_flag = (uint8_t)get_bits(bs, 1);
             gr->region_count[0] = 7;
@@ -609,9 +619,14 @@ static int L3_read_side_info(bs_t *bs, L3_gr_info_t *gr, const uint8_t *hdr)
         gr++;
     } while(--gr_count);
 
-    if (part_23_sum + bs->pos > bs->limit + main_data_begin*8)
+    if (bs->pos + part_23_sum > bs->limit + (main_data_begin << 3))
     {
-        return -1;
+        return UINT32_MAX;
+    }
+
+    if (part23_sum_out)
+    {
+        *part23_sum_out = part_23_sum;
     }
 
     return main_data_begin;
@@ -635,7 +650,7 @@ static void L3_read_scalefactors(uint8_t *scf, uint8_t *ist_pos, const uint8_t *
                 memset(ist_pos, 0, cnt);
             } else
             {
-                int max_scf = (scfsi < 0) ? (1 << bits) - 1 : -1;
+                int max_scf = (scfsi < 0) ? (1L << bits) - 1 : -1;
                 for (k = 0; k < cnt; k++)
                 {
                     int s = get_bits(bitbuf, bits);
@@ -657,7 +672,7 @@ static float L3_ldexp_q2(float y, int exp_q2)
     do
     {
         e = MINIMP3_MIN(30*4, exp_q2);
-        y *= g_expfrac[e & 3]*(1 << 30 >> (e >> 2));
+        y *= g_expfrac[e & 3]*((1L << 30) >> (e >> 2));
     } while ((exp_q2 -= e) > 0);
     return y;
 }
@@ -717,7 +732,7 @@ static void L3_decode_scalefactors(const uint8_t *hdr, uint8_t *ist_pos, bs_t *b
     }
 
     gain_exp = gr->global_gain + BITS_DEQUANTIZER_OUT*4 - 210 - (HDR_IS_MS_STEREO(hdr) ? 2 : 0);
-    gain = L3_ldexp_q2(1 << (MAX_SCFI/4),  MAX_SCFI - gain_exp);
+    gain = L3_ldexp_q2(1L << (MAX_SCFI/4),  MAX_SCFI - gain_exp);
     for (i = 0; i < (int)(gr->n_long_sfb + gr->n_short_sfb); i++)
     {
         scf[i] = L3_ldexp_q2(gain, iscf[i] << scf_shift);
@@ -750,7 +765,7 @@ static float L3_pow_43(int x)
     return g_pow43[16 + ((x + sign) >> 6)]*(1.f + frac*((4.f/3) + frac*(2.f/9)))*mult;
 }
 
-static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const float *scf, int layer3gr_limit)
+static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const float *scf, uint32_t layer3gr_limit)
 {
     static const int16_t tabs[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         785,785,785,785,784,784,784,784,513,513,513,513,513,513,513,513,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,
@@ -783,7 +798,8 @@ static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const 
     const uint8_t *sfb = gr_info->sfbtab;
     const uint8_t *bs_next_ptr = bs->buf + bs->pos/8;
     uint32_t bs_cache = (((bs_next_ptr[0]*256u + bs_next_ptr[1])*256u + bs_next_ptr[2])*256u + bs_next_ptr[3]) << (bs->pos & 7);
-    int pairs_to_decode, np, bs_sh = (bs->pos & 7) - 8;
+    int pairs_to_decode, np;
+    int bs_sh = (int)(bs->pos & 7) - 8;
     bs_next_ptr += 4;
 
     while (big_val_cnt > 0)
@@ -869,7 +885,7 @@ static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const 
             leaf = codebook_count1[(leaf >> 3) + (bs_cache << 4 >> (32 - (leaf & 3)))];
         }
         FLUSH_BITS(leaf & 7);
-        if (BSPOS > layer3gr_limit)
+    if (BSPOS > layer3gr_limit)
         {
             break;
         }
@@ -1222,8 +1238,8 @@ static void L3_imdct_gr(float *grbuf, float *overlap, unsigned block_type, unsig
 
 static void L3_save_reservoir(mp3dec_t *h, mp3dec_scratch_t *s)
 {
-    int pos = (s->bs.pos + 7)/8u;
-    int remains = s->bs.limit/8u - pos;
+    uint32_t pos = (s->bs.pos + 7) / 8u;
+    uint32_t remains = s->bs.limit / 8u - pos;
     if (remains > MAX_BITRESERVOIR_BYTES)
     {
         pos += remains - MAX_BITRESERVOIR_BYTES;
@@ -1231,17 +1247,24 @@ static void L3_save_reservoir(mp3dec_t *h, mp3dec_scratch_t *s)
     }
     if (remains > 0)
     {
-        memmove(h->reserv_buf, s->maindata + pos, remains);
+        memmove(h->reserv_buf,
+                s->maindata + (size_t)pos,
+                (size_t)remains);
     }
     h->reserv = remains;
 }
 
-static int L3_restore_reservoir(mp3dec_t *h, bs_t *bs, mp3dec_scratch_t *s, int main_data_begin)
+static int L3_restore_reservoir(mp3dec_t *h, bs_t *bs, mp3dec_scratch_t *s, uint32_t main_data_begin)
 {
-    int frame_bytes = (bs->limit - bs->pos)/8;
-    int bytes_have = MINIMP3_MIN(h->reserv, main_data_begin);
-    memcpy(s->maindata, h->reserv_buf + MINIMP3_MAX(0, h->reserv - main_data_begin), MINIMP3_MIN(h->reserv, main_data_begin));
-    memcpy(s->maindata + bytes_have, bs->buf + bs->pos/8, frame_bytes);
+    uint32_t frame_bytes = (bs->limit - bs->pos) / 8;
+    uint32_t bytes_have = MINIMP3_MIN(h->reserv, main_data_begin);
+    int32_t back = (int32_t)h->reserv - (int32_t)main_data_begin;
+    memcpy(s->maindata,
+           h->reserv_buf + (size_t)MINIMP3_MAX(0, back),
+           (size_t)MINIMP3_MIN(h->reserv, main_data_begin));
+    memcpy(s->maindata + (size_t)bytes_have,
+           bs->buf + (size_t)(bs->pos / 8),
+           (size_t)frame_bytes);
     bs_init(&s->bs, s->maindata, bytes_have + frame_bytes);
     return h->reserv >= main_data_begin;
 }
@@ -1252,7 +1275,7 @@ static void L3_decode(mp3dec_t *h, mp3dec_scratch_t *s, L3_gr_info_t *gr_info, i
 
     for (ch = 0; ch < nch; ch++)
     {
-        int layer3gr_limit = s->bs.pos + gr_info[ch].part_23_length;
+        uint32_t layer3gr_limit = s->bs.pos + gr_info[ch].part_23_length;
         L3_decode_scalefactors(h->header, s->ist_pos[ch], &s->bs, gr_info + ch, s->scf, ch);
         L3_huffman(s->grbuf[ch], &s->bs, gr_info + ch, s->scf, layer3gr_limit);
     }
@@ -1680,14 +1703,14 @@ static int mp3d_match_frame(const uint8_t *hdr, int mp3_bytes, int frame_bytes)
     return 1;
 }
 
-static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, int *free_format_bytes, int *ptr_frame_bytes)
+static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, uint32_t *free_format_bytes, uint32_t *ptr_frame_bytes)
 {
     int i, k;
     for (i = 0; i < mp3_bytes - HDR_SIZE; i++, mp3++)
     {
         if (hdr_valid(mp3))
         {
-            int frame_bytes = hdr_frame_bytes(mp3, *free_format_bytes);
+            int frame_bytes = hdr_frame_bytes(mp3, (int)*free_format_bytes);
             int frame_and_padding = frame_bytes + hdr_padding(mp3);
 
             for (k = HDR_SIZE; !frame_bytes && k < MAX_FREE_FORMAT_FRAME_SIZE && i + 2*k < mp3_bytes - HDR_SIZE; k++)
@@ -1707,7 +1730,7 @@ static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, int *free_format_b
                 mp3d_match_frame(mp3, mp3_bytes - i, frame_bytes)) ||
                 (!i && frame_and_padding == mp3_bytes))
             {
-                *ptr_frame_bytes = frame_and_padding;
+                *ptr_frame_bytes = (uint32_t)frame_and_padding;
                 return i;
             }
             *free_format_bytes = 0;
@@ -1724,11 +1747,12 @@ void mp3dec_init(mp3dec_t *dec)
 
 int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
 {
-    int i = 0, igr, frame_size = 0, success = 1;
+    int i = 0, igr, success = 1;
+    uint32_t frame_size = 0;
     const uint8_t *hdr;
     bs_t bs_frame[1];
 #ifdef MINIMP3_GEOS_PORT
-    mp3dec_scratch_t *scratch = g_minimp3_scratch_ptr;
+    mp3dec_scratch_t _far *scratch = g_minimp3_scratch_ptr;
     #define SCRATCH_STRUCT scratch->
     #define SCRATCH_PTR scratch
 #else
@@ -1738,7 +1762,7 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 #endif
 
 #ifdef MINIMP3_GEOS_PORT
-    if (scratch == (mp3dec_scratch_t *)0)
+    if (scratch == (mp3dec_scratch_t _far *)0)
     {
         info->frame_bytes = 0;
         return 0;
@@ -1747,8 +1771,9 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 
     if (mp3_bytes > 4 && dec->header[0] == 0xff && hdr_compare(dec->header, mp3))
     {
-        frame_size = hdr_frame_bytes(mp3, dec->free_format_bytes) + hdr_padding(mp3);
-        if (frame_size != mp3_bytes && (frame_size + HDR_SIZE > mp3_bytes || !hdr_compare(mp3, mp3 + frame_size)))
+        frame_size = (uint32_t)hdr_frame_bytes(mp3, (int)dec->free_format_bytes) + (uint32_t)hdr_padding(mp3);
+        if (frame_size != (uint32_t)mp3_bytes &&
+            (frame_size + HDR_SIZE > (uint32_t)mp3_bytes || !hdr_compare(mp3, mp3 + frame_size)))
         {
             frame_size = 0;
         }
@@ -1757,20 +1782,20 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     {
         memset(dec, 0, sizeof(mp3dec_t));
         i = mp3d_find_frame(mp3, mp3_bytes, &dec->free_format_bytes, &frame_size);
-        if (!frame_size || i + frame_size > mp3_bytes)
+        if (!frame_size || (uint32_t)i + frame_size > (uint32_t)mp3_bytes)
         {
-            info->frame_bytes = i;
+            info->frame_bytes = (uint32_t)i;
             return 0;
         }
     }
 
     hdr = mp3 + i;
     memcpy(dec->header, hdr, HDR_SIZE);
-    info->frame_bytes = i + frame_size;
-    info->frame_offset = i;
-    info->channels = HDR_IS_MONO(hdr) ? 1 : 2;
+    info->frame_bytes = (uint32_t)(i) + frame_size;
+    info->frame_offset = (uint32_t)i;
+    info->channels = (uint16_t)(HDR_IS_MONO(hdr) ? 1 : 2);
     info->hz = hdr_sample_rate_hz(hdr);
-    info->layer = 4 - HDR_GET_LAYER(hdr);
+    info->layer = (uint16_t)(4 - HDR_GET_LAYER(hdr));
     info->bitrate_kbps = hdr_bitrate_kbps(hdr);
 
     if (!pcm)
@@ -1778,7 +1803,10 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
         return hdr_frame_samples(hdr);
     }
 
-    bs_init(bs_frame, hdr + HDR_SIZE, frame_size - HDR_SIZE);
+    dec->debug_main_data_begin = 0;
+    dec->debug_part23_sum = 0;
+
+    bs_init(bs_frame, hdr + HDR_SIZE, (frame_size > HDR_SIZE) ? (frame_size - HDR_SIZE) : 0);
     if (HDR_IS_CRC(hdr))
     {
         get_bits(bs_frame, 16);
@@ -1786,8 +1814,9 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 
     if (info->layer == 3)
     {
-        int main_data_begin = L3_read_side_info(bs_frame, SCRATCH_STRUCT gr_info, hdr);
-        if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit)
+        uint32_t main_data_begin = L3_read_side_info(bs_frame, SCRATCH_STRUCT gr_info, hdr, &dec->debug_part23_sum);
+        dec->debug_main_data_begin = main_data_begin;
+        if (main_data_begin == 0xFFFFFFFFu || bs_frame->pos > bs_frame->limit)
         {
             mp3dec_init(dec);
             return 0;

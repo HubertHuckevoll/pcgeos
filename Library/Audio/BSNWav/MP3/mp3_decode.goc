@@ -21,11 +21,14 @@
 #define FP_OFF(fp) ((unsigned short)(fp))
 #endif
 
+#define MP3_TRACE_FRAME
+
 #define MINIMP3_IMPLEMENTATION
 
 #include "mp3_internal.h"
 
-// mp3dec_scratch_t *g_minimp3_scratch_ptr;
+// defined in minimp3.h
+// mp3dec_scratch_t _far *g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)0;
 
 /* ---- Local helpers ---- */
 static void     MP3_ResetDecoderState(MP3Handle *handleP);
@@ -40,7 +43,6 @@ static word     MP3_MixStereoToMonoInPlace(sword *pcmP,
 static Boolean  MP3_EnsureDecoderScratch(MP3Handle *handleP);
 static void     MP3_FreeDecoderScratch(MP3Handle *handleP);
 
-static Boolean  s_mp3DumpedToFile = FALSE;
 static Boolean  s_mp3LoggedInfo   = FALSE;
 
 /* ---- Implementation ---- */
@@ -77,7 +79,6 @@ MP3_OpenStream(FileHandle fh, WWFixed volume, Boolean forceMono)
     handleP->fh = fh;
 
     MP3_ResetDecoderState(handleP);
-    s_mp3DumpedToFile = FALSE;
     s_mp3LoggedInfo   = FALSE;
     if (!MP3_EnsureDecoderScratch(handleP))
     {
@@ -245,9 +246,9 @@ MP3_EnsureDecoderScratch(MP3Handle *handleP)
     }
 
     if ((handleP->scratchMemH != NullHandle) &&
-        (handleP->scratchMemP != (void *)0))
+        (handleP->scratchMemP != (void _far *)0))
     {
-        g_minimp3_scratch_ptr = handleP->scratchMemP;
+        g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)(handleP->scratchMemP);
         return TRUE;
     }
 
@@ -265,15 +266,15 @@ MP3_EnsureDecoderScratch(MP3Handle *handleP)
         return FALSE;
     }
 
-    handleP->scratchMemP = (void *)MemLock(handleP->scratchMemH);
-    if (handleP->scratchMemP == (void *)0)
+    handleP->scratchMemP = (void _far *)MemLock(handleP->scratchMemH);
+    if (handleP->scratchMemP == (void _far *)0)
     {
         MemFree(handleP->scratchMemH);
         handleP->scratchMemH = NullHandle;
         return FALSE;
     }
 
-    g_minimp3_scratch_ptr = handleP->scratchMemP;
+    g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)(handleP->scratchMemP);
 
     return TRUE;
 }
@@ -288,7 +289,7 @@ MP3_FreeDecoderScratch(MP3Handle *handleP)
 
     if (handleP->scratchMemH != NullHandle)
     {
-        if (handleP->scratchMemP != (void *)0)
+        if (handleP->scratchMemP != (void _far *)0)
         {
             MemUnlock(handleP->scratchMemH);
         }
@@ -296,10 +297,9 @@ MP3_FreeDecoderScratch(MP3Handle *handleP)
     }
 
     handleP->scratchMemH = NullHandle;
-    handleP->scratchMemP = (void *)0;
+    handleP->scratchMemP = (void _far *)0;
 
-    g_minimp3_scratch_ptr = (void *)0;
-    // mp3dec_assign_scratch((void *)0);
+    g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)0;
 }
 
 static void
@@ -412,6 +412,80 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
                         handleP->frameBuf,
                         &(handleP->fi));
 
+    #ifdef MP3_TRACE_FRAME
+    if (!s_mp3LoggedInfo)
+    {
+        FileHandle        dbgFH;
+        char              dbgBuf[256];
+        word              dbgLen;
+        word              sampleCount;
+        word              i;
+        mp3dec_scratch_t _far *scratch;
+
+        dbgFH = FileCreate("mp3trace.txt",
+                           FILE_CREATE_TRUNCATE |
+                           FILE_ACCESS_RW |
+                           FILE_DENY_NONE |
+                           FCF_NATIVE,
+                           FILE_ATTR_NORMAL);
+        if (dbgFH != 0)
+        {
+            long raw;
+
+            scratch = g_minimp3_scratch_ptr;
+            dbgLen = (word)sprintf(dbgBuf,
+                                   "inPos=%u inFill=%u frameBytes=%lu decoded=%d ch=%u reserv=%lu freeFmt=%lu mdb=%lu part23=%lu\r\n",
+                                   handleP->inPos,
+                                   handleP->inFill,
+                                   (unsigned long)handleP->fi.frame_bytes,
+                                   decodedSamples,
+                                   (unsigned)handleP->fi.channels,
+                                   (unsigned long)handleP->dec.reserv,
+                                   (unsigned long)handleP->dec.free_format_bytes,
+                                   (unsigned long)handleP->dec.debug_main_data_begin,
+                                   (unsigned long)handleP->dec.debug_part23_sum);
+            FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+
+            if (scratch != (mp3dec_scratch_t _far *)0)
+            {
+                dbgLen = (word)sprintf(dbgBuf,
+                                       "bs.pos=%lu bs.limit=%lu gr0_p23=%u gr0_big=%u gr0_gain=%u\r\n",
+                                       (unsigned long)scratch->bs.pos,
+                                       (unsigned long)scratch->bs.limit,
+                                       scratch->gr_info[0].part_23_length,
+                                       scratch->gr_info[0].big_values,
+                                       scratch->gr_info[0].global_gain);
+                FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+
+                dbgLen = (word)sprintf(dbgBuf, "grbuf:");
+                FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+                for (i = 0; i < 8; i++)
+                {
+                    memcpy(&raw, &scratch->grbuf[0][i], sizeof(long));
+                    dbgLen = (word)sprintf(dbgBuf, " %08lX", raw);
+                    FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+                }
+                FileWrite(dbgFH, "\r\n", 2, FALSE);
+            }
+
+            dbgLen = (word)sprintf(dbgBuf, "pcm:");
+            FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+
+            sampleCount = (decodedSamples > 0)
+                          ? (word)((dword)decodedSamples * (dword)handleP->fi.channels)
+                          : 0;
+            for (i = 0; (i < 16) && (i < sampleCount); i++)
+            {
+                dbgLen = (word)sprintf(dbgBuf, " %d", handleP->frameBuf[i]);
+                FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+            }
+            FileWrite(dbgFH, "\r\n", 2, FALSE);
+            FileClose(dbgFH, TRUE);
+        }
+        s_mp3LoggedInfo = TRUE;
+    }
+    #endif /* MP3_TRACE_FRAME */
+
     if (handleP->fi.frame_bytes > 0)
     {
         handleP->inPos += (word)handleP->fi.frame_bytes;
@@ -450,92 +524,23 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
 
     if (handleP->forceMono && (handleP->fi.channels == 2))
     {
+        word stereoSamples;
+
+        stereoSamples = (word)decodedSamples;
         handleP->frameBytes = MP3_MixStereoToMonoInPlace(handleP->frameBuf,
-                                                         (word)(decodedSamples / 2));
+                                                         stereoSamples);
     }
     else
     {
-        handleP->frameBytes = (word)(decodedSamples * 2);
+        dword totalSamples;
+
+        totalSamples = (dword)decodedSamples * (dword)handleP->outCh;
+        handleP->frameBytes = (word)(totalSamples * (dword)sizeof(sword));
     }
 
     MP3_ScalePcmWithWWFixed(handleP->frameBuf,
                             (word)(handleP->frameBytes / 2),
                             handleP->volume);
-
-#ifdef MP3_DUMP_PCM
-    if (!s_mp3LoggedInfo && handleP->frameBytes > 0)
-    {
-        FileHandle dbgFH;
-        char       dbgBuf[200];
-        word       dbgLen;
-        word       sampleCount;
-        void far  *globalPtr;
-        word       segAssigned;
-        word       offAssigned;
-        word       segGlobal;
-        word       offGlobal;
-        int        i;
-
-        globalPtr   = g_minimp3_scratch_ptr;
-        segAssigned = FP_SEG(handleP->scratchMemP);
-        offAssigned = FP_OFF(handleP->scratchMemP);
-        segGlobal   = FP_SEG(globalPtr);
-        offGlobal   = FP_OFF(globalPtr);
-        sampleCount = (word)(handleP->frameBytes / 2);
-
-        dbgFH = FileCreate("mp3dbg.txt",
-                           FILE_CREATE_TRUNCATE |
-                           FILE_ACCESS_RW |
-                           FILE_DENY_NONE |
-                           FCF_NATIVE,
-                           FILE_ATTR_NORMAL);
-        if (dbgFH != 0)
-        {
-            dbgLen = (word)sprintf(dbgBuf,
-                                   "assigned=%04X:%04X global=%04X:%04X decoded=%d frameBytes=%u\r\n",
-                                   segAssigned,
-                                   offAssigned,
-                                   segGlobal,
-                                   offGlobal,
-                                   decodedSamples,
-                                   handleP->frameBytes);
-            FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
-
-            dbgLen = (word)sprintf(dbgBuf, "samples:");
-            FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
-
-            for (i = 0; (i < 16) && (i < sampleCount); i++)
-            {
-                dbgLen = (word)sprintf(dbgBuf, " %d", handleP->frameBuf[i]);
-                FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
-            }
-            FileWrite(dbgFH, "\r\n", 2, FALSE);
-            FileClose(dbgFH, TRUE);
-        }
-        s_mp3LoggedInfo = TRUE;
-    }
-
-    if (!s_mp3DumpedToFile && handleP->frameBytes > 0)
-    {
-        FileHandle dumpFH;
-
-        dumpFH = FileCreate("mp3.raw",
-                            FILE_CREATE_TRUNCATE |
-                            FILE_ACCESS_RW |
-                            FILE_DENY_NONE |
-                            FCF_NATIVE,
-                            FILE_ATTR_NORMAL);
-        if (dumpFH != 0)
-        {
-            FileWrite(dumpFH,
-                      handleP->frameBuf,
-                      handleP->frameBytes,
-                      FALSE);
-            FileClose(dumpFH, TRUE);
-            s_mp3DumpedToFile = TRUE;
-        }
-    }
-#endif
 
     handleP->frameOff = 0;
     handleP->primed = TRUE;
