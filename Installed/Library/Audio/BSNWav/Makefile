@@ -6,7 +6,7 @@
 GEODE           = bsnwav
 ASMTOOLS        = asmtoolsManager.asm
 MAIN            = subcode.goc bsnwav.goc subcode.goh
-MP3             = minimp3_port.c minimp3.h minimp3_conf.h mp3_internal.h\
+MP3             = minimp3_port.c minimp3.h mp3_internal.h minimp3_port.h\
                   mp3_decode.goc mp3_play.goc
 QOA             = qoa_decode.goc qoa_play.goc
 UI_TO_RDFS      =

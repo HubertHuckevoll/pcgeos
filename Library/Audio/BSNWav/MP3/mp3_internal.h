@@ -9,7 +9,7 @@
 #include <file.h>
 #include <sound.h>
 
-#include "minimp3_conf.h"
+#include "minimp3_port.h"
 #include "../fmem_compat.h"
 
 #define MP3_INBUF_SIZE              6144

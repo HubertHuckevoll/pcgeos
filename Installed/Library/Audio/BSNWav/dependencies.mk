@@ -67,7 +67,7 @@ mp3_decode.eobj:
 mp3_decode.obj \
 mp3_decode.eobj: geos.h geoworks.h Ansi/string.h heap.h file.h sound.h \
                 driver.h lmem.h geode.h system.h MP3/mp3_internal.h \
-                MP3/minimp3_conf.h MP3/minimp3.h MP3/../fmem_compat.h
+                MP3/minimp3_port.h MP3/minimp3.h MP3/../fmem_compat.h
 mp3_play.obj \
 mp3_play.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -97,7 +97,7 @@ mp3_play.eobj: geos.h geoworks.h file.h Ansi/string.h sound.h driver.h \
                 Objects/Text/tCommon.h stylesh.h thread.h print.h \
                 Internal/spoolInt.h serialDr.h parallDr.h hugearr.h \
                 fileEnum.h library.h dirksnd.h MP3/mp3_internal.h \
-                MP3/minimp3_conf.h MP3/minimp3.h MP3/../fmem_compat.h
+                MP3/minimp3_port.h MP3/minimp3.h MP3/../fmem_compat.h
 qoa_decode.obj \
 qoa_decode.eobj: qoa.goh
 qoa_decode.obj \
@@ -134,7 +134,7 @@ qoa_play.eobj: geos.h geoworks.h file.h heap.h geode.h resource.h ec.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
                 dirksnd.h Ansi/string.h Ansi/stdio.h QOA/../fmem_compat.h
 minimp3_port.obj \
-minimp3_port.eobj: MP3/minimp3_conf.h MP3/minimp3.h Ansi/stdlib.h geos.h \
-                Ansi/string.h
+minimp3_port.eobj: MP3/minimp3_port.h MP3/minimp3.h geos.h heap.h \
+                Ansi/stdlib.h Ansi/string.h
 
 bsnwavEC.geo bsnwav.geo : geos.ldf ansic.ldf 
