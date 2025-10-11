@@ -308,9 +308,6 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
                         handleP->frameBuf,
                         &(handleP->fi));
 
-    SysNotify(SNF_CONTINUE, "we are", "here");
-
-
     if (handleP->fi.frame_bytes > 0)
     {
         handleP->inPos += (word)handleP->fi.frame_bytes;

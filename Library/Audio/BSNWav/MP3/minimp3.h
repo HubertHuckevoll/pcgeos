@@ -1723,13 +1723,17 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 #ifdef MINIMP3_GEOS_PORT
     MemHandle scratchH = NullHandle;
     mp3dec_scratch_t* scratch = {0};
+    #define SCRATCH_STRUCT scratch->
+    #define SCRATCH_PTR scratch
 #else
     mp3dec_scratch_t scratch;
+    #define SCRATCH_STRUCT scratch.
+    #define SCRATCH_PTR &scratch
 #endif
 
 #ifdef MINIMP3_GEOS_PORT
-    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
-    scratch = MemLock(scratchH);
+    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_FIXED, HAF_ZERO_INIT);
+    //scratch = MemLock(scratchH);
 #endif
 
     if (mp3_bytes > 4 && dec->header[0] == 0xff && hdr_compare(dec->header, mp3))
@@ -1773,41 +1777,23 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 
     if (info->layer == 3)
     {
-#ifdef MINIMP3_GEOS_PORT
-        int main_data_begin = L3_read_side_info(bs_frame, scratch->gr_info, hdr);
-#else
-        int main_data_begin = L3_read_side_info(bs_frame, scratch.gr_info, hdr);
-#endif
+        int main_data_begin = L3_read_side_info(bs_frame, SCRATCH_STRUCT gr_info, hdr);
         if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit)
         {
             mp3dec_init(dec);
             return 0;
         }
-#ifdef MINIMP3_GEOS_PORT
-        success = L3_restore_reservoir(dec, bs_frame, scratch, main_data_begin);
-#else
-        success = L3_restore_reservoir(dec, bs_frame, &scratch, main_data_begin);
-#endif
+        success = L3_restore_reservoir(dec, bs_frame, SCRATCH_PTR, main_data_begin);
         if (success)
         {
             for (igr = 0; igr < (HDR_TEST_MPEG1(hdr) ? 2 : 1); igr++, pcm += 576*info->channels)
             {
-#ifdef MINIMP3_GEOS_PORT
-                memset(scratch->grbuf[0], 0, 576*2*sizeof(float));
-                L3_decode(dec, scratch, scratch->gr_info + igr*info->channels, info->channels);
-                mp3d_synth_granule(dec->qmf_state, scratch->grbuf[0], 18, info->channels, pcm, scratch->syn[0]);
-#else
-                memset(scratch.grbuf[0], 0, 576*2*sizeof(float));
-                L3_decode(dec, &scratch, scratch.gr_info + igr*info->channels, info->channels);
-                mp3d_synth_granule(dec->qmf_state, scratch.grbuf[0], 18, info->channels, pcm, scratch.syn[0]);
-#endif
+                memset(SCRATCH_STRUCT grbuf[0], 0, 576*2*sizeof(float));
+                L3_decode(dec, SCRATCH_PTR, SCRATCH_STRUCT gr_info + igr*info->channels, info->channels);
+                mp3d_synth_granule(dec->qmf_state, SCRATCH_STRUCT grbuf[0], 18, info->channels, pcm, SCRATCH_STRUCT syn[0]);
             }
         }
-#ifdef MINIMP3_GEOS_PORT
-        L3_save_reservoir(dec, scratch);
-#else
-        L3_save_reservoir(dec, &scratch);
-#endif
+        L3_save_reservoir(dec, SCRATCH_PTR);
     } else
     {
 #ifdef MINIMP3_ONLY_MP3
@@ -1816,32 +1802,17 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
         L12_scale_info sci[1];
         L12_read_scale_info(hdr, bs_frame, sci);
 
-#ifdef MINIMP3_GEOS_PORT
-        memset(scratch->grbuf[0], 0, 576*2*sizeof(float));
-#else
-        memset(scratch.grbuf[0], 0, 576*2*sizeof(float));
-#endif
+        memset(SCRATCH_STRUCT grbuf[0], 0, 576*2*sizeof(float));
         for (i = 0, igr = 0; igr < 3; igr++)
         {
-#ifdef MINIMP3_GEOS_PORT
-            if (12 == (i += L12_dequantize_granule(scratch->grbuf[0] + i, bs_frame, sci, info->layer | 1)))
+            if (12 == (i += L12_dequantize_granule(SCRATCH_STRUCT grbuf[0] + i, bs_frame, sci, info->layer | 1)))
             {
                 i = 0;
-                L12_apply_scf_384(sci, sci->scf + igr, scratch->grbuf[0]);
-                mp3d_synth_granule(dec->qmf_state, scratch->grbuf[0], 12, info->channels, pcm, scratch->syn[0]);
-                memset(scratch->grbuf[0], 0, 576*2*sizeof(float));
+                L12_apply_scf_384(sci, sci->scf + igr, SCRATCH_STRUCT grbuf[0]);
+                mp3d_synth_granule(dec->qmf_state, SCRATCH_STRUCT grbuf[0], 12, info->channels, pcm, SCRATCH_STRUCT syn[0]);
+                memset(SCRATCH_STRUCT grbuf[0], 0, 576*2*sizeof(float));
                 pcm += 384*info->channels;
             }
-#else
-            if (12 == (i += L12_dequantize_granule(scratch.grbuf[0] + i, bs_frame, sci, info->layer | 1)))
-            {
-                i = 0;
-                L12_apply_scf_384(sci, sci->scf + igr, scratch.grbuf[0]);
-                mp3d_synth_granule(dec->qmf_state, scratch.grbuf[0], 12, info->channels, pcm, scratch.syn[0]);
-                memset(scratch.grbuf[0], 0, 576*2*sizeof(float));
-                pcm += 384*info->channels;
-            }
-#endif
             if (bs_frame->pos > bs_frame->limit)
             {
                 mp3dec_init(dec);
@@ -1852,7 +1823,7 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     }
 
 #ifdef MINIMP3_GEOS_PORT
-    MemUnlock(scratchH);
+    // MemUnlock(scratchH);
     MemFree(scratchH);
 #endif
 
