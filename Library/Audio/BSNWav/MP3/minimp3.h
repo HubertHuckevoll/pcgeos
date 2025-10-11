@@ -241,9 +241,10 @@ typedef struct
 } mp3dec_scratch_t;
 
 #ifdef MINIMP3_GEOS_PORT
-int mp3dec_get_scratch_size(void);
-void mp3dec_assign_scratch(void *scratchMem);
-mp3dec_scratch_t *mp3dec_get_scratch_ptr(void);
+mp3dec_scratch_t *g_minimp3_scratch_ptr = (mp3dec_scratch_t *)0;
+// int mp3dec_get_scratch_size(void);
+// void mp3dec_assign_scratch(void *scratchMem);
+// mp3dec_scratch_t *mp3dec_get_scratch_ptr(void);
 #endif
 
 static void bs_init(bs_t *bs, const uint8_t *data, int bytes)
@@ -1727,7 +1728,7 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     const uint8_t *hdr;
     bs_t bs_frame[1];
 #ifdef MINIMP3_GEOS_PORT
-    mp3dec_scratch_t *scratch = mp3dec_get_scratch_ptr();
+    mp3dec_scratch_t *scratch = g_minimp3_scratch_ptr;
     #define SCRATCH_STRUCT scratch->
     #define SCRATCH_PTR scratch
 #else

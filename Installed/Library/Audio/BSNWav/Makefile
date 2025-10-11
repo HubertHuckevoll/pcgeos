@@ -6,12 +6,12 @@
 GEODE           = bsnwav
 ASMTOOLS        = asmtoolsManager.asm
 MAIN            = subcode.goc bsnwav.goc subcode.goh
-MP3             = minimp3_port.c minimp3.h mp3_internal.h minimp3_port.h\
-                  mp3_decode.goc mp3_play.goc
+MP3             = mp3_internal.h minimp3.h minimp3_port.h mp3_play.goc\
+                  mp3_decode.goc
 QOA             = qoa_decode.goc qoa_play.goc
 UI_TO_RDFS      =
-OBJS            = subcode.obj bsnwav.obj minimp3_port.obj mp3_decode.obj\
-                  mp3_play.obj qoa_decode.obj qoa_play.obj
+OBJS            = subcode.obj bsnwav.obj mp3_play.obj mp3_decode.obj\
+                  qoa_decode.obj qoa_play.obj
 COMMON          = fmem_compat.h
 MODULES         = ASMTOOLS
 CMODULES        = Main MP3 QOA
