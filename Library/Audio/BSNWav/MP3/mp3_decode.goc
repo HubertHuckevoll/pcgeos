@@ -476,7 +476,7 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
         word       offGlobal;
         int        i;
 
-        globalPtr   = mp3dec_get_scratch_ptr();
+        globalPtr   = g_minimp3_scratch_ptr;
         segAssigned = FP_SEG(handleP->scratchMemP);
         offAssigned = FP_OFF(handleP->scratchMemP);
         segGlobal   = FP_SEG(globalPtr);

@@ -12,6 +12,8 @@
 #include "minimp3_port.h"
 #include "../fmem_compat.h"
 
+#define MP3_DUMP_PCM
+
 #define MP3_INBUF_SIZE              6144
 #define MP3_FRAME_SAMPLES_MAX       (MINIMP3_MAX_SAMPLES_PER_FRAME)
 #define MP3_PCM_FRAME_BYTES         (MP3_FRAME_SAMPLES_MAX * 2)
