@@ -59,6 +59,11 @@ static word     MP3_MixStereoToMonoInPlace(sword *pcmP,
                                            word stereoSamples);
 static Boolean  MP3_EnsureDecoderScratch(MP3Handle *handleP);
 static void     MP3_FreeDecoderScratch(MP3Handle *handleP);
+#ifdef MINIMP3_FLOAT_OUTPUT
+static void _pascal MP3_ConvertFloatToS16(const float *srcP,
+                                          sword *dstP,
+                                          word sampleCount);
+#endif
 
 /* ---- Implementation ---- */
 
