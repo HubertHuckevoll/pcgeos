@@ -9,7 +9,16 @@
 #include <stdint.h>
 #include <geos.h>
 #include <heap.h>
-
+#ifdef MINIMP3_GEOS_PORT
+extern void MP3_TraceWrite(const char *text);
+extern void MP3_TraceWriteHex(const char *label, const byte *data, word count);
+extern void MP3_TraceWriteFloatHex(const char *label, const float *data, word count);
+extern void MP3_TraceWriteSamples(const char *label, const sword *data, word count);
+extern word s_mp3DumpFrames;
+extern word s_mp3ClampLogs;
+extern word s_mp3ScaleLogs;
+extern word s_mp3SynthLogs;
+#endif
 #define MINIMP3_MAX_SAMPLES_PER_FRAME (1152*2)
 
 typedef struct
@@ -1266,6 +1275,22 @@ static int L3_restore_reservoir(mp3dec_t *h, bs_t *bs, mp3dec_scratch_t *s, uint
            bs->buf + (size_t)(bs->pos / 8),
            (size_t)frame_bytes);
     bs_init(&s->bs, s->maindata, bytes_have + frame_bytes);
+#ifdef MINIMP3_GEOS_PORT
+    if (s_mp3DumpFrames > 0)
+    {
+        char line[160];
+        sprintf(line,
+                "reserv restore bytes=%lu have=%lu frame=%lu main=%lu\r\n",
+                (unsigned long)h->reserv,
+                (unsigned long)bytes_have,
+                (unsigned long)frame_bytes,
+                (unsigned long)main_data_begin);
+        MP3_TraceWrite(line);
+        MP3_TraceWriteHex("maindata",
+                          (const byte *)s->maindata,
+                          (word)MINIMP3_MIN(bytes_have + frame_bytes, 16));
+    }
+#endif
     return h->reserv >= main_data_begin;
 }
 
@@ -1278,6 +1303,22 @@ static void L3_decode(mp3dec_t *h, mp3dec_scratch_t *s, L3_gr_info_t *gr_info, i
         uint32_t layer3gr_limit = s->bs.pos + gr_info[ch].part_23_length;
         L3_decode_scalefactors(h->header, s->ist_pos[ch], &s->bs, gr_info + ch, s->scf, ch);
         L3_huffman(s->grbuf[ch], &s->bs, gr_info + ch, s->scf, layer3gr_limit);
+#ifdef MINIMP3_GEOS_PORT
+        if (s_mp3DumpFrames > 0)
+        {
+            char line[160];
+            sprintf(line,
+                    "gr_info[%d] part23=%u n_long=%u n_short=%u block=%u mixed=%u pos=%lu\n",
+                    ch,
+                    (unsigned)gr_info[ch].part_23_length,
+                    (unsigned)gr_info[ch].n_long_sfb,
+                    (unsigned)gr_info[ch].n_short_sfb,
+                    (unsigned)gr_info[ch].block_type,
+                    (unsigned)gr_info[ch].mixed_block_flag,
+                    (unsigned long)s->bs.pos);
+            MP3_TraceWrite(line);
+        }
+#endif
     }
 
     if (HDR_TEST_I_STEREO(h->header))
@@ -1474,6 +1515,25 @@ static int16_t mp3d_scale_pcm(float sample)
     s = (int16_t)(sample + .5f);
     s -= (s < 0);   /* away from zero, to be compliant */
 #endif
+#ifdef MINIMP3_GEOS_PORT
+    if (s_mp3ScaleLogs < 16)
+    {
+        union
+        {
+            float f;
+            dword raw;
+        } conv;
+        char line[96];
+
+        conv.f = sample;
+        sprintf(line,
+                "scale sample=0x%08lX -> %d\r\n",
+                (unsigned long)conv.raw,
+                (int)s);
+        MP3_TraceWrite(line);
+        s_mp3ScaleLogs++;
+    }
+#endif /* MINIMP3_GEOS_PORT */
     return s;
 }
 #else /* MINIMP3_FLOAT_OUTPUT */
@@ -1495,6 +1555,17 @@ static void mp3d_synth_pair(mp3d_sample_t *pcm, int nch, const float *z)
     a += (z[ 8*64] - z[ 6*64]) * 37489;
     a +=  z[ 7*64]             * 75038;
     pcm[0] = mp3d_scale_pcm(a);
+#ifdef MINIMP3_GEOS_PORT
+    if ((s_mp3DumpFrames > 0) && (s_mp3SynthLogs < 16))
+    {
+        char line[128];
+        sprintf(line,
+                "synth a0=%ld out0=%d\r\n",
+                (long)a,
+                (int)pcm[0]);
+        MP3_TraceWrite(line);
+    }
+#endif
 
     z += 2;
     a  = z[14*64] * 104;
@@ -1506,6 +1577,18 @@ static void mp3d_synth_pair(mp3d_sample_t *pcm, int nch, const float *z)
     a += z[ 2*64] * 146;
     a += z[ 0*64] * -5;
     pcm[16*nch] = mp3d_scale_pcm(a);
+#ifdef MINIMP3_GEOS_PORT
+    if ((s_mp3DumpFrames > 0) && (s_mp3SynthLogs < 16))
+    {
+        char line[128];
+        sprintf(line,
+                "synth a1=%ld out1=%d\r\n",
+                (long)a,
+                (int)pcm[16*nch]);
+        MP3_TraceWrite(line);
+        s_mp3SynthLogs++;
+    }
+#endif
 }
 
 static void mp3d_synth(float *xl, mp3d_sample_t *dstl, int nch, float *lins)
@@ -1533,7 +1616,6 @@ static void mp3d_synth(float *xl, mp3d_sample_t *dstl, int nch, float *lins)
     };
     float *zlin = lins + 15*64;
     const float *w = g_win;
-
     zlin[4*15]     = xl[18*16];
     zlin[4*15 + 1] = xr[18*16];
     zlin[4*15 + 2] = xl[0];
@@ -1765,6 +1847,10 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     if (scratch == (mp3dec_scratch_t _far *)0)
     {
         info->frame_bytes = 0;
+        if (s_mp3DumpFrames > 0)
+        {
+            MP3_TraceWrite("decoder: scratch null\r\n");
+        }
         return 0;
     }
 #endif
@@ -1785,6 +1871,10 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
         if (!frame_size || (uint32_t)i + frame_size > (uint32_t)mp3_bytes)
         {
             info->frame_bytes = (uint32_t)i;
+            if (s_mp3DumpFrames > 0)
+            {
+                MP3_TraceWrite("decoder: frame sync not found\r\n");
+            }
             return 0;
         }
     }
@@ -1816,22 +1906,68 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     {
         uint32_t main_data_begin = L3_read_side_info(bs_frame, SCRATCH_STRUCT gr_info, hdr, &dec->debug_part23_sum);
         dec->debug_main_data_begin = main_data_begin;
+#ifdef MINIMP3_GEOS_PORT
+        if (s_mp3DumpFrames > 0)
+        {
+            char line[160];
+            sprintf(line,
+                    "side mainData=%lu bsPos=%lu reserv=%lu\r\n",
+                    (unsigned long)main_data_begin,
+                    (unsigned long)bs_frame->pos,
+                    (unsigned long)dec->reserv);
+            MP3_TraceWrite(line);
+        }
+#endif
         if (main_data_begin == 0xFFFFFFFFu || bs_frame->pos > bs_frame->limit)
         {
             mp3dec_init(dec);
+            if (s_mp3DumpFrames > 0)
+            {
+                MP3_TraceWrite("decoder: side info error\r\n");
+            }
             return 0;
         }
         success = L3_restore_reservoir(dec, bs_frame, SCRATCH_PTR, main_data_begin);
+#ifdef MINIMP3_GEOS_PORT
+        if (!success && (s_mp3DumpFrames > 0))
+        {
+            MP3_TraceWrite("decoder: restore reservoir failed\r\n");
+        }
+#endif
         if (success)
         {
             for (igr = 0; igr < (HDR_TEST_MPEG1(hdr) ? 2 : 1); igr++, pcm += 576*info->channels)
             {
                 memset(SCRATCH_STRUCT grbuf[0], 0, 576*2*sizeof(float));
                 L3_decode(dec, SCRATCH_PTR, SCRATCH_STRUCT gr_info + igr*info->channels, info->channels);
-                mp3d_synth_granule(dec->qmf_state, SCRATCH_STRUCT grbuf[0], 18, info->channels, pcm, SCRATCH_STRUCT syn[0]);
+                if (s_mp3DumpFrames > 0)
+                {
+                    MP3_TraceWriteFloatHex("grbuf", SCRATCH_STRUCT grbuf[0], 16);
+                }
+                {
+                    mp3d_sample_t *pcmBase = pcm;
+                    mp3d_synth_granule(dec->qmf_state, SCRATCH_STRUCT grbuf[0], 18, info->channels, pcmBase, SCRATCH_STRUCT syn[0]);
+                    if (s_mp3DumpFrames > 0)
+                    {
+                        if (s_mp3SynthLogs < 16)
+                        {
+                            MP3_TraceWriteFloatHex("qmfState", dec->qmf_state, 8);
+                        }
+                        MP3_TraceWriteSamples("pcmSynth", (const sword *)pcmBase, 16);
+                    }
+                }
             }
         }
         L3_save_reservoir(dec, SCRATCH_PTR);
+#ifdef MINIMP3_GEOS_PORT
+        if (s_mp3DumpFrames > 0)
+        {
+            char line[96];
+            sprintf(line, "reserv save bytes=%lu\r\n",
+                    (unsigned long)dec->reserv);
+            MP3_TraceWrite(line);
+        }
+#endif
     } else
     {
 #ifdef MINIMP3_ONLY_MP3
@@ -1858,6 +1994,11 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
             }
         }
 #endif /* MINIMP3_ONLY_MP3 */
+    }
+
+    if (!success && (s_mp3DumpFrames > 0))
+    {
+        MP3_TraceWrite("decoder: success flag zero\r\n");
     }
 
     return success*hdr_frame_samples(dec->header);

@@ -30,6 +30,9 @@ typedef struct _MP3Handle {
     sword                  frameBuf[MP3_PCM_FRAME_BYTES / 2];
     word                   frameBytes;
     word                   frameOff;
+#ifdef MINIMP3_FLOAT_OUTPUT
+    float                  frameFloatBuf[MP3_FRAME_SAMPLES_MAX];
+#endif
 
     word                   outRate;
     word                   outCh;
@@ -57,5 +60,19 @@ word        _pascal MP3_StreamBlockAlign(const MP3Handle *handleP);
 dword       _pascal MP3_ReadS16(MP3Handle *handleP,
                                 dword framesToRead,
                                 sword *dst);
+
+#ifdef MINIMP3_GEOS_PORT
+void        MP3_TraceWrite(const char *text);
+void        MP3_TraceWriteHex(const char *label,
+                              const byte *data,
+                              word count);
+void        MP3_TraceWriteFloatHex(const char *label,
+                                   const float *data,
+                                   word count);
+extern word    s_mp3DumpFrames;
+extern word    s_mp3ClampLogs;
+extern word    s_mp3ScaleLogs;
+extern word    s_mp3SynthLogs;
+#endif
 
 #endif /* MP3_INTERNAL_H */

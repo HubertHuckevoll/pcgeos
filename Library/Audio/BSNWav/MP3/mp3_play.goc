@@ -11,6 +11,7 @@
 #include <sound.h>
 #include <system.h>
 #include <Ansi/string.h>
+#include <Ansi/stdio.h>
 
 @include <bsnwav.goh>
 @include <mp3.goh>
@@ -18,12 +19,15 @@
 #include "mp3_internal.h"
 
 #define MP3_SCRATCH_FRAMES         2048
+#define MP3_CALLBACK_LOG_DELAY     4
 
 static MP3Handle    *s_mp3Handle       = 0;
 static word          s_mp3Channels     = 0;
 static MemHandle     s_mp3ScratchH     = NullHandle;
 static sword        *s_mp3ScratchP     = 0;
 static word          s_mp3ScratchBytes = 0;
+static Boolean       s_mp3CallbackLogged = FALSE;
+static word          s_mp3CallbackSkip   = MP3_CALLBACK_LOG_DELAY;
 
 static WWFixed   _pascal BSNWavMP3VolumeFromPercent(word pct);
 static Boolean          MP3_VerifyStream(MP3Handle *handleP);
@@ -166,6 +170,8 @@ MP3_ResetStaticState(void)
     MP3_FreeScratch();
     s_mp3Handle   = 0;
     s_mp3Channels = 0;
+    s_mp3CallbackLogged = FALSE;
+    s_mp3CallbackSkip   = MP3_CALLBACK_LOG_DELAY;
 }
 
 static Boolean _pascal
@@ -252,6 +258,59 @@ BSNWavMP3Callback(void *dstBuf, word wantBytes)
             _fmemset(dstFar + producedBytes,
                      0,
                      (word)(wantBytes - producedBytes));
+        }
+    }
+
+    if (!s_mp3CallbackLogged && (framesProduced > 0))
+    {
+        if (s_mp3CallbackSkip > 0)
+        {
+            s_mp3CallbackSkip--;
+        }
+        if ((s_mp3CallbackSkip == 0) && (wantBytes >= sizeof(sword)))
+        {
+            FileHandle dbgFH;
+            char dbgBuf[256];
+            word dbgLen;
+            word sampleCount;
+            word i;
+            sword far *samplesP;
+
+            dbgFH = FileOpen("mp3dbg.txt", FILE_ACCESS_RW | FILE_DENY_NONE);
+            if (dbgFH == 0)
+            {
+                dbgFH = FileCreate("mp3dbg.txt",
+                                   FILE_CREATE_NO_TRUNCATE |
+                                   FILE_ACCESS_RW |
+                                   FILE_DENY_NONE |
+                                   FCF_NATIVE,
+                                   FILE_ATTR_NORMAL);
+            }
+            if (dbgFH != 0)
+            {
+                (void)FilePos(dbgFH, 0L, FILE_POS_END);
+                samplesP = (sword far *)dstBuf;
+                sampleCount = (word)(wantBytes / (word)sizeof(sword));
+                if (sampleCount > 32)
+                {
+                    sampleCount = 32;
+                }
+                dbgLen = (word)sprintf(dbgBuf,
+                                       "callback want=%u produced=%u samples=",
+                                       (unsigned)wantBytes,
+                                       (unsigned)(framesProduced * blockAlign));
+                FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+                for (i = 0; i < sampleCount; i++)
+                {
+                    dbgLen = (word)sprintf(dbgBuf,
+                                           (i == 0) ? "%d" : " %d",
+                                           (int)samplesP[i]);
+                    FileWrite(dbgFH, dbgBuf, dbgLen, FALSE);
+                }
+                FileWrite(dbgFH, "\r\n", 2, FALSE);
+                FileClose(dbgFH, TRUE);
+                s_mp3CallbackLogged = TRUE;
+            }
         }
     }
 

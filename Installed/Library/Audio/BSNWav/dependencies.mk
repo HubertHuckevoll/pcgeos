@@ -83,15 +83,16 @@ mp3_play.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/helpCC.goh mp3.goh
 mp3_play.obj \
 mp3_play.eobj: geos.h geoworks.h file.h Ansi/string.h sound.h driver.h \
-                lmem.h geode.h system.h heap.h resource.h ec.h object.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h sllang.h \
-                chunkarr.h Objects/helpCC.h disk.h drive.h input.h char.h \
-                hwr.h win.h uDialog.h Objects/gInterC.h \
-                Objects/Text/tCommon.h stylesh.h thread.h print.h \
-                Internal/spoolInt.h serialDr.h parallDr.h hugearr.h \
-                fileEnum.h library.h dirksnd.h MP3/mp3_internal.h \
-                MP3/minimp3_port.h MP3/minimp3.h MP3/../fmem_compat.h
+                lmem.h geode.h system.h Ansi/stdio.h heap.h resource.h \
+                ec.h object.h graphics.h fontID.h font.h color.h \
+                gstring.h timer.h vm.h dbase.h localize.h Ansi/ctype.h \
+                timedate.h sllang.h chunkarr.h Objects/helpCC.h disk.h \
+                drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h library.h dirksnd.h \
+                MP3/mp3_internal.h MP3/minimp3_port.h MP3/minimp3.h \
+                MP3/../fmem_compat.h
 mp3_decode.obj \
 mp3_decode.eobj: 
 mp3_decode.obj \
