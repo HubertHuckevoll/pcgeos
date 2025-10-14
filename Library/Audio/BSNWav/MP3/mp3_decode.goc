@@ -692,9 +692,9 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
         int totalSamples;
 
         totalSamples = decodedSamples * (int)handleP->fi.channels;
-        mp3dec_f32_to_s16(handleP->frameFloatBuf,
-                          handleP->frameBuf,
-                          totalSamples);
+        MP3_ConvertFloatToS16(handleP->frameFloatBuf,
+                              handleP->frameBuf,
+                              (word)totalSamples);
     }
     else
     {
@@ -796,6 +796,49 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
     handleP->primed = TRUE;
     return TRUE;
 }
+
+#ifdef MINIMP3_FLOAT_OUTPUT
+static void _pascal
+MP3_ConvertFloatToS16(const float *srcP, sword *dstP, word sampleCount)
+{
+    word i;
+    double scaled;
+    float sample;
+
+    if ((srcP == (const float *)(void *)0) ||
+        (dstP == (sword *)(void *)0) ||
+        (sampleCount == 0))
+    {
+        return;
+    }
+
+    for (i = 0; i < sampleCount; i++)
+    {
+        sample = srcP[i];
+        scaled = (double)sample * 32768.0;
+        if (scaled >= 32767.0)
+        {
+            dstP[i] = 32767;
+        }
+        else if (scaled <= -32768.0)
+        {
+            dstP[i] = -32768;
+        }
+        else
+        {
+            if (scaled >= 0.0)
+            {
+                scaled += 0.5;
+            }
+            else
+            {
+                scaled -= 0.5;
+            }
+            dstP[i] = (sword)scaled;
+        }
+    }
+}
+#endif
 
 static void
 MP3_ScalePcmWithWWFixed(sword *samplesP, word sampleCount, WWFixed volume)
