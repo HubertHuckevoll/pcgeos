@@ -64,11 +64,14 @@ dword       _pascal MP3_ReadS16(MP3Handle *handleP,
 #ifdef MINIMP3_GEOS_PORT
 void        MP3_TraceWrite(const char *text);
 void        MP3_TraceWriteHex(const char *label,
-                              const byte *data,
+                              const byte _far *data,
                               word count);
 void        MP3_TraceWriteFloatHex(const char *label,
-                                   const float *data,
+                                   const float _far *data,
                                    word count);
+void        MP3_TraceWriteSamples(const char *label,
+                                  const sword _far *data,
+                                  word count);
 extern word    s_mp3DumpFrames;
 extern word    s_mp3ClampLogs;
 extern word    s_mp3ScaleLogs;
