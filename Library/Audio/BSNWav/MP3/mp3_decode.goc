@@ -802,8 +802,6 @@ static void _pascal
 MP3_ConvertFloatToS16(const float *srcP, sword *dstP, word sampleCount)
 {
     word i;
-    double scaled;
-    float sample;
 
     if ((srcP == (const float *)(void *)0) ||
         (dstP == (sword *)(void *)0) ||
@@ -814,26 +812,24 @@ MP3_ConvertFloatToS16(const float *srcP, sword *dstP, word sampleCount)
 
     for (i = 0; i < sampleCount; i++)
     {
-        sample = srcP[i];
-        scaled = (double)sample * 32768.0;
-        if (scaled >= 32767.0)
+        float scaled;
+
+        scaled = srcP[i] * 32768.0f;
+        if (scaled >= 32766.5f)
         {
             dstP[i] = 32767;
         }
-        else if (scaled <= -32768.0)
+        else if (scaled <= -32767.5f)
         {
             dstP[i] = -32768;
         }
         else
         {
-            if (scaled >= 0.0)
-            {
-                scaled += 0.5;
-            }
-            else
-            {
-                scaled -= 0.5;
-            }
+            /*
+             * Bias toward the sign before truncating so we follow
+             * minimp3's "round away from zero" behaviour.
+             */
+            scaled += (scaled >= 0.0f) ? 0.5f : -0.5f;
             dstP[i] = (sword)scaled;
         }
     }
