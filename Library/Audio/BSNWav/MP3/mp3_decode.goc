@@ -32,9 +32,9 @@ void MP3_TraceWrite(const char *text);
 void MP3_TraceWriteHex(const char *label,
                        const byte *data,
                        word count);
-static void MP3_TraceWriteSamples(const char *label,
-                                  const sword *data,
-                                  word count);
+void MP3_TraceWriteSamples(const char *label,
+                           const sword *data,
+                           word count);
 void MP3_TraceWriteFloatHex(const char *label,
                             const float *data,
                             word count);
@@ -464,7 +464,7 @@ MP3_TraceWriteHex(const char *label, const byte *data, word count)
     MP3_TraceWrite(line);
 }
 
-static void
+void
 MP3_TraceWriteSamples(const char *label, const sword *data, word count)
 {
     char line[256];
