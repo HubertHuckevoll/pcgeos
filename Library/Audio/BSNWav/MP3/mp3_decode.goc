@@ -30,13 +30,13 @@
 
 void MP3_TraceWrite(const char *text);
 void MP3_TraceWriteHex(const char *label,
-                       const byte *data,
+                       const byte _far *data,
                        word count);
 void MP3_TraceWriteSamples(const char *label,
-                           const sword *data,
+                           const sword _far *data,
                            word count);
 void MP3_TraceWriteFloatHex(const char *label,
-                            const float *data,
+                            const float _far *data,
                             word count);
 static Boolean MP3_SkipId3Tag(MP3Handle *handleP);
 word s_mp3DumpFrames = 0;
@@ -60,8 +60,8 @@ static word     MP3_MixStereoToMonoInPlace(sword *pcmP,
 static Boolean  MP3_EnsureDecoderScratch(MP3Handle *handleP);
 static void     MP3_FreeDecoderScratch(MP3Handle *handleP);
 #ifdef MINIMP3_FLOAT_OUTPUT
-static void _pascal MP3_ConvertFloatToS16(const float *srcP,
-                                          sword *dstP,
+static void _pascal MP3_ConvertFloatToS16(const float _far *srcP,
+                                          sword _far *dstP,
                                           word sampleCount);
 #endif
 
@@ -434,7 +434,7 @@ MP3_TraceWrite(const char *text)
 }
 
 void
-MP3_TraceWriteHex(const char *label, const byte *data, word count)
+MP3_TraceWriteHex(const char *label, const byte _far *data, word count)
 {
     char line[256];
     word i;
@@ -465,7 +465,7 @@ MP3_TraceWriteHex(const char *label, const byte *data, word count)
 }
 
 void
-MP3_TraceWriteSamples(const char *label, const sword *data, word count)
+MP3_TraceWriteSamples(const char *label, const sword _far *data, word count)
 {
     char line[256];
     word i;
@@ -496,7 +496,7 @@ MP3_TraceWriteSamples(const char *label, const sword *data, word count)
 }
 
 void
-MP3_TraceWriteFloatHex(const char *label, const float *data, word count)
+MP3_TraceWriteFloatHex(const char *label, const float _far *data, word count)
 {
     char line[256];
     union
@@ -799,12 +799,14 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
 
 #ifdef MINIMP3_FLOAT_OUTPUT
 static void _pascal
-MP3_ConvertFloatToS16(const float *srcP, sword *dstP, word sampleCount)
+MP3_ConvertFloatToS16(const float _far *srcP,
+                      sword _far *dstP,
+                      word sampleCount)
 {
     word i;
 
-    if ((srcP == (const float *)(void *)0) ||
-        (dstP == (sword *)(void *)0) ||
+    if ((srcP == (const float _far *)(void _far *)0) ||
+        (dstP == (sword _far *)(void _far *)0) ||
         (sampleCount == 0))
     {
         return;
