@@ -55,49 +55,31 @@ BSNWavMP3VolumeFromPercent(word pct)
 static Boolean
 MP3_VerifyStream(MP3Handle *handleP)
 {
-    MemHandle scratchH;
-    sword *scratchP;
-    dword framesRequested;
-    dword framesDecoded;
-    word bufferBytes;
-    Boolean success;
+    word blockAlign;
 
     if (handleP == (MP3Handle *)0)
     {
         return FALSE;
     }
 
-    framesRequested = 16;
-    bufferBytes = (word)(framesRequested *
-                         (dword)MP3_StreamBlockAlign(handleP));
-    if (bufferBytes == 0)
+    blockAlign = MP3_StreamBlockAlign(handleP);
+    if (blockAlign == 0)
     {
         return FALSE;
     }
 
-    scratchH = MemAlloc(bufferBytes, HF_SWAPABLE, HAF_ZERO_INIT);
-    if (scratchH == NullHandle)
+    if (!handleP->primed)
     {
         return FALSE;
     }
-    scratchP = (sword *)MemLock(scratchH);
-    if (!scratchP)
+
+    if ((MP3_StreamChannels(handleP) == 0) ||
+        (MP3_StreamSampleRate(handleP) == 0))
     {
-        MemFree(scratchH);
         return FALSE;
     }
 
-    framesDecoded = MP3_ReadS16(handleP, framesRequested, scratchP);
-    success = (framesDecoded > 0);
-
-    MemUnlock(scratchH);
-    MemFree(scratchH);
-
-    if (!MP3_RewindStream(handleP))
-    {
-        success = FALSE;
-    }
-    return success;
+    return TRUE;
 }
 
 static Boolean
