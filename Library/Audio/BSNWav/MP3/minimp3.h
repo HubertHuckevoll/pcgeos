@@ -6,7 +6,16 @@
     This software is distributed without any warranty.
     See <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
+#if (defined(__WATCOMC__) && !defined(__386__)) || !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
+typedef signed char     int8_t;
+typedef unsigned char   uint8_t;
+typedef signed int      int16_t;
+typedef unsigned int    uint16_t;
+typedef long            int32_t;
+typedef unsigned long   uint32_t;
+#else
 #include <stdint.h>
+#endif
 #include <geos.h>
 #include <heap.h>
 #ifdef MINIMP3_GEOS_PORT
