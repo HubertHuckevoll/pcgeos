@@ -116,9 +116,15 @@ static unsigned hdr_frame_samples(const uint8_t *h)
 
 static int hdr_frame_bytes(const uint8_t *h, int free_format_size)
 {
-    int frame_bytes = hdr_frame_samples(h)*hdr_bitrate_kbps(h)*125/hdr_sample_rate_hz(h);
-    if (HDR_IS_LAYER_1(h)) frame_bytes &= ~3; /* slot align */
-    return frame_bytes ? frame_bytes : free_format_size;
+    unsigned long frame_bytes;
+
+    frame_bytes = (unsigned long)hdr_frame_samples(h);
+    frame_bytes *= (unsigned long)hdr_bitrate_kbps(h);
+    frame_bytes *= (unsigned long)125;
+    frame_bytes /= (unsigned long)hdr_sample_rate_hz(h);
+    if (HDR_IS_LAYER_1(h)) frame_bytes &= ~3ul; /* slot align */
+    if (!frame_bytes) frame_bytes = (unsigned long)free_format_size;
+    return (int)frame_bytes;
 }
 static int hdr_padding(const uint8_t *h)
 { return HDR_TEST_PADDING(h) ? (HDR_IS_LAYER_1(h) ? 4 : 1) : 0; }
