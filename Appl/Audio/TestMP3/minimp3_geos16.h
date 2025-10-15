@@ -3,7 +3,6 @@
    This file has been pruned to: Layer III only; no SSE/MMX/NEON; int16_t output only.
 */
 
-
 #include <stdint.h>
 #include <string.h> /* memcpy, memmove, memset */
 
@@ -182,8 +181,10 @@ static int L3_read_side_info(bs_t *bs, L3_gr_info_t *gr, const uint8_t *hdr)
 
     unsigned tables, scfsi = 0;
     int main_data_begin, part_23_sum = 0;
-    int sr_idx = HDR_GET_MY_SAMPLE_RATE(hdr); sr_idx -= (sr_idx != 0);
+    int sr_idx = HDR_GET_MY_SAMPLE_RATE(hdr);
     int gr_count = HDR_IS_MONO(hdr) ? 1 : 2;
+
+    sr_idx -= (sr_idx != 0);
 
     if (HDR_TEST_MPEG1(hdr)) {
         gr_count *= 2;
@@ -1240,5 +1241,3 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     }
     return success*hdr_frame_samples(dec->header);
 }
-
-#endif /* MINIMP3_GEOS16_H */

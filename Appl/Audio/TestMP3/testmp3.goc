@@ -38,7 +38,7 @@
  * Forward declarations
  ****************************************************************************/
 
-int decode_file(const char *path)
+int decode_file(const char *path);
 
 /****************************************************************************
  * UI Resources
@@ -140,7 +140,7 @@ int decode_file(const char *path)
     return 0;
 }
 
-GenProcessClass, MSG_START_READING
+TestMP3ProcessClass, MSG_START_READING
 {
     decode_file("MP3.MP3");
 }
