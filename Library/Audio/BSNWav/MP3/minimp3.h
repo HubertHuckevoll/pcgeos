@@ -275,7 +275,17 @@ typedef struct
 } mp3dec_scratch_t;
 
 #ifdef MINIMP3_GEOS_PORT
-mp3dec_scratch_t _far *g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)0;
+#ifdef MINIMP3_IMPLEMENTATION
+/*
+ * On the 16-bit GEOS port we keep the decoder scratch space in near memory
+ * so the existing minimp3 code can access it with near pointers.
+ */
+mp3dec_scratch_t g_minimp3_scratch_storage;
+mp3dec_scratch_t *g_minimp3_scratch_ptr = &g_minimp3_scratch_storage;
+#else
+extern mp3dec_scratch_t g_minimp3_scratch_storage;
+extern mp3dec_scratch_t *g_minimp3_scratch_ptr;
+#endif
 #endif
 
 static void bs_init(bs_t *bs, const uint8_t *data, uint32_t bytes)
@@ -1826,17 +1836,17 @@ static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, uint32_t *free_for
                     *free_format_bytes = fb;
                 }
             }
-            if ((frame_bytes && i + frame_and_padding <= mp3_bytes &&
-                mp3d_match_frame(mp3, mp3_bytes - i, frame_bytes)) ||
-                (!i && frame_and_padding == mp3_bytes))
-            {
-                *ptr_frame_bytes = (uint32_t)frame_and_padding;
-                return i;
-            }
-            *free_format_bytes = 0;
-        }
-    }
-    *ptr_frame_bytes = 0;
+    mp3dec_scratch_t *scratch = g_minimp3_scratch_ptr;
+    #define SCRATCH_STRUCT scratch->
+    #define SCRATCH_PTR scratch
+#else
+    mp3dec_scratch_t scratch;
+    #define SCRATCH_STRUCT scratch.
+    #define SCRATCH_PTR &scratch
+#endif
+
+#ifdef MINIMP3_GEOS_PORT
+    if (scratch == (mp3dec_scratch_t *)0)
     return mp3_bytes;
 }
 
