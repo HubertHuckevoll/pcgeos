@@ -44,6 +44,7 @@ word s_mp3ClampLogs = 0;
 word s_mp3ScaleLogs = 0;
 word s_mp3SynthLogs = 0;
 static Boolean s_loggedSizes = FALSE;
+static Boolean s_minimp3ScratchInitialized = FALSE;
 
 /* ---- Local helpers ---- */
 static void     MP3_ResetDecoderState(MP3Handle *handleP);
@@ -272,10 +273,19 @@ MP3_EnsureDecoderScratch(MP3Handle *handleP)
         return FALSE;
     }
 
-    g_minimp3_scratch_ptr = &g_minimp3_scratch_storage;
-    if (g_minimp3_scratch_ptr != (mp3dec_scratch_t *)0)
+    if (g_minimp3_scratch_ptr == (mp3dec_scratch_t *)0)
+    {
+        g_minimp3_scratch_ptr = &g_minimp3_scratch_storage;
+    }
+    if (g_minimp3_scratch_ptr == (mp3dec_scratch_t *)0)
+    {
+        return FALSE;
+    }
+
+    if (!s_minimp3ScratchInitialized)
     {
         memset(g_minimp3_scratch_ptr, 0, sizeof(mp3dec_scratch_t));
+        s_minimp3ScratchInitialized = TRUE;
     }
     return TRUE;
 }
@@ -290,6 +300,7 @@ MP3_FreeDecoderScratch(MP3Handle *handleP)
 
     (void)handleP;
     g_minimp3_scratch_ptr = (mp3dec_scratch_t *)0;
+    s_minimp3ScratchInitialized = FALSE;
 }
 
 static Boolean
