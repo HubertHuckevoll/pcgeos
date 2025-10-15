@@ -19,7 +19,7 @@ type	appl, process, single
 
 class	TestMP3ProcessClass
 
-appobj	TestMP3App
+appobj	AppObj
 
 tokenchars "TMP3"
 tokenid 0

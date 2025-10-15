@@ -6,6 +6,7 @@
 #include <geode.h>
 #include <geos.h>
 #include <file.h>
+#include <stdio.h>
 #include "minimp3_geos16.h"
 
 #define FEED_BUF_SIZE  4096  /* small is fine; bigger reduces I/O calls */
@@ -31,6 +32,7 @@
  ****************************************************************************/
 
 @class TestMP3ProcessClass, GenProcessClass;
+    @message void MSG_START_READING();
 @endc;
 @classdecl TestMP3ProcessClass, neverSaved;
 
@@ -82,22 +84,31 @@ int decode_file(const char *path);
 
 int decode_file(const char *path)
 {
-    FILE *f = FileOpen(path, "rb");
-    if (!f) return -1;
-
+    FileHandle f = NullHandle;
+    FileHandle outF = NullHandle;
     mp3dec_t dec;
-    mp3dec_init(&dec);
-
     uint8_t  feed[FEED_BUF_SIZE];
     int      feed_len = 0;                 /* bytes currently in feed[] */
     int16_t  pcm[MINIMP3_MAX_SAMPLES_PER_FRAME]; /* 1152*2 int16 slots */
     mp3dec_frame_info_t info;
+    int channels = 0;
+    int out_count = 0;
+    int n = 0;
+    int samples = 0;
+    int used = 0;
+
+    f = FileOpen(path, FILE_ACCESS_R | FILE_DENY_NONE);
+    outF = FileOpen("MP3.pcm", FILE_ACCESS_W | FILE_DENY_NONE);
+    if (!f || !outF) return -1;
+
+    mp3dec_init(&dec);
 
     for (;;)
     {
         /* If buffer has room, read more bytes at the end */
         if (feed_len < FEED_BUF_SIZE) {
-            int n = fread(feed + feed_len, 1, FEED_BUF_SIZE - feed_len, f);
+            //int n = fread(feed + feed_len, 1, FEED_BUF_SIZE - feed_len, f);
+            n = FileRead(f, feed + feed_len, FEED_BUF_SIZE - feed_len, FALSE);
             if (n > 0) feed_len += n;
         }
 
@@ -106,18 +117,18 @@ int decode_file(const char *path)
             break;
 
         /* Try to decode from the current buffer */
-        int samples = mp3dec_decode_frame(&dec, feed, feed_len, pcm, &info);
+        samples = mp3dec_decode_frame(&dec, feed, feed_len, pcm, &info);
 
         if (info.frame_bytes > 0) {
             /* Consume the bytes the decoder used */
-            int used = info.frame_bytes;
+            used = info.frame_bytes;
             feed_len -= used;
             if (feed_len > 0)
                 memmove(feed, feed + used, (size_t)feed_len);
         } else {
             /* Decoder needs more bytes to find/complete a frame */
             /* If file is ended and we still can’t decode, drop 1 byte to resync */
-            if (feof(f)) {
+            if (FilePos(f, 0, FILE_POS_RELATIVE) == FilePos(f, 0, FILE_POS_END)) {
                 feed_len--;
                 if (feed_len > 0)
                     memmove(feed, feed + 1, (size_t)feed_len);
@@ -128,19 +139,25 @@ int decode_file(const char *path)
 
         if (samples > 0) {
             /* Use PCM here. If stereo, data is interleaved L R L R ... */
-            int channels = info.channels;   /* 1 or 2 */
-            int out_count = samples * channels;
+            channels = info.channels;   /* 1 or 2 */
+            out_count = samples * channels;
 
             /* TODO: play / write PCM. Example: write to stdout or device */
-            /* fwrite(pcm, sizeof(int16_t), out_count, out); */
+            // fwrite(pcm, sizeof(int16_t), out_count, out); */
+            FileWrite(outF, pcm, sizeof(int16_t) * out_count, FALSE);
         }
     }
 
-    fclose(f);
+    FileClose(f, TRUE);
+    FileClose(outF, TRUE);
+
+    mp3dec_exit();
+
     return 0;
 }
 
-TestMP3ProcessClass, MSG_START_READING
+@method TestMP3ProcessClass, MSG_START_READING
 {
-    decode_file("MP3.MP3");
+    (void) decode_file("MP3.MP3");
 }
+

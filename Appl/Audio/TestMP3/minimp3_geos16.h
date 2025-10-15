@@ -143,6 +143,9 @@ typedef struct
     uint8_t ist_pos[2][39];
 } mp3dec_scratch_t;
 
+MemHandle G_scratchH = NullHandle;
+mp3dec_scratch_t* G_scratchP = (void*) 0;
+
 /* --- Layer III side info / scalefactors / huffman / IMDCT / synth --- */
 /* (Below is the scalar-only extraction from your source. SIMD branches and L1/L2 were removed.) */
 
@@ -315,7 +318,7 @@ static float L3_ldexp_q2(float y, int exp_q2)
     int e;
     do {
         e = MINIMP3_MIN(30*4, exp_q2);
-        y *= g_expfrac[e & 3]*(1 << 30 >> (e >> 2));
+        y *= g_expfrac[e & 3]*((1L << 30) >> (e >> 2));
     } while ((exp_q2 -= e) > 0);
     return y;
 }
@@ -1181,7 +1184,17 @@ static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, int *free_format_b
 }
 
 /* -------- Public API -------- */
-void mp3dec_init(mp3dec_t *dec) { dec->header[0] = 0; }
+void mp3dec_init(mp3dec_t *dec)
+{
+    dec->header[0] = 0;
+    G_scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
+    G_scratchP = (mp3dec_scratch_t*) MemLock(G_scratchH);
+}
+
+void mp3dec_exit()
+{
+    MemFree(G_scratchH);
+}
 
 int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
 {
@@ -1191,7 +1204,7 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     int success;
     const uint8_t *hdr;
     bs_t bs_frame[1];
-    mp3dec_scratch_t scratch;
+    mp3dec_scratch_t* scratch = G_scratchP;
     int main_data_begin;
 
     i = 0;
@@ -1224,17 +1237,17 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     if (HDR_IS_CRC(hdr)) get_bits(bs_frame, 16);
 
     if (info->layer == 3) {
-        main_data_begin = L3_read_side_info(bs_frame, scratch.gr_info, hdr);
+        main_data_begin = L3_read_side_info(bs_frame, scratch->gr_info, hdr);
         if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit) { mp3dec_init(dec); return 0; }
-        success = L3_restore_reservoir(dec, bs_frame, &scratch, main_data_begin);
+        success = L3_restore_reservoir(dec, bs_frame, scratch, main_data_begin);
         if (success) {
             for (igr = 0; igr < (HDR_TEST_MPEG1(hdr) ? 2 : 1); igr++, pcm += 576*info->channels) {
-                memset(scratch.grbuf[0], 0, (unsigned)(576*2*sizeof(float)));
-                L3_decode(dec, &scratch, scratch.gr_info + igr*info->channels, info->channels);
-                mp3d_synth_granule(dec->qmf_state, scratch.grbuf[0], 18, info->channels, pcm, scratch.syn[0]);
+                memset(scratch->grbuf[0], 0, (unsigned)(576*2*sizeof(float)));
+                L3_decode(dec, scratch, scratch->gr_info + igr*info->channels, info->channels);
+                mp3d_synth_granule(dec->qmf_state, scratch->grbuf[0], 18, info->channels, pcm, scratch->syn[0]);
             }
         }
-        L3_save_reservoir(dec, &scratch);
+        L3_save_reservoir(dec, scratch);
     } else {
         /* Layer I/II removed: not supported in this build */
         return 0;
