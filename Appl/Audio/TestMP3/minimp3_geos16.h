@@ -3,21 +3,8 @@
    This file has been pruned to: Layer III only; no SSE/MMX/NEON; int16_t output only.
 */
 
-#ifndef MINIMP3_GEOS16_H
-#define MINIMP3_GEOS16_H
 
-/* ===== Watcom 16-bit friendly stdint fallback ===== */
-#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
-typedef signed char     int8_t;
-typedef unsigned char   uint8_t;
-typedef signed int      int16_t;
-typedef unsigned int    uint16_t;
-typedef long            int32_t;     /* Watcom 16-bit: long is 32-bit */
-typedef unsigned long   uint32_t;
-#else
 #include <stdint.h>
-#endif
-
 #include <string.h> /* memcpy, memmove, memset */
 
 #define MINIMP3_MAX_SAMPLES_PER_FRAME (1152*2)

@@ -1336,7 +1336,7 @@ static void L3_decode(mp3dec_t *h, mp3dec_scratch_t *s, L3_gr_info_t *gr_info, i
         {
             char line[160];
             sprintf(line,
-                    "gr_info[%d] part23=%u n_long=%u n_short=%u block=%u mixed=%u pos=%lu\n",
+                    "gr_info[%d] part23=%u n_long=%u n_short=%u block=%u mixed=%u pos=%lu\n",
                     ch,
                     (unsigned)gr_info[ch].part_23_length,
                     (unsigned)gr_info[ch].n_long_sfb,
@@ -1836,17 +1836,15 @@ static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, uint32_t *free_for
                     *free_format_bytes = fb;
                 }
             }
-    mp3dec_scratch_t *scratch = g_minimp3_scratch_ptr;
-    #define SCRATCH_STRUCT scratch->
-    #define SCRATCH_PTR scratch
-#else
-    mp3dec_scratch_t scratch;
-    #define SCRATCH_STRUCT scratch.
-    #define SCRATCH_PTR &scratch
-#endif
 
-#ifdef MINIMP3_GEOS_PORT
-    if (scratch == (mp3dec_scratch_t *)0)
+            if ((frame_and_padding < frame_bytes + hdr_padding(mp3 + k)) && mp3d_match_frame(mp3 + i, mp3_bytes - i, frame_bytes))
+            {
+                *ptr_frame_bytes = frame_bytes;
+                return i;
+            }
+            *free_format_bytes = frame_bytes;
+        }
+    }
     return mp3_bytes;
 }
 
