@@ -26,7 +26,6 @@
 #include "mp3_internal.h"
 
 // defined in minimp3.h
-// mp3dec_scratch_t _far *g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)0;
 
 void MP3_TraceWrite(const char *text);
 void MP3_TraceWriteHex(const char *label,
@@ -268,44 +267,16 @@ MP3_ReadS16(MP3Handle *handleP, dword framesToRead, sword *dst)
 static Boolean
 MP3_EnsureDecoderScratch(MP3Handle *handleP)
 {
-    int scratchSize;
-
     if (handleP == (MP3Handle *)0)
     {
         return FALSE;
     }
 
-    if ((handleP->scratchMemH != NullHandle) &&
-        (handleP->scratchMemP != (void _far *)0))
+    g_minimp3_scratch_ptr = &g_minimp3_scratch_storage;
+    if (g_minimp3_scratch_ptr != (mp3dec_scratch_t *)0)
     {
-        g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)(handleP->scratchMemP);
-        return TRUE;
+        memset(g_minimp3_scratch_ptr, 0, sizeof(mp3dec_scratch_t));
     }
-
-    scratchSize = (int)sizeof(mp3dec_scratch_t);
-    if (scratchSize <= 0 || scratchSize > 0xFFFF)
-    {
-        return FALSE;
-    }
-
-    handleP->scratchMemH = MemAlloc((word)scratchSize,
-                                    HF_SWAPABLE,
-                                    HAF_ZERO_INIT);
-    if (handleP->scratchMemH == NullHandle)
-    {
-        return FALSE;
-    }
-
-    handleP->scratchMemP = (void _far *)MemLock(handleP->scratchMemH);
-    if (handleP->scratchMemP == (void _far *)0)
-    {
-        MemFree(handleP->scratchMemH);
-        handleP->scratchMemH = NullHandle;
-        return FALSE;
-    }
-
-    g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)(handleP->scratchMemP);
-
     return TRUE;
 }
 
@@ -317,19 +288,8 @@ MP3_FreeDecoderScratch(MP3Handle *handleP)
         return;
     }
 
-    if (handleP->scratchMemH != NullHandle)
-    {
-        if (handleP->scratchMemP != (void _far *)0)
-        {
-            MemUnlock(handleP->scratchMemH);
-        }
-        MemFree(handleP->scratchMemH);
-    }
-
-    handleP->scratchMemH = NullHandle;
-    handleP->scratchMemP = (void _far *)0;
-
-    g_minimp3_scratch_ptr = (mp3dec_scratch_t _far *)0;
+    (void)handleP;
+    g_minimp3_scratch_ptr = (mp3dec_scratch_t *)0;
 }
 
 static Boolean
@@ -666,14 +626,8 @@ MP3_DecodeNextFrame(MP3Handle *handleP)
         MP3_TraceWrite(line);
         MP3_TraceWriteHex("hdr", hdr, hdrLen);
         sprintf(line,
-                "scratch=%04X:%04X\r\n",
-                (unsigned)FP_SEG(handleP->scratchMemP),
-                (unsigned)FP_OFF(handleP->scratchMemP));
-        MP3_TraceWrite(line);
-        sprintf(line,
-                "gScratch=%04X:%04X\r\n",
-                (unsigned)FP_SEG(g_minimp3_scratch_ptr),
-                (unsigned)FP_OFF(g_minimp3_scratch_ptr));
+                "gScratch=%04X\r\n",
+                (unsigned)g_minimp3_scratch_ptr);
         MP3_TraceWrite(line);
     }
 
