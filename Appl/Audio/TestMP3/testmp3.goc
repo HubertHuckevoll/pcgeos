@@ -10,6 +10,21 @@
 #include "minimp3_geos16.h"
 
 #define FEED_BUF_SIZE  4096  /* small is fine; bigger reduces I/O calls */
+#define WAV_HEADER_SIZE 44
+
+static void write_word_le(byte *buf, word offset, word value)
+{
+    buf[offset] = (byte)(value & 0xFF);
+    buf[offset + 1] = (byte)((value >> 8) & 0xFF);
+}
+
+static void write_dword_le(byte *buf, word offset, dword value)
+{
+    buf[offset] = (byte)(value & 0xFF);
+    buf[offset + 1] = (byte)((value >> 8) & 0xFF);
+    buf[offset + 2] = (byte)((value >> 16) & 0xFF);
+    buf[offset + 3] = (byte)((value >> 24) & 0xFF);
+}
 
 
 /****************************************************************************
@@ -94,13 +109,23 @@ int decode_file()
     int n = 0;
     int samples = 0;
     int used = 0;
-
     MemHandle pcmH = NullHandle;
     int16_t* pcm = (void*) 0;
+    MemHandle mp3dec_tH = NullHandle;
+    mp3dec_t* dec = (void*) 0;
+    Boolean eof = FALSE;
+    dword totalBytes = 0;
+    dword sampleRate = 0;
+    word  channelCount = 0;
+    byte  wavHeader[WAV_HEADER_SIZE];
 
     /* 1152*2 int16 slots */
     pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(int16_t)), HF_SWAPABLE, HAF_ZERO_INIT);
     pcm = (int16_t*)MemLock(pcmH);
+
+    mp3dec_tH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);
+    dec = (mp3dec_t*) MemLock(mp3dec_tH);
+
 
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
@@ -109,9 +134,19 @@ int decode_file()
                   FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
                   FILE_ATTR_NORMAL);
 
-    if (!f || !outF) return -1;
+    if (outF) {
+        memset(wavHeader, 0, WAV_HEADER_SIZE);
+        FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
+    }
 
-    mp3dec_init();
+    if (!f || !outF)
+    {
+        MemFree(pcmH);
+        MemFree(mp3dec_tH);
+        return -1;
+    }
+
+    mp3dec_init(dec);
 
     for (;;)
     {
@@ -119,6 +154,7 @@ int decode_file()
         if (feed_len < FEED_BUF_SIZE) {
             n = FileRead(f, feed + feed_len, FEED_BUF_SIZE - feed_len, FALSE);
             if (n > 0) feed_len += n;
+            if (n < 0) eof = TRUE;
         }
 
         /* Nothing left and no more to read? done. */
@@ -126,7 +162,7 @@ int decode_file()
             break;
 
         /* Try to decode from the current buffer */
-        samples = mp3dec_decode_frame(feed, feed_len, pcm, &info);
+        samples = mp3dec_decode_frame(dec, feed, feed_len, pcm, &info);
 
         if (info.frame_bytes > 0) {
             /* Consume the bytes the decoder used */
@@ -137,7 +173,7 @@ int decode_file()
         } else {
             /* Decoder needs more bytes to find/complete a frame */
             /* If file is ended and we still can’t decode, drop 1 byte to resync */
-            if (FilePos(f, 0, FILE_POS_RELATIVE) == FilePos(f, 0, FILE_POS_END)) {
+            if (eof) {
                 feed_len--;
                 if (feed_len > 0)
                     memmove(feed, feed + 1, (size_t)feed_len);
@@ -151,8 +187,62 @@ int decode_file()
             channels = info.channels;   /* 1 or 2 */
             out_count = samples * channels;
 
+            if (sampleRate == 0) {
+                sampleRate = info.hz;
+            }
+            if (channelCount == 0) {
+                channelCount = (word)channels;
+            }
+
             FileWrite(outF, pcm, sizeof(int16_t) * out_count, FALSE);
+            totalBytes += (dword)(sizeof(int16_t) * out_count);
         }
+    }
+
+    if ((totalBytes > 0) && (sampleRate > 0) && (channelCount > 0)) {
+        dword byteRate;
+        word  blockAlign;
+        dword riffSize;
+
+        memset(wavHeader, 0, WAV_HEADER_SIZE);
+        wavHeader[0] = 'R';
+        wavHeader[1] = 'I';
+        wavHeader[2] = 'F';
+        wavHeader[3] = 'F';
+
+        riffSize = 36 + totalBytes;
+        write_dword_le(wavHeader, 4, riffSize);
+
+        wavHeader[8]  = 'W';
+        wavHeader[9]  = 'A';
+        wavHeader[10] = 'V';
+        wavHeader[11] = 'E';
+
+        wavHeader[12] = 'f';
+        wavHeader[13] = 'm';
+        wavHeader[14] = 't';
+        wavHeader[15] = ' ';
+
+        write_dword_le(wavHeader, 16, 16);      /* PCM fmt chunk size */
+        write_word_le(wavHeader, 20, 1);        /* PCM format */
+        write_word_le(wavHeader, 22, channelCount);
+        write_dword_le(wavHeader, 24, sampleRate);
+
+        blockAlign = (word)(channelCount * sizeof(int16_t));
+        byteRate = sampleRate * (dword)blockAlign;
+
+        write_dword_le(wavHeader, 28, byteRate);
+        write_word_le(wavHeader, 32, blockAlign);
+        write_word_le(wavHeader, 34, 16);
+
+        wavHeader[36] = 'd';
+        wavHeader[37] = 'a';
+        wavHeader[38] = 't';
+        wavHeader[39] = 'a';
+        write_dword_le(wavHeader, 40, totalBytes);
+
+        FilePos(outF, 0L, FILE_POS_START);
+        FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
     }
 
     FileClose(f, TRUE);
@@ -160,7 +250,7 @@ int decode_file()
     FilePopDir();
 
     MemFree(pcmH);
-    mp3dec_exit();
+    MemFree(mp3dec_tH);
 
     return 0;
 }

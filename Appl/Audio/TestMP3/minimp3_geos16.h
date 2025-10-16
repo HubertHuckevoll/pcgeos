@@ -5,18 +5,25 @@
 
 #include <stdint.h>
 #include <string.h> /* memcpy, memmove, memset */
+#include <geos.h>
 
 #define MINIMP3_MAX_SAMPLES_PER_FRAME (1152*2)
 
 /* -------- Public API types -------- */
 typedef struct {
-    int frame_bytes, frame_offset, channels, hz, layer, bitrate_kbps;
+    dword frame_bytes;
+    dword frame_offset;
+    word  channels;
+    dword hz;
+    word  layer;
+    dword bitrate_kbps;
 } mp3dec_frame_info_t;
 
 typedef struct {
     float mdct_overlap[2][9*32];
     float qmf_state[15*2*32];
-    int   reserv, free_format_bytes;
+    sdword reserv;
+    dword free_format_bytes;
     unsigned char header[4], reserv_buf[511];
 } mp3dec_t;
 
@@ -142,13 +149,6 @@ typedef struct
     float grbuf[2][576], scf[40], syn[18 + 15][2*32];
     uint8_t ist_pos[2][39];
 } mp3dec_scratch_t;
-
-MemHandle G_scratchH = NullHandle;
-mp3dec_scratch_t* G_scratchP = (void*) 0;
-
-MemHandle G_mp3dec_tH = NullHandle;
-mp3dec_t* G_dec = (void*) 0;
-
 
 /* --- Layer III side info / scalefactors / huffman / IMDCT / synth --- */
 /* (Below is the scalar-only extraction from your source. SIMD branches and L1/L2 were removed.) */
@@ -828,11 +828,16 @@ static void L3_save_reservoir(mp3dec_t *h, mp3dec_scratch_t *s)
 static int L3_restore_reservoir(mp3dec_t *h, bs_t *bs, mp3dec_scratch_t *s, int main_data_begin)
 {
     int frame_bytes = (bs->limit - bs->pos)/8;
-    int bytes_have = MINIMP3_MIN(h->reserv, main_data_begin);
-    memcpy(s->maindata, h->reserv_buf + MINIMP3_MAX(0, h->reserv - main_data_begin), (unsigned)MINIMP3_MIN(h->reserv, main_data_begin));
+    sdword bytes_have_sd = MINIMP3_MIN(h->reserv, (sdword)main_data_begin);
+    sdword offset_sd = MINIMP3_MAX((sdword)0, h->reserv - (sdword)main_data_begin);
+    int bytes_have = (int)bytes_have_sd;
+
+    memcpy(s->maindata,
+           h->reserv_buf + (int)offset_sd,
+           (unsigned)bytes_have);
     memcpy(s->maindata + bytes_have, bs->buf + bs->pos/8, (unsigned)frame_bytes);
     bs_init(&s->bs, s->maindata, bytes_have + frame_bytes);
-    return h->reserv >= main_data_begin;
+    return h->reserv >= (sdword)main_data_begin;
 }
 
 /* ---------- Main L3 decode pass ---------- */
@@ -1188,23 +1193,12 @@ static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, int *free_format_b
 }
 
 /* -------- Public API -------- */
-void mp3dec_init()
+void mp3dec_init(mp3dec_t *dec)
 {
-    G_scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
-    G_scratchP = (mp3dec_scratch_t*) MemLock(G_scratchH);
-
-    G_mp3dec_tH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);
-    G_dec = (mp3dec_t*) MemLock(G_mp3dec_tH);
-    G_dec->header[0] = 0;
+    dec->header[0] = 0;
 }
 
-void mp3dec_exit()
-{
-    MemFree(G_mp3dec_tH);
-    MemFree(G_scratchH);
-}
-
-int mp3dec_decode_frame(const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
+int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
 {
     int i;
     int igr;
@@ -1212,44 +1206,62 @@ int mp3dec_decode_frame(const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, m
     int success;
     const uint8_t *hdr;
     bs_t bs_frame[1];
-    mp3dec_scratch_t* scratch = (void*) 0;
     int main_data_begin;
-    mp3dec_t *dec = (void*) 0;
+    int free_format_tmp;
+    MemHandle scratchH = NullHandle;
+    mp3dec_scratch_t* scratch = (void*) 0;
 
     i = 0;
     frame_size = 0;
     success = 1;
     main_data_begin = 0;
-    scratch = G_scratchP;
-    dec = G_dec;
+
+    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
+    scratch = (mp3dec_scratch_t*) MemLock(scratchH);
+
+    free_format_tmp = (int)dec->free_format_bytes;
 
     if (mp3_bytes > 4 && dec->header[0] == 0xff && hdr_compare(dec->header, mp3)) {
-        frame_size = hdr_frame_bytes(mp3, dec->free_format_bytes) + hdr_padding(mp3);
+        frame_size = hdr_frame_bytes(mp3, free_format_tmp) + hdr_padding(mp3);
         if (frame_size != mp3_bytes && (frame_size + HDR_SIZE > mp3_bytes || !hdr_compare(mp3, mp3 + frame_size))) frame_size = 0;
     }
     if (!frame_size) {
         memset(dec, 0, sizeof(mp3dec_t));
-        i = mp3d_find_frame(mp3, mp3_bytes, &dec->free_format_bytes, &frame_size);
-        if (!frame_size || i + frame_size > mp3_bytes) { info->frame_bytes = i; return 0; }
+        i = mp3d_find_frame(mp3, mp3_bytes, &free_format_tmp, &frame_size);
+        dec->free_format_bytes = (dword)free_format_tmp;
+        if (!frame_size || i + frame_size > mp3_bytes)
+        {
+            info->frame_bytes = (dword)i;
+            MemFree(scratchH);
+            return 0;
+        }
     }
 
     hdr = mp3 + i;
     memcpy(dec->header, hdr, HDR_SIZE);
-    info->frame_bytes = i + frame_size;
-    info->frame_offset = i;
-    info->channels = HDR_IS_MONO(hdr) ? 1 : 2;
-    info->hz = hdr_sample_rate_hz(hdr);
-    info->layer = 4 - HDR_GET_LAYER(hdr);
-    info->bitrate_kbps = hdr_bitrate_kbps(hdr);
+    info->frame_bytes = (dword)(i + frame_size);
+    info->frame_offset = (dword)i;
+    info->channels = (word)(HDR_IS_MONO(hdr) ? 1 : 2);
+    info->hz = (dword)hdr_sample_rate_hz(hdr);
+    info->layer = (word)(4 - HDR_GET_LAYER(hdr));
+    info->bitrate_kbps = (dword)hdr_bitrate_kbps(hdr);
 
-    if (!pcm) return hdr_frame_samples(hdr);
+    if (!pcm) {
+        MemFree(scratchH);
+        return hdr_frame_samples(hdr);
+    }
 
     bs_init(bs_frame, hdr + HDR_SIZE, frame_size - HDR_SIZE);
     if (HDR_IS_CRC(hdr)) get_bits(bs_frame, 16);
 
     if (info->layer == 3) {
         main_data_begin = L3_read_side_info(bs_frame, scratch->gr_info, hdr);
-        if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit) { mp3dec_init(); return 0; }
+        if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit)
+        {
+            mp3dec_init(dec);
+            MemFree(scratchH);
+            return 0;
+        }
         success = L3_restore_reservoir(dec, bs_frame, scratch, main_data_begin);
         if (success) {
             for (igr = 0; igr < (HDR_TEST_MPEG1(hdr) ? 2 : 1); igr++, pcm += 576*info->channels) {
@@ -1261,7 +1273,10 @@ int mp3dec_decode_frame(const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, m
         L3_save_reservoir(dec, scratch);
     } else {
         /* Layer I/II removed: not supported in this build */
+        MemFree(scratchH);
         return 0;
     }
+
+    MemFree(scratchH);
     return success*hdr_frame_samples(dec->header);
 }
