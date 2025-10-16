@@ -1198,7 +1198,7 @@ void mp3dec_init(mp3dec_t *dec)
     dec->header[0] = 0;
 }
 
-int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
+int mp3dec_decode_frame(mp3dec_scratch_t* scratch, mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
 {
     int i;
     int igr;
@@ -1208,16 +1208,13 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     bs_t bs_frame[1];
     int main_data_begin;
     int free_format_tmp;
-    MemHandle scratchH = NullHandle;
-    mp3dec_scratch_t* scratch = (void*) 0;
 
     i = 0;
     frame_size = 0;
     success = 1;
     main_data_begin = 0;
 
-    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
-    scratch = (mp3dec_scratch_t*) MemLock(scratchH);
+    memset(scratch, 0, sizeof(mp3dec_scratch_t));
 
     free_format_tmp = (int)dec->free_format_bytes;
 
@@ -1232,7 +1229,6 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
         if (!frame_size || i + frame_size > mp3_bytes)
         {
             info->frame_bytes = (dword)i;
-            MemFree(scratchH);
             return 0;
         }
     }
@@ -1247,7 +1243,6 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     info->bitrate_kbps = (dword)hdr_bitrate_kbps(hdr);
 
     if (!pcm) {
-        MemFree(scratchH);
         return hdr_frame_samples(hdr);
     }
 
@@ -1259,7 +1254,6 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
         if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit)
         {
             mp3dec_init(dec);
-            MemFree(scratchH);
             return 0;
         }
         success = L3_restore_reservoir(dec, bs_frame, scratch, main_data_begin);
@@ -1273,10 +1267,8 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
         L3_save_reservoir(dec, scratch);
     } else {
         /* Layer I/II removed: not supported in this build */
-        MemFree(scratchH);
         return 0;
     }
 
-    MemFree(scratchH);
     return success*hdr_frame_samples(dec->header);
 }

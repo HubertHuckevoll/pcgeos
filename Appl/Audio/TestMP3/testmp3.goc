@@ -118,6 +118,8 @@ int decode_file()
     dword sampleRate = 0;
     word  channelCount = 0;
     byte  wavHeader[WAV_HEADER_SIZE];
+    MemHandle scratchH = NullHandle;
+    mp3dec_scratch_t* scratch = (void*) 0;
 
     /* 1152*2 int16 slots */
     pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(int16_t)), HF_SWAPABLE, HAF_ZERO_INIT);
@@ -126,11 +128,13 @@ int decode_file()
     mp3dec_tH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);
     dec = (mp3dec_t*) MemLock(mp3dec_tH);
 
+    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
+    scratch = (mp3dec_scratch_t*) MemLock(scratchH);
 
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
     f = FileOpen("MP3.MP3", (FILE_ACCESS_R | FILE_DENY_RW));
-    outF = FileCreate("MP3.PCM",
+    outF = FileCreate("MP3.WAV",
                   FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
                   FILE_ATTR_NORMAL);
 
@@ -162,7 +166,7 @@ int decode_file()
             break;
 
         /* Try to decode from the current buffer */
-        samples = mp3dec_decode_frame(dec, feed, feed_len, pcm, &info);
+        samples = mp3dec_decode_frame(scratch, dec, feed, feed_len, pcm, &info);
 
         if (info.frame_bytes > 0) {
             /* Consume the bytes the decoder used */
@@ -249,6 +253,7 @@ int decode_file()
     FileClose(outF, TRUE);
     FilePopDir();
 
+    MemFree(scratchH);
     MemFree(pcmH);
     MemFree(mp3dec_tH);
 
