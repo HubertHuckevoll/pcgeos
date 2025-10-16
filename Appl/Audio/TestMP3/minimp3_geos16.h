@@ -146,6 +146,10 @@ typedef struct
 MemHandle G_scratchH = NullHandle;
 mp3dec_scratch_t* G_scratchP = (void*) 0;
 
+MemHandle G_mp3dec_tH = NullHandle;
+mp3dec_t* G_dec = (void*) 0;
+
+
 /* --- Layer III side info / scalefactors / huffman / IMDCT / synth --- */
 /* (Below is the scalar-only extraction from your source. SIMD branches and L1/L2 were removed.) */
 
@@ -1184,19 +1188,23 @@ static int mp3d_find_frame(const uint8_t *mp3, int mp3_bytes, int *free_format_b
 }
 
 /* -------- Public API -------- */
-void mp3dec_init(mp3dec_t *dec)
+void mp3dec_init()
 {
-    dec->header[0] = 0;
     G_scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
     G_scratchP = (mp3dec_scratch_t*) MemLock(G_scratchH);
+
+    G_mp3dec_tH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);
+    G_dec = (mp3dec_t*) MemLock(G_mp3dec_tH);
+    G_dec->header[0] = 0;
 }
 
 void mp3dec_exit()
 {
+    MemFree(G_mp3dec_tH);
     MemFree(G_scratchH);
 }
 
-int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
+int mp3dec_decode_frame(const uint8_t *mp3, int mp3_bytes, mp3d_sample_t *pcm, mp3dec_frame_info_t *info)
 {
     int i;
     int igr;
@@ -1206,12 +1214,14 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
     bs_t bs_frame[1];
     mp3dec_scratch_t* scratch = (void*) 0;
     int main_data_begin;
+    mp3dec_t *dec = (void*) 0;
 
     i = 0;
     frame_size = 0;
     success = 1;
     main_data_begin = 0;
     scratch = G_scratchP;
+    dec = G_dec;
 
     if (mp3_bytes > 4 && dec->header[0] == 0xff && hdr_compare(dec->header, mp3)) {
         frame_size = hdr_frame_bytes(mp3, dec->free_format_bytes) + hdr_padding(mp3);
@@ -1239,7 +1249,7 @@ int mp3dec_decode_frame(mp3dec_t *dec, const uint8_t *mp3, int mp3_bytes, mp3d_s
 
     if (info->layer == 3) {
         main_data_begin = L3_read_side_info(bs_frame, scratch->gr_info, hdr);
-        if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit) { mp3dec_init(dec); return 0; }
+        if (main_data_begin < 0 || bs_frame->pos > bs_frame->limit) { mp3dec_init(); return 0; }
         success = L3_restore_reservoir(dec, bs_frame, scratch, main_data_begin);
         if (success) {
             for (igr = 0; igr < (HDR_TEST_MPEG1(hdr) ? 2 : 1); igr++, pcm += 576*info->channels) {

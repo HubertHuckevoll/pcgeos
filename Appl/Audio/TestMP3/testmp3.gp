@@ -25,6 +25,7 @@ tokenchars "TMP3"
 tokenid 0
 
 heapspace 5000
+stack 8000
 
 library	geos
 library	ui

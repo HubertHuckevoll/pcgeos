@@ -82,14 +82,12 @@ int decode_file(const char *path);
 @end Interface;
 
 
-int decode_file(const char *path)
+int decode_file()
 {
     FileHandle f = NullHandle;
     FileHandle outF = NullHandle;
-    mp3dec_t dec;
     uint8_t  feed[FEED_BUF_SIZE];
     int      feed_len = 0;                 /* bytes currently in feed[] */
-    int16_t  pcm[MINIMP3_MAX_SAMPLES_PER_FRAME]; /* 1152*2 int16 slots */
     mp3dec_frame_info_t info;
     int channels = 0;
     int out_count = 0;
@@ -97,17 +95,28 @@ int decode_file(const char *path)
     int samples = 0;
     int used = 0;
 
-    f = FileOpen(path, FILE_ACCESS_R | FILE_DENY_NONE);
-    outF = FileOpen("MP3.pcm", FILE_ACCESS_W | FILE_DENY_NONE);
+    MemHandle pcmH = NullHandle;
+    int16_t* pcm = (void*) 0;
+
+    /* 1152*2 int16 slots */
+    pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(int16_t)), HF_SWAPABLE, HAF_ZERO_INIT);
+    pcm = (int16_t*)MemLock(pcmH);
+
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
+    f = FileOpen("MP3.MP3", (FILE_ACCESS_R | FILE_DENY_RW));
+    outF = FileCreate("MP3.PCM",
+                  FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
+                  FILE_ATTR_NORMAL);
+
     if (!f || !outF) return -1;
 
-    mp3dec_init(&dec);
+    mp3dec_init();
 
     for (;;)
     {
         /* If buffer has room, read more bytes at the end */
         if (feed_len < FEED_BUF_SIZE) {
-            //int n = fread(feed + feed_len, 1, FEED_BUF_SIZE - feed_len, f);
             n = FileRead(f, feed + feed_len, FEED_BUF_SIZE - feed_len, FALSE);
             if (n > 0) feed_len += n;
         }
@@ -117,7 +126,7 @@ int decode_file(const char *path)
             break;
 
         /* Try to decode from the current buffer */
-        samples = mp3dec_decode_frame(&dec, feed, feed_len, pcm, &info);
+        samples = mp3dec_decode_frame(feed, feed_len, pcm, &info);
 
         if (info.frame_bytes > 0) {
             /* Consume the bytes the decoder used */
@@ -142,15 +151,15 @@ int decode_file(const char *path)
             channels = info.channels;   /* 1 or 2 */
             out_count = samples * channels;
 
-            /* TODO: play / write PCM. Example: write to stdout or device */
-            // fwrite(pcm, sizeof(int16_t), out_count, out); */
             FileWrite(outF, pcm, sizeof(int16_t) * out_count, FALSE);
         }
     }
 
     FileClose(f, TRUE);
     FileClose(outF, TRUE);
+    FilePopDir();
 
+    MemFree(pcmH);
     mp3dec_exit();
 
     return 0;
@@ -158,6 +167,6 @@ int decode_file(const char *path)
 
 @method TestMP3ProcessClass, MSG_START_READING
 {
-    (void) decode_file("MP3.MP3");
+    (void) decode_file();
 }
 
