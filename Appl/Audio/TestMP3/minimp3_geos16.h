@@ -69,8 +69,12 @@ static uint32_t get_bits(bs_t *bs, int n)
 #define HDR_IS_FRAME_576(h)         ((h[1] & 14) == 2)
 #define HDR_IS_LAYER_1(h)           ((h[1] & 6) == 6)
 
+// #define MINIMP3_MIN(a,b) ((a)>(b)?(b):(a))
+// #define MINIMP3_MAX(a,b) ((a)<(b)?(a):(b))
+
 #define MINIMP3_MIN(a,b) ((a)>(b)?(b):(a))
-#define MINIMP3_MAX(a,b) ((a)<(b)?(a):(b))
+#define MINIMP3_MAX(a,b) ((a)<(b)?(b):(a))   /* upstream-style */
+
 
 static int hdr_valid(const uint8_t *h)
 {
