@@ -9,8 +9,26 @@
 #include <stdio.h>
 #include "minimp3_geos16.h"
 
+
+/****************************************************************************
+ * Constants
+ ****************************************************************************/
+
 #define FEED_BUF_SIZE  4096  /* small is fine; bigger reduces I/O calls */
 #define WAV_HEADER_SIZE 44
+#define TESTMP3_DUMP_PCM
+
+/****************************************************************************
+ * Globals
+ ****************************************************************************/
+
+Boolean     isRunning = FALSE;
+
+/****************************************************************************
+ * Forward declarations
+ ****************************************************************************/
+
+int decode_file(const char *path);
 
 static void write_word_le(byte *buf, word offset, word value)
 {
@@ -26,36 +44,15 @@ static void write_dword_le(byte *buf, word offset, dword value)
     buf[offset + 3] = (byte)((value >> 24) & 0xFF);
 }
 
-
-/****************************************************************************
- * Constants
- ****************************************************************************/
-
-
-/****************************************************************************
- * Globals
- ****************************************************************************/
-
-// word        MPI_currentVolume = MIXER_VOLUME_MAX;
-// word        MPI_previousVolume = MIXER_DEFAULT_VOLUME;
-// Boolean     MPI_muted = FALSE;
-// Boolean     MPI_demoMode = TRUE;
-
-
 /****************************************************************************
  * Class definition
  ****************************************************************************/
 
 @class TestMP3ProcessClass, GenProcessClass;
     @message void MSG_START_READING();
+    @message void MSG_STOP_READING();
 @endc;
 @classdecl TestMP3ProcessClass, neverSaved;
-
-/****************************************************************************
- * Forward declarations
- ****************************************************************************/
-
-int decode_file(const char *path);
 
 /****************************************************************************
  * UI Resources
@@ -83,7 +80,7 @@ int decode_file(const char *path);
 }
 
 @object GenInteractionClass MainGroupObj = {
-    GI_comp = @StartBut;
+    GI_comp = @StartBut, @StopBut;
     HINT_ORIENT_CHILDREN_VERTICALLY;
     HINT_CENTER_CHILDREN_HORIZONTALLY;
 }
@@ -92,6 +89,12 @@ int decode_file(const char *path);
     GI_visMoniker = "Start";
     GTI_destination = process;
     GTI_actionMsg = MSG_START_READING;
+}
+
+@object GenTriggerClass StopBut = {
+    GI_visMoniker = "Stop";
+    GTI_destination = process;
+    GTI_actionMsg = MSG_STOP_READING;
 }
 
 @end Interface;
@@ -142,12 +145,12 @@ int decode_file()
 
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
-    f = FileOpen("MP3.MP3", (FILE_ACCESS_R | FILE_DENY_RW));
-    outF = FileCreate("MP3.WAV",
-                  FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
+    f = FileOpen("3S.MP3", (FILE_ACCESS_R | FILE_DENY_RW));
+    outF = FileCreate("3S.WAV",
+                  FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_RW,
                   FILE_ATTR_NORMAL);
 #ifdef TESTMP3_DUMP_PCM
-    logF = FileCreate("MP3.LOG",
+    logF = FileCreate("3S.LOG",
                   FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
                   FILE_ATTR_NORMAL);
 #endif
@@ -184,7 +187,7 @@ int decode_file()
 
     mp3dec_init(dec);
 
-    for (;;)
+    while(isRunning == TRUE)
     {
         /* If buffer has room, read more bytes at the end */
         if (feed_len < FEED_BUF_SIZE) {
@@ -311,12 +314,20 @@ int decode_file()
         wavHeader[39] = 'a';
         write_dword_le(wavHeader, 40, totalBytes);
 
-        FilePos(outF, 0L, FILE_POS_START);
-        FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
+        FileClose(outF, TRUE);
+        /* Close and reopen so we can rewrite the header at offset 0 reliably. */
+        outF = FileOpen("MP3.WAV", FILE_ACCESS_RW | FILE_DENY_RW);
+        if (outF != NullHandle) {
+            FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
+            FileClose(outF, TRUE);
+        }
+        outF = NullHandle;
+    } else if (outF != NullHandle) {
+        FileClose(outF, TRUE);
+        outF = NullHandle;
     }
 
     FileClose(f, TRUE);
-    FileClose(outF, TRUE);
 #ifdef TESTMP3_DUMP_PCM
     FileClose(logF, TRUE);
 #endif
@@ -331,6 +342,11 @@ int decode_file()
 
 @method TestMP3ProcessClass, MSG_START_READING
 {
+    isRunning = TRUE;
     (void) decode_file();
 }
 
+@method TestMP3ProcessClass, MSG_STOP_READING
+{
+    isRunning = FALSE;
+}
