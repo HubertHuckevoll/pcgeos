@@ -120,6 +120,15 @@ int decode_file()
     byte  wavHeader[WAV_HEADER_SIZE];
     MemHandle scratchH = NullHandle;
     mp3dec_scratch_t* scratch = (void*) 0;
+#ifdef TESTMP3_DUMP_PCM
+    FileHandle logF = NullHandle;
+    dword sampleIndex = 0;
+    char logLine[96];
+    int16_t leftSample = 0;
+    int16_t rightSample = 0;
+    dword logTimestamp = 0;
+    word sampleLoop = 0;
+#endif
 
     /* 1152*2 int16 slots */
     pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(int16_t)), HF_SWAPABLE, HAF_ZERO_INIT);
@@ -137,14 +146,37 @@ int decode_file()
     outF = FileCreate("MP3.WAV",
                   FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
                   FILE_ATTR_NORMAL);
+#ifdef TESTMP3_DUMP_PCM
+    logF = FileCreate("MP3.LOG",
+                  FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
+                  FILE_ATTR_NORMAL);
+#endif
 
     if (outF) {
         memset(wavHeader, 0, WAV_HEADER_SIZE);
         FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
     }
 
-    if (!f || !outF)
+    if (!f || !outF
+#ifdef TESTMP3_DUMP_PCM
+        || !logF
+#endif
+        )
     {
+#ifdef TESTMP3_DUMP_PCM
+        if (logF)
+        {
+            FileClose(logF, TRUE);
+        }
+#endif
+        if (outF)
+        {
+            FileClose(outF, TRUE);
+        }
+        if (f)
+        {
+            FileClose(f, TRUE);
+        }
         MemFree(pcmH);
         MemFree(mp3dec_tH);
         return -1;
@@ -200,6 +232,40 @@ int decode_file()
 
             FileWrite(outF, pcm, sizeof(int16_t) * out_count, FALSE);
             totalBytes += (dword)(sizeof(int16_t) * out_count);
+#ifdef TESTMP3_DUMP_PCM
+            if (logF)
+            {
+                for (sampleLoop = 0; sampleLoop < (word)samples; sampleLoop++)
+                {
+                    if (channels == 2)
+                    {
+                        leftSample = pcm[(sampleLoop * 2) + 0];
+                        rightSample = pcm[(sampleLoop * 2) + 1];
+                    }
+                    else
+                    {
+                        leftSample = pcm[sampleLoop];
+                        rightSample = leftSample;
+                    }
+                    if (info.hz > 0)
+                    {
+                        logTimestamp = (sampleIndex * 1000UL) / info.hz;
+                    }
+                    else
+                    {
+                        logTimestamp = 0;
+                    }
+                    sprintf(logLine,
+                            "%lu,%lu,%d,%d\r\n",
+                            (unsigned long)sampleIndex,
+                            (unsigned long)logTimestamp,
+                            (int)leftSample,
+                            (int)rightSample);
+                    FileWrite(logF, logLine, (word)strlen(logLine), FALSE);
+                    sampleIndex++;
+                }
+            }
+#endif
         }
     }
 
@@ -251,6 +317,9 @@ int decode_file()
 
     FileClose(f, TRUE);
     FileClose(outF, TRUE);
+#ifdef TESTMP3_DUMP_PCM
+    FileClose(logF, TRUE);
+#endif
     FilePopDir();
 
     MemFree(scratchH);

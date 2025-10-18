@@ -7,6 +7,56 @@
 #include <string.h> /* memcpy, memmove, memset */
 #include <geos.h>
 
+#define MP3_FIXED_FRAC_BITS      16
+#define MP3_FIXED_SCALE          (1L << MP3_FIXED_FRAC_BITS)
+#define MP3_PCM_SHIFT            (MP3_FIXED_FRAC_BITS - 15)
+#define MP3_MDCT_OVERLAP_LEN     (9*32)
+#define MP3_QMF_STATE_LEN        (15*2*32)
+
+static float g_mdct_overlap_temp[2][MP3_MDCT_OVERLAP_LEN];
+static float g_qmf_state_temp[MP3_QMF_STATE_LEN];
+
+static float mp3d_fixed_to_float(sdword value)
+{
+    return (float)value / (float)MP3_FIXED_SCALE;
+}
+
+static sdword mp3d_float_to_fixed(float value)
+{
+    float scaled;
+
+    scaled = value * (float)MP3_FIXED_SCALE;
+    if (scaled >= 2147483647.0f)
+    {
+        return 2147483647L;
+    }
+    if (scaled <= -2147483648.0f)
+    {
+        return -2147483648L;
+    }
+    return (sdword)scaled;
+}
+
+static void mp3d_fixed_to_float_buffer(const sdword *src, float *dst, word count)
+{
+    word i;
+
+    for (i = 0; i < count; i++)
+    {
+        dst[i] = mp3d_fixed_to_float(src[i]);
+    }
+}
+
+static void mp3d_float_to_fixed_buffer(sdword *dst, const float *src, word count)
+{
+    word i;
+
+    for (i = 0; i < count; i++)
+    {
+        dst[i] = mp3d_float_to_fixed(src[i]);
+    }
+}
+
 #define MINIMP3_MAX_SAMPLES_PER_FRAME (1152*2)
 
 /* -------- Public API types -------- */
@@ -20,8 +70,8 @@ typedef struct {
 } mp3dec_frame_info_t;
 
 typedef struct {
-    float mdct_overlap[2][9*32];
-    float qmf_state[15*2*32];
+    sdword mdct_overlap[2][MP3_MDCT_OVERLAP_LEN];
+    sdword qmf_state[MP3_QMF_STATE_LEN];
     sdword reserv;
     dword free_format_bytes;
     unsigned char header[4], reserv_buf[511];
@@ -302,21 +352,21 @@ static const float g_sec[24] = {
 };
 
 static const float g_win[240] = {
-    -1,26,-31,208,218,401,-519,2063,2000,4788,-5517,7134,5959,35640,-39336,74992,
-    -1,24,-35,202,222,347,-581,2080,1952,4425,-5879,7640,5288,33791,-41176,74856,
-    -1,21,-38,196,225,294,-645,2087,1893,4063,-6237,8092,4561,31947,-43006,74630,
-    -1,19,-41,190,227,244,-711,2085,1822,3705,-6589,8492,3776,30112,-44821,74313,
-    -1,17,-45,183,228,197,-779,2075,1739,3351,-6935,8840,2935,28289,-46617,73908,
-    -1,16,-49,176,228,153,-848,2057,1644,3004,-7271,9139,2037,26482,-48390,73415,
-    -2,14,-53,169,227,111,-919,2032,1535,2663,-7597,9389,1082,24694,-50137,72835,
-    -2,13,-58,161,224,72,-991,2001,1414,2330,-7910,9592,70,22929,-51853,72169,
-    -2,11,-63,154,221,36,-1064,1962,1280,2006,-8209,9750,-998,21189,-53534,71420,
-    -2,10,-68,147,215,2,-1137,1919,1131,1692,-8491,9863,-2122,19478,-55178,70590,
-    -3,9,-73,139,208,-29,-1210,1870,970,1388,-8755,9935,-3300,17799,-56778,69679,
-    -3,8,-79,132,200,-57,-1283,1817,794,1095,-8998,9966,-4533,16155,-58333,68692,
-    -4,7,-85,125,189,-83,-1356,1759,605,814,-9219,9959,-5818,14548,-59838,67629,
-    -4,7,-91,117,177,-106,-1428,1698,402,545,-9416,9916,-7154,12980,-61289,66494,
-    -5,6,-97,111,163,-127,-1498,1634,185,288,-9585,9838,-8540,11455,-62684,65290
+    -0.000015259f, 0.000396729f, -0.000473022f, 0.003173828f, 0.003326416f, 0.006118774f, -0.007919312f, 0.031478882f, 0.030517578f, 0.073059082f, -0.084182739f, 0.108856201f, 0.090927124f, 0.543823242f, -0.600219727f, 1.144287109f,
+    -0.000015259f, 0.000366211f, -0.000534058f, 0.003082275f, 0.003387451f, 0.005294800f, -0.008865356f, 0.031738281f, 0.029785156f, 0.067520142f, -0.089706421f, 0.116577148f, 0.080688477f, 0.515609741f, -0.628295898f, 1.142211914f,
+    -0.000015259f, 0.000320435f, -0.000579834f, 0.002990723f, 0.003433228f, 0.004486084f, -0.009841919f, 0.031845093f, 0.028884888f, 0.061996460f, -0.095169067f, 0.123474121f, 0.069595337f, 0.487472534f, -0.656219482f, 1.138763428f,
+    -0.000015259f, 0.000289917f, -0.000625610f, 0.002899170f, 0.003463745f, 0.003723145f, -0.010848999f, 0.031814575f, 0.027801514f, 0.056533813f, -0.100540161f, 0.129577637f, 0.057617188f, 0.459472656f, -0.683914185f, 1.133926392f,
+    -0.000015259f, 0.000259399f, -0.000686646f, 0.002792358f, 0.003479004f, 0.003005981f, -0.011886597f, 0.031661987f, 0.026535034f, 0.051132202f, -0.105819702f, 0.134887695f, 0.044784546f, 0.431655884f, -0.711318970f, 1.127746582f,
+    -0.000015259f, 0.000244141f, -0.000747681f, 0.002685547f, 0.003479004f, 0.002334595f, -0.012939453f, 0.031387329f, 0.025085449f, 0.045837402f, -0.110946655f, 0.139450073f, 0.031082153f, 0.404083252f, -0.738372803f, 1.120223999f,
+    -0.000030518f, 0.000213623f, -0.000808716f, 0.002578735f, 0.003463745f, 0.001693726f, -0.014022827f, 0.031005859f, 0.023422241f, 0.040634155f, -0.115921021f, 0.143264771f, 0.016510010f, 0.376800537f, -0.765029907f, 1.111373901f,
+    -0.000030518f, 0.000198364f, -0.000885010f, 0.002456665f, 0.003417969f, 0.001098633f, -0.015121460f, 0.030532837f, 0.021575928f, 0.035552979f, -0.120697021f, 0.146362305f, 0.001068115f, 0.349868774f, -0.791213989f, 1.101211548f,
+    -0.000030518f, 0.000167847f, -0.000961304f, 0.002349854f, 0.003372192f, 0.000549316f, -0.016235352f, 0.029937744f, 0.019531250f, 0.030609131f, -0.125259399f, 0.148773193f, -0.015228271f, 0.323318481f, -0.816864014f, 1.089782715f,
+    -0.000030518f, 0.000152588f, -0.001037598f, 0.002243042f, 0.003280640f, 0.000030518f, -0.017349243f, 0.029281616f, 0.017257690f, 0.025817871f, -0.129562378f, 0.150497437f, -0.032379150f, 0.297210693f, -0.841949463f, 1.077117920f,
+    -0.000045776f, 0.000137329f, -0.001113892f, 0.002120972f, 0.003173828f, -0.000442505f, -0.018463135f, 0.028533936f, 0.014801025f, 0.021179199f, -0.133590698f, 0.151596069f, -0.050354004f, 0.271591187f, -0.866363525f, 1.063217163f,
+    -0.000045776f, 0.000122070f, -0.001205444f, 0.002014160f, 0.003051758f, -0.000869751f, -0.019577026f, 0.027725220f, 0.012115479f, 0.016708374f, -0.137298584f, 0.152069092f, -0.069168091f, 0.246505737f, -0.890090942f, 1.048156738f,
+    -0.000061035f, 0.000106812f, -0.001296997f, 0.001907349f, 0.002883911f, -0.001266479f, -0.020690918f, 0.026840210f, 0.009231567f, 0.012420654f, -0.140670776f, 0.151962280f, -0.088775635f, 0.221984863f, -0.913055420f, 1.031936646f,
+    -0.000061035f, 0.000106812f, -0.001388550f, 0.001785278f, 0.002700806f, -0.001617432f, -0.021789551f, 0.025909424f, 0.006134033f, 0.008316040f, -0.143676758f, 0.151306152f, -0.109161377f, 0.198059082f, -0.935195923f, 1.014617920f,
+    -0.000076294f, 0.000091553f, -0.001480103f, 0.001693726f, 0.002487183f, -0.001937866f, -0.022857666f, 0.024932861f, 0.002822876f, 0.004394531f, -0.146255493f, 0.150115967f, -0.130310059f, 0.174789429f, -0.956481934f, 0.996246338f
 };
 
 /* scalefactors */
@@ -868,7 +918,9 @@ static void L3_decode(mp3dec_t *h, mp3dec_scratch_t *s, L3_gr_info_t *gr_info, i
             L3_reorder(s->grbuf[ch] + n_long_bands*18, s->syn[0], gr_info->sfbtab + gr_info->n_long_sfb);
         }
         L3_antialias(s->grbuf[ch], aa_bands);
-        L3_imdct_gr(s->grbuf[ch], h->mdct_overlap[ch], gr_info->block_type, (unsigned)n_long_bands);
+        mp3d_fixed_to_float_buffer(h->mdct_overlap[ch], g_mdct_overlap_temp[ch], MP3_MDCT_OVERLAP_LEN);
+        L3_imdct_gr(s->grbuf[ch], g_mdct_overlap_temp[ch], gr_info->block_type, (unsigned)n_long_bands);
+        mp3d_float_to_fixed_buffer(h->mdct_overlap[ch], g_mdct_overlap_temp[ch], MP3_MDCT_OVERLAP_LEN);
         L3_change_sign(s->grbuf[ch]);
     }
 }
@@ -967,38 +1019,59 @@ static void mp3d_DCT_II(float *grbuf, int n)
 /* int16 scaling (scalar) */
 static int16_t mp3d_scale_pcm(float sample)
 {
-    int16_t s;
+    sdword fixed;
 
-    if (sample >=  32766.5f) return (int16_t) 32767;
-    if (sample <= -32767.5f) return (int16_t)-32768;
-    s = (int16_t)(sample + .5f);
-    s -= (s < 0); /* away from zero */
-    return s;
+    /* Convert to fixed and apply rounding away from zero before shifting. */
+    fixed = mp3d_float_to_fixed(sample);
+    if (MP3_PCM_SHIFT > 0)
+    {
+        sdword bias = (sdword)1 << (MP3_PCM_SHIFT - 1);
+        if (fixed >= 0)
+        {
+            fixed += bias;
+        }
+        else
+        {
+            fixed -= bias;
+        }
+        fixed >>= MP3_PCM_SHIFT;
+    }
+
+    if (fixed > 32767)
+    {
+        fixed = 32767;
+    }
+    else if (fixed < -32768)
+    {
+        fixed = -32768;
+    }
+
+    return (int16_t)fixed;
 }
 
 /* polyphase synthesis */
 static void mp3d_synth_pair(mp3d_sample_t *pcm, int nch, const float *z)
 {
     float a;
-    a  = (z[14*64] - z[    0]) * 29;
-    a += (z[ 1*64] + z[13*64]) * 213;
-    a += (z[12*64] - z[ 2*64]) * 459;
-    a += (z[ 3*64] + z[11*64]) * 2037;
-    a += (z[10*64] - z[ 4*64]) * 5153;
-    a += (z[ 5*64] + z[ 9*64]) * 6574;
-    a += (z[ 8*64] - z[ 6*64]) * 37489;
-    a +=  z[ 7*64]             * 75038;
+    a  = (z[14*64] - z[    0]) * 0.000442505f;
+    a += (z[ 1*64] + z[13*64]) * 0.003250122f;
+    a += (z[12*64] - z[ 2*64]) * 0.007003784f;
+    a += (z[ 3*64] + z[11*64]) * 0.031082153f;
+    a += (z[10*64] - z[ 4*64]) * 0.078628540f;
+    a += (z[ 5*64] + z[ 9*64]) * 0.100311279f;
+    a += (z[ 8*64] - z[ 6*64]) * 0.572036743f;
+    a +=  z[ 7*64]             * 1.144989014f;
     pcm[0] = mp3d_scale_pcm(a);
 
     z += 2;
-    a  = z[14*64] * 104;
-    a += z[12*64] * 1567;
-    a += z[10*64] * 9727;
-    a += z[ 8*64] * 64019;
-    a += z[ 6*64] * -9975;
-    a += z[ 4*64] * -45;
-    a += z[ 2*64] * 146;
-    a += z[ 0*64] * -5;
+    a  = z[14*64] * 0.001586914f;
+    a += z[12*64] * 0.023910522f;
+    a += z[10*64] * 0.148422241f;
+    a += z[ 8*64] * 0.976852417f;
+    a += z[ 6*64] * -0.152206421f;
+    a += z[ 4*64] * -0.000686646f;
+    a += z[ 2*64] * 0.002227783f;
+    a += z[ 0*64] * -0.000076294f;
     pcm[16*nch] = mp3d_scale_pcm(a);
 }
 
@@ -1265,7 +1338,9 @@ int mp3dec_decode_frame(mp3dec_scratch_t* scratch, mp3dec_t *dec, const uint8_t 
             for (igr = 0; igr < (HDR_TEST_MPEG1(hdr) ? 2 : 1); igr++, pcm += 576*info->channels) {
                 memset(scratch->grbuf[0], 0, (unsigned)(576*2*sizeof(float)));
                 L3_decode(dec, scratch, scratch->gr_info + igr*info->channels, info->channels);
-                mp3d_synth_granule(dec->qmf_state, scratch->grbuf[0], 18, info->channels, pcm, scratch->syn[0]);
+                mp3d_fixed_to_float_buffer(dec->qmf_state, g_qmf_state_temp, MP3_QMF_STATE_LEN);
+                mp3d_synth_granule(g_qmf_state_temp, scratch->grbuf[0], 18, info->channels, pcm, scratch->syn[0]);
+                mp3d_float_to_fixed_buffer(dec->qmf_state, g_qmf_state_temp, MP3_QMF_STATE_LEN);
             }
         }
         L3_save_reservoir(dec, scratch);
