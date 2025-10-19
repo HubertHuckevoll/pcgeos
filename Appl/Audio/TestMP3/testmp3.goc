@@ -17,6 +17,9 @@
 #define FEED_BUF_SIZE  4096  /* small is fine; bigger reduces I/O calls */
 #define WAV_HEADER_SIZE 44
 #define TESTMP3_DUMP_PCM
+#define TESTMP3_INPUT_FILE "3S.MP3"
+#define TESTMP3_OUTPUT_FILE "3S.WAV"
+#define TESTMP3_LOG_FILE "3S.LOG"
 
 /****************************************************************************
  * Globals
@@ -145,12 +148,12 @@ int decode_file()
 
     FilePushDir();
     FileSetStandardPath(SP_DOCUMENT);
-    f = FileOpen("3S.MP3", (FILE_ACCESS_R | FILE_DENY_RW));
-    outF = FileCreate("3S.WAV",
+    f = FileOpen(TESTMP3_INPUT_FILE, (FILE_ACCESS_R | FILE_DENY_RW));
+    outF = FileCreate(TESTMP3_OUTPUT_FILE,
                   FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_RW,
                   FILE_ATTR_NORMAL);
 #ifdef TESTMP3_DUMP_PCM
-    logF = FileCreate("3S.LOG",
+    logF = FileCreate(TESTMP3_LOG_FILE,
                   FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
                   FILE_ATTR_NORMAL);
 #endif
@@ -187,17 +190,23 @@ int decode_file()
 
     mp3dec_init(dec);
 
-    while(isRunning == TRUE)
+    for(;;)
     {
         /* If buffer has room, read more bytes at the end */
-        if (feed_len < FEED_BUF_SIZE) {
+        if (!eof && (feed_len < FEED_BUF_SIZE)) {
             n = FileRead(f, feed + feed_len, FEED_BUF_SIZE - feed_len, FALSE);
-            if (n > 0) feed_len += n;
-            if (n < 0) eof = TRUE;
+            if (n == -1)
+            {
+                eof = TRUE;
+            }
+            else
+            {
+                feed_len += n;
+            }
         }
 
         /* Nothing left and no more to read? done. */
-        if (feed_len == 0)
+        if ((feed_len == 0) && eof)
             break;
 
         /* Try to decode from the current buffer */
@@ -314,13 +323,9 @@ int decode_file()
         wavHeader[39] = 'a';
         write_dword_le(wavHeader, 40, totalBytes);
 
+        FilePos(outF, 0UL, FILE_POS_START);
+        FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
         FileClose(outF, TRUE);
-        /* Close and reopen so we can rewrite the header at offset 0 reliably. */
-        outF = FileOpen("MP3.WAV", FILE_ACCESS_RW | FILE_DENY_RW);
-        if (outF != NullHandle) {
-            FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
-            FileClose(outF, TRUE);
-        }
         outF = NullHandle;
     } else if (outF != NullHandle) {
         FileClose(outF, TRUE);
@@ -342,11 +347,11 @@ int decode_file()
 
 @method TestMP3ProcessClass, MSG_START_READING
 {
-    isRunning = TRUE;
+    //isRunning = TRUE;
     (void) decode_file();
 }
 
 @method TestMP3ProcessClass, MSG_STOP_READING
 {
-    isRunning = FALSE;
+    //isRunning = FALSE;
 }
