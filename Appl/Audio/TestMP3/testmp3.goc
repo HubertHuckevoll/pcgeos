@@ -221,8 +221,14 @@ int decode_file()
                 memmove(feed, feed + used, (size_t)feed_len);
         } else {
             /* Decoder needs more bytes to find/complete a frame */
+            /* If buffer is full and decoder made no progress, drop 1 byte to resync */
+            if ((feed_len == FEED_BUF_SIZE) && !eof) {
+                feed_len--;
+                if (feed_len > 0)
+                    memmove(feed, feed + 1, (size_t)feed_len);
+            }
             /* If file is ended and we still can’t decode, drop 1 byte to resync */
-            if (eof) {
+            else if (eof) {
                 feed_len--;
                 if (feed_len > 0)
                     memmove(feed, feed + 1, (size_t)feed_len);
