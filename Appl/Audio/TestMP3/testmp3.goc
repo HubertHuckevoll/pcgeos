@@ -16,6 +16,7 @@
 
 #define FEED_BUF_SIZE  4096  /* small is fine; bigger reduces I/O calls */
 #define WAV_HEADER_SIZE 44
+#define MAX_DECODE_LOOPS 100000  /* Safety limit to prevent infinite hangs */
 #define TESTMP3_DUMP_PCM
 #define TESTMP3_INPUT_FILE "3S.MP3"
 #define TESTMP3_OUTPUT_FILE "3S.WAV"
@@ -126,6 +127,7 @@ int decode_file()
     byte  wavHeader[WAV_HEADER_SIZE];
     MemHandle scratchH = NullHandle;
     mp3dec_scratch_t* scratch = (void*) 0;
+    dword loopCount = 0;
 #ifdef TESTMP3_DUMP_PCM
     FileHandle logF = NullHandle;
     dword sampleIndex = 0;
@@ -192,51 +194,83 @@ int decode_file()
 
     for(;;)
     {
-        /* If buffer has room, read more bytes at the end */
+        loopCount++;
+
+        /* Safety check: prevent infinite loops */
+        if (loopCount > MAX_DECODE_LOOPS) {
+            /* Exceeded maximum iterations - exit to prevent hang */
+            break;
+        }
+
+        /* Fill buffer if there's room and file not exhausted */
         if (!eof && (feed_len < FEED_BUF_SIZE)) {
             n = FileRead(f, feed + feed_len, FEED_BUF_SIZE - feed_len, FALSE);
             if (n == -1)
             {
+                /* Read error - treat as EOF */
                 eof = TRUE;
+            }
+            else if (n == 0)
+            {
+                /* No bytes read - could be temporary or EOF. */
+                /* Try to see if we're really at EOF by checking file position */
+                dword curPos = FilePos(f, 0, FILE_POS_RELATIVE);
+                dword fileSize = FileSize(f);
+                if (curPos >= fileSize)
+                {
+                    eof = TRUE;
+                }
+                /* else: not at EOF, just temporary 0 return - try again next iteration */
             }
             else
             {
-                if (n < (FEED_BUF_SIZE - feed_len)) eof = TRUE;
                 feed_len += n;
             }
         }
 
-        /* Nothing left and no more to read? done. */
+        /* Exit if buffer empty and file exhausted */
         if ((feed_len == 0) && eof)
             break;
 
-        /* Try to decode from the current buffer */
+        /* Try to decode a frame from current buffer */
         samples = mp3dec_decode_frame(scratch, dec, feed, feed_len, pcm, &info);
 
+        /* If decoder consumed bytes, remove them from buffer */
         if (info.frame_bytes > 0) {
-            /* Consume the bytes the decoder used */
             used = info.frame_bytes;
             feed_len -= used;
             if (feed_len > 0)
                 memmove(feed, feed + used, (size_t)feed_len);
-        } else {
-            /* Decoder needs more bytes to find/complete a frame */
-            /* If buffer is full and decoder made no progress, drop 1 byte to resync */
-            if ((feed_len == FEED_BUF_SIZE) && !eof) {
-                feed_len--;
-                if (feed_len > 0)
+        }
+        /* If no frame found/decoded AND no bytes consumed */
+        else if (samples == 0) {
+            /* Only try resync if we can't get more data */
+            if (eof || (feed_len >= FEED_BUF_SIZE)) {
+                /* At EOF or buffer full - drop bytes to find sync */
+                /* But if at EOF and no progress, give up quickly to avoid hanging */
+                if (eof) {
+                    /* At EOF - if we have less than a typical frame size left, */
+                    /* and can't decode, just discard remaining bytes and exit. */
+                    /* A full MP3 frame is typically 144-1441 bytes. */
+                    if (feed_len > 0 && feed_len < 2000) {
+                        /* Can't decode these trailing bytes - likely padding/metadata */
+                        feed_len = 0;
+                        break;
+                    }
+                }
+                /* Drop 1 byte to try to resync */
+                if (feed_len > 0) {
+                    feed_len--;
                     memmove(feed, feed + 1, (size_t)feed_len);
-            }
-            /* If file is ended and we still can’t decode, drop 1 byte to resync */
-            else if (eof) {
-                feed_len--;
-                if (feed_len > 0)
-                    memmove(feed, feed + 1, (size_t)feed_len);
-                else
+                }
+                if ((feed_len == 0) && eof) {
                     break;
+                }
             }
+            /* else: can read more data, loop will continue to fill buffer */
         }
 
+        /* Write decoded samples if any */
         if (samples > 0) {
             /* Use PCM here. If stereo, data is interleaved L R L R ... */
             channels = info.channels;   /* 1 or 2 */
