@@ -201,6 +201,7 @@ int decode_file()
             }
             else
             {
+                if (n < (FEED_BUF_SIZE - feed_len)) eof = TRUE;
                 feed_len += n;
             }
         }
