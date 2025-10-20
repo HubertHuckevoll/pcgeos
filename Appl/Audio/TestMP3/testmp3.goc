@@ -18,7 +18,7 @@
 #define FEED_BUF_SIZE     (MINIMP3_BUF_SIZE + 2048)
 #define WAV_HEADER_SIZE 44
 #define MAX_DECODE_LOOPS 100000  /* Safety limit to prevent infinite hangs */
-#define TESTMP3_DUMP_PCM
+// #define TESTMP3_DUMP_PCM
 #define TESTMP3_INPUT_FILE "3S.MP3"
 #define TESTMP3_OUTPUT_FILE "3S.WAV"
 #define TESTMP3_LOG_FILE "3S.LOG"
@@ -492,6 +492,17 @@ int decode_file()
             {
                 used = (word)info.frame_bytes;
                 drop_buffer_bytes(feed, &feed_len, used);
+
+                /* Verify we're at a frame header after consuming bytes */
+                /* If not at a valid frame start, resync */
+                if (feed_len >= 2)
+                {
+                    if (!((feed[0] == 0xFF) && ((feed[1] & 0xE0) == 0xE0)))
+                    {
+                        /* Not at frame header - resync */
+                        resync_to_frame(feed, &feed_len);
+                    }
+                }
             }
             zeroProgress = 0;
         }
