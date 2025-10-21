@@ -188,15 +188,19 @@ static Boolean skip_id3v2_header(FileHandle f, uint8_t *buffer, word *lengthP, B
     return TRUE;
 }
 
-static void resync_to_frame(uint8_t *buffer, word *lengthP)
+static word resync_to_frame(uint8_t *buffer, word *lengthP)
 {
     word index;
     word limit;
+    word dropped;
+    word originalLength;
 
+    originalLength = *lengthP;
     if (*lengthP < 2)
     {
+        dropped = *lengthP;
         *lengthP = 0;
-        return;
+        return dropped;
     }
     limit = *lengthP - 1;
     for (index = 0; index < limit; index++)
@@ -206,11 +210,15 @@ static void resync_to_frame(uint8_t *buffer, word *lengthP)
             if (index > 0)
             {
                 drop_buffer_bytes(buffer, lengthP, index);
+                dropped = index;
+                return dropped;
             }
-            return;
+            return 0;
         }
     }
+    dropped = originalLength;
     *lengthP = 0;
+    return dropped;
 }
 
 static Boolean refill_input_buffer(FileHandle f, uint8_t *buffer, word *lengthP, Boolean *eofP, Boolean *errorP)
@@ -592,8 +600,16 @@ int decode_file()
 
         if (zeroProgress >= 3)
         {
-            resync_to_frame(feed, &feed_len);
+            word previousFeedLen;
+            word removedBytes;
+
+            previousFeedLen = feed_len;
+            removedBytes = resync_to_frame(feed, &feed_len);
             zeroProgress = 0;
+            if ((feed_len > 0) && ((removedBytes == 0) || (feed_len == previousFeedLen)))
+            {
+                drop_buffer_bytes(feed, &feed_len, 1);
+            }
             if ((feed_len == 0) && eof)
             {
                 break;
