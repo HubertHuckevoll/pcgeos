@@ -17,11 +17,81 @@
 #define MINIMP3_BUF_SIZE  4096
 #define FEED_BUF_SIZE     (MINIMP3_BUF_SIZE + 2048)
 #define WAV_HEADER_SIZE 44
-#define MAX_DECODE_LOOPS 100000  /* Safety limit to prevent infinite hangs */
+#define MAX_DECODE_LOOPS 20000   /* Safety limit to prevent infinite hangs */
 // #define TESTMP3_DUMP_PCM
 #define TESTMP3_INPUT_FILE "3S.MP3"
 #define TESTMP3_OUTPUT_FILE "3S.WAV"
 #define TESTMP3_LOG_FILE "3S.LOG"
+
+#ifdef TESTMP3_DUMP_PCM
+static void log_status(FileHandle logF,
+                       const char *label,
+                       dword loopCount,
+                       word feedLen,
+                       Boolean eof,
+                       Boolean readError,
+                       Boolean decodeError,
+                       const mp3dec_frame_info_t *info,
+                       int samples,
+                       int zeroProgress)
+{
+    char logLine[160];
+    word logLen;
+    word writeResult;
+
+    if (!logF)
+    {
+        return;
+    }
+
+    sprintf(logLine,
+            "%s,%lu,%u,%d,%d,%d,%u,%u,%u\r\n",
+            label,
+            (unsigned long)loopCount,
+            (unsigned int)feedLen,
+            (info ? info->frame_bytes : -1),
+            samples,
+            zeroProgress,
+            eof ? 1 : 0,
+            readError ? 1 : 0,
+            decodeError ? 1 : 0);
+    logLen = (word)strlen(logLine);
+    writeResult = FileWrite(logF, logLine, logLen, FALSE);
+    (void)writeResult;
+}
+
+static void log_refill(FileHandle logF,
+                       const char *label,
+                       word request,
+                       int readResult,
+                       word previousLen,
+                       word newLen,
+                       Boolean eof,
+                       Boolean readError)
+{
+    char logLine[160];
+    word logLen;
+    word writeResult;
+
+    if (!logF)
+    {
+        return;
+    }
+
+    sprintf(logLine,
+            "%s,%u,%d,%u,%u,%u,%u\r\n",
+            label,
+            (unsigned int)request,
+            readResult,
+            (unsigned int)previousLen,
+            (unsigned int)newLen,
+            eof ? 1 : 0,
+            readError ? 1 : 0);
+    logLen = (word)strlen(logLine);
+    writeResult = FileWrite(logF, logLine, logLen, FALSE);
+    (void)writeResult;
+}
+#endif
 
 /****************************************************************************
  * Globals
@@ -221,11 +291,20 @@ static word resync_to_frame(uint8_t *buffer, word *lengthP)
     return dropped;
 }
 
-static Boolean refill_input_buffer(FileHandle f, uint8_t *buffer, word *lengthP, Boolean *eofP, Boolean *errorP)
+static Boolean refill_input_buffer(FileHandle f,
+                                   uint8_t *buffer,
+                                   word *lengthP,
+                                   Boolean *eofP,
+                                   Boolean *errorP
+#ifdef TESTMP3_DUMP_PCM
+                                   , FileHandle logF
+#endif
+)
 {
     Boolean didRead;
     int readResult;
     word request;
+    word previousLen;
 
     didRead = FALSE;
     while (!(*eofP) && (*lengthP < MINIMP3_BUF_SIZE))
@@ -234,17 +313,38 @@ static Boolean refill_input_buffer(FileHandle f, uint8_t *buffer, word *lengthP,
         {
             break;
         }
+        previousLen = *lengthP;
         request = FEED_BUF_SIZE - *lengthP;
         readResult = FileRead(f, buffer + *lengthP, request, FALSE);
         if (readResult < 0)
         {
             *errorP = TRUE;
             *eofP = TRUE;
+#ifdef TESTMP3_DUMP_PCM
+            log_refill(logF,
+                       "refill",
+                       request,
+                       readResult,
+                       previousLen,
+                       *lengthP,
+                       *eofP,
+                       *errorP);
+#endif
             break;
         }
         if (readResult == 0)
         {
             *eofP = TRUE;
+#ifdef TESTMP3_DUMP_PCM
+            log_refill(logF,
+                       "refill",
+                       request,
+                       readResult,
+                       previousLen,
+                       *lengthP,
+                       *eofP,
+                       *errorP);
+#endif
             break;
         }
         *lengthP += (word)readResult;
@@ -253,6 +353,16 @@ static Boolean refill_input_buffer(FileHandle f, uint8_t *buffer, word *lengthP,
         {
             *eofP = TRUE;
         }
+#ifdef TESTMP3_DUMP_PCM
+        log_refill(logF,
+                   "refill",
+                   request,
+                   readResult,
+                   previousLen,
+                   *lengthP,
+                   *eofP,
+                   *errorP);
+#endif
     }
     if (*eofP)
     {
@@ -440,7 +550,11 @@ int decode_file()
         {
             if (!eof)
             {
+#ifdef TESTMP3_DUMP_PCM
+                refill_input_buffer(f, feed, &feed_len, &eof, &readError, logF);
+#else
                 refill_input_buffer(f, feed, &feed_len, &eof, &readError);
+#endif
             }
             if (readError)
             {
@@ -475,7 +589,11 @@ int decode_file()
 
         if (!eof && (feed_len < MINIMP3_BUF_SIZE))
         {
+#ifdef TESTMP3_DUMP_PCM
+            refill_input_buffer(f, feed, &feed_len, &eof, &readError, logF);
+#else
             refill_input_buffer(f, feed, &feed_len, &eof, &readError);
+#endif
             if (readError)
             {
                 decodeError = TRUE;
@@ -489,6 +607,18 @@ int decode_file()
         }
 
         samples = mp3dec_decode_frame(scratch, dec, feed, feed_len, pcm, &info);
+#ifdef TESTMP3_DUMP_PCM
+        log_status(logF,
+                   "decode",
+                   loopCount,
+                   feed_len,
+                   eof,
+                   readError,
+                   decodeError,
+                   &info,
+                   samples,
+                   zeroProgress);
+#endif
 
         if (info.frame_bytes > 0)
         {
@@ -619,7 +749,11 @@ int decode_file()
 
         if (!eof && (feed_len < MINIMP3_BUF_SIZE))
         {
+#ifdef TESTMP3_DUMP_PCM
+            refill_input_buffer(f, feed, &feed_len, &eof, &readError, logF);
+#else
             refill_input_buffer(f, feed, &feed_len, &eof, &readError);
+#endif
             if (readError)
             {
                 decodeError = TRUE;
