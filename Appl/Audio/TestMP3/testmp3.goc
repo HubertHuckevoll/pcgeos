@@ -5,8 +5,8 @@
 #include <string.h>
 #include <geode.h>
 #include <geos.h>
+#include <system.h>
 #include <file.h>
-#include <stdio.h>
 #include "minimp3_geos16.h"
 
 
@@ -18,12 +18,34 @@
 #define FEED_BUF_SIZE     (MINIMP3_BUF_SIZE + 2048)
 #define WAV_HEADER_SIZE 44
 #define MAX_DECODE_LOOPS 20000   /* Safety limit to prevent infinite hangs */
-// #define TESTMP3_DUMP_PCM
+#define TESTMP3_DUMP_PCM
 #define TESTMP3_INPUT_FILE "3S.MP3"
 #define TESTMP3_OUTPUT_FILE "3S.WAV"
 #define TESTMP3_LOG_FILE "3S.LOG"
 
 #ifdef TESTMP3_DUMP_PCM
+static Boolean logWritesEnabled = TRUE;
+static Boolean logWriteFailed = FALSE;
+
+static Boolean log_write_line(FileHandle logF, const char *logLine, word logLen)
+{
+    word writeResult;
+
+    if (!logF || !logWritesEnabled)
+    {
+        return TRUE;
+    }
+
+    writeResult = FileWrite(logF, logLine, logLen, FALSE);
+    if (writeResult != logLen)
+    {
+        logWritesEnabled = FALSE;
+        logWriteFailed = TRUE;
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static void log_status(FileHandle logF,
                        const char *label,
                        dword loopCount,
@@ -37,27 +59,28 @@ static void log_status(FileHandle logF,
 {
     char logLine[160];
     word logLen;
-    word writeResult;
+    long frameBytes;
 
-    if (!logF)
+    if (!logF || !logWritesEnabled)
     {
         return;
     }
 
+    frameBytes = info ? (long)info->frame_bytes : -1L;
     sprintf(logLine,
-            "%s,%lu,%u,%d,%d,%d,%u,%u,%u\r\n",
+            "%s,%lu,%u,%ld,%d,%d,%u,%u,%u\r\n",
             label,
             (unsigned long)loopCount,
             (unsigned int)feedLen,
-            (info ? info->frame_bytes : -1),
+            frameBytes,
             samples,
             zeroProgress,
-            eof ? 1 : 0,
-            readError ? 1 : 0,
-            decodeError ? 1 : 0);
+            eof ? 1U : 0U,
+            readError ? 1U : 0U,
+            decodeError ? 1U : 0U);
+
     logLen = (word)strlen(logLine);
-    writeResult = FileWrite(logF, logLine, logLen, FALSE);
-    (void)writeResult;
+    (void)log_write_line(logF, logLine, logLen);
 }
 
 static void log_refill(FileHandle logF,
@@ -71,9 +94,8 @@ static void log_refill(FileHandle logF,
 {
     char logLine[160];
     word logLen;
-    word writeResult;
 
-    if (!logF)
+    if (!logF || !logWritesEnabled)
     {
         return;
     }
@@ -88,8 +110,7 @@ static void log_refill(FileHandle logF,
             eof ? 1 : 0,
             readError ? 1 : 0);
     logLen = (word)strlen(logLine);
-    writeResult = FileWrite(logF, logLine, logLen, FALSE);
-    (void)writeResult;
+    (void)log_write_line(logF, logLine, logLen);
 }
 #endif
 
@@ -470,6 +491,11 @@ int decode_file()
     word logLen = 0;
 #endif
 
+#ifdef TESTMP3_DUMP_PCM
+    logWritesEnabled = TRUE;
+    logWriteFailed = FALSE;
+#endif
+
     feedH = MemAlloc(FEED_BUF_SIZE, HF_SWAPABLE, HAF_ZERO_INIT);
     if (!feedH)
     {
@@ -678,7 +704,7 @@ int decode_file()
             }
             totalBytes += (dword)(sizeof(int16_t) * out_count);
 #ifdef TESTMP3_DUMP_PCM
-            if (logF)
+            if (logF && logWritesEnabled)
             {
                 for (sampleLoop = 0; sampleLoop < (word)samples; sampleLoop++)
                 {
@@ -707,15 +733,13 @@ int decode_file()
                             (int)leftSample,
                             (int)rightSample);
                     logLen = (word)strlen(logLine);
-                    writeResult = FileWrite(logF, logLine, logLen, FALSE);
-                    if (writeResult != logLen)
+                    if (!log_write_line(logF, logLine, logLen))
                     {
-                        decodeError = TRUE;
                         break;
                     }
                     sampleIndex++;
                 }
-                if (decodeError)
+                if (!logWritesEnabled)
                 {
                     break;
                 }
@@ -860,6 +884,14 @@ cleanup:
     {
         result = -1;
     }
+#ifdef TESTMP3_DUMP_PCM
+    if (logWriteFailed)
+    {
+        SysNotify(SNF_CONTINUE,
+                  "TestMP3",
+                  "PCM logging stopped after a write failure");
+    }
+#endif
     return result;
 }
 
