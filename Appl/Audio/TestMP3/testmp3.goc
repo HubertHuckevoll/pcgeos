@@ -112,6 +112,38 @@ static void log_refill(FileHandle logF,
     logLen = (word)strlen(logLine);
     (void)log_write_line(logF, logLine, logLen);
 }
+
+static void log_stall(FileHandle logF,
+                      const char *label,
+                      dword loopCount,
+                      word feedLenBefore,
+                      word feedLenAfter,
+                      word removedBytes,
+                      int zeroProgress,
+                      Boolean eof,
+                      Boolean readError)
+{
+    char logLine[160];
+    word logLen;
+
+    if (!logF || !logWritesEnabled)
+    {
+        return;
+    }
+
+    sprintf(logLine,
+            "%s,%lu,%u,%u,%u,%d,%u,%u\r\n",
+            label,
+            (unsigned long)loopCount,
+            (unsigned int)feedLenBefore,
+            (unsigned int)feedLenAfter,
+            (unsigned int)removedBytes,
+            zeroProgress,
+            eof ? 1U : 0U,
+            readError ? 1U : 0U);
+    logLen = (word)strlen(logLine);
+    (void)log_write_line(logF, logLine, logLen);
+}
 #endif
 
 /****************************************************************************
@@ -124,7 +156,7 @@ Boolean     isRunning = FALSE;
  * Forward declarations
  ****************************************************************************/
 
-int decode_file(const char *path);
+int decode_file(void);
 
 static void write_word_le(byte *buf, word offset, word value)
 {
@@ -568,6 +600,17 @@ int decode_file()
         loopCount++;
         if (loopCount > MAX_DECODE_LOOPS)
         {
+#ifdef TESTMP3_DUMP_PCM
+            log_stall(logF,
+                      "loopGuard",
+                      loopCount,
+                      feed_len,
+                      feed_len,
+                      0,
+                      zeroProgress,
+                      eof,
+                      readError);
+#endif
             decodeError = TRUE;
             break;
         }
@@ -756,14 +799,36 @@ int decode_file()
         {
             word previousFeedLen;
             word removedBytes;
+#ifdef TESTMP3_DUMP_PCM
+            word totalRemoved;
+            int stallCount;
+#endif
 
             previousFeedLen = feed_len;
             removedBytes = resync_to_frame(feed, &feed_len);
-            zeroProgress = 0;
+#ifdef TESTMP3_DUMP_PCM
+            totalRemoved = removedBytes;
+            stallCount = zeroProgress;
+#endif
             if ((feed_len > 0) && ((removedBytes == 0) || (feed_len == previousFeedLen)))
             {
                 drop_buffer_bytes(feed, &feed_len, 1);
+#ifdef TESTMP3_DUMP_PCM
+                totalRemoved++;
+#endif
             }
+#ifdef TESTMP3_DUMP_PCM
+            log_stall(logF,
+                      "resync",
+                      loopCount,
+                      previousFeedLen,
+                      feed_len,
+                      totalRemoved,
+                      stallCount,
+                      eof,
+                      readError);
+#endif
+            zeroProgress = 0;
             if ((feed_len == 0) && eof)
             {
                 break;
