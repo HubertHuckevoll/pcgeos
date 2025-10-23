@@ -65,106 +65,237 @@ dword _pascal skip_id3_tag(FileHandle inputF);
 
 int _pascal decode_file(void)
 {
-    FileHandle inputF = NullHandle;                                           /* Track the source MP3 handle. */
-    FileHandle outputF = NullHandle;                                          /* Track the destination PCM handle. */
-    MemHandle feedH = NullHandle;                                             /* Handle for the raw MP3 frame buffer. */
-    MemHandle pcmH = NullHandle;                                              /* Handle for decoded PCM samples. */
-    MemHandle decH = NullHandle;                                              /* Handle for decoder persistent state. */
-    MemHandle scratchH = NullHandle;                                          /* Handle for decoder scratch storage. */
-    uint8_t *feedP = (void*)0;                                                /* Pointer into the MP3 frame buffer. */
-    mp3d_sample_t *pcmP = (void*)0;                                           /* Pointer into the PCM output buffer. */
-    mp3dec_t *decP = (void*)0;                                                /* Pointer into the decoder state structure. */
-    mp3dec_scratch_t *scratchP = (void*)0;                                    /* Pointer into the scratch workspace. */
-    mp3dec_frame_info_t info;                                                 /* Per-frame metadata filled by the decoder. */
-    dword id3Offset = 0;                                                      /* Offset where audio data begins after ID3. */
-    int readResult = 0;                                                       /* Bytes read when grabbing headers from disk. */
-    word frameBytes = 0;                                                      /* Total byte count for each MP3 frame. */
-    word payloadBytes = 0;                                                    /* Byte count remaining after the header. */
-    word bytesToWrite = 0;                                                    /* Byte count of PCM data to flush per frame. */
-    int samples = 0;                                                          /* Number of PCM samples returned by decoder. */
-    int status = -1;                                                          /* Default to failure until streaming finishes. */
+    /* Track the source MP3 handle. */
+    FileHandle inputF = NullHandle;
+    /* Track the destination PCM handle. */
+    FileHandle outputF = NullHandle;
+    /* Handle for the raw MP3 frame buffer. */
+    MemHandle feedH = NullHandle;
+    /* Handle for decoded PCM samples. */
+    MemHandle pcmH = NullHandle;
+    /* Handle for decoder persistent state. */
+    MemHandle decH = NullHandle;
+    /* Handle for decoder scratch storage. */
+    MemHandle scratchH = NullHandle;
+    /* Pointer into the MP3 frame buffer. */
+    uint8_t *feedP = (void*)0;
+    /* Pointer into the PCM output buffer. */
+    mp3d_sample_t *pcmP = (void*)0;
+    /* Pointer into the decoder state structure. */
+    mp3dec_t *decP = (void*)0;
+    /* Pointer into the scratch workspace. */
+    mp3dec_scratch_t *scratchP = (void*)0;
+    /* Per-frame metadata filled by the decoder. */
+    mp3dec_frame_info_t info;
+    /* Offset where audio data begins after ID3. */
+    dword id3Offset = 0;
+    /* Bytes read when grabbing headers from disk. */
+    int readResult = 0;
+    /* Total byte count for each MP3 frame. */
+    word frameBytes = 0;
+    /* Byte count remaining after the header. */
+    word payloadBytes = 0;
+    /* Byte count of PCM data to flush per frame. */
+    word bytesToWrite = 0;
+    /* Number of PCM samples returned by decoder. */
+    int samples = 0;
+    /* Default to failure until streaming finishes. */
+    int status = -1;
+    /* Tracks whether the current frame header is valid. */
+    int headerValid = 0;
+    /* Bytes read when filling the rest of the frame. */
+    int payloadRead = 0;
+    /* Result from reading bytes while resynchronizing headers. */
+    int shiftResult = 0;
+    /* Next byte pulled when sliding across invalid headers. */
+    byte nextByte = 0;
+    /* Flag indicating whether decoding completed cleanly. */
+    Boolean decodeSuccess = TRUE;
 
-    memset(&info, 0, sizeof(info));                                           /* Clean the frame info so debugging starts from known values. */
+    /* Clean the frame info so debugging starts from known values. */
+    memset(&info, 0, sizeof(info));
 
-    feedH = MemAlloc(MP3_FRAME_BUFFER_SIZE, HF_SWAPABLE, HAF_ZERO_INIT);      /* Allocate memory for the MP3 frame staging buffer. */
-    feedP = (uint8_t*)MemLock(feedH);                                         /* Lock the MP3 buffer to obtain a direct pointer. */
-    pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(mp3d_sample_t)), HF_SWAPABLE, HAF_ZERO_INIT); /* Allocate PCM output memory. */
-    pcmP = (mp3d_sample_t*)MemLock(pcmH);                                     /* Lock the PCM buffer for immediate writes. */
-    decH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);            /* Allocate persistent decoder state storage. */
-    decP = (mp3dec_t*)MemLock(decH);                                          /* Lock decoder state so it can be initialized. */
-    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);/* Allocate scratch buffer required by the decoder. */
-    scratchP = (mp3dec_scratch_t*)MemLock(scratchH);                          /* Lock scratch buffer to hand to the decode routine. */
+    /* Allocate memory for the MP3 frame staging buffer. */
+    feedH = MemAlloc(MP3_FRAME_BUFFER_SIZE, HF_SWAPABLE, HAF_ZERO_INIT);
+    /* Lock the MP3 buffer to obtain a direct pointer. */
+    feedP = (uint8_t*)MemLock(feedH);
+    /* Allocate PCM output memory. */
+    pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(mp3d_sample_t)), HF_SWAPABLE, HAF_ZERO_INIT);
+    /* Lock the PCM buffer for immediate writes. */
+    pcmP = (mp3d_sample_t*)MemLock(pcmH);
+    /* Allocate persistent decoder state storage. */
+    decH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);
+    /* Lock decoder state so it can be initialized. */
+    decP = (mp3dec_t*)MemLock(decH);
+    /* Allocate scratch buffer required by the decoder. */
+    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
+    /* Lock scratch buffer to hand to the decode routine. */
+    scratchP = (mp3dec_scratch_t*)MemLock(scratchH);
 
-    inputF = FileOpen(TESTMP3_INPUT_FILE, (FILE_ACCESS_R | FILE_DENY_RW));    /* Open the MP3 input file for sequential reading. */
-    outputF = FileCreate(TESTMP3_OUTPUT_FILE, FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_RW, FILE_ATTR_NORMAL); /* Create the raw PCM output file. */
+    /* Open the MP3 input file for sequential reading. */
+    inputF = FileOpen(TESTMP3_INPUT_FILE, (FILE_ACCESS_R | FILE_DENY_RW));
+    /* Create the raw PCM output file. */
+    outputF = FileCreate(TESTMP3_OUTPUT_FILE, FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_RW, FILE_ATTR_NORMAL);
 
-    id3Offset = skip_id3_tag(inputF);                                         /* Position the stream after any ID3v2 metadata. */
-    (void) id3Offset;                                                         /* Leave the computed offset visible for debugging tools. */
+    /* Position the stream after any ID3v2 metadata. */
+    id3Offset = skip_id3_tag(inputF);
+    /* Leave the computed offset visible for debugging tools. */
+    (void) id3Offset;
 
-    mp3dec_init(decP);                                                        /* Reset decoder state so frames stream cleanly. */
+    /* Reset decoder state so frames stream cleanly. */
+    mp3dec_init(decP);
 
-    readResult = FileRead(inputF, feedP, HDR_SIZE, FALSE);                    /* Pull the first MP3 frame header into the buffer. */
-    while (readResult == HDR_SIZE)                                            /* Continue until FileRead no longer delivers a full header. */
+    /* Pull the first MP3 frame header into the buffer. */
+    readResult = FileRead(inputF, feedP, HDR_SIZE, FALSE);
+    /* Continue until FileRead no longer delivers a full header. */
+    while (readResult == HDR_SIZE)
     {
-        frameBytes = (word)(hdr_frame_bytes(feedP, 0) + hdr_padding(feedP));  /* Calculate complete frame length from the header fields. */
-        payloadBytes = frameBytes - HDR_SIZE;                                 /* Determine payload size by removing the header bytes. */
-        FileRead(inputF, feedP + HDR_SIZE, payloadBytes, FALSE);              /* Read the rest of the frame directly after the header. */
+        /* Confirm the header before computing frame metrics. */
+        headerValid = hdr_valid(feedP);
+        /* Attempt to resync if the header is invalid. */
+        while (!headerValid)
+        {
+            /* Slide forward one byte at a time to locate sync. */
+            shiftResult = FileRead(inputF, &nextByte, 1, FALSE);
+            /* Stop if no additional bytes remain. */
+            if (shiftResult != 1)
+            {
+                /* Treat read errors as fatal. */
+                if (shiftResult < 0)
+                {
+                    decodeSuccess = FALSE;
+                }
+                /* Force loop termination without decoding. */
+                readResult = 0;
+                break;
+            }
+            /* Shift the candidate header window by one byte. */
+            feedP[0] = feedP[1];
+            feedP[1] = feedP[2];
+            feedP[2] = feedP[3];
+            feedP[3] = nextByte;
+            /* Re-evaluate the header after shifting. */
+            headerValid = hdr_valid(feedP);
+        }
+        /* Exit when a valid header could not be located. */
+        if ((readResult != HDR_SIZE) || !headerValid)
+        {
+            break;
+        }
 
-        samples = mp3dec_decode_frame(scratchP, decP, feedP, frameBytes, pcmP, &info); /* Decode this frame into raw PCM samples. */
-        bytesToWrite = (word)(samples * info.channels * (word)sizeof(mp3d_sample_t)); /* Translate sample count into byte count for writing. */
-        FileWrite(outputF, pcmP, bytesToWrite, FALSE);                        /* Emit PCM bytes to disk in raw sample format. */
+        /* Calculate complete frame length from the header fields. */
+        frameBytes = (word)(hdr_frame_bytes(feedP, 0) + hdr_padding(feedP));
+        /* Bail if the header reports an impossible size. */
+        if ((frameBytes < HDR_SIZE) || (frameBytes > MP3_FRAME_BUFFER_SIZE))
+        {
+            decodeSuccess = FALSE;
+            readResult = 0;
+            break;
+        }
+        /* Determine payload size by removing the header bytes. */
+        payloadBytes = frameBytes - HDR_SIZE;
+        /* Only read payload bytes when a body exists. */
+        if (payloadBytes > 0)
+        {
+            /* Read the remainder of the frame. */
+            payloadRead = FileRead(inputF, feedP + HDR_SIZE, payloadBytes, FALSE);
+            /* Bail out if the payload could not be fetched. */
+            if (payloadRead != payloadBytes)
+            {
+                /* Flag truncated frames as errors. */
+                decodeSuccess = FALSE;
+                readResult = 0;
+                break;
+            }
+        }
 
-        readResult = FileRead(inputF, feedP, HDR_SIZE, FALSE);                /* Fetch the next frame header in preparation for the loop. */
+        /* Decode this frame into raw PCM samples. */
+        samples = mp3dec_decode_frame(scratchP, decP, feedP, frameBytes, pcmP, &info);
+        /* Translate sample count into byte count for writing. */
+        bytesToWrite = (word)(samples * info.channels * (word)sizeof(mp3d_sample_t));
+        /* Emit PCM bytes to disk in raw sample format. */
+        FileWrite(outputF, pcmP, bytesToWrite, FALSE);
+
+        /* Fetch the next frame header in preparation for the loop. */
+        readResult = FileRead(inputF, feedP, HDR_SIZE, FALSE);
     }
 
-    status = 0;                                                               /* If we reach here the MP3 stream drained successfully. */
+    /* If we reach here the MP3 stream drained successfully. */
+    if (decodeSuccess)
+    {
+        /* Flag success only when decoding completed cleanly. */
+        status = 0;
+    }
 
-    FileClose(outputF, TRUE);                                                 /* Close and flush the PCM output file. */
-    FileClose(inputF, TRUE);                                                  /* Close the MP3 input file. */
-    MemUnlock(scratchH);                                                      /* Release the locked scratch buffer pointer. */
-    MemUnlock(decH);                                                          /* Release the locked decoder state pointer. */
-    MemUnlock(pcmH);                                                          /* Release the locked PCM buffer pointer. */
-    MemUnlock(feedH);                                                         /* Release the locked MP3 frame buffer pointer. */
-    MemFree(scratchH);                                                        /* Free the scratch buffer handle. */
-    MemFree(decH);                                                            /* Free the decoder state handle. */
-    MemFree(pcmH);                                                            /* Free the PCM buffer handle. */
-    MemFree(feedH);                                                           /* Free the MP3 frame buffer handle. */
+    /* Close and flush the PCM output file. */
+    FileClose(outputF, TRUE);
+    /* Close the MP3 input file. */
+    FileClose(inputF, TRUE);
+    /* Release the locked scratch buffer pointer. */
+    MemUnlock(scratchH);
+    /* Release the locked decoder state pointer. */
+    MemUnlock(decH);
+    /* Release the locked PCM buffer pointer. */
+    MemUnlock(pcmH);
+    /* Release the locked MP3 frame buffer pointer. */
+    MemUnlock(feedH);
+    /* Free the scratch buffer handle. */
+    MemFree(scratchH);
+    /* Free the decoder state handle. */
+    MemFree(decH);
+    /* Free the PCM buffer handle. */
+    MemFree(pcmH);
+    /* Free the MP3 frame buffer handle. */
+    MemFree(feedH);
 
-    return status;                                                            /* Report completion status back to the caller. */
+    /* Report completion status back to the caller. */
+    return status;
 }
 
 dword _pascal skip_id3_tag(FileHandle inputF)
 {
-    byte id3Header[10];                                                       /* Local scratch buffer that captures the ID3 header. */
-    dword skipBytes = 0;                                                      /* Total number of bytes that should be skipped. */
+    /* Local scratch buffer that captures the ID3 header. */
+    byte id3Header[10];
+    /* Total number of bytes that should be skipped. */
+    dword skipBytes = 0;
 
-    FilePos(inputF, 0, FILE_POS_START);                                       /* Always start scanning from the beginning. */
-    FileRead(inputF, id3Header, 10, FALSE);                                   /* Pull the potential ID3 header into memory. */
+    /* Always start scanning from the beginning. */
+    FilePos(inputF, 0, FILE_POS_START);
+    /* Pull the potential ID3 header into memory. */
+    FileRead(inputF, id3Header, 10, FALSE);
 
-    if ((id3Header[0] == 'I') && (id3Header[1] == 'D') && (id3Header[2] == '3')) /* Confirm the presence of an ID3 tag. */
+    /* Confirm the presence of an ID3 tag. */
+    if ((id3Header[0] == 'I') && (id3Header[1] == 'D') && (id3Header[2] == '3'))
     {
-        skipBytes = ((dword)(id3Header[6] & 0x7F) << 21) |                    /* Decode the synchsafe tag length. */
+        /* Decode the synchsafe tag length. */
+        skipBytes = ((dword)(id3Header[6] & 0x7F) << 21) |
                     ((dword)(id3Header[7] & 0x7F) << 14) |
                     ((dword)(id3Header[8] & 0x7F) << 7) |
                     (dword)(id3Header[9] & 0x7F);
-        skipBytes += 10;                                                      /* Include the 10-byte header. */
-        if (id3Header[5] & 0x10)                                              /* Account for an optional footer when flagged. */
+        /* Include the 10-byte header. */
+        skipBytes += 10;
+        /* Account for an optional footer when flagged. */
+        if (id3Header[5] & 0x10)
         {
             skipBytes += 10;
         }
-        FilePos(inputF, skipBytes, FILE_POS_START);                           /* Seek to the start of compressed audio. */
+        /* Seek to the start of compressed audio. */
+        FilePos(inputF, skipBytes, FILE_POS_START);
     }
     else
     {
-        FilePos(inputF, 0, FILE_POS_START);                                   /* No tag detected: ensure playback starts at byte 0. */
+        /* No tag detected: ensure playback starts at byte 0. */
+        FilePos(inputF, 0, FILE_POS_START);
     }
 
-    return skipBytes;                                                         /* Report how many bytes were bypassed. */
+    /* Report how many bytes were bypassed. */
+    return skipBytes;
 }
 
 @method TestMP3ProcessClass, MSG_START_READING
 {
-    (void) decode_file();                                                     /* Trigger decoding when the Start button is pressed. */
+    /* Trigger decoding when the Start button is pressed. */
+    (void) decode_file();
 }
 
 @method TestMP3ProcessClass, MSG_STOP_READING
