@@ -1,442 +1,26 @@
 @include <stdapp.goh>
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <geode.h>
 #include <geos.h>
 #include <system.h>
 #include <file.h>
+
 #include "minimp3_geos16.h"
 
+#define MP3_FRAME_BUFFER_SIZE   (MAX_FREE_FORMAT_FRAME_SIZE + HDR_SIZE)
+#define TESTMP3_INPUT_FILE      "3S.MP3"
+#define TESTMP3_OUTPUT_FILE     "3S.PCM"
 
-/****************************************************************************
- * Constants
- ****************************************************************************/
-
-#define MINIMP3_BUF_SIZE  4096
-#define FEED_BUF_SIZE     (MINIMP3_BUF_SIZE + 2048)
-#define WAV_HEADER_SIZE 44
-#define MAX_DECODE_LOOPS 20000   /* Safety limit to prevent infinite hangs */
-#define TESTMP3_DUMP_PCM
-#define TESTMP3_INPUT_FILE "3S.MP3"
-#define TESTMP3_OUTPUT_FILE "3S.WAV"
-#define TESTMP3_LOG_FILE "3S.LOG"
-
-#ifdef TESTMP3_DUMP_PCM
-static Boolean logWritesEnabled = TRUE;
-static Boolean logWriteFailed = FALSE;
-
-static Boolean log_write_line(FileHandle logF, const char *logLine, word logLen)
-{
-    word writeResult;
-
-    if (!logF || !logWritesEnabled)
-    {
-        return TRUE;
-    }
-
-    writeResult = FileWrite(logF, logLine, logLen, FALSE);
-    if (writeResult != logLen)
-    {
-        logWritesEnabled = FALSE;
-        logWriteFailed = TRUE;
-        return FALSE;
-    }
-    return TRUE;
-}
-
-static void log_status(FileHandle logF,
-                       const char *label,
-                       dword loopCount,
-                       word feedLen,
-                       Boolean eof,
-                       Boolean readError,
-                       Boolean decodeError,
-                       const mp3dec_frame_info_t *info,
-                       int samples,
-                       int zeroProgress)
-{
-    char logLine[160];
-    word logLen;
-    long frameBytes;
-
-    if (!logF || !logWritesEnabled)
-    {
-        return;
-    }
-
-    frameBytes = info ? (long)info->frame_bytes : -1L;
-    sprintf(logLine,
-            "%s,%lu,%u,%ld,%d,%d,%u,%u,%u\r\n",
-            label,
-            (unsigned long)loopCount,
-            (unsigned int)feedLen,
-            frameBytes,
-            samples,
-            zeroProgress,
-            eof ? 1U : 0U,
-            readError ? 1U : 0U,
-            decodeError ? 1U : 0U);
-
-    logLen = (word)strlen(logLine);
-    (void)log_write_line(logF, logLine, logLen);
-}
-
-static void log_refill(FileHandle logF,
-                       const char *label,
-                       word request,
-                       int readResult,
-                       word previousLen,
-                       word newLen,
-                       Boolean eof,
-                       Boolean readError)
-{
-    char logLine[160];
-    word logLen;
-
-    if (!logF || !logWritesEnabled)
-    {
-        return;
-    }
-
-    sprintf(logLine,
-            "%s,%u,%d,%u,%u,%u,%u\r\n",
-            label,
-            (unsigned int)request,
-            readResult,
-            (unsigned int)previousLen,
-            (unsigned int)newLen,
-            eof ? 1 : 0,
-            readError ? 1 : 0);
-    logLen = (word)strlen(logLine);
-    (void)log_write_line(logF, logLine, logLen);
-}
-
-static void log_stall(FileHandle logF,
-                      const char *label,
-                      dword loopCount,
-                      word feedLenBefore,
-                      word feedLenAfter,
-                      word removedBytes,
-                      int zeroProgress,
-                      Boolean eof,
-                      Boolean readError)
-{
-    char logLine[160];
-    word logLen;
-
-    if (!logF || !logWritesEnabled)
-    {
-        return;
-    }
-
-    sprintf(logLine,
-            "%s,%lu,%u,%u,%u,%d,%u,%u\r\n",
-            label,
-            (unsigned long)loopCount,
-            (unsigned int)feedLenBefore,
-            (unsigned int)feedLenAfter,
-            (unsigned int)removedBytes,
-            zeroProgress,
-            eof ? 1U : 0U,
-            readError ? 1U : 0U);
-    logLen = (word)strlen(logLine);
-    (void)log_write_line(logF, logLine, logLen);
-}
-#endif
-
-/****************************************************************************
- * Globals
- ****************************************************************************/
-
-Boolean     isRunning = FALSE;
-
-/****************************************************************************
- * Forward declarations
- ****************************************************************************/
-
-int decode_file(void);
-
-static void write_word_le(byte *buf, word offset, word value)
-{
-    buf[offset] = (byte)(value & 0xFF);
-    buf[offset + 1] = (byte)((value >> 8) & 0xFF);
-}
-
-static void write_dword_le(byte *buf, word offset, dword value)
-{
-    buf[offset] = (byte)(value & 0xFF);
-    buf[offset + 1] = (byte)((value >> 8) & 0xFF);
-    buf[offset + 2] = (byte)((value >> 16) & 0xFF);
-    buf[offset + 3] = (byte)((value >> 24) & 0xFF);
-}
-
-static void drop_buffer_bytes(uint8_t *buffer, word *lengthP, word toDrop)
-{
-    word remaining;
-
-    if (*lengthP <= toDrop)
-    {
-        *lengthP = 0;
-        return;
-    }
-    remaining = *lengthP - toDrop;
-    memmove(buffer, buffer + toDrop, (word)remaining);
-    *lengthP = remaining;
-}
-
-static void skip_id3v1_tag(uint8_t *buffer, word *lengthP)
-{
-    word newLength;
-
-    if (*lengthP >= 128)
-    {
-        if ((buffer[*lengthP - 128] == 'T') &&
-            (buffer[*lengthP - 127] == 'A') &&
-            (buffer[*lengthP - 126] == 'G'))
-        {
-            *lengthP -= 128;
-            if (*lengthP >= 227)
-            {
-                newLength = *lengthP - 227;
-                if ((buffer[newLength] == 'T') &&
-                    (buffer[newLength + 1] == 'A') &&
-                    (buffer[newLength + 2] == 'G') &&
-                    (buffer[newLength + 3] == '+'))
-                {
-                    *lengthP -= 227;
-                }
-            }
-        }
-    }
-}
-
-static Boolean detect_id3v2_header(const uint8_t *buffer, word length, dword *headerSizeP)
-{
-    dword headerSize;
-
-    if (length < 10)
-    {
-        return FALSE;
-    }
-    if ((buffer[0] != 'I') || (buffer[1] != 'D') || (buffer[2] != '3'))
-    {
-        return FALSE;
-    }
-    if ((buffer[5] & 0x0F) != 0)
-    {
-        return FALSE;
-    }
-    if ((buffer[6] & 0x80) || (buffer[7] & 0x80) || (buffer[8] & 0x80) || (buffer[9] & 0x80))
-    {
-        return FALSE;
-    }
-    headerSize = ((dword)(buffer[6] & 0x7F) << 21) |
-                 ((dword)(buffer[7] & 0x7F) << 14) |
-                 ((dword)(buffer[8] & 0x7F) << 7) |
-                 (dword)(buffer[9] & 0x7F);
-    headerSize += 10;
-    if (buffer[5] & 0x10)
-    {
-        headerSize += 10;
-    }
-    *headerSizeP = headerSize;
-    return TRUE;
-}
-
-static Boolean skip_id3v2_header(FileHandle f, uint8_t *buffer, word *lengthP, Boolean *eofP, Boolean *errorP)
-{
-    dword headerSize;
-    dword remaining;
-    word toRead;
-    int readResult;
-
-    if (*lengthP < 10)
-    {
-        if (*eofP)
-        {
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if (!detect_id3v2_header(buffer, *lengthP, &headerSize))
-    {
-        return TRUE;
-    }
-    if (headerSize <= (dword)(*lengthP))
-    {
-        drop_buffer_bytes(buffer, lengthP, (word)headerSize);
-        return TRUE;
-    }
-    remaining = headerSize;
-    if (*lengthP > 0)
-    {
-        remaining -= (dword)(*lengthP);
-        *lengthP = 0;
-    }
-    while (remaining > 0)
-    {
-        toRead = (remaining > (dword)FEED_BUF_SIZE) ? FEED_BUF_SIZE : (word)remaining;
-        readResult = FileRead(f, buffer, toRead, FALSE);
-        if (readResult < 0)
-        {
-            *errorP = TRUE;
-            *eofP = TRUE;
-            break;
-        }
-        if (readResult == 0)
-        {
-            *eofP = TRUE;
-            break;
-        }
-        if ((word)readResult < toRead)
-        {
-            *eofP = TRUE;
-        }
-        if ((dword)readResult >= remaining)
-        {
-            remaining = 0;
-        }
-        else
-        {
-            remaining -= (dword)readResult;
-        }
-        if (*eofP && (remaining > 0))
-        {
-            break;
-        }
-    }
-    *lengthP = 0;
-    return TRUE;
-}
-
-static word resync_to_frame(uint8_t *buffer, word *lengthP)
-{
-    word index;
-    word limit;
-    word dropped;
-    word originalLength;
-
-    originalLength = *lengthP;
-    if (*lengthP < 2)
-    {
-        dropped = *lengthP;
-        *lengthP = 0;
-        return dropped;
-    }
-    limit = *lengthP - 1;
-    for (index = 0; index < limit; index++)
-    {
-        if ((buffer[index] == 0xFF) && ((buffer[index + 1] & 0xE0) == 0xE0))
-        {
-            if (index > 0)
-            {
-                drop_buffer_bytes(buffer, lengthP, index);
-                dropped = index;
-                return dropped;
-            }
-            return 0;
-        }
-    }
-    dropped = originalLength;
-    *lengthP = 0;
-    return dropped;
-}
-
-static Boolean refill_input_buffer(FileHandle f,
-                                   uint8_t *buffer,
-                                   word *lengthP,
-                                   Boolean *eofP,
-                                   Boolean *errorP
-#ifdef TESTMP3_DUMP_PCM
-                                   , FileHandle logF
-#endif
-)
-{
-    Boolean didRead;
-    int readResult;
-    word request;
-    word previousLen;
-
-    didRead = FALSE;
-    while (!(*eofP) && (*lengthP < MINIMP3_BUF_SIZE))
-    {
-        if (*lengthP >= FEED_BUF_SIZE)
-        {
-            break;
-        }
-        previousLen = *lengthP;
-        request = FEED_BUF_SIZE - *lengthP;
-        readResult = FileRead(f, buffer + *lengthP, request, FALSE);
-        if (readResult < 0)
-        {
-            *errorP = TRUE;
-            *eofP = TRUE;
-#ifdef TESTMP3_DUMP_PCM
-            log_refill(logF,
-                       "refill",
-                       request,
-                       readResult,
-                       previousLen,
-                       *lengthP,
-                       *eofP,
-                       *errorP);
-#endif
-            break;
-        }
-        if (readResult == 0)
-        {
-            *eofP = TRUE;
-#ifdef TESTMP3_DUMP_PCM
-            log_refill(logF,
-                       "refill",
-                       request,
-                       readResult,
-                       previousLen,
-                       *lengthP,
-                       *eofP,
-                       *errorP);
-#endif
-            break;
-        }
-        *lengthP += (word)readResult;
-        didRead = TRUE;
-        if ((word)readResult < request)
-        {
-            *eofP = TRUE;
-        }
-#ifdef TESTMP3_DUMP_PCM
-        log_refill(logF,
-                   "refill",
-                   request,
-                   readResult,
-                   previousLen,
-                   *lengthP,
-                   *eofP,
-                   *errorP);
-#endif
-    }
-    if (*eofP)
-    {
-        skip_id3v1_tag(buffer, lengthP);
-    }
-    return didRead;
-}
-
-/****************************************************************************
- * Class definition
- ****************************************************************************/
+int _pascal decode_file(void);
+dword _pascal skip_id3_tag(FileHandle inputF);
 
 @class TestMP3ProcessClass, GenProcessClass;
     @message void MSG_START_READING();
     @message void MSG_STOP_READING();
 @endc;
 @classdecl TestMP3ProcessClass, neverSaved;
-
-/****************************************************************************
- * UI Resources
- ****************************************************************************/
 
 @start AppResource;
 
@@ -479,494 +63,111 @@ static Boolean refill_input_buffer(FileHandle f,
 
 @end Interface;
 
-
-int decode_file()
+int _pascal decode_file(void)
 {
-    FileHandle f = NullHandle;
-    FileHandle outF = NullHandle;
-    mp3dec_frame_info_t info;
-    int channels = 0;
-    int out_count = 0;
-    int samples = 0;
-    word used = 0;
-    MemHandle pcmH = NullHandle;
-    int16_t* pcm = (void*)0;
-    MemHandle mp3dec_tH = NullHandle;
-    mp3dec_t* dec = (void*)0;
-    Boolean eof = FALSE;
-    dword totalBytes = 0;
-    dword sampleRate = 0;
-    word channelCount = 0;
-    byte wavHeader[WAV_HEADER_SIZE];
-    MemHandle scratchH = NullHandle;
-    mp3dec_scratch_t* scratch = (void*)0;
-    dword loopCount = 0;
-    Boolean decodeError = FALSE;
-    Boolean readError = FALSE;
-    Boolean id3Processed = FALSE;
-    MemHandle feedH = NullHandle;
-    uint8_t* feed = (void*)0;
-    word feed_len = 0;
-    Boolean firstFrame = FALSE;
-    int zeroProgress = 0;
-    int result = 0;
-    word writeResult = 0;
-    Boolean pushedDir = FALSE;
-#ifdef TESTMP3_DUMP_PCM
-    FileHandle logF = NullHandle;
-    dword sampleIndex = 0;
-    char logLine[96];
-    int16_t leftSample = 0;
-    int16_t rightSample = 0;
-    dword logTimestamp = 0;
-    word sampleLoop = 0;
-    word logLen = 0;
-#endif
+    FileHandle inputF = NullHandle;                                           /* Track the source MP3 handle. */
+    FileHandle outputF = NullHandle;                                          /* Track the destination PCM handle. */
+    MemHandle feedH = NullHandle;                                             /* Handle for the raw MP3 frame buffer. */
+    MemHandle pcmH = NullHandle;                                              /* Handle for decoded PCM samples. */
+    MemHandle decH = NullHandle;                                              /* Handle for decoder persistent state. */
+    MemHandle scratchH = NullHandle;                                          /* Handle for decoder scratch storage. */
+    uint8_t *feedP = (void*)0;                                                /* Pointer into the MP3 frame buffer. */
+    mp3d_sample_t *pcmP = (void*)0;                                           /* Pointer into the PCM output buffer. */
+    mp3dec_t *decP = (void*)0;                                                /* Pointer into the decoder state structure. */
+    mp3dec_scratch_t *scratchP = (void*)0;                                    /* Pointer into the scratch workspace. */
+    mp3dec_frame_info_t info;                                                 /* Per-frame metadata filled by the decoder. */
+    dword id3Offset = 0;                                                      /* Offset where audio data begins after ID3. */
+    int readResult = 0;                                                       /* Bytes read when grabbing headers from disk. */
+    word frameBytes = 0;                                                      /* Total byte count for each MP3 frame. */
+    word payloadBytes = 0;                                                    /* Byte count remaining after the header. */
+    word bytesToWrite = 0;                                                    /* Byte count of PCM data to flush per frame. */
+    int samples = 0;                                                          /* Number of PCM samples returned by decoder. */
+    int status = -1;                                                          /* Default to failure until streaming finishes. */
 
-#ifdef TESTMP3_DUMP_PCM
-    logWritesEnabled = TRUE;
-    logWriteFailed = FALSE;
-#endif
+    memset(&info, 0, sizeof(info));                                           /* Clean the frame info so debugging starts from known values. */
 
-    feedH = MemAlloc(FEED_BUF_SIZE, HF_SWAPABLE, HAF_ZERO_INIT);
-    if (!feedH)
+    feedH = MemAlloc(MP3_FRAME_BUFFER_SIZE, HF_SWAPABLE, HAF_ZERO_INIT);      /* Allocate memory for the MP3 frame staging buffer. */
+    feedP = (uint8_t*)MemLock(feedH);                                         /* Lock the MP3 buffer to obtain a direct pointer. */
+    pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(mp3d_sample_t)), HF_SWAPABLE, HAF_ZERO_INIT); /* Allocate PCM output memory. */
+    pcmP = (mp3d_sample_t*)MemLock(pcmH);                                     /* Lock the PCM buffer for immediate writes. */
+    decH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);            /* Allocate persistent decoder state storage. */
+    decP = (mp3dec_t*)MemLock(decH);                                          /* Lock decoder state so it can be initialized. */
+    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);/* Allocate scratch buffer required by the decoder. */
+    scratchP = (mp3dec_scratch_t*)MemLock(scratchH);                          /* Lock scratch buffer to hand to the decode routine. */
+
+    inputF = FileOpen(TESTMP3_INPUT_FILE, (FILE_ACCESS_R | FILE_DENY_RW));    /* Open the MP3 input file for sequential reading. */
+    outputF = FileCreate(TESTMP3_OUTPUT_FILE, FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_RW, FILE_ATTR_NORMAL); /* Create the raw PCM output file. */
+
+    id3Offset = skip_id3_tag(inputF);                                         /* Position the stream after any ID3v2 metadata. */
+    (void) id3Offset;                                                         /* Leave the computed offset visible for debugging tools. */
+
+    mp3dec_init(decP);                                                        /* Reset decoder state so frames stream cleanly. */
+
+    readResult = FileRead(inputF, feedP, HDR_SIZE, FALSE);                    /* Pull the first MP3 frame header into the buffer. */
+    while (readResult == HDR_SIZE)                                            /* Continue until FileRead no longer delivers a full header. */
     {
-        result = -1;
-        goto cleanup;
+        frameBytes = (word)(hdr_frame_bytes(feedP, 0) + hdr_padding(feedP));  /* Calculate complete frame length from the header fields. */
+        payloadBytes = frameBytes - HDR_SIZE;                                 /* Determine payload size by removing the header bytes. */
+        FileRead(inputF, feedP + HDR_SIZE, payloadBytes, FALSE);              /* Read the rest of the frame directly after the header. */
+
+        samples = mp3dec_decode_frame(scratchP, decP, feedP, frameBytes, pcmP, &info); /* Decode this frame into raw PCM samples. */
+        bytesToWrite = (word)(samples * info.channels * (word)sizeof(mp3d_sample_t)); /* Translate sample count into byte count for writing. */
+        FileWrite(outputF, pcmP, bytesToWrite, FALSE);                        /* Emit PCM bytes to disk in raw sample format. */
+
+        readResult = FileRead(inputF, feedP, HDR_SIZE, FALSE);                /* Fetch the next frame header in preparation for the loop. */
     }
-    feed = (uint8_t*)MemLock(feedH);
 
-    pcmH = MemAlloc((MINIMP3_MAX_SAMPLES_PER_FRAME * (word)sizeof(int16_t)), HF_SWAPABLE, HAF_ZERO_INIT);
-    if (!pcmH)
+    status = 0;                                                               /* If we reach here the MP3 stream drained successfully. */
+
+    FileClose(outputF, TRUE);                                                 /* Close and flush the PCM output file. */
+    FileClose(inputF, TRUE);                                                  /* Close the MP3 input file. */
+    MemUnlock(scratchH);                                                      /* Release the locked scratch buffer pointer. */
+    MemUnlock(decH);                                                          /* Release the locked decoder state pointer. */
+    MemUnlock(pcmH);                                                          /* Release the locked PCM buffer pointer. */
+    MemUnlock(feedH);                                                         /* Release the locked MP3 frame buffer pointer. */
+    MemFree(scratchH);                                                        /* Free the scratch buffer handle. */
+    MemFree(decH);                                                            /* Free the decoder state handle. */
+    MemFree(pcmH);                                                            /* Free the PCM buffer handle. */
+    MemFree(feedH);                                                           /* Free the MP3 frame buffer handle. */
+
+    return status;                                                            /* Report completion status back to the caller. */
+}
+
+dword _pascal skip_id3_tag(FileHandle inputF)
+{
+    byte id3Header[10];                                                       /* Local scratch buffer that captures the ID3 header. */
+    dword skipBytes = 0;                                                      /* Total number of bytes that should be skipped. */
+
+    FilePos(inputF, 0, FILE_POS_START);                                       /* Always start scanning from the beginning. */
+    FileRead(inputF, id3Header, 10, FALSE);                                   /* Pull the potential ID3 header into memory. */
+
+    if ((id3Header[0] == 'I') && (id3Header[1] == 'D') && (id3Header[2] == '3')) /* Confirm the presence of an ID3 tag. */
     {
-        result = -1;
-        goto cleanup;
-    }
-    pcm = (int16_t*)MemLock(pcmH);
-
-    mp3dec_tH = MemAlloc(sizeof(mp3dec_t), HF_SWAPABLE, HAF_ZERO_INIT);
-    if (!mp3dec_tH)
-    {
-        result = -1;
-        goto cleanup;
-    }
-    dec = (mp3dec_t*)MemLock(mp3dec_tH);
-
-    scratchH = MemAlloc(sizeof(mp3dec_scratch_t), HF_SWAPABLE, HAF_ZERO_INIT);
-    if (!scratchH)
-    {
-        result = -1;
-        goto cleanup;
-    }
-    scratch = (mp3dec_scratch_t*)MemLock(scratchH);
-
-    FilePushDir();
-    pushedDir = TRUE;
-    FileSetStandardPath(SP_DOCUMENT);
-    f = FileOpen(TESTMP3_INPUT_FILE, (FILE_ACCESS_R | FILE_DENY_RW));
-    outF = FileCreate(TESTMP3_OUTPUT_FILE,
-                      FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_RW,
-                      FILE_ATTR_NORMAL);
-#ifdef TESTMP3_DUMP_PCM
-    logF = FileCreate(TESTMP3_LOG_FILE,
-                      FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_DENY_RW | FILE_ACCESS_W,
-                      FILE_ATTR_NORMAL);
-#endif
-
-    if (outF)
-    {
-        memset(wavHeader, 0, WAV_HEADER_SIZE);
-        writeResult = FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
-        if (writeResult != WAV_HEADER_SIZE)
+        skipBytes = ((dword)(id3Header[6] & 0x7F) << 21) |                    /* Decode the synchsafe tag length. */
+                    ((dword)(id3Header[7] & 0x7F) << 14) |
+                    ((dword)(id3Header[8] & 0x7F) << 7) |
+                    (dword)(id3Header[9] & 0x7F);
+        skipBytes += 10;                                                      /* Include the 10-byte header. */
+        if (id3Header[5] & 0x10)                                              /* Account for an optional footer when flagged. */
         {
-            decodeError = TRUE;
+            skipBytes += 10;
         }
+        FilePos(inputF, skipBytes, FILE_POS_START);                           /* Seek to the start of compressed audio. */
     }
-
-    if (!f || !outF
-#ifdef TESTMP3_DUMP_PCM
-        || !logF
-#endif
-        || decodeError)
+    else
     {
-        result = -1;
-        goto cleanup;
+        FilePos(inputF, 0, FILE_POS_START);                                   /* No tag detected: ensure playback starts at byte 0. */
     }
 
-    mp3dec_init(dec);
-
-    for (;;)
-    {
-        loopCount++;
-        if (loopCount > MAX_DECODE_LOOPS)
-        {
-#ifdef TESTMP3_DUMP_PCM
-            log_stall(logF,
-                      "loopGuard",
-                      loopCount,
-                      feed_len,
-                      feed_len,
-                      0,
-                      zeroProgress,
-                      eof,
-                      readError);
-#endif
-            decodeError = TRUE;
-            break;
-        }
-
-        if (!id3Processed)
-        {
-            if (!eof)
-            {
-#ifdef TESTMP3_DUMP_PCM
-                refill_input_buffer(f, feed, &feed_len, &eof, &readError, logF);
-#else
-                refill_input_buffer(f, feed, &feed_len, &eof, &readError);
-#endif
-            }
-            if (readError)
-            {
-                decodeError = TRUE;
-                break;
-            }
-            if (!skip_id3v2_header(f, feed, &feed_len, &eof, &readError))
-            {
-                if (readError)
-                {
-                    decodeError = TRUE;
-                    break;
-                }
-                if ((feed_len == 0) && eof)
-                {
-                    break;
-                }
-                continue;
-            }
-            if (readError)
-            {
-                decodeError = TRUE;
-                break;
-            }
-            id3Processed = TRUE;
-            if ((feed_len == 0) && eof)
-            {
-                break;
-            }
-            continue;
-        }
-
-        if (!eof && (feed_len < MINIMP3_BUF_SIZE))
-        {
-#ifdef TESTMP3_DUMP_PCM
-            refill_input_buffer(f, feed, &feed_len, &eof, &readError, logF);
-#else
-            refill_input_buffer(f, feed, &feed_len, &eof, &readError);
-#endif
-            if (readError)
-            {
-                decodeError = TRUE;
-                break;
-            }
-        }
-
-        if ((feed_len == 0) && eof)
-        {
-            break;
-        }
-
-        samples = mp3dec_decode_frame(scratch, dec, feed, feed_len, pcm, &info);
-#ifdef TESTMP3_DUMP_PCM
-        log_status(logF,
-                   "decode",
-                   loopCount,
-                   feed_len,
-                   eof,
-                   readError,
-                   decodeError,
-                   &info,
-                   samples,
-                   zeroProgress);
-#endif
-
-        if (info.frame_bytes > 0)
-        {
-            if (info.frame_bytes > (dword)feed_len)
-            {
-                feed_len = 0;
-            }
-            else
-            {
-                used = (word)info.frame_bytes;
-                drop_buffer_bytes(feed, &feed_len, used);
-
-                /* Verify we're at a frame header after consuming bytes */
-                /* If not at a valid frame start, resync */
-                if (feed_len >= 2)
-                {
-                    if (!((feed[0] == 0xFF) && ((feed[1] & 0xE0) == 0xE0)))
-                    {
-                        /* Not at frame header - resync */
-                        resync_to_frame(feed, &feed_len);
-                    }
-                }
-            }
-            zeroProgress = 0;
-        }
-        else if (samples > 0)
-        {
-            zeroProgress = 0;
-        }
-        else
-        {
-            zeroProgress++;
-        }
-
-        if (samples > 0)
-        {
-            channels = info.channels;
-            out_count = samples * channels;
-
-            if (!firstFrame)
-            {
-                sampleRate = info.hz;
-                channelCount = (word)channels;
-                firstFrame = TRUE;
-            }
-            else if ((sampleRate != info.hz) || (channelCount != (word)channels))
-            {
-                decodeError = TRUE;
-                break;
-            }
-
-            writeResult = FileWrite(outF, pcm, (word)(sizeof(int16_t) * out_count), FALSE);
-            if (writeResult != (word)(sizeof(int16_t) * out_count))
-            {
-                decodeError = TRUE;
-                break;
-            }
-            totalBytes += (dword)(sizeof(int16_t) * out_count);
-#ifdef TESTMP3_DUMP_PCM
-            if (logF && logWritesEnabled)
-            {
-                for (sampleLoop = 0; sampleLoop < (word)samples; sampleLoop++)
-                {
-                    if (channels == 2)
-                    {
-                        leftSample = pcm[(sampleLoop * 2) + 0];
-                        rightSample = pcm[(sampleLoop * 2) + 1];
-                    }
-                    else
-                    {
-                        leftSample = pcm[sampleLoop];
-                        rightSample = leftSample;
-                    }
-                    if (info.hz > 0)
-                    {
-                        logTimestamp = (sampleIndex * 1000UL) / info.hz;
-                    }
-                    else
-                    {
-                        logTimestamp = 0;
-                    }
-                    sprintf(logLine,
-                            "%lu,%lu,%d,%d\r\n",
-                            (unsigned long)sampleIndex,
-                            (unsigned long)logTimestamp,
-                            (int)leftSample,
-                            (int)rightSample);
-                    logLen = (word)strlen(logLine);
-                    if (!log_write_line(logF, logLine, logLen))
-                    {
-                        break;
-                    }
-                    sampleIndex++;
-                }
-                if (!logWritesEnabled)
-                {
-                    break;
-                }
-            }
-#endif
-        }
-
-        if (decodeError)
-        {
-            break;
-        }
-
-        if (zeroProgress >= 3)
-        {
-            word previousFeedLen;
-            word removedBytes;
-#ifdef TESTMP3_DUMP_PCM
-            word totalRemoved;
-            int stallCount;
-#endif
-
-            previousFeedLen = feed_len;
-            removedBytes = resync_to_frame(feed, &feed_len);
-#ifdef TESTMP3_DUMP_PCM
-            totalRemoved = removedBytes;
-            stallCount = zeroProgress;
-#endif
-            if ((feed_len > 0) && ((removedBytes == 0) || (feed_len == previousFeedLen)))
-            {
-                drop_buffer_bytes(feed, &feed_len, 1);
-#ifdef TESTMP3_DUMP_PCM
-                totalRemoved++;
-#endif
-            }
-#ifdef TESTMP3_DUMP_PCM
-            log_stall(logF,
-                      "resync",
-                      loopCount,
-                      previousFeedLen,
-                      feed_len,
-                      totalRemoved,
-                      stallCount,
-                      eof,
-                      readError);
-#endif
-            zeroProgress = 0;
-            if ((feed_len == 0) && eof)
-            {
-                break;
-            }
-            continue;
-        }
-
-        if (!eof && (feed_len < MINIMP3_BUF_SIZE))
-        {
-#ifdef TESTMP3_DUMP_PCM
-            refill_input_buffer(f, feed, &feed_len, &eof, &readError, logF);
-#else
-            refill_input_buffer(f, feed, &feed_len, &eof, &readError);
-#endif
-            if (readError)
-            {
-                decodeError = TRUE;
-                break;
-            }
-        }
-
-        if ((feed_len == 0) && eof)
-        {
-            break;
-        }
-    }
-
-    if (!decodeError && (totalBytes > 0) && (sampleRate > 0) && (channelCount > 0))
-    {
-        dword byteRate;
-        word blockAlign;
-        dword riffSize;
-
-        memset(wavHeader, 0, WAV_HEADER_SIZE);
-        wavHeader[0] = 'R';
-        wavHeader[1] = 'I';
-        wavHeader[2] = 'F';
-        wavHeader[3] = 'F';
-
-        riffSize = 36 + totalBytes;
-        write_dword_le(wavHeader, 4, riffSize);
-
-        wavHeader[8]  = 'W';
-        wavHeader[9]  = 'A';
-        wavHeader[10] = 'V';
-        wavHeader[11] = 'E';
-
-        wavHeader[12] = 'f';
-        wavHeader[13] = 'm';
-        wavHeader[14] = 't';
-        wavHeader[15] = ' ';
-
-        write_dword_le(wavHeader, 16, 16);
-        write_word_le(wavHeader, 20, 1);
-        write_word_le(wavHeader, 22, channelCount);
-        write_dword_le(wavHeader, 24, sampleRate);
-
-        blockAlign = (word)(channelCount * sizeof(int16_t));
-        byteRate = sampleRate * (dword)blockAlign;
-
-        write_dword_le(wavHeader, 28, byteRate);
-        write_word_le(wavHeader, 32, blockAlign);
-        write_word_le(wavHeader, 34, 16);
-
-        wavHeader[36] = 'd';
-        wavHeader[37] = 'a';
-        wavHeader[38] = 't';
-        wavHeader[39] = 'a';
-        write_dword_le(wavHeader, 40, totalBytes);
-
-        FilePos(outF, 0UL, FILE_POS_START);
-        writeResult = FileWrite(outF, wavHeader, WAV_HEADER_SIZE, FALSE);
-        if (writeResult != WAV_HEADER_SIZE)
-        {
-            decodeError = TRUE;
-        }
-    }
-
-cleanup:
-    if (outF != NullHandle)
-    {
-        FileClose(outF, TRUE);
-        outF = NullHandle;
-    }
-    if (f)
-    {
-        FileClose(f, TRUE);
-    }
-#ifdef TESTMP3_DUMP_PCM
-    if (logF)
-    {
-        FileClose(logF, TRUE);
-    }
-#endif
-    if (pushedDir)
-    {
-        FilePopDir();
-    }
-
-    if (scratchH)
-    {
-        MemFree(scratchH);
-    }
-    if (pcmH)
-    {
-        MemFree(pcmH);
-    }
-    if (mp3dec_tH)
-    {
-        MemFree(mp3dec_tH);
-    }
-    if (feedH)
-    {
-        MemFree(feedH);
-    }
-
-    if (decodeError || (totalBytes == 0) || (sampleRate == 0) || (channelCount == 0))
-    {
-        result = -1;
-    }
-#ifdef TESTMP3_DUMP_PCM
-    if (logWriteFailed)
-    {
-        SysNotify(SNF_CONTINUE,
-                  "TestMP3",
-                  "PCM logging stopped after a write failure");
-    }
-#endif
-    return result;
+    return skipBytes;                                                         /* Report how many bytes were bypassed. */
 }
 
 @method TestMP3ProcessClass, MSG_START_READING
 {
-    //isRunning = TRUE;
-    (void) decode_file();
+    (void) decode_file();                                                     /* Trigger decoding when the Start button is pressed. */
 }
 
 @method TestMP3ProcessClass, MSG_STOP_READING
 {
-    //isRunning = FALSE;
+    /* No streaming state to tear down in this debug build. */
 }
