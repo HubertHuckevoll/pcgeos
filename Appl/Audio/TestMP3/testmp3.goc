@@ -132,6 +132,10 @@ int _pascal decode_file(void)
     /* Lock scratch buffer to hand to the decode routine. */
     scratchP = (mp3dec_scratch_t*)MemLock(scratchH);
 
+    /* set dir */
+    FilePushDir();
+    FileSetStandardPath(SP_DOCUMENT);
+
     /* Open the MP3 input file for sequential reading. */
     inputF = FileOpen(TESTMP3_INPUT_FILE, (FILE_ACCESS_R | FILE_DENY_RW));
     /* Create the raw PCM output file. */
@@ -247,6 +251,8 @@ int _pascal decode_file(void)
     MemFree(pcmH);
     /* Free the MP3 frame buffer handle. */
     MemFree(feedH);
+
+    FilePopDir();
 
     /* Report completion status back to the caller. */
     return status;
