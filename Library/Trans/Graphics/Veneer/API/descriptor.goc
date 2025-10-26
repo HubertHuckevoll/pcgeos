@@ -1,0 +1,81 @@
+#include <Trans/translatorDescriptor.h>
+
+#define IDC_GRAPHICS 0x4000
+
+extern dword _far _pascal VeneerImportProcedure(ImportFrame *frameP, VMChain *chainP);
+extern dword _far _pascal VeneerExportProcedure(ExportFrame *frameP);
+extern word _far _pascal VeneerTestFile(FileHandle file);
+extern MemHandle _far _pascal VeneerGatherImportOptions(Handle dialogH);
+extern MemHandle _far _pascal VeneerGatherExportOptions(Handle dialogH);
+extern void _far _pascal VeneerInitImportUI(Handle dialogH);
+extern void _far _pascal VeneerInitExportUI(Handle dialogH);
+
+extern optr ImportGroup;
+extern optr ExportGroup;
+
+static const TransFormatInfo kVeneerFormats[] =
+{
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
+    { (optr)(importUIOptr), (optr)(exportUIOptr), (word)(flagsValue) },
+#include "formats.def"
+#undef XLAT_FORMAT
+};
+
+#define VENEER_FORMAT_COUNT ((word)(sizeof(kVeneerFormats) / sizeof(kVeneerFormats[0])))
+#define VENEER_DATA_CLASS IDC_GRAPHICS
+
+const TransDescriptor kVeneerDescriptor =
+{
+    kVeneerFormats,
+    VENEER_FORMAT_COUNT,
+    VENEER_DATA_CLASS,
+    VeneerImportProcedure,
+    VeneerExportProcedure,
+    VeneerTestFile,
+    VeneerGatherImportOptions,
+    VeneerGatherExportOptions,
+    VeneerInitImportUI,
+    VeneerInitExportUI
+};
+
+TransDescriptor _far * _pascal XLAT_GetDescriptor(void)
+{
+    return (TransDescriptor _far *)&kVeneerDescriptor;
+}
+
+@start ResidentCode, data;
+
+const TransLibraryHeaderRecord XLAT_libraryHeader =
+{
+    { 'O', 'K' },
+    InfoResource,
+    (word)(VENEER_FORMAT_COUNT),
+    (word)(VENEER_DATA_CLASS),
+    { 'O', 'K' }
+};
+
+@end ResidentCode;
+
+@start InfoResource, lmem, LMEM_TYPE_GENERAL, mask LMF_IN_RESOURCE;
+
+TransImpexFormatRecord XLAT_formatTable[] =
+{
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
+    { (word)(@symbol##Name), (word)(@symbol##Mask), (optr)(importUIOptr), (optr)(exportUIOptr), (word)(flagsValue) },
+#include "formats.def"
+#undef XLAT_FORMAT
+};
+
+word XLAT_formatTableTerminator = 0;
+
+#define XLAT_FORMAT(symbol, nameLiteral, maskLiteral, importUIOptr, exportUIOptr, flagsValue) \
+    @chunk char symbol##Name[] = nameLiteral; \
+    @chunk char symbol##Mask[] = maskLiteral;
+#include "formats.def"
+#undef XLAT_FORMAT
+
+@end InfoResource;
+
+#undef VENEER_DATA_CLASS
+#undef VENEER_FORMAT_COUNT
+#undef IDC_GRAPHICS

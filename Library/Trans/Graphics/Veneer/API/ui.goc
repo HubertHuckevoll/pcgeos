@@ -1,0 +1,145 @@
+@include <stdapp.goh>
+@include <Objects/gItemGC.goh>
+@include <Objects/gValueC.goh>
+@include <Objects/gBoolGC.goh>
+@include <object.h>
+
+#define VENEER_IMPORT_METHOD_PLACE 0
+#define VENEER_IMPORT_METHOD_LAYER 1
+
+#define VENEER_EXPORT_FLAG_PREVIEW 0x0001
+#define VENEER_EXPORT_FLAG_METADATA 0x0002
+
+@start ImportInterface;
+
+@object GenTextClass VeneerImportIntro = {
+    GI_attrs = @default | GA_READ_ONLY;
+    GTXI_text = "Choose how Veneer content should be arranged when it is brought into your document.";
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenItemClass VeneerImportMethodPlace = {
+    GI_visMoniker = "Place on current page";
+    GII_identifier = VENEER_IMPORT_METHOD_PLACE;
+}
+
+@object GenItemClass VeneerImportMethodLayer = {
+    GI_visMoniker = "Insert as a floating layer";
+    GII_identifier = VENEER_IMPORT_METHOD_LAYER;
+}
+
+@object GenItemGroupClass VeneerImportMethodGroup = {
+    GI_visMoniker = "Placement:";
+    GIGI_selection = VENEER_IMPORT_METHOD_PLACE;
+    GIGI_behaviorType = GIGBT_EXCLUSIVE;
+    GI_comp = @VeneerImportMethodPlace, @VeneerImportMethodLayer;
+    HINT_ITEM_GROUP_RADIO_BUTTON_STYLE;
+    HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION;
+}
+
+@object GenValueClass VeneerImportScaleValue = {
+    GI_visMoniker = "Scale (%):";
+    GVLI_value = MakeWWFixed(100);
+    GVLI_minimum = MakeWWFixed(25);
+    GVLI_maximum = MakeWWFixed(400);
+    GVLI_increment = MakeWWFixed(5);
+    GVLI_displayFormat = GVDF_INTEGER;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenInteractionClass VeneerImportScaleBox = {
+    GI_visMoniker = "Scaling";
+    GI_comp = @VeneerImportScaleValue;
+    HINT_DRAW_IN_BOX;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenInteractionClass ImportGroup = {
+    GI_visMoniker = "Import Options";
+    GI_states = @default & ~GS_USABLE;
+    GII_visibility = GIV_DIALOG;
+    GII_attrs = GIA_MODAL;
+    GI_comp = @VeneerImportIntro, @VeneerImportMethodGroup, @VeneerImportScaleBox;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@end ImportInterface;
+
+@start ExportInterface;
+
+@object GenItemClass VeneerExportPaletteAutomatic = {
+    GI_visMoniker = "Automatic palette";
+    GII_identifier = 0;
+}
+
+@object GenItemClass VeneerExportPaletteWeb = {
+    GI_visMoniker = "Web-safe palette";
+    GII_identifier = 1;
+}
+
+@object GenItemClass VeneerExportPaletteMono = {
+    GI_visMoniker = "Monochrome";
+    GII_identifier = 2;
+}
+
+@object GenItemGroupClass VeneerExportPaletteGroup = {
+    GI_visMoniker = "Palette:";
+    GIGI_selection = 0;
+    GIGI_behaviorType = GIGBT_EXCLUSIVE;
+    GI_comp = @VeneerExportPaletteAutomatic, @VeneerExportPaletteWeb, @VeneerExportPaletteMono;
+    HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION;
+    HINT_ITEM_GROUP_RADIO_BUTTON_STYLE;
+}
+
+@object GenBooleanClass VeneerExportIncludePreview = {
+    GI_visMoniker = "Include preview bitmap";
+    GBI_identifier = VENEER_EXPORT_FLAG_PREVIEW;
+}
+
+@object GenBooleanClass VeneerExportEmbedMetadata = {
+    GI_visMoniker = "Embed document notes";
+    GBI_identifier = VENEER_EXPORT_FLAG_METADATA;
+}
+
+@object GenBooleanGroupClass VeneerExportExtrasGroup = {
+    GI_visMoniker = "Extras:";
+    GBGI_selectedBooleans = VENEER_EXPORT_FLAG_PREVIEW;
+    GI_comp = @VeneerExportIncludePreview, @VeneerExportEmbedMetadata;
+    HINT_BOOLEAN_GROUP_CHECKBOX_STYLE;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+}
+
+@object GenValueClass VeneerExportQualityValue = {
+    GI_visMoniker = "Compression quality:";
+    GVLI_value = MakeWWFixed(75);
+    GVLI_minimum = MakeWWFixed(0);
+    GVLI_maximum = MakeWWFixed(100);
+    GVLI_increment = MakeWWFixed(5);
+    GVLI_displayFormat = GVDF_INTEGER;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenInteractionClass VeneerExportQualityBox = {
+    GI_visMoniker = "Compression";
+    GI_comp = @VeneerExportQualityValue;
+    HINT_DRAW_IN_BOX;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenInteractionClass ExportGroup = {
+    GI_visMoniker = "Export Options";
+    GI_states = @default & ~GS_USABLE;
+    GII_visibility = GIV_DIALOG;
+    GII_attrs = GIA_MODAL;
+    GI_comp = @VeneerExportPaletteGroup, @VeneerExportExtrasGroup, @VeneerExportQualityBox;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@end ExportInterface;
+
+#undef VENEER_IMPORT_METHOD_PLACE
+#undef VENEER_IMPORT_METHOD_LAYER
+#undef VENEER_EXPORT_FLAG_PREVIEW
+#undef VENEER_EXPORT_FLAG_METADATA
