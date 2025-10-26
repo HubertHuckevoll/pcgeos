@@ -7,7 +7,10 @@
 #include <system.h>
 #include <file.h>
 
+#define TESTMP3_DECODER_GUARD_FEEDBACK 1
 #include "minimp3_geos16.h"
+
+word g_minimp3GuardFired = 0;
 
 #define MP3_FRAME_BUFFER_SIZE   (MAX_FREE_FORMAT_FRAME_SIZE + HDR_SIZE)
 #define TESTMP3_INPUT_FILE      "3S.MP3"
@@ -44,7 +47,7 @@ dword _pascal skip_id3_tag(FileHandle inputF);
 }
 
 @object GenInteractionClass MainGroupObj = {
-    GI_comp = @StartBut, @StopBut;
+    GI_comp = @StartBut, @ProgText;
     HINT_ORIENT_CHILDREN_VERTICALLY;
     HINT_CENTER_CHILDREN_HORIZONTALLY;
 }
@@ -55,13 +58,39 @@ dword _pascal skip_id3_tag(FileHandle inputF);
     GTI_actionMsg = MSG_START_READING;
 }
 
-@object GenTriggerClass StopBut = {
-    GI_visMoniker = "Stop";
-    GTI_destination = process;
-    GTI_actionMsg = MSG_STOP_READING;
+@object GenTextClass ProgText = {
+    GI_visMoniker = "Decoding Status";
+    GTXI_text = "";
+}
+
+@object GenGlyphClass Step2 = {
+    GI_visMoniker = "Decoding done";
+    GI_states = @default & ~GS_USABLE;
+}
+
+@object GenGlyphClass Step3 = {
+    GI_visMoniker = "Writing done";
+    GI_states = @default & ~GS_USABLE;
+}
+
+@object GenGlyphClass Step4 = {
+    GI_visMoniker = "n/a";
+    GI_states = @default & ~GS_USABLE;
+}
+
+@object GenGlyphClass Step5 = {
+    GI_visMoniker = "n/a";
+    GI_states = @default & ~GS_USABLE;
 }
 
 @end Interface;
+
+void _pascal reset()
+{
+    /* Reset all glyphs to their initial state. */
+    @call ProgText::MSG_VIS_TEXT_REPLACE_ALL_PTR("", 0);
+}
+
 
 int _pascal decode_file(void)
 {
@@ -213,12 +242,24 @@ int _pascal decode_file(void)
             }
         }
 
+        //reset();
+
         /* Decode this frame into raw PCM samples. */
+        @call ProgText::MSG_VIS_TEXT_APPEND_PTR(_TEXT("S"), 0);
         samples = mp3dec_decode_frame(scratchP, decP, feedP, frameBytes, pcmP, &info);
+        if (g_minimp3GuardFired)
+        {
+            @call ProgText::MSG_VIS_TEXT_APPEND_PTR(_TEXT("G"), 0);
+            g_minimp3GuardFired = 0;
+        }
+        @call ProgText::MSG_VIS_TEXT_APPEND_PTR(_TEXT("E"), 0);
+
+
         /* Translate sample count into byte count for writing. */
         bytesToWrite = (word)(samples * info.channels * (word)sizeof(mp3d_sample_t));
         /* Emit PCM bytes to disk in raw sample format. */
         FileWrite(outputF, pcmP, bytesToWrite, FALSE);
+
 
         /* Fetch the next frame header in preparation for the loop. */
         readResult = FileRead(inputF, feedP, HDR_SIZE, FALSE);
@@ -230,6 +271,9 @@ int _pascal decode_file(void)
         /* Flag success only when decoding completed cleanly. */
         status = 0;
     }
+
+    @call ProgText::MSG_VIS_TEXT_APPEND_PTR(_TEXT("D"), 0);
+
 
     /* Close and flush the PCM output file. */
     FileClose(outputF, TRUE);
@@ -301,6 +345,7 @@ dword _pascal skip_id3_tag(FileHandle inputF)
 @method TestMP3ProcessClass, MSG_START_READING
 {
     /* Trigger decoding when the Start button is pressed. */
+
     (void) decode_file();
 }
 

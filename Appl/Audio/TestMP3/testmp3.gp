@@ -24,12 +24,12 @@ appobj	AppObj
 tokenchars "TMP3"
 tokenid 0
 
-heapspace 5000
+heapspace 10000
 stack 8000
 
 library	geos
 library	ui
-library bsnwav
+#library bsnwav
 library	ansic
 library sound
 #

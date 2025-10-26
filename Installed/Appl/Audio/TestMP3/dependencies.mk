@@ -28,4 +28,4 @@ testmp3.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 minimp3_geos16.h
 
-testmp3EC.geo testmp3.geo : geos.ldf ui.ldf bsnwav.ldf ansic.ldf sound.ldf 
+testmp3EC.geo testmp3.geo : geos.ldf ui.ldf ansic.ldf sound.ldf 
