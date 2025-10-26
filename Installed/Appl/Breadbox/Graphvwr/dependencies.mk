@@ -147,8 +147,8 @@ imp_bmp.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h IMPBMP/imp_bmp.h \
-                IMPBMP/ibcommon.h pnglib.h Ansi/stdio.h Ansi/stdlib.h \
-                Ansi/string.h zlib.h zconf.h htmldrv.h product.h math.h \
+                IMPBMP/ibcommon.h Ansi/string.h pnglib.h Ansi/stdio.h \
+                Ansi/stdlib.h zlib.h zconf.h htmldrv.h product.h math.h \
                 htmlfstr.h awatcher.h htmlprog.h IMPBMP/imppcx.h \
                 IMPBMP/impbmp.h jpeglib.h jconfig.h jmorecfg.h
 bmpview.obj \
@@ -181,11 +181,11 @@ bmpview.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h IMPBMP/imp_bmp.h \
-                IMPBMP/ibcommon.h pnglib.h Ansi/stdio.h Ansi/stdlib.h \
-                Ansi/string.h zlib.h zconf.h htmldrv.h product.h math.h \
-                htmlfstr.h awatcher.h htmlprog.h GRAPH/quant.h initfile.h \
-                library.h sem.h
+                IMPBMP/ibcommon.h Ansi/string.h GRAPH/quant.h initfile.h \
+                pnglib.h Ansi/stdio.h Ansi/stdlib.h zlib.h zconf.h \
+                htmldrv.h product.h math.h htmlfstr.h awatcher.h \
+                htmlprog.h library.h sem.h
 quant.obj \
 quant.eobj: Ansi/string.h geos.h GRAPH/quant.h color.h heap.h
 
-graphvwrEC.geo graphvwr.geo : geos.ldf ui.ldf ansic.ldf extui.ldf color.ldf giflib.ldf pnglib.ldf thumbdb.ldf ijgjpeg.ldf 
+graphvwrEC.geo graphvwr.geo : geos.ldf ui.ldf ansic.ldf extui.ldf color.ldf giflib.ldf pnglib.ldf thumbdb.ldf ijgjpeg.ldf

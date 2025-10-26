@@ -38,7 +38,6 @@ typedef struct
   word                    IBP_height;
   BMType                  IBP_format;
   char                    IBP_impForm[31];
-  alphaTransformData      IBP_alphaTransform;
 } ImpBmpParams;
 
 typedef enum

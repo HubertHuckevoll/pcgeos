@@ -11,11 +11,10 @@
 #       ----      ----            -----------
 #       todd      7/21/98         Initial Revision
 #       jfh       12/5/01         Breadbox Ensemble first pass
-#       bluewaysw 2018            PC/GEOS (FreeGEOS edition)
+#       bluewaysw 2018            PC/GEOS Ensemble (FreeGEOS project)
 #
 # DESCRIPTION:
-#       Filetree for Breadbox Ensemble
-#       ... and PC/GEOS (FreeGEOS edition)
+#       Filetree
 #
 #       $Id:$
 #
@@ -520,11 +519,10 @@ DIR (ensemble) {
 			#
 			# BreadBox Libraries
 			#
-			Library/Breadbox/Impex/GIF/gif{ec}.geo GFS LOCALPC
-			Library/Breadbox/Impex/PNG/png{ec}.geo GFS LOCALPC
-			# Library/Breadbox/Impex/HTML/htmlimpx.geo GFS LOCALPC
-			Library/Breadbox/Impex/JPEG/jpeg{ec}.geo GFS LOCALPC
-			Library/Breadbox/Impex/VCImpex/vcimpex{ec}.geo GFS LOCALPC
+			Library/Breadbox/Impex/GIF/gif{ec}.geo
+			Library/Breadbox/Impex/PNG/png{ec}.geo
+			# Library/Breadbox/Impex/HTML/htmlimpx.GEO
+			Library/Breadbox/Impex/JPEG/jpeg{ec}.geo
 
 			# RTF for Help Files if tools build
 			# I'm not sure what this was - I think a special deal for

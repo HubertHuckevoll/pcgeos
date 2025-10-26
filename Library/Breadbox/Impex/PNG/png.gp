@@ -9,13 +9,15 @@ type library, single
 
 entry LibraryEntry
 
-library	geos
+library geos
 library ui
 library impex
 library extgraph
+library color
 library pnglib
 
 resource ExportInterface object
+resource ImportInterface object
 
 export TransGetImportUI
 export TransGetExportUI
@@ -27,3 +29,4 @@ export TransImport
 export TransExport
 export TransGetFormat
 
+export PngImportGroupClass
