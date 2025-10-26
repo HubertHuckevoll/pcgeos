@@ -9,11 +9,12 @@
 # REVISION HISTORY:
 #       Name      Date            Description
 #       ----      ----            -----------
-#       todd    7/21/98         Initial Revision
-#       jfh     12/5/01         Breadbox Ensemble first pass
+#       todd      7/21/98         Initial Revision
+#       jfh       12/5/01         Breadbox Ensemble first pass
+#       bluewaysw 2018            PC/GEOS Ensemble (FreeGEOS project)
 #
 # DESCRIPTION:
-#       Filetree for Breadbox Ensemble
+#       Filetree
 #
 #       $Id:$
 #
@@ -361,6 +362,7 @@ DIR (ensemble) {
 		Library/GrObj/{dbcs}/grobj{ec}.geo XIP=XIP LOCALPC
 		Library/Impex/{dbcs}/impex{ec}.geo XIP=XIP LOCALPC
 		Library/Math/Compiler/BorlandC/{dbcs}/borlandc{ec}.geo GFS LOCALPC
+		Library/Math/Compiler/WatcomC/{dbcs}/watcomc{ec}.geo GFS LOCALPC
 		Library/Math/{dbcs}/math{ec}.geo GFS LOCALPC
 		Library/Parse/{dbcs}/parse{ec}.geo GFS LOCALPC
 		Library/Saver/saver{ec}.geo XIP=XIP LOCALPC
@@ -485,6 +487,12 @@ DIR (ensemble) {
 		#
 		Library/Breadbox/Gsol/gsol{ec}.geo
 
+		#
+		# RabeSoft Libraries
+		#
+		Library/RabeSoft/rsftool/rsftool{ec}.geo GFS LOCALPC
+		Library/RabeSoft/bmptools/bmptools{ec}.geo GFS LOCALPC
+
 		DIR (font) {
 			Driver/Font/TrueType/{dbcs}/truetype{ec}.geo GFS LOCALPC
 		}
@@ -507,6 +515,7 @@ DIR (ensemble) {
 			# BreadBox Libraries
 			#
 			Library/Breadbox/Impex/GIF/gif{ec}.geo
+			Library/Breadbox/Impex/PNG/png{ec}.geo
 			# Library/Breadbox/Impex/HTML/htmlimpx.GEO
 			Library/Breadbox/Impex/JPEG/jpeg{ec}.geo
 
@@ -1017,7 +1026,6 @@ DIR (ensemble) {
 				#FontData/Ttf/PTSeriIt.ttf GFS LOCALPC
 				#FontData/Ttf/PTSeriRe.ttf GFS LOCALPC
 				#FontData/Ttf/OFL.txt GFS LOCALPC
-
 				FontData/Ttf/nmonobi.ttf GFS LOCALPC
 				FontData/Ttf/nmonobo.ttf GFS LOCALPC
 				FontData/Ttf/nmonore.ttf GFS LOCALPC
@@ -1037,10 +1045,9 @@ DIR (ensemble) {
 				FontData/Ttf/symbolps.ttf GFS LOCALPC
                                 FontData/Ttf/nimb_gpl.txt GFS LOCALPC
                                 FontData/Ttf/cooper.ttf GFS LOCALPC
-                                FontData/Ttf/OFL-Cooper.txt GFS LOCALPC
+                                FontData/Ttf/OFL-SIL.txt GFS LOCALPC
                                 FontData/Ttf/franklin.ttf GFS LOCALPC
                                 FontData/Ttf/Franklin.txt GFS LOCALPC
-                                FontData/Ttf/info.txt GFS LOCALPC
 				FontData/Ttf/bookmbi.ttf GFS LOCALPC
 				FontData/Ttf/bookmbo.ttf GFS LOCALPC
 				FontData/Ttf/bookmre.ttf GFS LOCALPC
