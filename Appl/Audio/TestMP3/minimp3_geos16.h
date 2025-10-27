@@ -80,9 +80,6 @@ typedef struct {
 /* scalar, int16 output */
 typedef int16_t mp3d_sample_t;
 
-#ifdef TESTMP3_DECODER_GUARD_FEEDBACK
-extern word g_minimp3GuardFired;
-#endif
 
 /* --------- Bitstream ---------- */
 typedef struct { const uint8_t *buf; int pos, limit; } bs_t;
@@ -667,9 +664,6 @@ bitstream_finish:
     return;
 
 bitstream_underrun:
-#ifdef TESTMP3_DECODER_GUARD_FEEDBACK
-    g_minimp3GuardFired = 1;
-#endif
     goto bitstream_finish;
 }
 
