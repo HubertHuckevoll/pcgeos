@@ -15,17 +15,36 @@
 @include <qoilib.goh>
 @include <extgraph.goh>
 
+#include <heap.h>
+
 dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
 {
     VMBlockHandle bmblock;
     QoiError error = 0;
+    QoiAlphaTransformData qoiOptions;
+    QoiAlphaTransformData *optionsP;
 
-    QoiImportSetAlphaThreshold(1);
-    QoiImportSetBlendColor(255, 255, 255);
-    QoiImportSetBlendEnabled(TRUE);
+    qoiOptions.QATD_method = QOI_AT_BLEND;
+    qoiOptions.QATD_alphaThreshold = 192;
+    qoiOptions.QATD_blendColor.RGB_red = 255;
+    qoiOptions.QATD_blendColor.RGB_green = 255;
+    qoiOptions.QATD_blendColor.RGB_blue = 255;
+
+    if (frame->IF_importOptions != NullHandle)
+    {
+        optionsP = (QoiAlphaTransformData*)MemLock(frame->IF_importOptions);
+        if (optionsP != (QoiAlphaTransformData*)0)
+        {
+            qoiOptions = *optionsP;
+            MemUnlock(frame->IF_importOptions);
+        }
+    }
 
     *chain = 0;
-    bmblock = QoiImportBitmapFHandle(frame->IF_sourceFile, frame->IF_transferVMFile, &error);
+    bmblock = QoiImportBitmapFHandleWithTransform(frame->IF_sourceFile,
+                                                  frame->IF_transferVMFile,
+                                                  &qoiOptions,
+                                                  &error);
 
     if ((bmblock != NullHandle) && (error == QE_NO_ERROR))
     {

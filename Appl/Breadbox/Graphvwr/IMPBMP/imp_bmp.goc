@@ -106,13 +106,23 @@ ImpBmpStatus _pascal Imp_BmpProcessFile(ImpBmpParams *params,ImpBmpFormat format
 
   if(format == IBF_QOI)
   {
-	QoiError stat = QE_NO_ERROR;
+        QoiError stat = QE_NO_ERROR;
+        QoiAlphaTransformData alphaTransform;
 
-	params->IBP_bitmap = QoiImportBitmapFHandle(params->IBP_source, params->IBP_dest, &stat);
-   	strcpy(params->IBP_impForm, ".QOI");
+        alphaTransform.QATD_method = QOI_AT_BLEND;
+        alphaTransform.QATD_alphaThreshold = 192;
+        alphaTransform.QATD_blendColor.RGB_red = 255;
+        alphaTransform.QATD_blendColor.RGB_green = 255;
+        alphaTransform.QATD_blendColor.RGB_blue = 255;
 
-	if(stat == GE_NO_ERROR)
-		return(IBS_NO_ERROR);
+        params->IBP_bitmap = QoiImportBitmapFHandleWithTransform(params->IBP_source,
+                                                                 params->IBP_dest,
+                                                                 &alphaTransform,
+                                                                 &stat);
+        strcpy(params->IBP_impForm, ".QOI");
+
+        if(stat == GE_NO_ERROR)
+                return(IBS_NO_ERROR);
 	else
 		return(IBS_SYS_ERROR);
   }

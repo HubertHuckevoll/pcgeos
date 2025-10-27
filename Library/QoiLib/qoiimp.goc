@@ -17,12 +17,13 @@
 
 #include "qoilib.goh"      /* public prototypes + QoiError */
 
-/* Import-time alpha handling knobs (defaults preserve old behavior) */
-static byte    g_qoiAlphaThreshold = 255;   /* A >= 255 => opaque, else transparent */
-static Boolean g_qoiBlendEnable    = FALSE; /* off by default */
-static byte    g_qoiBlendR         = 0;     /* blend target color (RGB) */
-static byte    g_qoiBlendG         = 0;
-static byte    g_qoiBlendB         = 0;
+/* Legacy compatibility transform state (mirrors old setters) */
+static QoiAlphaTransformData g_qoiLegacyTransform =
+{
+    QOI_AT_MASK,
+    255,
+    {0, 0, 0}
+};
 
 
 /**********************************************************************
@@ -73,25 +74,61 @@ qoiHash(QoiRGBA px)
     return (byte)(s & 63);
 }
 
+static void
+qoiInitDefaultTransform(QoiAlphaTransformData *out)
+{
+    out->QATD_method = QOI_AT_MASK;
+    out->QATD_alphaThreshold = 255;
+    out->QATD_blendColor.RGB_red = 255;
+    out->QATD_blendColor.RGB_green = 255;
+    out->QATD_blendColor.RGB_blue = 255;
+}
+
+static void
+qoiNormalizeTransform(const QoiAlphaTransformData *src,
+                      QoiAlphaTransformData *dst)
+{
+    qoiInitDefaultTransform(dst);
+
+    if (src != NULL)
+    {
+        dst->QATD_method = src->QATD_method;
+        dst->QATD_alphaThreshold = src->QATD_alphaThreshold;
+        dst->QATD_blendColor = src->QATD_blendColor;
+    }
+
+    if (!(dst->QATD_method == QOI_AT_MASK || dst->QATD_method == QOI_AT_BLEND))
+    {
+        dst->QATD_method = QOI_AT_MASK;
+    }
+}
+
 
 void _pascal _export
 QoiImportSetAlphaThreshold(byte threshold)
 {
-    g_qoiAlphaThreshold = threshold;   /* 0..255; 0 => everything opaque */
+    g_qoiLegacyTransform.QATD_alphaThreshold = threshold;
 }
 
 void _pascal _export
 QoiImportSetBlendColor(byte r, byte g, byte b)
 {
-    g_qoiBlendR = r;
-    g_qoiBlendG = g;
-    g_qoiBlendB = b;
+    g_qoiLegacyTransform.QATD_blendColor.RGB_red = r;
+    g_qoiLegacyTransform.QATD_blendColor.RGB_green = g;
+    g_qoiLegacyTransform.QATD_blendColor.RGB_blue = b;
 }
 
 void _pascal _export
 QoiImportSetBlendEnabled(Boolean on)
 {
-    g_qoiBlendEnable = on;
+    if (on)
+    {
+        g_qoiLegacyTransform.QATD_method = QOI_AT_BLEND;
+    }
+    else
+    {
+        g_qoiLegacyTransform.QATD_method = QOI_AT_MASK;
+    }
 }
 
 /**********************************************************************
@@ -99,61 +136,95 @@ QoiImportSetBlendEnabled(Boolean on)
 **********************************************************************/
 
 static QoiError
-qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
+qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels,
+                 const QoiAlphaTransformData *transform)
 {
     QoiRGBA index[64];
     QoiRGBA px;
-    word x, y, i;
+    word x;
+    word y;
+    word i;
     dword run;
+    byte *lineBase;
     byte *scan;
-    byte *maskPtr;
+    byte *maskBase;
     word maskIdx;
     byte maskBit;
     MemHandle line;
-    byte b, b2;
+    byte b;
+    byte b2;
     Boolean ok;
     word maskBytes;
     void *lineptr;
     word size;
+    Boolean useMask;
+    Boolean doBlend;
+    byte threshold;
+    RGBValue blendColor;
+    byte r8;
+    byte g8;
+    byte b8;
+    word a16;
+    word ia16;
 
-    Boolean opaque;
-    byte    r8, g8, b8;
-    word    a16, ia16;
+    useMask = FALSE;
+    doBlend = FALSE;
+    threshold = 255;
+    blendColor = transform->QATD_blendColor;
 
-    /* init index + prev pixel */
+    if (channels == 4)
+    {
+        if (transform->QATD_method == QOI_AT_MASK)
+        {
+            useMask = TRUE;
+            threshold = transform->QATD_alphaThreshold;
+        }
+        else if (transform->QATD_method == QOI_AT_BLEND)
+        {
+            doBlend = TRUE;
+        }
+    }
+
     for (i = 0; i < 64; i++)
     {
-        index[i].r = 0; index[i].g = 0; index[i].b = 0; index[i].a = 255;
+        index[i].r = 0;
+        index[i].g = 0;
+        index[i].b = 0;
+        index[i].a = 255;
     }
-    px.r = 0; px.g = 0; px.b = 0; px.a = 255;
+    px.r = 0;
+    px.g = 0;
+    px.b = 0;
+    px.a = 255;
 
-    maskBytes = (channels == 4) ? ((os->QOS_width + 7) / 8) : 0;
+    maskBytes = useMask ? (word)((os->QOS_width + 7) / 8) : 0;
 
-    os->QOS_maskoff = 0; /* mask first (GEOS convention) */
-    os->QOS_stride  = (word)(maskBytes + os->QOS_width * 3);
+    os->QOS_maskoff = 0;
+    os->QOS_stride = (word)(maskBytes + os->QOS_width * 3);
 
     line = os->QOS_line;
-    scan = (byte*) MemLock(line);
-    if (scan == NULL)
+    lineBase = (byte*)MemLock(line);
+    if (lineBase == NULL)
     {
         return QE_OUT_OF_MEMORY;
     }
-    maskPtr = scan;                  /* mask bytes at start (if any) */
-    scan    = scan + maskBytes;      /* RGB data after mask          */
+    maskBase = lineBase;
+    scan = lineBase + maskBytes;
 
-    maskIdx = 0;
-    maskBit = 0;
-    run     = 0;
+    run = 0;
 
     for (y = 0; y < os->QOS_height; y++)
     {
-        /* clear mask for this scanline */
-        if (channels == 4)
+        if (useMask)
         {
-            for (i = 0; i < maskBytes; i++) { maskPtr[i] = 0; }
-            maskIdx = 0;
-            maskBit = 0;
+            for (i = 0; i < maskBytes; i++)
+            {
+                maskBase[i] = 0;
+            }
         }
+
+        maskIdx = 0;
+        maskBit = 0;
 
         for (x = 0; x < os->QOS_width; x++)
         {
@@ -164,20 +235,31 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
             else
             {
                 ok = qoiReadByte(fh, &b);
-                if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                if (!ok)
+                {
+                    MemUnlock(line);
+                    return QE_OUT_OF_DATA;
+                }
 
                 if (b == QOI_OP_RGB)
                 {
-                    ok = qoiReadByte(fh, &px.r); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
-                    ok = qoiReadByte(fh, &px.g); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
-                    ok = qoiReadByte(fh, &px.b); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                    ok = qoiReadByte(fh, &px.r);
+                    if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                    ok = qoiReadByte(fh, &px.g);
+                    if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                    ok = qoiReadByte(fh, &px.b);
+                    if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
                 }
                 else if (b == QOI_OP_RGBA)
                 {
-                    ok = qoiReadByte(fh, &px.r); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
-                    ok = qoiReadByte(fh, &px.g); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
-                    ok = qoiReadByte(fh, &px.b); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
-                    ok = qoiReadByte(fh, &px.a); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                    ok = qoiReadByte(fh, &px.r);
+                    if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                    ok = qoiReadByte(fh, &px.g);
+                    if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                    ok = qoiReadByte(fh, &px.b);
+                    if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                    ok = qoiReadByte(fh, &px.a);
+                    if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
                 }
                 else
                 {
@@ -192,17 +274,25 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
                         {
                             px.r = (byte)(px.r + (((b >> 4) & 0x03) - 2));
                             px.g = (byte)(px.g + (((b >> 2) & 0x03) - 2));
-                            px.b = (byte)(px.b + ((  b       & 0x03) - 2));
+                            px.b = (byte)(px.b + ((b & 0x03) - 2));
                             break;
                         }
                         case QOI_OP_LUMA:
                         {
-                            ok = qoiReadByte(fh, &b2); if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+                            ok = qoiReadByte(fh, &b2);
+                            if (!ok)
                             {
-                                int dg, dr, db;
+                                MemUnlock(line);
+                                return QE_OUT_OF_DATA;
+                            }
+                            {
+                                int dg;
+                                int dr;
+                                int db;
+
                                 dg = ((b & 0x3f) - 32);
                                 dr = (int)((b2 >> 4) & 0x0f) - 8 + dg;
-                                db = (int)( b2       & 0x0f) - 8 + dg;
+                                db = (int)(b2 & 0x0f) - 8 + dg;
                                 px.g = (byte)((int)px.g + dg);
                                 px.r = (byte)((int)px.r + dr);
                                 px.b = (byte)((int)px.b + db);
@@ -217,25 +307,46 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
                     }
                 }
 
-                /* update index */
                 index[qoiHash(px)] = px;
+            }
 
-                /* decide opacity by threshold, set mask bit accordingly */
-                opaque = TRUE;
-                if (channels == 4)
+            r8 = px.r;
+            g8 = px.g;
+            b8 = px.b;
+
+            if (channels == 4)
+            {
+                if (useMask)
                 {
-                    if (px.a >= g_qoiAlphaThreshold)
+                    if (px.a >= threshold)
                     {
-                        /* mark opaque pixel in 1-bit mask */
-                        maskPtr[maskIdx] |= (byte)(0x80 >> maskBit);
+                        maskBase[maskIdx] |= (byte)(0x80 >> maskBit);
                     }
                     else
                     {
-                        /* below threshold -> transparent */
-                        opaque = FALSE;
-                        os->QOS_hasAlpha = TRUE;   /* we saw some alpha */
+                        os->QOS_hasAlpha = TRUE;
                     }
+                }
+                else if (px.a < 255)
+                {
+                    os->QOS_hasAlpha = TRUE;
+                }
 
+                if (doBlend && px.a < 255)
+                {
+                    a16 = (word)px.a;
+                    ia16 = (word)(255 - px.a);
+
+                    r8 = (byte)(((word)r8 * a16 +
+                                (word)blendColor.RGB_red * ia16 + 127) / 255);
+                    g8 = (byte)(((word)g8 * a16 +
+                                (word)blendColor.RGB_green * ia16 + 127) / 255);
+                    b8 = (byte)(((word)b8 * a16 +
+                                (word)blendColor.RGB_blue * ia16 + 127) / 255);
+                }
+
+                if (useMask)
+                {
                     maskBit++;
                     if (maskBit == 8)
                     {
@@ -243,66 +354,13 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
                         maskIdx++;
                     }
                 }
-
-                /* color to write (optional blend over constant RGB if semi-transparent) */
-                r8 = px.r;
-                g8 = px.g;
-                b8 = px.b;
-
-                /* If we treat it as opaque (by threshold), but the source has A<255,
-                * optionally pre-composite against a constant color for nicer visuals. */
-                if (opaque && g_qoiBlendEnable && (channels == 4) && (px.a < 255))
-                {
-                    /* integer blend: out = src*A + bg*(255-A), /255 rounded */
-                    a16  = (word)px.a;
-                    ia16 = (word)(255 - px.a);
-
-                    r8 = (byte)((( (word)r8 * a16 ) + ( (word)g_qoiBlendR * ia16 ) + 127) / 255);
-                    g8 = (byte)((( (word)g8 * a16 ) + ( (word)g_qoiBlendG * ia16 ) + 127) / 255);
-                    b8 = (byte)((( (word)b8 * a16 ) + ( (word)g_qoiBlendB * ia16 ) + 127) / 255);
-                }
-
-                /* write RGB triplet */
-                {
-                    byte *p;
-                    p = scan + (x * 3);
-                    p[0] = r8;
-                    p[1] = g8;
-                    p[2] = b8;
-                }
             }
 
-            /* mask bit: opaque=1, any A<255 => transparent */
-            if (channels == 4)
-            {
-                if (px.a == 255)
-                {
-                    maskPtr[maskIdx] |= (byte)(0x80 >> maskBit);
-                }
-                else
-                {
-                    os->QOS_hasAlpha = TRUE;
-                }
-
-                maskBit++;
-                if (maskBit == 8)
-                {
-                    maskBit = 0;
-                    maskIdx++;
-                }
-            }
-
-            /* write RGB */
-            {
-                byte *p;
-                p = scan + (x * 3);
-                p[0] = px.r;
-                p[1] = px.g;
-                p[2] = px.b;
-            }
+            scan[x * 3 + 0] = r8;
+            scan[x * 3 + 1] = g8;
+            scan[x * 3 + 2] = b8;
         }
 
-        /* write the scanline to the VM bitmap */
         if (HAL_COUNT(HugeArrayLock(os->QOS_file, os->QOS_block,
                                     (dword)y, &lineptr, &size)) != 0)
         {
@@ -317,11 +375,14 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
         }
     }
 
-    /* read and discard 8-byte end marker (lenient) */
     {
         byte tail[8];
         ok = qoiReadN(fh, tail, 8);
-        if (!ok) { MemUnlock(line); return QE_OUT_OF_DATA; }
+        if (!ok)
+        {
+            MemUnlock(line);
+            return QE_OUT_OF_DATA;
+        }
     }
 
     MemUnlock(line);
@@ -333,7 +394,9 @@ qoiDecodeTo24Bit(FileHandle fh, qoiOutStream *os, byte channels)
 **********************************************************************/
 
 VMBlockHandle _pascal _export
-QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
+QoiImportBitmapFNameWithTransform(PathName srcname, VMFileHandle destfile,
+                                  const QoiAlphaTransformData *transform,
+                                  QoiError *error)
 {
     FileHandle srcfile;
     QoiError stat;
@@ -342,7 +405,8 @@ QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
     srcfile = FileOpen(srcname, FILE_ACCESS_W | FILE_DENY_RW);
     if (srcfile)
     {
-        bmblock = QoiImportBitmapFHandle(srcfile, destfile, &stat);
+        bmblock = QoiImportBitmapFHandleWithTransform(srcfile, destfile,
+                                                      transform, &stat);
         FileClose(srcfile, 0);
     }
     else
@@ -351,113 +415,150 @@ QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
         bmblock = 0;
     }
 
-    if (error) { *error = stat; }
+    if (error)
+    {
+        *error = stat;
+    }
     return bmblock;
 }
 
 VMBlockHandle _pascal _export
-QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, QoiError *error)
+QoiImportBitmapFHandleWithTransform(FileHandle srcfile, VMFileHandle destfile,
+                                    const QoiAlphaTransformData *transform,
+                                    QoiError *error)
 {
-    QoiError        stat = QE_NO_ERROR;
+    QoiAlphaTransformData opts;
+    QoiError stat;
     QoiHeaderOnDisk hd;
-    dword           Wd, Hd;
-    word            W, H;
-    byte            channels;
-    byte            colorspace;
-    qoiOutStream    os;
-    GStateHandle    bmstate;
-    BMFormat        bmformat;
-    MemHandle       line = 0;
-    word            lineBytes;
-    word            maskBytes;
+    dword Wd;
+    dword Hd;
+    word W;
+    word H;
+    byte channels;
+    byte colorspace;
+    qoiOutStream os;
+    GStateHandle bmstate;
+    BMFormat bmformat;
+    MemHandle line;
+    word lineBytes;
+    word maskBytes;
+    Boolean useMask;
 
+    stat = QE_NO_ERROR;
+    line = 0;
     os.QOS_block = 0;
 
-    /* rewind and read header */
-    if (FilePos(srcfile, 0, FILE_POS_START) != 0) {
+    qoiNormalizeTransform(transform, &opts);
+
+    if (FilePos(srcfile, 0, FILE_POS_START) != 0)
+    {
         stat = QE_INVALID_FILE;
         goto done;
     }
-    if (!qoiReadN(srcfile, (void*)&hd, (word)sizeof(QoiHeaderOnDisk))) {
+    if (!qoiReadN(srcfile, (void*)&hd, (word)sizeof(QoiHeaderOnDisk)))
+    {
         stat = QE_WRONG_FILE_FORMAT;
         goto done;
     }
     if (hd.magic[0] != QOI_MAGIC_0 || hd.magic[1] != QOI_MAGIC_1 ||
-        hd.magic[2] != QOI_MAGIC_2 || hd.magic[3] != QOI_MAGIC_3) {
+        hd.magic[2] != QOI_MAGIC_2 || hd.magic[3] != QOI_MAGIC_3)
+    {
         stat = QE_WRONG_FILE_FORMAT;
         goto done;
     }
 
     Wd = qoiBE32ToHost(hd.widthBE);
     Hd = qoiBE32ToHost(hd.heightBE);
-    W  = qoiClampWordFromDword(Wd);
-    H  = qoiClampWordFromDword(Hd);
+    W = qoiClampWordFromDword(Wd);
+    H = qoiClampWordFromDword(Hd);
 
-    channels   = hd.channels;      /* 3 or 4 */
-    colorspace = hd.colorspace;    /* informational only */
+    channels = hd.channels;
+    colorspace = hd.colorspace;
     (void)colorspace;
 
-    if (!(channels == 3 || channels == 4)) {
+    if (!(channels == 3 || channels == 4))
+    {
         stat = QE_WRONG_FILE_FORMAT;
         goto done;
     }
 
-    /* 24-bit true color, optional mask */
+    useMask = (Boolean)((channels == 4) && (opts.QATD_method == QOI_AT_MASK));
+
     bmformat = (BMFormat)(BMF_24BIT | BMT_COMPLEX);
-    if (channels == 4) {
+    if (useMask)
+    {
         bmformat = (BMFormat)(bmformat | BMT_MASK);
     }
 
-    /* create VM-backed complex bitmap + gstate */
     os.QOS_block = GrCreateBitmap(bmformat, W, H, destfile, 0, &bmstate);
-    if (os.QOS_block == 0) {
+    if (os.QOS_block == 0)
+    {
         stat = QE_OUT_OF_MEMORY;
         goto done;
     }
-    GrDestroyBitmap(bmstate, BMD_LEAVE_DATA);  /* keep VM data */
+    GrDestroyBitmap(bmstate, BMD_LEAVE_DATA);
 
-    /* temp scanline: [mask?][RGB*W] */
     lineBytes = (word)(W * 3);
-    maskBytes = (channels == 4) ? (word)((W + 7) / 8) : 0;
+    maskBytes = useMask ? (word)((W + 7) / 8) : 0;
 
     line = MemAlloc((word)(lineBytes + maskBytes), HF_SWAPABLE, 0);
-    if (line == 0) {
+    if (line == 0)
+    {
         stat = QE_OUT_OF_MEMORY;
         goto fail_free_bitmap;
     }
 
-    /* fill output stream */
-    os.QOS_file     = destfile;
-    os.QOS_width    = W;
-    os.QOS_height   = H;
-    os.QOS_format   = (BMFormat)(bmformat & ~BMT_MASK);
-    os.QOS_line     = line;
+    os.QOS_file = destfile;
+    os.QOS_width = W;
+    os.QOS_height = H;
+    os.QOS_format = (BMFormat)(bmformat & ~BMT_MASK);
+    os.QOS_line = line;
     os.QOS_hasAlpha = FALSE;
-    os.QOS_y        = 0;
+    os.QOS_y = 0;
 
-    /* decode into the bitmap */
-    stat = qoiDecodeTo24Bit(srcfile, &os, channels);
+    stat = qoiDecodeTo24Bit(srcfile, &os, channels, &opts);
 
-    /* release temp line */
     MemFree(line);
     line = 0;
 
-    if (stat != QE_NO_ERROR) {
+    if (stat != QE_NO_ERROR)
+    {
         goto fail_free_bitmap;
     }
 
-    /* success */
     goto done;
 
 fail_free_bitmap:
-    if (os.QOS_block != 0) {
+    if (os.QOS_block != 0)
+    {
         VMFreeVMChain(destfile, VMCHAIN_MAKE_FROM_VM_BLOCK(os.QOS_block));
         os.QOS_block = 0;
     }
 
 done:
-    if (error) { *error = stat; }
+    if (line != 0)
+    {
+        MemFree(line);
+    }
+    if (error)
+    {
+        *error = stat;
+    }
     return os.QOS_block;
+}
+
+VMBlockHandle _pascal _export
+QoiImportBitmapFName(PathName srcname, VMFileHandle destfile, QoiError *error)
+{
+    return QoiImportBitmapFNameWithTransform(srcname, destfile,
+                                             &g_qoiLegacyTransform, error);
+}
+
+VMBlockHandle _pascal _export
+QoiImportBitmapFHandle(FileHandle srcfile, VMFileHandle destfile, QoiError *error)
+{
+    return QoiImportBitmapFHandleWithTransform(srcfile, destfile,
+                                               &g_qoiLegacyTransform, error);
 }
 
 QoiError _pascal _export

@@ -8,6 +8,7 @@
 #include <geos.h>
 #include <file.h>
 #include <vm.h>
+#include <graphics.h>
 
 /* Error codes */
 typedef enum
@@ -65,7 +66,32 @@ typedef struct
     word            QOS_y;
 } qoiOutStream;
 
-/* --- Import alpha/Blend controls --- */
+/* --- Import alpha handling --- */
+typedef enum
+{
+    QOI_AT_MASK = 0,
+    QOI_AT_BLEND
+} QoiAlphaTransformMethod;
+
+typedef struct
+{
+    QoiAlphaTransformMethod   QATD_method;
+    byte                      QATD_alphaThreshold;
+    RGBValue                  QATD_blendColor;
+} QoiAlphaTransformData;
+
+/* Optional alpha transform-aware import helpers */
+extern VMBlockHandle _pascal _export
+QoiImportBitmapFNameWithTransform(PathName srcname, VMFileHandle destfile,
+                                  const QoiAlphaTransformData *transform,
+                                  QoiError *error);
+
+extern VMBlockHandle _pascal _export
+QoiImportBitmapFHandleWithTransform(FileHandle srcfile, VMFileHandle destfile,
+                                    const QoiAlphaTransformData *transform,
+                                    QoiError *error);
+
+/* Compatibility helpers (legacy global knob API) */
 extern void _pascal _export
 QoiImportSetAlphaThreshold(byte threshold);
 
