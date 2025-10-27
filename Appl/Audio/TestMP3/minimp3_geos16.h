@@ -80,9 +80,6 @@ typedef struct {
 /* scalar, int16 output */
 typedef int16_t mp3d_sample_t;
 
-#ifdef TESTMP3_DECODER_GUARD_FEEDBACK
-extern word g_minimp3GuardFired;
-#endif
 
 /* --------- Bitstream ---------- */
 typedef struct { const uint8_t *buf; int pos, limit; } bs_t;
@@ -202,7 +199,7 @@ typedef struct {
 typedef struct
 {
     bs_t bs;
-    uint8_t maindata[MAX_BITRESERVOIR_BYTES + MAX_L3_FRAME_PAYLOAD_BYTES];
+    uint8_t maindata[MAX_BITRESERVOIR_BYTES + MAX_L3_FRAME_PAYLOAD_BYTES + 4];
     L3_gr_info_t gr_info[4];
     float grbuf[2][576], scf[40], syn[18 + 15][2*32];
     uint8_t ist_pos[2][39];
@@ -525,7 +522,13 @@ static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const 
 
     #define PEEK_BITS(n)  (bs_cache >> (32 - n))
     #define FLUSH_BITS(n) { bs_cache <<= (n); bs_sh += (n); }
-    #define CHECK_BITS    while (bs_sh >= 0) { bs_cache |= (uint32_t)*bs_next_ptr++ << bs_sh; bs_sh -= 8; }
+    #define CHECK_BITS    while (bs_sh >= 0) { \
+            if (bs_next_ptr >= bs_end) { \
+                goto bitstream_underrun; \
+            } \
+            bs_cache |= (uint32_t)*bs_next_ptr++ << bs_sh; \
+            bs_sh -= 8; \
+        }
     #define BSPOS         ((bs_next_ptr - bs->buf)*8 - 24 + bs_sh)
 
     float one;
@@ -554,14 +557,6 @@ static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const 
     big_val_cnt = gr_info->big_values;
     sfb = gr_info->sfbtab;
     bs_next_ptr = bs->buf + bs->pos/8;
-    if ((bs_end - bs_next_ptr) < 4)
-    {
-#ifdef TESTMP3_DECODER_GUARD_FEEDBACK
-        g_minimp3GuardFired = 1;
-#endif
-        bs->pos = layer3gr_limit;
-        return;
-    }
     bs_cache = (((bs_next_ptr[0]*256u + bs_next_ptr[1])*256u + bs_next_ptr[2])*256u + bs_next_ptr[3]) << (bs->pos & 7);
     pairs_to_decode = 0;
     np = 0;
@@ -579,14 +574,6 @@ static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const 
     bs_next_ptr += 4;
 
     while (big_val_cnt > 0) {
-        if (bs_next_ptr >= bs_end)
-        {
-#ifdef TESTMP3_DECODER_GUARD_FEEDBACK
-            g_minimp3GuardFired = 1;
-#endif
-            bs->pos = layer3gr_limit;
-            return;
-        }
         tab_num = gr_info->table_select[ireg];
         sfb_cnt = gr_info->region_count[ireg];
         ireg++;
@@ -627,14 +614,6 @@ static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const 
     codebook_count1 = (gr_info->count1_table) ? tab33 : tab32;
     np = 1 - big_val_cnt;
     for (;; dst += 4) {
-        if (bs_next_ptr >= bs_end)
-        {
-#ifdef TESTMP3_DECODER_GUARD_FEEDBACK
-            g_minimp3GuardFired = 1;
-#endif
-            bs->pos = layer3gr_limit;
-            return;
-        }
         leaf = codebook_count1[PEEK_BITS(4)];
         if (!(leaf & 8)) {
             leaf = codebook_count1[(leaf >> 3) + (bs_cache << 4 >> (32 - (leaf & 3)))];
@@ -680,7 +659,12 @@ static void L3_huffman(float *dst, bs_t *bs, const L3_gr_info_t *gr_info, const 
         CHECK_BITS;
     }
 
+bitstream_finish:
     bs->pos = layer3gr_limit;
+    return;
+
+bitstream_underrun:
+    goto bitstream_finish;
 }
 
 /* Stereo helpers (scalar only) */
@@ -929,6 +913,7 @@ static int L3_restore_reservoir(mp3dec_t *h, bs_t *bs, mp3dec_scratch_t *s, int 
            h->reserv_buf + (int)offset_sd,
            (unsigned)bytes_have);
     memcpy(s->maindata + bytes_have, bs->buf + bs->pos/8, (unsigned)frame_bytes);
+    memset(s->maindata + bytes_have + frame_bytes, 0, 4);
     bs_init(&s->bs, s->maindata, bytes_have + frame_bytes);
     return h->reserv >= (sdword)main_data_begin;
 }
@@ -1058,34 +1043,22 @@ static void mp3d_DCT_II(float *grbuf, int n)
 /* int16 scaling (scalar) */
 static int16_t mp3d_scale_pcm(float sample)
 {
-    sdword fixed;
-
-    /* Convert to fixed and apply rounding away from zero before shifting. */
-    fixed = mp3d_float_to_fixed(sample);
-    if (MP3_PCM_SHIFT > 0)
+    if (sample >= 32766.5f)
     {
-        sdword bias = (sdword)1 << (MP3_PCM_SHIFT - 1);
-        if (fixed >= 0)
-        {
-            fixed += bias;
-        }
-        else
-        {
-            fixed -= bias;
-        }
-        fixed >>= MP3_PCM_SHIFT;
+        return (int16_t)32767;
+    }
+    if (sample <= -32767.5f)
+    {
+        return (int16_t)-32768;
     }
 
-    if (fixed > 32767)
+    sample += 0.5f;
+    if (sample < 0.0f)
     {
-        fixed = 32767;
-    }
-    else if (fixed < -32768)
-    {
-        fixed = -32768;
+        sample -= 1.0f;
     }
 
-    return (int16_t)fixed;
+    return (int16_t)sample;
 }
 
 /* polyphase synthesis */

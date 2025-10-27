@@ -7,10 +7,7 @@
 #include <system.h>
 #include <file.h>
 
-#define TESTMP3_DECODER_GUARD_FEEDBACK 1
 #include "minimp3_geos16.h"
-
-word g_minimp3GuardFired = 0;
 
 #define MP3_FRAME_BUFFER_SIZE   (MAX_FREE_FORMAT_FRAME_SIZE + HDR_SIZE)
 #define TESTMP3_INPUT_FILE      "3S.MP3"
@@ -247,11 +244,6 @@ int _pascal decode_file(void)
         /* Decode this frame into raw PCM samples. */
         @call ProgText::MSG_VIS_TEXT_APPEND_PTR(_TEXT("S"), 0);
         samples = mp3dec_decode_frame(scratchP, decP, feedP, frameBytes, pcmP, &info);
-        if (g_minimp3GuardFired)
-        {
-            @call ProgText::MSG_VIS_TEXT_APPEND_PTR(_TEXT("G"), 0);
-            g_minimp3GuardFired = 0;
-        }
         @call ProgText::MSG_VIS_TEXT_APPEND_PTR(_TEXT("E"), 0);
 
 
