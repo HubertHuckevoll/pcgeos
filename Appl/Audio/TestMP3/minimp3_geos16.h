@@ -1058,59 +1058,50 @@ static void mp3d_DCT_II(float *grbuf, int n)
 /* int16 scaling (scalar) */
 static int16_t mp3d_scale_pcm(float sample)
 {
-    sdword fixed;
-
-    /* Convert to fixed and apply rounding away from zero before shifting. */
-    fixed = mp3d_float_to_fixed(sample);
-    if (MP3_PCM_SHIFT > 0)
+    if (sample >= 32766.5f)
     {
-        sdword bias = (sdword)1 << (MP3_PCM_SHIFT - 1);
-        if (fixed >= 0)
-        {
-            fixed += bias;
-        }
-        else
-        {
-            fixed -= bias;
-        }
-        fixed >>= MP3_PCM_SHIFT;
+        return (int16_t)32767;
+    }
+    if (sample <= -32767.5f)
+    {
+        return (int16_t)-32768;
     }
 
-    if (fixed > 32767)
+    if (sample < 0.0f)
     {
-        fixed = 32767;
+        sample -= 0.5f;
     }
-    else if (fixed < -32768)
+    else
     {
-        fixed = -32768;
+        sample += 0.5f;
     }
 
-    return (int16_t)fixed;
+    return (int16_t)sample;
 }
 
 /* polyphase synthesis */
 static void mp3d_synth_pair(mp3d_sample_t *pcm, int nch, const float *z)
 {
     float a;
-    a  = (z[14*64] - z[    0]) * 0.000442505f;
-    a += (z[ 1*64] + z[13*64]) * 0.003250122f;
-    a += (z[12*64] - z[ 2*64]) * 0.007003784f;
-    a += (z[ 3*64] + z[11*64]) * 0.031082153f;
-    a += (z[10*64] - z[ 4*64]) * 0.078628540f;
-    a += (z[ 5*64] + z[ 9*64]) * 0.100311279f;
-    a += (z[ 8*64] - z[ 6*64]) * 0.572036743f;
-    a +=  z[ 7*64]             * 1.144989014f;
+    a  = (z[14*64] - z[    0]) * 29.0f;
+    a += (z[ 1*64] + z[13*64]) * 213.0f;
+    a += (z[12*64] - z[ 2*64]) * 459.0f;
+    a += (z[ 3*64] + z[11*64]) * 2037.0f;
+    a += (z[10*64] - z[ 4*64]) * 5153.0f;
+    a += (z[ 5*64] + z[ 9*64]) * 6574.0f;
+    a += (z[ 8*64] - z[ 6*64]) * 37489.0f;
+    a +=  z[ 7*64]             * 75038.0f;
     pcm[0] = mp3d_scale_pcm(a);
 
     z += 2;
-    a  = z[14*64] * 0.001586914f;
-    a += z[12*64] * 0.023910522f;
-    a += z[10*64] * 0.148422241f;
-    a += z[ 8*64] * 0.976852417f;
-    a += z[ 6*64] * -0.152206421f;
-    a += z[ 4*64] * -0.000686646f;
-    a += z[ 2*64] * 0.002227783f;
-    a += z[ 0*64] * -0.000076294f;
+    a  = z[14*64] * 104.0f;
+    a += z[12*64] * 1567.0f;
+    a += z[10*64] * 9727.0f;
+    a += z[ 8*64] * 64019.0f;
+    a += z[ 6*64] * -9975.0f;
+    a += z[ 4*64] * -45.0f;
+    a += z[ 2*64] * 146.0f;
+    a += z[ 0*64] * -5.0f;
     pcm[16*nch] = mp3d_scale_pcm(a);
 }
 
