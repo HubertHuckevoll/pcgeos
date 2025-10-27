@@ -1,0 +1,156 @@
+/***********************************************************************
+ *
+ * QOI Import/Export UI helpers
+ *
+ ***********************************************************************/
+
+@include <stdapp.goh>
+@include <Objects/gItemGC.goh>
+@include <Objects/gValueC.goh>
+@include <Objects/colorC.goh>
+
+#include <qoilib.goh>
+
+@define dup(obj) ConstructOptr(OptrToHandle(oself), OptrToChunk(obj))
+@define dupHan(uiHandle, obj) ConstructOptr(uiHandle, OptrToChunk(obj))
+
+@extern object QoiImportGroup;
+@extern object QoiAlphaMethodGroup;
+@extern object QoiAlphaBlendBox;
+@extern object QoiAlphaMaskBox;
+@extern object QoiAlphaBlendColor;
+@extern object QoiAlphaThresholdValue;
+
+@class QoiImportGroupClass, GenInteractionClass;
+    @instance QoiAlphaTransformData qoiAlphaTransform = {0};
+
+    @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_QOI_ALPHA_METHOD_SELECTED(word selection);
+    @message (GEN_TRIGGER_ACTION) MSG_RESET_QOI_IMPORT_DIALOG();
+    @message (GEN_TRIGGER_ACTION) MSG_DISMISS_QOI_IMPORT_DIALOG();
+@endc
+@classdecl QoiImportGroupClass;
+
+MemHandle _pascal _export QoiGatherImportOptions(Handle dialogHan);
+void _pascal _export QoiGetImportOptionsFromUI(Handle dialogHan, QoiAlphaTransformData *qatdP);
+
+/*---------------------------------------------------------------------------
+ *  Helpers
+ *---------------------------------------------------------------------------*/
+static void
+QoiSetDefaults(QoiAlphaTransformData *data)
+{
+    data->QATD_method = QOI_AT_BLEND;
+    data->QATD_alphaThreshold = 192;
+    data->QATD_blendColor.RGB_red = 255;
+    data->QATD_blendColor.RGB_green = 255;
+    data->QATD_blendColor.RGB_blue = 255;
+}
+
+MemHandle _pascal _export
+QoiGatherImportOptions(Handle dialogHan)
+{
+    MemHandle handle;
+    QoiAlphaTransformData *dataP;
+
+    handle = MemAlloc(sizeof(QoiAlphaTransformData), HF_SWAPABLE, HAF_ZERO_INIT);
+    if (handle == NullHandle)
+    {
+        return NullHandle;
+    }
+
+    dataP = (QoiAlphaTransformData*)MemLock(handle);
+    if (dataP == NULL)
+    {
+        MemFree(handle);
+        return NullHandle;
+    }
+
+    QoiGetImportOptionsFromUI(dialogHan, dataP);
+    MemUnlock(handle);
+
+    return handle;
+}
+
+void _pascal _export
+QoiGetImportOptionsFromUI(Handle dialogHan, QoiAlphaTransformData *qatdP)
+{
+    ColorAndFlagReturn cafr;
+
+    QoiSetDefaults(qatdP);
+
+    qatdP->QATD_method = @call @dupHan(dialogHan, @QoiAlphaMethodGroup)::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+    qatdP->QATD_alphaThreshold = (byte)@call @dupHan(dialogHan, @QoiAlphaThresholdValue)::MSG_GEN_VALUE_GET_INTEGER_VALUE();
+    @call @dupHan(dialogHan, @QoiAlphaBlendColor)::MSG_COLOR_SELECTOR_GET_COLOR(&cafr);
+
+    if (cafr.CAFR_color.CQ_info == CF_INDEX)
+    {
+        RGBColorAsDWord c;
+        c = GrMapColorIndex(0, cafr.CAFR_color.CQ_redOrIndex);
+        qatdP->QATD_blendColor.RGB_red = RGB_RED(c);
+        qatdP->QATD_blendColor.RGB_green = RGB_GREEN(c);
+        qatdP->QATD_blendColor.RGB_blue = RGB_BLUE(c);
+    }
+    else if (cafr.CAFR_color.CQ_info == CF_RGB)
+    {
+        qatdP->QATD_blendColor.RGB_red = cafr.CAFR_color.CQ_redOrIndex;
+        qatdP->QATD_blendColor.RGB_green = cafr.CAFR_color.CQ_green;
+        qatdP->QATD_blendColor.RGB_blue = cafr.CAFR_color.CQ_blue;
+    }
+    else if (cafr.CAFR_color.CQ_info == CF_GRAY)
+    {
+        qatdP->QATD_blendColor.RGB_red = cafr.CAFR_color.CQ_redOrIndex;
+        qatdP->QATD_blendColor.RGB_green = cafr.CAFR_color.CQ_redOrIndex;
+        qatdP->QATD_blendColor.RGB_blue = cafr.CAFR_color.CQ_redOrIndex;
+    }
+}
+
+@method QoiImportGroupClass, MSG_VIS_OPEN
+{
+    @callsuper();
+
+    QoiGetImportOptionsFromUI(OptrToHandle(oself), &pself->qoiAlphaTransform);
+    @send oself::MSG_QOI_ALPHA_METHOD_SELECTED(pself->qoiAlphaTransform.QATD_method);
+}
+
+@method QoiImportGroupClass, MSG_QOI_ALPHA_METHOD_SELECTED
+{
+    if (selection == QOI_AT_BLEND)
+    {
+        @call @dup(@QoiAlphaBlendBox)::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+        @call @dup(@QoiAlphaMaskBox)::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+    }
+    else if (selection == QOI_AT_MASK)
+    {
+        @call @dup(@QoiAlphaMaskBox)::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+        @call @dup(@QoiAlphaBlendBox)::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+    }
+    else
+    {
+        @call @dup(@QoiAlphaBlendBox)::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+        @call @dup(@QoiAlphaMaskBox)::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+    }
+}
+
+@method QoiImportGroupClass, MSG_RESET_QOI_IMPORT_DIALOG
+{
+    ColorQuad defaultBlendColor;
+
+    QoiSetDefaults(&pself->qoiAlphaTransform);
+
+    defaultBlendColor.CQ_info = CF_RGB;
+    defaultBlendColor.CQ_redOrIndex = pself->qoiAlphaTransform.QATD_blendColor.RGB_red;
+    defaultBlendColor.CQ_green = pself->qoiAlphaTransform.QATD_blendColor.RGB_green;
+    defaultBlendColor.CQ_blue = pself->qoiAlphaTransform.QATD_blendColor.RGB_blue;
+
+    @call @dup(@QoiAlphaMethodGroup)::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(QOI_AT_BLEND, FALSE);
+    @call @dup(@QoiAlphaBlendColor)::MSG_COLOR_SELECTOR_SET_COLOR(defaultBlendColor, FALSE);
+    @call @dup(@QoiAlphaThresholdValue)::MSG_GEN_VALUE_SET_INTEGER_VALUE(pself->qoiAlphaTransform.QATD_alphaThreshold, FALSE);
+
+    @call @dup(@QoiAlphaBlendBox)::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+    @call @dup(@QoiAlphaMaskBox)::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_UI_QUEUE);
+}
+
+@method QoiImportGroupClass, MSG_DISMISS_QOI_IMPORT_DIALOG
+{
+    QoiGetImportOptionsFromUI(OptrToHandle(oself), &pself->qoiAlphaTransform);
+}

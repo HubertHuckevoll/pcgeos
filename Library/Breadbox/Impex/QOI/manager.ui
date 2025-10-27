@@ -1,4 +1,6 @@
 #include <generic.uih>
+#include <Objects/colorC.uih>
+#include <Objects/gValueC.uih>
 
 start ExportInterface;
 
@@ -31,3 +33,123 @@ QoiExportGroup = GenInteraction {
 }
 
 end ExportInterface;
+
+start ImportInterface;
+
+QoiAlphaMethodBlend = GenItem {
+    moniker = "Blend with Background Color";
+    identifier = 1;
+}
+
+QoiAlphaMethodMask = GenItem {
+    moniker = "Convert to 1-bit Mask";
+    identifier = 0;
+}
+
+QoiAlphaMethodGroup = GenItemGroup {
+    hints = {
+      HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION,
+      HINT_ITEM_GROUP_RADIO_BUTTON_STYLE,
+      HINT_ORIENT_CHILDREN_VERTICALLY
+    }
+    selection = 1;
+    applyMsg = MSG_QOI_ALPHA_METHOD_SELECTED;
+    destination = QoiImportGroup;
+    children = QoiAlphaMethodBlend, QoiAlphaMethodMask;
+}
+
+QoiAlphaBlendExplain = GenText {
+    genAttributes = default +readOnly;
+    text = "Blend transparency into a single background color.";
+    hints = { HINT_EXPAND_WIDTH_TO_FIT_PARENT };
+}
+
+QoiAlphaBlendColor = ColorSelector {
+    moniker = "Blend color:";
+    color = {
+        info = CF_RGB;
+        redOrIndex = 255;
+        green = 255;
+        blue = 255;
+    }
+    hints = {
+        HINT_EXPAND_WIDTH_TO_FIT_PARENT,
+        ATTR_GEN_CONTROL_REQUIRE_UI { word mask CSF_INDEX or mask CSF_RGB },
+        ATTR_GEN_CONTROL_PROHIBIT_UI { word mask CSF_PATTERN or mask CSF_DRAW_MASK }
+    }
+}
+
+QoiAlphaBlendBox = GenInteraction {
+    hints = {
+      HINT_DRAW_IN_BOX,
+      HINT_ORIENT_CHILDREN_VERTICALLY,
+      HINT_EXPAND_WIDTH_TO_FIT_PARENT
+    }
+    children = QoiAlphaBlendExplain, QoiAlphaBlendColor;
+}
+
+QoiAlphaMaskExplain = GenText {
+    genAttributes = default +readOnly;
+    text = "Convert transparency to an on/off mask using a threshold.";
+    hints = { HINT_EXPAND_WIDTH_TO_FIT_PARENT };
+}
+
+QoiAlphaThresholdValue = GenValue {
+    moniker = "Alpha threshold:";
+    value = 192;
+    minimum = 0;
+    maximum = 255;
+    increment = 1;
+    displayFormat = integer;
+    hints = { HINT_EXPAND_WIDTH_TO_FIT_PARENT };
+}
+
+QoiAlphaMaskBox = GenInteraction {
+    genStates = default -usable;
+    hints = {
+      HINT_DRAW_IN_BOX,
+      HINT_ORIENT_CHILDREN_VERTICALLY,
+      HINT_EXPAND_WIDTH_TO_FIT_PARENT
+    }
+    children = QoiAlphaMaskExplain, QoiAlphaThresholdValue;
+}
+
+QoiImportApplyTrigger = GenTrigger {
+    moniker = "OK";
+    genAttributes = default +completesInteraction;
+    hints = {
+      HINT_SEEK_REPLY_BAR,
+      HINT_DEFAULT_DEFAULT_ACTION
+    }
+}
+
+QoiImportResetTrigger = GenTrigger {
+    moniker = "Reset";
+    action = MSG_RESET_QOI_IMPORT_DIALOG, QoiImportGroup;
+    hints = { HINT_SEEK_REPLY_BAR };
+}
+
+QoiImportCancelTrigger = GenTrigger {
+    moniker = "Cancel";
+    genAttributes = default +completesInteraction;
+    action = MSG_DISMISS_QOI_IMPORT_DIALOG, QoiImportGroup;
+    hints = { HINT_SEEK_REPLY_BAR };
+}
+
+QoiImportReplyBar = GenInteraction {
+    hints = { HINT_MAKE_REPLY_BAR };
+    children = QoiImportApplyTrigger, QoiImportResetTrigger, QoiImportCancelTrigger;
+}
+
+QoiImportGroup = GenInteraction {
+    genStates = default -usable;
+    visibility = dialog;
+    attributes = modal;
+    hints = {
+      HINT_ORIENT_CHILDREN_VERTICALLY,
+      HINT_EXPAND_WIDTH_TO_FIT_PARENT
+    }
+    children = QoiAlphaMethodGroup, QoiAlphaBlendBox, QoiAlphaMaskBox, QoiImportReplyBar;
+}
+
+end ImportInterface;

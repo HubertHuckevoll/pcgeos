@@ -11,6 +11,7 @@ include manager.rdef
 global  QOIIMPORT: far
 global  QOITESTFILE: far
 global  QOIEXPORT: far
+global  QOIGATHERIMPORTOPTIONS: far
 
 	SetGeosConvention               ; set calling convention
 
@@ -156,9 +157,15 @@ TransGetExportUI endp
 
 ;--------------------------------------------------------------------------------
 
-TransGetImportOptions proc far
-		xor     dx,dx
-		ret
+TransGetImportOptions proc far uses ax,bx,cx,bp,si,di,ds
+        .enter
+
+        push    dx                              ; dialog handle
+        call    QOIGATHERIMPORTOPTIONS
+        mov     dx,ax
+
+        .leave
+        ret
 TransGetImportOptions endp
 
 ;--------------------------------------------------------------------------------

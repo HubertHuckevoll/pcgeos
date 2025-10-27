@@ -9,13 +9,15 @@ type library, single
 
 entry LibraryEntry
 
-library	geos
+library geos
 library ui
 library impex
 library extgraph
+library color
 library qoilib
 
 resource ExportInterface object
+resource ImportInterface object
 
 export TransGetImportUI
 export TransGetExportUI
@@ -26,3 +28,5 @@ export TransGetExportOptions
 export TransImport
 export TransExport
 export TransGetFormat
+export QOIGATHERIMPORTOPTIONS
+export QoiImportGroupClass
