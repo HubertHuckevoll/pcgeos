@@ -12,6 +12,7 @@ global _ImportSettings: nptr
 
 imptproc_TEXT   segment public 'CODE'
   extrn  IMPORTPROCEDURE: far
+  extrn  EXPORTPROCEDURE: far
   extrn  GETFORMAT: far
 imptproc_TEXT   ends
 
@@ -49,7 +50,15 @@ ASM     segment resource
         assume cs:ASM
 
 TransExport proc far
-        mov     ax,4                    ; TE_EXPORT_NO_SUPPORTED
+        uses    es,ds,si,di
+        .enter
+          push    ds
+          push    si
+          mov     ax,idata              ; DS=dgroup
+          mov     ds,ax
+          call    EXPORTPROCEDURE
+          mov     bx,dx
+        .leave
         ret
 TransExport endp
 
@@ -182,17 +191,17 @@ InfoResource    segment lmem LMEM_TYPE_GENERAL,mask LMF_IN_RESOURCE
         dw      fmt_1_name,fmt_1_mask
           D_OPTR  _ImportSettings
           dw      0,0
-          dw      8000h                 ; Currently we only support import
+          dw      0C000h
 
         dw      fmt_2_name,fmt_2_mask
           D_OPTR  _ImportSettings
           dw      0,0
-          dw      8000h                 ; Currently we only support import
+          dw      0C000h
 
         dw      fmt_3_name,fmt_3_mask
           D_OPTR  0
           dw      0,0
-          dw      8000h                 ; Currently we only support import
+          dw      0C000h
 
         dw      0
 
