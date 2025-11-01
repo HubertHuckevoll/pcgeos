@@ -12,10 +12,12 @@ global _ImportSettings: nptr
 
 imptproc_TEXT   segment public 'CODE'
   extrn  IMPORTPROCEDURE: far
-  extrn  EXPORTPROCEDURE: far
   extrn  GETFORMAT: far
 imptproc_TEXT   ends
 
+svgexpproc_TEXT segment public 'CODE'
+  extrn  EXPORTPROCEDURE: far
+svgexpproc_TEXT ends
 
 global  LibraryEntry: far
 global  TransExport: far

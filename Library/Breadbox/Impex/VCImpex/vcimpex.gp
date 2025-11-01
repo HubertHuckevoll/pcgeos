@@ -2,13 +2,13 @@ name vcimpex.lib
 
 longname        "CGM/HPGL/SVG Translator"
 tokenchars      "TLGR"
-tokenid		0
+tokenid         0
 
 type library, single
 
 entry LibraryEntry
 
-library	geos
+library geos
 library ui
 library impex
 library ansic

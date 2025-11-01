@@ -1,6 +1,7 @@
 #ifndef __VCIMPEX_SVGEXP_H_
 #define __VCIMPEX_SVGEXP_H_
 
+#include <geos.h>
 #include <graphics.h>
 #include <gstring.h>
 #include <file.h>
@@ -12,6 +13,7 @@
 #include <xlatLib.h>
 
 #define VCIMPEX_SVG_MAX_POLY_POINTS   256
+#define VCIMPEX_SVG_ELEMENT_BUFFER_SIZE   1024
 
 typedef struct
 {

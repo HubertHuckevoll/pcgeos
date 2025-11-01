@@ -25,19 +25,19 @@ typedef struct
         struct { Point p; } DRAW_RECT_TO;
         struct { word numPoints; Point p[VCIMPEX_SVG_MAX_POLY_POINTS]; } DRAW_POLY;
         struct { word numPoints; RegionFillRule rule; Point p[VCIMPEX_SVG_MAX_POLY_POINTS]; } FILL_POLYGON;
-        byte raw[512];
+        byte raw[VCIMPEX_SVG_ELEMENT_BUFFER_SIZE];
     } data;
 } VCImpexSVGGStringElement;
 
-static VCImpexSVGGStringElement svgElementBuffer;
-static PointWWFixed svgPolygonBuffer[VCIMPEX_SVG_MAX_POLY_POINTS];
+VCImpexSVGGStringElement svgElementBuffer;
+PointWWFixed svgPolygonBuffer[VCIMPEX_SVG_MAX_POLY_POINTS];
 
-static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context);
+word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context);
 
-static word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
-static word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
-static word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
-static void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value);
+word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
+word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
+word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
+void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value);
 
 /****************************************************************************
  * VCImpex SVG Export public entry point
@@ -62,6 +62,12 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     }
 
     context.svgFile = frame->EF_outputFile;
+    if (FileTruncate(context.svgFile, 0, FALSE) != 0)
+    {
+        GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
+        return TE_FILE_WRITE;
+    }
+    FilePos(context.svgFile, 0, FILE_POS_START);
     GrGetGStringBoundsDWord(sourceGState, 0, 0, &context.bounds);
     context.lineWidth = 0;
     context.lineColor = 0;
@@ -78,7 +84,7 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
  * Core gstring traversal
  ****************************************************************************/
 
-static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context)
+word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context)
 {
     MemHandle playbackBlockH;
     ChunkHandle playbackChunk;
@@ -90,6 +96,8 @@ static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSV
     word error;
     word handlerResult;
     Boolean handled;
+    GSRetType gsr;
+
 
     playbackBlockH = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
     if (playbackBlockH == NullHandle)
@@ -97,7 +105,7 @@ static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSV
         return TE_OUT_OF_MEMORY;
     }
 
-    playbackGState = GrCreateGString(playbackBlockH, GST_CHUNK, &playbackChunk);
+    playbackGState = GrCreateGString(playbackBlockH, GST_CHUNK, (word*) &playbackChunk);
     if (playbackGState == 0)
     {
         MemFree(playbackBlockH);
@@ -107,16 +115,21 @@ static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSV
     if (!VCImpexSVGWriteHeader(context))
     {
         GrDestroyGString(playbackGState, 0, GSKT_KILL_DATA);
-        MemFree(playbackBlockH);
         return TE_FILE_WRITE;
     }
 
     error = TE_NO_ERROR;
-    drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
-                               VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
 
-    while (drawResult == GSRT_ONE)
+    for(gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType);
+        gsr == GSRT_ONE;
+        gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType))
     {
+
+    //drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
+    //                           VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
+
+    //while (drawResult == GSRT_ONE)
+    //{
         GrGetGStringElement(playbackGState, sourceGState, sizeof(svgElementBuffer),
                             &svgElementBuffer, &elementSize);
         if (elementSize > sizeof(svgElementBuffer))
@@ -159,14 +172,14 @@ static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSV
             }
         }
 
-        drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
-                                   VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
+        //drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
+        //                           VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
     }
 
-    if ((error == TE_NO_ERROR) && (drawResult != GSRT_COMPLETE))
-    {
-        error = TE_EXPORT_ERROR;
-    }
+    //if ((error == TE_NO_ERROR) && (drawResult != GSRT_COMPLETE))
+    //{
+    //    error = TE_EXPORT_ERROR;
+    //}
 
     if (error == TE_NO_ERROR)
     {
@@ -177,7 +190,6 @@ static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSV
     }
 
     GrDestroyGString(playbackGState, 0, GSKT_KILL_DATA);
-    MemFree(playbackBlockH);
 
     return error;
 }
@@ -186,7 +198,7 @@ static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSV
  * Opcode handlers
  ****************************************************************************/
 
-static word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
 {
     PointWWFixed startPoint;
     PointWWFixed endPoint;
@@ -277,7 +289,7 @@ static word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGS
     return TE_NO_ERROR;
 }
 
-static word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
 {
     PointWWFixed corner1;
     PointWWFixed corner3;
@@ -316,7 +328,7 @@ static word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playb
     return TE_NO_ERROR;
 }
 
-static word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
+word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
 {
     Point *sourcePoints;
     word pointCount;
@@ -376,7 +388,7 @@ static word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbac
     return TE_NO_ERROR;
 }
 
-static void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value)
+void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value)
 {
     component->WWF_int = (word)((((sdword)value) >> 16) & 0xffff);
     component->WWF_frac = (word)(value & 0xffff);

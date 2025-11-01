@@ -9,11 +9,49 @@
 
 #include "svgexp.h"
 
+static void VCImpexSVGCopyLiteral(char *destination, const char *source)
+{
+    char currentChar;
+
+    if ((destination == NULL) || (source == NULL))
+    {
+        return;
+    }
+
+    do
+    {
+        currentChar = *source;
+        *destination = currentChar;
+        destination++;
+        source++;
+    } while (currentChar != '\0');
+}
+
+static word VCImpexSVGStringLength(const char *text)
+{
+    const char *scan;
+    word length;
+
+    if (text == NULL)
+    {
+        return 0;
+    }
+
+    scan = text;
+    while (*scan != '\0')
+    {
+        scan++;
+    }
+
+    length = (word)(scan - text);
+    return length;
+}
+
 static void VCImpexSVGFormatColor(RGBColorAsDWord colorValue, char *buffer)
 {
-    word redComponent;
-    word greenComponent;
-    word blueComponent;
+    word redComponent = 0;
+    word greenComponent = 0;
+    word blueComponent = 0;
 
     redComponent = RGB_RED(colorValue);
     greenComponent = RGB_GREEN(colorValue);
@@ -28,14 +66,19 @@ static void VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word fract
 
 Boolean _pascal VCImpexSVGWriteRawString(VCImpexSVGExportContext *context, const char *text)
 {
-    word length;
+    word length = 0;
 
     if ((context == NULL) || (text == NULL))
     {
         return FALSE;
     }
 
-    length = (word)strlen(text);
+    if (context->svgFile == NullHandle)
+    {
+        return FALSE;
+    }
+
+    length = VCImpexSVGStringLength(text);
     if (length == 0)
     {
         return TRUE;
@@ -50,11 +93,11 @@ Boolean _pascal VCImpexSVGWriteRawString(VCImpexSVGExportContext *context, const
 
 Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context)
 {
-    char buffer[160];
-    dword width;
-    dword height;
-    char widthText[20];
-    char heightText[20];
+    char buffer[160] = {0};
+    dword width = 0;
+    dword height = 0;
+    char widthText[20] = {0};
+    char heightText[20] = {0};
 
     if (context == NULL)
     {
@@ -119,13 +162,13 @@ Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExpo
 
 Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint)
 {
-    char buffer[200];
-    char x1Text[24];
-    char y1Text[24];
-    char x2Text[24];
-    char y2Text[24];
-    char widthText[24];
-    char colorText[10];
+    char buffer[200] = {0};
+    char x1Text[24] = {0};
+    char y1Text[24] = {0};
+    char x2Text[24] = {0};
+    char y2Text[24] = {0};
+    char widthText[24] = {0};
+    char colorText[10] = {0};
 
     if ((context == NULL) || (startPoint == NULL) || (endPoint == NULL))
     {
@@ -140,7 +183,7 @@ Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, con
 
     if (context->lineWidth == 0)
     {
-        strcpy(colorText, "none");
+        VCImpexSVGCopyLiteral(colorText, "none");
     }
     else
     {
@@ -154,20 +197,20 @@ Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, con
 
 Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean filled)
 {
-    char buffer[220];
-    char xText[24];
-    char yText[24];
-    char widthText[24];
-    char heightText[24];
-    char strokeWidthText[24];
-    char strokeColor[10];
-    char fillText[10];
-    WWFixedAsDWord leftValue;
-    WWFixedAsDWord topValue;
-    WWFixedAsDWord rightValue;
-    WWFixedAsDWord bottomValue;
-    sdword widthSigned;
-    sdword heightSigned;
+    char buffer[220] = {0};
+    char xText[24] = {0};
+    char yText[24] = {0};
+    char widthText[24] = {0};
+    char heightText[24] = {0};
+    char strokeWidthText[24] = {0};
+    char strokeColor[10] = {0};
+    char fillText[10] = {0};
+    WWFixedAsDWord leftValue = {0};
+    WWFixedAsDWord topValue = {0};
+    WWFixedAsDWord rightValue = {0};
+    WWFixedAsDWord bottomValue = {0};
+    sdword widthSigned = 0;
+    sdword heightSigned = 0;
 
     if ((context == NULL) || (corner1 == NULL) || (corner3 == NULL))
     {
@@ -200,7 +243,7 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
 
     if (context->lineWidth == 0)
     {
-        strcpy(strokeColor, "none");
+        VCImpexSVGCopyLiteral(strokeColor, "none");
     }
     else
     {
@@ -213,7 +256,7 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
     }
     else
     {
-        strcpy(fillText, "none");
+        VCImpexSVGCopyLiteral(fillText, "none");
     }
 
     sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" stroke=\"%s\" fill=\"%s\" stroke-width=\"%s\" />\n",
@@ -223,15 +266,15 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
 
 Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, const PointWWFixed *points, word pointCount, Boolean closeShape, Boolean filled)
 {
-    const char *elementName;
-    char prefix[20];
-    char xText[24];
-    char yText[24];
-    char coordinateText[64];
-    char strokeWidthText[24];
-    char strokeColor[10];
-    char fillText[10];
-    word index;
+    const char *elementName = (void*) 0;
+    char prefix[20] = {0};
+    char xText[24] = {0};
+    char yText[24] = {0};
+    char coordinateText[64] = {0};
+    char strokeWidthText[24] = {0};
+    char strokeColor[10] = {0};
+    char fillText[10] = {0};
+    word index = 0;
 
     if ((context == NULL) || (points == NULL) || (pointCount == 0))
     {
@@ -249,7 +292,7 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, 
 
     if (context->lineWidth == 0)
     {
-        strcpy(strokeColor, "none");
+        VCImpexSVGCopyLiteral(strokeColor, "none");
     }
     else
     {
@@ -263,7 +306,7 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, 
     }
     else
     {
-        strcpy(fillText, "none");
+        VCImpexSVGCopyLiteral(fillText, "none");
     }
 
     sprintf(prefix, "  <%s points=\"", elementName);
@@ -296,8 +339,8 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, 
 
 WWFixedAsDWord _pascal VCImpexSVGPackWWFixed(const WWFixed *value)
 {
-    WWFixedAsDWord result;
-    sdword integerPart;
+    WWFixedAsDWord result = {0};
+    sdword integerPart = 0;
 
     if (value == NULL)
     {
@@ -312,7 +355,7 @@ WWFixedAsDWord _pascal VCImpexSVGPackWWFixed(const WWFixed *value)
 
 void _pascal VCImpexSVGTransformPointFromInt(GStateHandle gstate, const Point *sourcePoint, PointWWFixed *targetPoint)
 {
-    XYValueAsDWord transformedValue;
+    XYValueAsDWord transformedValue = {0};
 
     transformedValue = GrTransform(gstate, sourcePoint->P_x, sourcePoint->P_y);
     targetPoint->PF_x.WWF_int = DWORD_X(transformedValue);
@@ -328,9 +371,9 @@ void _pascal VCImpexSVGTransformPointFromFixed(GStateHandle gstate, const PointW
 
 void _pascal VCImpexSVGTransformRelativePoint(GStateHandle gstate, const PointWWFixed *deltaPoint, PointWWFixed *targetPoint)
 {
-    PointWWFixed currentPoint;
-    WWFixedAsDWord xValue;
-    WWFixedAsDWord yValue;
+    PointWWFixed currentPoint = {0};
+    WWFixedAsDWord xValue = {0};
+    WWFixedAsDWord yValue = {0};
 
     GrGetCurPosWWFixed(gstate, &currentPoint);
     xValue = VCImpexSVGPackWWFixed(&currentPoint.PF_x) + VCImpexSVGPackWWFixed(&deltaPoint->PF_x);
