@@ -22,6 +22,7 @@ typedef struct
     WWFixedAsDWord lineWidth;
     RGBColorAsDWord lineColor;
     RGBColorAsDWord fillColor;
+    MemHandle bufferHeapH;
 } VCImpexSVGExportContext;
 
 Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context);
