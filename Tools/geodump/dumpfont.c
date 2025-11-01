@@ -161,7 +161,6 @@ void DisplayBSWF(FILE *f)
               GetStructP(nfh,face.ODE_headerPos);
                                         
               // Read width table
-              printf("        Width table: @ 0x0%-8lx\n", ftell(f));
               fread(nw+nfh.NFH_firstchar,sizeof(nw[0]),nfh.NFH_numchars,f);
 
               // Read kern pairs if available
@@ -196,13 +195,11 @@ void DisplayBSWF(FILE *f)
               if(nfh.NFH_firstchar<0x80)
               {
                 fseek(f,face.ODE_firstPos,SEEK_SET);
-                printf("        1st half of outlines: @ 0x0%-8lx\n", ftell(f));
                 fread(charOfs+nfh.NFH_firstchar,2,0x80-nfh.NFH_firstchar,f);
               }
               if(nfh.NFH_lastchar>0x7F)
               {
                 fseek(f,face.ODE_secondPos,SEEK_SET);
-                printf("        2nd half of outlines: @ 0x0%-8lx\n", ftell(f));
                 fread(charOfs+0x80,2,nfh.NFH_lastchar-0x7F,f);
               }
 

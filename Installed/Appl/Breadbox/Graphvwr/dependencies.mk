@@ -54,9 +54,7 @@ impbmp.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
-                IMPBMP/impbmp.h IMPBMP/ibcommon.h pnglib.h Ansi/stdio.h \
-                Ansi/stdlib.h zlib.h zconf.h htmldrv.h product.h math.h \
-                htmlfstr.h awatcher.h htmlprog.h
+                IMPBMP/impbmp.h IMPBMP/ibcommon.h
 impgif.obj \
 impgif.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -85,9 +83,7 @@ impgif.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
-                IMPBMP/impgif.h IMPBMP/ibcommon.h pnglib.h Ansi/stdio.h \
-                Ansi/stdlib.h zlib.h zconf.h htmldrv.h product.h math.h \
-                htmlfstr.h awatcher.h htmlprog.h
+                IMPBMP/impgif.h IMPBMP/ibcommon.h
 imppcx.obj \
 imppcx.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -116,9 +112,7 @@ imppcx.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
-                IMPBMP/imppcx.h IMPBMP/ibcommon.h pnglib.h Ansi/stdio.h \
-                Ansi/stdlib.h zlib.h zconf.h htmldrv.h product.h math.h \
-                htmlfstr.h awatcher.h htmlprog.h
+                IMPBMP/imppcx.h IMPBMP/ibcommon.h
 imp_bmp.obj \
 imp_bmp.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -188,4 +182,4 @@ bmpview.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
 quant.obj \
 quant.eobj: Ansi/string.h geos.h GRAPH/quant.h color.h heap.h
 
-graphvwrEC.geo graphvwr.geo : geos.ldf ui.ldf ansic.ldf extui.ldf color.ldf giflib.ldf pnglib.ldf thumbdb.ldf ijgjpeg.ldf
+graphvwrEC.geo graphvwr.geo : geos.ldf ui.ldf ansic.ldf extui.ldf color.ldf giflib.ldf pnglib.ldf thumbdb.ldf ijgjpeg.ldf 

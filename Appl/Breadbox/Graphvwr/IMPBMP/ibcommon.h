@@ -2,7 +2,6 @@
 #define __IBCOMMON_H
 
 #include <geos.h>
-#include <pnglib.h>
 
 typedef enum
 {
@@ -14,19 +13,6 @@ typedef enum
   IBF_GIF,
   IBF_PNG
 } ImpBmpFormat;
-
-// make sure to keep the following two structs in sync with
-// alpha supporting formats, like PNG and QOI
-typedef enum {
-    AT_TRESHOLD = 0,
-    AT_BLEND
-} alphaTransformMethod;
-
-typedef struct {
-    alphaTransformMethod method;
-    byte alphaThreshold;
-    RGBValue blendColor;
-} alphaTransformData;
 
 typedef struct
 {

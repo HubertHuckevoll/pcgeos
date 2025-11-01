@@ -70,4 +70,4 @@ exp.eobj: pnglib.h geos.h Ansi/stdio.h Ansi/stdlib.h Ansi/string.h \
                 math.h timedate.h htmlfstr.h awatcher.h htmlprog.h \
                 xlatLib.h geode.h geoworks.h extgraph.h gstring.h
 
-pngEC.geo png.geo : geos.ldf ui.ldf impex.ldf extgraph.ldf color.ldf pnglib.ldf
+pngEC.geo png.geo : geos.ldf ui.ldf impex.ldf extgraph.ldf color.ldf pnglib.ldf 

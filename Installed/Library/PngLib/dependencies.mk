@@ -13,4 +13,4 @@ pngimp.eobj: pnglib.h geos.h Ansi/stdio.h Ansi/stdlib.h Ansi/string.h \
                 math.h timedate.h htmlfstr.h awatcher.h htmlprog.h \
                 common.h
 
-pnglibEC.geo pnglib.geo : geos.ldf ansic.ldf zlib.ldf extgraph.ldf
+pnglibEC.geo pnglib.geo : geos.ldf ansic.ldf zlib.ldf extgraph.ldf 
