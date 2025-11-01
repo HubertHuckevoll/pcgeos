@@ -6,12 +6,13 @@
 GEODE           = vcimpex
 VCIMPEX         = vcimpexManager.asm vcimpex_ui.goc
 IMPTPROC        = imptproc.goc
+EXPPROC         = svgexpproc.goc svgsubcode.goc
 UI_TO_RDFS      =
-OBJS            = vcimpex_ui.obj imptproc.obj
+OBJS            = vcimpex_ui.obj imptproc.obj svgexpproc.obj svgsubcode.obj
 COMMON          = vconv_ui.h
 MODULES         = VCImpex
-CMODULES        = VCImpex imptproc
-SRCS            = $(VCIMPEX) $(IMPTPROC) $(COMMON)
+CMODULES        = VCImpex imptproc expproc
+SRCS            = $(VCIMPEX) $(IMPTPROC) $(EXPPROC) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = vcimpex

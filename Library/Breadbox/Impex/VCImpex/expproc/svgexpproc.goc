@@ -1,0 +1,383 @@
+/***********************************************************************
+ *
+ * PROJECT:       VCImpex SVG Exporter
+ * FILE:          svgexpproc.goc
+ *
+ * DESCRIPTION:   Implements the export procedure for SVG output
+ *
+ ***********************************************************************/
+
+#include "svgexp.h"
+
+#define VCIMPEX_SVG_GSTRING_FLAGS   (GSC_ONE)
+
+typedef struct
+{
+    GStringElement element;
+    union
+    {
+        struct { Point p1; Point p2; } DRAW_LINE;
+        struct { Point p; } DRAW_LINE_TO;
+        struct { PointWWFixed p; } DRAW_REL_LINE_TO;
+        struct { Point p; sword xy; } DRAW_HVLINE;
+        struct { sword xy; } DRAW_HVLINE_TO;
+        struct { Point p1; Point p2; } DRAW_RECT;
+        struct { Point p; } DRAW_RECT_TO;
+        struct { word numPoints; Point p[VCIMPEX_SVG_MAX_POLY_POINTS]; } DRAW_POLY;
+        struct { word numPoints; RegionFillRule rule; Point p[VCIMPEX_SVG_MAX_POLY_POINTS]; } FILL_POLYGON;
+        byte raw[512];
+    } data;
+} VCImpexSVGGStringElement;
+
+static VCImpexSVGGStringElement svgElementBuffer;
+static PointWWFixed svgPolygonBuffer[VCIMPEX_SVG_MAX_POLY_POINTS];
+
+static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context);
+
+static word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
+static word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
+static word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
+static void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value);
+
+/****************************************************************************
+ * VCImpex SVG Export public entry point
+ ****************************************************************************/
+
+dword _export _pascal ExportProcedure(ExportFrame *frame)
+{
+    GStateHandle sourceGState;
+    VCImpexSVGExportContext context;
+    word error;
+
+    if ((frame == NULL) || (frame->EF_transferVMChain == 0))
+    {
+        return TE_EXPORT_ERROR;
+    }
+
+    sourceGState = GrLoadGString(frame->EF_transferVMFile, GST_VMEM,
+                                 VMCHAIN_GET_VM_BLOCK(frame->EF_transferVMChain));
+    if (sourceGState == 0)
+    {
+        return TE_METAFILE_CREATION_ERROR;
+    }
+
+    context.svgFile = frame->EF_outputFile;
+    GrGetGStringBoundsDWord(sourceGState, 0, 0, &context.bounds);
+    context.lineWidth = 0;
+    context.lineColor = 0;
+    context.fillColor = 0;
+
+    error = VCImpexSVGExportGString(sourceGState, &context);
+
+    GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
+
+    return error;
+}
+
+/****************************************************************************
+ * Core gstring traversal
+ ****************************************************************************/
+
+static word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context)
+{
+    MemHandle playbackBlockH;
+    ChunkHandle playbackChunk;
+    GStateHandle playbackGState;
+    GSRetType drawResult;
+    word elementType;
+    word elementSize;
+    PointWWFixed currentPosition;
+    word error;
+    word handlerResult;
+    Boolean handled;
+
+    playbackBlockH = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
+    if (playbackBlockH == NullHandle)
+    {
+        return TE_OUT_OF_MEMORY;
+    }
+
+    playbackGState = GrCreateGString(playbackBlockH, GST_CHUNK, &playbackChunk);
+    if (playbackGState == 0)
+    {
+        MemFree(playbackBlockH);
+        return TE_OUT_OF_MEMORY;
+    }
+
+    if (!VCImpexSVGWriteHeader(context))
+    {
+        GrDestroyGString(playbackGState, 0, GSKT_KILL_DATA);
+        MemFree(playbackBlockH);
+        return TE_FILE_WRITE;
+    }
+
+    error = TE_NO_ERROR;
+    drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
+                               VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
+
+    while (drawResult == GSRT_ONE)
+    {
+        GrGetGStringElement(playbackGState, sourceGState, sizeof(svgElementBuffer),
+                            &svgElementBuffer, &elementSize);
+        if (elementSize > sizeof(svgElementBuffer))
+        {
+            error = TE_EXPORT_ERROR;
+            break;
+        }
+
+        VCImpexSVGUpdateDrawingState(playbackGState, context);
+        GrGetCurPosWWFixed(playbackGState, &currentPosition);
+
+        if (!((elementType >= GR_APPLY_ROTATION && elementType <= GR_XFORM_1F) ||
+              (elementType >= GR_SAVE_STATE && elementType <= GR_ATTR_9F)))
+        {
+            handlerResult = VCImpexSVGHandleLineOpcode(elementType, playbackGState, context, &currentPosition, &handled);
+            if (handlerResult != TE_NO_ERROR)
+            {
+                error = handlerResult;
+                break;
+            }
+
+            if (!handled)
+            {
+                handlerResult = VCImpexSVGHandleRectangleOpcode(elementType, playbackGState, context, &currentPosition, &handled);
+                if (handlerResult != TE_NO_ERROR)
+                {
+                    error = handlerResult;
+                    break;
+                }
+
+                if (!handled)
+                {
+                    handlerResult = VCImpexSVGHandlePolygonOpcode(elementType, playbackGState, context, &handled);
+                    if (handlerResult != TE_NO_ERROR)
+                    {
+                        error = handlerResult;
+                        break;
+                    }
+                }
+            }
+        }
+
+        drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
+                                   VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
+    }
+
+    if ((error == TE_NO_ERROR) && (drawResult != GSRT_COMPLETE))
+    {
+        error = TE_EXPORT_ERROR;
+    }
+
+    if (error == TE_NO_ERROR)
+    {
+        if (!VCImpexSVGWriteFooter(context))
+        {
+            error = TE_FILE_WRITE;
+        }
+    }
+
+    GrDestroyGString(playbackGState, 0, GSKT_KILL_DATA);
+    MemFree(playbackBlockH);
+
+    return error;
+}
+
+/****************************************************************************
+ * Opcode handlers
+ ****************************************************************************/
+
+static word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+{
+    PointWWFixed startPoint;
+    PointWWFixed endPoint;
+    Point tempPoint;
+    WWFixedAsDWord componentValue;
+
+    *handled = TRUE;
+
+    switch (elementType)
+    {
+        case GR_DRAW_LINE:
+            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_LINE.p1, &startPoint);
+            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_LINE.p2, &endPoint);
+            if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        case GR_DRAW_LINE_TO:
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
+            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_LINE_TO.p, &endPoint);
+            if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        case GR_DRAW_REL_LINE_TO:
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
+            VCImpexSVGTransformRelativePoint(playbackGState, &svgElementBuffer.data.DRAW_REL_LINE_TO.p, &endPoint);
+            if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        case GR_DRAW_HLINE:
+            tempPoint = svgElementBuffer.data.DRAW_HVLINE.p;
+            VCImpexSVGTransformPointFromInt(playbackGState, &tempPoint, &startPoint);
+            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE.xy)) << 16;
+            VCImpexSVGSetWWFixedComponent(&currentPosition->PF_x, componentValue);
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
+            if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        case GR_DRAW_VLINE:
+            tempPoint = svgElementBuffer.data.DRAW_HVLINE.p;
+            VCImpexSVGTransformPointFromInt(playbackGState, &tempPoint, &startPoint);
+            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE.xy)) << 16;
+            VCImpexSVGSetWWFixedComponent(&currentPosition->PF_y, componentValue);
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
+            if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        case GR_DRAW_HLINE_TO:
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
+            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE_TO.xy)) << 16;
+            VCImpexSVGSetWWFixedComponent(&currentPosition->PF_x, componentValue);
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
+            if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        case GR_DRAW_VLINE_TO:
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
+            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE_TO.xy)) << 16;
+            VCImpexSVGSetWWFixedComponent(&currentPosition->PF_y, componentValue);
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
+            if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        default:
+            break;
+    }
+    *handled = FALSE;
+    return TE_NO_ERROR;
+}
+
+static word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+{
+    PointWWFixed corner1;
+    PointWWFixed corner3;
+    Boolean filled;
+
+    *handled = TRUE;
+
+    switch (elementType)
+    {
+        case GR_DRAW_RECT:
+        case GR_FILL_RECT:
+            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_RECT.p1, &corner1);
+            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_RECT.p2, &corner3);
+            filled = (elementType == GR_FILL_RECT);
+            if (!VCImpexSVGWriteRectElement(context, &corner1, &corner3, filled))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        case GR_DRAW_RECT_TO:
+        case GR_FILL_RECT_TO:
+            VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &corner1);
+            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_RECT_TO.p, &corner3);
+            filled = (elementType == GR_FILL_RECT_TO);
+            if (!VCImpexSVGWriteRectElement(context, &corner1, &corner3, filled))
+            {
+                return TE_FILE_WRITE;
+            }
+            return TE_NO_ERROR;
+
+        default:
+            break;
+    }
+    *handled = FALSE;
+    return TE_NO_ERROR;
+}
+
+static word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
+{
+    Point *sourcePoints;
+    word pointCount;
+    word index;
+    Boolean closeShape;
+    Boolean filledShape;
+
+    *handled = TRUE;
+
+    switch (elementType)
+    {
+        case GR_DRAW_POLYGON:
+            pointCount = svgElementBuffer.data.DRAW_POLY.numPoints;
+            sourcePoints = svgElementBuffer.data.DRAW_POLY.p;
+            closeShape = TRUE;
+            filledShape = FALSE;
+            break;
+
+        case GR_DRAW_POLYLINE:
+            pointCount = svgElementBuffer.data.DRAW_POLY.numPoints;
+            sourcePoints = svgElementBuffer.data.DRAW_POLY.p;
+            closeShape = FALSE;
+            filledShape = FALSE;
+            break;
+
+        case GR_FILL_POLYGON:
+            pointCount = svgElementBuffer.data.FILL_POLYGON.numPoints;
+            sourcePoints = svgElementBuffer.data.FILL_POLYGON.p;
+            closeShape = TRUE;
+            filledShape = TRUE;
+            break;
+
+        default:
+            *handled = FALSE;
+            return TE_NO_ERROR;
+    }
+
+    if (pointCount == 0)
+    {
+        return TE_NO_ERROR;
+    }
+
+    if (pointCount > VCIMPEX_SVG_MAX_POLY_POINTS)
+    {
+        return TE_EXPORT_ERROR;
+    }
+
+    for (index = 0; index < pointCount; index++)
+    {
+        VCImpexSVGTransformPointFromInt(playbackGState, &sourcePoints[index], &svgPolygonBuffer[index]);
+    }
+
+    if (!VCImpexSVGWritePolygonElement(context, svgPolygonBuffer, pointCount, closeShape, filledShape))
+    {
+        return TE_FILE_WRITE;
+    }
+    return TE_NO_ERROR;
+}
+
+static void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value)
+{
+    component->WWF_int = (word)((((sdword)value) >> 16) & 0xffff);
+    component->WWF_frac = (word)(value & 0xffff);
+}
