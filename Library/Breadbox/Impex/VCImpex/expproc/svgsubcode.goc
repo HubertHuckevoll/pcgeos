@@ -9,44 +9,6 @@
 
 #include "svgexp.h"
 
-void _pascal VCImpexSVGCopyLiteral(char *destination, const char *source)
-{
-    char currentChar;
-
-    if ((destination == NULL) || (source == NULL))
-    {
-        return;
-    }
-
-    do
-    {
-        currentChar = *source;
-        *destination = currentChar;
-        destination++;
-        source++;
-    } while (currentChar != '\0');
-}
-
-word _pascal VCImpexSVGStringLength(const char *text)
-{
-    const char *scan;
-    word length;
-
-    if (text == NULL)
-    {
-        return 0;
-    }
-
-    scan = text;
-    while (*scan != '\0')
-    {
-        scan++;
-    }
-
-    length = (word)(scan - text);
-    return length;
-}
-
 void _pascal VCImpexSVGFormatColor(RGBColorAsDWord colorValue, char *buffer)
 {
     word redComponent = 0;
@@ -64,13 +26,13 @@ void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word frac
     LocalFixedToAscii(buffer, value, fractionDigits);
 }
 
-ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size)
+static inline ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size)
 {
     ChunkHandle chunkH = NullHandle;
 
     if ((context == NULL) || (context->bufferHeapH == NullHandle))
     {
-        return NullHandle;
+        return NullChunk;
     }
 
     chunkH = LMemAlloc(context->bufferHeapH, size);
@@ -78,7 +40,7 @@ ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word
     return chunkH;
 }
 
-void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
+static inline void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
 {
     if ((context != NULL) && (context->bufferHeapH != NullHandle) && (chunkHandle != NullChunk))
     {
@@ -100,7 +62,7 @@ Boolean _pascal VCImpexSVGWriteRawString(VCImpexSVGExportContext *context, const
         return FALSE;
     }
 
-    length = VCImpexSVGStringLength(text);
+    length = strlen(text);
     if (length == 0)
     {
         return TRUE;
@@ -290,7 +252,7 @@ Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, con
 
     if (context->lineWidth == 0)
     {
-        VCImpexSVGCopyLiteral(colorText, "none");
+        strcpy(colorText, "none");
     }
     else
     {
@@ -427,7 +389,7 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
 
     if (context->lineWidth == 0)
     {
-        VCImpexSVGCopyLiteral(strokeColor, "none");
+        strcpy(strokeColor, "none");
     }
     else
     {
@@ -440,7 +402,7 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
     }
     else
     {
-        VCImpexSVGCopyLiteral(fillText, "none");
+        strcpy(fillText, "none");
     }
 
     sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" stroke=\"%s\" fill=\"%s\" stroke-width=\"%s\" />\n",
@@ -549,7 +511,7 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, 
 
     if (context->lineWidth == 0)
     {
-        VCImpexSVGCopyLiteral(strokeColor, "none");
+        strcpy(strokeColor, "none");
     }
     else
     {
@@ -562,7 +524,7 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, 
     }
     else
     {
-        VCImpexSVGCopyLiteral(fillText, "none");
+        strcpy(fillText, "none");
     }
 
     sprintf(prefix, "  <%s points=\"", elementName);
