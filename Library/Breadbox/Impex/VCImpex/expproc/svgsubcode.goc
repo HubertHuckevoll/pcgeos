@@ -8,9 +8,8 @@
  ***********************************************************************/
 
 #include "svgexp.h"
-#include <lmem.h>
 
-static void _pascal VCImpexSVGCopyLiteral(char *destination, const char *source)
+void _pascal VCImpexSVGCopyLiteral(char *destination, const char *source)
 {
     char currentChar;
 
@@ -28,7 +27,7 @@ static void _pascal VCImpexSVGCopyLiteral(char *destination, const char *source)
     } while (currentChar != '\0');
 }
 
-static word _pascal VCImpexSVGStringLength(const char *text)
+word _pascal VCImpexSVGStringLength(const char *text)
 {
     const char *scan;
     word length;
@@ -48,7 +47,7 @@ static word _pascal VCImpexSVGStringLength(const char *text)
     return length;
 }
 
-static void _pascal VCImpexSVGFormatColor(RGBColorAsDWord colorValue, char *buffer)
+void _pascal VCImpexSVGFormatColor(RGBColorAsDWord colorValue, char *buffer)
 {
     word redComponent = 0;
     word greenComponent = 0;
@@ -60,12 +59,12 @@ static void _pascal VCImpexSVGFormatColor(RGBColorAsDWord colorValue, char *buff
     sprintf(buffer, "#%02X%02X%02X", (unsigned int)redComponent, (unsigned int)greenComponent, (unsigned int)blueComponent);
 }
 
-static void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word fractionDigits)
+void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word fractionDigits)
 {
     LocalFixedToAscii(buffer, value, fractionDigits);
 }
 
-static char *_pascal VCImpexSVGAllocLockedBuffer(VCImpexSVGExportContext *context, word size, ChunkHandle *chunkHandle)
+char *_pascal VCImpexSVGAllocLockedBuffer(VCImpexSVGExportContext *context, word size, ChunkHandle *chunkHandle)
 {
     char *buffer = (void*) 0;
 
@@ -99,7 +98,7 @@ static char *_pascal VCImpexSVGAllocLockedBuffer(VCImpexSVGExportContext *contex
     return buffer;
 }
 
-static void _pascal VCImpexSVGFreeLockedBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
+void _pascal VCImpexSVGFreeLockedBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
 {
     if ((context != NULL) && (context->bufferHeapH != NullHandle) && (chunkHandle != NullChunk))
     {
@@ -166,7 +165,7 @@ Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context)
     MemLock(context->bufferHeapH);
     locked = TRUE;
 
-    buffer = VCImpexSVGAllocLockedBuffer(context, 160, &bufferChunk);
+    buffer = VCImpexSVGAllocLockedBuffer(context, 200, &bufferChunk);
     if (buffer == (void*) 0)
     {
         goto cleanup;
@@ -183,6 +182,10 @@ Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context)
     {
         goto cleanup;
     }
+
+    buffer = LMemDerefHandles(context->bufferHeapH, bufferChunk);
+    widthText = LMemDerefHandles(context->bufferHeapH, widthChunk);
+    heightText = LMemDerefHandles(context->bufferHeapH, heightChunk);
 
     sprintf(buffer, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     if (!VCImpexSVGWriteRawString(context, buffer))

@@ -88,16 +88,18 @@ imptproc.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
 svgexpproc.obj \
 svgexpproc.eobj: 
 svgexpproc.obj \
-svgexpproc.eobj: expproc/svgexp.h geos.h graphics.h fontID.h font.h color.h \
-                gstring.h file.h localize.h Ansi/ctype.h timedate.h \
-                sllang.h Ansi/string.h Ansi/stdio.h xlatLib.h vm.h lmem.h \
-                geode.h geoworks.h
+svgexpproc.eobj: expproc/svgexp.h geos.h heap.h lmem.h library.h geode.h \
+                graphics.h fontID.h font.h color.h gstring.h file.h \
+                localize.h Ansi/ctype.h timedate.h sllang.h Ansi/string.h \
+                Ansi/stdio.h Ansi/stdlib.h resource.h geoMisc.h xlatLib.h \
+                vm.h geoworks.h
 svgsubcode.obj \
 svgsubcode.eobj: 
 svgsubcode.obj \
-svgsubcode.eobj: expproc/svgexp.h geos.h graphics.h fontID.h font.h color.h \
-                gstring.h file.h localize.h Ansi/ctype.h timedate.h \
-                sllang.h Ansi/string.h Ansi/stdio.h xlatLib.h vm.h lmem.h \
-                geode.h geoworks.h
+svgsubcode.eobj: expproc/svgexp.h geos.h heap.h lmem.h library.h geode.h \
+                graphics.h fontID.h font.h color.h gstring.h file.h \
+                localize.h Ansi/ctype.h timedate.h sllang.h Ansi/string.h \
+                Ansi/stdio.h Ansi/stdlib.h resource.h geoMisc.h xlatLib.h \
+                vm.h geoworks.h
 
 vcimpexEC.geo vcimpex.geo : geos.ldf ui.ldf impex.ldf ansic.ldf math.ldf meta.ldf 

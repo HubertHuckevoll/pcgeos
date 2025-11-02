@@ -8,7 +8,6 @@
  ***********************************************************************/
 
 #include "svgexp.h"
-#include <lmem.h>
 
 #define VCIMPEX_SVG_GSTRING_FLAGS   (GSC_ONE)
 
@@ -73,16 +72,12 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     context.lineWidth = 0;
     context.lineColor = 0;
     context.fillColor = 0;
-    context.bufferHeapH = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
+    context.bufferHeapH = MemAllocLMem(LMEM_TYPE_GENERAL, 0);
     if (context.bufferHeapH == NullHandle)
     {
         GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
         return TE_OUT_OF_MEMORY;
     }
-    MemLock(context.bufferHeapH);
-    LMemInitHeap(context.bufferHeapH, LMEM_TYPE_GENERAL, 0,
-                 sizeof(LMemBlockHeader), STD_INIT_HANDLES, STD_INIT_HEAP);
-    MemUnlock(context.bufferHeapH);
 
     error = VCImpexSVGExportGString(sourceGState, &context);
 

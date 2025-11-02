@@ -2,6 +2,9 @@
 #define __VCIMPEX_SVGEXP_H_
 
 #include <geos.h>
+#include <heap.h>
+#include <lmem.h>
+#include <library.h>
 #include <graphics.h>
 #include <gstring.h>
 #include <file.h>
@@ -9,6 +12,10 @@
 #include <localize.h>
 #include <Ansi/string.h>
 #include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+#include <resource.h>
+
+#include <geoMisc.h>                    /* various unix-like goodies */
 
 #include <xlatLib.h>
 
