@@ -8,6 +8,7 @@
  ***********************************************************************/
 
 #include "svgexp.h"
+#include <lmem.h>
 
 #define VCIMPEX_SVG_GSTRING_FLAGS   (GSC_ONE)
 
@@ -34,10 +35,10 @@ PointWWFixed svgPolygonBuffer[VCIMPEX_SVG_MAX_POLY_POINTS];
 
 word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context);
 
-word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
-word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
-word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
-void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value);
+word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
+word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
+word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
+void _pascal VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value);
 
 /****************************************************************************
  * VCImpex SVG Export public entry point
@@ -72,8 +73,24 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     context.lineWidth = 0;
     context.lineColor = 0;
     context.fillColor = 0;
+    context.bufferHeapH = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
+    if (context.bufferHeapH == NullHandle)
+    {
+        GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
+        return TE_OUT_OF_MEMORY;
+    }
+    MemLock(context.bufferHeapH);
+    LMemInitHeap(context.bufferHeapH, LMEM_TYPE_GENERAL, 0,
+                 sizeof(LMemBlockHeader), STD_INIT_HANDLES, STD_INIT_HEAP);
+    MemUnlock(context.bufferHeapH);
 
     error = VCImpexSVGExportGString(sourceGState, &context);
+
+    if (context.bufferHeapH != NullHandle)
+    {
+        MemFree(context.bufferHeapH);
+        context.bufferHeapH = NullHandle;
+    }
 
     GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
 
@@ -198,7 +215,7 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
  * Opcode handlers
  ****************************************************************************/
 
-word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
 {
     PointWWFixed startPoint;
     PointWWFixed endPoint;
@@ -289,7 +306,7 @@ word VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, V
     return TE_NO_ERROR;
 }
 
-word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
 {
     PointWWFixed corner1;
     PointWWFixed corner3;
@@ -328,7 +345,7 @@ word VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGSta
     return TE_NO_ERROR;
 }
 
-word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
+word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
 {
     Point *sourcePoints;
     word pointCount;
@@ -388,7 +405,7 @@ word VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState
     return TE_NO_ERROR;
 }
 
-void VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value)
+void _pascal VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value)
 {
     component->WWF_int = (word)((((sdword)value) >> 16) & 0xffff);
     component->WWF_frac = (word)(value & 0xffff);
