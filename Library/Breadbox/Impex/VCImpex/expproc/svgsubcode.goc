@@ -64,41 +64,21 @@ void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word frac
     LocalFixedToAscii(buffer, value, fractionDigits);
 }
 
-char *_pascal VCImpexSVGAllocLockedBuffer(VCImpexSVGExportContext *context, word size, ChunkHandle *chunkHandle)
+ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size)
 {
-    char *buffer = (void*) 0;
-
-    if (chunkHandle == NULL)
-    {
-        return (void*) 0;
-    }
-
-    *chunkHandle = NullChunk;
+    ChunkHandle chunkH = NullHandle;
 
     if ((context == NULL) || (context->bufferHeapH == NullHandle))
     {
-        return (void*) 0;
+        return NullHandle;
     }
 
-    *chunkHandle = LMemAlloc(context->bufferHeapH, size);
-    if (*chunkHandle == NullChunk)
-    {
-        return (void*) 0;
-    }
+    chunkH = LMemAlloc(context->bufferHeapH, size);
 
-    buffer = (char *)LMemDerefHandles(context->bufferHeapH, *chunkHandle);
-    if (buffer == (void*) 0)
-    {
-        LMemFreeHandles(context->bufferHeapH, *chunkHandle);
-        *chunkHandle = NullChunk;
-        return (void*) 0;
-    }
-
-    memset(buffer, 0, size);
-    return buffer;
+    return chunkH;
 }
 
-void _pascal VCImpexSVGFreeLockedBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
+void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
 {
     if ((context != NULL) && (context->bufferHeapH != NullHandle) && (chunkHandle != NullChunk))
     {
@@ -165,23 +145,17 @@ Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context)
     MemLock(context->bufferHeapH);
     locked = TRUE;
 
-    buffer = VCImpexSVGAllocLockedBuffer(context, 200, &bufferChunk);
-    if (buffer == (void*) 0)
-    {
+    bufferChunk = VCImpexSVGAllocBuffer(context, 200);
+    if (bufferChunk == NullChunk)
         goto cleanup;
-    }
 
-    widthText = VCImpexSVGAllocLockedBuffer(context, 20, &widthChunk);
-    if (widthText == (void*) 0)
-    {
+    widthChunk = VCImpexSVGAllocBuffer(context, 20);
+    if (widthChunk == NullChunk)
         goto cleanup;
-    }
 
-    heightText = VCImpexSVGAllocLockedBuffer(context, 20, &heightChunk);
-    if (heightText == (void*) 0)
-    {
+    heightChunk = VCImpexSVGAllocBuffer(context, 20);
+    if (heightChunk == NullChunk)
         goto cleanup;
-    }
 
     buffer = LMemDerefHandles(context->bufferHeapH, bufferChunk);
     widthText = LMemDerefHandles(context->bufferHeapH, widthChunk);
@@ -189,31 +163,25 @@ Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context)
 
     sprintf(buffer, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     if (!VCImpexSVGWriteRawString(context, buffer))
-    {
         goto cleanup;
-    }
 
     sprintf(buffer, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"\n");
     if (!VCImpexSVGWriteRawString(context, buffer))
-    {
         goto cleanup;
-    }
 
     sprintf(widthText, "%lu", (unsigned long)width);
     sprintf(heightText, "%lu", (unsigned long)height);
     sprintf(buffer, "     width=\"%s\" height=\"%s\" viewBox=\"%ld %ld %lu %lu\">\n", widthText, heightText,
             (long)context->bounds.RD_left, (long)context->bounds.RD_top, (unsigned long)width, (unsigned long)height);
     if (!VCImpexSVGWriteRawString(context, buffer))
-    {
         goto cleanup;
-    }
 
     success = TRUE;
 
 cleanup:
-    VCImpexSVGFreeLockedBuffer(context, heightChunk);
-    VCImpexSVGFreeLockedBuffer(context, widthChunk);
-    VCImpexSVGFreeLockedBuffer(context, bufferChunk);
+    VCImpexSVGFreeBuffer(context, heightChunk);
+    VCImpexSVGFreeBuffer(context, widthChunk);
+    VCImpexSVGFreeBuffer(context, bufferChunk);
 
     if (locked != FALSE)
     {
