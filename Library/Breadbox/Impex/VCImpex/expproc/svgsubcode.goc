@@ -425,10 +425,9 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
         strcpy(fillText, noneStr);
     }
 
-    //sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" stroke=\"%s\" fill=\"%s\" stroke-width=\"%s\" />\n",
-    //        xText, yText, widthText, heightText, strokeColor, fillText, strokeWidthText);
-    //success = VCImpexSVGWriteRawString(context, buffer);
-    success = TRUE;
+    sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" stroke=\"%s\" fill=\"%s\" stroke-width=\"%s\" />\n",
+            xText, yText, widthText, heightText, strokeColor, fillText, strokeWidthText);
+    success = VCImpexSVGWriteRawString(context, buffer);
 
 cleanup:
     VCImpexSVGFreeBuffer(context, fillChunk);
