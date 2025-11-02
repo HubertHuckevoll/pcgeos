@@ -1,11 +1,13 @@
 #include <$(SYSMAKEFILE)>
 
 # The manual says I should do this... ;-)
-XGOCFLAGS = -L vcimpex
+GOCFLAGS += -L vcimpex
+
+_PROTO = 4.0
+
 
 # Tell the compiler we're doing a library (observe SS!=DS)
-# ...not true for Watcom anymore! put "_pascal _export" on
-# the declaration and the implementation signature instead.
+# ...not true for Watcom anymore!
 #XCCOMFLAGS = -WDE
 
 # Set Copyright notice

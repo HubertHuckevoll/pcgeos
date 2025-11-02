@@ -6,6 +6,7 @@
  * DESCRIPTION:   Helper functions for writing SVG data
  *
  ***********************************************************************/
+@include <stdapp.goh>
 
 #include "svgexp.h"
 
@@ -26,21 +27,22 @@ void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word frac
     LocalFixedToAscii(buffer, value, fractionDigits);
 }
 
-static inline ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size)
+ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size)
 {
     ChunkHandle chunkH = NullHandle;
 
     if ((context == NULL) || (context->bufferHeapH == NullHandle))
-    {
         return NullChunk;
-    }
 
     chunkH = LMemAlloc(context->bufferHeapH, size);
+    MemLock(context->bufferHeapH);
+    memset(LMemDerefHandles(context->bufferHeapH, chunkH), 0, size);
+    MemUnlock(context->bufferHeapH);
 
     return chunkH;
 }
 
-static inline void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
+void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunkHandle)
 {
     if ((context != NULL) && (context->bufferHeapH != NullHandle) && (chunkHandle != NullChunk))
     {
@@ -107,7 +109,7 @@ Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context)
     MemLock(context->bufferHeapH);
     locked = TRUE;
 
-    bufferChunk = VCImpexSVGAllocBuffer(context, 200);
+    bufferChunk = VCImpexSVGAllocBuffer(context, 220);
     if (bufferChunk == NullChunk)
         goto cleanup;
 
@@ -202,7 +204,7 @@ Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, con
     MemLock(context->bufferHeapH);
     locked = TRUE;
 
-    bufferChunk = VCImpexSVGAllocBuffer(context, 200);
+    bufferChunk = VCImpexSVGAllocBuffer(context, 220);
     if (bufferChunk == NullChunk)
     {
         goto cleanup;
@@ -298,6 +300,7 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
     char *strokeWidthText = (void*) 0;
     char *strokeColor = (void*) 0;
     char *fillText = (void*) 0;
+    const char noneStr[] = "none";
     ChunkHandle bufferChunk = NullChunk;
     ChunkHandle xChunk = NullChunk;
     ChunkHandle yChunk = NullChunk;
@@ -323,37 +326,37 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
     MemLock(context->bufferHeapH);
     locked = TRUE;
 
-    bufferChunk = VCImpexSVGAllocBuffer(context, 220);
+    bufferChunk = VCImpexSVGAllocBuffer(context, 512);
     if (bufferChunk == NullChunk)
     {
         goto cleanup;
     }
 
-    xChunk = VCImpexSVGAllocBuffer(context, 24);
+    xChunk = VCImpexSVGAllocBuffer(context, 40);
     if (xChunk == NullChunk)
     {
         goto cleanup;
     }
 
-    yChunk = VCImpexSVGAllocBuffer(context, 24);
+    yChunk = VCImpexSVGAllocBuffer(context, 40);
     if (yChunk == NullChunk)
     {
         goto cleanup;
     }
 
-    widthChunk = VCImpexSVGAllocBuffer(context, 24);
+    widthChunk = VCImpexSVGAllocBuffer(context, 40);
     if (widthChunk == NullChunk)
     {
         goto cleanup;
     }
 
-    heightChunk = VCImpexSVGAllocBuffer(context, 24);
+    heightChunk = VCImpexSVGAllocBuffer(context, 40);
     if (heightChunk == NullChunk)
     {
         goto cleanup;
     }
 
-    strokeWidthChunk = VCImpexSVGAllocBuffer(context, 24);
+    strokeWidthChunk = VCImpexSVGAllocBuffer(context, 40);
     if (strokeWidthChunk == NullChunk)
     {
         goto cleanup;
@@ -406,7 +409,7 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
 
     if (context->lineWidth == 0)
     {
-        strcpy(strokeColor, "none");
+        strcpy(strokeColor, noneStr);
     }
     else
     {
@@ -419,12 +422,13 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
     }
     else
     {
-        strcpy(fillText, "none");
+        strcpy(fillText, noneStr);
     }
 
-    sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" stroke=\"%s\" fill=\"%s\" stroke-width=\"%s\" />\n",
-            xText, yText, widthText, heightText, strokeColor, fillText, strokeWidthText);
-    success = VCImpexSVGWriteRawString(context, buffer);
+    //sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" stroke=\"%s\" fill=\"%s\" stroke-width=\"%s\" />\n",
+    //        xText, yText, widthText, heightText, strokeColor, fillText, strokeWidthText);
+    //success = VCImpexSVGWriteRawString(context, buffer);
+    success = TRUE;
 
 cleanup:
     VCImpexSVGFreeBuffer(context, fillChunk);
@@ -446,7 +450,7 @@ cleanup:
 
 Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, const PointWWFixed *points, word pointCount, Boolean closeShape, Boolean filled)
 {
-    const char *elementName = (void*) 0;
+    char elementName[10] = {0};
     char *prefix = (void*) 0;
     char *xText = (void*) 0;
     char *yText = (void*) 0;
@@ -472,17 +476,17 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, 
 
     if (closeShape != FALSE)
     {
-        elementName = "polygon";
+        strcpy(elementName, "polygon");
     }
     else
     {
-        elementName = "polyline";
+        strcpy(elementName, "polyline");
     }
 
     MemLock(context->bufferHeapH);
     locked = TRUE;
 
-    prefixChunk = VCImpexSVGAllocBuffer(context, 20);
+    prefixChunk = VCImpexSVGAllocBuffer(context, 24);
     if (prefixChunk == NullChunk)
     {
         goto cleanup;

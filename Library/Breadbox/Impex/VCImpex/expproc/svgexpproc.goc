@@ -6,6 +6,7 @@
  * DESCRIPTION:   Implements the export procedure for SVG output
  *
  ***********************************************************************/
+@include <stdapp.goh>
 
 #include "svgexp.h"
 
@@ -132,6 +133,7 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
 
     error = TE_NO_ERROR;
 
+    /* the main loop */
     for(gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType);
         gsr == GSRT_ONE;
         gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType))

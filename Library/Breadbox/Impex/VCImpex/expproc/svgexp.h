@@ -14,8 +14,7 @@
 #include <Ansi/stdio.h>
 #include <Ansi/stdlib.h>
 #include <resource.h>
-
-#include <geoMisc.h>                    /* various unix-like goodies */
+#include <system.h>
 
 #include <xlatLib.h>
 
