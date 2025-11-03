@@ -35,6 +35,10 @@ ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word
         return NullChunk;
 
     chunkH = LMemAlloc(context->bufferHeapH, size);
+    if (chunkH == NullChunk)
+    {
+        return NullChunk;
+    }
     MemLock(context->bufferHeapH);
     memset(LMemDerefHandles(context->bufferHeapH, chunkH), 0, size);
     MemUnlock(context->bufferHeapH);
