@@ -63,16 +63,12 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     word error;
 
     if ((frame == NULL) || (frame->EF_transferVMChain == 0))
-    {
         return TE_EXPORT_ERROR;
-    }
 
     sourceGState = GrLoadGString(frame->EF_transferVMFile, GST_VMEM,
                                  VMCHAIN_GET_VM_BLOCK(frame->EF_transferVMChain));
     if (sourceGState == 0)
-    {
         return TE_METAFILE_CREATION_ERROR;
-    }
 
     context.svgFile = frame->EF_outputFile;
     if (FileTruncate(context.svgFile, 0, FALSE) != 0)
@@ -80,11 +76,13 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
         GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
         return TE_FILE_WRITE;
     }
+
     FilePos(context.svgFile, 0, FILE_POS_START);
     GrGetGStringBoundsDWord(sourceGState, 0, 0, &context.bounds);
     context.lineWidth = 0;
     context.lineColor = 0;
     context.fillColor = 0;
+
     context.bufferHeapH = MemAllocLMem(LMEM_TYPE_GENERAL, 0);
     if (context.bufferHeapH == NullHandle)
     {
