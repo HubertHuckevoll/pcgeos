@@ -15,6 +15,7 @@
 #include <Ansi/stdlib.h>
 #include <resource.h>
 #include <system.h>
+#include <math.h>
 
 #include <xlatLib.h>
 
@@ -49,14 +50,30 @@ Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteFooter(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint);
 Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean filled);
+Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY, Boolean filled);
 Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, const PointWWFixed *points, word pointCount, Boolean closeShape, Boolean filled);
-Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context, 
+Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
                                               const WWFixed *cx,
                                               const WWFixed *cy,
                                               const WWFixed *rx,
                                               const WWFixed *ry,
                                               Boolean filled,
                                               const TransMatrix *tm);
+Boolean _pascal VCImpexSVGWriteCubicPathElement(VCImpexSVGExportContext *context,
+                                                const PointWWFixed *start,
+                                                const PointWWFixed *cp1,
+                                                const PointWWFixed *cp2,
+                                                const PointWWFixed *end);
+Boolean _pascal VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
+                                          WWFixedAsDWord cx,
+                                          WWFixedAsDWord cy,
+                                          WWFixedAsDWord rx,
+                                          WWFixedAsDWord ry,
+                                          word startAngleDeg,
+                                          word endAngleDeg,
+                                          ArcCloseType closeType,
+                                          Boolean filled,
+                                          const TransMatrix *tm);
 Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteRawString(VCImpexSVGExportContext *context, const char *text);
 void _pascal VCImpexSVGTransformPointFromInt(GStateHandle gstate, const Point *sourcePoint, PointWWFixed *targetPoint);

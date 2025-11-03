@@ -1,0 +1,111 @@
+Short answer: You can keep adding a few more simple opcodes with the current structure, but if you plan to support arcs, curves, paths, or richer styles, a small refactor will pay off quickly.
+
+What’s good now
+Clear phases: traversal in svgexpproc.goc:136–140, decoding via GrGetGStringElement, then handler fan‑out (lines/rects/polygons).
+Writers are isolated in svgsubcode.goc; easy to extend per‑shape.
+Playback gstate lets you query transform and style just in time.
+
+Where it starts to strain
+Growing union: VCImpexSVGGStringElement is expanding per opcode. This doesn’t scale and couples parsing to storage.
+Ad‑hoc dispatch: nested handler calls in svgexpproc.goc:164–183 becomes unwieldy as handlers grow.
+Style tracking is minimal: only width/line/fill colors; you’ll need joins, caps, dash, miter, fill-rule, etc.
+Paths/curves/arcs: current model emits individual elements; path opcodes require accumulating segments into a single <path>.
+Coalescing is shape‑specific (rects). You’ll likely want it for ellipses and maybe others.
+
+Recommended refactors (lightweight, incremental)
+
+Element decoding
+Keep a single raw buffer (you already have raw[...]) and cast inside handlers to the header’s op-structs (e.g., OpDrawArc*, OpFillEllipse* in CInclude/gstring.h), instead of expanding your union for every opcode.
+Add a helper: void* VCImpexSVGAs(const void* raw, word expectedOpcode) to centralize assertions/casts.
+
+Dispatch table
+Replace chained if/handler calls with a small table: {opcodeRange/predicate, handler}. Keeps VCImpexSVGExportGString compact and makes adding opcodes trivial.
+Example buckets: lines, rectangles, round-rects, polygons, ellipses, arcs, curves, path-segment ops, path control ops, style ops.
+
+Style/state model
+Extend VCImpexSVGExportContext with: line join, cap, dash pattern, miter limit, fill rule.
+Provide VCImpexSVGUpdateDrawingState that mirrors all relevant gstate and a VCImpexSVGStyleToAttributes(...) to format common attributes once.
+
+Path builder
+Add a small “current path” accumulator: collects MOVE/LINE/CURVE/ARC segments and flushes on GR_DRAW_PATH, GR_SET_STROKE_PATH, GR_FILL_PATH, or on state/transform changes.
+Emit one <path d="..."> per stroke/fill, with style from context.
+
+Generalized coalescer
+Abstract the rect coalescer into a tiny “pending shape” facility that can handle fill+stroke pairs for rects and ellipses (and potentially polygons where the same geometry is restroked).
+Flush on geometry change, non-shape ops, or state/transform changes.
+
+Transform policy
+Decide per family:
+Ellipse/arc/curve/path: prefer transform matrix (preserves rotation/scaling cleanly).
+Lines/rects/polygons: pre-transform coordinates (simple and stable).
+Or unify by wrapping emitted geometry in a <g transform="matrix(...)"> when the transform isn’t identity.
+
+What you can add now without refactor
+Round-rects: map to <rect rx ry> using current transform approach.
+Beziers (GR_DRAW_CURVE*): emit <path> with C/S commands on a per‑segment basis.
+Simple GR_DRAW_ARC/GR_FILL_ARC: emit <path> with an “A” command using angles; close based on ArcCloseType.
+
+When to refactor
+Before implementing path-building opcodes (GR_BEGIN/END/CLOSE/FILL/DRAW_PATH, MOVE/REL_MOVE), or 3‑point arcs/splines, do the path builder + dispatch table + richer style snapshot. That will save churn and reduce bugs.
+If helpful, I can sketch the dispatch table scaffolding and a minimal path accumulator next, so adding new handlers becomes drop-in.
+
+
+
+
+
+Here’s a concise map of the GEOS GString geometric drawing opcodes you can implement, grouped by shape. All are defined in the GEOS headers (not exhaustive references shown).
+
+Lines & Points
+GR_DRAW_LINE, GR_DRAW_LINE_TO, GR_DRAW_REL_LINE_TO
+GR_DRAW_HLINE, GR_DRAW_HLINE_TO, GR_DRAW_VLINE, GR_DRAW_VLINE_TO
+GR_DRAW_POINT, GR_DRAW_POINT_CP
+Ref: CInclude/gstring.h:403, 445, 464, 508
+
+Rectangles
+GR_DRAW_RECT, GR_DRAW_RECT_TO
+GR_FILL_RECT, GR_FILL_RECT_TO
+Ref: CInclude/gstring.h:424, 436, 743, 755
+
+Round Rectangles
+GR_DRAW_ROUND_RECT, GR_DRAW_ROUND_RECT_TO
+GR_FILL_ROUND_RECT, GR_FILL_ROUND_RECT_TO
+Ref: CInclude/gstring.h:483, 497, 764, 777
+
+Polylines & Polygons
+GR_DRAW_POLYLINE, GR_BRUSH_POLYLINE
+GR_DRAW_POLYGON, GR_FILL_POLYGON (with RegionFillRule)
+Ref: CInclude/gstring.h:633, 641, 815, 806
+
+Ellipses & Arcs
+GR_DRAW_ELLIPSE, GR_FILL_ELLIPSE
+GR_DRAW_ARC, GR_FILL_ARC (angles + ArcCloseType)
+3‑point arcs: GR_DRAW_ARC_3POINT, GR_DRAW_ARC_3POINT_TO, GR_DRAW_REL_ARC_3POINT_TO, GR_FILL_ARC_3POINT, GR_FILL_ARC_3POINT_TO
+Ref: CInclude/gstring.h:651, 823, 663, 788, 1252, 1294
+
+Curves & Splines
+Cubic Bezier: GR_DRAW_CURVE, GR_DRAW_CURVE_TO, GR_DRAW_REL_CURVE_TO
+Splines: GR_DRAW_SPLINE, GR_DRAW_SPLINE_TO
+Ref: CInclude/gstring.h:680, 697, 712, 727, 735
+
+Paths (path building/stroking/filling)
+Path scope: GR_BEGIN_PATH, GR_END_PATH, GR_CLOSE_SUB_PATH, GR_SET_NULL_PATH
+Stroke/fill/clip path: GR_DRAW_PATH, GR_SET_STROKE_PATH, GR_FILL_PATH, GR_SET_CLIP_PATH, GR_SET_WIN_CLIP_PATH
+Moves for path: GR_MOVE_TO, GR_REL_MOVE_TO, GR_MOVE_TO_WWFIXED
+Ref: CInclude/gstring.h:1189, 1214, 1220, 1226, 1240, 1246, 1232, 1198, 1206, 908, 917, 927
+
+Quick SVG mapping tips
+Rectangles: map round‑rect via <rect rx=… ry=…>.
+Polylines/Polygons: <polyline> or <polygon> with fill rule.
+Ellipses: <ellipse> with current transform matrix to preserve rotation/scaling.
+
+Arcs:
+GR_DRAW_ARC: use <path> with an elliptical-arc segment; honor ArcCloseType (open chord, sector, etc.).
+3‑point arcs: compute arc parameters from three points and emit a single SVG arc segment.
+Curves: GR_DRAW_CURVE* → <path> cubic “C/S” segments.
+Splines: convert to equivalent cubic Beziers or approximate with a polyline.
+Brush polyline: approximate with stroke + caps/joins or SVG markers; exact brush stamping may require <marker> or pattern tiling.
+
+If you’d like, I can prioritize implementing:
+Round rect (easy win, <rect rx/ry>).
+Beziers (straightforward mapping to path).
+Arcs (angles + closure) and 3‑point arcs (needs small conversion helper).
