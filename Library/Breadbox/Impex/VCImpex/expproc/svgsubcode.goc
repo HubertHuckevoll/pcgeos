@@ -10,6 +10,22 @@
 
 #include "svgexp.h"
 
+/* Helper: format DWFixed (approximate to 16.16) */
+static void VCImpexSVGFormatDWFixed(const DWFixed *value, char *buffer, word fractionDigits)
+{
+    WWFixedAsDWord approx = 0;
+    sdword i = 0;
+    word f = 0;
+    if ((buffer == NULL) || (value == NULL))
+    {
+        return;
+    }
+    i = value->DWF_int;
+    f = (word)((value->DWF_frac >> 16) & 0xffff);
+    approx = ((WWFixedAsDWord)i << 16) | f;
+    LocalFixedToAscii(buffer, approx, fractionDigits);
+}
+
 void _pascal VCImpexSVGFormatColor(RGBColorAsDWord colorValue, char *buffer)
 {
     word redComponent = 0;
@@ -451,6 +467,196 @@ cleanup:
     return success;
 }
 
+Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
+                                              const WWFixed *cx,
+                                              const WWFixed *cy,
+                                              const WWFixed *rx,
+                                              const WWFixed *ry,
+                                              Boolean filled,
+                                              const TransMatrix *tm)
+{
+    char *buffer = (void*) 0;
+    char *cxText = (void*) 0;
+    char *cyText = (void*) 0;
+    char *rxText = (void*) 0;
+    char *ryText = (void*) 0;
+    char *strokeWidthText = (void*) 0;
+    char *strokeColor = (void*) 0;
+    char *fillText = (void*) 0;
+    char *matrixText = (void*) 0;
+    ChunkHandle bufferChunk = NullChunk;
+    ChunkHandle cxChunk = NullChunk;
+    ChunkHandle cyChunk = NullChunk;
+    ChunkHandle rxChunk = NullChunk;
+    ChunkHandle ryChunk = NullChunk;
+    ChunkHandle strokeWidthChunk = NullChunk;
+    ChunkHandle strokeColorChunk = NullChunk;
+    ChunkHandle fillChunk = NullChunk;
+    ChunkHandle matrixChunk = NullChunk;
+    Boolean success = FALSE;
+    Boolean locked = FALSE;
+
+    if ((context == NULL) || (cx == NULL) || (cy == NULL) || (rx == NULL) || (ry == NULL) || (context->bufferHeapH == NullHandle))
+    {
+        return FALSE;
+    }
+
+    MemLock(context->bufferHeapH);
+    locked = TRUE;
+
+    bufferChunk = VCImpexSVGAllocBuffer(context, 512);
+    if (bufferChunk == NullChunk)
+        goto cleanup;
+
+    cxChunk = VCImpexSVGAllocBuffer(context, 40);
+    if (cxChunk == NullChunk)
+        goto cleanup;
+    cyChunk = VCImpexSVGAllocBuffer(context, 40);
+    if (cyChunk == NullChunk)
+        goto cleanup;
+    rxChunk = VCImpexSVGAllocBuffer(context, 40);
+    if (rxChunk == NullChunk)
+        goto cleanup;
+    ryChunk = VCImpexSVGAllocBuffer(context, 40);
+    if (ryChunk == NullChunk)
+        goto cleanup;
+
+    strokeWidthChunk = VCImpexSVGAllocBuffer(context, 40);
+    if (strokeWidthChunk == NullChunk)
+        goto cleanup;
+    strokeColorChunk = VCImpexSVGAllocBuffer(context, 16);
+    if (strokeColorChunk == NullChunk)
+        goto cleanup;
+    fillChunk = VCImpexSVGAllocBuffer(context, 16);
+    if (fillChunk == NullChunk)
+        goto cleanup;
+
+    matrixChunk = VCImpexSVGAllocBuffer(context, 160);
+    if (matrixChunk == NullChunk)
+        goto cleanup;
+
+    buffer = LMemDerefHandles(context->bufferHeapH, bufferChunk);
+    cxText = LMemDerefHandles(context->bufferHeapH, cxChunk);
+    cyText = LMemDerefHandles(context->bufferHeapH, cyChunk);
+    rxText = LMemDerefHandles(context->bufferHeapH, rxChunk);
+    ryText = LMemDerefHandles(context->bufferHeapH, ryChunk);
+    strokeWidthText = LMemDerefHandles(context->bufferHeapH, strokeWidthChunk);
+    strokeColor = LMemDerefHandles(context->bufferHeapH, strokeColorChunk);
+    fillText = LMemDerefHandles(context->bufferHeapH, fillChunk);
+    matrixText = LMemDerefHandles(context->bufferHeapH, matrixChunk);
+
+    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(cx), cxText, 2);
+    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(cy), cyText, 2);
+    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(rx), rxText, 2);
+    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(ry), ryText, 2);
+    VCImpexSVGFormatFixed(context->lineWidth, strokeWidthText, 2);
+
+    if (context->lineWidth == 0)
+    {
+        strcpy(strokeColor, "none");
+    }
+    else
+    {
+        VCImpexSVGFormatColor(context->lineColor, strokeColor);
+    }
+
+    if (filled != FALSE)
+    {
+        VCImpexSVGFormatColor(context->fillColor, fillText);
+    }
+    else
+    {
+        strcpy(fillText, "none");
+    }
+
+    matrixText[0] = '\0';
+    if (tm != NULL)
+    {
+        char a[40], b[40], c[40], d[40], e[40], f[40];
+        a[0]=b[0]=c[0]=d[0]=e[0]=f[0]='\0';
+        VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&tm->TM_e11), a, 6);
+        VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&tm->TM_e12), b, 6);
+        VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&tm->TM_e21), c, 6);
+        VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&tm->TM_e22), d, 6);
+        VCImpexSVGFormatDWFixed(&tm->TM_e31, e, 2);
+        VCImpexSVGFormatDWFixed(&tm->TM_e32, f, 2);
+        sprintf(matrixText, " transform=\"matrix(%s %s %s %s %s %s)\"", a, b, c, d, e, f);
+    }
+
+    sprintf(buffer, "  <ellipse cx=\"%s\" cy=\"%s\" rx=\"%s\" ry=\"%s\" stroke=\"%s\" fill=\"%s\" stroke-width=\"%s\"%s />\n",
+            cxText, cyText, rxText, ryText, strokeColor, fillText, strokeWidthText, matrixText);
+    success = VCImpexSVGWriteRawString(context, buffer);
+
+cleanup:
+    VCImpexSVGFreeBuffer(context, matrixChunk);
+    VCImpexSVGFreeBuffer(context, fillChunk);
+    VCImpexSVGFreeBuffer(context, strokeColorChunk);
+    VCImpexSVGFreeBuffer(context, strokeWidthChunk);
+    VCImpexSVGFreeBuffer(context, ryChunk);
+    VCImpexSVGFreeBuffer(context, rxChunk);
+    VCImpexSVGFreeBuffer(context, cyChunk);
+    VCImpexSVGFreeBuffer(context, cxChunk);
+    VCImpexSVGFreeBuffer(context, bufferChunk);
+
+    if (locked != FALSE)
+    {
+        MemUnlock(context->bufferHeapH);
+    }
+
+    return success;
+}
+
+void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending)
+{
+    if (pending == NULL)
+        return;
+    pending->active = FALSE;
+    pending->haveStroke = FALSE;
+    pending->haveFill = FALSE;
+    pending->strokeWidth = 0;
+    pending->strokeColor = 0;
+    pending->fillColor = 0;
+    pending->corner1.PF_x.WWF_int = 0; pending->corner1.PF_x.WWF_frac = 0;
+    pending->corner1.PF_y.WWF_int = 0; pending->corner1.PF_y.WWF_frac = 0;
+    pending->corner3.PF_x.WWF_int = 0; pending->corner3.PF_x.WWF_frac = 0;
+    pending->corner3.PF_y.WWF_int = 0; pending->corner3.PF_y.WWF_frac = 0;
+}
+
+Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCImpexSVGPendingRect *pending)
+{
+    Boolean ok = TRUE;
+    WWFixedAsDWord savedWidth;
+    RGBColorAsDWord savedLine;
+    RGBColorAsDWord savedFill;
+
+    if ((context == NULL) || (pending == NULL))
+        return FALSE;
+
+    if (pending->active == FALSE)
+        return TRUE;
+
+    /* Save */
+    savedWidth = context->lineWidth;
+    savedLine = context->lineColor;
+    savedFill = context->fillColor;
+
+    /* Apply pending styles */
+    context->lineWidth = pending->haveStroke ? pending->strokeWidth : 0;
+    context->lineColor = pending->strokeColor;
+    context->fillColor = pending->fillColor;
+
+    ok = VCImpexSVGWriteRectElement(context, &pending->corner1, &pending->corner3, pending->haveFill);
+
+    /* Restore and clear */
+    context->lineWidth = savedWidth;
+    context->lineColor = savedLine;
+    context->fillColor = savedFill;
+
+    pending->active = FALSE;
+    pending->haveStroke = FALSE;
+    pending->haveFill = FALSE;
+    return ok;
+}
 Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, const PointWWFixed *points, word pointCount, Boolean closeShape, Boolean filled)
 {
     char elementName[10] = {0};
