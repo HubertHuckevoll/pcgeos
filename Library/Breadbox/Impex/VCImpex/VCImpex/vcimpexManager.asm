@@ -73,6 +73,8 @@ _vmc    local   dword
           push    ss                    ; arg 2: pointer to vm chain return buf
           lea     ax,_vmc
           push    ax
+          mov     ax,idata              ; DS=dgroup for high-level code
+          mov     ds,ax
           mov     ax,25                 ; Allocate default float stack size
           mov     bl,FLOAT_STACK_GROW
           call    FloatInit
