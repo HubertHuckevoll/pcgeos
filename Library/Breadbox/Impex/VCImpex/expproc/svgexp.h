@@ -19,8 +19,8 @@
 
 #include <xlatLib.h>
 
-#define VCIMPEX_SVG_MAX_POLY_POINTS   256
-#define VCIMPEX_SVG_ELEMENT_BUFFER_SIZE   1024
+#define VCIMPEX_SVG_MAX_POLY_POINTS   512
+#define VCIMPEX_SVG_ELEMENT_BUFFER_SIZE   4096
 
 typedef struct
 {
