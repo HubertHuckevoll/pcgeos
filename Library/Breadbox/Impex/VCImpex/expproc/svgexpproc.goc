@@ -14,43 +14,177 @@
 
 typedef struct
 {
-    GStringElement element;
-    union
-    {
-        struct { Point p1; Point p2; } DRAW_LINE;
-        struct { Point p; } DRAW_LINE_TO;
-        struct { PointWWFixed p; } DRAW_REL_LINE_TO;
-        struct { Point p; sword xy; } DRAW_HVLINE;
-        struct { sword xy; } DRAW_HVLINE_TO;
-        struct { Point p1; Point p2; } DRAW_RECT;
-        struct { Point p; } DRAW_RECT_TO;
-        struct { word r; Point p1; Point p2; } DRAW_ROUND_RECT;
-        struct { word r; Point p; } DRAW_ROUND_RECT_TO;
-        struct { sword x1; sword y1; sword x2; sword y2; } DRAW_ELLIPSE;
-        struct { sword x1; sword y1; sword x2; sword y2; sword x3; sword y3; sword x4; sword y4; } DRAW_CURVE;
-        struct { sword x2; sword y2; sword x3; sword y3; sword x4; sword y4; } DRAW_CURVE_TO;
-        struct { sword x2; sword y2; sword x3; sword y3; sword x4; sword y4; } DRAW_REL_CURVE_TO;
-        struct { word close; sword x1; sword y1; sword x2; sword y2; word ang1; word ang2; } DRAW_ARC;
-        struct { word close; sword x1; sword y1; sword x2; sword y2; word ang1; word ang2; } FILL_ARC;
-        struct { word numPoints; Point p[VCIMPEX_SVG_MAX_POLY_POINTS]; } DRAW_POLY;
-        struct { word numPoints; RegionFillRule rule; Point p[VCIMPEX_SVG_MAX_POLY_POINTS]; } FILL_POLYGON;
-        byte raw[VCIMPEX_SVG_ELEMENT_BUFFER_SIZE];
-    } data;
+    byte raw[VCIMPEX_SVG_ELEMENT_BUFFER_SIZE];
 } VCImpexSVGGStringElement;
+
+typedef struct
+{
+    GStringElement  ODRLT_opcode;
+    WWFixed         ODRLT_x2;
+    WWFixed         ODRLT_y2;
+} OpDrawRelLineTo;
 
 VCImpexSVGGStringElement svgElementBuffer;
 PointWWFixed svgPolygonBuffer[VCIMPEX_SVG_MAX_POLY_POINTS];
 
 word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context);
 
-word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
-word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled, VCImpexSVGPendingRect *pendingRect);
-word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
-word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
-word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled);
-word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
-word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled);
+typedef Boolean (_pascal *VCImpexSVGOpcodePredicate)(word elementType);
+typedef word (_pascal *VCImpexSVGOpcodeHandler)(word elementType,
+                                                GStateHandle playbackGState,
+                                                VCImpexSVGExportContext *context,
+                                                PointWWFixed *currentPosition,
+                                                VCImpexSVGPendingRect *pendingRect);
+
+typedef struct
+{
+    VCImpexSVGOpcodePredicate predicate;
+    VCImpexSVGOpcodeHandler handler;
+} VCImpexSVGDispatchEntry;
+
+void* _pascal VCImpexSVGAs(const void *raw, word expectedOpcode);
+Boolean _pascal VCImpexSVGIsLineOpcode(word elementType);
+Boolean _pascal VCImpexSVGIsRectangleOpcode(word elementType);
+Boolean _pascal VCImpexSVGIsRoundRectOpcode(word elementType);
+Boolean _pascal VCImpexSVGIsEllipseOpcode(word elementType);
+Boolean _pascal VCImpexSVGIsCurveOpcode(word elementType);
+Boolean _pascal VCImpexSVGIsArcOpcode(word elementType);
+Boolean _pascal VCImpexSVGIsPolygonOpcode(word elementType);
+
+word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
+word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
+word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
+word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
+word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
+word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
+word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
 void _pascal VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value);
+
+static const VCImpexSVGDispatchEntry gVCImpexSVGDispatchTable[] =
+{
+    {VCImpexSVGIsLineOpcode, VCImpexSVGHandleLineOpcode},
+    {VCImpexSVGIsRectangleOpcode, VCImpexSVGHandleRectangleOpcode},
+    {VCImpexSVGIsRoundRectOpcode, VCImpexSVGHandleRoundRectOpcode},
+    {VCImpexSVGIsEllipseOpcode, VCImpexSVGHandleEllipseOpcode},
+    {VCImpexSVGIsCurveOpcode, VCImpexSVGHandleCurveOpcode},
+    {VCImpexSVGIsArcOpcode, VCImpexSVGHandleArcOpcode},
+    {VCImpexSVGIsPolygonOpcode, VCImpexSVGHandlePolygonOpcode}
+};
+
+#define VCIMPEX_SVG_DISPATCH_COUNT  (sizeof(gVCImpexSVGDispatchTable) / sizeof(VCImpexSVGDispatchEntry))
+
+void* _pascal VCImpexSVGAs(const void *raw, word expectedOpcode)
+{
+    const GStringElement *opcodeP;
+
+    if (raw == NULL)
+    {
+        return (void*)0;
+    }
+
+    opcodeP = (const GStringElement*)raw;
+    if (*opcodeP != (GStringElement)expectedOpcode)
+    {
+        return (void*)0;
+    }
+
+    return (void*)raw;
+}
+
+Boolean _pascal VCImpexSVGIsLineOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_DRAW_LINE:
+        case GR_DRAW_LINE_TO:
+        case GR_DRAW_REL_LINE_TO:
+        case GR_DRAW_HLINE:
+        case GR_DRAW_VLINE:
+        case GR_DRAW_HLINE_TO:
+        case GR_DRAW_VLINE_TO:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+Boolean _pascal VCImpexSVGIsRectangleOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_DRAW_RECT:
+        case GR_FILL_RECT:
+        case GR_DRAW_RECT_TO:
+        case GR_FILL_RECT_TO:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+Boolean _pascal VCImpexSVGIsRoundRectOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_DRAW_ROUND_RECT:
+        case GR_FILL_ROUND_RECT:
+        case GR_DRAW_ROUND_RECT_TO:
+        case GR_FILL_ROUND_RECT_TO:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+Boolean _pascal VCImpexSVGIsEllipseOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_DRAW_ELLIPSE:
+        case GR_FILL_ELLIPSE:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+Boolean _pascal VCImpexSVGIsCurveOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_DRAW_CURVE:
+        case GR_DRAW_CURVE_TO:
+        case GR_DRAW_REL_CURVE_TO:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+Boolean _pascal VCImpexSVGIsArcOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_DRAW_ARC:
+        case GR_FILL_ARC:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+Boolean _pascal VCImpexSVGIsPolygonOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_DRAW_POLYGON:
+        case GR_DRAW_POLYLINE:
+        case GR_FILL_POLYGON:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
 
 /****************************************************************************
  * VCImpex SVG Export public entry point
@@ -112,15 +246,15 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     MemHandle playbackBlockH;
     ChunkHandle playbackChunk;
     GStateHandle playbackGState;
-    GSRetType drawResult;
     word elementType;
     word elementSize;
     PointWWFixed currentPosition;
     word error;
-    word handlerResult;
-    Boolean handled;
     GSRetType gsr;
     VCImpexSVGPendingRect pendingRect;
+    word dispatchIndex;
+    const VCImpexSVGDispatchEntry *entry;
+    word handlerResult;
 
 
     playbackBlockH = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
@@ -156,12 +290,10 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     //while (drawResult == GSRT_ONE)
     //{
 
-        handled = FALSE;
+        GrGetGStringElement(playbackGState, sourceGState, sizeof(svgElementBuffer.raw),
+                            svgElementBuffer.raw, &elementSize);
 
-        GrGetGStringElement(playbackGState, sourceGState, sizeof(svgElementBuffer),
-                            &svgElementBuffer, &elementSize);
-
-                            if (elementSize > sizeof(svgElementBuffer))
+        if (elementSize > sizeof(svgElementBuffer.raw))
         {
             error = TE_EXPORT_ERROR;
             break;
@@ -184,8 +316,7 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
         }
 
         /* If current element is not a rect, flush any pending rect to preserve order */
-        if (!(elementType == GR_DRAW_RECT || elementType == GR_FILL_RECT ||
-              elementType == GR_DRAW_RECT_TO || elementType == GR_FILL_RECT_TO))
+        if (!VCImpexSVGIsRectangleOpcode(elementType))
         {
             if (!VCImpexSVGFlushPendingRect(context, &pendingRect))
             {
@@ -194,72 +325,22 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
             }
         }
 
-        handlerResult = VCImpexSVGHandleLineOpcode(elementType, playbackGState, context, &currentPosition, &handled);
+        handlerResult = TE_NO_ERROR;
+        for (dispatchIndex = 0; dispatchIndex < VCIMPEX_SVG_DISPATCH_COUNT; dispatchIndex++)
+        {
+            entry = &gVCImpexSVGDispatchTable[dispatchIndex];
+            if (entry->predicate(elementType))
+            {
+                handlerResult = entry->handler(elementType, playbackGState, context, &currentPosition, &pendingRect);
+                break;
+            }
+        }
+
         if (handlerResult != TE_NO_ERROR)
         {
             error = handlerResult;
             break;
         }
-
-        if (!handled)
-        {
-            handlerResult = VCImpexSVGHandleRectangleOpcode(elementType, playbackGState, context, &currentPosition, &handled, &pendingRect);
-            if (handlerResult != TE_NO_ERROR)
-            {
-                error = handlerResult;
-                break;
-            }
-
-            if (!handled)
-            {
-                handlerResult = VCImpexSVGHandleRoundRectOpcode(elementType, playbackGState, context, &currentPosition, &handled);
-                if (handlerResult != TE_NO_ERROR)
-                {
-                    error = handlerResult;
-                    break;
-                }
-
-                if (!handled)
-                {
-                    handlerResult = VCImpexSVGHandleEllipseOpcode(elementType, playbackGState, context, &handled);
-                    if (handlerResult != TE_NO_ERROR)
-                    {
-                        error = handlerResult;
-                        break;
-                    }
-                    if (!handled)
-                    {
-                        handlerResult = VCImpexSVGHandleCurveOpcode(elementType, playbackGState, context, &currentPosition, &handled);
-                        if (handlerResult != TE_NO_ERROR)
-                        {
-                            error = handlerResult;
-                            break;
-                        }
-                        if (!handled)
-                        {
-                            handlerResult = VCImpexSVGHandleArcOpcode(elementType, playbackGState, context, &handled);
-                            if (handlerResult != TE_NO_ERROR)
-                            {
-                                error = handlerResult;
-                                break;
-                            }
-                            if (!handled)
-                            {
-                                handlerResult = VCImpexSVGHandlePolygonOpcode(elementType, playbackGState, context, &handled);
-                                if (handlerResult != TE_NO_ERROR)
-                                {
-                                    error = handlerResult;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
-        //                            VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
     }
 
     //if ((error == TE_NO_ERROR) && (drawResult != GSRT_COMPLETE))
@@ -293,20 +374,39 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
  * Opcode handlers
  ****************************************************************************/
 
-word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
 {
     PointWWFixed startPoint;
     PointWWFixed endPoint;
+    Point intPoint1;
+    Point intPoint2;
     Point tempPoint;
+    PointWWFixed deltaPoint;
     WWFixedAsDWord componentValue;
+    OpDrawLine *drawLineP;
+    OpDrawLineTo *drawLineToP;
+    OpDrawRelLineTo *drawRelLineToP;
+    OpDrawHLine *drawHLineP;
+    OpDrawHLineTo *drawHLineToP;
+    OpDrawVLine *drawVLineP;
+    OpDrawVLineTo *drawVLineToP;
 
-    *handled = TRUE;
+    (void)pendingRect;
 
     switch (elementType)
     {
         case GR_DRAW_LINE:
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_LINE.p1, &startPoint);
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_LINE.p2, &endPoint);
+            drawLineP = (OpDrawLine*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_LINE);
+            if (drawLineP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            intPoint1.P_x = (sword)drawLineP->ODL_x1;
+            intPoint1.P_y = (sword)drawLineP->ODL_y1;
+            intPoint2.P_x = (sword)drawLineP->ODL_x2;
+            intPoint2.P_y = (sword)drawLineP->ODL_y2;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint1, &startPoint);
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint2, &endPoint);
             if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
             {
                 return TE_FILE_WRITE;
@@ -315,7 +415,14 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
 
         case GR_DRAW_LINE_TO:
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_LINE_TO.p, &endPoint);
+            drawLineToP = (OpDrawLineTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_LINE_TO);
+            if (drawLineToP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            intPoint1.P_x = (sword)drawLineToP->ODLT_x2;
+            intPoint1.P_y = (sword)drawLineToP->ODLT_y2;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint1, &endPoint);
             if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
             {
                 return TE_FILE_WRITE;
@@ -324,7 +431,16 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
 
         case GR_DRAW_REL_LINE_TO:
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
-            VCImpexSVGTransformRelativePoint(playbackGState, &svgElementBuffer.data.DRAW_REL_LINE_TO.p, &endPoint);
+            drawRelLineToP = (OpDrawRelLineTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_REL_LINE_TO);
+            if (drawRelLineToP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            deltaPoint.PF_x.WWF_int = drawRelLineToP->ODRLT_x2.WWF_int;
+            deltaPoint.PF_x.WWF_frac = drawRelLineToP->ODRLT_x2.WWF_frac;
+            deltaPoint.PF_y.WWF_int = drawRelLineToP->ODRLT_y2.WWF_int;
+            deltaPoint.PF_y.WWF_frac = drawRelLineToP->ODRLT_y2.WWF_frac;
+            VCImpexSVGTransformRelativePoint(playbackGState, &deltaPoint, &endPoint);
             if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
             {
                 return TE_FILE_WRITE;
@@ -332,9 +448,15 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
             return TE_NO_ERROR;
 
         case GR_DRAW_HLINE:
-            tempPoint = svgElementBuffer.data.DRAW_HVLINE.p;
+            drawHLineP = (OpDrawHLine*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_HLINE);
+            if (drawHLineP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            tempPoint.P_x = (sword)drawHLineP->ODHL_x1;
+            tempPoint.P_y = (sword)drawHLineP->ODHL_y1;
             VCImpexSVGTransformPointFromInt(playbackGState, &tempPoint, &startPoint);
-            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE.xy)) << 16;
+            componentValue = ((WWFixedAsDWord)((sdword)(sword)drawHLineP->ODHL_x2)) << 16;
             VCImpexSVGSetWWFixedComponent(&currentPosition->PF_x, componentValue);
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
             if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
@@ -344,9 +466,15 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
             return TE_NO_ERROR;
 
         case GR_DRAW_VLINE:
-            tempPoint = svgElementBuffer.data.DRAW_HVLINE.p;
+            drawVLineP = (OpDrawVLine*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_VLINE);
+            if (drawVLineP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            tempPoint.P_x = (sword)drawVLineP->ODVL_x1;
+            tempPoint.P_y = (sword)drawVLineP->ODVL_y1;
             VCImpexSVGTransformPointFromInt(playbackGState, &tempPoint, &startPoint);
-            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE.xy)) << 16;
+            componentValue = ((WWFixedAsDWord)((sdword)(sword)drawVLineP->ODVL_y2)) << 16;
             VCImpexSVGSetWWFixedComponent(&currentPosition->PF_y, componentValue);
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
             if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
@@ -357,7 +485,12 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
 
         case GR_DRAW_HLINE_TO:
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
-            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE_TO.xy)) << 16;
+            drawHLineToP = (OpDrawHLineTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_HLINE_TO);
+            if (drawHLineToP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            componentValue = ((WWFixedAsDWord)((sdword)(sword)drawHLineToP->ODHLT_x2)) << 16;
             VCImpexSVGSetWWFixedComponent(&currentPosition->PF_x, componentValue);
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
             if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
@@ -368,7 +501,12 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
 
         case GR_DRAW_VLINE_TO:
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
-            componentValue = ((WWFixedAsDWord)((sdword)svgElementBuffer.data.DRAW_HVLINE_TO.xy)) << 16;
+            drawVLineToP = (OpDrawVLineTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_VLINE_TO);
+            if (drawVLineToP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            componentValue = ((WWFixedAsDWord)((sdword)(sword)drawVLineToP->ODVLT_y2)) << 16;
             VCImpexSVGSetWWFixedComponent(&currentPosition->PF_y, componentValue);
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &endPoint);
             if (!VCImpexSVGWriteLineElement(context, &startPoint, &endPoint))
@@ -380,24 +518,51 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
         default:
             break;
     }
-    *handled = FALSE;
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
 {
     PointWWFixed corner1;
     PointWWFixed corner3;
+    Point intCorner1;
+    Point intCorner3;
     Boolean filled;
-
-    *handled = TRUE;
+    OpDrawRect *drawRectP;
+    OpFillRect *fillRectP;
+    OpDrawRectTo *drawRectToP;
+    OpFillRectTo *fillRectToP;
 
     switch (elementType)
     {
         case GR_DRAW_RECT:
         case GR_FILL_RECT:
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_RECT.p1, &corner1);
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_RECT.p2, &corner3);
+            if (elementType == GR_DRAW_RECT)
+            {
+                drawRectP = (OpDrawRect*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_RECT);
+                if (drawRectP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                intCorner1.P_x = (sword)drawRectP->ODR_x1;
+                intCorner1.P_y = (sword)drawRectP->ODR_y1;
+                intCorner3.P_x = (sword)drawRectP->ODR_x2;
+                intCorner3.P_y = (sword)drawRectP->ODR_y2;
+            }
+            else
+            {
+                fillRectP = (OpFillRect*)VCImpexSVGAs(svgElementBuffer.raw, GR_FILL_RECT);
+                if (fillRectP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                intCorner1.P_x = (sword)fillRectP->OFFR_x1;
+                intCorner1.P_y = (sword)fillRectP->OFFR_y1;
+                intCorner3.P_x = (sword)fillRectP->OFFR_x2;
+                intCorner3.P_y = (sword)fillRectP->OFFR_y2;
+            }
+            VCImpexSVGTransformPointFromInt(playbackGState, &intCorner1, &corner1);
+            VCImpexSVGTransformPointFromInt(playbackGState, &intCorner3, &corner3);
             filled = (elementType == GR_FILL_RECT);
             /* Coalescing logic */
             if (pendingRect != NULL)
@@ -461,7 +626,27 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
         case GR_DRAW_RECT_TO:
         case GR_FILL_RECT_TO:
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &corner1);
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_RECT_TO.p, &corner3);
+            if (elementType == GR_DRAW_RECT_TO)
+            {
+                drawRectToP = (OpDrawRectTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_RECT_TO);
+                if (drawRectToP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                intCorner3.P_x = (sword)drawRectToP->ODRT_x2;
+                intCorner3.P_y = (sword)drawRectToP->ODRT_y2;
+            }
+            else
+            {
+                fillRectToP = (OpFillRectTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_FILL_RECT_TO);
+                if (fillRectToP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                intCorner3.P_x = (sword)fillRectToP->OFFRT_x2;
+                intCorner3.P_y = (sword)fillRectToP->OFFRT_y2;
+            }
+            VCImpexSVGTransformPointFromInt(playbackGState, &intCorner3, &corner3);
             filled = (elementType == GR_FILL_RECT_TO);
             if (pendingRect != NULL)
             {
@@ -521,11 +706,10 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
         default:
             break;
     }
-    *handled = FALSE;
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
+word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
 {
     WWFixed cx = {0};
     WWFixed cy = {0};
@@ -536,17 +720,40 @@ word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playba
     sword dx, dy;
     TransMatrix tm;
     Boolean filled;
+    OpDrawEllipse *drawEllipseP;
+    OpFillEllipse *fillEllipseP;
 
-    *handled = TRUE;
+    (void)currentPosition;
+    (void)pendingRect;
 
     switch (elementType)
     {
         case GR_DRAW_ELLIPSE:
         case GR_FILL_ELLIPSE:
-            x1 = svgElementBuffer.data.DRAW_ELLIPSE.x1;
-            y1 = svgElementBuffer.data.DRAW_ELLIPSE.y1;
-            x2 = svgElementBuffer.data.DRAW_ELLIPSE.x2;
-            y2 = svgElementBuffer.data.DRAW_ELLIPSE.y2;
+            if (elementType == GR_DRAW_ELLIPSE)
+            {
+                drawEllipseP = (OpDrawEllipse*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_ELLIPSE);
+                if (drawEllipseP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                x1 = (sword)drawEllipseP->ODE_x1;
+                y1 = (sword)drawEllipseP->ODE_y1;
+                x2 = (sword)drawEllipseP->ODE_x2;
+                y2 = (sword)drawEllipseP->ODE_y2;
+            }
+            else
+            {
+                fillEllipseP = (OpFillEllipse*)VCImpexSVGAs(svgElementBuffer.raw, GR_FILL_ELLIPSE);
+                if (fillEllipseP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                x1 = (sword)fillEllipseP->OFE_x1;
+                y1 = (sword)fillEllipseP->OFE_y1;
+                x2 = (sword)fillEllipseP->OFE_x2;
+                y2 = (sword)fillEllipseP->OFE_y2;
+            }
 
             /* center x */
             sum = (sdword)x1 + (sdword)x2;
@@ -581,45 +788,62 @@ word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playba
         default:
             break;
     }
-    *handled = FALSE;
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
+word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
 {
-    Point *sourcePoints;
+    const Point *sourcePoints;
     word pointCount;
     word index;
     Boolean closeShape;
     Boolean filledShape;
+    OpDrawPolygon *drawPolygonP;
+    OpDrawPolyline *drawPolylineP;
+    OpFillPolygon *fillPolygonP;
 
-    *handled = TRUE;
+    (void)currentPosition;
+    (void)pendingRect;
 
     switch (elementType)
     {
         case GR_DRAW_POLYGON:
-            pointCount = svgElementBuffer.data.DRAW_POLY.numPoints;
-            sourcePoints = svgElementBuffer.data.DRAW_POLY.p;
+            drawPolygonP = (OpDrawPolygon*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_POLYGON);
+            if (drawPolygonP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            pointCount = drawPolygonP->ODPG_count;
+            sourcePoints = (const Point *)((const byte *)drawPolygonP + sizeof(OpDrawPolygon));
             closeShape = TRUE;
             filledShape = FALSE;
             break;
 
         case GR_DRAW_POLYLINE:
-            pointCount = svgElementBuffer.data.DRAW_POLY.numPoints;
-            sourcePoints = svgElementBuffer.data.DRAW_POLY.p;
+            drawPolylineP = (OpDrawPolyline*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_POLYLINE);
+            if (drawPolylineP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            pointCount = drawPolylineP->ODPL_count;
+            sourcePoints = (const Point *)((const byte *)drawPolylineP + sizeof(OpDrawPolyline));
             closeShape = FALSE;
             filledShape = FALSE;
             break;
 
         case GR_FILL_POLYGON:
-            pointCount = svgElementBuffer.data.FILL_POLYGON.numPoints;
-            sourcePoints = svgElementBuffer.data.FILL_POLYGON.p;
+            fillPolygonP = (OpFillPolygon*)VCImpexSVGAs(svgElementBuffer.raw, GR_FILL_POLYGON);
+            if (fillPolygonP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            pointCount = fillPolygonP->OFP_count;
+            sourcePoints = (const Point *)((const byte *)fillPolygonP + sizeof(OpFillPolygon));
             closeShape = TRUE;
             filledShape = TRUE;
             break;
 
         default:
-            *handled = FALSE;
             return TE_NO_ERROR;
     }
 
@@ -645,7 +869,7 @@ word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playba
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
 {
     PointWWFixed corner1;
     PointWWFixed corner3;
@@ -655,19 +879,34 @@ word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle play
     XYValueAsDWord tx;
     XYValueAsDWord ty;
     Boolean filled;
+    OpDrawRoundRect *roundRectP;
+    OpDrawRoundRectTo *roundRectToP;
+    Point intCorner1;
+    Point intCorner3;
+    word radiusValue;
 
-    *handled = TRUE;
+    (void)pendingRect;
 
     switch (elementType)
     {
         case GR_DRAW_ROUND_RECT:
         case GR_FILL_ROUND_RECT:
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_ROUND_RECT.p1, &corner1);
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_ROUND_RECT.p2, &corner3);
+            roundRectP = (OpDrawRoundRect*)VCImpexSVGAs(svgElementBuffer.raw, elementType);
+            if (roundRectP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            intCorner1.P_x = (sword)roundRectP->ODRR_x1;
+            intCorner1.P_y = (sword)roundRectP->ODRR_y1;
+            intCorner3.P_x = (sword)roundRectP->ODRR_x2;
+            intCorner3.P_y = (sword)roundRectP->ODRR_y2;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intCorner1, &corner1);
+            VCImpexSVGTransformPointFromInt(playbackGState, &intCorner3, &corner3);
+            radiusValue = roundRectP->ODRR_radius;
             /* Transform radius r along x and y axes to world coordinates */
             t0 = GrTransform(playbackGState, 0, 0);
-            tx = GrTransform(playbackGState, (sword)svgElementBuffer.data.DRAW_ROUND_RECT.r, 0);
-            ty = GrTransform(playbackGState, 0, (sword)svgElementBuffer.data.DRAW_ROUND_RECT.r);
+            tx = GrTransform(playbackGState, (sword)radiusValue, 0);
+            ty = GrTransform(playbackGState, 0, (sword)radiusValue);
             {
                 sdword dx = (sdword)DWORD_X(tx) - (sdword)DWORD_X(t0);
                 sdword dy = (sdword)DWORD_Y(ty) - (sdword)DWORD_Y(t0);
@@ -691,10 +930,18 @@ word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle play
         case GR_DRAW_ROUND_RECT_TO:
         case GR_FILL_ROUND_RECT_TO:
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &corner1);
-            VCImpexSVGTransformPointFromInt(playbackGState, &svgElementBuffer.data.DRAW_ROUND_RECT_TO.p, &corner3);
+            roundRectToP = (OpDrawRoundRectTo*)VCImpexSVGAs(svgElementBuffer.raw, elementType);
+            if (roundRectToP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            intCorner3.P_x = (sword)roundRectToP->ODRRT_x2;
+            intCorner3.P_y = (sword)roundRectToP->ODRRT_y2;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intCorner3, &corner3);
+            radiusValue = roundRectToP->ODRRT_radius;
             t0 = GrTransform(playbackGState, 0, 0);
-            tx = GrTransform(playbackGState, (sword)svgElementBuffer.data.DRAW_ROUND_RECT_TO.r, 0);
-            ty = GrTransform(playbackGState, 0, (sword)svgElementBuffer.data.DRAW_ROUND_RECT_TO.r);
+            tx = GrTransform(playbackGState, (sword)radiusValue, 0);
+            ty = GrTransform(playbackGState, 0, (sword)radiusValue);
             {
                 sdword dx = (sdword)DWORD_X(tx) - (sdword)DWORD_X(t0);
                 sdword dy = (sdword)DWORD_Y(ty) - (sdword)DWORD_Y(t0);
@@ -718,35 +965,62 @@ word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle play
         default:
             break;
     }
-    *handled = FALSE;
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, Boolean *handled)
+word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
 {
     PointWWFixed startPoint;
     PointWWFixed cp1;
     PointWWFixed cp2;
     PointWWFixed endPoint;
+    OpDrawCurve *drawCurveP;
+    OpDrawCurveTo *drawCurveToP;
+    OpDrawRelCurveTo *drawRelCurveToP;
+    Point intPoint;
 
-    *handled = TRUE;
+    (void)pendingRect;
 
     switch (elementType)
     {
         case GR_DRAW_CURVE:
-            VCImpexSVGTransformPointFromInt(playbackGState, (Point*)&svgElementBuffer.data.DRAW_CURVE.x1, &startPoint);
-            VCImpexSVGTransformPointFromInt(playbackGState, (Point*)&svgElementBuffer.data.DRAW_CURVE.x2, &cp1);
-            VCImpexSVGTransformPointFromInt(playbackGState, (Point*)&svgElementBuffer.data.DRAW_CURVE.x3, &cp2);
-            VCImpexSVGTransformPointFromInt(playbackGState, (Point*)&svgElementBuffer.data.DRAW_CURVE.x4, &endPoint);
+            drawCurveP = (OpDrawCurve*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_CURVE);
+            if (drawCurveP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            intPoint.P_x = drawCurveP->ODCV_x1;
+            intPoint.P_y = drawCurveP->ODCV_y1;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &startPoint);
+            intPoint.P_x = drawCurveP->ODCV_x2;
+            intPoint.P_y = drawCurveP->ODCV_y2;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &cp1);
+            intPoint.P_x = drawCurveP->ODCV_x3;
+            intPoint.P_y = drawCurveP->ODCV_y3;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &cp2);
+            intPoint.P_x = drawCurveP->ODCV_x4;
+            intPoint.P_y = drawCurveP->ODCV_y4;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &endPoint);
             if (!VCImpexSVGWriteCubicPathElement(context, &startPoint, &cp1, &cp2, &endPoint))
                 return TE_FILE_WRITE;
             return TE_NO_ERROR;
 
         case GR_DRAW_CURVE_TO:
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
-            VCImpexSVGTransformPointFromInt(playbackGState, (Point*)&svgElementBuffer.data.DRAW_CURVE_TO.x2, &cp1);
-            VCImpexSVGTransformPointFromInt(playbackGState, (Point*)&svgElementBuffer.data.DRAW_CURVE_TO.x3, &cp2);
-            VCImpexSVGTransformPointFromInt(playbackGState, (Point*)&svgElementBuffer.data.DRAW_CURVE_TO.x4, &endPoint);
+            drawCurveToP = (OpDrawCurveTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_CURVE_TO);
+            if (drawCurveToP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
+            intPoint.P_x = drawCurveToP->ODCVT_x2;
+            intPoint.P_y = drawCurveToP->ODCVT_y2;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &cp1);
+            intPoint.P_x = drawCurveToP->ODCVT_x3;
+            intPoint.P_y = drawCurveToP->ODCVT_y3;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &cp2);
+            intPoint.P_x = drawCurveToP->ODCVT_x4;
+            intPoint.P_y = drawCurveToP->ODCVT_y4;
+            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &endPoint);
             if (!VCImpexSVGWriteCubicPathElement(context, &startPoint, &cp1, &cp2, &endPoint))
                 return TE_FILE_WRITE;
             return TE_NO_ERROR;
@@ -754,23 +1028,28 @@ word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playback
         case GR_DRAW_REL_CURVE_TO:
         {
             PointWWFixed delta;
+            drawRelCurveToP = (OpDrawRelCurveTo*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_REL_CURVE_TO);
+            if (drawRelCurveToP == (void*)0)
+            {
+                return TE_EXPORT_ERROR;
+            }
             /* cp1 */
-            delta.PF_x.WWF_int = (sword)svgElementBuffer.data.DRAW_REL_CURVE_TO.x2;
+            delta.PF_x.WWF_int = drawRelCurveToP->ODRCVT_x2;
             delta.PF_x.WWF_frac = 0;
-            delta.PF_y.WWF_int = (sword)svgElementBuffer.data.DRAW_REL_CURVE_TO.y2;
+            delta.PF_y.WWF_int = drawRelCurveToP->ODRCVT_y2;
             delta.PF_y.WWF_frac = 0;
             VCImpexSVGTransformPointFromFixed(playbackGState, currentPosition, &startPoint);
             VCImpexSVGTransformRelativePoint(playbackGState, &delta, &cp1);
             /* cp2 */
-            delta.PF_x.WWF_int = (sword)svgElementBuffer.data.DRAW_REL_CURVE_TO.x3;
+            delta.PF_x.WWF_int = drawRelCurveToP->ODRCVT_x3;
             delta.PF_x.WWF_frac = 0;
-            delta.PF_y.WWF_int = (sword)svgElementBuffer.data.DRAW_REL_CURVE_TO.y3;
+            delta.PF_y.WWF_int = drawRelCurveToP->ODRCVT_y3;
             delta.PF_y.WWF_frac = 0;
             VCImpexSVGTransformRelativePoint(playbackGState, &delta, &cp2);
             /* end */
-            delta.PF_x.WWF_int = (sword)svgElementBuffer.data.DRAW_REL_CURVE_TO.x4;
+            delta.PF_x.WWF_int = drawRelCurveToP->ODRCVT_x4;
             delta.PF_x.WWF_frac = 0;
-            delta.PF_y.WWF_int = (sword)svgElementBuffer.data.DRAW_REL_CURVE_TO.y4;
+            delta.PF_y.WWF_int = drawRelCurveToP->ODRCVT_y4;
             delta.PF_y.WWF_frac = 0;
             VCImpexSVGTransformRelativePoint(playbackGState, &delta, &endPoint);
             if (!VCImpexSVGWriteCubicPathElement(context, &startPoint, &cp1, &cp2, &endPoint))
@@ -781,30 +1060,69 @@ word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playback
         default:
             break;
     }
-    *handled = FALSE;
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, Boolean *handled)
+word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
 {
     Boolean fill = FALSE;
-    *handled = TRUE;
+    OpDrawArc *drawArcP;
+    OpFillArc *fillArcP;
+    TransMatrix tm;
+    WWFixed cx;
+    WWFixed cy;
+    WWFixed rx;
+    WWFixed ry;
+    word startAngle;
+    word endAngle;
+    sword x1;
+    sword y1;
+    sword x2;
+    sword y2;
+    ArcCloseType closeType;
+    WWFixedAsDWord cxFixed;
+    WWFixedAsDWord cyFixed;
+    WWFixedAsDWord rxFixed;
+    WWFixedAsDWord ryFixed;
+
+    (void)currentPosition;
+    (void)pendingRect;
 
     switch (elementType)
     {
         case GR_DRAW_ARC:
         case GR_FILL_ARC:
         {
-            TransMatrix tm;
-            WWFixed cx, cy, rx, ry;
-            word startAngle = svgElementBuffer.data.DRAW_ARC.ang1;
-            word endAngle = svgElementBuffer.data.DRAW_ARC.ang2;
-            sword x1 = svgElementBuffer.data.DRAW_ARC.x1;
-            sword y1 = svgElementBuffer.data.DRAW_ARC.y1;
-            sword x2 = svgElementBuffer.data.DRAW_ARC.x2;
-            sword y2 = svgElementBuffer.data.DRAW_ARC.y2;
-            ArcCloseType closeType = (ArcCloseType)svgElementBuffer.data.DRAW_ARC.close;
-            WWFixedAsDWord cxFixed, cyFixed, rxFixed, ryFixed;
+            if (elementType == GR_DRAW_ARC)
+            {
+                drawArcP = (OpDrawArc*)VCImpexSVGAs(svgElementBuffer.raw, GR_DRAW_ARC);
+                if (drawArcP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                startAngle = drawArcP->ODA_ang1;
+                endAngle = drawArcP->ODA_ang2;
+                x1 = (sword)drawArcP->ODA_x1;
+                y1 = (sword)drawArcP->ODA_y1;
+                x2 = (sword)drawArcP->ODA_x2;
+                y2 = (sword)drawArcP->ODA_y2;
+                closeType = drawArcP->ODA_close;
+            }
+            else
+            {
+                fillArcP = (OpFillArc*)VCImpexSVGAs(svgElementBuffer.raw, GR_FILL_ARC);
+                if (fillArcP == (void*)0)
+                {
+                    return TE_EXPORT_ERROR;
+                }
+                startAngle = fillArcP->OFA_ang1;
+                endAngle = fillArcP->OFA_ang2;
+                x1 = (sword)fillArcP->OFA_x1;
+                y1 = (sword)fillArcP->OFA_y1;
+                x2 = (sword)fillArcP->OFA_x2;
+                y2 = (sword)fillArcP->OFA_y2;
+                closeType = (ArcCloseType)fillArcP->OFA_close;
+            }
 
             /* center */
             cx.WWF_int = (sword)((x1 + x2) / 2);
@@ -833,7 +1151,6 @@ word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGS
         default:
             break;
     }
-    *handled = FALSE;
     return TE_NO_ERROR;
 }
 
