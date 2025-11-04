@@ -815,6 +815,8 @@ word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playba
             offset = sizeof(GStringElement);
             pointCount = VCImpexSVGReadWord(elementData, offset);
             offset += sizeof(word);
+            /* skip RegionFillRule byte */
+            offset += sizeof(RegionFillRule);
             closeShape = TRUE;
             filledShape = TRUE;
             break;
