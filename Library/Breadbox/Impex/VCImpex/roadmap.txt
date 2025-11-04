@@ -1,26 +1,4 @@
-Short answer: You can keep adding a few more simple opcodes with the current structure, but if you plan to support arcs, curves, paths, or richer styles, a small refactor will pay off quickly.
-
-What’s good now
-Clear phases: traversal in svgexpproc.goc:136–140, decoding via GrGetGStringElement, then handler fan‑out (lines/rects/polygons).
-Writers are isolated in svgsubcode.goc; easy to extend per‑shape.
-Playback gstate lets you query transform and style just in time.
-
-Where it starts to strain
-Growing union: VCImpexSVGGStringElement is expanding per opcode. This doesn’t scale and couples parsing to storage.
-Ad‑hoc dispatch: nested handler calls in svgexpproc.goc:164–183 becomes unwieldy as handlers grow.
-Style tracking is minimal: only width/line/fill colors; you’ll need joins, caps, dash, miter, fill-rule, etc.
-Paths/curves/arcs: current model emits individual elements; path opcodes require accumulating segments into a single <path>.
-Coalescing is shape‑specific (rects). You’ll likely want it for ellipses and maybe others.
-
 Recommended refactors (lightweight, incremental)
-
-Element decoding
-Keep a single raw buffer (you already have raw[...]) and cast inside handlers to the header’s op-structs (e.g., OpDrawArc*, OpFillEllipse* in CInclude/gstring.h), instead of expanding your union for every opcode.
-Add a helper: void* VCImpexSVGAs(const void* raw, word expectedOpcode) to centralize assertions/casts.
-
-Dispatch table
-Replace chained if/handler calls with a small table: {opcodeRange/predicate, handler}. Keeps VCImpexSVGExportGString compact and makes adding opcodes trivial.
-Example buckets: lines, rectangles, round-rects, polygons, ellipses, arcs, curves, path-segment ops, path control ops, style ops.
 
 Style/state model
 Extend VCImpexSVGExportContext with: line join, cap, dash pattern, miter limit, fill rule.
@@ -104,8 +82,3 @@ GR_DRAW_ARC: use <path> with an elliptical-arc segment; honor ArcCloseType (open
 Curves: GR_DRAW_CURVE* → <path> cubic “C/S” segments.
 Splines: convert to equivalent cubic Beziers or approximate with a polyline.
 Brush polyline: approximate with stroke + caps/joins or SVG markers; exact brush stamping may require <marker> or pattern tiling.
-
-If you’d like, I can prioritize implementing:
-Round rect (easy win, <rect rx/ry>).
-Beziers (straightforward mapping to path).
-Arcs (angles + closure) and 3‑point arcs (needs small conversion helper).
