@@ -22,19 +22,6 @@ PointWWFixed svgPolygonBuffer[VCIMPEX_SVG_MAX_POLY_POINTS];
 
 word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExportContext *context);
 
-typedef Boolean (_pascal *VCImpexSVGOpcodePredicate)(word elementType);
-typedef word (_pascal *VCImpexSVGOpcodeHandler)(word elementType,
-                                                GStateHandle playbackGState,
-                                                VCImpexSVGExportContext *context,
-                                                PointWWFixed *currentPosition,
-                                                VCImpexSVGPendingRect *pendingRect);
-
-typedef struct
-{
-    VCImpexSVGOpcodePredicate predicate;
-    VCImpexSVGOpcodeHandler handler;
-} VCImpexSVGDispatchEntry;
-
 void* _pascal VCImpexSVGAs(const void *raw, word expectedOpcode);
 Boolean _pascal VCImpexSVGIsLineOpcode(word elementType);
 Boolean _pascal VCImpexSVGIsRectangleOpcode(word elementType);
@@ -55,19 +42,6 @@ void _pascal VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord va
 word _pascal VCImpexSVGReadWord(const byte *data, word offset);
 sword _pascal VCImpexSVGReadSword(const byte *data, word offset);
 void _pascal VCImpexSVGReadWWFixed(const byte *data, word offset, WWFixed *value);
-
-static const VCImpexSVGDispatchEntry gVCImpexSVGDispatchTable[] =
-{
-    {VCImpexSVGIsLineOpcode, VCImpexSVGHandleLineOpcode},
-    {VCImpexSVGIsRectangleOpcode, VCImpexSVGHandleRectangleOpcode},
-    {VCImpexSVGIsRoundRectOpcode, VCImpexSVGHandleRoundRectOpcode},
-    {VCImpexSVGIsEllipseOpcode, VCImpexSVGHandleEllipseOpcode},
-    {VCImpexSVGIsCurveOpcode, VCImpexSVGHandleCurveOpcode},
-    {VCImpexSVGIsArcOpcode, VCImpexSVGHandleArcOpcode},
-    {VCImpexSVGIsPolygonOpcode, VCImpexSVGHandlePolygonOpcode}
-};
-
-#define VCIMPEX_SVG_DISPATCH_COUNT  (sizeof(gVCImpexSVGDispatchTable) / sizeof(VCImpexSVGDispatchEntry))
 
 void* _pascal VCImpexSVGAs(const void *raw, word expectedOpcode)
 {
@@ -248,8 +222,6 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     word error;
     GSRetType gsr;
     VCImpexSVGPendingRect pendingRect;
-    word dispatchIndex;
-    const VCImpexSVGDispatchEntry *entry;
     word handlerResult;
 
 
@@ -280,12 +252,6 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
         gsr == GSRT_ONE;
         gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType))
     {
-
-    //drawResult = GrDrawGString(playbackGState, sourceGState, 0, 0,
-    //                           VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
-    //while (drawResult == GSRT_ONE)
-    //{
-
         GrGetGStringElement(playbackGState, sourceGState, sizeof(svgElementBuffer.raw),
                             svgElementBuffer.raw, &elementSize);
 
@@ -322,14 +288,33 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
         }
 
         handlerResult = TE_NO_ERROR;
-        for (dispatchIndex = 0; dispatchIndex < VCIMPEX_SVG_DISPATCH_COUNT; dispatchIndex++)
+        if (VCImpexSVGIsLineOpcode(elementType))
         {
-            entry = &gVCImpexSVGDispatchTable[dispatchIndex];
-            if (entry->predicate(elementType))
-            {
-                handlerResult = entry->handler(elementType, playbackGState, context, &currentPosition, &pendingRect);
-                break;
-            }
+            handlerResult = VCImpexSVGHandleLineOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+        }
+        else if (VCImpexSVGIsRectangleOpcode(elementType))
+        {
+            handlerResult = VCImpexSVGHandleRectangleOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+        }
+        else if (VCImpexSVGIsRoundRectOpcode(elementType))
+        {
+            handlerResult = VCImpexSVGHandleRoundRectOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+        }
+        else if (VCImpexSVGIsEllipseOpcode(elementType))
+        {
+            handlerResult = VCImpexSVGHandleEllipseOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+        }
+        else if (VCImpexSVGIsCurveOpcode(elementType))
+        {
+            handlerResult = VCImpexSVGHandleCurveOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+        }
+        else if (VCImpexSVGIsArcOpcode(elementType))
+        {
+            handlerResult = VCImpexSVGHandleArcOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+        }
+        else if (VCImpexSVGIsPolygonOpcode(elementType))
+        {
+            handlerResult = VCImpexSVGHandlePolygonOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
         }
 
         if (handlerResult != TE_NO_ERROR)
@@ -338,11 +323,6 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
             break;
         }
     }
-
-    //if ((error == TE_NO_ERROR) && (drawResult != GSRT_COMPLETE))
-    //{
-    //    error = TE_EXPORT_ERROR;
-    //}
 
     /* Flush any pending rectangle before footer */
     if (error == TE_NO_ERROR)

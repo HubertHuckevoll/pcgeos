@@ -21,6 +21,7 @@
 
 #define VCIMPEX_SVG_MAX_POLY_POINTS   512
 #define VCIMPEX_SVG_ELEMENT_BUFFER_SIZE   4096
+#define VCIMPEX_SVG_TRACE_OPCODES     1
 
 typedef struct
 {
