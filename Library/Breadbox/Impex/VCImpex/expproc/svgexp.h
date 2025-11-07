@@ -101,12 +101,15 @@ void _pascal VCImpexSVGTransformPointFromFixed(GStateHandle gstate, const PointW
 void _pascal VCImpexSVGTransformRelativePoint(GStateHandle gstate, const PointWWFixed *deltaPoint, PointWWFixed *targetPoint);
 WWFixedAsDWord _pascal VCImpexSVGPackWWFixed(const WWFixed *value);
 void _pascal VCImpexSVGCopyPointWWFixed(PointWWFixed *destination, const PointWWFixed *source);
+void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word fractionDigits);
 Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
                                             Boolean includeFill,
                                             Boolean filled,
                                             RegionFillRule fillRule,
                                             char *buffer,
                                             word bufferSize);
+ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size);
+void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunk);
 
 /* Internal helpers for coalescing */
 void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending);

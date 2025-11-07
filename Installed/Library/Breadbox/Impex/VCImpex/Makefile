@@ -6,9 +6,9 @@
 GEODE           = vcimpex
 VCIMPEX         = vcimpexManager.asm vcimpex_ui.goc
 IMPTPROC        = imptproc.goc
-EXPPROC         = svgexp.h svgsubcode.goc svgexpproc.goc
+EXPPROC         = svgexp.h svgexpproc.goc svgsubcode.goc
 UI_TO_RDFS      =
-OBJS            = vcimpex_ui.obj imptproc.obj svgsubcode.obj svgexpproc.obj
+OBJS            = vcimpex_ui.obj imptproc.obj svgexpproc.obj svgsubcode.obj
 COMMON          = vconv_ui.h
 MODULES         = VCImpex
 CMODULES        = VCImpex imptproc expproc

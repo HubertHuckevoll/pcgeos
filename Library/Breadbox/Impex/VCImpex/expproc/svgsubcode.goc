@@ -206,11 +206,16 @@ ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word
     if ((context == NULL) || (context->bufferHeapH == NullHandle))
         return NullChunk;
 
+    MemLock(context->bufferHeapH);
     chunkH = LMemAlloc(context->bufferHeapH, size);
+    if (chunkH != NullChunk)
+    {
+        memset(LMemDerefHandles(context->bufferHeapH, chunkH), 0, size);
+    }
+    MemUnlock(context->bufferHeapH);
+
     if (chunkH == NullChunk)
         return NullChunk;
-
-    memset(LMemDerefHandles(context->bufferHeapH, chunkH), 0, size);
 
     return chunkH;
 }
@@ -219,7 +224,9 @@ void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle 
 {
     if ((context != NULL) && (context->bufferHeapH != NullHandle) && (chunkHandle != NullChunk))
     {
+        MemLock(context->bufferHeapH);
         LMemFreeHandles(context->bufferHeapH, chunkHandle);
+        MemUnlock(context->bufferHeapH);
     }
 }
 
@@ -1089,7 +1096,7 @@ void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending)
     pending->strokeStyle = LS_SOLID;
     pending->strokeDashPairCount = 0;
     memset(pending->strokeDashPattern, 0, sizeof(pending->strokeDashPattern));
-    pending->fillRule = RFR_WINDING;
+    pending->fillRule = WINDING;
     pending->corner1.PF_x.WWF_int = 0; pending->corner1.PF_x.WWF_frac = 0;
     pending->corner1.PF_y.WWF_int = 0; pending->corner1.PF_y.WWF_frac = 0;
     pending->corner3.PF_x.WWF_int = 0; pending->corner3.PF_x.WWF_frac = 0;
@@ -1236,14 +1243,6 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context,
 
         sprintf(coordinateText, "%s,%s ", xText, yText);
         if (!VCImpexSVGWriteRawString(context, coordinateText))
-        {
-            goto cleanup;
-        }
-    }
-
-    if (closeShape != FALSE)
-    {
-        if (!VCImpexSVGWriteRawString(context, "z"))
         {
             goto cleanup;
         }
