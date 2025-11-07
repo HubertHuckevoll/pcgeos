@@ -30,6 +30,11 @@ Boolean _pascal VCImpexSVGIsEllipseOpcode(word elementType);
 Boolean _pascal VCImpexSVGIsCurveOpcode(word elementType);
 Boolean _pascal VCImpexSVGIsArcOpcode(word elementType);
 Boolean _pascal VCImpexSVGIsPolygonOpcode(word elementType);
+Boolean _pascal VCImpexSVGIsStyleStateOpcode(word elementType);
+Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
+                                                 VCImpexSVGExportContext *context,
+                                                 word elementSize);
+void _pascal VCImpexSVGResetDashPattern(VCImpexSVGExportContext *context);
 
 word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
 word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
@@ -156,6 +161,112 @@ Boolean _pascal VCImpexSVGIsPolygonOpcode(word elementType)
     }
 }
 
+Boolean _pascal VCImpexSVGIsStyleStateOpcode(word elementType)
+{
+    switch (elementType)
+    {
+        case GR_SET_LINE_STYLE:
+        case GR_SET_CUSTOM_LINE_STYLE:
+        case GR_SET_LINE_END:
+        case GR_SET_LINE_JOIN:
+        case GR_SET_MITER_LIMIT:
+        case GR_SET_LINE_WIDTH:
+        case GR_SET_LINE_COLOR:
+        case GR_SET_LINE_COLOR_INDEX:
+        case GR_SET_AREA_COLOR:
+        case GR_SET_AREA_COLOR_INDEX:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+void _pascal VCImpexSVGResetDashPattern(VCImpexSVGExportContext *context)
+{
+    if (context == NULL)
+        return;
+
+    context->dashPairCount = 0;
+    memset(context->dashPattern, 0, sizeof(context->dashPattern));
+}
+
+Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
+                                                 VCImpexSVGExportContext *context,
+                                                 word elementSize)
+{
+    const byte *elementData;
+    word pairCount;
+    word entryCount;
+    word index;
+
+    if (context == NULL)
+        return FALSE;
+
+    elementData = svgElementBuffer.raw;
+
+    switch (elementType)
+    {
+        case GR_SET_LINE_STYLE:
+        {
+            const OpSetLineStyle *styleOp;
+
+            if (VCImpexSVGAs(elementData, GR_SET_LINE_STYLE) == (void*)0)
+            {
+                return FALSE;
+            }
+
+            styleOp = (const OpSetLineStyle *)elementData;
+            if (styleOp->OSLS_style != LS_CUSTOM)
+            {
+                VCImpexSVGResetDashPattern(context);
+            }
+            return TRUE;
+        }
+
+        case GR_SET_CUSTOM_LINE_STYLE:
+        {
+            const OpSetCustomLineStyle *customOp;
+            const byte *patternData;
+
+            if (VCImpexSVGAs(elementData, GR_SET_CUSTOM_LINE_STYLE) == (void*)0)
+            {
+                return FALSE;
+            }
+
+            customOp = (const OpSetCustomLineStyle *)elementData;
+            pairCount = customOp->OSCLS_count;
+            if (pairCount > MAX_DASH_ARRAY_PAIRS)
+            {
+                pairCount = MAX_DASH_ARRAY_PAIRS;
+            }
+
+            entryCount = pairCount * 2;
+            if ((sizeof(OpSetCustomLineStyle) + entryCount) > elementSize)
+            {
+                return FALSE;
+            }
+
+            context->dashPairCount = pairCount;
+            patternData = elementData + sizeof(OpSetCustomLineStyle);
+            for (index = 0; index < (MAX_DASH_ARRAY_PAIRS * 2); index++)
+            {
+                if (index < entryCount)
+                {
+                    context->dashPattern[index] = (word)patternData[index];
+                }
+                else
+                {
+                    context->dashPattern[index] = 0;
+                }
+            }
+            return TRUE;
+        }
+
+        default:
+            return TRUE;
+    }
+}
+
 /****************************************************************************
  * VCImpex SVG Export public entry point
  ****************************************************************************/
@@ -186,6 +297,12 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     context.lineWidth = 0;
     context.lineColor = 0;
     context.fillColor = 0;
+    context.lineJoin = LJ_MITERED;
+    context.lineCap = LE_BUTTCAP;
+    context.miterLimit = 0;
+    context.lineStyle = LS_SOLID;
+    VCImpexSVGResetDashPattern(&context);
+    context.fillRule = RFR_WINDING;
 
     context.bufferHeapH = MemAllocLMem(LMEM_TYPE_GENERAL, 0);
     if (context.bufferHeapH == NullHandle)
@@ -263,6 +380,21 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
 
         VCImpexSVGUpdateDrawingState(playbackGState, context);
         GrGetCurPosWWFixed(playbackGState, &currentPosition);
+
+        if (VCImpexSVGIsStyleStateOpcode(elementType))
+        {
+            if (!VCImpexSVGFlushPendingRect(context, &pendingRect))
+            {
+                error = TE_FILE_WRITE;
+                break;
+            }
+            if (!VCImpexSVGHandleStyleStateOpcode(elementType, context, elementSize))
+            {
+                error = TE_EXPORT_ERROR;
+                break;
+            }
+            continue;
+        }
 
         /* Flush pending rectangle if we hit a transform/state change op */
         if ((elementType >= GR_APPLY_ROTATION && elementType <= GR_XFORM_1F) ||
@@ -558,12 +690,21 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
                         {
                             pendingRect->haveFill = TRUE;
                             pendingRect->fillColor = context->fillColor;
+                            pendingRect->fillRule = context->fillRule;
                         }
                         else
                         {
                             pendingRect->haveStroke = (context->lineWidth != 0);
                             pendingRect->strokeColor = context->lineColor;
                             pendingRect->strokeWidth = context->lineWidth;
+                            pendingRect->strokeJoin = context->lineJoin;
+                            pendingRect->strokeCap = context->lineCap;
+                            pendingRect->strokeMiterLimit = context->miterLimit;
+                            pendingRect->strokeStyle = context->lineStyle;
+                            pendingRect->strokeDashPairCount = context->dashPairCount;
+                            memcpy(pendingRect->strokeDashPattern,
+                                   context->dashPattern,
+                                   sizeof(context->dashPattern));
                         }
                         if (pendingRect->haveFill && pendingRect->haveStroke)
                         {
@@ -589,6 +730,15 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
                 pendingRect->strokeWidth = context->lineWidth;
                 pendingRect->strokeColor = context->lineColor;
                 pendingRect->fillColor = context->fillColor;
+                pendingRect->strokeJoin = context->lineJoin;
+                pendingRect->strokeCap = context->lineCap;
+                pendingRect->strokeMiterLimit = context->miterLimit;
+                pendingRect->strokeStyle = context->lineStyle;
+                pendingRect->strokeDashPairCount = context->dashPairCount;
+                memcpy(pendingRect->strokeDashPattern,
+                       context->dashPattern,
+                       sizeof(context->dashPattern));
+                pendingRect->fillRule = context->fillRule;
                 return TE_NO_ERROR;
             }
             /* Fallback: no coalescing */
@@ -795,7 +945,7 @@ word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playba
             offset = sizeof(GStringElement);
             pointCount = VCImpexSVGReadWord(elementData, offset);
             offset += sizeof(word);
-            /* skip RegionFillRule byte */
+            context->fillRule = (RegionFillRule)elementData[offset];
             offset += sizeof(RegionFillRule);
             closeShape = TRUE;
             filledShape = TRUE;

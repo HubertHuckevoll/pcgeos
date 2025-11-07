@@ -30,6 +30,13 @@ typedef struct
     WWFixedAsDWord lineWidth;
     RGBColorAsDWord lineColor;
     RGBColorAsDWord fillColor;
+    LineJoin lineJoin;
+    LineEnd lineCap;
+    WWFixedAsDWord miterLimit;
+    LineStyle lineStyle;
+    word dashPairCount;
+    word dashPattern[MAX_DASH_ARRAY_PAIRS * 2];
+    RegionFillRule fillRule;
     MemHandle bufferHeapH;
 } VCImpexSVGExportContext;
 
@@ -43,6 +50,13 @@ typedef struct {
     WWFixedAsDWord strokeWidth;
     RGBColorAsDWord strokeColor;
     RGBColorAsDWord fillColor;
+    LineJoin strokeJoin;
+    LineEnd strokeCap;
+    WWFixedAsDWord strokeMiterLimit;
+    LineStyle strokeStyle;
+    word strokeDashPairCount;
+    word strokeDashPattern[MAX_DASH_ARRAY_PAIRS * 2];
+    RegionFillRule fillRule;
     Boolean haveStroke;
     Boolean haveFill;
 } VCImpexSVGPendingRect;
@@ -82,6 +96,11 @@ void _pascal VCImpexSVGTransformPointFromFixed(GStateHandle gstate, const PointW
 void _pascal VCImpexSVGTransformRelativePoint(GStateHandle gstate, const PointWWFixed *deltaPoint, PointWWFixed *targetPoint);
 WWFixedAsDWord _pascal VCImpexSVGPackWWFixed(const WWFixed *value);
 void _pascal VCImpexSVGCopyPointWWFixed(PointWWFixed *destination, const PointWWFixed *source);
+Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
+                                            Boolean includeFill,
+                                            Boolean filled,
+                                            char *buffer,
+                                            word bufferSize);
 
 /* Internal helpers for coalescing */
 void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending);
