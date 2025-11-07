@@ -66,7 +66,12 @@ Boolean _pascal VCImpexSVGWriteFooter(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint);
 Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean filled);
 Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY, Boolean filled);
-Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, const PointWWFixed *points, word pointCount, Boolean closeShape, Boolean filled);
+Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context,
+                                             const PointWWFixed *points,
+                                             word pointCount,
+                                             Boolean closeShape,
+                                             Boolean filled,
+                                             RegionFillRule fillRule);
 Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
                                               const WWFixed *cx,
                                               const WWFixed *cy,
@@ -99,6 +104,7 @@ void _pascal VCImpexSVGCopyPointWWFixed(PointWWFixed *destination, const PointWW
 Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
                                             Boolean includeFill,
                                             Boolean filled,
+                                            RegionFillRule fillRule,
                                             char *buffer,
                                             word bufferSize);
 

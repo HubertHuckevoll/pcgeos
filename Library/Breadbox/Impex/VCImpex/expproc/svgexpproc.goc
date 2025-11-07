@@ -905,11 +905,13 @@ word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playba
     const byte *elementData;
     word offset;
     Point intPoint;
+    RegionFillRule fillRule;
 
     (void)currentPosition;
     (void)pendingRect;
 
     elementData = svgElementBuffer.raw;
+    fillRule = context->fillRule;
 
     switch (elementType)
     {
@@ -945,7 +947,8 @@ word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playba
             offset = sizeof(GStringElement);
             pointCount = VCImpexSVGReadWord(elementData, offset);
             offset += sizeof(word);
-            context->fillRule = (RegionFillRule)elementData[offset];
+            fillRule = (RegionFillRule)elementData[offset];
+            context->fillRule = fillRule;
             offset += sizeof(RegionFillRule);
             closeShape = TRUE;
             filledShape = TRUE;
@@ -974,7 +977,7 @@ word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playba
         VCImpexSVGTransformPointFromInt(playbackGState, &intPoint, &svgPolygonBuffer[index]);
     }
 
-    if (!VCImpexSVGWritePolygonElement(context, svgPolygonBuffer, pointCount, closeShape, filledShape))
+    if (!VCImpexSVGWritePolygonElement(context, svgPolygonBuffer, pointCount, closeShape, filledShape, fillRule))
     {
         return TE_FILE_WRITE;
     }

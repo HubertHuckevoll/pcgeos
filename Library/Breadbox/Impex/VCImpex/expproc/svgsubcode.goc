@@ -339,6 +339,7 @@ Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExpo
 Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
                                             Boolean includeFill,
                                             Boolean filled,
+                                            RegionFillRule fillRule,
                                             char *buffer,
                                             word bufferSize)
 {
@@ -371,7 +372,7 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
     VCImpexSVGFormatFixed(context->miterLimit, miterLimitText, 2);
 
     fillColorText[0] = '\0';
-    fillRuleText = VCImpexSVGFillRuleToString(context->fillRule);
+    fillRuleText = VCImpexSVGFillRuleToString(fillRule);
 
     if (includeFill != FALSE)
     {
@@ -383,7 +384,6 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
         {
             strcpy(fillColorText, "none");
         }
-        fillRuleText = VCImpexSVGFillRuleToString(context->fillRule);
     }
 
     sprintf(buffer,
@@ -460,7 +460,7 @@ Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, con
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&startPoint->PF_y), y1Text, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_x), x2Text, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_y), y2Text, 2);
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     sprintf(buffer, "  <line x1=\"%s\" y1=\"%s\" x2=\"%s\" y2=\"%s\"%s />\n",
@@ -562,7 +562,7 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
     VCImpexSVGFormatFixed((WWFixedAsDWord)widthSigned, widthText, 2);
     VCImpexSVGFormatFixed((WWFixedAsDWord)heightSigned, heightText, 2);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\"%s />\n",
@@ -672,7 +672,7 @@ Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(radiusX), rxText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(radiusY), ryText, 2);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" rx=\"%s\" ry=\"%s\"%s />\n",
@@ -767,7 +767,7 @@ Boolean _pascal VCImpexSVGWriteCubicPathElement(VCImpexSVGExportContext *context
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&end->PF_x), exText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&end->PF_y), eyText, 2);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     sprintf(buffer, "  <path d=\"M %s %s C %s %s %s %s %s %s\"%s />\n",
@@ -916,7 +916,7 @@ Boolean _pascal VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
     VCImpexSVGFormatFixed(ey, eyText, 2);
     VCImpexSVGFormatFixed(rx, rxText, 2);
     VCImpexSVGFormatFixed(ry, ryText, 2);
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     centerXText[0] = '\0';
@@ -1036,7 +1036,7 @@ Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(cy), cyText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(rx), rxText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(ry), ryText, 2);
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     matrixText[0] = '\0';
@@ -1160,7 +1160,12 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     return ok;
 }
 
-Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, const PointWWFixed *points, word pointCount, Boolean closeShape, Boolean filled)
+Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context,
+                                             const PointWWFixed *points,
+                                             word pointCount,
+                                             Boolean closeShape,
+                                             Boolean filled,
+                                             RegionFillRule fillRule)
 {
     char elementName[10] = {0};
     char *prefix = (void*) 0;
@@ -1215,7 +1220,7 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context, 
     coordinateText = LMemDerefHandles(context->bufferHeapH, coordinateChunk);
     styleAttributes = LMemDerefHandles(context->bufferHeapH, styleChunk);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, fillRule, styleAttributes, 256))
         goto cleanup;
 
     sprintf(prefix, "  <%s points=\"", elementName);
