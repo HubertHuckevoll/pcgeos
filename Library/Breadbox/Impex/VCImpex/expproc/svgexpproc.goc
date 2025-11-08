@@ -247,6 +247,7 @@ void _pascal VCImpexSVGResetDashPattern(VCImpexSVGExportContext *context)
         return;
 
     context->dashPairCount = 0;
+    context->dashSkipCount = 0;
     memset(context->dashPattern, 0, sizeof(context->dashPattern));
 }
 
@@ -269,6 +270,7 @@ Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
         case GR_SET_LINE_STYLE:
         {
             const OpSetLineStyle *styleOp;
+            word skipCount;
 
             if (VCImpexSVGAs(elementData, GR_SET_LINE_STYLE) == (void*)0)
             {
@@ -276,10 +278,12 @@ Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
             }
 
             styleOp = (const OpSetLineStyle *)elementData;
+            skipCount = (word)styleOp->OSLS_index;
             if (styleOp->OSLS_style != LS_CUSTOM)
             {
                 VCImpexSVGResetDashPattern(context);
             }
+            context->dashSkipCount = skipCount;
             return TRUE;
         }
 
@@ -287,6 +291,7 @@ Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
         {
             const OpSetCustomLineStyle *customOp;
             const byte *patternData;
+            word skipCount;
 
             if (VCImpexSVGAs(elementData, GR_SET_CUSTOM_LINE_STYLE) == (void*)0)
             {
@@ -306,6 +311,9 @@ Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
                 return FALSE;
             }
 
+            VCImpexSVGResetDashPattern(context);
+            skipCount = customOp->OSCLS_index;
+            context->dashSkipCount = skipCount;
             context->dashPairCount = pairCount;
             patternData = elementData + sizeof(OpSetCustomLineStyle);
             for (index = 0; index < (MAX_DASH_ARRAY_PAIRS * 2); index++)
@@ -766,6 +774,14 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
                             pendingRect->strokeMiterLimit = context->miterLimit;
                             pendingRect->strokeStyle = context->lineStyle;
                             pendingRect->strokeDashPairCount = context->dashPairCount;
+                            if (pendingRect->haveStroke != FALSE)
+                            {
+                                pendingRect->strokeDashSkipCount = context->dashSkipCount;
+                            }
+                            else
+                            {
+                                pendingRect->strokeDashSkipCount = 0;
+                            }
                             memcpy(pendingRect->strokeDashPattern,
                                    context->dashPattern,
                                    sizeof(context->dashPattern));
@@ -799,6 +815,14 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
                 pendingRect->strokeMiterLimit = context->miterLimit;
                 pendingRect->strokeStyle = context->lineStyle;
                 pendingRect->strokeDashPairCount = context->dashPairCount;
+                if (pendingRect->haveStroke != FALSE)
+                {
+                    pendingRect->strokeDashSkipCount = context->dashSkipCount;
+                }
+                else
+                {
+                    pendingRect->strokeDashSkipCount = 0;
+                }
                 memcpy(pendingRect->strokeDashPattern,
                        context->dashPattern,
                        sizeof(context->dashPattern));
@@ -851,6 +875,14 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
                             pendingRect->haveStroke = (context->lineWidth != 0);
                             pendingRect->strokeColor = context->lineColor;
                             pendingRect->strokeWidth = context->lineWidth;
+                            if (pendingRect->haveStroke != FALSE)
+                            {
+                                pendingRect->strokeDashSkipCount = context->dashSkipCount;
+                            }
+                            else
+                            {
+                                pendingRect->strokeDashSkipCount = 0;
+                            }
                         }
                         if (pendingRect->haveFill && pendingRect->haveStroke)
                         {
@@ -874,6 +906,14 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
                 pendingRect->strokeWidth = context->lineWidth;
                 pendingRect->strokeColor = context->lineColor;
                 pendingRect->fillColor = context->fillColor;
+                if (pendingRect->haveStroke != FALSE)
+                {
+                    pendingRect->strokeDashSkipCount = context->dashSkipCount;
+                }
+                else
+                {
+                    pendingRect->strokeDashSkipCount = 0;
+                }
                 return TE_NO_ERROR;
             }
             if (!VCImpexSVGWriteRectElement(context, &corner1, &corner3, filled))

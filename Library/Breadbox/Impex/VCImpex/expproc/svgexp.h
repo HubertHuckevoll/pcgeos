@@ -35,6 +35,7 @@ typedef struct
     WWFixedAsDWord miterLimit;
     LineStyle lineStyle;
     word dashPairCount;
+    word dashSkipCount;
     word dashPattern[MAX_DASH_ARRAY_PAIRS * 2];
     RegionFillRule fillRule;
     MemHandle bufferHeapH;
@@ -55,6 +56,7 @@ typedef struct {
     WWFixedAsDWord strokeMiterLimit;
     LineStyle strokeStyle;
     word strokeDashPairCount;
+    word strokeDashSkipCount;
     word strokeDashPattern[MAX_DASH_ARRAY_PAIRS * 2];
     RegionFillRule fillRule;
     Boolean haveStroke;

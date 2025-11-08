@@ -25,6 +25,9 @@ static WWFixedAsDWord VCImpexSVGScaleDashLength(WWFixedAsDWord lineWidth, word f
 static void VCImpexSVGFormatDashArray(const VCImpexSVGExportContext *context,
                                       char *buffer,
                                       word bufferSize);
+static Boolean VCImpexSVGFormatDashOffset(const VCImpexSVGExportContext *context,
+                                          char *buffer,
+                                          word bufferSize);
 static const char* VCImpexSVGLineCapToString(LineEnd lineCap);
 static const char* VCImpexSVGLineJoinToString(LineJoin lineJoin);
 static const char* VCImpexSVGFillRuleToString(RegionFillRule fillRule);
@@ -199,6 +202,34 @@ static void VCImpexSVGFormatDashArray(const VCImpexSVGExportContext *context,
     }
 }
 
+static Boolean VCImpexSVGFormatDashOffset(const VCImpexSVGExportContext *context,
+                                          char *buffer,
+                                          word bufferSize)
+{
+    WWFixedAsDWord scaled = 0;
+
+    if ((buffer == NULL) || (bufferSize == 0))
+        return FALSE;
+
+    buffer[0] = '\0';
+
+    if ((context == NULL) || (context->lineWidth == 0) || (context->dashSkipCount == 0))
+    {
+        strcpy(buffer, "0");
+        return FALSE;
+    }
+
+    scaled = VCImpexSVGScaleDashLength(context->lineWidth, context->dashSkipCount);
+    VCImpexSVGFormatFixed(scaled, buffer, 2);
+
+    if (scaled == 0)
+    {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size)
 {
     ChunkHandle chunkH = NullHandle;
@@ -354,13 +385,16 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
     char strokeColorText[16];
     char fillColorText[16];
     char dashArrayText[160];
+    char dashOffsetText[40];
+    char dashOffsetSection[64];
     char miterLimitText[40];
     const char *lineCapText = (void*)0;
     const char *lineJoinText = (void*)0;
     const char *fillRuleText = (void*)0;
     char fillSection[48];
+    Boolean appendDashOffset;
 
-    if ((context == NULL) || (buffer == NULL) || (bufferSize < 200))
+    if ((context == NULL) || (buffer == NULL) || (bufferSize < 240))
         return FALSE;
 
     VCImpexSVGFormatFixed(context->lineWidth, strokeWidthText, 2);
@@ -374,6 +408,16 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
     }
 
     VCImpexSVGFormatDashArray(context, dashArrayText, sizeof(dashArrayText));
+    dashOffsetText[0] = '\0';
+    dashOffsetSection[0] = '\0';
+    appendDashOffset = FALSE;
+    if (strcmp(dashArrayText, "none") != 0)
+    {
+        if (VCImpexSVGFormatDashOffset(context, dashOffsetText, sizeof(dashOffsetText)))
+        {
+            appendDashOffset = TRUE;
+        }
+    }
     lineCapText = VCImpexSVGLineCapToString(context->lineCap);
     lineJoinText = VCImpexSVGLineJoinToString(context->lineJoin);
     VCImpexSVGFormatFixed(context->miterLimit, miterLimitText, 2);
@@ -401,6 +445,16 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
             lineJoinText,
             dashArrayText,
             miterLimitText);
+
+    if (appendDashOffset != FALSE)
+    {
+        sprintf(dashOffsetSection, " stroke-dashoffset=\"%s\"", dashOffsetText);
+        if (strlen(buffer) + strlen(dashOffsetSection) + 1 >= bufferSize)
+        {
+            return FALSE;
+        }
+        strcat(buffer, dashOffsetSection);
+    }
 
     if (includeFill != FALSE)
     {
@@ -1095,6 +1149,7 @@ void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending)
     pending->strokeMiterLimit = 0;
     pending->strokeStyle = LS_SOLID;
     pending->strokeDashPairCount = 0;
+    pending->strokeDashSkipCount = 0;
     memset(pending->strokeDashPattern, 0, sizeof(pending->strokeDashPattern));
     pending->fillRule = WINDING;
     pending->corner1.PF_x.WWF_int = 0; pending->corner1.PF_x.WWF_frac = 0;
@@ -1114,6 +1169,7 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     WWFixedAsDWord savedMiter;
     LineStyle savedStyle;
     word savedDashPairCount;
+    word savedDashSkipCount;
     word savedDashPattern[MAX_DASH_ARRAY_PAIRS * 2];
     RegionFillRule savedFillRule;
 
@@ -1132,6 +1188,7 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     savedMiter = context->miterLimit;
     savedStyle = context->lineStyle;
     savedDashPairCount = context->dashPairCount;
+    savedDashSkipCount = context->dashSkipCount;
     memcpy(savedDashPattern, context->dashPattern, sizeof(savedDashPattern));
     savedFillRule = context->fillRule;
 
@@ -1144,6 +1201,7 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     context->miterLimit = pending->strokeMiterLimit;
     context->lineStyle = pending->strokeStyle;
     context->dashPairCount = pending->strokeDashPairCount;
+    context->dashSkipCount = pending->strokeDashSkipCount;
     memcpy(context->dashPattern, pending->strokeDashPattern, sizeof(context->dashPattern));
     context->fillRule = pending->fillRule;
 
@@ -1158,12 +1216,14 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     context->miterLimit = savedMiter;
     context->lineStyle = savedStyle;
     context->dashPairCount = savedDashPairCount;
+    context->dashSkipCount = savedDashSkipCount;
     memcpy(context->dashPattern, savedDashPattern, sizeof(savedDashPattern));
     context->fillRule = savedFillRule;
 
     pending->active = FALSE;
     pending->haveStroke = FALSE;
     pending->haveFill = FALSE;
+    pending->strokeDashSkipCount = 0;
     return ok;
 }
 
