@@ -42,11 +42,27 @@ typedef struct
 } VCImpexSVGExportContext;
 
 /* Pending rectangle coalescing state */
+typedef enum {
+    VCIMPEX_SVG_PENDING_NONE = 0,
+    VCIMPEX_SVG_PENDING_RECT,
+    VCIMPEX_SVG_PENDING_ROUND_RECT,
+    VCIMPEX_SVG_PENDING_ELLIPSE
+} VCImpexSVGPendingType;
+
 typedef struct {
     Boolean active;
+    VCImpexSVGPendingType type;
     /* geometry already transformed to world coords */
     PointWWFixed corner1;
     PointWWFixed corner3;
+    WWFixed radiusX;
+    WWFixed radiusY;
+    WWFixed ellipseCenterX;
+    WWFixed ellipseCenterY;
+    WWFixed ellipseRadiusX;
+    WWFixed ellipseRadiusY;
+    Boolean haveTransform;
+    TransMatrix transform;
     /* style captured at time of ops */
     WWFixedAsDWord strokeWidth;
     RGBColorAsDWord strokeColor;
@@ -66,8 +82,8 @@ typedef struct {
 Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteFooter(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint);
-Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean filled);
-Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY, Boolean filled);
+Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean includeStroke, Boolean includeFill, Boolean filled);
+Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY, Boolean includeStroke, Boolean includeFill, Boolean filled);
 Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context,
                                              const PointWWFixed *points,
                                              word pointCount,
@@ -79,6 +95,8 @@ Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
                                               const WWFixed *cy,
                                               const WWFixed *rx,
                                               const WWFixed *ry,
+                                              Boolean includeStroke,
+                                              Boolean includeFill,
                                               Boolean filled,
                                               const TransMatrix *tm);
 Boolean _pascal VCImpexSVGWriteCubicPathElement(VCImpexSVGExportContext *context,
@@ -105,6 +123,7 @@ WWFixedAsDWord _pascal VCImpexSVGPackWWFixed(const WWFixed *value);
 void _pascal VCImpexSVGCopyPointWWFixed(PointWWFixed *destination, const PointWWFixed *source);
 void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word fractionDigits);
 Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
+                                            Boolean includeStroke,
                                             Boolean includeFill,
                                             Boolean filled,
                                             RegionFillRule fillRule,

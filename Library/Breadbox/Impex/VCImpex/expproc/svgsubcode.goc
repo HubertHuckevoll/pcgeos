@@ -385,6 +385,8 @@ Boolean _pascal VCImpexSVGWriteFooter(VCImpexSVGExportContext *context)
 
 Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExportContext *context)
 {
+    word index = 0;
+
     if (context == NULL) return FALSE;
 
     context->lineWidth = GrGetLineWidth(gstate);
@@ -394,11 +396,21 @@ Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExpo
     context->lineCap = GrGetLineEnd(gstate);
     context->miterLimit = GrGetMiterLimit(gstate);
     context->lineStyle = GrGetLineStyle(gstate);
+    if (context->lineStyle != LS_CUSTOM)
+    {
+        context->dashPairCount = 0;
+        context->dashSkipCount = 0;
+        for (index = 0; index < (MAX_DASH_ARRAY_PAIRS * 2); index++)
+        {
+            context->dashPattern[index] = 0;
+        }
+    }
 
     return TRUE;
 }
 
 Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
+                                            Boolean includeStroke,
                                             Boolean includeFill,
                                             Boolean filled,
                                             RegionFillRule fillRule,
@@ -416,34 +428,63 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
     const char *lineJoinText = (void*)0;
     const char *fillRuleText = (void*)0;
     char fillSection[48];
-    Boolean appendDashOffset;
+    Boolean appendDashOffset = FALSE;
     WWFixedAsDWord effectiveLineWidth = 0;
 
     if ((context == NULL) || (buffer == NULL) || (bufferSize < 240))
         return FALSE;
 
-    effectiveLineWidth = VCImpexSVGGetEffectiveLineWidth(context);
+    fillRuleText = VCImpexSVGFillRuleToString(fillRule);
+    fillColorText[0] = '\0';
 
-    VCImpexSVGFormatFixed(effectiveLineWidth, strokeWidthText, 2);
-    VCImpexSVGFormatColor(context->lineColor, strokeColorText);
-
-    VCImpexSVGFormatDashArray(context, dashArrayText, sizeof(dashArrayText));
-    dashOffsetText[0] = '\0';
-    dashOffsetSection[0] = '\0';
-    appendDashOffset = FALSE;
-    if (strcmp(dashArrayText, "none") != 0)
+    if (includeStroke != FALSE)
     {
-        if (VCImpexSVGFormatDashOffset(context, dashOffsetText, sizeof(dashOffsetText)))
+        effectiveLineWidth = VCImpexSVGGetEffectiveLineWidth(context);
+        VCImpexSVGFormatFixed(effectiveLineWidth, strokeWidthText, 2);
+        VCImpexSVGFormatColor(context->lineColor, strokeColorText);
+
+        VCImpexSVGFormatDashArray(context, dashArrayText, sizeof(dashArrayText));
+        dashOffsetText[0] = '\0';
+        dashOffsetSection[0] = '\0';
+        appendDashOffset = FALSE;
+        if (strcmp(dashArrayText, "none") != 0)
         {
-            appendDashOffset = TRUE;
+            if (VCImpexSVGFormatDashOffset(context, dashOffsetText, sizeof(dashOffsetText)))
+            {
+                appendDashOffset = TRUE;
+            }
+        }
+        lineCapText = VCImpexSVGLineCapToString(context->lineCap);
+        lineJoinText = VCImpexSVGLineJoinToString(context->lineJoin);
+        VCImpexSVGFormatFixed(context->miterLimit, miterLimitText, 2);
+
+        sprintf(buffer,
+                " stroke=\"%s\" stroke-width=\"%s\" stroke-linecap=\"%s\" stroke-linejoin=\"%s\" stroke-dasharray=\"%s\" stroke-miterlimit=\"%s\"",
+                strokeColorText,
+                strokeWidthText,
+                lineCapText,
+                lineJoinText,
+                dashArrayText,
+                miterLimitText);
+
+        if (appendDashOffset != FALSE)
+        {
+            sprintf(dashOffsetSection, " stroke-dashoffset=\"%s\"", dashOffsetText);
+            if (strlen(buffer) + strlen(dashOffsetSection) + 1 >= bufferSize)
+            {
+                return FALSE;
+            }
+            strcat(buffer, dashOffsetSection);
         }
     }
-    lineCapText = VCImpexSVGLineCapToString(context->lineCap);
-    lineJoinText = VCImpexSVGLineJoinToString(context->lineJoin);
-    VCImpexSVGFormatFixed(context->miterLimit, miterLimitText, 2);
-
-    fillColorText[0] = '\0';
-    fillRuleText = VCImpexSVGFillRuleToString(fillRule);
+    else
+    {
+        if (strlen(" stroke=\"none\"") + 1 >= bufferSize)
+        {
+            return FALSE;
+        }
+        strcpy(buffer, " stroke=\"none\"");
+    }
 
     if (includeFill != FALSE)
     {
@@ -455,30 +496,16 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
         {
             strcpy(fillColorText, "none");
         }
-    }
-
-    sprintf(buffer,
-            " stroke=\"%s\" stroke-width=\"%s\" stroke-linecap=\"%s\" stroke-linejoin=\"%s\" stroke-dasharray=\"%s\" stroke-miterlimit=\"%s\"",
-            strokeColorText,
-            strokeWidthText,
-            lineCapText,
-            lineJoinText,
-            dashArrayText,
-            miterLimitText);
-
-    if (appendDashOffset != FALSE)
-    {
-        sprintf(dashOffsetSection, " stroke-dashoffset=\"%s\"", dashOffsetText);
-        if (strlen(buffer) + strlen(dashOffsetSection) + 1 >= bufferSize)
+        sprintf(fillSection, " fill=\"%s\" fill-rule=\"%s\"", fillColorText, fillRuleText);
+        if (strlen(buffer) + strlen(fillSection) + 1 >= bufferSize)
         {
             return FALSE;
         }
-        strcat(buffer, dashOffsetSection);
+        strcat(buffer, fillSection);
     }
-
-    if (includeFill != FALSE)
+    else
     {
-        sprintf(fillSection, " fill=\"%s\" fill-rule=\"%s\"", fillColorText, fillRuleText);
+        strcpy(fillSection, " fill=\"none\"");
         if (strlen(buffer) + strlen(fillSection) + 1 >= bufferSize)
         {
             return FALSE;
@@ -541,7 +568,7 @@ Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, con
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&startPoint->PF_y), y1Text, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_x), x2Text, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_y), y2Text, 2);
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, context->fillRule, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, FALSE, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     sprintf(buffer, "  <line x1=\"%s\" y1=\"%s\" x2=\"%s\" y2=\"%s\"%s />\n",
@@ -564,7 +591,12 @@ cleanup:
     return success;
 }
 
-Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean filled)
+Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context,
+                                           const PointWWFixed *corner1,
+                                           const PointWWFixed *corner3,
+                                           Boolean includeStroke,
+                                           Boolean includeFill,
+                                           Boolean filled)
 {
     char *buffer = (void*) 0;
     char *xText = (void*) 0;
@@ -643,7 +675,13 @@ Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, con
     VCImpexSVGFormatFixed((WWFixedAsDWord)widthSigned, widthText, 2);
     VCImpexSVGFormatFixed((WWFixedAsDWord)heightSigned, heightText, 2);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context,
+                                     includeStroke,
+                                     includeFill,
+                                     filled,
+                                     context->fillRule,
+                                     styleAttributes,
+                                     256))
         goto cleanup;
 
     sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\"%s />\n",
@@ -666,7 +704,14 @@ cleanup:
     return success;
 }
 
-Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY, Boolean filled)
+Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context,
+                                                const PointWWFixed *corner1,
+                                                const PointWWFixed *corner3,
+                                                const WWFixed *radiusX,
+                                                const WWFixed *radiusY,
+                                                Boolean includeStroke,
+                                                Boolean includeFill,
+                                                Boolean filled)
 {
     char *buffer = (void*) 0;
     char *xText = (void*) 0;
@@ -753,7 +798,13 @@ Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(radiusX), rxText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(radiusY), ryText, 2);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context,
+                                     includeStroke,
+                                     includeFill,
+                                     filled,
+                                     context->fillRule,
+                                     styleAttributes,
+                                     256))
         goto cleanup;
 
     sprintf(buffer, "  <rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" rx=\"%s\" ry=\"%s\"%s />\n",
@@ -848,7 +899,7 @@ Boolean _pascal VCImpexSVGWriteCubicPathElement(VCImpexSVGExportContext *context
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&end->PF_x), exText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&end->PF_y), eyText, 2);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, context->fillRule, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context, TRUE, FALSE, FALSE, context->fillRule, styleAttributes, 256))
         goto cleanup;
 
     sprintf(buffer, "  <path d=\"M %s %s C %s %s %s %s %s %s\"%s />\n",
@@ -997,7 +1048,13 @@ Boolean _pascal VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
     VCImpexSVGFormatFixed(ey, eyText, 2);
     VCImpexSVGFormatFixed(rx, rxText, 2);
     VCImpexSVGFormatFixed(ry, ryText, 2);
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context,
+                                     (filled != FALSE) ? FALSE : TRUE,
+                                     (filled != FALSE) ? TRUE : FALSE,
+                                     filled,
+                                     context->fillRule,
+                                     styleAttributes,
+                                     256))
         goto cleanup;
 
     centerXText[0] = '\0';
@@ -1059,6 +1116,8 @@ Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
                                               const WWFixed *cy,
                                               const WWFixed *rx,
                                               const WWFixed *ry,
+                                              Boolean includeStroke,
+                                              Boolean includeFill,
                                               Boolean filled,
                                               const TransMatrix *tm)
 {
@@ -1117,7 +1176,13 @@ Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(cy), cyText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(rx), rxText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(ry), ryText, 2);
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, context->fillRule, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context,
+                                     includeStroke,
+                                     includeFill,
+                                     filled,
+                                     context->fillRule,
+                                     styleAttributes,
+                                     256))
         goto cleanup;
 
     matrixText[0] = '\0';
@@ -1159,6 +1224,7 @@ void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending)
 {
     if (pending == NULL) return;
     pending->active = FALSE;
+    pending->type = VCIMPEX_SVG_PENDING_NONE;
     pending->haveStroke = FALSE;
     pending->haveFill = FALSE;
     pending->strokeWidth = 0;
@@ -1172,6 +1238,14 @@ void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending)
     pending->strokeDashSkipCount = 0;
     memset(pending->strokeDashPattern, 0, sizeof(pending->strokeDashPattern));
     pending->fillRule = WINDING;
+    pending->radiusX.WWF_int = pending->radiusX.WWF_frac = 0;
+    pending->radiusY.WWF_int = pending->radiusY.WWF_frac = 0;
+    pending->ellipseCenterX.WWF_int = pending->ellipseCenterX.WWF_frac = 0;
+    pending->ellipseCenterY.WWF_int = pending->ellipseCenterY.WWF_frac = 0;
+    pending->ellipseRadiusX.WWF_int = pending->ellipseRadiusX.WWF_frac = 0;
+    pending->ellipseRadiusY.WWF_int = pending->ellipseRadiusY.WWF_frac = 0;
+    pending->haveTransform = FALSE;
+    memset(&pending->transform, 0, sizeof(pending->transform));
     pending->corner1.PF_x.WWF_int = 0; pending->corner1.PF_x.WWF_frac = 0;
     pending->corner1.PF_y.WWF_int = 0; pending->corner1.PF_y.WWF_frac = 0;
     pending->corner3.PF_x.WWF_int = 0; pending->corner3.PF_x.WWF_frac = 0;
@@ -1192,12 +1266,17 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     word savedDashSkipCount;
     word savedDashPattern[MAX_DASH_ARRAY_PAIRS * 2];
     RegionFillRule savedFillRule;
+    Boolean includeStroke;
+    Boolean includeFill;
 
     if ((context == NULL) || (pending == NULL))
         return FALSE;
 
     if (pending->active == FALSE)
         return TRUE;
+
+    includeStroke = (pending->haveStroke != FALSE) && (pending->strokeWidth != 0);
+    includeFill = pending->haveFill;
 
     /* Save */
     savedWidth = context->lineWidth;
@@ -1213,7 +1292,7 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     savedFillRule = context->fillRule;
 
     /* Apply pending styles */
-    context->lineWidth = pending->haveStroke ? pending->strokeWidth : 0;
+    context->lineWidth = pending->strokeWidth;
     context->lineColor = pending->strokeColor;
     context->fillColor = pending->fillColor;
     context->lineJoin = pending->strokeJoin;
@@ -1225,7 +1304,45 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     memcpy(context->dashPattern, pending->strokeDashPattern, sizeof(context->dashPattern));
     context->fillRule = pending->fillRule;
 
-    ok = VCImpexSVGWriteRectElement(context, &pending->corner1, &pending->corner3, pending->haveFill);
+    switch (pending->type)
+    {
+        case VCIMPEX_SVG_PENDING_RECT:
+            ok = VCImpexSVGWriteRectElement(context,
+                                            &pending->corner1,
+                                            &pending->corner3,
+                                            includeStroke,
+                                            includeFill,
+                                            includeFill);
+            break;
+
+        case VCIMPEX_SVG_PENDING_ROUND_RECT:
+            ok = VCImpexSVGWriteRoundRectElement(context,
+                                                 &pending->corner1,
+                                                 &pending->corner3,
+                                                 &pending->radiusX,
+                                                 &pending->radiusY,
+                                                 includeStroke,
+                                                 includeFill,
+                                                 includeFill);
+            break;
+
+        case VCIMPEX_SVG_PENDING_ELLIPSE:
+            ok = VCImpexSVGWriteEllipseElement(context,
+                                               &pending->ellipseCenterX,
+                                               &pending->ellipseCenterY,
+                                               &pending->ellipseRadiusX,
+                                               &pending->ellipseRadiusY,
+                                               includeStroke,
+                                               includeFill,
+                                               includeFill,
+                                               pending->haveTransform ? &pending->transform : NULL);
+            break;
+
+        case VCIMPEX_SVG_PENDING_NONE:
+        default:
+            ok = TRUE;
+            break;
+    }
 
     /* Restore and clear */
     context->lineWidth = savedWidth;
@@ -1240,10 +1357,7 @@ Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCI
     memcpy(context->dashPattern, savedDashPattern, sizeof(savedDashPattern));
     context->fillRule = savedFillRule;
 
-    pending->active = FALSE;
-    pending->haveStroke = FALSE;
-    pending->haveFill = FALSE;
-    pending->strokeDashSkipCount = 0;
+    VCImpexSVGInitPendingRect(pending);
     return ok;
 }
 
@@ -1307,7 +1421,13 @@ Boolean _pascal VCImpexSVGWritePolygonElement(VCImpexSVGExportContext *context,
     coordinateText = LMemDerefHandles(context->bufferHeapH, coordinateChunk);
     styleAttributes = LMemDerefHandles(context->bufferHeapH, styleChunk);
 
-    if (!VCImpexSVGStyleToAttributes(context, TRUE, filled, fillRule, styleAttributes, 256))
+    if (!VCImpexSVGStyleToAttributes(context,
+                                     (filled != FALSE) ? FALSE : TRUE,
+                                     (filled != FALSE) ? TRUE : FALSE,
+                                     filled,
+                                     fillRule,
+                                     styleAttributes,
+                                     256))
         goto cleanup;
 
     sprintf(prefix, "  <%s points=\"", elementName);
