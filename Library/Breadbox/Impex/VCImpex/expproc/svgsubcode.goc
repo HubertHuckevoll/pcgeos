@@ -21,7 +21,10 @@ static const word kVCImpexSVGBuiltinDashValues[][MAX_DASH_ARRAY_PAIRS * 2] =
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}  /* LS_CUSTOM placeholder */
 };
 
+static const WWFixedAsDWord kVCImpexSVGHairlineWidth = 0x00001000;
+
 static WWFixedAsDWord VCImpexSVGScaleDashLength(WWFixedAsDWord lineWidth, word factor);
+static WWFixedAsDWord VCImpexSVGGetEffectiveLineWidth(const VCImpexSVGExportContext *context);
 static void VCImpexSVGFormatDashArray(const VCImpexSVGExportContext *context,
                                       char *buffer,
                                       word bufferSize);
@@ -71,6 +74,21 @@ static WWFixedAsDWord VCImpexSVGScaleDashLength(WWFixedAsDWord lineWidth, word f
 
     product = (dword)lineWidth * (dword)factor;
     return (WWFixedAsDWord)product;
+}
+
+static WWFixedAsDWord VCImpexSVGGetEffectiveLineWidth(const VCImpexSVGExportContext *context)
+{
+    if (context == NULL)
+    {
+        return kVCImpexSVGHairlineWidth;
+    }
+
+    if (context->lineWidth == 0)
+    {
+        return kVCImpexSVGHairlineWidth;
+    }
+
+    return context->lineWidth;
 }
 
 static const char* VCImpexSVGLineCapToString(LineEnd lineCap)
@@ -123,17 +141,20 @@ static void VCImpexSVGFormatDashArray(const VCImpexSVGExportContext *context,
     char number[24];
     char *out = buffer;
     word remaining = bufferSize;
+    WWFixedAsDWord effectiveWidth = 0;
 
     if ((context == NULL) || (buffer == NULL) || (bufferSize == 0))
         return;
 
     buffer[0] = '\0';
 
-    if ((context->lineWidth == 0) || (remaining <= 1))
+    if (remaining <= 1)
     {
         strcpy(buffer, "none");
         return;
     }
+
+    effectiveWidth = VCImpexSVGGetEffectiveLineWidth(context);
 
     if ((context->lineStyle == LS_CUSTOM) && (context->dashPairCount != 0))
     {
@@ -167,7 +188,7 @@ static void VCImpexSVGFormatDashArray(const VCImpexSVGExportContext *context,
         if (baseValue == 0)
             continue;
 
-        scaled = VCImpexSVGScaleDashLength(context->lineWidth, baseValue);
+        scaled = VCImpexSVGScaleDashLength(effectiveWidth, baseValue);
         VCImpexSVGFormatFixed(scaled, number, 2);
         length = strlen(number);
 
@@ -207,19 +228,22 @@ static Boolean VCImpexSVGFormatDashOffset(const VCImpexSVGExportContext *context
                                           word bufferSize)
 {
     WWFixedAsDWord scaled = 0;
+    WWFixedAsDWord effectiveWidth = 0;
 
     if ((buffer == NULL) || (bufferSize == 0))
         return FALSE;
 
     buffer[0] = '\0';
 
-    if ((context == NULL) || (context->lineWidth == 0) || (context->dashSkipCount == 0))
+    if ((context == NULL) || (context->dashSkipCount == 0))
     {
         strcpy(buffer, "0");
         return FALSE;
     }
 
-    scaled = VCImpexSVGScaleDashLength(context->lineWidth, context->dashSkipCount);
+    effectiveWidth = VCImpexSVGGetEffectiveLineWidth(context);
+
+    scaled = VCImpexSVGScaleDashLength(effectiveWidth, context->dashSkipCount);
     VCImpexSVGFormatFixed(scaled, buffer, 2);
 
     if (scaled == 0)
@@ -393,19 +417,15 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
     const char *fillRuleText = (void*)0;
     char fillSection[48];
     Boolean appendDashOffset;
+    WWFixedAsDWord effectiveLineWidth = 0;
 
     if ((context == NULL) || (buffer == NULL) || (bufferSize < 240))
         return FALSE;
 
-    VCImpexSVGFormatFixed(context->lineWidth, strokeWidthText, 2);
-    if (context->lineWidth == 0)
-    {
-        strcpy(strokeColorText, "none");
-    }
-    else
-    {
-        VCImpexSVGFormatColor(context->lineColor, strokeColorText);
-    }
+    effectiveLineWidth = VCImpexSVGGetEffectiveLineWidth(context);
+
+    VCImpexSVGFormatFixed(effectiveLineWidth, strokeWidthText, 2);
+    VCImpexSVGFormatColor(context->lineColor, strokeColorText);
 
     VCImpexSVGFormatDashArray(context, dashArrayText, sizeof(dashArrayText));
     dashOffsetText[0] = '\0';
