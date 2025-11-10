@@ -41,44 +41,6 @@ typedef struct
     MemHandle bufferHeapH;
 } VCImpexSVGExportContext;
 
-/* Pending rectangle coalescing state */
-typedef enum {
-    VCIMPEX_SVG_PENDING_NONE = 0,
-    VCIMPEX_SVG_PENDING_RECT,
-    VCIMPEX_SVG_PENDING_ROUND_RECT,
-    VCIMPEX_SVG_PENDING_ELLIPSE
-} VCImpexSVGPendingType;
-
-typedef struct {
-    Boolean active;
-    VCImpexSVGPendingType type;
-    /* geometry already transformed to world coords */
-    PointWWFixed corner1;
-    PointWWFixed corner3;
-    WWFixed radiusX;
-    WWFixed radiusY;
-    WWFixed ellipseCenterX;
-    WWFixed ellipseCenterY;
-    WWFixed ellipseRadiusX;
-    WWFixed ellipseRadiusY;
-    Boolean haveTransform;
-    TransMatrix transform;
-    /* style captured at time of ops */
-    WWFixedAsDWord strokeWidth;
-    RGBColorAsDWord strokeColor;
-    RGBColorAsDWord fillColor;
-    LineJoin strokeJoin;
-    LineEnd strokeCap;
-    WWFixedAsDWord strokeMiterLimit;
-    LineStyle strokeStyle;
-    word strokeDashPairCount;
-    word strokeDashSkipCount;
-    word strokeDashPattern[MAX_DASH_ARRAY_PAIRS * 2];
-    RegionFillRule fillRule;
-    Boolean haveStroke;
-    Boolean haveFill;
-} VCImpexSVGPendingRect;
-
 Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteFooter(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint);
@@ -131,9 +93,5 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
                                             word bufferSize);
 ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size);
 void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunk);
-
-/* Internal helpers for coalescing */
-void _pascal VCImpexSVGInitPendingRect(VCImpexSVGPendingRect *pending);
-Boolean _pascal VCImpexSVGFlushPendingRect(VCImpexSVGExportContext *context, VCImpexSVGPendingRect *pending);
 
 #endif

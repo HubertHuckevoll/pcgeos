@@ -48,13 +48,13 @@ Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
                                                  word elementSize);
 void _pascal VCImpexSVGResetDashPattern(VCImpexSVGExportContext *context);
 
-word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
-word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
-word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
-word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
-word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
-word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
-word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect);
+word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition);
+word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition);
+word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition);
+word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition);
+word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition);
+word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition);
+word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition);
 word _pascal VCImpexSVGHandlePathOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context);
 word VCImpexSVGEmitPath(GStateHandle playbackGState,
                         VCImpexSVGExportContext *context,
@@ -62,15 +62,6 @@ word VCImpexSVGEmitPath(GStateHandle playbackGState,
                         Boolean strokePath,
                         RegionFillRule fillRule);
 void _pascal VCImpexSVGSetWWFixedComponent(WWFixed *component, WWFixedAsDWord value);
-void _pascal VCImpexSVGPendingCaptureFill(VCImpexSVGPendingRect *pending, const VCImpexSVGExportContext *context);
-void _pascal VCImpexSVGPendingCaptureStroke(VCImpexSVGPendingRect *pending, const VCImpexSVGExportContext *context);
-Boolean _pascal VCImpexSVGWWFixedEqual(const WWFixed *a, const WWFixed *b);
-Boolean _pascal VCImpexSVGPointEqual(const PointWWFixed *a, const PointWWFixed *b);
-Boolean _pascal VCImpexSVGPendingMatchesRect(const VCImpexSVGPendingRect *pending, const PointWWFixed *corner1, const PointWWFixed *corner3);
-Boolean _pascal VCImpexSVGPendingMatchesRoundRect(const VCImpexSVGPendingRect *pending, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY);
-Boolean _pascal VCImpexSVGPendingMatchesEllipse(const VCImpexSVGPendingRect *pending, const WWFixed *cx, const WWFixed *cy, const WWFixed *rx, const WWFixed *ry, const TransMatrix *tm);
-Boolean _pascal VCImpexSVGPendingElementMatches(const VCImpexSVGPendingRect *pending, word elementType);
-Boolean _pascal VCImpexSVGStyleOpcodeRequiresPendingFlush(word elementType);
 word _pascal VCImpexSVGReadWord(const byte *data, word offset);
 sword _pascal VCImpexSVGReadSword(const byte *data, word offset);
 void _pascal VCImpexSVGReadWWFixed(const byte *data, word offset, WWFixed *value);
@@ -224,135 +215,6 @@ Boolean _pascal VCImpexSVGIsPathOpcode(word elementType)
     {
         case GR_DRAW_PATH:
         case GR_FILL_PATH:
-            return TRUE;
-        default:
-            return FALSE;
-    }
-}
-
-void _pascal VCImpexSVGPendingCaptureFill(VCImpexSVGPendingRect *pending, const VCImpexSVGExportContext *context)
-{
-    if (pending == NULL || context == NULL)
-        return;
-    pending->fillColor = context->fillColor;
-    pending->fillRule = context->fillRule;
-    pending->haveFill = TRUE;
-}
-
-void _pascal VCImpexSVGPendingCaptureStroke(VCImpexSVGPendingRect *pending, const VCImpexSVGExportContext *context)
-{
-    if (pending == NULL || context == NULL)
-        return;
-    pending->strokeWidth = context->lineWidth;
-    pending->strokeColor = context->lineColor;
-    pending->strokeJoin = context->lineJoin;
-    pending->strokeCap = context->lineCap;
-    pending->strokeMiterLimit = context->miterLimit;
-    pending->strokeStyle = context->lineStyle;
-    pending->strokeDashPairCount = context->dashPairCount;
-    pending->strokeDashSkipCount = context->dashSkipCount;
-    memcpy(pending->strokeDashPattern, context->dashPattern, sizeof(pending->strokeDashPattern));
-    pending->haveStroke = (context->lineWidth != 0);
-}
-
-Boolean _pascal VCImpexSVGWWFixedEqual(const WWFixed *a, const WWFixed *b)
-{
-    if ((a == NULL) || (b == NULL))
-        return FALSE;
-    return (a->WWF_int == b->WWF_int) && (a->WWF_frac == b->WWF_frac);
-}
-
-Boolean _pascal VCImpexSVGPointEqual(const PointWWFixed *a, const PointWWFixed *b)
-{
-    if ((a == NULL) || (b == NULL))
-        return FALSE;
-    if (!VCImpexSVGWWFixedEqual(&a->PF_x, &b->PF_x))
-        return FALSE;
-    if (!VCImpexSVGWWFixedEqual(&a->PF_y, &b->PF_y))
-        return FALSE;
-    return TRUE;
-}
-
-Boolean _pascal VCImpexSVGPendingMatchesRect(const VCImpexSVGPendingRect *pending, const PointWWFixed *corner1, const PointWWFixed *corner3)
-{
-    if ((pending == NULL) || (pending->active == FALSE))
-        return FALSE;
-    if (pending->type != VCIMPEX_SVG_PENDING_RECT)
-        return FALSE;
-    return VCImpexSVGPointEqual(&pending->corner1, corner1) &&
-           VCImpexSVGPointEqual(&pending->corner3, corner3);
-}
-
-Boolean _pascal VCImpexSVGPendingMatchesRoundRect(const VCImpexSVGPendingRect *pending, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY)
-{
-    if ((pending == NULL) || (pending->active == FALSE))
-        return FALSE;
-    if (pending->type != VCIMPEX_SVG_PENDING_ROUND_RECT)
-        return FALSE;
-    if (!VCImpexSVGPointEqual(&pending->corner1, corner1) ||
-        !VCImpexSVGPointEqual(&pending->corner3, corner3))
-    {
-        return FALSE;
-    }
-    if (!VCImpexSVGWWFixedEqual(&pending->radiusX, radiusX) ||
-        !VCImpexSVGWWFixedEqual(&pending->radiusY, radiusY))
-    {
-        return FALSE;
-    }
-    return TRUE;
-}
-
-Boolean _pascal VCImpexSVGPendingMatchesEllipse(const VCImpexSVGPendingRect *pending, const WWFixed *cx, const WWFixed *cy, const WWFixed *rx, const WWFixed *ry, const TransMatrix *tm)
-{
-    if ((pending == NULL) || (pending->active == FALSE))
-        return FALSE;
-    if (pending->type != VCIMPEX_SVG_PENDING_ELLIPSE)
-        return FALSE;
-    if (!VCImpexSVGWWFixedEqual(&pending->ellipseCenterX, cx) ||
-        !VCImpexSVGWWFixedEqual(&pending->ellipseCenterY, cy) ||
-        !VCImpexSVGWWFixedEqual(&pending->ellipseRadiusX, rx) ||
-        !VCImpexSVGWWFixedEqual(&pending->ellipseRadiusY, ry))
-    {
-        return FALSE;
-    }
-    if (pending->haveTransform)
-    {
-        if (tm == NULL)
-        {
-            return FALSE;
-        }
-        return memcmp(&pending->transform, tm, sizeof(TransMatrix)) == 0;
-    }
-    else
-    {
-        return (tm == NULL) ? TRUE : FALSE;
-    }
-}
-
-Boolean _pascal VCImpexSVGPendingElementMatches(const VCImpexSVGPendingRect *pending, word elementType)
-{
-    if ((pending == NULL) || (pending->active == FALSE))
-        return FALSE;
-    switch (pending->type)
-    {
-        case VCIMPEX_SVG_PENDING_RECT:
-            return VCImpexSVGIsRectangleOpcode(elementType);
-        case VCIMPEX_SVG_PENDING_ROUND_RECT:
-            return VCImpexSVGIsRoundRectOpcode(elementType);
-        case VCIMPEX_SVG_PENDING_ELLIPSE:
-            return VCImpexSVGIsEllipseOpcode(elementType);
-        case VCIMPEX_SVG_PENDING_NONE:
-        default:
-            return FALSE;
-    }
-}
-
-Boolean _pascal VCImpexSVGStyleOpcodeRequiresPendingFlush(word elementType)
-{
-    switch (elementType)
-    {
-        case GR_SET_AREA_COLOR:
-        case GR_SET_AREA_COLOR_INDEX:
             return TRUE;
         default:
             return FALSE;
@@ -544,7 +406,6 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     PointWWFixed currentPosition;
     word error;
     GSRetType gsr;
-    VCImpexSVGPendingRect pendingRect;
     word handlerResult;
     word pathDepth = 0;
 
@@ -569,7 +430,6 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     }
 
     error = TE_NO_ERROR;
-    VCImpexSVGInitPendingRect(&pendingRect);
 
     /* the main loop */
     for(gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType);
@@ -590,14 +450,6 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
 
         if (VCImpexSVGIsStyleStateOpcode(elementType))
         {
-            if (VCImpexSVGStyleOpcodeRequiresPendingFlush(elementType))
-            {
-                if (!VCImpexSVGFlushPendingRect(context, &pendingRect))
-                {
-                    error = TE_FILE_WRITE;
-                    break;
-                }
-            }
             if (!VCImpexSVGHandleStyleStateOpcode(elementType, context, elementSize))
             {
                 error = TE_EXPORT_ERROR;
@@ -606,28 +458,11 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
             continue;
         }
 
-        /* Flush pending rectangle if we hit a transform/state change op */
+        /* Skip transform/state ops */
         if ((elementType >= GR_APPLY_ROTATION && elementType <= GR_XFORM_1F) ||
             (elementType >= GR_SAVE_STATE && elementType <= GR_ATTR_9F))
         {
-            if (!VCImpexSVGFlushPendingRect(context, &pendingRect))
-            {
-                error = TE_FILE_WRITE;
-                break;
-            }
-            /* skip handling state ops */
             continue;
-        }
-
-        /* Flush pending element if the incoming opcode cannot complete it */
-        if ((pendingRect.active != FALSE) &&
-            (VCImpexSVGPendingElementMatches(&pendingRect, elementType) == FALSE))
-        {
-            if (!VCImpexSVGFlushPendingRect(context, &pendingRect))
-            {
-                error = TE_FILE_WRITE;
-                break;
-            }
         }
 
         switch (elementType)
@@ -670,31 +505,31 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
         handlerResult = TE_NO_ERROR;
         if (VCImpexSVGIsLineOpcode(elementType))
         {
-            handlerResult = VCImpexSVGHandleLineOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+            handlerResult = VCImpexSVGHandleLineOpcode(elementType, playbackGState, context, &currentPosition);
         }
         else if (VCImpexSVGIsRectangleOpcode(elementType))
         {
-            handlerResult = VCImpexSVGHandleRectangleOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+            handlerResult = VCImpexSVGHandleRectangleOpcode(elementType, playbackGState, context, &currentPosition);
         }
         else if (VCImpexSVGIsRoundRectOpcode(elementType))
         {
-            handlerResult = VCImpexSVGHandleRoundRectOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+            handlerResult = VCImpexSVGHandleRoundRectOpcode(elementType, playbackGState, context, &currentPosition);
         }
         else if (VCImpexSVGIsEllipseOpcode(elementType))
         {
-            handlerResult = VCImpexSVGHandleEllipseOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+            handlerResult = VCImpexSVGHandleEllipseOpcode(elementType, playbackGState, context, &currentPosition);
         }
         else if (VCImpexSVGIsCurveOpcode(elementType))
         {
-            handlerResult = VCImpexSVGHandleCurveOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+            handlerResult = VCImpexSVGHandleCurveOpcode(elementType, playbackGState, context, &currentPosition);
         }
         else if (VCImpexSVGIsArcOpcode(elementType))
         {
-            handlerResult = VCImpexSVGHandleArcOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+            handlerResult = VCImpexSVGHandleArcOpcode(elementType, playbackGState, context, &currentPosition);
         }
         else if (VCImpexSVGIsPolygonOpcode(elementType))
         {
-            handlerResult = VCImpexSVGHandlePolygonOpcode(elementType, playbackGState, context, &currentPosition, &pendingRect);
+            handlerResult = VCImpexSVGHandlePolygonOpcode(elementType, playbackGState, context, &currentPosition);
         }
         else if (VCImpexSVGIsPathOpcode(elementType))
         {
@@ -705,15 +540,6 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
         {
             error = handlerResult;
             break;
-        }
-    }
-
-    /* Flush any pending rectangle before footer */
-    if (error == TE_NO_ERROR)
-    {
-        if (!VCImpexSVGFlushPendingRect(context, &pendingRect))
-        {
-            error = TE_FILE_WRITE;
         }
     }
 
@@ -734,7 +560,7 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
  * Opcode handlers
  ****************************************************************************/
 
-word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition)
 {
     PointWWFixed startPoint;
     PointWWFixed endPoint;
@@ -746,8 +572,6 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
     const byte *elementData;
     word offset;
     word wordValue1;
-
-    (void)pendingRect;
 
     elementData = svgElementBuffer.raw;
 
@@ -890,7 +714,7 @@ word _pascal VCImpexSVGHandleLineOpcode(word elementType, GStateHandle playbackG
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition)
 {
     PointWWFixed corner1;
     PointWWFixed corner3;
@@ -923,79 +747,7 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
             VCImpexSVGTransformPointFromInt(playbackGState, &intCorner1, &corner1);
             VCImpexSVGTransformPointFromInt(playbackGState, &intCorner3, &corner3);
             filled = (elementType == GR_FILL_RECT);
-            /* Coalescing logic */
-            if (pendingRect != NULL)
-            {
-                WWFixedAsDWord c1x = VCImpexSVGPackWWFixed(&corner1.PF_x);
-                WWFixedAsDWord c1y = VCImpexSVGPackWWFixed(&corner1.PF_y);
-                WWFixedAsDWord c3x = VCImpexSVGPackWWFixed(&corner3.PF_x);
-                WWFixedAsDWord c3y = VCImpexSVGPackWWFixed(&corner3.PF_y);
-                if (pendingRect->active)
-                {
-                    WWFixedAsDWord pc1x = VCImpexSVGPackWWFixed(&pendingRect->corner1.PF_x);
-                    WWFixedAsDWord pc1y = VCImpexSVGPackWWFixed(&pendingRect->corner1.PF_y);
-                    WWFixedAsDWord pc3x = VCImpexSVGPackWWFixed(&pendingRect->corner3.PF_x);
-                    WWFixedAsDWord pc3y = VCImpexSVGPackWWFixed(&pendingRect->corner3.PF_y);
-                    if (pc1x == c1x && pc1y == c1y && pc3x == c3x && pc3y == c3y)
-                    {
-                        if (filled)
-                        {
-                            VCImpexSVGPendingCaptureFill(pendingRect, context);
-                        }
-                        else
-                        {
-                            VCImpexSVGPendingCaptureStroke(pendingRect, context);
-                        }
-                        if (pendingRect->haveFill && pendingRect->haveStroke)
-                        {
-                            if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-                            {
-                                return TE_FILE_WRITE;
-                            }
-                        }
-                        return TE_NO_ERROR;
-                    }
-                    /* geometry differs: flush old then start new */
-                    if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-                    {
-                        return TE_FILE_WRITE;
-                    }
-                }
-                /* Start new pending */
-                pendingRect->active = TRUE;
-                pendingRect->type = VCIMPEX_SVG_PENDING_RECT;
-                pendingRect->corner1 = corner1;
-                pendingRect->corner3 = corner3;
-                pendingRect->radiusX.WWF_int = pendingRect->radiusX.WWF_frac = 0;
-                pendingRect->radiusY.WWF_int = pendingRect->radiusY.WWF_frac = 0;
-                pendingRect->ellipseCenterX.WWF_int = pendingRect->ellipseCenterX.WWF_frac = 0;
-                pendingRect->ellipseCenterY.WWF_int = pendingRect->ellipseCenterY.WWF_frac = 0;
-                pendingRect->ellipseRadiusX.WWF_int = pendingRect->ellipseRadiusX.WWF_frac = 0;
-                pendingRect->ellipseRadiusY.WWF_int = pendingRect->ellipseRadiusY.WWF_frac = 0;
-                pendingRect->haveTransform = FALSE;
-                pendingRect->haveFill = FALSE;
-                pendingRect->haveStroke = FALSE;
-                if (filled)
-                {
-                    VCImpexSVGPendingCaptureFill(pendingRect, context);
-                }
-                else
-                {
-                    VCImpexSVGPendingCaptureStroke(pendingRect, context);
-                }
-                return TE_NO_ERROR;
-            }
-            /* Fallback: no coalescing */
-            if (!VCImpexSVGWriteRectElement(context,
-                                             &corner1,
-                                             &corner3,
-                                             (filled == FALSE),
-                                             (filled != FALSE),
-                                             filled))
-            {
-                return TE_FILE_WRITE;
-            }
-            return TE_NO_ERROR;
+            break;
 
         case GR_DRAW_RECT_TO:
         case GR_FILL_RECT_TO:
@@ -1012,83 +764,25 @@ word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, GStateHandle play
             intCorner3.P_y = (sword)wordValue2;
             VCImpexSVGTransformPointFromInt(playbackGState, &intCorner3, &corner3);
             filled = (elementType == GR_FILL_RECT_TO);
-            if (pendingRect != NULL)
-            {
-                WWFixedAsDWord c1x = VCImpexSVGPackWWFixed(&corner1.PF_x);
-                WWFixedAsDWord c1y = VCImpexSVGPackWWFixed(&corner1.PF_y);
-                WWFixedAsDWord c3x = VCImpexSVGPackWWFixed(&corner3.PF_x);
-                WWFixedAsDWord c3y = VCImpexSVGPackWWFixed(&corner3.PF_y);
-                if (pendingRect->active)
-                {
-                    WWFixedAsDWord pc1x = VCImpexSVGPackWWFixed(&pendingRect->corner1.PF_x);
-                    WWFixedAsDWord pc1y = VCImpexSVGPackWWFixed(&pendingRect->corner1.PF_y);
-                    WWFixedAsDWord pc3x = VCImpexSVGPackWWFixed(&pendingRect->corner3.PF_x);
-                    WWFixedAsDWord pc3y = VCImpexSVGPackWWFixed(&pendingRect->corner3.PF_y);
-                    if (pc1x == c1x && pc1y == c1y && pc3x == c3x && pc3y == c3y)
-                    {
-                        if (filled)
-                        {
-                            VCImpexSVGPendingCaptureFill(pendingRect, context);
-                        }
-                        else
-                        {
-                            VCImpexSVGPendingCaptureStroke(pendingRect, context);
-                        }
-                        if (pendingRect->haveFill && pendingRect->haveStroke)
-                        {
-                            if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-                            {
-                                return TE_FILE_WRITE;
-                            }
-                        }
-                        return TE_NO_ERROR;
-                    }
-                    if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-                    {
-                        return TE_FILE_WRITE;
-                    }
-                }
-                pendingRect->active = TRUE;
-                pendingRect->type = VCIMPEX_SVG_PENDING_RECT;
-                pendingRect->corner1 = corner1;
-                pendingRect->corner3 = corner3;
-                pendingRect->radiusX.WWF_int = pendingRect->radiusX.WWF_frac = 0;
-                pendingRect->radiusY.WWF_int = pendingRect->radiusY.WWF_frac = 0;
-                pendingRect->ellipseCenterX.WWF_int = pendingRect->ellipseCenterX.WWF_frac = 0;
-                pendingRect->ellipseCenterY.WWF_int = pendingRect->ellipseCenterY.WWF_frac = 0;
-                pendingRect->ellipseRadiusX.WWF_int = pendingRect->ellipseRadiusX.WWF_frac = 0;
-                pendingRect->ellipseRadiusY.WWF_int = pendingRect->ellipseRadiusY.WWF_frac = 0;
-                pendingRect->haveTransform = FALSE;
-                pendingRect->haveFill = FALSE;
-                pendingRect->haveStroke = FALSE;
-                if (filled)
-                {
-                    VCImpexSVGPendingCaptureFill(pendingRect, context);
-                }
-                else
-                {
-                    VCImpexSVGPendingCaptureStroke(pendingRect, context);
-                }
-                return TE_NO_ERROR;
-            }
-            if (!VCImpexSVGWriteRectElement(context,
-                                             &corner1,
-                                             &corner3,
-                                             (filled == FALSE),
-                                             (filled != FALSE),
-                                             filled))
-            {
-                return TE_FILE_WRITE;
-            }
-            return TE_NO_ERROR;
+            break;
 
         default:
-            break;
+            return TE_NO_ERROR;
+    }
+
+    if (!VCImpexSVGWriteRectElement(context,
+                                     &corner1,
+                                     &corner3,
+                                     (filled == FALSE),
+                                     (filled != FALSE),
+                                     filled))
+    {
+        return TE_FILE_WRITE;
     }
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition)
 {
     WWFixed cx = {0};
     WWFixed cy = {0};
@@ -1153,57 +847,6 @@ word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playba
             return TE_NO_ERROR;
     }
 
-    if (pendingRect != NULL)
-    {
-        if (VCImpexSVGPendingMatchesEllipse(pendingRect, &cx, &cy, &rx, &ry, &tm))
-        {
-            if (filled)
-            {
-                VCImpexSVGPendingCaptureFill(pendingRect, context);
-            }
-            else
-            {
-                VCImpexSVGPendingCaptureStroke(pendingRect, context);
-            }
-            if (pendingRect->haveFill && pendingRect->haveStroke)
-            {
-                if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-                {
-                    return TE_FILE_WRITE;
-                }
-            }
-            return TE_NO_ERROR;
-        }
-
-        if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-        {
-            return TE_FILE_WRITE;
-        }
-
-        pendingRect->active = TRUE;
-        pendingRect->type = VCIMPEX_SVG_PENDING_ELLIPSE;
-        pendingRect->ellipseCenterX = cx;
-        pendingRect->ellipseCenterY = cy;
-        pendingRect->ellipseRadiusX = rx;
-        pendingRect->ellipseRadiusY = ry;
-        pendingRect->haveTransform = TRUE;
-        pendingRect->transform = tm;
-        pendingRect->corner1.PF_x.WWF_int = pendingRect->corner1.PF_x.WWF_frac = 0;
-        pendingRect->corner1.PF_y.WWF_int = pendingRect->corner1.PF_y.WWF_frac = 0;
-        pendingRect->corner3 = pendingRect->corner1;
-        pendingRect->haveFill = FALSE;
-        pendingRect->haveStroke = FALSE;
-        if (filled)
-        {
-            VCImpexSVGPendingCaptureFill(pendingRect, context);
-        }
-        else
-        {
-            VCImpexSVGPendingCaptureStroke(pendingRect, context);
-        }
-        return TE_NO_ERROR;
-    }
-
     if (!VCImpexSVGWriteEllipseElement(context,
                                        &cx,
                                        &cy,
@@ -1220,7 +863,7 @@ word _pascal VCImpexSVGHandleEllipseOpcode(word elementType, GStateHandle playba
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition)
 {
     word pointCount;
     word index;
@@ -1232,8 +875,6 @@ word _pascal VCImpexSVGHandlePolygonOpcode(word elementType, GStateHandle playba
     RegionFillRule fillRule;
 
     (void)currentPosition;
-    (void)pendingRect;
-
     elementData = svgElementBuffer.raw;
     fillRule = context->fillRule;
 
@@ -1942,7 +1583,7 @@ cleanup:
     return result;
 }
 
-word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition)
 {
     PointWWFixed corner1;
     PointWWFixed corner3;
@@ -2038,53 +1679,6 @@ word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle play
             return TE_NO_ERROR;
     }
 
-    if (pendingRect != NULL)
-    {
-        if (VCImpexSVGPendingMatchesRoundRect(pendingRect, &corner1, &corner3, &radiusX, &radiusY))
-        {
-            if (filled)
-            {
-                VCImpexSVGPendingCaptureFill(pendingRect, context);
-            }
-            else
-            {
-                VCImpexSVGPendingCaptureStroke(pendingRect, context);
-            }
-            if (pendingRect->haveFill && pendingRect->haveStroke)
-            {
-                if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-                {
-                    return TE_FILE_WRITE;
-                }
-            }
-            return TE_NO_ERROR;
-        }
-
-        if (!VCImpexSVGFlushPendingRect(context, pendingRect))
-        {
-            return TE_FILE_WRITE;
-        }
-
-        pendingRect->active = TRUE;
-        pendingRect->type = VCIMPEX_SVG_PENDING_ROUND_RECT;
-        pendingRect->corner1 = corner1;
-        pendingRect->corner3 = corner3;
-        pendingRect->radiusX = radiusX;
-        pendingRect->radiusY = radiusY;
-        pendingRect->haveTransform = FALSE;
-        pendingRect->haveFill = FALSE;
-        pendingRect->haveStroke = FALSE;
-        if (filled)
-        {
-            VCImpexSVGPendingCaptureFill(pendingRect, context);
-        }
-        else
-        {
-            VCImpexSVGPendingCaptureStroke(pendingRect, context);
-        }
-        return TE_NO_ERROR;
-    }
-
     if (!VCImpexSVGWriteRoundRectElement(context,
                                          &corner1,
                                          &corner3,
@@ -2099,7 +1693,7 @@ word _pascal VCImpexSVGHandleRoundRectOpcode(word elementType, GStateHandle play
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition)
 {
     PointWWFixed startPoint;
     PointWWFixed cp1;
@@ -2108,8 +1702,6 @@ word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playback
     Point intPoint;
     const byte *elementData;
     word offset;
-
-    (void)pendingRect;
 
     elementData = svgElementBuffer.raw;
 
@@ -2212,7 +1804,7 @@ word _pascal VCImpexSVGHandleCurveOpcode(word elementType, GStateHandle playback
     return TE_NO_ERROR;
 }
 
-word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, VCImpexSVGPendingRect *pendingRect)
+word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGState, VCImpexSVGExportContext *context, PointWWFixed *currentPosition)
 {
     Boolean fill = FALSE;
     TransMatrix tm;
@@ -2236,7 +1828,6 @@ word _pascal VCImpexSVGHandleArcOpcode(word elementType, GStateHandle playbackGS
     word wordValue;
 
     (void)currentPosition;
-    (void)pendingRect;
 
     elementData = svgElementBuffer.raw;
 
