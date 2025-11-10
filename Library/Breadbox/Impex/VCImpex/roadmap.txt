@@ -1,17 +1,5 @@
 Recommended refactors (lightweight, incremental)
 
-Style/state model
-Extend VCImpexSVGExportContext with: line join, cap, dash pattern, miter limit, fill rule.
-Provide VCImpexSVGUpdateDrawingState that mirrors all relevant gstate and a VCImpexSVGStyleToAttributes(...) to format common attributes once.
-
-Path builder
-Add a small “current path” accumulator: collects MOVE/LINE/CURVE/ARC segments and flushes on GR_DRAW_PATH, GR_SET_STROKE_PATH, GR_FILL_PATH, or on state/transform changes.
-Emit one <path d="..."> per stroke/fill, with style from context.
-
-Generalized coalescer
-Abstract the rect coalescer into a tiny “pending shape” facility that can handle fill+stroke pairs for rects and ellipses (and potentially polygons where the same geometry is restroked).
-Flush on geometry change, non-shape ops, or state/transform changes.
-
 Transform policy
 Decide per family:
 Ellipse/arc/curve/path: prefer transform matrix (preserves rotation/scaling cleanly).

@@ -396,6 +396,7 @@ Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExpo
     context->lineCap = GrGetLineEnd(gstate);
     context->miterLimit = GrGetMiterLimit(gstate);
     context->lineStyle = GrGetLineStyle(gstate);
+    context->forceNonScalingStroke = FALSE;
     if (context->lineStyle != LS_CUSTOM)
     {
         context->dashPairCount = 0;
@@ -475,6 +476,15 @@ Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
                 return FALSE;
             }
             strcat(buffer, dashOffsetSection);
+        }
+        if (context->forceNonScalingStroke != FALSE)
+        {
+            const char *vectorEffectAttr = " vector-effect=\"non-scaling-stroke\"";
+            if (strlen(buffer) + strlen(vectorEffectAttr) + 1 >= bufferSize)
+            {
+                return FALSE;
+            }
+            strcat(buffer, vectorEffectAttr);
         }
     }
     else
@@ -1048,14 +1058,22 @@ Boolean _pascal VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
     VCImpexSVGFormatFixed(ey, eyText, 2);
     VCImpexSVGFormatFixed(rx, rxText, 2);
     VCImpexSVGFormatFixed(ry, ryText, 2);
-    if (!VCImpexSVGStyleToAttributes(context,
-                                     (filled != FALSE) ? FALSE : TRUE,
-                                     (filled != FALSE) ? TRUE : FALSE,
-                                     filled,
-                                     context->fillRule,
-                                     styleAttributes,
-                                     256))
-        goto cleanup;
+    {
+        Boolean previousVectorEffect = context->forceNonScalingStroke;
+        context->forceNonScalingStroke = (tm != NULL) ? TRUE : FALSE;
+        if (!VCImpexSVGStyleToAttributes(context,
+                                         (filled != FALSE) ? FALSE : TRUE,
+                                         (filled != FALSE) ? TRUE : FALSE,
+                                         filled,
+                                         context->fillRule,
+                                         styleAttributes,
+                                         256))
+        {
+            context->forceNonScalingStroke = previousVectorEffect;
+            goto cleanup;
+        }
+        context->forceNonScalingStroke = previousVectorEffect;
+    }
 
     centerXText[0] = '\0';
     centerYText[0] = '\0';
@@ -1176,14 +1194,22 @@ Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(cy), cyText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(rx), rxText, 2);
     VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(ry), ryText, 2);
-    if (!VCImpexSVGStyleToAttributes(context,
-                                     includeStroke,
-                                     includeFill,
-                                     filled,
-                                     context->fillRule,
-                                     styleAttributes,
-                                     256))
-        goto cleanup;
+    {
+        Boolean previousVectorEffect = context->forceNonScalingStroke;
+        context->forceNonScalingStroke = (tm != NULL) ? TRUE : FALSE;
+        if (!VCImpexSVGStyleToAttributes(context,
+                                         includeStroke,
+                                         includeFill,
+                                         filled,
+                                         context->fillRule,
+                                         styleAttributes,
+                                         256))
+        {
+            context->forceNonScalingStroke = previousVectorEffect;
+            goto cleanup;
+        }
+        context->forceNonScalingStroke = previousVectorEffect;
+    }
 
     matrixText[0] = '\0';
     if (tm != NULL)

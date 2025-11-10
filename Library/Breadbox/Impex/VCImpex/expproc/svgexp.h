@@ -39,6 +39,7 @@ typedef struct
     word dashPattern[MAX_DASH_ARRAY_PAIRS * 2];
     RegionFillRule fillRule;
     MemHandle bufferHeapH;
+    Boolean forceNonScalingStroke;
 } VCImpexSVGExportContext;
 
 Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context);
