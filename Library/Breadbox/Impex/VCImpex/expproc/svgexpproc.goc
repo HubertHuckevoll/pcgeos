@@ -546,6 +546,7 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     GSRetType gsr;
     VCImpexSVGPendingRect pendingRect;
     word handlerResult;
+    word pathDepth = 0;
 
 
     playbackBlockH = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
@@ -627,6 +628,43 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
                 error = TE_FILE_WRITE;
                 break;
             }
+        }
+
+        switch (elementType)
+        {
+            case GR_BEGIN_PATH:
+                pathDepth++;
+                continue;
+
+            case GR_END_PATH:
+                if (pathDepth != 0)
+                {
+                    pathDepth--;
+                }
+                else
+                {
+                    pathDepth = 0;
+                }
+                continue;
+
+#ifdef GR_SET_NULL_PATH
+            case GR_SET_NULL_PATH:
+                pathDepth = 0;
+                continue;
+#endif
+
+            case GR_CLOSE_SUB_PATH:
+                /* nothing to emit directly for subpath closures */
+                continue;
+
+            default:
+                break;
+        }
+
+        if (pathDepth != 0)
+        {
+            /* suppress geometry opcodes recorded during an open path */
+            continue;
         }
 
         handlerResult = TE_NO_ERROR;
@@ -1773,11 +1811,10 @@ word VCImpexSVGEmitPath(GStateHandle playbackGState,
 
     if ((result == TE_NO_ERROR) && (builderReady != FALSE) && (builder.hasData != FALSE))
     {
-        char *styleText;
         char *buffer;
         char *pathData;
-    word totalLength;
-    word styleLength = 0;
+        word totalLength;
+        word styleLength = 0;
 
         styleChunk = VCImpexSVGAllocBuffer(context, 256);
         if (styleChunk == NullChunk)
