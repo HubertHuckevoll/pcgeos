@@ -28,5 +28,5 @@ export TransGetExportOptions
 export TransImport
 export TransExport
 export TransGetFormat
-export QOIGATHERIMPORTOPTIONS
+
 export QoiImportGroupClass

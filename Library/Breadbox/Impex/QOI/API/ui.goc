@@ -9,34 +9,176 @@
 @include <Objects/gValueC.goh>
 @include <Objects/colorC.goh>
 
-#include <qoilib.goh>
+#include <qoilib.h>
 
 @define dup(obj) ConstructOptr(OptrToHandle(oself), OptrToChunk(obj))
 @define dupHan(uiHandle, obj) ConstructOptr(uiHandle, OptrToChunk(obj))
 
-@extern object QoiImportGroup;
-@extern object QoiAlphaMethodGroup;
-@extern object QoiAlphaBlendBox;
-@extern object QoiAlphaMaskBox;
-@extern object QoiAlphaBlendColor;
-@extern object QoiAlphaThresholdValue;
-
 @class QoiImportGroupClass, GenInteractionClass;
     @instance QoiAlphaTransformData qoiAlphaTransform = {0};
 
-    @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_QOI_ALPHA_METHOD_SELECTED(word selection);
-    @message (GEN_TRIGGER_ACTION) MSG_RESET_QOI_IMPORT_DIALOG();
-    @message (GEN_TRIGGER_ACTION) MSG_DISMISS_QOI_IMPORT_DIALOG();
+    @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_QOI_ALPHA_METHOD_SELECTED;
+    @message (GEN_TRIGGER_ACTION) MSG_RESET_QOI_IMPORT_DIALOG;
+    @message (GEN_TRIGGER_ACTION) MSG_DISMISS_QOI_IMPORT_DIALOG;
 @endc
 @classdecl QoiImportGroupClass;
 
 MemHandle _pascal _export QoiGatherImportOptions(Handle dialogHan);
 void _pascal _export QoiGetImportOptionsFromUI(Handle dialogHan, QoiAlphaTransformData *qatdP);
 
+@start ImportInterface;
+
+@object GenItemClass QoiAlphaMethodBlend = {
+    GI_visMoniker = "Blend with Background Color";
+    GII_identifier = QOI_AT_BLEND;
+}
+
+@object GenItemClass QoiAlphaMethodMask = {
+    GI_visMoniker = "Convert to 1-bit Mask";
+    GII_identifier = QOI_AT_MASK;
+}
+
+@object GenItemGroupClass QoiAlphaMethodGroup = {
+    GIGI_selection = QOI_AT_BLEND;
+    GIGI_applyMsg = MSG_QOI_ALPHA_METHOD_SELECTED;
+    GIGI_destination = @ImportGroup;
+    GI_comp = @QoiAlphaMethodBlend, @QoiAlphaMethodMask;
+
+    HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION;
+    HINT_ITEM_GROUP_RADIO_BUTTON_STYLE;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+}
+
+@object GenTextClass QoiAlphaBlendExplain = {
+    GI_attrs = @default | GA_READ_ONLY;
+    GTXI_text = "Blend transparency into a single background color.";
+
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object ColorSelectorClass QoiAlphaBlendColor = {
+    GI_visMoniker = "Blend color:";
+    CSI_color = {255, CF_RGB, 255, 255};
+    GI_states = @default | GS_USABLE | GS_ENABLED;
+
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+    ATTR_GEN_CONTROL_REQUIRE_UI = (CSF_INDEX | CSF_RGB);
+    ATTR_GEN_CONTROL_PROHIBIT_UI = (CSF_PATTERN | CSF_DRAW_MASK);
+}
+
+@object GenInteractionClass QoiAlphaBlendBox = {
+    GI_comp = @QoiAlphaBlendExplain, @QoiAlphaBlendColor;
+
+    HINT_DRAW_IN_BOX;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+}
+
+@object GenTextClass QoiAlphaMaskExplain = {
+    GI_attrs = @default | GA_READ_ONLY;
+    GTXI_text = "Convert transparency to an on/off mask using a threshold.";
+
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenValueClass QoiAlphaThresholdValue = {
+    GI_visMoniker = "Alpha threshold:";
+    GVLI_minimum = MakeWWFixed(0);
+    GVLI_maximum = MakeWWFixed(255);
+    GVLI_increment = MakeWWFixed(1);
+    GVLI_value = MakeWWFixed(192);
+    GVLI_displayFormat = GVDF_INTEGER;
+
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenInteractionClass QoiAlphaMaskBox = {
+    GI_states = @default & ~GS_USABLE;
+    GI_comp = @QoiAlphaMaskExplain, @QoiAlphaThresholdValue;
+
+    HINT_DRAW_IN_BOX;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+}
+
+@object GenTriggerClass QoiImportApplyTrigger = {
+    GI_visMoniker = "OK";
+    GI_attrs = @default | GA_SIGNAL_INTERACTION_COMPLETE;
+    ATTR_GEN_TRIGGER_INTERACTION_COMMAND = IC_OK;
+
+    HINT_SEEK_REPLY_BAR;
+    HINT_DEFAULT_DEFAULT_ACTION;
+}
+
+@object GenTriggerClass QoiImportResetTrigger = {
+    GI_visMoniker = "Reset";
+    GTI_actionMsg = MSG_RESET_QOI_IMPORT_DIALOG;
+    GTI_destination = @ImportGroup;
+
+    HINT_SEEK_REPLY_BAR;
+}
+
+@object GenTriggerClass QoiImportCancelTrigger = {
+    GI_visMoniker = "Cancel";
+    GI_attrs = @default | GA_SIGNAL_INTERACTION_COMPLETE;
+    GTI_actionMsg = MSG_DISMISS_QOI_IMPORT_DIALOG;
+    GTI_destination = @ImportGroup;
+
+    HINT_SEEK_REPLY_BAR;
+}
+
+@object GenInteractionClass QoiImportReplyBar = {
+    GI_comp = @QoiImportApplyTrigger, @QoiImportResetTrigger, @QoiImportCancelTrigger;
+
+    HINT_MAKE_REPLY_BAR;
+}
+
+@object QoiImportGroupClass ImportGroup = {
+    GI_states = @default & ~GS_USABLE;
+    GII_visibility = GIV_DIALOG;
+    GII_attrs = GIA_MODAL;
+    GI_comp = @QoiAlphaMethodGroup, @QoiAlphaBlendBox, @QoiAlphaMaskBox, @QoiImportReplyBar;
+
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@end ImportInterface;
+
+@start ExportInterface;
+
+@object GenItemClass QoiExpBit24 = {
+    GI_visMoniker = 'T', "TrueColor (24 bits/pixel)";
+    GII_identifier = BMF_24BIT;
+}
+
+@object GenItemGroupClass QoiExpFormGroup = {
+    GIGI_selection = BMF_24BIT;
+    GI_comp = @QoiExpBit24;
+
+    HINT_ITEM_GROUP_MINIMIZE_SIZE;
+    HINT_ITEM_GROUP_DISPLAY_CURRENT_SELECTION;
+}
+
+@object GenInteractionClass QoiExpBitFormat = {
+    GI_visMoniker = 'C', "Colors:";
+    GI_comp = @QoiExpFormGroup;
+}
+
+@object GenInteractionClass ExportGroup = {
+    GI_states = @default & ~GS_USABLE;
+    GI_comp = @QoiExpBitFormat;
+
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@end ExportInterface;
+
 /*---------------------------------------------------------------------------
  *  Helpers
  *---------------------------------------------------------------------------*/
-static void
+void
 QoiSetDefaults(QoiAlphaTransformData *data)
 {
     data->QATD_method = QOI_AT_BLEND;
@@ -108,8 +250,8 @@ QoiGetImportOptionsFromUI(Handle dialogHan, QoiAlphaTransformData *qatdP)
 {
     @callsuper();
 
-    QoiGetImportOptionsFromUI(OptrToHandle(oself), &pself->qoiAlphaTransform);
-    @send oself::MSG_QOI_ALPHA_METHOD_SELECTED(pself->qoiAlphaTransform.QATD_method);
+    //QoiGetImportOptionsFromUI(OptrToHandle(oself), &pself->qoiAlphaTransform);
+    //@send oself::MSG_QOI_ALPHA_METHOD_SELECTED(pself->qoiAlphaTransform.QATD_method);
 }
 
 @method QoiImportGroupClass, MSG_QOI_ALPHA_METHOD_SELECTED

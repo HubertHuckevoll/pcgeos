@@ -16,9 +16,9 @@
 #include <hugearr.h>
 #include <Ansi/string.h>
 #include <graphics.h>
-@include <extgraph.goh>
+#include <extgraph.h>
 
-#include "qoilib.goh"      /* QoiError + import prototypes (export added above) */
+#include <qoilib.h>      /* QoiError + import prototypes (export added above) */
 
 
 /*============================= helpers ===============================*/

@@ -3,15 +3,36 @@ include vm.def
 include library.def
 include resource.def    ; idata/udata, ProcCallFixedOrMovable etc.
 
+UseLib Objects/colorC.def
+UseLib Objects/gValueC.def
+
 DefLib API/qoi.def
 
-include manager.rdef
+; UI
+global _ImportGroup: nptr
+global _ExportGroup: nptr
 
+
+
+;================================================================================
 ; global functions implemented in C
-global  QOIIMPORT: far
-global  QOITESTFILE: far
-global  QOIEXPORT: far
-global  QOIGATHERIMPORTOPTIONS: far
+; segment must be "public 'CODE'" to ensure that it combines
+; properly with the C segment of the same name.
+; imp_TEXT = "imp.goc" - ".goc + "_TEXT"
+
+impqoi_TEXT   segment public 'CODE'
+    extrn  QOIIMPORT: far
+    extrn  QOITESTFILE: far
+impqoi_TEXT   ends
+
+expqoi_TEXT   segment public 'CODE'
+    extrn  QOIEXPORT: far
+expqoi_TEXT   ends
+
+ui_TEXT   segment public 'CODE'
+    extrn  QOIGATHERIMPORTOPTIONS: far
+    extrn  QOIGATHEREXPORTOPTIONS: far
+ui_TEXT   ends
 
 	SetGeosConvention               ; set calling convention
 
@@ -170,43 +191,14 @@ TransGetImportOptions endp
 
 ;--------------------------------------------------------------------------------
 
-TransGetExportOptions proc far
-        push    ax                             ; 01ED 50
-        push    cx                             ; 01EE 51
-        push    bx                             ; 01EF 53
-        push    bp                             ; 01F0 55
-        push    si                             ; 01F1 56
-        push    di                             ; 01F2 57
-        push    ds                             ; 01F3 1E
-
-        mov     ax,MSG_GEN_ITEM_GROUP_GET_SELECTION
-        mov     bx,dx
-        mov     si,offset QoiExpFormGroup
-        mov     di,mask MF_CALL
-        call    ObjMessage
-
-        push    ax
-        mov     ax,00002h
-        mov     cl,050h
-        mov     ch,040h
-        call    MemAlloc
-        xor     dx,dx
-        jc      iopt_err
-        push    ax
-        pop     ds
-        pop     ax
-        mov     [ds:00000h],ax          ; booleanOptions
-        call    MemUnlock
-        mov     dx,bx
-        clc
-iopt_err:
-        pop     ds                             ; 0236 1F
-        pop     di                             ; 0237 5F
-        pop     si                             ; 0238 5E
-        pop     bp                             ; 0239 5D
-        pop     bx                             ; 023A 5B
-        pop     cx                             ; 023B 59
-        pop     ax                             ; 023C 58
+TransGetExportOptions proc far ; uses ax,bx,cx,bp,si,di,ds
+;        .enter
+;
+;        push    dx                              ; dialog handle
+;        call    QOIGATHEREXPORTOPTIONS
+;        mov     dx,ax
+;
+;        .leave
         ret
 TransGetExportOptions endp
 
@@ -229,8 +221,8 @@ ASM     ends
 InfoResource    segment lmem LMEM_TYPE_GENERAL, mask LMF_IN_RESOURCE
 
 		dw	fmt_1_name,fmt_1_mask
-		D_OPTR	0
-		D_OPTR  QoiExportGroup
+		D_OPTR	_ImportGroup
+		D_OPTR  _ExportGroup
 		dw	0C000h          ; 8000h = only support import, 0C000h = import and export
 		dw	0
 

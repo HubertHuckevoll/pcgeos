@@ -13,9 +13,9 @@
 #include <hugearr.h>
 #include <Ansi/string.h>
 #include <graphics.h>
-@include <extgraph.goh>
+#include <extgraph.h>
+#include <qoilib.h>      /* public prototypes + QoiError */
 
-#include "qoilib.goh"      /* public prototypes + QoiError */
 
 /* Legacy compatibility transform state (mirrors old setters) */
 static QoiAlphaTransformData g_qoiLegacyTransform =

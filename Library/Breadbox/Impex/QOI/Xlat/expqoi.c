@@ -10,11 +10,12 @@
  ***************************************************************************
  */
 
-@include <stdapp.goh>
-@include <impex.goh>
+// @include <stdapp.goh>
+// @include <impex.goh>
 
-@include <qoilib.goh>
-@include <extgraph.goh>
+#include <qoilib.h>
+#include <xlatLib.h>
+#include <extgraph.h>
 
 
 /****************************************************************************

@@ -6,7 +6,7 @@
 GEODE           = qoilib
 ASM_TO_OBJS     =
 UI_TO_RDFS      =
-SRCS            = qoiexp.goc qoiimp.goc
+SRCS            = qoiexp.c qoiimp.c
 OBJS            = qoiexp.obj qoiimp.obj
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf

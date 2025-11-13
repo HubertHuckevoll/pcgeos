@@ -8,7 +8,7 @@
 #include "IMPBMP/ibcommon.h"
 @include "statbar/statbar.goh"
 #include <Ansi/string.h>
-#include "pnglib.h"
+#include <pnglib.h>
 
 #include "IMPBMP/imppcx.h"
 #include "IMPBMP/impbmp.h"
@@ -24,7 +24,7 @@
 #include "IMPBMP/impgif.h"
 @endif /* GIFLIB_SUPPORT */
 
-@include <qoilib.goh>
+#include <qoilib.h>
 
 /*********************************************************************/
 

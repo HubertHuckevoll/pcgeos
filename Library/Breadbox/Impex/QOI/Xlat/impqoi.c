@@ -10,12 +10,14 @@
  ***************************************************************************
  */
 
-@include <stdapp.goh>
-@include <impex.goh>
-@include <qoilib.goh>
-@include <extgraph.goh>
 
+#include <qoilib.h>
 #include <heap.h>
+#include <graphics.h>
+#include <color.h>
+#include <xlatLib.h>
+#include <extgraph.h>
+
 
 dword _pascal QoiImport(ImportFrame *frame, VMChain *chain)
 {

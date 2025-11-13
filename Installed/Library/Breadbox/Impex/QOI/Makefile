@@ -4,13 +4,13 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = qoi
-API             = apiManager.asm qoi.def
-XLAT            = expqoi.goc impqoi.goc
-UI_TO_RDFS      = manager.ui
-OBJS            = expqoi.obj impqoi.obj
+API             = apiManager.asm qoi.def ui.goc
+XLAT            = expqoi.c impqoi.c
+UI_TO_RDFS      =
+OBJS            = ui.obj expqoi.obj impqoi.obj
 COMMON          =
 MODULES         = API
-CMODULES        = Xlat
+CMODULES        = API Xlat
 SRCS            = $(API) $(XLAT) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf

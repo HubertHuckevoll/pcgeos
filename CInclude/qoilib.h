@@ -2,10 +2,11 @@
   qoiimp.goh — Public header for the QOI bitmap importer / exporter
   (true-color)
  *======================================================================*/
-#ifndef __QOILIB_GOH__
-#define __QOILIB_GOH__
+#ifndef __QOILIB_H__
+#define __QOILIB_H__
 
 #include <geos.h>
+#include <heap.h>
 #include <file.h>
 #include <vm.h>
 #include <graphics.h>
@@ -122,4 +123,4 @@ QoiImportTestBitmapFHandle(FileHandle srcfile);
 extern QoiError _pascal _export
 QoiExportBitmapFHandle(VMFileHandle srcfile, VMBlockHandle bmpblock, FileHandle destfile);
 
-#endif /* __QOILIB_GOH__ */
+#endif /* __QOILIB_H__ */
