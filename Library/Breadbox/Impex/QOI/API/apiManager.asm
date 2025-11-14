@@ -8,17 +8,15 @@ UseLib Objects/gValueC.def
 
 DefLib API/qoi.def
 
-; UI
-global _ImportGroup: nptr
-global _ExportGroup: nptr
-
-
-
 ;================================================================================
 ; global functions implemented in C
 ; segment must be "public 'CODE'" to ensure that it combines
 ; properly with the C segment of the same name.
 ; imp_TEXT = "imp.goc" - ".goc + "_TEXT"
+;================================================================================
+
+global _ImportGroup: nptr
+global _ExportGroup: nptr
 
 impqoi_TEXT   segment public 'CODE'
     extrn  QOIIMPORT: far
@@ -36,6 +34,8 @@ ui_TEXT   ends
 
 	SetGeosConvention               ; set calling convention
 
+;================================================================================
+; Init resource
 ;================================================================================
 
 INIT    segment resource
@@ -56,11 +56,35 @@ LibraryEntry endp
 
 INIT    ends
 
+
+;================================================================================
+; InfoResource
+;================================================================================
+InfoResource    segment lmem LMEM_TYPE_GENERAL, mask LMF_IN_RESOURCE
+
+		dw	fmt_1_name,fmt_1_mask
+		D_OPTR	_ImportGroup
+		D_OPTR  _ExportGroup
+		dw	0C000h          ; 8000h = only support import, 0C000h = import and export
+		dw	0
+
+fmt_1_name      chunk   char
+		char	"QOI", 0
+fmt_1_name      endc
+
+fmt_1_mask      chunk   char
+		char    "*.qoi", 0
+fmt_1_mask      endc
+
+InfoResource    ends
+
+
+;================================================================================
+; ASM Code resource
 ;================================================================================
 
 ASM     segment resource
 	assume cs:ASM
-
 
 ;--------------------------------------------------------------------------------
 
@@ -132,6 +156,44 @@ TransGetFormat endp
 
 ;--------------------------------------------------------------------------------
 
+TransGetImportOptions proc far uses ax,bx,cx,bp,si,di,ds
+        .enter
+
+        push    dx                              ; dialog handle
+        call    QOIGATHERIMPORTOPTIONS
+        mov     dx,ax
+
+        .leave
+        ret
+TransGetImportOptions endp
+
+;--------------------------------------------------------------------------------
+
+TransGetExportOptions proc far ; uses ax,bx,cx,bp,si,di,ds
+;        .enter
+;
+;        push    dx                              ; dialog handle
+;        call    QOIGATHEREXPORTOPTIONS
+;        mov     dx,ax
+;
+;        .leave
+        ret
+TransGetExportOptions endp
+
+;--------------------------------------------------------------------------------
+
+TransInitImportUI proc far
+		ret
+TransInitImportUI endp
+
+;--------------------------------------------------------------------------------
+
+TransInitExportUI proc far
+		ret
+TransInitExportUI endp
+
+;--------------------------------------------------------------------------------
+
 TransGetImportUI proc far
 		mov     bp,00004h                      ; 0006 BD0800
 		push    di                             ; 0009 57
@@ -176,64 +238,9 @@ TransGetExportUI proc far
 		ret
 TransGetExportUI endp
 
-;--------------------------------------------------------------------------------
-
-TransGetImportOptions proc far uses ax,bx,cx,bp,si,di,ds
-        .enter
-
-        push    dx                              ; dialog handle
-        call    QOIGATHERIMPORTOPTIONS
-        mov     dx,ax
-
-        .leave
-        ret
-TransGetImportOptions endp
-
-;--------------------------------------------------------------------------------
-
-TransGetExportOptions proc far ; uses ax,bx,cx,bp,si,di,ds
-;        .enter
-;
-;        push    dx                              ; dialog handle
-;        call    QOIGATHEREXPORTOPTIONS
-;        mov     dx,ax
-;
-;        .leave
-        ret
-TransGetExportOptions endp
-
-;--------------------------------------------------------------------------------
-
-TransInitImportUI proc far
-		ret
-TransInitImportUI endp
-
-;--------------------------------------------------------------------------------
-
-TransInitExportUI proc far
-		ret
-TransInitExportUI endp
 
 ASM     ends
 
 ;================================================================================
 
-InfoResource    segment lmem LMEM_TYPE_GENERAL, mask LMF_IN_RESOURCE
-
-		dw	fmt_1_name,fmt_1_mask
-		D_OPTR	_ImportGroup
-		D_OPTR  _ExportGroup
-		dw	0C000h          ; 8000h = only support import, 0C000h = import and export
-		dw	0
-
-fmt_1_name      chunk   char
-		char	"QOI", 0
-fmt_1_name      endc
-
-fmt_1_mask      chunk   char
-		char    "*.qoi", 0
-fmt_1_mask      endc
-
-InfoResource    ends
-
-;================================================================================
+	SetDefaultConvention	; restore calling convention
