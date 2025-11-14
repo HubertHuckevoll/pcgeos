@@ -61,7 +61,7 @@ dword _pascal QoiExport(ExportFrame *frame)
         frame->EF_transferVMFile,
         VMCHAIN_GET_VM_BLOCK(frame->EF_transferVMChain),
         frame->EF_transferVMFile,
-        desttype,
+        BMF_24BIT, //;desttype,
         &egstat);
 
     if(egstat != EGE_NO_ERROR)

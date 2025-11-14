@@ -56,12 +56,12 @@ ui.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h qoilib.h
 expqoi.obj \
-expqoi.eobj: qoilib.h geos.h file.h vm.h lmem.h graphics.h fontID.h \
-                font.h color.h xlatLib.h geode.h geoworks.h extgraph.h \
-                gstring.h
+expqoi.eobj: qoilib.h geos.h heap.h file.h vm.h lmem.h graphics.h \
+                fontID.h font.h color.h xlatLib.h geode.h geoworks.h \
+                extgraph.h gstring.h
 impqoi.obj \
-impqoi.eobj: qoilib.h geos.h file.h vm.h lmem.h graphics.h fontID.h \
-                font.h color.h heap.h xlatLib.h geode.h geoworks.h \
+impqoi.eobj: qoilib.h geos.h heap.h file.h vm.h lmem.h graphics.h \
+                fontID.h font.h color.h xlatLib.h geode.h geoworks.h \
                 extgraph.h gstring.h
 
 qoiEC.geo qoi.geo : geos.ldf ui.ldf impex.ldf extgraph.ldf color.ldf qoilib.ldf 
