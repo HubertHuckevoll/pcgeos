@@ -35,7 +35,7 @@ const unsigned char PNG_SIGNATURE[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A
 // mximum scanline size
 // 8192 = 8KB limit, equals 2048px width in RGBA and 1024px in 16-bit RGBA.
 // 6144 = 6KB limit, equals 1536px width in RGBA and 768px in 16-bit RGBA.
-#define PNG_MAX_SCANLINE_SIZE 6144
+#define PNG_MAX_SCANLINE_SIZE 8192
 
 // Structure of IHDR - Chunk
 typedef struct {

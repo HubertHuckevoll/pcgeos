@@ -153,6 +153,7 @@ void _pascal _export PngGetImportOptionsFromUI(Handle dialogHan, pngAlphaTransfo
     GI_states = @default & ~GS_USABLE;
     GII_visibility = GIV_DIALOG;
     GII_attrs = GIA_MODAL;
+    GII_type = GIT_PROPERTIES;
     GI_comp = @PngAlphaMethodGroup, @PngAlphaBlendBox, @PngAlphaMaskBox, @PngImportReplyBar;
 
     HINT_ORIENT_CHILDREN_VERTICALLY;
