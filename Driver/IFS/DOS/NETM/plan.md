@@ -1,19 +1,5 @@
 Proposed Task Breakdown
 
-    Introduce the NetMount driver skeleton
-
-        Copy Driver/IFS/DOS/MSNet to Driver/IFS/DOS/netm and rename every MSNet* symbol, structure, and resource to a NetM*/NetMount* prefix so the new module is isolated from the legacy MS-Net driver while still exporting the same entry tables and helper layout.
-
-Author NetMount-specific .gp, .rev, constants, variables, and string tables that mirror the MSNet originals but with updated names/long strings ready for later functional work.
-
-    Leave build-system updates for a later task so subsequent functional branches can rebase cleanly; only new files are touched in this step.
-
-Detect NetMount and register with DOS redirectors
-
-    In netmInitExit.asm, replace the MSNet machine-name probe with code that scans INT 2F multiplex IDs (AH=C0h..FFh) for the JA/RO/NM signature, verifies the redirector API via INT 2F AX=1100h, and captures the primary DOS FSD’s strategy vector just as MSNet does today.
-
-    Ensure the init routine still performs the existing PSP capture, interrupt hooks, and primary FSD registration, but under the new NetMount prefixes established in Task 1 so later tasks won’t re-touch these blocks.
-
 Enumerate NetMount drives with the DOS redirector API
 
     Rewrite the NetMInitLocateDrives flow to iterate the DOS redirector list via INT 2F/AX=1106h (and related subfunctions) instead of MSDOS_GET_REDIRECTED_DEVICE, capturing each NetMount disk’s drive letter and canonical remote path before invoking FSDInitDrive with the correct fixed/network flags.
