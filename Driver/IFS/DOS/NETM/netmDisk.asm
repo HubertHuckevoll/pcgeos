@@ -152,8 +152,8 @@ REVISION HISTORY:
 NetmDiskSave	proc	far
 spaceAvail	local	word		push	cx
 privData	local	fptr		push	es, dx
-devName		local	NetmDeviceName
-targPath	local	NetmPath
+devName     	local   MSNetDeviceName
+targPath    	local   MSNetPath
 driveLetter	local	char
 		uses	ds, si, bx, dx, ax, es
 		.enter
@@ -280,8 +280,9 @@ savedData	local	fptr.FSSavedDisk push ds, si
 fsir		local	sptr		push es
 dse		local	word		push bx	; existing DSE for the saved
 						;  disk, if any
-devName		local	NetmDeviceName
-targPath	local	NetmPath
+devName     	local   MSNetDeviceName
+targPath    	local   MSNetPath
+
 		uses	cx, dx, si, di, ds, es
 		.enter
 		segmov	ds, ss, ax

@@ -177,9 +177,9 @@ REVISION HISTORY:
 	ardeb	3/29/92		Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-NetmInitLocateDrives proc	near
-devName		local	NetmDeviceName
-targPath	local	NetmPath
+NetmInitLocateDrives proc    near
+    devName     local   MSNetDeviceName
+    targPath    local   MSNetPath
 		uses	ds
 		.enter
 		mov	dx, ds:[fsdOffset]
