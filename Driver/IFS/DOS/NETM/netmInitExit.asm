@@ -58,17 +58,39 @@ REVISION HISTORY:
 NetmInit	proc	far
 		.enter
 	;
-	; Get the machine name, to ensure a compatible network is actually
-	; running.
+	; NetMount advertises itself via the DOS redirector multiplex
+	; interrupt.  Scan the IDs (C0h-FFh) until the JA/RO/NM signature is
+	; returned.  If we can't find it, NetMount isn't active.
 	;
-		sub	sp, 16
-		mov	dx, sp
-		segmov	ds, ss
-		mov	ax, MSDOS_GET_MACHINE_NAME
-		int	21h
-		mov	bx, sp
-		lea	sp, [bx+16]
-		jc	fail
+		mov	ah, 0C0h
+netMountScan:
+		push	ax
+		clr	al
+		int	2Fh
+		cmp	al, 0FFh
+		jne	netMountNext
+		cmp	bx, 'JA'
+		jne	netMountNext
+		cmp	cx, 'RO'
+		jne	netMountNext
+		cmp	dx, 'NM'
+		jne	netMountNext
+		pop	ax
+	;
+	; Verify the redirector API by making sure INT 2Fh, AX=1100h still
+	; succeeds (AL=0 on success.)
+	;
+		mov	ax, 1100h
+		int	2Fh
+		or	al, al
+		jnz	fail
+		jmp	short netMountFound
+netMountNext:
+		pop	ax
+		inc	ah
+		jnz	netMountScan
+		jmp	fail
+netMountFound:
 	;
 	; See if the primary FSD has been loaded yet and ensure its aux protocol
 	; number is compatible.
@@ -428,6 +450,12 @@ NetmExit	proc	far
 		mov	ax, CRITICAL_VECTOR
 		call	SysResetInterrupt
 done:
+		clc
+		.leave
+		ret
+NetmExit	endp
+
+Resident	ends
 		clc
 		.leave
 		ret
