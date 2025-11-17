@@ -42,6 +42,11 @@ driveTable	fptr.CurrentDirectory
 
 maxSector	word	0	; largest sector size for any managed drive
 
+ifdef  NETMOUNT_SUPPORT
+netMountMuxID	byte	0
+netMountDriveMap	fptr	<0, 0>
+endif
+
 udata	ends
 
 idata	segment

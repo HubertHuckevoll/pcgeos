@@ -129,6 +129,10 @@ endif
 		mov	ax, MSDOS_STD_SECTOR_SIZE
 		call	MSInitSetMaxSectorSize
 
+ifdef	NETMOUNT_SUPPORT
+		call	MSNetMountInit
+endif
+
 		call	MSLocateDrives
 
 if	SEND_DOCUMENT_FCN_ONLY
@@ -384,8 +388,18 @@ cdLoop:
 		jnz	next
 
 		test	ax, mask CDS_NETWORK
+ifdef	NETMOUNT_SUPPORT
+		jz	checkLocal
+		push	bx
+		call	MSNetMountDriveIsManaged
+		pop	bx
+		jc	checkLocal
+		jmp	short	next		; handled by msnet driver
+else
 		jnz	next		; handled by msnet driver
+endif
 
+checkLocal:
 		test	ax, mask CDS_LOCAL
 		jz	next
 
@@ -414,6 +428,114 @@ dcbLoop:
 		jne	dcbLoop
 		jmp	done
 MSLocateDrives endp
+
+ifdef   NETMOUNT_SUPPORT
+
+NETMOUNT_MIN_MUX_ID             equ     0C0h
+NETMOUNT_MAX_MUX_ID             equ     0FFh
+NETMOUNT_SIGNATURE_FUNCTION     equ     0FFh
+NETMOUNT_SHARED_DATA_FUNCTION   equ     1
+NETMOUNT_SHARED_DATA_DRIVE_MAP  equ     1
+
+;
+;----------------------------------------------------------------------
+;
+MSNetMountInit  proc    near
+                uses    ax, bx, cx, dx, si, di
+                .enter
+                push    es
+
+                clr     ax
+                mov     ds:[netMountMuxID], al
+                mov     ds:[netMountDriveMap].offset, ax
+                mov     ds:[netMountDriveMap].segment, ax
+
+                mov     dl, NETMOUNT_MIN_MUX_ID
+nmScanLoop:
+                mov     bh, 0
+                mov     bl, dl
+                mov     si, bx
+                mov     ah, dl
+                mov     al, NETMOUNT_SIGNATURE_FUNCTION
+                int     2fh
+                cmp     al, NETMOUNT_SIGNATURE_FUNCTION
+                jne     nmNextID
+                cmp     bx, 'JA'
+                jne     nmNextID
+                cmp     cx, 'RO'
+                jne     nmNextID
+                cmp     dx, 'NM'
+                jne     nmNextID
+
+                mov     ax, si
+                mov     ds:[netMountMuxID], al
+                mov     ah, al
+                mov     al, NETMOUNT_SHARED_DATA_FUNCTION
+                mov     bx, NETMOUNT_SHARED_DATA_DRIVE_MAP
+                int     2fh
+                mov     ds:[netMountDriveMap].offset, di
+                mov     ds:[netMountDriveMap].segment, es
+                mov     ax, es
+                or      ax, di
+                jnz     nmInitDone
+                clr     al
+                mov     ds:[netMountMuxID], al
+                jmp     short   nmInitDone
+
+nmNextID:
+                cmp     dl, NETMOUNT_MAX_MUX_ID
+                jae     nmInitDone
+                inc     dl
+                jmp     short   nmScanLoop
+
+nmInitDone:
+                pop     es
+                .leave
+                ret
+MSNetMountInit  endp
+
+;
+;----------------------------------------------------------------------
+;
+MSNetMountDriveIsManaged proc    near
+                uses    ax, cx, dx, si, di
+                .enter
+                mov     al, ds:[netMountMuxID]
+                or      al, al
+                jz      nmDriveNoMap
+
+                push    es
+                les     di, ds:[netMountDriveMap]
+                mov     ax, es
+                or      ax, di
+                jz      nmReleaseES
+
+                mov     ax, bx
+                mov     cl, 3
+                shr     ax, cl
+                add     di, ax
+                mov     dl, es:[di]
+                mov     cl, bl
+                and     cl, 7
+                mov     al, 1
+                shl     al, cl
+                test    dl, al
+                jz      nmReleaseES
+
+                pop     es
+                stc
+                jmp     short   nmDriveDone
+
+nmReleaseES:
+                pop     es
+nmDriveNoMap:
+                clc
+nmDriveDone:
+                .leave
+                ret
+MSNetMountDriveIsManaged endp
+
+endif   ; NETMOUNT_SUPPORT
 
 
 
@@ -1781,6 +1903,22 @@ MSExit		proc	far
 	;
 	; Unhook wait/post.
 	; 
+		call	DOSWaitPostExit
+	;
+	; Release the critical-error vector.
+	; 
+		call	DOSUnhookCriticalError
+	;
+	; Truncate the SFT to its original size (all files should have been
+	; closed by now)
+	; 
+		les	si, ds:[sftInitEnd]
+		mov	es:[si].SFTBH_next.offset, NIL
+		.leave
+		ret
+MSExit		endp
+
+Resident	ends
 		call	DOSWaitPostExit
 	;
 	; Release the critical-error vector.
