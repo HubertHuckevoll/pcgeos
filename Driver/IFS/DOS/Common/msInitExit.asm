@@ -364,7 +364,8 @@ REVISION HISTORY:
 	ardeb	10/30/91	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-MSLocateDrives proc	near
+		jc	createDrive
+createDrive:
 		.enter
 		call	MSFetchCWDTable
 		jc	useDCBs
