@@ -810,8 +810,7 @@ IdlePowerVerifyPassword	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		IdlePowerRegisterPowerOnOffNotify
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+		clc
 SYNOPSIS:	Do nothing.
 
 CALLED BY:	IdlePowerStrategy (DR_POWER_ON_OFF_NOTIFY)
@@ -871,8 +870,7 @@ IdlePowerDisablePassword	proc	near
 		stc
 
 		.leave
-		ret
-IdlePowerDisablePassword	endp
+		clc
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
