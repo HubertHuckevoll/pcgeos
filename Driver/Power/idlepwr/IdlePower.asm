@@ -809,11 +809,11 @@ IdlePowerVerifyPassword	endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		IdlePowerRegisterPowerOnOffNotify
+		; Acknowledge request without taking action
 		clc
-SYNOPSIS:	Do nothing.
-
-CALLED BY:	IdlePowerStrategy (DR_POWER_ON_OFF_NOTIFY)
+		; Nothing to disable for this driver
+		clc
+		ret
 
 PASS:	dx:cx = fptr to call back routine
 
@@ -901,9 +901,10 @@ IdlePowerRTCAck	proc	near
 
 		.leave
 		ret
-IdlePowerRTCAck	endp
-
-
+		; Nothing to unregister for this driver
+		clc
+		; EscCommands are accepted but ignored
+		clc
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		IdlePowerOnOffUnregister
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
