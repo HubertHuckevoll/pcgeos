@@ -72,7 +72,34 @@ Inspect Appl/Test/WebServ/webserv.asm and Library/DHCP/dhcpMain.asm for socket c
 
     This data is opaque to spooler: our driver will interpret it later.
 
-Conclusion: No need to change spooler to “connect” a TCP/IP driver. Just implement the custom stream driver and point to it in the printer’s config. Change the PScript driver in Driver / Printer to accept custom stream drivers.
+Conclusion: No need to change spooler to “connect” a TCP/IP driver. Just implement the custom stream driver and point to it in the printer’s config.
+
+However, each printer driver’s PrinterInfo includes a PrinterConnections bitfield that advertises which connection types it supports (serial, parallel, file, custom, etc.). The driver info resources set these flags (e.g., many drivers set RC_RS232C and/or CC_CENTRONICS, while the host/PS/fax entries set CC_CUSTOM). That’s the data the preferences UI uses to decide which port choices are valid for a given printer.
+(Examples in Driver/Printer/*/*Info.asm, and the PrinterConnections definition in CInclude/Internal/printDr.h.)
+
+The spool UI logic parses the printer’s port INI string and only recognizes four prefixes: "LP" (parallel), "CO" (serial), "CU" (custom), and "UN" (unknown). The UI only exposes LPT/COM/Unknown choices; “Custom” isn’t surfaced as a selectable UI option even though the backend supports it.
+This is visible in Library/Spool/UI/uiPrintControl.asm:
+    portTable maps "LP"→PPT_PARALLEL, "CO"→PPT_SERIAL, "CU"→PPT_CUSTOM, "UN"→PPT_NOTHING.
+    PrinterGetPortInfo reads the port key from the printer’s INI category and maps it via that table.
+    For PPT_CUSTOM, it calls PrinterGetCustomPortData to load customPortData (also from the printer’s INI category).
+
+So CUSTOM is supported, but typically set by installation logic or manual INI edits, not via the port dropdown UI.
+
+So we need to Change the PScript driver in Driver / Printer to hold an entry that advertises CC_CUSTOM in its driver’s PrinterInfo, so we can later set printer’s INI entry to:
+
+```
+[<printer category>]
+port = CU
+portDriver = rawtcp.geo
+```
+
+This way the spooler will treat it as a custom port and load our stream driver — even though the Preferences UI doesn’t provide a “Custom” option in the port list.
+
+Relevant code pointers
+    Port string → port type mapping: Library/Spool/UI/uiPrintControl.asm (portTable / PrinterGetPortInfo)
+    Custom port INI data: Library/Spool/UI/uiPrintControl.asm (PrinterGetCustomPortData, key "customPortData")
+    Driver connection flags: CInclude/Internal/printDr.h (PrinterConnections)
+    Examples of CC_CUSTOM: Driver/Printer/PScript/hostPrinterInfo.asm, Driver/Printer/Fax/*Info.asm
 
 3. Build a new TCP/IP stream driver (core work)
 
