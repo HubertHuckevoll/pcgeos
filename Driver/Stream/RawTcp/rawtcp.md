@@ -56,6 +56,61 @@ Relevant code pointers
     Driver connection flags: CInclude/Internal/printDr.h (PrinterConnections)
     Examples of CC_CUSTOM: Driver/Printer/PScript/hostPrinterInfo.asm, Driver/Printer/Fax/*Info.asm
 
+
+
+
+
+
+
+
+
+
+
+PrinterConnections record — what it is and how it relates to ports
+
+PrinterConnections is a bitfield in the printer’s info resource that advertises which connection types a specific printer driver supports. It’s defined in CInclude/Internal/printDr.h as a ByteFlags record, with one bit for each connection family:
+
+    IEEE488Connection
+
+    CustomConnection
+
+    SCSIConnection
+
+    RS232CConnection
+
+    CentronicsConnection
+
+    FileConnection
+
+    AppletalkConnection
+
+Each driver’s DriverInfo.asm (or per-device *Info.asm) fills out the PrinterInfo structure with these flags. That’s why some printers allow only LPT, others allow COM+LPT, some allow file, and a few allow CC_CUSTOM (e.g., fax, host/PS).
+
+So this record is the printer driver’s declaration of supported connection types, and the UI uses that to decide which port choices are valid.
+
+Definition reference: CInclude/Internal/printDr.h (the PrinterConnections record and its enum fields).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### Build a new TCP/IP stream driver (core work)
 
 #### Create rawtcp.gp in Driver/Stream/RawTcp/
