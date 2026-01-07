@@ -1,80 +1,35 @@
-These are the instructions to create RawTcp - a raw TCP (9100) stream driver for the JetDirect protocol (sending PS data created by a printer driver to a TCP/IP host/port) via PPT_CUSTOM.
+These are the instructions to create RawTcp - a raw TCP (9100) stream driver for the "JetDirect protocol" (sending PS data created by a printer driver to a TCP/IP host/port) that can be used as a PPT_CUSTOM port.
 
-0. Ground rules & constraints (must follow)
-
-    No spooler core change required for the first working version.
-
-    Use existing stream driver pattern (Netstr as a template).
-
-    Use Library/Socket API (not socket drivers directly).
-
-    INI‑only configuration is sufficient initially (customPortData or explicit keys).
-
-    Follow GEOS style:
-        This is a driver and implemented in ASM / ESP
-
-        ASM: tabs aligned to local code.
-
-        Small buffers (≤8 KB preferred).
-
-        No globals in libraries; use per‑instance context.
+### Ground rules & constraints (must follow)
+- No spooler core change required for the first working version.
+- Use existing stream driver pattern (Netstr as a template).
+- Use Library/Socket API (not socket drivers directly).
+- INI‑only configuration is sufficient initially.
+- Follow GEOS style:
+    - This is a driver and implemented in ASM / ESP
+    - formatting: use tabs aligned to local code
+    - Small buffers (≤8 KB preferred), if more is needed, look into hugelmem.asm / hugelmem.def
+    - No globals in libraries, create a per‑open context struct in dgroup or segment:
+        - socket handle
+        - resolved address (if cached)
+        - connection state flag
+        - pointer/offset to host string, port
+        - optional error state
 
 
 Document the exact error codes to return for parse errors (missing host/port, invalid port), network connect failures, and send/close errors. Reference existing conventions in `Driver/Stream/Netstr/netstrMain.asm` or `Driver/Stream/Serial/serialMain.asm`, and align with spooler errors like `PERROR_NETWORK_ERR` where appropriate.
 
+### Architecture overview (what you must deliver)
 
+- .gp for stream driver in Driver/Stream/RawTcp/
+- RawTcpStrategy implementing all required entry points
+- STREAM_ESC_LOAD_OPTIONS parsing config
+- TCP socket open/write/close using Library/Socket APIs
+- Proper error returns (matching stream driver conventions)
 
+### Spooler integration
 
-1. Architecture overview (exact data flow)
-
-Printer setup (INI)
-    ↓
-Spooler UI (Custom port selected)
-    - Loads customPortData into CPP_info
-    ↓
-Spooler process (processCustom.asm)
-    - Loads custom stream driver geode
-    - Calls STREAM_ESC_LOAD_OPTIONS (passes CPP_info)
-    - Opens stream
-    ↓
-Our TCP/IP stream driver
-    - Parses config
-    - Opens TCP socket
-    - Sends data on DR_STREAM_WRITE
-    - Closes socket on DR_STREAM_CLOSE
-
-Files involved:
-
-    Include/Internal/spoolInt.def → defines PPT_CUSTOM + 128‑byte CPP_info
-
-    Library/Spool/UI/uiPrintControl.asm → reads customPortData
-
-    Library/Spool/Process/processCustom.asm → loads custom stream driver + calls escape
-
-    Driver/Stream/Netstr/netstrMain.asm → good template
-
-    Library/Socket/* → socket API
-
-Inspect Appl/Test/WebServ/webserv.asm and Library/DHCP/dhcpMain.asm for socket call order and register usage. Choose the canonical call flow and document it in rawtcp driver comments.
-
-2. Spooler integration: exactly what is already provided
--   Port type wiring
-
-    PPT_CUSTOM is already defined (Include/Internal/spoolInt.def).
-
-    processCustom.asm loads the custom driver geode and calls STREAM_ESC_LOAD_OPTIONS, then DR_STREAM_OPEN.
-
--   Configuration input
-
-    uiPrintControl.asm → PrinterGetCustomPortData
-
-    Reads customPortData key from printer’s INI category and copies to CPP_info (128 bytes).
-
-    This data is opaque to spooler: our driver will interpret it later.
-
-Conclusion: No need to change spooler to “connect” a TCP/IP driver. Just implement the custom stream driver and point to it in the printer’s config.
-
-However, each printer driver’s PrinterInfo includes a PrinterConnections bitfield that advertises which connection types it supports (serial, parallel, file, custom, etc.). The driver info resources set these flags (e.g., many drivers set RC_RS232C and/or CC_CENTRONICS, while the host/PS/fax entries set CC_CUSTOM). That’s the data the preferences UI uses to decide which port choices are valid for a given printer.
+Each printer driver’s PrinterInfo includes a PrinterConnections bitfield that advertises which connection types it supports (serial, parallel, file, custom, etc.). The driver info resources set these flags (e.g., many drivers set RC_RS232C and/or CC_CENTRONICS, while the host/PS/fax entries set CC_CUSTOM). That’s the data the preferences UI uses to decide which port choices are valid for a given printer.
 (Examples in Driver/Printer/*/*Info.asm, and the PrinterConnections definition in CInclude/Internal/printDr.h.)
 
 The spool UI logic parses the printer’s port INI string and only recognizes four prefixes: "LP" (parallel), "CO" (serial), "CU" (custom), and "UN" (unknown). The UI only exposes LPT/COM/Unknown choices; “Custom” isn’t surfaced as a selectable UI option even though the backend supports it.
@@ -101,65 +56,34 @@ Relevant code pointers
     Driver connection flags: CInclude/Internal/printDr.h (PrinterConnections)
     Examples of CC_CUSTOM: Driver/Printer/PScript/hostPrinterInfo.asm, Driver/Printer/Fax/*Info.asm
 
-3. Build a new TCP/IP stream driver (core work)
+### Build a new TCP/IP stream driver (core work)
 
-3.1 Create rawtcp.gp in Driver/Stream/RawTcp/
+#### Create rawtcp.gp in Driver/Stream/RawTcp/
 
 For the .gp file clone Netstr’s structure:
-
-    Use Driver/Stream/Netstr/netstr.gp as baseline.
-
-    Ensure DriverType = STREAM.
-
-    Export one strategy entrypoint, e.g. RawTcpStrategy.
+- Use Driver/Stream/Netstr/netstr.gp as baseline.
+- Ensure DriverType = STREAM.
+- Export one strategy entrypoint, e.g. RawTcpStrategy.
 
 Key requirements:
+- The geode name must be unique.
+- The driver must export DRIVER_TYPE_STREAM.
 
-    The geode name must be unique.
+Define the exact library dependencies to add in `Driver/Stream/RawTcp/rawtcp.gp` (e.g., `library socket`, any resolver/net library if needed) and which `.def` files to include in the driver’s `.def` or `.asm`. Point to examples like `Driver/Stream/Netstr/netstr.def` and socket usage in `Appl/Test/WebServ/webserv.asm` for consistency.
 
-    The driver must export DRIVER_TYPE_STREAM.
 
-3.2 Main ASM file structure
+#### Main ASM file structure
 
 Base it on Driver/Stream/Netstr/netstrMain.asm.
 Mandatory entry points to implement:
 
-    DR_STREAM_OPEN
+- DR_STREAM_OPEN
+- DR_STREAM_WRITE
+- DR_STREAM_CLOSE
+- DR_STREAM_SET_NOTIFY (even if it’s a stub)
+- STREAM_ESC_LOAD_OPTIONS
 
-    DR_STREAM_WRITE
-
-    DR_STREAM_CLOSE
-
-    DR_STREAM_SET_NOTIFY (even if it’s a stub)
-
-    STREAM_ESC_LOAD_OPTIONS
-
-Define the exact library dependencies to add in `Driver/Stream/RawTcp/rawtcp.gp` (e.g., `library socket`, any resolver/net library if needed) and which `.def` files to include in the driver’s `.def` or `.asm`. Point to examples like `Driver/Stream/Netstr/netstr.def` and socket usage in `Appl/Test/WebServ/webserv.asm` for consistency.
-
-Context storage
-
-Create a per‑open context struct in dgroup or segment:
-
-    socket handle
-
-    resolved address (if cached)
-
-    connection state flag
-
-    pointer/offset to host string, port
-
-    optional error state
-
-Do not use large buffers; keep I/O in small chunks (≤ 8 KB).
-
-When running into memory problems, think about using hugelmem.asm in NetUtils.
-
-
-
-
-
-
-3.3 STREAM_ESC_LOAD_OPTIONS behavior
+#### STREAM_ESC_LOAD_OPTIONS behavior
 
     The spooler passes the printer INI category (JP_printerName) to STREAM_ESC_LOAD_OPTIONS. This is already hard‑wired in Library/Spool/Process/processCustom.asm.
 
@@ -396,11 +320,9 @@ From best references (WebServ + DHCP):
 
 Follow error handling patterns from webserv.asm or dhcpMain.asm.
 
-7. What you must deliver (exact checklist)
 
-- .gp for stream driver in Driver/Stream/RawTcp/
-- RawTcpStrategy implementing all required entry points
-- STREAM_ESC_LOAD_OPTIONS parsing config
-- TCP socket open/write/close using Library/Socket APIs
-- Proper error returns (matching stream driver conventions)
-- customPortData parsing
+
+    Driver/Stream/Netstr/netstrMain.asm => good template.
+    Library/Socket/* => socket API.
+Inspect Appl/Test/WebServ/webserv.asm and Library/DHCP/dhcpMain.asm for socket call order and register usage. Choose the canonical call flow and document it in rawtcp driver comments.
+
