@@ -1,11 +1,6 @@
-“RAW TCP (9100)”
+These are the instructions to create RawTcp - a raw TCP (9100) stream driver for the JetDirect protocol (sending PS data created by a printer driver to a TCP/IP host/port) via PPT_CUSTOM.
 
-Below is a much more detailed, non‑redundant, implementation‑grade guide for an AI agent to build a TCP/IP stream driver, connect it to the spooler, and (optionally) add UI. Everything is based on static inspection and prior analysis; no code was executed.
-TCP/IP Stream Driver + Spooler + UI: Exact Implementation Guide
-
-Goal: A custom stream driver that sends printer data to a TCP/IP host/port, connects via PPT_CUSTOM, and optionally adds a TCP/IP options dialog in the printer UI.
-
-0) Ground rules & constraints (must follow)
+0. Ground rules & constraints (must follow)
 
     No spooler core change required for the first working version.
 
@@ -16,18 +11,21 @@ Goal: A custom stream driver that sends printer data to a TCP/IP host/port, conn
     INI‑only configuration is sufficient initially (customPortData or explicit keys).
 
     Follow GEOS style:
+        This is a driver and implemented in ASM / ESP
 
         ASM: tabs aligned to local code.
-
-        GOC/C: 4 spaces, C89, variables at top.
-
-        _pascal by default.
 
         Small buffers (≤8 KB preferred).
 
         No globals in libraries; use per‑instance context.
 
-1) Architecture overview (exact data flow)
+
+Document the exact error codes to return for parse errors (missing host/port, invalid port), network connect failures, and send/close errors. Reference existing conventions in `Driver/Stream/Netstr/netstrMain.asm` or `Driver/Stream/Serial/serialMain.asm`, and align with spooler errors like `PERROR_NETWORK_ERR` where appropriate.
+
+
+
+
+1. Architecture overview (exact data flow)
 
 Printer setup (INI)
     ↓
@@ -39,7 +37,7 @@ Spooler process (processCustom.asm)
     - Calls STREAM_ESC_LOAD_OPTIONS (passes CPP_info)
     - Opens stream
     ↓
-Your TCP/IP stream driver
+Our TCP/IP stream driver
     - Parses config
     - Opens TCP socket
     - Sends data on DR_STREAM_WRITE
@@ -57,7 +55,9 @@ Files involved:
 
     Library/Socket/* → socket API
 
-2) Spooler integration: exactly what is already provided
+Inspect Appl/Test/WebServ/webserv.asm and Library/DHCP/dhcpMain.asm for socket call order and register usage. Choose the canonical call flow and document it in rawtcp driver comments.
+
+2. Spooler integration: exactly what is already provided
 -   Port type wiring
 
     PPT_CUSTOM is already defined (Include/Internal/spoolInt.def).
@@ -70,23 +70,21 @@ Files involved:
 
     Reads customPortData key from printer’s INI category and copies to CPP_info (128 bytes).
 
-    This data is opaque to spooler: your driver interprets it.
+    This data is opaque to spooler: our driver will interpret it later.
 
-Conclusion: You don’t need to change spooler to “connect” a TCP/IP driver. Just implement the custom stream driver and point to it in the printer’s config.
+Conclusion: No need to change spooler to “connect” a TCP/IP driver. Just implement the custom stream driver and point to it in the printer’s config. Change the PScript driver in Driver / Printer to accept custom stream drivers.
 
-3) Build a new TCP/IP stream driver (core work)
+3. Build a new TCP/IP stream driver (core work)
 
-3.1 Create driver directory + .gp
+3.1 Create rawtcp.gp in Driver/Stream/RawTcp/
 
-Location: Driver/Stream/TcpPort/
-
-Create new .gp (clone Netstr’s structure):
+For the .gp file clone Netstr’s structure:
 
     Use Driver/Stream/Netstr/netstr.gp as baseline.
 
     Ensure DriverType = STREAM.
 
-    Export one strategy entrypoint, e.g. TcpPortStrategy.
+    Export one strategy entrypoint, e.g. RawTcpStrategy.
 
 Key requirements:
 
@@ -109,6 +107,8 @@ Mandatory entry points to implement:
 
     STREAM_ESC_LOAD_OPTIONS
 
+Define the exact library dependencies to add in `Driver/Stream/RawTcp/rawtcp.gp` (e.g., `library socket`, any resolver/net library if needed) and which `.def` files to include in the driver’s `.def` or `.asm`. Point to examples like `Driver/Stream/Netstr/netstr.def` and socket usage in `Appl/Test/WebServ/webserv.asm` for consistency.
+
 Context storage
 
 Create a per‑open context struct in dgroup or segment:
@@ -125,11 +125,58 @@ Create a per‑open context struct in dgroup or segment:
 
 Do not use large buffers; keep I/O in small chunks (≤ 8 KB).
 
+When running into memory problems, think about using hugelmem.asm in NetUtils.
+
+
+
+
+
+
 3.3 STREAM_ESC_LOAD_OPTIONS behavior
+
+    The spooler passes the printer INI category (JP_printerName) to STREAM_ESC_LOAD_OPTIONS. This is already hard‑wired in Library/Spool/Process/processCustom.asm.
+
+    Netstr’s STREAM_ESC_LOAD_OPTIONS (NetstreamLoadOptions) only reads INI keys (e.g., "queue") via InitFileReadString. It does not look at CPP_info at all.
+
+    Implication for RawTcp: When implementing STREAM_ESC_LOAD_OPTIONS, it should read the INI category and parse any INI keys you decide to support (if any). It should not expect the 128‑byte CPP_info buffer there.
+    Citations:
+
+    Spooler call path uses printer name category for STREAM_ESC_LOAD_OPTIONS: Library/Spool/Process/processCustom.asm
+
+    Netstr’s STREAM_ESC_LOAD_OPTIONS reads INI via InitFileReadString: Driver/Stream/Netstr/netstrMain.asm
+
+
+✅ CPP_info is passed to DR_STREAM_OPEN
+
+    After calling STREAM_ESC_LOAD_OPTIONS, the spooler allocates a block, copies CPP_info into it, and passes that to DR_STREAM_OPEN.
+    Implication for RawTcp:
+    If you want the customPortData text (tcpport host=... port=...) to be the driver’s main configuration, then the correct place to parse it is DR_STREAM_OPEN, not STREAM_ESC_LOAD_OPTIONS.
+    Citation:
+
+    Spooler copies CPP_info into a block and passes it to DR_STREAM_OPEN: Library/Spool/Process/processCustom.asm
+
+    Command used: sed -n '40,140p' Library/Spool/Process/processCustom.asm
+
+Practical guidance for RawTcp design
+Option A (match existing behavior exactly)
+
+    STREAM_ESC_LOAD_OPTIONS: read INI keys if you want optional defaults, but do not rely on it for required connection settings.
+
+    DR_STREAM_OPEN: parse CPP_info for tcpport host=... port=... and validate.
+
+This aligns with how the spooler calls drivers today. It also fits the Netstr precedent.
+
+
+
+
+
 
 This is where you parse configuration. The input is the 128‑byte `customPortData` buffer (from `CPP_info`) which is treated as ASCII text. Required format:
 
-* First token must be `tcpport` (case‑insensitive).
+* First token must be `tcpport`
+* Everything may be case‑insensitive, including the rawtcp keyword and key names
+* unknown keys and malformed values should be ignored and replaced with default values
+* escape sequences are not allowed inside quoted values.
 * Remaining tokens are `key=value`, separated by whitespace.
 * Value forms:
 
@@ -137,14 +184,17 @@ This is where you parse configuration. The input is the 128‑byte `customPortDa
   * Bracketed IPv6: `host=[2001:db8::1]`
   * Unquoted: `port=9100`
 
+Defaults for timeout, retries, and keepalive must be given but are not configurable for now via INI, just use CONSTANTS.
+Missing host or port should result in the driver returning an error.
+
 Implement these steps:
 
-1. **Copy and terminate input**
+3.3.1. **Copy and terminate input**
 
    * Copy the 128‑byte buffer into a local small buffer (<= 256 bytes) and ensure it is null‑terminated.
    * Strip trailing garbage (stop at first `0x00`).
 
-2. **Tokenizer**
+3.3.2. **Tokenizer**
 
    * Implement a simple tokenizer that skips ASCII whitespace and returns the next token.
    * A token is either:
@@ -152,11 +202,11 @@ Implement these steps:
      * the first keyword (`tcpport`), or
      * a `key=value` pair, where `value` may include whitespace **only if quoted**.
 
-3. **Parse first token**
+3.3.3. **Parse first token**
 
    * Compare case‑insensitive against `tcpport`. If mismatch, return an error (carry set / error code).
 
-4. **Parse key=value pairs**
+3.3.4. **Parse key=value pairs**
 
    * Split each token at the first `=` into `key` and `value`.
    * Accept known keys: `host`, `port`, `timeout`, `keepalive`, `retries` (expandable list).
@@ -166,25 +216,26 @@ Implement these steps:
      * If it begins with `[` then consume until `]` (IPv6 literal).
      * Otherwise, read until whitespace.
 
-5. **Store results**
+3.3.5. **Store results**
 
    * Store `host` in a small fixed buffer (e.g., 128 bytes) in the per‑open context.
    * Store `port` as a numeric word (validate 1–65535).
    * Store optional numeric values (`timeout`, `keepalive`, `retries`) if present; otherwise use defaults.
 
-6. **Validation**
+3.3.6. **Validation**
 
    * `host` and `port` must be present; otherwise return error.
    * If value parsing fails (missing closing `"` or `]`, or non‑numeric `port`), return error.
 
-7. **Error reporting**
+3.3.7. **Error reporting**
 
-   * Use the same error/return conventions as existing stream drivers in `Driver/Stream/Netstr/netstrMain.asm` and `Driver/Stream/Serial/serialMain.asm` (carry set, error code in AX).
+    * Use the same error/return conventions as existing stream drivers in `Driver/Stream/Netstr/netstrMain.asm` and `Driver/Stream/Serial/serialMain.asm` (carry set, error code in AX).
 
-8. **Document the format**
+    * Specify how RawTcp should handle host/port values that exceed the fixed buffers (e.g., reject with error). Include max lengths, behavior for unterminated quoted/IPv6 values, and what constitutes a parse failure vs. a recoverable ignore. Reference the `CPP_info` size limit and the proposed host buffer size.
 
-   * Update `TechDocs/Markdown/Tools/tini.md` in the printer device section with a full example:
+3.3.8. **Document the format**
 
+Add an extensive comment to the top of the relevant function that explains the format:
      * `customPortData = tcpport host="printer.example.com" port=9100 timeout=30`
      * `customPortData = tcpport host=[2001:db8::1] port=9100`
 
@@ -196,11 +247,9 @@ Reference points for style and patterns:
 
 3.4 DR_STREAM_OPEN
 
-Steps (use socket library APIs; see WebServ/DHCP ASM patterns):
-
     Ensure TCP/IP domain available
 
-        Use SocketOpenDomainMedium if needed (see Library/Resolver/resolver*.asm).
+        Use socket library APIs (`Library/Socket`); see also WebServ, NewsRead and BBxBrow apps for usage patterns.
 
     Create socket
 
@@ -218,7 +267,10 @@ Steps (use socket library APIs; see WebServ/DHCP ASM patterns):
 
         SocketSetIntSocketOption for send/recv buffers (e.g., 8 KB)
 
+Each print job should open/close a socket, no persistent connection. Implement a reconnect and retry pattern on socket failure for a small number of times (5). Document behavior in driver comments.
+
 If any step fails: return error in carry/AX (match style in existing stream drivers).
+
 3.5 DR_STREAM_WRITE
 
     Input data buffer from spooler.
@@ -243,7 +295,8 @@ If any step fails: return error in carry/AX (match style in existing stream driv
 
     See Driver/Stream/Parallel/parallelMain.asm for how they delegate.
 
-4) Wiring to spooler (INI + printer driver)
+4. Wiring to spooler (INI + printer driver)
+
 4.1 Enable Custom Port in printer driver
 
 Printer drivers list connection types in:
@@ -253,53 +306,8 @@ Printer drivers list connection types in:
     Ensure PC_CUSTOM is enabled.
 
 If driver already allows Custom, nothing to do.
-4.2 Add custom port data in INI
 
-In printer’s INI category:
-
-Option A: customPortData
-
-customPortData = <binary blob>
-
-(You’ll need a tool or helper to write raw binary; use in test builds.)
-
-Option B: explicit keys
-
-tcpHost = printer.example.com
-tcpPort = 9100
-
-5) Optional UI: TCP/IP options dialog (advanced)
-
-If you want a UI similar to “Serial Port Options”:
-5.1 Identify current serial options UI
-
-    Library/Spool/UI/uiPrintControl.asm contains logic that enables/disables the serial options button.
-
-    Look for the port‑type handling logic and follow its patterns.
-
-5.2 Add TCP/IP UI objects
-
-    Add a dialog with:
-
-        Host field
-
-        Port field
-
-        Timeout field (optional)
-
-5.3 Enable/disable TCP/IP options button
-
-    Hook into the same port selection logic.
-
-    If port type is PPT_CUSTOM, enable the TCP/IP dialog button.
-
-5.4 Save settings to INI
-
-    On dialog apply, write keys (tcpHost, tcpPort, tcpTimeout) in printer’s INI category.
-
-    Alternatively, pack and write customPortData (harder for UI).
-
-6) Recommended reference files (exact path list)
+5. Recommended reference files (exact path list)
 
 Stream driver skeletons
 
@@ -335,7 +343,7 @@ ASM socket usage examples
 
     Library/Resolver/resolverComm.asm
 
-7) Minimal “connect + send + close” flow (ASM style guide)
+6. Minimal “connect + send + close” flow (ASM style guide)
 
 From best references (WebServ + DHCP):
 
@@ -360,23 +368,12 @@ From best references (WebServ + DHCP):
         SocketClose
 
 Follow error handling patterns from webserv.asm or dhcpMain.asm.
-8) What the AI agent must deliver (exact checklist)
 
-- New driver directory Driver/Stream/TcpPort/
-- .gp for stream driver
-- TcpPortStrategy implementing all required entry points
+7. What you must deliver (exact checklist)
+
+- .gp for stream driver in Driver/Stream/RawTcp/
+- RawTcpStrategy implementing all required entry points
 - STREAM_ESC_LOAD_OPTIONS parsing config
 - TCP socket open/write/close using Library/Socket APIs
 - Proper error returns (matching stream driver conventions)
-- INI key support or customPortData parsing
-- (Optional) Printer UI dialog for TCP/IP settings
-
-9) Why this works without spooler changes
-
-    processCustom.asm is already designed to load custom stream drivers.
-
-    customPortData is already passed into your driver.
-
-    Port selection logic already allows “Custom.”
-
-Your driver simply becomes the custom port’s stream handler.
+- customPortData parsing
