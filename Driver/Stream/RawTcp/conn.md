@@ -85,3 +85,74 @@ How it flows:
 So:
 Your JetDirect plan fits perfectly into the CUSTOM model.
 Just ensure your printer driver declares CC_CUSTOM and your port driver is a proper stream driver.
+
+
+
+Here’s how I’d name them to keep things generic and consistent with existing style:
+PrinterConnections (capability flags)
+
+Keep it generic to avoid vendor-specific naming:
+
+    NetworkConnection as the bitfield name
+
+    Enum values:
+
+        NC_NO_NETWORK
+
+        NC_NETWORK
+
+So in PrinterConnections you’d add a NetworkConnection bit (like the existing RS232CConnection, CentronicsConnection, etc.).
+
+If you want to be explicit that it’s TCP/IP-only, then:
+
+    TCPIPConnection with TC_NO_TCPIP / TC_TCPIP
+
+But “Network” is more future-proof.
+PrinterPortType (actual chosen port)
+
+Again, generic:
+
+    PPT_NETWORK
+
+or if you want to mirror the capability name:
+
+    PPT_TCPIP
+
+I’d go with PPT_NETWORK unless you know this will only ever be TCP/IP.
+Port parameters struct
+
+Add a dedicated parameter block under PortParams:
+
+    NetworkPortParams (or TcpipPortParams)
+
+    Fields like:
+
+        address/hostname (string)
+
+        port number (word)
+
+        optional timeout/retry settings
+
+        optional protocol flags (RAW vs LPR, etc.) if you want to expand later
+
+Example names:
+
+    NPP_hostName, NPP_port
+
+    or TPP_hostName, TPP_port (if TCP/IP-specific)
+
+My preference (most generic)
+
+    Capability: NetworkConnection with NC_NETWORK
+
+    Port type: PPT_NETWORK
+
+    Params: NetworkPortParams with NPP_* fields
+
+That keeps the door open for non‑TCP/IP network transports later, while still fitting JetDirect.
+
+If you want it JetDirect‑specific and explicit, then:
+
+    TCPIPConnection / PPT_TCPIP / TcpipPortParams
+
+But I’d recommend the generic Network naming unless you’re sure it should be TCP/IP forever.
