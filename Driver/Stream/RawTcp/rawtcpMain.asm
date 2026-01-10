@@ -801,19 +801,28 @@ RETURN:		carry clear + ax = bytes written on success
 RawTcpWrite	proc	near
 	callerSeg	local	word
 	contextSeg	local	word
+	callerNeedsCopy	local	word
+	chunkSize	local	word
+	tempBufferH	local	word
 	uses	ax,dx,di,bp,es
 	.enter
 
 	mov	ax, es
 	tst	ax
 	jz	invalidCallerSeg
-	tst	ah
-	jz	invalidCallerSeg
 	tst	bx
 	jz	invalidHandle
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
+	mov	cx, ss:[callerSeg]
+	call	MemSegmentToHandle
+	jc	callerSegHandleBacked
+	mov	ss:[callerNeedsCopy], TRUE
+	jmp	callerSegChecked
+callerSegHandleBacked:
+	clr	ss:[callerNeedsCopy]
+callerSegChecked:
 	EC < mov	ax, ss:[callerSeg]				>
 	EC < tst	ah						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_LOW		>
@@ -852,28 +861,79 @@ sendLoop:
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
 	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
-	push	es
-	mov	es, ss:[callerSeg]
-	mov	ax, es
-	tst	ax
-	jz	callerSegInvalidPop
-	cmp	ax, 0100h
-	jb	callerSegInvalidPop
-	pop	es
+	mov	ss:[chunkSize], cx
 	mov	ds, ss:[callerSeg]
+	tst	ss:[callerNeedsCopy]
+	jnz	sendChunkCopy
+	mov	cx, ss:[chunkSize]
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
 	jc	sendError
-	add	bp, cx
-	add	si, cx
-	sub	dx, cx
+	add	bp, ss:[chunkSize]
+	add	si, ss:[chunkSize]
+	sub	dx, ss:[chunkSize]
 	jmp	sendLoop
 
-callerSegInvalidPop:
+sendChunkCopy:
+	push	bx
+	mov	ax, ss:[chunkSize]
+	mov	cx, ALLOC_DYNAMIC_NO_ERR or \
+		    (mask HAF_ZERO_INIT shl 8)
+	call	MemAlloc
+	jnc	tempAllocOk
+	pop	bx
+	jmp	sendError
+
+tempAllocOk:
+	mov	ss:[tempBufferH], bx
+	pop	bx
+	push	bx
+	mov	bx, ss:[tempBufferH]
+	call	MemLock
+	pop	bx
+	tst	ax
+	jz	tempLockFailed
+	push	es
+	mov	es, ax
+	push	si
+	push	di
+	clr	di
+	mov	cx, ss:[chunkSize]
+	rep	movsb
+	pop	di
+	pop	si
 	pop	es
-	jmp	invalidCallerSeg
+	push	ds
+	push	si
+	mov	ds, ax
+	clr	si
+	mov	cx, ss:[chunkSize]
+	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
+	call	SocketSend
+	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
+	pop	si
+	pop	ds
+	pushf
+	push	bx
+	mov	bx, ss:[tempBufferH]
+	call	MemUnlock
+	call	MemFree
+	pop	bx
+	popf
+	jc	sendError
+	add	bp, ss:[chunkSize]
+	add	si, ss:[chunkSize]
+	sub	dx, ss:[chunkSize]
+	jmp	sendLoop
+
+tempLockFailed:
+	push	bx
+	mov	bx, ss:[tempBufferH]
+	call	MemFree
+	pop	bx
+	jmp	sendError
 
 sendError:
 	EC < WARNING RAWTCP_WRITE_SEND_FAILED >
