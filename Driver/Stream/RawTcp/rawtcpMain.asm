@@ -177,10 +177,10 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpStrategy	proc	far
 	uses	es, ds
-	.enter
-
 	tst	di
 	js	handleEscape
+
+	.enter
 
 	segmov	es, ds
 	mov	ds, cs:rawTcpData
@@ -210,7 +210,12 @@ doNotYetOpenCall:
 	jmp	exit
 
 handleEscape:
-	GOTO	RawTcpEscape
+	push	es
+	push	ds
+	call	RawTcpEscape
+	pop	ds
+	pop	es
+	ret
 
 exit:
 	.leave
