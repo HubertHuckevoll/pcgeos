@@ -910,6 +910,7 @@ tempAllocOk:
 	mov	ds, ax
 	clr	si
 	mov	cx, ss:[chunkSize]
+	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
