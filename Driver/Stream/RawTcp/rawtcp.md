@@ -1,4 +1,4 @@
-These are the instructions to create RawTcp - a raw TCP (9100) stream driver for the "JetDirect" protocol (sending printer data created by a printer driver unchanged to a TCP/IP host/port) that can be used as a "PPT_CUSTOM" port in the PC/GEOS spooler:
+These are the instructions to create RawTcp - a raw TCP (9100) stream driver for the "JetDirect" protocol (sending printer data created by a printer driver unchanged to a TCP/IP host/port) that can be used as a "PPT_CUSTOM" port in the PC/GEOS spooler.
 
 ### Ground rules & constraints (must follow)
 - No spooler core change required for the first working version.
@@ -8,14 +8,14 @@ These are the instructions to create RawTcp - a raw TCP (9100) stream driver for
 - Follow GEOS style:
     - This is a driver and implemented in ASM / ESP
     - formatting: use tabs aligned to local code
-    - Small buffers (≤8 KB preferred), if more is needed, look into hugelmem.asm / hugelmem.def
+    - Small buffers (≤8 KB preferred), if more is needed, look into LMem, HugeLMem
     - No globals in libraries, create a per‑open context struct in a segment (MemHandle via MemAlloc/HAF_ZERO_INIT):
         - socket handle
-        - resolved address (if cached)
+        - IP4 address
         - connection state flag
         - pointer/offset to host string, port
         - optional error state
-- Document behavior in driver comments.
+- Document behavior in driver comments very well.
 
 ### Architecture overview (what you must deliver)
 
@@ -67,7 +67,7 @@ If rawTcpPort is not given assume port 9100. If rawTcpHost is missing or empty, 
 
 No IPv6 Support for now, just IP4 and port. Also, no host names allowed in rawTcpHost (so no resolver needed), just dotted-quad IPv4.
 
-Defaults for timeout, retries, and keepalive must be given internally but are not configurable for now via INI, just use CONSTANTS.
+Defaults for timeout, retries, and keepalive must be given internally as constants, but are not (yet) configurable for now via INI.
 Missing host or port should result in the driver returning an error if possible, otherwise fail silently.
 
 Note: After calling STREAM_ESC_LOAD_OPTIONS, the spooler allocates a block, copies CPP_info into it, and passes that to DR_STREAM_OPEN. We ignore this mechanism completely, as we are using our own config reading via STREAM_ESC_LOAD_OPTIONS.
@@ -107,7 +107,6 @@ Timeouts
 
 Implement a reconnect and retry pattern on socket failure for a small number of times (3, changeable via a CONSTANT). There should be a delay between attempts of 250ms.
 
-Pseudo code:
 Inputs: spooler calls DR_STREAM_OPEN after STREAM_ESC_LOAD_OPTIONS.
 Outputs: carry clear on success; carry set + AX error on failure.
 
@@ -130,7 +129,6 @@ Flow (pseudo‑logic):
 
 ### DR_STREAM_WRITE
 
-Flow:
 Inputs: ds:si buffer, cx count (standard stream driver params).
 Outputs: carry clear and ax = bytes written (or cx updated, as per convention); carry set + AX error.
 
