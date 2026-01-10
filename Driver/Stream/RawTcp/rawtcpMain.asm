@@ -800,26 +800,37 @@ RETURN:		carry clear + ax = bytes written on success
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpWrite	proc	near
 	callerSeg	local	word
+	contextSeg	local	word
 	uses	ax,dx,di,bp,es
 	.enter
 
+	mov	ax, es
+	tst	ax
+	jz	invalidCallerSeg
+	tst	ah
+	jz	invalidCallerSeg
+	tst	bx
+	jz	invalidHandle
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
-	EC < mov	ax, es						>
-	EC < cmp	ax, 0100h					>
-	EC < WARNING_B RAWTCP_WRITE_CALLER_SEG_LOW		>
+	EC < mov	ax, ss:[callerSeg]				>
+	EC < tst	ah						>
+	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_LOW		>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
 	EC < mov	ax, bx						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
+	tst	ax
+	jz	lockFailed
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
 	mov	es, ax
-	EC < mov	ax, es						>
-	EC < cmp	ax, 0100h					>
-	EC < WARNING_B RAWTCP_WRITE_CONTEXT_SEG_LOW		>
+	mov	ss:[contextSeg], ax
+	EC < mov	ax, ss:[contextSeg]				>
+	EC < tst	ah						>
+	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_LOW		>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 
@@ -842,12 +853,12 @@ sendLoop:
 sendChunk:
 	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
 	mov	ds, ss:[callerSeg]
-	EC < mov	ax, ds						>
-	EC < cmp	ax, 0100h					>
-	EC < WARNING_B RAWTCP_WRITE_CALLER_SEG_RELOAD_LOW	>
+	EC < mov	ax, ss:[callerSeg]				>
+	EC < tst	ah						>
+	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_RELOAD_LOW	>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_RELOAD_ZERO	>
-	EC < mov	di, es						>
+	EC < mov	di, ss:[contextSeg]				>
 	EC < cmp	ax, di						>
 	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_CONTEXT	>
 	EC < mov	di, ss						>
@@ -893,6 +904,27 @@ done:
 	EC < mov	ax, bx						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	call	MemUnlock
+	.leave
+	ret
+
+invalidHandle:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
+	.leave
+	ret
+
+invalidCallerSeg:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
+	.leave
+	ret
+
+lockFailed:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
 	.leave
 	ret
 RawTcpWrite	endp
