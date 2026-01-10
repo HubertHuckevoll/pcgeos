@@ -352,7 +352,8 @@ parseHost:
 	;
 	; Parse and validate dotted-quad IP address.
 	;
-	mov	ds, es
+	mov	ax, es
+	mov	ds, ax
 	mov	si, offset RTC_cfgHostString
 	mov	di, offset RTC_cfgIPAddr
 	call	RawTcpParseIPv4
@@ -571,7 +572,8 @@ RawTcpOpen	proc	near
 
 	mov	ds:[RTC_socket], 0
 	mov	ds:[RTC_connected], 0
-	mov	ds:[RTC_port], es:[RTC_cfgPort]
+	mov	ax, es:[RTC_cfgPort]
+	mov	ds:[RTC_port], ax
 	mov	ds:[RTC_hostP], offset RTC_hostString
 	clr	ds:[RTC_error]
 
@@ -581,7 +583,8 @@ RawTcpOpen	proc	near
 	push	ds
 	push	es
 	mov	ax, ds
-	mov	ds, es
+	mov	cx, es
+	mov	ds, cx
 	mov	es, ax
 
 	lea	si, [RTC_cfgIPAddr]
@@ -623,7 +626,8 @@ openRetry:
 	mov	di, sp
 	segmov	es, ss
 
-	mov	es:[di].RTSA_socketAddress.SA_port.SP_port, ds:[RTC_port]
+	mov	ax, ds:[RTC_port]
+	mov	es:[di].RTSA_socketAddress.SA_port.SP_port, ax
 	mov	es:[di].RTSA_socketAddress.SA_port.SP_manuf, MANUFACTURER_ID_SOCKET_16BIT_PORT
 	mov	es:[di].RTSA_socketAddress.SA_domainSize, RAWTCP_TCP_DOMAIN_LENGTH
 	mov	es:[di].RTSA_socketAddress.SA_domain.offset, offset rawTcpTcpDomainString
