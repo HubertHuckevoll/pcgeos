@@ -586,7 +586,9 @@ RawTcpOpen	proc	near
 	jmp	configError
 haveConfig:
 	mov	dx, bx
+	EC < WARNING RAWTCP_OPEN_BEFORE_MEMLOCK >
 	call	MemLock
+	EC < WARNING RAWTCP_OPEN_AFTER_MEMLOCK >
 	mov	es, ax
 
 	test	es:[RTC_cfgFlags], mask RCF_HOST_VALID
@@ -655,7 +657,9 @@ contextAllocOk:
 	mov	cx, RAWTCP_RETRY_COUNT
 openRetry:
 	mov	ax, SDT_STREAM
+	EC < WARNING RAWTCP_OPEN_BEFORE_SOCKET_CREATE >
 	call	SocketCreate
+	EC < WARNING RAWTCP_OPEN_AFTER_SOCKET_CREATE >
 	jnc	createOk
 	EC < WARNING RAWTCP_OPEN_SOCKET_CREATE_FAILED >
 	jmp	retryDelay
@@ -693,7 +697,9 @@ createOk:
 	mov	dx, sp
 	push	bp
 	mov	bp, RAWTCP_CONNECT_TIMEOUT_TICKS
+	EC < WARNING RAWTCP_OPEN_BEFORE_SOCKET_CONNECT >
 	call	SocketConnect
+	EC < WARNING RAWTCP_OPEN_AFTER_SOCKET_CONNECT >
 	pop	bp
 
 	add	sp, size RawTcpSocketAddress
@@ -771,7 +777,9 @@ RawTcpWrite	proc	near
 	.enter
 
 	mov	di, bx
+	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
+	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
 	mov	es, ax
 
 	tst	es:[RTC_connected]
@@ -792,7 +800,9 @@ sendLoop:
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
 	clr	ax
+	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
+	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
 	jc	sendError
 	add	bp, cx
 	add	si, cx
@@ -857,7 +867,9 @@ RawTcpClose	proc	near
 	EC < WARNING RAWTCP_CLOSE_WITHOUT_SOCKET >
 	jmp	clearState
 closeSocket:
+	EC < WARNING RAWTCP_CLOSE_BEFORE_SOCKET_CLOSE >
 	call	SocketClose
+	EC < WARNING RAWTCP_CLOSE_AFTER_SOCKET_CLOSE >
 
 clearState:
 	clr	es:[RTC_socket]
