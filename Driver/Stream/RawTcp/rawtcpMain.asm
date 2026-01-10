@@ -870,6 +870,12 @@ sendChunk:
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
+	EC < WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
+	EC < tst	bx						>
+	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO		>
+	EC < mov	ax, es						>
+	EC < tst	ax						>
+	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 	jc	sendError
 	add	bp, ss:[chunkSize]
 	add	si, ss:[chunkSize]
@@ -914,6 +920,12 @@ tempAllocOk:
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
+	EC < WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
+	EC < tst	bx						>
+	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO		>
+	EC < mov	ax, es						>
+	EC < tst	ax						>
+	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 	pop	si
 	pop	ds
 	pushf
