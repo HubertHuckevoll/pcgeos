@@ -808,6 +808,10 @@ RawTcpWrite	proc	near
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
+	tst	es
+	jz	callerSegInvalidPreLock
+	cmp	es, 0100h
+	jb	callerSegInvalidPreLock
 	EC < mov	ax, es						>
 	EC < cmp	ax, 0100h					>
 	EC < WARNING_B RAWTCP_WRITE_CALLER_SEG_LOW		>
@@ -845,6 +849,13 @@ sendLoop:
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
 	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
+	push	es
+	mov	es, ss:[callerSeg]
+	tst	es
+	jz	callerSegInvalidPop
+	cmp	es, 0100h
+	jb	callerSegInvalidPop
+	pop	es
 	mov	ds, ss:[callerSeg]
 	EC < mov	ax, ds						>
 	EC < cmp	ax, 0100h					>
@@ -900,7 +911,22 @@ done:
 	.leave
 	ret
 
+callerSegInvalidPop:
+	pop	es
+callerSegInvalid:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
+	jmp	done
+
 invalidHandle:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
+	.leave
+	ret
+
+callerSegInvalidPreLock:
 	mov	ax, STREAM_CLOSED
 	clr	cx
 	stc
