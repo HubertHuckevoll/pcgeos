@@ -804,6 +804,7 @@ RawTcpWrite	proc	near
 	.enter
 
 	mov	di, bx
+	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
@@ -827,6 +828,7 @@ sendLoop:
 	jbe	sendChunk
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
+	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
 	mov	ds, ss:[callerSeg]
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
