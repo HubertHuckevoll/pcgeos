@@ -938,7 +938,12 @@ tempLockFailed:
 
 sendError:
 	EC < WARNING RAWTCP_WRITE_SEND_FAILED >
+	mov	es, ss:[contextSeg]
+	mov	bx, es:[RTC_socket]
+	tst	bx
+	jz	skipClose
 	call	SocketClose
+skipClose:
 	clr	es:[RTC_socket]
 	clr	es:[RTC_connected]
 	mov	ax, STREAM_CLOSED
