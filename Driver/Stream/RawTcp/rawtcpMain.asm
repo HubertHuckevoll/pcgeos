@@ -247,7 +247,9 @@ RawTcpEscape	proc	far
 	jne	notFound
 
 	pop	cx
+	EC < WARNING RAWTCP_ESCAPE_BEFORE_CALL >
 	call	{word} cs:[di+((offset escRoutines)-(offset escCodes)-2)]
+	EC < WARNING RAWTCP_ESCAPE_AFTER_CALL >
 	pop	di
 	ret
 
