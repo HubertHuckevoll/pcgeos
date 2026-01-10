@@ -97,6 +97,10 @@ DriverTable	DriverInfoStruct	<
 >
 ForceRef	DriverTable
 
+rawTcpHostKeyString	char	"rawTcpHost",0
+rawTcpPortKeyString	char	"rawTcpPort",0
+rawTcpTcpDomainString	char	"TCPIP",0
+
 idata		ends
 
 ;------------------------------------------------------------------------------
@@ -234,8 +238,6 @@ RawTcpEscape	proc	far
 	jne	notFound
 
 	pop	cx
-	nop
-	nop
 	call	{word} cs:[di+((offset escRoutines)-(offset escCodes)-2)]
 	pop	di
 	ret
@@ -250,10 +252,6 @@ RawTcpEscape	endp
 ;------------------------------------------------------------------------------
 ; INI option loading
 ;------------------------------------------------------------------------------
-
-rawTcpHostKeyString	char	"rawTcpHost",0
-rawTcpPortKeyString	char	"rawTcpPort",0
-rawTcpTcpDomainString	char	"TCPIP",0
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		RawTcpLoadOptions
@@ -315,7 +313,7 @@ allocOk:
 	;
 	; Read rawTcpPort (default RAWTCP_DEFAULT_PORT)
 	;
-	mov	cx, cs
+	mov	cx, dgroup
 	mov	dx, offset rawTcpPortKeyString
 	call	InitFileReadInteger
 	jnc	havePort
@@ -330,7 +328,7 @@ readHost:
 	;
 	; Read rawTcpHost (dotted IPv4). Use a temporary block then copy.
 	;
-	mov	cx, cs
+	mov	cx, dgroup
 	mov	dx, offset rawTcpHostKeyString
 	clr	bp
 	call	InitFileReadString
@@ -643,7 +641,8 @@ openRetry:
 	mov	es:[di].RTSA_socketAddress.SA_port.SP_manuf, MANUFACTURER_ID_SOCKET_16BIT_PORT
 	mov	es:[di].RTSA_socketAddress.SA_domainSize, RAWTCP_TCP_DOMAIN_LENGTH
 	mov	es:[di].RTSA_socketAddress.SA_domain.offset, offset rawTcpTcpDomainString
-	mov	es:[di].RTSA_socketAddress.SA_domain.segment, cs
+	mov	ax, dgroup
+	mov	es:[di].RTSA_socketAddress.SA_domain.segment, ax
 	mov	es:[di].RTSA_socketAddress.SA_addressSize, IP_ADDR_SIZE
 
 	lea	si, ds:[RTC_ipAddr]
