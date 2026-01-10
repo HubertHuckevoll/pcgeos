@@ -825,7 +825,8 @@ sendLoop:
 	jbe	sendChunk
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
-	mov	ds, ss:[sp]
+	pop	ds
+	push	ds
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
