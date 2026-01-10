@@ -518,10 +518,24 @@ CALLED BY:	DR_STREAM_WRITE_BYTE
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpWriteByte	proc	near
+	push	ds
+	push	si
 	push	cx
+	sub	sp, 2
+	mov	si, sp
+	mov	ss:[si], cl
+	segmov	ds, ss
+	mov	si, sp
 	mov	cx, 1
 	call	RawTcpWrite
+	mov	cx, ax
+	lahf
+	add	sp, 2
+	sahf
+	mov	ax, cx
 	pop	cx
+	pop	si
+	pop	ds
 	ret
 RawTcpWriteByte	endp
 
@@ -763,16 +777,19 @@ sendError:
 	clr	es:[RTC_socket]
 	clr	es:[RTC_connected]
 	mov	ax, STREAM_CLOSED
+	clr	cx
 	stc
 	jmp	done
 
 sendDone:
 	mov	ax, bp
+	mov	cx, bp
 	clc
 	jmp	done
 
 notConnected:
 	mov	ax, STREAM_CLOSED
+	clr	cx
 	stc
 
 done:
