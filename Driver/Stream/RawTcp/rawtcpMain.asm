@@ -860,19 +860,6 @@ sendChunk:
 	jb	callerSegInvalidPop
 	pop	es
 	mov	ds, ss:[callerSeg]
-	EC < mov	ax, ss:[callerSeg]				>
-	EC < tst	ah						>
-	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_RELOAD_LOW	>
-	EC < tst	ax						>
-	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_RELOAD_ZERO	>
-	EC < mov	di, ss:[contextSeg]				>
-	EC < cmp	ax, di						>
-	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_CONTEXT	>
-	EC < mov	di, ss						>
-	EC < cmp	ax, di						>
-	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_STACK		>
-	EC < cmp	ax, cs:rawTcpData				>
-	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_DATA		>
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
