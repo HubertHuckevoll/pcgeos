@@ -811,6 +811,8 @@ RawTcpWrite	proc	near
 	EC < WARNING_B RAWTCP_WRITE_CALLER_SEG_LOW		>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
+	EC < mov	ax, bx						>
+	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
@@ -888,6 +890,8 @@ notConnected:
 done:
 	mov	ds, ss:[callerSeg]
 	mov	bx, di
+	EC < mov	ax, bx						>
+	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	call	MemUnlock
 	.leave
 	ret
