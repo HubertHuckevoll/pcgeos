@@ -798,11 +798,12 @@ RETURN:		carry clear + ax = bytes written on success
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpWrite	proc	near
+	callerSeg	local	word
 	uses	ax,dx,di,bp,es
-	.enter	2
+	.enter
 
 	mov	di, bx
-	mov	ss:[bp-2], ds
+	mov	ss:[callerSeg], ds
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
@@ -825,7 +826,7 @@ sendLoop:
 	jbe	sendChunk
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
-	mov	ds, ss:[bp-2]
+	mov	ds, ss:[callerSeg]
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
@@ -859,7 +860,7 @@ notConnected:
 	stc
 
 done:
-	mov	ds, ss:[bp-2]
+	mov	ds, ss:[callerSeg]
 	mov	bx, di
 	call	MemUnlock
 	.leave
