@@ -871,6 +871,10 @@ sendChunk:
 	sub	dx, cx
 	jmp	sendLoop
 
+callerSegInvalidPop:
+	pop	es
+	jmp	invalidCallerSeg
+
 sendError:
 	EC < WARNING RAWTCP_WRITE_SEND_FAILED >
 	call	SocketClose
