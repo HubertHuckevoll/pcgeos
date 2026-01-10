@@ -800,26 +800,23 @@ RETURN:		carry clear + ax = bytes written on success
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpWrite	proc	near
 	callerSeg	local	word
+	contextSeg	local	word
 	uses	ax,dx,di,bp,es
 	.enter
 
 	mov	ax, es
 	tst	ax
 	jz	invalidCallerSeg
-	cmp	ax, 0100h
-	jb	invalidCallerSeg
+	tst	ah
+	jz	invalidCallerSeg
 	tst	bx
 	jz	invalidHandle
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
-	tst	es
-	jz	callerSegInvalidPreLock
-	cmp	es, 0100h
-	jb	callerSegInvalidPreLock
-	EC < mov	ax, es						>
-	EC < cmp	ax, 0100h					>
-	EC < WARNING_B RAWTCP_WRITE_CALLER_SEG_LOW		>
+	EC < mov	ax, ss:[callerSeg]				>
+	EC < tst	ah						>
+	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_LOW		>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
 	EC < mov	ax, bx						>
@@ -830,9 +827,10 @@ RawTcpWrite	proc	near
 	jz	lockFailed
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
 	mov	es, ax
-	EC < mov	ax, es						>
-	EC < cmp	ax, 0100h					>
-	EC < WARNING_B RAWTCP_WRITE_CONTEXT_SEG_LOW		>
+	mov	ss:[contextSeg], ax
+	EC < mov	ax, ss:[contextSeg]				>
+	EC < tst	ah						>
+	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_LOW		>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 
@@ -862,12 +860,12 @@ sendChunk:
 	jb	callerSegInvalidPop
 	pop	es
 	mov	ds, ss:[callerSeg]
-	EC < mov	ax, ds						>
-	EC < cmp	ax, 0100h					>
-	EC < WARNING_B RAWTCP_WRITE_CALLER_SEG_RELOAD_LOW	>
+	EC < mov	ax, ss:[callerSeg]				>
+	EC < tst	ah						>
+	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_RELOAD_LOW	>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_RELOAD_ZERO	>
-	EC < mov	di, es						>
+	EC < mov	di, ss:[contextSeg]				>
 	EC < cmp	ax, di						>
 	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_CONTEXT	>
 	EC < mov	di, ss						>
