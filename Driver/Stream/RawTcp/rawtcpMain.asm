@@ -1,0 +1,944 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	Copyright (c) GeoWorks 2024 -- All Rights Reserved
+
+PROJECT:	PC GEOS
+MODULE:		Stream Drivers -- RawTcp
+FILE:		rawtcpMain.asm
+
+AUTHOR:		OpenAI Assistant
+
+ROUTINES:
+	Name			Description
+	----			-----------
+	RawTcpStrategy		Entry point for RawTcp stream driver
+	RawTcpLoadOptions	Reads INI options for host/port
+	RawTcpOpen		Opens a TCP connection per print job
+	RawTcpWrite		Sends data to the TCP socket
+	RawTcpClose		Closes the TCP connection
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	OA	9/24/24		Initial revision
+
+DESCRIPTION:
+	RawTcp is a simple TCP stream driver for the JetDirect protocol
+	(usually TCP port 9100). It reads connection parameters via
+	STREAM_ESC_LOAD_OPTIONS and opens a new connection for each job.
+	
+	Behavior summary:
+	- INI-only configuration via "rawTcpHost" and "rawTcpPort"
+	- No hostname resolution; dotted-quad IPv4 only
+	- No persistent connections; socket opens/closes per job
+	- Uses Socket library APIs (SocketCreate/SocketConnect/SocketSend)
+	- Returns StreamError values on failure (STREAM_NO_DEVICE,
+	  STREAM_CLOSED)
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
+include	rawtcp.def
+
+;------------------------------------------------------------------------------
+; Constants
+;------------------------------------------------------------------------------
+
+RAWTCP_DEFAULT_PORT		equ	9100
+RAWTCP_CONNECT_TIMEOUT_TICKS	equ	10 * 60
+RAWTCP_RETRY_COUNT		equ	3
+RAWTCP_RETRY_DELAY_TICKS	equ	15
+
+RAWTCP_SEND_BUFFER_SIZE	equ	4096
+RAWTCP_RECV_BUFFER_SIZE	equ	2048
+RAWTCP_MAX_SEND_CHUNK		equ	2048
+
+RAWTCP_TCP_DOMAIN_LENGTH	equ	5
+
+;------------------------------------------------------------------------------
+; Data structures
+;------------------------------------------------------------------------------
+
+RawTcpConfigFlags	record
+	RCF_HOST_VALID:1
+	RCF_PORT_VALID:1
+	:14
+RawTcpConfigFlags	end
+
+RawTcpConfig	struct
+	RTC_cfgFlags	RawTcpConfigFlags
+	RTC_cfgPort	word
+	RTC_cfgIPAddr	IPAddr
+	RTC_cfgHostString	byte	MAX_IP_DECIMAL_ADDR_LENGTH_ZT dup (0)
+RawTcpConfig	ends
+
+RawTcpContext	struct
+	RTC_socket	word
+	RTC_connected	word
+	RTC_port	word
+	RTC_ipAddr	IPAddr
+	RTC_hostP	word
+	RTC_error	word
+	RTC_hostString	byte	MAX_IP_DECIMAL_ADDR_LENGTH_ZT dup (0)
+RawTcpContext	ends
+
+RawTcpSocketAddress	struct
+	RTSA_socketAddress	SocketAddress
+	RTSA_ipAddr	IPAddr
+RawTcpSocketAddress	ends
+
+;------------------------------------------------------------------------------
+; Driver info table
+;------------------------------------------------------------------------------
+
+idata		segment
+
+DriverTable	DriverInfoStruct	<
+	RawTcpStrategy, mask DA_CHARACTER, DRIVER_TYPE_STREAM
+>
+ForceRef	DriverTable
+
+idata		ends
+
+;------------------------------------------------------------------------------
+; Globals
+;------------------------------------------------------------------------------
+
+udata		segment
+rawTcpConfigH	hptr	0
+udata		ends
+
+;------------------------------------------------------------------------------
+; Escape table
+;------------------------------------------------------------------------------
+
+Resident	segment	resource
+
+DefEscapeTable	1
+DefEscape	RawTcpLoadOptions, STREAM_ESC_LOAD_OPTIONS
+
+;------------------------------------------------------------------------------
+; Strategy routine and dispatch table
+;------------------------------------------------------------------------------
+
+DefFunction	macro	funcCode, routine
+if ($-rawTcpFunctions) ne funcCode
+	ErrMessage <routine not in proper slot for funcCode>
+endif
+		nptr	routine
+		endm
+
+rawTcpFunctions	label	nptr
+DefFunction	DR_INIT,			RawTcpNull
+DefFunction	DR_EXIT,			RawTcpExit
+DefFunction	DR_SUSPEND,		RawTcpNull
+DefFunction	DR_UNSUSPEND,		RawTcpNull
+DefFunction	DR_STREAM_GET_DEVICE_MAP,	RawTcpGetDeviceMap
+DefFunction	DR_STREAM_OPEN,		RawTcpOpen
+DefFunction	DR_STREAM_CLOSE,		RawTcpClose
+DefFunction	DR_STREAM_SET_NOTIFY,	RawTcpSetNotify
+DefFunction	DR_STREAM_GET_ERROR,	RawTcpGetError
+DefFunction	DR_STREAM_SET_ERROR,	RawTcpSetError
+DefFunction	DR_STREAM_FLUSH,		RawTcpNull
+DefFunction	DR_STREAM_SET_THRESHOLD,	RawTcpNull
+DefFunction	DR_STREAM_READ,		RawTcpReadUnsupported
+DefFunction	DR_STREAM_READ_BYTE,	RawTcpReadUnsupported
+DefFunction	DR_STREAM_WRITE,		RawTcpWrite
+DefFunction	DR_STREAM_WRITE_BYTE,	RawTcpWriteByte
+DefFunction	DR_STREAM_QUERY,		RawTcpNull
+
+rawTcpData	sptr	dgroup
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpStrategy
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Entry point for all RawTcp-driver functions
+
+CALLED BY:	GLOBAL
+PASS:		di	= routine number
+		bx	= stream token (open calls ignore this)
+RETURN:		depends on function
+DESTROYED:	
+
+PSEUDO CODE/STRATEGY:
+	Dispatch to the appropriate handler. Escape codes are dispatched
+	via RawTcpEscape.
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	OA	9/24/24		Initial version
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpStrategy	proc	far
+	uses	es, ds
+	.enter
+
+	tst	di
+	js	handleEscape
+
+	segmov	es, ds
+	mov	ds, cs:rawTcpData
+
+	cmp	di, DR_STREAM_OPEN
+	jbe	notYetOpen
+	tst	bx
+	jnz	haveHandle
+	mov	ax, STREAM_CLOSED
+	stc
+	jmp	exit
+
+haveHandle:
+	call	cs:rawTcpFunctions[di]
+	jmp	exit
+
+notYetOpen:
+	call	cs:rawTcpFunctions[di]
+	jmp	exit
+
+handleEscape:
+	GOTO	RawTcpEscape
+
+exit:
+	.leave
+	ret
+RawTcpStrategy	endp
+
+global	RawTcpStrategy:far
+
+;------------------------------------------------------------------------------
+; Escape handling
+;------------------------------------------------------------------------------
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpEscape
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Execute escape function for RawTcp
+
+CALLED BY:	GLOBAL
+PASS:		di	= escape code (ORed with 8000h)
+RETURN:		di	= 0 if escape not supported
+DESTROYED:	see individual functions
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpEscape	proc	far
+
+	push	di, cx, ax, es
+	segmov	es, cs
+	mov	ax, di
+	mov	di, offset escCodes
+	mov	cx, NUM_ESC_ENTRIES
+	repne	scasw
+	pop	ax, es
+	jne	notFound
+
+	pop	cx
+	nop
+	nop
+	call	{word} cs:[di+((offset escRoutines)-(offset escCodes)-2)]
+	pop	di
+	ret
+
+notFound:
+	pop	cx
+	pop	di
+	clr	di
+	ret
+RawTcpEscape	endp
+
+;------------------------------------------------------------------------------
+; INI option loading
+;------------------------------------------------------------------------------
+
+rawTcpHostKeyString	char	"rawTcpHost",0
+rawTcpPortKeyString	char	"rawTcpPort",0
+rawTcpTcpDomainString	char	"TCPIP",0
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpLoadOptions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Read host/port options from the .INI file.
+
+CALLED BY:	RawTcpEscape (STREAM_ESC_LOAD_OPTIONS)
+PASS:		ds:si	= initfile category (printer name)
+RETURN:	nothing
+DESTROYED:	allows ax,bx,cx,dx,di,si,bp,es
+
+PSEUDO CODE/STRATEGY:
+	- Free any previous config block
+	- Read rawTcpPort (default 9100)
+	- Read rawTcpHost (dotted IPv4 only)
+	- Parse and store IP address for fast connect
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpLoadOptions	proc	near
+	uses	ax,bx,cx,dx,di,si,bp,es
+	.enter
+
+	;
+	; Switch to dgroup to manage config handle.
+	;
+	push	ds
+	push	si
+	mov	ax, dgroup
+	mov	ds, ax
+
+	mov	bx, ds:[rawTcpConfigH]
+	tst	bx
+	jz	allocConfig
+	call	MemFree
+	clr	ds:[rawTcpConfigH]
+
+allocConfig:
+	mov	ax, size RawTcpConfig
+	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or \
+		    (mask HAF_ZERO_INIT shl 8) or \
+		    mask HF_SHARABLE
+	call	MemAlloc
+	jnc	allocOk
+	jmp	doneRestore
+allocOk:
+	mov	ds:[rawTcpConfigH], bx
+	mov	es, ax
+
+	mov	es:[RTC_cfgPort], RAWTCP_DEFAULT_PORT
+	clr	es:[RTC_cfgFlags]
+
+	;
+	; Restore category pointer for InitFileRead* calls.
+	;
+	pop	si
+	pop	ds
+
+	;
+	; Read rawTcpPort (default RAWTCP_DEFAULT_PORT)
+	;
+	mov	cx, cs
+	mov	dx, offset rawTcpPortKeyString
+	call	InitFileReadInteger
+	jnc	havePort
+	mov	ax, RAWTCP_DEFAULT_PORT
+havePort:
+	mov	es:[RTC_cfgPort], ax
+	tst	ax
+	jz	readHost
+	or	es:[RTC_cfgFlags], mask RCF_PORT_VALID
+
+readHost:
+	;
+	; Read rawTcpHost (dotted IPv4). Use a temporary block then copy.
+	;
+	mov	cx, cs
+	mov	dx, offset rawTcpHostKeyString
+	clr	bp
+	call	InitFileReadString
+	jc	unlockConfig
+
+	push	bx
+	call	MemLock
+	mov	ds, ax
+	clr	si
+
+	mov	di, offset RTC_cfgHostString
+	mov	cx, MAX_IP_DECIMAL_ADDR_LENGTH_ZT
+copyHost:
+	lodsb
+	mov	es:[di], al
+	inc	di
+	cmp	al, 0
+	je	parseHost
+	loop	copyHost
+	mov	byte ptr es:[di-1], 0
+
+parseHost:
+	;
+	; Parse and validate dotted-quad IP address.
+	;
+	mov	ax, es
+	mov	ds, ax
+	mov	si, offset RTC_cfgHostString
+	mov	di, offset RTC_cfgIPAddr
+	call	RawTcpParseIPv4
+	jc	hostInvalid
+	cmp	byte ptr es:[RTC_cfgHostString], 0
+	je	hostInvalid
+	or	es:[RTC_cfgFlags], mask RCF_HOST_VALID
+
+hostInvalid:
+	pop	bx
+	call	MemUnlock
+	call	MemFree
+
+unlockConfig:
+	push	ds
+	mov	ax, dgroup
+	mov	ds, ax
+	mov	bx, ds:[rawTcpConfigH]
+	pop	ds
+	call	MemUnlock
+	jmp	done
+
+; MemAlloc failed; restore stack and exit
+
+doneRestore:
+	pop	si
+	pop	ds
+
+done:
+	.leave
+	ret
+RawTcpLoadOptions	endp
+
+;------------------------------------------------------------------------------
+; Driver entry points
+;------------------------------------------------------------------------------
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpNull
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	No-op routine for unsupported functions.
+
+CALLED BY:	various driver entry points
+RETURN:		carry clear
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpNull	proc	near
+	clc
+	ret
+RawTcpNull	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpExit
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Free cached configuration block, if present.
+
+CALLED BY:	DR_EXIT
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpExit	proc	near
+	uses	bx
+	.enter
+	mov	bx, ds:[rawTcpConfigH]
+	tst	bx
+	jz	done
+	call	MemFree
+	clr	ds:[rawTcpConfigH]
+
+	done:
+	clc
+	.leave
+	ret
+RawTcpExit	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpGetDeviceMap
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Return no physical device map.
+
+CALLED BY:	DR_STREAM_GET_DEVICE_MAP
+RETURN:		ax = 0
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpGetDeviceMap	proc	near
+	clr	ax
+	clc
+	ret
+RawTcpGetDeviceMap	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpSetNotify
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Notification stub (no async events reported).
+
+CALLED BY:	DR_STREAM_SET_NOTIFY
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpSetNotify	proc	near
+	clc
+	ret
+RawTcpSetNotify	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpGetError
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	No stored error; return 0.
+
+CALLED BY:	DR_STREAM_GET_ERROR
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpGetError	proc	near
+	clr	ax
+	clc
+	ret
+RawTcpGetError	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpSetError
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Ignore error postings.
+
+CALLED BY:	DR_STREAM_SET_ERROR
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpSetError	proc	near
+	clc
+	ret
+RawTcpSetError	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpReadUnsupported
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	RawTcp is write-only; read operations are unsupported.
+
+CALLED BY:	DR_STREAM_READ, DR_STREAM_READ_BYTE
+RETURN:		carry set, ax = STREAM_CLOSED
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpReadUnsupported	proc	near
+	mov	ax, STREAM_CLOSED
+	stc
+	ret
+RawTcpReadUnsupported	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpWriteByte
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Write a single byte by delegating to RawTcpWrite.
+
+CALLED BY:	DR_STREAM_WRITE_BYTE
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpWriteByte	proc	near
+	push	cx
+	mov	cx, 1
+	call	RawTcpWrite
+	pop	cx
+	ret
+RawTcpWriteByte	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpOpen
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Open a socket connection for a print job.
+
+CALLED BY:	DR_STREAM_OPEN
+PASS:		bx	= ignored (CPP_info block from spooler)
+RETURN:		bx	= stream token (context handle)
+		carry set + ax = STREAM_NO_DEVICE on failure
+
+PSEUDO CODE/STRATEGY:
+	- Validate config data loaded by STREAM_ESC_LOAD_OPTIONS
+	- Allocate a per-open context block
+	- Create and connect a TCP socket (with limited retries)
+	- Configure socket options (send/recv buffers, NO_DELAY, LINGER)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpOpen	proc	near
+	uses	ax,cx,dx,si,di,bp,es
+	.enter
+
+	push	ds
+	mov	bx, ds:[rawTcpConfigH]
+	tst	bx
+	jnz	haveConfig
+	jmp	configError
+haveConfig:
+	mov	dx, bx
+	call	MemLock
+	mov	es, ax
+
+	test	es:[RTC_cfgFlags], mask RCF_HOST_VALID
+	jnz	hostValid
+	jmp	configUnlockError
+hostValid:
+	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID
+	jnz	portValid
+	jmp	configUnlockError
+portValid:
+
+	;
+	; Allocate context for this open.
+	;
+	mov	ax, size RawTcpContext
+	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or \
+		    (mask HAF_ZERO_INIT shl 8) or \
+		    mask HF_SHARABLE
+	call	MemAlloc
+	jnc	contextAllocOk
+	jmp	configUnlockError
+contextAllocOk:
+
+	mov	bp, bx				; context handle
+	mov	ds, ax				; ds = context segment
+
+	mov	ds:[RTC_socket], 0
+	mov	ds:[RTC_connected], 0
+	mov	ax, es:[RTC_cfgPort]
+	mov	ds:[RTC_port], ax
+	mov	ds:[RTC_hostP], offset RTC_hostString
+	clr	ds:[RTC_error]
+
+	;
+	; Copy IP and host string into context.
+	;
+	push	ds
+	push	es
+	mov	ax, ds
+	mov	cx, es
+	mov	ds, cx
+	mov	es, ax
+
+	lea	si, [RTC_cfgIPAddr]
+	lea	di, [RTC_ipAddr]
+	mov	cx, size IPAddr
+	rep	movsb
+
+	lea	si, [RTC_cfgHostString]
+	lea	di, [RTC_hostString]
+	mov	cx, MAX_IP_DECIMAL_ADDR_LENGTH_ZT
+	rep	movsb
+
+	pop	es
+	pop	ds
+
+	mov	bx, dx
+	call	MemUnlock
+
+	;
+	; Retry socket open/connect a few times.
+	;
+	mov	cx, RAWTCP_RETRY_COUNT
+openRetry:
+	mov	ax, SDT_STREAM
+	call	SocketCreate
+	jc	retryFail
+
+	mov	ds:[RTC_socket], bx
+
+	;
+	; Build socket address on stack for connect.
+	;
+	push	ds
+	push	si
+	push	di
+	push	cx
+	mov	ax, size RawTcpSocketAddress
+	sub	sp, ax
+	mov	di, sp
+	segmov	es, ss
+
+	mov	ax, ds:[RTC_port]
+	mov	es:[di].RTSA_socketAddress.SA_port.SP_port, ax
+	mov	es:[di].RTSA_socketAddress.SA_port.SP_manuf, MANUFACTURER_ID_SOCKET_16BIT_PORT
+	mov	es:[di].RTSA_socketAddress.SA_domainSize, RAWTCP_TCP_DOMAIN_LENGTH
+	mov	es:[di].RTSA_socketAddress.SA_domain.offset, offset rawTcpTcpDomainString
+	mov	es:[di].RTSA_socketAddress.SA_domain.segment, cs
+	mov	es:[di].RTSA_socketAddress.SA_addressSize, IP_ADDR_SIZE
+
+	lea	si, ds:[RTC_ipAddr]
+	lea	di, es:[di].RTSA_socketAddress.SA_address
+	mov	cx, size IPAddr
+	rep	movsb
+
+	mov	cx, ss
+	mov	dx, sp
+	push	bp
+	mov	bp, RAWTCP_CONNECT_TIMEOUT_TICKS
+	call	SocketConnect
+	pop	bp
+
+	add	sp, size RawTcpSocketAddress
+	pop	cx
+	pop	di
+	pop	si
+	pop	ds
+
+	jc	connectFail
+
+	;
+	; Set socket options (best effort, no error returns available).
+	;
+	call	RawTcpSetSocketOptions
+
+	mov	ds:[RTC_connected], TRUE
+
+	mov	bx, bp
+	call	MemUnlock
+	mov	bx, bp
+	clc
+	jmp	done
+
+connectFail:
+	call	SocketClose
+	retryFail:
+	clr	ds:[RTC_socket]
+	dec	cx
+	jz	openFail
+	mov	ax, RAWTCP_RETRY_DELAY_TICKS
+	call	TimerSleep
+	jmp	openRetry
+
+openFail:
+	mov	bx, bp
+	call	MemUnlock
+	mov	bx, bp
+	call	MemFree
+
+configError:
+	mov	ax, STREAM_NO_DEVICE
+	stc
+	jmp	done
+
+configUnlockError:
+	mov	bx, dx
+	call	MemUnlock
+	mov	ax, STREAM_NO_DEVICE
+	stc
+	done:
+	pop	ds
+	.leave
+	ret
+RawTcpOpen	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpWrite
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Send data to the connected socket.
+
+CALLED BY:	DR_STREAM_WRITE
+PASS:		ds:si	= buffer
+		cx	= byte count
+		bx	= context handle
+RETURN:		carry clear + ax = bytes written on success
+		carry set + ax = STREAM_CLOSED on failure
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpWrite	proc	near
+	uses	ax,cx,dx,di,bp,es
+	.enter
+
+	mov	di, bx
+	call	MemLock
+	mov	es, ax
+
+	tst	es:[RTC_connected]
+	jz	notConnected
+	mov	bx, es:[RTC_socket]
+	tst	bx
+	jz	notConnected
+
+	mov	dx, cx
+	clr	bp
+
+sendLoop:
+	tst	dx
+	jz	sendDone
+	mov	cx, dx
+	cmp	cx, RAWTCP_MAX_SEND_CHUNK
+	jbe	sendChunk
+	mov	cx, RAWTCP_MAX_SEND_CHUNK
+sendChunk:
+	clr	ax
+	call	SocketSend
+	jc	sendError
+	add	bp, cx
+	add	si, cx
+	sub	dx, cx
+	jmp	sendLoop
+
+sendError:
+	call	SocketClose
+	clr	es:[RTC_socket]
+	clr	es:[RTC_connected]
+	mov	ax, STREAM_CLOSED
+	stc
+	jmp	done
+
+sendDone:
+	mov	ax, bp
+	clc
+	jmp	done
+
+notConnected:
+	mov	ax, STREAM_CLOSED
+	stc
+
+done:
+	mov	bx, di
+	call	MemUnlock
+	.leave
+	ret
+RawTcpWrite	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpClose
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Close the socket and free the context block.
+
+CALLED BY:	DR_STREAM_CLOSE
+PASS:		ax	= STREAM_LINGER or STREAM_DISCARD (ignored)
+		bx	= context handle
+RETURN:		carry clear
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpClose	proc	near
+	uses	ax,di,es
+	.enter
+
+	mov	di, bx
+	tst	bx
+	jz	done
+
+	call	MemLock
+	mov	es, ax
+
+	mov	bx, es:[RTC_socket]
+	tst	bx
+	jz	clearState
+	call	SocketClose
+
+clearState:
+	clr	es:[RTC_socket]
+	clr	es:[RTC_connected]
+	clr	es:[RTC_error]
+
+	mov	bx, di
+	call	MemUnlock
+	mov	bx, di
+	call	MemFree
+
+	done:
+	clc
+	.leave
+	ret
+RawTcpClose	endp
+
+;------------------------------------------------------------------------------
+; Helpers
+;------------------------------------------------------------------------------
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpSetSocketOptions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Set socket buffer sizes and boolean options.
+
+CALLED BY:	RawTcpOpen
+PASS:		bx	= socket handle
+RETURN:		nothing
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpSetSocketOptions	proc	near
+	uses	ax,cx
+	.enter
+
+	mov	ax, SO_SEND_BUF
+	mov	cx, RAWTCP_SEND_BUFFER_SIZE
+	call	SocketSetSocketOption
+
+	mov	ax, SO_RECV_BUF
+	mov	cx, RAWTCP_RECV_BUFFER_SIZE
+	call	SocketSetSocketOption
+
+	mov	ax, SO_NODELAY
+	mov	cx, TRUE
+	call	SocketSetSocketOption
+
+	mov	ax, SO_LINGER
+	mov	cx, FALSE
+	call	SocketSetSocketOption
+
+	.leave
+	ret
+RawTcpSetSocketOptions	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpParseIPv4
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Parse dotted-quad IPv4 string into IPAddr.
+
+CALLED BY:	RawTcpLoadOptions
+PASS:		ds:si	= null-terminated string
+		es:di	= IPAddr output buffer
+RETURN:		carry clear if valid; IPAddr written
+		carry set if invalid format
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpParseIPv4	proc	near
+	uses	ax,bx,cx,dx,si,di
+	.enter
+
+	clr	cl				; octet count
+
+parseOctet:
+	xor	bx, bx
+	clr	ch				; digit count
+
+digitLoop:
+	lodsb
+	cmp	al, '0'
+	jb	endDigits
+	cmp	al, '9'
+	ja	endDigits
+	inc	ch
+	mov	ah, 0
+	sub	al, '0'
+	mov	dx, ax				; dx = digit
+	mov	ax, bx
+	shl	ax, 1
+	mov	bx, ax
+	shl	ax, 1
+	shl	ax, 1
+	add	ax, bx
+	mov	bx, ax
+	add	bx, dx
+	cmp	bx, 255
+	ja	invalid
+	jmp	digitLoop
+
+endDigits:
+	cmp	ch, 0
+	je	invalid
+	mov	es:[di], bl
+	inc	di
+	inc	cl
+	cmp	al, '.'
+	je	needMore
+	cmp	al, 0
+	je	maybeDone
+	jmp	invalid
+
+needMore:
+	cmp	cl, 4
+	jae	invalid
+	jmp	parseOctet
+
+maybeDone:
+	cmp	cl, 4
+	jne	invalid
+	clc
+	jmp	parseDone
+
+invalid:
+	stc
+
+parseDone:
+	.leave
+	ret
+RawTcpParseIPv4	endp
+
+Resident	ends
