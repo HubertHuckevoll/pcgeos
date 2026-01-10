@@ -803,6 +803,11 @@ RawTcpWrite	proc	near
 	uses	ax,dx,di,bp,es
 	.enter
 
+	mov	ax, es
+	tst	ax
+	jz	invalidCallerSeg
+	cmp	ax, 0100h
+	jb	invalidCallerSeg
 	tst	bx
 	jz	invalidHandle
 	mov	di, bx
@@ -911,14 +916,6 @@ done:
 	.leave
 	ret
 
-callerSegInvalidPop:
-	pop	es
-callerSegInvalid:
-	mov	ax, STREAM_CLOSED
-	clr	cx
-	stc
-	jmp	done
-
 invalidHandle:
 	mov	ax, STREAM_CLOSED
 	clr	cx
@@ -926,7 +923,7 @@ invalidHandle:
 	.leave
 	ret
 
-callerSegInvalidPreLock:
+invalidCallerSeg:
 	mov	ax, STREAM_CLOSED
 	clr	cx
 	stc
