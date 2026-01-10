@@ -564,6 +564,7 @@ RawTcpWriteByte	proc	near
 	mov	si, sp
 	mov	ss:[si], cl
 	segmov	ds, ss
+	segmov	es, ds
 	mov	si, sp
 	mov	cx, 1
 	call	RawTcpWrite
@@ -803,7 +804,7 @@ RawTcpWrite	proc	near
 	.enter
 
 	mov	di, bx
-	mov	ss:[callerSeg], ds
+	mov	ss:[callerSeg], es
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
