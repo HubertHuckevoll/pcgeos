@@ -803,6 +803,13 @@ RawTcpWrite	proc	near
 	uses	ax,dx,di,bp,es
 	.enter
 
+	mov	ax, es
+	tst	ax
+	jz	invalidCallerSeg
+	cmp	ax, 0100h
+	jb	invalidCallerSeg
+	tst	bx
+	jz	invalidHandle
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
@@ -815,6 +822,8 @@ RawTcpWrite	proc	near
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
+	tst	ax
+	jz	lockFailed
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
 	mov	es, ax
 	EC < mov	ax, es						>
@@ -893,6 +902,27 @@ done:
 	EC < mov	ax, bx						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	call	MemUnlock
+	.leave
+	ret
+
+invalidHandle:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
+	.leave
+	ret
+
+invalidCallerSeg:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
+	.leave
+	ret
+
+lockFailed:
+	mov	ax, STREAM_CLOSED
+	clr	cx
+	stc
 	.leave
 	ret
 RawTcpWrite	endp
