@@ -852,6 +852,13 @@ sendLoop:
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
 	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
+	push	es
+	mov	es, ss:[callerSeg]
+	tst	es
+	jz	callerSegInvalidPop
+	cmp	es, 0100h
+	jb	callerSegInvalidPop
+	pop	es
 	mov	ds, ss:[callerSeg]
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
