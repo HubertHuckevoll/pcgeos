@@ -940,9 +940,12 @@ sendError:
 	EC < WARNING RAWTCP_WRITE_SEND_FAILED >
 	mov	es, ss:[contextSeg]
 	mov	bx, es:[RTC_socket]
+	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
 	tst	bx
 	jz	skipClose
+	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_CLOSE >
 	call	SocketClose
+	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_CLOSE >
 skipClose:
 	clr	es:[RTC_socket]
 	clr	es:[RTC_connected]
