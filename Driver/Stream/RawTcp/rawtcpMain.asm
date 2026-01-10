@@ -564,6 +564,7 @@ RawTcpWriteByte	proc	near
 	mov	si, sp
 	mov	ss:[si], cl
 	segmov	ds, ss
+	segmov	es, ds
 	mov	si, sp
 	mov	cx, 1
 	call	RawTcpWrite
