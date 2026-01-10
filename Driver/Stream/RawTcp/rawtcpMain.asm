@@ -803,7 +803,7 @@ RawTcpWrite	proc	near
 	.enter
 
 	mov	di, bx
-	mov	ss:[callerSeg], ds
+	mov	ss:[callerSeg], es
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
