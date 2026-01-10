@@ -710,7 +710,7 @@ createOk:
 	mov	es:[di].RTSA_socketAddress.SA_addressSize, size TcpOnlyExtendedAddress
 
 	lea	di, es:[di].RTSA_socketAddress.SA_address
-	mov	es:[di], 0				; ESACA_linkSize
+	mov	{word} es:[di], 0			; ESACA_linkSize
 
 	lea	si, ds:[RTC_ipAddr]
 	add	di, size word
