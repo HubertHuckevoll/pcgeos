@@ -238,7 +238,7 @@ RawTcpEscape	proc	far
 	jne	notFound
 
 	pop	cx
-	call	{word} cs:[di+((offset escRoutines)-(offset escCodes)-2)]
+	call	cs:[di+((offset escRoutines)-(offset escCodes)-2)]
 	pop	di
 	ret
 
