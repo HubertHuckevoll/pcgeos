@@ -276,6 +276,7 @@ RawTcpLoadOptions	proc	near
 	uses	ax,bx,cx,dx,di,si,bp,es
 	.enter
 
+	EC < WARNING RAWTCP_LOAD_OPTIONS_START >
 	;
 	; Switch to dgroup to manage config handle.
 	;
@@ -297,6 +298,7 @@ allocConfig:
 		    mask HF_SHARABLE
 	call	MemAlloc
 	jnc	allocOk
+	EC < WARNING RAWTCP_CONFIG_ALLOC_FAILED >
 	jmp	doneRestore
 allocOk:
 	mov	ds:[rawTcpConfigH], bx
@@ -319,6 +321,7 @@ allocOk:
 	call	InitFileReadInteger
 	jnc	havePort
 	mov	ax, RAWTCP_DEFAULT_PORT
+	EC < WARNING RAWTCP_CONFIG_PORT_DEFAULTED >
 havePort:
 	mov	es:[RTC_cfgPort], ax
 	tst	ax
@@ -333,7 +336,11 @@ readHost:
 	mov	dx, offset rawTcpHostKeyString
 	clr	bp
 	call	InitFileReadString
-	jc	unlockConfig
+	jnc	haveHostString
+	EC < WARNING RAWTCP_CONFIG_HOST_MISSING >
+	jmp	unlockConfig
+
+haveHostString:
 
 	push	bx
 	call	MemLock
@@ -364,8 +371,18 @@ parseHost:
 	cmp	byte ptr es:[RTC_cfgHostString], 0
 	je	hostInvalid
 	or	es:[RTC_cfgFlags], mask RCF_HOST_VALID
+	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID
+	jz	portInvalid
+	EC < WARNING RAWTCP_CONFIG_READY >
+	jmp	unlockHost
 
 hostInvalid:
+	EC < WARNING RAWTCP_CONFIG_HOST_INVALID >
+	jmp	unlockHost
+
+portInvalid:
+	EC < WARNING RAWTCP_CONFIG_PORT_INVALID >
+unlockHost:
 	pop	bx
 	call	MemUnlock
 	call	MemFree
@@ -565,6 +582,7 @@ RawTcpOpen	proc	near
 	mov	bx, ds:[rawTcpConfigH]
 	tst	bx
 	jnz	haveConfig
+	EC < WARNING RAWTCP_OPEN_NO_CONFIG >
 	jmp	configError
 haveConfig:
 	mov	dx, bx
@@ -573,10 +591,12 @@ haveConfig:
 
 	test	es:[RTC_cfgFlags], mask RCF_HOST_VALID
 	jnz	hostValid
+	EC < WARNING RAWTCP_OPEN_CONFIG_INVALID >
 	jmp	configUnlockError
 hostValid:
 	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID
 	jnz	portValid
+	EC < WARNING RAWTCP_OPEN_CONFIG_INVALID >
 	jmp	configUnlockError
 portValid:
 
@@ -589,6 +609,7 @@ portValid:
 		    mask HF_SHARABLE
 	call	MemAlloc
 	jnc	contextAllocOk
+	EC < WARNING RAWTCP_OPEN_CONTEXT_ALLOC_FAILED >
 	jmp	configUnlockError
 contextAllocOk:
 
@@ -635,8 +656,11 @@ contextAllocOk:
 openRetry:
 	mov	ax, SDT_STREAM
 	call	SocketCreate
-	jc	retryFail
+	jnc	createOk
+	EC < WARNING RAWTCP_OPEN_SOCKET_CREATE_FAILED >
+	jmp	retryDelay
 
+createOk:
 	mov	ds:[RTC_socket], bx
 
 	;
@@ -690,12 +714,15 @@ openRetry:
 	mov	bx, bp
 	call	MemUnlock
 	mov	bx, bp
+	EC < WARNING RAWTCP_OPEN_SUCCESS >
 	clc
 	jmp	done
 
 connectFail:
+	EC < WARNING RAWTCP_OPEN_SOCKET_CONNECT_FAILED >
 	call	SocketClose
-	retryFail:
+	jmp	retryDelay
+retryDelay:
 	clr	ds:[RTC_socket]
 	dec	cx
 	jz	openFail
@@ -773,6 +800,7 @@ sendChunk:
 	jmp	sendLoop
 
 sendError:
+	EC < WARNING RAWTCP_WRITE_SEND_FAILED >
 	call	SocketClose
 	clr	es:[RTC_socket]
 	clr	es:[RTC_connected]
@@ -788,6 +816,7 @@ sendDone:
 	jmp	done
 
 notConnected:
+	EC < WARNING RAWTCP_WRITE_NOT_CONNECTED >
 	mov	ax, STREAM_CLOSED
 	clr	cx
 	stc
@@ -824,7 +853,10 @@ RawTcpClose	proc	near
 
 	mov	bx, es:[RTC_socket]
 	tst	bx
-	jz	clearState
+	jnz	closeSocket
+	EC < WARNING RAWTCP_CLOSE_WITHOUT_SOCKET >
+	jmp	clearState
+closeSocket:
 	call	SocketClose
 
 clearState:
@@ -951,6 +983,7 @@ maybeDone:
 	jmp	parseDone
 
 invalid:
+	EC < WARNING RAWTCP_PARSE_IPV4_INVALID >
 	stc
 
 parseDone:

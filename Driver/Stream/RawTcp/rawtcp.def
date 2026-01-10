@@ -36,3 +36,24 @@ DefDriver	Internal/rawtcpDr.def
 
 	.ioenable
 
+;------------------------------------------------------------------------------
+;	Warnings
+;------------------------------------------------------------------------------
+
+RAWTCP_LOAD_OPTIONS_START				enum Warnings
+RAWTCP_CONFIG_ALLOC_FAILED				enum Warnings
+RAWTCP_CONFIG_PORT_DEFAULTED				enum Warnings
+RAWTCP_CONFIG_PORT_INVALID				enum Warnings
+RAWTCP_CONFIG_HOST_INVALID				enum Warnings
+RAWTCP_CONFIG_HOST_MISSING				enum Warnings
+RAWTCP_CONFIG_READY					enum Warnings
+RAWTCP_OPEN_NO_CONFIG					enum Warnings
+RAWTCP_OPEN_CONFIG_INVALID				enum Warnings
+RAWTCP_OPEN_CONTEXT_ALLOC_FAILED			enum Warnings
+RAWTCP_OPEN_SOCKET_CREATE_FAILED			enum Warnings
+RAWTCP_OPEN_SOCKET_CONNECT_FAILED			enum Warnings
+RAWTCP_OPEN_SUCCESS					enum Warnings
+RAWTCP_WRITE_NOT_CONNECTED				enum Warnings
+RAWTCP_WRITE_SEND_FAILED				enum Warnings
+RAWTCP_CLOSE_WITHOUT_SOCKET				enum Warnings
+RAWTCP_PARSE_IPV4_INVALID				enum Warnings
