@@ -1,0 +1,40 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	Copyright (c) GeoWorks 2024 -- All Rights Reserved
+
+PROJECT:	PC GEOS
+MODULE:		Include
+FILE:		rawtcpDr.def
+
+DECLARER:	RawTcp Stream Driver
+INTENDED USERS:	Print spooler
+OVERRIDE CONST:	-
+
+AUTHOR:		OpenAI Assistant
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	OA	9/24/24		Initial revision
+
+DESCRIPTION:
+	Header for users of the RawTcp stream driver. Most of the function
+	and type definitions are found in streamDr.def. No additional
+	driver-specific functions are defined for v1.
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
+SetDef	__RAWTCPDR
+
+StartDriver	rawtcp
+
+UseDriver Internal/streamDr.def
+
+;
+; Protocol number for this interface.
+;
+RAWTCP_PROTO_MAJOR	equ STREAM_PROTO_MAJOR+1
+RAWTCP_PROTO_MINOR	equ STREAM_PROTO_MINOR+0
+
+EndDriver	rawtcp
+
