@@ -26,7 +26,7 @@ DESCRIPTION:
 	RawTcp is a simple TCP stream driver for the JetDirect protocol
 	(usually TCP port 9100). It reads connection parameters via
 	STREAM_ESC_LOAD_OPTIONS and opens a new connection for each job.
-	
+
 	Behavior summary:
 	- INI-only configuration via "rawTcpHost" and "rawTcpPort"
 	- No hostname resolution; dotted-quad IPv4 only
@@ -34,7 +34,7 @@ DESCRIPTION:
 	- Uses Socket library APIs (SocketCreate/SocketConnect/SocketSend)
 	- Returns StreamError values on failure (STREAM_NO_DEVICE,
 	  STREAM_CLOSED)
-	
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 include	rawtcp.def
@@ -163,7 +163,7 @@ CALLED BY:	GLOBAL
 PASS:		di	= routine number
 		bx	= stream token (open calls ignore this)
 RETURN:		depends on function
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 	Dispatch to the appropriate handler. Escape codes are dispatched
@@ -767,7 +767,7 @@ RETURN:		carry clear + ax = bytes written on success
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpWrite	proc	near
-	uses	ax,cx,dx,di,bp,es
+	uses	ax,dx,di,bp,es
 	.enter
 
 	mov	di, bx
