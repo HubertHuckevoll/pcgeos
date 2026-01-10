@@ -656,8 +656,11 @@ contextAllocOk:
 openRetry:
 	mov	ax, SDT_STREAM
 	call	SocketCreate
-	jc	createFail
+	jnc	createOk
+	EC < WARNING RAWTCP_OPEN_SOCKET_CREATE_FAILED >
+	jmp	retryDelay
 
+createOk:
 	mov	ds:[RTC_socket], bx
 
 	;
@@ -719,9 +722,6 @@ connectFail:
 	EC < WARNING RAWTCP_OPEN_SOCKET_CONNECT_FAILED >
 	call	SocketClose
 	jmp	retryDelay
-
-createFail:
-	EC < WARNING RAWTCP_OPEN_SOCKET_CREATE_FAILED >
 retryDelay:
 	clr	ds:[RTC_socket]
 	dec	cx
