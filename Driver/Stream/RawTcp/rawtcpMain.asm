@@ -854,9 +854,10 @@ sendChunk:
 	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
 	push	es
 	mov	es, ss:[callerSeg]
-	tst	es
+	mov	ax, es
+	tst	ax
 	jz	callerSegInvalidPop
-	cmp	es, 0100h
+	cmp	ax, 0100h
 	jb	callerSegInvalidPop
 	pop	es
 	mov	ds, ss:[callerSeg]
