@@ -84,7 +84,7 @@ RawTcpContext	ends
 RawTcpSocketAddress	struct
 	RTSA_socketAddress	SocketAddress
 	RTSA_extAddress	word
-	RTSA_ipAddr	IP_ADDR_SIZE dup (byte)
+	RTSA_ipAddr	byte	IP_ADDR_SIZE dup (?)
 RawTcpSocketAddress	ends
 
 ;------------------------------------------------------------------------------
