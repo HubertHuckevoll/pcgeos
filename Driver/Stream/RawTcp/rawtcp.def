@@ -15,7 +15,7 @@ REVISION HISTORY:
 
 DESCRIPTION:
 	Header for the RawTcp stream driver.
-	
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 _Driver		= 1
 
@@ -91,3 +91,10 @@ RAWTCP_CLOSE_BEFORE_SOCKET_CLOSE			enum Warnings
 RAWTCP_CLOSE_AFTER_SOCKET_CLOSE			enum Warnings
 RAWTCP_CLOSE_WITHOUT_SOCKET				enum Warnings
 RAWTCP_PARSE_IPV4_INVALID				enum Warnings
+
+RAWTCP_WRITE_SOCKET_HANDLE_ZERO 		enum Warnings
+RAWTCP_WRITE_BEFORE_SOCKET_CLOSE		enum Warnings
+RAWTCP_WRITE_AFTER_SOCKET_CLOSE 		enum Warnings
+
+
+
