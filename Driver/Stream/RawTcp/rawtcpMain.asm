@@ -564,6 +564,7 @@ RawTcpWriteByte	proc	near
 	mov	si, sp
 	mov	ss:[si], cl
 	segmov	ds, ss
+	segmov	es, ds
 	mov	si, sp
 	mov	cx, 1
 	call	RawTcpWrite
@@ -803,11 +804,16 @@ RawTcpWrite	proc	near
 	.enter
 
 	mov	di, bx
-	mov	ss:[callerSeg], ds
+	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
+	mov	ss:[callerSeg], es
+	EC < mov	ax, es						>
+	EC < call	ECCheckSegment					>
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	call	MemLock
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
 	mov	es, ax
+	EC < mov	ax, es						>
+	EC < call	ECCheckSegment					>
 
 	tst	es:[RTC_connected]
 	jz	notConnected
@@ -826,7 +832,10 @@ sendLoop:
 	jbe	sendChunk
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
+	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
 	mov	ds, ss:[callerSeg]
+	EC < mov	ax, ds						>
+	EC < call	ECCheckSegment					>
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
