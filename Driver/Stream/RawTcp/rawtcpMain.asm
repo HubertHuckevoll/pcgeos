@@ -198,6 +198,14 @@ haveHandle:
 	jmp	exit
 
 notYetOpen:
+	cmp	di, DR_STREAM_OPEN
+	jne	doNotYetOpenCall
+	EC < WARNING RAWTCP_STRATEGY_BEFORE_OPEN_CALL >
+	call	cs:rawTcpFunctions[di]
+	EC < WARNING RAWTCP_STRATEGY_AFTER_OPEN_CALL >
+	jmp	exit
+
+doNotYetOpenCall:
 	call	cs:rawTcpFunctions[di]
 	jmp	exit
 
@@ -384,8 +392,12 @@ portInvalid:
 	EC < WARNING RAWTCP_CONFIG_PORT_INVALID >
 unlockHost:
 	pop	bx
+	EC < WARNING RAWTCP_CONFIG_BEFORE_HOST_MEMUNLOCK >
 	call	MemUnlock
+	EC < WARNING RAWTCP_CONFIG_AFTER_HOST_MEMUNLOCK >
+	EC < WARNING RAWTCP_CONFIG_BEFORE_HOST_MEMFREE >
 	call	MemFree
+	EC < WARNING RAWTCP_CONFIG_AFTER_HOST_MEMFREE >
 
 unlockConfig:
 	push	ds
@@ -393,7 +405,9 @@ unlockConfig:
 	mov	ds, ax
 	mov	bx, ds:[rawTcpConfigH]
 	pop	ds
+	EC < WARNING RAWTCP_CONFIG_BEFORE_CONFIG_MEMUNLOCK >
 	call	MemUnlock
+	EC < WARNING RAWTCP_CONFIG_AFTER_CONFIG_MEMUNLOCK >
 	jmp	done
 
 ; MemAlloc failed; restore stack and exit
