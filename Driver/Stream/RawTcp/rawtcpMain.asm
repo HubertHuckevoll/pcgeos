@@ -845,9 +845,11 @@ sendChunk:
 	EC < WARNING_B RAWTCP_WRITE_CALLER_SEG_RELOAD_LOW	>
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_RELOAD_ZERO	>
-	EC < cmp	ax, es						>
+	EC < mov	di, es						>
+	EC < cmp	ax, di						>
 	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_CONTEXT	>
-	EC < cmp	ax, ss						>
+	EC < mov	di, ss						>
+	EC < cmp	ax, di						>
 	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_STACK		>
 	EC < cmp	ax, cs:rawTcpData				>
 	EC < WARNING_E RAWTCP_WRITE_CALLER_EQUALS_DATA		>
