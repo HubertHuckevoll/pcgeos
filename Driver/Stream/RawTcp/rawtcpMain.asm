@@ -83,7 +83,8 @@ RawTcpContext	ends
 
 RawTcpSocketAddress	struct
 	RTSA_socketAddress	SocketAddress
-	RTSA_extAddress	TcpOnlyExtendedAddress
+	RTSA_extAddress	word
+	RTSA_ipAddr	IP_ADDR_SIZE dup (byte)
 RawTcpSocketAddress	ends
 
 ;------------------------------------------------------------------------------
@@ -707,7 +708,7 @@ createOk:
 	mov	es:[di].RTSA_socketAddress.SA_domain.offset, offset rawTcpTcpDomainString
 	mov	ax, dgroup
 	mov	es:[di].RTSA_socketAddress.SA_domain.segment, ax
-	mov	es:[di].RTSA_socketAddress.SA_addressSize, size TcpOnlyExtendedAddress
+	mov	es:[di].RTSA_socketAddress.SA_addressSize, size word + IP_ADDR_SIZE
 
 	lea	di, es:[di].RTSA_socketAddress.SA_address
 	mov	{word} es:[di], 0			; ESACA_linkSize
