@@ -117,6 +117,7 @@ udata		ends
 
 Resident	segment	resource
 
+even
 DefEscapeTable	1
 DefEscape	RawTcpLoadOptions, STREAM_ESC_LOAD_OPTIONS
 
@@ -238,7 +239,7 @@ RawTcpEscape	proc	far
 	jne	notFound
 
 	pop	cx
-	call	cs:[di+((offset escRoutines)-(offset escCodes)-2)]
+	call	{word} cs:[di+((offset escRoutines)-(offset escCodes)-2)]
 	pop	di
 	ret
 
