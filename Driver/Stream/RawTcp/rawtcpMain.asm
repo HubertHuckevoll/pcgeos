@@ -234,6 +234,8 @@ RawTcpEscape	proc	far
 	jne	notFound
 
 	pop	cx
+	nop
+	nop
 	call	{word} cs:[di+((offset escRoutines)-(offset escCodes)-2)]
 	pop	di
 	ret
@@ -295,7 +297,9 @@ allocConfig:
 		    (mask HAF_ZERO_INIT shl 8) or \
 		    mask HF_SHARABLE
 	call	MemAlloc
-	jc	doneRestore
+	jnc	allocOk
+	jmp	doneRestore
+allocOk:
 	mov	ds:[rawTcpConfigH], bx
 	mov	es, ax
 
@@ -547,15 +551,21 @@ RawTcpOpen	proc	near
 	push	ds
 	mov	bx, ds:[rawTcpConfigH]
 	tst	bx
-	jz	configError
+	jnz	haveConfig
+	jmp	configError
+haveConfig:
 	mov	dx, bx
 	call	MemLock
 	mov	es, ax
 
 	test	es:[RTC_cfgFlags], mask RCF_HOST_VALID
-	jz	configUnlockError
+	jnz	hostValid
+	jmp	configUnlockError
+hostValid:
 	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID
-	jz	configUnlockError
+	jnz	portValid
+	jmp	configUnlockError
+portValid:
 
 	;
 	; Allocate context for this open.
@@ -565,7 +575,9 @@ RawTcpOpen	proc	near
 		    (mask HAF_ZERO_INIT shl 8) or \
 		    mask HF_SHARABLE
 	call	MemAlloc
-	jc	configUnlockError
+	jnc	contextAllocOk
+	jmp	configUnlockError
+contextAllocOk:
 
 	mov	bp, bx				; context handle
 	mov	ds, ax				; ds = context segment
