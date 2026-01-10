@@ -528,7 +528,11 @@ RawTcpWriteByte	proc	near
 	mov	si, sp
 	mov	cx, 1
 	call	RawTcpWrite
-	lea	sp, [sp+2]
+	mov	cx, ax
+	lahf
+	add	sp, 2
+	sahf
+	mov	ax, cx
 	pop	cx
 	pop	si
 	pop	ds
