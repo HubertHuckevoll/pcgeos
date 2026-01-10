@@ -867,6 +867,13 @@ sendChunk:
 	jnz	sendChunkCopy
 	mov	cx, ss:[chunkSize]
 	clr	ax
+	EC < WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
+	EC < mov	ax, ds						>
+	EC < WARNING_Z RAWTCP_WRITE_DS_ZERO			>
+	EC < mov	ax, ss:[callerSeg]				>
+	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
+	EC < mov	ax, es						>
+	EC < WARNING_Z RAWTCP_WRITE_ES_ZERO			>
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
@@ -917,6 +924,13 @@ tempAllocOk:
 	clr	si
 	mov	cx, ss:[chunkSize]
 	clr	ax
+	EC < WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
+	EC < mov	ax, ds						>
+	EC < WARNING_Z RAWTCP_WRITE_DS_ZERO			>
+	EC < mov	ax, ss:[callerSeg]				>
+	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
+	EC < mov	ax, es						>
+	EC < WARNING_Z RAWTCP_WRITE_ES_ZERO			>
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
