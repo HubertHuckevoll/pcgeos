@@ -522,7 +522,8 @@ RawTcpWriteByte	proc	near
 	push	si
 	push	cx
 	sub	sp, 2
-	mov	ss:[sp], cl
+	mov	si, sp
+	mov	ss:[si], cl
 	segmov	ds, ss
 	mov	si, sp
 	mov	cx, 1
