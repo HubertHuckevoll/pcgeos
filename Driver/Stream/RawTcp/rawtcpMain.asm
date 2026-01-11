@@ -901,6 +901,7 @@ EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 ;		mov	cx, ss:[requestedCount]
 ;		jmp	done
 
+	mov	cx, ss:[requestedCount]
 	mov	dx, cx
 	clr	bp
 
