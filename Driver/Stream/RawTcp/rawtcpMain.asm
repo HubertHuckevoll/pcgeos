@@ -806,6 +806,7 @@ RawTcpWrite	proc	near
 	callerNeedsCopy	local	word
 	chunkSize	local	word
 	tempBufferH	local	word
+	requestedCount	local	word
 	uses	ax,dx,di,bp,es
 	.enter
 
@@ -859,8 +860,11 @@ callerSegChecked:
 	tst	bx
 	jz	notConnected
 
+	mov	ss:[requestedCount], cx
 	call	RawTcpWriteDebugTest
 	jc	sendError
+	mov	ax, ss:[requestedCount]
+	mov	cx, ss:[requestedCount]
 	jmp	done
 
 	mov	dx, cx
