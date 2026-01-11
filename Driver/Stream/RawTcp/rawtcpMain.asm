@@ -857,7 +857,6 @@ callerSegChecked:
 	tst	bx
 	jz	notConnected
 
-	mov	ax, ss:[driverSeg]
 	call	RawTcpWriteDebugTest
 	jc	sendError
 	jmp	done
@@ -1109,8 +1108,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 SYNOPSIS:	Send a small debug payload to the socket.
 
 CALLED BY:	RawTcpWrite
-PASS:		ax	= driver segment
-		es	= locked context segment
+PASS:		es	= locked context segment
 		bx	= socket handle
 RETURN:		carry clear + ax/cx = bytes written on success
 		carry set + ax = error on failure
@@ -1120,6 +1118,7 @@ RawTcpWriteDebugTest	proc	near
 	uses	ds,si,cx
 	.enter
 
+	mov	ax, cs
 	mov	ds, ax
 	mov	si, offset rawTcpDebugTestPayload
 	mov	cx, rawTcpDebugTestPayloadLength
