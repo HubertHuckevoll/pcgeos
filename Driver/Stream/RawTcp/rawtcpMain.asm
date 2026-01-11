@@ -801,6 +801,7 @@ RETURN:		carry clear + ax = bytes written on success
 RawTcpWrite	proc	near
 	callerSeg	local	word
 	contextSeg	local	word
+	contextHandle	local	word
 	driverSeg	local	word
 	callerNeedsCopy	local	word
 	chunkSize	local	word
@@ -815,6 +816,7 @@ RawTcpWrite	proc	near
 	tst	bx
 	jz	invalidHandle
 	mov	di, bx
+	mov	ss:[contextHandle], bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
 	mov	cx, ss
@@ -1014,7 +1016,7 @@ notConnected:
 
 done:
 	mov	ds, ss:[driverSeg]
-	mov	bx, di
+	mov	bx, ss:[contextHandle]
 	EC < mov	ax, bx						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMUNLOCK >
