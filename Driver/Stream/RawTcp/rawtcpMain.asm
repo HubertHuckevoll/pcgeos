@@ -804,6 +804,8 @@ RawTcpWrite	proc	near
 	contextHandle	local	word
 	driverSeg	local	word
 	callerNeedsCopy	local	word
+	callerIsLMem	local	word
+	callerChunkSize	local	word
 	chunkSize	local	word
 	tempBufferH	local	word
 	requestedCount	local	word
@@ -844,6 +846,8 @@ EC < 	WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO			>
 EC < 	mov	ax, bx						>
 EC < 	tst	ax						>
 EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
+	mov	ss:[callerIsLMem], FALSE
+	mov	ss:[callerChunkSize], 0
 	;
 	; Guard against caller buffer overruns in handle-backed segments.
 	;
@@ -855,6 +859,18 @@ EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	call	MemSegmentToHandle
 	jnc	bufferCheckDone
 	mov	bx, cx
+	mov	ax, MGIT_FLAGS_AND_LOCK_COUNT
+	call	MemGetInfo
+	test	al, mask HF_LMEM
+	jz	bufferCheckBlock
+	mov	ss:[callerIsLMem], TRUE
+	mov	ds, ss:[callerSeg]
+	ChunkSizePtr	ds, si, cx
+	mov	ss:[callerChunkSize], cx
+	cmp	cx, ss:[requestedCount]
+	jae	bufferCheckDone
+	jmp	shortBuffer
+bufferCheckBlock:
 	mov	ax, MGIT_SIZE
 	call	MemGetInfo
 	sub	ax, si
@@ -902,6 +918,13 @@ EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 ;		jmp	done
 
 	mov	cx, ss:[requestedCount]
+	tst	ss:[callerIsLMem]
+	jz	sendCountReady
+	cmp	cx, ss:[callerChunkSize]
+	jbe	sendCountReady
+	mov	cx, ss:[callerChunkSize]
+	mov	ss:[requestedCount], cx
+sendCountReady:
 	mov	dx, cx
 	clr	bp
 
