@@ -805,6 +805,7 @@ RawTcpWrite	proc	near
 	driverSeg	local	word
 	tempBufferH	local	word
 	requestedCount	local	word
+	socketH		local	word
 	uses	ax,dx,bp,es
 	.enter
 
@@ -837,6 +838,7 @@ EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 	mov	bx, es:[RTC_socket]
 	tst	bx
 	jz	notConnected
+	mov	ss:[socketH], bx
 
 	mov	ds, ss:[driverSeg]
 	mov	ax, ss:[requestedCount]
@@ -873,6 +875,7 @@ EC < 	tst	ax					>
 EC < 	WARNING_Z RAWTCP_WRITE_ES_ZERO			>
 EC < 	WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 EC < 	clr	ax					>
+	mov	bx, ss:[socketH]
 	call	SocketSend
 EC < 	WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
 EC < 	WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
