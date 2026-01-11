@@ -809,30 +809,34 @@ RawTcpWrite	proc	near
 	uses	ax,dx,bp,es
 	.enter
 
+	;
+	; store variables
+	;
 	mov	ss:[driverSeg], ds
 	mov	ss:[contextHandle], bx
-EC < 	WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
-
 	mov	ss:[requestedCount], cx
 
+	;
+	; check context handle, lock if exists
+	;
 	tst	bx
 	jz	invalidHandle
 	mov	ss:[callerSeg], es
-EC < 	WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	push	ds
 	call	MemLock
 	pop	ds
 	tst	ax
 	jz	lockFailed
-EC < 	WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
+
+	;
+	; store context
+	;
 	mov	es, ax
 	mov	ss:[contextSeg], ax
-EC < 	mov	ax, ss:[contextSeg]				>
-EC < 	tst	ah						>
-EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_LOW		>
-EC < 	tst	ax						>
-EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 
+	;
+	; Check socket
+	;
 	tst	es:[RTC_connected]
 	jz	notConnected
 	mov	bx, es:[RTC_socket]
@@ -840,18 +844,30 @@ EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 	jz	notConnected
 	mov	ss:[socketH], bx
 
+	;
+	; Allocate temp buffer
+	;
 	mov	ds, ss:[driverSeg]
 	mov	ax, ss:[requestedCount]
-	mov	cx, ALLOC_DYNAMIC_NO_ERR or \
-		    (mask HAF_ZERO_INIT shl 8)
+	mov	cx, ALLOC_DYNAMIC_NO_ERR or (mask HAF_ZERO_INIT shl 8)
 	call	MemAlloc
 	jc	allocFailed
+
+	;
+	; Lock temp buffer
+	;
 	mov	ss:[tempBufferH], bx
 	push	bx
 	call	MemLock
 	pop	bx
 	tst	ax
 	jz	tempLockFailed
+
+	;
+	; Copy data to temp buffer
+	; as an AssertCheck in SockeSend always expects a
+	; handle based far pointer in EC builds...
+	;
 	push	es
 	mov	es, ax
 	mov	ds, ss:[callerSeg]
@@ -859,11 +875,18 @@ EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 	mov	cx, ss:[requestedCount]
 	rep	movsb
 	pop	es
+
+	;
+	; Setup for SocketSend
+	;
 	mov	ds, ax
 	clr	si
 	mov	cx, ss:[requestedCount]
 	clr	ax
-EC < 	WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
+
+	;
+	; Error checking before sending
+	;
 EC < 	mov	ax, ds						>
 EC < 	tst	ax					>
 EC < 	WARNING_Z RAWTCP_WRITE_DS_ZERO			>
@@ -873,28 +896,31 @@ EC < 	WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
 EC < 	mov	ax, es						>
 EC < 	tst	ax					>
 EC < 	WARNING_Z RAWTCP_WRITE_ES_ZERO			>
-EC < 	WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
-EC < 	clr	ax					>
+EC <	clr	ax					>
+	;
+	; Send
+	;
 	mov	bx, ss:[socketH]
 	call	SocketSend
-EC < 	WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
-EC < 	WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
-EC < 	tst	bx						>
-EC < 	WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO		>
-EC < 	mov	ax, es						>
-EC < 	tst	ax						>
-EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
-	pushf
-	mov	ds, ss:[driverSeg]
-	mov	bx, ss:[tempBufferH]
-	call	MemUnlock
-	call	MemFree
-	popf
-	jc	sendError
-	mov	ax, ss:[requestedCount]
-	mov	cx, ss:[requestedCount]
-	clc
-	jmp	done
+
+	;
+	; clean up temp buffer
+	;
+	pushf				; Save flags
+	mov	ds, ss:[driverSeg]	; Set DS to the driver's segment
+	mov	bx, ss:[tempBufferH]	; Get handle to temporary buffer
+	call	MemUnlock		; Unlock the buffer
+	call	MemFree			; Free the buffer
+	popf				; Restore flags
+	jc	sendError		; If error, go to error handler
+
+	;
+	; prepare return values
+	;
+	mov	ax, ss:[requestedCount]	; Set AX to number of bytes requested
+	mov	cx, ss:[requestedCount]	; Set CX to number of bytes requested
+	clc				; Clear carry to indicate success
+	jmp	done			; And exit
 
 tempLockFailed:
 	mov	ds, ss:[driverSeg]
@@ -914,12 +940,10 @@ EC < 	WARNING RAWTCP_WRITE_SEND_FAILED >
 	mov	es, ss:[contextSeg]
 	mov	bx, es:[RTC_socket]
 	tst	bx
-EC < 	WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
 	jz	skipClose
-EC < 	WARNING RAWTCP_WRITE_BEFORE_SOCKET_CLOSE >
 	call	SocketClose
-EC < 	WARNING RAWTCP_WRITE_AFTER_SOCKET_CLOSE >
 skipClose:
+EC < 	WARNING RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
 	clr	es:[RTC_socket]
 	clr	es:[RTC_connected]
 	mov	ax, STREAM_CLOSED
@@ -936,14 +960,12 @@ EC < 	WARNING RAWTCP_WRITE_NOT_CONNECTED >
 done:
 	mov	ds, ss:[driverSeg]
 	mov	bx, ss:[contextHandle]
-EC < 	mov	ax, bx
-EC < 	tst	ax 					>
-EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	call	MemUnlock
 	.leave
 	ret
 
 invalidHandle:
+EC < 	WARNING RAWTCP_INVALID_HANDLE >
 	mov	ax, STREAM_CLOSED
 	clr	cx
 	stc
@@ -951,6 +973,7 @@ invalidHandle:
 	ret
 
 lockFailed:
+EC < 	WARNING RAWTCP_LOCK_FAILED >
 	mov	ax, STREAM_CLOSED
 	clr	cx
 	stc
@@ -1010,41 +1033,6 @@ RawTcpClose	endp
 ;------------------------------------------------------------------------------
 ; Helpers
 ;------------------------------------------------------------------------------
-
-rawTcpDebugTestPayload	db	"test"
-rawTcpDebugTestPayloadLength	equ	($ - rawTcpDebugTestPayload)
-
-COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpWriteDebugTest
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-SYNOPSIS:	Send a small debug payload to the socket.
-
-CALLED BY:	RawTcpWrite
-PASS:		es	= locked context segment
-		bx	= socket handle
-RETURN:		carry clear + ax/cx = bytes written on success
-		carry set + ax = error on failure
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpWriteDebugTest	proc	near
-	uses	ds,si,cx
-	.enter
-
-	mov	ax, cs
-	mov	ds, ax
-	mov	si, offset rawTcpDebugTestPayload
-	mov	cx, rawTcpDebugTestPayloadLength
-	clr	ax
-	call	SocketSend
-	jc	done
-	mov	ax, rawTcpDebugTestPayloadLength
-	mov	cx, ax
-
-done:
-	.leave
-	ret
-RawTcpWriteDebugTest	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		RawTcpSetSocketOptions
