@@ -801,12 +801,14 @@ RETURN:		carry clear + ax = bytes written on success
 RawTcpWrite	proc	near
 	callerSeg	local	word
 	contextSeg	local	word
+	driverSeg	local	word
 	callerNeedsCopy	local	word
 	chunkSize	local	word
 	tempBufferH	local	word
 	uses	ax,dx,di,bp,es
 	.enter
 
+	mov	ss:[driverSeg], ds
 	mov	ax, es
 	tst	ax
 	jz	invalidCallerSeg
@@ -954,6 +956,7 @@ tempAllocOk:
 	pop	ds
 	pushf
 	push	bx
+	mov	ds, ss:[driverSeg]
 	mov	bx, ss:[tempBufferH]
 	call	MemUnlock
 	call	MemFree
@@ -968,12 +971,14 @@ tempAllocOk:
 tempLockFailed:
 	push	bx
 	mov	bx, ss:[tempBufferH]
+	mov	ds, ss:[driverSeg]
 	call	MemFree
 	pop	bx
 	jmp	sendError
 
 sendError:
 	EC < WARNING RAWTCP_WRITE_SEND_FAILED >
+	mov	ds, ss:[driverSeg]
 	mov	es, ss:[contextSeg]
 	mov	bx, es:[RTC_socket]
 	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
@@ -1004,6 +1009,7 @@ notConnected:
 	stc
 
 done:
+	mov	ds, ss:[driverSeg]
 	mov	bx, di
 	EC < mov	ax, bx						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
