@@ -857,6 +857,10 @@ callerSegChecked:
 	tst	bx
 	jz	notConnected
 
+	call	RawTcpWriteDebugTest
+	jc	sendError
+	jmp	done
+
 	mov	dx, cx
 	clr	bp
 
@@ -1093,6 +1097,41 @@ RawTcpClose	endp
 ;------------------------------------------------------------------------------
 ; Helpers
 ;------------------------------------------------------------------------------
+
+rawTcpDebugTestPayload	db	"test"
+rawTcpDebugTestPayloadLength	equ	($ - rawTcpDebugTestPayload)
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		RawTcpWriteDebugTest
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Send a small debug payload to the socket.
+
+CALLED BY:	RawTcpWrite
+PASS:		es	= locked context segment
+		bx	= socket handle
+RETURN:		carry clear + ax/cx = bytes written on success
+		carry set + ax = error on failure
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
+RawTcpWriteDebugTest	proc	near
+	uses	ds,si,cx
+	.enter
+
+	mov	ax, cs
+	mov	ds, ax
+	mov	si, offset rawTcpDebugTestPayload
+	mov	cx, rawTcpDebugTestPayloadLength
+	clr	ax
+	call	SocketSend
+	jc	done
+	mov	ax, rawTcpDebugTestPayloadLength
+	mov	cx, ax
+
+done:
+	.leave
+	ret
+RawTcpWriteDebugTest	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		RawTcpSetSocketOptions
