@@ -838,6 +838,7 @@ callerSegChecked:
 	EC < tst	ax						>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
 	EC < mov	ax, bx						>
+	EC < tst	ax					>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	push	ds
@@ -887,10 +888,13 @@ sendChunk:
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
 	EC < mov	ax, ds						>
+	EC < tst	ax					>
 	EC < WARNING_Z RAWTCP_WRITE_DS_ZERO			>
 	EC < mov	ax, ss:[callerSeg]				>
+	EC < tst	ax					>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
 	EC < mov	ax, es						>
+	EC < tst	ax					>
 	EC < WARNING_Z RAWTCP_WRITE_ES_ZERO			>
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	push	ds
@@ -948,10 +952,13 @@ tempAllocOk:
 	clr	ax
 	EC < WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
 	EC < mov	ax, ds						>
+	EC < tst	ax					>
 	EC < WARNING_Z RAWTCP_WRITE_DS_ZERO			>
 	EC < mov	ax, ss:[callerSeg]				>
+	EC < tst	ax					>
 	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
 	EC < mov	ax, es						>
+	EC < tst	ax					>
 	EC < WARNING_Z RAWTCP_WRITE_ES_ZERO			>
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
 	call	SocketSend
@@ -991,11 +998,10 @@ sendError:
 	mov	ds, ss:[driverSeg]
 	mov	es, ss:[contextSeg]
 	mov	bx, es:[RTC_socket]
-	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
 	tst	bx
+	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
 	jz	skipClose
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_CLOSE >
-	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
 	call	SocketClose
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_CLOSE >
 skipClose:
@@ -1021,10 +1027,9 @@ notConnected:
 done:
 	mov	ds, ss:[driverSeg]
 	mov	bx, ss:[contextHandle]
-	EC < mov	ax, bx						>
+	EC < mov	ax, bx
+	EC < tst	ax 					>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
-	EC < WARNING RAWTCP_WRITE_BEFORE_MEMUNLOCK >
-	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO >
 	call	MemUnlock
 	.leave
 	ret
