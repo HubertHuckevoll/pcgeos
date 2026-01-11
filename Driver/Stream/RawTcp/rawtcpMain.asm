@@ -815,7 +815,8 @@ RawTcpWrite	proc	near
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
 	mov	ss:[callerSeg], es
-	cmp	ax, ss
+	mov	cx, ss
+	cmp	ax, cx
 	je	callerSegNeedsCopy
 	mov	cx, ss:[callerSeg]
 	call	MemSegmentToHandle
