@@ -791,7 +791,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 SYNOPSIS:	Send data to the connected socket.
 
 CALLED BY:	DR_STREAM_WRITE
-PASS:		ds:si	= buffer
+PASS:		es:si	= buffer
 		cx	= byte count
 		bx	= context handle
 RETURN:		carry clear + ax = bytes written on success
@@ -807,17 +807,20 @@ RawTcpWrite	proc	near
 	uses	ax,dx,di,bp,es
 	.enter
 
-	mov	ax, ds
+	mov	ax, es
 	tst	ax
 	jz	invalidCallerSeg
 	tst	bx
 	jz	invalidHandle
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
-	mov	ss:[callerSeg], ds
+	mov	ss:[callerSeg], es
+	cmp	ax, ss
+	je	callerSegNeedsCopy
 	mov	cx, ss:[callerSeg]
 	call	MemSegmentToHandle
 	jc	callerSegHandleBacked
+callerSegNeedsCopy:
 	mov	ss:[callerNeedsCopy], TRUE
 	jmp	callerSegChecked
 callerSegHandleBacked:
@@ -1000,7 +1003,6 @@ notConnected:
 	stc
 
 done:
-	mov	ds, ss:[callerSeg]
 	mov	bx, di
 	EC < mov	ax, bx						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
