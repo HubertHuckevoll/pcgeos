@@ -807,14 +807,14 @@ RawTcpWrite	proc	near
 	uses	ax,dx,di,bp,es
 	.enter
 
-	mov	ax, es
+	mov	ax, ds
 	tst	ax
 	jz	invalidCallerSeg
 	tst	bx
 	jz	invalidHandle
 	mov	di, bx
 	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
-	mov	ss:[callerSeg], es
+	mov	ss:[callerSeg], ds
 	mov	cx, ss:[callerSeg]
 	call	MemSegmentToHandle
 	jc	callerSegHandleBacked
@@ -831,7 +831,9 @@ callerSegChecked:
 	EC < mov	ax, bx						>
 	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
+	push	ds
 	call	MemLock
+	pop	ds
 	tst	ax
 	jz	lockFailed
 	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
@@ -875,7 +877,9 @@ sendChunk:
 	EC < mov	ax, es						>
 	EC < WARNING_Z RAWTCP_WRITE_ES_ZERO			>
 	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
+	push	ds
 	call	SocketSend
+	pop	ds
 	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
 	EC < WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
 	EC < tst	bx						>
@@ -904,7 +908,9 @@ tempAllocOk:
 	pop	bx
 	push	bx
 	mov	bx, ss:[tempBufferH]
+	push	ds
 	call	MemLock
+	pop	ds
 	pop	bx
 	tst	ax
 	jz	tempLockFailed
