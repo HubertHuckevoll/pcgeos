@@ -814,11 +814,15 @@ RawTcpWrite	proc	near
 	mov	ax, es
 	tst	ax
 	jz	invalidCallerSeg
+
 	tst	bx
 	jz	invalidHandle
 	mov	di, bx
 	mov	ss:[contextHandle], bx
-	EC < WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
+EC < 	WARNING RAWTCP_WRITE_CAPTURE_CALLER_SEG >
+
+	mov	ss:[requestedCount], cx
+
 	mov	ss:[callerSeg], es
 	mov	cx, ss
 	cmp	ax, cx
@@ -832,28 +836,56 @@ callerSegNeedsCopy:
 callerSegHandleBacked:
 	clr	ss:[callerNeedsCopy]
 callerSegChecked:
-	EC < mov	ax, ss:[callerSeg]				>
-	EC < tst	ah						>
-	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_LOW		>
-	EC < tst	ax						>
-	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
-	EC < mov	ax, bx						>
-	EC < tst	ax					>
-	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
-	EC < WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
+EC < 	mov	ax, ss:[callerSeg]				>
+EC < 	tst	ah						>
+EC < 	WARNING_Z RAWTCP_WRITE_CALLER_SEG_LOW			>
+EC < 	tst	ax						>
+EC < 	WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO			>
+EC < 	mov	ax, bx						>
+EC < 	tst	ax						>
+EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
+	;
+	; Guard against caller buffer overruns in handle-backed segments.
+	;
+	tst	ss:[callerNeedsCopy]
+	jnz	bufferOk
+	push	bx
+	push	ds
+	mov	cx, ss:[callerSeg]
+	call	MemSegmentToHandle
+	jnc	bufferCheckDone
+	mov	bx, cx
+	mov	ax, MGIT_SIZE
+	call	MemGetInfo
+	sub	ax, si
+	jc	shortBuffer
+	cmp	ax, ss:[requestedCount]
+	jae	bufferCheckDone
+shortBuffer:
+	pop	ds
+	pop	bx
+	mov	ax, STREAM_SHORT_READ_WRITE
+	clr	cx
+	stc
+	jmp	shortWriteExit
+bufferCheckDone:
+	pop	ds
+	pop	bx
+bufferOk:
+EC < 	WARNING RAWTCP_WRITE_BEFORE_MEMLOCK >
 	push	ds
 	call	MemLock
 	pop	ds
 	tst	ax
 	jz	lockFailed
-	EC < WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
+EC < 	WARNING RAWTCP_WRITE_AFTER_MEMLOCK >
 	mov	es, ax
 	mov	ss:[contextSeg], ax
-	EC < mov	ax, ss:[contextSeg]				>
-	EC < tst	ah						>
-	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_LOW		>
-	EC < tst	ax						>
-	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
+EC < 	mov	ax, ss:[contextSeg]				>
+EC < 	tst	ah						>
+EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_LOW		>
+EC < 	tst	ax						>
+EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 
 	tst	es:[RTC_connected]
 	jz	notConnected
@@ -861,12 +893,13 @@ callerSegChecked:
 	tst	bx
 	jz	notConnected
 
-	mov	ss:[requestedCount], cx
-	call	RawTcpWriteDebugTest
-	jc	sendError
-	mov	ax, ss:[requestedCount]
-	mov	cx, ss:[requestedCount]
-	jmp	done
+	;
+	; debug call
+	;
+;		call	RawTcpWriteDebugTest
+;		mov	ax, ss:[requestedCount]
+;		mov	cx, ss:[requestedCount]
+;		jmp	done
 
 	mov	dx, cx
 	clr	bp
@@ -879,34 +912,33 @@ sendLoop:
 	jbe	sendChunk
 	mov	cx, RAWTCP_MAX_SEND_CHUNK
 sendChunk:
-	EC < WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
+EC 	< WARNING RAWTCP_WRITE_LOAD_CALLER_SEG >
 	mov	ss:[chunkSize], cx
 	mov	ds, ss:[callerSeg]
 	tst	ss:[callerNeedsCopy]
 	jnz	sendChunkCopy
 	mov	cx, ss:[chunkSize]
 	clr	ax
-	EC < WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
-	EC < mov	ax, ds						>
-	EC < tst	ax					>
-	EC < WARNING_Z RAWTCP_WRITE_DS_ZERO			>
-	EC < mov	ax, ss:[callerSeg]				>
-	EC < tst	ax					>
-	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
-	EC < mov	ax, es						>
-	EC < tst	ax					>
-	EC < WARNING_Z RAWTCP_WRITE_ES_ZERO			>
-	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
-	push	ds
+EC < 	WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
+EC < 	mov	ax, ds						>
+EC < 	tst	ax					>
+EC < 	WARNING_Z RAWTCP_WRITE_DS_ZERO			>
+EC < 	mov	ax, ss:[callerSeg]				>
+EC < 	tst	ax					>
+EC < 	WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
+EC < 	mov	ax, es						>
+EC < 	tst	ax					>
+EC < 	WARNING_Z RAWTCP_WRITE_ES_ZERO			>
+EC < 	WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
+EC < 	clr	ax					>
 	call	SocketSend
-	pop	ds
-	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
-	EC < WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
-	EC < tst	bx						>
-	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO		>
-	EC < mov	ax, es						>
-	EC < tst	ax						>
-	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
+EC < 	WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
+EC < 	WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
+EC < 	tst	bx						>
+EC < 	WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO		>
+EC < 	mov	ax, es						>
+EC < 	tst	ax						>
+EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 	jc	sendError
 	add	bp, ss:[chunkSize]
 	add	si, ss:[chunkSize]
@@ -950,25 +982,26 @@ tempAllocOk:
 	clr	si
 	mov	cx, ss:[chunkSize]
 	clr	ax
-	EC < WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
-	EC < mov	ax, ds						>
-	EC < tst	ax					>
-	EC < WARNING_Z RAWTCP_WRITE_DS_ZERO			>
-	EC < mov	ax, ss:[callerSeg]				>
-	EC < tst	ax					>
-	EC < WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
-	EC < mov	ax, es						>
-	EC < tst	ax					>
-	EC < WARNING_Z RAWTCP_WRITE_ES_ZERO			>
-	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
+EC < 	WARNING RAWTCP_WRITE_PRE_SEND_SEGMENTS >
+EC < 	mov	ax, ds						>
+EC < 	tst	ax					>
+EC < 	WARNING_Z RAWTCP_WRITE_DS_ZERO			>
+EC < 	mov	ax, ss:[callerSeg]				>
+EC < 	tst	ax					>
+EC < 	WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
+EC < 	mov	ax, es						>
+EC < 	tst	ax					>
+EC < 	WARNING_Z RAWTCP_WRITE_ES_ZERO			>
+EC < 	WARNING RAWTCP_WRITE_BEFORE_SOCKET_SEND >
+EC < 	clr	ax					>
 	call	SocketSend
-	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
-	EC < WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
-	EC < tst	bx						>
-	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO		>
-	EC < mov	ax, es						>
-	EC < tst	ax						>
-	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
+EC < 	WARNING RAWTCP_WRITE_AFTER_SOCKET_SEND >
+EC < 	WARNING RAWTCP_WRITE_POST_SEND_VALIDATE >
+EC < 	tst	bx						>
+EC < 	WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO		>
+EC < 	mov	ax, es						>
+EC < 	tst	ax						>
+EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_SEG_ZERO		>
 	pop	si
 	pop	ds
 	pushf
@@ -994,16 +1027,16 @@ tempLockFailed:
 	jmp	sendError
 
 sendError:
-	EC < WARNING RAWTCP_WRITE_SEND_FAILED >
+EC < 	WARNING RAWTCP_WRITE_SEND_FAILED >
 	mov	ds, ss:[driverSeg]
 	mov	es, ss:[contextSeg]
 	mov	bx, es:[RTC_socket]
 	tst	bx
-	EC < WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
+EC < 	WARNING_Z RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
 	jz	skipClose
-	EC < WARNING RAWTCP_WRITE_BEFORE_SOCKET_CLOSE >
+EC < 	WARNING RAWTCP_WRITE_BEFORE_SOCKET_CLOSE >
 	call	SocketClose
-	EC < WARNING RAWTCP_WRITE_AFTER_SOCKET_CLOSE >
+EC < 	WARNING RAWTCP_WRITE_AFTER_SOCKET_CLOSE >
 skipClose:
 	clr	es:[RTC_socket]
 	clr	es:[RTC_connected]
@@ -1019,7 +1052,7 @@ sendDone:
 	jmp	done
 
 notConnected:
-	EC < WARNING RAWTCP_WRITE_NOT_CONNECTED >
+EC < 	WARNING RAWTCP_WRITE_NOT_CONNECTED >
 	mov	ax, STREAM_CLOSED
 	clr	cx
 	stc
@@ -1027,9 +1060,9 @@ notConnected:
 done:
 	mov	ds, ss:[driverSeg]
 	mov	bx, ss:[contextHandle]
-	EC < mov	ax, bx
-	EC < tst	ax 					>
-	EC < WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
+EC < 	mov	ax, bx
+EC < 	tst	ax 					>
+EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	call	MemUnlock
 	.leave
 	ret
@@ -1045,6 +1078,10 @@ invalidCallerSeg:
 	mov	ax, STREAM_CLOSED
 	clr	cx
 	stc
+	.leave
+	ret
+
+shortWriteExit:
 	.leave
 	ret
 
