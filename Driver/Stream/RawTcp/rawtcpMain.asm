@@ -865,8 +865,23 @@ EC < 	WARNING_Z RAWTCP_WRITE_CONTEXT_HANDLE_ZERO		>
 	jz	bufferCheckBlock
 	mov	ss:[callerIsLMem], TRUE
 	mov	ds, ss:[callerSeg]
-	ChunkSizePtr	ds, si, cx
+	mov	ax, ds:[LMBH_offset]
+	mov	dx, ds:[LMBH_nHandles]
+	shl	dx, 1
+	add	dx, ax
+	cmp	si, ax
+	jb	lmemHandleDone
+	cmp	si, dx
+	jae	lmemHandleDone
+	ChunkSizeHandle	ds, si, cx
 	mov	ss:[callerChunkSize], cx
+	mov	ax, ds:[si]
+	cmp	ax, -1
+	je	shortBuffer
+	mov	si, ax
+lmemHandleDone:
+	tst	ss:[callerChunkSize]
+	jz	bufferCheckBlock
 	cmp	cx, ss:[requestedCount]
 	jae	bufferCheckDone
 	jmp	shortBuffer
