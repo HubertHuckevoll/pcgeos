@@ -820,13 +820,17 @@ RawTcpWrite	proc	near
 	; check context handle, lock if exists
 	;
 	tst	bx
-	jz	invalidHandle
+	jnz	short haveHandle
+	jmp	invalidHandle
+haveHandle:
 	mov	ss:[callerSeg], es
 	push	ds
 	call	MemLock
 	pop	ds
 	tst	ax
-	jz	lockFailed
+	jnz	short haveLock
+	jmp	lockFailed
+haveLock:
 
 	;
 	; store context
@@ -838,10 +842,14 @@ RawTcpWrite	proc	near
 	; Check socket
 	;
 	tst	es:[RTC_connected]
-	jz	notConnected
+	jnz	short haveConnection
+	jmp	notConnected
+haveConnection:
 	mov	bx, es:[RTC_socket]
 	tst	bx
-	jz	notConnected
+	jnz	short haveSocket
+	jmp	notConnected
+haveSocket:
 	mov	ss:[socketH], bx
 
 	;
@@ -851,7 +859,9 @@ RawTcpWrite	proc	near
 	mov	ax, ss:[requestedCount]
 	mov	cx, ALLOC_DYNAMIC_NO_ERR or (mask HAF_ZERO_INIT shl 8)
 	call	MemAlloc
-	jc	allocFailed
+	jnc	short allocOk
+	jmp	allocFailed
+allocOk:
 
 	;
 	; Lock temp buffer
