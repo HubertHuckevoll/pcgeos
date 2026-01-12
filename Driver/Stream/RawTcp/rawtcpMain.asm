@@ -874,9 +874,9 @@ allocOk:
 	jz	tempLockFailed
 
 	;
-	; Copy data to temp buffer
-	; as an AssertCheck in SockeSend always expects a
-	; handle based far pointer in EC builds...
+	; Copy data to temp buffer, as an AssertCheck
+	; in SocketSend always expects a handle based
+	; far pointer in EC builds...?
 	;
 	push	es
 	mov	es, ax
