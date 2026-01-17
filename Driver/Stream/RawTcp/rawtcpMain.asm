@@ -204,7 +204,7 @@ notYetOpen:
 	jmp	exit
 
 doNotYetOpenCall:
-	call	cs:rawtcpFunctions[di]	; Call the pre-open function from the jump table
+	call	cs:rawTcpFunctions[di]	; Call the pre-open function from the jump table
 	jmp	exit
 
 handleEscape:
