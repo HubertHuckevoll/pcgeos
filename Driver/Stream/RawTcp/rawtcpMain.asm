@@ -288,141 +288,136 @@ RawTcpLoadOptions	proc	near
 	uses	ax,bx,cx,dx,di,si,bp,es
 	.enter
 
-	EC < WARNING RAWTCP_LOAD_OPTIONS_START >
 	;
 	; Switch to dgroup to manage config handle.
 	;
-	push	ds
+	push	ds			; Preserve original DS and SI
 	push	si
-	mov	ax, dgroup
+	mov	ax, dgroup		; Switch DS to the driver's data segment
 	mov	ds, ax
 
-	mov	bx, ds:[rawTcpConfigH]
-	tst	bx
-	jz	allocConfig
-	call	MemFree
-	clr	ds:[rawTcpConfigH]
+	mov	bx, ds:[rawTcpConfigH]	; Load existing config block handle, if any
+	tst	bx			; Check if a handle already exists
+	jz	allocConfig		; If not (handle is zero), jump to allocate a new one
+	call	MemFree			; If one exists, free the old memory block
+	clr	ds:[rawTcpConfigH]	; Clear the handle variable
 
 allocConfig:
-	mov	ax, size RawTcpConfig
-	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or \
-		    (mask HAF_ZERO_INIT shl 8) or \
-		    mask HF_SHARABLE
-	call	MemAlloc
-	jnc	allocOk
-	EC < WARNING RAWTCP_CONFIG_ALLOC_FAILED >
-	jmp	doneRestore
-allocOk:
-	mov	ds:[rawTcpConfigH], bx
-	mov	es, ax
+	mov	ax, size RawTcpConfig	; Get the size needed for the config structure
 
-	mov	es:[RTC_cfgPort], RAWTCP_DEFAULT_PORT
-	clr	es:[RTC_cfgFlags]
+	; Set up allocation flags: dynamic, zero-initialized, and sharable
+	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or (mask HAF_ZERO_INIT shl 8) or mask HF_SHARABLE
+	call	MemAlloc		; Allocate memory for the configuration
+	jnc	allocOk			; If allocation succeeds (no carry), continue
+	EC < WARNING RAWTCP_CONFIG_ALLOC_FAILED > ; Log a warning on failure
+	jmp	doneRestore		; Jump to cleanup code
+
+allocOk:
+	mov	ds:[rawTcpConfigH], bx	; Store the new handle (from BX) in our global variable
+	mov	es, ax			; Set ES to the new block's segment (from AX) for access
+
+	mov	es:[RTC_cfgPort], RAWTCP_DEFAULT_PORT ; Initialize the port with the default value
+	clr	es:[RTC_cfgFlags]	; Clear all configuration flags
 
 	;
 	; Restore category pointer for InitFileRead* calls.
 	;
-	pop	si
+	pop	si			; Restore original SI and DS
 	pop	ds
 
 	;
 	; Read rawTcpPort (default RAWTCP_DEFAULT_PORT)
 	;
-	mov	cx, dgroup
-	mov	dx, offset rawTcpPortKeyString
-	call	InitFileReadInteger
-	jnc	havePort
-	mov	ax, RAWTCP_DEFAULT_PORT
-	EC < WARNING RAWTCP_CONFIG_PORT_DEFAULTED >
+	mov	cx, dgroup		; Set CX to dgroup for InitFile... routines
+	mov	dx, offset rawTcpPortKeyString ; Point DX to the "rawTcpPort" key string
+	call	InitFileReadInteger	; Read the integer value from the .ini file
+	jnc	havePort		; If read was successful (no carry), jump
+	mov	ax, RAWTCP_DEFAULT_PORT	; Otherwise, use the default port value
+	EC < WARNING RAWTCP_CONFIG_PORT_DEFAULTED > ; Log a warning that we're using the default
+
 havePort:
-	mov	es:[RTC_cfgPort], ax
-	tst	ax
-	jz	readHost
-	or	es:[RTC_cfgFlags], mask RCF_PORT_VALID
+	mov	es:[RTC_cfgPort], ax	; Store the port value in our config block
+	tst	ax			; Check if the port value is non-zero
+	jz	readHost		; If zero, it's not valid, so skip setting the flag
+	or	es:[RTC_cfgFlags], mask RCF_PORT_VALID ; Mark the port as valid in the flags
 
 readHost:
 	;
 	; Read rawTcpHost (dotted IPv4). Use a temporary block then copy.
 	;
-	mov	cx, dgroup
-	mov	dx, offset rawTcpHostKeyString
-	clr	bp
-	call	InitFileReadString
-	jnc	haveHostString
-	EC < WARNING RAWTCP_CONFIG_HOST_MISSING >
-	jmp	unlockConfig
+	mov	cx, dgroup		; Set CX to dgroup
+	mov	dx, offset rawTcpHostKeyString ; Point DX to the "rawTcpHost" key string
+	clr	bp			; BP must be zero for InitFileReadString
+	call	InitFileReadString	; Read the host string from the .ini file
+	jnc	haveHostString		; If successful, continue
+	EC < WARNING RAWTCP_CONFIG_HOST_MISSING > ; Log a warning if the host key is missing
+	jmp	unlockConfig		; Skip to cleanup
 
 haveHostString:
+					; The handle for the temp string block is in BX
+	push	bx			; Save the handle of the temporary string block
+	call	MemLock			; Lock the block to get its address in AX:0
+	mov	ds, ax			; Point DS to the temporary string block
+	clr	si			; Clear SI to start reading from the beginning of the string
 
-	push	bx
-	call	MemLock
-	mov	ds, ax
-	clr	si
+	mov	di, offset RTC_cfgHostString ; Set DI to the destination buffer in our config block
+	mov	cx, MAX_IP_DECIMAL_ADDR_LENGTH_ZT ; Set CX to the max length to copy
 
-	mov	di, offset RTC_cfgHostString
-	mov	cx, MAX_IP_DECIMAL_ADDR_LENGTH_ZT
 copyHost:
-	lodsb
-	mov	es:[di], al
-	inc	di
-	cmp	al, 0
-	je	parseHost
-	loop	copyHost
-	mov	byte ptr es:[di-1], 0
+	lodsb				; Load a byte from DS:SI into AL, and increment SI
+	mov	es:[di], al		; Store the byte in the config block at ES:DI
+	inc	di			; Increment the destination pointer
+	cmp	al, 0			; Was this the null terminator?
+	je	parseHost		; If so, we're done copying
+	loop	copyHost		; Loop until CX is zero
+	mov	byte ptr es:[di-1], 0	; Ensure the string is null-terminated if it was too long
 
 parseHost:
 	;
 	; Parse and validate dotted-quad IP address.
 	;
-	mov	ax, es
+	mov	ax, es			; Point DS to our config block (where ES is pointing)
 	mov	ds, ax
-	mov	si, offset RTC_cfgHostString
-	mov	di, offset RTC_cfgIPAddr
-	call	RawTcpParseIPv4
-	jc	hostInvalid
-	cmp	byte ptr es:[RTC_cfgHostString], 0
-	je	hostInvalid
-	or	es:[RTC_cfgFlags], mask RCF_HOST_VALID
-	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID
-	jz	portInvalid
-	EC < WARNING RAWTCP_CONFIG_READY >
-	jmp	unlockHost
+	mov	si, offset RTC_cfgHostString ; SI points to the IP string to be parsed
+	mov	di, offset RTC_cfgIPAddr ; DI points to the destination for the binary IP
+	call	RawTcpParseIPv4		; Call the parsing routine
+	jc	hostInvalid		; If carry is set, the IP was invalid
+	cmp	byte ptr es:[RTC_cfgHostString], 0 ; Check if the source string was empty
+	je	hostInvalid		; If so, treat as invalid
+	or	es:[RTC_cfgFlags], mask RCF_HOST_VALID ; Mark the host as valid
+	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID ; Check if the port was also marked as valid
+	jz	portInvalid		; If not, the configuration is incomplete
+	jmp	unlockHost		; Both are valid, proceed to cleanup
 
 hostInvalid:
-	EC < WARNING RAWTCP_CONFIG_HOST_INVALID >
+	EC < WARNING RAWTCP_CONFIG_HOST_INVALID > ; Log that the host string is not a valid IP
 	jmp	unlockHost
 
 portInvalid:
-	EC < WARNING RAWTCP_CONFIG_PORT_INVALID >
+	EC < WARNING RAWTCP_CONFIG_PORT_INVALID > ; Log that the port is invalid (e.g., 0)
+
 unlockHost:
-	pop	bx
-	EC < WARNING RAWTCP_CONFIG_BEFORE_HOST_MEMUNLOCK >
-	call	MemUnlock
-	EC < WARNING RAWTCP_CONFIG_AFTER_HOST_MEMUNLOCK >
-	EC < WARNING RAWTCP_CONFIG_BEFORE_HOST_MEMFREE >
-	call	MemFree
-	EC < WARNING RAWTCP_CONFIG_AFTER_HOST_MEMFREE >
+	pop	bx			; Restore the handle to the temporary host string block
+	call	MemUnlock		; Unlock it
+	call	MemFree			; And free it
 
 unlockConfig:
-	push	ds
-	mov	ax, dgroup
+	push	ds			; Save DS
+	mov	ax, dgroup		; Point DS to our data segment
 	mov	ds, ax
-	mov	bx, ds:[rawTcpConfigH]
-	pop	ds
-	EC < WARNING RAWTCP_CONFIG_BEFORE_CONFIG_MEMUNLOCK >
-	call	MemUnlock
-	EC < WARNING RAWTCP_CONFIG_AFTER_CONFIG_MEMUNLOCK >
-	jmp	done
+	mov	bx, ds:[rawTcpConfigH]	; Get the handle to our main config block
+	pop	ds			; Restore DS
+	call	MemUnlock		; Unlock the main config block
+	jmp	done			; Jump to the end
 
 ; MemAlloc failed; restore stack and exit
-
 doneRestore:
-	pop	si
+	pop	si			; Restore SI and DS from the stack
 	pop	ds
 
 done:
-	.leave
-	ret
+	.leave				; Restore stack frame
+	ret				; Return
 RawTcpLoadOptions	endp
 
 ;------------------------------------------------------------------------------
@@ -455,15 +450,17 @@ CALLED BY:	DR_EXIT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpExit	proc	near
 	uses	bx
+
 	.enter
-	mov	bx, ds:[rawTcpConfigH]
-	tst	bx
-	jz	done
-	call	MemFree
-	clr	ds:[rawTcpConfigH]
+	mov	bx, ds:[rawTcpConfigH]	; Load the handle for the configuration block
+	tst	bx			; Check if the handle is valid (non-zero)
+	jz	done			; If it's zero, there's nothing to free, so exit
+	call	MemFree			; Free the memory block associated with the handle in BX
+	clr	ds:[rawTcpConfigH]	; Clear the global handle variable to mark it as freed
 
 	done:
-	clc
+	clc				; Clear carry flag to indicate success
+
 	.leave
 	ret
 RawTcpExit	endp
@@ -553,23 +550,27 @@ CALLED BY:	DR_STREAM_WRITE_BYTE
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpWriteByte	proc	near
-	push	ds
+	push	ds			; Save caller's registers
 	push	si
 	push	cx
-	sub	sp, 2
-	mov	si, sp
-	mov	ss:[si], cl
-	segmov	ds, ss
+
+	sub	sp, 2			; Allocate 2 bytes on the stack for the character
+	mov	si, sp			; Point SI to the allocated stack space
+	mov	ss:[si], cl		; Store the character (passed in CL) onto the stack
+
+	segmov	ds, ss			; Point DS:SI to the character on the stack
 	segmov	es, ds
-	mov	si, sp
-	mov	cx, 1
-	call	RawTcpWrite
-	mov	cx, ax
-	lahf
-	add	sp, 2
-	sahf
-	mov	ax, cx
-	pop	cx
+	mov	si, sp			; Set SI to the source buffer (the character on the stack)
+	mov	cx, 1			; Set CX to 1, as we are writing a single byte
+	call	RawTcpWrite		; Call the underlying write routine
+
+	mov	cx, ax			; Temporarily save the return value (bytes written) from AX
+	lahf				; Load flags (especially carry) into AH to preserve them
+	add	sp, 2			; Deallocate the 2 bytes from the stack
+	sahf				; Restore the flags from AH
+	mov	ax, cx			; Restore the return value into AX
+
+	pop	cx			; Restore caller's registers
 	pop	si
 	pop	ds
 	ret
@@ -597,107 +598,102 @@ RawTcpOpen	proc	near
 	uses	ax,cx,dx,si,di,bp,es
 	.enter
 
-	push	ds
-	mov	bx, ds:[rawTcpConfigH]
-	tst	bx
-	jnz	haveConfig
-	EC < WARNING RAWTCP_OPEN_NO_CONFIG >
-	jmp	configError
-haveConfig:
-	mov	dx, bx
-	EC < WARNING RAWTCP_OPEN_BEFORE_MEMLOCK >
-	call	MemLock
-	EC < WARNING RAWTCP_OPEN_AFTER_MEMLOCK >
-	mov	es, ax
+	push	ds			; Save caller's data segment
+	mov	bx, ds:[rawTcpConfigH]	; Get the handle to the global configuration block
+	tst	bx			; Check if the configuration has been loaded
+	jnz	haveConfig		; If yes, proceed
+	EC < WARNING RAWTCP_OPEN_NO_CONFIG > ; Log an error if no config is found
+	jmp	configError		; Jump to the error handling routine
 
-	test	es:[RTC_cfgFlags], mask RCF_HOST_VALID
-	jnz	hostValid
-	EC < WARNING RAWTCP_OPEN_CONFIG_INVALID >
-	jmp	configUnlockError
+haveConfig:
+	mov	dx, bx			; Temporarily save the config handle in DX
+	call	MemLock			; Lock the config block to get its segment address
+	mov	es, ax			; Place the config block's segment in ES
+
+	test	es:[RTC_cfgFlags], mask RCF_HOST_VALID ; Check if the host was validated in config
+	jnz	hostValid		; If so, continue
+	EC < WARNING RAWTCP_OPEN_CONFIG_INVALID > ; Log error if config is not valid
+	jmp	configUnlockError	; Jump to cleanup and error handling
+
 hostValid:
-	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID
-	jnz	portValid
-	EC < WARNING RAWTCP_OPEN_CONFIG_INVALID >
-	jmp	configUnlockError
+	test	es:[RTC_cfgFlags], mask RCF_PORT_VALID ; Check if the port was validated in config
+	jnz	portValid		; If so, continue
+	EC < WARNING RAWTCP_OPEN_CONFIG_INVALID > ; Log error if config is not valid
+	jmp	configUnlockError	; Jump to cleanup and error handling
 portValid:
 
 	;
-	; Allocate context for this open.
+	; Allocate context for this open. This context is specific to this stream instance.
 	;
-	mov	ax, size RawTcpContext
-	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or \
-		    (mask HAF_ZERO_INIT shl 8) or \
-		    mask HF_SHARABLE
-	call	MemAlloc
-	jnc	contextAllocOk
+	mov	ax, size RawTcpContext	; Get the size of the context structure
+	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or (mask HAF_ZERO_INIT shl 8) or mask HF_SHARABLE
+	call	MemAlloc		; Allocate the context block
+	jnc	contextAllocOk		; If successful, continue
 	EC < WARNING RAWTCP_OPEN_CONTEXT_ALLOC_FAILED >
-	jmp	configUnlockError
+	jmp	configUnlockError	; Jump to cleanup on failure
+
 contextAllocOk:
+	mov	bp, bx			; Store the new context handle in BP. BP is now our instance handle.
+	mov	ds, ax			; Point DS to the new context segment for easy access
 
-	mov	bp, bx				; context handle
-	mov	ds, ax				; ds = context segment
-
+	; Initialize fields in the new context block
 	mov	ds:[RTC_socket], 0
 	mov	ds:[RTC_connected], 0
-	mov	ax, es:[RTC_cfgPort]
-	mov	ds:[RTC_port], ax
-	mov	ds:[RTC_hostP], offset RTC_hostString
-	clr	ds:[RTC_error]
+	mov	ax, es:[RTC_cfgPort]	; Get port from config block (in ES)
+	mov	ds:[RTC_port], ax	; Store port in context block (in DS)
+	mov	ds:[RTC_hostP], offset RTC_hostString ; Set internal pointer to host string
+	clr	ds:[RTC_error]		; Clear the error field
 
 	;
-	; Copy IP and host string into context.
+	; Copy IP address and host string from the global config block into our local context.
 	;
-	push	ds
+	push	ds			; Swap DS (context) and ES (config) for movsb
 	push	es
 	mov	ax, ds
 	mov	cx, es
 	mov	ds, cx
 	mov	es, ax
 
-	lea	si, [RTC_cfgIPAddr]
-	lea	di, [RTC_ipAddr]
+	lea	si, [RTC_cfgIPAddr]	; DS:SI = source (config block's IP address)
+	lea	di, [RTC_ipAddr]	; ES:DI = destination (context block's IP address)
 	mov	cx, size IPAddr
-	rep	movsb
+	rep	movsb			; Copy the bytes
 
-	lea	si, [RTC_cfgHostString]
-	lea	di, [RTC_hostString]
+	lea	si, [RTC_cfgHostString]	; DS:SI = source (config block's host string)
+	lea	di, [RTC_hostString]	; ES:DI = destination (context block's host string)
 	mov	cx, MAX_IP_DECIMAL_ADDR_LENGTH_ZT
-	rep	movsb
+	rep	movsb			; Copy the string
 
-	pop	es
+	pop	es			; Restore DS and ES
 	pop	ds
 
-	mov	bx, dx
-	call	MemUnlock
+	mov	bx, dx			; Restore config handle from DX
+	call	MemUnlock		; Unlock the global config block
 
 	;
 	; Retry socket open/connect a few times.
 	;
-	mov	cx, RAWTCP_RETRY_COUNT
+	mov	cx, RAWTCP_RETRY_COUNT	; Initialize retry counter
 openRetry:
-	mov	ax, SDT_STREAM
-	EC < WARNING RAWTCP_OPEN_BEFORE_SOCKET_CREATE >
-	call	SocketCreate
-	EC < WARNING RAWTCP_OPEN_AFTER_SOCKET_CREATE >
-	jnc	createOk
+	mov	ax, SDT_STREAM		; Specify a stream socket type
+	call	SocketCreate		; Attempt to create the socket
+	jnc	createOk		; If successful (no carry), continue
 	EC < WARNING RAWTCP_OPEN_SOCKET_CREATE_FAILED >
-	jmp	retryDelay
+	jmp	retryDelay		; If failed, go to retry logic
 
 createOk:
-	mov	ds:[RTC_socket], bx
+	mov	ds:[RTC_socket], bx	; Store the new socket handle in our context
 
 	;
-	; Build socket address on stack for connect.
+	; Build the socket address structure on the stack for the connect call.
 	;
-	push	ds
-	push	si
-	push	di
-	push	cx
+	push	ds, si, di, cx		; Save registers
 	mov	ax, size RawTcpSocketAddress
-	sub	sp, ax
-	mov	di, sp
-	segmov	es, ss
+	sub	sp, ax			; Allocate space on the stack for the address struct
+	mov	di, sp			; Point DI to the start of the struct
+	segmov	es, ss			; Point ES to the stack segment to fill the struct
 
+	; Fill in the SocketAddress structure fields
 	mov	ax, ds:[RTC_port]
 	mov	es:[di].RTSA_socketAddress.SA_port.SP_port, ax
 	mov	es:[di].RTSA_socketAddress.SA_port.SP_manuf, MANUFACTURER_ID_SOCKET_16BIT_PORT
@@ -707,75 +703,68 @@ createOk:
 	mov	es:[di].RTSA_socketAddress.SA_domain.segment, ax
 	mov	es:[di].RTSA_socketAddress.SA_addressSize, size word + IP_ADDR_SIZE
 
+	; Copy the binary IP address into the address structure
 	lea	di, es:[di].RTSA_socketAddress.SA_address
-	mov	{word} es:[di], 0			; ESACA_linkSize
-
-	lea	si, ds:[RTC_ipAddr]
-	add	di, size word
+	mov	{word} es:[di], 0	; ESACA_linkSize (not used for IP)
+	lea	si, ds:[RTC_ipAddr]	; Point SI to the IP address in our context
+	add	di, size word		; Move DI past the linkSize field
 	mov	cx, size IPAddr
-	rep	movsb
+	rep	movsb			; Copy the IP address
 
-	mov	cx, ss
+	; Make the connect call
+	mov	cx, ss			; CX:DX points to the address struct on the stack
 	mov	dx, sp
-	push	bp
-	mov	bp, RAWTCP_CONNECT_TIMEOUT_TICKS
-	EC < WARNING RAWTCP_OPEN_BEFORE_SOCKET_CONNECT >
-	call	SocketConnect
-	EC < WARNING RAWTCP_OPEN_AFTER_SOCKET_CONNECT >
-	pop	bp
+	push	bp			; Save our context handle (BP)
+	mov	bp, RAWTCP_CONNECT_TIMEOUT_TICKS ; Load timeout value into BP
+	call	SocketConnect		; Attempt to connect
+	pop	bp			; Restore context handle
 
-	add	sp, size RawTcpSocketAddress
-	pop	cx
-	pop	di
-	pop	si
-	pop	ds
+	add	sp, size RawTcpSocketAddress ; Clean up stack space for address struct
+	pop	cx, di, si, ds		; Restore registers
 
-	jc	connectFail
+	jc	connectFail		; If connect failed (carry set), handle failure
 
-	;
-	; Set socket options (best effort, no error returns available).
-	;
-	call	RawTcpSetSocketOptions
-
-	mov	ds:[RTC_connected], TRUE
-
-	mov	bx, bp
-	call	MemUnlock
-	mov	bx, bp
-	EC < WARNING RAWTCP_OPEN_SUCCESS >
-	clc
+	; --- Connection Successful ---
+	call	RawTcpSetSocketOptions	; Set socket to non-blocking, etc.
+	mov	ds:[RTC_connected], TRUE ; Mark as connected in our context
+	mov	bx, bp			; Get our context handle into BX (the return value)
+	call	MemUnlock		; Unlock the context block
+	mov	bx, bp			; Set return value BX again (just in case)
+	clc				; Clear carry to indicate success
 	jmp	done
 
 connectFail:
 	EC < WARNING RAWTCP_OPEN_SOCKET_CONNECT_FAILED >
-	call	SocketClose
-	jmp	retryDelay
+	call	SocketClose		; Close the failed socket
+	jmp	retryDelay		; Go to the retry/delay logic
+
 retryDelay:
-	clr	ds:[RTC_socket]
-	dec	cx
-	jz	openFail
-	mov	ax, RAWTCP_RETRY_DELAY_TICKS
-	call	TimerSleep
-	jmp	openRetry
+	clr	ds:[RTC_socket]		; Clear the socket handle in our context
+	dec	cx			; Decrement the retry counter
+	jz	openFail		; If out of retries, fail completely
+	mov	ax, RAWTCP_RETRY_DELAY_TICKS ; Load delay time
+	call	TimerSleep		; Wait before trying again
+	jmp	openRetry		; Loop back to try creating a socket again
 
 openFail:
-	mov	bx, bp
-	call	MemUnlock
-	mov	bx, bp
-	call	MemFree
+	mov	bx, bp			; Get our context handle
+	call	MemUnlock		; Unlock the context block
+	mov	bx, bp			; Get handle again for MemFree
+	call	MemFree			; Free the context block we allocated
 
 configError:
-	mov	ax, STREAM_NO_DEVICE
-	stc
+	mov	ax, STREAM_NO_DEVICE	; Set error code for no config
+	stc				; Set carry to indicate error
 	jmp	done
 
 configUnlockError:
-	mov	bx, dx
-	call	MemUnlock
-	mov	ax, STREAM_NO_DEVICE
-	stc
-	done:
-	pop	ds
+	mov	bx, dx			; Get config handle from saved DX
+	call	MemUnlock		; Unlock the global config block
+	mov	ax, STREAM_NO_DEVICE	; Set error code
+	stc				; Set carry to indicate error
+done:
+	pop	ds			; Restore caller's DS
+
 	.leave
 	ret
 RawTcpOpen	endp
@@ -808,183 +797,174 @@ RawTcpWrite	proc	near
 	;
 	; store variables
 	;
-	mov	ss:[driverSeg], ds
-	mov	ss:[contextHandle], bx
-	mov	ss:[requestedCount], cx
+	mov	ss:[driverSeg], ds		; Store the driver's data segment
+	mov	ss:[contextHandle], bx		; Store the context handle passed in BX
+	mov	ss:[requestedCount], cx		; Store the number of bytes to write
 
 	;
 	; check context handle, lock if exists
 	;
-	tst	bx
-	jnz	short haveHandle
-	jmp	invalidHandle
-haveHandle:
-	mov	ss:[callerSeg], es
-	push	ds
-	call	MemLock
-	pop	ds
-	tst	ax
-	jnz	short haveLock
-	jmp	lockFailed
-haveLock:
+	tst	bx				; Check if the context handle is null
+	jnz	short haveHandle		; If not null, proceed
+	jmp	invalidHandle			; Otherwise, jump to error handler
 
+haveHandle:
+	mov	ss:[callerSeg], es		; Store the caller's segment
+	push	ds				; Preserve DS
+	call	MemLock				; Lock the context block, handle is in BX
+	pop	ds				; Restore DS
+	tst	ax				; Check if MemLock succeeded (returns segment in AX)
+	jnz	short haveLock			; If successful (AX != 0), proceed
+	jmp	lockFailed			; Otherwise, jump to error handler
+
+haveLock:
 	;
 	; store context
 	;
-	mov	es, ax
-	mov	ss:[contextSeg], ax
+	mov	es, ax				; Point ES to the locked context block
+	mov	ss:[contextSeg], ax		; Save the context segment
 
 	;
 	; Check socket
 	;
-	tst	es:[RTC_connected]
-	jnz	short haveConnection
-	jmp	notConnected
+	tst	es:[RTC_connected]		; Check if the 'connected' flag is set in the context
+	jnz	short haveConnection		; If connected, proceed
+	jmp	notConnected			; Otherwise, jump to error handler
+
 haveConnection:
-	mov	bx, es:[RTC_socket]
-	tst	bx
-	jnz	short haveSocket
-	jmp	notConnected
+	mov	bx, es:[RTC_socket]		; Get the socket handle from the context
+	tst	bx				; Check if the socket handle is valid (non-zero)
+	jnz	short haveSocket		; If valid, proceed
+	jmp	notConnected			; Otherwise, treat as not connected
+
 haveSocket:
-	mov	ss:[socketH], bx
+	mov	ss:[socketH], bx		; Store the socket handle
 
 	;
 	; Allocate temp buffer
 	;
-	mov	ds, ss:[driverSeg]
-	mov	ax, ss:[requestedCount]
-	mov	cx, ALLOC_DYNAMIC_NO_ERR or (mask HAF_ZERO_INIT shl 8)
-	call	MemAlloc
-	jnc	short allocOk
-	jmp	allocFailed
-allocOk:
+	mov	ds, ss:[driverSeg]		; Set DS to the driver's segment for memory allocation
+	mov	ax, ss:[requestedCount]		; Set AX to the number of bytes to allocate
+	mov	cx, ALLOC_DYNAMIC_NO_ERR or (mask HAF_ZERO_INIT shl 8) ; Set allocation flags (dynamic, no error code, zero-init)
+	call	MemAlloc			; Allocate the temporary buffer
+	jnc	short allocOk			; If allocation succeeded (no carry), proceed
+	jmp	allocFailed			; Otherwise, jump to error handler
 
+allocOk:
 	;
 	; Lock temp buffer
 	;
-	mov	ss:[tempBufferH], bx
-	push	bx
-	call	MemLock
-	pop	bx
-	tst	ax
-	jz	tempLockFailed
+	mov	ss:[tempBufferH], bx		; Store the handle to the temporary buffer
+	push	bx				; Preserve the handle on the stack
+	call	MemLock				; Lock the temporary buffer
+	pop	bx				; Restore the handle
+	tst	ax				; Check if the lock was successful (AX != 0)
+	jz	tempLockFailed			; If it failed, jump to cleanup
 
 	;
 	; Copy data to temp buffer, as an AssertCheck
 	; in SocketSend always expects a handle based
-	; far pointer in EC builds...?
+	; far pointer in EC builds...
 	;
-	push	es
-	mov	es, ax
-	mov	ds, ss:[callerSeg]
-	mov	di, 0
-	mov	cx, ss:[requestedCount]
-	rep	movsb
-	pop	es
+	push	es				; Preserve ES (pointing to context)
+	mov	es, ax				; Point ES to the newly locked temp buffer (destination)
+	mov	ds, ss:[callerSeg]		; Point DS to the caller's data (source)
+	mov	di, 0				; Set destination index to start of buffer
+	mov	cx, ss:[requestedCount]		; Set CX to the number of bytes to copy
+	rep	movsb				; Copy the data from DS:[SI] to ES:[DI]
+	pop	es				; Restore ES
 
 	;
 	; Setup for SocketSend
 	;
-	mov	ds, ax
-	clr	si
-	mov	cx, ss:[requestedCount]
-	clr	ax
+	mov	ds, ax				; Point DS to the temp buffer containing the data
+	clr	si				; Set source index to start of buffer
+	mov	cx, ss:[requestedCount]		; Set CX to the number of bytes to send
+	clr	ax				; Clear AX (parameter for SocketSend)
 
-	;
-	; Error checking before sending
-	;
-EC < 	mov	ax, ds						>
-EC < 	tst	ax					>
-EC < 	WARNING_Z RAWTCP_WRITE_DS_ZERO			>
-EC < 	mov	ax, ss:[callerSeg]				>
-EC < 	tst	ax					>
-EC < 	WARNING_Z RAWTCP_WRITE_CALLER_SEG_ZERO		>
-EC < 	mov	ax, es						>
-EC < 	tst	ax					>
-EC < 	WARNING_Z RAWTCP_WRITE_ES_ZERO			>
-EC <	clr	ax					>
 	;
 	; Send
 	;
-	mov	bx, ss:[socketH]
-	call	SocketSend
+	mov	bx, ss:[socketH]		; Load the socket handle into BX
+	call	SocketSend			; Send the data
 
 	;
 	; clean up temp buffer
 	;
-	pushf				; Save flags
+	pushf				; Save flags (to preserve carry flag from SocketSend)
 	mov	ds, ss:[driverSeg]	; Set DS to the driver's segment
 	mov	bx, ss:[tempBufferH]	; Get handle to temporary buffer
 	call	MemUnlock		; Unlock the buffer
 	call	MemFree			; Free the buffer
 	popf				; Restore flags
-	jc	sendError		; If error, go to error handler
+	jc	sendError		; If carry is set (send error), go to error handler
 
 	;
 	; prepare return values
 	;
-	mov	ax, ss:[requestedCount]	; Set AX to number of bytes requested
-	mov	cx, ss:[requestedCount]	; Set CX to number of bytes requested
+	mov	ax, ss:[requestedCount]	; Set AX to number of bytes requested (and sent)
+	mov	cx, ss:[requestedCount]	; Set CX to number of bytes requested (and sent)
 	clc				; Clear carry to indicate success
 	jmp	done			; And exit
 
 tempLockFailed:
-	mov	ds, ss:[driverSeg]
-	mov	bx, ss:[tempBufferH]
-	call	MemFree
-	jmp	sendError
+	mov	ds, ss:[driverSeg]		; Set DS to the driver's segment
+	mov	bx, ss:[tempBufferH]		; Get handle to temporary buffer
+	call	MemFree				; Free the allocated memory since lock failed
+	jmp	sendError			; Go to the send error handler
 
 allocFailed:
-	mov	ax, STREAM_CLOSED
-	clr	cx
-	stc
-	jmp	done
+	mov	ax, STREAM_CLOSED		; Set return code to indicate stream is closed
+	clr	cx				; Clear CX
+	stc					; Set carry flag to indicate an error
+	jmp	done				; Go to final cleanup
 
 sendError:
-EC < 	WARNING RAWTCP_WRITE_SEND_FAILED >
-	mov	ds, ss:[driverSeg]
-	mov	es, ss:[contextSeg]
-	mov	bx, es:[RTC_socket]
-	tst	bx
-	jz	skipClose
-	call	SocketClose
+	EC < 	WARNING RAWTCP_WRITE_SEND_FAILED >
+	mov	ds, ss:[driverSeg]		; Set DS to driver's segment
+	mov	es, ss:[contextSeg]		; Point ES to the connection's context
+	mov	bx, es:[RTC_socket]		; Get the socket handle from the context
+	tst	bx				; Check if the socket handle is valid
+	jz	skipClose			; If not, skip closing it
+	call	SocketClose			; Close the socket
 skipClose:
-EC < 	WARNING RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
-	clr	es:[RTC_socket]
-	clr	es:[RTC_connected]
-	mov	ax, STREAM_CLOSED
-	clr	cx
-	stc
-	jmp	done
+	EC < 	WARNING RAWTCP_WRITE_SOCKET_HANDLE_ZERO >
+	clr	es:[RTC_socket]			; Clear the socket handle in the context
+	clr	es:[RTC_connected]		; Clear the connected flag in the context
+	mov	ax, STREAM_CLOSED		; Set return code to indicate stream is closed
+	clr	cx				; Clear CX
+	stc					; Set carry flag to indicate an error
+	jmp	done				; Go to final cleanup
 
 notConnected:
-EC < 	WARNING RAWTCP_WRITE_NOT_CONNECTED >
-	mov	ax, STREAM_CLOSED
-	clr	cx
-	stc
+	EC < 	WARNING RAWTCP_WRITE_NOT_CONNECTED >
+	mov	ax, STREAM_CLOSED		; Set return code to indicate stream is closed
+	clr	cx				; Clear CX
+	stc					; Set carry flag to indicate an error
 
 done:
-	mov	ds, ss:[driverSeg]
-	mov	bx, ss:[contextHandle]
-	call	MemUnlock
-	.leave
-	ret
+	mov	ds, ss:[driverSeg]		; Restore the driver's data segment
+	mov	bx, ss:[contextHandle]		; Load the context handle
+	call	MemUnlock			; Unlock the context block
+	.leave					; Restore stack frame
+	ret					; Return to caller
 
 invalidHandle:
-EC < 	WARNING RAWTCP_INVALID_HANDLE >
-	mov	ax, STREAM_CLOSED
-	clr	cx
-	stc
-	.leave
-	ret
+	EC < 	WARNING RAWTCP_INVALID_HANDLE >
+	mov	ax, STREAM_CLOSED		; Set return code for invalid handle
+	clr	cx				; Clear CX
+	stc					; Set carry flag to indicate an error
+	.leave					; Restore stack frame
+	ret					; Return to caller
 
 lockFailed:
-EC < 	WARNING RAWTCP_LOCK_FAILED >
-	mov	ax, STREAM_CLOSED
-	clr	cx
-	stc
-	.leave
-	ret
+	EC < 	WARNING RAWTCP_LOCK_FAILED >
+	mov	ax, STREAM_CLOSED		; Set return code for lock failure
+	clr	cx				; Clear CX
+	stc					; Set carry flag to indicate an error
+	.leave					; Restore stack frame
+	ret					; Return to caller
+
 RawTcpWrite	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
