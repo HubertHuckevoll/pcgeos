@@ -176,6 +176,7 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpStrategy	proc	far
 	uses	es, ds
+
 	tst	di
 	js	handleEscape
 
@@ -199,9 +200,7 @@ haveHandle:
 notYetOpen:
 	cmp	di, DR_STREAM_OPEN
 	jne	doNotYetOpenCall
-	EC < WARNING RAWTCP_STRATEGY_BEFORE_OPEN_CALL >
 	call	cs:rawTcpFunctions[di]
-	EC < WARNING RAWTCP_STRATEGY_AFTER_OPEN_CALL >
 	jmp	exit
 
 doNotYetOpenCall:
