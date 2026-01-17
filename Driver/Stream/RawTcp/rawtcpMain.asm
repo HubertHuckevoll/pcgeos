@@ -891,21 +891,21 @@ allocOk:
 	;
 	; clean up temp buffer
 	;
-	pushf				; Save flags (to preserve carry flag from SocketSend)
-	mov	ds, ss:[driverSeg]	; Set DS to the driver's segment
-	mov	bx, ss:[tempBufferH]	; Get handle to temporary buffer
-	call	MemUnlock		; Unlock the buffer
-	call	MemFree			; Free the buffer
-	popf				; Restore flags
-	jc	sendError		; If carry is set (send error), go to error handler
+	pushf					; Save flags (to preserve carry flag from SocketSend)
+	mov	ds, ss:[driverSeg]		; Set DS to the driver's segment
+	mov	bx, ss:[tempBufferH]		; Get handle to temporary buffer
+	call	MemUnlock			; Unlock the buffer
+	call	MemFree				; Free the buffer
+	popf					; Restore flags
+	jc	sendError			; If carry is set (send error), go to error handler
 
 	;
 	; prepare return values
 	;
-	mov	ax, ss:[requestedCount]	; Set AX to number of bytes requested (and sent)
-	mov	cx, ss:[requestedCount]	; Set CX to number of bytes requested (and sent)
-	clc				; Clear carry to indicate success
-	jmp	done			; And exit
+	mov	ax, ss:[requestedCount]		; Set AX to number of bytes requested (and sent)
+	mov	cx, ss:[requestedCount]		; Set CX to number of bytes requested (and sent)
+	clc					; Clear carry to indicate success
+	jmp	done				; And exit
 
 tempLockFailed:
 	mov	ds, ss:[driverSeg]		; Set DS to the driver's segment
@@ -983,37 +983,35 @@ RawTcpClose	proc	near
 	uses	ax,di,es
 	.enter
 
-	mov	di, bx
-	tst	bx
-	jz	done
+	mov	di, bx			; Save the value of bx in di
+	tst	bx			; Test if bx is zero
+	jz	done			; If bx is zero, jump to the 'done' label
 
-	call	MemLock
-	mov	es, ax
+	call	MemLock			; Lock the memory block pointed to by bx, returns handle in ax
+	mov	es, ax			; Move the segment address from ax to es
 
-	mov	bx, es:[RTC_socket]
-	tst	bx
-	jnz	closeSocket
-	EC < WARNING RAWTCP_CLOSE_WITHOUT_SOCKET >
-	jmp	clearState
+	mov	bx, es:[RTC_socket]	; Get the socket handle from the RawTcpData structure
+	tst	bx			; Test if the socket handle is zero
+	jnz	closeSocket		; If it's not zero, jump to 'closeSocket'
+	EC < WARNING RAWTCP_CLOSE_WITHOUT_SOCKET > ; Log a warning if trying to close a non-existent socket
+	jmp	clearState		; Jump to 'clearState'
 closeSocket:
-	EC < WARNING RAWTCP_CLOSE_BEFORE_SOCKET_CLOSE >
-	call	SocketClose
-	EC < WARNING RAWTCP_CLOSE_AFTER_SOCKET_CLOSE >
+	call	SocketClose		; Close the socket
 
 clearState:
-	clr	es:[RTC_socket]
-	clr	es:[RTC_connected]
-	clr	es:[RTC_error]
+	clr	es:[RTC_socket]		; Clear the socket handle in the RawTcpData structure
+	clr	es:[RTC_connected]	; Clear the connected flag
+	clr	es:[RTC_error]		; Clear the error status
 
-	mov	bx, di
-	call	MemUnlock
-	mov	bx, di
-	call	MemFree
+	mov	bx, di			; Restore the original memory block handle from di to bx
+	call	MemUnlock		; Unlock the memory block
+	mov	bx, di			; Restore the original memory block handle from di to bx again
+	call	MemFree			; Free the memory block
 
 	done:
-	clc
-	.leave
-	ret
+	clc				; Clear the carry flag to indicate success
+	.leave				; Macro to restore the stack frame
+	ret				; Return from the subroutine
 RawTcpClose	endp
 
 ;------------------------------------------------------------------------------
@@ -1035,21 +1033,21 @@ RawTcpSetSocketOptions	proc	near
 	uses	ax,cx
 	.enter
 
-	mov	ax, SO_SEND_BUF
-	mov	cx, RAWTCP_SEND_BUFFER_SIZE
-	call	SocketSetSocketOption
+	mov	ax, SO_SEND_BUF			; Set option to configure send buffer size
+	mov	cx, RAWTCP_SEND_BUFFER_SIZE	; Set the send buffer size value
+	call	SocketSetSocketOption		; Call the function to set the socket option
 
-	mov	ax, SO_RECV_BUF
-	mov	cx, RAWTCP_RECV_BUFFER_SIZE
-	call	SocketSetSocketOption
+	mov	ax, SO_RECV_BUF			; Set option to configure receive buffer size
+	mov	cx, RAWTCP_RECV_BUFFER_SIZE	; Set the receive buffer size value
+	call	SocketSetSocketOption		; Call the function to set the socket option
 
-	mov	ax, SO_NODELAY
-	mov	cx, TRUE
-	call	SocketSetSocketOption
+	mov	ax, SO_NODELAY			; Set option to disable Nagle's algorithm (TCP_NODELAY)
+	mov	cx, TRUE			; Enable the option
+	call	SocketSetSocketOption		; Call the function to set the socket option
 
-	mov	ax, SO_LINGER
-	mov	cx, FALSE
-	call	SocketSetSocketOption
+	mov	ax, SO_LINGER			; Set option to configure socket linger behavior
+	mov	cx, FALSE			; Disable lingering (don't wait for pending data on close)
+	call	SocketSetSocketOption		; Call the function to set the socket option
 
 	.leave
 	ret
@@ -1072,64 +1070,64 @@ RawTcpParseIPv4	proc	near
 	uses	ax,bx,cx,dx,si,di
 	.enter
 
-	clr	cl				; octet count
+	clr	cl				; Clear the octet counter (macro for xor cl, cl).
 
 parseOctet:
-	xor	bx, bx
-	clr	ch				; digit count
+	xor	bx, bx				; Clear bx to accumulate the octet's value.
+	clr	ch				; Clear the digit counter for this octet (macro for xor ch, ch).
 
 digitLoop:
-	lodsb
-	cmp	al, '0'
-	jb	endDigits
-	cmp	al, '9'
-	ja	endDigits
-	inc	ch
-	mov	ah, 0
-	sub	al, '0'
-	mov	dx, ax				; dx = digit
-	mov	ax, bx
-	shl	ax, 1
-	mov	bx, ax
-	shl	ax, 1
-	shl	ax, 1
-	add	ax, bx
-	mov	bx, ax
-	add	bx, dx
-	cmp	bx, 255
-	ja	invalid
-	jmp	digitLoop
+	lodsb					; Load a byte from SI into AL, then increment SI.
+	cmp	al, '0'				; Compare the character with '0'.
+	jb	endDigits			; If it's below '0', it's not a digit.
+	cmp	al, '9'				; Compare the character with '9'.
+	ja	endDigits			; If it's above '9', it's not a digit.
+	inc	ch				; Increment the count of digits found for this octet.
+	mov	ah, 0				; Clear the upper byte of AX to work with AL alone.
+	sub	al, '0'				; Convert ASCII digit to its integer value (e.g., '5' -> 5).
+	mov	dx, ax				; Store the single digit's value in DX.
+	mov	ax, bx				; Move the current accumulated value into AX for calculation.
+	shl	ax, 1				; Multiply AX by 2 (AX = old_bx * 2).
+	mov	bx, ax				; Save the intermediate result in BX.
+	shl	ax, 1				; Multiply AX by 2 again (AX = old_bx * 4).
+	shl	ax, 1				; Multiply AX by 2 again (AX = old_bx * 8).
+	add	ax, bx				; Add the intermediate result (AX = (old_bx * 8) + (old_bx * 2) = old_bx * 10).
+	mov	bx, ax				; Store the new total (old_bx * 10) back in BX.
+	add	bx, dx				; Add the new digit to the total (BX = (old_bx * 10) + new_digit).
+	cmp	bx, 255				; Check if the octet value exceeds 255.
+	ja	invalid				; If so, the IP address is invalid.
+	jmp	digitLoop			; Loop to process the next character.
 
 endDigits:
-	cmp	ch, 0
-	je	invalid
-	mov	es:[di], bl
-	inc	di
-	inc	cl
-	cmp	al, '.'
-	je	needMore
-	cmp	al, 0
-	je	maybeDone
-	jmp	invalid
+	cmp	ch, 0				; Check if any digits were parsed for this octet.
+	je	invalid				; If not (e.g. an empty octet), it's invalid.
+	mov	es:[di], bl			; Store the completed octet value (from BL) into the destination buffer.
+	inc	di				; Increment the destination pointer.
+	inc	cl				; Increment the total count of parsed octets.
+	cmp	al, '.'				; Was the character that ended the loop a period?
+	je	needMore			; If yes, we need to parse another octet.
+	cmp	al, 0				; Was it the null terminator (end of string)?
+	je	maybeDone			; If yes, we might be done.
+	jmp	invalid				; Otherwise, it's an invalid character.
 
 needMore:
-	cmp	cl, 4
-	jae	invalid
-	jmp	parseOctet
+	cmp	cl, 4				; Have we already parsed 4 octets?
+	jae	invalid				; If yes, another octet is invalid (e.g. "1.2.3.4.").
+	jmp	parseOctet			; Go back to parse the next octet.
 
 maybeDone:
-	cmp	cl, 4
-	jne	invalid
-	clc
-	jmp	parseDone
+	cmp	cl, 4				; Did we parse exactly 4 octets?
+	jne	invalid				; If not, the IP address is incomplete or too long.
+	clc					; Clear the carry flag to signal success.
+	jmp	parseDone			; Jump to the cleanup and return.
 
 invalid:
-	EC < WARNING RAWTCP_PARSE_IPV4_INVALID >
-	stc
+	EC < WARNING RAWTCP_PARSE_IPV4_INVALID >; Log a warning for an invalid IPv4 string.
+	stc					; Set the carry flag to signal an error.
 
 parseDone:
-	.leave
-	ret
+	.leave					; Restore stack frame (mov sp, bp; pop bp).
+	ret					; Return to caller (carry flag indicates success/failure).
 RawTcpParseIPv4	endp
 
 Resident	ends
