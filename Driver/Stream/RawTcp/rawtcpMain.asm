@@ -177,43 +177,43 @@ REVISION HISTORY:
 RawTcpStrategy	proc	far
 	uses	es, ds
 
-	tst	di
-	js	handleEscape
+	tst	di			; Test di, see if it's an escape function
+	js	handleEscape		; Jump if sign bit is set (i.e. < 0)
 
 	.enter
 
-	segmov	es, ds
-	mov	ds, cs:rawTcpData
+	segmov	es, ds			; Set ES to DS for upcoming operations
+	mov	ds, cs:rawTcpData	; Point DS to our data segment
 
-	cmp	di, DR_STREAM_OPEN
-	jbe	notYetOpen
-	tst	bx
-	jnz	haveHandle
-	mov	ax, STREAM_CLOSED
-	stc
-	jmp	exit
+	cmp	di, DR_STREAM_OPEN	; Check if the function is DR_STREAM_OPEN or earlier
+	jbe	notYetOpen		; If so, handle as a pre-open call
+	tst	bx			; Check if we have a valid stream handle in BX
+	jnz	haveHandle		; If yes, proceed to call the function
+	mov	ax, STREAM_CLOSED	; Otherwise, return a STREAM_CLOSED error
+	stc				; Set carry to indicate an error
+	jmp	exit			; And exit
 
 haveHandle:
-	call	cs:rawTcpFunctions[di]
+	call	cs:rawTcpFunctions[di]	; Call the appropriate driver function from the jump table
 	jmp	exit
 
 notYetOpen:
-	cmp	di, DR_STREAM_OPEN
-	jne	doNotYetOpenCall
-	call	cs:rawTcpFunctions[di]
+	cmp	di, DR_STREAM_OPEN	; Is the call specifically to open the stream?
+	jne	doNotYetOpenCall	; If not, jump to the other handler
+	call	cs:rawTcpFunctions[di]	; If yes, call the open function
 	jmp	exit
 
 doNotYetOpenCall:
-	call	cs:rawTcpFunctions[di]
+	call	cs:rawtcpFunctions[di]	; Call the pre-open function from the jump table
 	jmp	exit
 
 handleEscape:
-	push	es
+	push	es			; Save ES and DS registers
 	push	ds
-	call	RawTcpEscape
-	pop	ds
+	call	RawTcpEscape		; Call the escape function handler
+	pop	ds			; Restore registers
 	pop	es
-	ret
+	ret				; Return from the driver call
 
 exit:
 	.leave
