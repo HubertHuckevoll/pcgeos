@@ -720,7 +720,7 @@ createOk:
 	pop	bp			; Restore context handle
 
 	add	sp, size RawTcpSocketAddress ; Clean up stack space for address struct
-	pop	cx, di, si, ds		; Restore registers
+	pop	ds, si, di, cx		; Restore registers
 
 	jc	connectFail		; If connect failed (carry set), handle failure
 
