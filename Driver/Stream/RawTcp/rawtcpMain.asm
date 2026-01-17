@@ -240,26 +240,25 @@ DESTROYED:	see individual functions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
 RawTcpEscape	proc	far
 
-	push	di, cx, ax, es
-	segmov	es, cs
-	mov	ax, di
-	mov	di, offset escCodes
-	mov	cx, NUM_ESC_ENTRIES
-	repne	scasw
-	pop	ax, es
-	jne	notFound
+	push	di, cx, ax, es		; Save registers that will be used
+	segmov	es, cs			; Set ES to CS for scanning the escape code table
+	mov	ax, di			; Move the escape code from DI into AX for scasw
+	mov	di, offset escCodes	; Point DI to the beginning of the escape code table
+	mov	cx, NUM_ESC_ENTRIES	; Load CX with the number of escape codes to check
+	repne	scasw			; Scan the table for the escape code in AX
+	pop	ax, es			; Restore original AX and ES
+	jne	notFound		; If no match was found, jump to notFound
 
-	pop	cx
-	EC < WARNING RAWTCP_ESCAPE_BEFORE_CALL >
+	pop	cx			; Restore original CX
+	;--- now call the correct routine from a parallel table ---
 	call	{word} cs:[di+((offset escRoutines)-(offset escCodes)-2)]
-	EC < WARNING RAWTCP_ESCAPE_AFTER_CALL >
-	pop	di
+	pop	di			; Restore original DI
 	ret
 
 notFound:
-	pop	cx
+	pop	cx			; Restore original CX and DI
 	pop	di
-	clr	di
+	clr	di			; Clear DI to signal an error/not found
 	ret
 RawTcpEscape	endp
 
