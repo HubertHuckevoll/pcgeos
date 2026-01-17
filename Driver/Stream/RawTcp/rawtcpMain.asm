@@ -1,12 +1,10 @@
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	Copyright (c) GeoWorks 2024 -- All Rights Reserved
-
 PROJECT:	PC GEOS
 MODULE:		Stream Drivers -- RawTcp
 FILE:		rawtcpMain.asm
 
-AUTHOR:		OpenAI Assistant
+AUTHOR:		OpenAI Assistant, prompted by Meyer in 01/2026
 
 ROUTINES:
 	Name			Description
@@ -20,7 +18,7 @@ ROUTINES:
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
-	OA	9/24/24		Initial revision
+	OA	01/2026		Initial revision
 
 DESCRIPTION:
 	RawTcp is a simple TCP stream driver for the JetDirect protocol
@@ -136,20 +134,20 @@ endif
 rawTcpFunctions	label	nptr
 DefFunction	DR_INIT,			RawTcpNull
 DefFunction	DR_EXIT,			RawTcpExit
-DefFunction	DR_SUSPEND,		RawTcpNull
-DefFunction	DR_UNSUSPEND,		RawTcpNull
+DefFunction	DR_SUSPEND,			RawTcpNull
+DefFunction	DR_UNSUSPEND,			RawTcpNull
 DefFunction	DR_STREAM_GET_DEVICE_MAP,	RawTcpGetDeviceMap
-DefFunction	DR_STREAM_OPEN,		RawTcpOpen
+DefFunction	DR_STREAM_OPEN,			RawTcpOpen
 DefFunction	DR_STREAM_CLOSE,		RawTcpClose
-DefFunction	DR_STREAM_SET_NOTIFY,	RawTcpSetNotify
-DefFunction	DR_STREAM_GET_ERROR,	RawTcpGetError
-DefFunction	DR_STREAM_SET_ERROR,	RawTcpSetError
+DefFunction	DR_STREAM_SET_NOTIFY,		RawTcpSetNotify
+DefFunction	DR_STREAM_GET_ERROR,		RawTcpGetError
+DefFunction	DR_STREAM_SET_ERROR,		RawTcpSetError
 DefFunction	DR_STREAM_FLUSH,		RawTcpNull
 DefFunction	DR_STREAM_SET_THRESHOLD,	RawTcpNull
-DefFunction	DR_STREAM_READ,		RawTcpReadUnsupported
-DefFunction	DR_STREAM_READ_BYTE,	RawTcpReadUnsupported
+DefFunction	DR_STREAM_READ,			RawTcpReadUnsupported
+DefFunction	DR_STREAM_READ_BYTE,		RawTcpReadUnsupported
 DefFunction	DR_STREAM_WRITE,		RawTcpWrite
-DefFunction	DR_STREAM_WRITE_BYTE,	RawTcpWriteByte
+DefFunction	DR_STREAM_WRITE_BYTE,		RawTcpWriteByte
 DefFunction	DR_STREAM_QUERY,		RawTcpNull
 
 rawTcpData	sptr	dgroup
