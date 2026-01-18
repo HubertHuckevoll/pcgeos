@@ -3,8 +3,8 @@
 #	Copyright (c) GeoWorks 2024 -- All Rights Reserved
 #
 # PROJECT:	PC GEOS
-# MODULE:	RawTcp Stream Driver
-# FILE:		rawtcp.gp
+# MODULE:	RawTcpIp Stream Driver
+# FILE:		rawtcpip.gp
 #
 # AUTHOR:	OpenAI Assistant
 #
@@ -12,7 +12,7 @@
 #
 # Specify permanent name first
 #
-name	rawtcp.drvr
+name	rawtcpip.drvr
 #
 # Specify geode type
 #
@@ -27,7 +27,7 @@ driver	stream
 #
 # Desktop-related things
 #
-longname	"RawTcp Stream Driver"
+longname	"RawTcpIp Stream Driver"
 tokenchars	"ISTR"
 tokenid		0
 #
@@ -37,7 +37,7 @@ resource Resident fixed code read-only shared
 #
 # Exported routines
 #
-export	RawTcpStrategy
+export	RawTcpIpStrategy
 #
 # XIP-enabled
 #

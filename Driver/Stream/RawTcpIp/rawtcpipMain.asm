@@ -1,19 +1,19 @@
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 PROJECT:	PC GEOS
-MODULE:		Stream Drivers -- RawTcp
-FILE:		rawtcpMain.asm
+MODULE:		Stream Drivers -- RawTcpIp
+FILE:		rawtcpipMain.asm
 
 AUTHOR:		OpenAI Assistant, prompted by Meyer in 01/2026
 
 ROUTINES:
 	Name			Description
 	----			-----------
-	RawTcpStrategy		Entry point for RawTcp stream driver
-	RawTcpLoadOptions	Reads INI options for host/port
-	RawTcpOpen		Opens a TCP connection per print job
-	RawTcpWrite		Sends data to the TCP socket
-	RawTcpClose		Closes the TCP connection
+	RawTcpIpStrategy		Entry point for RawTcpIp stream driver
+	RawTcpIpLoadOptions	Reads INI options for host/port
+	RawTcpIpOpen		Opens a TCP connection per print job
+	RawTcpIpWrite		Sends data to the TCP socket
+	RawTcpIpClose		Closes the TCP connection
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -21,7 +21,7 @@ REVISION HISTORY:
 	OA	01/2026		Initial revision
 
 DESCRIPTION:
-	RawTcp is a simple TCP stream driver for the JetDirect protocol
+	RawTcpIp is a simple TCP stream driver for the JetDirect protocol
 	(usually TCP port 9100). It reads connection parameters via
 	STREAM_ESC_LOAD_OPTIONS and opens a new connection for each job.
 
@@ -35,7 +35,7 @@ DESCRIPTION:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-include	rawtcp.def
+include	rawtcpip.def
 
 ;------------------------------------------------------------------------------
 ; Constants
@@ -56,20 +56,20 @@ RAWTCP_TCP_DOMAIN_LENGTH	equ	5
 ; Data structures
 ;------------------------------------------------------------------------------
 
-RawTcpConfigFlags	record
+RawTcpIpConfigFlags	record
 	RCF_HOST_VALID:1
 	RCF_PORT_VALID:1
 	:14
-RawTcpConfigFlags	end
+RawTcpIpConfigFlags	end
 
-RawTcpConfig	struct
-	RTC_cfgFlags	RawTcpConfigFlags
+RawTcpIpConfig	struct
+	RTC_cfgFlags	RawTcpIpConfigFlags
 	RTC_cfgPort	word
 	RTC_cfgIPAddr	IPAddr
 	RTC_cfgHostString	byte	MAX_IP_DECIMAL_ADDR_LENGTH_ZT dup (0)
-RawTcpConfig	ends
+RawTcpIpConfig	ends
 
-RawTcpContext	struct
+RawTcpIpContext	struct
 	RTC_socket	word
 	RTC_connected	word
 	RTC_port	word
@@ -77,13 +77,13 @@ RawTcpContext	struct
 	RTC_hostP	word
 	RTC_error	word
 	RTC_hostString	byte	MAX_IP_DECIMAL_ADDR_LENGTH_ZT dup (0)
-RawTcpContext	ends
+RawTcpIpContext	ends
 
-RawTcpSocketAddress	struct
+RawTcpIpSocketAddress	struct
 	RTSA_socketAddress	SocketAddress
 	RTSA_extAddress	word
 	RTSA_ipAddr	byte	IP_ADDR_SIZE dup (?)
-RawTcpSocketAddress	ends
+RawTcpIpSocketAddress	ends
 
 ;------------------------------------------------------------------------------
 ; Driver info table
@@ -92,7 +92,7 @@ RawTcpSocketAddress	ends
 idata		segment
 
 DriverTable	DriverInfoStruct	<
-	RawTcpStrategy, mask DA_CHARACTER, DRIVER_TYPE_STREAM
+	RawTcpIpStrategy, mask DA_CHARACTER, DRIVER_TYPE_STREAM
 >
 ForceRef	DriverTable
 
@@ -118,7 +118,7 @@ Resident	segment	resource
 
 even
 DefEscapeTable	1
-DefEscape	RawTcpLoadOptions, STREAM_ESC_LOAD_OPTIONS
+DefEscape	RawTcpIpLoadOptions, STREAM_ESC_LOAD_OPTIONS
 
 ;------------------------------------------------------------------------------
 ; Strategy routine and dispatch table
@@ -132,31 +132,31 @@ endif
 		endm
 
 rawTcpFunctions	label	nptr
-DefFunction	DR_INIT,			RawTcpNull
-DefFunction	DR_EXIT,			RawTcpExit
-DefFunction	DR_SUSPEND,			RawTcpNull
-DefFunction	DR_UNSUSPEND,			RawTcpNull
-DefFunction	DR_STREAM_GET_DEVICE_MAP,	RawTcpGetDeviceMap
-DefFunction	DR_STREAM_OPEN,			RawTcpOpen
-DefFunction	DR_STREAM_CLOSE,		RawTcpClose
-DefFunction	DR_STREAM_SET_NOTIFY,		RawTcpSetNotify
-DefFunction	DR_STREAM_GET_ERROR,		RawTcpGetError
-DefFunction	DR_STREAM_SET_ERROR,		RawTcpSetError
-DefFunction	DR_STREAM_FLUSH,		RawTcpNull
-DefFunction	DR_STREAM_SET_THRESHOLD,	RawTcpNull
-DefFunction	DR_STREAM_READ,			RawTcpReadUnsupported
-DefFunction	DR_STREAM_READ_BYTE,		RawTcpReadUnsupported
-DefFunction	DR_STREAM_WRITE,		RawTcpWrite
-DefFunction	DR_STREAM_WRITE_BYTE,		RawTcpWriteByte
-DefFunction	DR_STREAM_QUERY,		RawTcpNull
+DefFunction	DR_INIT,			RawTcpIpNull
+DefFunction	DR_EXIT,			RawTcpIpExit
+DefFunction	DR_SUSPEND,			RawTcpIpNull
+DefFunction	DR_UNSUSPEND,			RawTcpIpNull
+DefFunction	DR_STREAM_GET_DEVICE_MAP,	RawTcpIpGetDeviceMap
+DefFunction	DR_STREAM_OPEN,			RawTcpIpOpen
+DefFunction	DR_STREAM_CLOSE,		RawTcpIpClose
+DefFunction	DR_STREAM_SET_NOTIFY,		RawTcpIpSetNotify
+DefFunction	DR_STREAM_GET_ERROR,		RawTcpIpGetError
+DefFunction	DR_STREAM_SET_ERROR,		RawTcpIpSetError
+DefFunction	DR_STREAM_FLUSH,		RawTcpIpNull
+DefFunction	DR_STREAM_SET_THRESHOLD,	RawTcpIpNull
+DefFunction	DR_STREAM_READ,			RawTcpIpReadUnsupported
+DefFunction	DR_STREAM_READ_BYTE,		RawTcpIpReadUnsupported
+DefFunction	DR_STREAM_WRITE,		RawTcpIpWrite
+DefFunction	DR_STREAM_WRITE_BYTE,		RawTcpIpWriteByte
+DefFunction	DR_STREAM_QUERY,		RawTcpIpNull
 
 rawTcpData	sptr	dgroup
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpStrategy
+		RawTcpIpStrategy
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Entry point for all RawTcp-driver functions
+SYNOPSIS:	Entry point for all RawTcpIp-driver functions
 
 CALLED BY:	GLOBAL
 PASS:		di	= routine number
@@ -166,7 +166,7 @@ DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 	Dispatch to the appropriate handler. Escape codes are dispatched
-	via RawTcpEscape.
+	via RawTcpIpEscape.
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -174,7 +174,7 @@ REVISION HISTORY:
 	OA	9/24/24		Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpStrategy	proc	far
+RawTcpIpStrategy	proc	far
 	uses	es, ds
 
 	tst	di			; Test di, see if it's an escape function
@@ -210,7 +210,7 @@ doNotYetOpenCall:
 handleEscape:
 	push	es			; Save ES and DS registers
 	push	ds
-	call	RawTcpEscape		; Call the escape function handler
+	call	RawTcpIpEscape		; Call the escape function handler
 	pop	ds			; Restore registers
 	pop	es
 	ret				; Return from the driver call
@@ -218,19 +218,19 @@ handleEscape:
 exit:
 	.leave
 	ret
-RawTcpStrategy	endp
+RawTcpIpStrategy	endp
 
-global	RawTcpStrategy:far
+global	RawTcpIpStrategy:far
 
 ;------------------------------------------------------------------------------
 ; Escape handling
 ;------------------------------------------------------------------------------
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpEscape
+		RawTcpIpEscape
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Execute escape function for RawTcp
+SYNOPSIS:	Execute escape function for RawTcpIp
 
 CALLED BY:	GLOBAL
 PASS:		di	= escape code (ORed with 8000h)
@@ -238,7 +238,7 @@ RETURN:		di	= 0 if escape not supported
 DESTROYED:	see individual functions
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpEscape	proc	far
+RawTcpIpEscape	proc	far
 
 	push	di, cx, ax, es		; Save registers that will be used
 	segmov	es, cs			; Set ES to CS for scanning the escape code table
@@ -260,19 +260,19 @@ notFound:
 	pop	di
 	clr	di			; Clear DI to signal an error/not found
 	ret
-RawTcpEscape	endp
+RawTcpIpEscape	endp
 
 ;------------------------------------------------------------------------------
 ; INI option loading
 ;------------------------------------------------------------------------------
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpLoadOptions
+		RawTcpIpLoadOptions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Read host/port options from the .INI file.
 
-CALLED BY:	RawTcpEscape (STREAM_ESC_LOAD_OPTIONS)
+CALLED BY:	RawTcpIpEscape (STREAM_ESC_LOAD_OPTIONS)
 PASS:		ds:si	= initfile category (printer name)
 RETURN:	nothing
 DESTROYED:	allows ax,bx,cx,dx,di,si,bp,es
@@ -284,7 +284,7 @@ PSEUDO CODE/STRATEGY:
 	- Parse and store IP address for fast connect
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpLoadOptions	proc	near
+RawTcpIpLoadOptions	proc	near
 	uses	ax,bx,cx,dx,di,si,bp,es
 	.enter
 
@@ -303,7 +303,7 @@ RawTcpLoadOptions	proc	near
 	clr	ds:[rawTcpConfigH]	; Clear the handle variable
 
 allocConfig:
-	mov	ax, size RawTcpConfig	; Get the size needed for the config structure
+	mov	ax, size RawTcpIpConfig	; Get the size needed for the config structure
 
 	; Set up allocation flags: dynamic, zero-initialized, and sharable
 	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or (mask HAF_ZERO_INIT shl 8) or mask HF_SHARABLE
@@ -380,7 +380,7 @@ parseHost:
 	mov	ds, ax
 	mov	si, offset RTC_cfgHostString ; SI points to the IP string to be parsed
 	mov	di, offset RTC_cfgIPAddr ; DI points to the destination for the binary IP
-	call	RawTcpParseIPv4		; Call the parsing routine
+	call	RawTcpIpParseIPv4		; Call the parsing routine
 	jc	hostInvalid		; If carry is set, the IP was invalid
 	cmp	byte ptr es:[RTC_cfgHostString], 0 ; Check if the source string was empty
 	je	hostInvalid		; If so, treat as invalid
@@ -418,14 +418,14 @@ doneRestore:
 done:
 	.leave				; Restore stack frame
 	ret				; Return
-RawTcpLoadOptions	endp
+RawTcpIpLoadOptions	endp
 
 ;------------------------------------------------------------------------------
 ; Driver entry points
 ;------------------------------------------------------------------------------
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpNull
+		RawTcpIpNull
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	No-op routine for unsupported functions.
@@ -434,13 +434,13 @@ CALLED BY:	various driver entry points
 RETURN:		carry clear
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpNull	proc	near
+RawTcpIpNull	proc	near
 	clc
 	ret
-RawTcpNull	endp
+RawTcpIpNull	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpExit
+		RawTcpIpExit
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Free cached configuration block, if present.
@@ -448,7 +448,7 @@ SYNOPSIS:	Free cached configuration block, if present.
 CALLED BY:	DR_EXIT
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpExit	proc	near
+RawTcpIpExit	proc	near
 	uses	bx
 
 	.enter
@@ -463,10 +463,10 @@ RawTcpExit	proc	near
 
 	.leave
 	ret
-RawTcpExit	endp
+RawTcpIpExit	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpGetDeviceMap
+		RawTcpIpGetDeviceMap
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Return no physical device map.
@@ -475,14 +475,14 @@ CALLED BY:	DR_STREAM_GET_DEVICE_MAP
 RETURN:		ax = 0
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpGetDeviceMap	proc	near
+RawTcpIpGetDeviceMap	proc	near
 	clr	ax
 	clc
 	ret
-RawTcpGetDeviceMap	endp
+RawTcpIpGetDeviceMap	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpSetNotify
+		RawTcpIpSetNotify
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Notification stub (no async events reported).
@@ -490,13 +490,13 @@ SYNOPSIS:	Notification stub (no async events reported).
 CALLED BY:	DR_STREAM_SET_NOTIFY
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpSetNotify	proc	near
+RawTcpIpSetNotify	proc	near
 	clc
 	ret
-RawTcpSetNotify	endp
+RawTcpIpSetNotify	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpGetError
+		RawTcpIpGetError
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	No stored error; return 0.
@@ -504,14 +504,14 @@ SYNOPSIS:	No stored error; return 0.
 CALLED BY:	DR_STREAM_GET_ERROR
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpGetError	proc	near
+RawTcpIpGetError	proc	near
 	clr	ax
 	clc
 	ret
-RawTcpGetError	endp
+RawTcpIpGetError	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpSetError
+		RawTcpIpSetError
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Ignore error postings.
@@ -519,37 +519,37 @@ SYNOPSIS:	Ignore error postings.
 CALLED BY:	DR_STREAM_SET_ERROR
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpSetError	proc	near
+RawTcpIpSetError	proc	near
 	clc
 	ret
-RawTcpSetError	endp
+RawTcpIpSetError	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpReadUnsupported
+		RawTcpIpReadUnsupported
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	RawTcp is write-only; read operations are unsupported.
+SYNOPSIS:	RawTcpIp is write-only; read operations are unsupported.
 
 CALLED BY:	DR_STREAM_READ, DR_STREAM_READ_BYTE
 RETURN:		carry set, ax = STREAM_CLOSED
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpReadUnsupported	proc	near
+RawTcpIpReadUnsupported	proc	near
 	mov	ax, STREAM_CLOSED
 	stc
 	ret
-RawTcpReadUnsupported	endp
+RawTcpIpReadUnsupported	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpWriteByte
+		RawTcpIpWriteByte
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Write a single byte by delegating to RawTcpWrite.
+SYNOPSIS:	Write a single byte by delegating to RawTcpIpWrite.
 
 CALLED BY:	DR_STREAM_WRITE_BYTE
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpWriteByte	proc	near
+RawTcpIpWriteByte	proc	near
 	push	ds			; Save caller's registers
 	push	si
 	push	cx
@@ -562,7 +562,7 @@ RawTcpWriteByte	proc	near
 	segmov	es, ds
 	mov	si, sp			; Set SI to the source buffer (the character on the stack)
 	mov	cx, 1			; Set CX to 1, as we are writing a single byte
-	call	RawTcpWrite		; Call the underlying write routine
+	call	RawTcpIpWrite		; Call the underlying write routine
 
 	mov	cx, ax			; Temporarily save the return value (bytes written) from AX
 	lahf				; Load flags (especially carry) into AH to preserve them
@@ -574,10 +574,10 @@ RawTcpWriteByte	proc	near
 	pop	si
 	pop	ds
 	ret
-RawTcpWriteByte	endp
+RawTcpIpWriteByte	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpOpen
+		RawTcpIpOpen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Open a socket connection for a print job.
@@ -594,7 +594,7 @@ PSEUDO CODE/STRATEGY:
 	- Configure socket options (send/recv buffers, NO_DELAY, LINGER)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpOpen	proc	near
+RawTcpIpOpen	proc	near
 	uses	ax,cx,dx,si,di,bp,es
 	.enter
 
@@ -625,7 +625,7 @@ portValid:
 	;
 	; Allocate context for this open. This context is specific to this stream instance.
 	;
-	mov	ax, size RawTcpContext	; Get the size of the context structure
+	mov	ax, size RawTcpIpContext	; Get the size of the context structure
 	mov	cx, ALLOC_DYNAMIC_NO_ERR_LOCK or (mask HAF_ZERO_INIT shl 8) or mask HF_SHARABLE
 	call	MemAlloc		; Allocate the context block
 	jnc	contextAllocOk		; If successful, continue
@@ -688,7 +688,7 @@ createOk:
 	; Build the socket address structure on the stack for the connect call.
 	;
 	push	ds, si, di, cx		; Save registers
-	mov	ax, size RawTcpSocketAddress
+	mov	ax, size RawTcpIpSocketAddress
 	sub	sp, ax			; Allocate space on the stack for the address struct
 	mov	di, sp			; Point DI to the start of the struct
 	segmov	es, ss			; Point ES to the stack segment to fill the struct
@@ -719,13 +719,13 @@ createOk:
 	call	SocketConnect		; Attempt to connect
 	pop	bp			; Restore context handle
 
-	add	sp, size RawTcpSocketAddress ; Clean up stack space for address struct
+	add	sp, size RawTcpIpSocketAddress ; Clean up stack space for address struct
 	pop	ds, si, di, cx		; Restore registers
 
 	jc	connectFail		; If connect failed (carry set), handle failure
 
 	; --- Connection Successful ---
-	call	RawTcpSetSocketOptions	; Set socket to non-blocking, etc.
+	call	RawTcpIpSetSocketOptions	; Set socket to non-blocking, etc.
 	mov	ds:[RTC_connected], TRUE ; Mark as connected in our context
 	mov	bx, bp			; Get our context handle into BX (the return value)
 	call	MemUnlock		; Unlock the context block
@@ -767,10 +767,10 @@ done:
 
 	.leave
 	ret
-RawTcpOpen	endp
+RawTcpIpOpen	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpWrite
+		RawTcpIpWrite
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Send data to the connected socket.
@@ -783,7 +783,7 @@ RETURN:		carry clear + ax = bytes written on success
 		carry set + ax = STREAM_CLOSED on failure
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpWrite	proc	near
+RawTcpIpWrite	proc	near
 	callerSeg	local	word
 	contextSeg	local	word
 	contextHandle	local	word
@@ -965,10 +965,10 @@ lockFailed:
 	.leave					; Restore stack frame
 	ret					; Return to caller
 
-RawTcpWrite	endp
+RawTcpIpWrite	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpClose
+		RawTcpIpClose
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Close the socket and free the context block.
@@ -979,7 +979,7 @@ PASS:		ax	= STREAM_LINGER or STREAM_DISCARD (ignored)
 RETURN:		carry clear
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpClose	proc	near
+RawTcpIpClose	proc	near
 	uses	ax,di,es
 	.enter
 
@@ -990,7 +990,7 @@ RawTcpClose	proc	near
 	call	MemLock			; Lock the memory block pointed to by bx, returns handle in ax
 	mov	es, ax			; Move the segment address from ax to es
 
-	mov	bx, es:[RTC_socket]	; Get the socket handle from the RawTcpData structure
+	mov	bx, es:[RTC_socket]	; Get the socket handle from the RawTcpIpData structure
 	tst	bx			; Test if the socket handle is zero
 	jnz	closeSocket		; If it's not zero, jump to 'closeSocket'
 	EC < WARNING RAWTCP_CLOSE_WITHOUT_SOCKET > ; Log a warning if trying to close a non-existent socket
@@ -999,7 +999,7 @@ closeSocket:
 	call	SocketClose		; Close the socket
 
 clearState:
-	clr	es:[RTC_socket]		; Clear the socket handle in the RawTcpData structure
+	clr	es:[RTC_socket]		; Clear the socket handle in the RawTcpIpData structure
 	clr	es:[RTC_connected]	; Clear the connected flag
 	clr	es:[RTC_error]		; Clear the error status
 
@@ -1012,24 +1012,24 @@ clearState:
 	clc				; Clear the carry flag to indicate success
 	.leave				; Macro to restore the stack frame
 	ret				; Return from the subroutine
-RawTcpClose	endp
+RawTcpIpClose	endp
 
 ;------------------------------------------------------------------------------
 ; Helpers
 ;------------------------------------------------------------------------------
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpSetSocketOptions
+		RawTcpIpSetSocketOptions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Set socket buffer sizes and boolean options.
 
-CALLED BY:	RawTcpOpen
+CALLED BY:	RawTcpIpOpen
 PASS:		bx	= socket handle
 RETURN:		nothing
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpSetSocketOptions	proc	near
+RawTcpIpSetSocketOptions	proc	near
 	uses	ax,cx
 	.enter
 
@@ -1051,22 +1051,22 @@ RawTcpSetSocketOptions	proc	near
 
 	.leave
 	ret
-RawTcpSetSocketOptions	endp
+RawTcpIpSetSocketOptions	endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		RawTcpParseIPv4
+		RawTcpIpParseIPv4
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Parse dotted-quad IPv4 string into IPAddr.
 
-CALLED BY:	RawTcpLoadOptions
+CALLED BY:	RawTcpIpLoadOptions
 PASS:		ds:si	= null-terminated string
 		es:di	= IPAddr output buffer
 RETURN:		carry clear if valid; IPAddr written
 		carry set if invalid format
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@%
-RawTcpParseIPv4	proc	near
+RawTcpIpParseIPv4	proc	near
 	uses	ax,bx,cx,dx,si,di
 	.enter
 
@@ -1128,6 +1128,6 @@ invalid:
 parseDone:
 	.leave					; Restore stack frame (mov sp, bp; pop bp).
 	ret					; Return to caller (carry flag indicates success/failure).
-RawTcpParseIPv4	endp
+RawTcpIpParseIPv4	endp
 
 Resident	ends

@@ -1,5 +1,5 @@
-rawtcpMain.obj \
-rawtcpMain.eobj: rawtcp.def stdapp.def geos.def geode.def resource.def \
+rawtcpipMain.obj \
+rawtcpipMain.eobj: rawtcpip.def stdapp.def geos.def geode.def resource.def \
                 ec.def lmem.def object.def graphics.def fontID.def \
                 font.def color.def gstring.def text.def char.def heap.def \
                 ui.def file.def vm.def win.def input.def hwr.def \
@@ -27,6 +27,6 @@ rawtcpMain.eobj: rawtcp.def stdapp.def geos.def geode.def resource.def \
                 Objects/emomC.def Objects/emTrigC.def Internal/uProcC.def \
                 timer.def driver.def system.def initfile.def socket.def \
                 sockmisc.def Internal/strDrInt.def Internal/semInt.def \
-                Internal/streamDr.def Internal/rawtcpDr.def
+                Internal/streamDr.def Internal/rawtcpipDr.def
 
-rawtcpEC.geo rawtcp.geo : geos.ldf socket.ldf stream.ldf 
+rawtcpipEC.geo rawtcpip.geo : geos.ldf socket.ldf stream.ldf 

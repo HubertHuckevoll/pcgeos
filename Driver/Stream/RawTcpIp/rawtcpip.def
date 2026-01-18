@@ -3,8 +3,8 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 2024 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:		RawTcp Stream Driver
-FILE:		rawtcp.def
+MODULE:		RawTcpIp Stream Driver
+FILE:		rawtcpip.def
 
 AUTHOR:		OpenAI Assistant
 
@@ -14,7 +14,7 @@ REVISION HISTORY:
 	OA	9/24/24		Initial revision
 
 DESCRIPTION:
-	Header for the RawTcp stream driver.
+	Header for the RawTcpIp stream driver.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 _Driver		= 1
@@ -32,7 +32,7 @@ include	socket.def
 include	sockmisc.def
 
 UseDriver	Internal/strDrInt.def
-DefDriver	Internal/rawtcpDr.def
+DefDriver	Internal/rawtcpipDr.def
 
 	.ioenable
 

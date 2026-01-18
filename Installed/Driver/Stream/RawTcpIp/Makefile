@@ -3,11 +3,11 @@
 #
 # If you edit it, you will lose your changes, should it be regenerated.
 #
-GEODE           = rawtcp
-ASM_TO_OBJS     = rawtcpMain.asm
+GEODE           = rawtcpip
+ASM_TO_OBJS     = rawtcpipMain.asm
 UI_TO_RDFS      =
-SRCS            = rawtcpMain.asm rawtcp.def
-OBJS            = rawtcpMain.obj
+SRCS            = rawtcpipMain.asm rawtcpip.def
+OBJS            = rawtcpipMain.obj
 LOBJS           =
 
 SYSMAKEFILE     = geode.mk
