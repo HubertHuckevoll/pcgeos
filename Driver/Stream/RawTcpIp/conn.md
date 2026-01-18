@@ -83,3 +83,73 @@ Relevant code pointers
     Definition reference: CInclude/Internal/printDr.h (the PrinterConnections record and its enum fields).
     CInclude/Internal/spoolInt.h (PrinterPortType)
     Library/Spool/UI/uiPrintControl.asm
+
+
+Task 1:
+
+**Headers/defs (types + enums):**
+
+* `CInclude/Internal/spoolInt.h`
+
+  * Add new enum value: `PPT_RAWTCPIP`.
+  * Add `typedef struct` `RawTcpipPortParams`:
+
+    * `SBCS: char RTPP_host[64];`
+    * `DBCS: wchar RTPP_host[64];`
+    * `word RTPP_port;`
+  * Add `RawTcpipPortParams PP_rawtcpip;` to `PortParams` union.
+
+* `Include/Internal/spoolInt.def`
+
+  * Mirror `PPT_RAWTCPIP` in `PrinterPortType`.
+  * Add `RawTcpipPortParams` struct with identical fields and size:
+
+    * `RTPP_host` as `char[64]` (SBCS) / `wchar[64]` (DBCS).
+    * `RTPP_port` as `word`.
+  * Add `PP_rawtcpip RawTcpipPortParams` to `PortParams` union.
+
+**PrinterConnections capability bit:**
+
+* `Include/Internal/printDr.def`
+
+  * Add `PC_TCPIP TCPIPConnection:1` to `PrinterConnections record`.
+
+* `CInclude/Internal/printDr.h`
+
+  * Add `typedef ByteEnum TCPIPConnection;`
+  * Add `#define TC_NO_TCPIP 0x0` and `#define TC_TCPIP 0x1`.
+  * Add the matching bit mask for `PC_TCPIP` in `PrinterConnections`.
+
+**Spooler table wiring (stub handlers only):**
+
+* `Library/Spool/Process/processTables.asm`
+
+  * Extend all tables with a new `PPT_RAWTCPIP` entry:
+
+    * `portNameTable`, `portVerifyTable`, `portInitTable`, `portExitTable`,\
+      `portErrorTable`, `portCloseTable`, `portInputTable`.
+  * Add stub handlers with these exact names:
+
+    * `InitRawTcpipPrintPort`
+    * `VerifyRawTcpipPrintPort`
+    * `ExitRawTcpipPrintPort`
+    * `ErrorRawTcpipPrintPort`
+    * `CloseRawTcpipPrintPort`
+  * In each stub, add a **placeholder comment** (no real logic yet):
+
+    * `; TODO: RAWTCPIP port init - load rawtcpip.geo and call DR_STREAM_OPEN with PP_rawtcpip (default port 9100)`
+    * `; TODO: RAWTCPIP port verify - validate params / attempt open-close`
+    * `; TODO: RAWTCPIP port exit - close stream if open`
+    * `; TODO: RAWTCPIP port error/close handling`
+  * Return neutral values consistent with other port stubs.
+
+**UI port string mapping (placeholder only):**
+
+* `Library/Spool/UI/uiPrintControl.asm`
+
+  * Add a new `portTable` entry mapping `"IP"` → `PPT_RAWTCPIP`.
+  * In `PrinterGetPortInfo`, add a placeholder comment:
+
+    * `; TODO: RAWTCPIP params - parse host/port into PP_rawtcpip (UI/INI not wired yet)`
+
+Use the existing formatting conventions (tabs in ASM, C89 rules, handles/pointers naming).
