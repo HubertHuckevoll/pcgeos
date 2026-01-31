@@ -726,25 +726,34 @@ createOk:
 	jc	connectFail		; If connect failed (carry set), handle failure
 
 	; --- Connection Successful ---
-	; Minimal readiness check to ensure the socket is connected.
+	; Confirm the socket is connected by querying peer info immediately.
 	push	ds
 	push	si
+	push	di
 	push	ax
+	push	bx
 	mov	bx, ds:[RTC_socket]	; Ensure BX holds the socket handle
-	mov	ax, size SocketCheckRequest
+	mov	ax, size SocketAddress + (size word + IP_ADDR_SIZE) \
+			+ RAWTCP_TCP_DOMAIN_LENGTH + 1
 	sub	sp, ax
-	mov	si, sp
-	segmov	ds, ss
-	mov	ds:[si].SCR_socket, bx
-	mov	ds:[si].SCR_condition, SC_WRITE
-	mov	ax, 1
-	mov	bp, RAWTCP_CONNECT_READY_TIMEOUT_TICKS
-	call	SocketCheckReady
-	add	sp, size SocketCheckRequest
+	mov	di, sp
+	segmov	es, ss
+	mov	es:[di].SA_domainSize, RAWTCP_TCP_DOMAIN_LENGTH + 1
+	mov	es:[di].SA_addressSize, size word + IP_ADDR_SIZE
+	lea	si, es:[di + size SocketAddress + (size word + IP_ADDR_SIZE)]
+	mov	es:[di].SA_domain.offset, si
+	mov	es:[di].SA_domain.segment, ss
+	mov	cx, ss
+	mov	dx, sp
+	call	SocketGetPeerName
+	add	sp, size SocketAddress + (size word + IP_ADDR_SIZE) \
+			+ RAWTCP_TCP_DOMAIN_LENGTH + 1
+	pop	bx
 	pop	ax
+	pop	di
 	pop	si
 	pop	ds
-	jc	connectFail		; Treat not-ready as a connect failure
+	jc	connectFail		; Treat not-connected as a connect failure
 
 	call	RawTcpIpSetSocketOptions	; Set socket to non-blocking, etc.
 	mov	ds:[RTC_connected], TRUE ; Mark as connected in our context
