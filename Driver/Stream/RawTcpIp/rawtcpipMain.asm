@@ -43,6 +43,7 @@ include	rawtcpip.def
 
 RAWTCP_DEFAULT_PORT		equ	9100
 RAWTCP_CONNECT_TIMEOUT_TICKS	equ	10 * 60
+RAWTCP_CONNECT_READY_TIMEOUT_TICKS equ	2
 RAWTCP_RETRY_COUNT		equ	3
 RAWTCP_RETRY_DELAY_TICKS	equ	15
 
@@ -725,6 +726,26 @@ createOk:
 	jc	connectFail		; If connect failed (carry set), handle failure
 
 	; --- Connection Successful ---
+	; Minimal readiness check to ensure the socket is connected.
+	push	ds
+	push	si
+	push	ax
+	mov	bx, ds:[RTC_socket]	; Ensure BX holds the socket handle
+	mov	ax, size SocketCheckRequest
+	sub	sp, ax
+	mov	si, sp
+	segmov	ds, ss
+	mov	ds:[si].SCR_socket, bx
+	mov	ds:[si].SCR_condition, SC_WRITE
+	mov	ax, 1
+	mov	bp, RAWTCP_CONNECT_READY_TIMEOUT_TICKS
+	call	SocketCheckReady
+	add	sp, size SocketCheckRequest
+	pop	ax
+	pop	si
+	pop	ds
+	jc	connectFail		; Treat not-ready as a connect failure
+
 	call	RawTcpIpSetSocketOptions	; Set socket to non-blocking, etc.
 	mov	ds:[RTC_connected], TRUE ; Mark as connected in our context
 	mov	bx, bp			; Get our context handle into BX (the return value)
