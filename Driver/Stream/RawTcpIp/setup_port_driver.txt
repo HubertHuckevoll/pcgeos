@@ -1,0 +1,14 @@
+[printer]
+printers = GhostScript Software RIP color (PostScript)
+numPrinters = ...
+count = ..
+
+[GhostScript Software RIP color (PostScript)]
+type = 0
+driver = EC PostScript driver
+device = GhostScript Software RIP color (PostScript)
+portDriver = RAWTCPIP.GEO
+port = CU
+rawTcpIpHost = 127.0.0.1
+rawTcpIpPort = 9100
+intermittent = false

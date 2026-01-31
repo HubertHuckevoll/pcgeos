@@ -32,23 +32,23 @@ softRIPInfo	segment	resource
 				< PT_RASTER, BMF_MONO>,
 					; ---- PrinterConnections ------
 				< IC_NO_IEEE488,
-				CC_NO_CUSTOM,
+				CC_CUSTOM,
 				SC_NO_SCSI,
 				RC_NO_RS232C,
 				CC_NO_CENTRONICS,
 				FC_FILE,
 				AC_NO_APPLETALK >,
 					; ---- PrinterSmarts -----------
-				PS_PDL,	
+				PS_PDL,
 					;-------Custom Entry Routine-------
 				NULL,
 					;-------Custom Exit Routine-------
-				NULL,		
+				NULL,
 					; ---- Mode Info Offsets -------
 				NULL,
 				NULL,
 				offset softRIP300,
-				NULL,	
+				NULL,
 				NULL,
                      ; ---- Font Geometry -----------
                 NULL,
@@ -56,11 +56,11 @@ softRIPInfo	segment	resource
                 NULL,
 					; ---- PaperMargins ------------
 				< PR_MARGIN_LEFT,	; Tractor Margins
-				PR_MARGIN_TRACTOR, 
+				PR_MARGIN_TRACTOR,
 				PR_MARGIN_RIGHT,
 				PR_MARGIN_TRACTOR >,
 				< PR_MARGIN_LEFT,	; ASF Margins
-				PR_MARGIN_TOP, 	
+				PR_MARGIN_TOP,
 				PR_MARGIN_RIGHT,
 				PR_MARGIN_BOTTOM >,
 					; ---- PaperInputOptions -------
@@ -83,7 +83,7 @@ softRIPInfo	segment	resource
 ;----------------------------------------------------------------------------
 ;	Graphics modes info
 ;----------------------------------------------------------------------------
-                                   
+
 softRIP300			GraphicsProperties < 300,		; xres
 						300,		; yres
 						1,  		; band height
@@ -101,7 +101,7 @@ softRIP300			GraphicsProperties < 300,		; xres
 
 		PSInfoStruct   <
 			      PSFL_STANDARD_13, ; PSFontList
-			      0x0001,		; PSLevel flags 
+			      0x0001,		; PSLevel flags
 						;  9=PSL_CMYK or PSL_FILE
 			      SOFTRIP_PROLOG_LEN,	; prolog length
 			      offset softRIPProlog ; ptr to prolog
@@ -161,16 +161,16 @@ softRIPCInfo	segment	resource
 				FC_FILE,
 				AC_NO_APPLETALK >,
 					; ---- PrinterSmarts -----------
-				PS_PDL,	
+				PS_PDL,
 					;-------Custom Entry Routine-------
 				NULL,
 					;-------Custom Exit Routine-------
-				NULL,		
+				NULL,
 					; ---- Mode Info Offsets -------
 				NULL,
 				NULL,
 				offset softRIPcol300,
-				NULL,	
+				NULL,
 				NULL,
                      ; ---- Font Geometry -----------
                 NULL,
@@ -178,11 +178,11 @@ softRIPCInfo	segment	resource
                 NULL,
 					; ---- PaperMargins ------------
 				< PR_MARGIN_LEFT,	; Tractor Margins
-				PR_MARGIN_TRACTOR, 
+				PR_MARGIN_TRACTOR,
 				PR_MARGIN_RIGHT,
 				PR_MARGIN_TRACTOR >,
 				< PR_MARGIN_LEFT,	; ASF Margins
-				PR_MARGIN_TOP, 	
+				PR_MARGIN_TOP,
 				PR_MARGIN_RIGHT,
 				PR_MARGIN_BOTTOM >,
 					; ---- PaperInputOptions -------
@@ -205,7 +205,7 @@ softRIPCInfo	segment	resource
 ;----------------------------------------------------------------------------
 ;	Graphics modes info
 ;----------------------------------------------------------------------------
-                                   
+
 softRIPcol300			GraphicsProperties < 300,		; xres
 						300,		; yres
 						1,  		; band height
@@ -223,7 +223,7 @@ softRIPcol300			GraphicsProperties < 300,		; xres
 
 		PSInfoStruct   <
 			      PSFL_STANDARD_13, ; PSFontList
-			      0x8001,		; PSLevel flags 
+			      0x8001,		; PSLevel flags
 						;  9=PSL_CMYK or PSL_FILE
 			      SOFTRIPC_PROLOG_LEN,	; prolog length
 			      offset softRIPCProlog ; ptr to prolog
@@ -233,7 +233,7 @@ softRIPCProlog	label	byte
 	char	"GWDict begin", NL
 	char	"/SDC { 85 35 currentscreen 3 1 roll pop pop setscreen", NL
 	char	"{} setblackgeneration {} setundercolorremoval }bdef", NL
-	char	"end", NL             
+	char	"end", NL
 	char	"/Times-Roman findfont", NL
 	char	"/Times-Bold  findfont", NL
 	char	"/Times-Italic findfont", NL
@@ -251,7 +251,7 @@ softRIPCProlog	label	byte
 	char	"/Sans-Bold findfont", NL
 	char	"/Sans-Oblique findfont", NL
 	char	"/Sans-BoldOblique findfont ", NL
-	
+
 softRIPCEndProlog	label	byte
 
 SOFTRIPC_PROLOG_LEN equ	offset softRIPCEndProlog - offset softRIPCProlog

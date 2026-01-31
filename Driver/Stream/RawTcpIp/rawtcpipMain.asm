@@ -96,9 +96,9 @@ DriverTable	DriverInfoStruct	<
 >
 ForceRef	DriverTable
 
-rawTcpHostKeyString	char	"rawTcpHost",0
-rawTcpPortKeyString	char	"rawTcpPort",0
-rawTcpTcpDomainString	char	"TCPIP",0
+rawTcpIpHostKeyString	char	"rawTcpIpHost",0
+rawTcpIpPortKeyString	char	"rawTcpIpPort",0
+rawTcpIpDomainKeyString	char	"TCPIP",0
 
 idata		ends
 
@@ -329,7 +329,7 @@ allocOk:
 	; Read rawTcpPort (default RAWTCP_DEFAULT_PORT)
 	;
 	mov	cx, dgroup		; Set CX to dgroup for InitFile... routines
-	mov	dx, offset rawTcpPortKeyString ; Point DX to the "rawTcpPort" key string
+	mov	dx, offset rawTcpIpPortKeyString ; Point DX to the "rawTcpPort" key string
 	call	InitFileReadInteger	; Read the integer value from the .ini file
 	jnc	havePort		; If read was successful (no carry), jump
 	mov	ax, RAWTCP_DEFAULT_PORT	; Otherwise, use the default port value
@@ -346,7 +346,7 @@ readHost:
 	; Read rawTcpHost (dotted IPv4). Use a temporary block then copy.
 	;
 	mov	cx, dgroup		; Set CX to dgroup
-	mov	dx, offset rawTcpHostKeyString ; Point DX to the "rawTcpHost" key string
+	mov	dx, offset rawTcpIpHostKeyString ; Point DX to the "rawTcpHost" key string
 	clr	bp			; BP must be zero for InitFileReadString
 	call	InitFileReadString	; Read the host string from the .ini file
 	jnc	haveHostString		; If successful, continue
@@ -698,7 +698,7 @@ createOk:
 	mov	es:[di].RTSA_socketAddress.SA_port.SP_port, ax
 	mov	es:[di].RTSA_socketAddress.SA_port.SP_manuf, MANUFACTURER_ID_SOCKET_16BIT_PORT
 	mov	es:[di].RTSA_socketAddress.SA_domainSize, RAWTCP_TCP_DOMAIN_LENGTH
-	mov	es:[di].RTSA_socketAddress.SA_domain.offset, offset rawTcpTcpDomainString
+	mov	es:[di].RTSA_socketAddress.SA_domain.offset, offset rawTcpIpDomainKeyString
 	mov	ax, dgroup
 	mov	es:[di].RTSA_socketAddress.SA_domain.segment, ax
 	mov	es:[di].RTSA_socketAddress.SA_addressSize, size word + IP_ADDR_SIZE
