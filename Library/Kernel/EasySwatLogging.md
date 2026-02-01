@@ -44,16 +44,12 @@ endif
    - Load `AX = EC_LOG_WARNING` and call `CWARNINGNOTICE`.
    - Return to caller.
 
-Minimal sketch (adapt to your project’s segment assumptions/`assume` usage):
+In `Library/Kernel/Boot/bootBoot.asm`, inspect an existing `_pascal` far proc that uses a similar prologue (e.g., ones using `uses` or `push bp`), and match its parameter offset conventions. Then implement `ECWarningLogRecord` with those exact offsets for `typeTagP` and `addr`, updating comments accordingly to prevent stack misreads.
+
+Minimal sketch for the core functionality:
 ```asm
-if ERROR_CHECK
-; void _pascal ECWarningLogRecord(const char __far *typeTagP, dword addr)
-public ECWarningLogRecord
-ECWarningLogRecord proc far uses ds es
-    push bp
-    mov  bp, sp
-    ; typeTagP at [bp+6] (off), [bp+8] (seg) — adjust if your prologue differs
-    ; addr.off at [bp+10], addr.seg at [bp+12]
+
+   ...
 
     ; Copy up to 31 bytes from typeTagP -> ECLogTypeTag, then NUL
     push ds
@@ -87,10 +83,8 @@ ECWarningLogRecord proc far uses ds es
     mov  ax, EC_LOG_WARNING
     call CWARNINGNOTICE
 
-    pop  bp
-    ret
-ECWarningLogRecord endp
-endif
+   ...
+
 ```
 
 ---
@@ -112,7 +106,7 @@ Export **all three**:
    ```
 
 Don't touch kernelResource.def.
-
+And no need to guard this with if ERROR_CHECK - GP files dont't understand this.
 
 ---
 
