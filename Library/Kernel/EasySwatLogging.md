@@ -96,41 +96,38 @@ endif
 ---
 
 ## Kernel exports / ordinals
-**File:** `Library/Kernel/kernelResource.def`
-(**and** any `.gp` export block such as `Library/Kernel/geos.gp`, if applicable)
+**File:** `Library/Kernel/geos.gp`
 
-1. Under the appropriate EC guard, export **all three** with exact types:
-   ```
-   ECWarningLogRecord:far
-   ECLogTypeTag:byte
-   ECLogAddr:dword
-   ```
+Add `incminor SwatLoggingSupport` (see "incminor RawBitmaCreation"), then
 
-2. **Assign explicit ordinals** (or fixed positions) to preserve ABI stability. Do **not** describe offsets relative to “nearest symbol”; pick the next stable numbers and record them in comments:
-   ```text
-   ; Ordinals reserved for EC warning log feature:
-   ;   NNN: ECWarningLogRecord
-   ;   NNN+1: ECLogTypeTag
-   ;   NNN+2: ECLogAddr
+Export **all three**:
+   ```
+   export ECWarningLogRecord
+   export ECLogTypeTag
+   export ECLogAddr
+   export ECWARNINGLOGRECORD
+   export ECLOGTYPETAG
+   export ECLOGADDR
+
    ```
 
-3. Mirror these exports in any `.gp` or secondary export list the kernel uses.
+Don't touch kernelResource.def.
+
 
 ---
 
 ## Warning enum & external (EC-only)
 **File:** `Include/ec.def`
 
-1. In `etype Warnings`, add:
-   - `EC_LOG_WARNING` with a **specific numeric value** that does not collide with existing warnings.
-     - Choose a value following the project’s convention (e.g., a documented EC-only range).
-     - Add a brief comment documenting the chosen range and why this value is safe.
+1. Behind `Warnings etype word, 0`, on a new line, add
+   `EC_LOG_WARNING			enum Warnings`
 
-2. Under EC guard, declare the far routine so ASM and C can link consistently:
+Add a brief comment what it does.
+
+
+2. Behind `global SysSetECLevel:far`, after a newline, add
    ```asm
-   if ERROR_CHECK
-   extern  ECWarningLogRecord:far
-   endif
+   global  ECWarningLogRecord:far
    ```
 
 ---
@@ -138,20 +135,18 @@ endif
 ## C header + macros (EC-only)
 **File:** `CInclude/ec.h`
 
-1. Under `#if ERROR_CHECK`:
+1. After the declaration of "SysSetECLevel",
    - Provide a FAR-correct prototype (note `__far` on the char pointer):
      ```c
      extern void _pascal ECWarningLogRecord(const char __far *typeTagP, dword addr);
      ```
 
-   - Provide a helper to construct a **far pointer dword** (guarantees low=off/high=seg):
+   - after the following "#if	ERROR_CHECK" line, add a helper to construct a **far pointer dword** (guarantees low=off/high=seg):
      ```c
-     #ifndef EC_MAKE_FARPTR
      #define EC_MAKE_FARPTR(p)  ((((dword)FP_SEG(p)) << 16) | ((dword)FP_OFF(p)))
-     #endif
      ```
 
-   - Define the public macros:
+   - Then define the public macros:
      ```c
      /* Truncation: type tags longer than 31 bytes will be truncated by the callee. */
      #define EC_LOG_T(type, expr)   ECWarningLogRecord(#type, EC_MAKE_FARPTR(&(expr)))
@@ -209,17 +204,6 @@ if {$code == EC_LOG_WARNING} {
 
 ---
 
-## Build guards (uniform)
-Use the **same** EC guard everywhere this feature appears:
-
-- Assembly/def: `if ERROR_CHECK` … `endif`
-- C headers: `#if ERROR_CHECK` … `#endif`
-- The warning enum and extern in `Include/ec.def` can also be wrapped in the EC guard to avoid non-EC symbol exposure.
-
-This ensures **no references** exist in non-EC builds.
-
----
-
 ## Documentation
 1. **`TechDocs/Markdown/Routines/rroute_f.md`**
    - Document `EC_LOG_T(type, expr)` and `EC_LOG_STR(expr)` alongside other EC macros.
@@ -236,14 +220,3 @@ This ensures **no references** exist in non-EC builds.
 
 3. **Kernel dev docs (optional but recommended)**
    - Brief note in the EC/ERROR_CHECK section referencing these symbols and the `seg:off` encoding of `ECLogAddr`.
-
----
-
-## Final checklist (copy into PR description)
-- [ ] `bootVariable.def`: add `ECLogTypeTag` (32 bytes) + `ECLogAddr` (dword) under `if ERROR_CHECK`; document truncation and `seg:off` encoding.
-- [ ] `bootBoot.asm`: add `_pascal` far `ECWarningLogRecord` under `if ERROR_CHECK`; copy tag (<=31 + NUL), store addr, call `CWARNINGNOTICE` with `AX=EC_LOG_WARNING`.
-- [ ] `kernelResource.def` (+ `.gp` if used): export `ECWarningLogRecord:far`, `ECLogTypeTag:byte`, `ECLogAddr:dword` with **explicit ordinals**.
-- [ ] `Include/ec.def`: add `EC_LOG_WARNING` with a **non-colliding numeric value** (document the range) and an `extern ECWarningLogRecord:far` under EC guard.
-- [ ] `CInclude/ec.h`: add FAR-correct prototype, `EC_MAKE_FARPTR` helper, and `EC_LOG_T`/`EC_LOG_STR` macros under `#if ERROR_CHECK`; no-ops otherwise.
-- [ ] `Tools/swat/lib.new/fatalerr.tcl`: extend `why-warning` to handle `EC_LOG_WARNING` with `pstring ECLogTypeTag`, `ECLogAddr` parsing, `"string"` special case, `_print` typed value path, null-addr handling, and hex `seg:off` formatting.
-- [ ] Docs: update `rroute_f.md` and `tswatcm.md` with usage, behavior, and examples.
