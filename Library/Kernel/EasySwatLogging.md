@@ -46,8 +46,6 @@ endif
    - Load `AX = EC_LOG_WARNING` and call `CWARNINGNOTICE`.
    - Return to caller.
 
-In `Library/Kernel/Boot/bootBoot.asm`, inspect an existing `_pascal` far proc that uses a similar prologue (e.g., ones using `uses` or `push bp`), and match its parameter offset conventions. Then implement `ECWarningLogRecord` with those exact offsets for `typeTagP` and `addr`, updating comments accordingly to prevent stack misreads.
-
 Minimal sketch for the core functionality:
 ```asm
 
