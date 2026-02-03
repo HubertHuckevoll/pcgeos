@@ -37,6 +37,8 @@ endif
    - Stack (right-to-left):
      `const char __far *typeTagP`, then `dword addr`.
    - **Meaning of `addr`:** far pointer **dword** to the value/string to print (**low=offset, high=segment**).
+   - Check Library/User/User/userC.asm, functions like CLIPBOARDTESTITEMFORMAT, CLIPBOARDENUMITEMFORMATS, etc. to see how variables are passed and used from C to ASM in ESP
+
 
 3. **Implementation:**
    - Copy **up to 31 bytes** from `typeTagP` into `ECLogTypeTag`, then store a trailing `0`.
