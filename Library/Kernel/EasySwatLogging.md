@@ -20,8 +20,9 @@ Add an EC-only kernel log record + helper, expose EC macros in GOC, and extend S
 Example (pseudodef; keep your project’s segment/def syntax):
 ```asm
 if ERROR_CHECK
-ECLogTypeTag   db 32 dup (0)   ; NUL-terminated, writer truncates to 31 + NUL
-ECLogAddr      dd 0            ; far ptr dword: low=off, high=seg
+ECLogTypeTag   byte 32 dup (0)   ; NUL-terminated, writer truncates to 31 + NUL
+ECLogAddr      dword 0            ; far ptr dword: low=off, high=seg
+
 endif
 ```
 
@@ -106,7 +107,7 @@ Export **all three**:
    ```
 
 Don't touch kernelResource.def.
-And no need to guard this with if ERROR_CHECK - GP files dont't understand this.
+And no need to guard this with "if ERROR_CHECK" - GP files dont't understand this.
 
 ---
 
@@ -130,9 +131,9 @@ Add a brief comment what it does.
 **File:** `CInclude/ec.h`
 
 1. After the declaration of "SysSetECLevel",
-   - Provide a FAR-correct prototype (note `__far` on the char pointer):
+   - Provide a correct prototype (note no need to add `__far` on the char pointer as all GOC pointers are far pointers by default):
      ```c
-     extern void _pascal ECWarningLogRecord(const char __far *typeTagP, dword addr);
+     extern void _pascal ECWarningLogRecord(const char *typeTagP, dword addr);
      ```
 
    - after the following "#if	ERROR_CHECK" line, add a helper to construct a **far pointer dword** (guarantees low=off/high=seg):
@@ -170,7 +171,7 @@ Add a brief comment what it does.
      - Format addresses as 4-digit hex (e.g., `%04x:%04x`) for clarity.
    - Return `0` to continue execution (maintains existing behavior).
 
-Concrete snippet (adjust to match your file’s style/helpers):
+Concrete snippet (adjust to match the rest of fatalerr.tcl):
 ```tcl
 # inside why-warning { code ... }
 if {$code == EC_LOG_WARNING} {
