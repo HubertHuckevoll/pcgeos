@@ -1,68 +1,193 @@
-Imagine a folder called DISTAPPS under SYSAPPL. It contains all the GEOS applications of an Ensemble build. Then there is a preferences module that reads that folder and displays a list of all these applications. The clou: the preferences module checks for links to these applications in WORLD and/or DESKTOP. If an app has a link, it checks a select box or toggle on the app item in the pref module. If not - not. If an app is not selected and you do select it, a Link is created in WORLD/DESKTOP that can then be managed using GeoManager ot the Desktop. This way, all the apps stay in a folder and can be updated anytime that is needed with a distro update. Does that make sense?
+GOAL
 
-Yes, that model maps cleanly onto how GEOS is already structured and can be implemented with existing file/link mechanisms.
+Keep the canonical GEOS applications in:
+- SYSTEM\SYSAPPL\DISTAPPS  (i.e., SP_SYS_APPLICATION\DISTAPPS)
 
-Why it fits GEOS conventions
+Expose what the user sees/launches by creating/removing links in:
+- WORLD (SP_APPLICATION) and/or
+- Desktop folder (commonly SP_TOP\DESKTOP; product-dependent)
 
-    System apps live under SP_SYS_APPLICATION (commonly SYSTEM\SYSAPPL) and user‑launchable apps under SP_APPLICATION (commonly WORLD) per the standard path definitions in TechDocs/Markdown/Concepts/cfile.md. Keeping the real apps in a SYSAPPL\DISTAPPS subtree is consistent with “system app” semantics.
+A Preferences module lists apps found in DISTAPPS and uses a toggle per app:
+- toggle ON  -> ensure a link exists in the chosen target location(s)
+- toggle OFF -> remove the link(s)
 
-    Desktop/GeoManager link state is represented via file links plus desktop metadata (see Include/file.def for FileCreateLink/FileReadLink and Include/newdesk.def for DesktopInfo/FEA_DESKTOP_INFO usage). That matches your “selected = link exists” toggle model.
-
-    Be aware that some products store desktop links in the INI (see GPC_DESKTOP_LINKS_IN_INI in Include/product.def), so the preference module may need to respect that setting when determining whether a “link exists.”
-
-Practical mapping to your idea
-
-    Enumerate SYSTEM\SYSAPPL\DISTAPPS (or a standard path that resolves there).
-
-    For each app, check for an existing link in WORLD and/or the Desktop’s folder (often SP_TOP\DESKTOP in practice) by:
-
-        locating a link file whose target points back to the app (via FileReadLink), and/or
-
-        inspecting FEA_DESKTOP_INFO as needed for Desktop object type.
-
-    On toggle “on,” create a link in WORLD/DESKTOP with FileCreateLink and set desktop info if required.
-
-    On toggle “off,” delete the link.
-
-This preserves clean app storage in SYSAPPL\DISTAPPS while still letting users manage visible entries through the Desktop/GeoManager.
+This makes distro updates simple: update DISTAPPS, and the user-visible surface area remains links.
 
 
-Create a new Preferences module under Appl/Preferences (or the product’s preferred preferences location). Define a UI list (GenItemGroup/GenBooleanGroup or similar) bound to an internal model of discovered apps in SYSTEM\SYSAPPL\DISTAPPS. Ensure the list can show each app’s display name and a toggle state. Use GOC conventions and C89 variable declaration rules.
+WHY THIS MATCHES GEOS
+
+- Canonical storage under SP_SYS_APPLICATION matches system-managed distribution semantics.
+- Link state maps to existing link mechanisms (FileCreateLink, FileReadLink) plus Desktop metadata
+  (FEA_DESKTOP_INFO / DesktopInfo) where required.
+- Some products store desktop links in the INI (e.g., GPC_DESKTOP_LINKS_IN_INI), which can change how
+  link existence should be detected and managed.
+
+TODO: Decide upfront whether this module supports both file-link mode and INI-link mode, or only the
+      product’s active mode.
 
 
-Implement a scan routine that resolves SP\_SYS\_APPLICATION (from file.def/standard paths) and appends the DISTAPPS subdir. Use FileEnum or equivalent kernel routines to enumerate geodes. Extract a display name (from token/moniker or filename) and store it in the model. Avoid large local buffers; use MemAlloc with HAF\_ZERO\_INIT and lock/unlock patterns.
+HIGH-LEVEL BEHAVIOR
+
+1) On open / refresh
+   - Enumerate apps in SP_SYS_APPLICATION\DISTAPPS
+   - Build an in-memory list of distributable apps
+   - Detect whether each app currently has a link in configured target(s)
+   - Render list with name + toggle state (+ optional target indicator)
+
+2) On toggle change
+   - If toggled ON: create missing link(s)
+   - If toggled OFF: remove link(s)
+   - Recheck filesystem state and update UI (do not trust cached state)
 
 
-Add link-resolution logic that searches for a link in WORLD and/or Desktop (often SP\_APPLICATION and SP\_TOP\DESKTOP). Use FileReadLink / FileGetLinkExtraData or the desktop-info attribute (FEA\_DESKTOP\_INFO / DesktopInfo in Include/newdesk.def) to confirm a link points to the DISTAPPS target. Update the toggle state based on whether a link exists.
+CORE DECISIONS (SHARP EDGES)
+
+TODO: Link target policy
+      - Are links created in WORLD, DESKTOP, or both?
+      - If both are supported, is it a global setting or per-app?
+
+TODO: Link file naming policy
+      - How are created link files named?
+      - How are collisions avoided with existing files/links?
+      - What happens if a user already has a different name pointing to the same target?
+
+TODO: Ownership / deletion policy
+      - When toggling OFF, do we delete any link pointing to the target, or only links created by this module?
+      - Safer default: only delete links that match a recognizable naming/extra-data signature.
+
+TODO: App detection filter
+      - DISTAPPS may contain non-launchable GEODEs (libraries, components, drivers).
+      - Define what counts as an app (likely process geodes / launchable executables).
+      - Decide whether to hide helper apps or show everything.
 
 
-On toggle‑on, call FileCreateLink to create a link in the chosen target directory. Populate any required desktop metadata (FEA\_DESKTOP\_INFO) so GeoManager/desktop treats it as an executable. On toggle‑off, delete the link (FileDelete) and refresh the model state. Ensure product variation: if GPC\_DESKTOP\_LINKS\_IN\_INI is true, coordinate with the INI‑based link mechanism instead of (or in addition to) file links.
+DATA MODEL
+
+Define a small record per discovered entry:
+
+AppEntry
+- targetPath: full path to GEODE in DISTAPPS
+- displayName: derived name (cheap by default)
+- token/identifier: optional if obtainable without heavy loads
+- linkState: none | world | desktop | both
+- optional: linkNameWorld, linkNameDesktop (what was found/created)
+
+TODO: Decide how to derive displayName without expensive resource loads
+      - filename-based is cheap
+      - token/moniker is nicer but may require opening the GEODE / reading resources
 
 
-On module open, rescan DISTAPPS and re-evaluate link presence, rather than relying solely on cached state. If product policy requires, store/restore user selections in the Preferences file (Config library), but always reconcile with actual links in WORLD/DESKTOP to avoid drift.
+LINK DETECTION LOGIC
 
-Add a short README or comment block near the module describing: DISTAPPS source directory, link creation/removal behavior, and any product flags (e.g., GPC\_DESKTOP\_LINKS\_IN\_INI). Include references to Include/file.def and Include/newdesk.def for link/desktop info.
+For each app, determine if a corresponding link exists in each target directory:
 
+Approach A (robust, slower):
+- Enumerate candidate link files in WORLD and/or Desktop folder
+- For each candidate link file:
+  - FileReadLink (or equivalent) to get its target
+  - Match target against the app’s DISTAPPS path
+- Optionally verify/inspect FEA_DESKTOP_INFO where needed
 
+Approach B (fast, brittle):
+- Compute expected link filename and check only that
 
-In detail:
+TODO: Choose approach (or hybrid):
+      - Scanning is robust but slower
+      - Expected-name check is fast but depends on naming policy and breaks if users rename links
 
-Create the public/private headers for the preferences module and define the data model types (app entry record, link state enum, list context struct). Add constants for paths (DISTAPPS subdir) and any feature flags. Declare \_pascal function prototypes with C89-compliant signatures. Keep structs small; use handle-based storage where needed.
-
-
-Create the .ui (or equivalent resource) with the list and toggles. Wire UI messages to empty handlers (e.g., “refresh list,” “toggle item”). Ensure object names and messages align with the header declarations from Phase 1. No real scanning or linking logic yet—just UI plumbing.
-
-Implement the scan routine against SP\_SYS\_APPLICATION + DISTAPPS, build the in-memory model, and push names into the list UI. Use FileEnum and MemAlloc/MemLock/Unlock patterns. This phase should only read the file system (no link creation yet).
-
-
-Add link detection logic to mark items as selected based on FileReadLink/FEA\_DESKTOP\_INFO. Refresh UI state based on detected links. Still no link creation/removal in this phase.
-
-
-On toggle on/off, create or delete links in WORLD and/or Desktop as configured. Handle product settings like GPC\_DESKTOP\_LINKS\_IN\_INI. Update the model and UI state after each operation.
-
-
-Ensure the module rechecks the file system on open and after link operations. Optionally persist last view state (not the link state) in the preferences file. Handle missing DISTAPPS directory gracefully.
+TODO: Decide how to handle multiple links pointing to the same target
+      - mark as selected and optionally show duplicates
+      - or treat as an error condition
 
 
+LINK CREATION / REMOVAL
+
+Toggle ON:
+- Create link in configured target directory using FileCreateLink
+- Ensure Desktop/GeoManager treats it as launchable
+  - Set/update FEA_DESKTOP_INFO if required by the product/desktop variant
+
+TODO: Define which metadata must be set for the desktop variant(s) you care about
+
+Toggle OFF:
+- Remove link(s) per ownership policy
+- Refresh detection and UI state
+
+TODO: Safety behavior if link file was modified/renamed by user
+      - If only deleting owned links, you need a way to mark ownership
+        (naming convention, extra data, or a desktop-info signature)
 
 
+PRODUCT VARIATION: INI-BASED DESKTOP LINKS
+
+If GPC_DESKTOP_LINKS_IN_INI (or equivalent) is active:
+- Link existence may be represented in config rather than filesystem link files
+- Toggle operations must add/remove entries in the INI store (or coordinate with Desktop’s mechanism)
+
+TODO: Identify the exact storage format/keys and decide whether the module:
+      - edits the INI directly, or
+      - calls an existing Desktop/Config API (preferable if available)
+
+
+PERSISTENCE RULES
+
+- Source of truth is current filesystem/desktop state.
+- Always rescan and reconcile on open.
+- Storing user selections is optional and mostly redundant.
+
+If anything is stored:
+- Store UI state only (sorting, last selected item), not link truth.
+
+
+ERROR HANDLING & RESILIENCE
+
+- Missing DISTAPPS folder: show empty list + non-fatal status
+- Link create fails: leave toggle OFF, surface an error
+- Link delete fails: keep toggle ON, surface an error
+- Always re-evaluate after an operation
+
+TODO: Decide UI behavior when WORLD and DESKTOP disagree (link exists in one location only)
+      - tri-state / partial state, or
+      - treat “exists anywhere” as ON and show where
+
+
+IMPLEMENTATION PHASES
+
+Phase 1: Skeleton + UI plumbing
+- Create module headers (public/private) and model structs
+- Build .ui resources: list + toggle handling + refresh command
+- Wire message handlers (stubs)
+
+Phase 2: Scan DISTAPPS
+- Resolve SP_SYS_APPLICATION\DISTAPPS
+- Enumerate entries (FileEnum)
+- Filter to launchable apps
+- Populate model + UI list
+
+Phase 3: Link detection
+- Implement detection in WORLD and/or Desktop target(s)
+- Set per-item toggle state based on detected links
+- Optional: show “where linked” indicator
+
+Phase 4: Link create/remove
+- Toggle ON: create missing link(s) + metadata
+- Toggle OFF: remove link(s) per ownership policy
+- Refresh model/UI after each action
+
+Phase 5: INI mode + polish
+- Support INI-based link products if required
+- Add robust collision handling
+- Add a README/comment block documenting:
+  - DISTAPPS path
+  - link naming/ownership rules
+  - product flags and behavior differences
+  - references: Include/file.def, Include/newdesk.def, Include/product.def
+
+
+CRITICAL RISK IF LEFT UNDEFINED
+
+If you do not define a naming + ownership rule for links:
+- toggling OFF becomes risky (could delete user-managed links)
+- toggling ON becomes messy (duplicates/collisions)
+
+Everything else is straightforward GEOS plumbing once those rules are nailed down.
