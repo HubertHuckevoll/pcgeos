@@ -11,46 +11,46 @@ AUTHOR:		Cassie Hartzog, Nov  3, 1992
 ROUTINES:
 	Name			Description
 	----			-----------
-	PutStringInItem		Allocates an item and copies the text string 
-				from the geode into it. 
-	PutDataInItem		Allocates and item and copies the data into it. 
-	StoreMoniker		Chunk may contain either a text or gstring 
-				moniker. Put it into an item and update the 
-				ResourceArrayElement. 
-	StoreBitmap		chunk contains a bitmap, put it into an item in 
-				the Resource's group. 
-	StoreGString		chunk is a gstring structure, put it into an 
-				item and update the RAD_origItem field. 
-	StoreText		Chunk contains plain ol' text. Copy it into a 
-				DBItem and store the info in the 
-				ResourceArrayElement. 
-	CheckIfBitmap		Determines if passed chunk points to a bitmap. 
-	CalculateBitmapChunkSize	To check if this chunk could really 
-				contain a bitmap, we need to see how big the 
-				chunk would have to be to contain a bitmap of 
-				the given height and width, in the given 
-				format. 
-	DocumentCalcPackbitsBytes	Calc number of bytes in a 
-				packbits-compacted scan line 
-	DocumentCalcLineSize	Calculate the line width (bytes) for a scan 
-				line of a bitmap 
-	CheckIfText		validate that ds:si points to a text string 
-	CheckIfGString		Validate that chunk contains a gstring. 
-	CheckForGStringOptrs	Look for gstring elements which draw from 
-				optrs. 
-	CheckForGStringOptrsCallback	 
-	DBCSCheckFirstTwoWords	Are the first two characters valid DBCS ASCII? 
-	CheckIfMoniker		Determine if the passed chunk contains a 
-				moniker. 
-	CheckIfUIObject		Determines whether the passed lmem chunk 
-				contains an object subclassed off the passed 
-				class, library. 
-	CheckLibraryEntry	See if cx is an entry point for the passed 
-				library. 
-	CheckExportedEntry	Checks to see if cx is the correct exported 
-				class 
-	CheckIfSubclass		Given two entry points into the UI library, 
-				determine if one is a subclass of the other. 
+	PutStringInItem		Allocates an item and copies the text string
+				from the geode into it.
+	PutDataInItem		Allocates and item and copies the data into it.
+	StoreMoniker		Chunk may contain either a text or gstring
+				moniker. Put it into an item and update the
+				ResourceArrayElement.
+	StoreBitmap		chunk contains a bitmap, put it into an item in
+				the Resource's group.
+	StoreGString		chunk is a gstring structure, put it into an
+				item and update the RAD_origItem field.
+	StoreText		Chunk contains plain ol' text. Copy it into a
+				DBItem and store the info in the
+				ResourceArrayElement.
+	CheckIfBitmap		Determines if passed chunk points to a bitmap.
+	CalculateBitmapChunkSize	To check if this chunk could really
+				contain a bitmap, we need to see how big the
+				chunk would have to be to contain a bitmap of
+				the given height and width, in the given
+				format.
+	DocumentCalcPackbitsBytes	Calc number of bytes in a
+				packbits-compacted scan line
+	DocumentCalcLineSize	Calculate the line width (bytes) for a scan
+				line of a bitmap
+	CheckIfText		validate that ds:si points to a text string
+	CheckIfGString		Validate that chunk contains a gstring.
+	CheckForGStringOptrs	Look for gstring elements which draw from
+				optrs.
+	CheckForGStringOptrsCallback
+	DBCSCheckFirstTwoWords	Are the first two characters valid DBCS ASCII?
+	CheckIfMoniker		Determine if the passed chunk contains a
+				moniker.
+	CheckIfUIObject		Determines whether the passed lmem chunk
+				contains an object subclassed off the passed
+				class, library.
+	CheckLibraryEntry	See if cx is an entry point for the passed
+				library.
+	CheckExportedEntry	Checks to see if cx is the correct exported
+				class
+	CheckIfSubclass		Given two entry points into the UI library,
+				determine if one is a subclass of the other.
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -68,14 +68,14 @@ DESCRIPTION:
 
 
 DocumentParseCode	segment resource
-	
+
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		PutStringInItem
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Allocates an item and copies the text string from the 
+SYNOPSIS:	Allocates an item and copies the text string from the
 		geode into it.
 
 CALLED BY:	StoreText
@@ -107,7 +107,7 @@ PutStringInItem		proc	near
 	jnz	stringArgs
 	call	PutDataInItem
 
-done:	
+done:
 	.leave
 	ret
 
@@ -193,7 +193,7 @@ PutDataInItem		proc	near
 	; get the number of bytes to allocate
 	;
 	mov	cx, ss:[bp].PF_size
-	call	DBAlloc				
+	call	DBAlloc
 
 	; lock the item and copy the data into it
 	;
@@ -229,7 +229,7 @@ RETURN:		carry set if moniker sucessfully stored, or if it
 DESTROYED:	ax,bx,cx
 
 PSEUDO CODE/STRATEGY:
-	The chunk may or may not contain a moniker. 
+	The chunk may or may not contain a moniker.
 	First check if it has the correct moniker structure, and check
 	if it really contains text or gstring, according to moniker type.
 	Then save the moniker.
@@ -244,16 +244,16 @@ REVISION HISTORY:
 StoreMoniker		proc	far
 	uses	si,di,dx,ds
 	.enter
-	
+
 	; Dereference the chunk being examined
 	;
 	movdw	bxsi, ss:[bp].PF_object
 	call	MemDerefDS
-	mov	si, ds:[si]				
+	mov	si, ds:[si]
 
 	; check if it is a moniker, check if gstring or text, and
 	; get the mnemonic if there is one
-	; 
+	;
 	call	CheckIfMoniker				;dx <- ChunkType
 	jnc	done
 
@@ -301,7 +301,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		StoreBitmap
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	chunk contains a bitmap, put it into an item in the 
+SYNOPSIS:	chunk contains a bitmap, put it into an item in the
 		Resource's group.
 
 CALLED BY:	ParseUnknownChunks, ParseChunk
@@ -358,7 +358,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		StoreGString
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	chunk is a gstring structure, put it into an item and 
+SYNOPSIS:	chunk is a gstring structure, put it into an item and
 		update the RAD_origItem field.
 
 CALLED BY:	ParseUnknownChunks, ParseChunk
@@ -387,13 +387,13 @@ StoreGString		proc	far
 	;
 	movdw	bxsi, ss:[bp].PF_object
 	call	MemDerefDS
-	mov	si, ds:[si]				
+	mov	si, ds:[si]
 
 	jnc	noCheck
 	call	CheckIfGString			;validate that it is gstring
 	jnc	done				;not valid, don't store it
 
-noCheck:	
+noCheck:
 	call	PutDataInItem			;di <- DBItem for data
 
 	movdw	bxsi, ss:[bp].PF_resArray
@@ -453,13 +453,13 @@ StoreText		proc	far
 	;
 	movdw	bxsi, ss:[bp].PF_object
 	call	MemDerefDS
-	mov	si, ds:[si]				
+	mov	si, ds:[si]
 
 	jnc	noCheck
 	call	CheckIfText			;dx <- TextStringArgs
 	jnc	done				;not valid, don't store it
 
-noCheck:	
+noCheck:
 	call	PutStringInItem			;di <- string's DBItem
 	movdw	bxsi, ss:[bp].PF_resArray
 	call	MemDerefDS			;ds:di <- ResourceArrayElement
@@ -506,7 +506,7 @@ MAX_BITMAP_WIDTH	equ	640
 MAX_BITMAP_HEIGHT	equ	400
 
 CheckIfBitmap		proc	far
-	
+
 	;
 	; chunk must be at least big enough to hold a bitmap struct
 	;
@@ -515,18 +515,18 @@ CheckIfBitmap		proc	far
 	jbe	failed
 
 	;
-	; if this is a complex bitmap, make sure chunk is big enough 
+	; if this is a complex bitmap, make sure chunk is big enough
 	; to hold a CBitmap struct
 	;
 	mov	al, ds:[si].B_type
-	test	al, mask BMT_COMPLEX 
+	test	al, mask BMT_COMPLEX
 	jz	simple
 	cmp	dx, size CBitmap
 	jbe	failed
 
 	;
-	; If x and y resolutions are different, there's a good chance this 
-	; is not a bitmap. (Jon) 
+	; If x and y resolutions are different, there's a good chance this
+	; is not a bitmap. (Jon)
 	; (Geos does not allow creation of bitmaps with different
 	; resolutions, though we may support importing them in the future.)
 	;
@@ -536,9 +536,9 @@ CheckIfBitmap		proc	far
 
 	;
 	; Bitmap data should follow CBitmap structure + palette
-	;	
+	;
 	cmp	ds:[si].CB_data, dx
-	jae	failed	
+	jae	failed
 
 	;
 	; If we don't have a palette, then logically
@@ -564,7 +564,7 @@ checkFormat:
 	ja	failed
 
 	cmp	ds:[si].B_compact, 0
-	jb	failed		
+	jb	failed
 	cmp	ds:[si].B_compact, BMC_PACKBITS
 	ja	failed				;BMC_USER_DEFINED fails?
 
@@ -647,7 +647,7 @@ checkSize:
 	je	done				;yes!
 failed:
 	clc					;failure
-done:	
+done:
 	pop	si
 	ret
 
@@ -667,7 +667,7 @@ compacted:	; ax == num bytes per scanline
 	jmp	calc
 
 advanceSimple:
-	add	si, size Bitmap	
+	add	si, size Bitmap
 
 calc:
 	push	cx
@@ -722,7 +722,7 @@ CPB_5:
 		; repeat count with data byte, just inc nbytes and pointer,
 		; dec #uncompacted bytes appropriately
 
-		inc	cx		; one more byte in 
+		inc	cx		; one more byte in
 		inc	si		; bump to next flag/count byte
 		neg	al		;convert to number of bytes packed
 		inc	al		;i.e. number of copies plus the orig
@@ -736,7 +736,7 @@ CPB_20:
 		; discrete bytes, see how many
 CPB_100:
 		inc	al		; convert to number of discrete bytes
-		add	cx, ax		; bump count of compacted bytes 
+		add	cx, ax		; bump count of compacted bytes
 		add	si, ax		; bump pointer too
 		jmp	short	CPB_20
 DocumentCalcPackbitsBytes endp
@@ -779,7 +779,7 @@ DocumentCalcLineSize	proc	near
 		mov	ah, al			; make a copy
 		and	ah, mask BMT_FORMAT	; isolate format
 		xchg	ax, cx			; ax = line width, cx = flags
-		
+
 		mov	dx, ax			; save line width
 		add	dx, 7			; calc mask size
 		shr	dx, 1
@@ -788,7 +788,7 @@ DocumentCalcLineSize	proc	near
 
 		cmp	ch, BMF_MONO 		; are we monochrome ?
 		ja	colorCalc		;  no, do color calculation
-		
+
 		mov	ax, dx			; ax = BMF_MONO size
 
 		; done with scan line calc.  If there is a mask, add that in
@@ -809,7 +809,7 @@ colorCalc:
 		je	calcRGB
 
 		; it's CMYK or CMY, this should be easy
-		
+
 		mov	ax, dx			; it's 4 times the mask size
 		shl	ax, 1
 		shl	ax, 1
@@ -849,14 +849,14 @@ PASS:		ss:bp	- ParseFrame
 
 RETURN:		carry set if text chunk is valid
 		dx 	- TextStringArgs
-	
+
 DESTROYED:	dx, ds, si
 
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 	Does not support DBCS.
-	
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -868,10 +868,10 @@ CheckIfText		proc	near
 	.enter
 
 	; If it is text, it may or may not be null-terminated.
-	;	
+	;
 	mov	di, si
 	clr	dx				; dx is TextStringArgs record
-	mov	cx, ss:[bp].PF_size		
+	mov	cx, ss:[bp].PF_size
 	dec	cx				; don't check last char
 DBCS <	dec	cx							>
 	add	di, cx				; ds:di points to last char
@@ -896,7 +896,7 @@ startCheck:
 	LocalCmpChar	bx, '\2'		; UserStandardDialog arg 2
 	je	checkSecondReplacement
 	LocalCmpChar	bx, C_SPACE		; is it below a space?
-	jb	failedCheck                     ;  it's a control char	
+	jb	failedCheck                     ;  it's a control char
 
 	; SBCS - everthing from C_SPACE - 0xef is valid, except the delete char
 	; DBCS - 0xee## are also invalid characters
@@ -910,7 +910,7 @@ DBCS <	test	bh, not 0x27			; let mask 0x27 through	>
 DBCS <	jnz	failedCheck						>
 ;;DBCS <	cmp	bh, CS_CONTROL_HB		; is it a DBCS control char?	>
 ;;DBCS <	je	failedCheck						>
-	
+
 next:
 	LocalNextChar	dsdi
         loop    startCheck                      ; continue checking.
@@ -921,20 +921,14 @@ checkFirstReplacement:
 	inc	dh
 EC<	cmp	dh, 0						>
 EC<	ERROR_Z	RESEDIT_INTERNAL_LOGIC_ERROR			>
-	cmp	dh, 1
-	ja	clrDXThenFail		; we're only allowed one of these in a string
 	jmp	next
 
 checkSecondReplacement:
 	inc	dl
 EC<	cmp	dl, 0						>
 EC<	ERROR_Z	RESEDIT_INTERNAL_LOGIC_ERROR			>
-	cmp	dl, 1			; we're only allowed one of these in a string
-	ja	clrDXThenFail
 	jmp	next
 
-clrDXThenFail:
-	clr	dx
 failedCheck:
 	clc
 done:
@@ -961,7 +955,7 @@ RETURN:		carry set if a gstring
 DESTROYED:	ax,bx,cx,di,ds,es
 
 PSEUDO CODE/STRATEGY:
-	Draw the gstring an element at a time (skipping over them so 
+	Draw the gstring an element at a time (skipping over them so
 	that they aren't actually drawn), checking for GSRT_FAULT.
 	If no faults, the gstring contains valid opcodes, though
 	their arguments may be invalid.
@@ -994,10 +988,10 @@ CheckIfGString		proc	near
 
 	mov	cx, ss:[bp].PF_size
 	push	cx, si
-	sub	cx, size OpEndGString		;point to what should be 
+	sub	cx, size OpEndGString		;point to what should be
 	add	si, cx				; the EndGString command
 	cmp	{byte}ds:[si], GR_END_GSTRING	;yes, it could be a gstring
-	pop	cx, si				
+	pop	cx, si
 	LONG	jne	notGString		;nope, it's not a gstring
 
 	push	bp				;save ParseFrame pointer
@@ -1034,12 +1028,12 @@ nextElement:
 	cmp	ax, GSE_LAST_OPCODE		;is it within valid range?
 	ja	failure
 	cmp	al, GR_END_GSTRING		;is it the end of the gstring?
-	je	success			
+	je	success
 
 	mov	al, GSSPT_SKIP_1
 	call	GrSetGStringPos			; now skip over the element
 
-	cmp	bp, dx				;if not at end of chunk, 
+	cmp	bp, dx				;if not at end of chunk,
 	jb	nextElement			;  get the next element
 
 failure:
@@ -1051,7 +1045,7 @@ success:
 	cmp	bp, dx
 	jne	failure
 
-	; Check if this gstring has optr commands, and if so, 
+	; Check if this gstring has optr commands, and if so,
 	; whether the optrs are valid.  Only gstrings with non-
 	; optr commands are editable.
 	;
@@ -1094,7 +1088,7 @@ DESTROYED:	di, bx, cx
 PSEUDO CODE/STRATEGY:
 	If drawing from OPTR, make this gstring non-editable for now.
 	Later, add code to read in resource, copy data to a new
-	resource, and fixup the gstring optr.  
+	resource, and fixup the gstring optr.
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
@@ -1115,13 +1109,13 @@ CheckForGStringOptrs		proc near
 	;
 	clr	ss:[bp].PF_mnemonic		;is set to -1 if optr found
 	mov	al, GSSPT_BEGINNING
-	call	GrSetGStringPos		
+	call	GrSetGStringPos
 
 	clr	di				;no gstate
 	mov	dx, mask GSC_OUTPUT
 	mov	bx, cs
 	mov	cx, offset CheckForGStringOptrsCallback
-	call	GrParseGString	
+	call	GrParseGString
 
 	.leave
 	ret
@@ -1134,14 +1128,14 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		CheckForGStringOptrsCallback
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 
 CALLED BY:	CheckForGStringOptrs (via GrParseGString)
 PASS:		ds:si	- ptr to element
 		ss:bx	- ParseFrame
 
 RETURN:		ax	- TRUE if optr found, FALSE to continue parsing
-		sets ss:[bp].PF_mnemonic 
+		sets ss:[bp].PF_mnemonic
 			= 0 gstring doesn't contain optr command
 			= 1 gstring contains optr command, optr was found
 			= -1 if gstring contains an optr command
@@ -1186,7 +1180,7 @@ saveOptr:
 	mov	bp, bx				;ss:bp <- ParseFrame
 	movdw	bxax, ds:[si+5]			;all optrs 5 bytes from start
 	clr	cx				;set the ChunkType flags in dl
-	call	SetOptrType			
+	call	SetOptrType
 	mov	ss:[bp].PF_mnemonic, 1		;assume optr was found
 	jnc	endOfGString
 	mov	ss:[bp].PF_mnemonic, -1		;couldn't find optr
@@ -1223,14 +1217,14 @@ EXPLANATION OF HACK:
 	We want to be able avoid this, so we check to see if the first
 	two characters are of the form 0x00##, with some restrictions on ##
 	(ie, not a bizarre control character).
-	
+
 	So, we are checking whether the byte pattern is: ## 00 ## 00
 
 	If the data actually comprise a VisMoniker, the 2nd and 3rd bytes
 	will be the VM_width field.  We make the assumption that the
 	2nd byte (low byte of VM_width) will very seldom be 00, unless the
-	3rd byte (high byte of VM_width) is 00 also.  
-	
+	3rd byte (high byte of VM_width) is 00 also.
+
 	If the 3rd byte is 00, then the second word will not be a valid
 	DBCS ASCII character, since it will be 0x0000.
 
@@ -1276,7 +1270,7 @@ checkChar:
 	je	invalidText
 next:
 	loop	checkChar
-				
+
 validText::
 	cmp	{byte}ds:[di], 1
 	je	ambiguous
@@ -1326,12 +1320,12 @@ PASS:		ss:bp	- parse frame
 		ds:si	- data to check
 
 RETURN:		carry set if chunk is a moniker, or a moniker list
-		dl	- ChunkType: 
+		dl	- ChunkType:
 	 	  CT_TEXT or CT_GSTRING - if chunk contains a moniker
 		  CT_MONIKER_LIST       - if chunk contains a moniker list
 		  CT_NOT_EDITABLE       - if not moniker or moniker list
 
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 	Check moniker width (and height, if it is a gstring)
@@ -1362,7 +1356,7 @@ CheckIfMoniker		proc	far
 	clc
 	LONG 	jnz	done
 
-	; if it's marked as a gstring, see if it is a gstring, else it 
+	; if it's marked as a gstring, see if it is a gstring, else it
 	; must be text.
 	;
 	test	ds:[si].VM_type, mask VMT_GSTRING
@@ -1373,7 +1367,7 @@ CheckIfMoniker		proc	far
 	; DBCS: crude hack to check if the first two bytes are DBCS ascii.
 	;  if they are, likely that this is not a moniker
 	;
-	mov	di, si					
+	mov	di, si
 	add	si, MONIKER_TEXT_OFFSET
 	sub	ss:[bp].PF_size, MONIKER_TEXT_OFFSET
 
@@ -1390,7 +1384,7 @@ checkText:
 	call	CheckIfText				;dx <- TextStringArgs
 	jnc	failure
 
-	; if it is a text moniker, this flag shouldn't be set 
+	; if it is a text moniker, this flag shouldn't be set
 	; (why?)
 	sub	si, MONIKER_TEXT_OFFSET			;ds:si <- moniker
 	test	ds:[si].VM_type, mask VMT_GS_ASPECT_RATIO
@@ -1454,7 +1448,7 @@ tryGString:
 	cmp	ds:[si].VMGS_height, 800h
 	ja	failure
 	add	si, offset VMGS_gstring		; ds:si <- gstring
-		
+
 	; move ptr to data offset, and correct the chunk size
 	; then check if it is a valid gstring
 	;
@@ -1463,7 +1457,7 @@ tryGString:
 	jnc	failure
 
 	; now, because some text strings also pass the gstring
-	; moniker test, see if this chunk passes as text.  
+	; moniker test, see if this chunk passes as text.
 	; If so, it is more likely a plain text chunk.
 	;
 	sub	si, MONIKER_GSTRING_OFFSET
@@ -1473,7 +1467,7 @@ tryGString:
 	tst	dx				;does it have string args?
 	jnz	failure				;is yes, can't be a moniker
 	mov	dl, mask CT_GSTRING		;no, it's a gstring allright
-	stc			
+	stc
 
 done:
 	pop	ss:[bp].PF_size			;restore chunk size
@@ -1525,7 +1519,7 @@ CheckIfUIObject		proc	far
 	mov	cx, ds:[si].MB_class.offset	;library number
 	push	ds:[si].MB_class.segment	;possible entry point
 	mov	dx, cx
-	
+
 	;
 	; If the geode being parsed is the UI library, there is no need
 	; to follow the superclass up looking for a library relocation
@@ -1560,7 +1554,7 @@ EC<	cmp	dx, (ORS_OWNING_GEODE_ENTRY_POINT shl offset RID_SOURCE)>
 	jmp	done
 
 notLibrarySource:
-	; see if class is relocated from within the geode 
+	; see if class is relocated from within the geode
 	;
 	cmp	dx, (ORS_OWNING_GEODE_ENTRY_POINT shl offset RID_SOURCE)
 	jne	notObject
@@ -1572,7 +1566,7 @@ notLibrarySource:
 	call	CheckExportedEntry		;pass ax = class enum.
 	jnc	done
 	jmp	done
-	
+
 notObject:
 	pop	ax, ax				;fixup the stack
 	clc
@@ -1629,17 +1623,17 @@ EC <	ERROR_NZ RESEDIT_INTERNAL_LOGIC_ERROR		>
 	mul	cl
 	mov	di, ax
 	mov	cx, GEODE_NAME_SIZE
-	
+
 compare:
 	; check if ILE_name in es:di is the same as passed name
 	;
 	lodsb					;get char in al, increment si
 	cmp	al, es:[di]			;does it match char in ILE?
-	jne	failed	
+	jne	failed
 	inc	di
 	loop	compare
 	stc
-	
+
 done:
 	call	MemUnlock
 noTable:
@@ -1710,11 +1704,11 @@ CheckExportedEntry		proc	near
 	mov	bx, es:[0].DHS_exportTable
 	call	MemLock
 	mov	ds, ax
-	
+
 	mov	cx, ss:[bp].CEEF_entryPt
 	shl	cx				;entry*2
 	shl	cx				;entry*4
-	mov	si, cx	
+	mov	si, cx
 	movdw	cxdx, ds:[si]			;ds:si <- export entry
 	movdw	ss:[bp].CEEF_exportPtr, cxdx
 	call	MemUnlock
@@ -1728,7 +1722,7 @@ CheckExportedEntry		proc	near
 	mov	ds, ax
 
 loadRelocation:
-	; find the size of the relocation table for the resource 
+	; find the size of the relocation table for the resource
 	;      ds:0 points to geode's resource Table
 	;
 	clr	di
@@ -1742,10 +1736,10 @@ EC <	ERROR_NZ RESEDIT_INTERNAL_LOGIC_ERROR		>
 	mov	di, ax
 	mov	ax, ds:[di]			;relocation table size
 	push	ax
-		
+
 	; get the resource size (it is actually paragraph aligned)
 	;
-	mov	di, ss:[bp].CEEF_exportPtr.high 
+	mov	di, ss:[bp].CEEF_exportPtr.high
 	mov	ax, di				;ax <- resource number
 	shl	di
 	mov	cx, ds:[di]			;resource size
@@ -1759,18 +1753,18 @@ EC <	ERROR_NZ RESEDIT_INTERNAL_LOGIC_ERROR		>
 	mov	di, ss:[si].PF_numResources
 	shl	di
 	add	di, ax				;#res*4 + res*2
-	movdw	cxdx, ds:[di]			
+	movdw	cxdx, ds:[di]
 	movdw	ss:[bp].CEEF_resPos, cxdx	;position of resource in file
 	pop	ax				;resource size, rounded up
-	add	dx, ax	
+	add	dx, ax
 	adc	cx, 0				;cx:dx <-relocation table offset
 
-	; read in the relocation table	
+	; read in the relocation table
 	;
 	pop	ax				;relocation table size
 	mov	bx, es:[0].DHS_geode
 	call	FilePosAndRead
-	LONG	jc	error	
+	LONG	jc	error
 	mov	ss:[bp].CEEF_reloc, bx		;^hbx <- relocation table
 
 	; calculate the number of relocation entries from the table size
@@ -1782,7 +1776,7 @@ EC <	tst	dx					>
 EC <	ERROR_NZ	RESEDIT_INTERNAL_LOGIC_ERROR	>
 	mov	ss:[bp].CEEF_relocCount, ax
 
-	; now look for the relocation entry which matches the 
+	; now look for the relocation entry which matches the
 	; offset read from the exported entry table (exportPtr.low)
 findRelocation:
 	mov	bx, ss:[bp].CEEF_reloc
@@ -1791,7 +1785,7 @@ findRelocation:
 	mov	cx, ss:[bp].CEEF_relocCount 	;cx <- number of GRE's
 	clr	di
 	mov	ax, ss:[bp].CEEF_exportPtr.low	;offset of relocation
-	mov	bx, ax			
+	mov	bx, ax
 	add	bx, size word			;segment of relocation
 cmpOffset:
 	cmp	ax, ds:[di].GRE_offset		;do the offsets match?
@@ -1813,7 +1807,7 @@ found:
 	andnf 	cl, mask GRI_SOURCE
 	andnf	dl, mask GRI_TYPE
 	cmp	cl, GRS_LIBRARY shl offset GRI_SOURCE
-	jne	tryResource	
+	jne	tryResource
 	cmp	dl, GRT_OFFSET shl offset GRI_TYPE
 	jne	error
 
@@ -1854,7 +1848,7 @@ found:
 
 	; Check if class being exported is a subclass of the one passed.
 	;
-	mov	cx, ss:[bp].CEEF_class	
+	mov	cx, ss:[bp].CEEF_class
 	mov	dx, ss:[bp].CEEF_exportPtr.low
 	call	CheckIfSubclass			;carry set if it's a subclass
 
@@ -1869,7 +1863,7 @@ done:
 noReloc:
 	add	sp, size CheckExportedEntryFrame
 	sahf
-		
+
 	.leave
 	ret
 errorPop:
@@ -1895,7 +1889,7 @@ tryResource:
 	mov	al, FILE_POS_START
 	mov	bx, es:[0].DHS_geode
 	call	FilePos
-	
+
 	; load the relocation: resource number, offset within resource
 	;
 	segmov	ds, ss
@@ -1906,11 +1900,11 @@ tryResource:
 	jc	errorPop
 
 	pop	ax				;the old resource number
-	cmp	ax, ss:[bp].CEEF_exportPtr.high	;are they in same resource? 
+	cmp	ax, ss:[bp].CEEF_exportPtr.high	;are they in same resource?
 	lahf
 	mov	bx, es:[0].DHS_resourceTable
 	call	MemDerefDS			;ds - segment of resource tbl
-	sahf	
+	sahf
 	LONG	je	findRelocation		;yes, find relocation again
 	call	MemFree				;free old relocation table
 	LONG	jmp	loadRelocation		;no, load the new reloc table
@@ -1951,7 +1945,7 @@ CheckIfSubclass		proc	near
 	mov	ax, cx				;superclass entry point
 	call	ProcGetLibraryEntry
 	movdw	dssi, bxax			;ds:si <- fptr of class
-	
+
 	mov	bx, handle ui
 	mov	ax, dx				;subclass entry point
 	call	ProcGetLibraryEntry

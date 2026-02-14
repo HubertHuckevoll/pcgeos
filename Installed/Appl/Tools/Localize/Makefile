@@ -10,15 +10,16 @@ DOCUMENT        = documentBuild.asm documentClipboard.asm documentCount.asm\
                   documentList.asm documentManager.asm documentMisc.asm\
                   documentMnemonic.asm documentOpenClose.asm\
                   documentParse.asm documentPatch.asm documentPath.asm\
-                  documentPrint.asm documentResource.asm documentSearch.asm\
+                  documentPrint.asm documentSearch.asm\
                   documentSourceView.asm documentTransView.asm\
-                  documentUtilities.asm documentUpdate.asm
+                  documentUtilities.asm documentUpdate.asm\
+                  documentResource.asm
 MAIN            = mainBatch.asm mainList.asm mainManager.asm\
                   mainProcess.asm
 TEXT            = textDraw.asm textManager.asm
 UI              = uiManager.asm uiAppMoniker.ui uiDisplay.ui uiDocument.ui\
-                  uiEdit.ui uiImpExp.ui uiMain.ui uiManager.ui uiPrint.ui\
-                  uiProject.ui uiStrings.ui uiFile.ui
+                  uiEdit.ui uiFile.ui uiImpExp.ui uiMain.ui uiManager.ui\
+                  uiPrint.ui uiProject.ui uiStrings.ui
 UI_TO_RDFS      = uiManager.ui
 OBJS            =
 COMMON          = localizeConstant.def localizeConstant.uih\
