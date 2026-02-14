@@ -881,6 +881,8 @@ DBCS <	dec	cx							>
 DBCS <	shr	cx, 1				; cx <- number of chars	>
 	LocalIsNull	bx			; is it a NULL?
 	jz	startCheck			; yes
+	; Count each replacement argument occurrence.
+	; Multiple arg 1 and arg 2 placeholders are valid.
 checkFirstReplacement:
 	inc	dh
 EC<	cmp	dh, 0						>
