@@ -3,7 +3,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 1992 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:	        ResEdit	
+MODULE:	        ResEdit
 FILE:		documentResource.asm
 
 AUTHOR:		Cassie Hartzog, Nov 11, 1992
@@ -11,59 +11,59 @@ AUTHOR:		Cassie Hartzog, Nov 11, 1992
 ROUTINES:
 	Name			Description
 	----			-----------
-	ParseResources		The resource groups have all been added, so go 
-				through them and look for stuff that can be 
-				edited. 
-	DeleteChunksAndResources	The geode has been parsed, now delete 
-				any non-parseable (CT_NOT_EDITABLE) chunks, and 
-				any NOT_EDITABLE or empty resources from the 
-				name arrays. 
-	ParseResourcesCallback	For each resource, call ChunkArrayEnum on all 
-				the chunks in its block. 
-	ParseObjectChunks	On the first parse pass, go through all chunks 
-				in this resource, looking for objects, and mark 
-				their monikers and text chunks for the second 
-				pass parse. 
-	ParseUnknownChunks	Save editable data from known chunks, and try 
-				to parse unknown chunks. 
-	DeleteUnknownChunks	This is the third pass of the parse attempt. Go 
-				through the ResourceArray, deleting items which 
-				are not editable or of unkown type. 
-	ParseChunk		Try to parse a chunk about which nothing is 
-				known. 
-	MarkGCNListOfLists	Since GCNLists are so simple and generic, they 
-				can pass the checks for GStrings and Bitmaps. 
-				This routine determines whether the chunk 
-				contains a GCNListOfLists and should be called 
-				before checking for the other types. 
-	MarkGCNList		A GCNListOfList may have been detected. See if 
-				the passed chunk contains a valid GCNList. 
-	MarkObjects		Determine whether an object is a subclass of 
-				the passed class. 
-	MarkGenClassStuff	An object sublcassed off GenClass has been 
-				found. Get its mnemonic and keyboard shortcut, 
-				if any. 
-	MarkMonikers		Object is a GenClass, see if it has moniker(s). 
-	MarkMonikerList		Check if this chunk contains a moniker list. 
-	MarkOptrLists		This routine is an attempt to catch Tool lists 
-				associated with ToolControl objects. Since many 
-				of them are defined in non-ui libraries, I 
-				can't detect them without loading those 
-				libraries. 
-	MarkText		Object is GenClass, see if it is a GenText and 
-				has an lptr to some text. 
-	StoreObject		Check if the object has a shortcut and its 
-				element should therefore not be deleted. 
-	GetOptrResourceNumber	Given an unrelocated optr, return the resource 
-				number. 
-	SetOptrType		An editable chunk, referenced by an optr, has 
-				been found. Find its resource:chunk and set its 
-				flags. 
-	SetChunkType		An editable chunk has been found, set its 
-				flags. 
-	SetChunkTypeCallback	Find the element which has the passed chunk 
-				handle and set its flags. 
-	DerefElement		Dereference the current element. 
+	ParseResources		The resource groups have all been added, so go
+				through them and look for stuff that can be
+				edited.
+	DeleteChunksAndResources	The geode has been parsed, now delete
+				any non-parseable (CT_NOT_EDITABLE) chunks, and
+				any NOT_EDITABLE or empty resources from the
+				name arrays.
+	ParseResourcesCallback	For each resource, call ChunkArrayEnum on all
+				the chunks in its block.
+	ParseObjectChunks	On the first parse pass, go through all chunks
+				in this resource, looking for objects, and mark
+				their monikers and text chunks for the second
+				pass parse.
+	ParseUnknownChunks	Save editable data from known chunks, and try
+				to parse unknown chunks.
+	DeleteUnknownChunks	This is the third pass of the parse attempt. Go
+				through the ResourceArray, deleting items which
+				are not editable or of unkown type.
+	ParseChunk		Try to parse a chunk about which nothing is
+				known.
+	MarkGCNListOfLists	Since GCNLists are so simple and generic, they
+				can pass the checks for GStrings and Bitmaps.
+				This routine determines whether the chunk
+				contains a GCNListOfLists and should be called
+				before checking for the other types.
+	MarkGCNList		A GCNListOfList may have been detected. See if
+				the passed chunk contains a valid GCNList.
+	MarkObjects		Determine whether an object is a subclass of
+				the passed class.
+	MarkGenClassStuff	An object sublcassed off GenClass has been
+				found. Get its mnemonic and keyboard shortcut,
+				if any.
+	MarkMonikers		Object is a GenClass, see if it has moniker(s).
+	MarkMonikerList		Check if this chunk contains a moniker list.
+	MarkOptrLists		This routine is an attempt to catch Tool lists
+				associated with ToolControl objects. Since many
+				of them are defined in non-ui libraries, I
+				can't detect them without loading those
+				libraries.
+	MarkText		Object is GenClass, see if it is a GenText and
+				has an lptr to some text.
+	StoreObject		Check if the object has a shortcut and its
+				element should therefore not be deleted.
+	GetOptrResourceNumber	Given an unrelocated optr, return the resource
+				number.
+	SetOptrType		An editable chunk, referenced by an optr, has
+				been found. Find its resource:chunk and set its
+				flags.
+	SetChunkType		An editable chunk has been found, set its
+				flags.
+	SetChunkTypeCallback	Find the element which has the passed chunk
+				handle and set its flags.
+	DerefElement		Dereference the current element.
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -100,7 +100,7 @@ DESTROYED:	cx,dx,di
 PSEUDO CODE/STRATEGY:
 	Call ChunkArrayEnum to enumerate the ResourceArrays
 	for the first pass and second pass parse attempts.
-	Then call a routine which deletes all elements for 
+	Then call a routine which deletes all elements for
 	non-editable or non-parseable chunks.
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -114,7 +114,7 @@ ParseResources		proc	far
 		uses	bx,si,bp
 		.enter
 
-	; Set up the ParseFrame for what follows	
+	; Set up the ParseFrame for what follows
 
 		push	ds:[LMBH_handle]
 		sub	sp, size ParseFrame
@@ -137,7 +137,7 @@ ParseResources		proc	far
 		test	ds:[di].TMH_flags, mask TMHF_UI_LIBRARY
 		jz	notUI
 		ornf	ss:[bp].PF_flags, mask PF_UI_LIBRARY
-	
+
 notUI:
 
 	; Parse the geode
@@ -179,8 +179,8 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		DeleteChunksAndResources
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	The geode has been parsed, now delete any non-parseable 
-		(CT_NOT_EDITABLE) chunks, and any NOT_EDITABLE or 
+SYNOPSIS:	The geode has been parsed, now delete any non-parseable
+		(CT_NOT_EDITABLE) chunks, and any NOT_EDITABLE or
 		empty resources from the name arrays.
 
 CALLED BY:	ParseResourcesCallback (via ChunkArrayEnum)
@@ -229,7 +229,7 @@ DeleteChunksAndResources		proc	far
 	;
 	mov	bx, cs
 	mov	di, offset DeleteUnknownChunks
-	call	ChunkArrayEnum				
+	call	ChunkArrayEnum
 	call	ChunkArrayGetCount		;cx <- # of parseable chunks
 
 	; unlock the ResourceArray
@@ -267,11 +267,11 @@ SYNOPSIS:	For each resource, call ChunkArrayEnum on all the
 		chunks in its block.
 
 CALLED BY:	ParseResources (via ChunkArrayEnum)
-		
+
 PASS:		*ds:si	- ResourceMap
 		ds:di	- ResourceMapElement
 		ss:bp	- ParseFrame
-		
+
 RETURN:		carry set if error
 			ax - ErrorValue
 
@@ -357,7 +357,7 @@ callEnum:
 		mov	bx, ss:[bp].PF_object.handle
 		push	bp
 		mov	bp, ss:[bp].PF_TFFoffset
-		call	MyMemFree	
+		call	MyMemFree
 		pop	bp
 		call	DBUnlock_DS			;unlock ResourceArray
 		clc
@@ -385,7 +385,7 @@ CALLED BY:	ParseResourcesCallback (via ChunkArrayEnum)
 PASS:		*ds:si	- ResourceArray
 		ds:di	- ResourceArrayElement
 		ss:bp	- ParseFrame
-		
+
 RETURN:		carry set if unsuccessful
 
 DESTROYED:	ax
@@ -406,9 +406,9 @@ ParseObjectChunks	proc	far
 
 	; if this chunk was already marked while parsing another, done
 	;
-	tst	ds:[di].RAE_data.RAD_chunkType	
+	tst	ds:[di].RAE_data.RAD_chunkType
 	clc
-	LONG	jnz	done	
+	LONG	jnz	done
 
 	; save the chunk handle and number in ParseFrame
 	;
@@ -434,7 +434,7 @@ EC <	ERROR_AE	INVALID_CHUNK_NUMBER			>
 	mov	di, ds:[LMBH_offset]		;^ldi <- flags block handle
 
 	; See if it is an object block (in which case it has flags).
-	; This assumes an object can't be in block that does not have 
+	; This assumes an object can't be in block that does not have
 	; LMEM_TYPE_OBJ_BLOCK flag set.
 	;
 	clr	bx
@@ -443,7 +443,7 @@ EC <	ERROR_AE	INVALID_CHUNK_NUMBER			>
 	tst	dx				; Is this the first chunk?
 	jnz	checkForObject			;   then it contains only flags
 
-markNotEditable:		
+markNotEditable:
 	call	DerefElement_DS
 	mov	ds:[di].RAE_data.RAD_chunkType, mask CT_NOT_EDITABLE
 	jmp	finishUp
@@ -462,7 +462,7 @@ checkForObject:
 	; not editable, since it IS an object chunk.
 	;
 	mov	ax, enum GenClass
-	call	MarkObjects		
+	call	MarkObjects
 	jnc	markNotEditable			; not a GenClass object
 
 	;
@@ -494,11 +494,11 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		ParseUnknownChunks
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Save editable data from known chunks, and try to 
+SYNOPSIS:	Save editable data from known chunks, and try to
 		parse unknown chunks.
 
 CALLED BY:	ParseResources, CopyGeodeToLoc (via ChunkArrayEnum)
-		
+
 PASS:		*ds:si	- ResourceArray
 		ds:di	- ResourceArrayElement
 		ss:bp	- ParseFrame
@@ -511,7 +511,7 @@ PSEUDO CODE/STRATEGY:
 	If the calling routine is CopyGeodeToLoc, then the only
 	data in the ResourceArray is from the localization file,
 	and it may not be complete (e.g. chunk handle, chunk type).
-	
+
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
 	Name	Date		Description
@@ -524,7 +524,7 @@ ParseUnknownChunks	proc	far
 	.enter
 
 	; if it's already known to be not editable, don't go any further
-	; (eg, some object not subclassed from GenClass) 
+	; (eg, some object not subclassed from GenClass)
 	;
 	test	ds:[di].RAE_data.RAD_chunkType, mask CT_NOT_EDITABLE
 	LONG	jnz	notEditable
@@ -603,7 +603,7 @@ tryText:
 tryGString:
 	test	dl, mask CT_GSTRING
 	jz	tryBitmap
-	stc					; check the gstring 
+	stc					; check the gstring
  	call	StoreGString
 	jmp	done
 
@@ -643,7 +643,7 @@ SYNOPSIS:	This is the third pass of the parse attempt.  Go through
 		or of unkown type.
 
 CALLED BY:	ParseResources (via ChunkArrayEnum)
-		
+
 PASS:		*ds:si	- ResourceArray
 		ds:di	- ResourceArrayElement
 		ss:bp	- ParseFrame
@@ -697,11 +697,11 @@ PSEUDO CODE/STRATEGY:
 	first pass.
 
 	Monikers from GenClass objects should have been marked already,
-	but monikers and moniker lists from objects subclassed off of 
+	but monikers and moniker lists from objects subclassed off of
 	objects not in the UI library will not have ben marked.
 
 	Chunks declared in data segments that weren't caught in the
-	first pass still need to be parsed, such as GCNLists, 
+	first pass still need to be parsed, such as GCNLists,
 	ToolGroupLists, text strings, etc.
 
 	Many simple chunks fall through the tests for gstrings and
@@ -717,9 +717,9 @@ REVISION HISTORY:
 ParseChunk		proc	near
 
 	; Check if this chunk contains a moniker list
-	; 
+	;
 	mov	cx, 1				;don't set flags, just check
-	call	MarkMonikerList		
+	call	MarkMonikerList
 	jnc	monikerList			;carry CLEAR => is moniker list
 
 	; make sure this is not a GCNList before continuing, since
@@ -728,11 +728,11 @@ ParseChunk		proc	near
 	mov	cx, 1				;don't set flags, just check
 	call	MarkGCNListOfLists
 	jnc	gcnList				;carry CLEAR => GCNListofLists
-	
-	; Look for list of optrs, such as those used by 
+
+	; Look for list of optrs, such as those used by
 	; ToolControl objects.  These also pass through the checks
 	; for gstrings and bitmaps, so must check it first.
-	; 
+	;
 	call	MarkOptrLists
 	jnc	done			;it's a list of optrs, so not editable
 
@@ -778,7 +778,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Since GCNLists are so simple and generic, they can pass
-		the checks for GStrings and Bitmaps.  This routine 
+		the checks for GStrings and Bitmaps.  This routine
 		determines whether the chunk contains a GCNListOfLists
 		and should be called before checking for the other types.
 
@@ -786,15 +786,15 @@ CALLED BY:	ParseChunk
 
 PASS:		ss:bp	- ParseFrame
 		cx	- 0 to set flags, 1 to not set
-		
+
 RETURN:		carry CLEAR if it is a GCNList
 
 DESTROYED:	ax,bx,cx
 
 PSEUDO CODE/STRATEGY:
-	
+
 	Structure of the GCN list of lists (resides in a chunk)
-	
+
 		GCNListOfListsHeader	struct
 			GCNLOL_meta	ChunkArrayHeader
 			GCNLOL_data	label	GCNListOfListsElement
@@ -832,7 +832,7 @@ MarkGCNListOfLists		proc	near
 	.enter
 
 	movdw	bxsi, ss:[bp].PF_object
-	call	MemDerefDS		
+	call	MemDerefDS
 	mov	di, ds:[si]
 	mov	si, cx
 EC <.norcheck								>
@@ -854,9 +854,9 @@ EC <.norcheck								>
 
 EC <	.rcheck								>
 	mov	bx, ss:[bp].PF_object.handle	;block containing this chunk
-	call	MemDerefES			
+	call	MemDerefES
 	mov	ax, es:[LMBH_offset]		;first handle
-	mov	dx, es:[LMBH_nHandles]		
+	mov	dx, es:[LMBH_nHandles]
 	shl	dx, 1				;size of handle table
 
 	push	si				;save set/clear flag
@@ -879,7 +879,7 @@ checkElement:
 	call	MarkGCNList			;does it contain a valid list?
 	pop	cx
 	jnc	failure
-		
+
 	push	ax
 	add	ax, dx				;add size of table
 	cmp	bx, ax				;is it too big to be a handle?
@@ -929,7 +929,7 @@ DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
 	Structure of a GCN list:
-	
+
 		GCNListHeader	struct
 			GCNLH_meta		ChunkArrayHeader
 			GCNLH_statusEvent	hptr
@@ -987,11 +987,11 @@ MarkGCNList		proc	near
 	mov	cl, size GCNListElement
 	mul	cl				;ax <- size of data part
 	add	ax, size GCNListHeader		;ax <- size of entire array
-	cmp	ax, bx				;compare actual & calculated 
+	cmp	ax, bx				;compare actual & calculated
 	jne	failurePop2			;  size
 
 	mov	cx, ds:[di].GCNLH_meta.CAH_count
-	mov	si, ds:[di].GCNLH_meta.CAH_offset 
+	mov	si, ds:[di].GCNLH_meta.CAH_offset
 	add	si, di				;si <- offset of first element
 	clr	dx				;no ChunkType flags
 	pop	di				;restore the set/clear flag
@@ -1009,7 +1009,7 @@ checkElement:
 	pop	bx 				;^lbx <- chunk containing list
 	mov	cx, di				;  cx <- set/clear flag
 	mov	dl, mask CT_NOT_EDITABLE	;flag to set
-	call	SetChunkType			
+	call	SetChunkType
 	jc	failureNoPop
 	stc					;it's a valid list!
 
@@ -1033,7 +1033,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		MarkObjects
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Determine whether an object is a subclass of the passed 
+SYNOPSIS:	Determine whether an object is a subclass of the passed
 		class.
 
 CALLED BY:	ParseObjectChunks
@@ -1059,7 +1059,7 @@ MarkObjects		proc	near
 
 	call	CheckIfUIObject
 	jnc	done
-	
+
 	call	DerefElement_DS
 	ornf	ds:[di].RAE_data.RAD_chunkType, mask CT_OBJECT
 	stc
@@ -1139,15 +1139,15 @@ PSEUDO CODE/STRATEGY:
 	If it is a simple moniker, mark the chunk as such.
 
 	If the chunk contains a moniker list, mark it as not editable,
-	and call MarkMonikerList to mark all list entries as either 
+	and call MarkMonikerList to mark all list entries as either
 	text or gstring monikers.
 
-	If the first call to MarkMonikerList fails, 
-	it has to be called again to unmark any of the chunks it may 
+	If the first call to MarkMonikerList fails,
+	it has to be called again to unmark any of the chunks it may
 	have marked on the first call before it failed.
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-	
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -1174,7 +1174,7 @@ MarkMonikers		proc	far
 	mov	dl, mask CT_TEXT			;default is text
 	test	ds:[di].VM_type, mask VMT_GSTRING	;is it a gstring?
 	jz	setChunkType				;no, it's text
-	mov	dl, mask CT_GSTRING	
+	mov	dl, mask CT_GSTRING
 
 setChunkType:
 	; pass dl - CT flags, bx - chunk handle, ss:bp
@@ -1193,15 +1193,15 @@ monikerList:
 	mov	cx, 1					;don't set the CT flags
 	call	MarkMonikerList
 	jc	done					;not a monikerList
-	
+
 	; It's a valid VisMoniker list.  Now go back and set the
 	; ChunkType flags for the monikers in the list.
-	; 
+	;
 	clr	cx					;set the CT flags
 	call	MarkMonikerList				;if errors, don't know
 EC <	ERROR_C	SET_CHUNK_TYPE_FAILED_UNEXPECTEDLY		>
 
-	; mark the VisMonikerList chunk itself as not editable	
+	; mark the VisMonikerList chunk itself as not editable
 	; ^lbx - chunk containing moniker list
 	;
 	clr	cx					;set the flag
@@ -1224,7 +1224,7 @@ CALLED BY:	MarkMonikers, ParseChunks
 
 PASS:		ss:bp	- ParseFrame
 		cx	- 0 to set, 1 to clear flags
-	
+
 RETURN:		carry set if unsuccessful
 
 DESTROYED:	cx
@@ -1253,7 +1253,7 @@ MarkMonikerList		proc	near
 	mov	di, ds:[di]
 
 	ChunkSizePtr	ds, di, ax			;ax <- size of list
-	clr	dx					
+	clr	dx
 	mov	bx, size VisMonikerListEntry
 	div	bx
 	tst	dx					;doesn't divide evenly,
@@ -1272,15 +1272,15 @@ nextEntry:
 	jz	setOptrType				;no, it's text
 	mov	dl, mask CT_GSTRING
 
-setOptrType:	
-	; pass flags in dl, set or clear flag in cx, 
+setOptrType:
+	; pass flags in dl, set or clear flag in cx,
 	; PF in ss:bp, optr to mark in bx:ax
 	;
 	push	cx
 	mov	cx, si
 	ornf	dl, mask CT_MONIKER
 	movdw	bxax, ds:[di].VMLE_moniker
-	call	SetOptrType		
+	call	SetOptrType
 	pop	cx
 	jc	done					;error, don't continue
 	add	di, size VisMonikerListEntry
@@ -1300,12 +1300,12 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 SYNOPSIS:	This routine is an attempt to catch Tool lists
 		associated with ToolControl objects.  Since many of
 		them are defined in non-ui libraries, I can't detect
-		them without loading those libraries.  
-		
+		them without loading those libraries.
+
 CALLED BY:	ParseObjectChunks
 
 PASS:		ss:bp	- ParseFrame
-	
+
 RETURN:		carry set if not a list of optrs
 
 DESTROYED:	cx
@@ -1342,7 +1342,7 @@ nextOptr:
 	push	cx
 	mov	cx, 1				;don't set flags, just check
 						; if optr exists
-	movdw	bxax, ds:[si]	
+	movdw	bxax, ds:[si]
 	call	SetOptrType
 	pop	cx
 	jc	done				;it was not a valid optr
@@ -1401,7 +1401,7 @@ setType:
 	; set the ChunkType flag for the text chunk
 	;
 	clr	cx				; set the flags in dl
-	mov	dl, mask CT_TEXT		; 
+	mov	dl, mask CT_TEXT		;
 	mov	bx, di
 	call	SetChunkType			; carry set if error
 
@@ -1439,7 +1439,7 @@ SYNOPSIS:	Check if the object has a shortcut and its element should
 CALLED BY:	ParseUnknownChunks
 PASS:		es:di	- ResourceArrayElement
 		ss:bp	- ParseFrame
-RETURN:		carry set if the object has an editable shortcut 
+RETURN:		carry set if the object has an editable shortcut
 DESTROYED:	ax,cx,si,ds
 
 PSEUDO CODE/STRATEGY:
@@ -1450,7 +1450,7 @@ REVISION HISTORY:
 	cassie	5/17/93		Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-StoreObject		proc	near	
+StoreObject		proc	near
 	uses	bx
 	.enter
 
@@ -1480,7 +1480,7 @@ DBCS <	shl	cx, 1				; convert length to size>
 	add	di, cx				; ds:di <- pts past NULL
 	mov	ds:[di], ax			; save KbdShortcut
 
-	add	cx, size KeyboardShortcut	;extra room for KbdShortcut 
+	add	cx, size KeyboardShortcut	;extra room for KbdShortcut
 	mov	ss:[bp].PF_size, cx
 EC<	cmp	cx, SHORTCUT_BUFFER_SIZE			>
 EC<	ERROR_A	RESEDIT_INTERNAL_LOGIC_ERROR			>
@@ -1498,7 +1498,7 @@ EC<	ERROR_A	RESEDIT_INTERNAL_LOGIC_ERROR			>
 EC <	ERROR_C	CHUNK_ARRAY_ELEMENT_NOT_FOUND		>
 	pop	ds:[di].RAE_data.RAD_origItem
 
-	stc	
+	stc
 done:
 	.leave
 	ret
@@ -1532,27 +1532,29 @@ GetOptrResourceNumber		proc	near
 	; the optr handle is an ObjRelocationID record, the top
 	; 4 bits give the source, the lower four the index
 	;
-	mov	dx, ax				;^ldx <- chunk 
-	mov	ax, bx				
+	mov	dx, ax				;^ldx <- chunk
+	mov	ax, bx
 	mov	cx, ax				;ax, cx <- ORID
-	andnf	ax, mask RID_SOURCE		
+	andnf	ax, mask RID_SOURCE
 
 	; If the source is a data segment (as for VisMonikers defined in
 	; resources marked as data), RID_SOURCE will be ORS_NULL.
 	;
 	cmp	ax, (ORS_NULL shl offset RID_SOURCE)
 	je	nullSource
-	
+
 	; If the source is current block, get resource number from ParseFrame.
 	;
-	test	ax, (ORS_CURRENT_BLOCK shl offset RID_SOURCE)
-	jnz	getResourceNumber
+	cmp	ax, (ORS_CURRENT_BLOCK shl offset RID_SOURCE)
+	je	getResourceNumber
 
-	; If the source is OWNDING_GEODE, index gives the resource ID.
+	; If the source is OWNING_GEODE, index gives the resource ID.
 	;
-	test	ax, (ORS_OWNING_GEODE shl offset RID_SOURCE)
-	stc
-	jz	done
+	cmp	ax, (ORS_OWNING_GEODE shl offset RID_SOURCE)
+	je	nullSource
+
+	stc					; unknown source
+	jmp	done
 
 nullSource:
 	mov	ax, cx
@@ -1592,10 +1594,10 @@ DESTROYED:	ax, bx, cx
 
 PSEUDO CODE/STRATEGY:
 	If a resource is marked as data, UIC does not generate an object
-	relocation for the handle, so RID_SOURCE will be ORS_NULL.  
+	relocation for the handle, so RID_SOURCE will be ORS_NULL.
 	The value stored in the handle part of the optr is a resource ID,
-	and there's a GeodeRelocationEntry for that offset within that 
-	resource. 
+	and there's a GeodeRelocationEntry for that offset within that
+	resource.
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
@@ -1625,7 +1627,7 @@ EC <okay:					>
 	cmp	ax, ss:[bp].PF_resource		;is it in this resource?
 	je	setChunkType
 
-	; lock the map block, get the map array	
+	; lock the map block, get the map array
 	;
 	push	ax
 	mov	bx, ss:[bp].PF_transFile
@@ -1641,7 +1643,7 @@ EC <okay:					>
 	cmp	ax, ds:[di].TMH_totalResources
 	jae	errorUnlock
 
-	; lock this resource's ResourceArray 
+	; lock this resource's ResourceArray
 	;
 	call	FindResourceNumber
 	jc	errorUnlock			;resource not found, get out
@@ -1670,7 +1672,7 @@ EC <okay:					>
 	popdw	ss:[bp].PF_resArray		;original resource's ResArray
 	call	DBUnlock
 
-done:	
+done:
 	.leave
 	ret
 
@@ -1729,7 +1731,7 @@ EC <okay:						>
 	push	cx
 	mov	cx, bx				;^lcx <- chunk to mark
 	movdw	bxsi, ss:[bp].PF_resArray
-	pop	bp				;bp <-set/clear flag 
+	pop	bp				;bp <-set/clear flag
 	call	MemDerefDS
 	mov	bx, cs
 	mov	di, offset SetChunkTypeCallback
@@ -1759,8 +1761,8 @@ CALLED BY:	SetChunkType (via ChunkArrayEnum)
 PASS:		*ds:si	- ResourceArray
 		ds:di	- ResourceArrayElement
 		^lcx	- chunk handle
-		dl	- flags to modify	
-		bp	- 0 to set flags in dl, 
+		dl	- flags to modify
+		bp	- 0 to set flags in dl,
 			  1 to check for chunk's existence
 
 RETURN:		carry set if chunk handle found, to abort the Enum
@@ -1779,9 +1781,9 @@ SetChunkTypeCallback		proc	far
 	.enter
 
 	cmp	cx, ds:[di].RAE_data.RAD_handle
-	clc	
+	clc
 	jne	continue
-	
+
 	; I found it!  Now set or clear the flags.
 	;
 	tst	bp
@@ -1829,7 +1831,7 @@ EC<	ERROR_NE	RESEDIT_INTERNAL_LOGIC_ERROR		>
 	mov	ax, ss:[bp].PF_element
 	call	ChunkArrayElementToPtr		; ds:di <- ResourceArrayElement
 EC < 	ERROR_C	CHUNK_ARRAY_ELEMENT_NOT_FOUND			>
-	
+
 	.leave
 	ret
 DerefElement_DS		endp
