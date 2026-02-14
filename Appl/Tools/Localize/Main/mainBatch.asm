@@ -11,24 +11,24 @@ AUTHOR:		Paul Canavese, Jun 15, 1995
 ROUTINES:
 	Name			Description
 	----			-----------
-	REARunBatchJob		Run a batch job. 
-	InitiateBatchStatusDialog	Initiate the dialog that will report 
-				the status of the batch job as it occurs. 
-	REAProcessBatchFile	Process the batch command for the file 
-				indicated in the passed frame. 
-	BatchReport		Append a string to the batch report dialog. 
-	BatchReportNumber	Write the passed number to the batch status 
-				dialog. 
-	BatchReportReturn	Write a return to the batch status dialog. 
-	BatchReportTab		Write a tab to the batch status dialog. 
-	BatchReportSetValue	Set one of the value indicators in the status 
-				dialog. 
-	BatchReportIncrementValue	Increment one of the value indicators 
-				in the status dialog. 
-	BatchReportError	Report an error in the status dialog. 
-	BatchReportDocumentOpen	Report in the status box that the document has 
-				been opened. 
-	
+	REARunBatchJob		Run a batch job.
+	InitiateBatchStatusDialog	Initiate the dialog that will report
+				the status of the batch job as it occurs.
+	REAProcessBatchFile	Process the batch command for the file
+				indicated in the passed frame.
+	BatchReport		Append a string to the batch report dialog.
+	BatchReportNumber	Write the passed number to the batch status
+				dialog.
+	BatchReportReturn	Write a return to the batch status dialog.
+	BatchReportTab		Write a tab to the batch status dialog.
+	BatchReportSetValue	Set one of the value indicators in the status
+				dialog.
+	BatchReportIncrementValue	Increment one of the value indicators
+				in the status dialog.
+	BatchReportError	Report an error in the status dialog.
+	BatchReportDocumentOpen	Report in the status box that the document has
+				been opened.
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -36,8 +36,8 @@ REVISION HISTORY:
 
 
 DESCRIPTION:
-	
-	Routines for batch processing.		
+
+	Routines for batch processing.
 
 	$Id: mainBatch.asm,v 1.1 97/04/04 17:13:31 newdeal Exp $
 
@@ -65,7 +65,7 @@ PASS:		*ds:si	= ResEditApplicationClass object
 		ax	= message #
 RETURN:		nothing
 DESTROYED:	ax
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -77,7 +77,7 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 translationFileToken GeodeToken < "TRNS", MANUFACTURER_ID_GEOWORKS >
 
-REARunBatchJob	method dynamic ResEditProcessClass, 
+REARunBatchJob	method dynamic ResEditProcessClass,
 					MSG_RESEDIT_RUN_BATCH_JOB
 		uses	cx, dx, ds
 fileEnumMatchAttrsEnd	local   FileExtAttrDesc
@@ -87,7 +87,7 @@ fileEnumParams		local   FileEnumParams
 
 	; Turn on batch processing mode.
 
-		mov	al, BM_ON		
+		mov	al, BM_ON
 		call	SetBatchMode
 
 	; open/create fresh batch log file if requested
@@ -96,12 +96,12 @@ fileEnumParams		local   FileEnumParams
 		push	bx, dx, cx, si
 		GetResourceHandleNS	StringsUI, bx
 		call	MemLock
-	
+
 		mov	ds, ax
-		mov	si, offset BatchLogFileKey	
+		mov	si, offset BatchLogFileKey
 		mov	dx, ds:[si]			; ds:si <- key string
 		mov	cx, ds				; cx:dx <- key string
-		mov	si, offset CategoryString	
+		mov	si, offset CategoryString
 		mov	si, ds:[si]			; ds:si <- category string
 
 		push	bp
@@ -118,7 +118,7 @@ fileEnumParams		local   FileEnumParams
 
 		call 	MemLock 			; lock block with handle in bx
 		mov	ds, ax				; ds:0 points to file name
-		mov	dx, 0				; ds:dx <- fileName 
+		mov	dx, 0				; ds:dx <- fileName
 		mov	ax, ((mask FCF_NATIVE)\
 				shl 8) or (FileAccessFlags \
 				<FE_NONE, FA_WRITE_ONLY>)
@@ -142,7 +142,7 @@ noLogFile:
 	; Initiate the status dialog.
 
 		call	InitiateBatchStatusDialog
-	
+
 	; Allocate BatchProcessStruct.
 
 		mov	ax, size BatchProcessStruct
@@ -162,7 +162,7 @@ noLogFile:
 		push	bp
 		mov	ax, MSG_GEN_ITEM_GROUP_GET_SELECTION
 		GetResourceHandleNS	FileMenuUI, bx
-		mov	si, offset ResEditBatchOptionList 
+		mov	si, offset ResEditBatchOptionList
 		mov	di, mask MF_CALL
 		call	ObjMessage
 			; ax = batch message
@@ -175,16 +175,16 @@ noLogFile:
 		GetResourceHandleNS	StringsUI, bx
 		call	MemLock
 		mov	ds, ax
-		mov	si, offset AutorunBatchKey	
+		mov	si, offset AutorunBatchKey
 		mov	dx, ds:[si]			; ds:si <- key string
 		mov	cx, ds				; cx:dx <- key string
-		mov	si, offset CategoryString	
+		mov	si, offset CategoryString
 		mov	si, ds:[si]			; ds:si <- category string
 
-		mov	bp, size [BPS_docParams].DCP_path	
+		mov	bp, size [BPS_docParams].DCP_path
 		lea	di, es:[BPS_docParams].DCP_path ; es:di - buffer to fill
 		call	InitFileReadString		; ^hbx <- contains dest path
-		
+
 		pushf
 		mov	bx, ds:[LMBH_handle]
 		call	MemUnlock
@@ -198,7 +198,7 @@ noLogFile:
 		mov	ax, MSG_GEN_FILE_SELECTOR_GET_FULL_SELECTION_PATH
 		lea	dx, es:[BPS_docParams].DCP_path
 		GetResourceHandleNS	FileMenuUI, bx
-		mov	si, offset ResEditBatchDirSelector 
+		mov	si, offset ResEditBatchDirSelector
 		mov	di, mask MF_CALL
 		call	ObjMessage
 		mov	bx, ax			; Disk handle.
@@ -303,7 +303,7 @@ noFiles:
 		pop	bp
 
 	; Close the batch dialog.
-		
+
 		mov	ax, MSG_RESEDIT_APPLICATION_CANCEL_BATCH
                 GetResourceHandleNS     AppResource, bx
                 mov     si, offset ResEditApp
@@ -312,7 +312,7 @@ noFiles:
 
 	; Turn off batch processing mode.
 
-		mov	al, BM_OFF	
+		mov	al, BM_OFF
 		call	SetBatchMode
 		jmp	done
 
@@ -331,7 +331,7 @@ CALLED BY:	REARunBatchJob
 PASS:		nothing
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -344,7 +344,7 @@ InitiateBatchStatusDialog	proc	near
 		.enter
 
 	; Clear any status text from previous job.
-		
+
 		mov	ax, MSG_VIS_TEXT_DELETE_ALL
 		GetResourceHandleNS	FileMenuUI, bx
 		mov	si, offset ResEditBatchStatusText
@@ -417,7 +417,7 @@ PASS:		*ds	= dgroup of process
 		cx	= BatchProcessStruct
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -427,7 +427,7 @@ REVISION HISTORY:
 	pjc	8/17/95   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-REAProcessBatchFile	method dynamic ResEditProcessClass, 
+REAProcessBatchFile	method dynamic ResEditProcessClass,
 					MSG_RESEDIT_PROCESS_BATCH_FILE
 docParams	local	DocumentCommonParams
 token		local	GeodeToken
@@ -507,7 +507,7 @@ token		local	GeodeToken
 		mov	ax, MSG_GEN_DOCUMENT_GROUP_OPEN_DOC
 		mov	dx, size DocumentCommonParams
 		GetResourceHandleNS	AppDocUI, bx
-		mov	si, offset ResEditDocumentGroup 
+		mov	si, offset ResEditDocumentGroup
 		lea	bp, ss:[docParams]
 		mov	di, mask MF_CALL or mask MF_FIXUP_DS
 		call	ObjMessage
@@ -524,7 +524,7 @@ documentOpen::					; Leave for swat verbose
 		push	bp, cx, dx		; locals, Document optr
 		mov	ax, MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS
 		GetResourceHandleNS	FileMenuUI, bx
-		mov	si, offset ResEditBatchSaveBooleanGroup 
+		mov	si, offset ResEditBatchSaveBooleanGroup
 		mov	di, mask MF_CALL
 		call	ObjMessage
 		pop	bp, bx, si		; locals, Document optr
@@ -570,7 +570,7 @@ afterForcedUpdate:
 
 		mov	ax, MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS
 		GetResourceHandleNS	FileMenuUI, bx
-		mov	si, offset ResEditBatchSaveBooleanGroup 
+		mov	si, offset ResEditBatchSaveBooleanGroup
 		mov	di, mask MF_CALL
 		call	ObjMessage
 		pop	bx, si, bp		; Document optr, locals.
@@ -636,7 +636,7 @@ errorOpen:
 
 		mov	ax, offset ResEditBatchOpenTranslationError
 		call	BatchReportError
-		jmp	error		
+		jmp	error
 
 notTranslationFile:
 
@@ -701,7 +701,7 @@ fileFreeList:
 
 	; close log file if open
 
-closeLogFile:
+closeLogFile::
 		mov	bx, ss:[batchLogFile]
 		cmp	bx, 0
 		jz	noLogFile
@@ -717,10 +717,10 @@ noLogFile:
 		jnz	noExit
 
 		mov	ax, SST_DIRTY
-		mov 	si, (-1)			
+		mov 	si, (-1)
 			;	ds:si	= reason for the shutdown (null-terminated string).
-			;	si = -1 if no reason to give the user.		
-		call	SysShutdown		
+			;	si = -1 if no reason to give the user.
+		call	SysShutdown
 noExit:
 		jmp	done
 
@@ -746,10 +746,10 @@ PASS:		ax	= append message
 		dx:bp	= string to append
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -791,7 +791,7 @@ BatchReport	proc	far
 		jc	err
 		mov	dx, ax		; segment in ax
 		mov	ds, dx
-		mov	bp, ds:[bp]	; deref the chunk 
+		mov	bp, ds:[bp]	; deref the chunk
 noOptr:
 		mov	ds, dx
 		mov	es, dx
@@ -825,10 +825,6 @@ noAutorun:
 		clr	cx
 		call	ObjMessage
 
-		mov	ax, batchLogFile
-		jz	done
-
-done:
 		.leave
 		ret
 BatchReport	endp
@@ -845,10 +841,10 @@ CALLED BY:	BatchDisplayChunkStateCounts
 PASS:		ax	= number
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -894,10 +890,10 @@ CALLED BY:	EXTERNAL
 PASS:		nothing
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -956,10 +952,10 @@ CALLED BY:	EXTERNAL
 PASS:		nothing
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1019,10 +1015,10 @@ PASS:		dx = value
 		si = offset of GenValue in the FileMenuUI resource
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1057,10 +1053,10 @@ CALLED BY:	EXTERNAL
 PASS:		si = offset of GenValue in the FileMenuUI resource
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1094,10 +1090,10 @@ CALLED BY:	EXTERNAL
 PASS:		ax	= offset of the error string in FileMenuUI
 RETURN:		nothing
 DESTROYED:	ax
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1132,10 +1128,10 @@ CALLED BY:	REAProcessBatchFile
 PASS:		cx:dx	= document name
 RETURN:		nothing
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
