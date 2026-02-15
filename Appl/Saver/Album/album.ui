@@ -23,6 +23,23 @@
 #include	"saver.uih"
 #include	"options.uih"
 
+class AlbumApplication = SaverApplication {
+	pause = wordComp : "ALBUM_PAUSE_DEFAULT*60";
+	duration = wordComp : "ALBUM_DURATION_DEFAULT*60";
+	mode = wordComp : "SAVER_BITMAP_APPROPRIATE";
+	color = byteComp : "-1";
+	static /* timerHandle */ wordComp : 0;
+	static /* timerID */ wordComp : 0;
+}
+
+start AppResource;
+
+AlbumApp = AlbumApplication {
+	moniker = list { "Screen Saver"; }
+}
+
+end AppResource;
+
 #define CALL_ALBUM(routine) METHOD_SAVER_CALL_SPECIFIC, "enum " #routine
 
 start	AlbumOptions;

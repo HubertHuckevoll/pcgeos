@@ -39,6 +39,7 @@ include thread.def
 include timer.def
 include initfile.def
 
+include backgrnd.def
 include vm.def
 include	fileEnum.def
 
@@ -107,11 +108,36 @@ AlbumState	ends
 
 ;==============================================================================
 ;
+;			OBJECT CLASSES
+;
+;==============================================================================
+
+AlbumApplicationClass	class	SaverApplicationClass
+
+MSG_ALBUM_APP_DRAW				message
+
+    AAI_pause		word			ALBUM_PAUSE_DEFAULT*60
+    AAI_duration	word			ALBUM_DURATION_DEFAULT*60
+    AAI_mode		word			SAVER_BITMAP_APPROPRIATE
+    AAI_color		byte			-1
+
+    AAI_timerHandle	hptr		0
+		noreloc	AAI_timerHandle
+    AAI_timerID		word
+
+AlbumApplicationClass	endc
+
+AlbumProcessClass	class	GenProcessClass
+AlbumProcessClass	endc
+
+;==============================================================================
+;
 ;			      VARIABLES
 ;
 ;==============================================================================
 
 include	album.rdef
+ForceRef AlbumApp
 
 udata	segment
 
@@ -134,6 +160,7 @@ curTimerID	word
 ;
 fileBuffer	hptr				;handle of buffer
 fileCount	word				;# of files in buffer
+drawPhase	byte				;0=draw, 1=erase
 
 udata	ends
 
@@ -150,6 +177,9 @@ astate	AlbumState	<
     -1
 >
 
+	AlbumProcessClass	mask CLASSF_NEVER_SAVED
+	AlbumApplicationClass
+
 idata	ends
 
 ;==============================================================================
@@ -158,6 +188,120 @@ idata	ends
 ;
 ;==============================================================================
 AlbumCode	segment resource
+
+.warn -private
+albumOptionTable	SAOptionTable	<
+	albumCategory, length albumOptions
+>
+albumOptions	SAOptionDesc	<
+	albumPauseKey, size AAI_pause, offset AAI_pause
+>, <
+	albumDurationKey, size AAI_duration, offset AAI_duration
+>, <
+	albumModeKey, size AAI_mode, offset AAI_mode
+>, <
+	albumColorKey, size AAI_color, offset AAI_color
+>
+.warn @private
+albumCategory	char	'album', 0
+albumPauseKey	char	'pause', 0
+albumDurationKey	char	'duration', 0
+albumModeKey	char	'mode', 0
+albumColorKey	char	'color', 0
+
+AlbumLoadOptions	method dynamic AlbumApplicationClass, MSG_META_LOAD_OPTIONS
+	uses	ax, es
+	.enter
+
+	segmov	es, cs
+	mov	bx, offset albumOptionTable
+	call	SaverApplicationGetOptions
+
+	mov	ax, ds:[di].AAI_pause
+	segmov	es, dgroup, bx
+	mov	es:[astate].AS_pause, ax
+	mov	ax, ds:[di].AAI_duration
+	mov	es:[astate].AS_duration, ax
+	mov	ax, ds:[di].AAI_mode
+	mov	es:[astate].AS_mode, ax
+	mov	al, ds:[di].AAI_color
+	mov	es:[astate].AS_color, al
+
+	.leave
+	mov	di, offset AlbumApplicationClass
+	GOTO	ObjCallSuperNoLock
+AlbumLoadOptions	endm
+
+AlbumAppSetWin	method dynamic AlbumApplicationClass, MSG_SAVER_APP_SET_WIN
+	uses	dx, si, bp
+	.enter
+
+	mov	di, offset AlbumApplicationClass
+	call	ObjCallSuperNoLock
+
+	mov	di, ds:[si]
+	add	di, ds:[di].AlbumApplication_offset
+
+	mov	cx, ds:[di].SAI_curWindow
+	mov	bp, ds:[di].SAI_curGState
+	mov	dx, ds:[di].SAI_bounds.R_bottom
+	sub	dx, ds:[di].SAI_bounds.R_top
+	mov	bx, ds:[di].SAI_bounds.R_right
+	sub	bx, ds:[di].SAI_bounds.R_left
+	mov	si, bx
+	mov	di, bp
+	call	AlbumStart
+
+	mov	ax, MSG_ALBUM_APP_DRAW
+	call	ObjCallInstanceNoLock
+
+	.leave
+	ret
+AlbumAppSetWin	endm
+
+AlbumAppUnsetWin	method dynamic AlbumApplicationClass, MSG_SAVER_APP_UNSET_WIN
+	.enter
+
+	call	AlbumStop
+
+	mov	ax, MSG_SAVER_APP_UNSET_WIN
+	mov	di, offset AlbumApplicationClass
+	GOTO	ObjCallSuperNoLock
+AlbumAppUnsetWin	endm
+
+AlbumAppDraw	method dynamic AlbumApplicationClass, MSG_ALBUM_APP_DRAW
+	uses	bx, cx, dx, bp
+	.enter
+
+	mov	bp, ds:[LMBH_handle]
+	segmov	ds, dgroup, ax
+	tst	ds:[curGState]
+	jz	done
+
+	tst	ds:[drawPhase]
+	jnz	erase
+
+	call	AlbumDraw
+	mov	ds:[drawPhase], 1
+	mov	cx, ds:[astate].AS_duration
+	jmp	setTimer
+
+erase:
+	call	AlbumErase
+	clr	ds:[drawPhase]
+	mov	cx, ds:[astate].AS_pause
+
+setTimer:
+	mov	al, TIMER_EVENT_ONE_SHOT
+	mov	bx, bp
+	mov	dx, MSG_ALBUM_APP_DRAW
+	call	TimerStart
+	mov	ds:[curTimer], bx
+	mov	ds:[curTimerID], ax
+done:
+	.leave
+	ret
+AlbumAppDraw	endm
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -201,10 +345,7 @@ AlbumStart	proc	far
 	;
 	call	BuildFileList
 	jc	done				;branch if error
-	;
-	; Draw first background
-	;
-	call	AlbumDrawAndWait		;draw a background and wait
+	clr	ds:[drawPhase]
 done:
 
 	.leave
@@ -294,23 +435,21 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-backgroundDir	char "BACKGRND",0
-
 GotoBGDirectory	proc	near
 	uses	ax, bx, dx, ds
 	.enter
 
 	;
-	; Go to SYSTEM directory
+	; Go to USERDATA directory
 	;
-	mov	ax, SP_SYSTEM			;ax <- StandardPath
+	mov	ax, SP_USER_DATA			;ax <- StandardPath
 	call	FileSetStandardPath
 	;
 	; Go to the BACKGRND directory, which hopefully exists
 	;
 	clr	bx				;bx <- use current disk handle
 	segmov	ds, cs, dx			;ds:dx <- ptr to directory name
-	mov	dx, offset backgroundDir
+	mov	dx, offset BACKGROUND_DIR
 	call	FileSetCurrentPath
 
 	.leave
@@ -356,6 +495,7 @@ AlbumStop	proc	far
 	clr	ax
 	mov	ds:[curWindow], ax
 	mov	ds:[curGState], ax
+	mov	ds:[drawPhase], al
 	;
 	; Free the buffer of filenames, if it exists
 	;
@@ -1051,6 +1191,25 @@ RETURN:		none
 DESTROYED:	anything
 
 PSEUDO CODE/STRATEGY:
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	eca	10/29/91	Initial version
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
+AlbumSetColor	proc	far
+	.enter
+
+	segmov	ds, dgroup, ax
+	mov	ds:[astate].AS_color, cl
+
+	.leave
+	ret
+AlbumSetColor	endp
+
+AlbumInitExit	ends
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
 	Name	Date		Description
