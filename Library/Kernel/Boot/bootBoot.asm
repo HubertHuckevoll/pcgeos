@@ -137,7 +137,7 @@ KernelLibraryEntry	proc	far
 	SwatVectorDesc <
 		SWAT_VECTOR_SIG,
 		KV_AFTER_EXCEPTION_CHANGE,
-		size swatVectorTable, 
+		size swatVectorTable,
 		offset swatVectorTable
 	>
 
@@ -183,7 +183,7 @@ endif
 	; we want to go to InitGeos, which is in memory (since it is preloaded)
 	; but we must do so manually
 
-	mov	bx, handle InitGeos					
+	mov	bx, handle InitGeos
 NOFXIP <push	ds:[bx].HM_addr				;segment	>
 
 ;	On full-xip systems, the InitGeos resource *isn't* preloaded - bank
@@ -278,7 +278,7 @@ swatVectorTable	SwatVectorTable <
 	offset	OCCC_callInstanceCommon_end,
 	offset	OCCC_no_save_no_test,
 	offset	OCCC_no_save_no_test_end,
-	offset	OCCC_save_no_test, 
+	offset	OCCC_save_no_test,
 	offset	OCCC_save_no_test_end,
 	offset	Idle,
 	offset	Idle_end,
@@ -404,8 +404,8 @@ AddErrorInfo	proc	near
 	call	PushAll
 
 	push	ax				;save error code
-	mov	al, KS_FATAL_ERROR_IN					
-	call	AddStringAtMessageBuffer				
+	mov	al, KS_FATAL_ERROR_IN
+	call	AddStringAtMessageBuffer
 
 	; Now add the geode name...
 
@@ -418,8 +418,8 @@ AddErrorInfo	proc	near
 	; couldn't find a handle for the caller, so just assume it's in the
 	; kernel.
 useKernel:
-	mov	al, KS_KERNEL						
-	call	AddStringAtESDI						
+	mov	al, KS_KERNEL
+	call	AddStringAtESDI
 	pop	ax
 	jmp	checkKernelCode
 
@@ -718,10 +718,10 @@ PASS:		nothing
 RETURN:		nothing
 DESTROYED:	nothing
 SIDE EFFECTS:	control returns 3 bytes beyond the instruction that called
-     		us, to skip over the three bytes of "mov ax, number" 
+     		us, to skip over the three bytes of "mov ax, number"
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -755,7 +755,7 @@ DESTROYED:	nothing
 SIDE EFFECTS:	none
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -770,6 +770,59 @@ endif
 		ret	2		; just return, popping the error number
 					;  from the stack
 CWARNINGNOTICE	endp
+
+if ERROR_CHECK
+COMMENT @----------------------------------------------------------------------
+
+C FUNCTION:	ECWARNINGLOGRECORD
+
+C DECLARATION:	extern void
+			_far _pascal ECWarningLogRecord(
+				const char *typeTagP,
+				dword addr);
+
+DESCRIPTION:
+	Record EC warning logging metadata for Swat.
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	km	2/26		Initial version
+
+------------------------------------------------------------------------------@
+ECWARNINGLOGRECORD	proc	far	addr:dword, typeTagP:fptr.char
+				uses	ds, es, si, di
+	.enter
+
+	lds	si, typeTagP			; ds:si <- type tag (C string)
+	mov	ax, seg ECLogTypeTag
+	mov	es, ax
+	mov	di, offset ECLogTypeTag
+	mov	cx, 31
+	cld
+copyTagLoop:
+	lodsb
+	tst	al
+	jz	doneCopyTag
+	stosb
+	loop	copyTagLoop
+doneCopyTag:
+	clr	al
+	stosb					; always terminate
+
+	mov	ax, addr.low
+	mov	dx, addr.high
+	mov	{word}es:[ECLogAddr], ax	; low=offset
+	mov	{word}es:[ECLogAddr+2], dx	; high=segment
+
+	mov	ax, EC_LOG_WARNING
+	push	ax
+	call	CWARNINGNOTICE
+
+	.leave
+	ret
+ECWARNINGLOGRECORD	endp
+endif
 
 COMMENT @----------------------------------------------------------------------
 
@@ -890,7 +943,7 @@ checkAppFatalError:
 fetchErrorCode:
 	inc	si			; fetch error code from MOV AX that
 	lodsw				;  follows call to us
-			
+
 	mov	bp, ds
 	call	AddErrorInfo		; Figure geode that declared the error
 					;  and convert the error code. Returns
@@ -910,7 +963,7 @@ endif
 	tst	ds:defaultVideoStrategy.segment
 	jz	EndGeos			; no video driver loaded, so no way
 					;  to display reason for death except
-					;  as final words		
+					;  as final words
 
 if ERROR_CHECK	;**************************************************************
 	;
@@ -1050,7 +1103,7 @@ endif
 	call	ExitFSD
 
 	call	RestoreMovableInt	;reset INT
-	
+
 EndGeosDoubleFault label near
 	cmp	ds:errorFlag, 1
 	jg	tripleFault	; => died exiting system geodes
@@ -1099,14 +1152,14 @@ finishSystem:
 	; RAM...
 	;
 if	FULL_EXECUTE_IN_PLACE
-	call	CopyKCodeToRAM		
+	call	CopyKCodeToRAM
 	mov	bx, handle kcode		;Change the address in the
 	mov	ds:[bx].HM_addr, ax		; handle table, so the task
 						; switch driver can get to it
 		;Returns AX = kcode segment
-	mov	ss:[TPD_callVector].segment, ax				
-	mov	ss:[TPD_callVector].offset, offset afterCopy		
-	jmp	ss:[TPD_callVector]	;Jump to "afterCopy" in RAM...	
+	mov	ss:[TPD_callVector].segment, ax
+	mov	ss:[TPD_callVector].offset, offset afterCopy
+	jmp	ss:[TPD_callVector]	;Jump to "afterCopy" in RAM...
 afterCopy:
 endif
 BULLET <call	BulletCleanUp						>
@@ -1161,7 +1214,7 @@ endif
 exitAppropriately:
 
 if	EMM_XIP
-	mov	dx, ds:[loaderVars].KLV_emmHandle			
+	mov	dx, ds:[loaderVars].KLV_emmHandle
 	CallEMMDriver	EMF_FREE
 endif
 
@@ -1295,7 +1348,7 @@ DESTROYED:	nothing
 SIDE EFFECTS:	watchdogTimer is set to WATCHDOG_TIMER
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1429,7 +1482,7 @@ vectorBad:
 	mov	al, 'B'
 vectorGood:
 	call	HackChar
-	
+
 	pushf
 	pop	ax
 	test	ax, mask CPU_INTERRUPT
@@ -1477,7 +1530,7 @@ CALLED BY:	GLOBAL
 PASS:		ds - dgroup
 RETURN:		ax - segment address where we copied kcode...
 DESTROYED:	nada
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -1510,7 +1563,7 @@ CopyKCodeToRAM	proc	near	uses	bx, cx, si, di, es, ds
 	clr	si
 	shr	cx, 1
 	rep	movsw
-	mov	ax, es	
+	mov	ax, es
 	.leave
 	ret
 CopyKCodeToRAM	endp

@@ -252,6 +252,9 @@ extern ErrorCheckingFlags
 extern void
     _pascal SysSetECLevel(ErrorCheckingFlags flags, MemHandle checksumBlock);
 
+extern void
+    _pascal ECWarningLogRecord(const char *typeTagP, dword addr);
+
 /***/
 
 /*
@@ -260,6 +263,12 @@ extern void
 
 
 #if	ERROR_CHECK
+
+#define EC_MAKE_FARPTR(p)  ((((dword)PtrToSegment(p)) << 16) | ((dword)PtrToOffset(p)))
+/* Truncation: type tags longer than 31 bytes will be truncated by the callee. */
+#define EC_LOG_TAG(tag, expr)   ECWarningLogRecord((tag), EC_MAKE_FARPTR(&(expr)))
+#define EC_LOG_T(type, expr)   ECWarningLogRecord(#type, EC_MAKE_FARPTR(&(expr)))
+#define EC_LOG_STR(expr)       ECWarningLogRecord("string", EC_MAKE_FARPTR((expr)))
 
 #define EC(line) 		line
 #define EC_ERROR(code) 		FatalError(code)
@@ -278,6 +287,9 @@ extern void
 #define EC_BOUNDS(addr)
 #define EC_WARNING_IF(test, code)
 #define EC_WARNING(code)
+#define EC_LOG_TAG(tag, expr)   ((void)0)
+#define EC_LOG_T(type, expr)   ((void)0)
+#define EC_LOG_STR(expr)       ((void)0)
 
 #endif
 
@@ -318,6 +330,7 @@ pragma Alias(ECVMCheckMemHandle, "ECVMCHECKMEMHANDLE");
 pragma Alias(ECCheckBounds, "ECCHECKBOUNDS");
 pragma Alias(SysGetECLevel, "SYSGETECLEVEL");
 pragma Alias(SysSetECLevel, "SYSSETECLEVEL");
+pragma Alias(ECWarningLogRecord, "ECWARNINGLOGRECORD");
 #endif
 
 #endif

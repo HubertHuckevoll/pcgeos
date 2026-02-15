@@ -405,6 +405,100 @@ defvar warning-ignore-list nil
 	    # C version: code is pushed on the stack
 	    var code [value fetch ss:sp+4 word]
     	}
+
+	var geosWarnings [symbol find type geos::Warnings]
+	if {![null $geosWarnings] &&
+	    [string c [type emap $code $geosWarnings] EC_LOG_WARNING] == 0} {
+	    var tag [getstring ECLogTypeTag]
+	    var addr [value fetch ECLogAddr dword]
+	    var off [expr {$addr & 0xffff}]
+	    var seg [expr {($addr >> 16) & 0xffff}]
+	    if {$addr == 0} {
+		echo {EC log: (null)}
+		return 0
+	    }
+	    var p [format %04xh:%04xh $seg $off]
+	    if {[string c $tag string] == 0} {
+		echo -n "EC log (string): "
+		pstring $p
+	    } else {
+		if {[string match $tag *Handle]} {
+		    var raw [value fetch $p word]
+		    echo -n [format {EC log (%s): ^h%04xh} $tag $raw]
+		    if {$raw == 0} {
+			echo { (null)}
+		    } else {
+			if {[catch {var h [handle lookup $raw]} hErr] == 0 &&
+			    ![null $h]} {
+			    if {[catch {var owner [patient name [handle patient $h]]}
+					 ownerErr] == 0} {
+				echo [format { (%s)} $owner]
+			    } else {
+				echo { (valid)}
+			    }
+			} else {
+			    echo { (invalid)}
+			}
+		    }
+		} else {
+		echo -n [format {EC log (%s): } $tag]
+		var printed 0
+		var typeList [list $tag [format {geos::%s} $tag]]
+		if {[string c $tag Boolean] == 0} {
+		    var typeList [concat $typeList [list sword geos::sword word]]
+		}
+		if {[string c $tag ByteFlags] == 0 ||
+		    [string c $tag ByteEnum] == 0} {
+		    var typeList [concat $typeList [list byte geos::byte]]
+		}
+		if {[string c $tag WordFlags] == 0 ||
+		    [string c $tag Message] == 0 ||
+		    [string c $tag VardataKey] == 0 ||
+		    [string c $tag VMBlockHandle] == 0 ||
+		    [string c $tag DBGroup] == 0 ||
+		    [string c $tag DBItem] == 0 ||
+		    [string c $tag Segment] == 0 ||
+		    [string c $tag ChunkHandle] == 0} {
+		    var typeList [concat $typeList [list word geos::word]]
+		}
+		if {[string c $tag DWordFlags] == 0 ||
+		    [string c $tag VMChain] == 0 ||
+		    [string c $tag DBGroupAndItem] == 0} {
+		    var typeList [concat $typeList [list dword geos::dword]]
+		}
+		if {[string c $tag sdword] == 0} {
+		    var typeList [concat $typeList [list geos::sdword]]
+		}
+		if {[string c $tag sbyte] == 0} {
+		    var typeList [concat $typeList [list geos::sbyte]]
+		}
+		if {[string c $tag optr] == 0} {
+		    var typeList [concat $typeList [list geos::optr dword]]
+		}
+		if {[string c $tag dword] == 0} {
+		    var typeList [concat $typeList [list geos::dword]]
+		}
+		if {[string c $tag word] == 0} {
+		    var typeList [concat $typeList [list geos::word]]
+		}
+		foreach t $typeList {
+		    if {[catch {_print $t $p} printErr] == 0} {
+			var printed 1
+			break
+		    }
+		}
+		if {!$printed} {
+		    if {[catch {var raw [value fetch $p word]} rawErr] == 0} {
+			echo [format {<unable to print as %s, raw word=%04xh>} $tag $raw]
+		    } else {
+			echo [format {<unable to print %s at %s: %s>} $tag $p $printErr]
+		    }
+		}
+		}
+	    }
+	    return 0
+	}
+
 	var f [frame next $f]
     	if {[null [frame funcsym $f]]} {
     	    return 0

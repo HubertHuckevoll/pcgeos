@@ -59,8 +59,10 @@ CANNOT_USE_DBCS_IN_THIS_VERSION					enum FatalErrors
 ; Warnings is similar in declaration and function to FatalErrors, but is for
 ; places where the error by the programmer isn't immediately fatal. It will
 ; only be caught and printed if the programmer is attached with Swat.
-; 
+;
 Warnings etype word, 0
+; Warning used by ECWarningLogRecord to route typed/string EC log output.
+EC_LOG_WARNING			enum Warnings
 ContextValues	etype	word, 0
 
 StartKernel
@@ -152,6 +154,7 @@ global ECCHECKBOUNDS:far
 ;-----------------------------------------------------------------------------
 global SysGetECLevel:far
 global SysSetECLevel:far
+global ECWARNINGLOGRECORD:far
 
 
 ; we keep these around for purposed of the upgrade/wizrd and zoomer
@@ -244,7 +247,7 @@ FUNCTION:
 ARGUMENTS:
 	errorNumber -- error code
 DESTROYS:
-	If error condition occurs: 
+	If error condition occurs:
 		The System
 	Otherwise:
 		Nothing (flags preserved)
@@ -381,18 +384,18 @@ COMMENT @----------------------------------------------------------------------
 		in decoding the stack. Otherwise, it generates no code but
 		does a check to ensure that the routine is actually immediately
 		following. Use REAL_FALL_THRU if you can't afford the call/ret,
-		but Swat won't be able to decode the stack through that 
+		but Swat won't be able to decode the stack through that
 		function.
-		
+
 		The r1..r6 args are used if there are registers on the stack
 		that the fallen-into routine is expected to pop in a non-error-
 		checking version. The FALL_THRU_POP macro should be used before
 		the return from the fallen-into routine. The registers are
 		popped in the order given.
-		
+
 		GOTO is used in place of a jmp into another procedure.
 		routineName and r1..r6 are as for the FALL_THRU.
-		
+
 		In both the FALL_THRU and the GOTO, the assertion is made that
 		the destination routine has the same return type as the
 		current, as it must if the destination is to return for
@@ -422,7 +425,7 @@ endm
 GOTO_LOW macro routineName
 	;
 	; Complex expression required to handle GOTO through a vector...
-	; 
+	;
   .assert       ((TYPE (routineName) eq word) AND (TYPE @CurProc eq near)) OR \
 		((TYPE (routineName) eq dword) AND (TYPE @CurProc eq far)) OR \
 		((TYPE (routineName) eq TYPE @CurProc)), \
@@ -468,7 +471,7 @@ endif
 
 
 GOTO_NOOPT	macro	routineName, r1, r2, r3, r4, r5, r6
-    if ERROR_CHECK 
+    if ERROR_CHECK
 		call	routineName
 		DoPop	<r1>, <r2>, <r3>, <r4>, <r5>, <r6>
 		ret
@@ -486,7 +489,7 @@ GOTO_NOOPT	macro	routineName, r1, r2, r3, r4, r5, r6
 
 	;
 	; Complex expression required to handle GOTO through a vector...
-	; 
+	;
 	.assert	((TYPE (routineName) eq word) AND (TYPE @CurProc eq near)) OR \
 		((TYPE (routineName) eq dword) AND (TYPE @CurProc eq far)) OR \
 		((TYPE (routineName) eq TYPE @CurProc)), \
@@ -511,7 +514,7 @@ PSEUDO CODE/STRATEGY:
 	performed -- the calling function will pop the registers.
 
 	Otherwise, the registers are popped in the order given
-	
+
 	The "ret" for the routine should follow this macro.
 
 REVISION HISTORY:
@@ -580,7 +583,7 @@ SYNOPSIS:	For conditional jumps to far-away locations.  For code like
 		you must get on with business.  Typing:
 			LONG	jnz	LB_exit
 		will expand to:
-		
+
 			jz	tempLabel
 			jmp	LB_exit
 		tempLabel:
@@ -592,12 +595,12 @@ SYNOPSIS:	For conditional jumps to far-away locations.  For code like
 		error-checking version.  People should use LONG_EC first
 		in these situations, and only change to LONG when the non-error-
 		checking version gets assembled and complains.
-		
+
 PASS:		opcode	-	branch opcode we're replacing
-		label   - 	label to branch to 
+		label   - 	label to branch to
 
 PSEUDO CODE/STRATEGY:
-		I've made an attempt to put the most-used opcodes at the 
+		I've made an attempt to put the most-used opcodes at the
 		front, in the hopes that this won't be a CPU drain.  Feel
 		free to move them around.
 
@@ -679,7 +682,7 @@ GOTO_ECN	macro	routineName, r1, r2, r3, r4, r5, r6
 	else
 	;
 	; Complex expression required to handle GOTO through a vector...
-	; 
+	;
 	.assert	((TYPE (routineName) eq word) AND (TYPE @CurProc eq near)) OR \
 		((TYPE (routineName) eq dword) AND (TYPE @CurProc eq far)) OR \
 		((TYPE (routineName) eq TYPE @CurProc)), \
@@ -690,7 +693,7 @@ GOTO_ECN	macro	routineName, r1, r2, r3, r4, r5, r6
     else
 	;
 	; Complex expression required to handle GOTO through a vector...
-	; 
+	;
 	.assert	((TYPE (routineName) eq word) AND (TYPE @CurProc eq near)) OR \
 		((TYPE (routineName) eq dword) AND (TYPE @CurProc eq far)) OR \
 		((TYPE (routineName) eq TYPE @CurProc)), \

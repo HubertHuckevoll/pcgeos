@@ -54,7 +54,7 @@ endif
 nosort
 
 ifdef DONT_ALLOCATE_FIXED_STRINGS_AS_FIXED
-# If running on a multi-language XIP platform, we don't want FixedStrings 
+# If running on a multi-language XIP platform, we don't want FixedStrings
 # to be used right out of the XIP image, since we'll be translating the
 # strings in it.
 resource FixedStrings shared lmem preload
@@ -67,7 +67,7 @@ resource kcode fixed code read-only
 
 ifdef	GP_SYS_HAS_BITMAPS
 resource SysBitmapResource fixed lmem read-only
-# resource SysBitmapResource lmem read-only shared 
+# resource SysBitmapResource lmem read-only shared
 endif
 
 resource MovableStrings shared lmem read-only preload
@@ -145,7 +145,7 @@ resource GraphicsTextObscure code read-only shared
 resource GraphicsImage code read-only shared
 resource IMMoveResize code read-only shared
 resource IMMiscInput code read-only shared
-ifndef	GP_NO_PEN_SUPPORT	
+ifndef	GP_NO_PEN_SUPPORT
 ifdef	GP_FULL_EXECUTE_IN_PLACE
 resource IMPenCode fixed code read-only
 else
@@ -173,7 +173,7 @@ resource C_VarData code read-only shared
 resource VMUtils code read-only shared
 resource DosapplCode code read-only shared
 
-# ObjectLoad fixed to allow the async writing of object blocks in VM Files 
+# ObjectLoad fixed to allow the async writing of object blocks in VM Files
 # resource is 3112 bytes EC, 2741 bytes NEC on the Trunk as of 2/8/95
 
 resource ObjectLoad code fixed read-only shared
@@ -184,7 +184,7 @@ resource GraphicsArc code read-only shared
 resource GraphicsDashedLine code read-only shared
 resource SystemBitmapsAndHatches shared lmem data
 resource ObjectFile code read-only shared
-# ECCode fixed to allow heap-sensitive EC-code to be stored there, freeing 
+# ECCode fixed to allow heap-sensitive EC-code to be stored there, freeing
 # space in kcode.  Robertg - 2/18/95
 resource ECCode code fixed read-only shared
 ifdef DO_DBCS
@@ -212,7 +212,7 @@ endif
 resource ProfileLessCommonCode code read-only shared
 
 resource ifdef SSProfile code fixed read-only shared
-resource ifdef SSData data fixed shared 
+resource ifdef SSData data fixed shared
 
 resource UtilWindowCode		code read-only shared
 
@@ -543,7 +543,7 @@ export GrCharWidth
 export GrTextWidth
 export GrGetBitmap
 export GrSetWinClipRect
-export GrCopyGString		
+export GrCopyGString
 export GrCallFontDriverID
 export GrSetClipRect
 export GrCreateState
@@ -655,7 +655,7 @@ export	GrDeleteGStringElement
 export GrGetPathBounds
 
 #
-# START OF THE GSTRING CODES 
+# START OF THE GSTRING CODES
 #
 export GrEndGString
 export GrComment
@@ -870,6 +870,7 @@ export SysAddIdleIntercept
 export SysRemoveIdleIntercept
 export WarningNotice
 export CWARNINGNOTICE
+
 #
 # Localization routines
 #
@@ -1898,7 +1899,7 @@ export GRSETTEXTPATTERN
 export GRSETCUSTOMTEXTPATTERN
 export GRGETAREAPATTERN
 export GRGETTEXTPATTERN
-export	GRINVALRECTDWORD	
+export	GRINVALRECTDWORD
 export GRGETWINBOUNDS
 export GRGETWINBOUNDSDWORD
 export GRGETMASKBOUNDS
@@ -2061,7 +2062,7 @@ export	HugeArrayPrev
 export	HugeArrayExpand
 export	HugeArrayContract
 export HugeArrayEnum
-export	HUGEARRAYCREATE as HUGEARRAYCREATE_OLD 
+export	HUGEARRAYCREATE as HUGEARRAYCREATE_OLD
 export	HUGEARRAYDESTROY
 export	HUGEARRAYLOCK as HUGEARRAYLOCK_OLD
 export	HUGEARRAYUNLOCK
@@ -2557,3 +2558,6 @@ export GRSETTEXTDIRECTION
 endif
 
 incminor MouseWheelSupport
+
+incminor SwatLoggingSupport
+export ECWARNINGLOGRECORD
