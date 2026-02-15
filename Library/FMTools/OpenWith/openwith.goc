@@ -347,6 +347,9 @@ Boolean SelectedFilesCheckIfUnsupported()
         headerPtr  = (FileQuickTransferHeader*) MemLock(curBlock); // get pointer to its header
         entriesPtr = (FileOperationInfoEntry*) (headerPtr + 1); // get pointer to first entry (follows header)
 
+        EC_LOG_T(FileQuickTransferHeader, headerPtr);
+        EC_LOG_T(PathName, headerPtr->FQTH_pathname);
+
         for (i=0; i < headerPtr->FQTH_numFiles; i++)
         {
             if ((entriesPtr->FOIE_type == GFT_NOT_GEOS_FILE) &&
@@ -355,6 +358,7 @@ Boolean SelectedFilesCheckIfUnsupported()
                 // for folders above DOCUMENT/WORLD GFT_DIRECTORY seems not to be set (...?) -
                 // so we check again if actually a folder
                 FilePushDir();
+
                 if (FileSetCurrentPath(headerPtr->FQTH_diskHandle, headerPtr->FQTH_pathname) != NullHandle)
                 {
                     fAttrs = FileGetAttributes(entriesPtr->FOIE_name);

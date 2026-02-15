@@ -419,8 +419,7 @@ defvar warning-ignore-list nil
 	    }
 	    var p [format %04xh:%04xh $seg $off]
 	    if {[string c $tag string] == 0} {
-		echo -n "EC log (string): "
-		pstring $p
+		echo [format {EC log (string): %s} [getstring $p]]
 	    } else {
 		if {[string match $tag *Handle]} {
 		    var raw [value fetch $p word]
