@@ -778,7 +778,7 @@ C FUNCTION:	ECWARNINGLOGRECORD
 
 C DECLARATION:	extern void
 			_far _pascal ECWarningLogRecord(
-				const char *typeTagP,
+				const char *varNameP,
 				dword addr);
 
 DESCRIPTION:
@@ -790,23 +790,23 @@ REVISION HISTORY:
 	km	2/26		Initial version
 
 ------------------------------------------------------------------------------@
-ECWARNINGLOGRECORD	proc	far	addr:dword, typeTagP:fptr.char
+ECWARNINGLOGRECORD	proc	far	addr:dword, varNameP:fptr.char
 				uses	ds, es, si, di
 	.enter
 
-	lds	si, typeTagP			; ds:si <- type tag (C string)
-	mov	ax, seg ECLogTypeTag
+	lds	si, varNameP			; ds:si <- variable name (C string)
+	mov	ax, seg ECLogVarName
 	mov	es, ax
-	mov	di, offset ECLogTypeTag
+	mov	di, offset ECLogVarName
 	mov	cx, 31
 	cld
-copyTagLoop:
+copyVarNameLoop:
 	lodsb
 	tst	al
-	jz	doneCopyTag
+	jz	doneCopyVarName
 	stosb
-	loop	copyTagLoop
-doneCopyTag:
+	loop	copyVarNameLoop
+doneCopyVarName:
 	clr	al
 	stosb					; always terminate
 
@@ -814,6 +814,11 @@ doneCopyTag:
 	mov	dx, addr.high
 	mov	{word}es:[ECLogAddr], ax	; low=offset
 	mov	{word}es:[ECLogAddr+2], dx	; high=segment
+
+	mov	ax, {word}ss:[bp+2]		; caller return IP
+	mov	dx, {word}ss:[bp+4]		; caller return CS
+	mov	{word}es:[ECLogCaller], ax	; low=IP
+	mov	{word}es:[ECLogCaller+2], dx	; high=CS
 
 	mov	ax, EC_LOG_WARNING
 	push	ax

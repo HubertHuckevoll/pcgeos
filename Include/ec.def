@@ -61,7 +61,7 @@ CANNOT_USE_DBCS_IN_THIS_VERSION					enum FatalErrors
 ; only be caught and printed if the programmer is attached with Swat.
 ;
 Warnings etype word, 0
-; Warning used by ECWarningLogRecord to route typed/string EC log output.
+; Warning used by ECWarningLogRecord to route EC variable log output.
 EC_LOG_WARNING			enum Warnings
 ContextValues	etype	word, 0
 

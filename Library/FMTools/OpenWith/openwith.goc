@@ -425,8 +425,15 @@ void SelectedFilesLoad(GeodeToken* token, char* pathnameAndFile)
         headerPtr  = (FileQuickTransferHeader*) MemLock(curBlock); // get pointer to its header
         entriesPtr = (FileOperationInfoEntry*) (headerPtr + 1); // get pointer to first entry (follows header)
 
+        EC_LOG_T(curBlock);
+        EC_LOG_T(headerPtr->FQTH_pathname);
+        EC_LOG_T(entriesPtr);
+
         for (i=0; i < headerPtr->FQTH_numFiles; i++)
         {
+
+            EC_LOG_T(i);
+
             SelectedFilesLaunchApp(
                 token,
                 SP_APPLICATION,

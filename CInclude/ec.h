@@ -253,7 +253,7 @@ extern void
     _pascal SysSetECLevel(ErrorCheckingFlags flags, MemHandle checksumBlock);
 
 extern void
-    _pascal ECWarningLogRecord(const char *typeTagP, dword addr);
+    _pascal ECWarningLogRecord(const char *varNameP, dword addr);
 
 /***/
 
@@ -265,12 +265,8 @@ extern void
 #if	ERROR_CHECK
 
 #define EC_MAKE_FARPTR(p)  ((((dword)PtrToSegment(p)) << 16) | ((dword)PtrToOffset(p)))
-/* Enforce pointer arguments at compile time for EC_LOG_T. */
-#define EC_LOG_REQUIRE_PTR(p) ((void)sizeof(*(p)), (p))
-/* Truncation: type tags longer than 31 bytes will be truncated by the callee. */
-#define EC_LOG_TAG(tag, expr)   ECWarningLogRecord((tag), EC_MAKE_FARPTR(&(expr)))
-#define EC_LOG_T(type, ptrExpr)   ECWarningLogRecord(#type, EC_MAKE_FARPTR(EC_LOG_REQUIRE_PTR(ptrExpr)))
-#define EC_LOG_STR(expr)       ECWarningLogRecord("string", EC_MAKE_FARPTR((expr)))
+/* Truncation: variable names longer than 31 bytes will be truncated by callee. */
+#define EC_LOG_T(varExpr)      ECWarningLogRecord(#varExpr, EC_MAKE_FARPTR(&(varExpr)))
 
 #define EC(line) 		line
 #define EC_ERROR(code) 		FatalError(code)
@@ -289,9 +285,7 @@ extern void
 #define EC_BOUNDS(addr)
 #define EC_WARNING_IF(test, code)
 #define EC_WARNING(code)
-#define EC_LOG_TAG(tag, expr)   ((void)0)
-#define EC_LOG_T(type, expr)   ((void)0)
-#define EC_LOG_STR(expr)       ((void)0)
+#define EC_LOG_T(varExpr)      ((void)0)
 
 #endif
 
