@@ -1,0 +1,206 @@
+/***********************************************************************
+ *
+ *	Copyright (c) GeoWorks 1992 -- All Rights Reserved
+ *
+ * PROJECT:	  PCGEOS
+ * MODULE:	  album.ui
+ * FILE:	  albumpref.ui
+ *
+ * DESCRIPTION:
+ *	Preferences for Album saver
+ *
+ ***********************************************************************/
+#include	<generic.uih>
+#include	<config.uih>
+#include	<saver.uih>
+
+start	AlbumOptions;
+
+RootObject = PrefInteraction {
+	children =
+		AlbumPause,
+		AlbumDuration,
+		AlbumDrawMode,
+		AlbumColor;
+	genStates = default -usable;
+	hints = {
+		HINT_CENTER_CHILDREN_ON_MONIKERS,
+		ATTR_GEN_INIT_FILE_CATEGORY {
+			char "album", 0
+		}
+	}
+}
+
+AlbumPause = PrefValue {
+	hints = {
+		ATTR_GEN_INIT_FILE_KEY {
+			char "pause", 0
+		}
+	}
+	moniker = "Pause (sec):";
+	minimum = 1;
+	maximum = 60;
+	value = 10;
+}
+
+AlbumDuration = PrefValue {
+	hints = {
+		ATTR_GEN_INIT_FILE_KEY {
+			char "duration", 0
+		}
+	}
+	moniker = "Duration (sec):";
+	minimum = 1;
+	maximum = 60;
+	value = 10;
+}
+
+AlbumDrawMode = PrefItemGroup {
+	hints = {
+		ATTR_GEN_INIT_FILE_KEY {
+			char "mode", 0
+		}
+	}
+	moniker = "Draw:";
+	children = ADUpperLeft, ADCenter, ADTile, ADAppropriate;
+	selection = SAVER_BITMAP_APPROPRIATE;
+	numSelections = 1;
+}
+
+ADUpperLeft = GenItem {
+	moniker = "Upper Left";
+	identifier = SAVER_BITMAP_UPPER_LEFT;
+}
+
+ADCenter = GenItem {
+	moniker = "Centered";
+	identifier = SAVER_BITMAP_CENTER;
+}
+
+ADTile = GenItem {
+	moniker = "Tiled";
+	identifier = SAVER_BITMAP_TILE;
+}
+
+ADAppropriate = GenItem {
+	moniker = "As Appropriate";
+	identifier = SAVER_BITMAP_APPROPRIATE;
+}
+
+AlbumColor = PrefItemGroup {
+	hints = {
+		ATTR_GEN_INIT_FILE_KEY {
+			char "color", 0
+		},
+		HINT_TOOLBOX,
+		HINT_ORIENT_CHILDREN_HORIZONTALLY
+	}
+	moniker = "Color:";
+	children =
+		ColorBlack,
+		ColorBlue,
+		ColorGreen,
+		ColorCyan,
+		ColorRed,
+		ColorViolet,
+		ColorBrown,
+		ColorLightGray,
+		ColorDarkGray,
+		ColorLightBlue,
+		ColorLightGreen,
+		ColorLightCyan,
+		ColorLightRed,
+		ColorLightViolet,
+		ColorYellow,
+		ColorWhite,
+		ColorRandom;
+	selection = -1;
+	numSelections = 1;
+}
+
+ColorBlack = GenItem {
+	moniker = "Black";
+	identifier = C_BLACK;
+}
+
+ColorBlue = GenItem {
+	moniker = "Blue";
+	identifier = C_BLUE;
+}
+
+ColorGreen = GenItem {
+	moniker = "Green";
+	identifier = C_GREEN;
+}
+
+ColorCyan = GenItem {
+	moniker = "Cyan";
+	identifier = C_CYAN;
+}
+
+ColorRed = GenItem {
+	moniker = "Red";
+	identifier = C_RED;
+}
+
+ColorViolet = GenItem {
+	moniker = "Violet";
+	identifier = C_VIOLET;
+}
+
+ColorBrown = GenItem {
+	moniker = "Brown";
+	identifier = C_BROWN;
+}
+
+ColorLightGray = GenItem {
+	moniker = "Light Gray";
+	identifier = C_LIGHT_GRAY;
+}
+
+ColorDarkGray = GenItem {
+	moniker = "Dark Gray";
+	identifier = C_DARK_GRAY;
+}
+
+ColorLightBlue = GenItem {
+	moniker = "Light Blue";
+	identifier = C_LIGHT_BLUE;
+}
+
+ColorLightGreen = GenItem {
+	moniker = "Light Green";
+	identifier = C_LIGHT_GREEN;
+}
+
+ColorLightCyan = GenItem {
+	moniker = "Light Cyan";
+	identifier = C_LIGHT_CYAN;
+}
+
+ColorLightRed = GenItem {
+	moniker = "Light Red";
+	identifier = C_LIGHT_RED;
+}
+
+ColorLightViolet = GenItem {
+	moniker = "Light Violet";
+	identifier = C_LIGHT_VIOLET;
+}
+
+ColorYellow = GenItem {
+	moniker = "Yellow";
+	identifier = C_YELLOW;
+}
+
+ColorWhite = GenItem {
+	moniker = "White";
+	identifier = C_WHITE;
+}
+
+ColorRandom = GenItem {
+	moniker = "Random";
+	identifier = -1;
+}
+
+end	AlbumOptions;

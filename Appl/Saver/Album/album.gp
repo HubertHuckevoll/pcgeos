@@ -7,7 +7,7 @@ name album.lib
 #
 # All specific screen savers are libraries that may be launched but once
 #
-type library, single
+type appl, process, single
 #
 # This is the name that appears in the generic saver's list
 #
@@ -23,11 +23,6 @@ tokenid 0
 # We use the saver library, of course.
 #
 library saver
-#
-# We have user-savable options.
-#
-library options
-#
 # We must import the UI so our options block can be properly relocated, the
 # relocations happening w.r.t. our imported libraries (we own the block) even
 # though it's being duplicated on the generic saver's thread.
@@ -38,31 +33,12 @@ library ui
 #
 library geos
 #
-# The kernel needs this, yes precioussss
-#
-entry AlbumEntry
-#
 # Any special resource-allocation flags needed.
 #
-resource AlbumOptions ui-object
-resource AlbumHelp ui-object
+resource AppResource ui-object
 #
-# Pre-defined entry points -- must be first and in this order (q.v.
-# SaverFunctions)
+# Classes 'n' stuff
 #
-export AlbumStart
-export AlbumStop
-export AlbumFetchUI
-export AlbumFetchHelp
-export AlbumSaveState
-export AlbumRestoreState
-export AlbumSaveOptions
-#
-# Other entry  points we use
-#
-export AlbumSetPause
-export AlbumSetDuration
-export AlbumSetDrawMode
-export AlbumSetColor
-export AlbumDrawAndWait
-export AlbumEraseAndWait
+class	AlbumProcessClass
+appobj	AlbumApp
+export	AlbumApplicationClass

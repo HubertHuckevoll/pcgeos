@@ -20,35 +20,17 @@ DESCRIPTION:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-include type.def
-include geos.def
-include geosmacro.def
-include errorcheck.def
-include library.def
-include localmem.def
-include graphics.def
-include gstring.def
-include win.def
-include	geode.def
-include object.def
-include event.def
-include metaClass.def
-include processClass.def
-include	geodeBuild.def
-include thread.def
+include	stdapp.def
 include timer.def
 include initfile.def
+include Internal/heapInt.def
 
 include vm.def
 include	fileEnum.def
+include backgrnd.def
 
 UseLib	ui.def
-UseLib	options.def
 UseLib	saver.def
-
-include	coreBlock.def
-
-include character.def
 
 ;==============================================================================
 ;
@@ -93,7 +75,28 @@ ALBUM_DURATION_MAX	equ	60
 ALBUM_DURATION_DEFAULT	equ	10
 ALBUM_DURATION_STEP	equ	1
 
+ALBUM_TICKS_PER_SECOND	equ	60
+
 ALBUM_MAX_BACKGROUNDS	equ	255	;must be < 256
+
+ALBUM_ACTION_DRAW	equ	0
+ALBUM_ACTION_ERASE	equ	1
+
+ALBUM_TRACE_WARNINGS	equ	0
+
+ALBUM_WARN_STAGE_DRAW_ENTER		enum	Warnings
+ALBUM_WARN_STAGE_OPEN_RANDOM		enum	Warnings
+ALBUM_WARN_FAIL_OPEN_RANDOM		enum	Warnings
+ALBUM_WARN_FAIL_NO_FILES		enum	Warnings
+ALBUM_WARN_FAIL_GOTO_BG_DIR		enum	Warnings
+ALBUM_WARN_FAIL_MEMLOCK_FILE_LIST	enum	Warnings
+ALBUM_WARN_FAIL_VMOPEN_BG		enum	Warnings
+ALBUM_WARN_FAIL_DRAW_BG_BITMAP		enum	Warnings
+ALBUM_WARN_FAIL_BG_TOKEN_ATTR		enum	Warnings
+ALBUM_WARN_FAIL_BG_TOKEN_CHARS		enum	Warnings
+ALBUM_WARN_FAIL_BG_PROTOCOL_ATTR	enum	Warnings
+ALBUM_WARN_FAIL_BG_PROTOCOL_VERSION	enum	Warnings
+ALBUM_WARN_FAIL_NO_VALID_BG_FILES	enum	Warnings
 
 ;
 ; The state we save to our parent's state file on shutdown.
@@ -102,8 +105,27 @@ AlbumState	struc
     AS_pause		word			;pause between background
     AS_duration		word			;duration of each background
     AS_mode		SaverBitmapMode		;drawing mode
-    AS_color		Colors			;background color
+    AS_color		byte			;background color
 AlbumState	ends
+
+AlbumApplicationClass	class	SaverApplicationClass
+
+MSG_ALBUM_APP_DRAW				message
+
+    AAI_pause		word	ALBUM_PAUSE_DEFAULT
+    AAI_duration	word	ALBUM_DURATION_DEFAULT
+    AAI_mode		SaverBitmapMode	SAVER_BITMAP_APPROPRIATE
+    AAI_color		byte	-1
+    AAI_nextAction	byte	ALBUM_ACTION_DRAW
+
+    AAI_timerHandle	hptr	0
+	noreloc	AAI_timerHandle
+    AAI_timerID		word
+
+AlbumApplicationClass	endc
+
+AlbumProcessClass	class	GenProcessClass
+AlbumProcessClass	endc
 
 ;==============================================================================
 ;
@@ -112,6 +134,7 @@ AlbumState	ends
 ;==============================================================================
 
 include	album.rdef
+ForceRef	AlbumApp
 
 udata	segment
 
@@ -122,30 +145,29 @@ curWindow	hptr.Window
 curGState	hptr.GState
 winHeight	word
 winWidth	word
-
-;
-; Timer we started for moving
-;
-curTimer	hptr.HandleTimer
-curTimerID	word
+curRandom	hptr				;random number generator
 
 ;
 ; Buffer of background bitmap filenames
 ;
 fileBuffer	hptr				;handle of buffer
 fileCount	word				;# of files in buffer
+filePath	word				;StandardPath for selected BG files
 
 udata	ends
 
 idata	segment
+
+AlbumProcessClass	mask CLASSF_NEVER_SAVED
+AlbumApplicationClass
 
 ;
 ; Parameters for the Album, saved and restored to and from our parent's state
 ; file.
 ;
 astate	AlbumState	<
-    ALBUM_PAUSE_DEFAULT*60,
-    ALBUM_DURATION_DEFAULT*60,
+    ALBUM_PAUSE_DEFAULT*ALBUM_TICKS_PER_SECOND,
+    ALBUM_DURATION_DEFAULT*ALBUM_TICKS_PER_SECOND,
     SAVER_BITMAP_APPROPRIATE,
     -1
 >
@@ -158,6 +180,195 @@ idata	ends
 ;
 ;==============================================================================
 AlbumCode	segment resource
+
+.warn -private
+albumOptionTable	SAOptionTable	<
+	albumCategory, length albumOptions
+>
+albumOptions	SAOptionDesc	<
+	albumPauseKey, size AAI_pause, offset AAI_pause
+>, <
+	albumDurationKey, size AAI_duration, offset AAI_duration
+>, <
+	albumModeKey, size AAI_mode, offset AAI_mode
+>, <
+	albumColorKey, size AAI_color, offset AAI_color
+>
+.warn @private
+albumCategory		char	'album', 0
+albumPauseKey		char	'pause', 0
+albumDurationKey	char	'duration', 0
+albumModeKey		char	'mode', 0
+albumColorKey		char	'color', 0
+
+albumEnumParams		FileEnumParams <
+	mask FESF_GEOS_NON_EXECS,
+	FESRT_NAME,
+	size FileLongName,
+	albumMatchAttrs,
+	ALBUM_MAX_BACKGROUNDS
+>
+albumMatchAttrs		FileExtAttrDesc \
+	<FEA_TOKEN, albumToken, size GeodeToken>,
+	<FEA_END_OF_LIST>
+albumToken		GeodeToken <"BKGD", MANUFACTURER_ID_GEOWORKS>
+
+albumLegacyEnumParams	FileEnumParams <
+	mask FESF_GEOS_NON_EXECS,
+	FESRT_NAME,
+	size FileLongName,
+	albumLegacyMatchAttrs,
+	ALBUM_MAX_BACKGROUNDS
+>
+albumLegacyMatchAttrs	FileExtAttrDesc \
+	<FEA_TOKEN, albumLegacyToken, size GeodeToken>,
+	<FEA_END_OF_LIST>
+albumLegacyToken	GeodeToken <"BKGD", 0>
+
+albumAnyEnumParams	FileEnumParams <
+	mask FESF_GEOS_NON_EXECS,
+	FESRT_NAME,
+	size FileLongName,
+	albumAnyMatchAttrs,
+	ALBUM_MAX_BACKGROUNDS
+>
+albumAnyMatchAttrs	FileExtAttrDesc \
+	<FEA_END_OF_LIST>
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumSyncStateFromInstance
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Copy options from object instance into the old dgroup state.
+
+CALLED BY:	AlbumLoadOptions, AlbumAppSetWin
+PASS:		*ds:si	= AlbumApplicationClass object
+		ds:di	= AlbumApplicationClass instance data
+RETURN:		nothing
+DESTROYED:	nothing
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumSyncStateFromInstance	proc	near
+	class	AlbumApplicationClass
+	uses	ax, cx, es
+	.enter
+
+	mov	es, ss:[TPD_dgroup]
+
+	mov	ax, ALBUM_TICKS_PER_SECOND
+	mov	cx, ds:[di].AAI_pause
+	mul	cx
+	mov	es:[astate].AS_pause, ax
+
+	mov	ax, ALBUM_TICKS_PER_SECOND
+	mov	cx, ds:[di].AAI_duration
+	mul	cx
+	mov	es:[astate].AS_duration, ax
+
+	mov	ax, ds:[di].AAI_mode
+	mov	es:[astate].AS_mode, ax
+	mov	al, ds:[di].AAI_color
+	mov	es:[astate].AS_color, al
+
+	.leave
+	ret
+AlbumSyncStateFromInstance	endp
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumLoadOptions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Load options from the ini file.
+
+CALLED BY:	MSG_META_LOAD_OPTIONS
+PASS:		*ds:si	= AlbumApplicationClass object
+		ds:di	= AlbumApplicationClass instance data
+RETURN:		nothing
+DESTROYED:	ax, cx, dx, bp
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumLoadOptions	method dynamic AlbumApplicationClass, MSG_META_LOAD_OPTIONS
+	uses	bx, es
+	.enter
+
+	segmov	es, cs
+	mov	bx, offset albumOptionTable
+	call	SaverApplicationGetOptions
+
+	call	AlbumSyncStateFromInstance
+
+	.leave
+	mov	di, offset AlbumApplicationClass
+	call	ObjCallSuperNoLock
+	ret
+AlbumLoadOptions	endm
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumAppSetWin
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Initialize saver state and start drawing.
+
+CALLED BY:	MSG_SAVER_APP_SET_WIN
+PASS:		*ds:si	= AlbumApplicationClass object
+		ds:di	= AlbumApplicationClass instance data
+RETURN:		nothing
+DESTROYED:	ax, cx, dx, bp
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumAppSetWin	method dynamic AlbumApplicationClass, MSG_SAVER_APP_SET_WIN
+	uses	es, bx
+	.enter
+
+	mov	di, offset AlbumApplicationClass
+	call	ObjCallSuperNoLock
+
+	mov	di, ds:[si]
+	add	di, ds:[di].AlbumApplication_offset
+
+	;
+	; Create/reset RNG for random color/file selection.
+	;
+	mov	es, ss:[TPD_dgroup]
+	call	TimerGetCount
+	mov	dx, bx			; dxax <- seed
+	clr	bx			; bx <- allocate new RNG
+	call	SaverSeedRandom
+	mov	es:[curRandom], bx
+
+	call	AlbumSyncStateFromInstance
+	call	AlbumStart
+
+	.leave
+	ret
+AlbumAppSetWin	endm
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumAppUnsetWin
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Stop drawing and release runtime resources.
+
+CALLED BY:	MSG_SAVER_APP_UNSET_WIN
+PASS:		*ds:si	= AlbumApplicationClass object
+		ds:di	= AlbumApplicationClass instance data
+RETURN:		dx	= old window
+		bp	= old gstate
+DESTROYED:	ax, cx
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumAppUnsetWin	method dynamic AlbumApplicationClass, MSG_SAVER_APP_UNSET_WIN
+	call	AlbumStop
+
+	mov	ax, MSG_SAVER_APP_UNSET_WIN
+	mov	di, offset AlbumApplicationClass
+	call	ObjCallSuperNoLock
+	ret
+AlbumAppUnsetWin	endm
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -185,21 +396,31 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 AlbumStart	proc	far
-	uses	ax, bx, cx, dx, ds, es
+	class	AlbumApplicationClass
+	uses	ax, ds, es
 	.enter
-	call	SaverInitBlank
-	segmov	ds, dgroup, ax
+
+	mov	es, ss:[TPD_dgroup]
 	;
-	; Save the window and gstate we were given for later use.
+	; Save the window and gstate from the saver app instance.
 	;
-	mov	ds:[curWindow], cx
-	mov	ds:[curGState], di
-	mov	ds:[winHeight], dx
-	mov	ds:[winWidth], si
+	mov	ax, ds:[di].SAI_curWindow
+	mov	es:[curWindow], ax
+	mov	ax, ds:[di].SAI_curGState
+	mov	es:[curGState], ax
+	mov	ax, ds:[di].SAI_bounds.R_right
+	sub	ax, ds:[di].SAI_bounds.R_left
+	mov	es:[winWidth], ax
+	mov	ax, ds:[di].SAI_bounds.R_bottom
+	sub	ax, ds:[di].SAI_bounds.R_top
+	mov	es:[winHeight], ax
 	;
 	; Build a list of the currently available backgrounds
 	;
+	push	ds
+	segmov	ds, es
 	call	BuildFileList
+	pop	ds
 	jc	done				;branch if error
 	;
 	; Draw first background
@@ -223,7 +444,7 @@ PASS:		ds - seg addr of dgroup
 RETURN:		ds:fileCount - # of files found
 		ds:fileBuffer - handle of filename buffer
 		carry - set if error
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -235,38 +456,87 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 BuildFileList	proc	near
+	uses	bx, cx
 	.enter
 
 	mov	ds:fileCount, 0
 	mov	ds:fileBuffer, 0
+	mov	ds:filePath, 0
 	;
-	; Go to the right directory...
+	; Try user-local backgrounds first.
 	;
+	mov	bx, SP_USER_DATA
 	call	GotoBGDirectory
-	jc	done				;branch if error
-	;
-	; Enum me jesus
-	;
-	sub	sp, size FileEnumParams
-	mov	bp, sp
+	jc	tryPublic
 
-	mov	ss:[bp].FEP_fileTypes, mask FEFT_FILES or mask FEFT_GEOS \
-					or mask FEFT_NON_EXECS
-	mov	ss:[bp].FEP_searchFlags, mask FESF_TOKEN
-	mov	ss:[bp].FEP_returnFlags, mask FERF_CREATE or \
-				 FERT_DOS_NAME_ONLY shl (offset FERF_TYPES)
-	mov	ss:[bp].FEP_bufSize, ALBUM_MAX_BACKGROUNDS
-	mov	ss:[bp].FEP_skipCount, 0
-	mov	{word}ss:[bp].FEP_tokenMatch.GFHT_chars+0,'BK'
-	mov	{word}ss:[bp].FEP_tokenMatch.GFHT_chars+2,'GD'
-	mov	ss:[bp].FEP_tokenMatch.GFHT_manufID,0
-	call	FileEnum
-	jc	done				;branch if error
-	;
-	; Save the filename buffer
-	;
-	mov	ds:fileCount, bx		;save count of files
-	mov	ds:fileBuffer, cx		;save buffer handle
+	call	EnumBGFiles
+	jc	tryPublic
+	tst	cx
+	jnz	gotUserFiles
+	tst	bx
+	jz	tryUserLegacy
+	call	MemFree
+
+tryUserLegacy:
+	call	EnumBGFilesLegacy
+	jc	tryPublic
+	tst	cx
+	jnz	gotUserFiles
+	tst	bx
+	jz	tryUserAny
+	call	MemFree
+
+tryUserAny:
+	call	EnumBGFilesAny
+	jc	tryPublic
+	tst	cx
+	jnz	gotUserFiles
+	tst	bx
+	jz	tryPublic
+	call	MemFree
+
+tryPublic:
+	mov	bx, SP_PUBLIC_DATA
+	call	GotoBGDirectory
+	jc	done
+
+	call	EnumBGFiles
+	jc	done
+	tst	cx
+	jnz	gotPublicFiles
+	tst	bx
+	jz	tryPublicLegacy
+	call	MemFree
+
+tryPublicLegacy:
+	call	EnumBGFilesLegacy
+	jc	done
+	tst	cx
+	jnz	gotPublicFiles
+	tst	bx
+	jz	tryPublicAny
+	call	MemFree
+
+tryPublicAny:
+	call	EnumBGFilesAny
+	jc	done
+	tst	cx
+	jnz	gotPublicFiles
+	tst	bx
+	jz	done
+	call	MemFree
+	jmp	done
+
+gotUserFiles:
+	mov	ds:fileCount, cx		;save count of files
+	mov	ds:fileBuffer, bx		;save buffer handle
+	mov	ds:filePath, SP_USER_DATA
+	jmp	done
+
+gotPublicFiles:
+	mov	ds:fileCount, cx		;save count of files
+	mov	ds:fileBuffer, bx		;save buffer handle
+	mov	ds:filePath, SP_PUBLIC_DATA
 done:
 
 	.leave
@@ -275,13 +545,97 @@ BuildFileList	endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		EnumBGFiles
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Enumerate background files in the current directory.
+
+CALLED BY:	BuildFileList
+PASS:		nothing
+RETURN:		bx	= handle of returned filename buffer
+		cx	= number of files in buffer
+		carry	= set on error
+DESTROYED:	ds, si
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+EnumBGFiles	proc	near
+	.enter
+
+	push	ds
+	segmov	ds, cs
+	mov	si, offset albumEnumParams
+	call	FileEnumPtr
+	pop	ds
+
+	.leave
+	ret
+EnumBGFiles	endp
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		EnumBGFilesLegacy
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Enumerate background files using legacy BKGD token manuf.
+
+CALLED BY:	BuildFileList
+PASS:		nothing
+RETURN:		bx	= handle of returned filename buffer
+		cx	= number of files in buffer
+		carry	= set on error
+DESTROYED:	ds, si
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+EnumBGFilesLegacy	proc	near
+	.enter
+
+	push	ds
+	segmov	ds, cs
+	mov	si, offset albumLegacyEnumParams
+	call	FileEnumPtr
+	pop	ds
+
+	.leave
+	ret
+EnumBGFilesLegacy	endp
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		EnumBGFilesAny
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Enumerate any non-executable GEOS files in current dir.
+
+CALLED BY:	BuildFileList
+PASS:		nothing
+RETURN:		bx	= handle of returned filename buffer
+		cx	= number of files in buffer
+		carry	= set on error
+DESTROYED:	ds, si
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+EnumBGFilesAny	proc	near
+	.enter
+
+	push	ds
+	segmov	ds, cs
+	mov	si, offset albumAnyEnumParams
+	call	FileEnumPtr
+	pop	ds
+
+	.leave
+	ret
+EnumBGFilesAny	endp
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GotoBGDirectory
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Go to the background bitmap directory
-CALLED BY:	BuildFileList()
+CALLED BY:	BuildFileList(), OpenRandomBGFile()
 
-PASS:		none
+PASS:		bx	= StandardPath to use as base path
 RETURN:		carry - set if error
 DESTROYED:	none
 
@@ -294,22 +648,13 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-backgroundDir	char "BACKGRND",0
+backgroundDir	char BACKGROUND_DIR, 0
 
 GotoBGDirectory	proc	near
-	uses	ax, bx, dx, ds
+	uses	dx, ds
 	.enter
 
-	;
-	; Go to SYSTEM directory
-	;
-	mov	ax, SP_SYSTEM			;ax <- StandardPath
-	call	FileSetStandardPath
-	;
-	; Go to the BACKGRND directory, which hopefully exists
-	;
-	clr	bx				;bx <- use current disk handle
-	segmov	ds, cs, dx			;ds:dx <- ptr to directory name
+	segmov	ds, cs
 	mov	dx, offset backgroundDir
 	call	FileSetCurrentPath
 
@@ -340,27 +685,44 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 AlbumStop	proc	far
-	uses	ds, bx, ax
+	class	AlbumApplicationClass
+	uses	ax, bx, es
 	.enter
-	segmov	ds, dgroup, ax
-	
+
 	;
 	; Stop any timer we might have going
 	;
-	mov	bx, ds:[curTimer]
-	mov	ax, ds:[curTimerID]
+	clr	bx
+	xchg	bx, ds:[di].AAI_timerHandle
+	mov	ax, ds:[di].AAI_timerID
 	call	TimerStop
+	mov	ds:[di].AAI_nextAction, ALBUM_ACTION_DRAW
+
+	mov	es, ss:[TPD_dgroup]
 	;
 	; And mark the window and gstate as no longer existing.
 	;
 	clr	ax
-	mov	ds:[curWindow], ax
-	mov	ds:[curGState], ax
+	mov	es:[curWindow], ax
+	mov	es:[curGState], ax
+	mov	es:[winHeight], ax
+	mov	es:[winWidth], ax
+	mov	es:[fileCount], ax
+	mov	es:[filePath], ax
+	;
+	; Destroy RNG, if created.
+	;
+	clr	bx
+	xchg	bx, es:[curRandom]
+	tst	bx
+	jz	freeNames
+	call	SaverEndRandom
+freeNames:
 	;
 	; Free the buffer of filenames, if it exists
 	;
 	clr	bx
-	xchg	bx, ds:[fileBuffer]
+	xchg	bx, es:[fileBuffer]
 	tst	bx				;any buffer?
 	jz	done				;branch if no buffer
 	call	MemFree
@@ -399,25 +761,12 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 AlbumFetchUI	proc	far
-	uses	bp, si, di, ds
 	.enter
 
-	;
-	; Duplicate the block -- we have all the items send us methods, so
-	; we don't need to save the handle around.
-	;
-	mov	bx, handle AlbumOptions
-	mov	ax, handle saver	; owned by the saver library so it
-					;  can get into a state file
-	call	ObjDuplicateBlock
-
-	;
-	; Return the root in ^lcx:dx
-	;
-	mov	cx, bx
-	mov	dx, offset AlbumRoot
-	mov	ax, FIRST_OPTION_ENTRY	; first entry point used in OD's
-	mov	bx, LAST_OPTION_ENTRY	; last entry point used in OD's
+	clr	cx				; no legacy options tree
+	clr	dx
+	clr	ax
+	clr	bx
 	.leave
 	ret
 AlbumFetchUI	endp
@@ -432,7 +781,7 @@ SYNOPSIS:	Fetch the help tree
 CALLED BY:	Saver library
 PASS:		nothing
 RETURN:		^lcx:dx	= root of help tree (cx == 0 for none)
-DESTROYED:	
+DESTROYED:
 
 PSEUDO CODE/STRATEGY:
 
@@ -447,14 +796,8 @@ REVISION HISTORY:
 AlbumFetchHelp	proc	far
 	.enter
 
-	mov	bx, handle AlbumHelp
-	mov	ax, handle saver		;ax <- owned by 'saver'
-	call	ObjDuplicateBlock
-	;
-	; Return in ^lcx:dx
-	;
-	mov	cx, bx
-	mov	dx, offset HelpBox
+	clr	cx				; no legacy help tree
+	clr	dx
 
 	.leave
 	ret
@@ -475,10 +818,10 @@ RETURN:		nothing
 DESTROYED:	ax, bx
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -487,33 +830,8 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 AlbumSaveState	proc	far
-		uses	cx, di, es, ds, si
 		.enter
-	;
-	; Enlarge the block to hold our state information.
-	;
-		mov	bx, cx
-		mov	ax, dx
-		add	ax, size AlbumState + size word
-		mov	ch, mask HAF_LOCK
-		call	MemReAlloc
-		jc	done
-	;
-	; Copy our state block to the passed offset within the block.
-	;
-		mov	es, ax
-		mov	di, dx
-		segmov	ds, dgroup, si
-		mov	si, offset astate
-		mov	ax, size astate
-		stosw		; save the size of the saved state first
-		xchg	cx, ax
-		rep	movsb
-	;
-	; Done with the block, so unlock it.
-	;
-		call	MemUnlock
-done:
+		; Legacy entry point retained for compatibility with old saver API.
 		.leave
 		ret
 AlbumSaveState	endp
@@ -533,10 +851,10 @@ RETURN:		nothing
 DESTROYED:	ax, bx
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -545,34 +863,8 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 AlbumRestoreState	proc	far
-		uses	cx, di, es, ds, si
 		.enter
-	;
-	; Lock down the block that holds our state information.
-	;
-		mov	bx, cx
-		call	MemLock
-		jc	done
-		mov	ds, ax
-	;
-	; Copy our state block from the passed offset within the block.
-	;
-		segmov	es, dgroup, di
-		mov	di, offset astate
-		mov	cx, size astate
-		mov	si, dx
-
-		lodsw			; make sure the state is the right
-					;  size.
-		cmp	ax, cx
-		jne	unlock		; if not, abort the restore
-		rep	movsb
-	;
-	; Done with the block, so unlock it.
-	;
-unlock:
-		call	MemUnlock
-done:
+		; Legacy entry point retained for compatibility with old saver API.
 		.leave
 		ret
 AlbumRestoreState	endp
@@ -590,10 +882,10 @@ RETURN:		nothing
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -649,6 +941,71 @@ AlbumCode		segment	resource
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumSetTimer
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Set the one-shot timer for the next draw tick.
+
+CALLED BY:	AlbumDrawAndWait, AlbumEraseAndWait
+PASS:		*ds:si	= AlbumApplicationClass object
+		ds:di	= AlbumApplicationClass instance data
+		cx	= timer interval in ticks
+RETURN:		nothing
+DESTROYED:	ax, bx, cx, dx
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumSetTimer	proc	near
+	class	AlbumApplicationClass
+	.enter
+
+	mov	al, TIMER_EVENT_ONE_SHOT
+	mov	dx, MSG_ALBUM_APP_DRAW
+	mov	bx, ds:[LMBH_handle]		; ^lbx:si <- destination
+
+	call	TimerStart
+	mov	ds:[di].AAI_timerHandle, bx
+	mov	ds:[di].AAI_timerID, ax
+
+	.leave
+	ret
+AlbumSetTimer	endp
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumAppDraw
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Timer-driven draw loop handler.
+
+CALLED BY:	MSG_ALBUM_APP_DRAW
+PASS:		*ds:si	= AlbumApplicationClass object
+		ds:di	= AlbumApplicationClass instance data
+RETURN:		nothing
+DESTROYED:	ax, cx, dx, bp
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumAppDraw	method	dynamic	AlbumApplicationClass, MSG_ALBUM_APP_DRAW
+	.enter
+
+	tst	ds:[di].SAI_curGState
+	jz	quit
+
+	cmp	ds:[di].AAI_nextAction, ALBUM_ACTION_ERASE
+	je	doErase
+
+	call	AlbumDrawAndWait
+	jmp	quit
+
+doErase:
+	call	AlbumEraseAndWait
+
+quit:
+	.leave
+	ret
+AlbumAppDraw	endm
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		AlbumEraseAndWait
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -660,10 +1017,10 @@ RETURN:		none
 DESTROYED:	ax, bx, cx, dx
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -673,19 +1030,16 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 AlbumEraseAndWait	proc	far
+	class	AlbumApplicationClass
+	uses	ax, cx, es, si, di
 	.enter
 
 	call	AlbumErase			;erase the current background
 
-	segmov	ds, dgroup, ax
-
-	mov	al, TIMER_EVENT_ONE_SHOT
-	mov	cx, ds:[astate].AS_pause
-	mov	dx, enum AlbumDrawAndWait
-
-	call	SaverStartTimer
-	mov	ds:[curTimer], bx
-	mov	ds:[curTimerID], ax
+	mov	ds:[di].AAI_nextAction, ALBUM_ACTION_DRAW
+	mov	es, ss:[TPD_dgroup]
+	mov	cx, es:[astate].AS_pause
+	call	AlbumSetTimer
 
 	.leave
 	ret
@@ -713,19 +1067,16 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 AlbumDrawAndWait	proc	far
+	class	AlbumApplicationClass
+	uses	ax, cx, es, si, di
 	.enter
 
 	call	AlbumDraw			;draw a new background
 
-	segmov	ds, dgroup, ax
-
-	mov	al, TIMER_EVENT_ONE_SHOT
-	mov	cx, ds:[astate].AS_duration
-	mov	dx, enum AlbumEraseAndWait
-
-	call	SaverStartTimer
-	mov	ds:[curTimer], bx
-	mov	ds:[curTimerID], ax
+	mov	ds:[di].AAI_nextAction, ALBUM_ACTION_ERASE
+	mov	es, ss:[TPD_dgroup]
+	mov	cx, es:[astate].AS_duration
+	call	AlbumSetTimer
 
 	.leave
 	ret
@@ -757,32 +1108,43 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 AlbumDraw	proc	near
+	uses	ds, si, di
 	.enter
 
-	segmov	ds, dgroup, ax
+	mov	ds, ss:[TPD_dgroup]
+if	ALBUM_TRACE_WARNINGS
+EC <	WARNING	ALBUM_WARN_STAGE_DRAW_ENTER				>
+endif
 	;
 	; Make sure there is a GState to draw with
-	;		
+	;
 	mov	di, ds:[curGState]
 	tst	di
 	jz	quit
 	;
 	; Open a BG bitmap file
 	;
+if	ALBUM_TRACE_WARNINGS
+EC <	WARNING	ALBUM_WARN_STAGE_OPEN_RANDOM				>
+endif
 	call	OpenRandomBGFile		;open me jesus
 	;
 	; Fill the background with the requested color
 	;
 	pushf					;save any error from open
+EC <	pushf								>
+EC <	WARNING_C ALBUM_WARN_FAIL_OPEN_RANDOM			>
+EC <	popf								>
 	push	bx				;save VM file handle
 	mov	al, ds:[astate].AS_color
 	cmp	al, -1				;random color?
 	jne	gotColor			;branch if not random
-	mov	dx, Colors
+	mov	dx, C_WHITE+1
+	mov	bx, ds:[curRandom]
 	call	SaverRandom
 	mov	al, dl				;al <- Colors value
 gotColor:
-	mov	ah, COLOR_INDEX
+	mov	ah, CF_INDEX
 	call	GrSetAreaColor
 	clr	ax
 	clr	bx
@@ -795,14 +1157,24 @@ gotColor:
 	;
 	; Make sure the color attributes are correct for drawing
 	;
-	mov	ax, BLACK or (COLOR_INDEX shl 8)
+	mov	ax, C_BLACK or (CF_INDEX shl 8)
 	call	GrSetAreaColor
 	call	GrSetTextColor
 	;
 	; Draw it...
 	;
 	mov	ax, ds:[astate].AS_mode	;ax <- SaverBitmapMode
+	mov	cx, ds:[winWidth]
+	mov	dx, ds:[winHeight]
 	call	SaverDrawBGBitmap		;draw me jesus
+EC <	WARNING_C ALBUM_WARN_FAIL_DRAW_BG_BITMAP		>
+EC <	pushf								>
+EC <	jnc	noBgDiag						>
+EC <	push	bx							>
+EC <	call	AlbumECDiagnoseBGBitmapFail				>
+EC <	pop	bx							>
+EC <noBgDiag:								>
+EC <	popf								>
 
 	mov	al, FILE_NO_ERRORS
 	call	VMClose				;close me jesus
@@ -837,12 +1209,21 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 OpenRandomBGFile	proc	near
+	uses	es, si, di
 	.enter
 
 	;
 	; Switch to the BACKGRND directory
 	;
+	mov	bx, ds:filePath
+	tst	bx
+	jnz	gotPath
+	mov	bx, SP_USER_DATA
+gotPath:
 	call	GotoBGDirectory
+EC <	pushf								>
+EC <	WARNING_C ALBUM_WARN_FAIL_GOTO_BG_DIR			>
+EC <	popf								>
 	jc	quit				;branch if error
 	;
 	; Lock the buffer of filenames and pick a random file
@@ -852,34 +1233,189 @@ OpenRandomBGFile	proc	near
 	jz	noFilesError			;branch if no files
 	mov	bx, ds:fileBuffer		;bx <- handle of buffer
 	call	MemLock				;lock me jesus
+EC <	pushf								>
+EC <	WARNING_C ALBUM_WARN_FAIL_MEMLOCK_FILE_LIST		>
+EC <	popf								>
 	jc	quit				;branch if error
 	mov	ds, ax				;ds <- seg addr of buffer
+	mov	es, ss:[TPD_dgroup]
+	mov	bx, es:[curRandom]
+	mov	dx, es:[fileCount]
 	call	SaverRandom
-	mov	al, DFIS_NAME_BUFFER_SIZE	;al <- size of each name
-	mul	dl
+	mov	si, dx				;si <- random start index
+	mov	cx, es:[fileCount]		;cx <- max tries
+tryOpen:
+	mov	ax, si				;ax <- file index
+	mov	bx, size FileLongName
+	mul	bx				;dx:ax <- offset
 	mov	dx, ax				;ds:dx <- ptr to file name
 	;
-	; Try to open the file
+	; Try to open this candidate file
 	;
-	mov	ax, (VMO_OPEN shl 8) or (FILE_ACCESS_R or FILE_DENY_W)
+	mov	ax, (VMO_OPEN shl 8) or \
+			mask VMAF_USE_BLOCK_LEVEL_SYNCHRONIZATION or \
+			mask VMAF_FORCE_DENY_WRITE or mask VMAF_FORCE_READ_ONLY
+	push	cx				;preserve loop count
 	clr	cx
 	call	VMOpen				;open says me
+	pop	cx
+EC <	WARNING_C ALBUM_WARN_FAIL_VMOPEN_BG			>
+	jc	nextCandidate			;try another if open failed
+	;
+	; Only keep files that look like real background files.
+	;
+	push	cx				;validation clobbers cx
+	call	AlbumIsValidBGFile
+	pop	cx
+	jnc	foundValid
+	mov	al, FILE_NO_ERRORS
+	call	VMClose
+nextCandidate:
+	inc	si
+	cmp	si, es:[fileCount]
+	jb	indexOK
+	clr	si
+indexOK:
+	loop	tryOpen
+EC <	WARNING	ALBUM_WARN_FAIL_NO_VALID_BG_FILES			>
+	stc
+	jmp	unlockAndQuit
+foundValid:
+	clc
 	;
 	; Unlock the filename buffer
 	;
+unlockAndQuit:
+	pushf					;preserve open/validate status
 	push	bx				;save VM file handle
-	segmov	ds, dgroup, ax
+	mov	ds, ss:[TPD_dgroup]
 	mov	bx, ds:fileBuffer		;bx <- handle of buffer
 	call	MemUnlock
 	pop	bx				;bx <- VM file handle
+	popf					;restore open/validate carry
 quit:
 	.leave
 	ret
 
 noFilesError:
+EC <	WARNING	ALBUM_WARN_FAIL_NO_FILES				>
 	stc					;carry <- error
 	jmp	quit
 OpenRandomBGFile	endp
+
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumIsValidBGFile
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Check if an opened VM file is a valid background file.
+
+CALLED BY:	OpenRandomBGFile
+PASS:		bx	= VM file handle
+RETURN:		carry clear if file has BKGD token + compatible protocol
+DESTROYED:	ax, cx, dx, di, es
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumIsValidBGFile	proc	near
+	uses	ds, si, bp, di
+	.enter
+
+	sub	sp, size GeodeToken
+	mov	di, sp
+	segmov	es, ss
+
+	mov	ax, FEA_TOKEN
+	mov	cx, size GeodeToken
+	call	FileGetHandleExtAttributes
+	jc	invalid
+
+	cmp	{word} es:[di].GT_chars[0], 'B' or ('K' shl 8)
+	jne	invalid
+	cmp	{word} es:[di].GT_chars[2], 'G' or ('D' shl 8)
+	jne	invalid
+
+	mov	ax, FEA_PROTOCOL
+	mov	cx, size ProtocolNumber
+	call	FileGetHandleExtAttributes
+	jc	invalid
+
+	cmp	es:[di].PN_major, BG_PROTO_MAJOR
+	jne	invalid
+	cmp	es:[di].PN_minor, BG_PROTO_MINOR
+	jb	invalid
+
+	clc
+	jmp	done
+
+invalid:
+	stc
+
+done:
+	.leave
+	ret
+AlbumIsValidBGFile	endp
+
+if ERROR_CHECK
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		AlbumECDiagnoseBGBitmapFail
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Emit EC warnings describing why SaverDrawBGBitmap rejected file.
+
+CALLED BY:	AlbumDraw (EC only)
+PASS:		bx	= VM file handle
+RETURN:		nothing
+DESTROYED:	ax, cx, dx, di, es
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+AlbumECDiagnoseBGBitmapFail	proc	near
+	uses	si, ds, bp
+	.enter
+
+	sub	sp, size GeodeToken
+	mov	di, sp
+	segmov	es, ss
+	mov	ax, FEA_TOKEN
+	mov	cx, size GeodeToken
+	call	FileGetHandleExtAttributes
+	jnc	haveToken
+	WARNING	ALBUM_WARN_FAIL_BG_TOKEN_ATTR
+	jmp	done
+
+haveToken:
+	cmp	{word} es:[di].GT_chars[0], 'B' or ('K' shl 8)
+	jne	badToken
+	cmp	{word} es:[di].GT_chars[2], 'G' or ('D' shl 8)
+	je	checkProto
+badToken:
+	WARNING	ALBUM_WARN_FAIL_BG_TOKEN_CHARS
+	jmp	done
+
+checkProto:
+	mov	ax, FEA_PROTOCOL
+	mov	cx, size ProtocolNumber
+	call	FileGetHandleExtAttributes
+	jnc	haveProto
+	WARNING	ALBUM_WARN_FAIL_BG_PROTOCOL_ATTR
+	jmp	done
+
+haveProto:
+	cmp	es:[di].PN_major, BG_PROTO_MAJOR
+	jne	badProto
+	cmp	es:[di].PN_minor, BG_PROTO_MINOR
+	jb	badProto
+	jmp	done
+
+badProto:
+	WARNING	ALBUM_WARN_FAIL_BG_PROTOCOL_VERSION
+
+done:
+	add	sp, size GeodeToken
+	.leave
+	ret
+AlbumECDiagnoseBGBitmapFail	endp
+endif
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -887,7 +1423,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Erase the screen
-CALLED BY:	
+CALLED BY:
 
 PASS:		none
 RETURN:		none
@@ -903,19 +1439,20 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 AlbumErase	proc	near
+	uses	ds, si, di
 	.enter
 
-	segmov	ds, dgroup, ax
+	mov	ds, ss:[TPD_dgroup]
 	;
 	; Make sure there is a GState to draw with
-	;		
+	;
 	mov	di, ds:[curGState]
 	tst	di
 	jz	quit
 	;
 	; Set area color for erasure
 	;
-	mov	ax, BLACK or (COLOR_INDEX shl 8)
+	mov	ax, C_BLACK or (CF_INDEX shl 8)
 	call	GrSetAreaColor
 	;
 	; Erase the screen
@@ -964,12 +1501,6 @@ REVISION HISTORY:
 
 AlbumSetPause	proc	far
 	.enter
-
-	segmov	ds, dgroup, ax
-	mov	ax, 60
-	mul	cx
-	mov	ds:[astate].AS_pause, ax
-
 	.leave
 	ret
 AlbumSetPause	endp
@@ -997,12 +1528,6 @@ REVISION HISTORY:
 
 AlbumSetDuration	proc	far
 	.enter
-
-	segmov	ds, dgroup, ax
-	mov	ax, 60
-	mul	cx
-	mov	ds:[astate].AS_duration, ax
-
 	.leave
 	ret
 AlbumSetDuration	endp
@@ -1030,10 +1555,6 @@ REVISION HISTORY:
 
 AlbumSetDrawMode	proc	far
 	.enter
-
-	segmov	ds, dgroup, ax
-	mov	ds:[astate].AS_mode, cx
-
 	.leave
 	ret
 AlbumSetDrawMode	endp
@@ -1061,10 +1582,6 @@ REVISION HISTORY:
 
 AlbumSetColor	proc	far
 	.enter
-
-	segmov	ds, dgroup, ax
-	mov	ds:[astate].AS_color, cl
-
 	.leave
 	ret
 AlbumSetColor	endp
