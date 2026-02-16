@@ -267,6 +267,8 @@ extern void
 #define EC_MAKE_FARPTR(p)  ((((dword)PtrToSegment(p)) << 16) | ((dword)PtrToOffset(p)))
 /* Truncation: variable names longer than 31 bytes will be truncated by callee. */
 #define EC_LOG_T(varExpr)      ECWarningLogRecord(#varExpr, EC_MAKE_FARPTR(&(varExpr)))
+/* Prefix '$' marks varName as string-mode for Swat pretty-printing. */
+#define EC_LOG_S(strExpr)      ECWarningLogRecord("$" #strExpr, EC_MAKE_FARPTR((strExpr)))
 
 #define EC(line) 		line
 #define EC_ERROR(code) 		FatalError(code)
@@ -286,6 +288,7 @@ extern void
 #define EC_WARNING_IF(test, code)
 #define EC_WARNING(code)
 #define EC_LOG_T(varExpr)      ((void)0)
+#define EC_LOG_S(strExpr)      ((void)0)
 
 #endif
 

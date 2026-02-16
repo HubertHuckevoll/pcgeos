@@ -797,6 +797,17 @@ defvar warning-ignore-list nil
             if {[null $varName]} {
                 var varName {<?>}
             }
+            if {[string c [range $varName 0 0 chars] {$}] == 0} {
+                var strName [range $varName 1 end chars]
+                if {[null $strName]} {
+                    var strName {<?>}
+                }
+                echo -n [format {EC log (%s): } $strName]
+                if {[catch {pstring $p} pstringErr] != 0} {
+                    echo [format {<could not print string at %s>} $p]
+                }
+                return 0
+            }
             var varSym [why-warning-find-var-symbol $varName $callerFrame $callerP $callerPatientName]
             var exprType nil
             if {[null $varSym]} {
