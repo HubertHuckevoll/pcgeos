@@ -376,6 +376,25 @@ See also:
 ##############################################################################
 defvar warning-ignore-list nil
 
+[defsubr why-warning-print-tagged-value {tag p patientName}
+{
+    var candidateTypes [list $tag [format {geos::%s} $tag]]
+
+    if {![null $patientName]} {
+	var candidateTypes [concat $candidateTypes
+				 [list [format {%s::%s} $patientName $tag]]]
+    }
+
+    foreach candidate $candidateTypes {
+	if {[catch {_print $candidate $p} printErr] == 0} {
+	    return 1
+	}
+    }
+
+    return 0
+}]
+
+
 [defsubr why-warning {}
 {
     global warning-ignore-list
@@ -391,6 +410,7 @@ defvar warning-ignore-list nil
     	var w {unable to determine warning code, as top frame is invalid}
 	var patientName ""
     } else {
+	var patientName ""
     	if {[string c [symbol name [frame funcsym $f]] WarningNotice] == 0} {
     	    # assembly version: code is in mov ax instruction following the
 	    # call
@@ -405,6 +425,11 @@ defvar warning-ignore-list nil
 	    # C version: code is pushed on the stack
 	    var code [value fetch ss:sp+4 word]
     	}
+
+	var warnCaller [frame next $f]
+	if {![null $warnCaller] && ![null [frame funcsym $warnCaller]]} {
+	    var patientName [patient name [symbol patient [frame funcsym $warnCaller]]]
+	}
 
 	var geosWarnings [symbol find type geos::Warnings]
 	if {![null $geosWarnings] &&
@@ -441,56 +466,14 @@ defvar warning-ignore-list nil
 		    }
 		} else {
 		echo -n [format {EC log (%s): } $tag]
-		var printed 0
-		var typeList [list $tag [format {geos::%s} $tag]]
-		if {[string c $tag Boolean] == 0} {
-		    var typeList [concat $typeList [list sword geos::sword word]]
-		}
-		if {[string c $tag ByteFlags] == 0 ||
-		    [string c $tag ByteEnum] == 0} {
-		    var typeList [concat $typeList [list byte geos::byte]]
-		}
-		if {[string c $tag WordFlags] == 0 ||
-		    [string c $tag Message] == 0 ||
-		    [string c $tag VardataKey] == 0 ||
-		    [string c $tag VMBlockHandle] == 0 ||
-		    [string c $tag DBGroup] == 0 ||
-		    [string c $tag DBItem] == 0 ||
-		    [string c $tag Segment] == 0 ||
-		    [string c $tag ChunkHandle] == 0} {
-		    var typeList [concat $typeList [list word geos::word]]
-		}
-		if {[string c $tag DWordFlags] == 0 ||
-		    [string c $tag VMChain] == 0 ||
-		    [string c $tag DBGroupAndItem] == 0} {
-		    var typeList [concat $typeList [list dword geos::dword]]
-		}
-		if {[string c $tag sdword] == 0} {
-		    var typeList [concat $typeList [list geos::sdword]]
-		}
-		if {[string c $tag sbyte] == 0} {
-		    var typeList [concat $typeList [list geos::sbyte]]
-		}
-		if {[string c $tag optr] == 0} {
-		    var typeList [concat $typeList [list geos::optr dword]]
-		}
-		if {[string c $tag dword] == 0} {
-		    var typeList [concat $typeList [list geos::dword]]
-		}
-		if {[string c $tag word] == 0} {
-		    var typeList [concat $typeList [list geos::word]]
-		}
-		foreach t $typeList {
-		    if {[catch {_print $t $p} printErr] == 0} {
-			var printed 1
-			break
-		    }
-		}
-		if {!$printed} {
-		    if {[catch {var raw [value fetch $p word]} rawErr] == 0} {
-			echo [format {<unable to print as %s, raw word=%04xh>} $tag $raw]
+		if {![why-warning-print-tagged-value $tag $p $patientName]} {
+		    if {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0 &&
+			[catch {var rawDWord [value fetch $p dword]} rawDWordErr] == 0} {
+			echo [format {<unresolved type %s; fallback raw word=%04xh dword=%08xh at %s>} $tag $rawWord $rawDWord $p]
+		    } elif {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0} {
+			echo [format {<unresolved type %s; fallback raw word=%04xh at %s>} $tag $rawWord $p]
 		    } else {
-			echo [format {<unable to print %s at %s: %s>} $tag $p $printErr]
+			echo [format {<unresolved type %s at %s>} $tag $p]
 		    }
 		}
 		}
