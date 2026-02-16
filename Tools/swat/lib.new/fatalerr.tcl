@@ -82,7 +82,7 @@ See also:
     # only look up to 3 frames down, otherwise forget it
     [for {var f [frame top] level 0}
     	 {![null $f] && [frame function $f] != FatalError && $level < 3}
-	 {var f [frame next $f] level [expr $level+1]}   
+	 {var f [frame next $f] level [expr $level+1]}
 	{}
     ]
 
@@ -93,7 +93,7 @@ See also:
     	var nf [frame next $f]
     	if {[null $nf] || [frame function [frame top]] == AppFatalError} {
     	    var	ft [frame top]
-    	    var addr [format {%d:%d} [frame register cs $ft] 
+    	    var addr [format {%d:%d} [frame register cs $ft]
    	    	    	    	[frame register ip $ft]]
     	    [if {[string c [symbol-kernel-internal $addr] FatalError] == 0 &&
     	    	[string c [sym name [frame funcsym $ft]] AppFatalError] == 0}
@@ -103,20 +103,20 @@ See also:
 #    	    	var mycs [frame register cs $ft]
 #    	    	var myoff  [expr [value fetch $myss:$mysp word]+1]
     	    	var frpc [frame register pc [frame next $ft]]
-	    	var pname [patient name [handle patient [handle find 
+	    	var pname [patient name [handle patient [handle find
 			[frame register cs [frame next [frame top]]]:0]]]
     	    	    var fe [symbol find type $pname::FatalErrors]
 #        	    var error [type emap [value fetch $mycs:$myoff word] $fe]
-        	    var error [type emap [value fetch $frpc+1 word] $fe]
-        	    return [concat $error $pname [frame next [frame top]]]
+		    var error [type emap [value fetch $frpc+1 word] $fe]
+		    return [concat $error $pname [frame next [frame top]]]
     	    }]
     	}
-        var fs [frame funcsym $nf]
+	var fs [frame funcsym $nf]
 	#
 	# Fetch its full name so we find the patient and figure if we were
 	# called from outside the kernel.
 	#
-        var fn [symbol fullname $fs]
+	var fn [symbol fullname $fs]
     	if {[string match $fn *::AppFatalError]} {
     	    # called through external kernel entry point, so need to go up one
 	    # more level.
@@ -140,7 +140,7 @@ See also:
 	    var fe [symbol find type [patient name [symbol patient $fs]]::FatalErrors]
     	}
 	var error [type emap $error_val $fe]
-        var pname [index [range [patient fullname [symbol patient $fe]] 0 7 char] 0]
+	var pname [index [range [patient fullname [symbol patient $fe]] 0 7 char] 0]
 	#
 	# Make sure we've tried to load the error-description file for this
 	# patient.
@@ -150,19 +150,19 @@ See also:
 	    catch {load ${pname}.fei}
 	    var ${pname}_errs_loaded 1
     	}
-	    
+
     	return [concat $error $pname $nf]
     } else {
 	var ft [frame top]
-        var fn [frame next $ft]
-    	var addr [format {%d:%d} [frame register cs $ft] 
+	var fn [frame next $ft]
+    	var addr [format {%d:%d} [frame register cs $ft]
     	    	    	    	[frame register ip $ft]]
 
     	if {![null [frame funcsym $ft]] && [string m [sym name [frame funcsym $ft]] *CFATALERROR] == 1} {
     	    if {![null $fn]} {
     	    	var myss [frame register ss $fn]
-        	var mysp [frame register sp $fn]
-       	    	var pname [patient name [handle patient [handle find 
+		var mysp [frame register sp $fn]
+       	    	var pname [patient name [handle patient [handle find
     	    	    				[frame register cs $fn]:0]]]
     	    	var fe [sym find type $pname::FatalErrors]
     	    	if {[null $fe]} {
@@ -170,10 +170,10 @@ See also:
     	    	}
     	    	var error [type emap [value fetch $myss:$mysp+4 word] $fe]
     	    	if {[null $error]} {
-        	    var error [type emap [value fetch $mycs:$myoff word]
+		    var error [type emap [value fetch $mycs:$myoff word]
  	    	       	    [sym find type geos::FatalErrors]]
     	    	}
-    	    }    	    
+    	    }
     	    return [concat $error $pname $ft]
     	}
 
@@ -182,7 +182,7 @@ See also:
     	    if [null $fn] {
     	    	var pname geos
     	    } else {
-       	    	var pname [patient name [handle patient [handle find 
+       	    	var pname [patient name [handle patient [handle find
     	    	    				[frame register cs $fn]:0]]]
     	    }
     	    var fe [symbol find type $pname::FatalErrors]
@@ -190,10 +190,10 @@ See also:
     	    var	mysp [frame register sp $ft]
     	    if {[null $fn]} {
     	   	var mycs [frame register cs $ft]
-        	var myoff  [expr [value fetch $myss:$mysp word]]
+		var myoff  [expr [value fetch $myss:$mysp word]]
     	    } else {
     	   	var mycs [frame register cs $fn]
-        	var myoff [expr [frame register ip $fn]]
+		var myoff [expr [frame register ip $fn]]
     	    }
     	    var	opcode [value fetch $mycs:$myoff byte]
     	    # if the opcode is wrong try using the value at ss:sp as an
@@ -208,7 +208,7 @@ See also:
     	    	var myoff [expr $myoff+1]
     	    	var error [type emap [value fetch $mycs:$myoff word] $fe]
     	    	if {[null $error]} {
-        	    var error [type emap [value fetch $mycs:$myoff word]
+		    var error [type emap [value fetch $mycs:$myoff word]
  	    	       	    [sym find type geos::FatalErrors]]
     	    	}
     	    }
@@ -345,7 +345,7 @@ See also:
     #
     echo Execution died in patient [index $error 1]:
     frame set [index $error 2]
-    
+
     global fatalerr_info_table
     var exp [table lookup ${fatalerr_info_table} [index $error 1]::$ename]
 
@@ -364,7 +364,7 @@ See also:
 # PASS:		nothing
 # CALLED BY:	breakpoint module
 # RETURN:	0 (continue the machine)
-# SIDE EFFECTS:	
+# SIDE EFFECTS:
 #
 # STRATEGY
 #
@@ -381,14 +381,14 @@ defvar warning-ignore-list nil
     var candidateTypes [list $tag [format {geos::%s} $tag]]
 
     if {![null $patientName]} {
-	var candidateTypes [concat $candidateTypes
-				 [list [format {%s::%s} $patientName $tag]]]
+        var candidateTypes [concat $candidateTypes
+                                 [list [format {%s::%s} $patientName $tag]]]
     }
 
     foreach candidate $candidateTypes {
-	if {[catch {_print $candidate $p} printErr] == 0} {
-	    return 1
-	}
+        if {[catch {_print $candidate $p} printErr] == 0} {
+            return 1
+        }
     }
 
     return 0
@@ -402,124 +402,124 @@ defvar warning-ignore-list nil
     var f [frame top]
 
     if {![catch {symbol name [frame funcsym $f]} name] &&
-	[string match $name Writable*]} {
-	    var f [frame next $f]
-	}
+        [string match $name Writable*]} {
+            var f [frame next $f]
+        }
 
     if {[null $f] || [null [frame next $f]] || [null [frame funcsym $f]]} {
-    	var w {unable to determine warning code, as top frame is invalid}
-	var patientName ""
+        var w {unable to determine warning code, as top frame is invalid}
+        var patientName ""
     } else {
-	var patientName ""
-    	if {[string c [symbol name [frame funcsym $f]] WarningNotice] == 0} {
-    	    # assembly version: code is in mov ax instruction following the
-	    # call
+        var patientName ""
+        if {[string c [symbol name [frame funcsym $f]] WarningNotice] == 0} {
+            # assembly version: code is in mov ax instruction following the
+            # call
 
-	    var nframe [frame next $f]
-	    if {[catch {[var rframe [frame register pc $nframe]]} wrn] != 0} {
-		echo Warning: $wrn, continuing...
-		return 0
-	    }
-	    var code [value fetch $rframe+1 word]
-    	} else {
-	    # C version: code is pushed on the stack
-	    var code [value fetch ss:sp+4 word]
-    	}
+            var nframe [frame next $f]
+            if {[catch {[var rframe [frame register pc $nframe]]} wrn] != 0} {
+                echo Warning: $wrn, continuing...
+                return 0
+            }
+            var code [value fetch $rframe+1 word]
+        } else {
+            # C version: code is pushed on the stack
+            var code [value fetch ss:sp+4 word]
+        }
 
-	var warnCaller [frame next $f]
-	if {![null $warnCaller] && ![null [frame funcsym $warnCaller]]} {
-	    var patientName [patient name [symbol patient [frame funcsym $warnCaller]]]
-	}
+        var warnCaller [frame next $f]
+        if {![null $warnCaller] && ![null [frame funcsym $warnCaller]]} {
+            var patientName [patient name [symbol patient [frame funcsym $warnCaller]]]
+        }
 
-	var geosWarnings [symbol find type geos::Warnings]
-	if {![null $geosWarnings] &&
-	    [string c [type emap $code $geosWarnings] EC_LOG_WARNING] == 0} {
-	    var tag [getstring ECLogTypeTag]
-	    var addr [value fetch ECLogAddr dword]
-	    var off [expr {$addr & 0xffff}]
-	    var seg [expr {($addr >> 16) & 0xffff}]
-	    if {$addr == 0} {
-		echo {EC log: (null)}
-		return 0
-	    }
-	    var p [format %04xh:%04xh $seg $off]
-	    if {[string c $tag string] == 0} {
-		echo [format {EC log (string): %s} [getstring $p]]
-	    } else {
-		if {[string match $tag *Handle]} {
-		    var raw [value fetch $p word]
-		    echo -n [format {EC log (%s): ^h%04xh} $tag $raw]
-		    if {$raw == 0} {
-			echo { (null)}
-		    } else {
-			if {[catch {var h [handle lookup $raw]} hErr] == 0 &&
-			    ![null $h]} {
-			    if {[catch {var owner [patient name [handle patient $h]]}
-					 ownerErr] == 0} {
-				echo [format { (%s)} $owner]
-			    } else {
-				echo { (valid)}
-			    }
-			} else {
-			    echo { (invalid)}
-			}
-		    }
-		} else {
-		echo -n [format {EC log (%s): } $tag]
-		if {![why-warning-print-tagged-value $tag $p $patientName]} {
-		    if {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0 &&
-			[catch {var rawDWord [value fetch $p dword]} rawDWordErr] == 0} {
-			echo [format {<unresolved type %s; fallback raw word=%04xh dword=%08xh at %s>} $tag $rawWord $rawDWord $p]
-		    } elif {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0} {
-			echo [format {<unresolved type %s; fallback raw word=%04xh at %s>} $tag $rawWord $p]
-		    } else {
-			echo [format {<unresolved type %s at %s>} $tag $p]
-		    }
-		}
-		}
-	    }
-	    return 0
-	}
+        var geosWarnings [symbol find type geos::Warnings]
+        if {![null $geosWarnings] &&
+            [string c [type emap $code $geosWarnings] EC_LOG_WARNING] == 0} {
+            var tag [getstring ECLogTypeTag]
+            var addr [value fetch ECLogAddr dword]
+            var off [expr {$addr & 0xffff}]
+            var seg [expr {($addr >> 16) & 0xffff}]
+            if {$addr == 0} {
+                echo {EC log: (null)}
+                return 0
+            }
+            var p [format %04xh:%04xh $seg $off]
+            if {[string c $tag string] == 0} {
+                echo [format {EC log (string): %s} [getstring $p]]
+            } else {
+                if {[string match $tag *Handle]} {
+                    var raw [value fetch $p word]
+                    echo -n [format {EC log (%s): ^h%04xh} $tag $raw]
+                    if {$raw == 0} {
+                        echo { (null)}
+                    } else {
+                        if {[catch {var h [handle lookup $raw]} hErr] == 0 &&
+                            ![null $h]} {
+                            if {[catch {var owner [patient name [handle patient $h]]}
+                                         ownerErr] == 0} {
+                                echo [format { (%s)} $owner]
+                            } else {
+                                echo { (valid)}
+                            }
+                        } else {
+                            echo { (invalid)}
+                        }
+                    }
+                } else {
+                echo -n [format {EC log (%s): } $tag]
+                if {![why-warning-print-tagged-value $tag $p $patientName]} {
+                    if {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0 &&
+                        [catch {var rawDWord [value fetch $p dword]} rawDWordErr] == 0} {
+                        echo [format {<unresolved type %s; fallback raw word=%04xh dword=%08xh at %s>} $tag $rawWord $rawDWord $p]
+                    } elif {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0} {
+                        echo [format {<unresolved type %s; fallback raw word=%04xh at %s>} $tag $rawWord $p]
+                    } else {
+                        echo [format {<unresolved type %s at %s>} $tag $p]
+                    }
+                }
+                }
+            }
+            return 0
+        }
 
-	var f [frame next $f]
-    	if {[null [frame funcsym $f]]} {
-    	    return 0
-    	}
-	var patientName [patient name
-				 [symbol patient
-				  [frame funcsym $f]]]
-	var t [symbol find type $patientName::Warnings]
-	var func [frame function $f]
+        var f [frame next $f]
+        if {[null [frame funcsym $f]]} {
+            return 0
+        }
+        var patientName [patient name
+                                 [symbol patient
+                                  [frame funcsym $f]]]
+        var t [symbol find type $patientName::Warnings]
+        var func [frame function $f]
 
-	if {![null $t]} {
-    	    var w [type emap $code $t]
-	    if {[null $w]} {
-		var t {}
-	    }
-	}
-    	if {[null $t]} {
-	    var a [frame retaddr [frame prev $f]]
-    	    if {[catch {src line [index $a 0]:[index $a 1] $f} w_info] != 0} {
-    	    	var w UNKNOWN_WARNING
-    	    } else {
-    	    	var w [format {UNKNOWN_WARNING at %s} $w_info]
-    	    }
-    	} else {
-    	    var w [type emap $code $t]
-    	}	
-	frame set $f 0
+        if {![null $t]} {
+            var w [type emap $code $t]
+            if {[null $w]} {
+                var t {}
+            }
+        }
+        if {[null $t]} {
+            var a [frame retaddr [frame prev $f]]
+            if {[catch {src line [index $a 0]:[index $a 1] $f} w_info] != 0} {
+                var w UNKNOWN_WARNING
+            } else {
+                var w [format {UNKNOWN_WARNING at %s} $w_info]
+            }
+        } else {
+            var w [type emap $code $t]
+        }
+        frame set $f 0
     }
     # suppress output if user so desires
     [case $w in
-	${warning-ignore-list} {}
-	default {echo WARNING($patientName::$func): $w}
+        ${warning-ignore-list} {}
+        default {echo WARNING($patientName::$func): $w}
     ]
     if {![null [info proc $patientName::$w]]} {
             var res [eval $patientName::$w]
     }
 
     if {[null $res]} {
-	return 0
+        return 0
     } else {
         return $res
     }
@@ -536,8 +536,8 @@ defvar warning-ignore-list nil
 ##############################################################################
 #
 # SYNOPSIS:	Print the current working directory
-# PASS:		
-# CALLED BY:	
+# PASS:
+# CALLED BY:
 # RETURN:	nothing
 # SIDE EFFECTS:	none
 #
@@ -571,7 +571,7 @@ defvar warning-ignore-list nil
     }
     echo [format {Scribbled data @ %04xh:%04xh:} [read-reg es] $start]
     bytes es:$start 32
-    
+
     #
     # Print out info on the 5 blocks before this one (this one's handle is
     # in bx...)
@@ -586,7 +586,7 @@ defvar warning-ignore-list nil
     	var hid [value fetch kdata:$hid.HM_prev]
 	var handles [concat [list $hid] $handles]
     }]
-    
+
     echo [format {%d handles before corrupted one (%04xh)} [length $handles]
     	    [read-reg bx]]
 
@@ -620,7 +620,7 @@ defvar warning-ignore-list nil
 	 {var f [frame next $f]}
     {}]
     var f [frame next $f]
-    
+
     echo [frame function $f] is trying to borrow [expr [read-reg di]-100-[value fetch ss:geos::TPD_stackBot]]
     echo Current stack is [read-reg ax] ([expr [read-reg ax]-100-[value fetch ss:geos::TPD_stackBot]] after space for ints etc.)
 }]

@@ -265,9 +265,11 @@ extern void
 #if	ERROR_CHECK
 
 #define EC_MAKE_FARPTR(p)  ((((dword)PtrToSegment(p)) << 16) | ((dword)PtrToOffset(p)))
+/* Enforce pointer arguments at compile time for EC_LOG_T. */
+#define EC_LOG_REQUIRE_PTR(p) ((void)sizeof(*(p)), (p))
 /* Truncation: type tags longer than 31 bytes will be truncated by the callee. */
 #define EC_LOG_TAG(tag, expr)   ECWarningLogRecord((tag), EC_MAKE_FARPTR(&(expr)))
-#define EC_LOG_T(type, expr)   ECWarningLogRecord(#type, EC_MAKE_FARPTR(&(expr)))
+#define EC_LOG_T(type, ptrExpr)   ECWarningLogRecord(#type, EC_MAKE_FARPTR(EC_LOG_REQUIRE_PTR(ptrExpr)))
 #define EC_LOG_STR(expr)       ECWarningLogRecord("string", EC_MAKE_FARPTR((expr)))
 
 #define EC(line) 		line
