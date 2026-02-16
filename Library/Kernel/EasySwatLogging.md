@@ -196,3 +196,10 @@ if {$code == EC_LOG_WARNING} {
 ```
 
 *(Notes: `pstring` here is the autoloaded routine from `Tools/swat/lib.new/pvm.tcl` that reads C-style NUL-terminated strings by address or symbol. `_print` is from `Tools/swat/lib.new/print.tcl`.)*
+
+
+## Developer notes (current behavior)
+
+- `EC_LOG_T(type, expr)` should continue to use plain type tokens at call sites (for example `word`, `WWFixed`), because the macro still passes `#type` unchanged.
+- Swat `why-warning` now resolves typed tags by trying these type names in order: raw tag (`tag`), global kernel namespace (`geos::tag`), then current patient namespace (`<patient>::tag`) when a patient is known.
+- If none of those type symbols can be resolved, Swat prints a readable fallback including raw `word`/`dword` values from the logged address and continues execution.
