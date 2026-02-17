@@ -376,7 +376,7 @@ See also:
 ##############################################################################
 defvar warning-ignore-list nil
 
-[defsubr why-warning-find-var-symbol-in-scope-chain {name scope}
+[defsubr why-warning-ec-find-var-symbol-in-scope-chain {name scope}
 {
     var ssym [symbol find scope $scope]
     if {[null $ssym]} {
@@ -396,7 +396,7 @@ defvar warning-ignore-list nil
     return nil
 }]
 
-[defsubr why-warning-find-var-symbol {name callerFrame callerP patientName}
+[defsubr why-warning-ec-find-var-symbol {name callerFrame callerP patientName}
 {
     if {![null $callerP]} {
         if {[catch {var callerSym [symbol faddr proc $callerP]} callerErr] == 0 &&
@@ -413,7 +413,7 @@ defvar warning-ignore-list nil
 
             if {[catch {var callerScope [symbol fullname $callerSym]} cscopeErr] == 0 &&
                 ![null $callerScope]} {
-                var sym [why-warning-find-var-symbol-in-scope-chain $name $callerScope]
+                var sym [why-warning-ec-find-var-symbol-in-scope-chain $name $callerScope]
                 if {![null $sym]} {
                     return $sym
                 }
@@ -436,7 +436,7 @@ defvar warning-ignore-list nil
 
         if {[catch {var scopeName [frame scope $callerFrame]} scopeErr] == 0 &&
             ![null $scopeName]} {
-            var sym [why-warning-find-var-symbol-in-scope-chain $name $scopeName]
+            var sym [why-warning-ec-find-var-symbol-in-scope-chain $name $scopeName]
             if {![null $sym]} {
                 return $sym
             }
@@ -468,7 +468,7 @@ defvar warning-ignore-list nil
     return nil
 }]
 
-[defsubr why-warning-c-to-swat-expr {expr}
+[defsubr why-warning-ec-c-to-swat-expr {expr}
 {
     var idx [string first -> $expr]
     if {$idx < 0} {
@@ -501,7 +501,7 @@ defvar warning-ignore-list nil
     }
 }]
 
-[defsubr why-warning-find-member-op {expr}
+[defsubr why-warning-ec-find-member-op {expr}
 {
     var arrowIdx [string first -> $expr]
     var dotIdx [string first . $expr]
@@ -515,7 +515,7 @@ defvar warning-ignore-list nil
     return [list $dotIdx .]
 }]
 
-[defsubr why-warning-find-field-type {structType fieldName}
+[defsubr why-warning-ec-find-field-type {structType fieldName}
 {
     if {[catch {var fieldList [type fields $structType]} fieldsErr] != 0} {
         return nil
@@ -530,9 +530,9 @@ defvar warning-ignore-list nil
     return nil
 }]
 
-[defsubr why-warning-get-member-expression-type {expr callerFrame callerP patientName}
+[defsubr why-warning-ec-get-member-expression-type {expr callerFrame callerP patientName}
 {
-    var opInfo [why-warning-find-member-op $expr]
+    var opInfo [why-warning-ec-find-member-op $expr]
     var opPos [index $opInfo 0]
     if {$opPos < 0} {
         return nil
@@ -543,7 +543,7 @@ defvar warning-ignore-list nil
         return nil
     }
 
-    var baseSym [why-warning-find-var-symbol $baseExpr $callerFrame $callerP $patientName]
+    var baseSym [why-warning-ec-find-var-symbol $baseExpr $callerFrame $callerP $patientName]
     if {[null $baseSym]} {
         return nil
     }
@@ -573,7 +573,7 @@ defvar warning-ignore-list nil
             return nil
         }
 
-        var nextInfo [why-warning-find-member-op $rest]
+        var nextInfo [why-warning-ec-find-member-op $rest]
         var nextPos [index $nextInfo 0]
         if {$nextPos < 0} {
             var fieldName $rest
@@ -606,7 +606,7 @@ defvar warning-ignore-list nil
             return nil
         }
 
-        var nextType [why-warning-find-field-type $curType $fieldName]
+        var nextType [why-warning-ec-find-field-type $curType $fieldName]
         if {[null $nextType]} {
             return nil
         }
@@ -616,15 +616,15 @@ defvar warning-ignore-list nil
     return $curType
 }]
 
-[defsubr why-warning-get-expression-type {expr callerFrame callerP patientName}
+[defsubr why-warning-ec-get-expression-type {expr callerFrame callerP patientName}
 {
-    var memberType [why-warning-get-member-expression-type $expr $callerFrame $callerP $patientName]
+    var memberType [why-warning-ec-get-member-expression-type $expr $callerFrame $callerP $patientName]
     if {![null $memberType]} {
         return $memberType
     }
 
     var candidate1 $expr
-    var candidate2 [why-warning-c-to-swat-expr $expr]
+    var candidate2 [why-warning-ec-c-to-swat-expr $expr]
 
     foreach candidate [list $candidate1 $candidate2] {
         if {[null $candidate]} {
@@ -646,7 +646,7 @@ defvar warning-ignore-list nil
     return nil
 }]
 
-[defsubr why-warning-print-type-value {valueType p callerFrame}
+[defsubr why-warning-ec-print-type-value {valueType p callerFrame}
 {
     var oldFrame nil
     if {![null $callerFrame]} {
@@ -719,16 +719,128 @@ defvar warning-ignore-list nil
     return $printed
 }]
 
-[defsubr why-warning-print-symbol-value {sym p callerFrame}
+[defsubr why-warning-ec-print-symbol-value {sym p callerFrame}
 {
     var symData [symbol get $sym]
     if {[null [index $symData 2]]} {
         return 0
     }
 
-    return [why-warning-print-type-value [index $symData 2] $p $callerFrame]
+    return [why-warning-ec-print-type-value [index $symData 2] $p $callerFrame]
 }]
 
+[defsubr why-warning-ec-print-raw-fallback {varSym exprType varName p callerP}
+{
+    if {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0 &&
+        [catch {var rawDWord [value fetch $p dword]} rawDWordErr] == 0} {
+        if {![null $varSym]} {
+            echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} [symbol fullname $varSym] $rawWord $rawDWord $p $callerP]
+        } elif {![null $exprType]} {
+            echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} [type name $exprType {} 0] $rawWord $rawDWord $p $callerP]
+        } else {
+            echo [format {<unresolved var %s from %s; fallback raw word=%04xh dword=%08xh at %s>} $varName $callerP $rawWord $rawDWord $p]
+        }
+    } elif {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0} {
+        if {![null $varSym]} {
+            echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} [symbol fullname $varSym] $rawWord $p $callerP]
+        } elif {![null $exprType]} {
+            echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} [type name $exprType {} 0] $rawWord $p $callerP]
+        } else {
+            echo [format {<unresolved var %s from %s; fallback raw word=%04xh at %s>} $varName $callerP $rawWord $p]
+        }
+    } else {
+        if {![null $varSym]} {
+            echo [format {<resolved symbol %s but could not print typed value at %s (caller %s)>} [symbol fullname $varSym] $p $callerP]
+        } elif {![null $exprType]} {
+            echo [format {<resolved expression type %s but could not print typed value at %s (caller %s)>} [type name $exprType {} 0] $p $callerP]
+        } else {
+            echo [format {<unresolved var %s from %s at %s>} $varName $callerP $p]
+        }
+    }
+}]
+
+[defsubr why-warning-handle-ec-log {code warningFrame}
+{
+    var geosWarnings [symbol find type geos::Warnings]
+    if {[null $geosWarnings] ||
+        [string c [type emap $code $geosWarnings] EC_LOG_WARNING] != 0} {
+        return 0
+    }
+
+    var warnCaller [frame next $warningFrame]
+    var patientName {}
+    if {![null $warnCaller] && ![null [frame funcsym $warnCaller]]} {
+        var patientName [patient name [symbol patient [frame funcsym $warnCaller]]]
+    }
+
+    var varName [getstring ECLogVarName]
+    var addr [value fetch ECLogAddr dword]
+    var callerAddr [value fetch ECLogCaller dword]
+    var off [expr {$addr & 0xffff}]
+    var seg [expr {($addr >> 16) & 0xffff}]
+    var callerOff [expr {$callerAddr & 0xffff}]
+    var callerSeg [expr {($callerAddr >> 16) & 0xffff}]
+    if {$addr == 0} {
+        echo [format {EC log (%s): (null)} $varName]
+        return 1
+    }
+
+    var p [format %04xh:%04xh $seg $off]
+    var callerP [format %04xh:%04xh $callerSeg $callerOff]
+    var callerFrame nil
+    if {![null $warnCaller]} {
+        var callerFrame [frame next $warnCaller]
+    }
+
+    var callerPatientName $patientName
+    if {![null $callerFrame] && ![null [frame funcsym $callerFrame]]} {
+        var callerPatientName [patient name [symbol patient [frame funcsym $callerFrame]]]
+    }
+    if {[catch {var callerSym [symbol faddr proc $callerP]} callerErr] == 0 &&
+        ![null $callerSym]} {
+        var callerPatientName [patient name [symbol patient $callerSym]]
+    }
+
+    if {[null $varName]} {
+        var varName {<?>}
+    }
+
+    if {[string c [range $varName 0 0 chars] {$}] == 0} {
+        var strName [range $varName 1 end chars]
+        if {[null $strName]} {
+            var strName {<?>}
+        }
+        echo -n [format {EC log (%s): } $strName]
+        if {[catch {pstring $p} pstringErr] != 0} {
+            echo [format {<could not print string at %s>} $p]
+        }
+        return 1
+    }
+
+    var varSym [why-warning-ec-find-var-symbol $varName $callerFrame $callerP $callerPatientName]
+    var exprType nil
+    if {[null $varSym]} {
+        var exprType [why-warning-ec-get-expression-type $varName $callerFrame $callerP $callerPatientName]
+        if {[catch {var addrSym [symbol faddr var $p]} addrSymErr] == 0 &&
+            ![null $addrSym] &&
+            [string c [symbol name $addrSym] $varName] == 0} {
+            var varSym $addrSym
+        }
+    }
+
+    echo -n [format {EC log (%s): } $varName]
+    if {![null $varSym] &&
+        [why-warning-ec-print-symbol-value $varSym $p $callerFrame]} {
+        # printed
+    } elif {![null $exprType] &&
+             [why-warning-ec-print-type-value $exprType $p $callerFrame]} {
+        # printed
+    } else {
+        [why-warning-ec-print-raw-fallback $varSym $exprType $varName $p $callerP]
+    }
+
+    return 1
+}]
 
 [defsubr why-warning {}
 {
@@ -737,164 +849,72 @@ defvar warning-ignore-list nil
     var f [frame top]
 
     if {![catch {symbol name [frame funcsym $f]} name] &&
-        [string match $name Writable*]} {
-            var f [frame next $f]
-        }
+	[string match $name Writable*]} {
+	    var f [frame next $f]
+	}
 
     if {[null $f] || [null [frame next $f]] || [null [frame funcsym $f]]} {
-        var w {unable to determine warning code, as top frame is invalid}
-        var patientName ""
+	var w {unable to determine warning code, as top frame is invalid}
+	var patientName ""
     } else {
-        var patientName ""
-        if {[string c [symbol name [frame funcsym $f]] WarningNotice] == 0} {
-            # assembly version: code is in mov ax instruction following the
-            # call
+	if {[string c [symbol name [frame funcsym $f]] WarningNotice] == 0} {
+	    # assembly version: code is in mov ax instruction following the
+	    # call
 
-            var nframe [frame next $f]
-            if {[catch {[var rframe [frame register pc $nframe]]} wrn] != 0} {
-                echo Warning: $wrn, continuing...
-                return 0
-            }
-            var code [value fetch $rframe+1 word]
-        } else {
-            # C version: code is pushed on the stack
-            var code [value fetch ss:sp+4 word]
-        }
+	    var nframe [frame next $f]
+	    if {[catch {[var rframe [frame register pc $nframe]]} wrn] != 0} {
+		echo Warning: $wrn, continuing...
+		return 0
+	    }
+	    var code [value fetch $rframe+1 word]
+	} else {
+	    # C version: code is pushed on the stack
+	    var code [value fetch ss:sp+4 word]
+	}
 
-        var warnCaller [frame next $f]
-        if {![null $warnCaller] && ![null [frame funcsym $warnCaller]]} {
-            var patientName [patient name [symbol patient [frame funcsym $warnCaller]]]
-        }
+	if {[why-warning-handle-ec-log $code $f]} {
+	    return 0
+	}
 
-        var geosWarnings [symbol find type geos::Warnings]
-        if {![null $geosWarnings] &&
-            [string c [type emap $code $geosWarnings] EC_LOG_WARNING] == 0} {
-            var varName [getstring ECLogVarName]
-            var addr [value fetch ECLogAddr dword]
-            var callerAddr [value fetch ECLogCaller dword]
-            var off [expr {$addr & 0xffff}]
-            var seg [expr {($addr >> 16) & 0xffff}]
-            var callerOff [expr {$callerAddr & 0xffff}]
-            var callerSeg [expr {($callerAddr >> 16) & 0xffff}]
-            if {$addr == 0} {
-                echo [format {EC log (%s): (null)} $varName]
-                return 0
-            }
-            var p [format %04xh:%04xh $seg $off]
-            var callerP [format %04xh:%04xh $callerSeg $callerOff]
-            var callerFrame nil
-            if {![null $warnCaller]} {
-                var callerFrame [frame next $warnCaller]
-            }
-            var callerPatientName $patientName
-            if {![null $callerFrame] && ![null [frame funcsym $callerFrame]]} {
-                var callerPatientName [patient name [symbol patient [frame funcsym $callerFrame]]]
-            }
-            if {[catch {var callerSym [symbol faddr proc $callerP]} callerErr] == 0 &&
-                ![null $callerSym]} {
-                var callerPatientName [patient name [symbol patient $callerSym]]
-            }
-            if {[null $varName]} {
-                var varName {<?>}
-            }
-            if {[string c [range $varName 0 0 chars] {$}] == 0} {
-                var strName [range $varName 1 end chars]
-                if {[null $strName]} {
-                    var strName {<?>}
-                }
-                echo -n [format {EC log (%s): } $strName]
-                if {[catch {pstring $p} pstringErr] != 0} {
-                    echo [format {<could not print string at %s>} $p]
-                }
-                return 0
-            }
-            var varSym [why-warning-find-var-symbol $varName $callerFrame $callerP $callerPatientName]
-            var exprType nil
-            if {[null $varSym]} {
-                var exprType [why-warning-get-expression-type $varName $callerFrame $callerP $callerPatientName]
-                if {[catch {var addrSym [symbol faddr var $p]} addrSymErr] == 0 &&
-                    ![null $addrSym] &&
-                    [string c [symbol name $addrSym] $varName] == 0} {
-                    var varSym $addrSym
-                }
-            }
-            echo -n [format {EC log (%s): } $varName]
-            if {![null $varSym] &&
-                [why-warning-print-symbol-value $varSym $p $callerFrame]} {
-                # printed
-            } elif {![null $exprType] &&
-                     [why-warning-print-type-value $exprType $p $callerFrame]} {
-                # printed
-            } else {
-                if {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0 &&
-                    [catch {var rawDWord [value fetch $p dword]} rawDWordErr] == 0} {
-                    if {![null $varSym]} {
-                        echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} [symbol fullname $varSym] $rawWord $rawDWord $p $callerP]
-                    } elif {![null $exprType]} {
-                        echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} [type name $exprType {} 0] $rawWord $rawDWord $p $callerP]
-                    } else {
-                        echo [format {<unresolved var %s from %s; fallback raw word=%04xh dword=%08xh at %s>} $varName $callerP $rawWord $rawDWord $p]
-                    }
-                } elif {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0} {
-                    if {![null $varSym]} {
-                        echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} [symbol fullname $varSym] $rawWord $p $callerP]
-                    } elif {![null $exprType]} {
-                        echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} [type name $exprType {} 0] $rawWord $p $callerP]
-                    } else {
-                        echo [format {<unresolved var %s from %s; fallback raw word=%04xh at %s>} $varName $callerP $rawWord $p]
-                    }
-                } else {
-                    if {![null $varSym]} {
-                        echo [format {<resolved symbol %s but could not print typed value at %s (caller %s)>} [symbol fullname $varSym] $p $callerP]
-                    } elif {![null $exprType]} {
-                        echo [format {<resolved expression type %s but could not print typed value at %s (caller %s)>} [type name $exprType {} 0] $p $callerP]
-                    } else {
-                        echo [format {<unresolved var %s from %s at %s>} $varName $callerP $p]
-                    }
-                }
-            }
-            return 0
-        }
+	var f [frame next $f]
+	if {[null [frame funcsym $f]]} {
+	    return 0
+	}
+	var patientName [patient name
+				 [symbol patient
+				  [frame funcsym $f]]]
+	var t [symbol find type $patientName::Warnings]
+	var func [frame function $f]
 
-        var f [frame next $f]
-        if {[null [frame funcsym $f]]} {
-            return 0
-        }
-        var patientName [patient name
-                                 [symbol patient
-                                  [frame funcsym $f]]]
-        var t [symbol find type $patientName::Warnings]
-        var func [frame function $f]
-
-        if {![null $t]} {
-            var w [type emap $code $t]
-            if {[null $w]} {
-                var t {}
-            }
-        }
-        if {[null $t]} {
-            var a [frame retaddr [frame prev $f]]
-            if {[catch {src line [index $a 0]:[index $a 1] $f} w_info] != 0} {
-                var w UNKNOWN_WARNING
-            } else {
-                var w [format {UNKNOWN_WARNING at %s} $w_info]
-            }
-        } else {
-            var w [type emap $code $t]
-        }
-        frame set $f 0
+	if {![null $t]} {
+	    var w [type emap $code $t]
+	    if {[null $w]} {
+		var t {}
+	    }
+	}
+	if {[null $t]} {
+	    var a [frame retaddr [frame prev $f]]
+	    if {[catch {src line [index $a 0]:[index $a 1] $f} w_info] != 0} {
+		var w UNKNOWN_WARNING
+	    } else {
+		var w [format {UNKNOWN_WARNING at %s} $w_info]
+	    }
+	} else {
+	    var w [type emap $code $t]
+	}
+	frame set $f 0
     }
     # suppress output if user so desires
     [case $w in
-        ${warning-ignore-list} {}
-        default {echo WARNING($patientName::$func): $w}
+	${warning-ignore-list} {}
+	default {echo WARNING($patientName::$func): $w}
     ]
     if {![null [info proc $patientName::$w]]} {
             var res [eval $patientName::$w]
     }
 
     if {[null $res]} {
-        return 0
+	return 0
     } else {
         return $res
     }
