@@ -798,7 +798,7 @@ ECWARNINGLOGRECORD	proc	far	addr:dword, varNameP:fptr.char
 	mov	ax, seg ECLogVarName
 	mov	es, ax
 	mov	di, offset ECLogVarName
-	mov	cx, 31
+	mov	cx, 127
 	cld
 copyVarNameLoop:
 	lodsb

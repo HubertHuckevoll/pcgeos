@@ -42,9 +42,9 @@ logFileHan	hptr
 
 if ERROR_CHECK
 ; EC warning log state (idata is always resident so Swat can read by symbol).
-; ECLogVarName is always NUL-terminated when written and names >31 bytes are
-; truncated to 31 bytes plus trailing NUL.
-ECLogVarName	byte	32 dup (0)
+; ECLogVarName is always NUL-terminated when written and names >127 bytes are
+; truncated to 127 bytes plus trailing NUL.
+ECLogVarName	byte	128 dup (0)
 ; Far pointer dword for Swat, with low word = offset and high word = segment.
 ECLogAddr	dword	0
 ; Caller address in far-pointer layout, with low word = IP and high word = CS.

@@ -413,11 +413,11 @@ See also:
 #   Tag: "statePtr->node.next->count"
 #   Expected: chained member resolution; typed print if intermediate types exist.
 #
-# Case G: ambiguous/truncated long expression (>31 chars logged)
+# Case G: ambiguous/truncated long expression (>127 chars logged)
 #   C:   EC_LOG_T(reallyLongStructName.reallyLongFieldName);
-#   Tag: first 31 chars only
+#   Tag: first 127 chars only
 #   Expected: expression/symbol may miss by name; address-based var fallback can
-#             still match exact symbol or 31-char prefix and print typed value.
+#             still match exact symbol or 127-char prefix and print typed value.
 #
 # Case H: unsupported/complex expression form
 #   C:   EC_LOG_T((fooPtr+1)->bar[2]);
@@ -895,7 +895,15 @@ defvar warning-ignore-list nil
         if {[null $strName]} {
             var strName {<?>}
         }
-        echo -n [format {EC log (%s): } $strName]
+        var strNameLen [length $strName chars]
+        if {$strNameLen >= 2 &&
+            [string c [range $strName 0 0 chars] {"}] == 0 &&
+            [string c [range $strName [expr {$strNameLen-1}] [expr {$strNameLen-1}] chars] {"}] == 0} {
+            # String literal tag (from EC_LOG_S("...")): avoid printing it twice.
+            echo -n {EC log: }
+        } else {
+            echo -n [format {EC log (%s): } $strName]
+        }
         if {[catch {pstring $p} pstringErr] != 0} {
             echo [format {<could not print string at %s>} $p]
         }
@@ -910,8 +918,8 @@ defvar warning-ignore-list nil
             ![null $addrSym]} {
             var addrSymName [symbol name $addrSym]
             if {[string c $addrSymName $varName] == 0 ||
-                ([length $varName chars] == 31 &&
-                 [string c [range $addrSymName 0 30 chars] $varName] == 0)} {
+                ([length $varName chars] == 127 &&
+                 [string c [range $addrSymName 0 126 chars] $varName] == 0)} {
                 var varSym $addrSym
             }
         }

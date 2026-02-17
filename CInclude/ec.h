@@ -265,7 +265,7 @@ extern void
 #if	ERROR_CHECK
 
 #define EC_MAKE_FARPTR(p)  ((((dword)PtrToSegment(p)) << 16) | ((dword)PtrToOffset(p)))
-/* Truncation: variable names longer than 31 bytes will be truncated by callee. */
+/* Truncation: variable names longer than 127 bytes will be truncated by callee. */
 #define EC_LOG_T(varExpr)      ECWarningLogRecord(#varExpr, EC_MAKE_FARPTR(&(varExpr)))
 /* Prefix '$' marks varName as string-mode for Swat pretty-printing. */
 #define EC_LOG_S(strExpr)      ECWarningLogRecord("$" #strExpr, EC_MAKE_FARPTR((strExpr)))
