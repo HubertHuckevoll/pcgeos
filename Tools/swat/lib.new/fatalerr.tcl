@@ -396,18 +396,75 @@ defvar warning-ignore-list nil
     return nil
 }]
 
+# Inputs: variable name + scope/function symbol token to search.
+# Failure behavior: returns nil if lookup fails in this scope.
+[defsubr why-warning-try-symbol-in-scope {name scopeSym}
+{
+    foreach class {locvar var} {
+        if {[catch {var sym [symbol find $class $name $scopeSym]} symErr] == 0 &&
+            ![null $sym]} {
+            return $sym
+        }
+    }
+
+    return nil
+}]
+
+# Inputs: resolution kind (symbol|exprType|unresolved), resolved token/type,
+#         target address, caller address, and original variable expression.
+# Failure behavior: if raw memory fetch fails, emits message without raw data.
+[defsubr why-warning-format-typed-print-failure {resolutionKind resolved p callerP varName}
+{
+    var haveWord 0
+    var haveDWord 0
+    if {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0} {
+        var haveWord 1
+    }
+    if {$haveWord &&
+        [catch {var rawDWord [value fetch $p dword]} rawDWordErr] == 0} {
+        var haveDWord 1
+    }
+
+    if {[string c $resolutionKind symbol] == 0} {
+        var detail [symbol fullname $resolved]
+        if {$haveDWord} {
+            echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} $detail $rawWord $rawDWord $p $callerP]
+        } elif {$haveWord} {
+            echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} $detail $rawWord $p $callerP]
+        } else {
+            echo [format {<resolved symbol %s but could not print typed value at %s (caller %s)>} $detail $p $callerP]
+        }
+        return
+    }
+
+    if {[string c $resolutionKind exprType] == 0} {
+        var detail [type name $resolved {} 0]
+        if {$haveDWord} {
+            echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} $detail $rawWord $rawDWord $p $callerP]
+        } elif {$haveWord} {
+            echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} $detail $rawWord $p $callerP]
+        } else {
+            echo [format {<resolved expression type %s but could not print typed value at %s (caller %s)>} $detail $p $callerP]
+        }
+        return
+    }
+
+    if {$haveDWord} {
+        echo [format {<unresolved var %s from %s; fallback raw word=%04xh dword=%08xh at %s>} $varName $callerP $rawWord $rawDWord $p]
+    } elif {$haveWord} {
+        echo [format {<unresolved var %s from %s; fallback raw word=%04xh at %s>} $varName $callerP $rawWord $p]
+    } else {
+        echo [format {<unresolved var %s from %s at %s>} $varName $callerP $p]
+    }
+}]
+
 [defsubr why-warning-find-var-symbol {name callerFrame callerP patientName}
 {
     if {![null $callerP]} {
         if {[catch {var callerSym [symbol faddr proc $callerP]} callerErr] == 0 &&
             ![null $callerSym]} {
-            if {[catch {var sym [symbol find locvar $name $callerSym]} symErr] == 0 &&
-                ![null $sym]} {
-                return $sym
-            }
-
-            if {[catch {var sym [symbol find var $name $callerSym]} symErr] == 0 &&
-                ![null $sym]} {
+            var sym [why-warning-try-symbol-in-scope $name $callerSym]
+            if {![null $sym]} {
                 return $sym
             }
 
@@ -424,13 +481,8 @@ defvar warning-ignore-list nil
     if {![null $callerFrame] && ![null [frame funcsym $callerFrame]]} {
         var callerFrameSym [frame funcsym $callerFrame]
 
-        if {[catch {var sym [symbol find locvar $name $callerFrameSym]} symErr] == 0 &&
-            ![null $sym]} {
-            return $sym
-        }
-
-        if {[catch {var sym [symbol find var $name $callerFrameSym]} symErr] == 0 &&
-            ![null $sym]} {
+        var sym [why-warning-try-symbol-in-scope $name $callerFrameSym]
+        if {![null $sym]} {
             return $sym
         }
 
@@ -826,31 +878,12 @@ defvar warning-ignore-list nil
                      [why-warning-print-type-value $exprType $p $callerFrame]} {
                 # printed
             } else {
-                if {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0 &&
-                    [catch {var rawDWord [value fetch $p dword]} rawDWordErr] == 0} {
-                    if {![null $varSym]} {
-                        echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} [symbol fullname $varSym] $rawWord $rawDWord $p $callerP]
-                    } elif {![null $exprType]} {
-                        echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh dword=%08xh at %s (caller %s)>} [type name $exprType {} 0] $rawWord $rawDWord $p $callerP]
-                    } else {
-                        echo [format {<unresolved var %s from %s; fallback raw word=%04xh dword=%08xh at %s>} $varName $callerP $rawWord $rawDWord $p]
-                    }
-                } elif {[catch {var rawWord [value fetch $p word]} rawWordErr] == 0} {
-                    if {![null $varSym]} {
-                        echo [format {<resolved symbol %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} [symbol fullname $varSym] $rawWord $p $callerP]
-                    } elif {![null $exprType]} {
-                        echo [format {<resolved expression type %s but could not print typed value; fallback raw word=%04xh at %s (caller %s)>} [type name $exprType {} 0] $rawWord $p $callerP]
-                    } else {
-                        echo [format {<unresolved var %s from %s; fallback raw word=%04xh at %s>} $varName $callerP $rawWord $p]
-                    }
+                if {![null $varSym]} {
+                    why-warning-format-typed-print-failure symbol $varSym $p $callerP $varName
+                } elif {![null $exprType]} {
+                    why-warning-format-typed-print-failure exprType $exprType $p $callerP $varName
                 } else {
-                    if {![null $varSym]} {
-                        echo [format {<resolved symbol %s but could not print typed value at %s (caller %s)>} [symbol fullname $varSym] $p $callerP]
-                    } elif {![null $exprType]} {
-                        echo [format {<resolved expression type %s but could not print typed value at %s (caller %s)>} [type name $exprType {} 0] $p $callerP]
-                    } else {
-                        echo [format {<unresolved var %s from %s at %s>} $varName $callerP $p]
-                    }
+                    why-warning-format-typed-print-failure unresolved {} $p $callerP $varName
                 }
             }
             return 0
