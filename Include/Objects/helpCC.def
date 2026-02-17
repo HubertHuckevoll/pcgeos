@@ -3,7 +3,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 1992 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:		
+MODULE:
 FILE:		helpCC.def
 
 AUTHOR:		Gene Anderson, Sep 15, 1992
@@ -16,7 +16,7 @@ REVISION HISTORY:
 
 DESCRIPTION:
 	Definition for HelpControl class
-		
+
 	$Id: helpCC.def,v 1.1 97/04/04 14:18:05 newdeal Exp $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
@@ -70,7 +70,7 @@ endif
 ;----------------------------------------------------------------------
 ;		HelpControlClass
 ;----------------------------------------------------------------------
-	
+
 HelpControlClass	class	GenControlClass
 
 ;-----------------------------------------------------------------------------
@@ -173,10 +173,10 @@ MSG_HC_GET_LINK_NAME						message
 ; DESTROYED:	ax, cx, dx, bp
 ;
 GetLinkNameParams	struct
-    GLNP_linkToken	word
-    GLNP_fileToken	word
-    GLNP_linkName	ContextName
-    GLNP_fileName	FileLongName
+	GLNP_linkToken	word
+	GLNP_fileToken	word
+	GLNP_linkName	ContextName
+	GLNP_fileName	FileLongName
 GetLinkNameParams	ends
 
 protoreset
@@ -239,6 +239,13 @@ MSG_HC_DISPLAY_CONTEXT_INFO					message
 
 protoreset
 
+protominor UINewForFreeGEOS
+
+MSG_HC_ZOOM_IN						message
+MSG_HC_ZOOM_OUT 					message
+MSG_HC_RESET_ZOOM					message
+
+protoreset
 
 ;-----------------------------------------------------------------------------
 ;		Constants & Structures
@@ -262,7 +269,7 @@ HT_FIRST_AID		enum HelpType
 ;
 HT_STATUS_HELP		enum HelpType
 ;
-; Assistance or status help.  Several lines of non-scrollable, 
+; Assistance or status help.  Several lines of non-scrollable,
 ; non-hyperlinked help text.  Normally always on-screen, so no "Close"
 ; button is provided.
 ;
@@ -293,26 +300,26 @@ HT_SYSTEM_MODAL_HELP	enum HelpType
 ;
 
 HPCFeatures	record
-    :7
-    HPCF_HELP:1			;help trigger for help
-    HPCF_TEXT:1			;the text itself...
-    HPCF_CONTENTS:1		;go to table of contents
-    HPCF_HISTORY:1		;history list
-    HPCF_GO_BACK:1		;go back (simple history)
-    HPCF_CLOSE:1		;close/exit button
-    HPCF_INSTRUCTIONS:1		;instructions on current mode
-    HPCF_FIRST_AID_GO_BACK:1	;go back for first-aid
-    HPCF_FIRST_AID:1		;first-aid style topics/questions/answers
+	:7
+	HPCF_HELP:1			;help trigger for help
+	HPCF_TEXT:1			;the text itself...
+	HPCF_CONTENTS:1		;go to table of contents
+	HPCF_HISTORY:1		;history list
+	HPCF_GO_BACK:1		;go back (simple history)
+	HPCF_CLOSE:1		;close/exit button
+	HPCF_INSTRUCTIONS:1		;instructions on current mode
+	HPCF_FIRST_AID_GO_BACK:1	;go back for first-aid
+	HPCF_FIRST_AID:1		;first-aid style topics/questions/answers
 HPCFeatures	end
 
 ;
 ; Notification structure
 ;
 NotifyHelpContextChange	struct
-    NHCC_type		HelpType	;type of help (status, normal, etc.)
-    NHCC_context	ContextName	;context name to link to
-    NHCC_filename	FileLongName	;file name to link to
-    NHCC_filenameTOC	FileLongName	;file name to get TOC from
+	NHCC_type		HelpType	;type of help (status, normal, etc.)
+	NHCC_context	ContextName	;context name to link to
+	NHCC_filename	FileLongName	;file name to link to
+	NHCC_filenameTOC	FileLongName	;file name to get TOC from
 NotifyHelpContextChange	ends
 
 
@@ -417,15 +424,25 @@ TEMP_HELP_HEAPSPACE_TOKEN			vardata hptr
 ; by GeodeRequestSpace for allocating room for the compress library.
 ;
 
+TEMP_HELP_FONT_SIZE				vardata byte
+;
+; Internal only: Current zoom point size for help text.
+;
+
+TEMP_HELP_INITIAL_FONT_SIZE			vardata byte
+;
+; Internal only: Original point size before zooming started.
+;
+
 ;-----------------------------------------------------------------------------
 ;		Instance Data
 ;-----------------------------------------------------------------------------
 
-    HCI_helpType	HelpType		;type of help to display
-    HCI_curFile		hptr			;handle of current file
-    HCI_historyBuf	hptr			;handle of history buffer
-    HCI_nameArrayVM	word			;VM handle of name array
-    HCI_compressLib	hptr			;handle of compress lib
+	HCI_helpType	HelpType		;type of help to display
+	HCI_curFile		hptr			;handle of current file
+	HCI_historyBuf	hptr			;handle of history buffer
+	HCI_nameArrayVM	word			;VM handle of name array
+	HCI_compressLib	hptr			;handle of compress lib
 
 HelpControlClass	endc
 

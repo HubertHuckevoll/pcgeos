@@ -45,6 +45,9 @@ HelpTopGroup = GenInteraction {
 		HelpContentsTrigger,
 		HelpGoBackTrigger,
 		HelpHistoryList,
+		HelpZoomInTrigger,
+		HelpZoomOutTrigger,
+		HelpResetZoomTrigger,
 		HelpVersionTrigger,
 		HelpInfoTrigger;
 	hints = {
@@ -62,8 +65,6 @@ HelpTextDisplay = HelpText {
 		HINT_DEFAULT_FOCUS,
 		HINT_EXPAND_WIDTH_TO_FIT_PARENT,
 		HINT_EXPAND_HEIGHT_TO_FIT_PARENT
-/*  Removed to make help text more distinctive - Don 4/21/99*/
-/*		HINT_TEXT_WHITE_WASH_COLOR */
 	}
 }
 
@@ -113,6 +114,21 @@ HelpHistoryList = GenDynamicList {
 	hints = {
 		HINT_ITEM_GROUP_MINIMIZE_SIZE
 	}
+}
+
+HelpZoomInTrigger = GenTrigger {
+	moniker = "Zoom In";
+	action = MSG_HC_ZOOM_IN, "TO_OBJ_BLOCK_OUTPUT";
+}
+
+HelpZoomOutTrigger = GenTrigger {
+	moniker = "Zoom Out";
+	action = MSG_HC_ZOOM_OUT, "TO_OBJ_BLOCK_OUTPUT";
+}
+
+HelpResetZoomTrigger = GenTrigger {
+	moniker = "Reset Zoom";
+	action = MSG_HC_RESET_ZOOM, "TO_OBJ_BLOCK_OUTPUT";
 }
 
 HelpVersionTrigger = GenTrigger {

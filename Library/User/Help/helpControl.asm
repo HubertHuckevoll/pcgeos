@@ -3,7 +3,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Copyright (c) GeoWorks 1992 -- All Rights Reserved
 
 PROJECT:	PC GEOS
-MODULE:		
+MODULE:
 FILE:		helpControl.asm
 
 AUTHOR:		Gene Anderson, Oct 22, 1992
@@ -193,7 +193,7 @@ REVISION HISTORY:
 	eca	7/ 6/92		Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-HelpControlUpdateUI	method dynamic HelpControlClass, 
+HelpControlUpdateUI	method dynamic HelpControlClass,
 						MSG_GEN_CONTROL_UPDATE_UI
 	;
 	; See if we've already received a detach
@@ -584,10 +584,10 @@ PASS:		*ds:si	= HelpControlClass object
 		es:0	= NotifyHelpContextChange
 RETURN:		carry set if HTML help used
 DESTROYED:	nothing
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -727,10 +727,10 @@ CALLED BY:	HelpControlUseHTMLHelp
 PASS:		^hcx	= AppLaunchBlock
 RETURN:		nothing
 DESTROYED:	everything
-SIDE EFFECTS:	
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -828,7 +828,7 @@ REVISION HISTORY:
 HelpControlTweakDuplicatedUI		method dynamic HelpControlClass,
 					MSG_GEN_CONTROL_TWEAK_DUPLICATED_UI
 	.enter
-		
+
 	; Don't perform any "tweaking" unless our UI is available
 	;
 	test	dx, mask HPCF_FIRST_AID or mask HPCF_CONTENTS or \
@@ -863,6 +863,249 @@ HelpControlTweakDuplicatedUI		endm
 
 helpDebugCat	char	"help", 0
 helpDebugKey	char	"debug", 0
+
+;
+; Zoom constants
+;
+ZOOM_MIN_SIZE	equ	8		; minimum font size
+ZOOM_MAX_SIZE	equ	36		; maximum font size
+ZOOM_INCREMENT	equ	2		; step size for zooming
+ZOOM_DEFAULT_SIZE equ	12		; text engine default point size
+
+
+COMMENT @###############################################################
+		HelpControlZoomIn
+###############################################################
+
+SYNOPSIS:	Increase the font size of the help text
+CALLED BY:	MSG_HC_ZOOM_IN
+
+PASS:		*ds:si - instance data
+		ds:di - *ds:si
+		es - seg addr of HelpControlClass
+		ax - the message
+RETURN:		none
+DESTROYED:	ax, bx, cx, dx, si, di, bp
+
+PSEUDO CODE/STRATEGY:
+	- Get current font size from instance data
+	- If less than max, increase by ZOOM_INCREMENT
+	- Apply new size to HelpTextDisplay
+	- Save new size to instance data
+
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+
+###############################################################@
+
+HelpControlZoomIn	method dynamic HelpControlClass, MSG_HC_ZOOM_IN
+	call	ApplyLargerZoomToText
+	ret
+HelpControlZoomIn	endm
+
+
+COMMENT @###############################################################
+		HelpControlZoomOut
+###############################################################
+
+SYNOPSIS:	Decrease the font size of the help text
+CALLED BY:	MSG_HC_ZOOM_OUT
+
+PASS:		*ds:si - instance data
+		ds:di - *ds:si
+		es - seg addr of HelpControlClass
+		ax - the message
+RETURN:		none
+DESTROYED:	ax, bx, cx, dx, si, di, bp
+
+PSEUDO CODE/STRATEGY:
+	- Get current font size from instance data
+	- If greater than min, decrease by ZOOM_INCREMENT
+	- Apply new size to HelpTextDisplay
+	- Save new size to instance data
+
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+
+###############################################################@
+
+HelpControlZoomOut	method dynamic HelpControlClass, MSG_HC_ZOOM_OUT
+	call	ApplySmallerZoomToText
+	ret
+HelpControlZoomOut	endm
+
+
+COMMENT @###############################################################
+		HelpControlResetZoom
+###############################################################
+
+SYNOPSIS:	Reset help text zoom to default size
+CALLED BY:	MSG_HC_RESET_ZOOM
+
+PASS:		*ds:si - instance data
+		ds:di - *ds:si
+		es - seg addr of HelpControlClass
+		ax - the message
+RETURN:		none
+DESTROYED:	ax, bx, cx, dx, si, di, bp
+
+###############################################################@
+
+HelpControlResetZoom	method dynamic HelpControlClass, MSG_HC_RESET_ZOOM
+	mov	al, ZOOM_DEFAULT_SIZE
+	call	ApplyZoomToText
+	ret
+HelpControlResetZoom	endm
+
+
+COMMENT @###############################################################
+		ApplyLargerZoomToText
+###############################################################
+
+SYNOPSIS:	Increase HelpTextDisplay point size using text engine's size table
+CALLED BY:	HelpControlZoomIn
+
+PASS:		*ds:si - HelpControlClass instance
+RETURN:		none
+DESTROYED:	ax, bx, cx, dx, si, di, bp
+
+###############################################################@
+
+ApplyLargerZoomToText	proc	near
+	uses	bp
+	.enter
+
+	call	HHGetChildBlockAndFeatures	; ^hbx = child block
+	tst	bx
+	jz	done
+	mov	si, offset HelpTextDisplay	; ^lbx:si = HelpTextDisplay
+
+	mov	dx, size VisTextSetLargerPointSizeParams
+	sub	sp, size VisTextSetLargerPointSizeParams
+	mov	bp, sp
+	clrdw	ss:[bp].VTSLPSP_range.VTR_start
+	movdw	ss:[bp].VTSLPSP_range.VTR_end, TEXT_ADDRESS_PAST_END
+	mov	ss:[bp].VTSLPSP_maximumSize, ZOOM_MAX_SIZE
+	mov	ax, MSG_VIS_TEXT_SET_LARGER_POINT_SIZE
+	mov	di, mask MF_CALL or mask MF_STACK or mask MF_FIXUP_DS
+	call	ObjMessage
+	add	sp, size VisTextSetLargerPointSizeParams
+
+done:
+	.leave
+	ret
+ApplyLargerZoomToText	endp
+
+
+COMMENT @###############################################################
+		ApplySmallerZoomToText
+###############################################################
+
+SYNOPSIS:	Decrease HelpTextDisplay point size using text engine's size table
+CALLED BY:	HelpControlZoomOut
+
+PASS:		*ds:si - HelpControlClass instance
+RETURN:		none
+DESTROYED:	ax, bx, cx, dx, si, di, bp
+
+###############################################################@
+
+ApplySmallerZoomToText	proc	near
+	uses	bp
+	.enter
+
+	call	HHGetChildBlockAndFeatures	; ^hbx = child block
+	tst	bx
+	jz	done
+	mov	si, offset HelpTextDisplay	; ^lbx:si = HelpTextDisplay
+
+	mov	dx, size VisTextSetSmallerPointSizeParams
+	sub	sp, size VisTextSetSmallerPointSizeParams
+	mov	bp, sp
+	clrdw	ss:[bp].VTSSPSP_range.VTR_start
+	movdw	ss:[bp].VTSSPSP_range.VTR_end, TEXT_ADDRESS_PAST_END
+	mov	ss:[bp].VTSSPSP_minimumSize, ZOOM_MIN_SIZE
+	mov	ax, MSG_VIS_TEXT_SET_SMALLER_POINT_SIZE
+	mov	di, mask MF_CALL or mask MF_STACK or mask MF_FIXUP_DS
+	call	ObjMessage
+	add	sp, size VisTextSetSmallerPointSizeParams
+
+done:
+	.leave
+	ret
+ApplySmallerZoomToText	endp
+
+
+COMMENT @###############################################################
+		ApplyZoomToText
+###############################################################
+
+SYNOPSIS:	Apply the current font size to the HelpTextDisplay
+CALLED BY:	HelpControlZoomIn, HelpControlZoomOut
+
+PASS:		al - font size to apply
+		*ds:si - HelpControlClass instance
+RETURN:		none
+DESTROYED:	ax, bx, cx, dx, si, di, bp
+
+PSEUDO CODE/STRATEGY:
+	- Get the HelpTextDisplay object
+	- Send MSG_VIS_TEXT_SET_POINT_SIZE to it
+
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+
+###############################################################@
+
+ApplyZoomToText	proc	near
+	uses	bp
+	.enter
+
+	;
+	; Find the duplicated child block that contains HelpTextDisplay.
+	;
+	push	ax				; save font size in AL
+	call	HHGetChildBlockAndFeatures	; ^hbx = child block
+	pop	ax
+	tst	bx
+	jz	done
+	mov	si, offset HelpTextDisplay	; ^lbx:si = HelpTextDisplay
+	;
+	; Set up parameters for MSG_VIS_TEXT_SET_POINT_SIZE
+	;
+	mov	dx, size VisTextSetPointSizeParams
+	sub	sp, size VisTextSetPointSizeParams
+	mov	bp, sp
+	;
+	; Set range to cover all text (0 to end)
+	;
+	clrdw	ss:[bp].VTSPSP_range.VTR_start
+	movdw	ss:[bp].VTSPSP_range.VTR_end, TEXT_ADDRESS_PAST_END
+	;
+	; Set point size (WWFixed integer + fractional).
+	;
+	clr	ah
+	mov	ss:[bp].VTSPSP_pointSize.WWF_int, ax
+	clr	al
+	mov	ss:[bp].VTSPSP_pointSize.WWF_frac, ax
+	;
+	; Send the message to the text object
+	;
+	mov	ax, MSG_VIS_TEXT_SET_POINT_SIZE
+	mov	di, mask MF_CALL or mask MF_STACK or mask MF_FIXUP_DS
+	call	ObjMessage
+	add	sp, size VisTextSetPointSizeParams
+
+done:
+	.leave
+	ret
+ApplyZoomToText	endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -915,9 +1158,9 @@ PASS:		*ds:si	= HelpControlClass object
 		es 	= segment of HelpControlClass
 		ax	= message #
 		cl	= HelpType
-RETURN:		
-DESTROYED:	
-SIDE EFFECTS:	
+RETURN:
+DESTROYED:
+SIDE EFFECTS:
 
 PSEUDO CODE/STRATEGY:
 
@@ -927,7 +1170,7 @@ REVISION HISTORY:
 	brianc	4/ 4/95   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-HelpControlSetHelpType	method dynamic HelpControlClass, 
+HelpControlSetHelpType	method dynamic HelpControlClass,
 					MSG_HELP_CONTROL_SET_HELP_TYPE
 	.enter
 	mov	ds:[di].HCI_helpType, cl

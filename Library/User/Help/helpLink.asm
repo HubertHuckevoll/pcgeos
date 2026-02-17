@@ -422,6 +422,11 @@ afterOpen:
 						; we couldn't load it.	
 	call	HTGetTextForContext
 	jc	errorNoContext			;branch if error
+	mov	ax, TEMP_HELP_FONT_SIZE
+	call	ObjVarDeleteData
+	mov	ax, TEMP_HELP_INITIAL_FONT_SIZE
+	call	ObjVarDeleteData
+	clc					; keep HLDisplayText success status
 done:
 
 	.leave
