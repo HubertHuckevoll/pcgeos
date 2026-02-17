@@ -357,80 +357,160 @@ See also:
 }]
 
 ##############################################################################
-#				why-warning
+#				why-warning-handle-ec-log and its helpers
 ##############################################################################
 #
-# SYNOPSIS:	Print out the warning code when someone calls WarningNotice.
-# PASS:		nothing
-# CALLED BY:	breakpoint module
-# RETURN:	0 (continue the machine)
-# SIDE EFFECTS:
+# SYNOPSIS:	Called by "why-warning" (see below) with the
+#           code "EC_LOG_WARNING".
+#   		Print decoded warning names and EC log payloads.
+#   		using current caller frame/patient context.
 #
 # STRATEGY
+#	- why-warning determines warning code EC_LOG_WARNING from
+#     C call path (or assembly call path, in theory).
+#	- In case of EC_LOG_WARNING:
+#	    - read ECLogVarName/ECLogAddr/ECLogCaller from GEOS kernel
+#	    - print string payloads for "$" tags
+#	    - otherwise resolve symbol/type through scope + expression parsing
+#	    - fall back to raw word/dword output when typed print is unavailable
+#
+# EC log resolver coverage matrix (quick manual test guide)
+# ----------------------------------------------------------
+# NOTE: EC_LOG_T logs the expression text (#varExpr) and the address of &varExpr.
+# This handler resolves/prints using:
+#   1) symbol lookup (locals/globals/scope chain), then
+#   2) expression type parse, then
+#   3) address-based var symbol fallback, then
+#   4) raw word/dword fallback.
+#
+# Case A: local scalar
+#   C:   EC_LOG_T(i);
+#   Tag: "i"
+#   Expected: local symbol/type resolved; typed value printed.
+#
+# Case B: global in current patient
+#   C:   EC_LOG_T(curBlock);
+#   Tag: "curBlock"
+#   Expected: patient/global symbol resolved; typed value printed.
+#
+# Case C: namespaced/global reference
+#   C:   EC_LOG_T(geos::uiFlowFlags);
+#   Tag: "geos::uiFlowFlags"
+#   Expected: global symbol path resolves full name; typed value printed.
+#
+# Case D: direct struct member
+#   C:   EC_LOG_T(header.FQTH_pathname);
+#   Tag: "header.FQTH_pathname"
+#   Expected: member-type resolver walks "." chain and prints member type.
+#
+# Case E: pointer member
+#   C:   EC_LOG_T(headerPtr->FQTH_pathname);
+#   Tag: "headerPtr->FQTH_pathname"
+#   Expected: member-type resolver walks "->" chain (or addr-parse fallback).
+#
+# Case F: deep pointer/member chain
+#   C:   EC_LOG_T(statePtr->node.next->count);
+#   Tag: "statePtr->node.next->count"
+#   Expected: chained member resolution; typed print if intermediate types exist.
+#
+# Case G: ambiguous/truncated long expression (>31 chars logged)
+#   C:   EC_LOG_T(reallyLongStructName.reallyLongFieldName);
+#   Tag: first 31 chars only
+#   Expected: expression/symbol may miss by name; address-based var fallback can
+#             still match exact symbol or 31-char prefix and print typed value.
+#
+# Case H: unsupported/complex expression form
+#   C:   EC_LOG_T((fooPtr+1)->bar[2]);
+#   Tag: "(fooPtr+1)->bar[2]"
+#   Expected: may fail symbol/member parse; addr-parse may still resolve type;
+#             otherwise raw fallback message is printed.
 #
 # REVISION HISTORY:
 #	Name	Date		Description
 #	----	----		-----------
-#	ardeb	10/25/92	Initial Revision
+#	km	    2/26		Added EC_LOG_WARNING logging support
+#	km	    2/26		Hardened resolver/fallback behavior for EC logs
 #
 ##############################################################################
 defvar warning-ignore-list nil
 
 [defsubr why-warning-ec-find-var-symbol-in-scope-chain {name scope}
 {
-    var ssym [symbol find scope $scope]
-    if {[null $ssym]} {
+    if {[catch {var ssym [symbol find scope $scope]} findScopeErr] != 0 ||
+        [null $ssym]} {
         return nil
     }
 
-    while {[string c [symbol type $ssym] module] != 0} {
+    while {1} {
+        if {[catch {var symType [symbol type $ssym]} symTypeErr] != 0} {
+            break
+        }
+        if {[string c $symType module] == 0} {
+            break
+        }
+
         foreach class {locvar var} {
             if {[catch {var sym [symbol find $class $name $ssym]} symErr] == 0 &&
                 ![null $sym]} {
                 return $sym
             }
         }
-        var ssym [symbol scope $ssym 1]
+
+        if {[catch {var nextScope [symbol scope $ssym 1]} nextScopeErr] != 0 ||
+            [null $nextScope]} {
+            break
+        }
+        var ssym $nextScope
     }
 
     return nil
 }]
 
-[defsubr why-warning-ec-find-var-symbol {name callerFrame callerP patientName}
+[defsubr why-warning-ec-find-var-symbol-in-proc-scope {name procSym}
 {
-    if {![null $callerP]} {
-        if {[catch {var callerSym [symbol faddr proc $callerP]} callerErr] == 0 &&
-            ![null $callerSym]} {
-            if {[catch {var sym [symbol find locvar $name $callerSym]} symErr] == 0 &&
-                ![null $sym]} {
-                return $sym
-            }
+    if {[null $procSym]} {
+        return nil
+    }
 
-            if {[catch {var sym [symbol find var $name $callerSym]} symErr] == 0 &&
-                ![null $sym]} {
-                return $sym
-            }
+    foreach class {locvar var} {
+        if {[catch {var sym [symbol find $class $name $procSym]} symErr] == 0 &&
+            ![null $sym]} {
+            return $sym
+        }
+    }
 
-            if {[catch {var callerScope [symbol fullname $callerSym]} cscopeErr] == 0 &&
-                ![null $callerScope]} {
-                var sym [why-warning-ec-find-var-symbol-in-scope-chain $name $callerScope]
-                if {![null $sym]} {
-                    return $sym
-                }
+    if {[catch {var scopeName [symbol fullname $procSym]} scopeErr] == 0 &&
+        ![null $scopeName]} {
+        var sym [why-warning-ec-find-var-symbol-in-scope-chain $name $scopeName]
+        if {![null $sym]} {
+            return $sym
+        }
+    }
+
+    return nil
+}]
+
+[defsubr why-warning-ec-find-var-symbol {name callerFrame callerP callerSym patientName}
+{
+    if {![null $callerSym]} {
+        var sym [why-warning-ec-find-var-symbol-in-proc-scope $name $callerSym]
+        if {![null $sym]} {
+            return $sym
+        }
+    } elif {![null $callerP]} {
+        if {[catch {var callerPSym [symbol faddr proc $callerP]} callerErr] == 0 &&
+            ![null $callerPSym]} {
+            var sym [why-warning-ec-find-var-symbol-in-proc-scope $name $callerPSym]
+            if {![null $sym]} {
+                return $sym
             }
         }
     }
 
     if {![null $callerFrame] && ![null [frame funcsym $callerFrame]]} {
         var callerFrameSym [frame funcsym $callerFrame]
-
-        if {[catch {var sym [symbol find locvar $name $callerFrameSym]} symErr] == 0 &&
-            ![null $sym]} {
-            return $sym
-        }
-
-        if {[catch {var sym [symbol find var $name $callerFrameSym]} symErr] == 0 &&
-            ![null $sym]} {
+        var sym [why-warning-ec-find-var-symbol-in-proc-scope $name $callerFrameSym]
+        if {![null $sym]} {
             return $sym
         }
 
@@ -543,7 +623,7 @@ defvar warning-ignore-list nil
         return nil
     }
 
-    var baseSym [why-warning-ec-find-var-symbol $baseExpr $callerFrame $callerP $patientName]
+    var baseSym [why-warning-ec-find-var-symbol $baseExpr $callerFrame $callerP nil $patientName]
     if {[null $baseSym]} {
         return nil
     }
@@ -625,8 +705,12 @@ defvar warning-ignore-list nil
 
     var candidate1 $expr
     var candidate2 [why-warning-ec-c-to-swat-expr $expr]
+    var candidates [list $candidate1]
+    if {[string c $candidate2 $candidate1] != 0} {
+        var candidates [concat $candidates [list $candidate2]]
+    }
 
-    foreach candidate [list $candidate1 $candidate2] {
+    foreach candidate $candidates {
         if {[null $candidate]} {
             continue
         }
@@ -793,6 +877,7 @@ defvar warning-ignore-list nil
     }
 
     var callerPatientName $patientName
+    var callerSym nil
     if {![null $callerFrame] && ![null [frame funcsym $callerFrame]]} {
         var callerPatientName [patient name [symbol patient [frame funcsym $callerFrame]]]
     }
@@ -817,14 +902,18 @@ defvar warning-ignore-list nil
         return 1
     }
 
-    var varSym [why-warning-ec-find-var-symbol $varName $callerFrame $callerP $callerPatientName]
+    var varSym [why-warning-ec-find-var-symbol $varName $callerFrame $callerP $callerSym $callerPatientName]
     var exprType nil
     if {[null $varSym]} {
         var exprType [why-warning-ec-get-expression-type $varName $callerFrame $callerP $callerPatientName]
         if {[catch {var addrSym [symbol faddr var $p]} addrSymErr] == 0 &&
-            ![null $addrSym] &&
-            [string c [symbol name $addrSym] $varName] == 0} {
-            var varSym $addrSym
+            ![null $addrSym]} {
+            var addrSymName [symbol name $addrSym]
+            if {[string c $addrSymName $varName] == 0 ||
+                ([length $varName chars] == 31 &&
+                 [string c [range $addrSymName 0 30 chars] $varName] == 0)} {
+                var varSym $addrSym
+            }
         }
     }
 
@@ -841,6 +930,25 @@ defvar warning-ignore-list nil
 
     return 1
 }]
+
+##############################################################################
+#				why-warning
+##############################################################################
+#
+# SYNOPSIS:	Print out the warning code when someone calls WarningNotice.
+# PASS:		nothing
+# CALLED BY:	breakpoint module
+# RETURN:	0 (continue the machine)
+# SIDE EFFECTS:
+#
+# STRATEGY
+#
+# REVISION HISTORY:
+#	Name	Date		Description
+#	----	----		-----------
+#	ardeb	10/25/92	Initial Revision
+#
+##############################################################################
 
 [defsubr why-warning {}
 {
