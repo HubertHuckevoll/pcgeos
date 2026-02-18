@@ -56,15 +56,36 @@ HelpTopGroup = GenInteraction {
 }
 
 
-HelpTextDisplay = HelpText {
+HelpTextView = GenView {
 	genStates = default -usable;
+	genAttributes = default +targetable;
+	output = HelpTextContent;
+	horizAttributes = default +scrollable;
+	vertAttributes = default +scrollable;
+	viewAttributes = default +controlled, +focusable, +genericContents;
+	hints = {
+		HINT_DEFAULT_FOCUS,
+		HINT_DEFAULT_TARGET,
+		HINT_EXPAND_WIDTH_TO_FIT_PARENT,
+		HINT_EXPAND_HEIGHT_TO_FIT_PARENT,
+		HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE
+	}
+}
+
+HelpTextContent = GenContent {
+	genView = HelpTextView;
+	children = HelpTextDisplay;
+	contentAttrs = sameWidthAsSubview, sameHeightAsSubview;
+}
+
+HelpTextDisplay = HelpText {
 	genAttributes = readOnly;
 	text = "";
 	hints = {
 		ATTR_GEN_TEXT_SELECTABLE,
-		HINT_DEFAULT_FOCUS,
 		HINT_EXPAND_WIDTH_TO_FIT_PARENT,
-		HINT_EXPAND_HEIGHT_TO_FIT_PARENT
+		HINT_EXPAND_HEIGHT_TO_FIT_PARENT,
+		ATTR_GEN_TEXT_NEVER_MAKE_SCROLLABLE
 	}
 }
 

@@ -434,6 +434,11 @@ TEMP_HELP_INITIAL_FONT_SIZE			vardata byte
 ; Internal only: Original point size before zooming started.
 ;
 
+TEMP_HELP_ZOOM_PERCENT				vardata word
+;
+; Internal only: Current Help view zoom as integer percent.
+;
+
 ;-----------------------------------------------------------------------------
 ;		Instance Data
 ;-----------------------------------------------------------------------------

@@ -138,7 +138,7 @@ HC_childList	GenControlChildInfo	\
 				mask HPCF_HISTORY, 0>,
 	<offset HelpInstructions, mask HPCF_INSTRUCTIONS,
 				mask GCCF_IS_DIRECTLY_A_FEATURE>,
-	<offset HelpTextDisplay, mask HPCF_TEXT, 0>,
+	<offset HelpTextView, mask HPCF_TEXT, 0>,
 	<offset HelpBottomGroup, mask HPCF_FIRST_AID_GO_BACK or \
 				mask HPCF_CLOSE, 0>,
 	<offset HelpOnHelpTrigger, mask HPCF_HELP,
@@ -156,7 +156,7 @@ HC_featuresList GenControlFeaturesInfo \
 	<offset HelpGoBackTrigger, HCGoBackName, 0>,
 	<offset HelpHistoryList, HCHistoryName, 0>,
 	<offset HelpContentsTrigger, HCContentsName, 0>,
-	<offset HelpTextDisplay, HCTextName, 0>,
+	<offset HelpTextView, HCTextName, 0>,
 	<offset HelpOnHelpTrigger, HCHelpOnHelpName, 0>
 if FULL_EXECUTE_IN_PLACE
 UIControlInfoXIP	ends
@@ -864,20 +864,17 @@ HelpControlTweakDuplicatedUI		endm
 helpDebugCat	char	"help", 0
 helpDebugKey	char	"debug", 0
 
-;
-; Zoom constants
-;
-ZOOM_MIN_SIZE	equ	8		; minimum font size
-ZOOM_MAX_SIZE	equ	36		; maximum font size
-ZOOM_INCREMENT	equ	2		; step size for zooming
-ZOOM_DEFAULT_SIZE equ	12		; text engine default point size
+HELP_ZOOM_MIN_PERCENT	equ	50
+HELP_ZOOM_MAX_PERCENT	equ	300
+HELP_ZOOM_STEP		equ	25
+HELP_ZOOM_DEFAULT_PERCENT equ	100
 
 
 COMMENT @###############################################################
 		HelpControlZoomIn
 ###############################################################
 
-SYNOPSIS:	Increase the font size of the help text
+SYNOPSIS:	Zoom in the help view
 CALLED BY:	MSG_HC_ZOOM_IN
 
 PASS:		*ds:si - instance data
@@ -888,10 +885,9 @@ RETURN:		none
 DESTROYED:	ax, bx, cx, dx, si, di, bp
 
 PSEUDO CODE/STRATEGY:
-	- Get current font size from instance data
-	- If less than max, increase by ZOOM_INCREMENT
-	- Apply new size to HelpTextDisplay
-	- Save new size to instance data
+	- Read current HelpTextView scale
+	- Increase by HELP_ZOOM_STEP up to HELP_ZOOM_MAX_PERCENT
+	- Apply new scale to HelpTextView
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
@@ -901,7 +897,16 @@ REVISION HISTORY:
 ###############################################################@
 
 HelpControlZoomIn	method dynamic HelpControlClass, MSG_HC_ZOOM_IN
-	call	ApplyLargerZoomToText
+	call	GetCurrentHelpZoomPercent
+	cmp	ax, HELP_ZOOM_MAX_PERCENT
+	jae	done
+	add	ax, HELP_ZOOM_STEP
+	cmp	ax, HELP_ZOOM_MAX_PERCENT
+	jbe	setScale
+	mov	ax, HELP_ZOOM_MAX_PERCENT
+setScale:
+	call	SetHelpViewZoomPercent
+done:
 	ret
 HelpControlZoomIn	endm
 
@@ -910,7 +915,7 @@ COMMENT @###############################################################
 		HelpControlZoomOut
 ###############################################################
 
-SYNOPSIS:	Decrease the font size of the help text
+SYNOPSIS:	Zoom out the help view
 CALLED BY:	MSG_HC_ZOOM_OUT
 
 PASS:		*ds:si - instance data
@@ -921,10 +926,9 @@ RETURN:		none
 DESTROYED:	ax, bx, cx, dx, si, di, bp
 
 PSEUDO CODE/STRATEGY:
-	- Get current font size from instance data
-	- If greater than min, decrease by ZOOM_INCREMENT
-	- Apply new size to HelpTextDisplay
-	- Save new size to instance data
+	- Read current HelpTextView scale
+	- Decrease by HELP_ZOOM_STEP down to HELP_ZOOM_MIN_PERCENT
+	- Apply new scale to HelpTextView
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
@@ -934,7 +938,16 @@ REVISION HISTORY:
 ###############################################################@
 
 HelpControlZoomOut	method dynamic HelpControlClass, MSG_HC_ZOOM_OUT
-	call	ApplySmallerZoomToText
+	call	GetCurrentHelpZoomPercent
+	cmp	ax, HELP_ZOOM_MIN_PERCENT
+	jbe	done
+	sub	ax, HELP_ZOOM_STEP
+	cmp	ax, HELP_ZOOM_MIN_PERCENT
+	jae	setScale
+	mov	ax, HELP_ZOOM_MIN_PERCENT
+setScale:
+	call	SetHelpViewZoomPercent
+done:
 	ret
 HelpControlZoomOut	endm
 
@@ -943,7 +956,7 @@ COMMENT @###############################################################
 		HelpControlResetZoom
 ###############################################################
 
-SYNOPSIS:	Reset help text zoom to default size
+SYNOPSIS:	Reset help view zoom to 100%
 CALLED BY:	MSG_HC_RESET_ZOOM
 
 PASS:		*ds:si - instance data
@@ -956,156 +969,144 @@ DESTROYED:	ax, bx, cx, dx, si, di, bp
 ###############################################################@
 
 HelpControlResetZoom	method dynamic HelpControlClass, MSG_HC_RESET_ZOOM
-	mov	al, ZOOM_DEFAULT_SIZE
-	call	ApplyZoomToText
+	mov	ax, HELP_ZOOM_DEFAULT_PERCENT
+	call	SetHelpViewZoomPercent
 	ret
 HelpControlResetZoom	endm
 
 
 COMMENT @###############################################################
-		ApplyLargerZoomToText
+		GetCurrentHelpZoomPercent
 ###############################################################
 
-SYNOPSIS:	Increase HelpTextDisplay point size using text engine's size table
-CALLED BY:	HelpControlZoomIn
-
-PASS:		*ds:si - HelpControlClass instance
-RETURN:		none
-DESTROYED:	ax, bx, cx, dx, si, di, bp
-
-###############################################################@
-
-ApplyLargerZoomToText	proc	near
-	uses	bp
-	.enter
-
-	call	HHGetChildBlockAndFeatures	; ^hbx = child block
-	tst	bx
-	jz	done
-	mov	si, offset HelpTextDisplay	; ^lbx:si = HelpTextDisplay
-
-	mov	dx, size VisTextSetLargerPointSizeParams
-	sub	sp, size VisTextSetLargerPointSizeParams
-	mov	bp, sp
-	clrdw	ss:[bp].VTSLPSP_range.VTR_start
-	movdw	ss:[bp].VTSLPSP_range.VTR_end, TEXT_ADDRESS_PAST_END
-	mov	ss:[bp].VTSLPSP_maximumSize, ZOOM_MAX_SIZE
-	mov	ax, MSG_VIS_TEXT_SET_LARGER_POINT_SIZE
-	mov	di, mask MF_CALL or mask MF_STACK or mask MF_FIXUP_DS
-	call	ObjMessage
-	add	sp, size VisTextSetLargerPointSizeParams
-
-done:
-	.leave
-	ret
-ApplyLargerZoomToText	endp
-
-
-COMMENT @###############################################################
-		ApplySmallerZoomToText
-###############################################################
-
-SYNOPSIS:	Decrease HelpTextDisplay point size using text engine's size table
-CALLED BY:	HelpControlZoomOut
-
-PASS:		*ds:si - HelpControlClass instance
-RETURN:		none
-DESTROYED:	ax, bx, cx, dx, si, di, bp
-
-###############################################################@
-
-ApplySmallerZoomToText	proc	near
-	uses	bp
-	.enter
-
-	call	HHGetChildBlockAndFeatures	; ^hbx = child block
-	tst	bx
-	jz	done
-	mov	si, offset HelpTextDisplay	; ^lbx:si = HelpTextDisplay
-
-	mov	dx, size VisTextSetSmallerPointSizeParams
-	sub	sp, size VisTextSetSmallerPointSizeParams
-	mov	bp, sp
-	clrdw	ss:[bp].VTSSPSP_range.VTR_start
-	movdw	ss:[bp].VTSSPSP_range.VTR_end, TEXT_ADDRESS_PAST_END
-	mov	ss:[bp].VTSSPSP_minimumSize, ZOOM_MIN_SIZE
-	mov	ax, MSG_VIS_TEXT_SET_SMALLER_POINT_SIZE
-	mov	di, mask MF_CALL or mask MF_STACK or mask MF_FIXUP_DS
-	call	ObjMessage
-	add	sp, size VisTextSetSmallerPointSizeParams
-
-done:
-	.leave
-	ret
-ApplySmallerZoomToText	endp
-
-
-COMMENT @###############################################################
-		ApplyZoomToText
-###############################################################
-
-SYNOPSIS:	Apply the current font size to the HelpTextDisplay
+SYNOPSIS:	Get current HelpTextView zoom as a rounded percentage
 CALLED BY:	HelpControlZoomIn, HelpControlZoomOut
 
-PASS:		al - font size to apply
+PASS:		*ds:si - HelpControlClass instance
+RETURN:		ax - zoom percentage
+DESTROYED:	ax, bx, cx, dx, si, di, bp
+
+###############################################################@
+
+GetCurrentHelpZoomPercent	proc	near
+	uses	bx
+	.enter
+
+	mov	ax, TEMP_HELP_ZOOM_PERCENT
+	call	ObjVarFindData
+	jnc	defaultZoom
+	mov	ax, ds:[bx]
+	jmp	done
+
+defaultZoom:
+	mov	ax, HELP_ZOOM_DEFAULT_PERCENT
+	call	StoreHelpZoomPercent
+	mov	ax, HELP_ZOOM_DEFAULT_PERCENT
+
+done:
+	.leave
+	ret
+GetCurrentHelpZoomPercent	endp
+
+
+COMMENT @###############################################################
+		SetHelpViewZoomPercent
+###############################################################
+
+SYNOPSIS:	Set HelpTextView scale using a percentage value
+CALLED BY:	HelpControlZoomIn, HelpControlZoomOut, HelpControlResetZoom
+
+PASS:		ax - zoom percentage
 		*ds:si - HelpControlClass instance
 RETURN:		none
 DESTROYED:	ax, bx, cx, dx, si, di, bp
 
-PSEUDO CODE/STRATEGY:
-	- Get the HelpTextDisplay object
-	- Send MSG_VIS_TEXT_SET_POINT_SIZE to it
-
-KNOWN BUGS/SIDE EFFECTS/IDEAS:
-REVISION HISTORY:
-	Name	Date		Description
-	----	----		-----------
-
 ###############################################################@
 
-ApplyZoomToText	proc	near
-	uses	bp
+SetHelpViewZoomPercent	proc	near
+	uses	bx, cx, dx, si, di, bp
 	.enter
 
 	;
-	; Find the duplicated child block that contains HelpTextDisplay.
+	; Clamp and persist requested zoom first, so zoom buttons always have
+	; a stable source of truth even if the view's returned scale is odd.
 	;
-	push	ax				; save font size in AL
+	cmp	ax, HELP_ZOOM_MIN_PERCENT
+	jae	checkMax
+	mov	ax, HELP_ZOOM_MIN_PERCENT
+checkMax:
+	cmp	ax, HELP_ZOOM_MAX_PERCENT
+	jbe	storeZoom
+	mov	ax, HELP_ZOOM_MAX_PERCENT
+storeZoom:
+	push	ax				;save zoom % across helper calls
+	call	StoreHelpZoomPercent
+
 	call	HHGetChildBlockAndFeatures	; ^hbx = child block
-	pop	ax
 	tst	bx
-	jz	done
-	mov	si, offset HelpTextDisplay	; ^lbx:si = HelpTextDisplay
-	;
-	; Set up parameters for MSG_VIS_TEXT_SET_POINT_SIZE
-	;
-	mov	dx, size VisTextSetPointSizeParams
-	sub	sp, size VisTextSetPointSizeParams
+	jz	noView
+	mov	si, offset HelpTextView		; ^lbx:si = HelpTextView
+
+	pop	dx				;dx:cx = percentage
+	clr	cx
+	push	bx				;save child block handle
+	mov	bx, 100				;divide by 100
+	clr	ax
+	call	GrUDivWWFixed			;dx:cx = absolute WWFixed scale
+	pop	bx				;restore child block handle
+
+	push	bp				;preserve proc frame pointer
+	sub	sp, size ScaleViewParams
 	mov	bp, sp
-	;
-	; Set range to cover all text (0 to end)
-	;
-	clrdw	ss:[bp].VTSPSP_range.VTR_start
-	movdw	ss:[bp].VTSPSP_range.VTR_end, TEXT_ADDRESS_PAST_END
-	;
-	; Set point size (WWFixed integer + fractional).
-	;
-	clr	ah
-	mov	ss:[bp].VTSPSP_pointSize.WWF_int, ax
-	clr	al
-	mov	ss:[bp].VTSPSP_pointSize.WWF_frac, ax
-	;
-	; Send the message to the text object
-	;
-	mov	ax, MSG_VIS_TEXT_SET_POINT_SIZE
+	movdw	ss:[bp].SVP_scaleFactor.PF_x, dxcx
+	movdw	ss:[bp].SVP_scaleFactor.PF_y, dxcx
+	mov	ss:[bp].SVP_type, SVT_AROUND_UPPER_LEFT
+	clrdw	ss:[bp].SVP_point.PD_x
+	clrdw	ss:[bp].SVP_point.PD_y
+	mov	dx, size ScaleViewParams
+	mov	ax, MSG_GEN_VIEW_SET_SCALE_FACTOR
 	mov	di, mask MF_CALL or mask MF_STACK or mask MF_FIXUP_DS
 	call	ObjMessage
-	add	sp, size VisTextSetPointSizeParams
+	add	sp, size ScaleViewParams
+	pop	bp
+	jmp	short done
+
+noView:
+	pop	ax				;discard saved zoom %
 
 done:
 	.leave
 	ret
-ApplyZoomToText	endp
+SetHelpViewZoomPercent	endp
+
+
+COMMENT @###############################################################
+		StoreHelpZoomPercent
+###############################################################
+
+SYNOPSIS:	Store current Help zoom percentage in controller vardata
+CALLED BY:	GetCurrentHelpZoomPercent, SetHelpViewZoomPercent
+
+PASS:		ax - zoom percentage
+		*ds:si - HelpControlClass instance
+RETURN:		none
+DESTROYED:	ax, bx, cx, dx
+
+###############################################################@
+
+StoreHelpZoomPercent	proc	near
+	uses	bx, cx, dx
+	.enter
+
+	mov	dx, ax
+	mov	ax, TEMP_HELP_ZOOM_PERCENT
+	mov	cx, size word
+	call	ObjVarAddData			; ds:bx <- vardata
+	mov	ds:[bx], dx
+
+	.leave
+	ret
+StoreHelpZoomPercent	endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

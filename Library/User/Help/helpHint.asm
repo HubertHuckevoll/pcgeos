@@ -165,8 +165,8 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Sets:
-			minimum size so the text doesn't get too small
-			scrollable text
+			minimum size so the view doesn't get too small
+			text wash color
 
 CALLED BY:	HelpControlGenerateUI()
 PASS:		*ds:si - controller
@@ -193,7 +193,7 @@ HHSetTextHints		proc	near
 	mov	di, ds:[si]
 	add	di, ds:[di].HelpControl_offset
 	call	HHGetChildBlockAndFeatures
-	mov	si, offset HelpTextDisplay	;^lbx:si <- OD of text object
+	mov	si, offset HelpTextView		;^lbx:si <- OD of view object
 	;
 	; Don't set text hints for status help or focus help
 	; (other than setting the background white)
@@ -201,7 +201,7 @@ HHSetTextHints		proc	near
 	cmp	ds:[di].HCI_helpType, HT_STATUS_HELP
 	je	done
 	;
-	; Set a minimum size so text doesn't get too small on a small screen
+	; Set a minimum size so the view doesn't get too small on a small screen
 	;
 	sub	sp, (size SetSizeArgs)
 	mov	bp, sp				;ss:bp <- args
@@ -217,6 +217,7 @@ HHSetTextHints		proc	near
 	;
 	; check if any background color is specified
 	;
+	mov	si, offset HelpTextDisplay	;^lbx:si <- OD of text object
 	push	ds, si
 	segmov	ds, cs, cx
 	mov	si, offset helpColorCat		;ds:si <- category
@@ -247,13 +248,6 @@ HHSetTextHints		proc	near
 	add	sp, (size ColorQuad + size AddVarDataParams)
 
 afterColor:
-
-	;
-	; Set the text scrollable
-	;
-	mov	ax, MSG_GEN_TEXT_SET_ATTRS
-	mov	cx, mask GTA_INIT_SCROLLING	;cl <- set; ch <- clear
-	call	callObjMessage
 done:
 
 	.leave
@@ -318,7 +312,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		HCHTextFixedSize
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Set HINT_FIXED_SIZE on the help object's text object
+SYNOPSIS:	Set HINT_FIXED_SIZE on the help object's view
 
 CALLED BY:	HelpControlScanHints()
 PASS:		*ds:si - controller
@@ -352,7 +346,7 @@ HCHTextFixedSize		proc	near
 	rep	movsb				;copy me jesus
 	pop	bx				;bx <- child block
 
-	mov	si, offset HelpTextDisplay	;^lbx:si <- OD of text object
+	mov	si, offset HelpTextView		;^lbx:si <- OD of view object
 	mov	ax, MSG_GEN_SET_FIXED_SIZE
 	mov	di, mask MF_FIXUP_DS or mask MF_CALL
 	call	ObjMessage
