@@ -226,6 +226,20 @@ HHSetTextHints		proc	near
 	pop	ds, si
 	jc	afterColor
 
+	;
+	; Match the view's background to the help text wash color so any
+	; viewport area exposed by zooming uses the same color.
+	;
+	push	ax
+	mov	si, offset HelpTextView		;^lbx:si <- OD of view object
+	mov	cl, al				;CL <- indexed color
+	mov	ch, CF_INDEX
+	clr	dx				;unused for indexed color
+	mov	ax, MSG_GEN_VIEW_SET_COLOR
+	call	callObjMessage
+	pop	ax
+	mov	si, offset HelpTextDisplay	;^lbx:si <- OD of text object
+	
 	sub	sp, (size ColorQuad + size AddVarDataParams)
 	mov	bp, sp				;ss:bp <- args
 

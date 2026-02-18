@@ -76,6 +76,10 @@ HelpTextContent = GenContent {
 	genView = HelpTextView;
 	children = HelpTextDisplay;
 	contentAttrs = sameWidthAsSubview, sameHeightAsSubview;
+	hints = {
+		HINT_EXPAND_WIDTH_TO_FIT_PARENT,
+		HINT_EXPAND_HEIGHT_TO_FIT_PARENT
+	}
 }
 
 HelpTextDisplay = HelpText {
