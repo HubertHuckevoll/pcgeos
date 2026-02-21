@@ -1,4 +1,11 @@
-GOAL
+GOAL: create the UI and framework for a new prefs module in "Library/Pref/PrefAppl" in GOC.
+INSPIRATION for Pref modules written in GOC: "Library/Pref/Prefsndn"
+TODO: create prefappl.gp, prefappl.goc and an Art subfolder. You can copy the moniker.goh from the Art folder in "Library/Pref/Prefsndn" for now, we will create our own monikers later.
+PrefAppl should contain the following UI elements:
+A horizontally alignend GenItemGroupClass with HINT_ITEM_GROUP_TAB_STYLE and just one GenItemClass element with the moniker "Ensemble Apps". There also must be a TabGroup GenInteraction that holds our main content. Look at SDK_C/Tabs/tabs.goc on how to wire up Tab UI. The main content in our main (and only, for now) horizontally aligned tab must be a GenDynamicList.This must be wide enough to hold a GEOS file name (32 chars) and a 15x15 graphical moniker as well as some padding. It should be tall enough to show 12 elements. On the right side of the list there should be a GenInteraction as a holder for a vertical list of equally sized buttons (GenTrigger). The one and only being a "Rescan" GenTrigger for now. We also must wire up the events for tab switching, even if there is only one tab for now.
+DONE WHEN: PrefAppl compiles.
+
+
 
 Keep the canonical GEOS applications in:
 - SYSTEM\SYSAPPL\DISTAPPS  (i.e., SP_SYS_APPLICATION\DISTAPPS)
