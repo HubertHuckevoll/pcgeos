@@ -47,9 +47,25 @@ typedef enum {
 
 @object GenApplicationClass FirstRunApp = {
     GI_visMoniker = @list { @FirstRunTextMoniker };
+    GI_comp = @FirstRunPrimary;
+    gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) = @FirstRunPrimary;
 }
 
 @visMoniker FirstRunTextMoniker = "FirstRun";
+
+@object GenPrimaryClass FirstRunPrimary = {
+    GI_comp = @FirstRunStatusGlyph;
+
+    HINT_SIZE_WINDOW_AS_DESIRED;
+    HINT_CENTER_WINDOW;
+    HINT_PRIMARY_NO_FILE_MENU;
+    ATTR_GEN_DISPLAY_NOT_MAXIMIZABLE;
+    HINT_DISPLAY_NOT_RESIZABLE;
+}
+
+@object GenGlyphClass FirstRunStatusGlyph = {
+    GI_visMoniker = "Updating application links...";
+}
 
 @end AppResource;
 
