@@ -222,13 +222,13 @@ TileAttrChoice = PrefStringItem {
 }
 
 FitCoverAttrChoice = PrefStringItem {
-	moniker = "Scale image to cover screen";
+	moniker = "Scale graphic to cover screen";
 	identifier = 3;
 	initFileString = "cover";
 }
 
 FitContainAttrChoice = PrefStringItem {
-	moniker = "Scale image to fit inside screen";
+	moniker = "Scale graphic to fit inside screen";
 	identifier = 4;
 	initFileString = "contain";
 }
