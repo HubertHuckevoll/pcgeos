@@ -36,7 +36,7 @@ class PrefBGChooseList = PrefTocList {
 
 /**************************************************************************
  *	UI FOR SOUND
- **************************************************************************/ 
+ **************************************************************************/
 start	PrefBGUI;
 
 
@@ -47,7 +47,7 @@ BackgroundDialog = PrefBGDialog {
 	attributes = default +modal, +notUserInitiatable;
 	type = multipleResponse;
 
-	children = BackgroundTitleGroup, 
+	children = BackgroundTitleGroup,
 		BackgroundSubgroup,
 		BackgroundPasteGetFilenameBox,
 		BackgroundClose,
@@ -63,7 +63,7 @@ BackgroundDialog = PrefBGDialog {
 		},
 		ATTR_GEN_HELP_CONTEXT {
 			char "dbBackground",0
-		} 
+		}
 	}
 
 }
@@ -186,8 +186,8 @@ BackgroundAttrList = PrefItemGroup {
 	initFileFlags = default +useItemStrings;
 	numSelections = 1;
 	selection = 2;
-	hints = { 
-		HINT_PLACE_MONIKER_ABOVE, 
+	hints = {
+		HINT_PLACE_MONIKER_ABOVE,
 		HINT_ORIENT_CHILDREN_VERTICALLY,
 		ATTR_GEN_INIT_FILE_KEY {
 			char BACKGROUND_ATTR_KEY,0
@@ -196,9 +196,11 @@ BackgroundAttrList = PrefItemGroup {
 			char BACKGROUND_CATEGORY,0
 		}
 	}
-	children = UpperLeftAttrChoice, 
-			CenterAttrChoice, 
-			TileAttrChoice;
+	children = UpperLeftAttrChoice,
+			CenterAttrChoice,
+			TileAttrChoice,
+			FitCoverAttrChoice,
+			FitContainAttrChoice;
 }
 
 UpperLeftAttrChoice = PrefStringItem {
@@ -219,13 +221,25 @@ TileAttrChoice = PrefStringItem {
 	initFileString = "tile";
 }
 
+FitCoverAttrChoice = PrefStringItem {
+	moniker = "Scale image to cover screen";
+	identifier = 3;
+	initFileString = "cover";
+}
+
+FitContainAttrChoice = PrefStringItem {
+	moniker = "Scale image to fit inside screen";
+	identifier = 4;
+	initFileString = "contain";
+}
+
 BackgroundColorList = PrefColorSelector {
 	/* This object sets itself not usable on monochrome displays */
 	color = {
 		redOrIndex = C_CYAN;
 	}
 	moniker = "Background Color:";
-	hints = { 
+	hints = {
 		ATTR_GEN_INIT_FILE_KEY {
 			char BACKGROUND_COLOR_KEY,0
 		},
@@ -244,7 +258,7 @@ BackgroundPasteTrigger = GenTrigger {
 	genStates = default -enabled;
 	moniker = "Get Background from Clipboard";
 	action = MSG_PREF_BG_DIALOG_PASTE, BackgroundDialog;
-	genAttributes = default +initiatesInputIgnore, 
+	genAttributes = default +initiatesInputIgnore,
 				+initiatesBusyState;
 	hints = {
 	    HINT_TRIGGER_BRINGS_UP_WINDOW
@@ -256,7 +270,7 @@ BackgroundCutTrigger = GenTrigger {
 	genStates = default -enabled;
 	moniker = "Remove Background";
 	action = MSG_PREF_BG_DIALOG_PASTE, BackgroundDialog;
-	genAttributes = default +initiatesInputIgnore, 
+	genAttributes = default +initiatesInputIgnore,
 				+initiatesBusyState;
 	hints = {
 	    HINT_TRIGGER_BRINGS_UP_WINDOW
@@ -276,7 +290,7 @@ BackgroundPasteFilename = GenText {
 	moniker = "Enter name for this background:";
 	textDisplayAttributes = default +singleLineText;
 	hints = {
-		ATTR_GEN_TEXT_LEGAL_FILENAMES, 
+		ATTR_GEN_TEXT_LEGAL_FILENAMES,
 		HINT_PLACE_MONIKER_ABOVE,
 		HINT_DEFAULT_FOCUS
 		}
@@ -300,7 +314,7 @@ Right now, minimize doesn't work because we're a modal interaction.
 In order to minimize, we'd need to dismiss the interaction and then
 set the primary minimized.  There's then the usability issue of "why
 doesn't the same dialog box I had up before come back up when I
-unminimize?" 
+unminimize?"
 
 
 BackgroundMinimize = GenTrigger {

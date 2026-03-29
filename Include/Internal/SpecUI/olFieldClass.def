@@ -68,6 +68,12 @@ FieldBGDrawAttr	etype	byte
 	FBGDA_TILE		enum	FieldBGDrawAttr
 	;Tile the graphic to fill the screen
 
+	FBGDA_FIT_COVER		enum	FieldBGDrawAttr
+	;Scale uniformly to cover the whole screen
+
+	FBGDA_FIT_CONTAIN	enum	FieldBGDrawAttr
+	;Scale uniformly so the whole graphic remains visible
+
 FieldBGFlags	record
 	FBGF_DRAW_ATTR FieldBGDrawAttr:4
 	;Set if we want to fill the display by tiling the BG

@@ -381,7 +381,7 @@ REVISION HISTORY:
 OLFieldVisSetSize	method	dynamic OLFieldClass, MSG_VIS_SET_SIZE
 
 	push	bx, di
-	
+
 	push	di
 	mov	ax, MSG_VIS_SET_SIZE
 	mov	di, offset OLFieldClass
@@ -398,7 +398,7 @@ if TOOL_AREA_IS_TASK_BAR
 	mov	si, ds:[di].OLFI_toolArea	; get *ds:si = tool area
 	tst	si
 	jz	done
-	
+
 	mov	bx, ds:[LMBH_handle]
 
 	push	cx
@@ -1173,6 +1173,18 @@ OLFieldDrawBG	proc	far
 	bltSrcX		local	word
 	bltSrcY		local	word
 	haveBltSource	local	word
+	xScaleHigh	local	word
+	xScaleLow	local	word
+	yScaleHigh	local	word
+	yScaleLow	local	word
+	scaleHigh	local	word
+	scaleLow	local	word
+	scaledWidth	local	word
+	scaledHeight	local	word
+	scaledXOff	local	word
+	scaledYOff	local	word
+	transX		local	word
+	transY		local	word
 	.enter
 	push	ds, si
 EC <	call	ECCheckObject						>
@@ -1234,6 +1246,11 @@ afterSetY:
 	add	xoff, ax			;
 
 afterCenter:
+	cmp	flags, FBGDA_FIT_COVER shl offset FBGF_DRAW_ATTR
+	je	drawScaled
+	cmp	flags, FBGDA_FIT_CONTAIN shl offset FBGF_DRAW_ATTR
+	je	drawScaled
+
 	pop	ds, cx
 	mov	di, gstate
 	call	InvertColorIfPatternDrawOnBlackBackground
@@ -1315,6 +1332,169 @@ doneDraw:
 	add	bx, BGHeight			;
 	cmp	bx, scrHeight			;
 	LONG jb	resetXLoop			;
+	jmp	short exit
+
+drawScaled:
+	pop	ds, cx
+	mov	di, gstate
+	call	InvertColorIfPatternDrawOnBlackBackground
+	;  ax - 0, ok to invert the background pattern color.
+	;       1, not ok to invert the color
+	mov	notinvert, al
+
+	tst	BGWidth
+	jz	exit
+	tst	BGHeight
+	jz	exit
+
+	; Compute horizontal and vertical scale factors.
+	mov	dx, scrWidth
+	clr	cx
+	mov	bx, BGWidth
+	clr	ax
+	call	GrUDivWWFixed
+	mov	xScaleHigh, dx
+	mov	xScaleLow, cx
+
+	mov	dx, scrHeight
+	clr	cx
+	mov	bx, BGHeight
+	clr	ax
+	call	GrUDivWWFixed
+	mov	yScaleHigh, dx
+	mov	yScaleLow, cx
+
+	; Choose the final uniform scale factor.
+	mov	dx, xScaleHigh
+	mov	cx, xScaleLow
+	cmp	flags, FBGDA_FIT_CONTAIN shl offset FBGF_DRAW_ATTR
+	jne	checkCoverScale
+	mov	ax, xScaleHigh
+	cmp	ax, yScaleHigh
+	ja	useYScale
+	jb	haveScale
+	mov	ax, xScaleLow
+	cmp	ax, yScaleLow
+	ja	useYScale
+	jmp	short haveScale
+checkCoverScale:
+	cmp	flags, FBGDA_FIT_COVER shl offset FBGF_DRAW_ATTR
+	jne	haveScale
+	mov	ax, xScaleHigh
+	cmp	ax, yScaleHigh
+	ja	haveScale
+	jb	useYScale
+	mov	ax, xScaleLow
+	cmp	ax, yScaleLow
+	jae	haveScale
+useYScale:
+	mov	dx, yScaleHigh
+	mov	cx, yScaleLow
+haveScale:
+	mov	scaleHigh, dx
+	mov	scaleLow, cx
+
+	; Compute scaled size (safely) and scaled map offsets.
+	;
+	; We avoid GrMulWWFixed for width/height because very skinny images
+	; in cover mode can produce huge scaled dimensions (e.g. 1px width),
+	; which may overflow a signed word and make the image disappear.
+	;
+	; scaled = floor(dim * scaleHigh + (dim * scaleLow)/65536)
+	; and clamp to 32767 (largest positive signed translation space).
+	;
+	mov	ax, BGWidth
+	mul	scaleHigh			;DX:AX = BGWidth * integer(scale)
+	tst	dx
+	jnz	clampScaledWidth
+	cmp	ax, 32767
+	ja	clampScaledWidth
+	mov	scaledWidth, ax
+	mov	ax, BGWidth
+	mul	scaleLow				;DX = integer fractional part
+	add	scaledWidth, dx
+	jc	clampScaledWidth
+	cmp	scaledWidth, 32767
+	jbe	gotScaledWidth
+clampScaledWidth:
+	mov	scaledWidth, 32767
+gotScaledWidth:
+
+	mov	ax, BGHeight
+	mul	scaleHigh			;DX:AX = BGHeight * integer(scale)
+	tst	dx
+	jnz	clampScaledHeight
+	cmp	ax, 32767
+	ja	clampScaledHeight
+	mov	scaledHeight, ax
+	mov	ax, BGHeight
+	mul	scaleLow				;DX = integer fractional part
+	add	scaledHeight, dx
+	jc	clampScaledHeight
+	cmp	scaledHeight, 32767
+	jbe	gotScaledHeight
+clampScaledHeight:
+	mov	scaledHeight, 32767
+gotScaledHeight:
+
+	mov	dx, xoff
+	clr	cx
+	mov	bx, scaleHigh
+	mov	ax, scaleLow
+	call	GrMulWWFixed
+	mov	scaledXOff, dx
+
+	mov	dx, yoff
+	clr	cx
+	mov	bx, scaleHigh
+	mov	ax, scaleLow
+	call	GrMulWWFixed
+	mov	scaledYOff, dx
+
+	; Center the scaled image (cover crops, contain letterboxes).
+	mov	ax, scrWidth
+	sub	ax, scaledWidth
+	sar	ax, 1
+	sub	ax, scaledXOff
+	mov	transX, ax
+
+	mov	ax, scrHeight
+	sub	ax, scaledHeight
+	sar	ax, 1
+	sub	ax, scaledYOff
+	mov	transY, ax
+
+	; Draw once with transform.
+	mov	di, gstate
+	call	GrSaveState
+
+	mov	dx, transX
+	clr	cx
+	mov	bx, transY
+	clr	ax
+	call	GrApplyTranslation
+
+	mov	dx, scaleHigh
+	mov	cx, scaleLow
+	mov	bx, dx
+	mov	ax, cx
+	call	GrApplyScale
+
+	tst	notinvert
+	jnz	scaledNotInvert
+	mov	al, MM_INVERT
+	call	GrSetMixMode
+scaledNotInvert:
+	mov	ax, xoff
+	mov	bx, yoff
+	clr	dx
+	call	GrDrawGString
+	call	GrRestoreState
+EC <	cmp	dx, GSRT_COMPLETE					>
+EC <	ERROR_NE OL_ERROR						>
+	mov	al, GSSPT_BEGINNING
+	call	GrSetGStringPos
+
 exit:
 	.leave
 	ret
@@ -1713,12 +1893,13 @@ LocalDefNLString backgroundDir <BACKGROUND_DIR,0>
 backgroundCategory	char	BACKGROUND_CATEGORY,0
 backgroundKey		char	BACKGROUND_NAME_KEY,0
 attrKey			char	BACKGROUND_ATTR_KEY,0
-;	Either "Tiled", "Centered" or "None" are appropriate here
+;	Either "Tiled", "Centered", "None", "Cover" or "Contain" are
+;	appropriate here.
 
 OpenBGFile	proc	far
 	uses	es
 
-	attrStr	local	2 dup (TCHAR)
+	attrStr	local	8 dup (TCHAR)
 
 	.enter
 	push	bp
@@ -1734,19 +1915,30 @@ EC <	call	ECCheckObject						>
 	mov	dx, offset attrKey		;
 	segmov	es, ss, di			;ES:DI <- ptr to dest for chars
 	lea	di, attrStr			;
-SBCS <	mov	bp,INITFILE_DOWNCASE_CHARS or 2	;Only get first char+null>
-DBCS <	mov	bp,INITFILE_DOWNCASE_CHARS or (2 * size TCHAR)	;Space for 1st>
-DBCS <								; char + null>
+SBCS <	mov	bp,INITFILE_DOWNCASE_CHARS or 8	;Need first three chars+null>
+DBCS <	mov	bp,INITFILE_DOWNCASE_CHARS or (8 * size TCHAR)	;for cover/contain>
 	call	InitFileReadString		;
 	pop	ds, si				;Restore and save ptr to object
 	push	ds, si				;
 	mov	al, FBGDA_CENTER shl offset FBGF_DRAW_ATTR
 	jc	5$				;Branch if string not found
+	cmp	{byte} es:[di], 'c'		;center/cover/contain?
+	jne	20$
+	mov	al, FBGDA_CENTER shl offset FBGF_DRAW_ATTR
+	cmp	{byte} es:[di+1], 'o'		;co* => cover/contain
+	jne	5$
+	cmp	{byte} es:[di+2], 'v'		;cover
+	jne	8$
+	mov	al, FBGDA_FIT_COVER shl offset FBGF_DRAW_ATTR
+	jmp	short 5$
+8$:
+	cmp	{byte} es:[di+2], 'n'		;contain
+	jne	5$
+	mov	al, FBGDA_FIT_CONTAIN shl offset FBGF_DRAW_ATTR
+	jmp	short 5$
+20$:
 	mov	al, FBGDA_TILE shl offset FBGF_DRAW_ATTR
 	cmp	{byte} es:[di], 't'		;If tiling wanted, branch
-	je	5$				;
-	mov	al, FBGDA_CENTER shl offset FBGF_DRAW_ATTR
-	cmp	{byte} es:[di], 'c'		;If centered wanted, branch
 	je	5$				;
 	mov	al, FBGDA_UPPER_LEFT shl offset FBGF_DRAW_ATTR
 5$:						;
