@@ -1404,37 +1404,6 @@ DIR (ensemble) {
 
 			##
 			##
-			## NET.INI
-			##
-
-			TEMPLATE Tools/build/product/bbxensem/Template/{dbcs}/net{ec}.ini LOCALPC
-
-			##
-			##
-			## SYSTEM directory with geos.geo and fs drivers
-			## needed to load the GFS image
-			##
-
-			DIR (system) {
-
-				Library/Kernel/{dbcs}/geos{ec}.geo LOCALPC
-
-				DIR (fs) {
-					# the nt build won't run with this in it
-					# if (!nt) {
-						Driver/IFS/DOS/NTFat/ntfat{ec}.geo LOCALPC
-					# }
-					Driver/IFS/DOS/MSLF/mslf{ec}.geo LOCALPC
-					Driver/IFS/DOS/DRI/dri{ec}.geo LOCALPC
-					Driver/IFS/DOS/CDROM/cdrom{ec}.geo LOCALPC
-					Driver/IFS/DOS/MSNet/msnet{ec}.geo LOCALPC
-					Driver/IFS/DOS/OS2/os2{ec}.geo LOCALPC
-					Driver/IFS/GEOS/MegaFile/megafile{ec}.geo LOCALPC
-				}
-			}
-
-			##
-			##
 			## the two scripts needed to create and update the user writeable world
 			##
 			Tools/build/product/bbxensem/Scripts/gsetup.bat LOCALPC
@@ -1446,493 +1415,521 @@ DIR (ensemble) {
 			## using gsetup.bat and gupdate.bat
 			##
 
-			DIR (user) {
 
-				###############################################################################
-				#
-				# "update"
-				#
-				# Files / folders that live in the user writeable world but need to be updated
-				# once the system gets updated - like the loader, geos.str, splashscreens etc.
-				#
-				###############################################################################
 
-				DIR (update) {
+			###############################################################################
+			#
+			# "update"
+			#
+			# Files / folders that live in the user writeable world but need to be updated
+			# once the system gets updated - like the loader, geos.str, splashscreens etc.
+			#
+			###############################################################################
 
-					##
-					##
-					## GFS.INI
-					## when updating the system, make sure to edit GFS.INI and adopt the paths!
-					##
+			DIR (update) {
 
-					TEMPLATE Tools/build/product/bbxensem/Template/{dbcs}/gfs{ec}.ini LOCALPC
+				##
+				##
+				## NET.INI
+				##
 
-					##
-					##
-					## Loader, Icons, Splash and Reset & Co
-					##
+				TEMPLATE Tools/build/product/bbxensem/Template/{dbcs}/net{ec}.ini LOCALPC
 
-					IF (nt) {
-						TEMPLATE	Tools/build/product/bbxensem/Template/s.bat LOCALPC
-						TEMPLATE	Tools/build/product/bbxensem/Template/ss.bat LOCALPC
-					}
-					TEMPLATE  Tools/build/product/bbxensem/Template/ENSEMBLE.BAT LOCALPC
 
-					IF (nt) {
-						Loader/VGA/{dbcs}/loader{ec}.exe LOCALPC
-						Tools/build/product/bbxensem/Template/splash.scr LOCALPC
-						# send NT swat stub down
-						Tools/swat/Stub/NetWare/{dbcs}/swat.exe LOCALPC
+				##
+				##
+				## GFS.INI
+				## when updating the system, make sure to edit GFS.INI and adopt the paths!
+				##
+				## TEMPLATE Tools/build/product/bbxensem/Template/{dbcs}/gfs{ec}.ini LOCALPC
+
+				##
+				##
+				## Loader, Icons, Splash and Reset & Co
+				##
+
+				IF (nt) {
+					TEMPLATE	Tools/build/product/bbxensem/Template/s.bat LOCALPC
+					TEMPLATE	Tools/build/product/bbxensem/Template/ss.bat LOCALPC
+				}
+				TEMPLATE  Tools/build/product/bbxensem/Template/ENSEMBLE.BAT LOCALPC
+
+				IF (nt) {
+					Loader/VGA/{dbcs}/loader{ec}.exe LOCALPC
+					Tools/build/product/bbxensem/Template/splash.scr LOCALPC
+					# send NT swat stub down
+					Tools/swat/Stub/NetWare/{dbcs}/swat.exe LOCALPC
+				} ELSE {
+					Loader/VGA/loader{ec}.exe LOCALPC
+					IF (demo) {
+						Tools/build/product/bbxensem/Demo/splash.scr LOCALPC
 					} ELSE {
-						Loader/VGA/loader{ec}.exe LOCALPC
-						IF (demo) {
-							Tools/build/product/bbxensem/Demo/splash.scr LOCALPC
-						} ELSE {
-							Tools/build/product/bbxensem/Template/splash.scr LOCALPC
-						}
+						Tools/build/product/bbxensem/Template/splash.scr LOCALPC
 					}
-
-					Loader/geos.str LOCALPC
-
-					Tools/build/product/bbxensem/Images/Gwicon5.ico LOCALPC
-					Tools/build/product/bbxensem/Images/Gwicon7.ico LOCALPC
-					Tools/build/product/bbxensem/Images/pcgeos.ico LOCALPC
-
-					# License
-					Tools/build/product/bbxensem/Images/License.txt LOCALPC
-
-					ENGLISH {
-						Tools/build/product/bbxensem/Images/RESET.BAT LOCALPC
-					}
-					GERMAN {
-						Tools/build/product/bbxensem/Images/german/RESET.BAT LOCALPC
-					}
-
 				}
 
+				Loader/geos.str LOCALPC
 
-				###############################################################################
-				#
-				# "install"
-				#
-				# Directory for user files ("the user writeable world"), that gets copied into the
-				# ENSEMBLE root dir on install only
-				#
-				###############################################################################
+				Tools/build/product/bbxensem/Images/Gwicon5.ico LOCALPC
+				Tools/build/product/bbxensem/Images/Gwicon7.ico LOCALPC
+				Tools/build/product/bbxensem/Images/pcgeos.ico LOCALPC
 
-				DIR (install) {
+				# License
+				Tools/build/product/bbxensem/Images/License.txt LOCALPC
 
-					##
-					##
-					## Ini
-					##
+				ENGLISH {
+					Tools/build/product/bbxensem/Images/RESET.BAT LOCALPC
+				}
+				GERMAN {
+					Tools/build/product/bbxensem/Images/german/RESET.BAT LOCALPC
+				}
 
-					TEMPLATE Tools/build/product/bbxensem/Template/{dbcs}/geos{ec}.ini LOCALPC
+				##
+				##
+				## SYSTEM directory with geos.geo and fs drivers
+				## needed to load the GFS image
+				##
 
+				DIR (system) {
 
-					##
-					##
-					## PRIVDATA directory
-					##
+					Library/Kernel/{dbcs}/geos{ec}.geo LOCALPC
 
-					DIR (privdata) {
-
-						# runtime-generated mutable files must be in writable GEOS
-						Tools/build/product/bbxensem/Images/lastword.000 LOCALPC
-						Tools/build/product/bbxensem/Images/TTF_CACH.000 LOCALPC
-
-						# the browser cache folders
-						DIR (cache) {
-							FORCEDIR LOCALPC
-							DIR (0) {
-								FORCEDIR LOCALPC
-							}
-							DIR (1) {
-								FORCEDIR LOCALPC
-							}
-							DIR (2) {
-								FORCEDIR LOCALPC
-							}
-							DIR (3) {
-								FORCEDIR LOCALPC
-							}
-							DIR (4) {
-								FORCEDIR LOCALPC
-							}
-							DIR (alt0) {
-								FORCEDIR LOCALPC
-							}
-							DIR (alt1) {
-								FORCEDIR LOCALPC
-							}
-							DIR (alt2) {
-								FORCEDIR LOCALPC
-							}
-							DIR (alt3) {
-								FORCEDIR LOCALPC
-							}
-							DIR (alt4) {
-								FORCEDIR LOCALPC
-							}
-						}
-
-						DIR (htmlerr) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (sounds) {
-							FORCEDIR LOCALPC
-						}
-
-						# set up some more privdata folders
-						DIR (spool) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (state) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (waste) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (pref) {
-							FORCEDIR LOCALPC
-							# mutable device list cache must be writable
-							ENGLISH {
-								Tools/build/product/bbxensem/Images/GEOS_DEV.000 LOCALPC
-							}
-							GERMAN {
-								Tools/build/product/bbxensem/Trans/Privdata/german/GEOS_DEV.000 LOCALPC
-							}
-						}
+					DIR (fs) {
+						# the nt build won't run with this in it
+						# if (!nt) {
+							Driver/IFS/DOS/NTFat/ntfat{ec}.geo LOCALPC
+						# }
+						Driver/IFS/DOS/MSLF/mslf{ec}.geo LOCALPC
+						Driver/IFS/DOS/DRI/dri{ec}.geo LOCALPC
+						Driver/IFS/DOS/CDROM/cdrom{ec}.geo LOCALPC
+						Driver/IFS/DOS/MSNet/msnet{ec}.geo LOCALPC
+						Driver/IFS/DOS/OS2/os2{ec}.geo LOCALPC
+						Driver/IFS/GEOS/MegaFile/megafile{ec}.geo LOCALPC
 					}
+				}
+			}
 
-					##
-					##
-					## SYSTEM directory
-					##
 
-					DIR (system) {
-						DIR (dma) {
+			###############################################################################
+			#
+			# "install"
+			#
+			# Directory for user files ("the user writeable world"), that gets copied into the
+			# ENSEMBLE root dir on install only
+			#
+			###############################################################################
+
+			DIR (install) {
+
+				##
+				##
+				## Ini
+				##
+
+				TEMPLATE Tools/build/product/bbxensem/Template/{dbcs}/geos{ec}.ini LOCALPC
+
+
+				##
+				##
+				## PRIVDATA directory
+				##
+
+				DIR (privdata) {
+
+					# runtime-generated mutable files must be in writable GEOS
+					Tools/build/product/bbxensem/Images/lastword.000 LOCALPC
+					Tools/build/product/bbxensem/Images/TTF_CACH.000 LOCALPC
+
+					# the browser cache folders
+					DIR (cache) {
+						FORCEDIR LOCALPC
+						DIR (0) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (filemgr) {
+						DIR (1) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (font) {
+						DIR (2) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (fs) {
+						DIR (3) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (impex) {
+						DIR (4) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (kbd) {
+						DIR (alt0) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (mouse) {
+						DIR (alt1) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (net) {
+						DIR (alt2) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (power) {
+						DIR (alt3) {
 							FORCEDIR LOCALPC
 						}
-
-						DIR (pref) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (printer) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (savers) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (socket) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (sound) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (swap) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (sysappl) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (task) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (video) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (www) {
+						DIR (alt4) {
 							FORCEDIR LOCALPC
 						}
 					}
 
-					##
-					##
-					## DOCUMENT directory
-					##
+					DIR (htmlerr) {
+						FORCEDIR LOCALPC
+					}
 
-					DIR (document) {
-						#
-						# Default Breadbox Ensemble data files
-						#
+					DIR (sounds) {
+						FORCEDIR LOCALPC
+					}
 
-						Tools/build/product/bbxensem/Document/readme.txt LOCALPC
+					# set up some more privdata folders
+					DIR (spool) {
+						FORCEDIR LOCALPC
+					}
 
-						DIR (Clip Art) {
+					DIR (state) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (waste) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (pref) {
+						FORCEDIR LOCALPC
+						# mutable device list cache must be writable
 						ENGLISH {
-							Tools/build/product/bbxensem/Document/CLIPART/BORDERS_.000 LOCALPC
-							Tools/build/product/bbxensem/Document/CLIPART/NATURE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/CLIPART/CASample.000 LOCALPC
+							Tools/build/product/bbxensem/Images/GEOS_DEV.000 LOCALPC
 						}
 						GERMAN {
-							Tools/build/product/bbxensem/Document/german/clipart/CLIPART_.000 LOCALPC
-							Tools/build/product/bbxensem/Document/german/clipart/NATUR.000 LOCALPC
-							Tools/build/product/bbxensem/Document/german/clipart/RAHMEN_U.000 LOCALPC
-						}
-						}
-
-						DIR (Presentations) {
-							Tools/build/product/bbxensem/Document/SAMPLE_P.000 LOCALPC
-						}
-
-						DIR (Crossword Puzzles) {
-							Tools/build/product/bbxensem/Document/Crossword/science_.000 LOCALPC
-							Tools/build/product/bbxensem/Document/Crossword/geograph.000 LOCALPC
-							Tools/build/product/bbxensem/Document/Crossword/history_.000 LOCALPC
-							Tools/build/product/bbxensem/Document/Crossword/people__.000 LOCALPC
-							Tools/build/product/bbxensem/Document/Crossword/events__.000 LOCALPC
-						}
-
-						# the presidential profiles ebook
-						# should also be in DISTDOC as an installer file, comes pre-installed in
-						# english versions only
-						DIR (eBooks) {
-						ENGLISH {
-						DIR (Presidential Profiles) {
-							Tools/build/product/bbxensem/Document/presprof/_PRESIDE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P00CHART.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P00MAIN.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P00QUIZ.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P01WASHI.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P02ADAMS.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P03JEFFE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P04MADIS.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P05MONRO.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P06JQADA.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P07JACKS.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P08VANBU.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P09HARRI.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P10TYLER.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P11POLK.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P12TAYLO.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P13FILLM.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P14PIERC.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P15BUCHA.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P16LINCO.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P17JOHNS.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P18GRANT.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P19HAYES.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P20GARFI.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P21ARTHU.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P22CLEVE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P23BHARR.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P25MCKIN.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P26ROOSE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P27TAFT.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P28WILSO.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P29HARDI.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P30COOLI.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P31HOOVE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P32FDROO.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P33TRUMA.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P34EISEN.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P35KENNE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P36LBJOH.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P37NIXON.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P38FORD.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P39CARTE.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P40REAGA.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P41BUSH.000 LOCALPC
-							Tools/build/product/bbxensem/Document/presprof/P42CLINT.000 LOCALPC
-						}
-						}
-						}
-
-					}
-
-
-					##
-					##
-					## USERDATA directory
-					##
-
-					DIR (userdata) {
-						# mutable app data files seeded into writable USERDATA
-						Tools/build/product/bbxensem/Userdata/BBCDPLAY.DAT LOCALPC
-
-						DIR (Game) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (Word Matcher) {
-							FORCEDIR LOCALPC
-							ENGLISH {
-								Tools/build/product/bbxensem/Userdata/wordmat/WM_WORDS.000 LOCALPC
-							}
-							GERMAN {
-								Tools/build/product/bbxensem/Userdata/german/wordmat/WM_WORDS.000 LOCALPC
-							}
-						}
-
-						DIR (GeoNoid) {
-							FORCEDIR LOCALPC
-							Tools/build/product/bbxensem/Userdata/geonoid/GEONOIDL.000 LOCALPC
-						}
-
-						DIR (MunchData) {
-							FORCEDIR LOCALPC
-							Tools/build/product/bbxensem/Userdata/munchdat/LEVEL_DA.000 LOCALPC
-						}
-
-						DIR (TT Data) {
-							FORCEDIR LOCALPC
-							ENGLISH {
-								Tools/build/product/bbxensem/Userdata/ttdata/EXERCISE.VM LOCALPC
-							}
-							GERMAN {
-								Tools/build/product/bbxensem/Userdata/german/ttdata/EXERCISE.VM LOCALPC
-							}
-						}
-
-						DIR (LASERL) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (backgrnd) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (deck) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (dicts) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (help) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (template) {
-							FORCEDIR LOCALPC
-							DIR (GeoCalc Templates) {
-								FORCEDIR LOCALPC
-							}
-							DIR (GeoCalc Vorlagen) {
-								FORCEDIR LOCALPC
-							}
-							DIR (GeoDraw Templates) {
-								FORCEDIR LOCALPC
-							}
-							DIR (GeoDraw Vorlagen) {
-								FORCEDIR LOCALPC
-							}
-							DIR (GeoFile Templates) {
-								FORCEDIR LOCALPC
-							}
-							DIR (GeoFile Vorlagen) {
-								FORCEDIR LOCALPC
-							}
-							DIR (GeoWrite Templates) {
-								FORCEDIR LOCALPC
-							}
-							DIR (GeoWrite Vorlagen) {
-								FORCEDIR LOCALPC
-							}
-						}
-
-						DIR (termcap) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (font) {
-							DIR (ttf) {
-								FORCEDIR LOCALPC
-							}
+							Tools/build/product/bbxensem/Trans/Privdata/german/GEOS_DEV.000 LOCALPC
 						}
 					}
+				}
 
-					##
-					## WORLD
-					##
+				##
+				##
+				## SYSTEM directory
+				##
 
-					DIR (world) {
-						DIR (Desk Accessories) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (Games) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (Extras) {
-							FORCEDIR LOCALPC
-						}
-
-						DIR (Tools) {
-							IF (tools) {
-								FORCEDIR LOCALPC
-							}
-
-						}
-					}
-
-					##
-					##
-					## DOSROOM directory
-					##
-
-					DIR (dosroom) {
+				DIR (system) {
+					DIR (dma) {
 						FORCEDIR LOCALPC
 					}
 
-					##
-					##
-					## DESKTOP directory
-					##
+					DIR (filemgr) {
+						FORCEDIR LOCALPC
+					}
 
-					DIR (desktop) {
+					DIR (font) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (fs) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (impex) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (kbd) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (mouse) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (net) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (power) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (pref) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (printer) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (savers) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (socket) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (sound) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (swap) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (sysappl) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (task) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (video) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (www) {
 						FORCEDIR LOCALPC
 					}
 				}
 
+				##
+				##
+				## DOCUMENT directory
+				##
+
+				DIR (document) {
+					#
+					# Default Breadbox Ensemble data files
+					#
+
+					Tools/build/product/bbxensem/Document/readme.txt LOCALPC
+
+					DIR (Clip Art) {
+					ENGLISH {
+						Tools/build/product/bbxensem/Document/CLIPART/BORDERS_.000 LOCALPC
+						Tools/build/product/bbxensem/Document/CLIPART/NATURE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/CLIPART/CASample.000 LOCALPC
+					}
+					GERMAN {
+						Tools/build/product/bbxensem/Document/german/clipart/CLIPART_.000 LOCALPC
+						Tools/build/product/bbxensem/Document/german/clipart/NATUR.000 LOCALPC
+						Tools/build/product/bbxensem/Document/german/clipart/RAHMEN_U.000 LOCALPC
+					}
+					}
+
+					DIR (Presentations) {
+						Tools/build/product/bbxensem/Document/SAMPLE_P.000 LOCALPC
+					}
+
+					DIR (Crossword Puzzles) {
+						Tools/build/product/bbxensem/Document/Crossword/science_.000 LOCALPC
+						Tools/build/product/bbxensem/Document/Crossword/geograph.000 LOCALPC
+						Tools/build/product/bbxensem/Document/Crossword/history_.000 LOCALPC
+						Tools/build/product/bbxensem/Document/Crossword/people__.000 LOCALPC
+						Tools/build/product/bbxensem/Document/Crossword/events__.000 LOCALPC
+					}
+
+					# the presidential profiles ebook
+					# should also be in DISTDOC as an installer file, comes pre-installed in
+					# english versions only
+					DIR (eBooks) {
+					ENGLISH {
+					DIR (Presidential Profiles) {
+						Tools/build/product/bbxensem/Document/presprof/_PRESIDE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P00CHART.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P00MAIN.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P00QUIZ.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P01WASHI.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P02ADAMS.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P03JEFFE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P04MADIS.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P05MONRO.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P06JQADA.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P07JACKS.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P08VANBU.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P09HARRI.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P10TYLER.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P11POLK.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P12TAYLO.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P13FILLM.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P14PIERC.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P15BUCHA.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P16LINCO.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P17JOHNS.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P18GRANT.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P19HAYES.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P20GARFI.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P21ARTHU.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P22CLEVE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P23BHARR.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P25MCKIN.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P26ROOSE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P27TAFT.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P28WILSO.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P29HARDI.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P30COOLI.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P31HOOVE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P32FDROO.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P33TRUMA.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P34EISEN.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P35KENNE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P36LBJOH.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P37NIXON.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P38FORD.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P39CARTE.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P40REAGA.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P41BUSH.000 LOCALPC
+						Tools/build/product/bbxensem/Document/presprof/P42CLINT.000 LOCALPC
+					}
+					}
+					}
+
+				}
+
+
+				##
+				##
+				## USERDATA directory
+				##
+
+				DIR (userdata) {
+					# mutable app data files seeded into writable USERDATA
+					Tools/build/product/bbxensem/Userdata/BBCDPLAY.DAT LOCALPC
+
+					DIR (Game) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (Word Matcher) {
+						FORCEDIR LOCALPC
+						ENGLISH {
+							Tools/build/product/bbxensem/Userdata/wordmat/WM_WORDS.000 LOCALPC
+						}
+						GERMAN {
+							Tools/build/product/bbxensem/Userdata/german/wordmat/WM_WORDS.000 LOCALPC
+						}
+					}
+
+					DIR (GeoNoid) {
+						FORCEDIR LOCALPC
+						Tools/build/product/bbxensem/Userdata/geonoid/GEONOIDL.000 LOCALPC
+					}
+
+					DIR (MunchData) {
+						FORCEDIR LOCALPC
+						Tools/build/product/bbxensem/Userdata/munchdat/LEVEL_DA.000 LOCALPC
+					}
+
+					DIR (TT Data) {
+						FORCEDIR LOCALPC
+						ENGLISH {
+							Tools/build/product/bbxensem/Userdata/ttdata/EXERCISE.VM LOCALPC
+						}
+						GERMAN {
+							Tools/build/product/bbxensem/Userdata/german/ttdata/EXERCISE.VM LOCALPC
+						}
+					}
+
+					DIR (LASERL) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (backgrnd) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (deck) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (dicts) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (help) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (template) {
+						FORCEDIR LOCALPC
+						DIR (GeoCalc Templates) {
+							FORCEDIR LOCALPC
+						}
+						DIR (GeoCalc Vorlagen) {
+							FORCEDIR LOCALPC
+						}
+						DIR (GeoDraw Templates) {
+							FORCEDIR LOCALPC
+						}
+						DIR (GeoDraw Vorlagen) {
+							FORCEDIR LOCALPC
+						}
+						DIR (GeoFile Templates) {
+							FORCEDIR LOCALPC
+						}
+						DIR (GeoFile Vorlagen) {
+							FORCEDIR LOCALPC
+						}
+						DIR (GeoWrite Templates) {
+							FORCEDIR LOCALPC
+						}
+						DIR (GeoWrite Vorlagen) {
+							FORCEDIR LOCALPC
+						}
+					}
+
+					DIR (termcap) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (font) {
+						DIR (ttf) {
+							FORCEDIR LOCALPC
+						}
+					}
+				}
+
+				##
+				## WORLD
+				##
+
+				DIR (world) {
+					DIR (Desk Accessories) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (Games) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (Extras) {
+						FORCEDIR LOCALPC
+					}
+
+					DIR (Tools) {
+						IF (tools) {
+							FORCEDIR LOCALPC
+						}
+
+					}
+				}
+
+				##
+				##
+				## DOSROOM directory
+				##
+
+				DIR (dosroom) {
+					FORCEDIR LOCALPC
+				}
+
+				##
+				##
+				## DESKTOP directory
+				##
+
+				DIR (desktop) {
+					FORCEDIR LOCALPC
+				}
 			}
 
 		}

@@ -35,7 +35,7 @@ set FORCE=1
 goto CHECKDIR
 
 :CHECKDIR
-if exist user\install\NUL goto CHECKINI
+if exist install\NUL goto CHECKINI
 goto BADDIR
 
 :CHECKINI
@@ -45,8 +45,8 @@ goto DOINSTALL
 
 :INIEXISTS
 if "%FORCE%"=="1" goto FORCEWARN
-echo NOTICE: Existing GEOS configuration found in ..\..\ (GEOS.INI or GEOSEC.INI).
-echo NOTICE: Installation aborted. Use GSETUP.BAT -F to force install.
+echo Existing GEOS configuration found in ..\..\ (GEOS.INI or GEOSEC.INI).
+echo (Use GSETUP.BAT -F to force install).
 goto END
 
 :FORCEWARN
@@ -58,11 +58,11 @@ pause
 
 :DOINSTALL
 echo Installing from USER\INSTALL to ..\..\ ...
-xcopy user\install\*.* ..\..\ /S /E /Y
+xcopy install\*.* ..\..\ /S /E /Y
 
 rem Ensure bootstrap INI is present in ensemble root even if XCOPY omits it.
-if exist user\install\geosec.ini copy user\install\geosec.ini ..\..\
-if exist user\install\geos.ini copy user\install\geos.ini ..\..\
+if exist install\geosec.ini copy user\install\geosec.ini ..\..\
+if exist install\geos.ini copy user\install\geos.ini ..\..\
 
 echo.
 echo Running GUPDATE.BAT ...

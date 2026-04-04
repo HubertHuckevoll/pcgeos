@@ -17,12 +17,12 @@ if errorlevel 1 goto BADDIR
 goto CHECKDIR
 
 :CHECKDIR
-if exist user\update\NUL goto DOUPDATE
+if exist update\NUL goto DOUPDATE
 goto BADDIR
 
 :DOUPDATE
 echo Updating from USER\UPDATE to ..\..\ ...
-xcopy user\update\*.* ..\..\ /S /E /Y
+xcopy update\*.* ..\..\ /S /E /Y
 
 echo.
 echo Update complete.
