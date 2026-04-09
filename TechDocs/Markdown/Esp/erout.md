@@ -1,4 +1,4 @@
-## 3 Routine Writing
+# 3 Routine Writing
 
 This chapter deals with some of Esp's special features, and describes how to 
 write routines (and message-handlers) in Esp. 
@@ -14,7 +14,7 @@ describes conventions for writing both Esp routines and message-handlers,
 as well as special Esp conventions and techniques which differ significantly 
 from their Goc counterparts.
 
-### 3.1 GEOS Conventions
+## 3.1 GEOS Conventions
 
 GEOS has certain presumptions about how routines behaves. If you write 
 your code to follow these conventions, Esp and Swat can work together to 
@@ -73,7 +73,7 @@ just enough space for the local variables. (It will, if necessary, add a padding
 byte, so the total amount of space used by local variables remains 
 word-aligned.)
 
-#### 3.1.1 Parameters and Local Variables
+### 3.1.1 Parameters and Local Variables
 
 Esp makes it easy to use local variables and parameters. You need simply 
 declare them in the beginning of a procedure; Esp will automatically set up 
@@ -84,8 +84,8 @@ line of a procedure therefore has the following format:
 
 ~~~
 <ProcName> proc (near|far) \
-	[<paramName>:<paramType> \
-		[, <paramName>:<paramType>]*]
+        [<paramName>:<paramType> \
+                [, <paramName>:<paramType>]*]
 ~~~
 
 **ProcName**  
@@ -112,14 +112,14 @@ we use the Pascal convention, HelloProc (described in Figure 2-1), would
 have the following first line:
 
 ~~~
-HelloProc proc far	AnOptr:optr, AChar:char, AnInt:int
+HelloProc proc far      AnOptr:optr, AChar:char, AnInt:int
 ~~~
 
 Local variables are declared immediately after this line. Each local variable 
 has the following format:
 
 ~~~
-<varName>		local <varType>
+<varName>               local <varType>
 ~~~
 
 **varName**  
@@ -144,7 +144,7 @@ the stack frame, as well as the aliases for the variable names. .leave
 destroys the stack frame, restoring sp and bp to their values at the time 
 .enter was used.
 
-##### 3.1.1.1 Initializing Local Variables
+#### 3.1.1.1 Initializing Local Variables
 
 If you wish, you can specify that local variables be initialized. When Esp 
 builds the stack frame (i.e. at the .enter instruction). The initialization is 
@@ -175,28 +175,28 @@ argument given will be the highest word of the variable).
 For example, a procedure might have the following declarations:
 
 ~~~
-HelloProc	proc near
+HelloProc       proc near
 
-AnOptr		local optr	push bx, di
-AMemValue	local int	push ds:[GlobalVariable]
-AByte		local byte		; not initialized
+AnOptr          local optr      push bx, di
+AMemValue       local int       push ds:[GlobalVariable]
+AByte           local byte              ; not initialized
 
-AnotherInt	local int		; not initialized
+AnotherInt      local int               ; not initialized
 ~~~
 
 When Esp set up the stack frame, it would take steps equivalent to the 
 following instructions:
 
 ~~~
-push	bp		; Set up the stack frame
-mov	bp, sp		; (ss:[bp] = base of frame)
-push	bx		; Initialize AnOptr: high word
-push	di		; low word
-push	ds:[GlobalVariable]			; copy mem. location 
-				; to local variable
-sub	sp, 4		; Leave room for AByte and 
-			; AnotherInt (and add one byte, so
-			; local vars are word-aligned)
+push    bp              ; Set up the stack frame
+mov     bp, sp          ; (ss:[bp] = base of frame)
+push    bx              ; Initialize AnOptr: high word
+push    di              ; low word
+push    ds:[GlobalVariable]                     ; copy mem. location 
+                                ; to local variable
+sub     sp, 4           ; Leave room for AByte and 
+                        ; AnotherInt (and add one byte, so
+                        ; local vars are word-aligned)
 ~~~
 
 There is a special case for initializing local variables. The first local variable 
@@ -210,7 +210,7 @@ if you need to return a value in bp. If you want a local variable to contain the
 passed bp, but you do not want to change bp on return, you should 
 push-initialize the variable with ss:[bp], as described above.
 
-#### 3.1.2 The "uses" Directive
+### 3.1.2 The "uses" Directive
 
 Many routines will need to preserve the state of some or all of their registers. 
 Esp provides for this with the uses directive. This directive is used to specify 
@@ -218,14 +218,14 @@ a list of registers that should be pushed at the start of the routine, and
 popped at the end. Uses has the following format:
 
 ~~~
-uses	<reg> [, <reg>]*
+uses    <reg> [, <reg>]*
 ~~~
 
 uses must be used in conjunction with .enter and .leave. The registers 
 will be pushed at the point where .enter is used; they will be popped where 
 .leave is used.
 
-#### 3.1.3 .enter and .leave
+### 3.1.3 .enter and .leave
 
 Esp provides several conveniences for writing routines. It can automatically 
 save registers, set up stack frames, and set up local arguments. You can 
@@ -273,86 +273,86 @@ the HelloProc described in section 3.1.
 
 CALLED BY: HelloOtherProc
 
-PASS:	stack:	AnInt (pushed first)
-		AChar
-		AnOptr
+PASS:   stack:  AnInt (pushed first)
+                AChar
+                AnOptr
 
-RETURN:		ax = freeble factor
+RETURN:         ax = freeble factor
 
 DESTROYED: nothing
 
 SIDE EFFECTS: none
 
-PSEUDO CODE/STRATEGY:	
+PSEUDO CODE/STRATEGY:   
 Set up the local variables, then call HelloInnerProc to do the dirty work
 
 REVISION HISTORY:
 
- Name 		Date 		Description
- ---- 		---- 		-----------
+ Name           Date            Description
+ ----           ----            -----------
 
- Frank T. Poomm		4/1/93 		Initial version
+ Frank T. Poomm         4/1/93          Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-HelloProc proc far			anOptr:optr, aChar:char, anInt:int
+HelloProc proc far                      anOptr:optr, aChar:char, anInt:int
 
 uses bx, cx, dx
 
-localInt		local int		push ax
-localOptr		local optr
+localInt                local int               push ax
+localOptr               local optr
 
 .enter
 
-	call HelloInnerProc			; Calculate freeble factor; put it in LocalInt
-				; (HelloInnerProc presumably inherits the stack
-				; frame from HelloProc)
-	mov	ax, localInt		; Return the freeble factor
+        call HelloInnerProc                     ; Calculate freeble factor; put it in LocalInt
+                                ; (HelloInnerProc presumably inherits the stack
+                                ; frame from HelloProc)
+        mov     ax, localInt            ; Return the freeble factor
 
 .leave
 
-	ret
+        ret
 
 HelloProc endp
 
 ; Esp would expand this to code like this:
 
-	; Set up stack frame
-	push	bp	; preserve value of bp
-	mov	bp, sp	; Set bp to point to stack frame
-	push	ax	; Initialize LocalInt...
-	sub	sp, 4	; ...and leave enough uninitialized space for an optr
+        ; Set up stack frame
+        push    bp      ; preserve value of bp
+        mov     bp, sp  ; Set bp to point to stack frame
+        push    ax      ; Initialize LocalInt...
+        sub     sp, 4   ; ...and leave enough uninitialized space for an optr
 
-	; Set up names of parameters/local variables
-	anOptr		equ ss:[bp+6] 		; All of these names have local scope.
-	aChar		equ ss:[bp+6][4]
-	anInt		equ ss:[bp+6][6]
-	localInt		equ ss:[bp][-2]
-	localOptr		equ ss:[bp][-6]
+        ; Set up names of parameters/local variables
+        anOptr          equ ss:[bp+6]           ; All of these names have local scope.
+        aChar           equ ss:[bp+6][4]
+        anInt           equ ss:[bp+6][6]
+        localInt                equ ss:[bp][-2]
+        localOptr               equ ss:[bp][-6]
 
-	; Preserve registers specified in "uses" line
-	push	bx		; Esp recognizes that bp was preserved when the
-	push	cx		; stack frame was set up, so it does not push bp 
-	push	dx		; again here.
+        ; Preserve registers specified in "uses" line
+        push    bx              ; Esp recognizes that bp was preserved when the
+        push    cx              ; stack frame was set up, so it does not push bp 
+        push    dx              ; again here.
 
-	call	HelloInnerProc
+        call    HelloInnerProc
 
-	mov	ax, ss:[bp][-2]		; This copies the "localInt" variable into ax
+        mov     ax, ss:[bp][-2]         ; This copies the "localInt" variable into ax
 
-	; Restore the registers & destroy the stack frame
-	pop	dx
-	pop	cx
-	pop	bx
-	mov	sp, bp	; This pops the stack frame
-	pop	bp	; This restores bp
+        ; Restore the registers & destroy the stack frame
+        pop     dx
+        pop     cx
+        pop     bx
+        mov     sp, bp  ; This pops the stack frame
+        pop     bp      ; This restores bp
 
-	; Return, freeing passed parameters
-	retf	8
+        ; Return, freeing passed parameters
+        retf    8
 
-HelloProc		endp
+HelloProc               endp
 ~~~
 
-#### 3.1.4 Inheriting a Stack Frame
+### 3.1.4 Inheriting a Stack Frame
 
 You may write a routine which is called only by a single other routine. For 
 example, if you were writing a sort routine, you might write several 
@@ -371,7 +371,7 @@ any of its own local variables or passed parameters.
 The simplest way to inherit a stack frame is with a directive of this kind:
 
 ~~~
-.enter inherit			<routineName>
+.enter inherit                  <routineName>
 ~~~
 
 **routineName**  
@@ -398,13 +398,13 @@ return address.)
 For example, suppose you have the declaration
 
 ~~~
-HeirProc  proc near		callerParamOptr:optr,			\
-				callerParamInt:int
+HeirProc  proc near             callerParamOptr:optr,                   \
+                                callerParamInt:int
 
-callerLocalInt			local int
-callerLocalOptr			local optr
+callerLocalInt                  local int
+callerLocalOptr                 local optr
 
-.enter		inherit near
+.enter          inherit near
 ~~~
 
 As noted, Esp will not change bp; it assumes that ss:[bp] already points to 
@@ -420,7 +420,7 @@ accesses it, Esp will generate a warning at assembly time. If you declare a
 variable that is used only by other routines which inherit the stack frame, 
 you can disable the warning by using the [ForceRef](ebasics.md#forceref) macro.
 
-### 3.2 LMem Heaps and Chunks
+## 3.2 LMem Heaps and Chunks
 
 It is worth paying special attention to Local Memory heaps as they are used 
 in Esp. The heaps themselves are always the same, whether they are created 
@@ -485,19 +485,19 @@ Code Display 2-6 Using an LMem Heap
 
 ; First, we want to get access to the chunk specified by chunkHandleOne:
 
-	mov	bx, heapHandle			; bx = global handle of LMem heap
-	call	MemDerefDS			; ds:[0] = LMem heap
-	mov	si, chunkHandleOne		; ds:*si = chunk
-	mov	si, ds:[si]			; ds:[si] = chunk
+        mov     bx, heapHandle                  ; bx = global handle of LMem heap
+        call    MemDerefDS                      ; ds:[0] = LMem heap
+        mov     si, chunkHandleOne              ; ds:*si = chunk
+        mov     si, ds:[si]                     ; ds:[si] = chunk
 
 ; ds:[si] is now the address of the chunk. We can read from or write to the chunk
 ; at will. Now we want to allocate another chunk. ds still has the segment address
 ; of the LMem heap.
 
-	clr	al			; Clear all object flags
-	mov	cx, MY_CHUNK_SIZE	; cx = size of chunk
-	call	LMemAlloc		; ax = chunk handle of new chunk
-	mov	chunkHandleTwo, ax	; store the new handle
+        clr     al                      ; Clear all object flags
+        mov     cx, MY_CHUNK_SIZE       ; cx = size of chunk
+        call    LMemAlloc               ; ax = chunk handle of new chunk
+        mov     chunkHandleTwo, ax      ; store the new handle
 
 ; Note that the call to LMemAlloc may have moved the LMem heap. LMemAlloc
 ; automatically fixes ds (and, if appropriate, es); however, if I'd stored the
@@ -506,8 +506,8 @@ Code Display 2-6 Using an LMem Heap
 ; Now I want to look at the first chunk again. However, LMemAlloc can shuffle the
 ; heap, so I need to dereference the handle again:
 
-	mov	si, chunkHandleOne
-	mov	si, ds:[si]
+        mov     si, chunkHandleOne
+        mov     si, ds:[si]
 ~~~
 
 These principles apply wherever LMem heaps are used. For example, DB 
@@ -520,7 +520,7 @@ Object Blocks are also LMem heaps. Whenever a message is sent to an object,
 that object may be resized; this can shuffle the block, or cause the object block 
 to move on the global heap.
 
-### 3.3 Objects and Classes
+## 3.3 Objects and Classes
 
 One big difference between Esp and other assemblers is Esp's support for 
 object-oriented programming. OOP is at the heart of GEOS, and Esp is 
@@ -532,7 +532,7 @@ categories: Declaring objects; creating new classes; and handling messages.
 Each issue will be treated in its own section. This section also contains a 
 review of the structure of GEOS objects, and how objects are handled in Esp.
 
-#### 3.3.1 Object Structure
+### 3.3.1 Object Structure
 
 This section is a review of how GEOS works with objects. Before you read this, 
 you should be familiar with ["GEOS Programming," Chapter 5 of the 
@@ -590,11 +590,11 @@ Code Display 2-7 Finding a Class's Master Section
 
 ; First, we need to get the address of the master section. As noted, ds:[bx] 
 ; points to the beginning of the instance chunk.
-	mov	di, ds:[bx].HelloTrigger_offset
+        mov     di, ds:[bx].HelloTrigger_offset
 
 ; Now, ds:[bx][di] points to the beginning of the master section. To load the 
 ; datum, we add a displacement to this:
-	mov	ax, ds:[bx][di].HT_myDatum
+        mov     ax, ds:[bx][di].HT_myDatum
 ~~~
 
 When a message handler is called, it is given a pointer to the beginning of the 
@@ -619,7 +619,7 @@ to load G_aDatum into ax. The normal approach would be this:
 
 ~~~
 ; ds:[si] points to start of instance chunk
-mov	ax, ds:[si].G_aDatum
+mov     ax, ds:[si].G_aDatum
 ~~~
 
 There is one danger with this code. In a future rewrite, GoodbyeClass or 
@@ -631,17 +631,17 @@ no master class. One way to do this is to check that Goodbye_offset is
 undefined:
 
 ~~~
-ifdef 	Goodbye_offset
-	.err	<GoodbyeClass now has a master offset!>
+ifdef   Goodbye_offset
+        .err    <GoodbyeClass now has a master offset!>
 endif
 
-mov	ax, ds:[si].G_aDatum
+mov     ax, ds:[si].G_aDatum
 ~~~
 
 If any class in GoodbyeClass's class hierarchy becomes a master class, 
 Goodbye_offset will become defined, and this code will generate an error.
 
-#### 3.3.2 Messages
+### 3.3.2 Messages
 
 Writing code for objects is much like any other coding. Indeed, almost all 
 GEOS code is run by one object or another; either it is a message handler (or 
@@ -649,7 +649,7 @@ method), or it is a routine which is run by a method, directly or indirectly.
 There are a few conventions which apply specifically to methods; other than 
 that, methods can be treated just like other routines.
 
-##### 3.3.2.1 Handling Messages
+#### 3.3.2.1 Handling Messages
 
 Writing methods (also known as "message handlers") is little different from 
 writing other Esp procedures. This section describes GEOS's conventions for 
@@ -660,7 +660,7 @@ A method looks much like any other routine. However, its first line (the line
 containing the method's name) is slightly different:
 
 ~~~
-<MethodName>	method <static|Dynamic> <Class> <MsgName> [, <MsgName>]*
+<MethodName>    method <static|Dynamic> <Class> <MsgName> [, <MsgName>]*
 ~~~
 
 **MethodName**  
@@ -734,11 +734,11 @@ instance chunk; that is, di will be the same as bx. In either
 case, you can find instance data fields by using a displacement 
 from ds:[di].
 
-**ax**	This is the message number. Sometimes a single method will 
+**ax**  This is the message number. Sometimes a single method will 
 handle several different messages; such a method can examine 
 ax to figure out precisely which method was sent.
 
-**cx**, **dx**, **bp** 	These registers are passed intact from the message sender. See, 
+**cx**, **dx**, **bp**  These registers are passed intact from the message sender. See, 
 however, "Passing Arguments On the Stack" on page 86.
 
 Note that some of the values passed in the registers are very volatile. For 
@@ -755,9 +755,9 @@ like this:
 
 ~~~
 ; bx and di were invalidated
-mov	bx, ds:[si]         ; ds:[bx] = instance chunk
-mov	di, bx
-add	bx, MyClass_offset  ; or whatever the class
+mov     bx, ds:[si]         ; ds:[bx] = instance chunk
+mov     di, bx
+add     bx, MyClass_offset  ; or whatever the class
                         ; offset is named
 ~~~
 
@@ -835,7 +835,7 @@ parameter.
 
 The other registers have the usual values.
 
-##### 3.3.2.2 Sending Messages
+#### 3.3.2.2 Sending Messages
 
 By now you should be very familiar with sending messages to objects. 
 However, there are enough differences between Esp and Goc in how they 
@@ -862,7 +862,7 @@ message is sent within the thread, or because it is sent as a
 "call-and-return"-there is a danger that the recipient object block might be 
 shuffled or moved while the sender is blocked.
 
-##### 3.3.2.3 ObjMessage
+#### 3.3.2.3 ObjMessage
 
 ObjMessage, MessageFlags
 
@@ -1207,7 +1207,7 @@ exists. (Note that if MF_CHECK_DUPLICATE and
 MF_DISCARD_IF_NO_MATCH is passed but MF_REPLACE is not, the message 
 will always be discarded.)
 
-##### 3.3.2.4 Other Ways of Sending Messages
+#### 3.3.2.4 Other Ways of Sending Messages
 
 ObjCallInstanceNoLock, ObjcallInstanceNoLockES, 
 ObjCallSuperNoLock

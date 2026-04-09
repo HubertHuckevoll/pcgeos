@@ -332,14 +332,6 @@
   typedef TT_F26Dot6  TProject_Function( EXEC_OPS TT_Vector*  v1,
                                                   TT_Vector*  v2 );
 
-  /* reading a cvt value. Take care of non-square pixels when needed */
-  typedef TT_F26Dot6  TGet_CVT_Function( EXEC_OPS UShort  index );
-
-  /* setting or moving a cvt value.  Take care of non-square pixels  */
-  /* when needed                                                     */
-  typedef void  TSet_CVT_Function ( EXEC_OPS  UShort      index,
-                                              TT_F26Dot6  value );
-
   /* subglyph transformation record */
   struct  TTransform_
   {
@@ -361,7 +353,7 @@
 
     Long         file_offset;
 
-    TT_Big_Glyph_Metrics  metrics;
+    TT_Glyph_Metrics  metrics;
 
     TGlyph_Zone  zone;
 
@@ -552,13 +544,6 @@
 
     TCache  instances;   /* current instances for this face */
     TCache  glyphs;      /* current glyph containers for this face */
-
-    /* A typeless pointer to the face object extensions defined */
-    /* in the 'ttextend.*' files.                               */
-  #ifdef TT_CONFIG_OPTION_EXTEND_ENGINE
-    void*  extension;
-    Int    n_extensions;    /* number of extensions */
-  #endif
   };
 
 
@@ -591,7 +576,6 @@
     TCodeRangeTable  codeRangeTable;
 
     TGraphicsState   GS;
-    TGraphicsState   default_GS;
 
     UShort           cvtSize;   /* the scaled control value table */
     PLong            cvt;
@@ -685,12 +669,10 @@
     Long            scale2;         /* projection vector too..            */
     Bool            cached_metrics; /* the ppem is computed lazily. used  */
                                     /* to trigger computation when needed */
-
+#ifdef DEBUG_INTERPRETER
     Bool            instruction_trap;  /* If True, the interpreter will */
-                                       /* exit after each instruction   */
+#endif                                 /* exit after each instruction   */
 
-    TGraphicsState  default_GS;    /* graphics state resulting from  */
-                                   /* the prep program               */
     Bool            is_composite;  /* ture if the glyph is composite */
 
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
@@ -707,14 +689,9 @@
     TProject_Function  _near * func_dualproj;  /* current dual proj. function */
 
     TMove_Function     _near * func_move;      /* current point move function */
-
-    TGet_CVT_Function  _near * func_read_cvt;  /* read a cvt entry              */
-    TSet_CVT_Function  _near * func_write_cvt; /* write a cvt entry (in pixels) */
-    TSet_CVT_Function  _near * func_move_cvt;  /* incr a cvt entry (in pixels)  */
-
+    
     UShort             loadSize;
     PSubglyph_Stack    loadStack;      /* loading subglyph stack */
-
   };
 
 
@@ -726,9 +703,9 @@
 
   struct TGlyph_
   {
-    PFace                 face;
-    TT_Big_Glyph_Metrics  metrics;
-    TT_Outline            outline;
+    PFace             face;
+    TT_Glyph_Metrics  metrics;
+    TT_Outline        outline;
   };
 
 
@@ -781,7 +758,7 @@
                           PInstance           ins );
 
   LOCAL_DEF
-  TT_Error  Context_Save( PExecution_Context  exec,
+  void      Context_Save( PExecution_Context  exec,
                           PInstance           ins );
 
   LOCAL_DEF
@@ -806,7 +783,7 @@
   /********************************************************************/
 
   LOCAL_DEF TT_Error  TTObjs_Init( );
-  LOCAL_DEF TT_Error  TTObjs_Done( );
+  LOCAL_DEF void      TTObjs_Done( );
 
 #ifdef __cplusplus
   }

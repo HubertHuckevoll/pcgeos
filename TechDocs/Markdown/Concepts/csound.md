@@ -1,11 +1,11 @@
-## 13 Sound Library
+# 13 Sound Library
 
 GEOS includes a powerful sound library. The library allows users to play 
 individual notes, sequences of notes, and sampled sounds. It also provides 
 support for those sound devices which allow the sampling and playback of 
 digitized sounds.
 
-### 13.1 Goals and Motives
+## 13.1 Goals and Motives
 
 The sound library provides multiple tiers of support for a variety of devices. 
 You may program multiple-voice compositions (musical pieces which require 
@@ -23,7 +23,7 @@ programmer can keep his interface consistent with that of existing programs.
 When the standard system sounds are inappropriate, the programmer can 
 use other routines to completely specify the sound's pitch and duration.
 
-### 13.2 Playing UI Sounds
+## 13.2 Playing UI Sounds
 
 UserStandardSound()
 
@@ -73,7 +73,7 @@ sampled sound. SST_CUSTOM_NOTE signals that you wish to
 play a single note. To learn more about creating custom notes 
 and music buffers, see below. 
 
-### 13.3 Representing Tones
+## 13.3 Representing Tones
 
 Tones are defined by the following characteristics:
 
@@ -195,7 +195,7 @@ instrument, you should probably play notes of that frequency. For example,
 to simulate an "electric snare," you would use IP_ELECTRIC_SNARE to play a 
 note of frequency FR_ELECTRIC_SNARE.
 
-### 13.4 Single Notes
+## 13.4 Single Notes
 
 SoundAllocMusicNote(), SoundPlayMusicNote(), 
 SoundStopMusicNote(), SoundReallocMusicNote(), 
@@ -228,22 +228,22 @@ library will understand. See Code Display 13-1 for an example.
 Code Display 13-1 Allocating Single Music Notes
 ~~~
 /* BigBlatt is a Cb (C flat) Half-note, which will sound as if played by a trumpet.
- * 	This means a tone of 494Hz with duration (128 * playing tempo). */
-SoundErr = SoundAllocMusicNote ( IP_TRUMPET, 0,	/* Play as if with a trumpet */
-				MIDDLE_C_b,    /* C flat, 494 Hz. */
-				DYNAMIC_FFF,   /* Play it rather loudly */
-				SSDTT_TEMPO,   /* Length based on 128th notes */
-				WHOLE,         /* Duration = 128/128 notes */
-				&BigBlatt);		
+ *  This means a tone of 494Hz with duration (128 * playing tempo). */
+SoundErr = SoundAllocMusicNote ( IP_TRUMPET, 0, /* Play as if with a trumpet */
+                MIDDLE_C_b,    /* C flat, 494 Hz. */
+                DYNAMIC_FFF,   /* Play it rather loudly */
+                SSDTT_TEMPO,   /* Length based on 128th notes */
+                WHOLE,         /* Duration = 128/128 notes */
+                &BigBlatt);     
 
 /* SubliminalTone is an A note lasting 0.3 sec which will sound as if it was being
- * 	played very quietly on an electric piano. It will play at 880Hz. */
+ *  played very quietly on an electric piano. It will play at 880Hz. */
 SoundAllocMusicNote( IP_ELECTRIC_PIANO_1, 0, /* As if on piano */
-				MIDDLE_A,      /* Middle A, 880 Hz. */
-				DYNAMIC_PP,    /* Play it rather quietly. */
-				SSDTT_MSEC,    /* Length based on milliseconds */
-				300,           /* Duration = 0.300 seconds */
-				&SubliminalTone);
+                MIDDLE_A,      /* Middle A, 880 Hz. */
+                DYNAMIC_PP,    /* Play it rather quietly. */
+                SSDTT_MSEC,    /* Length based on milliseconds */
+                300,           /* Duration = 0.300 seconds */
+                &SubliminalTone);
 ~~~
 
 There are two ways to play a note. The first is to call **UserStandardSound()** 
@@ -314,14 +314,14 @@ Code Display 13-3 Stopping and Freeing a Note
 /* Stop the SubliminalTone if we're playing it, then change the stored note */
 SoundStopMusicNote(SubliminalTone);
 SoundReallocMusicNote(SubliminalTone, LOW_C, DYNAMIC_PPP,
-					SSDTT_MSEC, 500, IP_TINKLE_BELL, 0);
+                    SSDTT_MSEC, 500, IP_TINKLE_BELL, 0);
 
 /* Stop the BigBlatt if we're playing it, then discard it */
 SoundStopMusicNote(BigBlatt);
 SoundFreeMusicNote(BigBlatt);
 ~~~
 
-### 13.5 Declaring Music Buffers
+## 13.5 Declaring Music Buffers
 
 You may set up a buffer of notes to be played. This buffer may include 
 information for several voices. If you are familiar with constructing MIDI 
@@ -473,7 +473,7 @@ Release a semaphore. There is one word of data:
 
 - **semaphore** The handle of the semaphore to release ("V").
 
-### 13.6 Playing Music Buffers
+## 13.6 Playing Music Buffers
 
 SoundAllocMusic(), SoundInitMusic(), SoundPlayMusic(), 
 SoundStopMusic(), SoundReallocMusic(), SoundFreeMusic()
@@ -502,10 +502,10 @@ Code Display 13-5 Preparing and Playing Sound Buffers
 ~~~
 SoundInitMusic(MySongResource, 1);
 
-SoundErr = SoundAllocMusic(	&themeSongBuf, 
-				2, 		/* themeSongBuf has two voices,
-						 * MELODY and PERC. */
-				&theSong);		
+SoundErr = SoundAllocMusic( &themeSongBuf, 
+                2,      /* themeSongBuf has two voices,
+                         * MELODY and PERC. */
+                &theSong);      
 
 SoundPlayMusic(theSong, SP_STANDARD, 125, EOSF_UNLOCK);
 
@@ -542,7 +542,7 @@ SoundStopMusic(theSong);
 SoundFreeMusic(theSong);
 ~~~
 
-### 13.7 Playing Very Large Music Buffers
+## 13.7 Playing Very Large Music Buffers
 
 SoundAllocMusicStream(), SoundPlayToMusicStream(), 
 SoundStopMusicStream(), SoundFreeMusicStream()
@@ -563,7 +563,7 @@ call **SoundStopMusicStream()**. To free up the music stream, call
 through the stream when you free it; be sure to call 
 **SoundStopMusicStream()** if you are not otherwise sure.
 
-### 13.8 Playing Sampled Sounds
+## 13.8 Playing Sampled Sounds
 
 Once you have your sound data structure set up, the basic steps to playing 
 the sound are
@@ -628,7 +628,7 @@ Once the DAC stream has been disabled, you may free up the sound token by
 calling **SoundFreeSampleStream()**. You should call this with all sound 
 tokens before your application exits.
 
-### 13.9 Grabbing the Sound Exclusive
+## 13.9 Grabbing the Sound Exclusive
 
 SoundGetExclusive(), SoundGetExclusiveNB(), 
 SoundReleaseExclusive()
@@ -665,7 +665,7 @@ To release the exclusive, call **SoundReleaseExclusive()**. This will allow
 sounds to enter the queue and will allow another thread which has called 
 **SoundGetExclusive()** to grab the exclusive.
 
-### 13.10 Simulating Musical Instruments
+## 13.10 Simulating Musical Instruments
 
 In addition to the standard instruments provided by the system, you may 
 define instruments of your own. To do so, you must first find out what sort of 
@@ -676,7 +676,7 @@ To find out what sort of data structure the sound driver expects, call
 **SoundSynthDriverInfo()** and note the value returned at the format 
 pointer argument.
 
-#### 13.10.1 Acoustics In Brief
+### 13.10.1 Acoustics In Brief
 
 Sound may be thought of in terms of waves. A pure tone manifests as a sine 
 wave. The higher the frequency of the wave (as measured in Hertz), the 
@@ -695,7 +695,7 @@ A rich instrument such as an organ will make sounds on many frequencies
 other than that of the main note. A violin, with a very pure tone, will generate 
 almost no sound on frequencies other than that of the note being played.
 
-#### 13.10.2 Simple Instrument Description
+### 13.10.2 Simple Instrument Description
 
 The simple instrument description allows you to specify a way for less 
 powerful devices to emulate different musical instruments. You describe 
@@ -729,10 +729,10 @@ levels and leave the noise component as zero.
 
 ~~~
 CTIEnvelopeFormat BrokenTuba =
-	{255, 		/* Primary: full strength */
-	 64, 		/* First harmonic: 25% strength */
-	 10, 		/* 2nd harmonic: 10% strength */
-	 0};		/* No noise */
+    {255,       /* Primary: full strength */
+     64,        /* First harmonic: 25% strength */
+     10,        /* 2nd harmonic: 10% strength */
+     0};        /* No noise */
 ~~~
 
 To describe an instrument with noise, you must specify a type and a degree 
@@ -741,13 +741,13 @@ six bits describing the degree of noise, if any):
 
 ~~~
 CTIEnvelopeFormat FunkyPiano = 
-	{ 255, 32, 17, ((NT_WHITE_NOISE << 6) | 10) };
+    { 255, 32, 17, ((NT_WHITE_NOISE << 6) | 10) };
 
 CTIEnvelopeFormat NoisyDrum = 
-	{ 0, 0, 0, ((NT_METAL_NOISE << 6) | 63 ) };
+    { 0, 0, 0, ((NT_METAL_NOISE << 6) | 63 ) };
 ~~~
 
-#### 13.10.3 Advanced Description
+### 13.10.3 Advanced Description
 
 The advanced instrument description data structures were set up with the 
 SoundBlaster card in mind; for detailed information (i.e. timing numbers) 

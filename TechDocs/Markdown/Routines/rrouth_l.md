@@ -1,25 +1,28 @@
 ## 3.4 Routines H-L
 ----------
-#### HAL_COUNT()
-	word	HAL_COUNT(
-			dword	val);
+### HAL_COUNT()
+    word    HAL_COUNT(
+            dword   val);
+
 This macro is provided for use with **HugeArrayLock()**. It extracts the lower 
 word of the **HugeArrayLock()** return value. This is the number of elements 
 in the Huge Array block after the locked one (counting that locked one).
 
 ----------
-#### HAL_PREV
-	word	HAL_PREV(
-			dword	val);
+### HAL_PREV
+    word    HAL_PREV(
+            dword   val);
+
 This macro is provided for use with **HugeArrayLock()**. It extracts the upper 
 word of the **HugeArrayLock()** return value. This is the number of elements 
 in the Huge Array block before the locked one (counting that locked one).
 
 ----------
-#### HandleModifyOwner()
-	void	HandleModifyOwner(
-			MemHandle		mh,			/* Handle of block to modify */
-			GeodeHandle		owner);		/* Handle of block's new owner */
+### HandleModifyOwner()
+    void    HandleModifyOwner(
+            MemHandle       mh,         /* Handle of block to modify */
+            GeodeHandle     owner);     /* Handle of block's new owner */
+
 This routine changes the owner of the indicated global memory block. Note 
 that this routine can be called only by a thread belonging to the block's 
 original owner; that is, you can only use this routine to transfer ownership of 
@@ -33,9 +36,10 @@ ownership.
 **See Also:** MemGetInfo(), MemModifyFlags(), MemModifyOtherInfo()
 
 ----------
-#### HandleP()
-	void	HandleP(
-			MemHandle		mh);		/* Handle of block to grab */
+### HandleP()
+    void    HandleP(
+            MemHandle       mh);        /* Handle of block to grab */
+
 If several different threads will be accessing the same global memory block, 
 they need to make sure their activities will not conflict. The way they do that 
 is to use synchronization routines to get control of a block. **HandleP()** is part 
@@ -74,18 +78,20 @@ non-sharable block owned by another thread, **HandleP()** will fatal-error.
 **See Also:** HandleV(), MemPLock(), MemUnlockV()
 
 ----------
-#### HandleToOptr()
-	optr	HandleToOptr(
-			Handle 	han;
+### HandleToOptr()
+    optr    HandleToOptr(
+            Handle  han;
+
 This macro casts any handle to an optr, leaving the chunk handle portion of 
 the resultant optr to be zero.
 
 **See Also:** ConstructOptr(), OptrToHandle(), OptrToChunk()
 
 ----------
-#### HandleV()
-	void	HandleV(
-			MemHandle		mh);		/* Handle of block to grab */
+### HandleV()
+    void    HandleV(
+            MemHandle       mh);        /* Handle of block to grab */
+
 **HandleV()** is part of a set of synchronization routines. If several different 
 threads will be accessing the same global memory block, they need to make 
 sure their activities will not conflict. The way they do that is to use 
@@ -119,13 +125,14 @@ and returns.
 **See Also:** HandleP(), MemPLock(), MemUnlockV()
 
 ----------
-#### HugeArrayAppend()
-	void	HugeArrayAppend(
-			VMFileHandle		file,
-			VMBlockhandle		vmBlock,	/* Handle of directory block */
-			word				numElem,	/* # of elements to add to end of 
-											 * array */
-			const void *		initData);	/* Copy into each new element */
+### HugeArrayAppend()
+    void    HugeArrayAppend(
+            VMFileHandle        file,
+            VMBlockhandle       vmBlock,    /* Handle of directory block */
+            word                numElem,    /* # of elements to add to end of 
+                                             * array */
+            const void *        initData);  /* Copy into each new element */
+
 This routine appends one or more elements to a Huge Array. The data 
 pointed to by *initData* will be copied into each new element. If *initData* is a 
 null pointer, the elements will be uninitialized.
@@ -136,10 +143,11 @@ a single element; this element will be *numElem* bytes long.
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayCompressBlocks()
-	void	HugeArrayCompressBlocks(
-			VMFileHandle	vmFile,			/* File containing Huge Array */
-			VMBlockHandle	vmBlock);		/* handle of directory block */
+### HugeArrayCompressBlocks()
+    void    HugeArrayCompressBlocks(
+            VMFileHandle    vmFile,         /* File containing Huge Array */
+            VMBlockHandle   vmBlock);       /* handle of directory block */
+
 This routine compacts a Huge Array, resizing every block to be just as large 
 as necessary to accommodate its elements. It does not change any of the data 
 in the Huge Array.
@@ -147,11 +155,12 @@ in the Huge Array.
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayContract()
-	word	HugeArrayContract(
-			void **		elemPtr,		/* **elemPtr is first element to
- 										 * delete */
-			word		numElem);		/* # of elements to delete */
+### HugeArrayContract()
+    word    HugeArrayContract(
+            void **     elemPtr,        /* **elemPtr is first element to
+                                         * delete */
+            word        numElem);       /* # of elements to delete */
+
 Delete a number of elements starting at an address in a Huge Array. The 
 routine will fix up the pointer so it points to the first element after the deleted 
 elements. The routine automatically locks and unlocks Huge Array blocks as 
@@ -160,33 +169,36 @@ necessary.
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayCreate()
-	VMBlockhandle 	HugeArrayCreate(
-			VMFileHandle	vmFile,			/* Create in this VM file */
-			word			elemSize,		/* Pass zero for variable-size
-											 * elements */
-			word			headerSize);	/* Pass zero for default header */
+### HugeArrayCreate()
+    VMBlockhandle   HugeArrayCreate(
+            VMFileHandle    vmFile,         /* Create in this VM file */
+            word            elemSize,       /* Pass zero for variable-size
+                                             * elements */
+            word            headerSize);    /* Pass zero for default header */
+
 This routine creates and initializes a Huge Array in the specified file. It 
 returns the handle of the Huge Array's directory block.
 
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayDelete()
-	void	HugeArrayDelete(
-			VMFileHandle	vmFile,
-			VMBlockHandle	vmBlock,	/* handle of directory block */
-			word			numElem,	/* # of elements to delete */
-			dword			elemNum);	/* Index of first element to delete */
+### HugeArrayDelete()
+    void    HugeArrayDelete(
+            VMFileHandle    vmFile,
+            VMBlockHandle   vmBlock,    /* handle of directory block */
+            word            numElem,    /* # of elements to delete */
+            dword           elemNum);   /* Index of first element to delete */
+
 This routine deletes one or more elements from a Huge Array. It contracts 
 and frees blocks as necessary.
 
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayDirty()
-	void	HugeArrayDirty(
-			const void *	elemPtr);		/* Element in dirty block */
+### HugeArrayDirty()
+    void    HugeArrayDirty(
+            const void *    elemPtr);       /* Element in dirty block */
+
 This routine marks a block in a Huge Array as dirty. The routine is passed a 
 pointer to anywhere in a dirty element; that element's block will be dirtied.
 
@@ -196,27 +208,28 @@ pointer to anywhere in a dirty element; that element's block will be dirtied.
 block may be discarded before you can dirty it.
 
 ----------
-#### HugeArrayDestroy()
-	void	HugeArrayDestroy(
-			VMFileHandle	vmFile,
-			VMBlockHandle	vmBlock);		/* Handle of directory block */
+### HugeArrayDestroy()
+    void    HugeArrayDestroy(
+            VMFileHandle    vmFile,
+            VMBlockHandle   vmBlock);       /* Handle of directory block */
+
 This routine destroys a HugeArray by freeing all of its blocks.
 
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayEnum()
-	Boolean	HugeArrayEnum(
-			VMFileHandle	vmFile,			/* subject to override */
-			VMBlockHandle	vmBlock,		/* Handle of the Huge Array's directory
-											 * block */
-			Boolean _pascal (*callback) (	/* return true to stop */
-					void *		element,	/* element to examine */
-					void * 		enumData),
-			dword			startElement,	/* first element to examine */
-			dword			count,			/* examine this many elements */
-			void *			enumData;		/* this pointer is passed to callback
-											 * routine */
+### HugeArrayEnum()
+    Boolean HugeArrayEnum(
+            VMFileHandle    vmFile,         /* subject to override */
+            VMBlockHandle   vmBlock,        /* Handle of the Huge Array's directory
+                                             * block */
+            Boolean _pascal (*callback) (   /* return true to stop */
+                    void *      element,    /* element to examine */
+                    void *      enumData),
+            dword           startElement,   /* first element to examine */
+            dword           count,          /* examine this many elements */
+            void *          enumData;       /* this pointer is passed to callback
+                                             * routine */
 
 This routine lets you examine a sequence of elements in a Huge Array. 
 **HugeArrayEnum()** is passed six arguments. The first two are a file handle 
@@ -254,14 +267,15 @@ The starting element must be an element in the array. If you pass a starting
 index which is out-of-bounds, the results are undefined.
 
 ----------
-#### HugeArrayExpand()
-	word	HugeArrayExpand(
-			void **			elemPtr,	/* **elemPtr is element at location
-										 * where new elements will be
-										 * created */
-			word			numElem,	/* # of elements to insert */
-			const void *	initData);	/* Copy this into each new 
-										 * element */
+### HugeArrayExpand()
+    word    HugeArrayExpand(
+            void **         elemPtr,    /* **elemPtr is element at location
+                                         * where new elements will be
+                                         * created */
+            word            numElem,    /* # of elements to insert */
+            const void *    initData);  /* Copy this into each new 
+                                         * element */
+
 This routine inserts a number of elements at a specified location in a 
 HugeArray. The element pointed to will be shifted so it comes after the 
 newly-created elements. The pointer will be fixed up to point to the first new 
@@ -274,22 +288,24 @@ this element will be *numElem* bytes long.
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayGetCount()
-	dword	HugeArrayGetCount(
-			VMFileHandle		vmFile,
-			VMBlockHandle		vmBlock);	/* Handle of directory block */
+### HugeArrayGetCount()
+    dword   HugeArrayGetCount(
+            VMFileHandle        vmFile,
+            VMBlockHandle       vmBlock);   /* Handle of directory block */
+
 This routine returns the number of elements in a Huge Array.
 
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayInsert()
-	void	HugeArrayInsert(
-			VMFileHandle	vmFile,
-			VMBlockHandle	vmBlock,	/* Handle of directory block */
-			word			numElem,	/* # of elements to insert */
-			dword			elemNum,	/* Index of first new element */
-			const void *	initData);	/* Copy this into each new element */
+### HugeArrayInsert()
+    void    HugeArrayInsert(
+            VMFileHandle    vmFile,
+            VMBlockHandle   vmBlock,    /* Handle of directory block */
+            word            numElem,    /* # of elements to insert */
+            dword           elemNum,    /* Index of first new element */
+            const void *    initData);  /* Copy this into each new element */
+
 This routine inserts one or more elements in the midst of a Huge Array. The 
 first new element will have index *elemNum*; thus, the element which 
 previously had that index will now come after the new elements. The data 
@@ -302,15 +318,17 @@ this element will be *numElem* bytes long.
 **Include:** heap.h
 
 ----------
-#### HugeArrayLock()
-	dword	HugeArrayLock(
-			VMFileHandle	vmFile,
-			VMBlockhandle	vmBlock,		/* Handle of directory block */
-			dword			elemNum,		/* Element to lock */
-			void **			elemPtr);		/* Pointer to element is written 
-											 * here */
+### HugeArrayLock()
+    dword   HugeArrayLock(
+            VMFileHandle    vmFile,
+            VMBlockhandle   vmBlock,        /* Handle of directory block */
+            dword           elemNum,        /* Element to lock */
+            void **         elemPtr,        /* Pointer to element is written 
+                                             * here */
+            word *          elemSize);	    /* Size of element is written here */
+
 This routine locks an element in a Huge Array. It writes the element's 
-address to **elemPtr*. The dword returned indicates how many elements come 
+address to **elemPtr**. The dword returned indicates how many elements come 
 before and after the element in that block. The upper word indicates how 
 many elements come before the locked one, counting the locked element. The 
 lower word indicates how many elements come after the locked element, 
@@ -322,9 +340,10 @@ elements in the block without making further calls to **HugeArrayLock()**.
 **See Also:** HAL_COUNT(), HAL_PREV()
 
 ----------
-#### HugeArrayNext()
-	word	HugeArrayNext(
-			void **		elemPtr);
+### HugeArrayNext()
+    word    HugeArrayNext(
+            void **     elemPtr);
+
 This routine increments a pointer to an element in a HugeArray to point to 
 the next element. If the element was the last element in its block, 
 **HugeArrayNext()** will unlock its block and lock the next one. The routine 
@@ -339,10 +358,11 @@ the element, writes a null pointer to **elemPtr*, and returns zero.
 if you need to mark the block as dirty, do so before making this call.
 
 ----------
-#### HugeArrayPrev()
-	word	HugeArrayPrev(
-			void **		elemPtr1,		/* indicates current element */
-			void **		elemPtr2);
+### HugeArrayPrev()
+    word    HugeArrayPrev(
+            void **     elemPtr1,       /* indicates current element */
+            void **     elemPtr2);
+
 This routine decrements a pointer to an element in a HugeArray to point to 
 the previous element. If the element was the first element in its block, 
 **HugeArrayPrev()** will unlock its block and lock the previous one. The 
@@ -359,13 +379,14 @@ returns zero.
 if you need to mark the block as dirty, do so before making this call.
 
 ----------
-#### HugeArrayReplace()
-	void	HugeArrayReplace(
-			VMFileHandle	file,
-			VMBlockHandle	vmblock,		/* Handle of directory block */
-			word			numElem,		/* # of elements to replace */
-			dword			elemNum,		/* First element to replace */
-			const void *	initData);		/* Copy this into each element
+### HugeArrayReplace()
+    void    HugeArrayReplace(
+            VMFileHandle    file,
+            VMBlockHandle   vmblock,        /* Handle of directory block */
+            word            numElem,        /* # of elements to replace */
+            dword           elemNum,        /* First element to replace */
+            const void *    initData);      /* Copy this into each element
+
 This routine replaces one or more elements with copies of the passed data. If 
 *initData* is null, the elements will be filled with null bytes.
 
@@ -377,12 +398,13 @@ size will be *enumData* bytes long.
 **See Also:** HugeArrayResize()
 
 ----------
-#### HugeArrayResize()
-	void	HugeArrayResize(
-			VMFileHandle	vmFile,
-			VMBlockHandle	vmBlock,		/* Handle of directory block */
-			dword			elemNum,		/* Resize this element */
-			word			newSize);		/* New size in bytes */
+### HugeArrayResize()
+    void    HugeArrayResize(
+            VMFileHandle    vmFile,
+            VMBlockHandle   vmBlock,        /* Handle of directory block */
+            dword           elemNum,        /* Resize this element */
+            word            newSize);       /* New size in bytes */
+
 This routine resizes an element in a Huge Array. The array must contain 
 variable-sized elements. If the new size is larger than the old, the extra space 
 will be zero-initialized. If it is smaller, the element will be truncated.
@@ -390,9 +412,10 @@ will be zero-initialized. If it is smaller, the element will be truncated.
 **Include:** hugearr.h
 
 ----------
-#### HugeArrayUnlock()
-	void	HugeArrayUnlock(
-			void *		elemPtr);
+### HugeArrayUnlock()
+    void    HugeArrayUnlock(
+            void *      elemPtr);
+
 This routine unlocks the block of a HugeArray which contains the passed 
 element.
 
@@ -403,13 +426,13 @@ element.
 be discarded.
 
 ----------
-#### IACPConnect()
-	IACPConnection IACPConnect(
-			GeodeToken 			*list, 
-			IACPConnectFlags 	flags, 
-			MemHandle 			appLaunchBlock, 
-			optr 				client, 
-			word 				*numServers);
+### IACPConnect()
+    IACPConnection IACPConnect(
+            GeodeToken          *list, 
+            IACPConnectFlags    flags, 
+            MemHandle           appLaunchBlock, 
+            optr                client, 
+            word                *numServers);
 
 This routine establishes a connection between a client object (by default the 
 calling thread's application object) and one or more servers registered with 
@@ -421,9 +444,10 @@ IACPCF_CLIENT_OD_SPECIFIED flag is set in the flags parameter.
 **Include:** iacp.goh
 
 ----------
-#### IACPCreateDefaultLaunchBlock()
-	MemHandle IACPCreateDefaultLaunchBlock(
-			word 		appMode);
+### IACPCreateDefaultLaunchBlock()
+    MemHandle IACPCreateDefaultLaunchBlock(
+            word        appMode);
+
 This routine creates a memory block holding an **AppLaunchBlock** 
 structure suitable for passing to **IACPConnect()**. The two valid values to 
 pass in appMode are MSG_GEN_PROCESS_OPEN_APPLICATION and 
@@ -432,43 +456,47 @@ MSG_GEN_PROCESS_OPEN_ENGINE.
 **Include:** iacp.goh
 
 ----------
-#### IACPFinishConnect()
-	void	IACPFinishConnect(
-			IACPConnection		connection,
-			optr				server);
+### IACPFinishConnect()
+    void    IACPFinishConnect(
+            IACPConnection      connection,
+            optr                server);
+
 Finishes a connection made to a server which had to change from 
 non-interactible to interactible.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPLostConnection()
-	void IACPLostConnection(
-			optr 				oself, 
-			IACPConnection 		connection);
+### IACPLostConnection()
+    void IACPLostConnection(
+            optr                oself, 
+            IACPConnection      connection);
+
 This routine is called by IACP server objects to handle when a client closes a 
 connection.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPProcessMessage()
-	void IACPProcessMessage(
-			optr 				oself, 
-			EventHandle 		msgToSend, 
-			TravelOption 		topt, 
-			EventHandle 		completionMsg);
+### IACPProcessMessage()
+    void IACPProcessMessage(
+            optr                oself, 
+            EventHandle         msgToSend, 
+            TravelOption        topt, 
+            EventHandle         completionMsg);
+
 This is a utility routine to dispatch an encapsulated message handed to an 
 object by an IACP connection.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPRegisterDocument()
-	void IACPRegisterDocument(
-			optr 	server,
-			word 	disk,
-			dword 	fileID);
+### IACPRegisterDocument()
+    void IACPRegisterDocument(
+            optr    server,
+            word    disk,
+            dword   fileID);
+
 This routine registers an open document and the server object for it.
 
 This routine is to be used only by servers, not by clients, and should only be 
@@ -478,56 +506,61 @@ connect to a server that is not the creator of the document in question.
 **Include:** iacp.goh
 
 ----------
-#### IACPRegisterServer()
-	void 	IACPRegisterServer(
-			GeodeToken 			*list, 
-			optr 				server,
-			IACPServerMode 		mode,
-			IACPServerFlags 	flags);
+### IACPRegisterServer()
+    void    IACPRegisterServer(
+            GeodeToken          *list, 
+            optr                server,
+            IACPServerMode      mode,
+            IACPServerFlags     flags);
+
 This routine registers an object as a server for the IACP server list specified 
 by the passed token.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPSendMessage()
-	word IACPSendMessage(
-			IACPConnection 		connection, 
-			EventHandle 		msgToSend, 
-			TravelOption 		topt, 
-			EventHandle 		completionMsg, 
-			IACPSide 			side);
+### IACPSendMessage()
+    word IACPSendMessage(
+            IACPConnection      connection, 
+            EventHandle         msgToSend, 
+            TravelOption        topt, 
+            EventHandle         completionMsg, 
+            IACPSide            side);
+
 This routine sends a recorded message to all the  objects on the other side of 
 an IACP connection.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPSendMessageToServer()
-	word IACPSendMessageToServer(
-			IACPConnection 		connection, 
-			EventHandle 		msgToSend, 
-			TravelOption 		topt, 
-			EventHandle 		completionMsg, 
-			word 				serverNum);
+### IACPSendMessageToServer()
+    word IACPSendMessageToServer(
+            IACPConnection      connection, 
+            EventHandle         msgToSend, 
+            TravelOption        topt, 
+            EventHandle         completionMsg, 
+            word                serverNum);
+
 This routine sends a message to a specific server on the other side of an IACP 
 connection.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPShutdown()
-	void IACPShutdown(
-			IACPConnection 		connection, 
-			optr 				serverOD);
+### IACPShutdown()
+    void IACPShutdown(
+            IACPConnection      connection, 
+            optr                serverOD);
+
 This routine removes a server or client from an IACP connection.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPShutdownAll()
-	void IACPShutdownAll(
-			optr	obj);
+### IACPShutdownAll()
+    void IACPShutdownAll(
+            optr    obj);
+
 This calls **IACPShutdown()** for all connections to which the passed object 
 is a party. It's primarily used by **GenApplicationClass** when the 
 application is exiting.
@@ -535,31 +568,34 @@ application is exiting.
 **Include:** iacp.goh
 
 ----------
-#### IACPUnregisterDocument()
-	void IACPUnregisterDocument(
-			optr 	server,
-			word 	disk,
-			dword 	fileID);
+### IACPUnregisterDocument()
+    void IACPUnregisterDocument(
+            optr    server,
+            word    disk,
+            dword   fileID);
+
 This routine unregisters an open document and the server object for it.
 
 **Include:** iacp.goh
 
 ----------
-#### IACPUnregisterServer()
-	void IACPUnregisterServer(
-			GeodeToken 		*token, 
-			optr 		object);
+### IACPUnregisterServer()
+    void IACPUnregisterServer(
+            GeodeToken      *token, 
+            optr        object);
+
 This removes the specified server object from the indicated IACP server list. 
 
 **Include:** iacp.goh
 
 ----------
-#### ImpexCreateTempFile()
-	TransError ImpexCreateTempFile(
-			char *			buffer,
-			word			fileType,
-			FileHandle *	file,
-			MemHandle *		errorString);
+### ImpexCreateTempFile()
+    TransError ImpexCreateTempFile(
+            char *          buffer,
+            word            fileType,
+            FileHandle *    file,
+            MemHandle *     errorString);
+
 This routine creates and opens a unique temporary file to be used by 
 translation libraries for file importing and exporting. The routine is called 
 only by translation libraries.
@@ -599,11 +635,12 @@ contain a random value. Do not use **errString* if the routine did not return
 TE_CUSTOM.
 
 ----------
-#### ImpexDeleteTempFile()
-	TransError ImpexDeleteTempFile(
-			const char *		buffer,
-			FileHandle			tempFile,
-			word				fileType);
+### ImpexDeleteTempFile()
+    TransError ImpexDeleteTempFile(
+            const char *        buffer,
+            FileHandle          tempFile,
+            word                fileType);
+
 This routine closes, then deletes, a temporary file which was created by 
 **ImpexCreateTempFile()**. It is passed the following arguments:
 
@@ -634,15 +671,16 @@ contain a random value. Do not use **errString* if the routine did not return
 TE_CUSTOM.
 
 ----------
-#### ImpexExportToMetafile()
-	TransError 	ImpexExportToMetafile(
-			Handle			xlatLib,
-			VMFileHandle	xferFile,
-			FileHandle		metafile,
-			dword			xferFormat,
-			word			arg1,
-			word			arg2,
-			MemHandle *		errString);
+### ImpexExportToMetafile()
+    TransError  ImpexExportToMetafile(
+            Handle          xlatLib,
+            VMFileHandle    xferFile,
+            FileHandle      metafile,
+            dword           xferFormat,
+            word            arg1,
+            word            arg2,
+            MemHandle *     errString);
+
 This routine is used by translation libraries. The routine calls an 
 intermediate translation library to finish translating a given file into the 
 GEOS Metafile format.
@@ -654,9 +692,10 @@ contain a random value. Do not use **errString* if the routine did not return
 TE_CUSTOM.
 
 ----------
-#### ImpexImportExportCompleted()
-	void 	ImpexImportExportCompleted(
-			ImpexTranslationParams *		itParams);
+### ImpexImportExportCompleted()
+    void    ImpexImportExportCompleted(
+            ImpexTranslationParams *        itParams);
+
 The application should send this message when it is finished importing or 
 exporting data. The routine will send an appropriate acknowledgment 
 message to the ImportControl or ExportControl object, depending on the 
@@ -675,15 +714,16 @@ an output file. Therefore, an application should not call this routine
 until it is absolutely finished with the transfer file.
 
 ----------
-#### ImpexImportFromMetafile()
-	TransError 	ImpexExportToMetafile(
-			Handle			xlatLib,
-			VMFileHandle	xferFile,
-			FileHandle		metafile,
-			dword *			xferFormat,
-			word			arg1,
-			word			arg2,
-			MemHandle *		errString);
+### ImpexImportFromMetafile()
+    TransError  ImpexExportToMetafile(
+            Handle          xlatLib,
+            VMFileHandle    xferFile,
+            FileHandle      metafile,
+            dword *         xferFormat,
+            word            arg1,
+            word            arg2,
+            MemHandle *     errString);
+
 This routine is used by translation libraries. The routine calls an 
 intermediate translation library to translate a given file from the GEOS 
 Metafile format to an intermediate format.
@@ -695,8 +735,9 @@ contain a random value. Do not use **errString* if the routine did not return
 TE_CUSTOM.
 
 ----------
-#### InitFileCommit()
-	void	InitFileCommit(void);
+### InitFileCommit()
+    void    InitFileCommit(void);
+
 This routine commits any changes to the GEOS.INI file, removing and 
 replacing its stored backup. It ensures that no other threads are working on 
 the file during the commit operation.
@@ -704,9 +745,10 @@ the file during the commit operation.
 **Include:** initfile.h
 
 ----------
-#### InitFileDeleteCategory()
-	void	InitFileDeleteCategory(
-			const char 		*category);
+### InitFileDeleteCategory()
+    void    InitFileDeleteCategory(
+            const char      *category);
+
 This routine deletes the specified category, along with all its entries, from the 
 GEOS.INI file. Pass it the following:
 
@@ -717,10 +759,11 @@ case-insensitive.
 **Include:** initfile.h
 
 ----------
-#### InitFileDeleteEntry()
-	void	InitFileDeleteEntry(
-			const char 		*category,
-			const char 		*key);
+### InitFileDeleteEntry()
+    void    InitFileDeleteEntry(
+            const char      *category,
+            const char      *key);
+
 This routine deletes an entry in the GEOS.INI file. Pass it the following:
 
 *category* - A pointer to the null-terminated string representing the 
@@ -733,11 +776,12 @@ be deleted.
 **Include:** initfile.h
 
 ----------
-#### InitFileDeleteStringSection()
-	void	InitFileDeleteStringSection(
-			const char *		category,
-			const char *		key,
-			word				stringNum);
+### InitFileDeleteStringSection()
+    void    InitFileDeleteStringSection(
+            const char *        category,
+            const char *        key,
+            word                stringNum);
+
 This routine deletes the specified string section from the given blob in the 
 GEOS.INI file. Pass it the following:
 
@@ -753,15 +797,15 @@ stringNum - The zero-based string section number.
 **Include:** initfile.h
 
 ----------
-#### InitFileEnumStringSection()
-	Boolean	InitFileEnumStringSection(
-			const char *			category,
-			const char *			key,
-			InitFileReadFlags		flags,
-			Boolean _pascal (*callback)		(const char *stringSection,
-						 word 				sectionNum,
-						 void *				enumData),
-			void *					enumdata);
+### InitFileEnumStringSection()
+    Boolean InitFileEnumStringSection(
+            const char *            category,
+            const char *            key,
+            InitFileReadFlags       flags,
+            Boolean _pascal (*callback)     (const char *stringSection,
+                         word               sectionNum,
+                         void *             enumData),
+            void *                  enumdata);
 
 This routine enumerates a particular blob, allowing a callback routine to 
 process each of the string sections in it. The routine will stop processing 
@@ -808,8 +852,9 @@ processed.
 **Include:** initfile.h
 
 ----------
-#### InitFileGetTimeLastModified()
-	dword	InitFileGetTimeLastModified(void);
+### InitFileGetTimeLastModified()
+    dword   InitFileGetTimeLastModified(void);
+
 This routine returns the time when the GEOS.INI file was last modified. The 
 returned time is the value of the system counter when the file was last 
 written.
@@ -817,11 +862,12 @@ written.
 **Include:** initfile.h
 
 ----------
-#### InitFileReadBoolean()
-	Boolean	InitFileReadBoolean(
-			const char *		category,
-			const char *		key,
-			Boolean *			bool);
+### InitFileReadBoolean()
+    Boolean InitFileReadBoolean(
+            const char *        category,
+            const char *        key,
+            Boolean *           bool);
+
 This routine reads a Boolean entry in the GEOS.INI file, copying it into a 
 passed buffer. It returns the first instance of the category/key combination it 
 encounters, searching the local INI file first. Thus, local settings will always 
@@ -843,18 +889,19 @@ be returned.
 The function's return value will be *true* if an error occurs or if the entry could 
 not be found; it will be *false* otherwise.
 
-Warnings:	The return value of this function is *not* the Boolean stored in the GEOS.INI 
+Warnings:   The return value of this function is *not* the Boolean stored in the GEOS.INI 
 file. That value is returned in the Boolean pointed to by *bool*.
 
 **Include:** initfile.h
 
 ----------
-#### InitFileReadDataBlock()
-	Boolean	InitFileReadDataBlock(
-			const char *		category,
-			const char *		key,
-			MemHandle *			block,
-			word *				dataSize);
+### InitFileReadDataBlock()
+    Boolean InitFileReadDataBlock(
+            const char *        category,
+            const char *        key,
+            MemHandle *         block,
+            word *              dataSize);
+
 This routine reads an entry in the GEOS.INI file, allocating a new block and 
 copying the data into it. The routine returns the first instance of the 
 category/key combination it encounters, searching the local INI file first. 
@@ -884,13 +931,14 @@ not be found; it will be *false* otherwise.
 **Include:** initfile.h
 
 ----------
-#### InitFileReadDataBuffer()
-	Boolean	InitFileReadDataBuffer(
-			const char *		category,
-			const char *		key,
-			void *				buffer,
-			word				bufSize,
-			word *				dataSize);
+### InitFileReadDataBuffer()
+    Boolean InitFileReadDataBuffer(
+            const char *        category,
+            const char *        key,
+            void *              buffer,
+            word                bufSize,
+            word *              dataSize);
+
 This routine reads an entry in the GEOS.INI file, copying it into a passed 
 buffer. It returns the first instance of the category/key combination it 
 encounters, searching the local INI file first. Thus, local settings will always 
@@ -922,11 +970,12 @@ not be found; it will be *false* otherwise.
 **Include:** initfile.h
 
 ----------
-#### InitFileReadInteger()
-	Boolean	InitFileReadInteger(
-			const char *		category,
-			const char *		key,
-			word *				i);
+### InitFileReadInteger()
+    Boolean InitFileReadInteger(
+            const char *        category,
+            const char *        key,
+            word *              i);
+
 This routine reads an integer entry in the GEOS.INI file, copying it into the 
 passed variable. It returns the first instance of the category/key combination 
 it encounters, searching the local INI file first. Thus, local settings will 
@@ -950,13 +999,14 @@ not be found; it will be *false* otherwise.
 **Include:** initfile.h
 
 ----------
-#### InitFileReadStringBlock()
-	Boolean	InitFileReadStringBlock(
-			const char *		category,
-			const char *		key,
-			MemHandle *			block,
-			InitFileReadFlags	flags,
-			word *				dataSize);
+### InitFileReadStringBlock()
+    Boolean InitFileReadStringBlock(
+            const char *        category,
+            const char *        key,
+            MemHandle *         block,
+            InitFileReadFlags   flags,
+            word *              dataSize);
+
 This routine reads a string entry in the GEOS.INI file, allocates a new block 
 on the global heap, and copies the read string into the new block. It returns 
 the first instance of the category/key combination it encounters, searching 
@@ -991,13 +1041,14 @@ not be found; it will be *false* otherwise.
 **Include:** initfile.h
 
 ----------
-#### InitFileReadStringBuffer()
-	Boolean	InitFileReadStringBuffer(
-			const char *		category,
-			const char *		key,
-			char *				buffer,
-			InitFileReadFlags	flags,
-			word *				dataSize);
+### InitFileReadStringBuffer()
+    Boolean InitFileReadStringBuffer(
+            const char *        category,
+            const char *        key,
+            char *              buffer,
+            InitFileReadFlags   flags,
+            word *              dataSize);
+
 This routine reads a string entry in the GEOS.INI file, copying it into a 
 passed, locked buffer. It returns the first instance of the category/key 
 combination it encounters, searching the local INI file first. Thus, local 
@@ -1031,14 +1082,15 @@ not be found; it will be *false* otherwise.
 **Include:** initfile.h
 
 ----------
-#### InitFileReadStringSectionBlock()
-	Boolean	InitFileReadStringSectionBlock(
-			const char *		category,
-			const char *		key,
-			word				section,
-			MemHandle *			block,
-			InitFileReadFlags	flags,
-			word *				dataSize);
+### InitFileReadStringSectionBlock()
+    Boolean InitFileReadStringSectionBlock(
+            const char *        category,
+            const char *        key,
+            word                section,
+            MemHandle *         block,
+            InitFileReadFlags   flags,
+            word *              dataSize);
+
 This routine reads a string section from the specified entry in the GEOS.INI 
 file, allocates a new block on the global heap, and copies the read string 
 section into the new block. It returns the first instance of the category/key 
@@ -1074,14 +1126,15 @@ not be found; it will be *false* otherwise.
 **Include:** initfile.h
 
 ----------
-#### InitFileReadStringSectionBuffer()
-	Boolean	InitFileReadStringSectionBuffer(
-			const char *		category,
-			const char *		key,
-			word				section,
-			char *				buffer,
-			InitFileReadFlags	flags,
-			word *				dataSize);
+### InitFileReadStringSectionBuffer()
+    Boolean InitFileReadStringSectionBuffer(
+            const char *        category,
+            const char *        key,
+            word                section,
+            char *              buffer,
+            InitFileReadFlags   flags,
+            word *              dataSize);
+
 This routine reads a string section from the specified entry in the GEOS.INI 
 file, copying it into a passed, locked buffer. It returns the indicated section in 
 the first instance of the category/key combination it encounters, searching 
@@ -1119,8 +1172,9 @@ not be found; it will be *false* otherwise.
 **Include:** initfile.h
 
 ----------
-#### InitFileRevert()
-	Boolean	InitFileRevert(void);
+### InitFileRevert()
+    Boolean InitFileRevert(void);
+
 This routine restores the GEOS.INI file from its saved backup version. It 
 ensures that no other thread is operating on the file while it is being restored. 
 This function returns an error flag: *true* represents an error in restoring the 
@@ -1129,8 +1183,9 @@ file; *false* indicates success.
 **Include:** initfile.h
 
 ----------
-#### InitFileSave()
-	Boolean	InitFileSave(void);
+### InitFileSave()
+    Boolean InitFileSave(void);
+
 This routine saves the GEOS.INI file synchronously by updating the backup 
 file to be the current version. (**InitFileCommit()** actually overwrites the 
 GEOS.INI file itself.) It ensures that no other thread is operating on the file 
@@ -1140,11 +1195,12 @@ represents an error in trying to save the file; *false* indicates success.
 **Include:** initfile.h
 
 ----------
-#### InitFileWriteBoolean()
-	void	InitFileWriteBoolean(
-			const char *		category,
-			const char *		key,
-			Boolean 			bool);
+### InitFileWriteBoolean()
+    void    InitFileWriteBoolean(
+            const char *        category,
+            const char *        key,
+            Boolean             bool);
+
 This integer writes a Boolean value into the specified category and key of the 
 local GEOS.INI file. The Boolean will appear as "true" or "false" if the user 
 looks at GEOS.INI with a text editor, but it will be an actual Boolean value to 
@@ -1164,12 +1220,13 @@ Once written, the Boolean value can be read with **InitFileReadBoolean()**.
 **Include:** initfile.h
 
 ----------
-#### InitFileWriteData()
-	void	InitFileWriteData(
-			const char 		*category,
-			const char 		*key,
-			const void 		*buffer,
-			word			bufSize);
+### InitFileWriteData()
+    void    InitFileWriteData(
+            const char      *category,
+            const char      *key,
+            const void      *buffer,
+            word            bufSize);
+
 This routine writes a given piece of data to the local GEOS.INI file. Pass it the 
 following:
 
@@ -1191,11 +1248,11 @@ Once data has been written to the INI file, it can be read with
 **Include:** initfile.h
 
 ----------
-#### InitFileWriteInteger()
-	void	InitFileWriteInteger(
-			const char 		*category,
-			const char 		*key,
-			word			value);
+### InitFileWriteInteger()
+    void    InitFileWriteInteger(
+            const char      *category,
+            const char      *key,
+            word            value);
 
 This routine writes an integer into the category and key specified for the local 
 GEOS.INI file. Pass the following:
@@ -1214,11 +1271,12 @@ The integer, once written, can be read with **InitFileReadInteger()**.
 **Include:** initfile.h
 
 ----------
-#### InitFileWriteString()
-	void	InitFileWriteString(
-			const char 		*category,
-			const char 		*key,
-			const char 		*str);
+### InitFileWriteString()
+    void    InitFileWriteString(
+            const char      *category,
+            const char      *key,
+            const char      *str);
+
 This routine writes an entire string into the category and key specified for the 
 local GEOS.INI file. Pass it the following:
 
@@ -1241,11 +1299,12 @@ or **InitFileReadStringBuffer()**.
 **Include:** initfile.h
 
 ----------
-#### InitFileWriteStringSection()
-	void	InitFileWriteStringSection(
-			const char 		*category,
-			const char 		*key,
-			const char 		*string);
+### InitFileWriteStringSection()
+    void    InitFileWriteStringSection(
+            const char      *category,
+            const char      *key,
+            const char      *string);
+
 This routine appends a string section onto the blob specified by the *category* 
 and *key* parameters. The string section will become part of the blob and will 
 be its last section. The section may not contain any carriage returns or line 
@@ -1267,48 +1326,52 @@ Once written, the segment may be read with
 **Include:** initfile.h
 
 ----------
-#### InkDBGetDisplayInfo()
-	void 	InkDBGetDisplayInfo(
-			InkDBDisplayInfo *		retVal,
-			VMFileHandle 			fh);
+### InkDBGetDisplayInfo()
+    void    InkDBGetDisplayInfo(
+            InkDBDisplayInfo *      retVal,
+            VMFileHandle            fh);
+
 This routine returns the dword ID of the note or folder which is presently 
 being displayed by the Ink Database. It also returns the ID of the parent 
 folder, and the page number, if applicable.
 
 **Structures:** It returns this information by filling in an **InkDBDisplayInfo** structure:
 
-	typedef struct {
-		dword 	IDBDI_currentDisplay;
-		dword 	IDBDI_parentFolder;
-		word 	IDBDI_pageNumber;
-	} InkDBDisplayInfo;
+    typedef struct {
+        dword   IDBDI_currentDisplay;
+        dword   IDBDI_parentFolder;
+        word    IDBDI_pageNumber;
+    } InkDBDisplayInfo;
 
 **Include:** pen.goh
 
 ----------
-#### InkDBGetHeadFolder()
-	dword 	InkDBGetHeadFolder(
-			VMFileHandle 		fh);
+### InkDBGetHeadFolder()
+    dword   InkDBGetHeadFolder(
+            VMFileHandle        fh);
+
 This routine returns the dword ID of the head folder of an Ink Database file.
 
 **Include:** pen.goh
 
 ----------
-#### InkDBInit()
-	void 	InkDBInit(
-			VMFileHandle 		fh);
+### InkDBInit()
+    void    InkDBInit(
+            VMFileHandle        fh);
+
 This routine takes a new Ink Database file. It initializes the file for use, 
 creating all needed maps and a top-level folder. 
 
 **Include:** pen.goh
 
 ----------
-#### InkDBSetDisplayInfo()
-	void 	InkDBSetDisplayInfo(
-			VMFileHandle 	fh,
-			dword 			ofh,	/* Parent Folder dword ID# */
-			dword			note,	/* ID# of note or folder to display */
-			word			page); 	/* If displaying note, page # to display*/
+### InkDBSetDisplayInfo()
+    void    InkDBSetDisplayInfo(
+            VMFileHandle    fh,
+            dword           ofh,    /* Parent Folder dword ID# */
+            dword           note,   /* ID# of note or folder to display */
+            word            page);  /* If displaying note, page # to display*/
+
 This routine sets the display information for an Ink Database file. This 
 routine sets the user's location in the database. The caller must supply the 
 dword ID number of the note or folder to display, the parent folder (0 if 
@@ -1318,10 +1381,11 @@ a note.
 **Include:** pen.goh
 
 ----------
-#### InkFolderCreateSubFolder()
-	dword 	InkFolderCreateSubFolder(
-			dword 			tag, 	/* ID# of parent folder (0 for top-level) */
-			VMFileHandle 	fh); 	/* Handle of Ink DB file */
+### InkFolderCreateSubFolder()
+    dword   InkFolderCreateSubFolder(
+            dword           tag,    /* ID# of parent folder (0 for top-level) */
+            VMFileHandle    fh);    /* Handle of Ink DB file */
+
 This routine creates a subfolder within the passed folder. The new folder is 
 automatically added to it's parent's chunk array. The return value is new 
 folder's dword ID number.
@@ -1329,24 +1393,25 @@ folder's dword ID number.
 **Include:** pen.goh
 
 ----------
-#### InkFolderDelete()
-	void 	InkFolderDelete(
-			dword 			tag,		/* ID# of folder */
-			VMFileHandle 	fh);		/* Handle of Ink DB file */
+### InkFolderDelete()
+    void    InkFolderDelete(
+            dword           tag,        /* ID# of folder */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This routine removes an Ink Database folder.
 
 **Include:** pen.goh
 
 ----------
-#### InkFolderDepthFirstTraverse()
-	word 	InkFolderDepthFirstTraverse(
-			dword 			rfldr,		/* ID# of folder at root of search tree */
-			VMFileHandle	fh, 		/* Handle of Ink DB file */
-			Boolean 	_pascal	(*callback)( /* far ptr to callback routine */
-				dword				fldr,
-				VMFileHandle 		fh,
-				word *				info),
-			word *			info);		/* Extra data to pass to callback */
+### InkFolderDepthFirstTraverse()
+    word    InkFolderDepthFirstTraverse(
+            dword           rfldr,      /* ID# of folder at root of search tree */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            Boolean     _pascal (*callback)( /* far ptr to callback routine */
+                dword               fldr,
+                VMFileHandle        fh,
+                word *              info),
+            word *          info);      /* Extra data to pass to callback */
 
 This routine does a depth-first traversal of a folder tree. The callback routine, 
 which must be declared _pascal, can halt the search by returning *true*, in 
@@ -1356,26 +1421,28 @@ search will return *false*.
 **Include:** pen.goh
 
 ----------
-#### InkFolderDisplayChildInList()
-	void 	InkFolderDisplayChildInList(
-			dword 			fldr, 		/* ID# of folder */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			optr 			list, 		/* GenDynamicList */
-			word			entry, 		/* entry number of child to display */
-			Boolean			displayFolders); /* Include monikers in count,
-											  * return their monikers */
+### InkFolderDisplayChildInList()
+    void    InkFolderDisplayChildInList(
+            dword           fldr,       /* ID# of folder */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            optr            list,       /* GenDynamicList */
+            word            entry,      /* entry number of child to display */
+            Boolean         displayFolders); /* Include monikers in count,
+                                              * return their monikers */
+
 This routine requests that a dynamic list display the name of one of a folder's 
 children. It is normally called in an applications *GDLI_queryMsg* handler.
 
 **Include:** pen.goh
 
 ----------
-#### InkFolderGetChildInfo()
-	Boolean 	InkFolderDisplayChildInfo( /* true if folder; else note */
-			dword 			fldr, 		/* ID# of folder */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			word			entry, 		/* entry number of child */
-			dword *			childID);	/* Pointer to returned child ID # */
+### InkFolderGetChildInfo()
+    Boolean     InkFolderDisplayChildInfo( /* true if folder; else note */
+            dword           fldr,       /* ID# of folder */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            word            entry,      /* entry number of child */
+            dword *         childID);   /* Pointer to returned child ID # */
+
 This routine returns information about one of a folder's children. The explicit 
 return value will be *true* if the child is a folder, *false* if the child is a note. In 
 addition, the passed dword pointer will point to the child's dword ID number.
@@ -1383,22 +1450,24 @@ addition, the passed dword pointer will point to the child's dword ID number.
 **Include:** pen.goh
 
 ----------
-#### InkFolderGetChildNumber()
-	word 	InkFolderDisplayChildInList( 
-			dword 			fldr, 		/* ID# of folder */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			dword			note); 		/* ID# of child note or folder */
+### InkFolderGetChildNumber()
+    word    InkFolderDisplayChildInList( 
+            dword           fldr,       /* ID# of folder */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            dword           note);      /* ID# of child note or folder */
+
 This routine returns the passed note or folder's entry number within its 
 passed parent folder.
 
 **Include:** pen.goh
 
 ----------
-#### InkFolderGetContents()
-	DBGroupAndItem 	InkFolderGetContents(
-			dword 				tag, 			/* ID# of folder */
-			VMFileHandle 		fh,				/* Handle of Ink DB file */
-			DBGroupAndItem *	subFolders); 	/* pointer to return value */);
+### InkFolderGetContents()
+    DBGroupAndItem  InkFolderGetContents(
+            dword               tag,            /* ID# of folder */
+            VMFileHandle        fh,             /* Handle of Ink DB file */
+            DBGroupAndItem *    subFolders);    /* pointer to return value */);
+
 This routine returns the contents of a folder. It returns two chunk arrays, 
 each of which is filled with dword ID numbers of the folder's children. The 
 explicitly returned array holds the numbers of the folder's child notes. The 
@@ -1408,10 +1477,11 @@ ID numbers of the subfolders.
 **Include:** pen.goh
 
 ----------
-#### InkFolderGetNumChildren()
-	dword 	InkFolderGetNumChildren( /* Subfolders:Notes */
-			dword 			fldr, 		/* ID# of folder */
-			VMFileHandle 	fh);		/* Handle of Ink DB file */
+### InkFolderGetNumChildren()
+    dword   InkFolderGetNumChildren( /* Subfolders:Notes */
+            dword           fldr,       /* ID# of folder */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This message returns the number of children the Ink Database folder has. 
 The high word of the return value holds the number of sub folders; the low 
 word holds the number of notes.
@@ -1419,50 +1489,55 @@ word holds the number of notes.
 **Include:** pen.goh
 
 ----------
-#### InkFolderMove()
-	void 	InkFolderMove(
-			dword 		fldr, 		/* ID# of folder to move */
-			dword 		pfldr);		/* ID# of new parent folder */
+### InkFolderMove()
+    void    InkFolderMove(
+            dword       fldr,       /* ID# of folder to move */
+            dword       pfldr);     /* ID# of new parent folder */
+
 This routine moves an Ink Database folder to a new location in the folder 
 tree.
 
 **Include:** pen.goh
 
 ----------
-#### InkFolderSetTitle()
-	void 	InkFolderSetTitle(
-			dword 			tag, 		/* ID# of folder */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			const char *	name); 		/* Text object */);
+### InkFolderSetTitle()
+    void    InkFolderSetTitle(
+            dword           tag,        /* ID# of folder */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            const char *    name);      /* Text object */);
+
 This routine renames an Ink Database folder. The passed name should be 
 null-terminated.
 
 **Include:** pen.goh
 
 ----------
-#### InkFolderSetTitleFromTextObject()
-	void 	InkFolderSetTitleFromTextObject(
-			dword 		tag, 		/* ID# of folder */
-			FileHandle 	fh,			/* Handle of Ink DB file */
-			optr		text); 		/* Text object */);
+### InkFolderSetTitleFromTextObject()
+    void    InkFolderSetTitleFromTextObject(
+            dword       tag,        /* ID# of folder */
+            FileHandle  fh,         /* Handle of Ink DB file */
+            optr        text);      /* Text object */);
+
 This routine sets the name of the passed Ink Database folder from the 
 contents of the passed VisText object.
 
 **Include:** pen.goh
 
 ----------
-#### InkGetDocPageInfo()
-	void 	InkGetDocPageInfo(
-			PageSizeReport *	psr, 	/* Structure to fill with return value */
-			VMFileHandle 		fh);
+### InkGetDocPageInfo()
+    void    InkGetDocPageInfo(
+            PageSizeReport *    psr,    /* Structure to fill with return value */
+            VMFileHandle        fh);
+
 This routine returns the dword ID of the head folder of an Ink Database file.
 
 **Include:** pen.goh
 
 ----------
-#### InkGetDocCustomGString()
-	GStateHandle 	InkGetDocCustomGString(
-			VMFileHandle 		dbfh);
+### InkGetDocCustomGString()
+    GStateHandle    InkGetDocCustomGString(
+            VMFileHandle        dbfh);
+
 This routine returns the custom GString associated with the passed Ink 
 Database file. Note that this custom background will only be used if the 
 document's basic **InkBackgroundType** is IBT_CUSTOM. (This may be 
@@ -1471,9 +1546,10 @@ determined using the **InkDBSetDocGString()** routine.
 **Include:** pen.goh
 
 ----------
-#### InkGetDocGString()
-	InkBackgroundType 	InkGetDocGString(
-			VMFileHandle 		dbfh);
+### InkGetDocGString()
+    InkBackgroundType   InkGetDocGString(
+            VMFileHandle        dbfh);
+
 This routine returns the standard GString to use as a background picture 
 with the passed Ink Database file. If the returned background type is custom, 
 be sure to also call **InkGetDocCustomGString()**.
@@ -1481,20 +1557,22 @@ be sure to also call **InkGetDocCustomGString()**.
 **Include:** pen.goh
 
 ----------
-#### InkGetParentFolder()
-	dword 	InkGetParentFolder(
-			dword 			tag, 		/* ID# of folder or note */
-			VMFileHandle 	fh);		/* Handle of Ink DB file */
+### InkGetParentFolder()
+    dword   InkGetParentFolder(
+            dword           tag,        /* ID# of folder or note */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This message returns the dword ID of the passed Ink Database note or folder.
 
 **Include:** pen.goh
 
 ----------
-#### InkGetTitle()
-	word 	InkGetTitle(
-			dword 			tag, 		/* ID# of folder or note */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			char *			dest); 		/* should be INK_DB_MAX_TITLE_SIZE +1 */);
+### InkGetTitle()
+    word    InkGetTitle(
+            dword           tag,        /* ID# of folder or note */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            char *          dest);      /* should be INK_DB_MAX_TITLE_SIZE +1 */);
+
 This message fills the passed text buffer with the folder's or note's title, a 
 null-terminated string. The routine's explicit return value is the length of the 
 string (including the terminator).
@@ -1502,63 +1580,68 @@ string (including the terminator).
 **Include:** pen.goh
 
 ----------
-#### InkNoteCopyMoniker()
-	dword 	InkNoteCopyMoniker(
-			dword 	title,		/* ID# of parent folder */
-			optr 	list, 		/* Output list */
-			word 	type, 		/* 1: text note
-								 * 0: ink note
-								 * -1: folder */
-			word	entry);		/* Handle of Ink DB file */
+### InkNoteCopyMoniker()
+    dword   InkNoteCopyMoniker(
+            dword   title,      /* ID# of parent folder */
+            optr    list,       /* Output list */
+            word    type,       /* 1: text note
+                                 * 0: ink note
+                                 * -1: folder */
+            word    entry);     /* Handle of Ink DB file */
+
 This routine copies the icon and title into the VisMoniker.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteCreate()
-	dword 	InkNoteCreate(
-			dword 			tag,		/* ID# of parent folder */
-			VMFileHandle	fh);		/* Handle of Ink DB file */
+### InkNoteCreate()
+    dword   InkNoteCreate(
+            dword           tag,        /* ID# of parent folder */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This routine creates a note and adds it to the passed folder's child list. The 
 new note's dword ID is returned.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteCreatePage()
-	word 	InkNoteCreatePage(
-			dword 			tag,	/* ID# of note */
-			VMFileHandle	fh,		/* Handle of Ink DB file */
-			word 			page); 	/* Page number to insert before, 
-									 * CA_NULL_ELEMENT to append */
+### InkNoteCreatePage()
+    word    InkNoteCreatePage(
+            dword           tag,    /* ID# of note */
+            VMFileHandle    fh,     /* Handle of Ink DB file */
+            word            page);  /* Page number to insert before, 
+                                     * CA_NULL_ELEMENT to append */
+
 This routine creates a new page within a note. It returns the new page 
 number.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteDelete()
-	void 	InkNoteDelete(
-			dword 			tag, 		/* ID# of note */
-			VMFileHandle 	fh);		/* Handle of Ink DB file */
+### InkNoteDelete()
+    void    InkNoteDelete(
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This message deletes the passed note. All references to the note are deleted.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteFindByKeywords()
-	ChunkHandle 	InkNoteFindByKeywords( 
-						/* Return value is chunk array with elements:
-						 *  FindNoteHeader
-						 *  -dword tag-
-						 *  -dword tag-
-						 *   etc- */
-			VMFileHandle 	fh,
-			char *			strings,	/* strings to match (separated by 
-										 * whitespace or commas), can contain
-										 * C_WILDCARD or C_SINGLE_WILDCARD */
-			word 			opt,		/* true to match all keywords; 
-										 * false to match at least one keyword */
+### InkNoteFindByKeywords()
+    ChunkHandle     InkNoteFindByKeywords( 
+                        /* Return value is chunk array with elements:
+                         *  FindNoteHeader
+                         *  -dword tag-
+                         *  -dword tag-
+                         *   etc- */
+            VMFileHandle    fh,
+            char *          strings,    /* strings to match (separated by 
+                                         * whitespace or commas), can contain
+                                         * C_WILDCARD or C_SINGLE_WILDCARD */
+            word            opt,        /* true to match all keywords; 
+                                         * false to match at least one keyword */
+
 This routine returns a chunk array containing the dword ID numbers of all 
 notes whose keywords match the passed search string, preceded by the 
 number of matching notes. If no such notes are found, then the returned 
@@ -1570,19 +1653,20 @@ match, only the first 20K will be returned.
 **Include:** pen.goh
 
 ----------
-#### InkNoteFindByTitle()
-	ChunkHandle 	InkNoteFindByTitle( 
-						/* Return value is chunk array with elements:
-						 *  FindNoteHeader
-						 *  -dword tag-
-						 *  -dword tag-
-						 *   etc- */
-			const char *	string,	/* string to match (can contain C_WILDCARD
-									 * or C_SINGLE_WILDCARD */
-			SearchOptions 	opt,	/* Search options */
-			Boolean 		Body, 	/* true if you want to look in the body
-									 * of text notes */
-			VMFileHandle	fh);	/* Handle of Ink DB file */
+### InkNoteFindByTitle()
+    ChunkHandle     InkNoteFindByTitle( 
+                        /* Return value is chunk array with elements:
+                         *  FindNoteHeader
+                         *  -dword tag-
+                         *  -dword tag-
+                         *   etc- */
+            const char *    string, /* string to match (can contain C_WILDCARD
+                                     * or C_SINGLE_WILDCARD */
+            SearchOptions   opt,    /* Search options */
+            Boolean         Body,   /* true if you want to look in the body
+                                     * of text notes */
+            VMFileHandle    fh);    /* Handle of Ink DB file */
+
 This routine returns a chunk array containing the dword ID numbers of all 
 notes whose titles match the passed search string, preceded by the number 
 of matching notes. If no such notes are found, then the returned handle will 
@@ -1594,20 +1678,22 @@ match, only the first 20K will be returned.
 **Include:** pen.goh
 
 ----------
-#### InkNoteGetCreationDate()
-	dword 	InkNoteGetCreationDate( 
-			dword 			tag,		/* ID# of note */
-			VMFileHandle	fh);		/* Handle of Ink DB file */
+### InkNoteGetCreationDate()
+    dword   InkNoteGetCreationDate( 
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This routine gets a note's creation date.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteGetKeywords()
-	void 	InkNoteGetKeywords(
-			dword 			tag, 		/* ID# of note */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			char *			text); 		/* String to hold return value */);
+### InkNoteGetKeywords()
+    void    InkNoteGetKeywords(
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            char *          text);      /* String to hold return value */);
+
 This routine fills the passed buffer with the note's keywords. The target 
 buffer should be of atleast length INK_DB_MAX_NOTE_KEYWORDS_SIZE +1. 
 The string will be null-terminated.
@@ -1615,36 +1701,40 @@ The string will be null-terminated.
 **Include:** pen.goh
 
 ----------
-#### InkNoteGetModificationDate()
-	dword 	InkNoteGetModificationDate( 
-			dword 			tag,		/* ID# of note */
-			VMFileHandle	fh);		/* Handle of Ink DB file */
+### InkNoteGetModificationDate()
+    dword   InkNoteGetModificationDate( 
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This routine gets a note's modification date.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteGetNoteType()
-	NoteType 	InkNoteGetNoteType( /* 0: Ink, 1: Text */
-			dword 			tag,		/* ID# of note */
-			VMFileHandle	fh);		/* Handle of Ink DB file */
+### InkNoteGetNoteType()
+    NoteType    InkNoteGetNoteType( /* 0: Ink, 1: Text */
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This routine gets a note's **NoteType**: NT_INK or NT_TEXT.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteGetNumPages()
-	word 	InkNoteGetNumPages(
-			dword 		tag);		/* ID# of note */
+### InkNoteGetNumPages()
+    word    InkNoteGetNumPages(
+            dword       tag);       /* ID# of note */
+
 This routine returns the number of pages within the passed note.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteGetPages()
-	DBGroupAndItem 	InkNoteGetPages(
-			dword 			tag,		/* ID# of note */
-			VMFileHandle	fh);		/* Handle of Ink DB file */
+### InkNoteGetPages()
+    DBGroupAndItem  InkNoteGetPages(
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This routine returns a DB group and item containing a chunk array. The 
 chunk array contains the page information of the note, either compressed 
 pen data or text. Each array element holds one page of data.
@@ -1652,102 +1742,111 @@ pen data or text. Each array element holds one page of data.
 **Include:** pen.goh
 
 ----------
-#### InkNoteLoadPage()
-	void 	InkNoteLoadPage(
-			dword 			tag,		/* ID# of note */
-			VMFileHandle	fh,			/* Handle of Ink DB file */
-			word 			page, 		/* Page number */
-			optr 			obj, 		/* an Ink or VisText object */
-			word 			type);		/* note type 0: ink, 1: text */
+### InkNoteLoadPage()
+    void    InkNoteLoadPage(
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            word            page,       /* Page number */
+            optr            obj,        /* an Ink or VisText object */
+            word            type);      /* note type 0: ink, 1: text */
+
 This routine loads a visual object (Ink or Text) with the contents of the passed 
 Ink Database page. Be sure to load only the correct type of data into an object.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteMove()
-	void 	InkNoteMove(
-			dword 			tag, 		/* ID# of note */
-			dword 			pfolder, 	/* ID# of new parent folder */
-			VMFileHandle 	fh);		/* Handle of Ink DB file */
+### InkNoteMove()
+    void    InkNoteMove(
+            dword           tag,        /* ID# of note */
+            dword           pfolder,    /* ID# of new parent folder */
+            VMFileHandle    fh);        /* Handle of Ink DB file */
+
 This message moves the passed note to a new location. All references to the 
 note are suitably altered.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteSavePage()
-	void 	InkNoteSavePage(
-			dword 			tag,		/* ID# of note */
-			VMFileHandle	fh,			/* Handle of Ink DB file */
-			word 			page, 		/* Page number */
-			optr 			obj, 		/* an Ink or VisText object */
-			word 			type);		/* note type 0: ink, 1: text */
+### InkNoteSavePage()
+    void    InkNoteSavePage(
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            word            page,       /* Page number */
+            optr            obj,        /* an Ink or VisText object */
+            word            type);      /* note type 0: ink, 1: text */
+
 This routine saves the contents of a visual object (Ink or Text) to the passed 
 Ink Database page.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteSendKeywordsdToTextObject()
-	void 	InkNoteSendKeywordsToTextObject(
-			dword 			tag, 		/* ID# of note */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			optr			text); 		/* Text object to set */);
+### InkNoteSendKeywordsdToTextObject()
+    void    InkNoteSendKeywordsToTextObject(
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            optr            text);      /* Text object to set */);
+
 This message replaces the passed VisText object's text with the keywords 
 from the passed folder or note of an Ink Database file.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteSetKeywords()
-	void 	InkNoteSetKeywords(
-			dword 			tag, 			/* ID# of note */
-			VMFileHandle 	fh,				/* Handle of Ink DB file */
-			const char *	text); 			/* Keyword string */);
+### InkNoteSetKeywords()
+    void    InkNoteSetKeywords(
+            dword           tag,            /* ID# of note */
+            VMFileHandle    fh,             /* Handle of Ink DB file */
+            const char *    text);          /* Keyword string */);
+
 This message sets an Ink Database note's keywords. The passed string 
 should be null-terminated.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteSetKeywordsFromTextObject()
-	void 	InkNoteSetKeywordsFromTextObject(
-			dword 			tag, 			/* ID# of note */
-			VMFileHandle 	fh,				/* Handle of Ink DB file */
-			optr *			text); 			/* Text object */);
+### InkNoteSetKeywordsFromTextObject()
+    void    InkNoteSetKeywordsFromTextObject(
+            dword           tag,            /* ID# of note */
+            VMFileHandle    fh,             /* Handle of Ink DB file */
+            optr *          text);          /* Text object */);
+
 This message sets an Ink Database note's keywords by copying them from the 
 passed text object.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteSetModificationDate()
-	void 	InkNoteSetModificationDate( 
-			word			tdft1, 		/* First two words of */
-			word			tdft2,		/* TimerDateAndTime structure */
-			dword 			note,		/* ID# of note */
-			FileHandle		fh);		/* Handle of Ink DB file */
+### InkNoteSetModificationDate()
+    void    InkNoteSetModificationDate( 
+            word            tdft1,      /* First two words of */
+            word            tdft2,      /* TimerDateAndTime structure */
+            dword           note,       /* ID# of note */
+            FileHandle      fh);        /* Handle of Ink DB file */
+
 This routine sets a note's modification date.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteSetNoteType()
-	void 	InkNoteSetNoteType( 
-			dword 			tag,		/* ID# of note */
-			VMFileHandle	fh,			/* Handle of Ink DB file */
-			NoteType 		nt);		/* NT_INK or NT_TEXT */
+### InkNoteSetNoteType()
+    void    InkNoteSetNoteType( 
+            dword           tag,        /* ID# of note */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            NoteType        nt);        /* NT_INK or NT_TEXT */
+
 This routine sets a note's type: text or ink.
 
 **Include:** pen.goh
 
 ----------
-#### InkNoteSetTitle()
-	void 	InkNoteSetTitle(
-			dword 			tag, 			/* ID# of note */
-			VMFileHandle 	fh,				/* Handle of Ink DB file */
-			const char *	name); 			/* Text object */);
+### InkNoteSetTitle()
+    void    InkNoteSetTitle(
+            dword           tag,            /* ID# of note */
+            VMFileHandle    fh,             /* Handle of Ink DB file */
+            const char *    name);          /* Text object */);
+
 This message renames an Ink Database note. The passed name should be 
 null-terminated. The string may be up to 
 INK_DB_MAX_NOTE_KEYWORDS_SIZE +1 in length.
@@ -1755,32 +1854,35 @@ INK_DB_MAX_NOTE_KEYWORDS_SIZE +1 in length.
 **Include:** pen.goh
 
 ----------
-#### InkNoteSetTitleFromTextObject()
-	void 	InkNoteSetTitleFromTextObject(
-			dword 			tag, 		/* ID# of note */
-			FileHandle 		fh,			/* Handle of Ink DB file */
-			optr			text); 		/* Text object */);
+### InkNoteSetTitleFromTextObject()
+    void    InkNoteSetTitleFromTextObject(
+            dword           tag,        /* ID# of note */
+            FileHandle      fh,         /* Handle of Ink DB file */
+            optr            text);      /* Text object */);
+
 This message sets the name of the passed Ink Database note from the 
 contents of the passed VisText object.
 
 **Include:** pen.goh
 
 ----------
-#### InkSendTitleToTextObject()
-	void 	InkSendTitleToTextObject(
-			dword 			tag, 		/* ID# of folder or note */
-			VMFileHandle 	fh,			/* Handle of Ink DB file */
-			optr			to); 		/* Text object to set */);
+### InkSendTitleToTextObject()
+    void    InkSendTitleToTextObject(
+            dword           tag,        /* ID# of folder or note */
+            VMFileHandle    fh,         /* Handle of Ink DB file */
+            optr            to);        /* Text object to set */);
+
 This message replaces the passed VisText object's text with the name from 
 the passed folder or note of an Ink Database file.
 
 **Include:** pen.goh
 
 ----------
-#### InkSetDocCustomGString()
-	void	InkSetDocCustomGString(
-			VMFileHandle 		dbfh,
-			Handle		gstring);
+### InkSetDocCustomGString()
+    void    InkSetDocCustomGString(
+            VMFileHandle        dbfh,
+            Handle      gstring);
+
 This routine sets the custom GString to use as a background for the passed 
 Ink Database file. Note that this custom background will only be used if the 
 document's basic **InkBackgroundType** is IBT_CUSTOM. (Set this using the 
@@ -1789,10 +1891,11 @@ document's basic **InkBackgroundType** is IBT_CUSTOM. (Set this using the
 **Include:** pen.goh
 
 ----------
-#### InkSetDocGString()
-	void	InkSetDocGString(
-			VMFileHandle 			dbfh,
-			InkBackgroundType		type);
+### InkSetDocGString()
+    void    InkSetDocGString(
+            VMFileHandle            dbfh,
+            InkBackgroundType       type);
+
 This routine sets the standard GString to use as a background picture with 
 the passed Ink Database file. If the passed background type is custom, be 
 sure to also call **InkSetDocCustomGString()**.
@@ -1800,27 +1903,30 @@ sure to also call **InkSetDocCustomGString()**.
 **Include:** pen.goh
 
 ----------
-#### InkSetDocPageInfo()
-	void 	InkSetDocPageInfo(
-			PageSizeReport *		psr,
-			VMFileHandle 			fh);
+### InkSetDocPageInfo()
+    void    InkSetDocPageInfo(
+            PageSizeReport *        psr,
+            VMFileHandle            fh);
+
 Set the page information for an Ink Database file.
 
 **Include:** pen.goh
 
 ----------
-#### IntegerOf()
-	word	IntegerOf(
-			WWFixedAsDWord		wwf)
+### IntegerOf()
+    word    IntegerOf(
+            WWFixedAsDWord      wwf)
+
 This macro returns the integral portion of a WWFixedAsDWord value.
 
 **Include:** geos.h
 
 ----------
-#### LMemAlloc()
-	ChunkHandle	 LMemAlloc(
-			MemHandle	mh,				/* Handle of block containing heap */
-			word		chunkSize);		/* Size of new chunk in bytes */
+### LMemAlloc()
+    ChunkHandle  LMemAlloc(
+            MemHandle   mh,             /* Handle of block containing heap */
+            word        chunkSize);     /* Size of new chunk in bytes */
+
 This routine allocates a new chunk in the LMem heap. The heap must be 
 locked or fixed. It allocates a chunk, expanding the chunk table if enccessary, 
 and returns the chunk's handle. The chunk is not zero-initialized. If the 
@@ -1840,9 +1946,10 @@ moved.
 **See Also:** LMemDeref(), LMemReAlloc()
 
 ----------
-#### LMemContract()
-	void	LMemContract(
-			MemHandle		mh);		/* Handle of LMem heap */
+### LMemContract()
+    void    LMemContract(
+            MemHandle       mh);        /* Handle of LMem heap */
+
 This routine contracts an LMem heap; that is, it deletes all the free chunks, 
 moves all the used chunks to the beginning of the heap (right after the chunk 
 handle table), and resizes the block to free the unused space at the end. It's 
@@ -1855,12 +1962,13 @@ move; however, all pointers to chunks will be invalidated.
 **Include:** lmem.h
 
 ----------
-#### LMemDeleteAt()
-	void	LMemDeleteAt(
-			optr	chunk,			/* Chunk to resize */
-			word	deleteOffset,	/* Offset within chunk of first 
-									 * byte to be deleted */
-			word	deleteCount);	/* # of bytes to delete */
+### LMemDeleteAt()
+    void    LMemDeleteAt(
+            optr    chunk,          /* Chunk to resize */
+            word    deleteOffset,   /* Offset within chunk of first 
+                                     * byte to be deleted */
+            word    deleteCount);   /* # of bytes to delete */
+
 This routine deletes a specified number of bytes from inside a chunk. It is 
 guaranteed not to cause the heap to be resized or compacted; thus, pointers 
 to other chunks remain valid.
@@ -1875,13 +1983,14 @@ indicate bytes that are not in the chunk, results are undefined.
 **See Also:** LMemReAlloc(), LMemInsertAt(), LMemDeleteAtHandles()
 
 ----------
-#### LMemDeleteAtHandles()
-	void	LMemDeleteAtHandles(
-			MemHandle		mh,				/* Handle of LMem heap */
-			ChunkHandle		ch,				/* Handle of chunk to resize */
-			word			deleteOffset,	/* Offset within chunk of first 
-											 * byte to be deleted */
-			word			deleteCount);	/* # of bytes to delete */
+### LMemDeleteAtHandles()
+    void    LMemDeleteAtHandles(
+            MemHandle       mh,             /* Handle of LMem heap */
+            ChunkHandle     ch,             /* Handle of chunk to resize */
+            word            deleteOffset,   /* Offset within chunk of first 
+                                             * byte to be deleted */
+            word            deleteCount);   /* # of bytes to delete */
+
 This routine is exactly like **LMemDeleteAt()** above, except that the chunk 
 is specified by its global and chunk handles.
 
@@ -1893,9 +2002,10 @@ indicate bytes that are not in the chunk, results are undefined.
 **Include:** lmem.h
 
 ----------
-#### LMemDeref()
-	void *	LMemDeref(
-			optr	chunk);	/* optr to chunk to dereference */
+### LMemDeref()
+    void *  LMemDeref(
+            optr    chunk); /* optr to chunk to dereference */
+
 This routine translates an optr into the address of the chunk. The LMem 
 heap must be locked or fixed on the global heap. Chunk addresses can be 
 invalidated by many LMem routines, forcing you to dereference the optr 
@@ -1908,10 +2018,11 @@ again.
 **See Also:** LMemDerefHandles()
 
 ----------
-#### LMemDerefHandles()
-	void *	LMemDerefHandles(
-			MemHandle		mh,			/* Handle of LMem heap's block */
-			ChunkHandle		chunk);		/* Handle of chunk to dereference */
+### LMemDerefHandles()
+    void *  LMemDerefHandles(
+            MemHandle       mh,         /* Handle of LMem heap's block */
+            ChunkHandle     chunk);     /* Handle of chunk to dereference */
+
 This routine is exactly like **LMemDeref()** above, except that the chunk is 
 specified by its global and chunk handles.
 
@@ -1922,9 +2033,10 @@ specified by its global and chunk handles.
 **See Also:** LMemDeref()
 
 ----------
-#### LMemFree()
-	void	LMemFree(
-			optr	chunk);			/*optr of chunk to free */
+### LMemFree()
+    void    LMemFree(
+            optr    chunk);         /*optr of chunk to free */
+
 This routine frees a chunk from an LMem heap. The chunk is added to the 
 heap's free list. The routine is guaranteed not to compact or resize the heap; 
 thus, all pointers within the block remain valid (except for pointers to data 
@@ -1937,10 +2049,11 @@ in the freed chunk, of course).
 **See Also:** LMemFreeHandles()
 
 ----------
-#### LMemFreeHandles()
-	void	LMemFreeHandles(
-			MemHandle		mh,				/* Handle of LMem heap */
-			ChunkHandle		chunk);			/* Handle of chunk to free */
+### LMemFreeHandles()
+    void    LMemFreeHandles(
+            MemHandle       mh,             /* Handle of LMem heap */
+            ChunkHandle     chunk);         /* Handle of chunk to free */
+
 This routine is just like **LMemFree()** above, except that the chunk is 
 specified by its global and chunk handles (instead of by an optr).
 
@@ -1949,9 +2062,10 @@ specified by its global and chunk handles (instead of by an optr).
 **Include:** lmem.h
 
 ----------
-#### LMemGetChunkSize()
-	word	LMemGetChunkSize(
-			optr	chunk);				/* optr of subject chunk */
+### LMemGetChunkSize()
+    word    LMemGetChunkSize(
+            optr    chunk);             /* optr of subject chunk */
+
 This routine returns the size (in bytes) of a chunk in an LMem heap. Since 
 LMem chunks are dword-aligned, the chunk's size may be slightly larger 
 than the size specified when it was allocated. The routine is guaranteed not 
@@ -1965,10 +2079,11 @@ valid.
 **See Also:** LMemGetChunkSizeHandles()
 
 ----------
-#### LMemGetChunkSizeHandles()
-	word	Routine(
-			MemHandle		mh,			/* Handle of LMem heap */
-			ChunkHandle		chunk);		/* Handle of chunk in question */
+### LMemGetChunkSizeHandles()
+    word    Routine(
+            MemHandle       mh,         /* Handle of LMem heap */
+            ChunkHandle     chunk);     /* Handle of chunk in question */
+
 This routine is just like **LMemGetChunkSize()** above, except that the 
 chunk is specified by its global and chunk handles (instead of by an optr).
 
@@ -1979,17 +2094,18 @@ chunk is specified by its global and chunk handles (instead of by an optr).
 **See Also:** LMemGetChunkSize()
 
 ----------
-#### LMemInitHeap()
-	void	LMemInitHeap(
-			MemHandle			mh,			/* Handle of (locked or fixed)
-											 * block which will contain heap 	*/
-			LMemType			type,		/* Type of heap to create */
-			LocalMemoryFlags	flags,		/* Record of LocalMemoryFlags */
-			word				lmemOffset,	/* Offset of first chunk in heap (or
-											 * zero for default offset) */
-			word				numHandles,	/* Size of starter handle table */
-			word				freeSpace);	/* Size of first free chunk 
-											 * created */
+### LMemInitHeap()
+    void    LMemInitHeap(
+            MemHandle           mh,         /* Handle of (locked or fixed)
+                                             * block which will contain heap    */
+            LMemType            type,       /* Type of heap to create */
+            LocalMemoryFlags    flags,      /* Record of LocalMemoryFlags */
+            word                lmemOffset, /* Offset of first chunk in heap (or
+                                             * zero for default offset) */
+            word                numHandles, /* Size of starter handle table */
+            word                freeSpace); /* Size of first free chunk 
+                                             * created */
+
 This routine creates an LMem heap in a global memory block. The block must 
 be locked or fixed in memory. The routine initializes the 
 **LMemBlockHeader**, creates a handle table, allocates a single free chunk, 
@@ -2097,12 +2213,13 @@ large enough to accommodate the entire heap.
 MemFree(), VMAllocLMem()
 
 ----------
-#### LMemInsertAt()
-	void	LMemInsertAt(
-			optr	chunk,			/* optr of chunk to resize */
-			word	insertOffset,	/* Offset within chunk of first byte
-									 * to be added */
-			word	insertCount);	/* # of bytes to add */
+### LMemInsertAt()
+    void    LMemInsertAt(
+            optr    chunk,          /* optr of chunk to resize */
+            word    insertOffset,   /* Offset within chunk of first byte
+                                     * to be added */
+            word    insertCount);   /* # of bytes to add */
+
 This routine inserts space in the middle of a chunk and zero-initializes the 
 new space. The first new byte will be at the specified offset within the chunk. 
 
@@ -2120,13 +2237,14 @@ is out-of-bounds, results are undefined.
 **See Also:** LMemReAlloc(), LMemDeleteAt(), LMemInsertAtHandles()
 
 ----------
-#### LMemInsertAtHandles()
-	void	LMemInsertAtHandles(
-			MemHandle		mh,				/* Handle of LMem heap */
-			ChunkHandle		chunk,			/* Chunk to resize */
-			word			insertOffset,	/* Offset within chunk of first byte
-											 * to be added */
-			word			insertCount);	/* # of bytes to add */
+### LMemInsertAtHandles()
+    void    LMemInsertAtHandles(
+            MemHandle       mh,             /* Handle of LMem heap */
+            ChunkHandle     chunk,          /* Chunk to resize */
+            word            insertOffset,   /* Offset within chunk of first byte
+                                             * to be added */
+            word            insertCount);   /* # of bytes to add */
+
 This routine is just like **LMemInsertAt()** above, except that the chunk is 
 specified by its global and chunk handles (instead of by an optr).
 
@@ -2142,10 +2260,11 @@ is out-of-bounds, results are undefined.
 **Include:** lmem.h
 
 ----------
-#### LMemReAlloc()
-	Boolean	LMemReAlloc(
-			optr	chunk,				/* optr of chunk to resize */
-			word	chunkSize);			/* New size of chunk in bytes */
+### LMemReAlloc()
+    Boolean LMemReAlloc(
+            optr    chunk,              /* optr of chunk to resize */
+            word    chunkSize);         /* New size of chunk in bytes */
+
 This routine resizes a chunk in an LMem heap. The heap must be in a locked 
 or fixed block. If the routine succeeds, it returns zero. If it fails (because the 
 heap ran out of space and could not be expanded), it returns non-zero.
@@ -2170,11 +2289,12 @@ or resized, invalidating pointers.
 **See Also:** LMemReAllocHandles(), LMemInsertAt(), LMemDeleteAt()
 
 ----------
-#### LMemReAllocHandles()
-	void	LMemReAllocHandles(
-			MemHandle		mh,				/* Handle of LMem heap */
-			ChunkHandle		chunk,			/* Handle of chunk to resize */
-			word			chunkSize);		/* New size of chunk in bytes */
+### LMemReAllocHandles()
+    void    LMemReAllocHandles(
+            MemHandle       mh,             /* Handle of LMem heap */
+            ChunkHandle     chunk,          /* Handle of chunk to resize */
+            word            chunkSize);     /* New size of chunk in bytes */
+
 This routine is just like **LMemReAlloc()** above, except that the chunk is 
 specified by its global and chunk handles (instead of by an optr).
 
@@ -2186,20 +2306,22 @@ or resized, invalidating pointers.
 **Include:** lmem.h
 
 ----------
-#### LocalAsciiToFixed()
-	WWFixedAsDWord LocalAsciiToFixed(
-			const char *		buffer,
-			char **				parseEnd);
+### LocalAsciiToFixed()
+    WWFixedAsDWord LocalAsciiToFixed(
+            const char *        buffer,
+            char **             parseEnd);
+
 This routines converts a string like "12.345" to a fixed point number.
 
 **Include:** localize.h
 
 ----------
-#### LocalCmpStrings()
-	sword	LocalCmpStrings(
-			const char *		str1,
-			const char *		str2,
-			word				strSize);
+### LocalCmpStrings()
+    sword   LocalCmpStrings(
+            const char *        str1,
+            const char *        str2,
+            word                strSize);
+
 This routine compares two strings to determine which comes first in a lexical 
 (i.e. alphabetic) ordering. If the return value is negative, then *str1* is earlier 
 than *str2*. If the return value is positive, then *str1* is later than *str2*. If the 
@@ -2209,13 +2331,14 @@ alphabetical order.
 **Include:** localize.h
 
 ----------
-#### LocalCmpStringsDosToGeos()
-	sword	LocalCmpStringsDosToGeos(
-			const char *					str1,
-			const char *					str2,
-			word							strSize,
-			word							defaultChar,
-			LocalCmpStringsDosToGeosFlags 	flags);
+### LocalCmpStringsDosToGeos()
+    sword   LocalCmpStringsDosToGeos(
+            const char *                    str1,
+            const char *                    str2,
+            word                            strSize,
+            word                            defaultChar,
+            LocalCmpStringsDosToGeosFlags   flags);
+
 This routine compares two strings to determine which comes first in lexical 
 ordering. Either or both of these strings may be a DOS string.  If the return 
 value is negative, then *str1* is earlier than *str2*. If the return value is positive, 
@@ -2224,19 +2347,20 @@ at the same place in alphabetical order.
 
 **Structures:**
 
-	typedef ByteFlags LocalCmpStringsDosToGeosFlags;
-		/* The following flags may be combined using | and &:
-		 *		LCSDTG_NO_CONVERT_STRING_2,
-		 * 		LCSDTG_NO_CONVERT_STRING_1 */
+    typedef ByteFlags LocalCmpStringsDosToGeosFlags;
+        /* The following flags may be combined using | and &:
+         *      LCSDTG_NO_CONVERT_STRING_2,
+         *      LCSDTG_NO_CONVERT_STRING_1 */
 
-**Include:**	localize.h
+**Include:**    localize.h
 
 ----------
-#### LocalCmpStringsNoCase()
-	sword	LocalCmpStringsNoCase(
-			const char *		str1,
-			const char *		str2,
-			word				strSize);
+### LocalCmpStringsNoCase()
+    sword   LocalCmpStringsNoCase(
+            const char *        str1,
+            const char *        str2,
+            word                strSize);
+
 This routine compares two strings to determine which comes first in a lexical 
 (i.e. alphabetic) ordering. The comparison used is not case-sensitive.  If the 
 return value is negative, then *str1* is earlier than *str2*. If the return value is 
@@ -2246,12 +2370,12 @@ strings appear at the same place in alphabetical order.
 **Include:** localize.h
 
 ----------
-#### LocalCodePageToGeos()
-	Boolean	LocalCodePageToGeos(
-			char *			str,
-			word			strSize,	/* Size of the string, in bytes */
-			DosCodePage 	codePage,
-			word			defaultChar);
+### LocalCodePageToGeos()
+    Boolean LocalCodePageToGeos(
+            char *          str,
+            word            strSize,    /* Size of the string, in bytes */
+            DosCodePage     codePage,
+            word            defaultChar);
 
 This routine converts a DOS string to standard GEOS text using a specified 
 code page. Any characters for which there is no GEOS equivalent will be 
@@ -2260,35 +2384,37 @@ replaced by the passed default character.
 **Include:** localize.h
 
 ----------
-#### LocalCodePageToGeosChar()
-	word	LocalCodePageToGeosChar(
-			word			ch,
-			DosCodePage		codePage,
-			word			defaultChar);
+### LocalCodePageToGeosChar()
+    word    LocalCodePageToGeosChar(
+            word            ch,
+            DosCodePage     codePage,
+            word            defaultChar);
 
 This routine converts a DOS character to standard GEOS text using a 
 specified code page. Any character for which there is no GEOS equivalent will 
 be replaced by the passed default character.
 
-**Include:**	localize.h
+**Include:**    localize.h
 
 ----------
-#### LocalCustomFormatDateTime()
-	word	LocalCustomFormatDateTime(
-			char *					str,		/* Buffer to save formatted text in */
-			const char *			format,		/* Format string */
-			const TimerDateAndTime	*dateTime);
+### LocalCustomFormatDateTime()
+    word    LocalCustomFormatDateTime(
+            char *                  str,        /* Buffer to save formatted text in */
+            const char *            format,     /* Format string */
+            const TimerDateAndTime  *dateTime);
+
 This routine takes a date or time and constructs a string using a custom 
 format. 
 
 **Include:** localize.h
 
 ----------
-#### LocalCustomParseDateTime()
-	word	LocalCustomParseDateTime(
-			const char *			str,
-			DateTimeFormat			format,
-			TimerDateAndTime *		dateTime);
+### LocalCustomParseDateTime()
+    word    LocalCustomParseDateTime(
+            const char *            str,
+            DateTimeFormat          format,
+            TimerDateAndTime *      dateTime);
+
 This routine parses a date and time string by comparing it with the passed 
 **DateTimeFormat**. It fills in the fields of the **TimerDateAndTime** 
 structure. Any fields which are not specified in the format string will be filled 
@@ -2301,11 +2427,12 @@ correctly.
 **Include:** localize.h
 
 ----------
-#### LocalDistanceFromAscii()
-	WWFixedAsDword 	LocalDistanceFromAscii( 
-			const char *			buffer,
-			DistanceUnit 			distanceUnits,
-			MeasurementTypes		measurementType);
+### LocalDistanceFromAscii()
+    WWFixedAsDword  LocalDistanceFromAscii( 
+            const char *            buffer,
+            DistanceUnit            distanceUnits,
+            MeasurementTypes        measurementType);
+
 This routine takes a function like "72 pt" and returns a number representing 
 the distance. The returned answer represents the measure in points, inches, 
 centimeters, or some other measure as specified by the passed unit.
@@ -2313,83 +2440,91 @@ centimeters, or some other measure as specified by the passed unit.
 **Include:** localize.h
 
 ----------
-#### LocalDistanceToAscii()
-	word	LocalDistanceToAscii( /* Length of string, including NULL */
-			char *				buffer,		/*Buffer to save formatted text in */
-			word 				value,
-			DistanceUnit 		distanceUnits,
-			MeasurementType 	measurementType);
+### LocalDistanceToAscii()
+    word    LocalDistanceToAscii( /* Length of string, including NULL */
+            char *              buffer,     /*Buffer to save formatted text in */
+            word                value,
+            DistanceUnit        distanceUnits,
+            MeasurementType     measurementType);
+
 This routine takes a distance and a set of units and returns a string 
 containing a properly formatted distance.
 
 **Include:** localize.h
 
 ----------
-#### LocalDosToGeos()
-	Boolean	LocalDosToGeos(
-			char *	str,
-			word	strSize,
-			word	defaultChar);
+### LocalDosToGeos()
+    Boolean LocalDosToGeos(
+            char *  str,
+            word    strSize,
+            word    defaultChar);
+
 Convert a DOS string to GEOS text. Any characters for which there is no 
 GEOS equivalent will be replaced by the passed default character.
 
 **Include:** localize.h
 
 ----------
-#### LocalDosToGeosChar()
-	word	LocalDosToGeosChar(
-			word	ch,
-			word	defaultChar);
+### LocalDosToGeosChar()
+    word    LocalDosToGeosChar(
+            word    ch,
+            word    defaultChar);
+
 Convert a DOS character to GEOS text. Any characters for which there is no 
 GEOS equivalent will be replaced by the passed default character.
 
 **Include:** localize.h
 
 ----------
-#### LocalDowncaseChar()
-	word	LocalDowncaseChar(
-			word	ch);
+### LocalDowncaseChar()
+    word    LocalDowncaseChar(
+            word    ch);
+
 Return the lower case equivalent, if any, of the passed character.
 
 **Include:** localize.h
 
 ----------
-#### LocalDowncaseString()
-	void	LocalDowncaseString(
-			char *	str,
-			word	size);		/* Size of string, in bytes */
+### LocalDowncaseString()
+    void    LocalDowncaseString(
+            char *  str,
+            word    size);      /* Size of string, in bytes */
+
 Convert the passed string to its all lower case equivalent.
 
 **Include:** localize.h
 
 ----------
-#### LocalFixedToAscii()
-	void	LocalFixedToAscii(
-			char *			buffer,
-			WWFixedAsDWord	value,
-			word			fracDigits);
+### LocalFixedToAscii()
+    void    LocalFixedToAscii(
+            char *          buffer,
+            WWFixedAsDWord  value,
+            word            fracDigits);
+
 This routine returns the ASCII expression of a fixed point number.
 
 **Include:** localize.h
 
 ----------
-#### LocalFormatDateTime()
-	word	LocalFormatDateTime( /* Length of returned string */
-			char *						str,
-			DateTimeFormat 				format,
-			const TimerDateAndTime *	dateTime);
+### LocalFormatDateTime()
+    word    LocalFormatDateTime( /* Length of returned string */
+            char *                      str,
+            DateTimeFormat              format,
+            const TimerDateAndTime *    dateTime);
+
 This routine returns the string (e.g. "9:37") corresponding to the passed 
 DateAndTime.
 
-**Include:**	localize.h
+**Include:**    localize.h
 
 ----------
-#### LocalGeosToCodePage()
-	Boolean	LocalGeosToCodePage(
-			char *			str,
-			word			strSize,
-			DosCodePage 	codePage,
-			word			defaultChar);
+### LocalGeosToCodePage()
+    Boolean LocalGeosToCodePage(
+            char *          str,
+            word            strSize,
+            DosCodePage     codePage,
+            word            defaultChar);
+
 Convert a GEOS string to DOS text, using the specified code page. Any 
 characters for which there is no DOS equivalent will be replaced by the 
 passed default character.
@@ -2397,11 +2532,12 @@ passed default character.
 **Include:** localize.h
 
 ----------
-#### LocalGeosToCodePageChar()
-	word	LocalGeosToCodePageChar(
-			word			ch,
-			DosCodePage 	codePage,
-			word			defaultChar);
+### LocalGeosToCodePageChar()
+    word    LocalGeosToCodePageChar(
+            word            ch,
+            DosCodePage     codePage,
+            word            defaultChar);
+
 Convert a GEOS character to DOS text, using the specified code page. Any 
 character for which there is no DOS equivalent will be replaced by the passed 
 default character.
@@ -2409,154 +2545,172 @@ default character.
 **Include:** localize.h
 
 ----------
-#### LocalGeosToDos()
-	Boolean	LocalGeosToDos(
-			char *	str,
-			word	strSize,
-			word	defaultChar);
+### LocalGeosToDos()
+    Boolean LocalGeosToDos(
+            char *  str,
+            word    strSize,
+            word    defaultChar);
+
 Convert a GEOS string to DOS text. Any characters for which there is no DOS 
 equivalent will be replaced by the passed default character.
 
 **Include:** localize.h
 
 ----------
-#### LocalGeosToDosChar()
-	word	LocalGeosToDosChar(
-			word	ch,
-			word	defaultChar);
+### LocalGeosToDosChar()
+    word    LocalGeosToDosChar(
+            word    ch,
+            word    defaultChar);
+
 Convert a GEOS character to DOS text. Any character for which there is no 
 DOS equivalent will be replaced by the passed default character.
 
 **Include:** localize.h
 
 ----------
-#### LocalGetCodePage()
-	DosCodePage LocalGetCodePage(void);
+### LocalGetCodePage()
+    DosCodePage LocalGetCodePage(void);
+
 This routine returns the current code page, used by DOS to handle 
 international character sets.
 
 **Include:** localize.h
 
 ----------
-#### LocalGetCurrencyFormat()
-	void	LocalGetCurrencyFormat(
-			LocalCurrencyFormat *	buf,
-			char *					symbol);
+### LocalGetCurrencyFormat()
+    void    LocalGetCurrencyFormat(
+            LocalCurrencyFormat *   buf,
+            char *                  symbol);
+
 This routine returns the current currency format and symbol.
 
 **Include:** localize.h
 
 ----------
-#### LocalGetDateTimeFormat()
-	void	LocalGetDateTimeFormat(
-			char *				str,
-			DateTimeFormat 		format);
+### LocalGetDateTimeFormat()
+    void    LocalGetDateTimeFormat(
+            char *              str,
+            DateTimeFormat      format);
+
 This routine returns the user's preferred time and date formats.
 
 **Include:** localize.h
 
 ----------
-#### LocalGetDefaultPrintSizes()
-	void	LocalGetDefaultPrintSizes(
-			DefaultPrintSizes *		sizes);
+### LocalGetDefaultPrintSizes()
+    void    LocalGetDefaultPrintSizes(
+            DefaultPrintSizes *     sizes);
+
 This routine returns the system's default page and document size.
 
 **Include:** localize.h
 
 ----------
-#### LocalGetMeasurementType()
-	MeasurementTypes LocalGetMeasurementType(void);
+### LocalGetMeasurementType()
+    MeasurementTypes LocalGetMeasurementType(void);
+
 This routine returns the user preference between US and metric 
 measurement systems.
 
 **Include:** localize.h
 
 ----------
-#### LocalGetNumericFormat()
-	void	LocalGetNumericFormat(
-			LocalNumericFormat *		buf);
+### LocalGetNumericFormat()
+    void    LocalGetNumericFormat(
+            LocalNumericFormat *        buf);
+
 This routine returns the user's preferred format for numbers.
 
 **Include:** localize.h
 
 ----------
-#### LocalGetQuotes()
-	void	LocalGetQuotes(
-			LocalQuotes *		quotes);
+### LocalGetQuotes()
+    void    LocalGetQuotes(
+            LocalQuotes *       quotes);
+
 This routine returns the user's preferred quote marks.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsAlpha()
-	Boolean	LocalIsAlpha(
-			word	ch);
+### LocalIsAlpha()
+    Boolean LocalIsAlpha(
+            word    ch);
+
 This routine returns *true* if the passed character is alphabetic.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsAlphaNumeric()
-	Boolean	LocalIsAlphaNumeric(
-			word	ch);
+### LocalIsAlphaNumeric()
+    Boolean LocalIsAlphaNumeric(
+            word    ch);
+
 This routine returns *true* if the passed character is alphanumeric.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsControl()
-	Boolean	LocalIsControl(
-			word	ch);
+### LocalIsControl()
+    Boolean LocalIsControl(
+            word    ch);
+
 This routine returns *true* if the passed character is a control character.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsDateChar()
-	Boolean	LocalIsDateChar(
-			word	ch);
+### LocalIsDateChar()
+    Boolean LocalIsDateChar(
+            word    ch);
+
 This routine returns *true* if the passed character could be part of a date or 
 time.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsDigit()
-	Boolean	LocalIsDigit(
-			word	ch);
+### LocalIsDigit()
+    Boolean LocalIsDigit(
+            word    ch);
+
 This routine returns *true* if the passed character is a decimal digit.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsDosChar()
-	Boolean	LocalIsDosChar(
-			word	ch);
+### LocalIsDosChar()
+    Boolean LocalIsDosChar(
+            word    ch);
+
 This routine returns *true* if the passed character is part of the DOS character 
 set.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsGraphic()
-	Boolean	LocalIsGraphic(
-			word	ch);
+### LocalIsGraphic()
+    Boolean LocalIsGraphic(
+            word    ch);
+
 This routine returns true if the passed character is displayable.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsHexDigit()
-	Boolean	LocalIsHexDigit(
-			word	ch);
+### LocalIsHexDigit()
+    Boolean LocalIsHexDigit(
+            word    ch);
+
 This routine returns *true* if the passed character is a hexadecimal digit.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsLower()
-	Boolean	LocalIsLower(
-			word	ch);
+### LocalIsLower()
+    Boolean LocalIsLower(
+            word    ch);
+
 This routine returns *true* if the passed character is a lower case alphabetic 
 character.
 
@@ -2564,174 +2718,194 @@ character.
 
 ----------
 ##### LocalIsNumChar()
-	Boolean	LocalIsNumChar(
-			word	ch);
+    Boolean LocalIsNumChar(
+            word    ch);
+
 This routine returns *true* if the passed character is a number or part of the 
 number format.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsPrintable()
-	Boolean	LocalIsPrintable(
-			word	ch);
+### LocalIsPrintable()
+    Boolean LocalIsPrintable(
+            word    ch);
+
 This routine returns *true* if the passed character is printable (i.e. takes up a 
 space when printing).
 
 **Include:** localize.h
 
 ----------
-#### LocalIsPunctuation()
-	Boolean	LocalIsPunctuation(
-			word	ch);
+### LocalIsPunctuation()
+    Boolean LocalIsPunctuation(
+            word    ch);
+
 This routine returns *true* if the passed character is a punctuation mark.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsSpace()
-	Boolean	LocalIsSpace(
-			word	ch);
+### LocalIsSpace()
+    Boolean LocalIsSpace(
+            word    ch);
+
 This routine returns *true* if the passed character is whitespace.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsSymbol()
-	Boolean	LocalIsSymbol(
-			word	ch);
+### LocalIsSymbol()
+    Boolean LocalIsSymbol(
+            word    ch);
+
 This routine returns *true* if the passed character is a symbol.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsTimeChar()
-	Boolean	LocalIsTimeChar(
-			word	ch);
+### LocalIsTimeChar()
+    Boolean LocalIsTimeChar(
+            word    ch);
+
 This routine returns *true* if the passed character is a number or part of the 
 user's time format.
 
 **Include:** localize.h
 
 ----------
-#### LocalIsUpper()
-	Boolean	LocalIsUpper(
-			word	ch);
+### LocalIsUpper()
+    Boolean LocalIsUpper(
+            word    ch);
+
 This routine returns *true* if the passed character is an upper case alphabetic 
 character.
 
 **Include:** localize.h
 
 ----------
-#### LocalLexicalValue()
-	word	LocalLexicalValue(
-			word	ch);
+### LocalLexicalValue()
+    word    LocalLexicalValue(
+            word    ch);
+
 This routine returns the passed character's lexical value, useful when trying 
 to sort strings alphabetically.
 
 **Include:** localize.h
 
 ----------
-#### LocalLexicalValueNoCase()
-	word	LocalLexicalValueNoCase(
-			word	ch);
+### LocalLexicalValueNoCase()
+    word    LocalLexicalValueNoCase(
+            word    ch);
+
 This routine returns the passed character's case-insensitive lexical value, 
 useful when trying to sort strings alphabetically.
 
 **Include:** localize.h
 
 ----------
-#### LocalParseDateTime()
-	Boolean	LocalParseDateTime(
-			const char *			str,
-			DateTimeFormat 			format,
-			TimerDateAndTime *		dateTime);
+### LocalParseDateTime()
+    Boolean LocalParseDateTime(
+            const char *            str,
+            DateTimeFormat          format,
+            TimerDateAndTime *      dateTime);
+
 This routine takes a string describing a date or time (e.g. "9:37") and parses 
 it using the passed format.
 
 **Include:** localize.h
 
 ----------
-#### LocalSetCurrencyFormat()
-	void	LocalSetCurrencyFormat(
-			const LocalCurrencyFormat *		buf,
-			const char *					symbol);
+### LocalSetCurrencyFormat()
+    void    LocalSetCurrencyFormat(
+            const LocalCurrencyFormat *     buf,
+            const char *                    symbol);
+
 This routine changes the stored preferred currency format.
 
 **Include:** localize.h
 
 ----------
-#### LocalSetDateTimeFormat()
-	void	LocalSetDateTimeFormat(
-			const char *		str,
-			DateTimeFormat 		format);
+### LocalSetDateTimeFormat()
+    void    LocalSetDateTimeFormat(
+            const char *        str,
+            DateTimeFormat      format);
+
 This routine changes the stored preferred time and date format.
 
 **Include:** localize.h
 
 ----------
-#### LocalSetDefaultPrintSizes()
-	void	LocalSetDefaultPrintSizes(
-			const DefaultPrintSizes *			sizes);
+### LocalSetDefaultPrintSizes()
+    void    LocalSetDefaultPrintSizes(
+            const DefaultPrintSizes *           sizes);
+
 This routine changes the stored preferred default page and document sizes.
 
 **Include:** localize.h
 
 ----------
-#### LocalSetMeasurementType()
-	void	LocalSetMeasurementType(
-			MeasurementTypes meas);
+### LocalSetMeasurementType()
+    void    LocalSetMeasurementType(
+            MeasurementTypes meas);
+
 This routine changes the stored preferred measurement type.
 
 **Include:** localize.h
 
 ----------
-#### LocalSetNumericFormat()
-	void	LocalSetNumericFormat(
-			const LocalNumericFormat *			buf);
+### LocalSetNumericFormat()
+    void    LocalSetNumericFormat(
+            const LocalNumericFormat *          buf);
+
 This routine changes the stored preferred number format.
 
 **Include:** localize.h
 
 ----------
-#### LocalSetQuotes()
-	void	LocalSetQuotes(
-			const LocalQuotes *		quotes);
+### LocalSetQuotes()
+    void    LocalSetQuotes(
+            const LocalQuotes *     quotes);
+
 This routine changes the stored preferred quote marks.
 
 **Include:** localize.h
 
 ----------
-#### LocalStringLength()
-	word	LocalStringLength(
-			const char *		str);
+### LocalStringLength()
+    word    LocalStringLength(
+            const char *        str);
+
 This routine returns the length (in characters) of a null-terminated string 
 (not counting the null), even for multibyte character sets.
 
 **Include:** localize.h
 
 ----------
-#### LocalStringSize()
-	word	LocalStringSize(
-			const char *		str);
+### LocalStringSize()
+    word    LocalStringSize(
+            const char *        str);
+
 This routine returns the size (in bytes) of a null-terminated string.
 
 **Include:** localize.h
 
 ----------
-#### LocalUpcaseChar()
-	word	LocalUpcaseChar(
-			word	ch);
+### LocalUpcaseChar()
+    word    LocalUpcaseChar(
+            word    ch);
+
 This routine returns the upper case equivalent, if any, of the passed 
 character.
 
 **Include:** localize.h
 
 ----------
-#### LocalUpcaseString()
-	void	LocalUpcaseString(
-			char *	str,
-			word	size);
+### LocalUpcaseString()
+    void    LocalUpcaseString(
+            char *  str,
+            word    size);
+
 This routine converts the passed string to its all upper case equivalent.
 
 **Include:** localize.h

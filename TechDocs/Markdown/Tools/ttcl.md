@@ -1,4 +1,4 @@
-## 5 Tool Command Language
+# 5 Tool Command Language
 
 Before using this chapter one should have a good understanding of how the 
 Swat commands function "Swat Introduction," Chapter 3, and of how the 
@@ -30,7 +30,7 @@ Descriptions and examples of coding conventions, techniques, and tricks.
 Steps to take in order to be able to use a newly written command to help 
 debug an application.
 
-### 5.1 Using This Chapter
+## 5.1 Using This Chapter
 
 This chapter provides the information needed to write a new Swat command 
 in Tcl. But, new commands need only be written in certain situations. Some 
@@ -49,7 +49,7 @@ should be written to examine that table in particular.
 The existing Swat commands should take care of the bulk of debugging, but 
 sometimes an extra command can help.
 
-### 5.2 Copyright Information
+## 5.2 Copyright Information
 
 The following sections of this chapter fall under the copyright below: 
 Background and Description, Syntax and Structure, and Commands.
@@ -62,7 +62,7 @@ that the above copyright notice appear in all copies. The University of
 California makes no representations about the suitability of this software for 
 any purpose. It is provided "as is" without express or implied warranty.
 
-### 5.3 Background and Description
+## 5.3 Background and Description
 
 The Tool Command Language is abbreviated as Tcl and is pronounced 
 "tickle". It was developed and written by Professor John Ousterhout at the 
@@ -82,7 +82,7 @@ the Tcl language, routines to implement the Tcl built-in
 commands, and procedures allowing an application to extend 
 Tcl with additional commands.
 
-### 5.4 Syntax and Structure
+## 5.4 Syntax and Structure
 
 Tcl supports only one type of data: *strings*. All commands, all arguments to 
 commands, all command results, and all variable values are strings. Where 
@@ -121,7 +121,7 @@ The structure and building of procedures in Tcl.
 + Variables  
 Variable declaration and description.
 
-#### 5.4.1 Basic Command Syntax
+### 5.4.1 Basic Command Syntax
 
 The Tcl language has syntactic similarities to both Unix and Lisp. However, 
 the interpretation of commands is different in Tcl than in either of those 
@@ -143,13 +143,13 @@ example, will treat its first argument as the name of a variable and its second
 argument as a string value to assign to that variable. For other commands, 
 arguments may be interpreted as integers, lists, file names, or Tcl commands.
 
-##### 5.4.1.1 Comments
+#### 5.4.1.1 Comments
 
 If the first non-blank character in a command is # (a number sign), then 
 everything from the # up through the next newline character is treated as 
 comment and discarded by the parser.
 
-##### 5.4.1.2 Argument Grouping
+#### 5.4.1.2 Argument Grouping
 
 Normally each argument field ends at the next white space (tabs or spaces), 
 but curly braces ("{" and "}") may be used to group arguments in different 
@@ -169,10 +169,10 @@ complex command structures to be built up without confusion. For example,
 the **eval** command takes one argument, which is a command string; **eval** 
 invokes the Tcl interpreter to execute the command string. The command:
 
-	eval {  
-	    var a 22  
-	    var b 33  
-	}
+    eval {  
+        var a 22  
+        var b 33  
+    }
 
 will assign the value 22 to **a** and 33 to **b**.
 
@@ -187,7 +187,7 @@ significant in a command field if the first character of the field is a left bra
 Otherwise neither left nor right braces in the field will be treated specially 
 (except as part of variable substitution).
 
-##### 5.4.1.3 Command Grouping
+#### 5.4.1.3 Command Grouping
 
 Normally, each command occupies one line (the command is terminated by a 
 newline character). Thus, the string:
@@ -237,7 +237,7 @@ If a field is enclosed in braces then the brackets and the characters between
 them are not interpreted specially; they are passed through to the argument 
 verbatim.
 
-##### 5.4.1.5 Variable Substitution
+#### 5.4.1.5 Variable Substitution
 
 The dollar sign ($) may be used as a special shorthand form for substituting 
 variables. If $ appears in an argument that is not enclosed in braces then 
@@ -269,7 +269,7 @@ argument verbatim.
 The dollar sign abbreviation is simply a shorthand form. **$a** is completely 
 equivalent to **[var a]**; it is provided as a convenience to reduce typing.
 
-##### 5.4.1.6 Backslash Substitution
+#### 5.4.1.6 Backslash Substitution
 
 Backslashes may be used to insert non-printing characters into command 
 fields and also to insert braces, brackets, and dollar signs into fields without 
@@ -294,25 +294,25 @@ the next character. For example, in the command:
 the first argument will be \\*a and the second \\{test.
 
 
-**Table 5-1 *Backslash Sequences***
+**Table 5-1** Backslash Sequences
 
 ----------
 
-	Sequence		Replaced Value  
-	\b				Backspace (octal 10)  
-	\e				Escape (octal 33)  
-	\n				Newline (octal 15)  
-	\t				Tab (octal 11)  
-	\{				Left brace ("{")  
-	\}				Right brace ("}")  
-	\[				Open bracket ("[")  
-	\]				Close bracket ("]")  
-	\<space>		Space (note: does not terminate the argument)  
-	\\				Backslash ("\")  
-	\Cx				Control-x for any ASCII x except M (see below)  
-	\Mx				Meta-x for any ASCII x  
-	\CMx			Control-meta-x for any ASCII x  
-	\ddd			The digits ddd (one, two, or three of them) give the octal value of the character
+    Sequence        Replaced Value  
+    \b              Backspace (octal 10)  
+    \e              Escape (octal 33)  
+    \n              Newline (octal 15)  
+    \t              Tab (octal 11)  
+    \{              Left brace ("{")  
+    \}              Right brace ("}")  
+    \[              Open bracket ("[")  
+    \]              Close bracket ("]")  
+    \<space>        Space (note: does not terminate the argument)  
+    \\              Backslash ("\")  
+    \Cx             Control-x for any ASCII x except M (see below)  
+    \Mx             Meta-x for any ASCII x  
+    \CMx            Control-meta-x for any ASCII x  
+    \ddd            The digits ddd (one, two, or three of them) give the octal value of the character
 
 ----------
 
@@ -330,7 +330,7 @@ structure; it only covers the most common cases. To produce particularly
 complicated arguments it will probably be easiest to use the format 
 command along with command substitution.
 
-#### 5.4.2 Expressions
+### 5.4.2 Expressions
 
 The second major interpretation applied to strings in Tcl is as *expressions*. 
 Several commands, such as **expr**, **for**, and **if**, treat some of their arguments 
@@ -345,22 +345,20 @@ in octal (if the first character of the value of the first character is 0 (zero)
 in hexadecimal (if the first two characters of the value are 0x). The valid 
 operators are listed in Table 5-2 grouped in decreasing order of precedence.
 
-**Table 5-2 Valid Operators**
+**Table 5-2** Valid Operators
 
-----------
-
-	Operators			Description  
-	-   ~   !			Unary minus, bit-wise NOT, logical NOT  
-	*   /   %			Multiply, divide, remainder  
-	+   -				Add and subtract  
-	<<   >>				Left and right shift  
-	< >   <=   >=		Boolean less, greater, less than or equal, and greater than or equal. Each operator produces 1 if the condition is true, 0 otherwise  
-	==   !=				Boolean equal and not equal  
-	&					Bit-wise AND  
-	^					Bit-wise exclusive OR  
-	|					Bit-wise OR  
-	&&					Logical AND  
-	||					Logical OR
+    Operators           Description  
+    -   ~   !           Unary minus, bit-wise NOT, logical NOT  
+    *   /   %           Multiply, divide, remainder  
+    +   -               Add and subtract  
+    <<   >>             Left and right shift  
+    < >   <=   >=       Boolean less, greater, less than or equal, and greater than or equal. Each operator produces 1 if the condition is true, 0 otherwise  
+    ==   !=             Boolean equal and not equal  
+    &                   Bit-wise AND  
+    ^                   Bit-wise exclusive OR  
+    |                   Bit-wise OR  
+    &&                  Logical AND  
+    ||                  Logical OR
 
 ----------
 
@@ -410,7 +408,7 @@ desired result:
 
 `for {var i 1} {$i<=10} {var i [expr $i+1]} {body-}`
 
-#### 5.4.3 Lists
+### 5.4.3 Lists
 
 The third major way that strings are interpreted in Tcl is a *list*. A list is just 
 a string with a list-like structure consisting of fields separated by white 
@@ -441,7 +439,7 @@ The Tcl commands **concat**, **foreach**, **index**, **length**, **list**, and *
 you to build lists, extract elements from them, search them, and perform 
 other list-related functions.
 
-#### 5.4.4 Command Results
+### 5.4.4 Command Results
 
 Each command produces two results: a code and a string. The code indicates 
 whether the command completed successfully or not, and the string gives 
@@ -489,7 +487,7 @@ TCL_**RETURN** codes. The **catch** command allows Tcl programs to catch
 errors and handle them without aborting command interpretation any 
 further.
 
-#### 5.4.5 Procedures
+### 5.4.5 Procedures
 
 Tcl allows one to extend the command interface by defining procedures. A Tcl 
 procedure can be invoked just like any other Tcl command (it has a name and 
@@ -498,7 +496,7 @@ a piece of C code linked into the program; it is a string containing one or more
 other Tcl commands. See the **proc** command for information on how to define 
 procedures and what happens when they are invoked.
 
-#### 5.4.6 Variables
+### 5.4.6 Variables
 
 Tcl allows the definition of variables and the use of their values either 
 through $-style variable substitution, the var command, or a few other 
@@ -511,14 +509,14 @@ global command may be used to request that a name refer to a global
 variable for the duration of the current procedure (somewhat analogous to 
 **extern** in C).
 
-### 5.5 Commands
+## 5.5 Commands
 
 The Tcl library provides the following built-in commands, which will be 
 available to any application using Tcl. In addition to these built-in 
 commands, there may be additional commands defined in Swat, plus 
 commands defined as Tcl procedures.
 
-#### 5.5.1 Notation
+### 5.5.1 Notation
 
 The descriptions of the Tcl commands will follow the following notational 
 conventions:
@@ -550,7 +548,7 @@ indicates one or more repetitions of the construct may be used. For
 example, `unalias word*` can be the `unalias` command by itself, or it can 
 be followed by a list of words to be unaliased.
 
-#### 5.5.2 Built-in Commands
+### 5.5.2 Built-in Commands
 
 The built-in Tcl commands are as follows:
 
@@ -643,7 +641,7 @@ continue, for.
 Do one of two things depending on whether the character in $c 
 is a digit.
 
-**Synopsis:**	Perform one of a set of actions based on whether a string matches one or more 
+**Synopsis:**   Perform one of a set of actions based on whether a string matches one or more 
 patterns.
 
 **Notes:**
@@ -839,7 +837,7 @@ return, catch.
 
 ----------
 
-###eval
+### eval
 
 **Usage:**  
 `eval <body>`
@@ -1123,7 +1121,7 @@ Ditto.
 **Synopsis:**  
 This is Tcl's conditional, as you'd expect from its name.
 
-**Notes:**	
+**Notes:**  
 
 + The "then" and "else" keywords are optional, intended to delineate the 
 different sections of the command and make the whole easier to read. 
@@ -1406,7 +1404,7 @@ defsubr, return.
 
 **Examples:**
 
-	protect {  
+    protect {  
        var s [stream open $file w]
        # do stuff with the stream
     } {
@@ -1572,7 +1570,7 @@ extract out a string of at most 10 characters.
 
 + There is currently a limit of 5 fields. 
 
-**See Also:**	format.
+**See Also:**   format.
 
 ----------
 
@@ -1754,7 +1752,7 @@ given name, even if it has no value yet.
 **See Also:**  
 global.
 
-### 5.6 Coding
+## 5.6 Coding
 
 This section provides information about the features and commands of Tcl 
 that are important to know when using Swat, and the features and 
@@ -1769,7 +1767,7 @@ them.
 
 + Examples
 
-#### 5.6.1 Swat Data Structure Commands
+### 5.6.1 Swat Data Structure Commands
 
 `symbol, type, patient, handle, brk, cbrk, event, thread, 
 src, cache, table`
@@ -1979,7 +1977,7 @@ which the cache was created: lru (last recently used) or fifo (first in, first o
 If lru, the least-recently-used entry is flushed; if fifo, the oldest entry is 
 flushed.
 
-**Notes:**	
+**Notes:**  
 
 + Unlike the "table" command, the "cache" command returns tokens for 
 entries, not their values. This allows entries to be individually flushed or 
@@ -2070,7 +2068,7 @@ The `<handler>` procedure is invoked each time an event of type
 event-specific piece of data, and the given `<data>`. A handler procedure 
 should be declared  
 `proc <handler> {arg data} {<body>}`  
-	The handle subcommand returns an <event> for later use in deleting it. 
+    The handle subcommand returns an <event> for later use in deleting it. 
 The `<handler>` should return one of **event\_handled**, 
 **event\_not\_handled**, or **event\_stop_handling**. If it returns 
 **event\_stop\_handling**, the event will not be dispatched to any other 
@@ -2247,38 +2245,34 @@ automatically deleted.
 integer is a mask of bits that mean different things:
 
 
-**Table 5-3** *The State Subcommand: Block Information*
+**Table 5-3** The State Subcommand: Block Information
 
-----------
-
-	Mask		State			Mask		State  
-	0xf8000		Type			0x00200		Attached  
-	0x00040		Discarded		0x00008		Fixed  
-	0x00001		Resident		0x00800		LMem  
-	0x00100		Process			0x00020		Swapped  
-	0x00004		Discardable		0x00400		Kernel  
-	0x00080		Resource		0x00010		Shared  
-	0x00002		Swapable
+    Mask        State           Mask        State  
+    0xf8000     Type            0x00200     Attached  
+    0x00040     Discarded       0x00008     Fixed  
+    0x00001     Resident        0x00800     LMem  
+    0x00100     Process         0x00020     Swapped  
+    0x00004     Discardable     0x00400     Kernel  
+    0x00080     Resource        0x00010     Shared  
+    0x00002     Swapable
 
 When the integer is AND-ed with the mask for Type (0xf8000), the following 
 values indicate the following types of handles:
 
-**Table 5-4** *The State Subcommand: Block Type*
+**Table 5-4** The State Subcommand: Block Type
 
-----------
-
-	Mask		State  
-	0xe0000		Thread  
-	0xb0000		Semaphore  
-	0x80000		Event with stack data chain  
-	0x70000		Stack data chain element  
-	0xd0000		File  
-	0xa0000		Saved block  
-	0x08000		Memory  
-	0xc0000		VM File  
-	0x90000		Event  
-	0x60000		Timer  
-	0x40000		Event queue
+    Mask        State  
+    0xe0000     Thread  
+    0xb0000     Semaphore  
+    0x80000     Event with stack data chain  
+    0x70000     Stack data chain element  
+    0xd0000     File  
+    0xa0000     Saved block  
+    0x08000     Memory  
+    0xc0000     VM File  
+    0x90000     Event  
+    0x60000     Timer  
+    0x40000     Event queue
 
 + "handle other" returns the handle's otherInfo field. Note: This isn't 
 necessarily the otherInfo field from the PC. E.g., for resource handles, it's 
@@ -2483,33 +2477,33 @@ can be obtained with the "symbol type" command.
 
 + The symbol classes are as follows:
 
-	**type** - describes any structured type: typedef, struct, record, etype, 
+    **type** - describes any structured type: typedef, struct, record, etype, 
 union. Symbols of this class may also be used in place of type 
 tokens (see the "type" command).
 
-	**field** - describes a field in a structured type: field, bitfield.
+    **field** - describes a field in a structured type: field, bitfield.
 
-	**enum** - describes a member of an enumerated type: enum, message.
+    **enum** - describes a member of an enumerated type: enum, message.
 
-	**const** - a constant defined with EQU: *const*.
+    **const** - a constant defined with EQU: *const*.
 
-	**var** - describes any variable symbol: var, chunk, locvar, class, 
+    **var** - describes any variable symbol: var, chunk, locvar, class, 
 masterclass, variantclass.
 
-	**locvar** - describes any local variable symbol: locvar, locstatic.
+    **locvar** - describes any local variable symbol: locvar, locstatic.
 
-	**scope** - describes any symbol that holds other symbols within it: 
+    **scope** - describes any symbol that holds other symbols within it: 
 module, proc, blockstart, struct, union, record, etype.
 
-	**proc** - describes only proc symbols.
+    **proc** - describes only proc symbols.
 
-	**label** - describes any code-related symbol: label, proc, loclabel.
+    **label** - describes any code-related symbol: label, proc, loclabel.
 
-	**onstack** - describes only symbols created by the directive.
+    **onstack** - describes only symbols created by the directive.
 
-	**module** - describes only segment/group symbols.
+    **module** - describes only segment/group symbols.
 
-	**profile** - describes a symbol that marks where profiling code was 
+    **profile** - describes a symbol that marks where profiling code was 
 inserted by a compiler or assembler.
 
 + The `<class>` argument for the "find", "faddr" and "match" subcommands 
@@ -2538,7 +2532,7 @@ fine arguments, as is "with-patient").
 + The "symbol get" commands provides different data for each symbol 
 class, as follows:
 
-	`var, locvar, chunk: {<addr> <sclass> <type>}`  
+    `var, locvar, chunk: {<addr> <sclass> <type>}`  
 `<addr>` is the symbol's address as for the "addr" subcommand, 
 `<sclass>` is the storage class of the variable and is one of static 
 (a statically allocated variable), lmem (an lmem chunk), local (a 
@@ -2547,38 +2541,38 @@ above the frame pointer), or reg (a register variable; address is
 the machine register number -- and index into the list returned 
 by the "current-registers" command).
 
-	`object class: {<addr> <sclass> <type> <flag> <super>}`  
+    `object class: {<addr> <sclass> <type> <flag> <super>}`  
 first three elements same as for other variables. `<flag>` is 
 "variant" if the class is a variant class, "master" if the class is a 
 master class, or empty if the class is nothing special. `<super>` 
 is the symbol token of the class's superclass.
 
-	`label-class: {<addr> (near|far)}`  
+    `label-class: {<addr> (near|far)}`  
 `<addr>` is the symbol's address as for the "addr" subcommand. 
 The second element is "near" or "far" depending on the type of 
 label involved.
 
-	`field-class: {<bit-offset> <bit-width> <field-type> <struct-type>}`  
+    `field-class: {<bit-offset> <bit-width> <field-type> <struct-type>}`  
 `<bit-offset>` is the offset of the field from the structure/union/record's base 
 expressed in bits. `<bit-width>` is the width of the field, in bits. 
 `<field-type>` is the type for the field itself, while `<struct-type>` 
 is the token for the containing structured type.
 
-	`const: {<value>}`  
+    `const: {<value>}`  
 `<value>` is just the symbol's value.
 
-	`enum-class: {<value> <etype>}`  
+    `enum-class: {<value> <etype>}`  
 `<value>` is the symbol's value. `<etype>` is the enumerated type's 
 symbol.
 
-	`blockstart, blockend: {<addr>}`  
+    `blockstart, blockend: {<addr>}`  
 `<addr>` is the address bound to the symbol.
 
-	`onstack: {<addr> <data>}`  
+    `onstack: {<addr> <data>}`  
 `<addr>` is the address at which the ON_STACK was declared. 
 `<data>` is the arguments given to the ON_STACK directive.
 
-	`module: {<patient>}`  
+    `module: {<patient>}`  
 `<patient>` is the token for the patient owning the module.
 
 + A related command, "symbol tget" will fetch the type token for symbols 
@@ -2836,12 +2830,12 @@ is the length of the field, in bits (starting with 1, as you'd expect). For a
 bitfield, `<type>` should be the field within which the bitfield is defined. 
 For example, the C declaration:
 
-	struct {
+    struct {
 
-		word a:6;  
-		word b:10;  
-		word c;  
-	}
+        word a:6;  
+        word b:10;  
+        word c;  
+    }
 
     would result in the command "type make struct a [type word] 0 6 b [type 
 word] 6 10 c [type word] 16 16", because a and b are defined within a word 
@@ -2958,7 +2952,7 @@ to display their fields (or members, as the case may be).
 **See Also:**  
 gc, symbol, symbol-types, value
 
-#### 5.6.2 Examples
+### 5.6.2 Examples
 
 This section will contain a few examples of Tcl code for Swat commands, 
 showing the use of some of included Tcl commands. A good way to view the 
@@ -2981,16 +2975,16 @@ Some code examples:
 
 **Swat Display 5-3 The Whatat Command**
 
-	[defcommand whatat {addr} output
-	{Given an address, print the name of the variable at that address}
-	{
-		var a [sym faddr var $addr]
-		if {[null $a]}{
-		 echo *nil*
-	} else {
-		echo [sym name $a]
-	}
-	}]
+    [defcommand whatat {addr} output
+    {Given an address, print the name of the variable at that address}
+    {
+        var a [sym faddr var $addr]
+        if {[null $a]}{
+         echo *nil*
+    } else {
+        echo [sym name $a]
+    }
+    }]
 
 This example shows the code of the **whatat** command. Note the use of the **sym** (an abbreviation for 
 symbol) command to find the address of the given variable `<addr>` of class `<var>`.
@@ -2999,63 +2993,63 @@ symbol) command to find the address of the given variable `<addr>` of class `<va
 
 **Swat Display 5-4 The Bytes Command**
 
-	1	var addr [get-address $addr ds:si]
-	2	var base [index [addr-parse $addr] 1]
-	3	echo {Addr: +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +a +b +c +d +e +f}
-	4	#fetch the bytes themselves
-	5	var bytes [value fetch $addr [type make array $num [type byte]]]
-	6	#
-		# $s is the index of the first byte to display on this row, $e is the
-		# index of the last one. $e can get > $num. The loop handles this case.
-		#
-		var s 0 e [expr 16-($base&0xf)-1]
-		#
-		# $pre can only be non-zero for the first line, so set it once here.
-		# We'll set it to zero when done with the first line.
-		# $post can be non-zero only for the last line, but we can't just
-		# set it to zero and let the loop handle it, as the first may be the
-		# last, so-
-		#
-		var pre [expr 16-($e-$s)-1]
-		if {$e > $num} {
-		var post [expr $e-($num-1)]
-		} else {
-		var post 0
-		} 
+    1   var addr [get-address $addr ds:si]
+    2   var base [index [addr-parse $addr] 1]
+    3   echo {Addr: +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +a +b +c +d +e +f}
+    4   #fetch the bytes themselves
+    5   var bytes [value fetch $addr [type make array $num [type byte]]]
+    6   #
+        # $s is the index of the first byte to display on this row, $e is the
+        # index of the last one. $e can get > $num. The loop handles this case.
+        #
+        var s 0 e [expr 16-($base&0xf)-1]
+        #
+        # $pre can only be non-zero for the first line, so set it once here.
+        # We'll set it to zero when done with the first line.
+        # $post can be non-zero only for the last line, but we can't just
+        # set it to zero and let the loop handle it, as the first may be the
+        # last, so-
+        #
+        var pre [expr 16-($e-$s)-1]
+        if {$e > $num} {
+        var post [expr $e-($num-1)]
+        } else {
+        var post 0
+        } 
 
-		[for {var start [expr {$base&~0xf}]}
-		{$s < $num}
-		{var start [expr $start+16]}
-		{
-	28	#extract the bytes we want
-	29	var bs [range $bytes $s $e]
-	30	echo [format {%04xh: %*s%s%*s "%*s%s%*s"} $start
-		[expr $pre*3] {}
-		[map i $bs {format %02x $i}]
-		[expr $post*3] {}
-		$pre {}
-		[mapconcat i $bs {
-		if {$i >= 32 && $i < 127} {
-		format %c $i
-		} else {
-		format .
-		}
-		}]
-		$post {}]
-		var s [expr $e+1] e [expr $e+16] pre 0
-		if {$e >= $num} {
-		var post [expr $e-($num-1)]
-		}
-		}]
-		set-address $addr+$num-1
-		set-repeat [format {$0 {%s} $2} $addr+$num]
+        [for {var start [expr {$base&~0xf}]}
+        {$s < $num}
+        {var start [expr $start+16]}
+        {
+    28  #extract the bytes we want
+    29  var bs [range $bytes $s $e]
+    30  echo [format {%04xh: %*s%s%*s "%*s%s%*s"} $start
+        [expr $pre*3] {}
+        [map i $bs {format %02x $i}]
+        [expr $post*3] {}
+        $pre {}
+        [mapconcat i $bs {
+        if {$i >= 32 && $i < 127} {
+        format %c $i
+        } else {
+        format .
+        }
+        }]
+        $post {}]
+        var s [expr $e+1] e [expr $e+16] pre 0
+        if {$e >= $num} {
+        var post [expr $e-($num-1)]
+        }
+        }]
+        set-address $addr+$num-1
+        set-repeat [format {$0 {%s} $2} $addr+$num]
 
 This example shows the code for the **bytes** commands. Notice the use of the **type** command on the 
 fifth line, and the **range** command on the twenty-ninth line.
 
 ----------
 
-### 5.7 Using a New Command
+## 5.7 Using a New Command
 
 Once a new command is written, it needs to be loaded into Swat so that it can 
 be used. Depending on how the command is to be used, you may be interested 
@@ -3067,7 +3061,7 @@ in any of the following topics:
 
 + Explicit loading
 
-#### 5.7.1 Compilation
+### 5.7.1 Compilation
 
 It is possible to byte-compile a Tcl script. The **bc** Tcl command creates a .TLC 
 file containing compiled Tcl code-this code will run faster than normal Tcl 
@@ -3075,7 +3069,7 @@ code. When loading, Swat will load a .TLC file instead of a .TCL file where
 possible. Making changes to compiled Tcl functions involves changing the 
 source code and re-compiling.
 
-#### 5.7.2 Autoloading
+### 5.7.2 Autoloading
 
 If the development environment has been set up properly, there should 
 already exist the **/pcgeos/Tools/swat/lib** directory on the workstation. This 
@@ -3098,7 +3092,7 @@ the 1 indicates that the interpreter will not evaluate arguments passed to the
 command. (See "Swat Reference," Chapter 4, for more information on the 
 **autoload** command.)
 
-#### 5.7.3 Explicit Loading
+### 5.7.3 Explicit Loading
 
 Another way to load a command into Swat is to use the **load** command from 
 the Swat command line. This command is simply `load <path>/<filename>`. 
