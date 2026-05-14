@@ -38,6 +38,8 @@ include ec.def
 
 include object.def
 include graphics.def
+include gstring.def
+include lmem.def
 
 include Objects/winC.def
 
@@ -138,9 +140,9 @@ HelloExposed	method	HelloProcessClass, MSG_META_EXPOSED
 	;if we had background graphics to draw, we would call the
 	;apropriate graphics routines now.
 
-	;draw the text into the window (pass ^hdi = GState)
+	; Draw the bitmap chunks into the window (pass ^hdi = GState).
 
-	call	HelloDrawText
+	call	HelloDrawBitmaps
 
 	;now free the GState, and indicate that we are done drawing to the
 	;window.
@@ -155,10 +157,9 @@ HelloExposed	endm
 
 COMMENT @----------------------------------------------------------------------
 
-FUNCTION:	HelloDrawText
+FUNCTION:	HelloDrawBitmaps
 
-DESCRIPTION:	This procedure will draw a simple line of text onto the
-		document.
+DESCRIPTION:	This procedure draws the bitmap chunks onto the document.
 
 CALLED BY:	HelloExposed
 
@@ -179,52 +180,215 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 
-;These constants are used in the code below:
+HELLO_BITMAP_COUNT		equ	6
+HELLO_BITMAP_LEFT		equ	10
+HELLO_BITMAP_TOP		equ	10
+HELLO_BITMAP_X_STEP		equ	70
 
-TEXT_POINT_SIZE			equ	48	;point size
-TEXT_ROTATION			equ	360-15	;angle of rotation, in degrees
-TEXT_X_POSITION			equ	30	;x position, in document coords.
-TEXT_Y_POSITION			equ	0	;y position, in document coords.
+HelloDrawBitmaps	proc	near
+	uses	ax, bx, cx, dx, si
+	.enter
 
-HelloDrawText	proc	near
+	mov	si, offset helloBitmapChunks
+	mov	cx, HELLO_BITMAP_COUNT
+	mov	ax, HELLO_BITMAP_LEFT
+drawLoop:
+	mov	bx, HELLO_BITMAP_TOP
+	mov	dx, cs:[si]
+	push	ax, cx, si
+	mov	cx, handle TestBitmapResource
+	call	TestDrawBitmap
+	pop	ax, cx, si
+	add	ax, HELLO_BITMAP_X_STEP
+	add	si, size word
+	loop	drawLoop
 
-	;first change some of the default GState values, such as font
-
-	mov	cx, FID_DTC_URW_ROMAN	;font (URW Roman)
-	mov	dx, TEXT_POINT_SIZE		;point size (integer)
-	clr	ah				;point size (fraction) = 0
-	call	GrSetFont		;change the GState
-
-	;set the text color according to our textColor variable
-
-	mov	ah, CF_INDEX		;indicate we are using a pre-defined
-					;color, not an RGB value.
-	mov	al, C_LIGHT_BLUE		;set text color value
-	call	GrSetTextColor		;set text color in GState
-
-	;apply a rotation to the transformation matrix, so the text
-	;will be drawn at an angle.
-
-	mov	dx, TEXT_ROTATION	;set rotation (integer) for text
-	clr	cx			;zero fractional degrees.
-	call	GrApplyRotation
-
-	;draw some text onto the document
-
-	mov	ax, TEXT_X_POSITION	;set (ax, bx) = top-left document
-	mov	bx, TEXT_Y_POSITION	;	coordinate for text.
-
-	segmov	ds, cs			;set ds:si = pointer to text string
-	mov	si, offset CommonCode:sampleText
-
-	clr	cx			;indicate is null-terminated string
-	call	GrDrawText		;draw text into window
+	.leave
 	ret
-HelloDrawText	endp
+HelloDrawBitmaps	endp
 
-;Text to display on the document. In a real application, this text would
-;be in a separate resource, which allows read/write access.
+helloBitmapChunks	word \
+	offset GeoWriteApp16Chunk,
+	offset GeoWriteAppMonoChunk,
+	offset BridgeChunk,
+	offset WassermannTCChunk,
+	offset BerndChunk,
+	offset DragonChunk
 
-sampleText	char	"The quick brown fox jumped over the lazy dog.", 0
+
+COMMENT @----------------------------------------------------------------------
+
+FUNCTION:	TestDrawBitmap
+
+DESCRIPTION:	Lock a bitmap optr, draw it, and unlock it.
+
+PASS:		di	= GState handle
+		ax	= x position
+		bx	= y position
+		cx	= bitmap block handle
+		dx	= bitmap chunk handle
+
+RETURN:		nothing
+
+DESTROYED:	nothing
+
+------------------------------------------------------------------------------@
+
+TestDrawBitmap	proc	near
+gstate		local	hptr
+xPos		local	word
+yPos		local	word
+bitmapBlock	local	hptr
+bitmapChunk	local	word
+	uses	ax, bx, cx, dx, si, di, ds
+	.enter
+
+	mov	ss:[gstate], di
+	mov	ss:[xPos], ax
+	mov	ss:[yPos], bx
+	mov	ss:[bitmapBlock], cx
+	mov	ss:[bitmapChunk], dx
+
+	mov	bx, cx
+	call	MemLock
+	mov	ds, ax
+	mov	si, ss:[bitmapChunk]
+	mov	si, ds:[si]		; ds:si = bitmap
+
+	mov	di, ss:[gstate]
+	mov	ax, ss:[xPos]
+	mov	bx, ss:[yPos]
+	clr	dx			; no callback
+	call	GrDrawBitmap
+
+	mov	bx, ss:[bitmapBlock]
+	call	MemUnlock
+
+	.leave
+	ret
+TestDrawBitmap	endp
+
+
+COMMENT @----------------------------------------------------------------------
+
+FUNCTION:	TestDrawGString
+
+DESCRIPTION:	Lock a gstring optr, load it, draw it, destroy the loaded
+		gstring handle, and unlock the optr block.
+
+PASS:		di	= GState handle
+		ax	= x position
+		bx	= y position
+		cx	= gstring block handle
+		dx	= gstring chunk handle
+
+RETURN:		nothing
+
+DESTROYED:	nothing
+
+------------------------------------------------------------------------------@
+
+TestDrawGString	proc	near
+gstate		local	hptr
+xPos		local	word
+yPos		local	word
+gstringBlock	local	hptr
+gstringChunk	local	word
+gstringH	local	hptr
+	uses	ax, bx, cx, dx, si, di, ds
+	.enter
+
+	mov	ss:[gstate], di
+	mov	ss:[xPos], ax
+	mov	ss:[yPos], bx
+	mov	ss:[gstringBlock], cx
+	mov	ss:[gstringChunk], dx
+
+	mov	bx, cx
+	call	MemLock
+	mov	ds, ax
+	mov	si, ss:[gstringChunk]
+	mov	si, ds:[si]		; ds:si = gstring bytes
+
+	mov	bx, ds
+	mov	cl, GST_PTR
+	call	GrLoadGString
+	mov	ss:[gstringH], si
+
+	mov	di, ss:[gstate]
+	mov	ax, ss:[xPos]
+	mov	bx, ss:[yPos]
+	clr	dx
+	call	GrDrawGString
+
+	mov	si, ss:[gstringH]
+	clr	di
+	mov	dl, GSKT_LEAVE_DATA
+	call	GrDestroyGString
+
+	mov	bx, ss:[gstringBlock]
+	call	MemUnlock
+
+	.leave
+	ret
+TestDrawGString	endp
+
+ForceRef	TestDrawGString		; alternate draw helper for gstring chunks
 
 CommonCode	ends		;end of CommonCode resource
+
+;------------------------------------------------------------------------------
+;		Bitmap chunks used by HelloDrawBitmaps
+;------------------------------------------------------------------------------
+
+TestBitmapResource	segment	lmem LMEM_TYPE_GENERAL
+
+GeoWriteApp16Chunk	chunk	Bitmap
+	Bitmap	<16,16,BMC_UNCOMPACTED,BMF_MONO>
+	db	0ffh, 081h, 0bdh, 0a5h, 0a5h, 0bdh, 081h, 0ffh
+	db	081h, 0bdh, 0a5h, 0a5h, 0bdh, 081h, 081h, 0ffh
+	db	0ffh, 081h, 0bdh, 0a5h, 0a5h, 0bdh, 081h, 0ffh
+	db	081h, 0bdh, 0a5h, 0a5h, 0bdh, 081h, 081h, 0ffh
+GeoWriteApp16Chunk	endc
+
+GeoWriteAppMonoChunk	chunk	Bitmap
+	Bitmap	<16,16,BMC_UNCOMPACTED,BMF_MONO>
+	db	0ffh, 000h, 081h, 000h, 0bdh, 000h, 0a5h, 000h
+	db	0a5h, 000h, 0bdh, 000h, 081h, 000h, 0ffh, 000h
+	db	000h, 0ffh, 000h, 081h, 000h, 0bdh, 000h, 0a5h
+	db	000h, 0a5h, 000h, 0bdh, 000h, 081h, 000h, 0ffh
+GeoWriteAppMonoChunk	endc
+
+BridgeChunk	chunk	Bitmap
+	Bitmap	<16,16,BMC_UNCOMPACTED,BMF_MONO>
+	db	018h, 018h, 024h, 024h, 042h, 042h, 081h, 081h
+	db	0ffh, 0ffh, 081h, 081h, 0ffh, 0ffh, 081h, 081h
+	db	018h, 018h, 024h, 024h, 042h, 042h, 081h, 081h
+	db	0ffh, 0ffh, 081h, 081h, 0ffh, 0ffh, 081h, 081h
+BridgeChunk	endc
+
+WassermannTCChunk	chunk	Bitmap
+	Bitmap	<16,16,BMC_UNCOMPACTED,BMF_MONO>
+	db	000h, 000h, 03ch, 03ch, 042h, 042h, 099h, 099h
+	db	0a5h, 0a5h, 099h, 099h, 042h, 042h, 03ch, 03ch
+	db	000h, 000h, 03ch, 03ch, 042h, 042h, 099h, 099h
+	db	0a5h, 0a5h, 099h, 099h, 042h, 042h, 03ch, 03ch
+WassermannTCChunk	endc
+
+BerndChunk	chunk	Bitmap
+	Bitmap	<16,16,BMC_UNCOMPACTED,BMF_MONO>
+	db	0f0h, 00fh, 090h, 009h, 090h, 009h, 0f0h, 00fh
+	db	090h, 009h, 090h, 009h, 0f0h, 00fh, 000h, 000h
+	db	0f0h, 00fh, 090h, 009h, 090h, 009h, 0f0h, 00fh
+	db	090h, 009h, 090h, 009h, 0f0h, 00fh, 000h, 000h
+BerndChunk	endc
+
+DragonChunk	chunk	Bitmap
+	Bitmap	<16,16,BMC_UNCOMPACTED,BMF_MONO>
+	db	001h, 080h, 003h, 0c0h, 007h, 0e0h, 00eh, 070h
+	db	01ch, 038h, 038h, 01ch, 070h, 00eh, 0e0h, 007h
+	db	0e0h, 007h, 070h, 00eh, 038h, 01ch, 01ch, 038h
+	db	00eh, 070h, 007h, 0e0h, 003h, 0c0h, 001h, 080h
+DragonChunk	endc
+
+TestBitmapResource	ends

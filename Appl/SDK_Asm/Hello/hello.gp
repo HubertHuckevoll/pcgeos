@@ -61,3 +61,4 @@ library	ui
 #
 resource AppResource ui-object
 resource Interface ui-object
+resource TestBitmapResource lmem read-only shared
