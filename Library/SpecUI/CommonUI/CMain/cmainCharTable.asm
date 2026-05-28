@@ -15,7 +15,7 @@ REVISION HISTORY:
 	dlitwin	4/12/94		Moved to SPUI from UI, renamed from
 				uiCharTable.asm to cmainCharTable.asm
 	dlitwin	4/29/94		Changed the way the initfile keyboard
-				conditionals work such that there is 
+				conditionals work such that there is
 				now the concept of initfile keyboard or
 				non-initfile keyboard, which relys on the
 				generic KEYBOARD_... constants to be set
@@ -51,7 +51,7 @@ PASS:		*ds:si	= VisCharTableClass object
 
 RETURN:		nothing
 DESTROYED:	ax, bx, cx, dx
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -98,7 +98,7 @@ CALLED BY:	GLOBAL
 PASS:		*ds:si	= VisCharTableClass object
 RETURN:		nada
 DESTROYED:	ax, cx, dx, bp
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -132,12 +132,12 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 SYNOPSIS:	Draws the data for this object.
 
 CALLED BY:	GLOBAL
-PASS:		es - segment of VisCharTableClass 
+PASS:		es - segment of VisCharTableClass
 		bp - ^hGState
 		cl - DrawFlags
 RETURN:		nada
 DESTROYED:	ax, bx, cx, dx, si, di, bp
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -188,7 +188,7 @@ isFullyEnabled:
 	call	CharTableCountNumberColumns	;CX <- # columns
 	mov	ss:[noOptimize], ax		;If there are no space filler
 						; chars in the data, we can
-						; do an optimized draw	
+						; do an optimized draw
 	push	bp
 	call	GetCharTableInfo		;ax <- top of the rectangle
 						;bx <- left of the rectangle
@@ -212,7 +212,7 @@ IKBD <	mov	cx, es:[charTableWidth]	>
 IKBD <	pop	es			>
 IKBD <	dec	cx			>
 NOTIKBD<mov	cx, KEYBOARD_CHAR_TABLE_WIDTH-1 >
-						;We know the char table is 
+						;We know the char table is
 						; centered, so we can get the
 						; right edge of the rectangle
 						; by subtracting the left edge
@@ -253,7 +253,7 @@ drawLoop:
 
 	push	si
 	movdw	bxsi, es:[si]
-	
+
 	call	MemLock
 	mov	ds, ax
 	mov	si, ds:[si]			;DS:SI <- string to draw
@@ -281,7 +281,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GetCharTableInfo
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Find out the top, left and width of a rectangle in the
 		Character Table and the rows and columns of the CharTable
 CALLED BY:	VisCharTableDraw
@@ -296,10 +296,10 @@ RETURN:		ax - top of the rectangle
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -333,7 +333,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GetCenteredTableTopLeftCoord
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Get the left and top coordinates of the centered CharTable
 CALLED BY:	GetCharTableInfo
 PASS:		es - dgroup
@@ -350,7 +350,7 @@ PSEUDO CODE/STRATEGY:
 		top  = [CHAR_TABLE_HEIGHT - rectHeight * current row #] /2
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -393,7 +393,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		CharTableCountNumberColumns
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Count number of columns in the Character Table assuming each
 		row has the same number of columns except for the one with
 		special attribute
@@ -409,7 +409,7 @@ PSEUDO CODE/STRATEGY:
 ; ChunkSizePtr( segment, ptr, result );
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -446,7 +446,7 @@ EC <	call	ECLMemValidateHeap					>
 	pop	cx
 	jz	exit
 	clr	ax
-exit:	
+exit:
 	.leave
 	ret
 CharTableCountNumberColumns	endp
@@ -467,10 +467,10 @@ RETURN:		dx - number of rows
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -515,10 +515,10 @@ RETURN:		carry set if it is the table with special last line
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -548,7 +548,7 @@ CALLED BY:	GLOBAL
 PASS:		al - char to look for
 RETURN:		carry set if is special char, ax = chunk handle of text
 DESTROYED:	nada
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -603,17 +603,17 @@ CALLED BY:	VisCharTableDraw
 PASS: 		DI - GState handle
 		DS:SI - string to display
 		bx - top of the rectangle
-		ax - zero if we can optimize the drawing (only draw 
-		     	the right edge of the box)		
+		ax - zero if we can optimize the drawing (only draw
+		     	the right edge of the box)
 		dx - left of the rectangle
 RETURN:		nothing
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -670,7 +670,7 @@ drawLoop:
 	tst	al
 	jz	done
 	call	CheckIfSpecialChar		;If this is a special char,
-	jc	isSpecialChar			; AX = chunk handle of 
+	jc	isSpecialChar			; AX = chunk handle of
 						; corresponding text string
 	cmp	ax, CHAR_TABLE_SPACE_FILLER_CHAR
 	je	skipChar
@@ -772,7 +772,7 @@ endif	; _NIKE_EUROPE
 
 	push	bx
 	mov	bx, handle GenPenInputControlToolboxUI
-	call	MemLock
+	call	ObjLockObjBlock
 	pop	bx
 
 NKE <	push	si			;save chunk handle of string	>
@@ -783,7 +783,7 @@ NKE <	push	si			;save chunk handle of string	>
 NKE <	pop	si			;restore chunk handle of string	>
 NKE <	cmp	si, offset String_BS					>
 NKE <	jne	noHack							>
-NKE <	inc	cx			;hack '<-' for NIKE.  Gross!!!	> 
+NKE <	inc	cx			;hack '<-' for NIKE.  Gross!!!	>
 NKE <noHack:								>
 	call	OptimizedDrawRect
 
@@ -811,7 +811,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		CharTableDrawVirtualChar
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Calculate the width of the virtual character,
 		draw a rectangle around it and draw the text inside the rect.
 CALLED BY:	CharTableDrawLine5()
@@ -823,10 +823,10 @@ RETURN:		cx - right coord of the rectangle just drawn
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -836,7 +836,7 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 CharTableDrawVirtualChar	proc	near	uses	ax,bx,dx,si,ds
-charRect	local	Rectangle	
+charRect	local	Rectangle
 	.enter
 
 
@@ -923,7 +923,7 @@ REVISION HISTORY:
 	JT	7/30/92   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-CharTableMouseStartSelect	method dynamic VisCharTableClass, 
+CharTableMouseStartSelect	method dynamic VisCharTableClass,
 							MSG_META_START_SELECT
 	.enter
 
@@ -957,7 +957,7 @@ endif
 
 	mov	dl, mask CF_FIRST_PRESS
 	mov	ax, MSG_META_KBD_CHAR
-	call	CT_ObjMessageFixupDS 	
+	call	CT_ObjMessageFixupDS
 
 	; check if there is any pending MSG_META_START_SELECT (for any object)
 	;   in the event queue.  If so, don't sleep.
@@ -973,23 +973,23 @@ endif
 	jnz	noSleep
 
 	mov	ax, 10				;Pause for 1/6 second
-	call	TimerSleep 	
+	call	TimerSleep
 
 noSleep:
 	clr	dh
 	clr	bp
-	ornf	dl, mask CF_RELEASE 	
+	ornf	dl, mask CF_RELEASE
 	andnf	dl, not mask CF_FIRST_PRESS or mask CF_REPEAT_PRESS
 						;Added 4/12/93 cbh
 
-	mov	ax, MSG_META_KBD_CHAR 	
-	call	CT_ObjMessageFixupDS 	
+	mov	ax, MSG_META_KBD_CHAR
+	call	CT_ObjMessageFixupDS
 
 	pop	ax, bx, si, di
 	call	CharTableInvertChar
 
-done: 	
-	mov	ax, mask MRF_PROCESSED 	
+done:
+	mov	ax, mask MRF_PROCESSED
 	.leave
 	ret
 CharTableMouseStartSelect	endm
@@ -1067,9 +1067,9 @@ DESTROYED:	nothing
 PSEUDO CODE/STRATEGY:
 		col = (x clicked position - x start coord)/rect width
 		row = (y clicked position - y start coord)/rect height
-	
+
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1124,10 +1124,10 @@ NOTIKBD<mov	bx, KEYBOARD_CHAR_TABLE_RECT_HEIGHT			>
 	div	bx
 	inc	ax				;make row number as 1-based
 	mov	ss:[row], ax			;bx <- row number
-	
+
 	cmp	ax, 1
 	jl	outOfBound
-	
+
 	mov	dx, ss:[totalRows]
 	cmp	ss:[row], dx
 	jg	outOfBound
@@ -1168,7 +1168,7 @@ NOTIKBD<mov	bx, KEYBOARD_CHAR_TABLE_RECT_HEIGHT			>
 	jg	done
 	cmp	dx, ss:[mouseX]
 	je	outOfBound
-	
+
 	call	GetSpaceWidth			;cx - SPACE rect width
 	add	dx, cx
 	mov	ss:[column], 10
@@ -1247,7 +1247,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		GetEnterWidth, GetBackspaceWidth
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Get the width of the virtual character rectangle
 CALLED BY:	CharTableFindSelectedRowCol
 PASS:		nothing
@@ -1255,10 +1255,10 @@ RETURN:		cx - rect width
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1282,7 +1282,7 @@ GetSpaceWidth	proc	near
 	ret
 GetSpaceWidth	endp
 
-GetEnterWidth	proc	near	
+GetEnterWidth	proc	near
 	.enter
 	mov	si, offset String_ENTER
 	call	CharTableVirtualCharRectWidthSI
@@ -1290,7 +1290,7 @@ GetEnterWidth	proc	near
 	ret
 GetEnterWidth	endp
 
-GetBackspaceWidth	proc	near	
+GetBackspaceWidth	proc	near
 	.enter
 	mov	si, offset String_BS
 	call	CharTableVirtualCharRectWidthSI
@@ -1312,10 +1312,10 @@ RETURN:		cx - width of the desired rectangle
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1352,9 +1352,9 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		CharTableFindCharValue
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Pass in the row and column number, find the corresponding
-		character value		
+		character value
 CALLED BY:	CharTableMouseStartSelect
 PASS:		(ax, bx) - (row, column) in the Character Table
 		*ds:si - VisCharTable object
@@ -1364,7 +1364,7 @@ DESTROYED:	nothing
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1409,7 +1409,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		CharTableGetCharValue_BXDX
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Get character value
 CALLED BY:	CharTableFindCharValue()
 PASS:		bxdx - optr to the line (instance data of VisCharTableClass)
@@ -1423,7 +1423,7 @@ DESTROYED:	nothing
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1467,10 +1467,10 @@ RETURN:		nothing
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -1500,7 +1500,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		CharTableGetRectBounds
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Get the rectangle bounds in the character table
 CALLED BY:	CharTableInvertChar()
 PASS:		(ax, bx) - (row, col) of rectangle
@@ -1512,8 +1512,8 @@ RETURN:		(ax, bx, cx, dx) - (left, top, right, bottom)
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-;	left = start x position + (col-1)*rectWidth 
-;	     = (col-1)*rectWidth 
+;	left = start x position + (col-1)*rectWidth
+;	     = (col-1)*rectWidth
 
 ;	top  = start y position + (row-1)*rectHeight
 ;	     = CHAR_TABLE_TOP_BOTTOM_MARGIN + (row-1)* CHAR_TABLE_RECT_HEIGHT
@@ -1591,10 +1591,10 @@ LONG	je	specialEnterBS
 	call	GetTabWidth			;cx - TAB rect width
 	mov	dx, cx				;dx - TAB rect width
 	mov	cx, ax				;cx - left of TAB
-	add	cx, dx				;cx - right of TAB 
-	
+	add	cx, dx				;cx - right of TAB
+
 	cmp	bx, FIRST_SPECIAL_CHAR_IN_LAST_ROW
-	je	doPopTopBottom	
+	je	doPopTopBottom
 
 	mov	ax, cx				;ax - left of SPACE rect
 	call	GetSpaceWidth			;cx - SPACE rect width
@@ -1603,7 +1603,7 @@ LONG	je	specialEnterBS
 	add	cx, dx				;cx - right of SPACE
 
 	cmp	bx, FIRST_SPECIAL_CHAR_IN_LAST_ROW + 1
-	je	doPopTopBottom	
+	je	doPopTopBottom
 
 	mov	ax, cx				;ax - left of ENTER rect
 	call	GetEnterWidth			;cx - ENTER rect width
@@ -1612,7 +1612,7 @@ LONG	je	specialEnterBS
 	add	cx, dx				;cx - right of ENTER
 
 	cmp	bx, FIRST_SPECIAL_CHAR_IN_LAST_ROW+2
-	je	doPopTopBottom	
+	je	doPopTopBottom
 
 EC <	cmp	bx, FIRST_SPECIAL_CHAR_IN_LAST_ROW+3			;>
 EC <	ERROR_NE	ILLEGAL_CHAR_TABLE_COLUMN_NUMBER	;>
@@ -1628,8 +1628,8 @@ doPopTopBottom:
 	jmp	doTopBottom
 
 normal:
-;	left = start x position + (col-1)*rectWidth 
-;	     = (col-1)*rectWidth 
+;	left = start x position + (col-1)*rectWidth
+;	     = (col-1)*rectWidth
 
 	push	ax				;ax <- row number
 	dec	bx
@@ -1670,7 +1670,7 @@ specialEnterBS:
 	mov	dx, cx				;dx - ENTER rect width
 	mov	cx, ax				;cx - left of ENTER
 	add	cx, dx				;cx - right of ENTER
-	
+
 	cmp	bx, FIRST_SPECIAL_CHAR_IN_LAST_ROW
 	je	doPopTopBottom
 
@@ -1688,7 +1688,7 @@ CharTableGetRectBounds	endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			Utilities 
+			Utilities
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 VisCharTableDeref_DSDI	proc	near
@@ -1727,9 +1727,9 @@ RETURN:		nothing
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -1739,11 +1739,11 @@ REVISION HISTORY:
 ECCheckVisCharTableObj	proc	near	uses	es, di
 	.enter
 
-	mov	di, segment VisCharTableClass				
-	mov	es, di							
-	mov	di, offset VisCharTableClass				
-	call	ObjIsObjectInClass					
-	ERROR_NC	ILLEGAL_OBJECT_PASSED_TO_VIS_CHAR_TABLE_ROUTINE	
+	mov	di, segment VisCharTableClass
+	mov	es, di
+	mov	di, offset VisCharTableClass
+	call	ObjIsObjectInClass
+	ERROR_NC	ILLEGAL_OBJECT_PASSED_TO_VIS_CHAR_TABLE_ROUTINE
 
 	.leave
 	ret
@@ -1764,12 +1764,12 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		CharTableGetCustomCharTableData
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
-		Copies the data in the CharTableData sturcture in the 
+SYNOPSIS:
+		Copies the data in the CharTableData sturcture in the
 		PenInputControl to the instance data of the CustomCharTable
 		object
 CALLED BY:	GenPenInputControlSetDisplay
-PASS:		
+PASS:
 		*ds:si	= VisCharTableClass object
 		ds:di	= VisCharTableClass instance data
 		ds:bx	= VisCharTableClass object (same as *ds:si)
@@ -1789,7 +1789,7 @@ REVISION HISTORY:
 	JT	8/11/92   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-CharTableGetCustomCharTableData	method dynamic VisCharTableClass, 
+CharTableGetCustomCharTableData	method dynamic VisCharTableClass,
 				MSG_CHAR_TABLE_GET_CUSTOM_CHAR_TABLE_DATA
 	uses	es
 	.enter
@@ -1830,7 +1830,7 @@ PASS:		*ds:si	= VisCharTableClass object
 RETURN:		nothing
 DESTROYED:	nothing
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1839,7 +1839,7 @@ REVISION HISTORY:
 	dlitwin	5/ 3/94   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-VisCharTableSetToZoomerSize	method dynamic VisCharTableClass, 
+VisCharTableSetToZoomerSize	method dynamic VisCharTableClass,
 					MSG_VIS_CHAR_TABLE_SET_TO_ZOOMER_SIZE
 	.enter
 

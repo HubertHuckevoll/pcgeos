@@ -155,7 +155,8 @@ KeyboardAttrsGroup = PrefInteraction vardataReloc {
 KeyboardSettings = PrefInteraction {
 	children =
 		KeyboardDelayList,
-		KeyboardRepeatList;
+		KeyboardRepeatList,
+		KeyboardFloatingList;
 	hints = {
 		HINT_ORIENT_CHILDREN_VERTICALLY
 	}
@@ -233,6 +234,29 @@ KeyboardRepeatMedium = GenItem {
 KeyboardRepeatFast = GenItem {
 	moniker = "Fast";
 	identifier = KBD_REPEAT_FAST;
+}
+
+/*****************************************************************************/
+
+KeyboardFloatingList = PrefBooleanGroup {
+	prefAttrs = default +rebootIfChanged;
+	children = KeyboardFloatingBoolean;
+	hints = {
+		ATTR_PREF_BOOLEAN_GROUP_SEPARATE_BOOLEAN_KEYS
+	}
+}
+
+KeyboardFloatingBoolean = PrefBoolean {
+	moniker = "Floating keyboard";
+	identifier = TRUE;
+	hints = {
+		ATTR_GEN_INIT_FILE_CATEGORY {
+			char "input",0
+		},
+		ATTR_GEN_INIT_FILE_KEY {
+			char "noKeyboard",0
+		}
+	}
 }
 
 KeyboardOptions = PrefInteraction {

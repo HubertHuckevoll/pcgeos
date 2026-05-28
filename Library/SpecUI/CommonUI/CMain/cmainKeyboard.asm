@@ -16,7 +16,7 @@ REVISION HISTORY:
 				uiKeyboard.asm to cmainKeyboard.asm
 
 DESCRIPTION:
-	Contains code to implement the VisKeyboard object	
+	Contains code to implement the VisKeyboard object
 
 	$Id: cmainKeyboard.asm,v 1.1 97/04/07 10:52:28 newdeal Exp $
 
@@ -77,7 +77,7 @@ REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
 	Don	9/11/93		Initial version
-	dlitwin	4/14/94		Moved to the SPUI, made it called on the 
+	dlitwin	4/14/94		Moved to the SPUI, made it called on the
 				SPUI start up instead of the UI UserAttach
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
@@ -88,7 +88,7 @@ uiCategoryStr	char	"ui",0
 InitFloatingKbd	proc	near
 	uses	ds
 	.enter
-	
+
 	mov	ax, dgroup
 	mov	ds, ax
 	push	ds
@@ -102,7 +102,7 @@ InitFloatingKbd	proc	near
 
 	mov	ds:[floatingKbdSize], ax
 	tst	ax				; do we have STANDARD settings?
-	jz	storeStandardSettings		
+	jz	storeStandardSettings
 
 	mov	ds:[charTableRectWidth], ZOOMER_CHAR_TABLE_RECT_WIDTH
 	mov	ds:[charTableRectHeight], ZOOMER_CHAR_TABLE_RECT_HEIGHT
@@ -146,7 +146,7 @@ PASS:		*ds:si	= VisKeyboardClass object
 RETURN:		nothing
 DESTROYED:	nothing
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -155,7 +155,7 @@ REVISION HISTORY:
 	dlitwin	5/ 3/94   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-VisKeyboardSetToZoomerSize	method dynamic VisKeyboardClass, 
+VisKeyboardSetToZoomerSize	method dynamic VisKeyboardClass,
 					MSG_VIS_KEYBOARD_SET_TO_ZOOMER_SIZE
 	.enter
 
@@ -294,9 +294,9 @@ RETURN:		nothing
 DESTROYED:	nothing
 
 PSEUDO CODE/STRATEGY:
-		
+
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -306,11 +306,11 @@ REVISION HISTORY:
 ECCheckVisKbdObj	proc	near	uses	es, di
 	.enter
 
-	mov	di, segment VisKeyboardClass				
-	mov	es, di							
-	mov	di, offset VisKeyboardClass				
-	call	ObjIsObjectInClass					
-	ERROR_NC	ILLEGAL_OBJECT_PASSED_TO_VIS_KEYBOARD_ROUTINE	
+	mov	di, segment VisKeyboardClass
+	mov	es, di
+	mov	di, offset VisKeyboardClass
+	call	ObjIsObjectInClass
+	ERROR_NC	ILLEGAL_OBJECT_PASSED_TO_VIS_KEYBOARD_ROUTINE
 
 	.leave
 	ret
@@ -330,10 +330,10 @@ RETURN:		none
 DESTROYED:	none
 
 PSEUDO CODE/STRATEGY:
-		
+
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
-		
+
 
 REVISION HISTORY:
 	Name	Date		Description
@@ -381,7 +381,7 @@ CALLED BY:	GLOBAL
 PASS:		nada
 RETURN:		nada
 DESTROYED:	nada
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -476,7 +476,7 @@ KeyboardVisOpen	method dynamic VisKeyboardClass, MSG_VIS_OPEN
 	call	VisKeyboardSetKBSHandle
 
 	;
-	; Check for the keyboardShiftRelStr and set or instance data 
+	; Check for the keyboardShiftRelStr and set or instance data
 	; appropriately.
 	;
 	push	ds, si
@@ -543,7 +543,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		KeyboardVisClose
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	
+SYNOPSIS:
 		Message handler for MSG_VIS_CLOSE for the VisKeyboardClass
 CALLED BY:	GLOBAL
 PASS:		*ds:si	= VisKeyboardClass object
@@ -589,7 +589,7 @@ CALLED BY:	GLOBAL
 PASS:		*ds:si - VisKeyboard object
 RETURN:		nada
 DESTROYED:	nada
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -733,7 +733,7 @@ StateKeys	VChar \
 	VC_CAPSLOCK,
 	VC_ALT_GR
 endif
-	
+
 StateBits	MyKeyState \
 	(mask MKS_SHIFT),
 	(mask MKS_SHIFT),
@@ -947,7 +947,7 @@ PASS:		ds	- segment of VisKeyboard
 RETURN:		Zflag	- set if not fully enabled
 DESTROYED:	ax
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -966,7 +966,7 @@ CheckIfObjectFullyEnabled	proc	near
 	mov	di, mask MF_RECORD
 	call	ObjMessage
 	mov	cx, di			;CX <- classed event
-	
+
 	mov	si, ss:[objChunk]
 	mov	ax, MSG_VIS_VUP_CALL_OBJECT_OF_CLASS
 	call	VisCallParent
@@ -991,7 +991,7 @@ PASS:		^hdi	= GState
 RETURN:		nothing
 DESTROYED:	ax, bx, cx, dx
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1063,7 +1063,7 @@ PASS:		^hdi	= GState
 RETURN:		nothing
 DESTROYED:	ax, bx, cx, dx
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1110,7 +1110,7 @@ PASS:		*ds:si	= VisKeyboardClass object
 RETURN:		nothing
 DESTROYED:	ax, bx, cx, dx
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1164,7 +1164,7 @@ PASS:		*ds:si	= VisKeyboardClass object
 RETURN:		nothing
 DESTROYED:	ax, bx, cx, dx
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1305,7 +1305,7 @@ PASS:		ds:si	= chunk of bitmap to draw
 RETURN:		nothing
 DESTROYED:	si
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1396,7 +1396,7 @@ EC <	ERROR_NZ	ILLEGAL_KBD_MOD_STATE		>
 	mov	ss:[drawKeyOnly], ah
 	mov	bx, ss:[objChunk]
 	call	GetKeyBounds
-	
+
 	tst	ss:[drawKeyOnly]
 	jz	drawNormal
 
@@ -1475,14 +1475,14 @@ drawInsides:
 	pop	dx, cx, di			; restore char, accent, gstate
 	call	GrDrawChar
 
-done: 	
-	.leave 	
+done:
+	.leave
 	ret				; <--- RETURN HERE
 
 isVirtual:
 	call	KeyboardDrawVirtualChar
 	jmp	done
-KeyboardDrawKey	endp 
+KeyboardDrawKey	endp
 
 
 
@@ -1502,7 +1502,7 @@ PASS:		ax	= char value
 RETURN:		nothing
 DESTROYED:	ax, bx,cx, dx, ds, si, es
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1518,7 +1518,7 @@ KeyboardDrawVirtualChar	proc	near
 	.enter inherit KeyboardDrawKey
 
 	;
-	; We can't clear the upper byte for DBCS in order for us to 
+	; We can't clear the upper byte for DBCS in order for us to
 	; make valid comparisons.
 	; 6/19/96 - ptrinh
 	;
@@ -1575,13 +1575,13 @@ endif
 	; If this is a virtual character, find out what string to use for it
 	;
 	mov_tr	ax, si				; ax = char to look for
- 	mov	cx, length VirtualChars 	
-	segmov	es, cs 	
+ 	mov	cx, length VirtualChars
+	segmov	es, cs
 	mov	di, offset VirtualChars
-	repne	scasb 	
+	repne	scasb
 	jne	notVirtual
 	sub	di, offset VirtualChars+1
-	shl	di, 1 	
+	shl	di, 1
 	mov	di, cs:[VirtualStringTable][di]	; di = chunk handle of string
 	jmp	common
 
@@ -1591,18 +1591,18 @@ endif
 	;
 notVirtual:
  	mov	cx, length SpecialChars
-	segmov	es, cs 	
+	segmov	es, cs
 	mov	di, offset SpecialChars
-	repne	scasb 	
+	repne	scasb
 EC <	ERROR_NZ	CHAR_NOT_SUPPORTED				>
    	sub	di, offset SpecialChars+1
 	shl	di, 1
 	mov	di, cs:[SpecialCharTable][di]
 
 common:
-	mov	bx, handle GenPenInputControlToolboxUI 	
+	mov	bx, handle GenPenInputControlToolboxUI
 	segmov	es, ds, ax			; save our objblock in es
-	call	MemLock
+	call	ObjLockObjBlock
 	mov	ds, ax
 	mov	si, ds:[di]			; ds:si = string to display
 						;  in virtual key
@@ -1629,7 +1629,7 @@ setNewFontAndSize:
 	clr	ax				; dx.ah is font size
 	call	GrSetFont
 
-	;	
+	;
 	; Center string in key, vertically and horizontally
 	;
 skipSet:
@@ -1655,8 +1655,8 @@ gotHeight:
 	js	doWidth
 
 	inc	cx				; round up
-	sar	cx, 1 	
-	add	bx, cx 
+	sar	cx, 1
+	add	bx, cx
 
 doWidth:
 	ChunkSizePtr	ds, si, cx		;CX <- length of string
@@ -1667,10 +1667,10 @@ doWidth:
 
 	sar	ss:[keyWidth], 1
 	add	ax, ss:[keyWidth]
-	
-doDrawVirtualKey: 	
+
+doDrawVirtualKey:
 	call	GrDrawText
-	mov	bx, handle GenPenInputControlToolboxUI 	
+	mov	bx, handle GenPenInputControlToolboxUI
 	call	MemUnlock
 
 	;
@@ -1705,12 +1705,12 @@ VirtualChars	Chars \
 		C_SYS_LEFT_CTRL,
 		C_SYS_RIGHT_CTRL,
 		C_SYS_LEFT_ALT,
-		C_SYS_RIGHT_ALT, 
+		C_SYS_RIGHT_ALT,
 		C_SYS_ALT_GR,
 		C_SYS_CAPS_LOCK
 else
 VirtualChars	VChar	VC_BACKSPACE, VC_DEL, VC_TAB, VC_ENTER,
-		VC_LSHIFT, VC_RSHIFT, VC_LCTRL, VC_RCTRL, VC_LALT, VC_RALT, 
+		VC_LSHIFT, VC_RSHIFT, VC_LCTRL, VC_RCTRL, VC_LALT, VC_RALT,
 		VC_ALT_GR, VC_CAPSLOCK
 endif
 
@@ -1731,10 +1731,10 @@ VirtualStringTable	lptr \
 .assert	(length VirtualStringTable) eq (length VirtualChars)
 
 if DBCS_PCGEOS
-SpecialChars	Chars	C_SPACE, C_THIN_SPACE, C_EN_SPACE, C_EM_SPACE, 
+SpecialChars	Chars	C_SPACE, C_THIN_SPACE, C_EN_SPACE, C_EM_SPACE,
 			C_NON_BREAKING_SPACE, C_SOFT_HYPHEN
 else
-SpecialChars	Chars	C_SPACE, C_THINSPACE, C_ENSPACE, C_EMSPACE, 
+SpecialChars	Chars	C_SPACE, C_THINSPACE, C_ENSPACE, C_EMSPACE,
 			C_NONBRKSPACE, C_OPTHYPHEN
 endif
 
@@ -1747,7 +1747,7 @@ SpecialCharTable	lptr	\
 	String_OPTHYPHEN
 
 .assert (length SpecialChars) eq (length SpecialCharTable)
-		
+
 
 
 if STYLUS_KEYBOARD
@@ -1766,7 +1766,7 @@ PASS:		^hdi	= GState
 RETURN:		nothing
 DESTROYED:	nothing
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -1810,7 +1810,7 @@ StylusKeyboardDrawDeleteBitmap	proc	near
 
 	;
 	; Get starting width by centering our bitmap in our key
-	; 
+	;
 	mov	ax, cs:[bp].KP_right		; right
 	sub	ax, cs:[bp].KP_left		; right - left
 	sub	ax, ds:[si].B_width		; right - left - width
@@ -1850,26 +1850,26 @@ PASS:		*ds:si	= VisKeyboard object
 			  receiving object
 		dx	= X position of mouse, in document coordinates of
 			  receiving object
-RETURN:		if key was "pressed": 		
+RETURN:		if key was "pressed":
 			di	= MSG_META_KBD_CHAR
 			cx	= character value
 			dl	= CharFlags
 			dh	= ShiftState
 			bp low	= ToggleState
 			bp high	= scan code
-DESTROYED:	none 
-PSEUDO CODE/STRATEGY: 	
+DESTROYED:	none
+PSEUDO CODE/STRATEGY:
 		To allow the Keycaps application to function as a keyboard,
 	 	it intercepts mouse presses and converts them to key presses if
 		they fall inside the window and on the image of a particular
-	 	key. It does this by finding the scan code and current 
-		modifiers and from that finding the character value that is 
-		currently displayed on the key. This information together 
-		comprises the data for a MSG_META_KBD_CHAR, which replaces 
-		the mouse press data in the input stream, and the rest of the 
-		system is none the wiser...  
+	 	key. It does this by finding the scan code and current
+		modifiers and from that finding the character value that is
+		currently displayed on the key. This information together
+		comprises the data for a MSG_META_KBD_CHAR, which replaces
+		the mouse press data in the input stream, and the rest of the
+		system is none the wiser...
 
-KNOWN BUGS/SIDE EFFECTS/IDEAS: 
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
 		Name	Date		Description
 		----	----		-----------
@@ -1878,9 +1878,9 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 KeyboardMouseStartSelect	method	VisKeyboardClass,
-				MSG_META_START_SELECT 	
-	uses	bx, ds 	
-	.enter 	
+				MSG_META_START_SELECT
+	uses	bx, ds
+	.enter
 
 if STYLUS_KEYBOARD
 	call	StylusKeyboardCheckForPICGadgetClick
@@ -1905,7 +1905,7 @@ if STYLUS_KEYBOARD
 	call	StylusCheckForSymIntScanCode
 	jc	done
 endif
-	call	KeyboardPress 	
+	call	KeyboardPress
 
 	test	dl, mask CF_STATE_KEY		;Don't output any keyboard
 	jnz	done				; chars for state key changes
@@ -1936,29 +1936,29 @@ endif
 	jnz	noSleep
 
 	mov	ax, 10				;Pause for 1/6 second
-	call	TimerSleep 	
+	call	TimerSleep
 
 noSleep:
-	ornf	dl, mask CF_RELEASE 	
+	ornf	dl, mask CF_RELEASE
 	andnf	dl, not mask CF_FIRST_PRESS or mask CF_REPEAT_PRESS
 						;Added 4/12/93 cbh
 
-	mov	ax, MSG_META_KBD_CHAR 	
-	call	KBD_ObjMessageFixupDS 	
+	mov	ax, MSG_META_KBD_CHAR
+	call	KBD_ObjMessageFixupDS
 	pop	si				; *ds:si = self
 
 	call	KeyboardGetGState		;Uninvert the chars
-	call	KeyboardPress 
-done: 	
-	mov	ax, mask MRF_PROCESSED 	
+	call	KeyboardPress
+done:
+	mov	ax, mask MRF_PROCESSED
 	.leave
-	ret 
-KeyboardMouseStartSelect	endp 
+	ret
+KeyboardMouseStartSelect	endp
 
 KBD_ObjMessageFixupDS	proc	near
 	mov	di, mask MF_FIXUP_DS
 	call	ObjMessage
-	ret		
+	ret
 KBD_ObjMessageFixupDS	endp
 
 
@@ -1982,7 +1982,7 @@ RETURN:		carry	= set if it was sym or int
 				no regs destroyed
 DESTROYED:	see "Return:"
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -2069,7 +2069,7 @@ RETURN:		carry	= set if this was in our bounds
 DESTROYED:	carry	= set:	All destroyed
 			= clear: nothing destroyed
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -2230,7 +2230,7 @@ found:
 	ret
 KBD_CheckDuplicateCB	endp
 
- 
+
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		FindScancode
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2248,16 +2248,16 @@ RETURN:		carry	= set if the mouse press wasn't on a key
 			dh - ShiftState
 			bp low - ToggleState (always 0, as it happens...)
 			bp high - scan code of key
-DESTROYED:	ax, bx, di 
+DESTROYED:	ax, bx, di
 
-PSEUDO CODE/STRATEGY: 
-KNOWN BUGS/SIDE EFFECTS/IDEAS: 
+PSEUDO CODE/STRATEGY:
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
 	eca	7/16/90		Initial version
 	JT	7/15/92		Modified
-	dlitwin	4/30/94		Fixed up to use VKI_layout... instead of 
+	dlitwin	4/30/94		Fixed up to use VKI_layout... instead of
 				hardcoded offsets
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
@@ -2441,7 +2441,7 @@ SBCS <	clr	al							>
 DBCS <	clr	ax							>
 	clr	dx				;CharFlags, ShiftState
 	jmp	isVirtual
-	
+
 noModifiers:
 	clr	dx				;dl <- CharFlags
 	test	ds:[si].KS_state, MKS_STATE_KEY
@@ -2622,7 +2622,7 @@ RETURN:		ZFlag	= clear if we are in Symbol or International states:
 				ax, cx, dx unchanged
 DESTROYED:	nothing
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -2647,10 +2647,10 @@ LONG	jz	exit
 	;
 	;	**** More hacks to make the Stylus Keyboard work ****
 	; OK, so we know that we are in some kind of International,
-	; Symbol and Shift combination state.  We are so far away from 
+	; Symbol and Shift combination state.  We are so far away from
 	; having our scancode (which we really want here) that we have
 	; to generate it from our KeyboardStruct ptr (which we do by
-	; subtracting the beginning of the table and dividing by the 
+	; subtracting the beginning of the table and dividing by the
 	; structure size).  I really hate this kind of stuff.
 	;		dlitwin 5/21/93
 	;
@@ -2663,7 +2663,7 @@ LONG	jz	exit
 	div	dl					; al is our scancode
 	pop	dx
 	clr	ah					; ax is our scancode
-	inc	ax					; convert back to 
+	inc	ax					; convert back to
 							;  scancode (1 based)
 
 	;
@@ -2684,15 +2684,15 @@ LONG	jz	exit
 withinBounds:
 	mov	ax, si
  	mov	cx, length SymIntVirtualScancodes
-	segmov	es, cs 	
+	segmov	es, cs
 	mov	di, offset SymIntVirtualScancodes
-	repne	scasb 	
+	repne	scasb
 	clc						; assume not virtual
 	jne	gotVirtualCharIndicator
 	stc
 gotVirtualCharIndicator:
 	pushf					; preserve carry (virtual char)
-	
+
 
 	;
 	; Now that that is over with, determine which offset in out table
@@ -2871,7 +2871,7 @@ EC <	call	ECCheckKbdPtr			>
 	; offset..., could you please look at
 	; KeyboardGetOtherShiftKeyState also to check if changes is
 	; necessary.  Thanks.  Lulu /11/14/94
-	
+
 		CheckHack< (size KeyPic) eq 9 >
 	mov	si, ax
 	shl	si, 1
@@ -2992,7 +2992,7 @@ PASS:		inherited stack frame
 RETURN:		nothing
 DESTROYED:	nothing
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 		ss:[kbdModState] updated correctly
 PSEUDO CODE/STRATEGY:
 
@@ -3064,7 +3064,7 @@ PASS:		ds:bx	= KeyboardStruct ptr
 RETURN:		nothing
 DESTROYED:	al
 
-SIDE EFFECTS:	
+SIDE EFFECTS:
 PSEUDO CODE/STRATEGY:
 
 REVISION HISTORY:
@@ -3129,7 +3129,7 @@ EC <	call	ECCheckGStateHandle			>
 	mov	al, MM_INVERT
 	call	GrSetMixMode
 	call	GetKeyBounds
-	inc	ax 
+	inc	ax
 	inc	bx
 	call	GrFillRect
 	call	GrRestoreState
@@ -3151,7 +3151,7 @@ PASS:		si	= offset into table of key bounds
 		*ds:bx	= VisKeyboardClass object
 RETURN:		ax, bx, cx, dx - bounds of key
 DESTROYED:	nothing
- 
+
 PSEUDO CODE/STRATEGY:
 
 KNOWN BUGS/SIDE EFFECTS/IDEAS:
@@ -3183,7 +3183,7 @@ EC <	ERROR_Z	KBD_KEY_DOES_NOT_EXIST			>
 	; damn thing if the .ini file indicates AltGr, but it is in the code
 	; segment and that is a no-no.
 	;	Instead the table is set up with the full length spacebar
-	; *and* the AltGr key.  If we won't be using the AltGr key I just 
+	; *and* the AltGr key.  If we won't be using the AltGr key I just
 	; store a shorter length for the table in VKI_kbdLayoutLength, so
 	; the AltGr key never gets hit (as if it didn't exist) and we are
 	; happy.  If we will be using the AltGr key, I store the real length
@@ -3198,7 +3198,7 @@ if STYLUS_KEYBOARD
 	tst	ds:[bx].VKI_hasAltGr
 	jz	skipAdjustment
 
-	;	
+	;
 	; The table is 0 based, so we have the scancode-1 structures
 	;
 	mov	bx, ds:[bx].VKI_kbdLayoutOffset

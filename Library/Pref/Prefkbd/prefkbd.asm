@@ -355,15 +355,34 @@ notNoneDelay:
 	mov	ax, KBD_REPEAT_MEDIUM
 notNoneRepeat:
 	;
+	; Get the state of the Floating keyboard checkbox
+	;
+	push	ax				;save typematic repeat rate
+	mov	ax, MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS
+	mov	si, offset KeyboardFloatingList
+	call	ObjCallInstanceNoLock
+	push	ax
+	;
 	; Write the results to the geos.ini file
 	;
-	pop	bp
-	ornf	bp, ax				;bp <- typematic rate
+	pop	ax				;ax <- floating keyboard state
+	pop	bp				;bp <- typematic repeat rate
+	pop	dx				;dx <- typematic delay
+	ornf	bp, dx				;bp <- typematic rate
+	push	ax
 	mov	cx, cs
 	mov	dx, offset typematicKey		;cx:dx <- key
 	mov	ds, cx
 	mov	si, offset typematicCategory	;ds:si <- category
 	call	InitFileWriteInteger
+	;
+	; Keep the Express Menu's floating keyboard trigger in sync.
+	; [input]/noKeyboard is saved by KeyboardFloatingBoolean.
+	;
+	pop	ax				;ax <- floating keyboard state
+	mov	dx, offset floatingKeyboardKey	;cx:dx <- key
+	mov	si, offset expressMenuCategory	;ds:si <- category
+	call	InitFileWriteBoolean
 	ret
 PrefKbdDialogApply		endm
 
@@ -372,6 +391,8 @@ typematicKey		char	"keyboardTypematic", 0
 AltGrKey		char	"keyboardAltGr", 0
 ShiftRKey		char	"keyboardShiftRelease", 0
 SwaptCKey		char	"keyboardSwapCtrl", 0
+expressMenuCategory	char	"expressMenuControl", 0
+floatingKeyboardKey	char	"floatingKeyboard", 0
 
 
 
