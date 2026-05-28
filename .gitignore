@@ -46,6 +46,8 @@ bin/printsls
 bin/sym2dis
 bin/cvtpcx
 bin/swat
+bin/target-codex
+Tools/swat/lib.new/codex.tcl
 
 # IDE stuff
 .vscode
