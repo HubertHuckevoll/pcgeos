@@ -42,6 +42,7 @@ bin/esp
 bin/findlbdr
 bin/geodump
 bin/ldf2sls
+bin/fntpatch
 bin/printsls
 bin/sym2dis
 bin/cvtpcx
@@ -70,6 +71,7 @@ Installed/Tools/glue/linux.md/glue
 Installed/Tools/goc/linux.md/goc
 Installed/Tools/grev/linux.md/grev
 Installed/Tools/ldf2sls/linux.md/ldf2sls
+Installed/Tools/fntpatch/linux.md/fntpatch
 Installed/Tools/loc/linux.md/loc
 Installed/Tools/misc/cvtpcx/linux.md/cvtpcx
 Installed/Tools/nmkmf/linux.md/mkmf
