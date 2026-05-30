@@ -1,0 +1,13 @@
+#!/bin/sh
+
+#
+# $Id: makefonts,v 1.7 93/06/16 11:50:34 gene Exp $
+#
+
+# set n="/staff/pcgeos/gene/Tools/nim2pc/sparc.md/nim2pc -2"
+# echo using $n
+
+# $n -cFID_BERKELEY -FSANS_SERIF -o"Berkeley" Src/Berkeley/*
+cd "`dirname "$0"`" || exit 1
+yes | clean
+pmake -DREMOVE Berkeley.fnt

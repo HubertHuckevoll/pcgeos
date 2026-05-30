@@ -1,0 +1,3015 @@
+
+berkeley_14Seg	segment
+berkeley_14StartData label byte
+	word	berkeley_14EndData-berkeley_14StartData
+	word	FM_BITMAP
+	WBFixed	<153,8>		;average width
+	WBFixed	<0,16>		;max width
+	WBFixed	<0,0>		;height adjustment
+	WBFixed	<0,18>		;height
+	WBFixed	<0,4>		;accent
+	WBFixed	<0,8>		;mean
+	WBFixed	<0,0>		;baseline adjustment
+	WBFixed	<0,14>		;baseline
+	WBFixed	<0,4>		;descent
+	WBFixed	<0,1>		;leading
+	word	0		;# of kern pairs
+	word	berkeley_14KernPairs-berkeley_14StartData		;kern pair ptr
+	word	berkeley_14KernValues-berkeley_14StartData		;kern value ptr
+	Chars	32		;first char
+	Chars	255		;last char
+	Chars	46		;default char
+	WBFixed	<0,16>		;underline pos
+	WBFixed	<0,1>		;underline thick
+	WBFixed	<51,9>		;strike pos
+	WBFixed	<0,0>		;above font box
+	WBFixed	<0,0>		;below font box
+	word	0		;min LSB
+	word	0		;min TSB
+	word	0		;max BSB
+	word	0		;max RSB
+	word	18		;pixel height
+	byte	0		;flags
+	word	666		;heap count
+
+	word	offset berkeley_14Char20 - berkeley_14StartData
+	WBFixed	<0,6>		;space
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char21 - berkeley_14StartData
+	WBFixed	<0,4>		;exclamation (!)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char22 - berkeley_14StartData
+	WBFixed	<0,8>		;quote (")
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char23 - berkeley_14StartData
+	WBFixed	<0,11>		;number sign (#)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char24 - berkeley_14StartData
+	WBFixed	<0,10>		;dollar sign ($)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char25 - berkeley_14StartData
+	WBFixed	<0,14>		;percent (%)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char26 - berkeley_14StartData
+	WBFixed	<0,11>		;ampersand (&)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char27 - berkeley_14StartData
+	WBFixed	<0,4>		;single quote (')
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char28 - berkeley_14StartData
+	WBFixed	<0,6>		;left parenthesis (()
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char29 - berkeley_14StartData
+	WBFixed	<0,6>		;right parenthesis ())
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char2a - berkeley_14StartData
+	WBFixed	<0,10>		;asterisk (*)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char2b - berkeley_14StartData
+	WBFixed	<0,8>		;plus (+)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char2c - berkeley_14StartData
+	WBFixed	<0,4>		;comma (,)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char2d - berkeley_14StartData
+	WBFixed	<0,8>		;minus (-)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char2e - berkeley_14StartData
+	WBFixed	<0,4>		;period (.)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char2f - berkeley_14StartData
+	WBFixed	<0,9>		;slash (/)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char30 - berkeley_14StartData
+	WBFixed	<0,10>		;zero (0)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char31 - berkeley_14StartData
+	WBFixed	<0,10>		;one (1)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char32 - berkeley_14StartData
+	WBFixed	<0,10>		;two (2)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char33 - berkeley_14StartData
+	WBFixed	<0,10>		;three (3)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char34 - berkeley_14StartData
+	WBFixed	<0,10>		;four (4)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char35 - berkeley_14StartData
+	WBFixed	<0,10>		;five (5)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char36 - berkeley_14StartData
+	WBFixed	<0,10>		;six (6)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char37 - berkeley_14StartData
+	WBFixed	<0,10>		;seven (7)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char38 - berkeley_14StartData
+	WBFixed	<0,10>		;eight (8)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char39 - berkeley_14StartData
+	WBFixed	<0,10>		;nine (9)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char3a - berkeley_14StartData
+	WBFixed	<0,4>		;colon (:)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char3b - berkeley_14StartData
+	WBFixed	<0,4>		;semicolon (;)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char3c - berkeley_14StartData
+	WBFixed	<0,8>		;less than (<)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char3d - berkeley_14StartData
+	WBFixed	<0,8>		;equal (=)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char3e - berkeley_14StartData
+	WBFixed	<0,8>		;greater than (>)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char3f - berkeley_14StartData
+	WBFixed	<0,10>		;question mark (?)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char40 - berkeley_14StartData
+	WBFixed	<0,12>		;at sign (@)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char41 - berkeley_14StartData
+	WBFixed	<0,10>		;capital A
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char42 - berkeley_14StartData
+	WBFixed	<0,10>		;capital B
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char43 - berkeley_14StartData
+	WBFixed	<0,10>		;capital C
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char44 - berkeley_14StartData
+	WBFixed	<0,10>		;capital D
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char45 - berkeley_14StartData
+	WBFixed	<0,9>		;capital E
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char46 - berkeley_14StartData
+	WBFixed	<0,9>		;capital F
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char47 - berkeley_14StartData
+	WBFixed	<0,10>		;capital G
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char48 - berkeley_14StartData
+	WBFixed	<0,10>		;capital H
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char49 - berkeley_14StartData
+	WBFixed	<0,4>		;capital I
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char4a - berkeley_14StartData
+	WBFixed	<0,9>		;capital J
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char4b - berkeley_14StartData
+	WBFixed	<0,10>		;capital K
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char4c - berkeley_14StartData
+	WBFixed	<0,9>		;capital L
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char4d - berkeley_14StartData
+	WBFixed	<0,13>		;capital M
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char4e - berkeley_14StartData
+	WBFixed	<0,11>		;capital N
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char4f - berkeley_14StartData
+	WBFixed	<0,11>		;capital O
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char50 - berkeley_14StartData
+	WBFixed	<0,10>		;capital P
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char51 - berkeley_14StartData
+	WBFixed	<0,10>		;capital Q
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char52 - berkeley_14StartData
+	WBFixed	<0,10>		;capital R
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char53 - berkeley_14StartData
+	WBFixed	<0,10>		;capital S
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char54 - berkeley_14StartData
+	WBFixed	<0,10>		;capital T
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char55 - berkeley_14StartData
+	WBFixed	<0,10>		;capital U
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char56 - berkeley_14StartData
+	WBFixed	<0,10>		;capital V
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char57 - berkeley_14StartData
+	WBFixed	<0,13>		;capital W
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char58 - berkeley_14StartData
+	WBFixed	<0,11>		;capital X
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char59 - berkeley_14StartData
+	WBFixed	<0,10>		;capital Y
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char5a - berkeley_14StartData
+	WBFixed	<0,9>		;capital Z
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char5b - berkeley_14StartData
+	WBFixed	<0,5>		;left bracket ([)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char5c - berkeley_14StartData
+	WBFixed	<0,9>		;back slash (\)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char5d - berkeley_14StartData
+	WBFixed	<0,5>		;right bracket (])
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char5e - berkeley_14StartData
+	WBFixed	<0,10>		;ASCII circumflex (^)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char5f - berkeley_14StartData
+	WBFixed	<0,9>		;underscore (_)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char60 - berkeley_14StartData
+	WBFixed	<0,5>		;grave (`)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char61 - berkeley_14StartData
+	WBFixed	<0,10>		;small a
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char62 - berkeley_14StartData
+	WBFixed	<0,10>		;small b
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char63 - berkeley_14StartData
+	WBFixed	<0,10>		;small c
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char64 - berkeley_14StartData
+	WBFixed	<0,10>		;small d
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char65 - berkeley_14StartData
+	WBFixed	<0,10>		;small e
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char66 - berkeley_14StartData
+	WBFixed	<0,7>		;small f
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char67 - berkeley_14StartData
+	WBFixed	<0,10>		;small g
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char68 - berkeley_14StartData
+	WBFixed	<0,10>		;small h
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char69 - berkeley_14StartData
+	WBFixed	<0,4>		;small i
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char6a - berkeley_14StartData
+	WBFixed	<0,6>		;small j
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char6b - berkeley_14StartData
+	WBFixed	<0,9>		;small k
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char6c - berkeley_14StartData
+	WBFixed	<0,4>		;small l
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char6d - berkeley_14StartData
+	WBFixed	<0,16>		;small m
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char6e - berkeley_14StartData
+	WBFixed	<0,10>		;small n
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char6f - berkeley_14StartData
+	WBFixed	<0,10>		;small o
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char70 - berkeley_14StartData
+	WBFixed	<0,10>		;small p
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char71 - berkeley_14StartData
+	WBFixed	<0,10>		;small q
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char72 - berkeley_14StartData
+	WBFixed	<0,9>		;small r
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char73 - berkeley_14StartData
+	WBFixed	<0,10>		;small s
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char74 - berkeley_14StartData
+	WBFixed	<0,7>		;small t
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char75 - berkeley_14StartData
+	WBFixed	<0,10>		;small u
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char76 - berkeley_14StartData
+	WBFixed	<0,10>		;small v
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char77 - berkeley_14StartData
+	WBFixed	<0,14>		;small w
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char78 - berkeley_14StartData
+	WBFixed	<0,11>		;small x
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char79 - berkeley_14StartData
+	WBFixed	<0,10>		;small y
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char7a - berkeley_14StartData
+	WBFixed	<0,9>		;small z
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char7b - berkeley_14StartData
+	WBFixed	<0,6>		;left brace ({)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char7c - berkeley_14StartData
+	WBFixed	<0,4>		;bar (|)
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char7d - berkeley_14StartData
+	WBFixed	<0,6>		;right brace (})
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char7e - berkeley_14StartData
+	WBFixed	<0,9>		;ASCII tilde (~)
+	byte	0
+	word	0		;usage
+
+	word	0
+	WBFixed	<0,0>		;ASCII delete
+	byte	mask CTF_NO_DATA
+	word	0		;usage
+
+	word	offset berkeley_14Char80 - berkeley_14StartData
+	WBFixed	<0,10>		;A dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char81 - berkeley_14StartData
+	WBFixed	<0,10>		;A ring
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char82 - berkeley_14StartData
+	WBFixed	<0,10>		;C cedilla
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char83 - berkeley_14StartData
+	WBFixed	<0,9>		;E acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char84 - berkeley_14StartData
+	WBFixed	<0,11>		;N tilde
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char85 - berkeley_14StartData
+	WBFixed	<0,11>		;O dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char86 - berkeley_14StartData
+	WBFixed	<0,10>		;U dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char87 - berkeley_14StartData
+	WBFixed	<0,10>		;a acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char88 - berkeley_14StartData
+	WBFixed	<0,10>		;a grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char89 - berkeley_14StartData
+	WBFixed	<0,10>		;a circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char8a - berkeley_14StartData
+	WBFixed	<0,10>		;a dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char8b - berkeley_14StartData
+	WBFixed	<0,10>		;a tilde
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char8c - berkeley_14StartData
+	WBFixed	<0,10>		;a ring
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char8d - berkeley_14StartData
+	WBFixed	<0,10>		;c cedilla
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char8e - berkeley_14StartData
+	WBFixed	<0,10>		;e acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char8f - berkeley_14StartData
+	WBFixed	<0,10>		;e grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char90 - berkeley_14StartData
+	WBFixed	<0,10>		;e circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char91 - berkeley_14StartData
+	WBFixed	<0,10>		;e dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char92 - berkeley_14StartData
+	WBFixed	<0,4>		;i acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char93 - berkeley_14StartData
+	WBFixed	<0,4>		;i grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char94 - berkeley_14StartData
+	WBFixed	<0,4>		;i circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char95 - berkeley_14StartData
+	WBFixed	<0,4>		;i dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char96 - berkeley_14StartData
+	WBFixed	<0,10>		;n tilde
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char97 - berkeley_14StartData
+	WBFixed	<0,10>		;o acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char98 - berkeley_14StartData
+	WBFixed	<0,10>		;o grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char99 - berkeley_14StartData
+	WBFixed	<0,10>		;o circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char9a - berkeley_14StartData
+	WBFixed	<0,10>		;o dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char9b - berkeley_14StartData
+	WBFixed	<0,10>		;o tilde
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char9c - berkeley_14StartData
+	WBFixed	<0,10>		;u acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char9d - berkeley_14StartData
+	WBFixed	<0,10>		;u grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char9e - berkeley_14StartData
+	WBFixed	<0,10>		;u circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Char9f - berkeley_14StartData
+	WBFixed	<0,10>		;u dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara0 - berkeley_14StartData
+	WBFixed	<0,6>		;dagger
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara1 - berkeley_14StartData
+	WBFixed	<0,8>		;degree
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara2 - berkeley_14StartData
+	WBFixed	<0,10>		;cent
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara3 - berkeley_14StartData
+	WBFixed	<0,10>		;sterling
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara4 - berkeley_14StartData
+	WBFixed	<0,10>		;section
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara5 - berkeley_14StartData
+	WBFixed	<0,9>		;bullet
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara6 - berkeley_14StartData
+	WBFixed	<0,12>		;paragraph
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara7 - berkeley_14StartData
+	WBFixed	<0,10>		;German double S
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara8 - berkeley_14StartData
+	WBFixed	<0,14>		;registered
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chara9 - berkeley_14StartData
+	WBFixed	<0,14>		;copyright
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charaa - berkeley_14StartData
+	WBFixed	<0,15>		;trademark
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charab - berkeley_14StartData
+	WBFixed	<0,5>		;acute accent
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charac - berkeley_14StartData
+	WBFixed	<0,6>		;dieresis accent
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charad - berkeley_14StartData
+	WBFixed	<0,10>		;not equal
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charae - berkeley_14StartData
+	WBFixed	<0,15>		;capital AE
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charaf - berkeley_14StartData
+	WBFixed	<0,11>		;capital O slash
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb0 - berkeley_14StartData
+	WBFixed	<0,16>		;infinity
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb1 - berkeley_14StartData
+	WBFixed	<0,8>		;plus minus
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb2 - berkeley_14StartData
+	WBFixed	<0,8>		;less than or equal
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb3 - berkeley_14StartData
+	WBFixed	<0,8>		;greater than or equal
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb4 - berkeley_14StartData
+	WBFixed	<0,10>		;yen
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb5 - berkeley_14StartData
+	WBFixed	<0,10>		;lower mu
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb6 - berkeley_14StartData
+	WBFixed	<0,10>		;partial diff
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb7 - berkeley_14StartData
+	WBFixed	<0,11>		;sigma / summation
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb8 - berkeley_14StartData
+	WBFixed	<0,13>		;product
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charb9 - berkeley_14StartData
+	WBFixed	<0,13>		;pi
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charba - berkeley_14StartData
+	WBFixed	<0,4>		;integral
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charbb - berkeley_14StartData
+	WBFixed	<0,9>		;ord feminine
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charbc - berkeley_14StartData
+	WBFixed	<0,9>		;ord masculine
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charbd - berkeley_14StartData
+	WBFixed	<0,13>		;omega
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charbe - berkeley_14StartData
+	WBFixed	<0,16>		;small ae
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charbf - berkeley_14StartData
+	WBFixed	<0,10>		;small o slash
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc0 - berkeley_14StartData
+	WBFixed	<0,10>		;question down
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc1 - berkeley_14StartData
+	WBFixed	<0,4>		;exclamation down
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc2 - berkeley_14StartData
+	WBFixed	<0,9>		;logical not
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc3 - berkeley_14StartData
+	WBFixed	<0,13>		;root
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc4 - berkeley_14StartData
+	WBFixed	<0,6>		;florin
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc5 - berkeley_14StartData
+	WBFixed	<0,10>		;approximately equal
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc6 - berkeley_14StartData
+	WBFixed	<0,11>		;delta
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc7 - berkeley_14StartData
+	WBFixed	<0,12>		;guilled dbl left
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc8 - berkeley_14StartData
+	WBFixed	<0,12>		;guilled dbl right
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charc9 - berkeley_14StartData
+	WBFixed	<0,14>		;ellipsis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charca - berkeley_14StartData
+	WBFixed	<0,6>		;non-brk space
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charcb - berkeley_14StartData
+	WBFixed	<0,10>		;A grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charcc - berkeley_14StartData
+	WBFixed	<0,10>		;A tilde
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charcd - berkeley_14StartData
+	WBFixed	<0,11>		;O tilde
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charce - berkeley_14StartData
+	WBFixed	<0,16>		;capital OE
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charcf - berkeley_14StartData
+	WBFixed	<0,16>		;small oe
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard0 - berkeley_14StartData
+	WBFixed	<0,7>		;en dash
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard1 - berkeley_14StartData
+	WBFixed	<0,10>		;em dash
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard2 - berkeley_14StartData
+	WBFixed	<0,8>		;quote dbl left
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard3 - berkeley_14StartData
+	WBFixed	<0,8>		;quote dbl right
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard4 - berkeley_14StartData
+	WBFixed	<0,4>		;quote sgl left
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard5 - berkeley_14StartData
+	WBFixed	<0,4>		;quote sgl right
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard6 - berkeley_14StartData
+	WBFixed	<0,8>		;division
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard7 - berkeley_14StartData
+	WBFixed	<0,13>		;lozenge
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard8 - berkeley_14StartData
+	WBFixed	<0,10>		;y dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chard9 - berkeley_14StartData
+	WBFixed	<0,10>		;Y dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charda - berkeley_14StartData
+	WBFixed	<0,9>		;fraction
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chardb - berkeley_14StartData
+	WBFixed	<0,9>		;currency
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chardc - berkeley_14StartData
+	WBFixed	<0,8>		;guilled sgl left
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chardd - berkeley_14StartData
+	WBFixed	<0,8>		;guilled sgl right
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charde - berkeley_14StartData
+	WBFixed	<0,10>		;y acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chardf - berkeley_14StartData
+	WBFixed	<0,10>		;Y acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare0 - berkeley_14StartData
+	WBFixed	<0,6>		;double dagger
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare1 - berkeley_14StartData
+	WBFixed	<0,3>		;centered dot
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare2 - berkeley_14StartData
+	WBFixed	<0,4>		;quote sgl low
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare3 - berkeley_14StartData
+	WBFixed	<0,8>		;quote dbl low
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare4 - berkeley_14StartData
+	WBFixed	<0,16>		;per thousand
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare5 - berkeley_14StartData
+	WBFixed	<0,10>		;A circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare6 - berkeley_14StartData
+	WBFixed	<0,9>		;E circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare7 - berkeley_14StartData
+	WBFixed	<0,10>		;A acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare8 - berkeley_14StartData
+	WBFixed	<0,9>		;E dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chare9 - berkeley_14StartData
+	WBFixed	<0,9>		;E grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charea - berkeley_14StartData
+	WBFixed	<0,4>		;I acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chareb - berkeley_14StartData
+	WBFixed	<0,4>		;I circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charec - berkeley_14StartData
+	WBFixed	<0,4>		;I dieresis
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Chared - berkeley_14StartData
+	WBFixed	<0,4>		;I grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charee - berkeley_14StartData
+	WBFixed	<0,11>		;O acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charef - berkeley_14StartData
+	WBFixed	<0,11>		;O circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf0 - berkeley_14StartData
+	WBFixed	<0,11>		;logo
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf1 - berkeley_14StartData
+	WBFixed	<0,11>		;O grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf2 - berkeley_14StartData
+	WBFixed	<0,10>		;U acute
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf3 - berkeley_14StartData
+	WBFixed	<0,10>		;U circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf4 - berkeley_14StartData
+	WBFixed	<0,10>		;U grave
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf5 - berkeley_14StartData
+	WBFixed	<0,4>		;i dotless
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf6 - berkeley_14StartData
+	WBFixed	<0,5>		;circumflex
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf7 - berkeley_14StartData
+	WBFixed	<0,9>		;tilde
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf8 - berkeley_14StartData
+	WBFixed	<0,7>		;macron
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charf9 - berkeley_14StartData
+	WBFixed	<0,6>		;breve
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charfa - berkeley_14StartData
+	WBFixed	<0,2>		;dot accent
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charfb - berkeley_14StartData
+	WBFixed	<0,6>		;ring accent
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charfc - berkeley_14StartData
+	WBFixed	<0,4>		;cedilla
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charfd - berkeley_14StartData
+	WBFixed	<0,7>		;Hungarian umlat
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charfe - berkeley_14StartData
+	WBFixed	<0,4>		;ogonek
+	byte	0
+	word	0		;usage
+
+	word	offset berkeley_14Charff - berkeley_14StartData
+	WBFixed	<0,7>		;caron
+	byte	0
+	word	0		;usage
+
+berkeley_14KernPairs	label	byte
+berkeley_14KernValues	label	byte
+berkeley_14Char20 label byte			;space
+	byte	0,0,0,0,0
+
+
+berkeley_14Char21 label byte			;exclamation (!)
+	byte	2	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0,0xc0,0xc0
+
+berkeley_14Char22 label byte			;quote (")
+	byte	6	;width
+	byte	4	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xcc,0xcc,0x44,0x88
+
+berkeley_14Char23 label byte			;number sign (#)
+	byte	9	;width
+	byte	5	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x1b,0,0x7f,0x80,0x36,0,0xff,0,0x6c,0
+
+berkeley_14Char24 label byte			;dollar sign ($)
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x18,0x7e,0xdb,0xd8,0xd8,0x7e,0x1b,0x1b,0x1b,0xdb,0x7e
+	byte	0x18,0x18
+
+berkeley_14Char25 label byte			;percent (%)
+	byte	12	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7f,0xe0,0xcc,0x60,0xcc,0xc0,0x79,0x80,0x3,0,0x6,0
+	byte	0xd,0xe0,0x1b,0x30,0x33,0x30,0x31,0xe0
+
+berkeley_14Char26 label byte			;ampersand (&)
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x78,0,0xcc,0,0xcc,0,0xcc,0,0x78,0,0x78,0
+	byte	0xcd,0,0xc6,0,0xe7,0,0x79,0x80
+
+berkeley_14Char27 label byte			;single quote (')
+	byte	2	;width
+	byte	4	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0x40,0x80
+
+berkeley_14Char28 label byte			;left parenthesis (()
+	byte	4	;width
+	byte	14	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x30,0x60,0x60,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0x60,0x60
+	byte	0x30,0x10
+
+berkeley_14Char29 label byte			;right parenthesis ())
+	byte	4	;width
+	byte	14	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0x80,0xc0,0x60,0x60,0x30,0x30,0x30,0x30,0x30,0x30,0x60,0x60
+	byte	0xc0,0x80
+
+berkeley_14Char2a label byte			;asterisk (*)
+	byte	8	;width
+	byte	5	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x66,0x3c,0xff,0x3c,0x66
+
+berkeley_14Char2b label byte			;plus (+)
+	byte	6	;width
+	byte	6	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x30,0x30,0xfc,0xfc,0x30,0x30
+
+berkeley_14Char2c label byte			;comma (,)
+	byte	2	;width
+	byte	4	;# rows
+	sbyte	12	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0x40,0x80
+
+berkeley_14Char2d label byte			;minus (-)
+	byte	6	;width
+	byte	2	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfc,0xfc
+
+berkeley_14Char2e label byte			;period (.)
+	byte	2	;width
+	byte	2	;# rows
+	sbyte	12	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0
+
+berkeley_14Char2f label byte			;slash (/)
+	byte	7	;width
+	byte	12	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x6,0x6,0xc,0xc,0x18,0x18,0x30,0x30,0x60,0x60,0xc0,0xc0
+
+berkeley_14Char30 label byte			;zero (0)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char31 label byte			;one (1)
+	byte	3	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	4	;x offset
+
+	byte	0x60,0xe0,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+
+berkeley_14Char32 label byte			;two (2)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0x3,0x6,0xc,0x18,0x30,0x60,0x7f
+
+berkeley_14Char33 label byte			;three (3)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xff,0x6,0xc,0x18,0xc,0x6,0x3,0x3,0xc6,0x7c
+
+berkeley_14Char34 label byte			;four (4)
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	0	;x offset
+
+	byte	0x3,0,0x7,0,0xf,0,0x1b,0,0x33,0,0x63,0
+	byte	0xc3,0,0xff,0x80,0x3,0,0x3,0
+
+berkeley_14Char35 label byte			;five (5)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xff,0xc0,0xc0,0xfc,0x6,0x3,0x3,0x3,0xc6,0x7c
+
+berkeley_14Char36 label byte			;six (6)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x60,0xc0,0xdc,0xe6,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char37 label byte			;seven (7)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xff,0x3,0x6,0x6,0xc,0xc,0x18,0x18,0x18,0x18
+
+berkeley_14Char38 label byte			;eight (8)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0x66,0x3c,0x66,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char39 label byte			;nine (9)
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0xc3,0xc3,0x67,0x3b,0x3,0x6,0x3c
+
+berkeley_14Char3a label byte			;colon (:)
+	byte	2	;width
+	byte	6	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0,0,0xc0,0xc0
+
+berkeley_14Char3b label byte			;semicolon (;)
+	byte	2	;width
+	byte	8	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0,0,0xc0,0xc0,0x40,0x80
+
+berkeley_14Char3c label byte			;less than (<)
+	byte	6	;width
+	byte	9	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc,0x18,0x30,0x60,0xc0,0x60,0x30,0x18,0xc
+
+berkeley_14Char3d label byte			;equal (=)
+	byte	6	;width
+	byte	5	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfc,0xfc,0,0xfc,0xfc
+
+berkeley_14Char3e label byte			;greater than (>)
+	byte	6	;width
+	byte	9	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0x60,0x30,0x18,0xc,0x18,0x30,0x60,0xc0
+
+berkeley_14Char3f label byte			;question mark (?)
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0x3,0x6,0xc,0x18,0x18,0,0x18,0x18
+
+berkeley_14Char40 label byte			;at sign (@)
+	byte	10	;width
+	byte	9	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3f,0,0x61,0x80,0xce,0xc0,0xd2,0xc0,0xd2,0xc0,0xd2,0xc0
+	byte	0xcf,0x80,0x60,0,0x3e,0
+
+berkeley_14Char41 label byte			;capital A
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7e,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3,0xc3,0xc3
+
+berkeley_14Char42 label byte			;capital B
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0xc3,0xc3,0xc3,0xfe,0xc3,0xc3,0xc3,0xc3,0xfe
+
+berkeley_14Char43 label byte			;capital C
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0x63,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0x63,0x3e
+
+berkeley_14Char44 label byte			;capital D
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfc,0xc6,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc6,0xfc
+
+berkeley_14Char45 label byte			;capital E
+	byte	7	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0xc0,0xc0,0xc0,0xfc,0xc0,0xc0,0xc0,0xc0,0xfe
+
+berkeley_14Char46 label byte			;capital F
+	byte	7	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0xc0,0xc0,0xc0,0xfc,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char47 label byte			;capital G
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0x63,0xc0,0xc0,0xc7,0xc3,0xc3,0xc3,0x63,0x3e
+
+berkeley_14Char48 label byte			;capital H
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3,0xc3,0xc3
+
+berkeley_14Char49 label byte			;capital I
+	byte	2	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char4a label byte			;capital J
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	0	;x offset
+
+	byte	0x3,0x3,0x3,0x3,0x3,0x3,0x3,0xc3,0xc3,0x7e
+
+berkeley_14Char4b label byte			;capital K
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc6,0xcc,0xd8,0xf0,0xf0,0xd8,0xcc,0xc6,0xc3
+
+berkeley_14Char4c label byte			;capital L
+	byte	7	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xfe
+
+berkeley_14Char4d label byte			;capital M
+	byte	11	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0x60,0xe0,0xe0,0xf1,0xe0,0xdb,0x60,0xce,0x60,0xc4,0x60
+	byte	0xc0,0x60,0xc0,0x60,0xc0,0x60,0xc0,0x60
+
+berkeley_14Char4e label byte			;capital N
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc1,0x80,0xe1,0x80,0xf1,0x80,0xd9,0x80,0xcd,0x80,0xc7,0x80
+	byte	0xc3,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80
+
+berkeley_14Char4f label byte			;capital O
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0,0x63,0,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80
+	byte	0xc1,0x80,0xc1,0x80,0x63,0,0x3e,0
+
+berkeley_14Char50 label byte			;capital P
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0xc3,0xc3,0xc3,0xfe,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char51 label byte			;capital Q
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0xc3,0xcb,0x6e,0x3c,0x6
+
+berkeley_14Char52 label byte			;capital R
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0xc3,0xc3,0xc3,0xfe,0xf0,0xd8,0xcc,0xc6,0xc3
+
+berkeley_14Char53 label byte			;capital S
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7e,0xc3,0xc0,0xc0,0x7e,0x3,0x3,0x3,0xc3,0x7e
+
+berkeley_14Char54 label byte			;capital T
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xff,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18
+
+berkeley_14Char55 label byte			;capital U
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char56 label byte			;capital V
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x66,0x3c,0x18
+
+berkeley_14Char57 label byte			;capital W
+	byte	11	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0x60,0xc0,0x60,0xc0,0x60,0xc0,0x60,0xc4,0x60,0xce,0x60
+	byte	0xdb,0x60,0xf1,0xe0,0xe0,0xe0,0xc0,0x60
+
+berkeley_14Char58 label byte			;capital X
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc1,0x80,0xc1,0x80,0x63,0,0x36,0,0x1c,0,0x1c,0
+	byte	0x36,0,0x63,0,0xc1,0x80,0xc1,0x80
+
+berkeley_14Char59 label byte			;capital Y
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0x66,0x3c,0x18,0x18,0x18,0x18,0x18
+
+berkeley_14Char5a label byte			;capital Z
+	byte	7	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0x6,0x6,0xc,0x18,0x30,0x60,0xc0,0xc0,0xfe
+
+berkeley_14Char5b label byte			;left bracket ([)
+	byte	3	;width
+	byte	14	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0xe0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+	byte	0xc0,0xe0
+
+berkeley_14Char5c label byte			;back slash (\)
+	byte	7	;width
+	byte	12	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0x60,0x60,0x30,0x30,0x18,0x18,0xc,0xc,0x6,0x6
+
+berkeley_14Char5d label byte			;right bracket (])
+	byte	3	;width
+	byte	14	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0xe0,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+	byte	0x60,0xe0
+
+berkeley_14Char5e label byte			;ASCII circumflex (^)
+	byte	8	;width
+	byte	4	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x3c,0x66,0xc3
+
+berkeley_14Char5f label byte			;underscore (_)
+	byte	9	;width
+	byte	2	;# rows
+	sbyte	14	;y offset
+	sbyte	0	;x offset
+
+	byte	0xff,0x80,0xff,0x80
+
+berkeley_14Char60 label byte			;grave (`)
+	byte	3	;width
+	byte	2	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0x60
+
+berkeley_14Char61 label byte			;small a
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7e,0xc3,0x3,0x7f,0xc3,0xc3,0xc7,0x7b
+
+berkeley_14Char62 label byte			;small b
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xdc,0xe6,0xc3,0xc3,0xc3,0xc3,0xe6,0xdc
+
+berkeley_14Char63 label byte			;small c
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0x63,0xc0,0xc0,0xc0,0xc0,0x63,0x3e
+
+berkeley_14Char64 label byte			;small d
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3,0x3,0x3b,0x67,0xc3,0xc3,0xc3,0xc3,0x67,0x3b
+
+berkeley_14Char65 label byte			;small e
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0xff,0xc0,0xc0,0x63,0x3e
+
+berkeley_14Char66 label byte			;small f
+	byte	6	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x60,0xf8,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+
+berkeley_14Char67 label byte			;small g
+	byte	8	;width
+	byte	12	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3b,0x67,0xc3,0xc3,0xc3,0xc3,0x67,0x3b,0x3,0x3,0x66,0x3c
+
+berkeley_14Char68 label byte			;small h
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xdc,0xe6,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3
+
+berkeley_14Char69 label byte			;small i
+	byte	2	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char6a label byte			;small j
+	byte	5	;width
+	byte	14	;# rows
+	sbyte	4	;y offset
+	sbyte	0	;x offset
+
+	byte	0x18,0,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18
+	byte	0x18,0xf0
+
+berkeley_14Char6b label byte			;small k
+	byte	7	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xc6,0xcc,0xd8,0xf0,0xf0,0xd8,0xcc,0xc6
+
+berkeley_14Char6c label byte			;small l
+	byte	2	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char6d label byte			;small m
+	byte	14	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xdc,0xf0,0xe7,0x98,0xc3,0xc,0xc3,0xc,0xc3,0xc,0xc3,0xc
+	byte	0xc3,0xc,0xc3,0xc
+
+berkeley_14Char6e label byte			;small n
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xdc,0xe6,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3
+
+berkeley_14Char6f label byte			;small o
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char70 label byte			;small p
+	byte	8	;width
+	byte	12	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xdc,0xe6,0xc3,0xc3,0xc3,0xc3,0xe6,0xdc,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char71 label byte			;small q
+	byte	8	;width
+	byte	12	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3b,0x67,0xc3,0xc3,0xc3,0xc3,0x67,0x3b,0x3,0x3,0x3,0x3
+
+berkeley_14Char72 label byte			;small r
+	byte	7	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xdc,0xe6,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char73 label byte			;small s
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7e,0xc3,0xc0,0x7e,0x3,0x3,0xc3,0x7e
+
+berkeley_14Char74 label byte			;small t
+	byte	5	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x60,0x60,0xf8,0x60,0x60,0x60,0x60,0x60,0x60,0x38
+
+berkeley_14Char75 label byte			;small u
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b
+
+berkeley_14Char76 label byte			;small v
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0xc3,0xc3,0x66,0x3c,0x18
+
+berkeley_14Char77 label byte			;small w
+	byte	12	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc6,0x30,0xc6,0x30,0xc6,0x30,0xc6,0x30,0xc6,0x30,0xc6,0x30
+	byte	0x6f,0x60,0x39,0xc0
+
+berkeley_14Char78 label byte			;small x
+	byte	9	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc1,0x80,0x63,0,0x36,0,0x1c,0,0x1c,0,0x36,0
+	byte	0x63,0,0xc1,0x80
+
+berkeley_14Char79 label byte			;small y
+	byte	8	;width
+	byte	12	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b,0x3,0x3,0x66,0x3c
+
+berkeley_14Char7a label byte			;small z
+	byte	7	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0x6,0xc,0x18,0x30,0x60,0xc0,0xfe
+
+berkeley_14Char7b label byte			;left brace ({)
+	byte	4	;width
+	byte	13	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x30,0x60,0x60,0x60,0x60,0xc0,0x60,0x60,0x60,0x60,0x30
+	byte	0x10
+
+berkeley_14Char7c label byte			;bar (|)
+	byte	2	;width
+	byte	14	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+	byte	0xc0,0xc0
+
+berkeley_14Char7d label byte			;right brace (})
+	byte	4	;width
+	byte	13	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x80,0xc0,0x60,0x60,0x60,0x60,0x30,0x60,0x60,0x60,0x60,0xc0
+	byte	0x80
+
+berkeley_14Char7e label byte			;ASCII tilde (~)
+	byte	8	;width
+	byte	2	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7b,0xde
+
+berkeley_14Char80 label byte			;A dieresis
+	byte	8	;width
+	byte	13	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0,0x7e,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3,0xc3
+	byte	0xc3
+
+berkeley_14Char81 label byte			;A ring
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0x18,0,0x7e,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3
+	byte	0xc3,0xc3
+
+berkeley_14Char82 label byte			;C cedilla
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0x63,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0x63,0x3e,0x8,0x4
+	byte	0x4,0x18
+
+berkeley_14Char83 label byte			;E acute
+	byte	7	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0,0xfe,0xc0,0xc0,0xc0,0xfc,0xc0,0xc0,0xc0
+	byte	0xc0,0xfe
+
+berkeley_14Char84 label byte			;N tilde
+	byte	9	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x39,0,0x46,0,0,0,0,0,0xc1,0x80,0xe1,0x80
+	byte	0xf1,0x80,0xd9,0x80,0xcd,0x80,0xc7,0x80,0xc3,0x80,0xc1,0x80
+	byte	0xc1,0x80,0xc1,0x80
+
+berkeley_14Char85 label byte			;O dieresis
+	byte	9	;width
+	byte	13	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0,0,0,0,0x3e,0,0x63,0,0xc1,0x80
+	byte	0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0x63,0
+	byte	0x3e,0
+
+berkeley_14Char86 label byte			;U dieresis
+	byte	8	;width
+	byte	13	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x66
+	byte	0x3c
+
+berkeley_14Char87 label byte			;a acute
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0x7e,0xc3,0x3,0x7f,0xc3,0xc3,0xc7,0x7b
+
+berkeley_14Char88 label byte			;a grave
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x8,0,0x7e,0xc3,0x3,0x7f,0xc3,0xc3,0xc7,0x7b
+
+berkeley_14Char89 label byte			;a circumflex
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0,0x7e,0xc3,0x3,0x7f,0xc3,0xc3,0xc7,0x7b
+
+berkeley_14Char8a label byte			;a dieresis
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0x7e,0xc3,0x3,0x7f,0xc3,0xc3,0xc7,0x7b
+
+berkeley_14Char8b label byte			;a tilde
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x32,0x4c,0,0x7e,0xc3,0x3,0x7f,0xc3,0xc3,0xc7,0x7b
+
+berkeley_14Char8c label byte			;a ring
+	byte	8	;width
+	byte	13	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0x24,0x18,0,0x7e,0xc3,0x3,0x7f,0xc3,0xc3,0xc7
+	byte	0x7b
+
+berkeley_14Char8d label byte			;c cedilla
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0x63,0xc0,0xc0,0xc0,0xc0,0x63,0x3e,0x8,0x8,0x10
+
+berkeley_14Char8e label byte			;e acute
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0x3c,0x66,0xc3,0xff,0xc0,0xc0,0x63,0x3e
+
+berkeley_14Char8f label byte			;e grave
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x8,0,0x3c,0x66,0xc3,0xff,0xc0,0xc0,0x63,0x3e
+
+berkeley_14Char90 label byte			;e circumflex
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0,0x3c,0x66,0xc3,0xff,0xc0,0xc0,0x63,0x3e
+
+berkeley_14Char91 label byte			;e dieresis
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0x3c,0x66,0xc3,0xff,0xc0,0xc0,0x63,0x3e
+
+berkeley_14Char92 label byte			;i acute
+	byte	2	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x40,0x80,0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char93 label byte			;i grave
+	byte	2	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x80,0x40,0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Char94 label byte			;i circumflex
+	byte	4	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	0	;x offset
+
+	byte	0x60,0x90,0,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+
+berkeley_14Char95 label byte			;i dieresis
+	byte	4	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	0	;x offset
+
+	byte	0x90,0,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+
+berkeley_14Char96 label byte			;n tilde
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x32,0x4c,0,0xdc,0xe6,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3
+
+berkeley_14Char97 label byte			;o acute
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char98 label byte			;o grave
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x8,0,0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char99 label byte			;o circumflex
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0,0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char9a label byte			;o dieresis
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char9b label byte			;o tilde
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x32,0x4c,0,0x3c,0x66,0xc3,0xc3,0xc3,0xc3,0x66,0x3c
+
+berkeley_14Char9c label byte			;u acute
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b
+
+berkeley_14Char9d label byte			;u grave
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x8,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b
+
+berkeley_14Char9e label byte			;u circumflex
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b
+
+berkeley_14Char9f label byte			;u dieresis
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b
+
+berkeley_14Chara0 label byte			;dagger
+	byte	4	;width
+	byte	6	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0x60,0x60,0xf0,0x60,0x60,0x60
+
+berkeley_14Chara1 label byte			;degree
+	byte	6	;width
+	byte	4	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x78,0xcc,0xcc,0x78
+
+berkeley_14Chara2 label byte			;cent
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x3e,0x6b,0xc8,0xc8,0xc8,0xc8,0x6b,0x3e,0x8,0x8
+
+berkeley_14Chara3 label byte			;sterling
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0x63,0x60,0x60,0xf8,0x60,0x60,0x60,0x63,0xfe
+
+berkeley_14Chara4 label byte			;section
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7e,0xc3,0xc0,0x7e,0xc3,0xc3,0xc3,0x7e,0x3,0xc3,0x7e
+
+berkeley_14Chara5 label byte			;bullet
+	byte	7	;width
+	byte	7	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x38,0x7c,0xfe,0xfe,0xfe,0x7c,0x38
+
+berkeley_14Chara6 label byte			;paragraph
+	byte	10	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3f,0xc0,0x6c,0xc0,0xcc,0xc0,0xcc,0xc0,0xcc,0xc0,0x6c,0xc0
+	byte	0x3f,0xc0,0xc,0xc0,0xc,0xc0,0xc,0xc0
+
+berkeley_14Chara7 label byte			;German double S
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	0	;x offset
+
+	byte	0x3f,0,0x61,0x80,0x61,0x80,0x61,0x80,0x63,0,0x61,0x80
+	byte	0x61,0x80,0x61,0x80,0x61,0x80,0xe7,0
+
+berkeley_14Chara8 label byte			;registered
+	byte	12	;width
+	byte	9	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3f,0xc0,0x60,0x60,0xce,0x30,0xc9,0x30,0xc9,0x30,0xce,0x30
+	byte	0xc9,0x30,0x60,0x60,0x3f,0xc0
+
+berkeley_14Chara9 label byte			;copyright
+	byte	12	;width
+	byte	9	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3f,0xc0,0x60,0x60,0xc6,0x30,0xc9,0x30,0xc8,0x30,0xc9,0x30
+	byte	0xc6,0x30,0x60,0x60,0x3f,0xc0
+
+berkeley_14Charaa label byte			;trademark
+	byte	13	;width
+	byte	4	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xf6,0x18,0x67,0x38,0x66,0xd8,0x66,0x18
+
+berkeley_14Charab label byte			;acute accent
+	byte	2	;width
+	byte	2	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x40,0x80
+
+berkeley_14Charac label byte			;dieresis accent
+	byte	4	;width
+	byte	1	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x90
+
+berkeley_14Charad label byte			;not equal
+	byte	8	;width
+	byte	7	;# rows
+	sbyte	7	;y offset
+	sbyte	1	;x offset
+
+	byte	0x6,0xff,0xff,0x1c,0xff,0xff,0x60
+
+berkeley_14Charae label byte			;capital AE
+	byte	13	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7f,0xf8,0xc3,0x80,0xc3,0x80,0xc3,0x80,0xff,0xf0,0xc3,0x80
+	byte	0xc3,0x80,0xc3,0x80,0xc3,0x80,0xc3,0xf8
+
+berkeley_14Charaf label byte			;capital O slash
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3e,0x80,0x63,0,0xc3,0x80,0xc5,0x80,0xc9,0x80,0xc9,0x80
+	byte	0xd1,0x80,0xe1,0x80,0x63,0,0xbe,0
+
+berkeley_14Charb0 label byte			;infinity
+	byte	14	;width
+	byte	6	;# rows
+	sbyte	7	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7c,0xf8,0xc7,0x8c,0xc3,0xc,0xc3,0xc,0xc7,0x8c,0x7c,0xf8
+
+berkeley_14Charb1 label byte			;plus minus
+	byte	6	;width
+	byte	9	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x30,0x30,0xfc,0xfc,0x30,0x30,0,0xfc,0xfc
+
+berkeley_14Charb2 label byte			;less than or equal
+	byte	6	;width
+	byte	9	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x30,0x60,0xc0,0x60,0x30,0x18,0,0xfc
+
+berkeley_14Charb3 label byte			;greater than or equal
+	byte	6	;width
+	byte	9	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x60,0x30,0x18,0xc,0x18,0x30,0x60,0,0xfc
+
+berkeley_14Charb4 label byte			;yen
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0x66,0x3c,0x7e,0x18,0x18,0x7e,0x18,0x18,0x18
+
+berkeley_14Charb5 label byte			;lower mu
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xe7,0xbb,0x80,0x80
+
+berkeley_14Charb6 label byte			;partial diff
+	byte	8	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7c,0x6,0x3,0x1f,0x33,0x63,0xc3,0xc3,0xc6,0x7c
+
+berkeley_14Charb7 label byte			;sigma / summation
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xff,0x80,0x61,0x80,0x30,0,0x18,0,0xc,0,0xc,0
+	byte	0x18,0,0x30,0,0x61,0x80,0xff,0x80
+
+berkeley_14Charb8 label byte			;product
+	byte	11	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xff,0xe0,0x60,0xc0,0x60,0xc0,0x60,0xc0,0x60,0xc0,0x60,0xc0
+	byte	0x60,0xc0,0x60,0xc0,0x60,0xc0,0x60,0xc0
+
+berkeley_14Charb9 label byte			;pi
+	byte	11	;width
+	byte	9	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0,0x20,0x7f,0xc0,0xb1,0x80,0x31,0x80,0x31,0x80,0x31,0x80
+	byte	0x31,0x80,0x31,0x80,0x63,0
+
+berkeley_14Charba label byte			;integral
+	byte	4	;width
+	byte	14	;# rows
+	sbyte	4	;y offset
+	sbyte	0	;x offset
+
+	byte	0x30,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+	byte	0x60,0xc0
+
+berkeley_14Charbb label byte			;ord feminine
+	byte	7	;width
+	byte	8	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7e,0xc6,0xc6,0xc6,0xc6,0x7e,0,0xfe
+
+berkeley_14Charbc label byte			;ord masculine
+	byte	7	;width
+	byte	8	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7c,0xc6,0xc6,0xc6,0xc6,0x7c,0,0xfe
+
+berkeley_14Charbd label byte			;omega
+	byte	11	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3f,0x80,0x60,0xc0,0xc0,0x60,0xc0,0x60,0xc0,0x60,0xc0,0x60
+	byte	0x60,0xc0,0x31,0x80,0x1b,0,0x7b,0xc0
+
+berkeley_14Charbe label byte			;small ae
+	byte	14	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7e,0xf0,0xc3,0x98,0x3,0xc,0x7f,0xfc,0xc3,0,0xc3,0
+	byte	0xc7,0x8c,0x7b,0xf8
+
+berkeley_14Charbf label byte			;small o slash
+	byte	8	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3d,0x66,0xc7,0xcb,0xd3,0xe3,0x66,0xbc
+
+berkeley_14Charc0 label byte			;question down
+	byte	8	;width
+	byte	11	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x18,0,0x18,0x18,0xc,0x6,0x3,0xc3,0x66,0x3c
+
+berkeley_14Charc1 label byte			;exclamation down
+	byte	2	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Charc2 label byte			;logical not
+	byte	7	;width
+	byte	4	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0xfe,0xfe,0x6,0x6
+
+berkeley_14Charc3 label byte			;root
+	byte	11	;width
+	byte	12	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0,0xe0,0,0xe0,0x1,0x80,0x1,0x80,0x3,0,0x3,0
+	byte	0x6,0,0x6,0,0xcc,0,0x6c,0,0x38,0,0x18,0
+
+berkeley_14Charc4 label byte			;florin
+	byte	4	;width
+	byte	14	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x30,0x60,0x60,0xf0,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+	byte	0x60,0xc0
+
+berkeley_14Charc5 label byte			;approximately equal
+	byte	8	;width
+	byte	5	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7b,0xde,0,0x7b,0xde
+
+berkeley_14Charc6 label byte			;delta
+	byte	9	;width
+	byte	9	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0,0x1c,0,0x1c,0,0x36,0,0x36,0,0x63,0
+	byte	0x63,0,0xc1,0x80,0xff,0x80
+
+berkeley_14Charc7 label byte			;guilled dbl left
+	byte	10	;width
+	byte	7	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0xc0,0x31,0x80,0x63,0,0xc6,0,0x63,0,0x31,0x80
+	byte	0x18,0xc0
+
+berkeley_14Charc8 label byte			;guilled dbl right
+	byte	10	;width
+	byte	7	;# rows
+	sbyte	8	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc6,0,0x63,0,0x31,0x80,0x18,0xc0,0x31,0x80,0x63,0
+	byte	0xc6,0
+
+berkeley_14Charc9 label byte			;ellipsis
+	byte	12	;width
+	byte	2	;# rows
+	sbyte	12	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc6,0x30,0xc6,0x30
+
+berkeley_14Charca label byte			;non-brk space
+	byte	0,0,0,0,0
+
+
+berkeley_14Charcb label byte			;A grave
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x8,0,0,0x7e,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3
+	byte	0xc3,0xc3
+
+berkeley_14Charcc label byte			;A tilde
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x39,0x46,0,0,0x7e,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3
+	byte	0xc3,0xc3
+
+berkeley_14Charcd label byte			;O tilde
+	byte	9	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x39,0,0x46,0,0,0,0,0,0x3e,0,0x63,0
+	byte	0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80
+	byte	0x63,0,0x3e,0
+
+berkeley_14Charce label byte			;capital OE
+	byte	14	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3f,0xfc,0x63,0x80,0xc1,0x80,0xc1,0x80,0xc1,0xf8,0xc1,0x80
+	byte	0xc1,0x80,0xc1,0x80,0x63,0x80,0x3f,0xfc
+
+berkeley_14Charcf label byte			;small oe
+	byte	14	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0xf0,0x67,0x98,0xc3,0xc,0xc3,0xfc,0xc3,0,0xc3,0
+	byte	0x67,0x8c,0x3c,0xf8
+
+berkeley_14Chard0 label byte			;en dash
+	byte	5	;width
+	byte	1	;# rows
+	sbyte	10	;y offset
+	sbyte	1	;x offset
+
+	byte	0xf8
+
+berkeley_14Chard1 label byte			;em dash
+	byte	8	;width
+	byte	1	;# rows
+	sbyte	10	;y offset
+	sbyte	1	;x offset
+
+	byte	0xff
+
+berkeley_14Chard2 label byte			;quote dbl left
+	byte	6	;width
+	byte	4	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0x44,0x88,0xcc,0xcc
+
+berkeley_14Chard3 label byte			;quote dbl right
+	byte	6	;width
+	byte	4	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0xcc,0xcc,0x44,0x88
+
+berkeley_14Chard4 label byte			;quote sgl left
+	byte	2	;width
+	byte	4	;# rows
+	sbyte	2	;y offset
+	sbyte	1	;x offset
+
+	byte	0x40,0x80,0xc0,0xc0
+
+berkeley_14Chard5 label byte			;quote sgl right
+	byte	2	;width
+	byte	4	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0x40,0x80
+
+berkeley_14Chard6 label byte			;division
+	byte	6	;width
+	byte	8	;# rows
+	sbyte	5	;y offset
+	sbyte	1	;x offset
+
+	byte	0x30,0x30,0,0xfc,0xfc,0,0x30,0x30
+
+berkeley_14Chard7 label byte			;lozenge
+	byte	11	;width
+	byte	11	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x4,0,0xe,0,0x1b,0,0x31,0x80,0x60,0xc0,0xc0,0x60
+	byte	0x60,0xc0,0x31,0x80,0x1b,0,0xe,0,0x4,0
+
+berkeley_14Chard8 label byte			;y dieresis
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b,0x3,0x3
+	byte	0x66,0x3c
+
+berkeley_14Chard9 label byte			;Y dieresis
+	byte	8	;width
+	byte	13	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x24,0,0,0xc3,0xc3,0xc3,0x66,0x3c,0x18,0x18,0x18,0x18
+	byte	0x18
+
+berkeley_14Charda label byte			;fraction
+	byte	9	;width
+	byte	10	;# rows
+	sbyte	5	;y offset
+	sbyte	0	;x offset
+
+	byte	0,0x80,0x1,0x80,0x3,0,0x6,0,0xc,0,0x18,0
+	byte	0x30,0,0x60,0,0xc0,0,0x80,0
+
+berkeley_14Chardb label byte			;currency
+	byte	7	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x3c,0x3c,0x62,0xc0,0xf8,0xc0,0xc0,0xf8,0x62,0x3c
+
+berkeley_14Chardc label byte			;guilled sgl left
+	byte	6	;width
+	byte	9	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc,0x18,0x30,0x60,0xc0,0x60,0x30,0x18,0xc
+
+berkeley_14Chardd label byte			;guilled sgl right
+	byte	6	;width
+	byte	9	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0x60,0x30,0x18,0xc,0x18,0x30,0x60,0xc0
+
+berkeley_14Charde label byte			;y acute
+	byte	8	;width
+	byte	15	;# rows
+	sbyte	3	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0x67,0x3b,0x3
+	byte	0x3,0x66,0x3c
+
+berkeley_14Chardf label byte			;Y acute
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0,0xc3,0xc3,0xc3,0x66,0x3c,0x18,0x18,0x18
+	byte	0x18,0x18
+
+berkeley_14Chare0 label byte			;double dagger
+	byte	4	;width
+	byte	9	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x60,0x60,0xf0,0x60,0x60,0x60,0xf0,0x60,0x60
+
+berkeley_14Chare1 label byte			;centered dot
+	byte	1	;width
+	byte	1	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x80
+
+berkeley_14Chare2 label byte			;quote sgl low
+	byte	2	;width
+	byte	4	;# rows
+	sbyte	12	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0x40,0x80
+
+berkeley_14Chare3 label byte			;quote dbl low
+	byte	6	;width
+	byte	4	;# rows
+	sbyte	12	;y offset
+	sbyte	1	;x offset
+
+	byte	0xcc,0xcc,0x44,0x88
+
+berkeley_14Chare4 label byte			;per thousand
+	byte	14	;width
+	byte	10	;# rows
+	sbyte	4	;y offset
+	sbyte	1	;x offset
+
+	byte	0x7f,0xc0,0xdc,0xc0,0xdd,0x80,0x7b,0,0x6,0,0xc,0
+	byte	0x1b,0xf8,0x36,0xec,0x66,0xec,0x63,0xf8
+
+berkeley_14Chare5 label byte			;A circumflex
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0,0,0x7e,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3
+	byte	0xc3,0xc3
+
+berkeley_14Chare6 label byte			;E circumflex
+	byte	7	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x30,0x48,0,0,0xfe,0xc0,0xc0,0xc0,0xfc,0xc0,0xc0,0xc0
+	byte	0xc0,0xfe
+
+berkeley_14Chare7 label byte			;A acute
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x8,0x10,0,0,0x7e,0xc3,0xc3,0xc3,0xff,0xc3,0xc3,0xc3
+	byte	0xc3,0xc3
+
+berkeley_14Chare8 label byte			;E dieresis
+	byte	7	;width
+	byte	13	;# rows
+	sbyte	1	;y offset
+	sbyte	1	;x offset
+
+	byte	0x44,0,0,0xfe,0xc0,0xc0,0xc0,0xfc,0xc0,0xc0,0xc0,0xc0
+	byte	0xfe
+
+berkeley_14Chare9 label byte			;E grave
+	byte	7	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x20,0x10,0,0,0xfe,0xc0,0xc0,0xc0,0xfc,0xc0,0xc0,0xc0
+	byte	0xc0,0xfe
+
+berkeley_14Charea label byte			;I acute
+	byte	2	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x40,0x80,0,0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+	byte	0xc0,0xc0
+
+berkeley_14Chareb label byte			;I circumflex
+	byte	4	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0x60,0x90,0,0,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+	byte	0x60,0x60
+
+berkeley_14Charec label byte			;I dieresis
+	byte	4	;width
+	byte	13	;# rows
+	sbyte	1	;y offset
+	sbyte	0	;x offset
+
+	byte	0x90,0,0,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60
+	byte	0x60
+
+berkeley_14Chared label byte			;I grave
+	byte	2	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x80,0x40,0,0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+	byte	0xc0,0xc0
+
+berkeley_14Charee label byte			;O acute
+	byte	9	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x4,0,0x8,0,0,0,0,0,0x3e,0,0x63,0
+	byte	0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80
+	byte	0x63,0,0x3e,0
+
+berkeley_14Charef label byte			;O circumflex
+	byte	9	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0,0x24,0,0,0,0,0,0x3e,0,0x63,0
+	byte	0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80
+	byte	0x63,0,0x3e,0
+
+berkeley_14Charf0 label byte			;logo
+	byte	11	;width
+	byte	15	;# rows
+	sbyte	1	;y offset
+	sbyte	0	;x offset
+
+	byte	0xff,0xe0,0xfb,0xe0,0xfb,0xe0,0xf1,0xe0,0xd1,0x60,0xc0,0x60
+	byte	0xd5,0x60,0xd5,0x60,0xd5,0x60,0xc0,0x60,0xc0,0x60,0xc0,0x60
+	byte	0xc0,0x60,0xc0,0x60,0xc0,0x60
+
+berkeley_14Charf1 label byte			;O grave
+	byte	9	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0,0x8,0,0,0,0,0,0x3e,0,0x63,0
+	byte	0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80,0xc1,0x80
+	byte	0x63,0,0x3e,0
+
+berkeley_14Charf2 label byte			;U acute
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x4,0x8,0,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3
+	byte	0x66,0x3c
+
+berkeley_14Charf3 label byte			;U circumflex
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x18,0x24,0,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3
+	byte	0x66,0x3c
+
+berkeley_14Charf4 label byte			;U grave
+	byte	8	;width
+	byte	14	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x10,0x8,0,0,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3
+	byte	0x66,0x3c
+
+berkeley_14Charf5 label byte			;i dotless
+	byte	2	;width
+	byte	8	;# rows
+	sbyte	6	;y offset
+	sbyte	1	;x offset
+
+	byte	0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0
+
+berkeley_14Charf6 label byte			;circumflex
+	byte	4	;width
+	byte	2	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0x60,0x90
+
+berkeley_14Charf7 label byte			;tilde
+	byte	7	;width
+	byte	2	;# rows
+	sbyte	0	;y offset
+	sbyte	1	;x offset
+
+	byte	0x72,0x8c
+
+berkeley_14Charf8 label byte			;macron
+	byte	6	;width
+	byte	1	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0xfc
+
+berkeley_14Charf9 label byte			;breve
+	byte	5	;width
+	byte	2	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0x88,0x70
+
+berkeley_14Charfa label byte			;dot accent
+	byte	1	;width
+	byte	1	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0x80
+
+berkeley_14Charfb label byte			;ring accent
+	byte	5	;width
+	byte	5	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0x70,0x88,0x88,0x88,0x70
+
+berkeley_14Charfc label byte			;cedilla
+	byte	2	;width
+	byte	4	;# rows
+	sbyte	14	;y offset
+	sbyte	0	;x offset
+
+	byte	0x80,0x80,0x40,0x80
+
+berkeley_14Charfd label byte			;Hungarian umlat
+	byte	6	;width
+	byte	2	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0x44,0x88
+
+berkeley_14Charfe label byte			;ogonek
+	byte	2	;width
+	byte	4	;# rows
+	sbyte	14	;y offset
+	sbyte	0	;x offset
+
+	byte	0x40,0x40,0x80,0x40
+
+berkeley_14Charff label byte			;caron
+	byte	6	;width
+	byte	3	;# rows
+	sbyte	0	;y offset
+	sbyte	0	;x offset
+
+	byte	0x84,0x48,0x30
+
+berkeley_14EndData label byte
+berkeley_14Seg	ends

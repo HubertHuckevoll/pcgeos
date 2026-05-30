@@ -948,6 +948,20 @@ static void FormatPointSize(const PointEntry *entryP, char *buf)
             entryP->pointSize[2]);
 }
 
+static void FormatStrikeDirName(const PointEntry *entryP, char *buf)
+{
+    unsigned int pointSize;
+
+    pointSize = ((unsigned int)entryP->pointSize[0] << 8) |
+                (unsigned int)entryP->pointSize[1];
+    if (entryP->pointSize[2] == 0) {
+        sprintf(buf, "size_pt_%02u_style_%02x", pointSize, entryP->style);
+    } else {
+        sprintf(buf, "size_pt_%02u_%02x_style_%02x", pointSize,
+                entryP->pointSize[2], entryP->style);
+    }
+}
+
 static int WriteStrikeMeta(const char *path, const PointEntry *entryP,
                            const FontBufInfo *fbP)
 {
@@ -1115,7 +1129,6 @@ static int DoUnpack(const char *fontPath, const char *fontDir)
     unsigned int i;
     unsigned int exported;
     char **strikeNamesP;
-    char pointBuf[16];
     char nameBuf[96];
     char *pathP;
     char *strikesDirP;
@@ -1158,9 +1171,7 @@ static int DoUnpack(const char *fontPath, const char *fontDir)
     free(pathP);
     exported = 0;
     for (i = 0; i < count; i++) {
-        FormatPointSize(entriesP + i, pointBuf);
-        sprintf(nameBuf, "%03u_style-%02x_pt-%s", i, entriesP[i].style,
-                pointBuf);
+        FormatStrikeDirName(entriesP + i, nameBuf);
         strikeNamesP[i] = DupString(nameBuf);
         if (strikeNamesP[i] == (char *)0) {
             free(strikesDirP);
@@ -1248,6 +1259,26 @@ static int MetaGetULong(const TextData *textP, const char *key,
         return 0;
     }
     *valueP = strtoul(s, &endP, 0);
+    if (*endP != '\0') {
+        fprintf(stderr, "fntpatch: invalid metadata value %s=%s\n", key, s);
+        free(s);
+        return 0;
+    }
+    free(s);
+    return 1;
+}
+
+static int MetaGetLong(const TextData *textP, const char *key, long *valueP)
+{
+    char *s;
+    char *endP;
+
+    s = MetaGet(textP, key);
+    if (s == (char *)0) {
+        fprintf(stderr, "fntpatch: missing metadata key %s\n", key);
+        return 0;
+    }
+    *valueP = strtol(s, &endP, 0);
     if (*endP != '\0') {
         fprintf(stderr, "fntpatch: invalid metadata value %s=%s\n", key, s);
         free(s);
@@ -1379,7 +1410,10 @@ static int PackGlyph(const char *strikeDir, const TextData *glyphMetaP,
     unsigned long payloadSize;
     unsigned long expectedPayloadSize;
     unsigned long dataFileOffset;
+    unsigned long dataHeaderOffset;
     unsigned long exportable;
+    long xoff;
+    long yoff;
     int differs;
 
     payloadP = (Byte *)0;
@@ -1417,18 +1451,32 @@ static int PackGlyph(const char *strikeDir, const TextData *glyphMetaP,
         free(pbmRelP);
         return 0;
     }
+    sprintf(key, "glyph.%03u.cd_xoff", glyphIndex);
+    if (!MetaGetLong(glyphMetaP, key, &xoff)) {
+        free(pbmRelP);
+        return 0;
+    }
+    sprintf(key, "glyph.%03u.cd_yoff", glyphIndex);
+    if (!MetaGetLong(glyphMetaP, key, &yoff)) {
+        free(pbmRelP);
+        return 0;
+    }
     sprintf(key, "glyph.%03u.cd_data_file_offset", glyphIndex);
     if (!MetaGetULong(glyphMetaP, key, &dataFileOffset)) {
         free(pbmRelP);
         return 0;
     }
     if (((width + 7) / 8) != rowBytes ||
+        dataFileOffset < CHAR_DATA_HEADER_SIZE ||
+        xoff < -128 || xoff > 127 ||
+        yoff < -128 || yoff > 127 ||
         dataFileOffset + expectedPayloadSize > fontSize) {
         fprintf(stderr, "fntpatch: glyph %03u metadata range is invalid\n",
                 glyphIndex);
         free(pbmRelP);
         return 0;
     }
+    dataHeaderOffset = dataFileOffset - CHAR_DATA_HEADER_SIZE;
     pbmPathP = PathJoin(strikeDir, pbmRelP);
     free(pbmRelP);
     if (pbmPathP == (char *)0) {
@@ -1447,9 +1495,13 @@ static int PackGlyph(const char *strikeDir, const TextData *glyphMetaP,
         return 0;
     }
     differs = memcmp(fontDataP + dataFileOffset, payloadP,
-                     (size_t)payloadSize) != 0;
+                     (size_t)payloadSize) != 0 ||
+              fontDataP[dataHeaderOffset + 2] != (Byte)(yoff & 0xff) ||
+              fontDataP[dataHeaderOffset + 3] != (Byte)(xoff & 0xff);
     if (differs) {
         memcpy(fontDataP + dataFileOffset, payloadP, (size_t)payloadSize);
+        fontDataP[dataHeaderOffset + 2] = (Byte)(yoff & 0xff);
+        fontDataP[dataHeaderOffset + 3] = (Byte)(xoff & 0xff);
         (*changedP)++;
     } else {
         (*unchangedP)++;
