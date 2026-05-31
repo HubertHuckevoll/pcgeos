@@ -401,7 +401,11 @@ FSL18 = GenItem {
 FontSample = GenText {
     genAttributes = default +readOnly;
     textDisplayAttributes = default +singleLineText;
-    text = "Sample text in selected font size.";
+    text = data {
+        char "Text in selected font size E"
+        byte C_CURRENCY
+        char ".", 0
+    }
     hints = {
 	ATTR_GEN_TEXT_DEFAULT_CHAR_ATTR {
 	    word DEF_CHAR_ATTR_FONT_SIZE(VTDF_BERKELEY, VTDS_10)
