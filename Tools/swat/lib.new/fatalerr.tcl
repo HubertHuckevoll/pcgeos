@@ -374,57 +374,6 @@ See also:
 #	    - otherwise resolve symbol/type through scope + expression parsing
 #	    - fall back to raw word/dword output when typed print is unavailable
 #
-# EC log resolver coverage matrix (quick manual test guide)
-# ----------------------------------------------------------
-# NOTE: EC_LOG_T logs the expression text (#varExpr) and the address of &varExpr.
-# This handler resolves/prints using:
-#   1) symbol lookup (locals/globals/scope chain), then
-#   2) expression type parse, then
-#   3) address-based var symbol fallback, then
-#   4) raw word/dword fallback.
-#
-# Case A: local scalar
-#   C:   EC_LOG_T(i);
-#   Tag: "i"
-#   Expected: local symbol/type resolved; typed value printed.
-#
-# Case B: global in current patient
-#   C:   EC_LOG_T(curBlock);
-#   Tag: "curBlock"
-#   Expected: patient/global symbol resolved; typed value printed.
-#
-# Case C: namespaced/global reference
-#   C:   EC_LOG_T(geos::uiFlowFlags);
-#   Tag: "geos::uiFlowFlags"
-#   Expected: global symbol path resolves full name; typed value printed.
-#
-# Case D: direct struct member
-#   C:   EC_LOG_T(header.FQTH_pathname);
-#   Tag: "header.FQTH_pathname"
-#   Expected: member-type resolver walks "." chain and prints member type.
-#
-# Case E: pointer member
-#   C:   EC_LOG_T(headerPtr->FQTH_pathname);
-#   Tag: "headerPtr->FQTH_pathname"
-#   Expected: member-type resolver walks "->" chain (or addr-parse fallback).
-#
-# Case F: deep pointer/member chain
-#   C:   EC_LOG_T(statePtr->node.next->count);
-#   Tag: "statePtr->node.next->count"
-#   Expected: chained member resolution; typed print if intermediate types exist.
-#
-# Case G: ambiguous/truncated long expression (>127 chars logged)
-#   C:   EC_LOG_T(reallyLongStructName.reallyLongFieldName);
-#   Tag: first 127 chars only
-#   Expected: expression/symbol may miss by name; address-based var fallback can
-#             still match exact symbol or 127-char prefix and print typed value.
-#
-# Case H: unsupported/complex expression form
-#   C:   EC_LOG_T((fooPtr+1)->bar[2]);
-#   Tag: "(fooPtr+1)->bar[2]"
-#   Expected: may fail symbol/member parse; addr-parse may still resolve type;
-#             otherwise raw fallback message is printed.
-#
 # REVISION HISTORY:
 #	Name	Date		Description
 #	----	----		-----------

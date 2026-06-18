@@ -718,10 +718,43 @@ given address.
     4   D kcode::CWARNINGNOTICE all why-warning
     5   E <ss1::MESS1_TEXT::Mess1Draw+10 all halt
     (geos:0) 9 =>
-    
+
 ----------
 
-**go**  
+EC warning logging adds a special warning code, EC_LOG_WARNING, used by the
+EC_LOG_T and EC_LOG_S macros. The why-warning command recognizes this warning
+and prints the logged value instead of printing a normal warning line.
+
+EC_LOG_S logs a string pointer. If the tag came from a string literal, Swat
+prints the string once as EC log: text. Otherwise it prints the string with the
+logged expression name.
+
+EC_LOG_T logs the expression text and the address of that expression. Swat
+resolves the value by trying local and global symbols, then expression type
+parsing, then an address-based variable lookup, and finally raw word and dword
+output.
+
+The following cases are useful when testing the resolver:
+
++ EC_LOG_T(i) should resolve a local scalar by local symbol and print its typed
+  value.
++ EC_LOG_T(curBlock) should resolve a current-patient symbol or global and print
+  its typed value.
++ EC_LOG_T(geos::uiFlowFlags) should resolve a fully-qualified global symbol.
++ EC_LOG_T(header.FQTH_pathname) should walk a direct structure member chain.
++ EC_LOG_T(headerPtr->FQTH_pathname) should walk a pointer member chain, or use
+  the address parser fallback.
++ EC_LOG_T(statePtr->node.next->count) should print a deep member chain when
+  intermediate types are present in the symbols.
++ EC_LOG_T(reallyLongStructName.reallyLongFieldName) may be truncated after 127
+  characters; address-based lookup can still recover the typed value when the
+  symbol name matches exactly or by that prefix.
++ EC_LOG_T((fooPtr+1)->bar[2]) may fail symbol and member parsing; address
+  parsing may still resolve the type, otherwise Swat prints raw fallback values.
+
+----------
+
+**go**
     go [<address-expressions>]
 
 The go command sets a one-time breakpoint and resumes execution on the 
