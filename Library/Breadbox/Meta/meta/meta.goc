@@ -862,16 +862,16 @@ Meta_Ellipse(sword cex,sword cey,sword rx,sword ry,sword angle,
     _Meta_chk(cex,cey,&cex,&cey);
     _Meta_chk(rx,ry,&rx,&ry);
 
-    if(meta_GrObj) {                /*** GrObj output */
-        obj = Create_GrObj(x1, y1, x2, y2,
-                           (ClassStruct *)&EllipseClass, TRUE, in, edges);
-        if(angle && rx!=ry)
-            @call obj::MSG_GO_ROTATE(HANDLE_CENTER,MakeWWFixed(-angle));
-        Add_GrObj(obj);
-    }
-    else if(in || edges)            /*** GString output */
-    {
-        _Meta_UpdateEnvironment();    /* update general data */
+        if(meta_GrObj) {                /*** GrObj output */
+          obj = Create_GrObj(x1,y1,x2,y2,(ClassStruct *)&EllipseClass,
+            TRUE,in,edges);
+          if(angle && rx!=ry)
+            @call obj::MSG_GO_ROTATE(MakeWWFixed(-angle),HANDLE_CENTER);
+          Add_GrObj(obj);
+        }
+        else if(in || edges)            /*** GString output */
+        {
+          _Meta_UpdateEnvironment();    /* update general data */
 
         if(angle && rx!=ry && (in || edges))
         {
@@ -940,17 +940,17 @@ Meta_EllipticalArc(sword cex,sword cey,sword rx,sword ry,sword angle,
                 ea+=180;                  /* compensate start/end angle */
                 sa+=180;
             }
-            @call obj::MSG_GO_ROTATE(HANDLE_CENTER,MakeWWFixed(-angle));
-            /* rotate by given angle */
+            @call obj::MSG_GO_ROTATE(MakeWWFixed(-angle),HANDLE_CENTER);
+                                        /* rotate by given angle */
+          }
+          Add_GrObj(obj);
+          @call obj::MSG_ARC_SET_START_ANGLE(MakeWWFixed(sa));
+          @call obj::MSG_ARC_SET_END_ANGLE(MakeWWFixed(ea));
+          @call obj::MSG_ARC_SET_ARC_CLOSE_TYPE(act);
         }
-        Add_GrObj(obj);
-        @call obj::MSG_ARC_SET_START_ANGLE(MakeWWFixed(sa));
-        @call obj::MSG_ARC_SET_END_ANGLE(MakeWWFixed(ea));
-        @call obj::MSG_ARC_SET_ARC_CLOSE_TYPE(act);
-    }
-    else if(in || edges)            /*** GString output */
-    {
-        _Meta_UpdateEnvironment();    /* update general data */
+        else if(in || edges)            /*** GString output */
+        {
+          _Meta_UpdateEnvironment();    /* update general data */
 
         if((angle || yscale!=MakeWWFixed(1)) && (in || edges))
         {
