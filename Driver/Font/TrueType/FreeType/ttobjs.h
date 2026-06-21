@@ -20,7 +20,6 @@
 
 #include "ttconfig.h"
 #include "ttengine.h"
-#include "ttcache.h"
 #include "tttables.h"
 #include "ttcmap.h"
 #include <heap.h>
@@ -184,7 +183,7 @@
     TT_UnitVector  projVector;
     TT_UnitVector  freeVector;
 
-    Long           loop;
+    Int            loop;
     TT_F26Dot6     minimum_distance;
     Int            round_state;
 
@@ -315,6 +314,8 @@
 
 #endif
 
+#define CALL_INTERPRETER  ( engineInstance.interpreterActive ? RunIns( exec ) : TT_Err_Ok )
+
   /* Rounding function, as used by the interpreter */
   typedef TT_F26Dot6  TRound_Function( EXEC_OPS TT_F26Dot6 distance,
                                                 TT_F26Dot6 compensation );
@@ -329,14 +330,6 @@
   /* by the interpreter                                          */
   typedef TT_F26Dot6  TProject_Function( EXEC_OPS TT_Vector*  v1,
                                                   TT_Vector*  v2 );
-
-  /* reading a cvt value. Take care of non-square pixels when needed */
-  typedef TT_F26Dot6  TGet_CVT_Function( EXEC_OPS UShort  index );
-
-  /* setting or moving a cvt value.  Take care of non-square pixels  */
-  /* when needed                                                     */
-  typedef void  TSet_CVT_Function ( EXEC_OPS  UShort      index,
-                                              TT_F26Dot6  value );
 
   /* subglyph transformation record */
   struct  TTransform_
@@ -359,7 +352,7 @@
 
     Long         file_offset;
 
-    TT_Big_Glyph_Metrics  metrics;
+    TT_Glyph_Metrics  metrics;
 
     TGlyph_Zone  zone;
 
@@ -435,25 +428,14 @@
   /* metrics used by the instance and execution context objects */
   struct  TIns_Metrics_
   {
-    TT_F26Dot6  pointSize;      /* point size.  1 point = 1/72 inch. */
+    TT_F26Dot6  pointSize;   /* point size.  1 point = 1/72 inch. */
 
-    UShort      x_resolution;   /* device horizontal resolution in dpi. */
-    UShort      y_resolution;   /* device vertical resolution in dpi.   */
-
-    UShort      x_ppem;         /* horizontal pixels per EM */
-    UShort      y_ppem;         /* vertical pixels per EM   */
-
-    Long        x_scale1;
-    Long        x_scale2;    /* used to scale FUnits to fractional pixels */
-
-    Long        y_scale1;
-    Long        y_scale2;    /* used to scale FUnits to fractional pixels */
-
-    /* for non-square pixels */
-    Long        x_ratio;
-    Long        y_ratio;
-
+    UShort      resolution;  /* device resolution in dpi. */
     UShort      ppem;        /* maximum ppem size */
+    Long        x_scale1;
+
+    Long        units_per_em;
+
     Long        ratio;       /* current ratio     */
     Long        scale1;
     Long        scale2;      /* scale for ppem */
@@ -474,9 +456,6 @@
 
   struct  TFace_
   {
-    /* parent engine instance for the face object */
-    PEngine_Instance  engine;
-
     /* i/o stream */
     TT_Stream  stream;
 
@@ -552,22 +531,8 @@
     UShort  maxContours;   /* max glyph contours numb, simple and composite */
     UShort  maxComponents; /* max components in a composite glyph */
 
-    /* the following are object caches to track active */
-    /* and recycled instances and execution contexts   */
-    /* objects.  See 'ttcache.h'                       */
-
-    TCache  instances;   /* current instances for this face */
-    TCache  glyphs;      /* current glyph containers for this face */
-
-
-    /* A typeless pointer to the face object extensions defined */
-    /* in the 'ttextend.*' files.                               */
-    void*  extension;
-    Int    n_extensions;    /* number of extensions */
-
-    /* Use extensions to provide additional capabilities to the */
-    /* engine.  Read the developer's guide in the documentation */
-    /* directory to know how to do that.                        */
+    PInstance  instance;   /* current instances for this face */
+    PGlyph     glyph;      /* current glyph containers for this face */
   };
 
 
@@ -600,7 +565,6 @@
     TCodeRangeTable  codeRangeTable;
 
     TGraphicsState   GS;
-    TGraphicsState   default_GS;
 
     UShort           cvtSize;   /* the scaled control value table */
     PLong            cvt;
@@ -632,7 +596,7 @@
     UShort          stackSize;  /* size of exec. stack */
     PStorage        stack;      /* current exec. stack */
 
-    Long            args;
+    Short           args;
     UShort          new_top;    /* new top after exec.    */
 
     TGlyph_Zone     zp0,            /* zone records */
@@ -690,16 +654,10 @@
     TT_F26Dot6      phase;      /* 'SuperRounding'     */
     TT_F26Dot6      threshold;
 
-    Long            scale1;         /* scaling values along the current   */
-    Long            scale2;         /* projection vector too..            */
-    Bool            cached_metrics; /* the ppem is computed lazily. used  */
-                                    /* to trigger computation when needed */
-
+#ifdef DEBUG_INTERPRETER
     Bool            instruction_trap;  /* If True, the interpreter will */
-                                       /* exit after each instruction   */
+#endif                                 /* exit after each instruction   */
 
-    TGraphicsState  default_GS;    /* graphics state resulting from  */
-                                   /* the prep program               */
     Bool            is_composite;  /* ture if the glyph is composite */
 
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
@@ -714,17 +672,11 @@
 
     TProject_Function  _near * func_project;   /* current projection function */
     TProject_Function  _near * func_dualproj;  /* current dual proj. function */
-    TProject_Function  _near * func_freeProj;  /* current freedom proj. func  */
 
     TMove_Function     _near * func_move;      /* current point move function */
-
-    TGet_CVT_Function  _near * func_read_cvt;  /* read a cvt entry              */
-    TSet_CVT_Function  _near * func_write_cvt; /* write a cvt entry (in pixels) */
-    TSet_CVT_Function  _near * func_move_cvt;  /* incr a cvt entry (in pixels)  */
-
+    
     UShort             loadSize;
     PSubglyph_Stack    loadStack;      /* loading subglyph stack */
-
   };
 
 
@@ -736,9 +688,9 @@
 
   struct TGlyph_
   {
-    PFace                 face;
-    TT_Big_Glyph_Metrics  metrics;
-    TT_Outline            outline;
+    PFace             face;
+    TT_Glyph_Metrics  metrics;
+    TT_Outline        outline;
   };
 
 
@@ -748,8 +700,6 @@
   struct  TFont_Input_
   {
     TT_Stream         stream;     /* input stream                */
-    PEngine_Instance  engine;     /* parent engine instance      */
-
   };
 
   typedef struct TFont_Input_  TFont_Input;
@@ -793,7 +743,7 @@
                           PInstance           ins );
 
   LOCAL_DEF
-  TT_Error  Context_Save( PExecution_Context  exec,
+  void      Context_Save( PExecution_Context  exec,
                           PInstance           ins );
 
   LOCAL_DEF
@@ -817,8 +767,8 @@
   /*                                                                  */
   /********************************************************************/
 
-  LOCAL_DEF TT_Error  TTObjs_Init( PEngine_Instance  engine );
-  LOCAL_DEF TT_Error  TTObjs_Done( PEngine_Instance  engine );
+  LOCAL_DEF TT_Error  TTObjs_Init( );
+  LOCAL_DEF void      TTObjs_Done( );
 
 #ifdef __cplusplus
   }

@@ -221,9 +221,9 @@ typedef struct {
 } HTMLStylesTable;
 
 typedef struct {
-    unsigned int num;
-    char name[7];
-    unsigned int c;
+  char name[7];
+  unsigned int num;
+  unsigned int c;
 } HTMLEntityTable;
 
 typedef struct {
@@ -310,6 +310,7 @@ extern dword textpos;
 
 extern word            currentFlags;
 extern VisTextCharAttr currentCS;
+extern VisTextCharAttr parentCS;
 extern VisTextParaAttr currentS;
 extern sword           currentBaseFont;
 
@@ -381,6 +382,7 @@ Boolean AddCellRecord(void);
 word GetCellLevel(void);
 void AddParaCond(void);
 void AddParaCondBeforeTable(void);
+void SetDocumentCharset(char *charSet);
 
 void GetCharacterBase(VisTextCharAttr *cs);
 void GetParagraphBase(VisTextParaAttr *cs);

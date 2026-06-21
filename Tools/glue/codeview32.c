@@ -166,8 +166,14 @@ CV32LocatePublic(ID   	name,	    	/* Name to find */
 	     *
 	     * 12/4/18: need to bring case-insensitve comparison back
 	     * due to upper casing of some names by Watcom C -- mgroeber
+	     *
+	     * 9/5/25: back to previous, seems to still work for bulding
+	     * all ensemble.
  	     */
-	    if (((*bp == namelen) && (ustrncmp((char *)bp+1, namestr, namelen) == 0)) ||
+	    if (((*bp == namelen) &&
+		 (geosRelease >= 2 ?
+		  (strncmp((char *)bp+1, namestr, namelen) == 0) :
+		  (ustrncmp((char *)bp+1, namestr, namelen) == 0))) ||
 		((aliasPtr != NULL) &&
 		 (bp[1] == '_') && (*bp == namelen+1) &&
 		 (strncmp(namestr, (char *)bp+2, namelen) == 0))) {
@@ -847,6 +853,59 @@ CV32CreateTypedef(const char    	*file,	    /* Object file from which the
 	VMFree(symbols, tsymBlock);
     }
 }
+
+
+/***********************************************************************
+ *                      CV32EnterTypedef
+ ***********************************************************************
+ * SYNOPSIS:        Enter a single OSYM_TYPEDEF symbol into the global
+ *                  type-symbol stream, given a pre-resolved name and
+ *                  type word.  Shared workhorse for CST2_UDT.
+ * CALLED BY:       CV32ProcessSymbols (CST2_UDT case)
+ * RETURN:          Nothing
+ * SIDE EFFECTS:    A temporary sym-block is allocated, filled, passed to
+ *                  Obj_EnterTypeSyms(OETS_TOP_LEVEL_ONLY), then freed.
+ *
+ * STRATEGY:
+ *      Mirrors the pattern in CV32CreateTypedef / CV32FinishStructuredType:
+ *      allocate a one-symbol VMBlock, set osh->types to the caller-supplied
+ *      typeBlock so Obj_EnterTypeSyms can follow non-special type offsets,
+ *      fill the ObjSym, unlock+dirty, enter, free.
+ *
+ ***********************************************************************/
+static void
+CV32EnterTypedef(const char    *file,       /* Object file (for errors)     */
+                 ID             name,       /* Symbol name (!= NullID)       */
+                 word           typeWord,   /* Resolved word from CV32FetchType */
+                 VMBlockHandle  typeBlock)  /* Type block owning typeWord    */
+{
+    VMBlockHandle   tsymBlock;
+    ObjSymHeader   *osh;
+    ObjSym         *os;
+
+    tsymBlock = VMAlloc(symbols,
+                        sizeof(ObjSymHeader) + sizeof(ObjSym),
+                        OID_SYM_BLOCK);
+
+    osh = (ObjSymHeader *)VMLock(symbols, tsymBlock, (MemHandle *)NULL);
+    osh->num   = 1;
+    osh->types = typeBlock;     /* Required by Obj_EnterTypeSyms */
+    osh->seg   = 0;
+    osh->next  = 0;
+
+    os = ObjFirstEntry(osh, ObjSym);
+    os->type           = OSYM_TYPEDEF;
+    os->flags          = 0;
+    os->name           = name;
+    os->u.typeDef.type = typeWord;
+
+    VMUnlockDirty(symbols, tsymBlock);
+
+    (void)Obj_EnterTypeSyms(file, symbols, globalSeg, tsymBlock,
+                            OETS_TOP_LEVEL_ONLY);
+    VMFree(symbols, tsymBlock);
+}
+
 
 /***********************************************************************
  *				CV32LocateList
@@ -953,7 +1012,8 @@ static word
 CV32ProcessStructure(const char  	    *file,
 		   byte	    	    **bpPtr,
 		   word	    	    len,
-		   VMBlockHandle    typeBlock)
+		   VMBlockHandle    typeBlock,
+		   Boolean          isUnion)
 {
     byte    	    *bp;    	    /* Current byte in structure record */
     byte    	    *dataBase;	    /* Base of the structure description */
@@ -1025,9 +1085,10 @@ CV32ProcessStructure(const char  	    *file,
 //    }
 
     MSObj_GetWord(prop, bp);
-    MSObj_GetWord(dlist, bp);
-    MSObj_GetWord(shape, bp);
-
+    if (!isUnion) {
+	MSObj_GetWord(dlist, bp);
+	MSObj_GetWord(shape, bp);
+    }
     size = CV32GetInteger(&bp) /*/ 8*/;
 
     if(size == 0) {
@@ -1551,14 +1612,23 @@ error:
 	    VMBlockHandle   ttypeBlock;	    /* Associated type block (shouldn't
 					     * be used at all...) */
 	    byte    	    symflags;	    /* Flags to give to esym */
+	    word 	    leaf;
 
 	    /*
 	     * Locate the CTL_LIST record that holds the list of members
 	     */
-		bp = &fieldTypeIndex;
-	    if (!CV32LocateList(file, &bp, &mlistBase, &mlistLen)) {
+	    mlistBase = CV32LocateType(fieldTypeIndex, &mlistLen);
+	    if (mlistBase == NULL) {
+		Notify(NOTIFY_ERROR, "%s: cannot locate field list for enum", file);
 		goto error;
 	    }
+	    /* skip the CTL2_FIELDLIST leaf that CV32LocateList would have consumed */
+	    MSObj_GetWord(leaf, mlistBase);
+	    if (leaf != CTL2_FIELDLIST) {
+    		Notify(NOTIFY_ERROR, "%s: wrong field list type %d", file, leaf);
+    		goto error;
+	    }
+	    mlistLen -= 2;
 
 	    /*
 	     * If this is actually an enum, we need to have a real name for
@@ -2111,10 +2181,10 @@ CV32ProcessTypeRecord(const char 	    *file,  	/* Object file from which
 			break;
 		case CTL2_CLASS:
 		case CTL2_STRUCTURE:
-			retval = CV32ProcessStructure(file, &bp, len - 2, typeBlock);
+			retval = CV32ProcessStructure(file, &bp, len - 2, typeBlock, FALSE);
 			break;
 		case CTL2_MEMBER:
-			retval = CV32ProcessStructure(file, &bp, len - 2, typeBlock);
+			retval = CV32ProcessStructure(file, &bp, len - 2, typeBlock, FALSE);
 			break;
 		case CTL2_ID:
 		{
@@ -2132,23 +2202,7 @@ CV32ProcessTypeRecord(const char 	    *file,  	/* Object file from which
 		}
 		case CTL2_UNION:
 		{
-			word count;
-			word baseType;
-			word properties;
-			unsigned long size;
-			ID name;   	    /* Name of the union */
-
-			MSObj_GetWord(count, bp);
-			MSObj_GetWord(baseType, bp);
-			MSObj_GetWord(properties, bp);
-
-			size = CV32GetInteger(&bp);
-
-			name = NullID;
-			if ((bp - *bpPtr) < (len-2)) {
-				name = CV32GetString(&bp);
-			}
-			bp = *bpPtr + len;
+			retval = CV32ProcessStructure(file, &bp, len - 2, typeBlock, TRUE);
 			break;
 		}
 		case CTL2_ENUMERATION:
@@ -2473,6 +2527,7 @@ CV32ProcessUnprocessedTypeRecords(const char *file)
 	    //case CTL_TYPEDEF:
 	    case CTL2_STRUCTURE:
 	    //case CTL_SCALAR:
+	    case CTL2_ENUMERATION:
 		(void)CV32ProcessTypeRecord(file,
 					  &bp,
 					  len,
@@ -3016,10 +3071,85 @@ CV32ProcessSymbols(const char	*file)	/* Object file name (for errors) */
     		break;
 	}
 	case CST2_UDT:
+	{
 		/*
-		* Deal with this some day.
+		* S_UDT / CST2_UDT – user-defined-type alias record.
+		*
+		* Wire format (relative to `base`, after the recType word;
+		* total payload is `len` bytes from `base`):
+		*
+		*   offset  size  field
+		*   ------  ----  -----
+		*     0      2    type index  (word)
+		*     2      1+n  counted name (length byte followed by n chars)
+		*
+		* We materialise the referenced type through CV32FetchType,
+		* then emit an OSYM_TYPEDEF into the global type-symbol stream
+		* via CV32EnterTypedef.  bp is always set to base+len at the
+		* end of the case (via the break + the assignment after the
+		* switch) so the outer loop stays in sync even on error.
 		*/
-		break;
+		word           typeIndex;
+		word           resolvedType;
+		ID             udtName;
+		VMBlockHandle  ttypeBlock;
+		ObjTypeHeader *oth;
+
+		/* --- defensive length check ---
+		* Minimum meaningful record: 2 bytes type index
+		*                          + 1 byte  name-length prefix
+		*                          + 1 byte  at least one name character
+		* = 4 bytes past the recType word (which is already consumed).
+		* `len` covers [base .. base+len), and `bp` currently points
+		* to base+2 (past recType).  So available payload = len - 2.  */
+
+		if ((len - 2) < 4) {
+		Notify(NOTIFY_ERROR,
+			"%s: CST2_UDT record too short (%d payload bytes)",
+			file, len - 2);
+		break;          /* bp = base + len enforced after switch */
+		}
+
+		/* --- parse type index --- */
+		MSObj_GetWord(typeIndex, bp);
+
+		/* --- parse counted name --- */
+		udtName = CV32GetString(&bp);
+		if (udtName == NullID) {
+		Notify(NOTIFY_ERROR,
+			"%s: CST2_UDT record has empty name – skipping",
+			file);
+		break;          /* bp = base + len enforced after switch */
+		}
+
+		/*
+		* Allocate a temporary type block for CV32FetchType.
+		* We share it with CV32EnterTypedef (via osh->types) so
+		* Obj_EnterTypeSyms can resolve non-special type offsets.
+		* After CV32EnterTypedef returns we free it ourselves.
+		*/
+		ttypeBlock = VMAlloc(symbols,
+				sizeof(ObjTypeHeader) + 16 * sizeof(ObjType),
+				OID_TYPE_BLOCK);
+		oth = (ObjTypeHeader *)VMLock(symbols, ttypeBlock, (MemHandle *)NULL);
+		oth->num = 0;
+		VMUnlockDirty(symbols, ttypeBlock);
+
+		/* --- resolve type --- */
+		resolvedType = CV32FetchType(file, ttypeBlock, typeIndex);
+
+		/* --- emit OSYM_TYPEDEF into global stream --- */
+		CV32EnterTypedef(file, udtName, resolvedType, ttypeBlock);
+
+		/*
+		* CV32EnterTypedef freed its own tsymBlock; free the type
+		* block we allocated above.  (If resolvedType had OTYPE_SPECIAL
+		* set, ttypeBlock is empty but VMFree handles that correctly.)
+		*/
+		VMFree(symbols, ttypeBlock);
+
+		break;      /* bp will be set to base + len by the line below */
+	}
 	case CST2_LDATA16:
 	case CST2_GDATA16:
 		/*

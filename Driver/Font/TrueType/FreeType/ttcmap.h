@@ -83,9 +83,11 @@
   struct  TCMap4_
   {
     UShort  segCountX2;     /* number of segments * 2       */
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
     UShort  searchRange;    /* these parameters can be used */
     UShort  entrySelector;  /* for a binary search          */
     UShort  rangeShift;
+#endif
 
     MemHandle      segmentBlock;
     MemHandle      glyphIdBlock;
@@ -118,7 +120,9 @@
     UShort  platformEncodingID;
     UShort  format;
     UShort  length;
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
     UShort  version;
+#endif
 
     Bool    loaded;
     ULong   offset;
@@ -152,7 +156,7 @@
   /* Destroy one character mapping table */
 
   LOCAL_DEF
-  TT_Error  CharMap_Free( PCMapTable  table );
+  void      CharMap_Free( PCMapTable  table );
 
 
   /* Use character mapping table to perform mapping */

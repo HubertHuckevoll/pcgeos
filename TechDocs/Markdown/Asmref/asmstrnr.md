@@ -1,11 +1,11 @@
 ## 3.5 Structures N-R
 
 ----------
-#### NameArrayAddFlags
-	NameArrayAddFlags		record
-		NAAF_SET_DATA_ON_REPLACE		:1
-										:15
-	NameArrayAddFlags		end
+### NameArrayAddFlags
+    NameArrayAddFlags       record
+        NAAF_SET_DATA_ON_REPLACE        :1
+                                        :15
+    NameArrayAddFlags       end
 
 NAAF_SET_DATA_ON_REPLACE  
 If replacing an existing name set, set data for the name to the data passed.
@@ -13,22 +13,22 @@ If replacing an existing name set, set data for the name to the data passed.
 **Library:** chunkarr.def
 
 ----------
-#### NameArrayElement
-	NameArrayElement		struct
-		NAE_meta		RefElementHeader	;standard ElementArray header
-		NAE_data		label byte			;data
-	NameArrayElement		ends
+### NameArrayElement
+    NameArrayElement        struct
+        NAE_meta        RefElementHeader    ;standard ElementArray header
+        NAE_data        label byte          ;data
+    NameArrayElement        ends
 
 The name itself immediately follows the byte of data.
 
 **Library:** chunkarr.def
 
 ----------
-#### NameArrayHeader
-	NameArrayHeader		struct
-		NAH_meta			ElementArrayHeader
-		NAH_dataSize		word
-	NameArrayHeader		ends
+### NameArrayHeader
+    NameArrayHeader     struct
+        NAH_meta            ElementArrayHeader
+        NAH_dataSize        word
+    NameArrayHeader     ends
 
 This structure must be at the front of every name array. Since name arrays 
 are special kinds of element arrays, the **NameArrayHeader** must itself 
@@ -42,24 +42,24 @@ array.
 **Library:** chunkarr.def
 
 ----------
-#### NameArrayMaxElement
-	NameArrayMaxElement			struct
-		NAME_meta			RefElementHeader
-		NAME_data			byte NAME_ARRAY_MAX_DATA_SIZE dup (?)
-		NAME_name			char NAME_ARRAY_MAX_NAME_SIZE dup (?)
-	NameArrayMaxElement			ends
+### NameArrayMaxElement
+    NameArrayMaxElement         struct
+        NAME_meta           RefElementHeader
+        NAME_data           byte NAME_ARRAY_MAX_DATA_SIZE dup (?)
+        NAME_name           char NAME_ARRAY_MAX_NAME_SIZE dup (?)
+    NameArrayMaxElement         ends
 
 **Library:** chunkarr.def
 
 ----------
-#### NavigateCommonFlags
-	NavigateCommonFlags			record
-		NCF_IS_COMPOSITE			:1
-		NCF_IS_FOCUSABLE			:1
-		NCF_IS_MENU_RELATED			:1
-		NCF_IS_ROOT_NODE			:1
-									:4
-	NavigateCommonFlags			end
+### NavigateCommonFlags
+    NavigateCommonFlags         record
+        NCF_IS_COMPOSITE            :1
+        NCF_IS_FOCUSABLE            :1
+        NCF_IS_MENU_RELATED         :1
+        NCF_IS_ROOT_NODE            :1
+                                    :4
+    NavigateCommonFlags         end
 
 NCF_IS_COMPOSITE  
 Set this if calling from a composite object (is subclass of 
@@ -80,13 +80,13 @@ Set if this node is the root level of the tree.
 **Library:** Objects/visC.def
 
 ----------
-#### NavigateCommonParams
-	NavigateCommonParams			struct
-		NCP_object				optr
-		NCP_navFlags			NavigateFlags
-		NCP_navCommonFlags		NavigateCommonFlags
-		NCP_genericData			lptr
-	NavigateCommonParams			ends
+### NavigateCommonParams
+    NavigateCommonParams            struct
+        NCP_object              optr
+        NCP_navFlags            NavigateFlags
+        NCP_navCommonFlags      NavigateCommonFlags
+        NCP_genericData         lptr
+    NavigateCommonParams            ends
 
 *NCP_object* stores the object that originated the message. When returned, 
 this entry stores the final recipient of the message.
@@ -98,25 +98,25 @@ for navigation hints on the object.)
 **Library:** Objects/visC.def
 
 ----------
-#### NavigateFlags
-	NavigateFlags		record
-		; reply flags
-		NF_COMPLETED_CIRCUIT			:1
-		NF_REACHED_ROOT					:1
-										:6
-		; command flags (MUST BE IN LOWER BYTE)
-										:1	;reserved for future use
-											;(lines up with VTF_IS_COMPOSITE)
-										:1	;reserved for future use (lines up with 
-											; GS_ENABLED and NCF_FOCUSABLE)
-		NF_NAV_MENU_BAR					:1
-										:1	;reserved for future use(lines up with 
-											;VTF_IS_WIN_GROUP and NCF_IS_ROOT)
-		NF_INITIATE_QUERY				:1
-		NF_SKIP_NODE					:1
-		NF_TRAVEL_CIRCUIT				:1
-		NF_BACKTRACK_AFTER_TRAVELING	:1
-	NavigateFlags		end
+### NavigateFlags
+    NavigateFlags       record
+        ; reply flags
+        NF_COMPLETED_CIRCUIT            :1
+        NF_REACHED_ROOT                 :1
+                                        :6
+        ; command flags (MUST BE IN LOWER BYTE)
+                                        :1  ;reserved for future use
+                                            ;(lines up with VTF_IS_COMPOSITE)
+                                        :1  ;reserved for future use (lines up with 
+                                            ; GS_ENABLED and NCF_FOCUSABLE)
+        NF_NAV_MENU_BAR                 :1
+                                        :1  ;reserved for future use(lines up with 
+                                            ;VTF_IS_WIN_GROUP and NCF_IS_ROOT)
+        NF_INITIATE_QUERY               :1
+        NF_SKIP_NODE                    :1
+        NF_TRAVEL_CIRCUIT               :1
+        NF_BACKTRACK_AFTER_TRAVELING    :1
+    NavigateFlags       end
 
 NF_COMPLETED_CIRCUIT  
 This is set when this message is received at a node and the 
@@ -160,29 +160,29 @@ checking, and for the "navigate to previous" case.
 **Library:** Objects/visC.def
 
 ----------
-#### NCCFlagsUnion
-	NCCFlagsUnion		union
-		NCCFU_char				VisTextCharAttrFlags
-		NCCFU_paragraph			VisTextParaAttrFlags
-		NCCFU_border			VisTextParaAttrBorderFlags
-	NCCFlagsUnion		ends
+### NCCFlagsUnion
+    NCCFlagsUnion       union
+        NCCFU_char              VisTextCharAttrFlags
+        NCCFU_paragraph         VisTextParaAttrFlags
+        NCCFU_border            VisTextParaAttrBorderFlags
+    NCCFlagsUnion       ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NoteType
-	NoteType	etype byte, 0, 2
-		NT_INK		enum NoteType
-		NT_TEXT		enum NoteType
+### NoteType
+    NoteType    etype byte, 0, 2
+        NT_INK      enum NoteType
+        NT_TEXT     enum NoteType
 
 **Library:** pen.def
 
 ----------
-#### NotificationType
-	NotificationType		struct
-		NT_manuf		ManufacturerID
-		NT_type			word
-	NotificationType		ends
+### NotificationType
+    NotificationType        struct
+        NT_manuf        ManufacturerID
+        NT_type         word
+    NotificationType        ends
 
 This structure defines a basic GCN notification type that can be passed with 
 MSG_META_NOTIFY and MSG_META_NOTIFY_WITH_DATA_BLOCK.
@@ -190,89 +190,89 @@ MSG_META_NOTIFY and MSG_META_NOTIFY_WITH_DATA_BLOCK.
 **Library:** Objects/metaC.def
 
 ----------
-#### NotifyColorChange
-	NotifyColorChange		struct
-		NCC_color			ColorQuad
-		NCC_grayScreen		SystemDrawMask
-		NCC_pattern			GraphicPattern
-		NCC_flags			NCCFlagsUnion
-									;VTCAF_MULTIPLE_COLORS
-									;VTCAF_MULTIPLE_GRAY_SCREENS
-									;VTCAF_MULTIPLE_PATTERNS
-									;	-or-
-									;VTCAF_MULTIPLE_BG_COLORS
-									;VTCAF_MULTIPLE_BG_GRAY_SCREENS
-									;VTCAF_MULTIPLE_BG_PATTERNS
-									;	-or-
-									;VTPAF_MULTIPLE_BG_COLORS
-									;VTPAF_MULTIPLE_BG_GRAY_SCREENS
-									;VTPAF_MULTIPLE_BG_PATTERNS
-									;	-or-
-									;VTPABF_MULTIPLE_BORDER_COLORS
-									;VTPABF_MULTIPLE_BORDER_GRAY_SCREENS
-									;VTPABF_MULTIPLE_BORDER_PATTERNS
-	NotifyColorChange		ends
+### NotifyColorChange
+    NotifyColorChange       struct
+        NCC_color           ColorQuad
+        NCC_grayScreen      SystemDrawMask
+        NCC_pattern         GraphicPattern
+        NCC_flags           NCCFlagsUnion
+                                    ;VTCAF_MULTIPLE_COLORS
+                                    ;VTCAF_MULTIPLE_GRAY_SCREENS
+                                    ;VTCAF_MULTIPLE_PATTERNS
+                                    ;   -or-
+                                    ;VTCAF_MULTIPLE_BG_COLORS
+                                    ;VTCAF_MULTIPLE_BG_GRAY_SCREENS
+                                    ;VTCAF_MULTIPLE_BG_PATTERNS
+                                    ;   -or-
+                                    ;VTPAF_MULTIPLE_BG_COLORS
+                                    ;VTPAF_MULTIPLE_BG_GRAY_SCREENS
+                                    ;VTPAF_MULTIPLE_BG_PATTERNS
+                                    ;   -or-
+                                    ;VTPABF_MULTIPLE_BORDER_COLORS
+                                    ;VTPABF_MULTIPLE_BORDER_GRAY_SCREENS
+                                    ;VTPABF_MULTIPLE_BORDER_PATTERNS
+    NotifyColorChange       ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NotifyDisplayChange
-	NotifyDisplayChange			struct
-		NDC_displayNum		word
-		NDC_name			char MAX_DISPLAY_NAME_SIZE dup (?)
-		NDC_overlapping		BooleanByte
-	NotifyDisplayChange			ends
+### NotifyDisplayChange
+    NotifyDisplayChange         struct
+        NDC_displayNum      word
+        NDC_name            char MAX_DISPLAY_NAME_SIZE dup (?)
+        NDC_overlapping     BooleanByte
+    NotifyDisplayChange         ends
 
 **Library:** Objects/gDCtrlC.def
 
 ----------
-#### NotifyDisplayListChange
-	NotifyDisplayListChange			struct
-		NDLC_counter			word
-		NDLC_group				optr
-	NotifyDisplayListChange			ends
+### NotifyDisplayListChange
+    NotifyDisplayListChange         struct
+        NDLC_counter            word
+        NDLC_group              optr
+    NotifyDisplayListChange         ends
 
 **Library:** Objects/gDCtrlC.def
 
 ----------
-#### NotifyDocumentChange
-	NotifyDocumentChange			struct
-		NDC_attrs				GenDocumentAttrs
-		NDC_type				GenDocumentType
-		NDC_fileHandle			hptr
-		NDC_emptyExists			BooleanByte
-		NDC_defaultExists		BooleanByte
-	NotifyDocumentChange			ends
+### NotifyDocumentChange
+    NotifyDocumentChange            struct
+        NDC_attrs               GenDocumentAttrs
+        NDC_type                GenDocumentType
+        NDC_fileHandle          hptr
+        NDC_emptyExists         BooleanByte
+        NDC_defaultExists       BooleanByte
+    NotifyDocumentChange            ends
 
 **Library:** Objects/gDocCtrl.def
 
 ----------
-#### NotifyEnabledFlags
-	NotifyEnabledFlags		record
-		NEF_STATE_CHANGING		:1	;this is the object whose state is changing
-								:7
-	NotifyEnabledFlags		end
+### NotifyEnabledFlags
+    NotifyEnabledFlags      record
+        NEF_STATE_CHANGING      :1  ;this is the object whose state is changing
+                                :7
+    NotifyEnabledFlags      end
 
 **Library:** Objects/genC.def
 
 ----------
-#### NotifyFloatFormatChange
-	NotifyFloatFormatChange			struc
-		NFFC_vmFileHan			word
-		NFFC_vmBlkHan			word
-		NFFC_format				word
-		NFFC_count				word
-	NotifyFloatFormatChange			ends
+### NotifyFloatFormatChange
+    NotifyFloatFormatChange         struc
+        NFFC_vmFileHan          word
+        NFFC_vmBlkHan           word
+        NFFC_format             word
+        NFFC_count              word
+    NotifyFloatFormatChange         ends
 
 **Library:** math.def
 
 ----------
-#### NotifyFocusWindowKbdStatus
-	NotifyFocusWindowKbdStatus		struct
-		NFWKS_needsFloatingKbd			word
-		NFWKS_kbdPosition				Point<>
-		NFWKS_focusWindow				optr
-	NFWKS_sysModal					word
+### NotifyFocusWindowKbdStatus
+    NotifyFocusWindowKbdStatus      struct
+        NFWKS_needsFloatingKbd          word
+        NFWKS_kbdPosition               Point<>
+        NFWKS_focusWindow               optr
+    NFWKS_sysModal                  word
 
 *NFWKS_needsFloatingKbd*
 If non-zero, the window needs a floating keyboard - otherwise, 
@@ -292,33 +292,33 @@ Either zero if window is not sys-modal or 0xffff if it is
 **Library:** 
 
 ----------
-#### NotifyFontAttrChange
-	NotifyFontAttrChange			struct
-		NFAC_fontWeight					byte
-		NFAC_fontWeightDiffs			byte
-		NFAC_fontWidth					byte
-		NFAC_fontWidthDiffs				byte
-		NFAC_trackKerning				word
-		NFAC_trackKerningDiffs			byte
-	NotifyFontAttrChange			ends
+### NotifyFontAttrChange
+    NotifyFontAttrChange            struct
+        NFAC_fontWeight                 byte
+        NFAC_fontWeightDiffs            byte
+        NFAC_fontWidth                  byte
+        NFAC_fontWidthDiffs             byte
+        NFAC_trackKerning               word
+        NFAC_trackKerningDiffs          byte
+    NotifyFontAttrChange            ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NotifyFontChange
-	NotifyFontChange			struct
-		NFC_fontID			FontID
-		NFC_diffs			byte
-	NotifyFontChange			ends
+### NotifyFontChange
+    NotifyFontChange            struct
+        NFC_fontID          FontID
+        NFC_diffs           byte
+    NotifyFontChange            ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NotifyGenControlStatusChange
-	NotifyGenControlStatusChange				struct
-		NGCS_controller					optr
-		NGCS_statusChange				GenControlStatusChange
-	NotifyGenControlStatusChange				ends
+### NotifyGenControlStatusChange
+    NotifyGenControlStatusChange                struct
+        NGCS_controller                 optr
+        NGCS_statusChange               GenControlStatusChange
+    NotifyGenControlStatusChange                ends
 
 *NGCS_controller* stores the optr of the GenControl object itself. This optr may 
 be used to send messages or fetch information from the GenControl (typically 
@@ -330,10 +330,10 @@ object has undergone.
 **Library:** Objects/gCtrlC.def
 
 ----------
-#### NotifyInkHasTarget
-	NotifyInkHasTarget			struct
-		NIHT_optr			optr
-	NotifyInkHasTarget			ends
+### NotifyInkHasTarget
+    NotifyInkHasTarget          struct
+        NIHT_optr           optr
+    NotifyInkHasTarget          ends
 
 This structure is sent to objects requesting GWNT_INK_HAS_TARGET 
 notification.
@@ -341,65 +341,65 @@ notification.
 **Library:** pen.def
 
 ----------
-#### NotifyJustificationChange
-	NotifyJustificationChange			struct
-		NJC_justification		Justification
-		NJC_diffs				byte
-		NJC_useGeneral			byte 	;if non-zero then use "general" in place
-										;of "full" justification.
-	NotifyJustificationChange			ends
+### NotifyJustificationChange
+    NotifyJustificationChange           struct
+        NJC_justification       Justification
+        NJC_diffs               byte
+        NJC_useGeneral          byte    ;if non-zero then use "general" in place
+                                        ;of "full" justification.
+    NotifyJustificationChange           ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NotifyPageInfoChange
-	NotifyPageInfoChange		struct
-		NPIC_width 			word
-		NPIC_height 		word
-		NPIC_rightMargin 	word		; 13.3 (8* actual value)
-		NPIC_leftMargin 	word		; 13.3 (8* actual value)
-		NPIC_topMargin 		word		; 13.3 (8* actual value)
-		NPIC_bottomMargin 	word		; 13.3 (8* actual value)
-	NotifyPageInfoChange		ends
+### NotifyPageInfoChange
+    NotifyPageInfoChange        struct
+        NPIC_width          word
+        NPIC_height         word
+        NPIC_rightMargin    word        ; 13.3 (8* actual value)
+        NPIC_leftMargin     word        ; 13.3 (8* actual value)
+        NPIC_topMargin      word        ; 13.3 (8* actual value)
+        NPIC_bottomMargin   word        ; 13.3 (8* actual value)
+    NotifyPageInfoChange        ends
 
 **Library:** pageInfo.def
 
 ----------
-#### NotifyPageStateChange
-	NotifyPageStateChange			struct
-		NPSC_firstPage					word		;first page
-		NPSC_lastPage					word		;last page
-		NPSC_currentPage				word		;current page
-	NotifyPageStateChange			ends
+### NotifyPageStateChange
+    NotifyPageStateChange           struct
+        NPSC_firstPage                  word        ;first page
+        NPSC_lastPage                   word        ;last page
+        NPSC_currentPage                word        ;current page
+    NotifyPageStateChange           ends
 
 **Library:** Objects/gPageCC.def
 
 ----------
-#### NotifyPointSizeChange
-	NotifyPointSizeChange			struct
-		NPSC_pointSize			WWFixed
-		NPSC_diffs				byte
-	NotifyPointSizeChange			ends
+### NotifyPointSizeChange
+    NotifyPointSizeChange           struct
+        NPSC_pointSize          WWFixed
+        NPSC_diffs              byte
+    NotifyPointSizeChange           ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NotifySearchReplaceEnableChange
-	NotifySearchReplaceEnableChange					struct
-		NSREC_flags			SearchReplaceEnableFlags
-	NotifySearchReplaceEnableChange					ends
+### NotifySearchReplaceEnableChange
+    NotifySearchReplaceEnableChange                 struct
+        NSREC_flags         SearchReplaceEnableFlags
+    NotifySearchReplaceEnableChange                 ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NotifySelectStateChange
-	NotifySelectStateChange			struct
-		NSSC_selectionType					SelectionDataType
-		NSSC_clipboardableSelection			BooleanByte
-		NSSC_selectAllAvailable				BooleanByte
-		NSSC_deleteableSelection			BooleanByte
-		NSSC_pasteable						BooleanByte
-	NotifySelectStateChange			ends
+### NotifySelectStateChange
+    NotifySelectStateChange         struct
+        NSSC_selectionType                  SelectionDataType
+        NSSC_clipboardableSelection         BooleanByte
+        NSSC_selectAllAvailable             BooleanByte
+        NSSC_deleteableSelection            BooleanByte
+        NSSC_pasteable                      BooleanByte
+    NotifySelectStateChange         ends
 
 *NSSC_selectionType* determines if a text object has the target and a selection.
 
@@ -416,20 +416,20 @@ exists.
 **Library:** Objects/gEditCC.def
 
 ----------
-#### NotifyTextStyleChange
-	NotifyTextStyleChange			struct
-		NTSC_styles				TextStyle
-		NTSC_indeterminates		TextStyle
-	NotifyTextStyleChange			ends
+### NotifyTextStyleChange
+    NotifyTextStyleChange           struct
+        NTSC_styles             TextStyle
+        NTSC_indeterminates     TextStyle
+    NotifyTextStyleChange           ends
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### NotifyUndoStateChange
-	NotifyUndoStateChange			struct
-		NUSC_undoTitle			optr
-		NUSC_undoType			UndoDescription
-	NotifyUndoStateChange			ends
+### NotifyUndoStateChange
+    NotifyUndoStateChange           struct
+        NUSC_undoTitle          optr
+        NUSC_undoType           UndoDescription
+    NotifyUndoStateChange           ends
 
 *NUSC_undoTitle* stores the title of the current undo item or 0:0 if there is no 
 operation to undo.
@@ -437,78 +437,78 @@ operation to undo.
 **Library:** Objects/gEditCC.def
 
 ----------
-#### NotifyViewStateChange
-	NotifyViewStateChange				struct
-		NVSC_origin					PointDWFixed
-		NVSC_docBounds				RectDWord
-		NVSC_increment				PointDWord
-		NVSC_scaleFactor			PointWWFixed
-		NVSC_color					ColorQuad
-		NVSC_attrs					GenViewAttrs
-		NVSC_horizAttrs				GenViewDimensionAttrs
-		NVSC_vertAttrs				GenViewDimensionAttrs
-		NVSC_inkType				GenViewInkType
-		NVSC_contentSize 			XYSize
-		NVSC_contentScreenSize 		XYSize
-		NVSC_originRelative 		PointDWord
-		NVSC_documentSize 			PointDWord
-	NotifyViewStateChange				ends
+### NotifyViewStateChange
+    NotifyViewStateChange               struct
+        NVSC_origin                 PointDWFixed
+        NVSC_docBounds              RectDWord
+        NVSC_increment              PointDWord
+        NVSC_scaleFactor            PointWWFixed
+        NVSC_color                  ColorQuad
+        NVSC_attrs                  GenViewAttrs
+        NVSC_horizAttrs             GenViewDimensionAttrs
+        NVSC_vertAttrs              GenViewDimensionAttrs
+        NVSC_inkType                GenViewInkType
+        NVSC_contentSize            XYSize
+        NVSC_contentScreenSize      XYSize
+        NVSC_originRelative         PointDWord
+        NVSC_documentSize           PointDWord
+    NotifyViewStateChange               ends
 
 **Library:** Objects/gViewCC.def
 
 ----------
-#### NumberFormatFlags
-	NumberFormatFlags		record
-								:7
-		NFF_LEADING_ZERO		:1
-	NumberFormatFlags		end
+### NumberFormatFlags
+    NumberFormatFlags       record
+                                :7
+        NFF_LEADING_ZERO        :1
+    NumberFormatFlags       end
 
 **Library:** localize.def
 
 ----------
-#### NumberType
-	NumberType		etype byte, 0, 1
-		NT_VALUE		enum NumberType			; It's just a number
-		NT_BOOLEAN		enum NumberType			; It's a boolean
-		NT_DATE_TIME	enum NumberType			; It's a date/time
+### NumberType
+    NumberType      etype byte, 0, 1
+        NT_VALUE        enum NumberType         ; It's just a number
+        NT_BOOLEAN      enum NumberType         ; It's a boolean
+        NT_DATE_TIME    enum NumberType         ; It's a date/time
 
 **Library:** parse.def
 
 ----------
-#### ObjChunkFlags
-	ObjChunkFlags		record
-								:3
-		OCF_VARDATA_RELOC		:1
-		OCF_DIRTY				:1
-		OCF_IGNORE_DIRTY		:1
-		OCF_IN_RESOURCE			:1
-		OCF_IS_OBJECT			:1
-	ObjChunkFlags		end
+### ObjChunkFlags
+    ObjChunkFlags       record
+                                :3
+        OCF_VARDATA_RELOC       :1
+        OCF_DIRTY               :1
+        OCF_IGNORE_DIRTY        :1
+        OCF_IN_RESOURCE         :1
+        OCF_IS_OBJECT           :1
+    ObjChunkFlags       end
 
 **Library:** object.def
 
 ----------
-#### ObjCompCallType
-	ObjCompCallType		etype word, 0, 2
-		OCCT_SAVE_PARAMS_TEST_ABORT				enum ObjCompCallType
-		OCCT_SAVE_PARAMS_DONT_TEST_ABORT		enum ObjCompCallType
-		OCCT_DONT_SAVE_PARAMS_TEST_ABORT		enum ObjCompCallType
-		OCCT_DONT_SAVE_PARAMS_DONT_TEST_ABORT	enum ObjCompCallType
-		OCCT_ABORT_AFTER_FIRST					enum ObjCompCallType
-		OCCT_COUNT_CHILDREN						enum ObjCompCallType
+### ObjCompCallType
+    ObjCompCallType     etype word, 0, 2
+        OCCT_SAVE_PARAMS_TEST_ABORT             enum ObjCompCallType
+        OCCT_SAVE_PARAMS_DONT_TEST_ABORT        enum ObjCompCallType
+        OCCT_DONT_SAVE_PARAMS_TEST_ABORT        enum ObjCompCallType
+        OCCT_DONT_SAVE_PARAMS_DONT_TEST_ABORT   enum ObjCompCallType
+        OCCT_ABORT_AFTER_FIRST                  enum ObjCompCallType
+        OCCT_COUNT_CHILDREN                     enum ObjCompCallType
 
 **Library:** Objects/metaC.def
 
 ----------
-#### ObjectTransform
-	ObjectTransform		struct
-		OT_center			PointDWFixed
-		OT_width			WWFixed
-		OT_height			WWFixed
-		OT_parentWidth		WWFixed
-		OT_parentHeight		WWFixed
-		OT_transform		GrObjTransMatrix
-	ObjectTransform		ends
+### ObjectTransform
+    ObjectTransform     struct
+        OT_center           PointDWFixed
+        OT_width            WWFixed
+        OT_height           WWFixed
+        OT_parentWidth      WWFixed
+        OT_parentHeight     WWFixed
+        OT_transform        GrObjTransMatrix
+    ObjectTransform     ends
 
 *OT_center* stores the center of the object in the parent's coordinate system.
 
@@ -527,13 +527,13 @@ invalidation, etc.
 **Library:** grobj.def
 
 ----------
-#### ObjFlushInputQueueNextStop
-	ObjFlushInputQueueNextStop			etype word, 0, 2
-		OFIQNS_INPUT_MANAGER				enum ObjFlushInputQueueNextStop
-		OFIQNS_SYSTEM_INPUT_OBJ				enum ObjFlushInputQueueNextStop
-		OFIQNS_INPUT_OBJ_OF_OWNING_GEODE 	enum ObjFlushInputQueueNextStop
-		OFIQNS_PROCESS_OF_OWNING_GEODE		enum ObjFlushInputQueueNextStop
-		OFIQNS_DISPATCH						enum ObjFlushInputQueueNextStop
+### ObjFlushInputQueueNextStop
+    ObjFlushInputQueueNextStop          etype word, 0, 2
+        OFIQNS_INPUT_MANAGER                enum ObjFlushInputQueueNextStop
+        OFIQNS_SYSTEM_INPUT_OBJ             enum ObjFlushInputQueueNextStop
+        OFIQNS_INPUT_OBJ_OF_OWNING_GEODE    enum ObjFlushInputQueueNextStop
+        OFIQNS_PROCESS_OF_OWNING_GEODE      enum ObjFlushInputQueueNextStop
+        OFIQNS_DISPATCH                     enum ObjFlushInputQueueNextStop
 
 OFIQNS__INPUT_MANAGER  
 MF_FORCE_QUEUE message to the kernel's input manager 
@@ -560,14 +560,14 @@ Queues are flushed, so FORCE_QUEUE dispatch passed Event.
 **Library:** Objects/metaC.def
 
 ----------
-#### ObjLMemBlockHeader
-	ObjLMemBlockHeader			struct
-		OLMBH_header				LMemBlockHeader <>
-		OLMBH_inUseCount			word
-		OLMBH_interactibleCount		word
-		OLMBH_output				optr
-		OLMBH_resourceSize			word
-	ObjLMemBlockHeader			ends
+### ObjLMemBlockHeader
+    ObjLMemBlockHeader          struct
+        OLMBH_header                LMemBlockHeader <>
+        OLMBH_inUseCount            word
+        OLMBH_interactibleCount     word
+        OLMBH_output                optr
+        OLMBH_resourceSize          word
+    ObjLMemBlockHeader          ends
 
 This structure is the standard object block (resource) header that begins 
 every object block. Since Object blocks are types of LMem blocks, the first 
@@ -593,38 +593,38 @@ TO_OBJ_BLOCK_OUTPUT.
 **Library:** object.def
 
 ----------
-#### ObjRelocation
-	ObjRelocation		struct
-		OR_type		ObjRelocationType		; Type of relocation
-		OR_offset	word					; Offset to relocation
-	ObjRelocation		ends
+### ObjRelocation
+    ObjRelocation       struct
+        OR_type     ObjRelocationType       ; Type of relocation
+        OR_offset   word                    ; Offset to relocation
+    ObjRelocation       ends
 
 This is the structure of an object relocation table entry (for instance data).
 
 **Library:** object.def
 
 ----------
-#### ObjRelocationID
-	ObjRelocationID		record
-		RID_SOURCE			ObjRelocationSource:4
-		RID_INDEX			:12
-	ObjRelocationID		end
+### ObjRelocationID
+    ObjRelocationID     record
+        RID_SOURCE          ObjRelocationSource:4
+        RID_INDEX           :12
+    ObjRelocationID     end
 
 **Library:** object.def
 
 ----------
-#### ObjRelocationSource
-	ObjRelocationSource			etype byte
-		ORS_NULL 						enum ObjRelocationSource
-		ORS_OWNING_GEODE 				enum ObjRelocationSource
-		ORS_KERNEL 						enum ObjRelocationSource
-		ORS_LIBRARY 					enum ObjRelocationSource
-		ORS_CURRENT_BLOCK				enum ObjRelocationSource
-		ORS_VM_HANDLE 					enum ObjRelocationSource
-		ORS_OWNING_GEODE_ENTRY_POINT	enum ObjRelocationSource
-		ORS_NON_STATE_VM				enum ObjRelocationSource
-		ORS_UNKNOWN_BLOCK				enum ObjRelocationSource
-		ORS_EXTERNAL 					enum ObjRelocationSource
+### ObjRelocationSource
+    ObjRelocationSource         etype byte
+        ORS_NULL                        enum ObjRelocationSource
+        ORS_OWNING_GEODE                enum ObjRelocationSource
+        ORS_KERNEL                      enum ObjRelocationSource
+        ORS_LIBRARY                     enum ObjRelocationSource
+        ORS_CURRENT_BLOCK               enum ObjRelocationSource
+        ORS_VM_HANDLE                   enum ObjRelocationSource
+        ORS_OWNING_GEODE_ENTRY_POINT    enum ObjRelocationSource
+        ORS_NON_STATE_VM                enum ObjRelocationSource
+        ORS_UNKNOWN_BLOCK               enum ObjRelocationSource
+        ORS_EXTERNAL                    enum ObjRelocationSource
 
 ORS_NULL  
 ObjRelocation to zero.
@@ -660,12 +660,12 @@ Internal.
 **Library:** object.def
 
 ----------
-#### ObjRelocationType
-	ObjRelocationType			etype byte
-		RELOC_END_OF_LIST 	enum ObjRelocationType
-		RELOC_HANDLE 		enum ObjRelocationType	;resource ID to handle
-		RELOC_SEGMENT 		enum ObjRelocationType	;resource ID to segment
-		RELOC_ENTRY_POINT 	enum ObjRelocationType	;resource ID/entry #
+### ObjRelocationType
+    ObjRelocationType           etype byte
+        RELOC_END_OF_LIST   enum ObjRelocationType
+        RELOC_HANDLE        enum ObjRelocationType  ;resource ID to handle
+        RELOC_SEGMENT       enum ObjRelocationType  ;resource ID to segment
+        RELOC_ENTRY_POINT   enum ObjRelocationType  ;resource ID/entry #
 
 RELOC_END_OF_LIST  
 Relocation from resource ID to handle. The target contains the 
@@ -687,210 +687,210 @@ Resource ID/entry number.
 **Library:** object.def
 
 ----------
-#### OldErrorCheckingFlags
-	OldErrorCheckingFlags   record
-		OECF_REGION				:1 	;Region checking
-		OECF_HEAP_FREE_BLOCKS	:1 	;Ensure that all free blocks are 0xcccc
-		OECF_LMEM_INTERNAL		:1 	;Internal lmem checking
-		OECF_LMEM_FREE_AREAS	:1 	;Ensure that all free areas are 0xcccc
-		OECF_LMEM_OBJECT		:1 	;Consistency checks on objects in lmem chunks
-		OECF_BLOCK_CHECKSUM		:1 	;Checksum on a particular block
-		OECF_GRAPHICS			:1 	;Misc graphics stuff
-		OECF_SEGMENT			:1 	;Extensive segment checking
-		OECF_NORMAL				:1 	;Misc kernel error checking
-		OECF_VMEM				:1 	;VM file consistency
-		OECF_APP				:1 	;Application error checking (if implemented
-									;by applications)
-		OECF_LMEM_MOVE			:1 	;Force lmem blocks to move whenever possible
-		OECF_UNLOCK_MOVE		:1 	;Force unlocked blocks to move
-		OECF_VMEM_DISCARD		:1 	;Force clean VM blocks to be discarded
-		OECF_ANAL_VMEM			:1 	;Extensive VM error checking
-		OECF_TEXT				:1
-	OldErrorCheckingFlags   end
+### OldErrorCheckingFlags
+    OldErrorCheckingFlags   record
+        OECF_REGION             :1  ;Region checking
+        OECF_HEAP_FREE_BLOCKS   :1  ;Ensure that all free blocks are 0xcccc
+        OECF_LMEM_INTERNAL      :1  ;Internal lmem checking
+        OECF_LMEM_FREE_AREAS    :1  ;Ensure that all free areas are 0xcccc
+        OECF_LMEM_OBJECT        :1  ;Consistency checks on objects in lmem chunks
+        OECF_BLOCK_CHECKSUM     :1  ;Checksum on a particular block
+        OECF_GRAPHICS           :1  ;Misc graphics stuff
+        OECF_SEGMENT            :1  ;Extensive segment checking
+        OECF_NORMAL             :1  ;Misc kernel error checking
+        OECF_VMEM               :1  ;VM file consistency
+        OECF_APP                :1  ;Application error checking (if implemented
+                                    ;by applications)
+        OECF_LMEM_MOVE          :1  ;Force lmem blocks to move whenever possible
+        OECF_UNLOCK_MOVE        :1  ;Force unlocked blocks to move
+        OECF_VMEM_DISCARD       :1  ;Force clean VM blocks to be discarded
+        OECF_ANAL_VMEM          :1  ;Extensive VM error checking
+        OECF_TEXT               :1
+    OldErrorCheckingFlags   end
 
 **Library:** ec.def
 
 ----------
-#### OperatorStackElement
-	OperatorStackElement	struct
-		OSE_type		EvalStackOperatorType	; Type of the operator
-		OSE_data		EvalStackOperatorData	; The associated data
-	OperatorStackElement    ends
+### OperatorStackElement
+    OperatorStackElement    struct
+        OSE_type        EvalStackOperatorType   ; Type of the operator
+        OSE_data        EvalStackOperatorData   ; The associated data
+    OperatorStackElement    ends
 
 **Library:** parse.def
 
 ----------
-#### OperatorType
-	OperatorType		etype byte, 0, 1
-		OP_RANGE_SEPARATOR				enum OperatorType
-		OP_NEGATION						enum OperatorType
-		OP_PERCENT						enum OperatorType
-		OP_EXPONENTIATION				enum OperatorType
-		OP_MULTIPLICATION				enum OperatorType
-		OP_DIVISION						enum OperatorType
-		OP_MODULO						enum OperatorType
-		OP_ADDITION						enum OperatorType
-		OP_SUBTRACTION					enum OperatorType
-		OP_EQUAL						enum OperatorType
-		OP_NOT_EQUAL					enum OperatorType
-		OP_LESS_THAN					enum OperatorType
-		OP_GREATER_THAN					enum OperatorType
-		OP_LESS_THAN_OR_EQUAL			enum OperatorType
-		OP_GREATER_THAN_OR_EQUAL		enum OperatorType
-		;
-		;
-		OP_STRING_CONCAT				enum OperatorType
-		OP_RANGE_INTERSECTION			enum OperatorType
-		;
-		; The following are graphic versions of existing operators. For example,
-		; OP_NOT_EQUAL_GRAPHIC is the same as OP_NOT_EQUAL, but shows up on screen
-		; as an equals sign with a line through it.
-		;
-		OP_NOT_EQUAL_GRAPHIC			enum OperatorType
-		OP_DIVISION_GRAPHIC				enum OperatorType
-		OP_LESS_THAN_OR_EQUAL_GRAPHIC	enum OperatorType
-		OP_GREATER_THAN_OR_EQUAL_GRAPHIC enum OperatorType
-		;
-		; The following are included here because it's convenient. They represent
-		; an as yet undecided operator. The scanner has seen it and recognized it.
-		; The parser will decide which operator it is.
-		;
-		; The problem is that a single lexical token can correspond to two different
-		; operations, depending on the context:
-		; Percent Operator:
-		;	9%	<- Divides the value to the left by 100
-		; Modulo Operator:
-		;	9%2	<- Performs the operation "9 MOD 2"
-		; Negation Operator:
-		;	-5	<- Negates the value to the right
-		; Subtraction Operator:
-		;	3-5	<- Performs the operation "3 MINUS 5"
-		;
-		; Since the scanner has no idea what is coming next in the input stream it
-		; can only return that the operator is undecided.
-		;
-		; These operators should always be the last in the list since none of the
-		; tables depend on them.
-		;
-		OP_PERCENT_MODULO				enum OperatorType
-		OP_SUBTRACTION_NEGATION			enum OperatorType
+### OperatorType
+    OperatorType        etype byte, 0, 1
+        OP_RANGE_SEPARATOR              enum OperatorType
+        OP_NEGATION                     enum OperatorType
+        OP_PERCENT                      enum OperatorType
+        OP_EXPONENTIATION               enum OperatorType
+        OP_MULTIPLICATION               enum OperatorType
+        OP_DIVISION                     enum OperatorType
+        OP_MODULO                       enum OperatorType
+        OP_ADDITION                     enum OperatorType
+        OP_SUBTRACTION                  enum OperatorType
+        OP_EQUAL                        enum OperatorType
+        OP_NOT_EQUAL                    enum OperatorType
+        OP_LESS_THAN                    enum OperatorType
+        OP_GREATER_THAN                 enum OperatorType
+        OP_LESS_THAN_OR_EQUAL           enum OperatorType
+        OP_GREATER_THAN_OR_EQUAL        enum OperatorType
+        ;
+        ;
+        OP_STRING_CONCAT                enum OperatorType
+        OP_RANGE_INTERSECTION           enum OperatorType
+        ;
+        ; The following are graphic versions of existing operators. For example,
+        ; OP_NOT_EQUAL_GRAPHIC is the same as OP_NOT_EQUAL, but shows up on screen
+        ; as an equals sign with a line through it.
+        ;
+        OP_NOT_EQUAL_GRAPHIC            enum OperatorType
+        OP_DIVISION_GRAPHIC             enum OperatorType
+        OP_LESS_THAN_OR_EQUAL_GRAPHIC   enum OperatorType
+        OP_GREATER_THAN_OR_EQUAL_GRAPHIC enum OperatorType
+        ;
+        ; The following are included here because it's convenient. They represent
+        ; an as yet undecided operator. The scanner has seen it and recognized it.
+        ; The parser will decide which operator it is.
+        ;
+        ; The problem is that a single lexical token can correspond to two different
+        ; operations, depending on the context:
+        ; Percent Operator:
+        ;   9%  <- Divides the value to the left by 100
+        ; Modulo Operator:
+        ;   9%2 <- Performs the operation "9 MOD 2"
+        ; Negation Operator:
+        ;   -5  <- Negates the value to the right
+        ; Subtraction Operator:
+        ;   3-5 <- Performs the operation "3 MINUS 5"
+        ;
+        ; Since the scanner has no idea what is coming next in the input stream it
+        ; can only return that the operator is undecided.
+        ;
+        ; These operators should always be the last in the list since none of the
+        ; tables depend on them.
+        ;
+        OP_PERCENT_MODULO               enum OperatorType
+        OP_SUBTRACTION_NEGATION         enum OperatorType
 
 **Library:** parse.def
 
 ----------
-#### OriginChangedParams
-	OriginChangedParams			struct
-		OCP_origin		PointDWord		;new origin
-		OCP_window		lptr Window		;window of view
-	OriginChangedParams			ends
+### OriginChangedParams
+    OriginChangedParams         struct
+        OCP_origin      PointDWord      ;new origin
+        OCP_window      lptr Window     ;window of view
+    OriginChangedParams         ends
 
 **Library:** Objects/gViewC.def
 
 ----------
-#### PACFeatures
-	PACFeatures		record
-		PACF_WORD_WRAP					:1
-		PACF_COLUMN_BREAK_BEFORE		:1
-		PACF_KEEP_PARA_WITH_NEXT		:1
-		PACF_KEEP_PARA_TOGETHER			:1
-		PACF_KEEP_LINES					:1
-	PACFeatures		end
+### PACFeatures
+    PACFeatures     record
+        PACF_WORD_WRAP                  :1
+        PACF_COLUMN_BREAK_BEFORE        :1
+        PACF_KEEP_PARA_WITH_NEXT        :1
+        PACF_KEEP_PARA_TOGETHER         :1
+        PACF_KEEP_LINES                 :1
+    PACFeatures     end
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### PACToolboxFeatures
-	PACToolboxFeatures		record
-	PACToolboxFeatures		end
+### PACToolboxFeatures
+    PACToolboxFeatures      record
+    PACToolboxFeatures      end
 
 **Library:** Object/Text/tCtrlC.def
 
 ----------
-#### PageEndCommand
-	PageEndCommand		etype	byte
-		PEC_FORM_FEED		enum	PageEndCommand	; 0 = form feed
-		PEC_NO_FORM_FEED	enum	PageEndCommand	; 1 = no form feed
+### PageEndCommand
+    PageEndCommand      etype   byte
+        PEC_FORM_FEED       enum    PageEndCommand  ; 0 = form feed
+        PEC_NO_FORM_FEED    enum    PageEndCommand  ; 1 = no form feed
 
 **Library:** graphics.def
 
 ----------
-#### PageLayout
-	PageLayout		union
-		PL_paper			PageLayoutPaper
-		PL_envelope			PageLayoutEnvelope
-		PL_label			PageLayoutLabel
-	PageLayout		end
+### PageLayout
+    PageLayout      union
+        PL_paper            PageLayoutPaper
+        PL_envelope         PageLayoutEnvelope
+        PL_label            PageLayoutLabel
+    PageLayout      end
 
 **Library:** spool.def
 
 ----------
-#### PageLayoutEnvelope
-	PageLayoutEnvelope			record
-							:12
-		PLE_ORIENTATION		EnvelopeOrientation:1
-		PLE_TYPE			PageType:3				; PT_ENVELOPE
-	PageLayoutEnvelope			end
+### PageLayoutEnvelope
+    PageLayoutEnvelope          record
+                            :12
+        PLE_ORIENTATION     EnvelopeOrientation:1
+        PLE_TYPE            PageType:3              ; PT_ENVELOPE
+    PageLayoutEnvelope          end
 
 **Library:** spool.def
 
 ----------
-#### PageLayoutLabel
-	PageLayoutLabel			record
-						:1
-		PLL_ROWS		:6				; labels down
-		PLL_COLUMNS		:6				; labels across
-		PLL_TYPE		PageType:3		; PT_LABEL
-	PageLayoutLabel			end
+### PageLayoutLabel
+    PageLayoutLabel         record
+                        :1
+        PLL_ROWS        :6              ; labels down
+        PLL_COLUMNS     :6              ; labels across
+        PLL_TYPE        PageType:3      ; PT_LABEL
+    PageLayoutLabel         end
 
 **Library:** spool.def
 
 ----------
-#### PageLayoutPaper
-	PageLayoutPaper		record
-							:12
-		PLP_ORIENTATION		PaperOrientation:1
-		PLP_TYPE			PageType:3			; PT_PAPER
-	PageLayoutPaper		end
+### PageLayoutPaper
+    PageLayoutPaper     record
+                            :12
+        PLP_ORIENTATION     PaperOrientation:1
+        PLP_TYPE            PageType:3          ; PT_PAPER
+    PageLayoutPaper     end
 
 **Library:** spool.def
 
 ----------
-#### PageSetupInfo
-	PageSetupInfo		struct
-		PSI_meta			VMChainLink
-		PSI_pageSize		XYSize			; In pixels (points)
-		PSI_layout			PageLayout
-		PSI_numColumns		word
-		PSI_columnSpacing	word			; In points * 8
-		PSI_ruleWidth		word			; In pixels (points)
-		;
-		; The margins are relative to the edges of the page, and are in points * 8
-		;
-		PSI_leftMargin		word
-		PSI_rightMargin		word
-		PSI_topMargin		word
-		PSI_bottomMargin	word
-	PageSetupInfo		ends
+### PageSetupInfo
+    PageSetupInfo       struct
+        PSI_meta            VMChainLink
+        PSI_pageSize        XYSize          ; In pixels (points)
+        PSI_layout          PageLayout
+        PSI_numColumns      word
+        PSI_columnSpacing   word            ; In points * 8
+        PSI_ruleWidth       word            ; In pixels (points)
+        ;
+        ; The margins are relative to the edges of the page, and are in points * 8
+        ;
+        PSI_leftMargin      word
+        PSI_rightMargin     word
+        PSI_topMargin       word
+        PSI_bottomMargin    word
+    PageSetupInfo       ends
 
 **Library:** Objects/vTextC.def
 
 ----------
-#### PageSizeControlAttrs
-	PageSizeControlAttrs		record
-		; EXTERNAL
-		PZCA_ACT_LIKE_GADGET		:1
-		PZCA_PAPER_SIZE				:1
-		PZCA_INITIALIZE				:1
-									:5
-		; INTERNAL
-		PZCA_NEW_PAGE_TYPE			:1		;INTERNAL
-		PZCA_SWAP_WIDTH_HEIGHT		:1		;INTERNAL
-		PZCA_SIZE_LIST_INITIALIZED	:1		;INTERNAL
-		PZCA_IGNORE_UPDATE			:1		;INTERNAL
-		PZCA_PORTRAIT_VALID			:1
-		PZCA_LANDSCAPE_VALID		:1
-									:2
-	PageSizeControlAttrs		end
+### PageSizeControlAttrs
+    PageSizeControlAttrs        record
+        ; EXTERNAL
+        PZCA_ACT_LIKE_GADGET        :1
+        PZCA_PAPER_SIZE             :1
+        PZCA_INITIALIZE             :1
+                                    :5
+        ; INTERNAL
+        PZCA_NEW_PAGE_TYPE          :1      ;INTERNAL
+        PZCA_SWAP_WIDTH_HEIGHT      :1      ;INTERNAL
+        PZCA_SIZE_LIST_INITIALIZED  :1      ;INTERNAL
+        PZCA_IGNORE_UPDATE          :1      ;INTERNAL
+        PZCA_PORTRAIT_VALID         :1
+        PZCA_LANDSCAPE_VALID        :1
+                                    :2
+    PageSizeControlAttrs        end
 
 PZCA_ACT_LIKE_GADGET  
 Tells the PageSizeControl object to act like any other generic 
@@ -909,74 +909,74 @@ attribute.
 **Library:** spool.def
 
 ----------
-#### PageSizeControlChanges
-	PageSizeControlChanges			struct
-		PSCC_destination		optr		; destination for message
-		PSCC_message			word		; message to be sent
-		;
-		;	Pass:		SS:BP	= PageSizeReport
-		;				DX		= size PageSizeReport
-		;	Returns:	Nothing
-		;				AX, CX, DX, BP - may destroy
-		;
-	PageSizeControlChanges			ends
+### PageSizeControlChanges
+    PageSizeControlChanges          struct
+        PSCC_destination        optr        ; destination for message
+        PSCC_message            word        ; message to be sent
+        ;
+        ;   Pass:       SS:BP   = PageSizeReport
+        ;               DX      = size PageSizeReport
+        ;   Returns:    Nothing
+        ;               AX, CX, DX, BP - may destroy
+        ;
+    PageSizeControlChanges          ends
 
 **Library:** spool.def
 
 ----------
-#### PageSizeControlFeatures
-	PageSizeControlFeatures			record
-		PSIZECF_MARGINS			:1		; not part of default features
-		PSIZECF_CUSTOM_SIZE		:1
-		PSIZECF_LAYOUT			:1
-		PSIZECF_SIZE_LIST		:1
-		PSIZECF_PAGE_TYPE		:1
-	PageSizeControlFeatures			end
+### PageSizeControlFeatures
+    PageSizeControlFeatures         record
+        PSIZECF_MARGINS         :1      ; not part of default features
+        PSIZECF_CUSTOM_SIZE     :1
+        PSIZECF_LAYOUT          :1
+        PSIZECF_SIZE_LIST       :1
+        PSIZECF_PAGE_TYPE       :1
+    PageSizeControlFeatures         end
 
 **Library:** spool.def
 
 ----------
-#### PageSizeControlMaxDimensions
-	PageSizeControlMaxDimensions	struct
-		PZCMD_width				dword		; maximum width
-		PZCMD_height			dword		; maximum height
-	PageSizeControlMaxDimensions	ends
+### PageSizeControlMaxDimensions
+    PageSizeControlMaxDimensions    struct
+        PZCMD_width             dword       ; maximum width
+        PZCMD_height            dword       ; maximum height
+    PageSizeControlMaxDimensions    ends
 
 **Library:** spool.def
 
 ----------
-#### PageSizeControlToolboxFeatures
-	PageSizeControlToolboxFeatures			record
-		PSIZECTF_DIALOG_BOX				:1
-	PageSizeControlToolboxFeatures			end
+### PageSizeControlToolboxFeatures
+    PageSizeControlToolboxFeatures          record
+        PSIZECTF_DIALOG_BOX             :1
+    PageSizeControlToolboxFeatures          end
 
 **Library:** spool.def
 
 ----------
-#### PageSizeReport
-	PageSizeReport			struct
-		PSR_width		dword				; width of the page
-		PSR_height		dword				; height of the page
-		PSR_layout		PageLayout			; layout options
-		PSR_margins		PCMarginParams		; document margins
-	PageSizeReport			ends
+### PageSizeReport
+    PageSizeReport          struct
+        PSR_width       dword               ; width of the page
+        PSR_height      dword               ; height of the page
+        PSR_layout      PageLayout          ; layout options
+        PSR_margins     PCMarginParams      ; document margins
+    PageSizeReport          ends
 
 **Library:** spool.def
 
 ----------
-#### PageType
-	PageType		etype word, 0, 2
-		PT_PAPER			enum PageType
-		PT_ENVELOPE			enum PageType
-		PT_LABEL			enum PageType
+### PageType
+    PageType        etype word, 0, 2
+        PT_PAPER            enum PageType
+        PT_ENVELOPE         enum PageType
+        PT_LABEL            enum PageType
 
 **Library:** print.def
 
 ----------
-#### Palette
-	Palette		struct
-		P_entries		word 16		; Number of 3-byte entries in palette.
-	Palette		ends
+### Palette
+    Palette     struct
+        P_entries       word 16     ; Number of 3-byte entries in palette.
+    Palette     ends
 
 This structure stores the custom palettes allocated by **GrCreatePalette** and 
 associated with windows.
@@ -984,59 +984,59 @@ associated with windows.
 **Library:** color.def
 
 ----------
-#### PaperOrientation
-	PaperOrientation		etype byte, 0, 1
-		PO_PORTRAIT				enum PaperOrientation
-		PO_LANDSCAPE			enum PaperOrientation
+### PaperOrientation
+    PaperOrientation        etype byte, 0, 1
+        PO_PORTRAIT             enum PaperOrientation
+        PO_LANDSCAPE            enum PaperOrientation
 
 **Library:** print.def
 
 ----------
-#### ParserFlags
-	ParserFlags		record
-		;
-		; These are initialized by the parser. They are initialized to zero.
-		;
-		PF_HAS_LOOKAHEAD			:1	; The next token to get is the look-ahead 
-										; token.
-		PF_CONTAINS_DISPLAY_FUNC	:1	; Set: This expression contains a function
-										; which should be evaluated when the
-										; result of the expression is displayed.
-		PF_OPERATORS				:1	; Set: Allow operators.
-		PF_NUMBERS					:1	; Set: Allow numbers.
-		PF_CELLS					:1	; Set: Allow cell references.
-		PF_FUNCTIONS				:1	; Set: Allow functions.
-		PF_NAMES					:1	; Set: Allow names.
-		PF_NEW_NAMES				:1	; Set: Allow new names (app only).
-	ParserFlags		end
+### ParserFlags
+    ParserFlags     record
+        ;
+        ; These are initialized by the parser. They are initialized to zero.
+        ;
+        PF_HAS_LOOKAHEAD            :1  ; The next token to get is the look-ahead 
+                                        ; token.
+        PF_CONTAINS_DISPLAY_FUNC    :1  ; Set: This expression contains a function
+                                        ; which should be evaluated when the
+                                        ; result of the expression is displayed.
+        PF_OPERATORS                :1  ; Set: Allow operators.
+        PF_NUMBERS                  :1  ; Set: Allow numbers.
+        PF_CELLS                    :1  ; Set: Allow cell references.
+        PF_FUNCTIONS                :1  ; Set: Allow functions.
+        PF_NAMES                    :1  ; Set: Allow names.
+        PF_NEW_NAMES                :1  ; Set: Allow new names (app only).
+    ParserFlags     end
 
 **Library:** parse.def
 
 ----------
-#### ParserParameters
-	ParserParameters		struct
-		;
-		; Applications should initialize these fields before calling ParseString
-		;
-		PP_common				CommonParameters <>
-		;
-		; Possible callbacks:
-		; CT_FUNCTION_TO_TOKEN
-		; CT_NAME_TO_TOKEN
-		;
-		PP_parserBufferSize		word			; Size of the buffer
-		;
-		; Fields below this point are initialized by ParseString
-		;
-		PP_flags				ParserFlags		; Parsing flags
-		PP_textPtr				fptr.char		; Pointer to text
-		PP_currentToken			ScannerToken	; Current token
-		PP_lookAheadToken		ScannerToken	; Look ahead token
+### ParserParameters
+    ParserParameters        struct
+        ;
+        ; Applications should initialize these fields before calling ParseString
+        ;
+        PP_common               CommonParameters <>
+        ;
+        ; Possible callbacks:
+        ; CT_FUNCTION_TO_TOKEN
+        ; CT_NAME_TO_TOKEN
+        ;
+        PP_parserBufferSize     word            ; Size of the buffer
+        ;
+        ; Fields below this point are initialized by ParseString
+        ;
+        PP_flags                ParserFlags     ; Parsing flags
+        PP_textPtr              fptr.char       ; Pointer to text
+        PP_currentToken         ScannerToken    ; Current token
+        PP_lookAheadToken       ScannerToken    ; Look ahead token
 
-		PP_error				ParserScannerEvaluatorError
-		PP_tokenStart			word			; Offset to start of token
-		PP_tokenEnd				word			; Offset to end of token
-	ParserParameters		ends
+        PP_error                ParserScannerEvaluatorError
+        PP_tokenStart           word            ; Offset to start of token
+        PP_tokenEnd             word            ; Offset to end of token
+    ParserParameters        ends
 
 The parser allocates this structure on the stack when performing parsing 
 operations such as **ParseString**.
@@ -1044,196 +1044,196 @@ operations such as **ParseString**.
 **Library:** parse.def
 
 ----------
-#### ParserScannerEvaluatorError
-	ParserScannerEvaluatorError				etype byte, 0, 1
-		;
-		; Scanner errors
-		;
-		PSEE_BAD_NUMBER					enum ParserScannerEvaluatorError
-		PSEE_BAD_CELL_REFERENCE			enum ParserScannerEvaluatorError
-		PSEE_NO_CLOSE_QUOTE				enum ParserScannerEvaluatorError
-		PSEE_COLUMN_TOO_LARGE			enum ParserScannerEvaluatorError
-		PSEE_ROW_TOO_LARGE				enum ParserScannerEvaluatorError
-		PSEE_ILLEGAL_TOKEN				enum ParserScannerEvaluatorError
-		;
-		; Parser errors
-		;
-		PSEE_GENERAL					enum ParserScannerEvaluatorError
-		PSEE_TOO_MANY_TOKENS			enum ParserScannerEvaluatorError
-		PSEE_EXPECTED_OPEN_PAREN		enum ParserScannerEvaluatorError
-		PSEE_EXPECTED_CLOSE_PAREN		enum ParserScannerEvaluatorError
-		PSEE_BAD_EXPRESSION				enum ParserScannerEvaluatorError
-		PSEE_EXPECTED_END_OF_EXPRESSION	enum ParserScannerEvaluatorError
-		PSEE_MISSING_CLOSE_PAREN		enum ParserScannerEvaluatorError
-		PSEE_UNKNOWN_IDENTIFIER			enum ParserScannerEvaluatorError
-		PSEE_NOT_ENOUGH_NAME_SPACE		enum ParserScannerEvaluatorError
-		;
-		; Serious evaluator errors
-		;
-		PSEE_OUT_OF_STACK_SPACE			enum ParserScannerEvaluatorError
-		PSEE_NESTING_TOO_DEEP			enum ParserScannerEvaluatorError
-		;
-		; Evaluator errors that are returned as the result of formulas.
-		; These are returned on the argument stack.
-		;
-		PSEE_ROW_OUT_OF_RANGE			enum ParserScannerEvaluatorError
-		PSEE_COLUMN_OUT_OF_RANGE		enum ParserScannerEvaluatorError
-		PSEE_FUNCTION_NO_LONGER_EXISTS	enum ParserScannerEvaluatorError
-		PSEE_BAD_ARG_COUNT				enum ParserScannerEvaluatorError
-		PSEE_WRONG_TYPE					enum ParserScannerEvaluatorError
-		PSEE_DIVIDE_BY_ZERO				enum ParserScannerEvaluatorError
-		PSEE_UNDEFINED_NAME				enum ParserScannerEvaluatorError
-		PSEE_CIRCULAR_REF				enum ParserScannerEvaluatorError
-		PSEE_CIRCULAR_DEP				enum ParserScannerEvaluatorError
-		PSEE_CIRC_NAME_REF				enum ParserScannerEvaluatorError
-		PSEE_NUMBER_OUT_OF_RANGE		enum ParserScannerEvaluatorError
-		PSEE_GEN_ERR					enum ParserScannerEvaluatorError
-		PSEE_NA							enum ParserScannerEvaluatorError
-		;
-		; Dependency errors
-		;
-		PSEE_TOO_MANY_DEPENDENCIES		enum ParserScannerEvaluatorError
-		;
-		; Applications can define errors too, they start here.
-		;
-		PSEE_FIRST_APPLICATION_ERROR	enum ParserScannerEvaluatorError, 0xc0
-		;
-		; !!! NOTE !!!
-		; These PSEE_ errors map directly to the floating point errors
-		; Any change in the float library errors require corresponding
-		; changes here.
-		;
-		PSEE_FLOAT_POS_INFINITY			enum ParserScannerEvaluatorError, 250
-		PSEE_FLOAT_NEG_INFINITY			enum ParserScannerEvaluatorError
-		PSEE_FLOAT_GEN_ERR				enum ParserScannerEvaluatorError
+### ParserScannerEvaluatorError
+    ParserScannerEvaluatorError             etype byte, 0, 1
+        ;
+        ; Scanner errors
+        ;
+        PSEE_BAD_NUMBER                 enum ParserScannerEvaluatorError
+        PSEE_BAD_CELL_REFERENCE         enum ParserScannerEvaluatorError
+        PSEE_NO_CLOSE_QUOTE             enum ParserScannerEvaluatorError
+        PSEE_COLUMN_TOO_LARGE           enum ParserScannerEvaluatorError
+        PSEE_ROW_TOO_LARGE              enum ParserScannerEvaluatorError
+        PSEE_ILLEGAL_TOKEN              enum ParserScannerEvaluatorError
+        ;
+        ; Parser errors
+        ;
+        PSEE_GENERAL                    enum ParserScannerEvaluatorError
+        PSEE_TOO_MANY_TOKENS            enum ParserScannerEvaluatorError
+        PSEE_EXPECTED_OPEN_PAREN        enum ParserScannerEvaluatorError
+        PSEE_EXPECTED_CLOSE_PAREN       enum ParserScannerEvaluatorError
+        PSEE_BAD_EXPRESSION             enum ParserScannerEvaluatorError
+        PSEE_EXPECTED_END_OF_EXPRESSION enum ParserScannerEvaluatorError
+        PSEE_MISSING_CLOSE_PAREN        enum ParserScannerEvaluatorError
+        PSEE_UNKNOWN_IDENTIFIER         enum ParserScannerEvaluatorError
+        PSEE_NOT_ENOUGH_NAME_SPACE      enum ParserScannerEvaluatorError
+        ;
+        ; Serious evaluator errors
+        ;
+        PSEE_OUT_OF_STACK_SPACE         enum ParserScannerEvaluatorError
+        PSEE_NESTING_TOO_DEEP           enum ParserScannerEvaluatorError
+        ;
+        ; Evaluator errors that are returned as the result of formulas.
+        ; These are returned on the argument stack.
+        ;
+        PSEE_ROW_OUT_OF_RANGE           enum ParserScannerEvaluatorError
+        PSEE_COLUMN_OUT_OF_RANGE        enum ParserScannerEvaluatorError
+        PSEE_FUNCTION_NO_LONGER_EXISTS  enum ParserScannerEvaluatorError
+        PSEE_BAD_ARG_COUNT              enum ParserScannerEvaluatorError
+        PSEE_WRONG_TYPE                 enum ParserScannerEvaluatorError
+        PSEE_DIVIDE_BY_ZERO             enum ParserScannerEvaluatorError
+        PSEE_UNDEFINED_NAME             enum ParserScannerEvaluatorError
+        PSEE_CIRCULAR_REF               enum ParserScannerEvaluatorError
+        PSEE_CIRCULAR_DEP               enum ParserScannerEvaluatorError
+        PSEE_CIRC_NAME_REF              enum ParserScannerEvaluatorError
+        PSEE_NUMBER_OUT_OF_RANGE        enum ParserScannerEvaluatorError
+        PSEE_GEN_ERR                    enum ParserScannerEvaluatorError
+        PSEE_NA                         enum ParserScannerEvaluatorError
+        ;
+        ; Dependency errors
+        ;
+        PSEE_TOO_MANY_DEPENDENCIES      enum ParserScannerEvaluatorError
+        ;
+        ; Applications can define errors too, they start here.
+        ;
+        PSEE_FIRST_APPLICATION_ERROR    enum ParserScannerEvaluatorError, 0xc0
+        ;
+        ; !!! NOTE !!!
+        ; These PSEE_ errors map directly to the floating point errors
+        ; Any change in the float library errors require corresponding
+        ; changes here.
+        ;
+        PSEE_FLOAT_POS_INFINITY         enum ParserScannerEvaluatorError, 250
+        PSEE_FLOAT_NEG_INFINITY         enum ParserScannerEvaluatorError
+        PSEE_FLOAT_GEN_ERR              enum ParserScannerEvaluatorError
 
 **Library:** parse.def
 
 ----------
-#### ParserToken
-	ParserToken			struct
-		PT_type		ParserTokenType				; Type of token data
-		PT_data		ParserTokenData				; The data itself
-	ParserToken			ends
+### ParserToken
+    ParserToken         struct
+        PT_type     ParserTokenType             ; Type of token data
+        PT_data     ParserTokenData             ; The data itself
+    ParserToken         ends
 
 **Library:** parse.def
 
 ----------
-#### ParserTokenCellData
-	ParserTokenCellData				struct
-		PTCD_cellRef			CellReference <>
-	ParserTokenCellData				ends
+### ParserTokenCellData
+    ParserTokenCellData             struct
+        PTCD_cellRef            CellReference <>
+    ParserTokenCellData             ends
 
 **Library:** parse.def
 
 ----------
-#### ParserTokenData
-	ParserTokenData		union
-		PTD_number			ParserTokenNumberData
-		PTD_string			ParserTokenStringData
-		PTD_name			ParserTokenNameData
-		PTD_cell			ParserTokenCellData
-		PTD_function		ParserTokenFunctionData
-		PTD_operator		ParserTokenOperatorData
-	ParserTokenData		end
+### ParserTokenData
+    ParserTokenData     union
+        PTD_number          ParserTokenNumberData
+        PTD_string          ParserTokenStringData
+        PTD_name            ParserTokenNameData
+        PTD_cell            ParserTokenCellData
+        PTD_function        ParserTokenFunctionData
+        PTD_operator        ParserTokenOperatorData
+    ParserTokenData     end
 
 **Library:** parse.def
 
 ----------
-#### ParserTokenFunctionData
-	ParserTokenFunctionData		struct
-		PTFD_functionID				word	; Identifier for the function
-	ParserTokenFunctionData		ends
+### ParserTokenFunctionData
+    ParserTokenFunctionData     struct
+        PTFD_functionID             word    ; Identifier for the function
+    ParserTokenFunctionData     ends
 
 **Library:** 
 
 ----------
-#### ParserTokenNameData
-	ParserTokenNameData			struct
-		PTND_name		word		; The token describing the name
-	ParserTokenNameData			ends
+### ParserTokenNameData
+    ParserTokenNameData         struct
+        PTND_name       word        ; The token describing the name
+    ParserTokenNameData         ends
 
 **Library:** parse.def
 
 ----------
-#### ParserTokenNumberData
-	ParseTokenNumberData			struct
-		PTND_value			FloatNum <>		; 8 byte constant
-	ParseTokenNumberData			ends
+### ParserTokenNumberData
+    ParseTokenNumberData            struct
+        PTND_value          FloatNum <>     ; 8 byte constant
+    ParseTokenNumberData            ends
 
 **Library:** parse.def
 
 ----------
-#### ParserTokenOperatorData
-	ParserTokenOperatorData				struct
-		PTOD_operatorID			OperatorType	; The operator ID.
-	ParserTokenOperatorData				ends
+### ParserTokenOperatorData
+    ParserTokenOperatorData             struct
+        PTOD_operatorID         OperatorType    ; The operator ID.
+    ParserTokenOperatorData             ends
 
 **Library:** parse.def
 
 ----------
-#### ParserTokenStringData
-	ParserTokenStringData			struct
-		PTSD_length			word		; Length of the string
-	ParserTokenStringData			ends
+### ParserTokenStringData
+    ParserTokenStringData           struct
+        PTSD_length         word        ; Length of the string
+    ParserTokenStringData           ends
 
 **Library:** parse.def
 
 ----------
-#### ParserTokenType
-	ParserTokenType		etype byte, 0, 1
-		PARSER_TOKEN_NUMBER					enum ParserTokenType
-		PARSER_TOKEN_STRING					enum ParserTokenType
-		PARSER_TOKEN_CELL					enum ParserTokenType
-		PARSER_TOKEN_END_OF_EXPRESSION		enum ParserTokenType
-		PARSER_TOKEN_OPEN_PAREN				enum ParserTokenType
-		PARSER_TOKEN_CLOSE_PAREN			enum ParserTokenType
-		PARSER_TOKEN_NAME					enum ParserTokenType
-		;
-		; All the items above are in common with the ScannerTokenType list.
-		; You can add or delete items below this point without changing
-		; the other table.
-		;
-		PARSER_TOKEN_FUNCTION				enum ParserTokenType
-		PARSER_TOKEN_CLOSE_FUNCTION			enum ParserTokenType
-		PARSER_TOKEN_ARG_END				enum ParserTokenType
-		PARSER_TOKEN_OPERATOR				enum ParserTokenType
+### ParserTokenType
+    ParserTokenType     etype byte, 0, 1
+        PARSER_TOKEN_NUMBER                 enum ParserTokenType
+        PARSER_TOKEN_STRING                 enum ParserTokenType
+        PARSER_TOKEN_CELL                   enum ParserTokenType
+        PARSER_TOKEN_END_OF_EXPRESSION      enum ParserTokenType
+        PARSER_TOKEN_OPEN_PAREN             enum ParserTokenType
+        PARSER_TOKEN_CLOSE_PAREN            enum ParserTokenType
+        PARSER_TOKEN_NAME                   enum ParserTokenType
+        ;
+        ; All the items above are in common with the ScannerTokenType list.
+        ; You can add or delete items below this point without changing
+        ; the other table.
+        ;
+        PARSER_TOKEN_FUNCTION               enum ParserTokenType
+        PARSER_TOKEN_CLOSE_FUNCTION         enum ParserTokenType
+        PARSER_TOKEN_ARG_END                enum ParserTokenType
+        PARSER_TOKEN_OPERATOR               enum ParserTokenType
 
 **Library:** parse.def
 
 ----------
-#### PASCFeatures
-	PASCFeatures		record
-		PASCF_SPACE_ON_TOP			:1
-		PASCF_SPACE_ON_BOTTOM		:1
-	PASCFeatures		end
+### PASCFeatures
+    PASCFeatures        record
+        PASCF_SPACE_ON_TOP          :1
+        PASCF_SPACE_ON_BOTTOM       :1
+    PASCFeatures        end
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### PASCToolboxFeatures
-	PASCToolboxFeatures			record
-	PASCToolboxFeatures			end
+### PASCToolboxFeatures
+    PASCToolboxFeatures         record
+    PASCToolboxFeatures         end
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### PathCombineType
-	PathCombineType		etype word
-		PCT_NULL			enum PathCombineType	; destroy current
-		PCT_REPLACE			enum PathCombineType	; replace current
-		PCT_UNION			enum PathCombineType	; add to current
-		PCT_INTERSECTION	enum PathCombineType	; intersect with curr
+### PathCombineType
+    PathCombineType     etype word
+        PCT_NULL            enum PathCombineType    ; destroy current
+        PCT_REPLACE         enum PathCombineType    ; replace current
+        PCT_UNION           enum PathCombineType    ; add to current
+        PCT_INTERSECTION    enum PathCombineType    ; intersect with curr
 
 **Library:** graphics.def
 
 ----------
-#### PathCompareType
-	PathCompareType		etype byte
-		PCT_EQUAL			enum PathCompareType
-		PCT_SUBDIR			enum PathCompareType
-		PCT_UNRELATED		enum PathCompareType
-		PCT_ERROR			enum PathCompareType
+### PathCompareType
+    PathCompareType     etype byte
+        PCT_EQUAL           enum PathCompareType
+        PCT_SUBDIR          enum PathCompareType
+        PCT_UNRELATED       enum PathCompareType
+        PCT_ERROR           enum PathCompareType
 
 PCT_EQUAL  
 The 2 paths are equal.
@@ -1252,15 +1252,15 @@ the paths was not found, etc.).
 **Library:** file.def
 
 ----------
-#### PatternType
-	PatternType		etype byte
-		PT_SOLID				enum PatternType	
-		PT_SYSTEM_HATCH			enum PatternType	
-		PT_SYSTEM_BITMAP		enum PatternType	
-		PT_USER_HATCH			enum PatternType	
-		PT_USER_BITMAP			enum PatternType	
-		PT_CUSTOM_HATCH			enum PatternType	
-		PT_CUSTOM_BITMAP		enum PatternType	
+### PatternType
+    PatternType     etype byte
+        PT_SOLID                enum PatternType    
+        PT_SYSTEM_HATCH         enum PatternType    
+        PT_SYSTEM_BITMAP        enum PatternType    
+        PT_USER_HATCH           enum PatternType    
+        PT_USER_BITMAP          enum PatternType    
+        PT_CUSTOM_HATCH         enum PatternType    
+        PT_CUSTOM_BITMAP        enum PatternType    
 
 PT_SOLID  
 Solid pattern. Passed in AH: Nothing.
@@ -1286,96 +1286,96 @@ Appl-custom tiled bitmap.
 **Library:** graphics.def
 
 ----------
-#### PCComInitFlags
-	PCComInitFlags record
-		PCCIF_NOTIFY_OUTPUT		:1	; notify caller of output
-		PCCIF_NOTIFY_EXIT		:1	; notify caller of remote exit
-								:14
-	PCComInitFlags end
+### PCComInitFlags
+    PCComInitFlags record
+        PCCIF_NOTIFY_OUTPUT     :1  ; notify caller of output
+        PCCIF_NOTIFY_EXIT       :1  ; notify caller of remote exit
+                                :14
+    PCComInitFlags end
 
 **Library:** pccom.def
 
 ----------
-#### PCComReturnType
-	PCComReturnType etype byte
-		PCCRT_NO_ERROR 					enum PCComReturnType
-		PCCRT_CANNOT_LOAD_SERIAL_DRIVER 	enum PCComReturnType
-		PCCRT_CANNOT_CREATE_THREAD 			enum PCComReturnType
-		PCCRT_CANNOT_ALLOC_STREAM 			enum PCComReturnType
-		PCCRT_ALREADY_INITIALIZED 			enum PCComReturnType
+### PCComReturnType
+    PCComReturnType etype byte
+        PCCRT_NO_ERROR                  enum PCComReturnType
+        PCCRT_CANNOT_LOAD_SERIAL_DRIVER     enum PCComReturnType
+        PCCRT_CANNOT_CREATE_THREAD          enum PCComReturnType
+        PCCRT_CANNOT_ALLOC_STREAM           enum PCComReturnType
+        PCCRT_ALREADY_INITIALIZED           enum PCComReturnType
 
 **Library:** pccom.def
 
 ----------
-#### PCDocSizeParams
-	PCDocSizeParams			struct
-		PCDSP_width 	dword (?) 		; width of the document
-		PCDSP_height 	dword (?)		; height of the document
-	PCDocSizeParams			ends
+### PCDocSizeParams
+    PCDocSizeParams         struct
+        PCDSP_width     dword (?)       ; width of the document
+        PCDSP_height    dword (?)       ; height of the document
+    PCDocSizeParams         ends
 
 **Library:** spool.def
 
 ----------
-#### PCMarginParams
-	PCMarginParams		struct
-		PCMP_left			word (?)			; left margin
-		PCMP_top			word (?)			; top margin
-		PCMP_right			word (?)			; right margin
-		PCMP_bottom			word (?)			; bottom margin
-	PCMarginParams		ends
+### PCMarginParams
+    PCMarginParams      struct
+        PCMP_left           word (?)            ; left margin
+        PCMP_top            word (?)            ; top margin
+        PCMP_right          word (?)            ; right margin
+        PCMP_bottom         word (?)            ; bottom margin
+    PCMarginParams      ends
 
 **Library:** print.def
 
 ----------
-#### PCProgressType
-	PCProgressType			etype word, 0, 2
-		PCPT_PAGE		enum PCProgressType		; change page number
-		PCPT_PERCENT	enum PCProgressType		; change percent done
-		PCPT_TEXT		enum PCProgressType		; change text message
+### PCProgressType
+    PCProgressType          etype word, 0, 2
+        PCPT_PAGE       enum PCProgressType     ; change page number
+        PCPT_PERCENT    enum PCProgressType     ; change percent done
+        PCPT_TEXT       enum PCProgressType     ; change text message
 
 **Library:** spool.def
 
 ----------
-#### PenInputDisplayType
-	PenInputDisplayType			etype word
-		PIDT_KEYBOARD					enum PenInputDisplayType
-		PIDT_CHAR_TABLE					enum PenInputDisplayType
-		PIDT_CHAR_TABLE_SYMBOLS			enum PenInputDisplayType
-		PIDT_CHAR_TABLE_INTERNATIONAL	enum PenInputDisplayType
-		PIDT_CHAR_TABLE_MATH			enum PenInputDisplayType
-		PIDT_CHAR_TABLE_CUSTOM			enum PenInputDisplayType
-		PIDT_HWR_ENTRY_AREA				enum PenInputDisplayType
+### PenInputDisplayType
+    PenInputDisplayType         etype word
+        PIDT_KEYBOARD                   enum PenInputDisplayType
+        PIDT_CHAR_TABLE                 enum PenInputDisplayType
+        PIDT_CHAR_TABLE_SYMBOLS         enum PenInputDisplayType
+        PIDT_CHAR_TABLE_INTERNATIONAL   enum PenInputDisplayType
+        PIDT_CHAR_TABLE_MATH            enum PenInputDisplayType
+        PIDT_CHAR_TABLE_CUSTOM          enum PenInputDisplayType
+        PIDT_HWR_ENTRY_AREA             enum PenInputDisplayType
 
 **Library:** Objects/gPenICC.def
 
 ----------
-#### PLInit
-	PLInit	struct
-		PLI_align			byte
-		PLI_message			word
-		PLI_point			PointDWFixed
-		PLI_instructions	PriorityListInstructions
-		PLI_maxElements		word
-		PLI_class			fptr.ClassStruct
-	PLInit	ends
+### PLInit
+    PLInit  struct
+        PLI_align           byte
+        PLI_message         word
+        PLI_point           PointDWFixed
+        PLI_instructions    PriorityListInstructions
+        PLI_maxElements     word
+        PLI_class           fptr.ClassStruct
+    PLInit  ends
 
 **Library:** grobj.def
 
 ----------
-#### Point
-	Point	struct
-		P_x	sword
-		P_y	sword
-	Point	ends
+### Point
+    Point   struct
+        P_x sword
+        P_y sword
+    Point   ends
 
 **Library:** graphics.def
 
 ----------
-#### PointDWFixed
-	PointDWFixed		struct
-		PDF_x		DWFixed
-		PDF_y		DWFixed
-	PointDWFixed		ends
+### PointDWFixed
+    PointDWFixed        struct
+        PDF_x       DWFixed
+        PDF_y       DWFixed
+    PointDWFixed        ends
 
 This structure stores a point (in graphic coordinates) where each coordinate 
 is in terms of a **DWFixed** value.
@@ -1383,11 +1383,11 @@ is in terms of a **DWFixed** value.
 **Library:** graphics.def
 
 ----------
-#### PointDWord
-	PointDWord		struct
-		PD_x	sdword
-		PD_y	sdword
-	PointDWord		ends
+### PointDWord
+    PointDWord      struct
+        PD_x    sdword
+        PD_y    sdword
+    PointDWord      ends
 
 This structure stores a point (in graphic coordinates) where each coordinate 
 is in terms of a signed dword value.
@@ -1395,13 +1395,13 @@ is in terms of a signed dword value.
 **Library:** graphics.def
 
 ----------
-#### PointerDef
-	PointerDef		struct
-		PD_width		PointerDefWidth
-		PD_height		byte
-		PD_hotX			sbyte
-		PD_hotY			sbyte
-	PointerDef		ends
+### PointerDef
+    PointerDef      struct
+        PD_width        PointerDefWidth
+        PD_height       byte
+        PD_hotX         sbyte
+        PD_hotY         sbyte
+    PointerDef      ends
 
 This structure defines a mouse pointer.
 
@@ -1413,36 +1413,36 @@ of the pointer. These offsets are relative to the upper left corner of the point
 **Library:** graphics.def
 
 ----------
-#### PointerDefWidth
-	PointerDefWidth record
-		PDW_ALWAYS_SHOW_PTR		:1
-		; flag, set in BUSY cursors & any other cursors that should be shown
-		; for status's sake, regardless of whether the ptr image is normally
-		; hidden or not (such as in keyboard-only or ink-only systems).
-		; Interpreted, implemented by Input Manager -- Video drivers should
-		; ignore. 
-		PDW_WIDTH				:7
-		; width of cursor
-	PointerDefWidth end
+### PointerDefWidth
+    PointerDefWidth record
+        PDW_ALWAYS_SHOW_PTR     :1
+        ; flag, set in BUSY cursors & any other cursors that should be shown
+        ; for status's sake, regardless of whether the ptr image is normally
+        ; hidden or not (such as in keyboard-only or ink-only systems).
+        ; Interpreted, implemented by Input Manager -- Video drivers should
+        ; ignore. 
+        PDW_WIDTH               :7
+        ; width of cursor
+    PointerDefWidth end
 
 **Library:** graphics.def
 
 ----------
-#### PointerModes
-	PointerModes		record
-		PM_HANDLES_RESIZE					:1
-		PM_HANDLES_ROTATE					:1
-		PM_POINTER_IS_ACTION_OBJECT			:1
-	PointerModes		end
+### PointerModes
+    PointerModes        record
+        PM_HANDLES_RESIZE                   :1
+        PM_HANDLES_ROTATE                   :1
+        PM_POINTER_IS_ACTION_OBJECT         :1
+    PointerModes        end
 
 **Library:** grobj.def
 
 ----------
-#### PointWBFixed
-	PointWBFixed		struct
-		PWBF_x		WBFixed
-		PWBF_y		WBFixed
-	PointWBFixed		ends
+### PointWBFixed
+    PointWBFixed        struct
+        PWBF_x      WBFixed
+        PWBF_y      WBFixed
+    PointWBFixed        ends
 
 This structure stores a point (in graphic coordinates) where each coordinate 
 is in terms of a **WBFixed** value.
@@ -1450,11 +1450,11 @@ is in terms of a **WBFixed** value.
 **Library:** graphics.def
 
 ----------
-#### PointWWFixed
-	PointWWFixed		struct
-		PF_x		WWFixed
-		PF_y		WWFixed
-	PointWWFixed		ends
+### PointWWFixed
+    PointWWFixed        struct
+        PF_x        WWFixed
+        PF_y        WWFixed
+    PointWWFixed        ends
 
 This structure stores a point (in graphic coordinates) where each coordinate 
 is in terms of a **WWFixed** value.
@@ -1462,15 +1462,15 @@ is in terms of a **WWFixed** value.
 **Library:** graphics.def
 
 ----------
-#### PrefAttributes
-	PrefAttributes		record
-		PA_REBOOT_IF_CHANGED			:1
-		PA_LOAD_IF_USABLE				:1
-		PA_SAVE_IF_USABLE				:1
-		PA_SAVE_IF_ENABLED				:1
-		PA_SAVE_IF_CHANGED				:1
-										:3
-	PrefAttributes		end
+### PrefAttributes
+    PrefAttributes      record
+        PA_REBOOT_IF_CHANGED            :1
+        PA_LOAD_IF_USABLE               :1
+        PA_SAVE_IF_USABLE               :1
+        PA_SAVE_IF_ENABLED              :1
+        PA_SAVE_IF_CHANGED              :1
+                                        :3
+    PrefAttributes      end
 
 PA_REBOOT_IF_CHANGED  
 This bit signals that changes in the state of this object, or this 
@@ -1495,23 +1495,23 @@ Save options only if this object has changed.
 **Library:**  config.def
 
 ----------
-#### PrefDialogChangeType
-	PrefDialogChangeType			etype word, 0
-		PDCT_OPEN			enum PrefDialogChangeType
-		PDCT_CLOSE			enum PrefDialogChangeType
-		PDCT_DESTROY		enum PrefDialogChangeType
-		PDCT_RESTART		enum PrefDialogChangeType
-		PDCT_SHUTDOWN		enum PrefDialogChangeType
+### PrefDialogChangeType
+    PrefDialogChangeType            etype word, 0
+        PDCT_OPEN           enum PrefDialogChangeType
+        PDCT_CLOSE          enum PrefDialogChangeType
+        PDCT_DESTROY        enum PrefDialogChangeType
+        PDCT_RESTART        enum PrefDialogChangeType
+        PDCT_SHUTDOWN       enum PrefDialogChangeType
 
 **Library:** config.def
 
 ----------
-#### PrefEnableData
-	PrefEnableData			struct
-		PED_item		word
-		PED_lptr		lptr
-		PED_flags		PrefEnableFlags
-	PrefEnableData			ends
+### PrefEnableData
+    PrefEnableData          struct
+        PED_item        word
+        PED_lptr        lptr
+        PED_flags       PrefEnableFlags
+    PrefEnableData          ends
 
 *PED_item* stores the identifier of the item that controls enabling/disabling of 
 the object. If the identifier is GIGS_NONE, then the action will be performed 
@@ -1522,12 +1522,12 @@ if no items are selected.
 **Library:** config.def
 
 ----------
-#### PrefEnableFlags
-	PrefEnableFlags		record
-		PEF_DISABLE_IF_SELECTED			:1
-		PEF_DISABLE_IF_NONE				:1
-										:6
-		PrefEnableFlags		end
+### PrefEnableFlags
+    PrefEnableFlags     record
+        PEF_DISABLE_IF_SELECTED         :1
+        PEF_DISABLE_IF_NONE             :1
+                                        :6
+        PrefEnableFlags     end
 
 PEF_DISABLE_IF_SELECTED  
 If set, disable the object if the associated item is selected, 
@@ -1541,13 +1541,13 @@ selected-or if there are no items in the list.
 **Library:** config.def
 
 ----------
-#### PrefInitFileFlags
-	PrefInitFileFlags		record
-		PIFF_USE_ITEM_STRINGS			:1
-		PIFF_USE_ITEM_MONIKERS			:1
-		PIFF_APPEND_TO_KEY				:1
-										:5
-	PrefInitFileFlags		end
+### PrefInitFileFlags
+    PrefInitFileFlags       record
+        PIFF_USE_ITEM_STRINGS           :1
+        PIFF_USE_ITEM_MONIKERS          :1
+        PIFF_APPEND_TO_KEY              :1
+                                        :5
+    PrefInitFileFlags       end
 
 PIFF_USE_ITEM_STRINGS  
 If set, then the item group's children must be of class 
@@ -1565,12 +1565,12 @@ already exist for this key.
 **Library:** config.def
 
 ----------
-#### PrefInteractionAttrs
-	PrefInteractionAttrs record
-		PIA_LOAD_OPTIONS_ON_INITIATE	:1
-		PIA_SAVE_OPTIONS_ON_APPLY		:1
-										:6
-	PrefInteractionAttrs    end
+### PrefInteractionAttrs
+    PrefInteractionAttrs record
+        PIA_LOAD_OPTIONS_ON_INITIATE    :1
+        PIA_SAVE_OPTIONS_ON_APPLY       :1
+                                        :6
+    PrefInteractionAttrs    end
 
 PIA_LOAD_OPTIONS_ON_INITIATE  
 If set, then the dialog will send MSG_PREF_INIT, followed by 
@@ -1586,24 +1586,24 @@ for objects of **PrefDialogClass**.
 **Library:** config.def
 
 ----------
-#### PrefItemGroupStringVars
-	PrefItemGroupStringVars struct
-		PIGSV_endPtr			nptr.char
-		PIGSV_selections		word PREF_ITEM_GROUP_MAX_SELECTIONS dup (?)
-		PIGSV_numSelections		word
-		PIGSV_buffer			char PREF_ITEM_GROUP_STRING_BUFFER_SIZE dup (?)
+### PrefItemGroupStringVars
+    PrefItemGroupStringVars struct
+        PIGSV_endPtr            nptr.char
+        PIGSV_selections        word PREF_ITEM_GROUP_MAX_SELECTIONS dup (?)
+        PIGSV_numSelections     word
+        PIGSV_buffer            char PREF_ITEM_GROUP_STRING_BUFFER_SIZE dup (?)
 
 **Library:** config.def
 
 ----------
-#### PrefMgrFeatures
-	PrefMgrFeatures		record
-		PMF_HARDWARE		:1
-		PMF_SYSTEM			:1
-		PMF_NETWORK			:1
-		PMF_USER			:1
-							:12
-	PrefMgrFeatures		end
+### PrefMgrFeatures
+    PrefMgrFeatures     record
+        PMF_HARDWARE        :1
+        PMF_SYSTEM          :1
+        PMF_NETWORK         :1
+        PMF_USER            :1
+                            :12
+    PrefMgrFeatures     end
 
 PMF_HARDWARE  
 These settings are for a user who has permissions to actually change the 
@@ -1629,27 +1629,27 @@ example, to look at a scaled-down, "network-only" prefmgr.
 **Library:** config.def
 
 ----------
-#### PrefModuleEntryType
-	PrefModuleEntryType			etype word, 0, 1
-		PMET_FETCH_UI				enum PrefModuleEntryType 
-		;
-		; Return the OD of the top-most object in the UI tree.
-		; All UI *must* be in the same segment as this object. The UI tree
-		; will be duplicated by the application, and added to the app's
-		; generic tree.
-		;
-		; Pass: nothing
-		; Return: ^ldx:ax - OD of root of UI tree.
-		; Destroy: nothing
-		;
-		PMET_GET_MODULE_INFO		enum PrefModuleEntryType
-		; Return information about this module that will be used to determine
-		; whether to display it on-screen, what it will look like, etc. 
-		;
-		; Pass:	ds:si - pointer to a PrefModuleInfo buffer to be filled in
-		; Return: -- buffer filled in
-		; Destroy: ax, bx
-		;
+### PrefModuleEntryType
+    PrefModuleEntryType         etype word, 0, 1
+        PMET_FETCH_UI               enum PrefModuleEntryType 
+        ;
+        ; Return the OD of the top-most object in the UI tree.
+        ; All UI *must* be in the same segment as this object. The UI tree
+        ; will be duplicated by the application, and added to the app's
+        ; generic tree.
+        ;
+        ; Pass: nothing
+        ; Return: ^ldx:ax - OD of root of UI tree.
+        ; Destroy: nothing
+        ;
+        PMET_GET_MODULE_INFO        enum PrefModuleEntryType
+        ; Return information about this module that will be used to determine
+        ; whether to display it on-screen, what it will look like, etc. 
+        ;
+        ; Pass: ds:si - pointer to a PrefModuleInfo buffer to be filled in
+        ; Return: -- buffer filled in
+        ; Destroy: ax, bx
+        ;
 
 Entry points for the Preferences Modules. Each module (library) must have 
 the following routines exported in its .gp file, in the following order, as the 
@@ -1658,56 +1658,56 @@ first routines exported from that library.
 **Library:** config.def
 
 ----------
-#### PrefModuleInfo
-	PrefModuleInfo struct
-		PMI_requiredFeatures		PrefMgrFeatures <>
-		; Features that MUST be set for this module to appear in PrefMgr
-		PMI_prohibitedFeatures		PrefMgrFeatures <>
-		; Features that MUST NOT be set for this module to appear.
-		PMI_minLevel				UIInterfaceLevel	0
-		; Minimum user level required for this module to appear.
-		; Currently not implemented by PrefMgr -- should be set to zero by
-		; module.
-		PMI_maxLevel				UIInterfaceLevel	UIInterfaceLevel
-		; Minimum user level required for this module to appear.
-		; Currently not implemented by PrefMgr. Should be set to
-		; the maximum value by module.
-		PMI_monikerList				optr
-		; Moniker list in a shared, lmem, read-only resource that will be
-		; used as the module's trigger
-		PMI_monikerToken			GeodeToken
-		; A unique GeodeToken that will be used to enter the module's
-		; moniker list into the token database. This is done so that the
-		; module is only called with PMET_GET_MODULE_INFO the first time
-		; it is encountered by PrefMgr - all subsequent times, the
-		; necessary information is cached.
-	PrefModuleInfo ends
+### PrefModuleInfo
+    PrefModuleInfo struct
+        PMI_requiredFeatures        PrefMgrFeatures <>
+        ; Features that MUST be set for this module to appear in PrefMgr
+        PMI_prohibitedFeatures      PrefMgrFeatures <>
+        ; Features that MUST NOT be set for this module to appear.
+        PMI_minLevel                UIInterfaceLevel    0
+        ; Minimum user level required for this module to appear.
+        ; Currently not implemented by PrefMgr -- should be set to zero by
+        ; module.
+        PMI_maxLevel                UIInterfaceLevel    UIInterfaceLevel
+        ; Minimum user level required for this module to appear.
+        ; Currently not implemented by PrefMgr. Should be set to
+        ; the maximum value by module.
+        PMI_monikerList             optr
+        ; Moniker list in a shared, lmem, read-only resource that will be
+        ; used as the module's trigger
+        PMI_monikerToken            GeodeToken
+        ; A unique GeodeToken that will be used to enter the module's
+        ; moniker list into the token database. This is done so that the
+        ; module is only called with PMET_GET_MODULE_INFO the first time
+        ; it is encountered by PrefMgr - all subsequent times, the
+        ; necessary information is cached.
+    PrefModuleInfo ends
 
 **Library:** config.def
 
 ----------
-#### PrefTimeDateControlFeatures
-	PrefTimeDateControlFeatures     record
-		PTDCF_DATE		:1
-		PTDCF_TIME		:1
-	PrefTimeDateControlFeatures     end
+### PrefTimeDateControlFeatures
+    PrefTimeDateControlFeatures     record
+        PTDCF_DATE      :1
+        PTDCF_TIME      :1
+    PrefTimeDateControlFeatures     end
 
 **Library:** config.def
 
 ----------
-#### PrefTimeDateControlScreen
-	PrefTimeDateControlScreen		etype	word, 0, 2
-		PTDCS_TIME_DATE		enum	PrefTimeDateControlScreen
+### PrefTimeDateControlScreen
+    PrefTimeDateControlScreen       etype   word, 0, 2
+        PTDCS_TIME_DATE     enum    PrefTimeDateControlScreen
 
 **Library:** config.def
 
 ----------
-#### PrefTocExtraEntry
-	PrefTocExtraEntry		struct
-		PTEE_item		lptr.char
-		PTEE_driver		lptr.char
-		PTEE_info		word
-	PrefTocExtraEntry		ends
+### PrefTocExtraEntry
+    PrefTocExtraEntry       struct
+        PTEE_item       lptr.char
+        PTEE_driver     lptr.char
+        PTEE_info       word
+    PrefTocExtraEntry       ends
 
 *PTEE_item* stores the lptr of the item name. For device lists, this is the device. 
 For others, this is the filename.
@@ -1719,19 +1719,19 @@ For others, this is the filename.
 **Library:** config.def
 
 ----------
-#### PrefTriggerAction
-	PrefTriggerAction		struct
-		PTA_message		word
-		PTA_dest		optr
-	PrefTriggerAction		ends
+### PrefTriggerAction
+    PrefTriggerAction       struct
+        PTA_message     word
+        PTA_dest        optr
+    PrefTriggerAction       ends
 
 **Library:** config.def
 
 ----------
-#### PrefVMMapBlock
-	PrefVMMapBlock	struct 
-		PVMMB_root		fptr
-	PrefVMMapBlock	ends
+### PrefVMMapBlock
+    PrefVMMapBlock  struct 
+        PVMMB_root      fptr
+    PrefVMMapBlock  ends
 
 Map block for a VM file this object can handle.
 
@@ -1741,125 +1741,125 @@ portion is VM block handle
 **Library:** config.def
 
 ----------
-#### PrintControlAttrs
-	PrintControlAttrs		record
-								:1
-		PCA_SEE_IF_DOC_WILL_FIT	:1		; check if document will fit on paper
-		PCA_MARK_APP_BUSY		:1		; mark busy while application is printing
-		PCA_VERIFY_PRINT		:1		; indicate we want to verify before 
-										; printing
-		PCA_SHOW_PROGRESS		:1		; show the print progress dialog box
-		PCA_PROGRESS_PERCENT	:1		; show progress by percentage completed
-		PCA_PROGRESS_PAGE		:1		; show progress by page completed
-		PCA_FORCE_ROTATION		:1		; Force rotation of output
-		PCA_COPY_CONTROLS		:1		; Copy controls are available
-		PCA_PAGE_CONTROLS		:1		; Page range controls are available
-		PCA_QUALITY_CONTROLS	:1		; Print quality controls are available
-		PCA_USES_DIALOG_BOX		:1		; A print dialog box should appear
-		PCA_GRAPHICS_MODE		:1		; Supports graphics mode output
-		PCA_TEXT_MODE			:1		; Supports text mode output
-		PCA_DEFAULT_QUALITY		PrintQualityEnum:2	; default print quality
-	PrintControlAttrs		end
+### PrintControlAttrs
+    PrintControlAttrs       record
+                                :1
+        PCA_SEE_IF_DOC_WILL_FIT :1      ; check if document will fit on paper
+        PCA_MARK_APP_BUSY       :1      ; mark busy while application is printing
+        PCA_VERIFY_PRINT        :1      ; indicate we want to verify before 
+                                        ; printing
+        PCA_SHOW_PROGRESS       :1      ; show the print progress dialog box
+        PCA_PROGRESS_PERCENT    :1      ; show progress by percentage completed
+        PCA_PROGRESS_PAGE       :1      ; show progress by page completed
+        PCA_FORCE_ROTATION      :1      ; Force rotation of output
+        PCA_COPY_CONTROLS       :1      ; Copy controls are available
+        PCA_PAGE_CONTROLS       :1      ; Page range controls are available
+        PCA_QUALITY_CONTROLS    :1      ; Print quality controls are available
+        PCA_USES_DIALOG_BOX     :1      ; A print dialog box should appear
+        PCA_GRAPHICS_MODE       :1      ; Supports graphics mode output
+        PCA_TEXT_MODE           :1      ; Supports text mode output
+        PCA_DEFAULT_QUALITY     PrintQualityEnum:2  ; default print quality
+    PrintControlAttrs       end
 
 **Library:** spool.def
 
 ----------
-#### PrintControlFeatures
-	PrintControlFeatures			record
-		PRINTCF_PRINT_TRIGGER			:1		; wants a print trigger
-		PRINTCF_FAX_TRIGGER				:1		; wants a fax trigger
-	PrintControlFeatures			end
+### PrintControlFeatures
+    PrintControlFeatures            record
+        PRINTCF_PRINT_TRIGGER           :1      ; wants a print trigger
+        PRINTCF_FAX_TRIGGER             :1      ; wants a fax trigger
+    PrintControlFeatures            end
 
 **Library:** spool.def
 
 ----------
-#### PrintControlStatus
-	PrintControlStatus		etype word
-		PCS_PRINT_BOX_VISIBLE		enum PrintControlStatus	; Print DB is on screen
-		PCS_PRINT_BOX_NOT_VISIBLE	enum PrintControlStatus	; Print DB not on screen
+### PrintControlStatus
+    PrintControlStatus      etype word
+        PCS_PRINT_BOX_VISIBLE       enum PrintControlStatus ; Print DB is on screen
+        PCS_PRINT_BOX_NOT_VISIBLE   enum PrintControlStatus ; Print DB not on screen
 
 **Library:** spool.def
 
 ----------
-#### PrintControlToolboxFeatures
-	PrintControlToolboxFeatures				record
-		PRINTCTF_PRINT_TRIGGER		:1		; wants a print tool trigger
-		PRINTCTF_FAX_TRIGGER		:1		; wants a fax tool trigger
-	PrintControlToolboxFeatures				end
+### PrintControlToolboxFeatures
+    PrintControlToolboxFeatures             record
+        PRINTCTF_PRINT_TRIGGER      :1      ; wants a print tool trigger
+        PRINTCTF_FAX_TRIGGER        :1      ; wants a fax tool trigger
+    PrintControlToolboxFeatures             end
 
 **Library:** spool.def
 
 ----------
-#### PrinterDriverType
-	PrinterDriverType		etype byte, 0
-		PDT_PRINTER			enum PrinterDriverType
-		PDT_PLOTTER			enum PrinterDriverType
-		PDT_FACSIMILE		enum PrinterDriverType
-		PDT_CAMERA			enum PrinterDriverType
-		PDT_OTHER			enum PrinterDriverType
-		PDT_ALL				equ -1			; all printers of all types
+### PrinterDriverType
+    PrinterDriverType       etype byte, 0
+        PDT_PRINTER         enum PrinterDriverType
+        PDT_PLOTTER         enum PrinterDriverType
+        PDT_FACSIMILE       enum PrinterDriverType
+        PDT_CAMERA          enum PrinterDriverType
+        PDT_OTHER           enum PrinterDriverType
+        PDT_ALL             equ -1          ; all printers of all types
 
 **Library:** print.def
 
 ----------
-#### PrinterMode
-	PrinterMode		etype byte, 0, 2
-		PM_GRAPHICS_LOW_RES	enum PrinterMode	; lowest quality...fastest...
-		PM_GRAPHICS_MED_RES	enum PrinterMode	; medium quality...slower...
-		PM_GRAPHICS_HI_RES	enum PrinterMode	; best quality...slowest...
-		PM_TEXT_DRAFT		enum PrinterMode	; fastest ascii output
-		PM_TEXT_NLQ			enum PrinterMode	; best quality ascii output
+### PrinterMode
+    PrinterMode     etype byte, 0, 2
+        PM_GRAPHICS_LOW_RES enum PrinterMode    ; lowest quality...fastest...
+        PM_GRAPHICS_MED_RES enum PrinterMode    ; medium quality...slower...
+        PM_GRAPHICS_HI_RES  enum PrinterMode    ; best quality...slowest...
+        PM_TEXT_DRAFT       enum PrinterMode    ; fastest ascii output
+        PM_TEXT_NLQ         enum PrinterMode    ; best quality ascii output
 
-		PM_FIRST_TEXT_MODE	equ PM_TEXT_DRAFT	; equate to make the code easier
+        PM_FIRST_TEXT_MODE  equ PM_TEXT_DRAFT   ; equate to make the code easier
 
 **Library:** print.def
 
 ----------
-#### PrinterOutputModes
-	PrinterOutputModes		record
-		POM_unused				:3		; leave these bits alone!!!
-		POM_GRAPHICS_LOW		:1		; Graphics mode low quality available
-		POM_GRAPHICS_MEDIUM		:1		; Graphics mode medium quality available 
-		POM_GRAPHICS_HIGH		:1		; Graphics mode high quality available 
-		POM_TEXT_DRAFT			:1		; Character mode draft quality available 
-		POM_TEXT_NLQ			:1		; Character mode NLQ quality available 
-	PrinterOutputModes		end
+### PrinterOutputModes
+    PrinterOutputModes      record
+        POM_unused              :3      ; leave these bits alone!!!
+        POM_GRAPHICS_LOW        :1      ; Graphics mode low quality available
+        POM_GRAPHICS_MEDIUM     :1      ; Graphics mode medium quality available 
+        POM_GRAPHICS_HIGH       :1      ; Graphics mode high quality available 
+        POM_TEXT_DRAFT          :1      ; Character mode draft quality available 
+        POM_TEXT_NLQ            :1      ; Character mode NLQ quality available 
+    PrinterOutputModes      end
 
 **Library:** spool.def
 
 ----------
-#### PrintQualityEnum
-	PrintQualityenum 	etype byte, 0, 1
-		PQT_HIGH		enum PrintQualityenum 		; default to high
-		PQT_MEDIUM		enum PrintQualityenum 		; default to medium
-		PQT_LOW			enum PrintQualityenum 		; default to low
+### PrintQualityEnum
+    PrintQualityenum    etype byte, 0, 1
+        PQT_HIGH        enum PrintQualityenum       ; default to high
+        PQT_MEDIUM      enum PrintQualityenum       ; default to medium
+        PQT_LOW         enum PrintQualityenum       ; default to low
 
 **Library:** spool.def
 
 ----------
-#### PrintStatusFlags
-	PrintStatusFlags		record
-		PSF_FAX_AVAILABLE		:1		; set if a fax driver is available
-								:3
-		PSF_ABORT				:1		; user wants to abort printing
-		PSF_RECEIVED_COMPLETED	:1		; MSG_PC_PRINTING_COMPLETED received
-		PSF_RECEIVED_NAME		:1		; MSG_PC_SET_DOC_NAME received
-		PSF_VERIFIED			:1		; PSG_PC_VERIFY_? received
-	PrintStatusFlags		end
+### PrintStatusFlags
+    PrintStatusFlags        record
+        PSF_FAX_AVAILABLE       :1      ; set if a fax driver is available
+                                :3
+        PSF_ABORT               :1      ; user wants to abort printing
+        PSF_RECEIVED_COMPLETED  :1      ; MSG_PC_PRINTING_COMPLETED received
+        PSF_RECEIVED_NAME       :1      ; MSG_PC_SET_DOC_NAME received
+        PSF_VERIFIED            :1      ; PSG_PC_VERIFY_? received
+    PrintStatusFlags        end
 
 **Library:** spool.def
 
 ----------
-#### PriorityList
-	PriorityList		struct
-		PL_message			word
-		PL_point			PointDWFixed
-		PL_instructions		PriorityListInstructions
-		PL_class			fptr.ClassStruct
-		PL_numElements 		word
-		PL_maxElements		word
-		PL_list 			lptr
-	PriorityList		ends
+### PriorityList
+    PriorityList        struct
+        PL_message          word
+        PL_point            PointDWFixed
+        PL_instructions     PriorityListInstructions
+        PL_class            fptr.ClassStruct
+        PL_numElements      word
+        PL_maxElements      word
+        PL_list             lptr
+    PriorityList        ends
 
 *PL_message* stores the method to send to each object.
 
@@ -1880,26 +1880,26 @@ list.
 **Library:** grobj.def
 
 ----------
-#### PriorityListElement
-	PriorityListElement			struct
-		PLE_od			optr
-		PLE_priority	byte
-		PLE_other		byte
-	PriorityListElement			ends
+### PriorityListElement
+    PriorityListElement         struct
+        PLE_od          optr
+        PLE_priority    byte
+        PLE_other       byte
+    PriorityListElement         ends
 
 **Library:** grobj.def
 
 ----------
-#### PriorityListInstructions
-	PriorityListInstructions			record
-		PLI_CHECK_SELECTION_HANDLE_BOUNDS				:1
-		PLI_ONLY_PROCESS_SELECTED						:1
-		PLI_ONLY_PROCESS_CLASS							:1
-		PLI_ONLY_INSERT_CLASS							:1
-		PLI_STOP_AT_FIRST_HIGH							:1
-		PLI_ONLY_INSERT_HIGH							:1
-		PLI_DONT_INSERT_OBJECTS_WITH_SELECTION_LOCK		:1
-	PriorityListInstructions			end
+### PriorityListInstructions
+    PriorityListInstructions            record
+        PLI_CHECK_SELECTION_HANDLE_BOUNDS               :1
+        PLI_ONLY_PROCESS_SELECTED                       :1
+        PLI_ONLY_PROCESS_CLASS                          :1
+        PLI_ONLY_INSERT_CLASS                           :1
+        PLI_STOP_AT_FIRST_HIGH                          :1
+        PLI_ONLY_INSERT_HIGH                            :1
+        PLI_DONT_INSERT_OBJECTS_WITH_SELECTION_LOCK     :1
+    PriorityListInstructions            end
 
 PLI_CHECK_SELECTION_HANDLE_BOUNDS  
 Do trivial reject check on bounds of objects that include the 
@@ -1928,25 +1928,25 @@ objects must return EPN_SELECTION_LOCK_SET.
 **Library:** grobj.def
 
 ----------
-#### ProcessCallRoutineParams
-ProcessCallRoutineParams		struct
-PCRP_address			fptr
-PCRP_dataAX				word
-PCRP_dataBX				word
-PCRP_dataCX				word
-PCRP_dataDX				word
-PCRP_dataSI				word
-PCRP_dataDI				word
-ProcessCallRoutineParams		ends
+### ProcessCallRoutineParams
+ProcessCallRoutineParams        struct
+PCRP_address            fptr
+PCRP_dataAX             word
+PCRP_dataBX             word
+PCRP_dataCX             word
+PCRP_dataDX             word
+PCRP_dataSI             word
+PCRP_dataDI             word
+ProcessCallRoutineParams        ends
 
 **Library:** processC.def
 
 ----------
-#### ProtocolNumber
-	ProtocolNumber		struct
-		PN_major			word
-		PN_minor			word
-	ProtocolNumber		ends
+### ProtocolNumber
+    ProtocolNumber      struct
+        PN_major            word
+        PN_minor            word
+    ProtocolNumber      ends
 
 This structure defines the protocol level of a file, geode, or document.
 
@@ -1959,55 +1959,55 @@ different, the two items may or may not be compatible.
 **Library:** geode.def
 
 ----------
-#### PSCFeatures
-	PSCFeatures		record
-		PSCF_9				:1
-		PSCF_10				:1
-		PSCF_12				:1
-		PSCF_14				:1
-		PSCF_18				:1
-		PSCF_24				:1
-		PSCF_36				:1
-		PSCF_54				:1
-		PSCF_72				:1
-		PSCF_SMALLER		:1
-		PSCF_LARGER			:1
-		PSCF_CUSTOM_SIZE	:1
-PSCFeatures		end
+### PSCFeatures
+    PSCFeatures     record
+        PSCF_9              :1
+        PSCF_10             :1
+        PSCF_12             :1
+        PSCF_14             :1
+        PSCF_18             :1
+        PSCF_24             :1
+        PSCF_36             :1
+        PSCF_54             :1
+        PSCF_72             :1
+        PSCF_SMALLER        :1
+        PSCF_LARGER         :1
+        PSCF_CUSTOM_SIZE    :1
+    PSCFeatures     end
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### PSCToolboxFeatures
-	PSCToolboxFeatures		record
-		PSCTF_9			:1
-		PSCTF_10		:1
-		PSCTF_12		:1
-		PSCTF_14		:1
-		PSCTF_18		:1
-		PSCTF_24		:1
-		PSCTF_36		:1
-		PSCTF_54		:1
-		PSCTF_72		:1
-		PSCTF_SMALLER	:1
-		PSCTF_LARGER	:1
-	PSCToolboxFeatures		end
+### PSCToolboxFeatures
+    PSCToolboxFeatures      record
+        PSCTF_9         :1
+        PSCTF_10        :1
+        PSCTF_12        :1
+        PSCTF_14        :1
+        PSCTF_18        :1
+        PSCTF_24        :1
+        PSCTF_36        :1
+        PSCTF_54        :1
+        PSCTF_72        :1
+        PSCTF_SMALLER   :1
+        PSCTF_LARGER    :1
+    PSCToolboxFeatures      end
 
 **Library:** Objects/Text/tCtrlC.def
 
 ----------
-#### PtrImageLevel
-	PtrImageLevel		etype word, 0
-		PIL_SYSTEM			enum PtrImageLevel
-		PIL_1				enum PtrImageLevel
-		PIL_FLOW			enum PtrImageLevel
-		PIL_3				enum PtrImageLevel
-		PIL_GEODE			enum PtrImageLevel
-		PIL_5				enum PtrImageLevel
-		PIL_GADGET			enum PtrImageLevel
-		PIL_7				enum PtrImageLevel
-		PIL_WINDOW			enum PtrImageLevel
-		PIL_DEFAULT			enum PtrImageLevel
+### PtrImageLevel
+    PtrImageLevel       etype word, 0
+        PIL_SYSTEM          enum PtrImageLevel
+        PIL_1               enum PtrImageLevel
+        PIL_FLOW            enum PtrImageLevel
+        PIL_3               enum PtrImageLevel
+        PIL_GEODE           enum PtrImageLevel
+        PIL_5               enum PtrImageLevel
+        PIL_GADGET          enum PtrImageLevel
+        PIL_7               enum PtrImageLevel
+        PIL_WINDOW          enum PtrImageLevel
+        PIL_DEFAULT         enum PtrImageLevel
 
 Enumerated type for ptr image level. Each level may specify a particular 
 mouse ptr image, or specify that the level does not currently have an image. 
@@ -2042,15 +2042,15 @@ Default pointer.
 **Library:** win.def
 
 ----------
-#### PtrImageValue
-	PtrImageValue		etype word
-		PIV_NONE					enum PtrImageValue, 0
-		PIV_VIDEO_DRIVER_DEFAULT	enum PtrImageValue
-		PIV_UPDATE					enum PtrImageValue
+### PtrImageValue
+    PtrImageValue       etype word
+        PIV_NONE                    enum PtrImageValue, 0
+        PIV_VIDEO_DRIVER_DEFAULT    enum PtrImageValue
+        PIV_UPDATE                  enum PtrImageValue
 
 Enumerated type passed as an alternative to an optr to a PointerDef.
 
-PIV_NONE	  
+PIV_NONE      
 No ptr image requested for level. Important: Keep the value of 
 this enumerated constant to 0, so that a null optr results in no 
 ptr image being requested.
@@ -2066,51 +2066,51 @@ screens.
 **Library:** win.def
 
 ----------
-#### QuickSortParameters
-	QuickSortParameters				struct
-		QSP_compareCallback		fptr	; Compare two elements
-		;
-		;	Pass:
-		;		ds:si		- first array element
-		;		es:di		- second array element
-		;		bx			- parameter passed to ArrayQuickSort
-		;	Return:
-		;		flags set so caller can jl, je, or jg
-		;		according as first element is less than,
-		;		equal to, or greater than the second.
-		;	Destroyed:
-		;		ax, bx, cx, dx, di, si
-		;
-		QSP_lockCallback		fptr	; Lock an element (segment = 0, for none)
-		;
-		;	Pass:
-		;		ds:si		- array element to lock
-		;		bx			- parameter passed to ArrayQuickSort
-		;	Return:
-		;		nothing
-		;	Destroyed:
-		;		nothing
-		;
-		QSP_unlockCallback		fptr	; Unlock an element (segment = 0, for none)
-		;
-		;	Pass:
-		;		ds:si		- array element to unlock
-		;		bx			- parameter passed to ArrayQuickSort
-		;	Return:
-		;		nothing
-		;	Destroyed:
-		;		nothing
-		;
-		QSP_insertLimit			word
-		QSP_medianLimit			word
-		;
-		; These are used internally by the quicksort algorithm and should not
-		; be set by the caller.
-		;
-		QSP_nLesser				word
-		QSP_nGreater			word
-		align					word
-	QuickSortParameters				ends
+### QuickSortParameters
+    QuickSortParameters             struct
+        QSP_compareCallback     fptr    ; Compare two elements
+        ;
+        ;   Pass:
+        ;       ds:si       - first array element
+        ;       es:di       - second array element
+        ;       bx          - parameter passed to ArrayQuickSort
+        ;   Return:
+        ;       flags set so caller can jl, je, or jg
+        ;       according as first element is less than,
+        ;       equal to, or greater than the second.
+        ;   Destroyed:
+        ;       ax, bx, cx, dx, di, si
+        ;
+        QSP_lockCallback        fptr    ; Lock an element (segment = 0, for none)
+        ;
+        ;   Pass:
+        ;       ds:si       - array element to lock
+        ;       bx          - parameter passed to ArrayQuickSort
+        ;   Return:
+        ;       nothing
+        ;   Destroyed:
+        ;       nothing
+        ;
+        QSP_unlockCallback      fptr    ; Unlock an element (segment = 0, for none)
+        ;
+        ;   Pass:
+        ;       ds:si       - array element to unlock
+        ;       bx          - parameter passed to ArrayQuickSort
+        ;   Return:
+        ;       nothing
+        ;   Destroyed:
+        ;       nothing
+        ;
+        QSP_insertLimit         word
+        QSP_medianLimit         word
+        ;
+        ; These are used internally by the quicksort algorithm and should not
+        ; be set by the caller.
+        ;
+        QSP_nLesser             word
+        QSP_nGreater            word
+        align                   word
+    QuickSortParameters             ends
 
 *QSP_insertLimit* stores the size of the list below which we choose to use 
 insertion sort and not quicksort.
@@ -2124,13 +2124,13 @@ and greater list parts. This is used internally by the quicksort algorithm.
 **Library:** chunkarr.def
 
 ----------
-#### QuitLevel
-	QuitLevel		etype word
-		QL_BEFORE_UI			enum QuitLevel
-		QL_UI					enum QuitLevel
-		QL_AFTER_UI				enum QuitLevel
-		QL_DETACH				enum QuitLevel
-		QL_AFTER_DETACH			enum QuitLevel
+### QuitLevel
+    QuitLevel       etype word
+        QL_BEFORE_UI            enum QuitLevel
+        QL_UI                   enum QuitLevel
+        QL_AFTER_UI             enum QuitLevel
+        QL_DETACH               enum QuitLevel
+        QL_AFTER_DETACH         enum QuitLevel
 
 QL_BEFORE_UI  
 Quit message sent out before MSG_META_QUIT messages are 
@@ -2155,60 +2155,60 @@ Why is it still around? You'll understand when you're older.
 **Library:** Objects/metaC.def
 
 ----------
-#### RandomGenInitFlags
-	RandomGenInitFlags		record
-		RGIF_USE_SEED			:1
-		RGIF_GENERATE_SEED		:1
-								:6
-	RandomGenInitFlags		end
+### RandomGenInitFlags
+    RandomGenInitFlags      record
+        RGIF_USE_SEED           :1
+        RGIF_GENERATE_SEED      :1
+                                :6
+    RandomGenInitFlags      end
 
 **Library:** math.def
 
 ----------
-#### RangeEnumFlags
-	RangeEnumFlags		record
-		REF_ALL_CELLS			:1	; Set: callback for all cells.
-		REF_NO_LOCK				:1	; Set: callback will lock/unlock cells.
-		REF_ROW_FLAGS			:1	; Set: get row flags when calling back
-		REF_MATCH_ROW_FLAGS		:1	; Set: callback for cells w/matching row 
-									; flags
-		;
-		; These next ones are returned from the callback routine.
-		;
-		REF_CELL_ALLOCATED		:1	; Set: The callback routine allocated the 
-									; cell for which the callback occurred.
-		REF_CELL_FREED:1			; Set: The callback routine freed the cell 
-									; for which the callback occurred.
-		REF_OTHER_ALLOC_OR_FREE	:1	; Set: The callback routine may have 
-									; allocated or freed a cell other than the 
-									; one for which the callback occurred.
-		REF_ROW_FLAGS_MODIFIED	:1	; Set: The callback routine changed 
-									; the row flags
-	RangeEnumFlags		end
+### RangeEnumFlags
+    RangeEnumFlags      record
+        REF_ALL_CELLS           :1  ; Set: callback for all cells.
+        REF_NO_LOCK             :1  ; Set: callback will lock/unlock cells.
+        REF_ROW_FLAGS           :1  ; Set: get row flags when calling back
+        REF_MATCH_ROW_FLAGS     :1  ; Set: callback for cells w/matching row 
+                                    ; flags
+        ;
+        ; These next ones are returned from the callback routine.
+        ;
+        REF_CELL_ALLOCATED      :1  ; Set: The callback routine allocated the 
+                                    ; cell for which the callback occurred.
+        REF_CELL_FREED:1            ; Set: The callback routine freed the cell 
+                                    ; for which the callback occurred.
+        REF_OTHER_ALLOC_OR_FREE :1  ; Set: The callback routine may have 
+                                    ; allocated or freed a cell other than the 
+                                    ; one for which the callback occurred.
+        REF_ROW_FLAGS_MODIFIED  :1  ; Set: The callback routine changed 
+                                    ; the row flags
+    RangeEnumFlags      end
 
 **Library:** cell.def
 
 ----------
-#### RangeEnumParams
-	RangeEnumParams		struct
-		REP_callback		fptr.far	;routine to call
-		REP_bounds			Rectangle	;cells to enumerate
-		;
-		; Stuff below this point is filled in by RangeEnum() and can be
-		; used by the callback.
-		;
-		REP_rowFlags		word		;current row flags
-		;
-		; Stuff below this point is setup by RangeEnum(). Applications don't
-		; need to worry about it.
-		;
-		REP_cfp				fptr.CellFunctionParameters
-		;
-		; Stuff below this point is only used with REF_MATCH_ROW_FLAGS
-		;
-		REP_matchFlags		word		;flags to match
-		REP_flagRow			word		;row we locked for flags
-	RangeEnumParams		ends
+### RangeEnumParams
+    RangeEnumParams     struct
+        REP_callback        fptr.far    ;routine to call
+        REP_bounds          Rectangle   ;cells to enumerate
+        ;
+        ; Stuff below this point is filled in by RangeEnum() and can be
+        ; used by the callback.
+        ;
+        REP_rowFlags        word        ;current row flags
+        ;
+        ; Stuff below this point is setup by RangeEnum(). Applications don't
+        ; need to worry about it.
+        ;
+        REP_cfp             fptr.CellFunctionParameters
+        ;
+        ; Stuff below this point is only used with REF_MATCH_ROW_FLAGS
+        ;
+        REP_matchFlags      word        ;flags to match
+        REP_flagRow         word        ;row we locked for flags
+    RangeEnumParams     ends
 
 This structure is used most often by the **RangeEnum** routine. In this case, 
 the structure defines how the enumeration will occur.
@@ -2232,12 +2232,12 @@ cells.
 **Library:** cell.def
 
 ----------
-#### RangeInsertParams
-	RangeInsertParams			struct
-		RIP_bounds			Rectangle
-		RIP_delta			Point
-		RIP_cfp				dword
-	RangeInsertParams			ends
+### RangeInsertParams
+    RangeInsertParams           struct
+        RIP_bounds          Rectangle
+        RIP_delta           Point
+        RIP_cfp             dword
+    RangeInsertParams           ends
 
 This structure is used by the **RangeInsert** routine, which shifts a group of 
 cells from one position to another.
@@ -2253,20 +2253,20 @@ entry is set up automatically by the routine.
 **Library:** cell.def
 
 ----------
-#### RangeSortCellExistsFlags
-	RangeSortCellExistsFlags			record
-									:6		; Unused bits
-		RSCEF_SECOND_CELL_EXISTS	:1		; Set: Second cell exists
-		RSCEF_FIRST_CELL_EXISTS		:1		; Set: First cell exists
-	RangeSortCellExistsFlags			end
+### RangeSortCellExistsFlags
+    RangeSortCellExistsFlags            record
+                                    :6      ; Unused bits
+        RSCEF_SECOND_CELL_EXISTS    :1      ; Set: Second cell exists
+        RSCEF_FIRST_CELL_EXISTS     :1      ; Set: First cell exists
+    RangeSortCellExistsFlags            end
 
 **Library:** cell.def
 
 ----------
-#### RangeSortError
-	RangeSortError		etype word, 0, 1
-		RSE_NO_ERROR			enum RangeSortError
-		RSE_UNABLE_TO_ALLOC		enum RangeSortError
+### RangeSortError
+    RangeSortError      etype word, 0, 1
+        RSE_NO_ERROR            enum RangeSortError
+        RSE_UNABLE_TO_ALLOC     enum RangeSortError
 
 RSE_NO_ERROR  
 No error, the sort was successful. 
@@ -2278,48 +2278,48 @@ needs to sort the data.
 **Library:** cell.def
 
 ----------
-#### RangeSortFlags
-	RangeSortFlags		record
-		RSF_SORT_ROWS			:1	; Set: Sort rows
-		RSF_SORT_ASCENDING		:1	; Set: Sort in ascending order
-		RSF_IGNORE_CASE			:1	; Set: Ignore case in string compares
-		 						:4
-		RSF_IGNORE_SPACES		:1	; Set: Ignore spaces & punctuation
-									; NOTE: this is not supported directly
-									; by the Cell library, but is placed
-									; here for the convenience of apps.
-	RangeSortFlags		end
+### RangeSortFlags
+    RangeSortFlags      record
+        RSF_SORT_ROWS           :1  ; Set: Sort rows
+        RSF_SORT_ASCENDING      :1  ; Set: Sort in ascending order
+        RSF_IGNORE_CASE         :1  ; Set: Ignore case in string compares
+                                :4
+        RSF_IGNORE_SPACES       :1  ; Set: Ignore spaces & punctuation
+                                    ; NOTE: this is not supported directly
+                                    ; by the Cell library, but is placed
+                                    ; here for the convenience of apps.
+    RangeSortFlags      end
 
 **Library:** cell.def
 
 ----------
-#### RangeSortParams
-	RangeSortParams		struct
-		RSP_range			Rectangle
-		RSP_active			Point
-		RSP_callback		dword		; Comparison routine
-		;
-		; Callback is defined as:
-		;	PASS:		ds:si	= Pointer to first cells data
-		;				es:di	= Pointer to second cells data
-		;				ax		= RangeSortCellExistsFlags
-		;				ss:bx	= Parameters passed to RangeSort
-		;	RETURN:		Flags set for comparison of the two cells
-		;	DESTROYED: cx, dx, di, si, bp
-		;
-		RSP_flags			RangeSortFlags
-		align				word
-		;
-		; The rest is used in RangeSort and should be ignored.
-		;
-		RSP_cfp				dword
-		RSP_sourceChunk		word
-		RSP_destChunk		word
-		RSP_base			word
-		RSP_lockedEntry		dword
-		RSP_cachedFlags		byte
-		align				word
-	RangeSortParams		ends
+### RangeSortParams
+    RangeSortParams     struct
+        RSP_range           Rectangle
+        RSP_active          Point
+        RSP_callback        dword       ; Comparison routine
+        ;
+        ; Callback is defined as:
+        ;   PASS:       ds:si   = Pointer to first cells data
+        ;               es:di   = Pointer to second cells data
+        ;               ax      = RangeSortCellExistsFlags
+        ;               ss:bx   = Parameters passed to RangeSort
+        ;   RETURN:     Flags set for comparison of the two cells
+        ;   DESTROYED: cx, dx, di, si, bp
+        ;
+        RSP_flags           RangeSortFlags
+        align               word
+        ;
+        ; The rest is used in RangeSort and should be ignored.
+        ;
+        RSP_cfp             dword
+        RSP_sourceChunk     word
+        RSP_destChunk       word
+        RSP_base            word
+        RSP_lockedEntry     dword
+        RSP_cachedFlags     byte
+        align               word
+    RangeSortParams     ends
 
 *RSP_range* stores the rectangular range to conduct the sort on.
 
@@ -2344,11 +2344,11 @@ upon.
 **Library:** cell.def
 
 ----------
-#### RecalcSizeArgs
-	RecalcSizeArgs		record
-		RSA_CHOOSE_OWN_SIZE			:1
-		RSA_SUGGESTED_SIZE			:15
-	RecalcSizeArgs		end
+### RecalcSizeArgs
+    RecalcSizeArgs      record
+        RSA_CHOOSE_OWN_SIZE         :1
+        RSA_SUGGESTED_SIZE          :15
+    RecalcSizeArgs      end
 
 RSA_CHOOSE_OWN_SIZE  
 Geometry manager wants object to choose its own size, 
@@ -2361,85 +2361,85 @@ Suggested size to use, if above bit is not set.
 **Library:** Objects/visC.def
 
 ----------
-#### Rectangle
-	Rectangle			struct
-		R_left		sword
-		R_top		sword
-		R_right		sword
-		R_bottom	sword
-	Rectangle			ends
+### Rectangle
+    Rectangle           struct
+        R_left      sword
+        R_top       sword
+        R_right     sword
+        R_bottom    sword
+    Rectangle           ends
 
 This is the standard structure for a rectangle in GEOS.
 
 **Library:** graphics.def
 
 ----------
-#### RectDWFixed
-	RectDWFixed		struct
-		RDWF_left		DWFixed
-		RDWF_top		DWFixed
-		RDWF_right		DWFixed
-		RDWF_bottom		DWFixed
-	RectDWFixed		ends
-	
+### RectDWFixed
+    RectDWFixed     struct
+        RDWF_left       DWFixed
+        RDWF_top        DWFixed
+        RDWF_right      DWFixed
+        RDWF_bottom     DWFixed
+    RectDWFixed     ends
+    
 **Library:** bitmap.def
 
 ----------
-#### RectDWord
-	RectDWord		struct
-		RD_left			sdword
-		RD_top			sdword
-		RD_right		sdword
-		RD_bottom		sdword
-	RectDWord		ends
+### RectDWord
+    RectDWord       struct
+        RD_left         sdword
+        RD_top          sdword
+        RD_right        sdword
+        RD_bottom       sdword
+    RectDWord       ends
 
 This is the standard structure for a rectangle in extended coordinates.
 
 **Library:** graphics.def
 
 ----------
-#### RectRegion
-	RectRegion			struct
-		RR_y1M1		word
-		RR_eo1		word EOREGREC
-		RR_y2		word
-		RR_x1		word
-		RR_x2		word
-		RR_eo2		word EOREGREC
-		RR_eo3		word EOREGREC
-	RectRegion			ends
+### RectRegion
+    RectRegion          struct
+        RR_y1M1     word
+        RR_eo1      word EOREGREC
+        RR_y2       word
+        RR_x1       word
+        RR_x2       word
+        RR_eo2      word EOREGREC
+        RR_eo3      word EOREGREC
+    RectRegion          ends
 
 This structure stores a rectangular region.
 
 **Library:** graphics.def
 
 ----------
-#### RectWWFixed
-	RectWWFixed		struct
-		RWWF_left		WWFixed
-		RWWF_top		WWFixed
-		RWWF_right		WWFixed
-		RWWF_bottom		WWFixed
-	RectWWFixed		ends
+### RectWWFixed
+    RectWWFixed     struct
+        RWWF_left       WWFixed
+        RWWF_top        WWFixed
+        RWWF_right      WWFixed
+        RWWF_bottom     WWFixed
+    RectWWFixed     ends
 
 **Library:** grobj.def
 
 ----------
-#### RefElementHeader
-	RefElementHeader		struct
-		REH_refCount			WordAndAHalf
-	RefElementHeader		ends
+### RefElementHeader
+    RefElementHeader        struct
+        REH_refCount            WordAndAHalf
+    RefElementHeader        ends
 
 This structure defines a header for an element of a fixed size.
 
 **Library:** chunkarr.def
 
 ----------
-#### Region
-	Region	struct
-		R_data		word
-	Region	ends
-	EOREGREC		=	8000h
+### Region
+    Region  struct
+        R_data      word
+    Region  ends
+    EOREGREC        =   8000h
 
 This structure stores a region of a graphics coordinate space. A region is of 
 arbitrary length and consists of a series of word-length values. 
@@ -2468,21 +2468,21 @@ those which are different
 **Library:** graphics.def
 
 ----------
-#### RegionFillRule
-	RegionFillRule		etype byte
-		RFR_ODD_EVEN 	enum RegionFillRule		; 0 = odd-even rule
-		RFR_WINDING 	enum RegionFillRule		; 1 = winding rule
+### RegionFillRule
+    RegionFillRule      etype byte
+        RFR_ODD_EVEN    enum RegionFillRule     ; 0 = odd-even rule
+        RFR_WINDING     enum RegionFillRule     ; 1 = winding rule
 
 **Library:** graphics.def
 
 ----------
-#### ReleaseNumber
-	ReleaseNumber		struct
-		RN_major			word
-		RN_minor			word
-		RN_change			word
-		RN_engineering		word
-	ReleaseNumber		ends
+### ReleaseNumber
+    ReleaseNumber       struct
+        RN_major            word
+        RN_minor            word
+        RN_change           word
+        RN_engineering      word
+    ReleaseNumber       ends
 
 This structure stores the release number (version) of a file, document or 
 geode.
@@ -2499,12 +2499,12 @@ need to be examined or changed.
 **Library:** geode.def
 
 ----------
-#### ReplaceAllFromOffsetFlags
-	ReplaceAllFromOffsetFlags			record
-		RAFOF_CONTINUING_REPLACE	:1
-		RAFOF_HAS_UNDO				:1
-									:14
-	ReplaceAllFromOffsetFlags			end
+### ReplaceAllFromOffsetFlags
+    ReplaceAllFromOffsetFlags           record
+        RAFOF_CONTINUING_REPLACE    :1
+        RAFOF_HAS_UNDO              :1
+                                    :14
+    ReplaceAllFromOffsetFlags           end
 
 RAFOF_CONTINUING_REPLACE  
 Set if this message was generated to continue a replace all sent 
@@ -2518,12 +2518,12 @@ ReplaceAll are undoable.
 **Library:** Objects/vTextC.def
 
 ----------
-#### ReplaceAllFromOffsetStruct
-	ReplaceAllFromOffsetStruct			struct
-		RAFOS_data				hptr.SearchReplaceStruct
-		RAFOS_startOffset		dword
-		RAFOS_flags				ReplaceAllFromOffsetFlags
-	ReplaceAllFromOffsetStruct			ends
+### ReplaceAllFromOffsetStruct
+    ReplaceAllFromOffsetStruct          struct
+        RAFOS_data              hptr.SearchReplaceStruct
+        RAFOS_startOffset       dword
+        RAFOS_flags             ReplaceAllFromOffsetFlags
+    ReplaceAllFromOffsetStruct          ends
 
 *RAFOS_data* stores a pointer to the replace-all data. The data is organized in 
 the following format:
@@ -2542,11 +2542,11 @@ them.
 **Library:** Objects/vTextC.def
 
 ----------
-#### ReplaceAllInRangeStruct
-	ReplaceAllInRangeStruct			struct
-		RAIRS_data			hptr.SearchReplaceStruct
-		RAIRS_range			VisTextRange <>
-	ReplaceAllInRangeStruct			ends
+### ReplaceAllInRangeStruct
+    ReplaceAllInRangeStruct         struct
+        RAIRS_data          hptr.SearchReplaceStruct
+        RAIRS_range         VisTextRange <>
+    ReplaceAllInRangeStruct         ends
 
 *RAIRS_data* stores a pointer to the replace-all data. The data is organized in 
 the following format:
@@ -2559,11 +2559,11 @@ SearchReplaceStruct.
 **Library:** Objects/vTextC.def
 
 ----------
-#### ReplaceItemMonikerFlags
-	ReplaceItemMonikerFlags			record
-		RIMF_NOT_ENABLED		:1
-								:15
-	ReplaceItemMonikerFlags			end
+### ReplaceItemMonikerFlags
+    ReplaceItemMonikerFlags         record
+        RIMF_NOT_ENABLED        :1
+                                :15
+    ReplaceItemMonikerFlags         end
 
 RIMF_NOT_ENABLED  
 Ensure that the item we are setting the moniker for will be 
@@ -2572,19 +2572,19 @@ disabled while visible.
 **Library:** Objects/gDListC.def
 
 ----------
-#### ReplaceItemMonikerFrame
-	ReplaceItemMonikerFrame			struct
-		RIMF_source			dword
-		RIMF_sourceType		VisMonikerSourceType
-		even
-		RIMF_dataType		VisMonikerDataType
-		even
-		RIMF_length			word
-		RIMF_width			word
-		RIMF_height			word
-		RIMF_itemFlags		ReplaceItemMonikerFlags
-		RIMF_item			word
-	ReplaceItemMonikerFrame			ends
+### ReplaceItemMonikerFrame
+    ReplaceItemMonikerFrame         struct
+        RIMF_source         dword
+        RIMF_sourceType     VisMonikerSourceType
+        even
+        RIMF_dataType       VisMonikerDataType
+        even
+        RIMF_length         word
+        RIMF_width          word
+        RIMF_height         word
+        RIMF_itemFlags      ReplaceItemMonikerFlags
+        RIMF_item           word
+    ReplaceItemMonikerFrame         ends
 
 *RIMF_source* stores a pointer to the source moniker. This pointer may be an 
 optr, hptr, or fptr, depending on the *RIMF_sourceType*.
@@ -2615,19 +2615,19 @@ gstring.
 **Library:** Objects/gDListC.def
 
 ----------
-#### ReplaceVisMonikerFrame
-	ReplaceVisMonikerFrame			struct
-		RVMF_source				dword
-		RVMF_sourceType			VisMonikerSourceType
-		even
-		RVMF_dataType			VisMonikerDataType
-		even
-		RVMF_length				word
-		RVMF_width				word
-		RVMF_height				word
-		RVMF_updateMode			VisUpdateMode
-		even
-	ReplaceVisMonikerFrame			ends
+### ReplaceVisMonikerFrame
+    ReplaceVisMonikerFrame          struct
+        RVMF_source             dword
+        RVMF_sourceType         VisMonikerSourceType
+        even
+        RVMF_dataType           VisMonikerDataType
+        even
+        RVMF_length             word
+        RVMF_width              word
+        RVMF_height             word
+        RVMF_updateMode         VisUpdateMode
+        even
+    ReplaceVisMonikerFrame          ends
 
 This structure is used by MSG_GEN_REPLACE_VIS_MONIKER to store the 
 parameters used in that operation.
@@ -2660,23 +2660,23 @@ new moniker.
 **Library:** Objects/genC.def
 
 ----------
-#### ReplaceWithGraphicParams
-	ReplaceWithGraphicParams			struct
-		RWGP_range				VisTextRange	;range to replace
-		RWGP_pasteFrame			word			;ptr to frame if quick paste.
-												;0 otherwise.
-		RWGP_sourceFile			word			;source vm file
-		RWGP_graphic			VisTextGraphic
-	ReplaceWithGraphicParams			ends
+### ReplaceWithGraphicParams
+    ReplaceWithGraphicParams            struct
+        RWGP_range              VisTextRange    ;range to replace
+        RWGP_pasteFrame         word            ;ptr to frame if quick paste.
+                                                ;0 otherwise.
+        RWGP_sourceFile         word            ;source vm file
+        RWGP_graphic            VisTextGraphic
+    ReplaceWithGraphicParams            ends
 
 **Library:** Objects/vTextC.def
 
 ----------
-#### ReplaceWithHWRData
-	ReplaceWithHWRData		struct
-		RWHWRD_range			VisTextRange <>
-		RWHWRD_context			HWRContext <>
-	ReplaceWithHWRData		ends
+### ReplaceWithHWRData
+    ReplaceWithHWRData      struct
+        RWHWRD_range            VisTextRange <>
+        RWHWRD_context          HWRContext <>
+    ReplaceWithHWRData      ends
 
 *RWHWRD_range* stores the range to replace. This range may start beyond the 
 end of the text. If so, spaces should be appended to the text.
@@ -2687,143 +2687,143 @@ data was added.
 **Library:** Objects/gPenICC.def
 
 ----------
-#### RequestedViewArea
-	RequestedViewArea		etype byte
-		RVA_NO_AREA_CHOICE	enum RequestedViewArea	;no choice made here
-		RVA_X_SCROLLER_AREA	enum RequestedViewArea	;put with x scroller
-		RVA_Y_SCROLLER_AREA	enum RequestedViewArea	;put with y scroller
-		RVA_LEFT_AREA		enum RequestedViewArea	;put in left area
-		RVA_TOP_AREA		enum RequestedViewArea	;put in top area
-		RVA_RIGHT_AREA		enum RequestedViewArea	;put in right area
-		RVA_BOTTOM_AREA		enum RequestedViewArea	;put in bottom area
+### RequestedViewArea
+    RequestedViewArea       etype byte
+        RVA_NO_AREA_CHOICE  enum RequestedViewArea  ;no choice made here
+        RVA_X_SCROLLER_AREA enum RequestedViewArea  ;put with x scroller
+        RVA_Y_SCROLLER_AREA enum RequestedViewArea  ;put with y scroller
+        RVA_LEFT_AREA       enum RequestedViewArea  ;put in left area
+        RVA_TOP_AREA        enum RequestedViewArea  ;put in top area
+        RVA_RIGHT_AREA      enum RequestedViewArea  ;put in right area
+        RVA_BOTTOM_AREA     enum RequestedViewArea  ;put in bottom area
 
 **Library:** Objects/genC.def
 
 ----------
-#### RGBDelta
-	RGBDelta		struct
-		RGBD_red		sbyte
-		RGBD_green		sbyte
-		RGBD_blue		sbyte
-	RGBDelta		ends
+### RGBDelta
+    RGBDelta        struct
+        RGBD_red        sbyte
+        RGBD_green      sbyte
+        RGBD_blue       sbyte
+    RGBDelta        ends
 
 **Library:** color.def
 
 ----------
-#### RGBValue
-	RGBValue		struct
-		RGB_red			byte
-		RGB_green		byte
-		RGB_blue		byte
-	RGBValue		ends
+### RGBValue
+    RGBValue        struct
+        RGB_red         byte
+        RGB_green       byte
+        RGB_blue        byte
+    RGBValue        ends
 
 **Library:** color.def
 
 ----------
-#### RGCFeatures
-	RGCFeatures		record
-		RGCF_GRID_SPACING		:1
-		RGCF_SNAP_TO_GRID		:1
-		GRCF_SHOW_GRID			:1
-	RGCFeatures		end
+### RGCFeatures
+    RGCFeatures     record
+        RGCF_GRID_SPACING       :1
+        RGCF_SNAP_TO_GRID       :1
+        GRCF_SHOW_GRID          :1
+    RGCFeatures     end
 
 **Library:** ruler.def
 
 ----------
-#### RowBlockList
-	RowBlockList		struct
-		RBL_blocks			nptr N_ROW_BLOCKS dup (0)
-	RowBlockList		ends
+### RowBlockList
+    RowBlockList        struct
+        RBL_blocks          nptr N_ROW_BLOCKS dup (0)
+    RowBlockList        ends
 
 **Library:** cell.def
 
 ----------
-#### RSCCFeatures
-	RSCCFeatures		record
-		RSCCF_SHOW_VERTICAL			:1
-		RSCCF_SHOW_HORIZONTAL		:1
-		RSCCF_SHOW_RULERS			:1
-	RSCCFeatures		end
+### RSCCFeatures
+    RSCCFeatures        record
+        RSCCF_SHOW_VERTICAL         :1
+        RSCCF_SHOW_HORIZONTAL       :1
+        RSCCF_SHOW_RULERS           :1
+    RSCCFeatures        end
 
 **Library:** ruler.def
 
 ----------
-#### RSCCToolboxFeatures
-	RSCCToolboxFeatures			record
-	RSCCToolboxFeatures			end
+### RSCCToolboxFeatures
+    RSCCToolboxFeatures         record
+    RSCCToolboxFeatures         end
 
 **Library:** ruler.def
 
 ----------
-#### RTCFeatures
-	RTCFeatures		record
-		RTCF_DEFAULT		:1
-		RTCF_SPREADSHEET	:1
-		RTCF_INCHES			:1
-		RTCF_CENTIMETERS	:1
-		RTCF_POINTS			:1
-		RTCF_PICAS			:1
-	RTCFeatures		end
+### RTCFeatures
+    RTCFeatures     record
+        RTCF_DEFAULT        :1
+        RTCF_SPREADSHEET    :1
+        RTCF_INCHES         :1
+        RTCF_CENTIMETERS    :1
+        RTCF_POINTS         :1
+        RTCF_PICAS          :1
+    RTCFeatures     end
 
 **Library:** ruler.def
 
 ----------
-#### RTCToolboxFeatures
-	RTCToolboxFeatures		record
-		RTCTF_DEFAULT			:1
-		RTCTF_SPREADSHEET		:1
-		RTCTF_INCHES			:1
-		RTCTF_CENTIMETERS		:1
-		RTCTF_POINTS			:1
-		RTCTF_PICAS				:1
-	RTCToolboxFeatures		end
+### RTCToolboxFeatures
+    RTCToolboxFeatures      record
+        RTCTF_DEFAULT           :1
+        RTCTF_SPREADSHEET       :1
+        RTCTF_INCHES            :1
+        RTCTF_CENTIMETERS       :1
+        RTCTF_POINTS            :1
+        RTCTF_PICAS             :1
+    RTCToolboxFeatures      end
 
 **Library:** ruler.def
 
 ----------
-#### RulerGridNotificationBlock
-	RulerGridNotificationBlock				struct
-		RGNB_gridSpacing				WWFixed
-		RGNB_gridOptions				GridOptions
-	RulerGridNotificationBlock				ends
+### RulerGridNotificationBlock
+    RulerGridNotificationBlock              struct
+        RGNB_gridSpacing                WWFixed
+        RGNB_gridOptions                GridOptions
+    RulerGridNotificationBlock              ends
 
 **Library:** ruler.def
 
 ----------
-#### RulerGuideControlFeatures
-	RulerGuideControlFeatures			record
-		RGCF_HV					:1
-		RGCF_LIST				:1
-		RGCF_POSITION			:1
-		RGCF_DELETE				:1
-	RulerGuideControlFeatures			end
+### RulerGuideControlFeatures
+    RulerGuideControlFeatures           record
+        RGCF_HV                 :1
+        RGCF_LIST               :1
+        RGCF_POSITION           :1
+        RGCF_DELETE             :1
+    RulerGuideControlFeatures           end
 
 **Library:** ruler.def
 
 ----------
-#### RulerShowControlAttributes
-	RulerShowControlAttributes				record
-		RSCA_SHOW_VERTICAL				:1
-		RSCA_SHOW_HORIZONTAL			:1
-										:14
-	RulerShowControlAttributes				end
+### RulerShowControlAttributes
+    RulerShowControlAttributes              record
+        RSCA_SHOW_VERTICAL              :1
+        RSCA_SHOW_HORIZONTAL            :1
+                                        :14
+    RulerShowControlAttributes              end
 
 **Library:** ruler.def
 
 ----------
-#### RulerTypeNotificationBlock
-	RulerTypeNotificationBlock			struct
-		RTNB_type		VisRulerType
-	RulerTypeNotificationBlock			ends
+### RulerTypeNotificationBlock
+    RulerTypeNotificationBlock          struct
+        RTNB_type       VisRulerType
+    RulerTypeNotificationBlock          ends
 
 **Library:** ruler.def
 
 ----------
-#### RulerViewAttributes
-	RulerViewAttributes			record
-		RVA_HORIZONTAL		:1
-							:7
-	RulerViewAttributes			end
+### RulerViewAttributes
+    RulerViewAttributes         record
+        RVA_HORIZONTAL      :1
+                            :7
+    RulerViewAttributes         end
 
 **Library:** ruler.def
 

@@ -32,6 +32,8 @@ VD_VESA_720x400_16              enum    VideoDevice
 VD_VESA_800x480_16              enum    VideoDevice
 VD_VESA_832x624_16              enum    VideoDevice
 VD_VESA_848x480_16              enum    VideoDevice
+VD_VESA_960x540_16              enum    VideoDevice
+VD_VESA_960x600_16              enum    VideoDevice
 VD_VESA_1024_600_16             enum    VideoDevice
 
 VD_VESA_1Kx768_16               enum    VideoDevice
@@ -59,6 +61,12 @@ VD_VESA_1920_1080_16             enum    VideoDevice
 VD_VESA_1920_1200_16             enum    VideoDevice
 VD_VESA_1920_1440_16             enum    VideoDevice
 VD_VESA_2048_1536_16             enum    VideoDevice
+
+; DPI based modes
+VD_VESA_DPI72_16             	 enum    VideoDevice
+VD_VESA_DPI96_16             	 enum    VideoDevice
+VD_VESA_DPI120_16             	 enum    VideoDevice
+
 endif
 
         ; the first thing in the segment is the DriverExtendedInfoTable
@@ -82,6 +90,8 @@ ifndef PRODUCT_WIN_DEMO
 			VGA800_480String,
 			VGA832_624String,
 			VGA848_480String,
+			VGA960_540String,
+			VGA960_600String,
 			VGA1024_600String,
 			UVGAString,                     ; VD_VESA_1Kx768_16
 			VGA1152_864String,
@@ -105,6 +115,9 @@ ifndef PRODUCT_WIN_DEMO
 			VGA1920_1200String,
 			VGA1920_1440String,
 			VGA2048_1536String,
+			VGA72DPIString,
+			VGA96DPIString,
+			VGA120DPIString,
 endif
 			0				; table terminator
 
@@ -120,6 +133,8 @@ LocalDefString VGA720_400String <"VESA Compatible SuperVGA: 720x400 64K-color",0
 LocalDefString VGA800_480String <"VESA Compatible SuperVGA: 800x480 64K-color",0>
 LocalDefString VGA832_624String <"VESA Compatible SuperVGA: 832x624 64K-color",0>
 LocalDefString VGA848_480String <"VESA Compatible SuperVGA: 848x480 64K-color",0>
+LocalDefString VGA960_540String <"VESA Compatible SuperVGA: 960x540 64K-color",0>
+LocalDefString VGA960_600String <"VESA Compatible SuperVGA: 960x600 64K-color",0>
 LocalDefString VGA1024_600String <"VESA Compatible SuperVGA: 1024x600 64K-color",0>
 
 LocalDefString UVGAString <"VESA Compatible SuperVGA: 1024x768 64K-color",0>
@@ -147,5 +162,9 @@ LocalDefString VGA1920_1080String <"VESA Compatible SuperVGA: 1920x1080 64K-colo
 LocalDefString VGA1920_1200String <"VESA Compatible SuperVGA: 1920x1200 64K-color",0>
 LocalDefString VGA1920_1440String <"VESA Compatible SuperVGA: 1920x1440 64K-color",0>
 LocalDefString VGA2048_1536String <"VESA Compatible SuperVGA: 2048x1536 64K-color",0>
+
+LocalDefString VGA72DPIString <"Basebox: 72 DPI 64K-color",0>
+LocalDefString VGA96DPIString <"Basebox: 96 DPI 64K-color",0>
+LocalDefString VGA120DPIString <"Basebox: 120 DPI 64K-color",0>
 endif
    

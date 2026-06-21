@@ -21,16 +21,14 @@
 #include "ttmemory.h"
 #include "ttload.h"
 #include "ttinterp.h"
+#include <string.h>
+#include <ec.h>
 
 
-/* Add extensions definition */
-#ifdef TT_CONFIG_OPTION_EXTEND_ENGINE
-#include "ttextend.h"
-#endif
+#ifdef __GEOS__
+extern TEngine_Instance engineInstance;
+#endif  /* __GEOS__ */
 
-/* Required by tracing mode */
-#undef   TT_COMPONENT
-#define  TT_COMPONENT  trace_objs
 
 /*******************************************************************
  *
@@ -42,17 +40,15 @@
  ******************************************************************/
 
   LOCAL_FUNC
-  PExecution_Context  New_Context( PFace  face )
+  PExecution_Context New_Context(PFace face)
   {
-    PEngine_Instance    engine;
-    PExecution_Context  exec;
+    PExecution_Context exec;
 
+    if ( !face || !(exec = engineInstance.exec) || engineInstance.exec_in_use) 
+        return NULL;
 
-    if ( !face )
-      return NULL;
-
-    engine = face->engine;
-    CACHE_New( engine->objs_exec_cache, exec, face );
+    engineInstance.exec_in_use = TRUE;
+    exec->face = face;
     return exec;
   }
 
@@ -68,15 +64,16 @@
   LOCAL_FUNC
   TT_Error  Done_Context( PExecution_Context  exec )
   {
-    PEngine_Instance  engine;
+    if ( exec != engineInstance.exec )
+        return TT_Err_Invalid_Argument;
 
+    exec->instance = NULL;
+    exec->face     = NULL;
+    engineInstance.exec_in_use = FALSE;
 
-    if ( !exec )
-      return TT_Err_Ok;
-
-    engine = exec->face->engine;
-    return CACHE_Done( engine->objs_exec_cache, exec );
+    return TT_Err_Ok;
   }
+
 
 
 /*******************************************************************
@@ -126,19 +123,17 @@
  *
  *  Input  :  pts          pointer to the target glyph zone record
  *
- *  Return :  Error code.
+ *  Return :  void.
  *
  *****************************************************************/
 
   static
-  TT_Error  Done_Glyph_Zone( PGlyph_Zone  pts )
+  void  Done_Glyph_Zone( PGlyph_Zone  pts )
   {
     FREE( pts->contours );
     FREE( pts->touch );
     FREE( pts->cur );
     FREE( pts->org );
-
-    return TT_Err_Ok;
   }
 
 
@@ -241,7 +236,7 @@
  *
  *****************************************************************/
 
-  LOCAL_FUNC
+  static
   TT_Error Clear_CodeRange( PExecution_Context  exec, Int  range )
   {
     if ( range < 1 || range > 3 )
@@ -267,13 +262,13 @@
  *
  *****************************************************************/
 
-  LOCAL_FUNC
-  TT_Error  Context_Destroy( void*  _context )
+  static
+  void  Context_Destroy( void*  _context )
   {
     PExecution_Context  exec = (PExecution_Context)_context;
 
     if ( !exec )
-      return TT_Err_Ok;
+      return;
 
     /* free composite load stack */
     FREE( exec->loadStack );
@@ -300,7 +295,6 @@
     exec->instance = NULL;
     exec->face     = NULL;
 
-    return TT_Err_Ok;
   }
 
 
@@ -310,37 +304,16 @@
  *
  *****************************************************************/
 
-  LOCAL_FUNC
-  TT_Error  Context_Create( void*  _context, void*  _face )
+  static
+  TT_Error  Context_Create( void*  _context )
   {
     PExecution_Context  exec = (PExecution_Context)_context;
+    TT_Error            error;
 
-    PFace        face = (PFace)_face;
-    TT_Error     error;
-
-
-    /* XXX : We don't reserve arrays anymore, this is done automatically */
-    /*       during a "Context_Load"..                                   */
 
     exec->callSize  = 32;
     if ( ALLOC_ARRAY( exec->callStack, exec->callSize, TCallRecord ) )
       goto Fail_Memory;
-
-    /* all values in the context are set to 0 already, but this is */
-    /* here as a remainder                                         */
-    exec->maxPoints   = 0;
-    exec->maxContours = 0;
-
-    exec->stackSize = 0;
-    exec->loadSize  = 0;
-    exec->glyphSize = 0;
-
-    exec->stack     = NULL;
-    exec->loadStack = NULL;
-    exec->glyphIns  = NULL;
-
-    exec->face     = face;
-    exec->instance = NULL;
 
     return TT_Err_Ok;
 
@@ -436,7 +409,6 @@
                          PFace               face,
                          PInstance           ins )
   {
-    Int           i;
     TMaxProfile*  maxp;
     TT_Error      error;
 
@@ -458,8 +430,9 @@
       exec->maxFunc  = ins->maxFunc;
       exec->maxIns   = ins->maxIns;
 
-      for ( i = 0; i < MAX_CODE_RANGES; ++i )
-        exec->codeRangeTable[i] = ins->codeRangeTable[i];
+      ins->codeRangeTable[0] = exec->codeRangeTable[0];
+      ins->codeRangeTable[1] = exec->codeRangeTable[1];
+      ins->codeRangeTable[2] = exec->codeRangeTable[2];
 
       /* set graphics state */
       exec->GS = ins->GS;
@@ -508,7 +481,9 @@
     exec->pts.n_points   = 0;
     exec->pts.n_contours = 0;
 
+#ifdef DEBUG_INTERPRETER
     exec->instruction_trap = FALSE;
+#endif    
 
     return TT_Err_Ok;
   }
@@ -520,12 +495,9 @@
  *
  *****************************************************************/
 
-  LOCAL_FUNC
-  TT_Error  Context_Save( PExecution_Context  exec,
-                          PInstance           ins )
+  static void  Context_Save( PExecution_Context  exec,
+                             PInstance           ins )
   {
-    Int  i;
-
     /* XXXX : Will probably disappear soon with all the coderange */
     /*        management, which is now rather obsolete.           */
 
@@ -534,10 +506,9 @@
     ins->maxFunc  = exec->maxFunc;
     ins->maxIns   = exec->maxIns;
 
-    for ( i = 0; i < MAX_CODE_RANGES; ++i )
-      ins->codeRangeTable[i] = exec->codeRangeTable[i];
-
-    return TT_Err_Ok;
+    ins->codeRangeTable[0] = exec->codeRangeTable[0];
+    ins->codeRangeTable[1] = exec->codeRangeTable[1];
+    ins->codeRangeTable[2] = exec->codeRangeTable[2];
   }
 
 
@@ -579,7 +550,7 @@
     exec->top     = 0;
     exec->callTop = 0;
 
-    return RunIns( exec );
+    return CALL_INTERPRETER;
   }
 
 
@@ -612,19 +583,18 @@
  *
  *  Input  :  _instance   the instance object to destroy
  *
- *  Output :  error code.
+ *  Output :  void.
  *
  ******************************************************************/
 
   LOCAL_FUNC
-  TT_Error  Instance_Destroy( void* _instance )
+  void  Instance_Destroy( void* _instance )
   {
     PInstance  ins = (PInstance)_instance;
 
 
     if ( !_instance )
-      return TT_Err_Ok;
-
+      return;
 
     FREE( ins->cvt );
     ins->cvtSize = 0;
@@ -648,7 +618,6 @@
     ins->owner = NULL;
     ins->valid = FALSE;
 
-    return TT_Err_Ok;
   }
 
 
@@ -692,13 +661,9 @@
       PIns_Metrics   metrics = &ins->metrics;
 
 
-      metrics->pointSize    = 10 << 6;     /* default pointsize  = 10pts */
-
-      metrics->x_resolution = 72;          /* default resolution = 72dpi */
-      metrics->y_resolution = 72;
-
-      metrics->x_ppem = 0;
-      metrics->y_ppem = 0;
+      metrics->pointSize  = 10 << 6;   /* default pointsize  = 10pts */
+      metrics->resolution = 72;        /* default resolution = 72dpi */
+      metrics->ppem       = 0;
 
       /* set default compensation ( all 0 ) */
       for ( i = 0; i < 4; ++i )
@@ -745,16 +710,13 @@
   TT_Error  Instance_Init( PInstance  ins )
   {
     PExecution_Context  exec;
-
-    TT_Error  error;
-    PFace     face = ins->owner;
+    TT_Error            error;
+    PFace               face = ins->owner;
 
 
     exec = New_Context( face );
-    /* debugging instances have their own context */
 
-    if ( !exec )
-      return TT_Err_Could_Not_Find_Context;
+EC( ECCheckBounds( exec ) );
 
     ins->GS = Default_GraphicsState;
 
@@ -776,21 +738,18 @@
       PIns_Metrics  metrics = &exec->metrics;
 
 
-      metrics->x_ppem    = 0;
-      metrics->y_ppem    = 0;
-      metrics->pointSize = 0;
-      metrics->x_scale1  = 0;
-      metrics->x_scale2  = 1;
-      metrics->y_scale1  = 0;
-      metrics->y_scale2  = 1;
-
-      metrics->ppem      = 0;
-      metrics->scale1    = 0;
-      metrics->scale2    = 1;
-      metrics->ratio     = 1L << 16;
+      metrics->ppem         = 0;
+      metrics->pointSize    = 0;
+      metrics->x_scale1     = 0;
+      metrics->units_per_em = 1;
+      metrics->scale1       = 0;
+      metrics->scale2       = 1;
+      metrics->ratio        = 1L << 16;
     }
 
+#ifdef DEBUG_INTERPRETER
     exec->instruction_trap = FALSE;
+#endif
 
     exec->cvtSize = ins->cvtSize;
     exec->cvt     = ins->cvt;
@@ -813,17 +772,14 @@
       if ( error )
         goto Fin;
 
-      error = RunIns( exec );
+      error = CALL_INTERPRETER;
     }
     else
       error = TT_Err_Ok;
 
   Fin:
     Context_Save( exec, ins );
-
     Done_Context( exec );
-    /* debugging instances keep their context */
-
     ins->valid = FALSE;
 
     return error;
@@ -847,69 +803,39 @@
   TT_Error  Instance_Reset( PInstance  ins )
   {
     PExecution_Context  exec;
-
-    TT_Error  error;
-    UShort    i;
-    PFace     face;
+    TT_Error            error;
+    PFace               face;
 
 
-    if ( !ins )
-      return TT_Err_Invalid_Instance_Handle;
+EC( ECCheckBounds( ins ) );
 
     if ( ins->valid )
       return TT_Err_Ok;
 
     face = ins->owner;
 
-    if ( ins->metrics.x_ppem < 1 ||
-         ins->metrics.y_ppem < 1 )
+    if ( ins->metrics.ppem < 1 )
       return TT_Err_Invalid_PPem;
 
     /* compute new transformation */
-    if ( ins->metrics.x_ppem >= ins->metrics.y_ppem )
-    {
-      ins->metrics.scale1  = ins->metrics.x_scale1;
-      ins->metrics.scale2  = ins->metrics.x_scale2;
-      ins->metrics.ppem    = ins->metrics.x_ppem;
-      ins->metrics.x_ratio = 1L << 16;
-      ins->metrics.y_ratio = TT_MulDiv( ins->metrics.y_ppem,
-                                        0x10000,
-                                        ins->metrics.x_ppem );
-    }
-    else
-    {
-      ins->metrics.scale1  = ins->metrics.y_scale1;
-      ins->metrics.scale2  = ins->metrics.y_scale2;
-      ins->metrics.ppem    = ins->metrics.y_ppem;
-      ins->metrics.x_ratio = TT_MulDiv( ins->metrics.x_ppem,
-                                        0x10000,
-                                        ins->metrics.y_ppem );
-      ins->metrics.y_ratio = 1L << 16;
-    }
+    ins->metrics.scale1 = ins->metrics.x_scale1;
+    ins->metrics.scale2 = ins->metrics.units_per_em;
 
     /* Scale the cvt values to the new ppem.          */
     /* We use by default the y ppem to scale the CVT. */
     MulDivList( ins->cvt, ins->cvtSize, face->cvt, ins->metrics.scale1, ins->metrics.scale2 );
 
     /* All twilight points are originally zero */
-    for ( i = 0; i < ins->twilight.n_points; ++i )
-    {
-      ins->twilight.org[i].x = 0;
-      ins->twilight.org[i].y = 0;
-      ins->twilight.cur[i].x = 0;
-      ins->twilight.cur[i].y = 0;
-    }
+    memset( ins->twilight.org, 0, ins->twilight.n_points * sizeof(TT_Vector) );
+    memset( ins->twilight.cur, 0, ins->twilight.n_points * sizeof(TT_Vector) );
 
     /* clear storage area */
-    for ( i = 0; i < ins->storeSize; ++i )
-      ins->storage[i] = 0;
+    memset( ins->storage, 0, ins->storeSize * sizeof(ins->storage[0]) );
 
     ins->GS = Default_GraphicsState;
 
     /* get execution context and run prep program */
-
     exec = New_Context(face);
-    /* debugging instances have their own context */
 
     if ( !exec )
       return TT_Err_Could_Not_Find_Context;
@@ -923,7 +849,9 @@
 
     Clear_CodeRange( exec, TT_CodeRange_Glyph );
 
+#ifdef DEBUG_INTERPRETER
     exec->instruction_trap = FALSE;
+#endif
 
     exec->top     = 0;
     exec->callTop = 0;
@@ -934,26 +862,23 @@
       if ( error )
         goto Fin;
 
-      error = RunIns( exec );
+      error = CALL_INTERPRETER;
     }
     else
       error = TT_Err_Ok;
 
-    ins->GS = exec->GS;
     /* save default graphics state */
+    ins->GS = exec->GS;
 
   Fin:
     Context_Save( exec, ins );
-
     Done_Context( exec );
-    /* debugging instances keep their context */
 
     if ( !error )
       ins->valid = TRUE;
 
     return error;
   }
-
 
 
 /*******************************************************************
@@ -971,28 +896,34 @@
  *
  *  Input  :  _face   typeless pointer to the face object to destroy
  *
- *  Output :  Error code.
+ *  Output :  void.
  *
  ******************************************************************/
 
   LOCAL_FUNC
-  TT_Error  Face_Destroy( void*  _face )
+  void  Face_Destroy( void*  _face )
   {
     PFace   face = (PFace)_face;
     UShort  n;
 
 
     if ( !face )
-      return TT_Err_Ok;
+      return;
 
     /* first of all, destroys the cached sub-objects */
-    Cache_Destroy( &face->instances );
-    Cache_Destroy( &face->glyphs );
+    if ( face->instance )
+    {
+      Instance_Destroy( face->instance );
+      FREE( face->instance );
+      face->instance = NULL;
+    }
 
-    /* destroy the extensions */
-#ifdef TT_CONFIG_OPTION_EXTEND_ENGINE
-    Extension_Destroy( face );
-#endif
+    if ( face->glyph )
+    {
+      Glyph_Destroy( face->glyph );
+      FREE( face->glyph );
+      face->glyph = NULL;
+    }
 
     /* freeing table directory */
     FREE( face->dirTables );
@@ -1047,7 +978,6 @@
     Free_TrueType_Hdmx( face );
 #endif
 
-    return TT_Err_Ok;
   }
 
 
@@ -1076,25 +1006,14 @@
   TT_Error  Face_Create( void*  _face,
                          void*  _input )
   {
-    PEngine_Instance  engine;
-
     TFont_Input*  input = (TFont_Input*)_input;
     PFace         face  = (PFace)_face;
     TT_Error      error;
 
 
-    face->stream = input->stream;
-    face->engine = input->engine;
-
-    engine = face->engine;
-
-    Cache_Create( engine,
-                  engine->objs_instance_class,
-                  &face->instances );
-
-    Cache_Create( engine,
-                  engine->objs_glyph_class,
-                  &face->glyphs );
+    face->stream   = input->stream;
+    face->instance = NULL;
+    face->glyph    = NULL;
 
     /* Load collection directory if present, then font directory */
 
@@ -1139,11 +1058,6 @@
 
       goto Fail;
 
-#ifdef TT_CONFIG_OPTION_EXTEND_ENGINE
-    if ( ( error = Extension_Create( face ) ) != TT_Err_Ok )
-      return error;
-#endif
-
     return TT_Err_Ok;
 
   Fail :
@@ -1153,6 +1067,7 @@
 
 #undef LOAD_
 
+#pragma code_seg(ttapi_TEXT)
 
 /*******************************************************************
  *
@@ -1162,21 +1077,21 @@
  *
  *  Input  :  _glyph  typeless pointer to the glyph record to destroy
  *
- *  Output :  Error code.
+ *  Output :  void.
  *
  ******************************************************************/
 
   LOCAL_FUNC
-  TT_Error  Glyph_Destroy( void*  _glyph )
+  void  Glyph_Destroy( void*  _glyph )
   {
     PGlyph  glyph = (PGlyph)_glyph;
 
 
     if ( !glyph )
-      return TT_Err_Ok;
+      return;
 
     glyph->outline.owner = TRUE;
-    return TT_Done_Outline( &glyph->outline );
+    TT_Done_Outline( &glyph->outline );
   }
 
 
@@ -1201,11 +1116,8 @@
     PGlyph    glyph = (PGlyph)_glyph;
 
 
-    if ( !face )
-      return TT_Err_Invalid_Face_Handle;
-
-    if ( !glyph )
-      return TT_Err_Invalid_Glyph_Handle;
+EC( ECCheckBounds( face ) );
+EC( ECCheckBounds( glyph ) );
 
     glyph->face = face;
 
@@ -1215,7 +1127,7 @@
                            &glyph->outline );
   }
 
-
+#pragma code_seg()
 
 /*******************************************************************
  *
@@ -1231,92 +1143,31 @@
  *
  ******************************************************************/
 
-  static
-  const TCache_Class  objs_face_class =
-  {
-    sizeof ( TFace ),
-    -1,
-    Face_Create,
-    Face_Destroy,
-    NULL,
-    NULL
-  };
-
-  static
-  const TCache_Class  objs_instance_class =
-  {
-    sizeof ( TInstance ),
-    -1,
-    Instance_Create,
-    Instance_Destroy,
-    NULL,
-    NULL
-  };
-
-  /* Note that we use a cache size of 1 for the execution context.  */
-  /* This is to avoid re-creating a new context each time we        */
-  /* change one instance's attribute (resolution and/or char sizes) */
-  /* or when we load a glyph.                                       */
-
-  static
-  const TCache_Class  objs_exec_class =
-  {
-    sizeof ( TExecution_Context ),
-    1,
-    Context_Create,
-    Context_Destroy,
-    NULL,
-    NULL
-  };
-
-  static
-  const TCache_Class  objs_glyph_class =
-  {
-    sizeof ( TGlyph ),
-    -1,
-    Glyph_Create,
-    Glyph_Destroy,
-    NULL,
-    NULL
-  };
-
-
   LOCAL_FUNC
-  TT_Error  TTObjs_Init( PEngine_Instance  engine )
+  TT_Error  TTObjs_Init( )
   {
-    PCache        face_cache, exec_cache;
-    TT_Error      error;
+    PExecution_Context  exec = NULL;
+    TT_Error            error;
 
 
-    if ( ALLOC( face_cache, sizeof ( TCache ) ) ||
-         ALLOC( exec_cache, sizeof ( TCache ) ) )
+    if ( ALLOC( exec, sizeof ( TExecution_Context ) ) )
       goto Fail;
 
-    /* create face cache */
-    error = Cache_Create( engine, (PCache_Class)&objs_face_class, face_cache );
+    error = Context_Create( exec );
     if ( error )
-      goto Fail;
+        goto Fail;
 
-    engine->objs_face_cache = face_cache;
+    engineInstance.exec = exec;
+    engineInstance.exec_in_use = FALSE;
 
-    error = Cache_Create( engine, (PCache_Class)&objs_exec_class, exec_cache );
-    if ( error )
-      goto Fail;
-
-    engine->objs_exec_cache = exec_cache;
-
-    engine->objs_face_class      = (PCache_Class)&objs_face_class;
-    engine->objs_instance_class  = (PCache_Class)&objs_instance_class;
-    engine->objs_execution_class = (PCache_Class)&objs_exec_class;
-    engine->objs_glyph_class     = (PCache_Class)&objs_glyph_class;
-
-    goto Exit;
+    return TT_Err_Ok;
 
   Fail:
-    FREE( face_cache );
-    FREE( exec_cache );
+    if( exec) {
+      Context_Destroy( exec );
+      FREE( exec );
+    }
 
-  Exit:
     return error;
   }
 
@@ -1334,18 +1185,16 @@
  ******************************************************************/
 
   LOCAL_FUNC
-  TT_Error  TTObjs_Done( PEngine_Instance  engine )
+  void  TTObjs_Done( )
   {
-    /* destroy all active faces and contexts before releasing the */
-    /* caches                                                     */
-    Cache_Destroy( (TCache*)engine->objs_exec_cache );
-    Cache_Destroy( (TCache*)engine->objs_face_cache );
+    if ( engineInstance.exec )
+    {
+        Context_Destroy( engineInstance.exec );
+        FREE( engineInstance.exec );
+        engineInstance.exec = NULL;
+    }
 
-    /* Now frees caches and cache classes */
-    FREE( engine->objs_exec_cache );
-    FREE( engine->objs_face_cache );
-
-    return TT_Err_Ok;
+    engineInstance.exec_in_use = FALSE;
   }
 
 

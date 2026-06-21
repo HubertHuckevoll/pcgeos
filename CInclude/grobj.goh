@@ -12,7 +12,8 @@
  *	----	----		-----------
  *	Allen 	2/20/92		Inital version
  *	Allen	4/22/92		Updated for controllers
- *	RainerB	11/12/22	Default value of GBI_curScaleFactor of GrObjBodyClass: Syntax fixed				
+ *	RainerB	11/12/22	Default value of GBI_curScaleFactor of GrObjBodyClass: Syntax fixed	
+ *	MarcusG 11/03/24	Fixed methods and structs required by V-Convert	
  *
  * DESCRIPTION:
  *	This file is the C header file for the GrObj library 
@@ -30,6 +31,7 @@
 @include <Objects/vTextC.goh>
 @include <Objects/gCtrlC.goh>
 @include <Objects/bitmapC.goh>
+@include <Objects/splineC.goh>
 
 /*-----------------------------------------------------------------------------
 ;	Structures and Constants (Added as needed)
@@ -144,7 +146,7 @@ typedef struct {  /* XXX */ /* Untested structure */
 	byte				GOBAEE_backR;
 	byte				GOBAEE_backG;
 	byte				GOBAEE_backB;
-	GrObjAreaAttrElementType	GOBAEE_aaeType;
+	byte    			GOBAEE_aaeType;
 	GrObjAreaAttrInfoRecord 	GOBAAE_areaInfo;
 
 		/* The following fields are unused, but must
@@ -2479,7 +2481,7 @@ typedef struct {		/* CHECKME */
  */
 
 @message void MSG_GO_ROTATE(	 		/* XXX */
-	WWFixed 	angle = cx.dx,
+	WWFixedAsDWord 	         angle = cx.dx,
 	GrObjHandleSpecification center = bp);
 /*
  *	Rotate object x degrees.
@@ -2786,15 +2788,6 @@ typedef ByteFlags AnotherToolActivatedFlags;		/* CHECKME */
  * DESTROYED:
  * 	ax
  */
-
-#if 0		/* done in Objects/bitmapC.goh now */
-typedef struct {		/* CHECKME */
-    DWFixed	RDWF_left;
-    DWFixed	RDWF_top;
-    DWFixed	RDWF_right;
-    DWFixed	RDWF_bottom;
-} RectDWFixed;
-#endif
 
 typedef struct {		/* CHECKME */
     RectDWFixed	BRD_rect;
@@ -4355,13 +4348,13 @@ typedef struct {
 	WWFixed 	GOGSP_width;
 } GOGetSizeParams;
 
-@message void MSG_GO_GET_SIZE( 	/* XXX */
-	GOGetSizeParams	_far *retValue = bpaxdxcx);
+@message void MSG_GO_GET_SIZE(
+	GOGetSizeParams	_far *retValue = axbpcxdx);
 /*
- *	Return the width and height of the object in points. The dimensions
- *	are calculated by mapping the object's corners into document coords
- *	and calculating the distances between them. The center of the
- *	selection ahndles of a rectangle represent the corners mapped into
+ *	Return the absolute width and height of the object in points. The
+ *	dimensions are calculated by mapping the object's corners into document
+ *	coords and calculating the distances between them. The center of the
+ *	selection handles of a rectangle represent the corners mapped into
  *	document coords. The line thickness is not included in this
  *	calculation.
  *
@@ -11069,7 +11062,7 @@ typedef ByteFlags PointerModes;
 -----------------------------------------------------------------------------*/
 
 @class ArcClass, GrObjClass;
-@message void MSG_ARC_SET_START_ANGLE(WWFixed angle = dx.cx);
+@message void MSG_ARC_SET_START_ANGLE(WWFixedAsDWord angle = dx.cx);
 /*
  * 	Set the starting angle of the ellipse
  * 
@@ -11090,7 +11083,7 @@ typedef ByteFlags PointerModes;
 
 
 
-@message void MSG_ARC_SET_END_ANGLE(WWFixed angle = dx.cx);
+@message void MSG_ARC_SET_END_ANGLE(WWFixedAsDWord angle = dx.cx);
 /*
  * 	Set the ending angle of the ellipse
  * 
@@ -12305,7 +12298,7 @@ typedef struct {		/* CHECKME */
 -----------------------------------------------------------------------------*/
 
 @class GrObjBitmapClass, GrObjVisClass;
-/*	@uses VisBitmapClass;	when bitmap has C interface */
+	@uses VisBitmapClass;
 @endc
 
 
@@ -12433,7 +12426,7 @@ typedef struct {		/* CHECKME */
 -----------------------------------------------------------------------------*/
 
 @class GrObjSplineClass, GrObjVisClass;
-/*	@uses VisSplineClass;	when spline has C interface */
+	@uses VisSplineClass;
 @endc
 
 /*-----------------------------------------------------------------------------

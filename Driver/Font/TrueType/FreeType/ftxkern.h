@@ -74,10 +74,11 @@ extern "C" {
   struct  TT_Kern_0_
   {
     TT_UShort  nPairs;          /* number of kerning pairs */
-
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
     TT_UShort  searchRange;     /* these values are defined by the TT spec */
     TT_UShort  entrySelector;   /* for table searchs.                      */
     TT_UShort  rangeShift;
+#endif
     MemHandle  pairsBlock;      /* a table of nPairs `pairs' */
   };
 
@@ -149,10 +150,6 @@ extern "C" {
 
   /***************** high-level API extension **************************/
 
-  /* Initialize Kerning extension, must be called after                 */
-  /* TT_Init_FreeType(). There is no need for a finalizer               */
-  EXPORT_DEF
-  TT_Error  TT_Init_Kerning_Extension( void );
 
   /* Note on the implemented mechanism:                                 */
 
@@ -163,15 +160,23 @@ extern "C" {
 
   /* Queries a pointer to the kerning directory for the face object     */
   EXPORT_DEF
-  TT_Error  TT_Get_Kerning_Directory( TT_Face      face,
-                                      TT_Kerning*  directory );
+  TT_Error  TT_Load_Kerning_Directory( TT_Face      face,
+                                       TT_Kerning*  directory );
+
+
+  /* Releases all resources allocated for a kerning directory.          */
+  EXPORT_DEF
+  void      TT_Kerning_Directory_Done( TT_Kerning*  directory );
+
 
   /* Load the kerning table number `kern_index' in the kerning          */
   /* directory.  The table will stay in memory until the `face'         */
   /* face is destroyed.                                                 */
   EXPORT_DEF
-  TT_Error  TT_Load_Kerning_Table( TT_Face    face,
-                                   TT_UShort  kern_index );
+  TT_Error  TT_Load_Kerning_Table( TT_Face      face,
+                                   TT_Kerning*  directory,
+                                   TT_UShort    kern_index );
+
 
 #ifdef __cplusplus
 }

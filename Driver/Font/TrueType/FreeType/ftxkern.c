@@ -20,7 +20,6 @@
 
 #include "ftxkern.h"
 
-#include "ttextend.h"
 #include "tttypes.h"
 #include "ttmemory.h"
 #include "ttfile.h"
@@ -28,16 +27,6 @@
 #include "ttload.h"  /* For the macros */
 #include "tttags.h"
 #include <ec.h>
-
-/* Required by the tracing mode */
-#undef  TT_COMPONENT
-#define TT_COMPONENT  trace_any
-
-#define KERNING_ID  Build_Extension_ID( 'k', 'e', 'r', 'n' )
-
-#ifdef __GEOS__
-extern TEngine_Instance engineInstance;
-#endif  /* __GEOS__ */
 
 
 /*******************************************************************
@@ -73,9 +62,11 @@ extern TEngine_Instance engineInstance;
 
     num_pairs            = GET_UShort();
     kern0->nPairs        = 0;
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
     kern0->searchRange   = GET_UShort();
     kern0->entrySelector = GET_UShort();
     kern0->rangeShift    = GET_UShort();
+#endif
 
     /* we only set kern0->nPairs if the subtable has been loaded */
 
@@ -266,6 +257,7 @@ EC( ECCheckBounds( pairs ) );
 
 #endif
 
+
 /*******************************************************************
  *
  *  Function    :  Kerning_Create
@@ -286,15 +278,13 @@ EC( ECCheckBounds( pairs ) );
  *
  ******************************************************************/
 
-  static TT_Error  Kerning_Create( void*  ext,
-                                   PFace  face )
+  static TT_Error  Kerning_Create( TT_Kerning*  kern,
+                                   PFace        face )
   {
     DEFINE_LOAD_LOCALS( face->stream );
 
-    TT_Kerning*  kern = (TT_Kerning*)ext;
-    UShort       num_tables;
-    Short        table;
-
+    UShort             num_tables;
+    Short              table;
     TT_Kern_Subtable*  sub;
 
 
@@ -364,35 +354,34 @@ EC( ECCheckBounds( pairs ) );
 
 /*******************************************************************
  *
- *  Function    :  Kerning_Destroy
+ *  Function    :  TT_Kerning_Directory_Done
  *
  *  Description :  Destroys all kerning information.
  *
- *  Input  :  kern   pointer to the extension's kerning field
+ *  Input  :  directory   pointer to the extension's kerning field
  *
- *  Output :  error code
+ *  Output :  void
  *
  *  Notes  :  This function is a destructor; it must be able
  *            to destroy partially built tables.
  *
  ******************************************************************/
 
-  static TT_Error  Kerning_Destroy( void*  ext,
-                                    PFace  face )
+  EXPORT_FUNC
+  void  TT_Kerning_Directory_Done( TT_Kerning*  directory )
   {
-    TT_Kerning*        kern = (TT_Kerning*)ext;
     TT_Kern_Subtable*  sub;
     UShort             n;
 
 
     /* by convention */
-    if ( !kern || kern->nTables == 0 )
-      return TT_Err_Ok;
+    if ( !directory || directory->nTables == 0 )
+      return;
 
     /* scan the table directory and release loaded entries */
 
-    sub = kern->tables;
-    for ( n = 0; n < kern->nTables; ++n )
+    sub = directory->tables;
+    for ( n = 0; n < directory->nTables; ++n )
     {
       if ( sub->loaded )
       {
@@ -401,9 +390,11 @@ EC( ECCheckBounds( pairs ) );
         case 0:
           GEO_FREE( sub->t.kern0.pairsBlock );
           sub->t.kern0.nPairs        = 0;
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
           sub->t.kern0.searchRange   = 0;
           sub->t.kern0.entrySelector = 0;
           sub->t.kern0.rangeShift    = 0;
+#endif
           break;
 
 #ifdef TT_CONFIG_OPTION_SUPPORT_KERN2
@@ -432,16 +423,14 @@ EC( ECCheckBounds( pairs ) );
       ++sub;
     }
 
-    FREE( kern->tables );
-    kern->nTables = 0;
-
-    return TT_Err_Ok;
+    FREE( directory->tables );
+    directory->nTables = 0;
   }
 
 
 /*******************************************************************
  *
- *  Function    :  TT_Get_Kerning_Directory
+ *  Function    :  TT_Load_Kerning_Directory
  *
  *  Description :  Returns a given face's kerning directory.
  *
@@ -459,23 +448,16 @@ EC( ECCheckBounds( pairs ) );
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_Kerning_Directory( TT_Face      face,
-                                      TT_Kerning*  directory )
+  TT_Error  TT_Load_Kerning_Directory( TT_Face      face,
+                                       TT_Kerning*  directory )
   {
     PFace        faze = HANDLE_Face( face );
-    TT_Error     error;
-    TT_Kerning*  kerning;
 
 
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( faze ) );
 
     /* copy directory header */
-    error = TT_Extension_Get( faze, KERNING_ID, (void**)&kerning );
-    if ( !error )
-      *directory = *kerning;
-
-    return error;
+    return Kerning_Create( directory, faze );
   }
 
 
@@ -495,32 +477,27 @@ EC( ECCheckBounds( pairs ) );
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Load_Kerning_Table( TT_Face    face,
-                                   TT_UShort  kern_index )
+  TT_Error  TT_Load_Kerning_Table( TT_Face      face,
+                                   TT_Kerning*  directory,
+                                   TT_UShort    kern_index )
   {
     TT_Error   error;
     TT_Stream  stream;
-
-    TT_Kerning*        kern;
     TT_Kern_Subtable*  sub;
 
 
     PFace  faze = HANDLE_Face( face );
 
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( faze ) );
+EC( ECCheckBounds( directory ) );
 
-    error = TT_Extension_Get( faze, KERNING_ID, (void**)&kern );
-    if ( error )
-      return error;
-
-    if ( kern->nTables == 0 )
+    if ( directory->nTables == 0 )
       return TT_Err_Table_Missing;
 
-    if ( kern_index >= kern->nTables )
+    if ( kern_index >= directory->nTables )
       return TT_Err_Invalid_Argument;
 
-    sub = kern->tables + kern_index;
+    sub = directory->tables + kern_index;
 
 #ifdef TT_CONFIG_OPTION_SUPPORT_KERN2
     if ( sub->format != 0 && sub->format != 2 )
@@ -554,17 +531,6 @@ EC( ECCheckBounds( pairs ) );
     DONE_Stream( stream );
 
     return error;
-  }
-
-
-  EXPORT_FUNC
-  TT_Error  TT_Init_Kerning_Extension( void )
-  {
-    return TT_Register_Extension( &engineInstance,
-                                KERNING_ID,
-                                sizeof ( TT_Kerning ),
-                                Kerning_Create,
-                                Kerning_Destroy );
   }
 
 

@@ -1,4 +1,4 @@
-## 1 Driver Development
+# 1 Driver Development
 
 There are three kinds of geode: applications, libraries, and drivers. Most
 programmers will only write applications. A few will write libraries, either
@@ -18,7 +18,7 @@ examining them, you should be able to see how a driver is put together, and
 how to rewrite one of those drivers for a new device. These examples are
 located in the \OMNIGO\DRIVER\DDK directory.
 
-### 1.1 Driver Basics
+## 1.1 Driver Basics
 
 One of the advantages of the GEOS operating system is that it insulates
 application developers from many of the low-level hardware chores. GEOS
@@ -50,7 +50,7 @@ printer driver, for example, all printer drivers should look and act more or
 less the same. Thus, a driver will have close constraints on its interface with
 other parts of GEOS.
 
-#### 1.1.1 Driver Behavior
+### 1.1.1 Driver Behavior
 
 In some ways, drivers behave differently from other geodes. One major
 difference is that for some drivers, running speed is a much higher priority
@@ -73,7 +73,7 @@ Drivers tend to use fixed memory more often than other geodes do. A driver’s
 strategy routine (described below) and interrupt handlers must all be in fixed
 memory; any other timing-critical routines may also be in fixed resources.
 
-#### 1.1.2 Driver Structure
+### 1.1.2 Driver Structure
 
 A driver usually provides two communication structures. One is the interface
 it provides to the GEOS system, either through a library or a GEOS
@@ -90,7 +90,7 @@ driving. Most often, a driver will receive and handle interrupts from its
 device. It does this by registering an interrupt handler with the GEOS kernel.
 The interrupt handler must also be in a fixed code resource.
 
-#### 1.1.3 Extended Drivers
+### 1.1.3 Extended Drivers
 
 Some drivers can handle a number of similar, but distinct, devices. These
 drivers are known as extended drivers. An extended driver must provide
@@ -100,7 +100,7 @@ provide certain extra functionality to the kernel.
 When an extended driver is loaded, it is told which of its various devices it is
 intended to drive.
 
-### 1.2 Defining a Basic Driver
+## 1.2 Defining a Basic Driver
 
 Every driver, of whatever type, has a few components in common. The driver
 stores information about itself in a certain, rigidly defined way; that way, the
@@ -112,7 +112,7 @@ type; these are listed in this section. Others are specific for a type of driver
 these will be listed in the chapter pertaining to that type of driver.
 Driver Development
 
-#### 1.2.1 The Driver’s .GP File
+### 1.2.1 The Driver’s .GP File
 
 A driver is a geode. As such, it will be compiled as any other geode, and
 contains a geode parameters file. The geode parameters file looks somewhat
@@ -147,7 +147,7 @@ if available, and check the device’s driver include file in
 \OMNIGO\INCLUDE\INTERNAL. All device include file names end with
 dr.def; for example, all mouse drivers must include the file mousedr.def.
 
-#### 1.2.2 Information about the Driver
+### 1.2.2 Information about the Driver
 
 DriverTable, DriverInfoStruct, DriverAttrs, DriverType
 
@@ -173,11 +173,11 @@ the strategy routine.
 
 The DriverInfoStruct has the following definition:
 ~~~
-	DriverInfoStruct struct
-		DIS_strategy			fptr.far
-		DIS_driverAttributes	DriverAttrs
-		DIS_driverType			DriverType
-		DriverInfoStruct ends
+    DriverInfoStruct struct
+        DIS_strategy            fptr.far
+        DIS_driverAttributes    DriverAttrs
+        DIS_driverType          DriverType
+        DriverInfoStruct ends
 ~~~
 *DIS _strategy*  
 This is the address of the strategy routine. The strategy routine
@@ -195,12 +195,12 @@ It specifies specifically what kind of device the driver drives.
 The *DIS _driverAttributes* field contains a DriverAttrs record. This record
 has the following fields:
 ~~~
-	DriverAttrs record
-		DA_FILE_SYSTEM:1,
-		DA_CHARACTER:1,
-		DA_HAS_EXTENDED_INFO:1,
-		:13
-	DriverAttrs end
+    DriverAttrs record
+        DA_FILE_SYSTEM:1,
+        DA_CHARACTER:1,
+        DA_HAS_EXTENDED_INFO:1,
+        :13
+    DriverAttrs end
 ~~~
 ``DA_FILE_SYSTEM``  
 The driver is for file access.
@@ -216,32 +216,32 @@ The *DIS _driverType* field contains a member of the DriverType enumerated
 type. This type specifies what kind of driver this is. The type has the
 following members:
 ~~~
-	DRIVER_TYPE_VIDEO
-	DRIVER_TYPE_INPUT
-	DRIVER_TYPE_MASS_STORAGE
-	DRIVER_TYPE_STREAM
-	DRIVER_TYPE_FONT
-	DRIVER_TYPE_OUTPUT
-	DRIVER_TYPE_LOCALIZATION
-	DRIVER_TYPE_FILE_SYSTEM
-	DRIVER_TYPE_PRINTER
-	DRIVER_TYPE_SWAP
-	DRIVER_TYPE_POWER_MANAGEMENT
-	DRIVER_TYPE_TASK_SWITCH
-	DRIVER_TYPE_NETWORK
-	DRIVER_TYPE_SOUND
-	DRIVER_TYPE_PAGER
-	DRIVER_TYPE_PCMCIA
-	DRIVER_TYPE_FEP
-	DRIVER_TYPE_MAILBOX_DATA
-	DRIVER_TYPE_MAILBOX_TRANSPORT
-	DRIVER_TYPE_SOCKET
-	DRIVER_TYPE_SCAN
-	DRIVER_TYPE_OTHER_PROCESSOR
-	DRIVER_TYPE_MAILBOX_RECEIVE
-	DRIVER_TYPE_MODEM
-	DRIVER_TYPE_CONNECT_TRANSLATE
-	DRIVER_TYPE_CONNECT_TRANSFER
+    DRIVER_TYPE_VIDEO
+    DRIVER_TYPE_INPUT
+    DRIVER_TYPE_MASS_STORAGE
+    DRIVER_TYPE_STREAM
+    DRIVER_TYPE_FONT
+    DRIVER_TYPE_OUTPUT
+    DRIVER_TYPE_LOCALIZATION
+    DRIVER_TYPE_FILE_SYSTEM
+    DRIVER_TYPE_PRINTER
+    DRIVER_TYPE_SWAP
+    DRIVER_TYPE_POWER_MANAGEMENT
+    DRIVER_TYPE_TASK_SWITCH
+    DRIVER_TYPE_NETWORK
+    DRIVER_TYPE_SOUND
+    DRIVER_TYPE_PAGER
+    DRIVER_TYPE_PCMCIA
+    DRIVER_TYPE_FEP
+    DRIVER_TYPE_MAILBOX_DATA
+    DRIVER_TYPE_MAILBOX_TRANSPORT
+    DRIVER_TYPE_SOCKET
+    DRIVER_TYPE_SCAN
+    DRIVER_TYPE_OTHER_PROCESSOR
+    DRIVER_TYPE_MAILBOX_RECEIVE
+    DRIVER_TYPE_MODEM
+    DRIVER_TYPE_CONNECT_TRANSLATE
+    DRIVER_TYPE_CONNECT_TRANSFER
 ~~~
 
 Code Display 1-1 A Sample DriverTable
@@ -272,7 +272,7 @@ udata segment
 udata ends
 ~~~
 
-#### 1.2.3 Extended Drivers
+### 1.2.3 Extended Drivers
 
 If the driver is an extended driver (i.e., if the DA_HAS_EXTENDED_INFO bit
 in the DIS _driverAttributes field is set), the device must use a slightly
@@ -281,11 +281,11 @@ must begin its dgroup segment (or fixed, read-only, code resource) with a
 DriverExtendedInfoStruct. The DriverExtendedInfoStruct has the
 following definition:
 ~~~
-	DriverExtendedInfoStruct struct
-		DEIS_common        DriverInfoStruct
-		DEIS_resource      hptr.DriverExtendedInfoTable
-	DriverExtendedInfoStruct ends
-~~~	
+    DriverExtendedInfoStruct struct
+        DEIS_common        DriverInfoStruct
+        DEIS_resource      hptr.DriverExtendedInfoTable
+    DriverExtendedInfoStruct ends
+~~~ 
 This structure’s first field is a regular DriverInfoStruct, so the segment
 still begins with a DriverInfoStruct and a strategy routine, as is required.
 The other field should contain the handle of a sharable lmem segment that
@@ -298,12 +298,12 @@ The DriverExtendedInfoTable structure must be at the beginning of the
 resource. The DriverExtendedInfoTable structure has the following
 definition:
 ~~~
-	DriverExtendedInfoTable struct
-		DEIT_common        LMemBlockHeader
-		DEIT_numDevices    word
-		DEIT_nameTable     nptr.lptr.char
-		DEIT_infoTable     nptr.word
-	DriverExtendedInfoTable ends
+    DriverExtendedInfoTable struct
+        DEIT_common        LMemBlockHeader
+        DEIT_numDevices    word
+        DEIT_nameTable     nptr.lptr.char
+        DEIT_infoTable     nptr.word
+    DriverExtendedInfoTable ends
 ~~~
 *DEIT_common*  
 This is the standard LMem block header structure. You must
@@ -395,7 +395,7 @@ DriverInfoStruct. For example, if you are writing a mouse driver, you must
 begin its driver table segment with a MouseDriverInfoStruct, the first
 field of which is a DriverExtendedInfoStruct.
 
-#### 1.2.4 The Strategy Routine
+### 1.2.4 The Strategy Routine
 
 Every driver must have a strategy routine. This routine is called by the GEOS
 kernel and by libraries. The strategy routine is passed a code telling it what
@@ -404,7 +404,7 @@ routine contains a jump table; it calls a different routine, using the passed
 code as an offset into the jump table. (All the passed codes are even numbers,
 to facilitate jumping through a table of near-pointers.)
 
-##### 1.2.4.1 What Functions Must Be Handled?
+#### 1.2.4.1 What Functions Must Be Handled?
 
 ''DriverFunction, DriverExtendedFunction''
 
@@ -442,7 +442,7 @@ to those drivers.
 Different drivers will react to this in different ways. Some drivers will not
 have to handle escape codes at all.
 
-##### 1.2.4.2 The DriverFunction Type
+#### 1.2.4.2 The DriverFunction Type
 
 DR_INIT, DR_EXIT, DR_SUSPEND, DR_UNSUSPEND
 
@@ -526,7 +526,7 @@ __Destroyed:__
 __Include:__
 driver.def
 
-##### 1.2.4.3 Writing the Strategy Routine
+#### 1.2.4.3 Writing the Strategy Routine
 
 As noted, the strategy routine is the single entry point upon which a driver
 executes code. That routine determines what the driver needs to do, and calls
@@ -571,7 +571,7 @@ MyStrategy   proc far
              ; Now call the appropriate driver routine. Load DS and ES with our dgroup
              ; for future use
 
-	     segmov      ds, dgroup, ax
+             segmov      ds, dgroup, ax
              mov         es, ax
              shl         di
              pushdw      cs:[pfuncs][di]
@@ -605,7 +605,7 @@ MyExit       endp
 Init         ends
 ~~~
 
-##### 1.2.4.4 The DriverExtendedFunction Type
+#### 1.2.4.4 The DriverExtendedFunction Type
 
 ``DRE_TEST_DEVICE, DRE_SET_DEVICE, DevicePresent, EnumerateDevice``  
 All extended drivers must be able to handle the two functions specified by the
@@ -697,7 +697,7 @@ __Warning:__
 containing the driver’s extended information and return the block’s segment
 address in es. Be sure to unlock this block when you’re done with it.
 
-#### 1.2.5 Escape Codes
+### 1.2.5 Escape Codes
 
 ``DriverEscCode``  
 Some kinds of drivers may be passed escape codes. An escape code is passed

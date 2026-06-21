@@ -29,20 +29,15 @@
 #include "ttengine.h"
 #include "ttcalc.h"
 #include "ttmemory.h"
-#include "ttcache.h"
 #include "ttfile.h"
 #include "ttobjs.h"
 #include "ttload.h"
 #include "ttgload.h"
 #include "ttraster.h"
-#include "ttextend.h"
 #include "tttags.h"
 #include <geos.h>
+#include <ec.h>
 
-
-/* required by the tracing mode */
-#undef  TT_COMPONENT
-#define TT_COMPONENT  trace_api
 
 #ifdef __GEOS__
 extern TEngine_Instance engineInstance;
@@ -57,14 +52,10 @@ extern TEngine_Instance engineInstance;
 
 
 #define RENDER_Glyph( glyph, target ) \
-          Render_Glyph( RAS_OPS  glyph, target )
-
-#define RENDER_Gray_Glyph( glyph, target, palette ) \
-          Render_Gray_Glyph( RAS_OPS  glyph, target, palette )
+          Render_Bitmap_Glyph( RAS_OPS  glyph, target )
 
 #define RENDER_Region_Glyph( glyph, target ) \
           Render_Region_Glyph( RAS_OPS glyph, target )
-
 
 
 /*******************************************************************
@@ -89,7 +80,6 @@ extern TEngine_Instance engineInstance;
   EXPORT_FUNC
   TT_Error  TT_Init_FreeType( void )
   {
-    PEngine_Instance  _engine = &engineInstance;
     TT_Error          error;
 
 
@@ -99,18 +89,10 @@ extern TEngine_Instance engineInstance;
       return error;
 
 #undef  TT_FAIL
-#define TT_FAIL( x )  ( error = x (_engine) ) != TT_Err_Ok
+#define TT_FAIL( x )  ( error = x () ) != TT_Err_Ok
 
     /* Initalize components */
-    if ( 
-#ifndef __GEOS__
-         TT_FAIL( TTFile_Init  )  ||
-#endif
-         TT_FAIL( TTCache_Init )  ||
-#ifdef TT_CONFIG_OPTION_EXTEND_ENGINE
-         TT_FAIL( TTExtend_Init ) ||
-#endif
-         TT_FAIL( TTObjs_Init )   ||
+    if ( TT_FAIL( TTObjs_Init )   ||
          TT_FAIL( TTRaster_Init ) )
        goto Fail;
 
@@ -134,7 +116,7 @@ extern TEngine_Instance engineInstance;
  *
  *  Input  :  void
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  MT-Note : Destroys an engine.  Not necessarily thread-safe
  *            depending on the implementations of ttmemory,
@@ -144,24 +126,11 @@ extern TEngine_Instance engineInstance;
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Done_FreeType( void )
+  void  TT_Done_FreeType( void )
   {
-    PEngine_Instance  _engine = &engineInstance;
-
-
-    TTRaster_Done( _engine );
-    TTObjs_Done  ( _engine );
-#ifdef TT_CONFIG_OPTION_EXTEND_ENGINE
-    TTExtend_Done( _engine );
-#endif
-    TTCache_Done ( _engine );
-#ifndef __GEOS__
-    TTFile_Done  ( _engine );
-#endif
-
+    TTRaster_Done();
+    TTObjs_Done  ();
     TTMemory_Done();
-
-    return TT_Err_Ok;
   }
 
 
@@ -182,41 +151,41 @@ extern TEngine_Instance engineInstance;
  *
  ******************************************************************/
 
-  EXPORT_FUNC
-  TT_Error  TT_Open_Face( const FileHandle  file,
-                          TT_Face*          face )
-  {
-    PEngine_Instance  _engine = &engineInstance;
+EXPORT_FUNC
+TT_Error  TT_Open_Face( const FileHandle  file,
+                        TT_Face*          face )
+{
+  TFont_Input  input;
+  TT_Error     error;
+  TT_Stream    stream;
+  PFace        _face;
 
-    TFont_Input  input;
-    TT_Error     error;
-    TT_Stream    stream;
-    PFace        _face;
-
-
-    /* open the file */
-    error = TT_Open_Stream( file, &stream );
+  error = TT_Open_Stream( file, &stream );
     if ( error )
-      return error;
-
-    input.stream    = stream;
-    input.engine    = _engine;
-
-    /* Create and load the new face object - this is thread-safe */
-    error = CACHE_New( _engine->objs_face_cache,
-                       _face,
-                       &input );
-
-    /* Set the handle */
-    HANDLE_Set( *face, _face );
-
-    if (error) {
-        TT_Close_Stream(&stream);
         return error;
+
+    input.stream = stream;
+
+    if ( ALLOC( _face, sizeof( TFace ) ) )
+    {
+        error = TT_Err_Out_Of_Memory;
+        goto Fail;
     }
 
+    error = Face_Create( _face, &input );
+    if ( error )
+    {
+        FREE( _face );
+        goto Fail;
+    }
+
+    HANDLE_Set( *face, _face );
     return TT_Err_Ok;
-  }
+
+Fail:
+    TT_Close_Stream( &stream );
+    return error;
+}
 
 
 /*******************************************************************
@@ -228,7 +197,7 @@ extern TEngine_Instance engineInstance;
  *  Input  :  face          the face handle
  *            properties    address of target properties record
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  Note :    Currently, max_Faces is always set to 0.
  *
@@ -237,14 +206,13 @@ extern TEngine_Instance engineInstance;
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_Face_Properties( TT_Face              face,
+  void  TT_Get_Face_Properties( TT_Face              face,
                                     TT_Face_Properties*  properties )
   {
     PFace _face = HANDLE_Face( face );
 
 
-    if ( !_face )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( _face ) );
 
     properties->num_Glyphs   = _face->numGlyphs;
     properties->max_Points   = _face->maxPoints;
@@ -268,8 +236,6 @@ extern TEngine_Instance engineInstance;
   #ifdef TT_CONFIG_OPTION_PROCESS_HDMX
     properties->hdmx         = &_face->hdmx;
   #endif
-
-    return TT_Err_Ok;
   }
 
 
@@ -342,8 +308,7 @@ extern TEngine_Instance engineInstance;
     UShort  num;
 
 
-    if ( !_face )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( _face ) );
 
     // Check the glyph range
     if ( lastGlyph >= _face->numGlyphs || firstGlyph > lastGlyph )
@@ -398,36 +363,6 @@ extern TEngine_Instance engineInstance;
 
 /*******************************************************************
  *
- *  Function    :  TT_Flush_Face
- *
- *  Description :  This function is used to close an active face's
- *                 file handle or descriptor.  This is useful to save
- *                 system resources, if your application uses tons
- *                 of fonts.
- *
- *  Input  :  face    the given face handle
- *
- *  Output :  Error code.
- *
- *  MT-Note : YES!  (If ttfile is.)
- *
- ******************************************************************/
-/*
-  EXPORT_FUNC
-  TT_Error  TT_Flush_Face( TT_Face  face )
-  {
-    PFace  faze = HANDLE_Face( face );
-
-
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
-    else
-      return TT_Flush_Stream( &faze->stream );
-  }
-*/
-
-/*******************************************************************
- *
  *  Function    :  TT_Close_Face
  *
  *  Description :  Closes an opened face object.  This function
@@ -436,7 +371,7 @@ extern TEngine_Instance engineInstance;
  *
  *  Input  :  face    the given face handle
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  NOTE   :  The handle is set to NULL on exit.
  *
@@ -445,20 +380,17 @@ extern TEngine_Instance engineInstance;
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Close_Face( TT_Face  face )
+  void  TT_Close_Face( TT_Face  face )
   {
     PFace  _face = HANDLE_Face( face );
 
 
-    if ( !_face )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( _face ) );
 
     TT_Close_Stream( &_face->stream );
-
-    /* delete the face object -- this is thread-safe */
-    return CACHE_Done( _face->engine->objs_face_cache, _face );
+    Face_Destroy( _face );
+    FREE( _face );
   }
-
 
 /*******************************************************************
  *
@@ -477,87 +409,40 @@ extern TEngine_Instance engineInstance;
  *
  ******************************************************************/
 
-  EXPORT_FUNC
-  TT_Error  TT_New_Instance( TT_Face       face,
-                             TT_Instance*  instance )
-  {
+EXPORT_FUNC
+TT_Error  TT_New_Instance( TT_Face       face,
+                           TT_Instance*  instance )
+{
     TT_Error   error;
     PFace      _face = HANDLE_Face( face );
     PInstance  _ins;
 
 
-    if ( !_face )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( _face ) );
+EC_ERROR_IF( _face->instance, TT_Err_Invalid_Face_Handle );
 
-    /* get a new instance from the face's cache -- this is thread-safe */
-    error = CACHE_New( &_face->instances, _ins, _face );
+    if ( ALLOC( _ins, sizeof( TInstance ) ) )
+        return TT_Err_Out_Of_Memory;
 
-    HANDLE_Set( *instance, _ins );
+    error = Instance_Create( _ins, _face );
+    if ( error )
+        goto Fail;
 
-    if ( !error )
+    error = Instance_Init( _ins );
+    if ( error )
     {
-      error = Instance_Init( _ins );
-      if ( error )
-      {
-        HANDLE_Set( *instance, NULL );
-        CACHE_Done( &_face->instances, _ins );
-      }
+        Instance_Destroy( _ins );
+        goto Fail;
     }
 
+    _face->instance = _ins;
+    HANDLE_Set( *instance, _ins );
+    return TT_Err_Ok;
+
+Fail:
+    FREE( _ins );
     return error;
-  }
-
-
-/*******************************************************************
- *
- *  Function    :  TT_Set_Instance_Resolutions
- *
- *  Description :  Resets an instance to a new device resolution.
- *
- *  Input  :  instance      the instance handle
- *            xResolution   new horizontal device resolution in dpi
- *            yResolution   new vertical device resolution in dpi
- *
- *  Output :  Error code.
- *
- *  Note :    There is no check for overflow; with other words,
- *            the product of glyph dimensions times the device
- *            resolutions must have reasonable values.
- *
- *  MT-Note : You should set the charsize or pixel size immediately
- *            after this call in multi-threaded programs.  This will
- *            force the instance data to be resetted.  Otherwise, you
- *            may encounter corruption when loading two glyphs from
- *            the same instance concurrently!
- *
- *            Happily, 99.99% will do just that :-)
- *
- ******************************************************************/
-/*
-  EXPORT_FUNC
-  TT_Error  TT_Set_Instance_Resolutions( TT_Instance  instance,
-                                         TT_UShort    xResolution,
-                                         TT_UShort    yResolution )
-  {
-    PInstance  ins = HANDLE_Instance( instance );
-
-
-    if ( !ins )
-      return TT_Err_Invalid_Instance_Handle;
-
-    ins->metrics.x_resolution = xResolution;
-    ins->metrics.y_resolution = yResolution;
-    ins->valid                = FALSE; */
-
-    /* In the case of a thread-safe implementation, we immediately    */
-    /* call Instance_Reset in order to change the instance's variable */
-
-    /* In the case of a non-threaded build, we simply set the 'valid' */
-    /* flag to FALSE, which will force the instance's resetting at    */
-    /* the next glyph loading                                         */
-
-/*    return TT_Err_Ok;
-  } */
+}
 
 
 /*******************************************************************
@@ -581,127 +466,37 @@ extern TEngine_Instance engineInstance;
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Set_Instance_CharSize( TT_Instance  instance,
-                                       TT_F26Dot6   charSize )
+  TT_Error  TT_Set_Instance_CharSize_And_Resolutions( TT_Instance  instance,
+                                                      TT_F26Dot6   charSize,
+                                                      TT_UShort    resolution )
   {
-    PInstance  ins = HANDLE_Instance( instance );
+    PInstance   ins = HANDLE_Instance( instance );
+    TT_F26Dot6  scale1;
 
-
-    if ( !ins )
-      return TT_Err_Invalid_Instance_Handle;
+EC( ECCheckBounds( ins ) );
 
     if ( charSize < 1 * 64 )
       charSize = 1 * 64;
 
-    ins->metrics.x_scale1 = ( charSize * ins->metrics.x_resolution ) / 72;
-    ins->metrics.x_scale2 = ins->owner->fontHeader.Units_Per_EM;
-
-    ins->metrics.y_scale1 = ( charSize * ins->metrics.y_resolution ) / 72;
-    ins->metrics.y_scale2 = ins->owner->fontHeader.Units_Per_EM;
+    scale1 = ( charSize * resolution ) / 72;
 
     if ( ins->owner->fontHeader.Flags & 8 )
-    {
-      ins->metrics.x_scale1 = (ins->metrics.x_scale1+32) & -64;
-      ins->metrics.y_scale1 = (ins->metrics.y_scale1+32) & -64;
-    }
+      scale1 = ( scale1 + 32 ) & -64;
 
-    ins->metrics.x_ppem = ins->metrics.x_scale1 >> 6;
-    ins->metrics.y_ppem = ins->metrics.y_scale1 >> 6;
-    ins->metrics.pointSize = charSize;
+    if ( ins->valid                        &&
+         ins->metrics.resolution == resolution &&
+         ins->metrics.x_scale1   == scale1     &&
+         ins->metrics.pointSize  == charSize )
+      return TT_Err_Ok;
 
-    ins->valid  = FALSE;
+    ins->metrics.resolution   = resolution;
+    ins->metrics.x_scale1     = scale1;
+    ins->metrics.units_per_em = ins->owner->fontHeader.Units_Per_EM;
+    ins->metrics.ppem         = scale1 >> 6;
+    ins->metrics.pointSize    = charSize;
+    ins->valid                = FALSE;
 
     return Instance_Reset( ins );
-  }
-
-
-/*******************************************************************
- *
- *  Function    :  TT_Set_Instance_Transform_Flags
- *
- *  Description :  Informs the interpreter about the transformations
- *                 that will be applied to the rendered glyphs.
- *
- *  Input  :  instance      the instance handle
- *            rotated       set to TRUE if the glyph are rotated
- *            stretched     set to TRUE if the glyph are stretched
- *
- *  Output :  Error code.
- *
- *  Note :    This function is deprecated!  It's much better to
- *            control hinting manually when calling TT_Load_Glyph
- *            than relying on the font programs...
- *
- *            Never use it, unless calling for trouble ;-)
- *
- *  MT-Note : NO!  This should be called only when setting/resetting
- *            instances, so there is no need to protect.
- *
- ******************************************************************/
-/*
-  EXPORT_FUNC
-  TT_Error  TT_Set_Instance_Transform_Flags( TT_Instance  instance,
-                                             TT_Bool      rotated,
-                                             TT_Bool      stretched )
-  {
-    PInstance  ins = HANDLE_Instance( instance );
-
-
-    if ( !ins )
-      return TT_Err_Invalid_Instance_Handle;
-
-    ins->metrics.rotated   = rotated;
-    ins->metrics.stretched = stretched;
-    ins->valid             = FALSE;
-
-    return TT_Err_Ok;
-  }*/
-
-
-/*******************************************************************
- *
- *  Function    :  TT_Get_Instance_Metrics
- *
- *  Description :  Returns instance metrics.
- *
- *  Input  :  instance      the instance handle
- *            metrics       address of target instance metrics record
- *
- *  Output :  Error code.
- *
- *  MT-Note : YES!  Reads only semi-permanent data.
- *
- ******************************************************************/
-
-  EXPORT_FUNC
-  TT_Error  TT_Get_Instance_Metrics( TT_Instance           instance,
-                                     TT_Instance_Metrics*  metrics )
-  {
-    PInstance  ins = HANDLE_Instance( instance );
-
-
-    if ( !ins )
-     return TT_Err_Invalid_Instance_Handle;
-
-    if ( !ins->valid )
-      Instance_Reset( ins );
-
-    metrics->pointSize    = ins->metrics.pointSize;
-
-    metrics->x_scale      = TT_MulDiv( 0x10000,
-                                       ins->metrics.x_scale1,
-                                       ins->metrics.x_scale2 );
-
-    metrics->y_scale      = TT_MulDiv( 0x10000,
-                                       ins->metrics.y_scale1,
-                                       ins->metrics.y_scale2 );
-
-    metrics->x_resolution = ins->metrics.x_resolution;
-    metrics->y_resolution = ins->metrics.y_resolution;
-    metrics->x_ppem       = ins->metrics.x_ppem;
-    metrics->y_ppem       = ins->metrics.y_ppem;
-
-    return TT_Err_Ok;
   }
 
 
@@ -713,25 +508,31 @@ extern TEngine_Instance engineInstance;
  *
  *  Input  :  instance      address of instance handle
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  MT-Safe : YES!
  *
  ******************************************************************/
 
-  EXPORT_FUNC
-  TT_Error  TT_Done_Instance( TT_Instance  instance )
-  {
+EXPORT_FUNC
+void  TT_Done_Instance( TT_Instance  instance )
+{
     PInstance  ins = HANDLE_Instance( instance );
+    PFace      face;
 
 
-    if ( !ins )
-      return TT_Err_Invalid_Instance_Handle;
+EC( ECCheckBounds( ins ) );
 
-    /* delete the instance -- this is thread-safe */
-    return CACHE_Done( &ins->owner->instances, ins );
-  }
+    face = ins->owner;
 
+EC( ECCheckBounds( face ) );
+EC_ERROR_IF( face->instance != ins, TT_Err_Invalid_Instance_Handle );
+
+    face->instance = NULL;
+
+    Instance_Destroy( ins );
+    FREE( ins );
+}
 
 /*******************************************************************
  *
@@ -749,26 +550,32 @@ extern TEngine_Instance engineInstance;
  *
  ******************************************************************/
 
-  EXPORT_FUNC
-  TT_Error  TT_New_Glyph( TT_Face    face,
-                          TT_Glyph*  glyph )
-  {
-    TT_Error  error;
-    PFace     _face = HANDLE_Face( face );
-    PGlyph    _glyph;
+EXPORT_FUNC
+TT_Error  TT_New_Glyph( TT_Face    face,
+                        TT_Glyph*  glyph )
+{
+    PFace    _face  = HANDLE_Face( face );
+    PGlyph   _glyph;
+    TT_Error error;
 
 
-    if ( !_face )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( _face ) );
 
-    /* get a new glyph from the face's cache -- this is thread-safe */
-    error = CACHE_New( &_face->glyphs, _glyph, _face );
+    if ( ALLOC( _glyph, sizeof ( TGlyph ) ) )
+        return TT_Err_Out_Of_Memory;
 
+    error = Glyph_Create( _glyph, _face );
+    if ( error )
+    {
+        FREE( _glyph );
+        return error;
+    }
+
+    _face->glyph = _glyph;
     HANDLE_Set( *glyph, _glyph );
 
-    return error;
-  }
-
+    return TT_Err_Ok;
+}
 
 /*******************************************************************
  *
@@ -785,18 +592,23 @@ extern TEngine_Instance engineInstance;
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Done_Glyph( TT_Glyph  glyph )
+  void  TT_Done_Glyph( TT_Glyph  glyph )
   {
     PGlyph  _glyph = HANDLE_Glyph( glyph );
+    PFace   face;
 
 
-    if ( !_glyph )
-      return TT_Err_Invalid_Glyph_Handle;
+EC( ECCheckBounds( _glyph ) );
 
-    /* delete the engine -- this is thread-safe */
-    return CACHE_Done( &_glyph->face->glyphs, _glyph );
+    face = _glyph->face;
+
+EC_ERROR_IF( !face, TT_Err_Invalid_Glyph_Handle );
+EC_ERROR_IF( face->glyph != _glyph, TT_Err_Invalid_Glyph_Handle );
+
+    face->glyph = NULL;
+    Glyph_Destroy( _glyph );
+    FREE( _glyph );
   }
-
 
 /*******************************************************************
  *
@@ -826,28 +638,24 @@ extern TEngine_Instance engineInstance;
     PGlyph     _glyph = HANDLE_Glyph( glyph );
     TT_Error   error;
 
+    if ( !_ins || !(loadFlags & TTLOAD_SCALE_GLYPH) )
+    {
+        loadFlags &= ~(TTLOAD_SCALE_GLYPH | TTLOAD_HINT_GLYPH);
+        _ins = NULL;
+    }
 
-    if ( !_ins )
-      loadFlags &= ~(TTLOAD_SCALE_GLYPH | TTLOAD_HINT_GLYPH);
-
-    if ( (loadFlags & TTLOAD_SCALE_GLYPH) == 0 )
-      _ins = 0;
-
-    if ( !_glyph )
-      return TT_Err_Invalid_Glyph_Handle;
+    EC( ECCheckBounds( _glyph ) );
 
     if ( _ins )
     {
-      if ( _ins->owner != _glyph->face )
-        return TT_Err_Invalid_Face_Handle;
+        EC_ERROR_IF( _ins->owner != _glyph->face, TT_Err_Invalid_Face_Handle );
 
-      if ( !_ins->valid )
-      {
-        /* This code can only be called in non thread-safe builds */
-        error = Instance_Reset( _ins );
-        if ( error )
-          return error;
-      }
+        if ( !_ins->valid )
+        {
+            error = Instance_Reset( _ins );
+            if ( error )
+                return error;
+        }
     }
 
     return Load_TrueType_Glyph( _ins, _glyph, glyphIndex, loadFlags );
@@ -863,26 +671,23 @@ extern TEngine_Instance engineInstance;
  *  Input  :  glyph     the glyph handle
  *            outline   address where the glyph outline will be returned
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  MT-Safe : YES!  Reads only semi-permanent data.
  *
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_Glyph_Outline( TT_Glyph     glyph,
-                                  TT_Outline*  outline )
+  void  TT_Get_Glyph_Outline( TT_Glyph     glyph,
+                              TT_Outline*  outline )
   {
     PGlyph  _glyph = HANDLE_Glyph( glyph );
 
 
-    if ( !_glyph )
-      return TT_Err_Invalid_Glyph_Handle;
+EC( ECCheckBounds( _glyph ) );
 
     *outline = _glyph->outline;
     outline->owner = FALSE;
-
-    return TT_Err_Ok;
   }
 
 
@@ -895,28 +700,22 @@ extern TEngine_Instance engineInstance;
  *  Input  :  glyph       glyph object handle
  *            metrics     address where metrics will be returned
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  MT-Safe : NO!  Glyph containers can't be shared.
  *
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_Glyph_Metrics( TT_Glyph           glyph,
-                                  TT_Glyph_Metrics*  metrics )
+  void  TT_Get_Glyph_Metrics( TT_Glyph           glyph,
+                              TT_Glyph_Metrics*  metrics )
   {
     PGlyph  _glyph = HANDLE_Glyph( glyph );
 
 
-    if ( !_glyph )
-      return TT_Err_Invalid_Glyph_Handle;
+EC( ECCheckBounds( _glyph ) );
 
-    metrics->bbox     = _glyph->metrics.bbox;
-    metrics->bearingX = _glyph->metrics.horiBearingX;
-    metrics->bearingY = _glyph->metrics.horiBearingY;
-    metrics->advance  = _glyph->metrics.horiAdvance;
-
-    return TT_Err_Ok;
+    *metrics = _glyph->metrics;
   }
 
 
@@ -948,14 +747,11 @@ extern TEngine_Instance engineInstance;
     PStorage  glyphLocations;
     Short     bearing;
     UShort    advance;
-    Long      offset;
 
 
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( faze ) );
+EC_ERROR_IF( index >= faze->numGlyphs, TT_Err_Invalid_Argument ); 
 
-    if ( index >= faze->numGlyphs )
-      return TT_Err_Invalid_Argument;
 
     /* find "glyf" table */
     table = TT_LookUp_Table( faze, TTAG_glyf );
@@ -982,11 +778,12 @@ extern TEngine_Instance engineInstance;
       goto Fin;
     }
 
-    offset = faze->dirTables[table].Offset + glyphLocations[index];
-
     /* read first glyph header */
-    if ( FILE_Seek( offset ) || ACCESS_Frame( 10 ) )
+    if ( FILE_Seek( faze->dirTables[table].Offset + glyphLocations[index] ) || ACCESS_Frame( 10 ) )
+    {
+      GEO_UNLOCK( faze->glyphLocationBlock );
       goto Fail;
+    }
 
     SKIP( 2 );
 
@@ -1008,69 +805,11 @@ extern TEngine_Instance engineInstance;
 
     metrics->advance  = advance;
     metrics->bearingX = bearing;
-    metrics->bearingY = 0;
 
   Fail:
     DONE_Stream( stream );
     return error;
   }
-
-
-/*******************************************************************
- *
- *  Function    :  TT_Get_Glyph_Bitmap
- *
- *  Description :  Produces a bitmap from a glyph outline.
- *
- *  Input  :  glyph      the glyph container's handle
- *            map        target pixmap description block
- *            xOffset    x offset in fractional pixels (26.6 format)
- *            yOffset    y offset in fractional pixels (26.6 format)
- *
- *  Output :  Error code.
- *
- *  Note : Only use integer pixel offsets if you want to preserve
- *         the fine hints applied to the outline.  This means that
- *         xOffset and yOffset must be multiples of 64!
- *
- *  MT-Safe : NO!  Glyph containers can't be shared.
- *
- ******************************************************************/
-/*
-  EXPORT_FUNC
-  TT_Error  TT_Get_Glyph_Bitmap( TT_Glyph        glyph,
-                                 TT_Raster_Map*  map,
-                                 TT_F26Dot6      xOffset,
-                                 TT_F26Dot6      yOffset )
-  {
-    PEngine_Instance  _engine;
-    TT_Error          error;
-    PGlyph            _glyph = HANDLE_Glyph( glyph );
-
-    TT_Outline  outline;
-
-
-    if ( !_glyph )
-      return TT_Err_Invalid_Glyph_Handle;
-
-    _engine = _glyph->face->engine;
-
-    outline = _glyph->outline;
-    // XXX : For now, use only dropout mode 2
-    // outline.dropout_mode = _glyph->scan_type;
-    outline.dropout_mode = 2;
-
-    TT_Translate_Outline( &outline, xOffset, yOffset );
-    error = TT_Get_Outline_Bitmap( &outline, map );
-    TT_Translate_Outline( &outline, -xOffset, -yOffset );
-
-    return error;
-  }
-*/
-
-
-  static const TT_Outline  null_outline
-      = { 0, 0, NULL, NULL, NULL, 0, 0, 0, 0 };
 
 
 /*******************************************************************
@@ -1099,10 +838,10 @@ extern TEngine_Instance engineInstance;
     TT_Error  error;
 
 
-    if ( !outline )
-      return TT_Err_Invalid_Argument;
+EC( ECCheckBounds( outline ) );
 
-    *outline = null_outline;
+    MEM_Set( outline, 0, sizeof(TT_Outline) );
+    outline->owner = TRUE;
 
     if ( ALLOC( outline->points,   numPoints*2*sizeof ( TT_F26Dot6 ) ) ||
          ALLOC( outline->flags,    numPoints  *sizeof ( Byte )       ) ||
@@ -1111,11 +850,9 @@ extern TEngine_Instance engineInstance;
 
     outline->n_points   = numPoints;
     outline->n_contours = numContours;
-    outline->owner      = TRUE;
     return TT_Err_Ok;
 
   Fail:
-    outline->owner = TRUE;
     TT_Done_Outline( outline );
     return error;
   }
@@ -1131,14 +868,14 @@ extern TEngine_Instance engineInstance;
  *
  *  Input  :  outline        address of outline
  *
- *  Output :  Error code.
+ *  Output :  void.
  *
  *  MT-Safe : YES!
  *
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Done_Outline( TT_Outline*  outline )
+  void  TT_Done_Outline( TT_Outline*  outline )
   {
     if ( outline )
     {
@@ -1148,11 +885,9 @@ extern TEngine_Instance engineInstance;
         FREE( outline->flags    );
         FREE( outline->contours );
       }
-      *outline = null_outline;
-      return TT_Err_Ok;
+
+      MEM_Set( outline, 0, sizeof(TT_Outline) );
     }
-    else
-      return TT_Err_Invalid_Argument;
   }
 
 
@@ -1176,8 +911,13 @@ extern TEngine_Instance engineInstance;
   TT_Error  TT_Get_Outline_Bitmap( TT_Outline*     outline,
                                    TT_Raster_Map*  map )
   {
-    if ( !outline || !map )
-      return TT_Err_Invalid_Argument;
+EC( ECCheckBounds( outline ) );
+EC( ECCheckBounds( map ) );
+
+    if ( outline->n_points == 0 || outline->n_contours <= 0 )
+      return TT_Err_Ok; 
+
+EC_ERROR_IF( outline->n_points < outline->contours[outline->n_contours - 1], TT_Err_Too_Many_Points );
 
     return RENDER_Glyph( outline, map );
   }
@@ -1203,12 +943,12 @@ extern TEngine_Instance engineInstance;
 EXPORT_FUNC
 TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
                                  TT_Raster_Map*  map )
-{
-  if ( !outline || !map )
-    return TT_Err_Invalid_Argument;
+  {
+EC( ECCheckBounds( outline ) );
+EC( ECCheckBounds( map ) );
 
-  return RENDER_Region_Glyph( outline, map );
-}
+    return RENDER_Region_Glyph( outline, map );
+  }
 
 #endif    /* __GEOS__ */
 
@@ -1241,41 +981,6 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
 
 /*******************************************************************
  *
- *  Function    :  TT_Transform_Vector
- *
- *  Description :  Apply a simple transform to a vector
- *
- *  Input  :  x, y        the vector.
- *
- *            matrix      simple matrix with 16.16 fixed floats
- *
- *  Output :  None.
- *
- *  MT-Safe : YES!
- *
- ******************************************************************/
-
-  EXPORT_FUNC
-  void  TT_Transform_Vector( TT_F26Dot6*  x,
-                             TT_F26Dot6*  y,
-                             TT_Matrix*   matrix )
-  {
-    TT_F26Dot6  xz, yz;
-
-
-    xz = TT_MulFix( *x, matrix->xx ) +
-         TT_MulFix( *y, matrix->xy );
-
-    yz = TT_MulFix( *x, matrix->yx ) +
-         TT_MulFix( *y, matrix->yy );
-
-    *x = xz;
-    *y = yz;
-  }
-
-
-/*******************************************************************
- *
  *  Function    :  TT_Translate_Outline
  *
  *  Description :  Applies a simple translation.
@@ -1284,7 +989,7 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  *            xOffset
  *            yOffset
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  MT-Safe : YES!
  *
@@ -1317,52 +1022,49 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  *  Input  :  outline   no comment :)
  *            bbox      address where the bounding box is returned
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  MT-Safe : YES!
  *
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_Outline_BBox( TT_Outline*  outline,
-                                 TT_BBox*     bbox )
+  void  TT_Get_Outline_BBox( TT_Outline*  outline,
+                             TT_BBox*     bbox )
   {
     TT_F26Dot6  x, y;
     UShort      k;
 
 
-    if ( outline && bbox )
+EC( ECCheckBounds( outline ) );
+EC( ECCheckBounds( bbox ) );
+
+    if ( outline->n_points == 0 )
     {
-      if ( outline->n_points == 0 )
-      {
-        bbox->xMin = 0;
-        bbox->yMin = 0;
-        bbox->xMax = 0;
-        bbox->yMax = 0;
-      }
-      else
-      {
-        TT_Vector*  vec = outline->points;
-
-        bbox->xMin = bbox->xMax = vec->x;
-        bbox->yMin = bbox->yMax = vec->y;
-        ++vec;
-
-        for ( k = 1; k < outline->n_points; ++k )
-        {
-          x = vec->x;
-          if ( x < bbox->xMin ) bbox->xMin = x;
-          if ( x > bbox->xMax ) bbox->xMax = x;
-          y = vec->y;
-          if ( y < bbox->yMin ) bbox->yMin = y;
-          if ( y > bbox->yMax ) bbox->yMax = y;
-          ++vec;
-        }
-      }
-      return TT_Err_Ok;
+      bbox->xMin = 0;
+      bbox->yMin = 0;
+      bbox->xMax = 0;
+      bbox->yMax = 0;
     }
     else
-      return TT_Err_Invalid_Argument;
+    {
+      TT_Vector*  vec = outline->points;
+
+      bbox->xMin = bbox->xMax = vec->x;
+      bbox->yMin = bbox->yMax = vec->y;
+      ++vec;
+
+      for ( k = 1; k < outline->n_points; ++k )
+      {
+        x = vec->x;
+        if ( x < bbox->xMin ) bbox->xMin = x;
+        if ( x > bbox->xMax ) bbox->xMax = x;
+        y = vec->y;
+        if ( y < bbox->yMin ) bbox->yMin = y;
+        if ( y > bbox->yMax ) bbox->yMax = y;
+        ++vec;
+      }
+    }
   }
 
 
@@ -1379,34 +1081,30 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  *            platformID       address of returned platform ID
  *            encodingID       address of returned encoding ID
  *
- *  Output :  error code
+ *  Output :  void
  *
  *  MT-Safe : YES !
  *
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_CharMap_ID( TT_Face     face,
-                               TT_UShort   charmapIndex,
-                               TT_UShort*  platformID,
-                               TT_UShort*  encodingID )
+  void  TT_Get_CharMap_ID( TT_Face     face,
+                           TT_UShort   charmapIndex,
+                           TT_UShort*  platformID,
+                           TT_UShort*  encodingID )
   {
     PCMapTable  cmap;
     PFace       faze = HANDLE_Face( face );
 
 
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( faze ) );
+EC_ERROR_IF( charmapIndex >= faze->numCMaps, TT_Err_Invalid_Argument );
 
-    if ( charmapIndex >= faze->numCMaps )
-      return TT_Err_Invalid_Argument;
 
     cmap = faze->cMaps + charmapIndex;
 
     *platformID = cmap->platformID;
     *encodingID = cmap->platformEncodingID;
-
-    return TT_Err_Ok;
   }
 
 
@@ -1431,23 +1129,18 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
                             TT_UShort    charmapIndex,
                             TT_CharMap*  charMap )
   {
-    TT_Error    error;
     TT_Stream   stream;
     PCMapTable  cmap;
+    TT_Error    error = TT_Err_Ok;
     PFace       faze = HANDLE_Face( face );
 
 
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
-
-    if ( charmapIndex >= faze->numCMaps )
-      return TT_Err_Invalid_Argument;
+EC( ECCheckBounds( faze ) );
+EC_ERROR_IF( charmapIndex >= faze->numCMaps, TT_Err_Invalid_Argument );
 
     cmap = faze->cMaps + charmapIndex;
 
     /* Load table if needed */
-    error = TT_Err_Ok;
-
     if ( !cmap->loaded )
     {
       (void)USE_Stream( faze->stream, stream );
@@ -1487,7 +1180,7 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  *  MT-Safe : YES!
  *
  ******************************************************************/
-
+  #pragma code_seg(ttcmap_TEXT)
   EXPORT_FUNC
   TT_UShort  TT_Char_Index( TT_CharMap  charMap,
                             TT_UShort   charCode )
@@ -1500,7 +1193,7 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
 
     return CharMap_Index( cmap, charCode );
   }
-
+#pragma code_seg()
 
 /*******************************************************************
  *
@@ -1516,7 +1209,7 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  *            languageID
  *            nameID
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  Notes  :  Some files have a corrupt or unusual name table, with some
  *            entries having a platformID > 3.  These can usually
@@ -1527,22 +1220,19 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_Name_ID( TT_Face     face,
-                            TT_UShort   nameIndex,
-                            TT_UShort*  platformID,
-                            TT_UShort*  encodingID,
-                            TT_UShort*  languageID,
-                            TT_UShort*  nameID )
+  void  TT_Get_Name_ID( TT_Face     face,
+                        TT_UShort   nameIndex,
+                        TT_UShort*  platformID,
+                        TT_UShort*  encodingID,
+                        TT_UShort*  languageID,
+                        TT_UShort*  nameID )
   {
     TNameRec*  namerec;
     PFace      faze = HANDLE_Face( face );
 
 
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
-
-    if ( nameIndex >= faze->nameTable.numNameRecords )
-      return TT_Err_Invalid_Argument;
+EC( ECCheckBounds( faze ) );
+EC_ERROR_IF( nameIndex >= faze->nameTable.numNameRecords, TT_Err_Invalid_Argument );
 
     namerec = faze->nameTable.names + nameIndex;
 
@@ -1550,8 +1240,6 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
     *encodingID = namerec->encodingID;
     *languageID = namerec->languageID;
     *nameID     = namerec->nameID;
-
-    return TT_Err_Ok;
   }
 
 
@@ -1567,7 +1255,7 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  *            stringPtr   address of returned pointer to string
  *            length      address of returned string length
  *
- *  Output :  Error code.
+ *  Output :  void
  *
  *  Notes  :  If the string's platformID is invalid,
  *            stringPtr is NULL, and length is 0.
@@ -1577,27 +1265,23 @@ TT_Error  TT_Get_Outline_Region( TT_Outline*     outline,
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Get_Name_String( TT_Face      face,
-                                TT_UShort    nameIndex,
-                                TT_String**  stringPtr,
-                                TT_UShort*   length )
+  void  TT_Get_Name_String( TT_Face      face,
+                            TT_UShort    nameIndex,
+                            TT_String**  stringPtr,
+                            TT_UShort*   length )
   {
     TNameRec*  namerec;
     PFace      faze = HANDLE_Face( face );
 
 
-    if ( !faze )
-      return TT_Err_Invalid_Face_Handle;
+EC( ECCheckBounds( faze ) );
+EC_ERROR_IF( nameIndex >= faze->nameTable.numNameRecords, TT_Err_Invalid_Argument );
 
-    if ( nameIndex >= faze->nameTable.numNameRecords )
-      return TT_Err_Invalid_Argument;
 
     namerec = faze->nameTable.names + nameIndex;
 
     *stringPtr = (String*)namerec->string;
     *length    = namerec->stringLength;
-
-    return TT_Err_Ok;
   }
 
 

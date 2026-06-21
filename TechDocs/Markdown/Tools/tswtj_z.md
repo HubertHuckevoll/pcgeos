@@ -1,4 +1,4 @@
-### 4.3 Swat Reference J-Z
+## 4.3 Swat Reference J-Z
 
 ----------
 
@@ -81,7 +81,7 @@ repeatCommand, top-level-read.
 
 ### length
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -144,7 +144,7 @@ help-fetch.
 
 ### list
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -288,7 +288,7 @@ The default size is 10 lines.
 
 Simple integer loop procedure. Usage is:
 
-	loop <loop-variable> <start>,<end> [step <step>] <body>	
+    loop <loop-variable> <start>,<end> [step <step>] <body> 
 
 `<start>`, `<end>`, and `<step>` are integers. `<body>` is a string for Tcl to 
 evaluate. If no `<step>` is given, 1 or -1 (depending as `<start>` is less than or 
@@ -500,7 +500,7 @@ something in a different part of the tree has it.
 + The variable "printNamesInObjTrees" can be used to print out the actual 
 app-defined labels for the objects, instead of the class, where available. 
 
-	This variable defaults to false. 
+    This variable defaults to false. 
 
 **See Also:**  
 target, focus, mouse, keyboard, pobject.
@@ -795,8 +795,7 @@ Count up instances of various objects on the heap.
 + Output fields:
 
     **direct** - number of direct instances of this class  
-    **indirect** - number if indirect instance of this class (i.e object's superclass
-is this class)  
+    **indirect** - number if indirect instance of this class (i.e object's superclass is this class)  
     **size** - total size of instance data for this class (excludes instance data 
 inherited from superclass)
 
@@ -910,7 +909,7 @@ Watch the messages which reach the process object.
 **Synopsis:**  
 Display message calls that have reached a particular object.
 
-**Notes:**	
+**Notes:**  
 
 + The `<address>` argument is the address of the object to watch.
 
@@ -993,7 +992,7 @@ Patch assists in creating breakpoints that invisibly make small changes to
 code. This can help the programmer find several bugs without remaking and 
 redownloading.
 
-**Notes:**	
+**Notes:**  
 
 + If you give no `<addr>` when creating a patch, the patch will be placed at 
 the most-recently accessed address, as set by the command that 
@@ -1004,30 +1003,30 @@ which comes from the following command set: (see Table 4-2)
 
 ----------
 
-**Table 4-2 Patch Command Set**
+**Table 4-2** Patch Command Set
 
-	Form					Meaning					Example
+    Form                    Meaning                 Example
 
-	<reg> = <value>			assign value to reg		ax = bx		dl = 5
-	push <reg>|<value>		push value				push ax		push 45
-	pop <reg>|<value>		pop value				pop ax		pop 45
-	pop						pop nothing (sp=sp+2)	pop
-	jmp <address>			change ip				jmp UI_Attach+45
-	scall <address> <regs>	call routine (save)		scall MemLock ax = 3
-	mcall<address> <regs>	call routine (modify)	mcall MemLock ax = 3
-	xchg <reg> <reg>		swap two registers		xchg ax bx
-	set <flag>				set condition flag		set CF		set ZF
-	reset <flag>			reset condition flag	reset CF	reset ZF
-	if <flag>				if flag set then -	 	if CF
-	if !<flag>				if flag reset then -	if !ZF
-	if <expr>				if expr then -			if foo == 4
-	else
-	endif
-	ret						make function return	ret
-	$						terminate input
-	a						abort
-	<other>					tcl command				echo $foo
-	<flag> is taken from the set TF, IF, DF, OF, SF, ZF, PF, AF, CF and must be in upper-case.
+    <reg> = <value>         assign value to reg     ax = bx     dl = 5
+    push <reg>|<value>      push value              push ax     push 45
+    pop <reg>|<value>       pop value               pop ax      pop 45
+    pop                     pop nothing (sp=sp+2)   pop
+    jmp <address>           change ip               jmp UI_Attach+45
+    scall <address> <regs>  call routine (save)     scall MemLock ax = 3
+    mcall<address> <regs>   call routine (modify)   mcall MemLock ax = 3
+    xchg <reg> <reg>        swap two registers      xchg ax bx
+    set <flag>              set condition flag      set CF      set ZF
+    reset <flag>            reset condition flag    reset CF    reset ZF
+    if <flag>               if flag set then -      if CF
+    if !<flag>              if flag reset then -    if !ZF
+    if <expr>               if expr then -          if foo == 4
+    else
+    endif
+    ret                     make function return    ret
+    $                       terminate input
+    a                       abort
+    <other>                 tcl command             echo $foo
+    <flag> is taken from the set TF, IF, DF, OF, SF, ZF, PF, AF, CF and must be in upper-case.
 
 + The "scall" command has no effect on the current registers (not even for purposes of return values), while the "mcall" command changes whatever registers the function called modifies. See the "call" documentation for the format of `<regs>`.
 
@@ -1047,7 +1046,7 @@ This command causes a RET to be placed at the start of a routine.
 
 ### patient
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -1587,7 +1586,7 @@ printed out.
 
 + The `s' flag requests that a summary table be printed.
 
-	All flags are optional and may be combined. 
+    All flags are optional and may be combined. 
 
 + The address arguments are the VM file handle and the VM block handle 
 for the directory block. If nothing is specified, then bx:di is used
@@ -1973,7 +1972,7 @@ print the GSControl record with the top two bits set
 **Synopsis:**  
 Print a record using a certain value.
 
-**Notes:**	
+**Notes:**  
 
 + The `<type>` argument is the type of the record.
 
@@ -2356,7 +2355,7 @@ state. "asm" and "src" modes also print this.
 
 ### proc
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -2393,7 +2392,7 @@ objwatch, mwatch, objmessagebrk, pobject.
 
 ### protect
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -2908,13 +2907,13 @@ Stop the debugger and exit.
 
 + Anything else causes swat to detach and exit.
 
-**See Also:**	detach.
+**See Also:**   detach.
 
 ----------
 
 ### range
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -3161,7 +3160,7 @@ finish, backtrace.
 
 ### return
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -3334,7 +3333,7 @@ list the saved blocks of the current patient.
 `sbwalk geos`  
 list the saved blocks of the GEOS patient.
 
-**Synopsis:**	List all the saved blocks in a patient.
+**Synopsis:**   List all the saved blocks in a patient.
 
 **Notes:**  
 The `<patient>` argument is any GEOS patient. If none is specified then 
@@ -3344,7 +3343,7 @@ the current patient is used.
 
 ### scan
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -3618,7 +3617,7 @@ AX register when unassembling a message call.
 
 ----------
 
-###skip
+### skip
 
 **Usage:**  
 `skip [<number of instructions>]`
@@ -3719,7 +3718,7 @@ Defaults to "any".
 
 ### source
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -3776,7 +3775,7 @@ this again.
 
 ### src
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -4197,7 +4196,7 @@ protect, source, file.
 
 ### string
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -4247,7 +4246,7 @@ the PC.
 
 ### symbol
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -4366,7 +4365,7 @@ gentree, impliedgrab.
 
 ### table
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -4579,7 +4578,7 @@ freeze.
 
 ### thread
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -4783,7 +4782,7 @@ List all the timers in GEOS.
 
 ### type
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 
@@ -4940,19 +4939,19 @@ address. If the address has an implied data type (it involves a named
 variable or a structure field), then you do not need to give the `<type>` 
 argument. 
 
-	All integers and enumerated types are returned in decimal. 32-bit 
+    All integers and enumerated types are returned in decimal. 32-bit 
 pointers are returned as a single decimal integer whose high 16 bits are 
 the high 16 bits (segment or handle) of the pointer. 16-bit pointers are 
 likewise returned as a single decimal integer. 
 
-	Characters are returned as characters, with non-printable characters 
+    Characters are returned as characters, with non-printable characters 
 converted to the appropriate backslash escapes (for example, newline is 
 returned as \n). 
 
-	Arrays are returned as a list of value lists, one element per element of the 
+    Arrays are returned as a list of value lists, one element per element of the 
 array. 
 
-	Structures, unions and records are returned as a list of elements, each of 
+    Structures, unions and records are returned as a list of elements, each of 
 which is a 3-element list: `{<field-name> <type> <value>}`. `<field-name>` is 
 the name of the field, `<type>` is the type token for the type of data stored 
 in the field, and `<value>` is the value list for the data in the field, 
@@ -4989,7 +4988,7 @@ addr-parse, assign, field.
 
 ### var
 
-This is a Tcl primitive. See "Tool Command Language," Chapter 5.
+This is a Tcl primitive. See [Tool Command Language](ttcl.md).
 
 ----------
 

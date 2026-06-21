@@ -80,7 +80,7 @@ htmlclrt.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
                 Objects/colorC.goh Objects/styles.goh options.goh \
-                html4par.goh product.goh Objects/vLTextC.goh extgraph.goh
+                html4par.goh product.goh Objects/vLTextC.goh
 htmlclrt.obj \
 htmlclrt.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -91,7 +91,8 @@ htmlclrt.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h regiont.h internal.h hwlib.h
+                awatcher.h htmlopt.h regiont.h internal.h hwlib.h \
+                extgraph.h
 htmlcol.obj \
 htmlcol.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -145,8 +146,8 @@ htmlfdrw.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
                 Objects/colorC.goh Objects/styles.goh options.goh \
-                html4par.goh product.goh Objects/vLTextC.goh extgraph.goh \
-                radio0.goh radio1.goh
+                html4par.goh product.goh Objects/vLTextC.goh radio0.goh \
+                radio1.goh
 htmlfdrw.obj \
 htmlfdrw.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -158,7 +159,8 @@ htmlfdrw.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h regiont.h internal.h hwlib.h \
-                tableint.h htmlclas/formset.h htmldrv.h math.h htmlprog.h
+                tableint.h htmlclas/formset.h extgraph.h htmldrv.h math.h \
+                htmlprog.h
 htmlfedi.obj \
 htmlfedi.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -179,7 +181,7 @@ htmlfedi.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
                 Objects/colorC.goh Objects/styles.goh options.goh \
-                html4par.goh product.goh Objects/vLTextC.goh extgraph.goh
+                html4par.goh product.goh Objects/vLTextC.goh
 htmlfedi.obj \
 htmlfedi.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -191,7 +193,7 @@ htmlfedi.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h regiont.h internal.h hwlib.h \
-                htmlclas/formset.h
+                extgraph.h htmlclas/formset.h
 htmlform.obj \
 htmlform.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -245,7 +247,7 @@ htmlfsiz.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
                 Objects/colorC.goh Objects/styles.goh options.goh \
-                html4par.goh product.goh Objects/vLTextC.goh extgraph.goh
+                html4par.goh product.goh Objects/vLTextC.goh
 htmlfsiz.obj \
 htmlfsiz.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -257,7 +259,7 @@ htmlfsiz.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h regiont.h internal.h hwlib.h \
-                htmlclas/formset.h
+                extgraph.h htmlclas/formset.h
 htmltabl.obj \
 htmltabl.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -344,7 +346,7 @@ htmltdrw.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
                 Objects/colorC.goh Objects/styles.goh options.goh \
-                html4par.goh product.goh Objects/vLTextC.goh extgraph.goh
+                html4par.goh product.goh Objects/vLTextC.goh
 htmltdrw.obj \
 htmltdrw.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
@@ -356,7 +358,7 @@ htmltdrw.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
-                regiont.h internal.h hwlib.h tableint.h
+                regiont.h internal.h hwlib.h extgraph.h tableint.h
 htmltpos.obj \
 htmltpos.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -733,4 +735,4 @@ wwwtools.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h internal.h \
                 hwlib.h regiont.h
 
-html4parEC.geo html4par.geo : geos.ldf ui.ldf ansic.ldf extgraph.ldf text.ldf 
+html4parEC.geo html4par.geo : geos.ldf ui.ldf ansic.ldf extgraph.ldf text.ldf

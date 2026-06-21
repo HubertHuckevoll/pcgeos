@@ -1,4 +1,4 @@
-## 7 The Clipboard
+# 7 The Clipboard
 
 For an application to survive in the GUI world today, it must support at least 
 the ever-present "Cut, Copy, and Paste" functions to which users have grown 
@@ -15,7 +15,7 @@ of mouse input. However, the concepts of the Clipboard and quick-transfer
 mechanisms are simple and may be understood without having read those 
 sections.
 
-### 7.1 Overview
+## 7.1 Overview
 
 The user understands two ways to cut and paste information: The first is to 
 use the Edit menu and the Cut, Copy, and Paste functions. The second is to 
@@ -34,7 +34,7 @@ if you are not familiar with the features and rules governing the Edit menu
 and the quick-transfer operations, you most likely will want to read this 
 section.
 
-#### 7.1.1 Cut, Copy, and Paste
+### 7.1.1 Cut, Copy, and Paste
 
 Even the simplest, text-using applications provide an Edit menu with the 
 Cut, Copy, and Paste options. A sample Edit menu is shown in Figure 7-1.
@@ -72,7 +72,7 @@ this is where the cursor was last placed); if something is already selected, the
 selection will be replaced with the pasted material. If there is nothing on the 
 Clipboard, then there is nothing to paste; therefore, the option is disabled.
 
-#### 7.1.2 Quick-Transfer
+### 7.1.2 Quick-Transfer
 
 The user can copy and move selected items without using the Edit menu; he 
 simply drags the item using the quick-transfer button of his mouse, and the 
@@ -110,7 +110,7 @@ changes. For example, a drawing program may wish to alter the shape or
 color of an object while it is being quick-moved but leave it normal during a 
 quick-copy or no-operation transfer.
 
-### 7.2 Transfer Data Structures
+## 7.2 Transfer Data Structures
 
 Both the Clipboard and quick-transfer mechanisms use similar structures to 
 accomplish data transfer. These data structures are owned and managed by 
@@ -132,7 +132,7 @@ and graphics strings are special formats that are described below. Geodes can
 create their own specific formats; for example, GeoManager uses a special 
 format for quick-transfer of files between disks and directories.
 
-#### 7.2.1 The Transfer VM File Format
+### 7.2.1 The Transfer VM File Format
 
 The Transfer VM File is a normal VM file, managed by the UI. It contains several 
 components, each of which is accessed through special routines that take care of 
@@ -157,51 +157,51 @@ Code Display 7-1 ClipboardItemHeader
 
 typedef struct {
 
-	    /* The CIH_owner field is the optr of the object that put
-	     * the current transfer item into the Transfer VM File. */
-    optr		CIH_owner;
+        /* The CIH_owner field is the optr of the object that put
+         * the current transfer item into the Transfer VM File. */
+    optr        CIH_owner;
 
-	    /* The CIH_flags field determines whether the transfer item is used by
-	     * the quick transfer mechanism or by the normal Clipboard. If this
-	     * field is equal to the constant CIF_QUICK, then the transfer item
-	     * belongs to the quick transfer mechanism. If it is any other value,
-	     * the transfer item belongs to the normal Clipboard. */
-    ClipboardItemFlags		CIH_flags;
-	/* The ClipboardItemFlags type has one predefined value:
-	 *	CIF_QUICK	0x4000
-	 * If this flag does not apply, use TIF_NORMAL, which is 0x0000. */
+        /* The CIH_flags field determines whether the transfer item is used by
+         * the quick transfer mechanism or by the normal Clipboard. If this
+         * field is equal to the constant CIF_QUICK, then the transfer item
+         * belongs to the quick transfer mechanism. If it is any other value,
+         * the transfer item belongs to the normal Clipboard. */
+    ClipboardItemFlags      CIH_flags;
+    /* The ClipboardItemFlags type has one predefined value:
+     *  CIF_QUICK   0x4000
+     * If this flag does not apply, use TIF_NORMAL, which is 0x0000. */
 
-	    /* The CIH_name field is a 33-character buffer that should contain a
-	     * null-terminated character string representing the name of the given
-	     * transfer item. */
-    ClipboardItemNameBuffer 		CIH_name;
+        /* The CIH_name field is a 33-character buffer that should contain a
+         * null-terminated character string representing the name of the given
+         * transfer item. */
+    ClipboardItemNameBuffer         CIH_name;
 
-	    /* The CIH_formatCount field indicates the number of formats of the
-	     * transfer item currently available. For example, this field would be
-	     * 2 if CIF_TEXT and CIF_GRAPHICS_STRING formats were supported and
-	     * available in the Transfer VM File. */
-    word		CIH_formatCount;
+        /* The CIH_formatCount field indicates the number of formats of the
+         * transfer item currently available. For example, this field would be
+         * 2 if CIF_TEXT and CIF_GRAPHICS_STRING formats were supported and
+         * available in the Transfer VM File. */
+    word        CIH_formatCount;
 
-	    /* The CIH_sourceID field contains information about the source
-	     * document of the transfer. Typically, this will be the optr of the
-	     * parent GenDocument object. */
-    dword		CIH_sourceID;
+        /* The CIH_sourceID field contains information about the source
+         * document of the transfer. Typically, this will be the optr of the
+         * parent GenDocument object. */
+    dword       CIH_sourceID;
 
-	    /* The CIH_formats field is actually an array of ten
-	     * ClipboardFormatInfo structures, each of which contains the
-	     * important details about a specific format of the transfer item. */
-    FormatArray		CIH_formats;
+        /* The CIH_formats field is actually an array of ten
+         * ClipboardFormatInfo structures, each of which contains the
+         * important details about a specific format of the transfer item. */
+    FormatArray     CIH_formats;
 
-	    /* This field is reserved and should not be used. */
-    dword			CIH_reserved;
+        /* This field is reserved and should not be used. */
+    dword           CIH_reserved;
 } ClipboardItemHeader;
 
 /* The FormatArray type is an array of ClipboardItemFormatInfo structures. The
  * definition of this field is shown here: */
 
-typedef	ClipboardItemFormatInfo		FormatArray[CLIPBOARD_MAX_FORMATS];
-	/* CLIPBOARD_MAX_FORMATS is a constant defining the maximum number of
-	 * formats allowed for any given transfer item. It is defined as 10. */
+typedef ClipboardItemFormatInfo     FormatArray[CLIPBOARD_MAX_FORMATS];
+    /* CLIPBOARD_MAX_FORMATS is a constant defining the maximum number of
+     * formats allowed for any given transfer item. It is defined as 10. */
 ~~~
 
 
@@ -215,7 +215,7 @@ Clipboard and one for the quick-transfer mechanism (see Figure 7-3). When
 calling **ClipboardQueryItem()**, the requesting geode must specify which 
 item it wants. See [section 7.3](#73-using-the-clipboard) and [section 7.4](#74-using-quick-transfer).
 
-#### 7.2.2 ClipboardItemFormatInfo
+### 7.2.2 ClipboardItemFormatInfo
 
 This structure contains information about a specific format of the transfer 
 item. The Transfer VM File will support up to ten formats of a given item at 
@@ -247,22 +247,22 @@ Code Display 7-2 ClipboardItemFormatInfo
  * format of the transfer item. */
 
 typedef struct {
-	/* CIFI_format contains a format ID as well as the
-	 * manufacturer ID of the geode responsible for the format. */
-	ClipboardItemFormatID	 CIFI_format;
+    /* CIFI_format contains a format ID as well as the
+     * manufacturer ID of the geode responsible for the format. */
+    ClipboardItemFormatID    CIFI_format;
 
-	/* CIFI_extra1 and CIFI_extra2 are extra words provided for
-	 * format-specific use. */
-	word	CIFI_extra1;
-	word	CIFI_extra2;
+    /* CIFI_extra1 and CIFI_extra2 are extra words provided for
+     * format-specific use. */
+    word    CIFI_extra1;
+    word    CIFI_extra2;
 
-	/* CIFI_vmChain is a VM handle pointing to the first block in the
-	 * specific format. */
-	VMChain	CIFI_vmChain;
+    /* CIFI_vmChain is a VM handle pointing to the first block in the
+     * specific format. */
+    VMChain CIFI_vmChain;
 
-	/* CIFI_renderer contains the token of the geode that created
-	 * the format. */
-	GeodeToken	CIFI_renderer;
+    /* CIFI_renderer contains the token of the geode that created
+     * the format. */
+    GeodeToken  CIFI_renderer;
 } ClipboardItemFormatInfo;
 ~~~
 
@@ -280,7 +280,7 @@ manufacturer ID and format ID.
 **ManufacturerFromFormatID**
 ~~~
 **ManufacturerID** ManufacturerFromFormatID(type);
-	ClipboardItemFormatID type;
+    ClipboardItemFormatID type;
 ~~~
 This macro extracts the manufacturer ID from the given clipboard format ID 
 and manufacturer value.
@@ -288,12 +288,12 @@ and manufacturer value.
 **TypeFromFormatID**
 ~~~
 word TypeFromFormatID(type);
-	ClipboardItemFormatID type;
+    ClipboardItemFormatID type;
 ~~~
 This macro extracts the format ID from the given clipboard format ID and 
 manufacturer value.
 
-#### 7.2.3 Transfer Data Structures
+### 7.2.3 Transfer Data Structures
 
 Two structures are used with specific routines when dealing with the transfer 
 mechanisms. The **ClipboardQueryArgs** structure is returned by 
@@ -313,21 +313,21 @@ Code Display 7-3 ClipboardQueryArgs and ClipboardRequestArgs
 /* ClipboardQueryArgs is filled by ClipboardQueryItem(), which is called when
  * determining whether a transfer item exists. */
 typedef struct {
-    word		CQA_numFormats;		/* the total number of formats available */
-    optr		CQA_owner;		/* the optr of the originating object */
-    TransferBlockID CQA_header;				/* The combined VM file handle and VM block
-				 * handle of the block containing the
-				 * ClipboardItemHeader */
+    word        CQA_numFormats;     /* the total number of formats available */
+    optr        CQA_owner;      /* the optr of the originating object */
+    TransferBlockID CQA_header;             /* The combined VM file handle and VM block
+                 * handle of the block containing the
+                 * ClipboardItemHeader */
 } ClipboardQueryArgs;
 
 /* ClipboardRequestArgs is filled by ClipboardRequestItemFormat(), which is called
  * when the application wants to retrieve the current transfer item. */
 typedef struct {
-    VMFileHandle		CRA_file;		/* The VM file handle of the transfer file */
-    VMChain		CRA_data;		/* The handle of the VM chain containing the
-				 * transfer item */
-    word		CRA_extra1;		/* an extra word of data */
-    word		CRA_extra2;		/* another extra word of data */
+    VMFileHandle        CRA_file;       /* The VM file handle of the transfer file */
+    VMChain     CRA_data;       /* The handle of the VM chain containing the
+                 * transfer item */
+    word        CRA_extra1;     /* an extra word of data */
+    word        CRA_extra2;     /* another extra word of data */
 } ClipboardRequestArgs;
 ~~~
 
@@ -336,8 +336,8 @@ Below are the macros for use with the **TransferBlockID** structure.
 **BlockIDFromFileAndBlock**
 ~~~
 **TransferBlockID** BlockIDFromFileAndBlock(f, b);
-	VMFileHandle  f;
-	VMBlockHandle b;
+    VMFileHandle  f;
+    VMBlockHandle b;
 ~~~
 This macro creates a **TransferBlockID** value from the given file and block 
 handles.
@@ -345,18 +345,18 @@ handles.
 **FileFromTransferBlockID**
 ~~~
 **VMFileHandle** FileFromTransferBlockID(id);
-	TransferBlockID	id;
+    TransferBlockID id;
 ~~~
 This macro extracts the file handle from the given **TransferBlockID** value.
 
 **BlockFromTransferBlockID**
 ~~~
 **VMBlockHandle** BlockFromTransferBlockID(id);
-	TransferBlockID	 id;
+    TransferBlockID  id;
 ~~~
 This macro extracts the block handle from the given **TransferBlockID** value.
 
-#### 7.2.4 Clipboard Item Formats
+### 7.2.4 Clipboard Item Formats
 
 There are several built-in transfer formats that many GEOS applications 
 may support; each of these types is an enumeration of 
@@ -368,16 +368,16 @@ is shown below.
 
 ~~~
 typedef enum /* word */ {
-	CIF_TEXT,
-	CIF_GRAPHICS_STRING,
-	CIF_FILES,
-	CIF_SPREADSHEET,
-	CIF_INK,
-	CIF_GROBJ,
-	CIF_GEODEX,
-	CIF_BITMAP,
-	CIF_SOUND_SYNTH,
-	CIF_SOUND_SAMPLE
+    CIF_TEXT,
+    CIF_GRAPHICS_STRING,
+    CIF_FILES,
+    CIF_SPREADSHEET,
+    CIF_INK,
+    CIF_GROBJ,
+    CIF_GEODEX,
+    CIF_BITMAP,
+    CIF_SOUND_SYNTH,
+    CIF_SOUND_SAMPLE
 } ClipboardItemFormat;
 ~~~
 
@@ -399,7 +399,7 @@ To create a custom format, simply define these two items as appropriate (your
 Manufacturer ID should be set already). Then define your format to fit within 
 the structures used by the Clipboard (shown above).
 
-### 7.3 Using The Clipboard
+## 7.3 Using The Clipboard
 
 ClipboardQueryItem(), ClipboardRegisterItem(), 
 ClipboardDoneWithItem()
@@ -452,7 +452,7 @@ should use **ClipboardQueryItem()**. Since you have no changes to register,
 you must later use **ClipboardDoneWithItem()** to give up your exclusive 
 access to the transfer VM file.
 
-#### 7.3.1 Registering with the Clipboard
+### 7.3.1 Registering with the Clipboard
 
 ClipboardAddToNotificationList()
 
@@ -470,7 +470,7 @@ handler. If the object handling the Clipboard operations is the application's
 Process object, however, it may call **ClipboardAddToNotificationList()** in 
 its MSG_GEN_PROCESS_OPEN_APPLICATION handler.
 
-#### 7.3.2 Managing the Edit Menu
+### 7.3.2 Managing the Edit Menu
 
 MSG_META_CLIPBOARD_NOTIFY_NORMAL_TRANSFER_ITEM_CHANGED, 
 ClipboardTestItemFormat()
@@ -559,8 +559,8 @@ Code Display 7-5 Handling Clipboard Changes
 
 @method MyClipProcessClass, MSG_META_CLIPBOARD_NOTIFY_NORMAL_TRANSFER_ITEM_CHANGED
 {
-    ClipboardQueryArgs			query;			/* A structure of arguments */
-    Boolean			endisable = FALSE;			/* The trigger is disabled */
+    ClipboardQueryArgs          query;          /* A structure of arguments */
+    Boolean         endisable = FALSE;          /* The trigger is disabled */
 
     /* Call ClipboardQueryItem() to gain exclusive access to and information about
      * the current transfer item. Pass it zero indicating we're checking the
@@ -575,10 +575,10 @@ Code Display 7-5 Handling Clipboard Changes
      * is not supported, then the enDisable argument is set to TRUE. */
 
     if (query.CQA_numFormats) {
-		if (ClipboardTestItemFormat(query.CQA_header,
-			FormatIDFromManufacturerAndType(MANUFACTURER_ID_ME, CIF_TEXT))) {
-	   		endisable = TRUE;
-		}
+        if (ClipboardTestItemFormat(query.CQA_header,
+            FormatIDFromManufacturerAndType(MANUFACTURER_ID_ME, CIF_TEXT))) {
+            endisable = TRUE;
+        }
     }
 
     /* Because we've found out what we need to know, restore the Clipboard with a
@@ -593,14 +593,14 @@ Code Display 7-5 Handling Clipboard Changes
      * appropriate message to the trigger object. */
 
     if (endisable) {
-		@call EditPaste::MSG_GEN_SET_ENABLED(VUM_NOW);
+        @call EditPaste::MSG_GEN_SET_ENABLED(VUM_NOW);
     } else {
-		@call EditPaste::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+        @call EditPaste::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
     }
 }
 ~~~
 
-#### 7.3.3 The GenEditControl
+### 7.3.3 The GenEditControl
 
 As stated above, most applications will simply let a GenEditControl object 
 create and maintain their Edit menu. **GenEditControlClass** is a subclass 
@@ -662,38 +662,38 @@ Code Display 7-6 GenEditControl Features and Tools
 /* This display shows the features and tools records of GenEditControlClass, as
  * well as the default settings and instance data. */
 
-	/* GenEditControlClass features */
+    /* GenEditControlClass features */
 typedef WordFlags GECFeatures;
-#define GECF_UNDO				0x0020		/* MSG_META_UNDO */
-#define GECF_CUT				0x0010		/* MSG_META_CLIPBOARD_CUT */
-#define GECF_COPY				0x0008		/* MSG_META_CLIPBOARD_COPY */
-#define GECF_PASTE				0x0004		/* MSG_META_CLIPBOARD_PASTE */
-#define GECF_SELECT_ALL				0x0002		/* MSG_META_SELECT_ALL */
-#define GECF_DELETE				0x0001		/* MSG_META_DELETE */
+#define GECF_UNDO               0x0020      /* MSG_META_UNDO */
+#define GECF_CUT                0x0010      /* MSG_META_CLIPBOARD_CUT */
+#define GECF_COPY               0x0008      /* MSG_META_CLIPBOARD_COPY */
+#define GECF_PASTE              0x0004      /* MSG_META_CLIPBOARD_PASTE */
+#define GECF_SELECT_ALL             0x0002      /* MSG_META_SELECT_ALL */
+#define GECF_DELETE             0x0001      /* MSG_META_DELETE */
 
-#define GEC_DEFAULT_FEATURES				(GECF_UNDO | GECF_CUT | GECF_COPY | \
-				 GECF_PASTE | GECF_SELECT_ALL | GECF_DELETE)
+#define GEC_DEFAULT_FEATURES                (GECF_UNDO | GECF_CUT | GECF_COPY | \
+                 GECF_PASTE | GECF_SELECT_ALL | GECF_DELETE)
 
-	/* GenEditControlClass tools */
+    /* GenEditControlClass tools */
 typedef WordFlags GECToolboxFeatures;
-#define GECTF_UNDO				0x0020		/* MSG_META_UNDO */
-#define GECTF_CUT				0x0010		/* MSG_META_CLIPBOARD_CUT */
-#define GECTF_COPY				0x0008		/* MSG_META_CLIPBOARD_COPY */
-#define GECTF_PASTE				0x0004		/* MSG_META_CLIPBOARD_PASTE */
-#define GECTF_SELECT_ALL				0x0002		/* MSG_META_SELECT_ALL */
-#define GECTF_DELETE				0x0001		/* MSG_META_DELETE */
+#define GECTF_UNDO              0x0020      /* MSG_META_UNDO */
+#define GECTF_CUT               0x0010      /* MSG_META_CLIPBOARD_CUT */
+#define GECTF_COPY              0x0008      /* MSG_META_CLIPBOARD_COPY */
+#define GECTF_PASTE             0x0004      /* MSG_META_CLIPBOARD_PASTE */
+#define GECTF_SELECT_ALL                0x0002      /* MSG_META_SELECT_ALL */
+#define GECTF_DELETE                0x0001      /* MSG_META_DELETE */
 
-#define GEC_DEFAULT_TOOLBOX_FEATURES					(GECTF_UNDO | GECTF_CUT | GECTF_COPY |
-					 GECTF_PASTE | GECTF_SELECT_ALL |
-					 GECTF_DELETE)
+#define GEC_DEFAULT_TOOLBOX_FEATURES                    (GECTF_UNDO | GECTF_CUT | GECTF_COPY |
+                     GECTF_PASTE | GECTF_SELECT_ALL |
+                     GECTF_DELETE)
 
-	/* GenEditControlClass Instance Data Settings */
-    @default GCI_output = (TO_APP_TARGET);						/* Send output to the target */
+    /* GenEditControlClass Instance Data Settings */
+    @default GCI_output = (TO_APP_TARGET);                      /* Send output to the target */
     @default GI_states = (@default | GS_ENABLED);
     @default GI_attrs = (@default | GA_KBD_SEARCH_PATH);
 ~~~
 
-#### 7.3.4 Handling Cut and Copy
+### 7.3.4 Handling Cut and Copy
 
 MSG_META_CLIPBOARD_CUT, MSG_META_CLIPBOARD_COPY
 
@@ -742,18 +742,18 @@ Code Display 7-7 MSG_META_CLIPBOARD_CUT
  * memory block containing all the subject text). */
 
 @method ClipSampProcessClass, MSG_META_CLIPBOARD_CUT {
-	/* Use MSG_META_CLIPBOARD_COPY to copy the data to the clipboard. */
+    /* Use MSG_META_CLIPBOARD_COPY to copy the data to the clipboard. */
     @call self::MSG_META_CLIPBOARD_COPY();
 
-	/* Delete the data. The data is contained entirely within a single memory
-	 * block and is just text. The block is referenced by the memory handle
-	 * textHandle. If textHandle is not null, then the block may be freed. */
-    if (textHandle) {					/* If textHandle is valid, */
-	MemFree(textHandle);				/* free the memory block */
-	textHandle = 0;				/* and zero the handle. */
+    /* Delete the data. The data is contained entirely within a single memory
+     * block and is just text. The block is referenced by the memory handle
+     * textHandle. If textHandle is not null, then the block may be freed. */
+    if (textHandle) {                   /* If textHandle is valid, */
+    MemFree(textHandle);                /* free the memory block */
+    textHandle = 0;             /* and zero the handle. */
     }
-	/* Redraw the view area to reflect the deleted text. */
-    ResetViewArea();			/* Custom routine to redraw the view. */
+    /* Redraw the view area to reflect the deleted text. */
+    ResetViewArea();            /* Custom routine to redraw the view. */
 }
 ~~~
 
@@ -776,14 +776,14 @@ Code Display 7-8 MSG_META_CLIPBOARD_COPY
  * message handler. */
 
 @method ClipSampProcessClass, MSG_META_CLIPBOARD_COPY {
-    char			*textText;		/* temporary string for the text */
-    int			textLength;		/* length of string including null */
-    MemHandle			headerMemHandle;		/* handle of ClipboardItemHeader block */
-    VMFileHandle 			transferVMFile;		/* VM file handle of Transfer VM File */
-    VMBlockHandle 			dataVMBlock;		/* VM handle of attached data block */
-    VMBlockHandle 			headerVMBlock;		/* VM handle of attached header block */
-    ClipboardItemHeader 			*headerMem;		/* ClipboardItemHeader for the VM file */
-    optr			textObj;		/* temporary text object for transfer */
+    char            *textText;      /* temporary string for the text */
+    int         textLength;     /* length of string including null */
+    MemHandle           headerMemHandle;        /* handle of ClipboardItemHeader block */
+    VMFileHandle            transferVMFile;     /* VM file handle of Transfer VM File */
+    VMBlockHandle           dataVMBlock;        /* VM handle of attached data block */
+    VMBlockHandle           headerVMBlock;      /* VM handle of attached header block */
+    ClipboardItemHeader             *headerMem;     /* ClipboardItemHeader for the VM file */
+    optr            textObj;        /* temporary text object for transfer */
 
     /* First, lock the text string into memory and get its length, adding one for
      * the null character at the end. Then unlock the text string's block. */
@@ -800,27 +800,27 @@ Code Display 7-8 MSG_META_CLIPBOARD_COPY
     @call textObj::MSG_VIS_TEXT_REPLACE_ALL_PTR((char *)MemLock(textHandle), 0);
     MemUnlock(textHandle);
     dataVMBlock = TextFinishedWithClipboardObject(
-					textObj, TCO_RETURN_TRANSFER_FORMAT);
+                    textObj, TCO_RETURN_TRANSFER_FORMAT);
 
     /* Now get the transfer VM file. */
     transferVMFile = ClipboardGetClipboardFile();
 
     /* Now, allocate and fill in the transfer item header block. */
 
-    headerVMBlock = VMalloc(				transferVMFile, 
-				sizeof(ClipboardItemHeader), 
-				MY_TRANSFER_ID);
+    headerVMBlock = VMalloc(                transferVMFile, 
+                sizeof(ClipboardItemHeader), 
+                MY_TRANSFER_ID);
     headerMem = (ClipboardItemHeader *)VMLock(transferVMFile, headerVMBlock,
-							&headerMemHandle);
+                            &headerMemHandle);
     headerMem->CIH_owner = (optr) (((dword)GeodeGetProcessHandle()<<16) | 0);
-    headerMem->CIH_flags = 0;					/* Normal transfer; no flags. */
+    headerMem->CIH_flags = 0;                   /* Normal transfer; no flags. */
     (void) strcpy(headerMem->CIH_name, "Sample Text");
     headerMem->CIH_formatCount = 1;
     headerMem->CIH_sourceID = 0;
     headerMem->CIH_formats[0].CFI_format =
-		FormatIDFromManufacturerAndType(MANUFACTURER_ID_ME, CIF_TEXT);
+        FormatIDFromManufacturerAndType(MANUFACTURER_ID_ME, CIF_TEXT);
     headerMem->CIH_formats[0].CFI_vmChain =
-				VMCHAIN_MAKE_FROM_VM_BLOCK(dataVMBlock);
+                VMCHAIN_MAKE_FROM_VM_BLOCK(dataVMBlock);
     headerMem->CIH_formats[0].CFI_extra1 = 0;
     headerMem->CIH_formats[0].CFI_extra2 = 0;
     VMUnlock(headerMemHandle);
@@ -829,12 +829,12 @@ Code Display 7-8 MSG_META_CLIPBOARD_COPY
      * the transfer item and its header into the Clipboard. */
 
     ClipboardRegisterItem(BlockIDFromFileAndBlock(
-					transferVMFile, headerVMBlock),
-			0);
+                    transferVMFile, headerVMBlock),
+            0);
 }
 ~~~
 
-#### 7.3.5 Handling Paste
+### 7.3.5 Handling Paste
 
 ClipboardRequestItemFormat(), MSG_META_CLIPBOARD_PASTE
 
@@ -880,57 +880,57 @@ Code Display 7-9 MSG_META_CLIPBOARD_PASTE
  * MSG_META_CLIPBOARD_PASTE has no parameters and requires no return value. */
 
 @method ClipSampProcessClass, MSG_META_CLIPBOARD_PASTE {
-    ClipboardQueryArgs				query;		/* returned by
-						 * ClipboardQueryItem() */
-    ClipboardRequestArgs 				request;		/* returned by
-						 * ClipboardRequestItemFormat() */
-    TextTransferBlockHeader				*dataBlock		/* pointer to block header */
-    MemHandle				dataBlockMemHandle; /* handle of locked block */
-    word				charsAvail;		/* number of chars in block */
-    int				textLength;		/* length of text */
-    word				transferFlags = 0; /* flags for the transfer
-						 * (normal transfer) */
+    ClipboardQueryArgs              query;      /* returned by
+                         * ClipboardQueryItem() */
+    ClipboardRequestArgs                request;        /* returned by
+                         * ClipboardRequestItemFormat() */
+    TextTransferBlockHeader             *dataBlock      /* pointer to block header */
+    MemHandle               dataBlockMemHandle; /* handle of locked block */
+    word                charsAvail;     /* number of chars in block */
+    int             textLength;     /* length of text */
+    word                transferFlags = 0; /* flags for the transfer
+                         * (normal transfer) */
 
-	    /* Call ClipboardQueryItem() to be sure that a normal
-	     * transfer item exists in the Clipboard. */
+        /* Call ClipboardQueryItem() to be sure that a normal
+         * transfer item exists in the Clipboard. */
     ClipboardQueryItem(transferFlags, &query);
-					/* Fills ClipboardQueryArgs structure */
+                    /* Fills ClipboardQueryArgs structure */
 
-	    /* If a transfer item exists, check for a CIF_TEXT
-	     * version, the only format we support. */
-    if (query.CQA_numFormats) {				/* if more than zero formats available */
+        /* If a transfer item exists, check for a CIF_TEXT
+         * version, the only format we support. */
+    if (query.CQA_numFormats) {             /* if more than zero formats available */
        if (ClipboardTestItemFormat(query.CQA_header,
-					FormatIDFromManufacturerAndType(
-							MANUFACTURER_ID_ME,
-							CIF_TEXT))) {
+                    FormatIDFromManufacturerAndType(
+                            MANUFACTURER_ID_ME,
+                            CIF_TEXT))) {
 
-	/* A CIF_TEXT version exists. Now we grab that transfer item by calling
-	 * ClipboardRequestItemFormat(). This routine fills ClipboardRequestArgs,
-	 * which contains information about the Transfer VM File and the
-	 * ClipboardItemHeader block in that file. */
+    /* A CIF_TEXT version exists. Now we grab that transfer item by calling
+     * ClipboardRequestItemFormat(). This routine fills ClipboardRequestArgs,
+     * which contains information about the Transfer VM File and the
+     * ClipboardItemHeader block in that file. */
 
-	    ClipboardRequestItemFormat(FormatIDFromManufacturerAndType(
-					MANUFACTURER_ID_ME, CIF_TEXT),
-					query.CQA_header, &request);
+        ClipboardRequestItemFormat(FormatIDFromManufacturerAndType(
+                    MANUFACTURER_ID_ME, CIF_TEXT),
+                    query.CQA_header, &request);
 
-	/* Now we have the VM file handle of the Transfer VM File and the VM block
-	 * handle of the ClipboardItemHeader structure. From this we can get the
-	 * data in the data block. To speed things up, we will copy the transfer
-	 * text directly into our already-allocated memory block; the handle to our
-	 * memory block is in textHandle. */
+    /* Now we have the VM file handle of the Transfer VM File and the VM block
+     * handle of the ClipboardItemHeader structure. From this we can get the
+     * data in the data block. To speed things up, we will copy the transfer
+     * text directly into our already-allocated memory block; the handle to our
+     * memory block is in textHandle. */
 
-	dataBlock = (TextTransferBlockHeader *)VMLock(
-				request.CRA_file,
-				VMCHAIN_GET_VM_BLOCK(request.CRA_data),
-				&dataBlockMemHandle);
-	textHugeArray = VMCHAIN_GET_VM_BLOCK(dataBlock->TTBH_text);
-	VMUnlock(dataBlockMemHandle);
+    dataBlock = (TextTransferBlockHeader *)VMLock(
+                request.CRA_file,
+                VMCHAIN_GET_VM_BLOCK(request.CRA_data),
+                &dataBlockMemHandle);
+    textHugeArray = VMCHAIN_GET_VM_BLOCK(dataBlock->TTBH_text);
+    VMUnlock(dataBlockMemHandle);
 
-	/* Since the data is CIF_TEXT, we know the data block is in the format of
-	 * TextTransferBlockHeader. We get the text by cycling through the
-	 * format's HugeArray. This code has been taken out of this example for
-	 * simplicity; you can look at the ClipSamp sample application source
-	 * code for it. */
+    /* Since the data is CIF_TEXT, we know the data block is in the format of
+     * TextTransferBlockHeader. We get the text by cycling through the
+     * format's HugeArray. This code has been taken out of this example for
+     * simplicity; you can look at the ClipSamp sample application source
+     * code for it. */
     }
 
     /* After copying the text into our block, we signal we're done with the
@@ -938,11 +938,11 @@ Code Display 7-9 MSG_META_CLIPBOARD_PASTE
      * that, we update our view and return. */
 
     ClipboardDoneWithItem(query.CQA_header);
-    ResetViewArea();				/* Routine defined in ClipSamp. */
+    ResetViewArea();                /* Routine defined in ClipSamp. */
 }
 ~~~
 
-#### 7.3.6 Unregistering with the Clipboard
+### 7.3.6 Unregistering with the Clipboard
 
 ClipboardRemoveFromNotificationList()
 
@@ -954,7 +954,7 @@ MSG_GEN_PROCESS_CLOSE_APPLICATION handler you should make a call
 to the routine **ClipboardRemoveFromNotificationList()**, which removes 
 the passed object from the notification list.
 
-#### 7.3.7 Implementing Undo
+### 7.3.7 Implementing Undo
 
 For the most part, implementation of Undo is left up to the application. This 
 is due to the fact that operations that may be undone are typically very 
@@ -964,7 +964,7 @@ MSG_META_UNDO. For more information on Undo and how it works in
 GEOS, see ["UI Messages" of "System Classes," Chapter 1 of the 
 Object Reference Book](../Objects/osyscla.md#1133-ui-messages).
 
-#### 7.3.8 Transfer File Information
+### 7.3.8 Transfer File Information
 
 ClipboardTestItemFormat(), ClipboardEnumItemFormats(), 
 ClipboardGetItemInfo(), ClipboardGetNormalItemInfo(), 
@@ -1000,7 +1000,7 @@ item header for the "Undo" transfer item.
 Return the VM file handle of the UI transfer file (the one 
 typically used when copying, cutting, and pasting).
 
-#### 7.3.9 Undoing a Clipboard Change
+### 7.3.9 Undoing a Clipboard Change
 
 ClipboardUnregisterItem()
 
@@ -1010,7 +1010,7 @@ more than one change to the clipboard. This routine can not "undo" itself;
 that is, calling this routine twice in a row will leave the clipboard in a state 
 other than the original state.
 
-### 7.4 Using Quick-Transfer
+## 7.4 Using Quick-Transfer
 
 An application must understand the Clipboard and its structure before being 
 able to support the quick-transfer feature of the UI. However, because 
@@ -1028,7 +1028,7 @@ a quick transfer is made with the flag CIF_QUICK. When passed to the
 transfer mechanism's routines, this flag indicates that the quick-transfer 
 item should be accessed and the Clipboard data should remain intact.
 
-#### 7.4.1 Supporting Quick-Transfer
+### 7.4.1 Supporting Quick-Transfer
 
 In order for an application to support the quick-transfer mechanism, it must 
 be able to handle several situations. The list below enumerates all the tasks 
@@ -1069,7 +1069,7 @@ of a quick-transfer:
 + Transfers in a format not supported by the destination are "no operation" 
 transfers.
 
-#### 7.4.2 Quick-Transfer Procedure
+### 7.4.2 Quick-Transfer Procedure
 
 Although applications must handle several situations to support the 
 quick-transfer mechanism, the procedure involved in a quick-transfer is 
@@ -1135,14 +1135,14 @@ quick-transfer and must know when the transfer is concluded. If the
 operation is a quick-move, the source must delete the information or 
 object that was moved.
 
-#### 7.4.3 Quick-Transfer Data Structures
+### 7.4.3 Quick-Transfer Data Structures
 
 The quick-transfer mechanism uses the same structures as the Clipboard. 
 However, there are special data structures that are used exclusively by the 
 quick-transfer mechanism. These data structures are used by individual UI 
 routines and are documented with those routines.
 
-#### 7.4.4 Source Object Responsibility
+### 7.4.4 Source Object Responsibility
 
 MSG_META_START_MOVE_COPY, ClipboardStartQuickTransfer(), 
 MSG_META_CLIPBOARD_NOTIFY_QUICK_TRANSFER_FEEDBACK
@@ -1208,7 +1208,7 @@ extra visual feedback to the user. This behavior is not required of the source
 object but can be beneficial to your application. It is also supplemental to the 
 destination-related feedback that must be provided.
 
-##### 7.4.4.1 Responsibilities of a Potential Destination
+#### 7.4.4.1 Responsibilities of a Potential Destination
 
 ClipboardGetQuickTransferStatus(), 
 ClipboardSetQuickTransferFeedback(), 
@@ -1272,7 +1272,7 @@ The object then becomes oblivious to future quick-transfer events until the
 pointer returns to its window (or unless it was registered for notification of 
 quick-transfer conclusion).
 
-##### 7.4.4.2 Responsibilities of the Destination Object
+#### 7.4.4.2 Responsibilities of the Destination Object
 
 MSG_META_END_MOVE_COPY, ClipboardEndQuickTransfer()
 
@@ -1293,13 +1293,13 @@ notification to be sent to the transfer's source and allow it to complete its
 actions properly. To finish the transfer, the object should call 
 **ClipboardEndQuickTransfer()**.
 
-##### 7.4.4.3 Getting More Information
+#### 7.4.4.3 Getting More Information
 
 In addition to the routines above, you can use one other to retrieve 
 information about a quick-transfer item. **ClipboardGetQuickItemInfo()** 
 returns a set of handles for the transfer VM file and the file's header block.
 
-##### 7.4.4.4 When the Transfer Is Concluded
+#### 7.4.4.4 When the Transfer Is Concluded
 
 MSG_META_CLIPBOARD_NOTIFY_QUICK_TRANSFER_CONCLUDED
 
@@ -1311,7 +1311,7 @@ indicating what type of operation the transfer ended up being. The source
 object should then follow the rules of quick transfer and act appropriately 
 (e.g. delete the source object on a quick-move operation).
 
-### 7.5 Shutdown Issues
+## 7.5 Shutdown Issues
 
 ClipboardClearQuickTransferNotification(), 
 ClipboardAbortQuickTransfer(), 

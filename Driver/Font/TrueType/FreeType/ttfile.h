@@ -39,6 +39,7 @@
   extern "C" {
 #endif
 
+#ifndef __GEOS__
   /* Initialize file component */
   LOCAL_DEF
   TT_Error  TTFile_Init( PEngine_Instance  engine );
@@ -46,7 +47,7 @@
   /* Done with file component */
   LOCAL_DEF
   TT_Error  TTFile_Done( PEngine_Instance  engine );
-
+#endif
 
   /**********************************************************************/
   /*                                                                    */
@@ -66,7 +67,7 @@
   /* Should only be used for a stream opend with TT_Open_Stream(). */
 
   LOCAL_DEF
-  TT_Error  TT_Close_Stream( TT_Stream*  stream );
+  void      TT_Close_Stream( TT_Stream*  stream );
 
 
   /* Informs the component that we're going to use the file   */
@@ -88,7 +89,7 @@
   /* in re-entrant builds, this will really discard the stream */
 
   EXPORT_DEF
-  TT_Error  TT_Done_Stream( TT_Stream*  stream );
+  void      TT_Done_Stream( TT_Stream*  stream );
 
   /* Closes the stream's file handle to release system resources */
   /* The function TT_Use_Stream automatically re-activates a     */

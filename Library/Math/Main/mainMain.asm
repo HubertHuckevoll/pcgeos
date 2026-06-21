@@ -211,8 +211,10 @@ loadCoprocLibrary:
 
 	push	ds
 	segmov	ds, cs
-	clr	ax
-	mov	bx, ax
+
+	mov	ax, COPROC_LIB_PROTO_MAJOR
+	mov	bx, COPROC_LIB_PROTO_MINOR
+
 	call	GeodeUseLibrary			; bx <- library handle
 	call	FilePopDir
 	pop	ds
@@ -543,6 +545,31 @@ OverwriteRelocationTable	proc	near
 	mov	cx, ds:[GH_exportEntryCount]
 	sub	cx, MATH_LIBRARY_FIRST_ENTRY_POINT_TO_OVERWRITE
 
+	cmp	cx, MATH_LIBRARY_FIRST_TABLE_ENTRY_COUNT
+					; first part relication table
+					; apply size limit
+	jle 	1$
+
+	; deal with 2nd part of the relac table here
+	sub	cx, MATH_LIBRARY_FIRST_TABLE_ENTRY_COUNT
+
+	mov	si, ds:[GH_exportLibTabOff]
+	mov	di, es:[GH_exportLibTabOff]
+	mov	bx, MATH_LIBRARY_FIRST_ENTRY_POINT_TO_OVERWRITE+MATH_LIBRARY_FIRST_TABLE_ENTRY_COUNT
+	shl	bx
+	shl	bx
+	add	si, bx			; put ds:si beyond first few routines
+					; bx = size(fptr)/2 * # of entries
+	mov	bx, MATH_LIBRARY_FIRST_TABLE_ENTRY_COUNT+MATH_LIBRARY_SECOND_TABLE_SKIP_ENTRY_COUNT
+	shl	bx
+	shl	bx
+	add	di, bx
+
+	shl	cx			
+	rep	movsw			; copy tables
+
+	mov	cx, MATH_LIBRARY_FIRST_TABLE_ENTRY_COUNT
+1$:
 	mov	si, ds:[GH_exportLibTabOff]
 	mov	di, es:[GH_exportLibTabOff]
 	mov	bx, MATH_LIBRARY_FIRST_ENTRY_POINT_TO_OVERWRITE

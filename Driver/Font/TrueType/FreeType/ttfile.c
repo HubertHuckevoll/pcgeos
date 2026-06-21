@@ -55,11 +55,6 @@
 #include "ttfile.h"     /* our prototypes */
 
 
-/* required by the tracing mode */
-#undef  TT_COMPONENT
-#define TT_COMPONENT  trace_file
-
-
 /* For now, we don't define additional error messages in the core library */
 /* to report open-on demand errors. Define these error as standard ones   */
 
@@ -95,7 +90,6 @@
   {
     Long        position;                /* current position within the file */
     FileHandle  file;                    /* file handle                      */
-    Long        base;                    /* stream base in file              */
     Long        size;                    /* stream size in file              */
   };
 
@@ -109,7 +103,7 @@
 #define STREAM2REC( x )  ( (TStream_Rec*)HANDLE_Val( x ) )
 
   static  TT_Error  Stream_Activate  ( PStream_Rec  stream );
-  static  TT_Error  Stream_Deactivate( PStream_Rec  stream );
+  static  void      Stream_Deactivate( PStream_Rec  stream );
 
 
 #ifndef TT_CONFIG_OPTION_THREAD_SAFE
@@ -169,6 +163,7 @@
 /* that need an 'optional' stream argument.                   */
 
 
+#ifndef __GEOS__
 /*******************************************************************
  *
  *  Function    :  TTFile_Init
@@ -208,6 +203,7 @@
 
     return TT_Err_Ok;
   }
+#endif
 
 
 /*******************************************************************
@@ -244,7 +240,7 @@
  *
  *  Input  :  stream  target stream
  *
- *  Output :  Error code.
+ *  Output :  void.
  *
  ******************************************************************/
 
@@ -252,8 +248,6 @@
   TT_Error  TT_Done_Stream( TT_Stream*  stream )
   {
      HANDLE_Set( *stream, NULL );
-
-     return TT_Err_Ok;
   }
 
 
@@ -433,6 +427,8 @@
 #define STREAM_VAR   stream
 
 
+#ifndef __GEOS__
+
 /*******************************************************************
  *
  *  Function    :  TTFile_Init
@@ -461,6 +457,8 @@
   {
     return TT_Err_Ok;
   }
+  
+#endif
 
 
 /*******************************************************************
@@ -495,14 +493,14 @@
  *
  *  Input  :  stream  target stream
  *
- *  Output :
+ *  Output :  void.
  *
  ******************************************************************/
 
   EXPORT_FUNC
-  TT_Error  TT_Done_Stream( TT_Stream*  stream )
+  void  TT_Done_Stream( TT_Stream*  stream )
   {
-    return TT_Close_Stream( stream );
+    TT_Close_Stream( stream );
   }
 
 
@@ -549,7 +547,7 @@
 
     CUR_Frame.cursor = CUR_Frame.address;
     return error;
-  }
+  } 
 
 
 /*******************************************************************
@@ -698,7 +696,7 @@
  *
  *  Input  :  stream   the stream to deactivate
  *
- *  Output :  Error condition
+ *  Output :  void
  *
  *  Note   :  the function is called whenever a stream is deleted
  *            (_not_ when a stream handle's is closed due to an
@@ -707,14 +705,14 @@
  *
  ******************************************************************/
 
-  static  TT_Error  Stream_Deactivate( PStream_Rec  stream )
+  static  void  Stream_Deactivate( PStream_Rec  stream )
   {
     /* Save its current position within the file */
     stream->position = FilePos( stream->file, 0, FILE_POS_RELATIVE );  
-
-    return TT_Err_Ok;
   }
 
+
+#ifndef __GEOS__
 
 /*******************************************************************
  *
@@ -737,9 +735,11 @@
 
     if ( rec )
       return rec->size;
-    else
-      return 0;  /* invalid stream - return 0 */
+
+    return 0;  /* invalid stream - return 0 */
   }
+
+#endif
 
 
 /*******************************************************************
@@ -774,7 +774,6 @@
 
     stream_rec->file     = file;
     stream_rec->size     = -1L;
-    stream_rec->base     = 0;
     stream_rec->position = 0;
 
     error = Stream_Activate( stream_rec );
@@ -801,12 +800,12 @@
  *
  *  Input  :  stream         address of target TT_Stream structure
  *
- *  Output :  SUCCESS (always).
+ *  Output :  void.
  *
  ******************************************************************/
 
   LOCAL_FUNC
-  TT_Error  TT_Close_Stream( TT_Stream*  stream )
+  void  TT_Close_Stream( TT_Stream*  stream )
   {
     PStream_Rec  rec = STREAM2REC( *stream );
 
@@ -815,9 +814,10 @@
     FREE( rec );
 
     HANDLE_Set( *stream, NULL );
-    return TT_Err_Ok;
   }
 
+
+#ifndef __GEOS__
 
 /*******************************************************************
  *
@@ -846,9 +846,11 @@
       Stream_Deactivate( rec );
       return TT_Err_Ok;
     }
-    else
-      return TT_Err_Invalid_Argument;
+
+    return TT_Err_Invalid_Argument;
   }
+
+#endif /* __GEOS__ */
 
 
 /*******************************************************************
@@ -866,8 +868,6 @@
   EXPORT_FUNC
   TT_Error  TT_Seek_File( STREAM_ARGS Long  position )
   {
-    position += CUR_Stream->base;
-
     FilePos( CUR_Stream->file, position, FILE_POS_START );
     if ( ThreadGetError() != NO_ERROR_RETURNED )  
       return TT_Err_Invalid_File_Offset;
@@ -891,8 +891,11 @@
   EXPORT_FUNC
   TT_Error  TT_Skip_File( STREAM_ARGS Long  distance )
   {
-    return TT_Seek_File( STREAM_VARS FilePos( CUR_Stream->file, 0, FILE_POS_RELATIVE ) -
-                                    CUR_Stream->base + distance );
+    FilePos( CUR_Stream->file, distance, FILE_POS_RELATIVE );
+    if ( ThreadGetError() != NO_ERROR_RETURNED )
+      return TT_Err_Invalid_File_Offset;
+
+    return TT_Err_Ok;
   }
 
 
@@ -964,7 +967,7 @@
   EXPORT_FUNC
   Long  TT_File_Pos( STREAM_ARG )
   {
-    return FilePos( CUR_Stream->file, 0, FILE_POS_RELATIVE ) - CUR_Stream->base;
+    return FilePos( CUR_Stream->file, 0, FILE_POS_RELATIVE );
   }
 
 

@@ -1,4 +1,4 @@
-## 4 The Primary Window
+# 4 The Primary Window
 
 In this chapter, we will explore our first stage in constructing a charting 
 application. This first stage consists of a primary window, which we will use 
@@ -11,7 +11,7 @@ and later explore the program itself using the Swat debugger.
 
 ![](Art/tutorial-mychart_primary_window.png)
 
-### 4.1 README
+## 4.1 README
 
 You are about to start typing in the source code of a new program. Before we 
 tell you exactly what to do, we're going to spell out some miscellaneous 
@@ -30,7 +30,7 @@ sending files between the machines using the pccom tool, you might try
 either reducing your communication speed or consulting 
 "Troubleshooting Communications," Appendix A of this book.
 
-### 4.2 Creating the Application
+## 4.2 Creating the Application
 
 We set up our files in a subdirectory of \PCGEOS\APPL (we'll use 
 \PCGEOS\APPL\MCHRT) on the host machine. The files are MCHRT.GP 
@@ -152,7 +152,7 @@ icon.
 The window pictured on the first page of this chapter should appear on your 
 screen.
 
-### 4.3 The Application So Far
+## 4.3 The Application So Far
 
 Right now, application basically consists of a Primary Window. You might 
 think that the application looks rather plain, and it does. However, note the 
@@ -178,7 +178,7 @@ was before.
 
 ![](Art/tutorial-mychart_multi_lunchable.png)
 
-### 4.4 MCHRT.GP: Geode Parameters
+## 4.4 MCHRT.GP: Geode Parameters
 
 The geode parameters file tells the Glue linker about our application's 
 general organization. You can get complete information about all of the 
@@ -298,7 +298,7 @@ user will get valuable feedback that their actions are being acknowledged,
 even if our program isn't fast enough to do all of the underlying calculations 
 quickly.
 
-### 4.5 MCHRT.GOC: Source Code
+## 4.5 MCHRT.GOC: Source Code
 
 This file contains the source code for the application. Right now, there's 
 nothing that you would recognize as procedural code. All there is to this 
@@ -381,7 +381,7 @@ resources.
 The next set of fields contains the application object's instance data.
 
 ~~~
-	 GI_visMoniker = list { @MCTextMoniker }
+     GI_visMoniker = list { @MCTextMoniker }
 ~~~
 
 This line specifies the name of the object, which will in turn be used as the 
@@ -399,7 +399,7 @@ GenApplicationClass instance field names would begin "GAI_". The
 parlance, a "visual moniker" is a name used to identify an object to the user. 
 
 ~~~
-	 GI_comp = @MCPrimary;
+     GI_comp = @MCPrimary;
 ~~~
 
 We are setting the value of another instance data field. From the field name, 
@@ -408,7 +408,7 @@ field is used to list the children of a generic UI object. In this case, our
 application has only one child object, the primary window MCPrimary.
 
 ~~~
-	gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) =@MCPrimary;
+    gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) =@MCPrimary;
 }
 ~~~
 
@@ -469,7 +469,7 @@ will do).
 We're done putting things into the INTERFACE resource for now. In fact, we're 
 done with the program. 
 
-### 4.6 Exploring With Swat
+## 4.6 Exploring With Swat
 
 Right now, the application doesn't have any procedural code. In fact, there 
 isn't very much code to the application at all. Chances are the program has 
@@ -576,7 +576,7 @@ machine:
 ~~~
 PC Halted
 Stopped in 0214h:0000h, address 0214h:0000h
-102140h: 		CMP 	AH, 16 (10h) 		;16h
+102140h:        CMP     AH, 16 (10h)        ;16h
 (geos:0) 2 =>
 ~~~
 
@@ -680,7 +680,7 @@ master part: Gen_offset(164) -- ui::GenPrimaryInstance
   void _lptr GPI_longTermMoniker = null
 }
 Variable Data:
-	*** No Variable Data ***
+    *** No Variable Data ***
 [mchrt:0] 6 =>
 ~~~
 
@@ -727,7 +727,7 @@ master part: Gen_offset(164) -- ui::GenPrimaryInstance
   void _lptr GPI_longTermMoniker = null
 }
 Variable Data:
-	*** No Variable Data ***
+    *** No Variable Data ***
 [mchrt:0] 6 =>
 ~~~
 
@@ -923,7 +923,7 @@ placed on that thread's event queue. Right now, there are no messages
 queued for either of our threads.
 
 ~~~
-3b10h 607eh    896 3560h 1b70h  s SL a       0 	    mchrt 0:49 4320h R#4 (APPRESOURCE)
+3b10h 607eh    896 3560h 1b70h  s SL a       0      mchrt 0:49 4320h R#4 (APPRESOURCE)
 4530h 425fh   2080 4bd0h 4b50h  FIXED n/a           mchrt n/a 1h     R#1 (dgroup) 
 4aa0h 0000h     16 0000h 0000h  sDS d        0      mchrt 0:51 1h    R#2 (MCHRT_TEXT)
 4c10h 5bb5h    928 3710h 4140h  s SL a       0      mchrt 0:49 4320h R#3 (INTERFACE)
@@ -1037,9 +1037,9 @@ Code Display 3-2 MCHRT.GOC
 
 @start AppResource; 
 @object GenApplicationClass MCApp = {
-	GI_visMoniker = list { @MCTextMoniker }
-	GI_comp = @MCPrimary;
-	gcnList(MANUFACTURER_ID_GEOWORKS,GAGCNLT_WINDOWS) = @MCPrimary; 
+    GI_visMoniker = list { @MCTextMoniker }
+    GI_comp = @MCPrimary;
+    gcnList(MANUFACTURER_ID_GEOWORKS,GAGCNLT_WINDOWS) = @MCPrimary; 
 } /* end of MCApp */
 
 @visMoniker MCTextMoniker = "MyChart Application";

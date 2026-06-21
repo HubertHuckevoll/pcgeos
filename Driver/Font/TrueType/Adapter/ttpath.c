@@ -25,22 +25,14 @@
 
 
 /*
- * macros
- */
-
-#define WW_FIXED_TO_WWFIXEDASDWORD( value )     ( (dword) ( (((dword)value.WWF_int) << 16) | value.WWF_frac ) )
-
-#define ROUND_WWFIXED( value )    ( value & 0xffff ? ( value >> 16 ) + 1 : value >> 16 )
-
-/*
  * types
  */
 
-typedef void  Function_MoveTo( Handle han, TT_Vector* vec );
+typedef void  Function_MoveTo( Handle han, const TT_Vector* vec );
 
-typedef void  Function_LineTo( Handle han, TT_Vector* vec );
+typedef void  Function_LineTo( Handle han, const TT_Vector* vec );
 
-typedef void  Function_ConicTo( Handle han, TT_Vector* v_control, TT_Vector* vec );
+typedef void  Function_ConicTo( Handle han, const TT_Vector* v_control, const TT_Vector* vec );
 
 
 /*
@@ -67,17 +59,17 @@ static void ConvertOutline( Handle            handle,
                             TT_Outline*       outline, 
                             RenderFunctions*  functions );
 
-static void _near MoveTo( Handle handle, TT_Vector* vec );
+static void _near MoveTo( Handle handle, const TT_Vector* vec );
 
-static void _near RegionPathMoveTo( Handle handle, TT_Vector* vec );
+static void _near RegionPathMoveTo( Handle handle, const TT_Vector* vec );
 
-static void _near LineTo( Handle handle, TT_Vector* vec );
+static void _near LineTo( Handle handle, const TT_Vector* vec );
 
-static void _near RegionPathLineTo( Handle handle, TT_Vector* vec );
+static void _near RegionPathLineTo( Handle handle, const TT_Vector* vec );
 
-static void _near ConicTo( Handle handle, TT_Vector* v_control, TT_Vector* vec );
+static void _near ConicTo( Handle handle, const TT_Vector* v_control, const TT_Vector* vec );
 
-static void _near RegionPathConicTo( Handle handle, TT_Vector* v_control, TT_Vector* vec );
+static void _near RegionPathConicTo( Handle handle, const TT_Vector* v_control, const TT_Vector* vec );
 
 static void WriteComment( TRUETYPE_VARS, GStateHandle gstate );
 
@@ -170,19 +162,18 @@ EC(     ECCheckBounds( (void*)fontHeader ) );
 
         InitConvertHeader(trueTypeVars, fontHeader);
 
-        TT_New_Glyph( FACE, &GLYPH );
-
         /* get TT char index */
         charIndex = TT_Char_Index( CHAR_MAP, GeosCharToUnicode( character ) );
         if( charIndex == 0 )
                 goto Fail;
-
+        
         /* write prologue */
         if( pathFlags & FGPF_SAVE_STATE )
                 GrSaveState( gstate );
-
+        
         /* load glyph and scale its outline to 1000 units per em */
-        TT_Load_Glyph( INSTANCE, GLYPH, charIndex, 0 );
+        TT_New_Glyph( FACE, &GLYPH );
+        TT_Load_Glyph( INSTANCE, GLYPH, charIndex, TTLOAD_HINT_GLYPH );
         TT_Get_Glyph_Outline( GLYPH, &OUTLINE );
         CalcScaleAndScaleOutline( trueTypeVars );
 
@@ -202,7 +193,7 @@ EC(     ECCheckBounds( (void*)fontHeader ) );
 	/* in reverse order. Step 5 is, of course, already in the GState.  */
 
         /* calculate baseline for further use */
-        baseline = fontHeader->FH_accent + fontHeader->FH_ascent;
+        baseline = FACE_PROPERTIES.os2->usWinAscent;
 
         /* translate by current cursor position */
         cursorPos = GrGetCurPos( gstate );
@@ -239,8 +230,6 @@ EC(     ECCheckBounds( (void*)fontHeader ) );
         /* write epilogue */
         if( pathFlags & FGPF_SAVE_STATE )
                 GrRestoreState( gstate );
-
-        TT_Done_Glyph( GLYPH );
 
 Fail:
         TrueType_Unlock_Face( trueTypeVars );
@@ -336,20 +325,19 @@ EC(     ECCheckBounds( (void*)fontHeader ) );
         /* get current cursor position */
         cursorPos = GrGetCurPos( gstate );
         result = GrTransform( gstate, DWORD_X(cursorPos), DWORD_Y(cursorPos) );
-        
+
         /* transform glyphs outline */
         TT_Transform_Outline( &OUTLINE, &transform.TM_matrix );
         TT_Transform_Outline( &OUTLINE, &flipMatrix );
         TT_Translate_Outline( &OUTLINE, DWORD_X(result) + transform.TM_heightX + transform.TM_scriptX, 
                                         DWORD_Y(result) + transform.TM_heightY + transform.TM_scriptY );
+
         /* set render functions */
         renderFunctions.Proc_MoveTo  = RegionPathMoveTo;
         renderFunctions.Proc_LineTo  = RegionPathLineTo;
         renderFunctions.Proc_ConicTo = RegionPathConicTo;
 
         ConvertOutline( regionPath, &OUTLINE, &renderFunctions );
-
-        TT_Done_Glyph( GLYPH );
 
 Fail:
         TrueType_Unlock_Face( trueTypeVars );
@@ -449,8 +437,7 @@ EC(     ECCheckBounds( (void*)outline ) );
                         }
 
                         case CURVE_TAG_CONIC:  /* consume conic arcs */
-                                v_control.x = point->x;
-                                v_control.y = point->y;
+                                v_control = *point;
 
                         Do_Conic:
                                 if ( point < limit )
@@ -462,8 +449,7 @@ EC(     ECCheckBounds( (void*)outline ) );
                                         ++point;
                                         ++tags;
 
-                                        vec.x = point->x;
-                                        vec.y = point->y;
+                                        vec = *point;
 
                                         if (  *tags & CURVE_TAG_ON )
                                         {
@@ -508,7 +494,7 @@ EC(     ECCheckBounds( (void*)outline ) );
  *      18/11/23  JK        Initial Revision
  *******************************************************************/
 
-static void _near MoveTo( Handle handle, TT_Vector* vec )
+static void _near MoveTo( Handle handle, const TT_Vector* vec )
 {
         GrMoveTo( (GStateHandle) handle, vec->x, vec->y );
 }
@@ -531,7 +517,7 @@ static void _near MoveTo( Handle handle, TT_Vector* vec )
  *      14/03/24  JK        Initial Revision
  *******************************************************************/
 
-static void _near RegionPathMoveTo( Handle handle, TT_Vector* vec )
+static void _near RegionPathMoveTo( Handle handle, const TT_Vector* vec )
 {
         GrRegionPathMovePen( handle, vec->x, vec->y );
 }
@@ -554,7 +540,7 @@ static void _near RegionPathMoveTo( Handle handle, TT_Vector* vec )
  *      18/11/23  JK        Initial Revision
  *******************************************************************/
 
-static void _near LineTo( Handle handle, TT_Vector* vec )
+static void _near LineTo( Handle handle, const TT_Vector* vec )
 {
         GrDrawLineTo( (GStateHandle) handle, vec->x, vec->y );
 }
@@ -577,7 +563,7 @@ static void _near LineTo( Handle handle, TT_Vector* vec )
  *      14/03/24  JK        Initial Revision
  *******************************************************************/
 
-static void _near RegionPathLineTo( Handle handle, TT_Vector* vec )
+static void _near RegionPathLineTo( Handle handle, const TT_Vector* vec )
 {
         GrRegionPathDrawLineTo( handle, vec->x, vec->y );
 }
@@ -601,7 +587,7 @@ static void _near RegionPathLineTo( Handle handle, TT_Vector* vec )
  *      18/11/23  JK        Initial Revision
  *******************************************************************/
 
-static void _near ConicTo( Handle handle, TT_Vector* v_control, TT_Vector* vec )
+static void _near ConicTo( Handle handle, const TT_Vector* v_control, const TT_Vector* vec )
 {
         Point p[3];
 
@@ -633,7 +619,7 @@ static void _near ConicTo( Handle handle, TT_Vector* v_control, TT_Vector* vec )
  *      14/03/24  JK        Initial Revision
  *******************************************************************/
 
-static void _near RegionPathConicTo( Handle handle, TT_Vector* v_control, TT_Vector* vec )
+static void _near RegionPathConicTo( Handle handle, const TT_Vector* v_control, const TT_Vector* vec )
 {
         Point p[3];
 
@@ -833,10 +819,10 @@ EC(     ECCheckBounds( (void*)trueTypeVars ) );
         transMatrix->TM_matrix.xy = 0L;
         transMatrix->TM_matrix.yx = 0L;
         transMatrix->TM_matrix.yy = scaleFactor;
-        transMatrix->TM_heightX   = 0L;
-        transMatrix->TM_heightY   = ROUND_WWFIXED( SCALE_WORD( fontHeader->FH_ascent + fontHeader->FH_accent, scaleFactor ) ) + BASELINE_CORRECTION;
-        transMatrix->TM_scriptX   = 0L;
-        transMatrix->TM_scriptY   = 0L;
+        transMatrix->TM_heightX   = 0;
+        transMatrix->TM_heightY   = FACE_PROPERTIES.os2->usWinAscent;
+        transMatrix->TM_scriptX   = 0;
+        transMatrix->TM_scriptY   = 0;
 
         /* fake bold style       */
         if( stylesToImplement & TS_BOLD )
@@ -856,7 +842,7 @@ EC(     ECCheckBounds( (void*)trueTypeVars ) );
         /* fake script style      */
         if( stylesToImplement & ( TS_SUBSCRIPT | TS_SUPERSCRIPT ) )
         {      
-                WWFixedAsDWord scriptBaseline = GrMulWWFixed( MakeWWFixed( fontHeader->FH_height + fontHeader->FH_baseAdjust ), scaleFactor ); 
+                WWFixedAsDWord scriptBaseline = GrMulWWFixed( MakeWWFixed( FACE_PROPERTIES.os2->usWinAscent ), scaleFactor ); 
 
 
                 transMatrix->TM_matrix.xx = GrMulWWFixed( transMatrix->TM_matrix.xx, SCRIPT_FACTOR );
@@ -871,7 +857,7 @@ EC(     ECCheckBounds( (void*)trueTypeVars ) );
                 {
                         //TODO: Is rounding necessary here?
                         transMatrix->TM_scriptY = ( GrMulWWFixed( scriptBaseline, SUPERSCRIPT_OFFSET ) - 
-                                                GrMulWWFixed( WORD_TO_WWFIXEDASDWORD( fontHeader->FH_accent + fontHeader->FH_ascent + fontHeader->FH_baseAdjust ), scaleFactor ) >> 16 );
+                                                GrMulWWFixed( WORD_TO_WWFIXEDASDWORD( FACE_PROPERTIES.os2->usWinAscent ), scaleFactor ) >> 16 );
                 }
         }
 
@@ -907,12 +893,26 @@ static void CalcDriversTransformMatrix( TransformMatrix* transformMatrix, GState
 
 EC(     ECCheckBounds( transformMatrix ) );
 EC(     ECCheckGStateHandle( gstate) );
-EC(     ECCheckWindowHandle( win ) );
 
 
-        WinGetTransform( win, &windowMatrix );
+        if( win )
+        {
+EC(             ECCheckWindowHandle( win ) );
+                WinGetTransform( win, &windowMatrix );
+        }
+        else
+        {
+                windowMatrix.TM_e11.WWF_int  = 1;
+                windowMatrix.TM_e11.WWF_frac = 0;
+                windowMatrix.TM_e12.WWF_int  = 0;
+                windowMatrix.TM_e12.WWF_frac = 0;
+                windowMatrix.TM_e21.WWF_int  = 0;
+                windowMatrix.TM_e21.WWF_frac = 0;
+                windowMatrix.TM_e22.WWF_int  = 1;
+                windowMatrix.TM_e22.WWF_frac = 0;
+        }
+
         GrGetTransform( gstate, &graphicMatrix );
-
 
         temp_e11 = GrMulWWFixed( transformMatrix->TM_matrix.xx, WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e11 ) ) 
                         + GrMulWWFixed( transformMatrix->TM_matrix.xy, WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e21 ) );
@@ -923,19 +923,13 @@ EC(     ECCheckWindowHandle( win ) );
         temp_e22 = GrMulWWFixed( transformMatrix->TM_matrix.yx, WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e12 ) ) 
                         + GrMulWWFixed( transformMatrix->TM_matrix.yy, WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e22 ) );
 
-        transformMatrix->TM_matrix.xx = GrMulWWFixed( temp_e11, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e11 ) ) 
-                        + GrMulWWFixed( temp_e12, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e21 ) );
-        transformMatrix->TM_matrix.xy = GrMulWWFixed( temp_e11, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e12 ) ) 
-                        + GrMulWWFixed( temp_e12, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e22 ) );
-        transformMatrix->TM_matrix.yx = GrMulWWFixed( temp_e21, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e11 ) ) 
-                        + GrMulWWFixed( temp_e22, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e21 ) );
-        transformMatrix->TM_matrix.yy = GrMulWWFixed( temp_e21, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e12 ) ) 
-                        + GrMulWWFixed( temp_e22, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e22 ) );
+        transformMatrix->TM_matrix.xx = GrMulWWFixed( temp_e11, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e11 ) );
+        transformMatrix->TM_matrix.yx = - GrMulWWFixed( temp_e12, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e22 ) );
+        transformMatrix->TM_matrix.xy = - GrMulWWFixed( temp_e21, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e11 ) );
+        transformMatrix->TM_matrix.yy = GrMulWWFixed( temp_e22, WWFIXED_TO_WWFIXEDASDWORD( windowMatrix.TM_e22 ) );
 
-
-        transformMatrix->TM_heightX = INTEGER_OF_WWFIXEDASDWORD( GrMulWWFixed( 
-                        WORD_TO_WWFIXEDASDWORD( transformMatrix->TM_heightY ), WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e21 ) ) );
+        transformMatrix->TM_heightX = -INTEGER_OF_WWFIXEDASDWORD( GrMulWWFixed( 
+                        WORD_TO_WWFIXEDASDWORD( transformMatrix->TM_heightY ), transformMatrix->TM_matrix.xy ) );
         transformMatrix->TM_heightY = INTEGER_OF_WWFIXEDASDWORD( GrMulWWFixed( 
-                        WORD_TO_WWFIXEDASDWORD( transformMatrix->TM_heightY ), WWFIXED_TO_WWFIXEDASDWORD( graphicMatrix.TM_e22 ) ) );
+                        WORD_TO_WWFIXEDASDWORD( transformMatrix->TM_heightY ), transformMatrix->TM_matrix.yy ) );
 }
-

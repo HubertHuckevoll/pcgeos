@@ -1,0 +1,689 @@
+/***********************************************************************
+ *
+ *	Code-File for Bitmap Tool Library
+ *
+ *      Made by RABE-Soft 10/2002 - 07/2025
+ *	Adapted for free PC/GEOS project 01/2024
+ *
+ *
+ *	Note: Comments were translated from German to English with AI support
+ *	and were not always manually reviewed in detail. Some may sound
+ *	a little odd as a result.
+ *
+ *
+ ***********************************************************************/
+
+@include <stdapp.goh>
+@include <stdlib.h>
+
+#include <string.h>
+
+@include "bmptools.goh"
+@include "Code/rtools.goh"
+
+
+
+/*
+ ***************************************************************************
+ *		Bitmap tools: Fast sequential access
+ ***************************************************************************
+ */
+
+
+/*--------------------- BTBitmapLock ---------------------
+ *	Purpose:        Lock a line in a HugeBitmap and initialize
+ *			the BitmapAccessRecord for fast line access
+ *			using the other BTBitmap...() routines
+ *	Parameters:     file:	VM file containing the HugeBitmap
+ *			bmpBlock: VM handle of the bitmap
+ *			line:	line to be locked
+ *			*baRecord: structure to initialize
+ *	Return:		Pointer to the locked line
+ *			Null pointer on error
+ *				 - Line number too large
+ *				 - Bitmap is compressed
+ ---------------------------------------------------------------------------*/
+extern void* RS_EXPORT BTBitmapLock(VMFileHandle file, VMBlockHandle bmpBlock,
+		BitmapAccessRecord *baRecord, word line) {
+int compressed;
+
+    baRecord->file = file;
+    baRecord->handle = bmpBlock;
+    BTGetMoreBitmapInfos(baRecord->file, baRecord->handle, 0, (int*)&baRecord->numLines, &compressed);
+
+    if ( compressed ) return NULL;
+
+    return BTBitmapRelock(baRecord, line);
+
+    }
+
+/*--------------------- BTBitmapRelock ---------------------
+ *	Purpose:        Lock a line in a HugeBitmap when the
+ *			BitmapAccessRecord was previously initialized with BTBitmapLock()
+ *			but then released again with BTBitmapUnlock().
+ *	Parameters:     line:	line to be locked
+ *			*baRecord: BitmapAccessRecord previously initialized by BTBitmapLock()
+ *	Return:		Pointer to the locked line
+ *			Null pointer on error (line number too large)
+ ---------------------------------------------------------------------------*/
+extern void* RS_EXPORT BTBitmapRelock(BitmapAccessRecord *baRecord, word line) {
+dword retVal;
+
+    if ( line < baRecord->numLines ) {
+	    retVal = HugeArrayLock(baRecord->file, baRecord->handle,
+				line, (void**)&baRecord->unlockPtr, &baRecord->lineLen);
+	    }
+    else    {	// Error: Line number too large
+	    baRecord->unlockPtr = 0;
+	    retVal = 1;
+	    }
+    baRecord->linePtr = baRecord->unlockPtr;
+    baRecord->curLine = line;
+    baRecord->linesLeft = (retVal & 0xFFFF) - 1;
+    baRecord->linesLocked =	/* total locked lines */
+		baRecord->linesLeft + ((retVal>>16) & 0xFFFF);
+    baRecord->needDirty = FALSE;
+
+    return baRecord->linePtr;
+    }
+
+/*--------------------- BTBitmapUnlock ---------------------
+ *	Purpose:	Release a bitmap locked via BTBitmapLock() or BTBitmapNext().
+ *			baRecord->file and baRecord->handle remain intact, so that
+ *			re-locking via BTBitmapRelock() is possible.
+ *	Parameters:	*baRecord: access control structure
+ *			makeDirty: call HugeArrayDirty()?
+ *	Return:
+ ---------------------------------------------------------------------------*/
+extern void RS_EXPORT BTBitmapUnlock(BitmapAccessRecord *baRecord, Boolean makeDirty) {
+
+    baRecord->needDirty |= makeDirty;
+    if (baRecord->unlockPtr) {
+	if ( baRecord->needDirty) HugeArrayDirty(baRecord->unlockPtr);
+	HugeArrayUnlock(baRecord->unlockPtr);
+	}
+    baRecord->unlockPtr = 0;
+    baRecord->linesLeft = 0;
+}
+
+/*--------------------- BTBitmapNext ---------------------
+ *	Purpose:	Returns a pointer to the next line of the bitmap,
+ *			which was previously locked using BTBitmapLock().
+ *			Takes into account that additional lines may still be
+ *			accessible without unlocking / relocking.
+ *	Parameters:     *baRecord: description structure
+ *			makeDirty: call HugeArrayDirty()?
+ *				Note: For performance reasons,
+ *				HugeArrayDirty() may not be called immediately,
+ *				but only later during Unlock(). This does not
+ *				affect functionality.
+ *	Return:		Pointer to the next line
+ *			Null pointer if there is no 'next' line
+ ---------------------------------------------------------------------------*/
+extern void* RS_EXPORT BTBitmapNext(BitmapAccessRecord *baRecord, Boolean makeDirty) {
+
+    if (!baRecord->unlockPtr) return 0;	// error. bitmap not locked
+
+    baRecord->needDirty |= makeDirty;
+    if ( baRecord->linesLeft ) {	// best case
+	baRecord->curLine++;
+	baRecord->linesLeft--;
+	baRecord->linePtr += baRecord->lineLen;
+	}
+    else {		// stupid
+	if ( baRecord->needDirty) HugeArrayDirty(baRecord->unlockPtr);
+	HugeArrayUnlock(baRecord->unlockPtr);
+
+	// lock next line
+	BTBitmapRelock(baRecord, baRecord->curLine + 1);
+	}
+
+    return baRecord->linePtr;
+    }
+
+
+/*--------------------- BTBitmapPrev ---------------------
+ *	Purpose:	Returns a pointer to the previous line of the bitmap,
+ *			which was previously locked using BTBitmapLock().
+ *			Takes into account that additional lines may still be
+ *			accessible without unlocking / relocking.
+ *	Parameters:     *baRecord: description structure
+ *			makeDirty: call HugeArrayDirty()?
+ *				Note: For performance reasons,
+ *				HugeArrayDirty() may not be called immediately,
+ *				but only later during Unlock(). This does not
+ *				affect functionality.
+ *	Return:		Pointer to the previous line
+ *			Null pointer if there is no 'previous' line
+ ---------------------------------------------------------------------------*/
+extern void* RS_EXPORT BTBitmapPrev(BitmapAccessRecord *baRecord, Boolean makeDirty) {
+int prevLines;
+
+    if (!baRecord->unlockPtr) return 0;	// error. bitmap not locked
+
+    baRecord->needDirty |= makeDirty;
+    prevLines = baRecord->linesLocked - baRecord->linesLeft - 1;
+    if ( prevLines ) {
+	baRecord->curLine--;
+	baRecord->linesLeft++;
+	baRecord->linePtr -= baRecord->lineLen;
+	}
+    else {
+	if ( baRecord->needDirty) HugeArrayDirty(baRecord->unlockPtr);
+	HugeArrayUnlock(baRecord->unlockPtr);
+
+	// lock previous line
+	BTBitmapRelock(baRecord, baRecord->curLine - 1);
+	}
+
+    return baRecord->linePtr;
+}
+
+/*
+ ***************************************************************************
+ *		Bitmap tools: Access to (usage of) offscreen bitmaps
+ ***************************************************************************
+ */
+
+/*--------------------- LocalClipMonoLine ---------------------
+ *	Purpose:        Copy a monochrome pixel line (or its mask)
+ *			from one bitmap to another
+ *			- The data to be copied can start at any pixel position
+ *			  (srcPtr + srcOffset, in pixels).
+ *			- In the destination bitmap, data is always written
+ *			  left-aligned (starting at destPtr, i.e., position zero)
+ *			- Excess bits in the destination buffer are set to zero
+ *	Parameters:     destPtr:  pointer to the destination buffer
+ *			srcPtr:   pointer to the start of the source pixel line
+ *				  or the mask area
+ *			srcOffset: pixel position where the data starts
+ *			numPixels: number of pixels to copy
+ *	Return:
+ ---------------------------------------------------------------------------*/
+void LocalClipMonoLine(byte *destPtr, byte *srcPtr, int srcOffset, int numPixels) {
+word tailMask, mask1, mask2;
+int  k, n, aByte, shiftBits, numBytes;
+
+    shiftBits = srcOffset & 0x07;
+    mask1 = 0xFF << shiftBits;
+    mask2 = mask1 ^ 0xFF;
+    numBytes = (numPixels +7) / 8;	// Number of bytes to store the bits
+
+    tailMask = 8 - (numPixels & 7);
+    tailMask = 0xFF << tailMask;	// Mask for hiding the last bits
+	if(( tailMask & 0xFF ) == 0) tailMask=0xFF;	// Bits in the target buffer
+
+    if ( shiftBits == 0 ) {
+		/* Simply copying the data is sufficient */
+		srcPtr += srcOffset/8;
+		memcpy(destPtr, srcPtr, numBytes);
+		}
+    else  {
+		/* Copy taking into account the pixel shift */
+		srcPtr += srcOffset/8;
+		for ( k = 0, n = 0; k < numBytes; k++, n++) {
+			 aByte = (srcPtr[k] << shiftBits ) & mask1;
+			 aByte |= (srcPtr[k+1] >> (8-shiftBits) ) & mask2;
+			 destPtr[n] = aByte;
+			 }
+		}
+
+    /* now hide any unnecessary bits */
+    destPtr += numBytes - 1;
+    *destPtr &= tailMask;
+    }
+
+/*--------------------- LocalClip4BitLine ---------------------
+ *	Purpose:        Copy a 4 bit pixel line from one bitmap to another
+ *			- The data to be copied can start at any pixel position
+ *			  (srcPtr + srcOffset, in pixels).
+ *			- In the destination bitmap, data is always written
+ *			  left-aligned (starting at destPtr, i.e., position zero)
+ *			- Excess bits in the destination buffer are set to zero
+ *	Parameters:     destPtr:  pointer to the destination buffer
+ *			srcPtr:   pointer to the start of the source pixel line
+ *				  the first pixel may be the lower or the higher
+ *				  half byte, depending on X0
+ *			x0:	  postion of the 1st pixel
+ *			numPixels: number of pixels to copy
+ *	Return:
+ ---------------------------------------------------------------------------*/
+void LocalClip4BitLine(byte *destPtr, byte *srcPtr, int x0, int numPixels) {
+int x, b, destByte;
+int numBytes;
+
+    numBytes = (numPixels+1)/2;
+
+    /*
+     * destPtr always points to pixel 0 of the destination line
+     * if x0 is an even pixel (0, 2, 4) we only have to copy the proper
+     * number of bytes. Great!
+     */
+    if ( (x0 & 1) == 0 ) {
+    	memcpy(destPtr, srcPtr, numBytes);
+    	return;
+    }
+
+
+    /*
+     *
+     * Iterate over the number of bytes to write (numBytes)
+     * initialize the variable b with the 1st source byte
+     */
+    b = *srcPtr;
+
+    for ( x = 0; x < numBytes; x++ ) {
+
+    	/*
+    	 * The upper half byte to write is the lower half byte of b
+    	 */
+    	destByte = b << 4;
+
+    	/*
+    	 * The lower half byte to write is the upper half byte of
+    	 * the next source byte. Store it in the varable b.
+    	 */
+    	srcPtr++;
+    	b = *srcPtr;
+    	destByte |= b >> 4;
+
+    	/*
+    	 * now write the destination byte
+    	 */
+    	*destPtr = destByte;
+    	destPtr++;
+    }
+}
+
+/*--------------------- BTClipBitmap ---------------------
+ *	Purpose:	Cut out a part of a bitmap
+ *			The bitmap must be uncompacted
+ *	Parameters:	srcFile, srcHandle: source bitmap
+ *			destFile: where to store the new bitmap
+ *			x0, y0, x1, y1: coordinates of the section
+ *				to be copied (inclusive)
+ *	Return: 	Handle of the new bitmap
+ *			Null handle in case of any error
+ ---------------------------------------------------------------------------*/
+extern VMBlockHandle RS_EXPORT BTClipBitmap ( VMFileHandle srcFile, VMBlockHandle srcBlock,
+	VMFileHandle destFile, int x0, int y0, int x1, int y1 ) {
+int width, height, tmp, xLen, yLen, compact, line, n, x0Mask, xLenMask;
+int srcMaskLen, destMaskLen;
+Boolean	masked;
+VMBlockHandle  newBlock;
+BMType	bmType, newType;
+byte 	*palette;
+BitmapAccessRecord  srcBAR, destBAR;
+
+    bmType = BTGetMoreBitmapInfos(srcFile, srcBlock,
+		&width, &height, &compact );
+
+    if ( compact ) return 0;
+    switch ( bmType & BMT_FORMAT ) {
+
+	// supported formats
+	case BMF_MONO:
+	case BMF_8BIT:
+	case BMF_4BIT:
+	case BMF_24BIT:
+	    break;
+
+	default:	// BMF_4CMYK, BMF_3CMY
+	    return 0;
+	}
+
+    palette = 0;		// default
+    if ( bmType & BMT_PALETTE ) {
+	int numColors;
+	switch ( bmType & BMT_FORMAT ) {
+	    	/*
+	    	 * Note: currently (01/2026) GEOS does not support
+	    	 * monochrome bitmaps with palette. But this may be
+	    	 * the case later. Then this should work ..
+	    	 */
+	    case BMF_MONO: numColors = 2; break;
+
+	    case BMF_4BIT: numColors = 16; break;
+	    case BMF_8BIT: numColors = 256; break;
+	    default: numColors = 0;
+	}
+
+    	if ( numColors ) {
+    	    palette = malloc(numColors*sizeof(PaletteEntry));
+	    BTGetBitmapPalette(srcFile, srcBlock,
+	    		(PaletteEntry *)palette, numColors);
+	}
+
+    }	// end of BMT_PALETTE
+
+    /* handling stupid parameter errors */
+    if ( x0 > x1 ) { tmp = x0; x0 = x1; x1 = tmp; }
+    if ( y0 > y1 ) { tmp = y0; y0 = y1; y1 = tmp; }
+
+    if ( x0 < 0 ) x0 = 0;
+    if ( y0 < 0 ) y0 = 0;
+    if ( x1 >= width ) x1 = width - 1;
+    if ( y1 >= height ) y1 = height - 1;
+
+    /*
+     * xLen and yLen are the width and height of the clipped bitmap
+     */
+    xLen = x1 - x0 + 1;	if ( xLen <= 0 ) return 0;
+    yLen = y1 - y0 + 1;	if ( yLen <= 0 ) return 0;
+
+    masked = ( bmType & BMT_MASK );
+    if ( masked ) {
+	srcMaskLen = (width + 7) / 8;
+	destMaskLen = (xLen + 7) / 8;
+    }
+    else {
+    	srcMaskLen = destMaskLen = 0;
+    }
+
+    /*
+     * let's create the new bitmap now
+     */
+    newType = bmType & BMT_FORMAT;
+    newType |= BMT_HUGE | BMT_COMPLEX;
+    if ( palette ) newType |= BMT_PALETTE;
+    if ( masked ) newType |= BMT_MASK;
+    newBlock = BTCreateOffscreenBitmap( destFile,
+			newType, xLen, yLen, (PaletteEntry *)palette);
+
+
+    /*
+     * Clipping 8 bit and 24 bit data is quite simple and can be done in the
+     * same way inside of the loop. Clipping monochrome and 4 Bit data
+     * is somewhat difficult.
+     * We also need the unchanged position of the mask data to be clipped
+     */
+    x0Mask = x0;
+    xLenMask = xLen;		// for the mask, I always need the original
+    if ( (bmType & BMT_FORMAT) == BMF_24BIT ) {
+	x0 *= 3;
+	xLen *=3;
+    }
+
+
+    /*
+     * handle bitmaps line by line
+     */
+
+    BTBitmapLock(srcFile, srcBlock,&srcBAR, y0);
+    BTBitmapLock(destFile, newBlock, &destBAR, 0);
+    bmType &= BMT_FORMAT;
+
+    for ( line = y0, n = 0; line <= y1; line++, n++ ) {
+
+    	switch ( bmType ) {
+    	case BMF_MONO:
+    	    LocalClipMonoLine(destBAR.linePtr + destMaskLen,
+				srcBAR.linePtr + srcMaskLen, x0, xLen);
+	    break;
+    	case BMF_4BIT:
+    	    LocalClip4BitLine(destBAR.linePtr + destMaskLen,
+				srcBAR.linePtr + srcMaskLen + x0/2, x0, xLen);
+	    break;
+
+    	default:	// 8 bit and 24 bit
+    	    memcpy(destBAR.linePtr + destMaskLen,
+				srcBAR.linePtr+x0 + srcMaskLen, xLen);
+	    break;
+	}
+
+    	// handle mask, if we have one
+	if (masked) LocalClipMonoLine(destBAR.linePtr,
+			srcBAR.linePtr, x0Mask, xLenMask);
+
+	BTBitmapNext(&srcBAR, FALSE);
+	BTBitmapNext(&destBAR, TRUE);
+
+    }
+
+    BTBitmapUnlock(&srcBAR, FALSE);
+    BTBitmapUnlock(&destBAR, TRUE);
+
+    if ( palette ) free(palette);
+    return newBlock;
+
+}
+
+
+
+/*--------------------- ExpandPixelLine ---------------------
+ * Purpose:	Duplicate a single pixel line (mask line or monochrome)
+ *---------------------------------------------------------------------------*/
+void ExpandPixelLine(byte *destPtr, byte *srcPtr, int numBits) {
+word newMask;
+word bit;
+int n, src, dest;
+byte mask;
+
+   src = dest = 0;
+   do {
+	// Get byte to be duplicated. Prepare new values
+	mask = srcPtr[src];
+	src++;
+	bit = 0x80;
+	newMask = 0;
+
+	// Duplicate byte to word
+	for ( n = 0; n < 8 ; n++ )
+	   {
+	   newMask <<= 2;
+	   if ( mask & bit ) newMask += 3;
+	   bit >>= 1;
+	   }
+
+	// Store bytes as long as bits remain
+	destPtr[dest] = ( newMask >> 8 ) &0xFF;
+	numBits -= 4;
+	dest++;
+	if ( numBits > 0 ) {
+		destPtr[dest] = newMask & 0xFF;
+		numBits -= 4;
+		dest++;
+		}
+
+	} while(numBits > 0);
+
+   }
+
+/*--------------------- BTInflateBitmap ---------------------
+ *	Purpose:	Upscale an uncompressed bitmap to double its size
+ *			('inflate' it)
+ *	Parameters:	srcFile, bmpBlock:	handle of the bitmap
+ *			destFile: 	file for the new bitmap
+ *	Return: 	VMHandle of the new bitmap
+ *			Null handle on error (e.g., bitmap is compressed)
+ ---------------------------------------------------------------------------*/
+extern VMBlockHandle RS_EXPORT BTInflateBitmap(VMFileHandle srcFile, VMBlockHandle bmpBlock, VMFileHandle destFile) {
+Boolean	compact, masked, hasPalette;
+int width, height, type, format, line, n, k;
+int destLen, maskLen, destMaskLen, numColors;
+byte *destMemPtr, *destPixPtr, *srcPixPtr, *palPtr;
+VMBlockHandle	newBitmap;
+BitmapAccessRecord	srcBar, destBar;
+
+     if ( !(srcFile && bmpBlock && destFile) ) return 0;	// Parameter error
+
+     /* Retrieve information about the source bitmap */
+     type = BTGetMoreBitmapInfos(srcFile, bmpBlock, &width, &height, (int*)&compact);
+     if ( compact ) return 0;
+
+     masked = type & BMT_MASK;
+     hasPalette = type & BMT_PALETTE;
+     format = type & BMT_FORMAT;
+
+     /* preparations */
+     if ( masked ) {
+	maskLen = (width + 7)/8;
+	destMaskLen = (2*width + 7)/8;
+	}
+     else maskLen = destMaskLen = 0;
+
+    /* Ensure that no unexpected format is present
+     * and calculate the number of bytes to copy (mask + pixels)
+     * numColors is needed in case a palette is used */
+    switch ( format ) {
+	case BMF_MONO:	destLen = destMaskLen + (2*width + 7)/8;
+			numColors = 2;
+			break;
+	case BMF_4BIT:  destLen = destMaskLen + width; //==(2*width + 1)/2;
+			numColors = 16;
+			break;
+	case BMF_8BIT:  destLen = destMaskLen + 2*width;
+			numColors = 256;
+			break;
+	case BMF_24BIT: destLen = destMaskLen + 6*width;
+			numColors = 0;  // has no palette
+			break;
+				// all of this is OK
+	case BMF_4CMYK:
+	default:
+		return 0;	// cannot handle this
+	}
+
+    /* If present: retrieve palette */
+     if ( hasPalette )	{
+	palPtr = malloc( sizeof(PaletteEntry) * 256 );
+	BTGetBitmapPalette(srcFile, bmpBlock, (PaletteEntry *)palPtr, numColors);
+	}
+     else palPtr = 0;
+
+    /* Create new bitmap, release palette if necessary */
+     newBitmap = BTCreateOffscreenBitmap(destFile,
+			type, 2*width, 2*height, (PaletteEntry *)palPtr);
+     if ( palPtr )  free(palPtr);
+     if (!newBitmap) return 0;
+
+
+      /* Copy graphic data – Part 1: Initialization */
+     destMemPtr = malloc(destLen);
+     if (!destMemPtr) return 0;
+
+
+     srcPixPtr = (byte*)BTBitmapLock(srcFile, bmpBlock, &srcBar, 0) + maskLen;
+     BTBitmapLock(destFile, newBitmap, &destBar, 0);
+     destPixPtr = destMemPtr + destMaskLen;
+
+      /* Copy graphic data – Part 2: Duplicate each line */
+     for ( line = 0; line < height; line++) {
+	// Duplicate mask
+	if ( masked)
+	   ExpandPixelLine(destMemPtr, srcBar.linePtr, width);
+
+	// Duplicate pixel data
+	switch ( format ) {
+	    case BMF_MONO:
+		ExpandPixelLine(destPixPtr, srcPixPtr, width);
+		break;
+	    case BMF_4BIT:
+		for ( n = 0; n < width; n++ ) {
+			word value;
+			value = srcPixPtr[n/2];
+			if ( n&1) value &=0xF;
+				else value = (value>>4) & 0xF;
+			value |= (value<<4);
+			destPixPtr[n] = value;
+			}
+		break;
+	    case BMF_8BIT:
+		for ( n = 0, k = 0; n < width; n++, k+=2 ) {
+			byte value = srcPixPtr[n];
+			destPixPtr[k] = value;
+			destPixPtr[k+1] = value;
+			}
+		break;
+	    case BMF_24BIT:
+		for ( n = 0; n < width; n++ ) {
+			byte *sp, *dp, *dp2;
+			sp = &srcPixPtr[3*n];
+			dp = &destPixPtr[6*n];
+			dp2 = dp + 3;
+			for (k =0; k< 3; k++ ) {
+				*dp = *dp2 = *sp;
+				dp++; dp2++; sp++;
+				}
+			}
+		break;
+	    }
+
+	// Copy data
+	memcpy(destBar.linePtr, destMemPtr, destLen);
+	BTBitmapNext(&destBar, TRUE);
+	memcpy(destBar.linePtr, destMemPtr, destLen);
+	BTBitmapNext(&destBar, TRUE);
+	srcPixPtr = maskLen + (byte*)BTBitmapNext(&srcBar, FALSE);
+
+	}
+
+      /* Copy graphic data – Part 3: unlock and release */
+     BTBitmapUnlock(&srcBar, FALSE);
+     BTBitmapUnlock(&destBar, TRUE);
+
+     if ( destMemPtr ) free(destMemPtr);
+     return newBitmap;
+}
+
+
+/*--------------------- BTCopyBitmap ---------------------
+ *	Purpose:	Copy a bitmap into (another) file
+ *	Parameters:     srcFile: file containing the bitmap
+ *                      destFile: destination file, can be == srcFile
+ *			bmpBlock: handle of the bitmap
+ *	Return:		Handle of the new bitmap
+ ---------------------------------------------------------------------------*/
+extern VMBlockHandle RS_EXPORT BTCopyBitmap(VMFileHandle srcFile, VMFileHandle destFile, VMBlockHandle bmpBlock)
+{
+VMBlockHandle newBlock;
+VMChain nChain, oChain;
+
+	oChain = bmpBlock;	// 16 to 32 Bit
+	nChain = VMCopyVMChain(srcFile,( oChain << 16 ),destFile);
+	newBlock = (VMBlockHandle)(nChain >> 16);
+	return newBlock;
+}
+
+
+/*--------------------- BTCreateThumbnailMakerStruct ---------------------
+ *	Purpose:        Nomen est omen
+ *	Parameters:	tms:	pointer to structure created
+ *			xSize, ySize: size of the original graphic
+ *			maxThumbnailSize: maximum size for thumbnail
+ *	Return:
+ ---------------------------------------------------------------------------*/
+extern void RS_EXPORT BTCreateThumbnailMakerStruct( ThumbnailMakerStruct *tms,
+		int xSize, int ySize, int maxThumbnailSize ) {
+WWFixedAsDWord	xScale, yScale, scale;
+int	size;
+
+	tms->grafikSizeX = xSize;
+	tms->grafikSizeY = ySize;
+
+	xScale = GrSDivWWFixed(int2wwf(maxThumbnailSize), int2wwf(xSize));
+	yScale = GrSDivWWFixed(int2wwf(maxThumbnailSize), int2wwf(ySize));
+	scale = min(xScale,yScale);
+
+	size = GrMulWWFixed(scale, int2wwf(xSize)) >> 16;
+	tms->tnWidth = size;	// Safe conversion, otherwise write dword to *word
+	size = GrMulWWFixed(scale, int2wwf(ySize)) >> 16;
+	tms->tnHeight = size;
+
+	/* Ensure minimum size for x and y, no zero dimensions */
+	if ( tms->tnWidth < 10 ) tms->tnWidth = min(10, xSize);
+	if ( tms->tnHeight < 10 ) tms->tnHeight = min(10, ySize);
+
+
+	tms->xScan = GrSDivWWFixed( int2wwf(xSize), int2wwf(tms->tnWidth) );
+	tms->yScan = GrSDivWWFixed( int2wwf(ySize), int2wwf(tms->tnHeight));
+
+}
+
+
+/*---------------------  ---------------------
+ *	Purpose:
+ *	Parameters:
+ *	Return:
+ ---------------------------------------------------------------------------*/
+

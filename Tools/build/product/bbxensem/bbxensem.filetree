@@ -9,11 +9,12 @@
 # REVISION HISTORY:
 #       Name      Date            Description
 #       ----      ----            -----------
-#       todd    7/21/98         Initial Revision
-#       jfh     12/5/01         Breadbox Ensemble first pass
+#       todd      7/21/98         Initial Revision
+#       jfh       12/5/01         Breadbox Ensemble first pass
+#       bluewaysw 2018            PC/GEOS Ensemble (FreeGEOS project)
 #
 # DESCRIPTION:
-#       Filetree for Breadbox Ensemble
+#       Filetree
 #
 #       $Id:$
 #
@@ -70,7 +71,12 @@ DIR (ensemble) {
 
 	Tools/build/product/bbxensem/Images/Gwicon5.ico
 	Tools/build/product/bbxensem/Images/Gwicon7.ico
+	ENGLISH {
 	Tools/build/product/bbxensem/Images/RESET.BAT
+	}
+	GERMAN {
+	Tools/build/product/bbxensem/Images/german/RESET.BAT
+	}
 
 	#TEMPLATE Tools/build/product/bbxensem/Template/globalpc.bat
 
@@ -95,9 +101,16 @@ DIR (ensemble) {
 		}
 
 		DIR (Clip Art) {
+		ENGLISH {
 			Tools/build/product/bbxensem/Document/CLIPART/BORDERS_.000
 			Tools/build/product/bbxensem/Document/CLIPART/NATURE.000
 			Tools/build/product/bbxensem/Document/CLIPART/CASample.000
+		}
+		GERMAN {
+			Tools/build/product/bbxensem/Document/german/clipart/CLIPART_.000
+			Tools/build/product/bbxensem/Document/german/clipart/NATUR.000
+			Tools/build/product/bbxensem/Document/german/clipart/RAHMEN_U.000
+		}
 		}
 
 		DIR (Presentations) {
@@ -180,6 +193,7 @@ DIR (ensemble) {
 		Appl/Launcher/launcher{ec}.geo
 		Tools/build/product/bbxensem/Images/{dbcs}/TOKEN_DA.000 LOCALPC
 		Tools/build/product/bbxensem/Images/lastword.000
+		Tools/build/product/bbxensem/Images/TTF_CACH.000 LOCALPC
 
 		# the browser cache folders
 		DIR (cache) {
@@ -250,6 +264,7 @@ DIR (ensemble) {
 		}
 
 		DIR (htmlerr) {
+		ENGLISH {
 			Tools/build/product/bbxensem/Privdata/htmlerr/error1.htm
 			Tools/build/product/bbxensem/Privdata/htmlerr/error2.htm
 			Tools/build/product/bbxensem/Privdata/htmlerr/error3.htm
@@ -270,8 +285,29 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Privdata/htmlerr/error19.htm
 			Tools/build/product/bbxensem/Privdata/htmlerr/error20.htm
 		}
+		GERMAN {
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error1.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error2.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error3.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error4.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error5.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error6.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error7.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error8.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error9.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error10.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error11.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error12.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error13.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error14.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error15.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error16.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error18.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error19.htm
+			Tools/build/product/bbxensem/Trans/Privdata/german/htmlerr/error20.htm
+			}
+		}
 	}
-
 
 	##
 	##
@@ -320,11 +356,13 @@ DIR (ensemble) {
 		Library/Cell/{dbcs}/cell{ec}.geo GFS LOCALPC
 		Library/Chart/{dbcs}/chart{ec}.geo GFS LOCALPC
 		Library/Compress/compress{ec}.geo GFS LOCALPC
+		Library/Convert/convert{ec}.geo GFS LOCALPC
 
 		Library/ConView/conview{ec}.geo GFS LOCALPC
 		Library/GrObj/{dbcs}/grobj{ec}.geo XIP=XIP LOCALPC
 		Library/Impex/{dbcs}/impex{ec}.geo XIP=XIP LOCALPC
 		Library/Math/Compiler/BorlandC/{dbcs}/borlandc{ec}.geo GFS LOCALPC
+		Library/Math/Compiler/WatcomC/{dbcs}/watcomc{ec}.geo GFS LOCALPC
 		Library/Math/{dbcs}/math{ec}.geo GFS LOCALPC
 		Library/Parse/{dbcs}/parse{ec}.geo GFS LOCALPC
 		Library/Saver/saver{ec}.geo XIP=XIP LOCALPC
@@ -391,7 +429,6 @@ DIR (ensemble) {
 		Library/Breadbox/MiniZip/minizip{ec}.geo
 		Library/Breadbox/CDAudio/cdaudio{ec}.geo
 		Library/Breadbox/ThumbDB/thumbdb{ec}.geo
-		Library/Breadbox/HtmlPars/htmlpars{ec}.geo
 		Library/Breadbox/ps2pdf/ps2pdf{ec}.geo
 
 		Library/dil/bbxmail/bbxmlib{ec}.geo
@@ -399,20 +436,23 @@ DIR (ensemble) {
 		#
 		# GPC Browser libraries
 		#
-#		Library/Breadbox/Html4Par/JS{dbcs}/html4par{ec}.geo GFS LOCALPC
 		Library/Breadbox/Html4Par/html4par{ec}.geo GFS LOCALPC
 		Library/Breadbox/Ibms/{dbcs}/ibms{ec}.geo GFS LOCALPC
 		Library/Breadbox/Ijgjpeg/{dbcs}/ijgjpeg{ec}.geo GFS LOCALPC
 		Library/Breadbox/ExtGraph/{dbcs}/extgraph{ec}.geo GFS LOCALPC
 		Library/Breadbox/Giflib/giflib{ec}.geo GFS LOCALPC
 		Library/Cookies/{dbcs}/cookies{ec}.geo GFS LOCALPC
-#		Library/JS/{dbcs}/js{ec}.geo GFS LOCALPC
-		#Library/Breadbox/FJPEG/{dbcs}/FJPEG{ec}.geo GFS LOCALPC
+		Library/Breadbox/Fjpeg/{dbcs}/fjpeg{ec}.geo GFS LOCALPC
 
 		#
 		# for WebMagick (and InfoServ)
 		#
 		Library/SSL/{dbcs}/ssl{ec}.geo GFS LOCALPC
+
+		#
+		# introduced with FreeGEOS project...
+		#
+		Library/PngLib/pnglib{ec}.geo GFS LOCALPC
 
 		#
 		# for Global Email
@@ -437,8 +477,23 @@ DIR (ensemble) {
 		Library/Breadbox/SStor/sstor{ec}.geo
 		Library/Breadbox/Impex/WFWLib/wfwlib{ec}.geo
 
+		#
+		# for Host Internet Interface
+		#
+		Library/HostIf/hostif{ec}.geo
+
+		#
+		# GSOL lib for FontMagick
+		#
+		Library/Breadbox/Gsol/gsol{ec}.geo
+
+		#
+		# RabeSoft Libraries
+		#
+		Library/RabeSoft/rsftool/rsftool{ec}.geo GFS LOCALPC
+		Library/RabeSoft/bmptools/bmptools{ec}.geo GFS LOCALPC
+
 		DIR (font) {
-			Driver/Font/Nimbus/{dbcs}/nimbus{ec}.geo GFS LOCALPC
 			Driver/Font/TrueType/{dbcs}/truetype{ec}.geo GFS LOCALPC
 		}
 
@@ -460,6 +515,7 @@ DIR (ensemble) {
 			# BreadBox Libraries
 			#
 			Library/Breadbox/Impex/GIF/gif{ec}.geo
+			Library/Breadbox/Impex/PNG/png{ec}.geo
 			# Library/Breadbox/Impex/HTML/htmlimpx.GEO
 			Library/Breadbox/Impex/JPEG/jpeg{ec}.geo
 
@@ -499,8 +555,8 @@ DIR (ensemble) {
 			#
 			# Breadbox ImpGraph Library
 			#
-			# Library/Breadbox/ImpGraph/FJPEG{dbcs}/impgraph{ec}.geo GFS LOCALPC
-			Library/Breadbox/ImpGraph/impgraph{ec}.geo GFS LOCALPC
+			Library/Breadbox/ImpGraph/FJPEG{dbcs}/impgraph{ec}.geo GFS LOCALPC
+			#Library/Breadbox/ImpGraph/impgraph{ec}.geo GFS LOCALPC
 
 			#
 			# Breadbox ImpDoc Library
@@ -660,7 +716,7 @@ DIR (ensemble) {
 
 			Appl/Saver/Maze/maze{ec}.geo GFS LOCALPC
 			# there are no options to mangage Appl/Saver/Maze/MazePref/mazepref{ec}.geo GFS LOCALPC
-			
+
 			Appl/Saver/Noodle/noodle{ec}.geo GFS LOCALPC
 			Appl/Saver/Noodle/NoodlePref/noodlepref{ec}.geo GFS LOCALPC
 
@@ -702,8 +758,8 @@ DIR (ensemble) {
 #				Driver/Sound/WinNT/{dbcs}/sndwinnt{ec}.geo LOCALPC
 #				#Driver/Sound/GPCSS/{dbcs}/gpcss{ec}.geo LOCALPC
 #			} ELSE {
-				Driver/Sound/Standard/standard.geo GFS LOCALPC
-				Driver/Sound/SoundBlaster/sblaster.geo GFS LOCALPC
+				Driver/Sound/Standard/standard{ec}.geo GFS LOCALPC
+				Driver/Sound/SoundBlaster/sblaster{ec}.geo GFS LOCALPC
 #			}
 		}
 
@@ -735,6 +791,7 @@ DIR (ensemble) {
 			Library/FMTools/Linktool/linktool{ec}.geo
 			Library/FMTools/OpenWith/openwith{ec}.geo
 			Library/FMTools/FolderEd/foldered{ec}.geo
+			Library/FMTools/CvtTool/cvttool{ec}.geo
 		}
 
 		DIR (task) {
@@ -773,6 +830,7 @@ DIR (ensemble) {
 			Driver/Socket/EtherODI/etherodi{ec}.geo GFS LOCALPC
 			Driver/Socket/EtherPKT/etherpkt{ec}.geo GFS LOCALPC
 			Library/DHCP/dhcp{ec}.geo GFS LOCALPC
+			Driver/Socket/HstTCPIP/hsttcpip{ec}.geo XIP=XIP GFS LOCALPC
 		}
 
 
@@ -783,6 +841,13 @@ DIR (ensemble) {
 			Library/Breadbox/UrlDrv/Wmg3Http/{dbcs}/wmg3http{ec}.geo GFS LOCALPC
 			Library/Breadbox/UrlDrv/Wmg3Ftp/{dbcs}/wmg3ftp{ec}.geo GFS LOCALPC
 			Library/Breadbox/UrlDrv/Wmg3Ext/{dbcs}/wmg3ext{ec}.geo GFS LOCALPC
+		}
+
+		#
+		# Power drivers
+		#
+		DIR (power) {
+			Driver/Power/hltpwr/hltpwr{ec}.geo GFS LOCALPC
 		}
 
 	}
@@ -805,7 +870,7 @@ DIR (ensemble) {
 			# word list
 			ENGLISH {
 				Tools/build/product/bbxensem/Userdata/wordmat/WM_WORDS.000
-			} 
+			}
 			GERMAN {
 				Tools/build/product/bbxensem/Userdata/german/wordmat/WM_WORDS.000
 			}
@@ -815,6 +880,7 @@ DIR (ensemble) {
 			#
 			# Standard "patterns" and Full Moon
 			#
+			ENGLISH {
 			Tools/build/product/bbxensem/Userdata/backgrnd/bricks.000
 			Tools/build/product/bbxensem/Userdata/backgrnd/chocolat.000
 			Tools/build/product/bbxensem/Userdata/backgrnd/cubes.000
@@ -859,6 +925,59 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Userdata/backgrnd/MEADOWS.000
 			Tools/build/product/bbxensem/Userdata/backgrnd/WIDE_MEA.000
 			Tools/build/product/bbxensem/Userdata/backgrnd/ENDLESS_.000
+			Tools/build/product/bbxensem/Userdata/backgrnd/BLUEGRAY.000
+			Tools/build/product/bbxensem/Userdata/backgrnd/LAVASTON.000
+			Tools/build/product/bbxensem/Userdata/backgrnd/PAVEMENT.000
+			Tools/build/product/bbxensem/Userdata/backgrnd/REDCOMBS.000
+			}
+			GERMAN {
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/BLAU_ZU_.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/BLAU_ZU_.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/BLAU_ZU_.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/BLAUER_V.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/BLAUER_V.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/BLAUER_V.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/DACHZIEG.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/FELSWAND.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/GEFLOCHT.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/GRUEN_ZU.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/GRUEN_ZU.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/GRUEN_ZU.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/GRUENER_.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/GRUENER_.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/GRUENER_.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/HOLZMASE.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/KIESELST.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/KLEINE_W.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/LAUBHECK.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROHRLEIT.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROT_NACH.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROT_NACH.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROT_NACH.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROTER_VE.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROTER_VE.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROTER_VE.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SANDSTEI.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SANDSTEI.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SANDSTEI.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHOKOLA.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.001
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.002
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.003
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.004
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.005
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.006
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.007
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/SCHWARZ_.008
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/STEINE.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/VOLLMOND.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/WUERFEL.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/BLAUGRAU.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/LAVASTEI.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/PFLASTER.000
+			Tools/build/product/bbxensem/Trans/Userdata/german/backgrnd/ROTEWABE.000
+			}
 		}
 
 		DIR (dicts) {
@@ -903,18 +1022,6 @@ DIR (ensemble) {
 			#FontData/Markfthn.fnt GFS LOCALPC
 
 			DIR (ttf) {
-				#FontData/Ttf/PTMonoBo.ttf GFS LOCALPC
-				#FontData/Ttf/PTMonoRe.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansBo.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansBI.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansIt.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansRe.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriBo.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriBI.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriIt.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriRe.ttf GFS LOCALPC
-				#FontData/Ttf/OFL.txt GFS LOCALPC
-
 				FontData/Ttf/nmonobi.ttf GFS LOCALPC
 				FontData/Ttf/nmonobo.ttf GFS LOCALPC
 				FontData/Ttf/nmonore.ttf GFS LOCALPC
@@ -934,10 +1041,26 @@ DIR (ensemble) {
 				FontData/Ttf/symbolps.ttf GFS LOCALPC
                                 FontData/Ttf/nimb_gpl.txt GFS LOCALPC
                                 FontData/Ttf/cooper.ttf GFS LOCALPC
-                                FontData/Ttf/OFL-Cooper.txt GFS LOCALPC
+                                FontData/Ttf/OFL-SIL.txt GFS LOCALPC
                                 FontData/Ttf/franklin.ttf GFS LOCALPC
                                 FontData/Ttf/Franklin.txt GFS LOCALPC
-                                FontData/Ttf/Info.txt GFS LOCALPC
+				FontData/Ttf/bookmbi.ttf GFS LOCALPC
+				FontData/Ttf/bookmbo.ttf GFS LOCALPC
+				FontData/Ttf/bookmre.ttf GFS LOCALPC
+				FontData/Ttf/bookmri.ttf GFS LOCALPC
+				#FontData/Ttf/dingbats.ttf GFS LOCALPC
+				FontData/Ttf/gothicbi.ttf GFS LOCALPC
+				FontData/Ttf/gothicbo.ttf GFS LOCALPC
+				FontData/Ttf/gothicre.ttf GFS LOCALPC
+				FontData/Ttf/gothicri.ttf GFS LOCALPC
+				FontData/Ttf/p052bi.ttf GFS LOCALPC
+				FontData/Ttf/p052bo.ttf GFS LOCALPC
+				FontData/Ttf/p052re.ttf GFS LOCALPC
+				FontData/Ttf/p052ri.ttf GFS LOCALPC
+				FontData/Ttf/z003.ttf GFS LOCALPC
+				FontData/Ttf/MarVoSym.ttf GFS LOCALPC
+				FontData/Ttf/MarVoSym.txt GFS LOCALPC
+				FontData/Ttf/markfelt.ttf GFS LOCALPC
 			}
 		}
 
@@ -980,7 +1103,7 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Help/BBG10.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/HINV10.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/BANKER30.000 GFS LOCALPC
-			Tools/build/product/bbxensem/Help/BIMHELP.000 GFS LOCALPC
+#			Tools/build/product/bbxensem/Help/BIMHELP.000 GFS LOCALPC
 #			Tools/build/product/bbxensem/Help/GEOCON_h.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/FILE_FIN.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/MACRO_RE.000 GFS LOCALPC
@@ -1005,6 +1128,8 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Help/OL_HELP.000 GFS LOCALPC
 
 			Tools/build/product/bbxensem/Help/INSTALL_.000 GFS LOCALPC
+			Tools/build/product/bbxensem/Help/GRAFCALC.000 GFS LOCALPC
+			Tools/build/product/bbxensem/Help/FONTMAGI.000 GFS LOCALPC
 
 		# games for first release
 			Tools/build/product/bbxensem/Help/AMATEUR.000 GFS LOCALPC
@@ -1012,6 +1137,7 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Help/COLUMN.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/CROSSWD.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/FCELL_HE.000 GFS LOCALPC
+			Tools/build/product/bbxensem/Help/GLADHCEN.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/HEARTS.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/POKER.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/PYRAMID.000 GFS LOCALPC
@@ -1064,7 +1190,7 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Help/german/BBG10.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/HINV10.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/BANKER30.000 GFS LOCALPC
-			Tools/build/product/bbxensem/Help/german/BIMHELP.000 GFS LOCALPC
+#			Tools/build/product/bbxensem/Help/german/BIMHELP.000 GFS LOCALPC
 #			Tools/build/product/bbxensem/Help/german/GEOCON_h.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/FILE_FIN.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/MACRO_RE.000 GFS LOCALPC
@@ -1089,6 +1215,8 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Help/german/OL_HELP.000 GFS LOCALPC
 
 			Tools/build/product/bbxensem/Help/german/INSTALL_.000 GFS LOCALPC
+			Tools/build/product/bbxensem/Help/german/GRAFCALC.000 GFS LOCALPC
+			Tools/build/product/bbxensem/Help/german/FONTMAGI.000 GFS LOCALPC
 
 		# games for first release
 			Tools/build/product/bbxensem/Help/german/AMATEUR.000 GFS LOCALPC
@@ -1096,6 +1224,7 @@ DIR (ensemble) {
 			Tools/build/product/bbxensem/Help/german/COLUMN.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/CROSSWD.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/FCELL_HE.000 GFS LOCALPC
+			Tools/build/product/bbxensem/Help/german/GLADHCDE.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/HEARTS.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/POKER.000 GFS LOCALPC
 			Tools/build/product/bbxensem/Help/german/PYRAMID.000 GFS LOCALPC
@@ -1165,7 +1294,7 @@ DIR (ensemble) {
 				Tools/build/product/bbxensem/Userdata/Template/NewWrite/report-f.000
 				Tools/build/product/bbxensem/Userdata/Template/NewWrite/travel_i.000
 				}
-			}			
+			}
 			GERMAN {
 			DIR (GeoCalc Vorlagen) {
 				Tools/build/product/bbxensem/Userdata/german/Template/GeoCalc/FAHRTENB.000
@@ -1297,7 +1426,6 @@ DIR (ensemble) {
 		Appl/GeoPoint/geopoint{ec}.geo
 		Appl/dil/bbxmail/bbxmail{ec}.geo GFS LOCALPC
 		Appl/Breadbox/BbxBrow/bbxbrow{ec}.geo GFS LOCALPC
-#		Appl/Breadbox/BbxBrow/JS{dbcs}/bbxbrow{ec}.geo GFS LOCALPC
 		Appl/Preferences/PrefMgr/prefmgr{ec}.geo GFS LOCALPC
 		Appl/GeoDex/geodex{ec}.geo GFS LOCALPC
 		Appl/Calendar/geoplan{ec}.geo GFS LOCALPC
@@ -1317,6 +1445,7 @@ DIR (ensemble) {
 			Appl/Games/Amateur/amateur{ec}.geo GFS LOCALPC
 			Appl/Games/BJack/bjack{ec}.geo GFS LOCALPC
 			Appl/Games/CWord/cword{ec}.geo GFS LOCALPC
+			Appl/Games/GeoLadder/geoladder{ec}.geo GFS LOCALPC
 			Appl/Games/GWPoker/gwpoker{ec}.geo GFS LOCALPC
 			Appl/Games/Hearts/hearts{ec}.geo GFS LOCALPC
 			Appl/Games/Mine/msweep{ec}.geo GFS LOCALPC
@@ -1373,7 +1502,7 @@ DIR (ensemble) {
 			Appl/Breadbox/BbxChat/bbxchat{ec}.geo
       			Appl/IDialup/{dbcs}/idialup{ec}.geo GFS LOCALPC
 			Appl/Breadbox/ftpc/ftpc{ec}.geo
-			Appl/Breadbox/BIM/bim{ec}.geo
+#			Appl/Breadbox/BIM/bim{ec}.geo
 			Appl/Breadbox/NewsRead/newsread{ec}.geo
 			Appl/Term/term{ec}.geo GFS LOCALPC
 #			Appl/Breadbox/Geocon3/geocon3{ec}.geo
@@ -1388,6 +1517,8 @@ DIR (ensemble) {
                         Appl/Breadbox/Graphvwr/graphvwr{ec}.geo
                         Appl/Breadbox/BBGrmt/bbgrmt{ec}.geo GFS LOCALPC
 
+                        Appl/GrafCalc/grafcalc{ec}.geo GFS LOCALPC
+			Appl/EduApps/Fontmgck/fontmgck{ec}.geo GFS LOCALPC
 		}
 
 		DIR (Tools) {

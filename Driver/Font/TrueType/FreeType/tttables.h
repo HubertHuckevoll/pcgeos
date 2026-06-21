@@ -38,9 +38,11 @@
     TT_Fixed  version;      /* should be 0x10000 */
     UShort    numTables;    /* number of tables  */
 
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
     UShort  searchRange;    /* These parameters are only used  */
     UShort  entrySelector;  /* for a dichotomy search in the   */
     UShort  rangeShift;     /* directory. We ignore them.      */
+#endif
   };
 
   typedef struct TTableDir_  TTableDir;
@@ -52,7 +54,9 @@
   struct  TTableDirEntry_
   {
     ULong  Tag;        /*        table type */
+#ifdef TT_CONFIG_OPTION_SUPPORT_CHECKSUM
     ULong  CheckSum;   /*    table checksum */
+#endif
     ULong  Offset;     /* table file offset */
     ULong  Length;     /*      table length */
   };
@@ -87,7 +91,9 @@
 
   struct  TMaxProfile_
   {
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
     TT_Fixed  version;
+#endif
     UShort    numGlyphs,
               maxPoints,
               maxContours,

@@ -30,7 +30,7 @@ LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = html4par
 
-PRODUCTS        = DBCS JS
+PRODUCTS        = JS
 
 SYSMAKEFILE     = geode.mk
 
@@ -53,8 +53,4 @@ SYSMAKEFILE     = geode.mk
 
 #if exists(JS/$(DEPFILE))
 #include "JS/$(DEPFILE)"
-#endif
-
-#if exists(JSDBCS/$(DEPFILE))
-#include "JSDBCS/$(DEPFILE)"
 #endif
