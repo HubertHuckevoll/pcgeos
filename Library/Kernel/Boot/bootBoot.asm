@@ -771,7 +771,6 @@ endif
 					;  from the stack
 CWARNINGNOTICE	endp
 
-if ERROR_CHECK
 COMMENT @----------------------------------------------------------------------
 
 C FUNCTION:	ECWARNINGLOGRECORD
@@ -790,6 +789,7 @@ REVISION HISTORY:
 	km	2/26		Initial version
 
 ------------------------------------------------------------------------------@
+if ERROR_CHECK
 ECWARNINGLOGRECORD	proc	far	addr:dword, varNameP:fptr.char
 				uses	ds, es, si, di
 	.enter
@@ -826,6 +826,10 @@ doneCopyVarName:
 
 	.leave
 	ret
+ECWARNINGLOGRECORD	endp
+else
+ECWARNINGLOGRECORD	proc	far
+	ret	8
 ECWARNINGLOGRECORD	endp
 endif
 

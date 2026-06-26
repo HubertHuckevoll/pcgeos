@@ -25,6 +25,8 @@ MACROS:
 	FALL_THRU_POP	Pop registers for gross routines that expect
 			registers on the stack.
 	EC		Include the current line in error-check version only
+	EC_BREAK	Stop Swat at the current source location
+	EC_TRACE	Log a trace message in Swat
 	EEC		Include temporary error checking code
 	NEC		Include code when NOT error checking
 	LONG		Long conditional jump
@@ -571,6 +573,67 @@ endm
 NEC	macro	line
 	ife	ERROR_CHECK
 line
+	endif
+endm
+
+COMMENT @----------------------------------------------------------------------
+
+	EC_BREAK
+	EC_TRACE	<"text">
+
+	FUNCTION:
+		EC_BREAK stops Swat at the current source location.
+		EC_TRACE logs a simple trace message through the existing EC
+		warning log path and then continues.
+
+	ARGUMENTS:
+		text -- null-terminated trace string to print
+
+------------------------------------------------------------------------------@
+EC_BREAK	macro
+	if	ERROR_CHECK
+		int	3
+	endif
+endm
+
+EC_TRACE	macro	text
+	local	traceName, traceString, traceDone
+	if	ERROR_CHECK
+		pushf
+		push	ax
+		push	bx
+		push	cx
+		push	dx
+		push	si
+		push	di
+		push	bp
+		push	ds
+		push	es
+
+		mov	ax, cs
+		push	ax
+		mov	ax, offset traceName
+		push	ax
+		mov	ax, cs
+		push	ax
+		mov	ax, offset traceString
+		push	ax
+		call	ECWARNINGLOGRECORD
+
+		pop	es
+		pop	ds
+		pop	bp
+		pop	di
+		pop	si
+		pop	dx
+		pop	cx
+		pop	bx
+		pop	ax
+		popf
+		jmp	traceDone
+traceName	char	"$!", 0
+traceString	char	text, 0
+traceDone:
 	endif
 endm
 

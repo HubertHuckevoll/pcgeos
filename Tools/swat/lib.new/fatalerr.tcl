@@ -839,6 +839,14 @@ defvar warning-ignore-list nil
         var varName {<?>}
     }
 
+    if {[string c $varName {$!}] == 0} {
+        echo -n {EC log: }
+        if {[catch {pstring $p} pstringErr] != 0} {
+            echo [format {<could not print trace string at %s>} $p]
+        }
+        return 1
+    }
+
     if {[string c [range $varName 0 0 chars] {$}] == 0} {
         var strName [range $varName 1 end chars]
         if {[null $strName]} {

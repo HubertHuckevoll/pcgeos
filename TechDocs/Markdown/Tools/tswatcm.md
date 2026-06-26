@@ -734,6 +734,12 @@ resolves the value by trying local and global symbols, then expression type
 parsing, then an address-based variable lookup, and finally raw word and dword
 output.
 
+ESP/ASM code can use EC_TRACE <"text"> for a simple reached-here message.
+It prints the text as EC log: text and continues execution. EC_BREAK emits an
+EC-only software breakpoint so Swat stops at the macro site. These ASM macros
+are source markers only; use Swat's normal ASM commands for registers, memory,
+flags, typed values, and stepping.
+
 The following cases are useful when testing the resolver:
 
 + EC_LOG_T(i) should resolve a local scalar by local symbol and print its typed
