@@ -431,6 +431,8 @@ void SelectedFilesLoad(GeodeToken* token, char* pathnameAndFile)
         EC_LOG_T(headerPtr->FQTH_pathname);
         EC_LOG_T(entriesPtr);
 
+        EC_BREAK();
+
         for (i=0; i < headerPtr->FQTH_numFiles; i++)
         {
 

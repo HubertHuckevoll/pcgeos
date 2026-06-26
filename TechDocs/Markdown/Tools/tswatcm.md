@@ -735,10 +735,11 @@ parsing, then an address-based variable lookup, and finally raw word and dword
 output.
 
 ESP/ASM code can use EC_TRACE <"text"> for a simple reached-here message.
-It prints the text as EC log: text and continues execution. EC_BREAK emits an
-EC-only software breakpoint so Swat stops at the macro site. These ASM macros
-are source markers only; use Swat's normal ASM commands for registers, memory,
-flags, typed values, and stepping.
+It prints the text as EC log: text and continues execution. ESP/ASM code can
+use EC_BREAK, and C/GOC code can use EC_BREAK(), to emit an EC-only breakpoint
+for temporary debugging. These source markers emit no code in non-EC builds and
+are not a general ASM value logging API; use Swat's normal ASM commands for
+registers, memory, flags, typed values, and stepping.
 
 The following cases are useful when testing the resolver:
 

@@ -773,6 +773,29 @@ CWARNINGNOTICE	endp
 
 COMMENT @----------------------------------------------------------------------
 
+C FUNCTION:	ECBREAK
+
+C DECLARATION:	extern void
+			_far _pascal ECBreak(void);
+
+DESCRIPTION:
+	Trap into Swat for temporary EC debugging.
+
+REVISION HISTORY:
+	Name	Date		Description
+	----	----		-----------
+	km	2/26		Initial version
+
+------------------------------------------------------------------------------@
+ECBREAK	proc	far
+if ERROR_CHECK
+	int	1
+endif
+	ret
+ECBREAK	endp
+
+COMMENT @----------------------------------------------------------------------
+
 C FUNCTION:	ECWARNINGLOGRECORD
 
 C DECLARATION:	extern void
@@ -790,7 +813,8 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 if ERROR_CHECK
-ECWARNINGLOGRECORD	proc	far	addr:dword, varNameP:fptr.char
+SetGeosConvention
+ECWARNINGLOGRECORD	proc	far	varNameP:fptr.char, addr:dword
 				uses	ds, es, si, di
 	.enter
 
@@ -827,6 +851,7 @@ doneCopyVarName:
 	.leave
 	ret
 ECWARNINGLOGRECORD	endp
+SetDefaultConvention
 else
 ECWARNINGLOGRECORD	proc	far
 	ret	8

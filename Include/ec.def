@@ -161,6 +161,7 @@ global ECCHECKBOUNDS:far
 global SysGetECLevel:far
 global SysSetECLevel:far
 global ECWARNINGLOGRECORD:far
+global ECBREAK:far
 
 
 ; we keep these around for purposed of the upgrade/wizrd and zoomer
@@ -592,7 +593,7 @@ COMMENT @----------------------------------------------------------------------
 ------------------------------------------------------------------------------@
 EC_BREAK	macro
 	if	ERROR_CHECK
-		int	3
+		int	1
 	endif
 endm
 
