@@ -255,9 +255,6 @@ extern void
 extern void
     _pascal ECWarningLogRecord(const char *varNameP, dword addr);
 
-extern void
-    _pascal ECBreak(void);
-
 /***/
 
 /*
@@ -273,7 +270,17 @@ extern void
 /* Prefix '$' marks varName as string-mode for Swat pretty-printing. */
 #define EC_LOG_S(strExpr)      ECWarningLogRecord("$" #strExpr, EC_MAKE_FARPTR((strExpr)))
 
-#define EC_BREAK()             ECBreak()
+#if defined(__WATCOMC__) || defined(__WATCOM__)
+void _ECBreak(void);
+#pragma aux _ECBreak = "int 1";
+#define EC_BREAK()             _ECBreak()
+#elif defined(__BORLANDC__)
+#define EC_BREAK()             asm { int 1 }
+#else
+#define EC_BREAK()             \
+    do { _inline_byte(0xcd); _inline_byte(0x01); } while (0)
+#endif
+
 #define EC(line) 		line
 #define EC_ERROR(code) 		FatalError(code)
 #define EC_ERROR_IF(test, code) if (test) FatalError(code)
@@ -335,7 +342,6 @@ pragma Alias(ECCheckBounds, "ECCHECKBOUNDS");
 pragma Alias(SysGetECLevel, "SYSGETECLEVEL");
 pragma Alias(SysSetECLevel, "SYSSETECLEVEL");
 pragma Alias(ECWarningLogRecord, "ECWARNINGLOGRECORD");
-pragma Alias(ECBreak, "ECBREAK");
 #endif
 
 #endif

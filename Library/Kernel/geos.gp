@@ -2561,4 +2561,3 @@ incminor MouseWheelSupport
 
 incminor SwatLoggingSupport
 export ECWARNINGLOGRECORD
-export ECBREAK

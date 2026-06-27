@@ -161,7 +161,6 @@ global ECCHECKBOUNDS:far
 global SysGetECLevel:far
 global SysSetECLevel:far
 global ECWARNINGLOGRECORD:far
-global ECBREAK:far
 
 
 ; we keep these around for purposed of the upgrade/wizrd and zoomer
