@@ -979,3 +979,14 @@ See Also:
 }]
 
 var defaultCleChars {aebfrvdtkyu}
+
+#
+# Enable the existing command-line editor by default. Users can still
+# put "tcsh off" or "tcsh cle off" in swat.rc to disable it.
+#
+if {[null $cleChars]} {
+    var cleChars $defaultCleChars
+}
+if {[null $historySearching]} {
+    var historySearching 1
+}
