@@ -1,0 +1,15 @@
+Heading one                          [24 pt, bold]
+
+Normal bold, italic, code, and a link (https://example.com).
+       ^^^^  ^^^^^^  ^^^^
+       bold  italic  URW Mono
+
+" A quoted paragraph. "              [italic]
+
+¥ first                              [¥ is GEOS SBCS bullet 0xA5]
+¥ second
+
+1. one
+2. two
+
+----------------------------------------

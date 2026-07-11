@@ -1,0 +1,7 @@
+SetDef __HTML4PAR
+
+StartLibrary html4par
+
+global HTMLTRANSLATECHARNUM:far
+
+EndLibrary html4par

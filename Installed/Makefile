@@ -97,7 +97,7 @@ minimalLibrary	: kernel swap sound net ui isui motif spool text mailbox \
 		  jpeg giflib gif png htmlimpx n2txt inetmsg extui \
 		  winword8 zlib dirlist minizip idialc eps impex_libs \
 		  thumbdb ftplib flllib sitelist int8087 intx87\
-		  basicdb gridlib gsol treplib hostif ascii \
+		  basicdb gridlib gsol treplib hostif ascii markdown \
 		  rsftool bmptools
 
 prefLibs	: prefvid prefts preftd \
@@ -310,6 +310,9 @@ Installed/Library/Trans/Graphics/Vector/Wmf: ui impex ansic MAKELIB
 
 ascii	: Installed/Library/Trans/Text/Ascii
 Installed/Library/Trans/Text/Ascii: 	ui text MAKELIB
+
+markdown	: Installed/Library/Trans/Text/Markdown
+Installed/Library/Trans/Text/Markdown: 	ui text html4par MAKELIB
 
 msword	: Installed/Library/Trans/Text/MicrosoftWord
 Installed/Library/Trans/Text/MicrosoftWord: 	ui ansic impex msmfile MAKELIB

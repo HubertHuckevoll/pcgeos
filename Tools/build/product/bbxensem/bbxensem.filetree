@@ -544,6 +544,7 @@ DIR (ensemble) {
 			Library/Trans/Database/DBase4/dbase4{ec}.geo GFS LOCALPC
 			Library/Trans/SSheet/Lotus123/lot123ss{ec}.geo GFS LOCALPC
 			Library/Trans/Text/Ascii/ascii{ec}.geo GFS LOCALPC
+			Library/Trans/Text/Markdown/markdown{ec}.geo GFS LOCALPC
 			Library/Trans/Text/MicrosoftWord/msword{ec}.geo GFS LOCALPC
 			# This L123 as text causes autodetect to crash big time
 			# and we don't need it
