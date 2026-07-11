@@ -95,7 +95,8 @@ endif
 	;
 		mov	bx, ds:[si].IF_transferVMFile
 		mov	ss:[vmFile], bx
-		clr	ax			; no regions, clear flags
+		mov	ax, mask VTSF_MULTIPLE_CHAR_ATTRS or \
+			    mask VTSF_MULTIPLE_PARA_ATTRS ; no regions
 		call	TextAllocClipboardObject
 		movdw	textObj, bxsi
 		call	InitializeClipboardObject
@@ -172,7 +173,20 @@ REVISION HISTORY:
 InitializeClipboardObject	proc	near	uses	di, bp
 		.enter
 	;
-	; Preserve the default body font and set its point size to 12pt.
+	; Give rich character storage a concrete default body font.
+	;
+		mov	dx, size VisTextSetFontIDParams
+		sub	sp, dx
+		mov	bp, sp
+		movdw	ss:[bp].VTSFIDP_range.VTR_start, TEXT_ADDRESS_PAST_END
+		movdw	ss:[bp].VTSFIDP_range.VTR_end, TEXT_ADDRESS_PAST_END
+		mov	ss:[bp].VTSFIDP_fontID, FID_DTC_URW_ROMAN
+		mov	ax, MSG_VIS_TEXT_SET_FONT_ID
+		mov	di, mask MF_STACK
+		call	ObjMessage
+		add	sp, dx
+	;
+	; Set the default body size to 12pt.
 	;
 		mov	dx, size VisTextSetPointSizeParams
 		sub	sp, dx

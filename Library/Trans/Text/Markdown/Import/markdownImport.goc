@@ -475,6 +475,7 @@ void MDApplyFormatting(MDState *stateP, dword base,
     word index;
     word size;
     MDRun *runP;
+    WWFixed pointSize;
 
     for (index = 0; index < stateP->runCount; ++index) {
         runP = &stateP->runs[index];
@@ -488,8 +489,6 @@ void MDApplyFormatting(MDState *stateP, dword base,
         }
     }
     if (stateP->heading != 0) {
-        WWFixed pointSize;
-
         switch (stateP->heading) {
         case 1: size = 24; break;
         case 2: size = 20; break;
@@ -507,6 +506,18 @@ void MDApplyFormatting(MDState *stateP, dword base,
         MDSetStyle(stateP->textObj, base, base + lineLength - 1,
                    MD_STYLE_ITALIC);
     }
+    /* Range changes also become the insertion attributes.  Restore the body
+     * attributes before the next line is appended without changing its CR.
+     */
+    pointSize.WWF_int = 12;
+    pointSize.WWF_frac = 0;
+    @call stateP->textObj::MSG_VIS_TEXT_SET_FONT_ID(
+        FID_DTC_URW_ROMAN, TEXT_ADDRESS_PAST_END, TEXT_ADDRESS_PAST_END);
+    @call stateP->textObj::MSG_VIS_TEXT_SET_POINT_SIZE(
+        pointSize, TEXT_ADDRESS_PAST_END, TEXT_ADDRESS_PAST_END);
+    @call stateP->textObj::MSG_VIS_TEXT_SET_TEXT_STYLE(
+        0, 0, TS_BOLD | TS_ITALIC, 0,
+        TEXT_ADDRESS_PAST_END, TEXT_ADDRESS_PAST_END);
 }
 
 TransError _far _pascal MDReadAndImport(FileHandle source, optr textObj)
