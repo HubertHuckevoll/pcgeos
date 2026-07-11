@@ -5,14 +5,14 @@
 #
 GEODE           = markdown
 EXPORT          = exportMain.asm exportManager.asm
-IMPORT          = importMain.asm importManager.asm markdownRich.asm\
-                  importConstant.def
+IMPORT          = importManager.asm importMain.asm markdownRich.asm\
+                  importConstant.def markdownImport.goc
 LIB             = libFormat.asm libManager.asm
 UI_TO_RDFS      =
-OBJS            =
+OBJS            = markdownImport.obj
 COMMON          = asciiConstant.def asciiGeode.def html4par.def
 MODULES         = Export Import Lib
-CMODULES        =
+CMODULES        = Import
 SRCS            = $(EXPORT) $(IMPORT) $(LIB) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf

@@ -35,9 +35,15 @@ include	asciiGeode.def		; this includes the .def files
 
 include importConstant.def
 
+; markdownImport.goc uses its default C code segment.  Declaring the external
+; there lets the linker combine this declaration with that module, as in the
+; mixed ASM/C Impex translators.
+markdownImport_TEXT segment public 'CODE'
+extrn MDREADANDIMPORT:far
+markdownImport_TEXT ends
+
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;	Code
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 include	importMain.asm			; main interface
-include	markdownRich.asm

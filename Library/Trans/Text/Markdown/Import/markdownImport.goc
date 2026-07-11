@@ -1,0 +1,549 @@
+@include <stdapp.goh>
+#include <xlatLib.h>
+@include <html4par.goh>
+
+#define MD_MAX_LINE 2048
+#define MD_MAX_INPUT (MD_MAX_LINE - 5)
+#define MD_MAX_OUTPUT 4096
+#define MD_READ_SIZE 512
+#define MD_MAX_RUNS 96
+
+#define MD_STYLE_BOLD 0x0001
+#define MD_STYLE_ITALIC 0x0002
+#define MD_STYLE_CODE 0x0004
+
+typedef struct {
+    word start;
+    word end;
+    word style;
+} MDRun;
+
+typedef struct {
+    FileHandle source;
+    optr textObj;
+    word readPos;
+    word readSize;
+    byte pushed[3];
+    word pushCount;
+    byte pending;
+    Boolean pendingValid;
+    Boolean eof;
+    char input[MD_MAX_LINE];
+    char output[MD_MAX_OUTPUT];
+    byte readBuffer[MD_READ_SIZE];
+    MDRun runs[MD_MAX_RUNS];
+    word runCount;
+    word heading;
+    word headingStart;
+    Boolean quote;
+    word textEnd;
+} MDState;
+
+int MDRawRead(MDState *stateP)
+{
+    word count;
+
+    if (stateP->pushCount != 0) {
+        return stateP->pushed[--stateP->pushCount];
+    }
+    if (stateP->readPos == stateP->readSize) {
+        count = FileRead(stateP->source, stateP->readBuffer,
+                         MD_READ_SIZE, FALSE);
+        if (count == (word)-1) {
+            return -2;
+        }
+        stateP->readPos = 0;
+        stateP->readSize = count;
+        if (count == 0) {
+            return -1;
+        }
+    }
+    return stateP->readBuffer[stateP->readPos++];
+}
+
+void MDRawPush(MDState *stateP, byte value)
+{
+    if (stateP->pushCount < 3) {
+        stateP->pushed[stateP->pushCount++] = value;
+    }
+}
+
+TransError MDSkipBOM(MDState *stateP)
+{
+    int first;
+    int second;
+    int third;
+
+    first = MDRawRead(stateP);
+    if (first == -2) {
+        return TE_FILE_READ;
+    }
+    if (first < 0) {
+        return TE_NO_ERROR;
+    }
+    if (first != 0xef) {
+        MDRawPush(stateP, (byte)first);
+        return TE_NO_ERROR;
+    }
+    second = MDRawRead(stateP);
+    if (second < 0) {
+        MDRawPush(stateP, (byte)first);
+        return (second == -2) ? TE_FILE_READ : TE_NO_ERROR;
+    }
+    if (second != 0xbb) {
+        MDRawPush(stateP, (byte)second);
+        MDRawPush(stateP, (byte)first);
+        return TE_NO_ERROR;
+    }
+    third = MDRawRead(stateP);
+    if (third < 0) {
+        MDRawPush(stateP, (byte)second);
+        MDRawPush(stateP, (byte)first);
+        return (third == -2) ? TE_FILE_READ : TE_NO_ERROR;
+    }
+    if (third != 0xbf) {
+        MDRawPush(stateP, (byte)third);
+        MDRawPush(stateP, (byte)second);
+        MDRawPush(stateP, (byte)first);
+    }
+    return TE_NO_ERROR;
+}
+
+int MDReadChar(MDState *stateP)
+{
+    int value;
+    int c2;
+    int c3;
+    int c4;
+    unsigned int unicode;
+    int mapped;
+
+    if (stateP->pendingValid) {
+        stateP->pendingValid = FALSE;
+        return stateP->pending;
+    }
+    value = MDRawRead(stateP);
+    if (value < 0 || value < 0x80) {
+        return value;
+    }
+    if (value >= 0xc2 && value <= 0xdf) {
+        c2 = MDRawRead(stateP);
+        if (c2 < 0) {
+            return (c2 == -2) ? -2 : '?';
+        }
+        if ((c2 & 0xc0) != 0x80) {
+            MDRawPush(stateP, (byte)c2);
+            return '?';
+        }
+        unicode = ((value & 0x1f) << 6) | (c2 & 0x3f);
+    } else if (value >= 0xe0 && value <= 0xef) {
+        c2 = MDRawRead(stateP);
+        if (c2 < 0) {
+            return (c2 == -2) ? -2 : '?';
+        }
+        if ((c2 & 0xc0) != 0x80 ||
+            (value == 0xe0 && c2 < 0xa0) ||
+            (value == 0xed && c2 >= 0xa0)) {
+            if ((c2 & 0xc0) != 0x80) {
+                MDRawPush(stateP, (byte)c2);
+            }
+            return '?';
+        }
+        c3 = MDRawRead(stateP);
+        if (c3 < 0) {
+            return (c3 == -2) ? -2 : '?';
+        }
+        if ((c3 & 0xc0) != 0x80) {
+            MDRawPush(stateP, (byte)c3);
+            return '?';
+        }
+        unicode = ((value & 0x0f) << 12) |
+                  ((c2 & 0x3f) << 6) | (c3 & 0x3f);
+    } else if (value >= 0xf0 && value <= 0xf4) {
+        c2 = MDRawRead(stateP);
+        c3 = MDRawRead(stateP);
+        c4 = MDRawRead(stateP);
+        if (c2 == -2 || c3 == -2 || c4 == -2) {
+            return -2;
+        }
+        if (c2 >= 0 && (c2 & 0xc0) != 0x80) {
+            MDRawPush(stateP, (byte)c2);
+        } else if (c3 >= 0 && (c3 & 0xc0) != 0x80) {
+            MDRawPush(stateP, (byte)c3);
+        } else if (c4 >= 0 && (c4 & 0xc0) != 0x80) {
+            MDRawPush(stateP, (byte)c4);
+        }
+        return '?';
+    } else {
+        return '?';
+    }
+    mapped = HTMLTranslateCharNum(unicode);
+    return mapped ? mapped : '?';
+}
+
+TransError MDReadLine(MDState *stateP, word *lengthP)
+{
+    word length;
+    int value;
+    int next;
+
+    length = 0;
+    for (;;) {
+        value = MDReadChar(stateP);
+        if (value == -2) {
+            return TE_FILE_READ;
+        }
+        if (value == -1) {
+            if (length == 0) {
+                stateP->eof = TRUE;
+                *lengthP = 0;
+                return TE_NO_ERROR;
+            }
+            break;
+        }
+        if (value == C_CR || value == C_LF) {
+            next = MDReadChar(stateP);
+            if (next == -2) {
+                return TE_FILE_READ;
+            }
+            if (next >= 0 && !((value == C_CR && next == C_LF) ||
+                               (value == C_LF && next == C_CR))) {
+                stateP->pending = (byte)next;
+                stateP->pendingValid = TRUE;
+            }
+            break;
+        }
+        if (length >= MD_MAX_INPUT) {
+            return TE_IMPORT_ERROR;
+        }
+        stateP->input[length++] = (char)value;
+    }
+    stateP->input[length++] = C_CR;
+    stateP->input[length] = C_NULL;
+    *lengthP = length;
+    return TE_NO_ERROR;
+}
+
+Boolean MDPut(MDState *stateP, word *posP, char value)
+{
+    if (*posP >= MD_MAX_OUTPUT - 1) {
+        return FALSE;
+    }
+    stateP->output[(*posP)++] = value;
+    return TRUE;
+}
+
+void MDAddRun(MDState *stateP, word start, word end, word style)
+{
+    MDRun *runP;
+
+    if (start >= end || stateP->runCount == MD_MAX_RUNS) {
+        return;
+    }
+    runP = &stateP->runs[stateP->runCount++];
+    runP->start = start;
+    runP->end = end;
+    runP->style = style;
+}
+
+Boolean MDHasClosing(const char *textP, word pos,
+                                  char delimiter, word width)
+{
+    pos += width;
+    while (textP[pos] != C_CR) {
+        if (textP[pos] == delimiter &&
+            (width == 1 || textP[pos + 1] == delimiter)) {
+            return TRUE;
+        }
+        ++pos;
+    }
+    return FALSE;
+}
+
+Boolean MDHasLink(const char *textP, word pos)
+{
+    ++pos;
+    while (textP[pos] != C_CR && textP[pos] != ']') {
+        ++pos;
+    }
+    if (textP[pos] != ']' || textP[pos + 1] != '(') {
+        return FALSE;
+    }
+    pos += 2;
+    while (textP[pos] != C_CR && textP[pos] != ')') {
+        ++pos;
+    }
+    return textP[pos] == ')';
+}
+
+Boolean MDIsRule(const char *textP)
+{
+    word pos;
+    word count;
+    char marker;
+    char value;
+
+    pos = 0;
+    count = 0;
+    marker = 0;
+    while ((value = textP[pos++]) != C_CR) {
+        if (value == ' ' || value == C_TAB) {
+            continue;
+        }
+        if (marker == 0) {
+            if (value != '-' && value != '_' && value != '*') {
+                return FALSE;
+            }
+            marker = value;
+        } else if (value != marker) {
+            return FALSE;
+        }
+        ++count;
+    }
+    return count >= 3;
+}
+
+TransError MDParseLine(MDState *stateP, word *lengthP)
+{
+    word inPos;
+    word outPos;
+    word start;
+    word savedIn;
+    word savedOut;
+    word width;
+    word style;
+    char delimiter;
+    char value;
+
+    inPos = 0;
+    outPos = 0;
+    stateP->runCount = 0;
+    stateP->heading = 0;
+    stateP->quote = FALSE;
+    if (MDIsRule(stateP->input)) {
+        while (outPos < 40) {
+            stateP->output[outPos++] = '-';
+        }
+        stateP->output[outPos++] = C_CR;
+        stateP->output[outPos] = C_NULL;
+        *lengthP = outPos;
+        return TE_NO_ERROR;
+    }
+    savedIn = inPos;
+    while (stateP->input[inPos] == '#' && stateP->heading < 6) {
+        ++inPos;
+        ++stateP->heading;
+    }
+    if (stateP->heading == 0 || stateP->input[inPos] != ' ') {
+        stateP->heading = 0;
+        inPos = savedIn;
+    } else {
+        ++inPos;
+    }
+    if (stateP->heading == 0 && stateP->input[inPos] == '>') {
+        ++inPos;
+        if (stateP->input[inPos] == ' ') {
+            ++inPos;
+        }
+        if (!MDPut(stateP, &outPos, '"') ||
+            !MDPut(stateP, &outPos, ' ')) {
+            return TE_IMPORT_ERROR;
+        }
+        stateP->quote = TRUE;
+    } else if (stateP->heading == 0 &&
+               (stateP->input[inPos] == '-' ||
+                stateP->input[inPos] == '*' ||
+                stateP->input[inPos] == '+') &&
+               stateP->input[inPos + 1] == ' ') {
+        inPos += 2;
+        if (!MDPut(stateP, &outPos, (char)0xa5) ||
+            !MDPut(stateP, &outPos, ' ')) {
+            return TE_IMPORT_ERROR;
+        }
+    } else if (stateP->heading == 0) {
+        savedIn = inPos;
+        savedOut = outPos;
+        while (stateP->input[inPos] >= '0' &&
+               stateP->input[inPos] <= '9') {
+            if (!MDPut(stateP, &outPos, stateP->input[inPos++])) {
+                return TE_IMPORT_ERROR;
+            }
+        }
+        if (inPos == savedIn || stateP->input[inPos] != '.' ||
+            stateP->input[inPos + 1] != ' ') {
+            inPos = savedIn;
+            outPos = savedOut;
+        } else {
+            inPos += 2;
+            if (!MDPut(stateP, &outPos, '.') ||
+                !MDPut(stateP, &outPos, ' ')) {
+                return TE_IMPORT_ERROR;
+            }
+        }
+    }
+    stateP->headingStart = outPos;
+    while ((value = stateP->input[inPos]) != C_CR) {
+        delimiter = value;
+        width = 0;
+        style = 0;
+        if (value == '`') {
+            width = 1;
+            style = MD_STYLE_CODE;
+        } else if (value == '*' || value == '_') {
+            width = (stateP->input[inPos + 1] == value) ? 2 : 1;
+            style = (width == 2) ? MD_STYLE_BOLD : MD_STYLE_ITALIC;
+        }
+        if (width != 0 &&
+            MDHasClosing(stateP->input, inPos, delimiter, width)) {
+            inPos += width;
+            start = outPos;
+            while (stateP->input[inPos] != C_CR &&
+                   !(stateP->input[inPos] == delimiter &&
+                     (width == 1 ||
+                      stateP->input[inPos + 1] == delimiter))) {
+                if (!MDPut(stateP, &outPos, stateP->input[inPos++])) {
+                    return TE_IMPORT_ERROR;
+                }
+            }
+            if (stateP->input[inPos] == delimiter) {
+                inPos += width;
+            }
+            MDAddRun(stateP, start, outPos, style);
+            continue;
+        }
+        if (value == '[' && MDHasLink(stateP->input, inPos)) {
+            ++inPos;
+            while (stateP->input[inPos] != ']') {
+                if (!MDPut(stateP, &outPos, stateP->input[inPos++])) {
+                    return TE_IMPORT_ERROR;
+                }
+            }
+            inPos += 2;
+            if (!MDPut(stateP, &outPos, ' ') ||
+                !MDPut(stateP, &outPos, '(')) {
+                return TE_IMPORT_ERROR;
+            }
+            while (stateP->input[inPos] != ')') {
+                if (!MDPut(stateP, &outPos, stateP->input[inPos++])) {
+                    return TE_IMPORT_ERROR;
+                }
+            }
+            ++inPos;
+            if (!MDPut(stateP, &outPos, ')')) {
+                return TE_IMPORT_ERROR;
+            }
+            continue;
+        }
+        if (!MDPut(stateP, &outPos, value)) {
+            return TE_IMPORT_ERROR;
+        }
+        ++inPos;
+    }
+    if (stateP->quote && !MDPut(stateP, &outPos, '"')) {
+        return TE_IMPORT_ERROR;
+    }
+    stateP->textEnd = outPos;
+    if (!MDPut(stateP, &outPos, C_CR)) {
+        return TE_IMPORT_ERROR;
+    }
+    stateP->output[outPos] = C_NULL;
+    if (stateP->heading != 0) {
+        MDAddRun(stateP, stateP->headingStart, stateP->textEnd,
+                 MD_STYLE_BOLD);
+    }
+    *lengthP = outPos;
+    return TE_NO_ERROR;
+}
+
+void MDSetStyle(optr textObj, dword start, dword end, word style)
+{
+    TextStyle bits;
+
+    bits = 0;
+    if (style & MD_STYLE_BOLD) {
+        bits |= TS_BOLD;
+    }
+    if (style & MD_STYLE_ITALIC) {
+        bits |= TS_ITALIC;
+    }
+    @call textObj::MSG_VIS_TEXT_SET_TEXT_STYLE(0, 0, 0, bits, end, start);
+}
+
+void MDApplyFormatting(MDState *stateP, dword base,
+                                    word lineLength)
+{
+    word index;
+    word size;
+    MDRun *runP;
+
+    for (index = 0; index < stateP->runCount; ++index) {
+        runP = &stateP->runs[index];
+        if (runP->style & MD_STYLE_CODE) {
+            @call stateP->textObj::MSG_VIS_TEXT_SET_FONT_ID(
+                FID_DTC_URW_MONO, base + runP->end, base + runP->start);
+        }
+        if (runP->style & (MD_STYLE_BOLD | MD_STYLE_ITALIC)) {
+            MDSetStyle(stateP->textObj, base + runP->start,
+                       base + runP->end, runP->style);
+        }
+    }
+    if (stateP->heading != 0) {
+        WWFixed pointSize;
+
+        switch (stateP->heading) {
+        case 1: size = 24; break;
+        case 2: size = 20; break;
+        case 3: size = 18; break;
+        case 4: size = 16; break;
+        case 5: size = 14; break;
+        default: size = 13; break;
+        }
+        pointSize.WWF_int = size;
+        pointSize.WWF_frac = 0;
+        @call stateP->textObj::MSG_VIS_TEXT_SET_POINT_SIZE(
+            pointSize, base + lineLength - 1, base);
+    }
+    if (stateP->quote) {
+        MDSetStyle(stateP->textObj, base, base + lineLength - 1,
+                   MD_STYLE_ITALIC);
+    }
+}
+
+TransError _far _pascal MDReadAndImport(FileHandle source, optr textObj)
+{
+    MemHandle stateH;
+    MDState *stateP;
+    TransError error;
+    word inputLength;
+    word outputLength;
+    dword base;
+
+    stateH = MemAlloc(sizeof(MDState), HF_DYNAMIC,
+                      HAF_ZERO_INIT | HAF_LOCK);
+    if (stateH == NullHandle) {
+        return TE_OUT_OF_MEMORY;
+    }
+    stateP = (MDState *)MemDeref(stateH);
+    stateP->source = source;
+    stateP->textObj = textObj;
+    error = MDSkipBOM(stateP);
+    while (error == TE_NO_ERROR && !stateP->eof) {
+        error = MDReadLine(stateP, &inputLength);
+        if (error != TE_NO_ERROR || stateP->eof) {
+            break;
+        }
+        error = MDParseLine(stateP, &outputLength);
+        if (error != TE_NO_ERROR) {
+            break;
+        }
+        base = @call textObj::MSG_VIS_TEXT_GET_TEXT_SIZE();
+        /* TextAllocClipboardObject creates this object on the import thread.
+         * @call therefore copies the pointer data before this block is reused.
+         */
+        @call textObj::MSG_VIS_TEXT_APPEND_PTR(stateP->output, outputLength);
+        MDApplyFormatting(stateP, base, outputLength);
+    }
+    MemUnlock(stateH);
+    MemFree(stateH);
+    return error;
+}

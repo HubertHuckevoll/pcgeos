@@ -102,13 +102,17 @@ endif
 	;
 	; Read in text from file.
 	;
-		call	MDReadAndImport
+		push	ss:[sourceFile]
+		push	word ptr ss:[textObj+2]
+		push	word ptr ss:[textObj]
+		call	MDREADANDIMPORT
 						; ax <- TransError or 0
 		tst	ax
 		jnz	error
 	;
 	; Get the transfer format.
 	;
+		movdw	bxsi, ss:[textObj]
 		mov	ax, TCO_RETURN_TRANSFER_FORMAT
 		call	TextFinishWithClipboardObject
 	;
@@ -134,6 +138,7 @@ EC <		jmp	done						>
 
 error:
 		push	ax			; save TransError
+		movdw	bxsi, ss:[textObj]
 		mov	ax, TCO_RETURN_NOTHING
 		call	TextFinishWithClipboardObject
 		pop	ax			; restore TransError
@@ -167,20 +172,7 @@ REVISION HISTORY:
 InitializeClipboardObject	proc	near	uses	di, bp
 		.enter
 	;
-	; Set the font to be monospaced.
-	;
-		mov	dx, size VisTextSetFontIDParams
-		sub	sp, dx
-		mov	bp, sp
-		movdw	ss:[bp].VTSFIDP_range.VTR_start, TEXT_ADDRESS_PAST_END
-		movdw	ss:[bp].VTSFIDP_range.VTR_end, TEXT_ADDRESS_PAST_END
-		mov	ss:[bp].VTSFIDP_fontID, FID_DTC_URW_MONO
-		mov	ax, MSG_VIS_TEXT_SET_FONT_ID
-		mov	di, mask MF_STACK
-		call	ObjMessage
-		add	sp, dx
-	;
-	; Set the point size of the font to be 10 CPI
+	; Preserve the default body font and set its point size to 12pt.
 	;
 		mov	dx, size VisTextSetPointSizeParams
 		sub	sp, dx
