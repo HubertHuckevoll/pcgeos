@@ -5,8 +5,8 @@
 #
 GEODE           = markdown
 EXPORT          = exportManager.asm exportMain.asm exportMarkdown.goc
-IMPORT          = importManager.asm importMain.asm markdownRich.asm\
-                  importConstant.def markdownImport.goc
+IMPORT          = importManager.asm importMain.asm importConstant.def\
+                  markdownImport.goc
 LIB             = libFormat.asm libManager.asm
 UI_TO_RDFS      =
 OBJS            = exportMarkdown.obj markdownImport.obj
