@@ -1,0 +1,13 @@
+Heading one                         [24 pt, bold, URW Roman]
+Heading six                         [9 pt, bold, URW Roman]
+
+Normal bold, italic, and code.
+       ^^^^  ^^^^^^      ^^^^
+       bold  italic      URW Mono
+
+Y first                             [Y is GEOS SBCS bullet 0xA5]
+1. one
+
+Unsafe *bold* marker                [bold across *bold*, exported plain]
+Combined style                      [bold and italic, exported plain]
+" A quoted paragraph. "             [italic, exported plain]

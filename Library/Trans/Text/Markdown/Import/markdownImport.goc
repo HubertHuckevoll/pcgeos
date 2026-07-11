@@ -491,11 +491,11 @@ void MDApplyFormatting(MDState *stateP, dword base,
     if (stateP->heading != 0) {
         switch (stateP->heading) {
         case 1: size = 24; break;
-        case 2: size = 20; break;
-        case 3: size = 18; break;
-        case 4: size = 16; break;
-        case 5: size = 14; break;
-        default: size = 13; break;
+        case 2: size = 18; break;
+        case 3: size = 14; break;
+        case 4: size = 12; break;
+        case 5: size = 10; break;
+        default: size = 9; break;
         }
         pointSize.WWF_int = size;
         pointSize.WWF_frac = 0;

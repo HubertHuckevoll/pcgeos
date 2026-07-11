@@ -29,6 +29,10 @@ DESCRIPTION:
 
 include	asciiGeode.def		; this includes the .def files
 
+exportMarkdown_TEXT segment public 'CODE'
+extrn MDEXPORT:far
+exportMarkdown_TEXT ends
+
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;	Code
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

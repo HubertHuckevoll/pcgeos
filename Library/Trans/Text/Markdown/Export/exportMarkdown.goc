@@ -1,0 +1,368 @@
+@include <stdapp.goh>
+@include <Objects/clipbrd.goh>
+#include <vm.h>
+#include <xlatLib.h>
+#include <string.h>
+@include <html4par.goh>
+
+#define MD_EXPORT_LINE 2048
+#define MD_EXPORT_OUTPUT 6656
+
+#define MD_KIND_BOLD 0x01
+#define MD_KIND_ITALIC 0x02
+#define MD_KIND_CODE 0x04
+
+typedef struct {
+    optr textObj;
+    FileHandle output;
+    char line[MD_EXPORT_LINE];
+    char rendered[MD_EXPORT_OUTPUT];
+    byte kinds[MD_EXPORT_LINE];
+    word unicode[256];
+    VMFileHandle vmFile;
+    MemHandle charElementsH;
+    optr charElementArray;
+    TextRunArrayElement *nextRunP;
+    word currentToken;
+    Boolean attrsValid;
+} MDExportState;
+
+TransError MDWrite(FileHandle output, const char *dataP, word length)
+{
+    word written;
+
+    written = FileWrite(output, dataP, length, FALSE);
+    return (written == length) ? TE_NO_ERROR : TE_FILE_WRITE;
+}
+
+void MDAddUnicode(MDExportState *stateP, word unicode)
+{
+    int mapped;
+
+    mapped = HTMLTranslateCharNum(unicode);
+    if (mapped > 0 && mapped < 256 && stateP->unicode[mapped] == 0) {
+        stateP->unicode[mapped] = unicode;
+    }
+}
+
+void MDInitUnicode(MDExportState *stateP)
+{
+    static const word extra[] = {
+        0x0152, 0x0153, 0x0160, 0x0161, 0x0178,
+        0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d,
+        0x2020, 0x2021, 0x2022, 0x2026, 0x2030, 0x2122
+    };
+    word value;
+    word index;
+
+    for (value = 32; value < 128; ++value) {
+        stateP->unicode[value] = value;
+    }
+    stateP->unicode[C_TAB] = C_TAB;
+    for (value = 160; value < 256; ++value) {
+        MDAddUnicode(stateP, value);
+    }
+    for (index = 0; index < sizeof(extra) / sizeof(extra[0]); ++index) {
+        MDAddUnicode(stateP, extra[index]);
+    }
+}
+
+Boolean MDPutByte(MDExportState *stateP, word *posP, byte value)
+{
+    if (*posP >= MD_EXPORT_OUTPUT) {
+        return FALSE;
+    }
+    stateP->rendered[(*posP)++] = value;
+    return TRUE;
+}
+
+Boolean MDPutChar(MDExportState *stateP, word *posP, byte value)
+{
+    word unicode;
+
+    unicode = stateP->unicode[value];
+    if (unicode == 0) {
+        unicode = '?';
+    }
+    if (unicode < 0x80) {
+        return MDPutByte(stateP, posP, (byte)unicode);
+    }
+    if (unicode < 0x800) {
+        return MDPutByte(stateP, posP, 0xc0 | (unicode >> 6)) &&
+               MDPutByte(stateP, posP, 0x80 | (unicode & 0x3f));
+    }
+    return MDPutByte(stateP, posP, 0xe0 | (unicode >> 12)) &&
+           MDPutByte(stateP, posP, 0x80 | ((unicode >> 6) & 0x3f)) &&
+           MDPutByte(stateP, posP, 0x80 | (unicode & 0x3f));
+}
+
+Boolean MDRunReached(TextRunArrayElement *runP, dword position)
+{
+    if (runP->TRAE_position.WAAH_high == -1) {
+        return FALSE;
+    }
+    return runP->TRAE_position.WAAH_high < (byte)(position >> 16) ||
+           (runP->TRAE_position.WAAH_high == (byte)(position >> 16) &&
+            runP->TRAE_position.WAAH_low <= (word)position);
+}
+
+VisTextCharAttr *MDGetAttr(MDExportState *stateP, dword position)
+{
+    word count;
+    word size;
+
+    if (!stateP->attrsValid) {
+        return (void *)0;
+    }
+    while (MDRunReached(stateP->nextRunP, position)) {
+        stateP->currentToken = stateP->nextRunP->TRAE_token;
+        count = HugeArrayNext((void **)&stateP->nextRunP, &size);
+        if (count == 0) {
+            stateP->attrsValid = FALSE;
+            return (void *)0;
+        }
+    }
+    return ChunkArrayElementToPtr(stateP->charElementArray,
+                                  stateP->currentToken, (void *)0);
+}
+
+word MDAttrKind(VisTextCharAttr *attrP)
+{
+    word kind;
+
+    kind = 0;
+    if (attrP->VTCA_textStyles & TS_BOLD) {
+        kind |= MD_KIND_BOLD;
+    }
+    if (attrP->VTCA_textStyles & TS_ITALIC) {
+        kind |= MD_KIND_ITALIC;
+    }
+    if (attrP->VTCA_fontID == FID_DTC_URW_MONO) {
+        kind |= MD_KIND_CODE;
+    }
+    return kind;
+}
+
+word MDHeadingFromSize(word size)
+{
+    static const byte sizes[] = {24, 18, 14, 12, 10, 9};
+    word level;
+
+    for (level = 0; level < 6; ++level) {
+        if (size == sizes[level]) {
+            return level + 1;
+        }
+    }
+    return 0;
+}
+
+Boolean MDRunSafe(const char *lineP, word start, word end, word kind)
+{
+    word index;
+    char delimiter;
+
+    if (start >= end || lineP[start] == ' ' || lineP[start] == C_TAB ||
+        lineP[end - 1] == ' ' || lineP[end - 1] == C_TAB) {
+        return FALSE;
+    }
+    delimiter = (kind == MD_KIND_CODE) ? '`' : '*';
+    for (index = start; index < end; ++index) {
+        if (lineP[index] == delimiter || lineP[index] == C_CR) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+Boolean MDPutDelimiter(MDExportState *stateP, word *posP, word kind)
+{
+    if (kind == MD_KIND_CODE) {
+        return MDPutByte(stateP, posP, '`');
+    }
+    if (kind == MD_KIND_BOLD) {
+        return MDPutByte(stateP, posP, '*') &&
+               MDPutByte(stateP, posP, '*');
+    }
+    return MDPutByte(stateP, posP, '*');
+}
+
+TransError MDRenderLine(MDExportState *stateP, dword base, word length)
+{
+    VisTextCharAttr *attrP;
+    word heading;
+    word headingSize;
+    word inPos;
+    word outPos;
+    word runEnd;
+    word kind;
+    word nextKind;
+    Boolean quote;
+
+    headingSize = 0;
+    heading = (length != 0);
+    for (inPos = 0; inPos < length; ++inPos) {
+        attrP = MDGetAttr(stateP, base + inPos);
+        stateP->kinds[inPos] = attrP ? MDAttrKind(attrP) : 0;
+        if (!attrP || !(attrP->VTCA_textStyles & TS_BOLD)) {
+            heading = 0;
+        } else if (headingSize == 0) {
+            headingSize = attrP->VTCA_pointSize.WBF_int;
+        } else if (headingSize != attrP->VTCA_pointSize.WBF_int) {
+            heading = 0;
+        }
+    }
+    heading = heading ? MDHeadingFromSize(headingSize) : 0;
+    outPos = 0;
+    for (inPos = 0; inPos < heading; ++inPos) {
+        if (!MDPutByte(stateP, &outPos, '#')) return TE_EXPORT_ERROR;
+    }
+    if (heading && !MDPutByte(stateP, &outPos, ' ')) return TE_EXPORT_ERROR;
+
+    inPos = 0;
+    if (!heading && length >= 2 &&
+        (byte)stateP->line[0] == 0xa5 && stateP->line[1] == ' ') {
+        if (!MDPutByte(stateP, &outPos, '-') ||
+            !MDPutByte(stateP, &outPos, ' ')) return TE_EXPORT_ERROR;
+        inPos = 2;
+    }
+    quote = (length >= 4 && stateP->line[0] == '"' &&
+             stateP->line[1] == ' ' && stateP->line[length - 1] == '"');
+    while (inPos < length) {
+        kind = stateP->kinds[inPos];
+        if (quote) kind &= ~MD_KIND_ITALIC;
+        if (heading) kind &= ~MD_KIND_BOLD;
+        runEnd = inPos + 1;
+        while (runEnd < length) {
+            nextKind = stateP->kinds[runEnd];
+            if (quote) nextKind &= ~MD_KIND_ITALIC;
+            if (heading) nextKind &= ~MD_KIND_BOLD;
+            if (nextKind != kind) break;
+            ++runEnd;
+        }
+        if (kind != MD_KIND_BOLD && kind != MD_KIND_ITALIC &&
+            kind != MD_KIND_CODE) {
+            kind = 0;
+        }
+        if (kind && !MDRunSafe(stateP->line, inPos, runEnd, kind)) {
+            kind = 0;
+        }
+        if (kind && !MDPutDelimiter(stateP, &outPos, kind)) {
+            return TE_EXPORT_ERROR;
+        }
+        while (inPos < runEnd) {
+            if (!MDPutChar(stateP, &outPos,
+                           (byte)stateP->line[inPos++])) {
+                return TE_EXPORT_ERROR;
+            }
+        }
+        if (kind && !MDPutDelimiter(stateP, &outPos, kind)) {
+            return TE_EXPORT_ERROR;
+        }
+    }
+    if (!MDPutByte(stateP, &outPos, C_CR) ||
+        !MDPutByte(stateP, &outPos, C_LF)) {
+        return TE_EXPORT_ERROR;
+    }
+    return MDWrite(stateP->output, stateP->rendered, outPos);
+}
+
+TransError MDExportObject(MDExportState *stateP)
+{
+    TextReference reference;
+    dword size;
+    dword base;
+    dword end;
+    dword pulled;
+    word length;
+    TransError error;
+
+    size = @call stateP->textObj::MSG_VIS_TEXT_GET_TEXT_SIZE();
+    base = 0;
+    reference.TR_type = TRT_POINTER;
+    reference.TR_ref.TRU_pointer.TRP_pointer = stateP->line;
+    while (base < size) {
+        end = base + MD_EXPORT_LINE - 1;
+        if (end > size) {
+            end = size;
+        }
+        pulled = @call stateP->textObj::MSG_VIS_TEXT_GET_TEXT_RANGE(
+            0, reference, end, base);
+        if (pulled == 0) return TE_EXPORT_ERROR;
+        length = 0;
+        while (length < (word)pulled && stateP->line[length] != C_CR) {
+            ++length;
+        }
+        if (length == (word)pulled && base + pulled < size) {
+            return TE_EXPORT_ERROR;
+        }
+        error = MDRenderLine(stateP, base, length);
+        if (error != TE_NO_ERROR) return error;
+        base += length;
+        if (base < size && stateP->line[length] == C_CR) ++base;
+    }
+    return TE_NO_ERROR;
+}
+
+TransError _far _pascal MDExport(ExportFrame *frameP)
+{
+    MemHandle stateH;
+    MDExportState *stateP;
+    optr textObj;
+    TransError error;
+    TextTransferBlockHeader *headerP;
+    LMemBlockHeader *elementsP;
+    MemHandle headerH;
+    VMBlockHandle charRuns;
+    VMBlockHandle charElements;
+    word count;
+    word size;
+
+    stateH = MemAlloc(sizeof(MDExportState), HF_DYNAMIC,
+                      HAF_ZERO_INIT | HAF_LOCK);
+    if (stateH == NullHandle) return TE_OUT_OF_MEMORY;
+    stateP = (MDExportState *)MemDeref(stateH);
+    textObj = TextAllocClipboardObject(frameP->EF_transferVMFile,
+        VTSF_MULTIPLE_CHAR_ATTRS | VTSF_MULTIPLE_PARA_ATTRS, 0);
+    if (!textObj) {
+        MemUnlock(stateH);
+        MemFree(stateH);
+        return TE_OUT_OF_MEMORY;
+    }
+    @call textObj::MSG_VIS_TEXT_REPLACE_WITH_TEXT_TRANSFER_FORMAT(
+        VMCHAIN_GET_VM_BLOCK(frameP->EF_transferVMChain),
+        frameP->EF_transferVMFile, 0, 0, 0);
+    stateP->textObj = textObj;
+    stateP->output = frameP->EF_outputFile;
+    stateP->vmFile = frameP->EF_transferVMFile;
+    headerP = VMLock(stateP->vmFile,
+        VMCHAIN_GET_VM_BLOCK(frameP->EF_transferVMChain), &headerH);
+    charRuns = VMCHAIN_GET_VM_BLOCK(headerP->TTBH_charAttrRuns);
+    charElements = VMCHAIN_GET_VM_BLOCK(headerP->TTBH_charAttrElements);
+    VMUnlock(headerH);
+    if (charRuns != NullHandle && charElements != NullHandle) {
+        elementsP = VMLock(stateP->vmFile, charElements,
+                           &stateP->charElementsH);
+        stateP->charElementArray =
+            ConstructOptr(stateP->charElementsH, elementsP->LMBH_offset);
+        count = HugeArrayLock(stateP->vmFile, charRuns, 0,
+                              (void **)&stateP->nextRunP, &size);
+        if (count != 0) {
+            stateP->currentToken = stateP->nextRunP->TRAE_token;
+            count = HugeArrayNext((void **)&stateP->nextRunP, &size);
+            stateP->attrsValid = (count != 0);
+        }
+    }
+    MDInitUnicode(stateP);
+    error = MDExportObject(stateP);
+    if (stateP->nextRunP != (void *)0) {
+        HugeArrayUnlock(stateP->nextRunP);
+    }
+    if (stateP->charElementsH != NullHandle) {
+        VMUnlock(stateP->charElementsH);
+    }
+    TextFinishWithClipboardObject(textObj, TCO_RETURN_NOTHING,
+        HandleToOptr(GeodeGetProcessHandle()), "");
+    MemUnlock(stateH);
+    MemFree(stateH);
+    return error;
+}

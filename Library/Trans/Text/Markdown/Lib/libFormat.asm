@@ -52,7 +52,8 @@ DefTransFormat	TF_ASCII, \
 		"*.md", \
 		0, \
 		0, \
-		<mask IFI_IMPORT_CAPABLE>
+		<mask IFI_IMPORT_CAPABLE or \
+		 mask IFI_EXPORT_CAPABLE>
 CheckHack < TF_ASCII eq IDSF_ASCII >
 endif
 

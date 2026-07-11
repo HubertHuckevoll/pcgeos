@@ -1,7 +1,7 @@
 # PC/GEOS Markdown Translator
 
-This is an import-only Markdown translator for SBCS PC/GEOS Ensemble.
-It appears in GeoWrite as Markdown and accepts .md and .markdown files.
+This is a Markdown import and export translator for SBCS PC/GEOS Ensemble.
+It appears in GeoWrite as Markdown and accepts .md files.
 
 The importer reads UTF-8 source text. An initial UTF-8 BOM is ignored. Unicode
 characters are mapped through the installed HTML character mapper; malformed
@@ -15,6 +15,17 @@ Supported Markdown is deliberately small:
 - block quotes
 - horizontal rules
 - links rendered as label (url)
+
+Export is optimized for documents produced by this importer. It writes UTF-8
+and conservatively recovers headings, isolated bold and italic runs, inline
+code, and the importer's bullet and ordered-list prefixes. Formatting that
+cannot be represented safely is written as plain text. Converted links,
+quote wrappers, and horizontal-rule text remain visible text rather than
+being guessed back into lost structure.
+
+Heading levels 1 through 6 use the point-size selector's standard 24, 18, 14,
+12, 10, and 9 point sizes. Existing documents imported with older translator
+versions must be imported again to acquire these sizes.
 
 Unmatched delimiters are imported literally. Nested blocks, tables, fenced
 code blocks, and full CommonMark behavior are not supported. A logical input
