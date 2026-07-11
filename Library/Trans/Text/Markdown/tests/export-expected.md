@@ -8,4 +8,4 @@ Normal **bold**, *italic*, and `code`.
 
 Unsafe *bold* marker
 Combined style
-" A quoted paragraph. "
+> A quoted paragraph.

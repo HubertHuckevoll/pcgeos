@@ -145,13 +145,13 @@ word MDAttrKind(VisTextCharAttr *attrP)
 
 word MDHeadingFromSize(word size)
 {
-    static const byte sizes[] = {24, 18, 14, 12, 10, 9};
-    word level;
-
-    for (level = 0; level < 6; ++level) {
-        if (size == sizes[level]) {
-            return level + 1;
-        }
+    switch (size) {
+    case 24: return 1;
+    case 18: return 2;
+    case 14: return 3;
+    case 12: return 4;
+    case 10: return 5;
+    case 9: return 6;
     }
     return 0;
 }
@@ -191,6 +191,7 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length)
     VisTextCharAttr *attrP;
     word heading;
     word headingSize;
+    word textEnd;
     word inPos;
     word outPos;
     word runEnd;
@@ -207,8 +208,6 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length)
             heading = 0;
         } else if (headingSize == 0) {
             headingSize = attrP->VTCA_pointSize.WBF_int;
-        } else if (headingSize != attrP->VTCA_pointSize.WBF_int) {
-            heading = 0;
         }
     }
     heading = heading ? MDHeadingFromSize(headingSize) : 0;
@@ -227,12 +226,27 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length)
     }
     quote = (length >= 4 && stateP->line[0] == '"' &&
              stateP->line[1] == ' ' && stateP->line[length - 1] == '"');
-    while (inPos < length) {
+    if (quote) {
+        for (runEnd = 0; runEnd < length; ++runEnd) {
+            if (!(stateP->kinds[runEnd] & MD_KIND_ITALIC)) {
+                quote = FALSE;
+                break;
+            }
+        }
+    }
+    textEnd = length;
+    if (quote) {
+        if (!MDPutByte(stateP, &outPos, '>') ||
+            !MDPutByte(stateP, &outPos, ' ')) return TE_EXPORT_ERROR;
+        inPos = 2;
+        textEnd = length - 1;
+    }
+    while (inPos < textEnd) {
         kind = stateP->kinds[inPos];
         if (quote) kind &= ~MD_KIND_ITALIC;
         if (heading) kind &= ~MD_KIND_BOLD;
         runEnd = inPos + 1;
-        while (runEnd < length) {
+        while (runEnd < textEnd) {
             nextKind = stateP->kinds[runEnd];
             if (quote) nextKind &= ~MD_KIND_ITALIC;
             if (heading) nextKind &= ~MD_KIND_BOLD;
