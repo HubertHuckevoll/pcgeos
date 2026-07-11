@@ -22,7 +22,9 @@ code, and the importer's bullet and ordered-list prefixes. Formatting that
 cannot be represented safely is written as plain text. Converted links,
 and horizontal-rule text remain visible text rather than being guessed back
 into lost structure. The importer's italic quoted-paragraph wrapper is
-recognized and exported with `> ` again.
+recognized and exported with `> ` again, including wrappers split across
+consecutive lines. Multiline recovery requires every line in the balanced
+wrapper to remain italic; otherwise the original text is exported unchanged.
 
 Heading levels 1 through 6 use the point-size selector's standard 24, 18, 14,
 12, 10, and 9 point sizes. Existing documents imported with older translator

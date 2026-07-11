@@ -25,6 +25,7 @@ typedef struct {
     TextRunArrayElement *nextRunP;
     word currentToken;
     Boolean attrsValid;
+    Boolean quote;
 } MDExportState;
 
 TransError MDWrite(FileHandle output, const char *dataP, word length)
@@ -186,7 +187,82 @@ Boolean MDPutDelimiter(MDExportState *stateP, word *posP, word kind)
     return MDPutByte(stateP, posP, '*');
 }
 
-TransError MDRenderLine(MDExportState *stateP, dword base, word length)
+Boolean MDRangeItalic(MDExportState *stateP, dword start, dword end)
+{
+    VisTextCharAttr attrs;
+    VisTextCharAttrDiffs diffs;
+
+    if (start == end) {
+        return FALSE;
+    }
+    @call stateP->textObj::MSG_VIS_TEXT_GET_CHAR_ATTR(
+        0, &diffs, &attrs, end, start);
+    return (attrs.VTCA_textStyles & TS_ITALIC) &&
+           !(diffs.VTCAD_textStyles & TS_ITALIC);
+}
+
+Boolean MDLineEndsQuote(const char *lineP, word length)
+{
+    while (length != 0 &&
+           (lineP[length - 1] == ' ' || lineP[length - 1] == C_TAB)) {
+        --length;
+    }
+    return length != 0 && lineP[length - 1] == '"';
+}
+
+Boolean MDQuoteRegionValid(MDExportState *stateP, dword base,
+                           word length, dword size)
+{
+    TextReference reference;
+    dword end;
+    dword pulled;
+
+    if (!MDRangeItalic(stateP, base, base + length)) {
+        return FALSE;
+    }
+    if (MDLineEndsQuote(stateP->line, length)) {
+        return TRUE;
+    }
+    base += length;
+    if (base < size) {
+        ++base;
+    }
+    reference.TR_type = TRT_POINTER;
+    reference.TR_ref.TRU_pointer.TRP_pointer = stateP->rendered;
+    while (base < size) {
+        end = base + MD_EXPORT_LINE - 1;
+        if (end > size) {
+            end = size;
+        }
+        pulled = @call stateP->textObj::MSG_VIS_TEXT_GET_TEXT_RANGE(
+            0, reference, end, base);
+        if (pulled == 0) {
+            return FALSE;
+        }
+        length = 0;
+        while (length < (word)pulled && stateP->rendered[length] != C_CR) {
+            ++length;
+        }
+        if (length == 0 ||
+            !MDRangeItalic(stateP, base, base + length)) {
+            return FALSE;
+        }
+        if (MDLineEndsQuote(stateP->rendered, length)) {
+            return TRUE;
+        }
+        if (length == (word)pulled && base + pulled < size) {
+            return FALSE;
+        }
+        base += length;
+        if (base < size) {
+            ++base;
+        }
+    }
+    return FALSE;
+}
+
+TransError MDRenderLine(MDExportState *stateP, dword base, word length,
+                        dword size)
 {
     VisTextCharAttr *attrP;
     word heading;
@@ -197,7 +273,7 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length)
     word runEnd;
     word kind;
     word nextKind;
-    Boolean quote;
+    Boolean quoteEnd;
 
     headingSize = 0;
     heading = (length != 0);
@@ -224,31 +300,57 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length)
             !MDPutByte(stateP, &outPos, ' ')) return TE_EXPORT_ERROR;
         inPos = 2;
     }
-    quote = (length >= 4 && stateP->line[0] == '"' &&
-             stateP->line[1] == ' ' && stateP->line[length - 1] == '"');
-    if (quote) {
-        for (runEnd = 0; runEnd < length; ++runEnd) {
-            if (!(stateP->kinds[runEnd] & MD_KIND_ITALIC)) {
-                quote = FALSE;
-                break;
+    textEnd = length;
+    quoteEnd = FALSE;
+    if (!heading && !stateP->quote) {
+        while (inPos < length &&
+               (stateP->line[inPos] == ' ' ||
+                stateP->line[inPos] == C_TAB)) {
+            ++inPos;
+        }
+        if (inPos < length && stateP->line[inPos] == '"' &&
+            MDQuoteRegionValid(stateP, base, length, size)) {
+            stateP->quote = TRUE;
+            ++inPos;
+            if (inPos < length && stateP->line[inPos] == ' ') {
+                ++inPos;
             }
+        } else {
+            inPos = 0;
+        }
+    } else if (stateP->quote) {
+        while (inPos < length &&
+               (stateP->line[inPos] == ' ' ||
+                stateP->line[inPos] == C_TAB)) {
+            ++inPos;
         }
     }
-    textEnd = length;
-    if (quote) {
+    if (stateP->quote) {
         if (!MDPutByte(stateP, &outPos, '>') ||
             !MDPutByte(stateP, &outPos, ' ')) return TE_EXPORT_ERROR;
-        inPos = 2;
-        textEnd = length - 1;
+        while (textEnd > inPos &&
+               (stateP->line[textEnd - 1] == ' ' ||
+                stateP->line[textEnd - 1] == C_TAB)) {
+            --textEnd;
+        }
+        if (textEnd > inPos && stateP->line[textEnd - 1] == '"') {
+            --textEnd;
+            while (textEnd > inPos &&
+                   (stateP->line[textEnd - 1] == ' ' ||
+                    stateP->line[textEnd - 1] == C_TAB)) {
+                --textEnd;
+            }
+            quoteEnd = TRUE;
+        }
     }
     while (inPos < textEnd) {
         kind = stateP->kinds[inPos];
-        if (quote) kind &= ~MD_KIND_ITALIC;
+        if (stateP->quote) kind &= ~MD_KIND_ITALIC;
         if (heading) kind &= ~MD_KIND_BOLD;
         runEnd = inPos + 1;
         while (runEnd < textEnd) {
             nextKind = stateP->kinds[runEnd];
-            if (quote) nextKind &= ~MD_KIND_ITALIC;
+            if (stateP->quote) nextKind &= ~MD_KIND_ITALIC;
             if (heading) nextKind &= ~MD_KIND_BOLD;
             if (nextKind != kind) break;
             ++runEnd;
@@ -276,6 +378,9 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length)
     if (!MDPutByte(stateP, &outPos, C_CR) ||
         !MDPutByte(stateP, &outPos, C_LF)) {
         return TE_EXPORT_ERROR;
+    }
+    if (quoteEnd) {
+        stateP->quote = FALSE;
     }
     return MDWrite(stateP->output, stateP->rendered, outPos);
 }
@@ -309,7 +414,7 @@ TransError MDExportObject(MDExportState *stateP)
         if (length == (word)pulled && base + pulled < size) {
             return TE_EXPORT_ERROR;
         }
-        error = MDRenderLine(stateP, base, length);
+        error = MDRenderLine(stateP, base, length, size);
         if (error != TE_NO_ERROR) return error;
         base += length;
         if (base < size && stateP->line[length] == C_CR) ++base;
