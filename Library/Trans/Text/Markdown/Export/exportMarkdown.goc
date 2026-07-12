@@ -302,7 +302,7 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length,
     }
     textEnd = length;
     quoteEnd = FALSE;
-    if (!heading && !stateP->quote) {
+    if (!heading && inPos == 0 && !stateP->quote) {
         while (inPos < length &&
                (stateP->line[inPos] == ' ' ||
                 stateP->line[inPos] == C_TAB)) {
