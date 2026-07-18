@@ -1,16 +1,71 @@
 @include <stdapp.goh>
+#define MD_USE_IMPGRAPH 0
+
+#if MD_USE_IMPGRAPH
+/* Retain the ImpGraph loader for later multi-format support. */
+#include <awatcher.h>
+#include <fileEnum.h>
+#include <htmldrv.h>
+#include <library.h>
+#include <resource.h>
+#endif
+#include <file.h>
+#include <gstring.h>
+#include <graphics.h>
+#include <pnglib.h>
 #include <xlatLib.h>
 @include <html4par.goh>
+#include <string.h>
+#include <vm.h>
 
 #define MD_MAX_LINE 2048
 #define MD_MAX_INPUT (MD_MAX_LINE - 5)
 #define MD_MAX_OUTPUT 4096
 #define MD_READ_SIZE 512
 #define MD_MAX_RUNS 96
+#define MD_MAX_IMAGES 32
+/* ATTENTION: these bounds keep oversized decoded images out of the document;
+ * pre-decode IHDR validation is the upgrade path for tighter resource limits.
+ */
+#define MD_MAX_IMAGE_DIMENSION 2048
+#define MD_MAX_IMAGE_PIXELS 1048576UL
+#if MD_USE_IMPGRAPH
+#define MD_IMAGE_MEMORY_LIMIT 0x00400000UL
+#endif
 
 #define MD_STYLE_BOLD 0x0001
 #define MD_STYLE_ITALIC 0x0002
 #define MD_STYLE_CODE 0x0004
+
+typedef enum {
+    MD_WARNING_BAD_IMAGE_PATH = 1,
+    MD_WARNING_IMPGRAPH_LOAD_FAILED,
+    MD_WARNING_IMPGRAPH_ENTRY_MISSING,
+    MD_WARNING_SOURCE_PATH_FAILED,
+    MD_WARNING_RELATIVE_IMAGE_NOT_FOUND,
+    MD_WARNING_WATCHER_ALLOCATION_FAILED,
+    MD_WARNING_IMAGE_DECODE_FAILED,
+    MD_WARNING_IMAGE_RESULT_INVALID,
+    MD_WARNING_GSTRING_CREATION_FAILED,
+    MD_WARNING_GSTRING_RECORD_FAILED,
+    MD_WARNING_IMPGRAPH_FILE_NOT_FOUND,
+    MD_WARNING_IMPGRAPH_DEPENDENCY_NOT_FOUND,
+    MD_WARNING_IMPGRAPH_PROTOCOL_ERROR,
+    MD_WARNING_IMPGRAPH_LIBRARY_LOAD_ERROR,
+    MD_WARNING_IMPGRAPH_LIBRARY_INIT_ERROR,
+    MD_WARNING_IMPGRAPH_FILE_OPENED,
+    MD_WARNING_IMPGRAPH_LONG_NAME_NOT_FOUND,
+    MD_WARNING_IMPEX_PATH_CONFIRMED,
+    MD_WARNING_IMPEX_PATH_UNEXPECTED,
+    MD_WARNING_IMPEX_MARKDOWN_OPENED,
+    MD_WARNING_IMPEX_MARKDOWN_NOT_FOUND,
+    MD_WARNING_IMPGRAPH_DIRECT_PATH_FAILED,
+    MD_WARNING_IMPGRAPH_PATH_RESOLVE_FAILED,
+    MD_WARNING_IMPGRAPH_ENUM_FOUND,
+    MD_WARNING_IMPGRAPH_ENUM_NOT_FOUND,
+    MD_WARNING_MIME_ENUM_FOUND,
+    MD_WARNING_MIME_ENUM_NOT_FOUND
+} MDImageWarning;
 
 typedef struct {
     word start;
@@ -19,8 +74,26 @@ typedef struct {
 } MDRun;
 
 typedef struct {
+    word outputPos;
+    VMBlockHandle gstring;
+    XYSize size;
+} MDImage;
+
+#if MD_USE_IMPGRAPH
+typedef struct {
+    dword amount;
+    dword maximum;
+} MDAllocationWatcher;
+#endif
+
+typedef struct {
     FileHandle source;
+    ImportFrame *frameP;
     optr textObj;
+    VMFileHandle transferFile;
+#if MD_USE_IMPGRAPH
+    GeodeHandle imageLibrary;
+#endif
     word readPos;
     word readSize;
     byte pushed[3];
@@ -33,6 +106,8 @@ typedef struct {
     byte readBuffer[MD_READ_SIZE];
     MDRun runs[MD_MAX_RUNS];
     word runCount;
+    MDImage images[MD_MAX_IMAGES];
+    word imageCount;
     word heading;
     word headingStart;
     Boolean quote;
@@ -276,6 +351,475 @@ Boolean MDHasLink(const char *textP, word pos)
     return textP[pos] == ')';
 }
 
+Boolean MDFindImage(const char *textP, word pos, word *endP,
+                    word *pathStartP, word *pathEndP)
+{
+    if (textP[pos] != '!' || textP[pos + 1] != '[') {
+        return FALSE;
+    }
+    pos += 2;
+    while (textP[pos] != C_CR && textP[pos] != ']') {
+        ++pos;
+    }
+    if (textP[pos] != ']' || textP[pos + 1] != '(') {
+        return FALSE;
+    }
+    *pathStartP = pos + 2;
+    pos += 2;
+    while (textP[pos] != C_CR && textP[pos] != ')') {
+        ++pos;
+    }
+    if (textP[pos] != ')' || pos == *pathStartP) {
+        return FALSE;
+    }
+    *pathEndP = pos;
+    *endP = pos + 1;
+    return TRUE;
+}
+
+char MDLower(char value)
+{
+    if (value >= 'A' && value <= 'Z') {
+        value += 'a' - 'A';
+    }
+    return value;
+}
+
+word MDImageKind(const char *pathP)
+{
+    word length;
+    word index;
+    word dot;
+    word extensionLength;
+
+    length = strlen(pathP);
+    dot = length;
+    index = length;
+    while (index != 0) {
+        --index;
+        if (pathP[index] == '/' || pathP[index] == '\\') {
+            break;
+        }
+        if (pathP[index] == '.') {
+            dot = index;
+            break;
+        }
+    }
+    if (dot == length) {
+        return 0;
+    }
+    extensionLength = length - dot - 1;
+    if (extensionLength == 3 &&
+        MDLower(pathP[dot + 1]) == 'p' &&
+        MDLower(pathP[dot + 2]) == 'n' &&
+        MDLower(pathP[dot + 3]) == 'g') {
+        return 1;
+    }
+#if MD_USE_IMPGRAPH
+    /* Retain the ImpGraph formats for later multi-format support. */
+    if (extensionLength == 3 &&
+        MDLower(pathP[dot + 1]) == 'j' &&
+        MDLower(pathP[dot + 2]) == 'p' &&
+        MDLower(pathP[dot + 3]) == 'g') {
+        return 2;
+    }
+    if (extensionLength == 4 &&
+        MDLower(pathP[dot + 1]) == 'j' &&
+        MDLower(pathP[dot + 2]) == 'p' &&
+        MDLower(pathP[dot + 3]) == 'e' &&
+        MDLower(pathP[dot + 4]) == 'g') {
+        return 2;
+    }
+#endif
+    return 0;
+}
+
+Boolean MDMakeImagePath(const char *textP, word start, word end,
+                        PathName pathP)
+{
+    word index;
+    word length;
+    char value;
+
+    length = end - start;
+    if (length == 0 || length >= sizeof(PathName)) {
+        return FALSE;
+    }
+    for (index = 0; index < length; ++index) {
+        value = textP[start + index];
+        if (value == '/') {
+            value = '\\';
+        }
+        if (index == 0 && (value == '\\' || value == ':')) {
+            return FALSE;
+        }
+        if (value == ':') {
+            return FALSE;
+        }
+        pathP[index] = value;
+    }
+    pathP[length] = C_NULL;
+    return TRUE;
+}
+
+#if MD_USE_IMPGRAPH
+/* Retain the ImpGraph discovery code for later multi-format support. */
+void MDWarnImpGraphEnumerated(void)
+{
+    EC_WARNING(MD_WARNING_IMPGRAPH_ENUM_FOUND);
+}
+
+void MDWarnImpGraphNotEnumerated(void)
+{
+    EC_WARNING(MD_WARNING_IMPGRAPH_ENUM_NOT_FOUND);
+}
+
+void MDWarnMimeDriversEnumerated(void)
+{
+    EC_WARNING(MD_WARNING_MIME_ENUM_FOUND);
+}
+
+void MDWarnMimeDriversNotEnumerated(void)
+{
+    EC_WARNING(MD_WARNING_MIME_ENUM_NOT_FOUND);
+}
+
+GeodeHandle MDLoadImageLibrary(GeodeLoadError *loadErrorP)
+{
+    GeodeToken mimeToken = {{MIME_DRV_TOKEN}, MIME_DRV_MFID};
+    FileEnumParams enumParams;
+    FileExtAttrDesc matchAttrs[2];
+    MemHandle fileListH;
+    char *fileNameP;
+    char permName[GEODE_NAME_SIZE];
+    GeodeHandle libraryH;
+    word found;
+    word notHandled;
+
+    memset(&enumParams, 0, sizeof(enumParams));
+    memset(matchAttrs, 0, sizeof(matchAttrs));
+
+    matchAttrs[0].FEAD_attr = FEA_TOKEN;
+    matchAttrs[0].FEAD_value = &mimeToken;
+    matchAttrs[0].FEAD_size = sizeof(mimeToken);
+    matchAttrs[1].FEAD_attr = FEA_END_OF_LIST;
+
+    enumParams.FEP_searchFlags = FESF_GEOS_EXECS;
+    enumParams.FEP_returnAttrs = (void *)FESRT_NAME;
+    enumParams.FEP_returnSize = FILE_LONGNAME_BUFFER_SIZE;
+    enumParams.FEP_matchAttrs = matchAttrs;
+    enumParams.FEP_bufSize = FE_BUFSIZE_UNLIMITED;
+    fileListH = NullHandle;
+    notHandled = 0;
+    found = FileEnum(&enumParams, &fileListH, &notHandled);
+    if (found == 0 || fileListH == NullHandle) {
+        MDWarnMimeDriversNotEnumerated();
+        *loadErrorP = GLE_FILE_NOT_FOUND;
+        return NullHandle;
+    }
+    MDWarnMimeDriversEnumerated();
+
+    fileNameP = (char *)MemLock(fileListH);
+    libraryH = NullHandle;
+    while (found-- != 0) {
+        *loadErrorP = (GeodeLoadError)-1;
+        libraryH = GeodeUseLibrary(fileNameP,
+                                   MIME_DRV_PROTOMAJOR, MIME_DRV_PROTOMINOR,
+                                   loadErrorP);
+        if (libraryH != NullHandle &&
+            *loadErrorP == (GeodeLoadError)-1) {
+            GeodeGetInfo(libraryH, GGIT_PERM_NAME_ONLY, permName);
+            if (memcmp(permName, "impgraph", GEODE_NAME_SIZE) == 0) {
+                MDWarnImpGraphEnumerated();
+                break;
+            }
+            GeodeFreeLibrary(libraryH);
+        }
+        libraryH = NullHandle;
+        fileNameP += sizeof(FileLongName);
+    }
+    MemUnlock(fileListH);
+    MemFree(fileListH);
+    if (libraryH == NullHandle) {
+        MDWarnImpGraphNotEnumerated();
+        *loadErrorP = GLE_FILE_NOT_FOUND;
+    }
+    return libraryH;
+}
+#endif
+
+Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
+                      VMBlockHandle *gstringP, XYSize *sizeP)
+{
+    PathName imagePath;
+#if MD_USE_IMPGRAPH
+    TCHAR mimeType[12];
+    MDAllocationWatcher *watcherP;
+    AllocWatcherHandle watcherH;
+    entry_MimeDrvGraphicEx *entryP;
+    ImageAdditionalData iad;
+    MimeStatus mimeStatus;
+    GeodeLoadError loadError;
+    dword usedMem;
+#else
+    pngAlphaTransformData alphaTransform;
+    XYValueAsDWord bitmapSize;
+#endif
+    VMBlockHandle bitmapBlock;
+    VMBlockHandle gstringBlock;
+    GStateHandle gstate;
+    GStringErrorType gstringError;
+    FileHandle testFile;
+    word kind;
+
+    if (!MDMakeImagePath(stateP->input, pathStart, pathEnd, imagePath)) {
+        EC_WARNING(MD_WARNING_BAD_IMAGE_PATH);
+        return FALSE;
+    }
+    kind = MDImageKind((char *)imagePath);
+    if (kind == 0) {
+        return FALSE;
+    }
+#if MD_USE_IMPGRAPH
+    /* Retain the ImpGraph loader and dispatch for later format support. */
+    if (kind == 1) {
+        strcpy((char *)mimeType, "image/png");
+    } else {
+        strcpy((char *)mimeType, "image/jpeg");
+    }
+
+    if (stateP->imageLibrary == NullHandle) {
+        FilePushDir();
+        if (!FileSetCurrentPath(SP_IMPORT_EXPORT_DRIVERS, ".")) {
+            EC_WARNING(MD_WARNING_IMPGRAPH_DIRECT_PATH_FAILED);
+            stateP->imageLibrary = NullHandle;
+            loadError = GLE_FILE_NOT_FOUND;
+        } else {
+            stateP->imageLibrary = MDLoadImageLibrary(&loadError);
+        }
+        FilePopDir();
+        if (stateP->imageLibrary == NullHandle) {
+            if (loadError == GLE_FILE_NOT_FOUND) {
+                EC_WARNING(MD_WARNING_IMPGRAPH_FILE_NOT_FOUND);
+                return FALSE;
+            }
+            if (loadError == GLE_LIBRARY_NOT_FOUND) {
+                EC_WARNING(MD_WARNING_IMPGRAPH_DEPENDENCY_NOT_FOUND);
+                return FALSE;
+            }
+            if (loadError == GLE_LIBRARY_PROTOCOL_ERROR ||
+                loadError == GLE_PROTOCOL_IMPORTER_TOO_RECENT ||
+                loadError == GLE_PROTOCOL_IMPORTER_TOO_OLD) {
+                EC_WARNING(MD_WARNING_IMPGRAPH_PROTOCOL_ERROR);
+                return FALSE;
+            }
+            if (loadError == GLE_LIBRARY_LOAD_ERROR) {
+                EC_WARNING(MD_WARNING_IMPGRAPH_LIBRARY_LOAD_ERROR);
+                return FALSE;
+            }
+            if (loadError == GLE_LIBRARY_INIT_ERROR) {
+                EC_WARNING(MD_WARNING_IMPGRAPH_LIBRARY_INIT_ERROR);
+                return FALSE;
+            }
+            EC_WARNING(MD_WARNING_IMPGRAPH_LOAD_FAILED);
+            return FALSE;
+        }
+    }
+    entryP = ProcGetLibraryEntry(stateP->imageLibrary,
+                                 MIME_ENTRY_GRAPHIC_EX);
+    if (entryP == (void *)0) {
+        EC_WARNING(MD_WARNING_IMPGRAPH_ENTRY_MISSING);
+        return FALSE;
+    }
+#endif
+
+    FilePushDir();
+    if (!FileSetCurrentPath(stateP->frameP->IF_sourcePathDisk,
+                            stateP->frameP->IF_sourcePathName)) {
+        EC_WARNING(MD_WARNING_SOURCE_PATH_FAILED);
+        FilePopDir();
+        return FALSE;
+    }
+    testFile = FileOpen(imagePath, FILE_ACCESS_R | FILE_DENY_W);
+    if (testFile == NullHandle) {
+        EC_WARNING(MD_WARNING_RELATIVE_IMAGE_NOT_FOUND);
+        FilePopDir();
+        return FALSE;
+    }
+#if MD_USE_IMPGRAPH
+    FileClose(testFile, TRUE);
+
+    /* ATTENTION: ImpGraph expects the private two-dword watcher layout but
+     * does not export its lifecycle API.  A public ImpGraph watcher entry is
+     * the upgrade path if that layout ever changes.
+     */
+    watcherH = MemAlloc(sizeof(MDAllocationWatcher),
+                        HF_SHARABLE | HF_SWAPABLE,
+                        HAF_ZERO_INIT | HAF_LOCK);
+    if (watcherH == NullWatcher) {
+        EC_WARNING(MD_WARNING_WATCHER_ALLOCATION_FAILED);
+        FilePopDir();
+        return FALSE;
+    }
+    watcherP = (MDAllocationWatcher *)MemDeref(watcherH);
+    watcherP->amount = MD_IMAGE_MEMORY_LIMIT;
+    watcherP->maximum = MD_IMAGE_MEMORY_LIMIT;
+    MemUnlock(watcherH);
+    memset(&iad, 0, sizeof(iad));
+    memset(&mimeStatus, 0, sizeof(mimeStatus));
+    usedMem = 0;
+    bitmapBlock =
+        ((pcfm_MimeDrvGraphicEx *)ProcCallFixedOrMovable_pascal)(
+            mimeType, imagePath, stateP->transferFile, &iad,
+            MIME_RES_UNKNOWN, watcherH, &usedMem, &mimeStatus, 0,
+            MIME_GREX_NO_ANIMATIONS | MIME_GREX_NO_SCANLINE_COMPRESS,
+            entryP);
+    MemFree(watcherH);
+#else
+    alphaTransform.method = PNG_AT_TRESHOLD;
+    alphaTransform.alphaThreshold = 128;
+    alphaTransform.blendColor.RGB_red = 255;
+    alphaTransform.blendColor.RGB_green = 255;
+    alphaTransform.blendColor.RGB_blue = 255;
+    bitmapBlock = pngImportConvertFile(testFile, stateP->transferFile,
+                                       &alphaTransform);
+    FileClose(testFile, TRUE);
+#endif
+    FilePopDir();
+
+#if MD_USE_IMPGRAPH
+    if (bitmapBlock == NullHandle || iad.IAD_type != IAD_TYPE_BITMAP ||
+        iad.IAD_size.XYS_width == 0 || iad.IAD_size.XYS_height == 0 ||
+        iad.IAD_size.XYS_width > MD_MAX_IMAGE_DIMENSION ||
+        iad.IAD_size.XYS_height > MD_MAX_IMAGE_DIMENSION ||
+        (dword)iad.IAD_size.XYS_width *
+               (dword)iad.IAD_size.XYS_height > MD_MAX_IMAGE_PIXELS) {
+        if (bitmapBlock == NullHandle) {
+            EC_WARNING(MD_WARNING_IMAGE_DECODE_FAILED);
+        } else {
+            EC_WARNING(MD_WARNING_IMAGE_RESULT_INVALID);
+        }
+        if (bitmapBlock != NullHandle) {
+            VMFreeVMChain(stateP->transferFile,
+                          VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+        }
+        return FALSE;
+    }
+#else
+    if (bitmapBlock == NullHandle) {
+        EC_WARNING(MD_WARNING_IMAGE_DECODE_FAILED);
+        return FALSE;
+    }
+    bitmapSize = GrGetHugeBitmapSize(stateP->transferFile, bitmapBlock);
+    sizeP->XYS_width = (word)bitmapSize;
+    sizeP->XYS_height = (word)(bitmapSize >> 16);
+    if (sizeP->XYS_width == 0 || sizeP->XYS_height == 0 ||
+        sizeP->XYS_width > MD_MAX_IMAGE_DIMENSION ||
+        sizeP->XYS_height > MD_MAX_IMAGE_DIMENSION ||
+        (dword)sizeP->XYS_width * (dword)sizeP->XYS_height >
+            MD_MAX_IMAGE_PIXELS) {
+        EC_WARNING(MD_WARNING_IMAGE_RESULT_INVALID);
+        VMFreeVMChain(stateP->transferFile,
+                      VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+        return FALSE;
+    }
+#endif
+
+    gstate = GrCreateGString(stateP->transferFile, GST_VMEM,
+                             &gstringBlock);
+    if (!gstate || gstringBlock == NullHandle) {
+        EC_WARNING(MD_WARNING_GSTRING_CREATION_FAILED);
+        if (bitmapBlock != NullHandle) {
+            VMFreeVMChain(stateP->transferFile,
+                          VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+        }
+        return FALSE;
+    }
+#if MD_USE_IMPGRAPH
+    GrSetGStringBounds(gstate, 0, 0, iad.IAD_size.XYS_width,
+                       iad.IAD_size.XYS_height);
+#else
+    GrSetGStringBounds(gstate, 0, 0, sizeP->XYS_width,
+                       sizeP->XYS_height);
+#endif
+    GrDrawHugeBitmap(gstate, 0, 0, stateP->transferFile, bitmapBlock);
+    gstringError = GrEndGString(gstate);
+    if (gstringError != GSET_NO_ERROR) {
+        GrDestroyGString(gstate, 0, GSKT_KILL_DATA);
+        VMFreeVMChain(stateP->transferFile,
+                      VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+        EC_WARNING(MD_WARNING_GSTRING_RECORD_FAILED);
+        return FALSE;
+    }
+    GrDestroyGString(gstate, 0, GSKT_LEAVE_DATA);
+    VMFreeVMChain(stateP->transferFile,
+                  VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+    *gstringP = gstringBlock;
+#if MD_USE_IMPGRAPH
+    *sizeP = iad.IAD_size;
+#endif
+    return TRUE;
+}
+
+void MDDiscardImages(MDState *stateP)
+{
+    word index;
+
+    for (index = 0; index < stateP->imageCount; ++index) {
+        if (stateP->images[index].gstring != NullHandle) {
+            VMFreeVMChain(stateP->transferFile,
+                VMCHAIN_MAKE_FROM_VM_BLOCK(stateP->images[index].gstring));
+        }
+    }
+    stateP->imageCount = 0;
+}
+
+void MDInsertImages(MDState *stateP, dword base)
+{
+    word index;
+    word insertedCount = 0;
+    VisTextGraphic graphic;
+    dword insertPos;
+    dword textSizeBefore;
+
+    for (index = 0; index < stateP->imageCount; ++index) {
+        memset(&graphic, 0, sizeof(graphic));
+        graphic.VTG_type = VTGT_GSTRING;
+        graphic.VTG_size = stateP->images[index].size;
+        graphic.VTG_vmChain = VMCHAIN_MAKE_FROM_VM_BLOCK(
+            stateP->images[index].gstring);
+        graphic.VTG_data.VTGD_gstring.VTGG_tmatrix.TM_e11.WWF_int = 1;
+        graphic.VTG_data.VTGD_gstring.VTGG_tmatrix.TM_e22.WWF_int = 1;
+        /* REPLACE_WITH_GRAPHIC inserts C_GRAPHIC itself.  Each earlier image
+         * has shifted the insertion point by one character.
+         */
+        insertPos = base + stateP->images[index].outputPos + insertedCount;
+        textSizeBefore =
+            @call stateP->textObj::MSG_VIS_TEXT_GET_TEXT_SIZE();
+        @call stateP->textObj::MSG_VIS_TEXT_REPLACE_WITH_GRAPHIC(
+            graphic, stateP->transferFile, 0, insertPos, insertPos);
+        if (@call stateP->textObj::MSG_VIS_TEXT_GET_TEXT_SIZE() ==
+            textSizeBefore + 1) {
+            ++insertedCount;
+        }
+        VMFreeVMChain(stateP->transferFile,
+            VMCHAIN_MAKE_FROM_VM_BLOCK(stateP->images[index].gstring));
+        stateP->images[index].gstring = NullHandle;
+    }
+    stateP->imageCount = 0;
+}
+
+Boolean MDPutInputRange(MDState *stateP, word *outPosP,
+                        word start, word end)
+{
+    while (start < end) {
+        if (!MDPut(stateP, outPosP, stateP->input[start++])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 Boolean MDIsRule(const char *textP)
 {
     word pos;
@@ -312,8 +856,12 @@ TransError MDParseLine(MDState *stateP, word *lengthP)
     word savedOut;
     word width;
     word style;
+    word imageEnd;
+    word pathStart;
+    word pathEnd;
     char delimiter;
     char value;
+    MDImage *imageP;
 
     inPos = 0;
     outPos = 0;
@@ -409,6 +957,26 @@ TransError MDParseLine(MDState *stateP, word *lengthP)
                 inPos += width;
             }
             MDAddRun(stateP, start, outPos, style);
+            continue;
+        }
+        if (value == '!' && stateP->input[inPos + 1] == '[') {
+            if (MDFindImage(stateP->input, inPos, &imageEnd,
+                            &pathStart, &pathEnd)) {
+                if (stateP->imageCount < MD_MAX_IMAGES &&
+                    MDImportImage(stateP, pathStart, pathEnd,
+                                  &stateP->images[stateP->imageCount].gstring,
+                                  &stateP->images[stateP->imageCount].size)) {
+                    imageP = &stateP->images[stateP->imageCount++];
+                    imageP->outputPos = outPos;
+                } else if (!MDPutInputRange(stateP, &outPos,
+                                            inPos, imageEnd)) {
+                    return TE_IMPORT_ERROR;
+                }
+                inPos = imageEnd;
+            } else if (!MDPut(stateP, &outPos, stateP->input[inPos++]) ||
+                       !MDPut(stateP, &outPos, stateP->input[inPos++])) {
+                return TE_IMPORT_ERROR;
+            }
             continue;
         }
         if (value == '[' && MDHasLink(stateP->input, inPos)) {
@@ -520,7 +1088,7 @@ void MDApplyFormatting(MDState *stateP, dword base,
         TEXT_ADDRESS_PAST_END, TEXT_ADDRESS_PAST_END);
 }
 
-TransError _far _pascal MDReadAndImport(FileHandle source, optr textObj)
+TransError _far _pascal MDReadAndImport(ImportFrame *frameP, optr textObj)
 {
     MemHandle stateH;
     MDState *stateP;
@@ -535,8 +1103,10 @@ TransError _far _pascal MDReadAndImport(FileHandle source, optr textObj)
         return TE_OUT_OF_MEMORY;
     }
     stateP = (MDState *)MemDeref(stateH);
-    stateP->source = source;
+    stateP->source = frameP->IF_sourceFile;
+    stateP->frameP = frameP;
     stateP->textObj = textObj;
+    stateP->transferFile = frameP->IF_transferVMFile;
     error = MDSkipBOM(stateP);
     while (error == TE_NO_ERROR && !stateP->eof) {
         error = MDReadLine(stateP, &inputLength);
@@ -553,7 +1123,17 @@ TransError _far _pascal MDReadAndImport(FileHandle source, optr textObj)
          */
         @call textObj::MSG_VIS_TEXT_APPEND_PTR(stateP->output, outputLength);
         MDApplyFormatting(stateP, base, outputLength);
+        MDInsertImages(stateP, base);
     }
+    if (error != TE_NO_ERROR) {
+        MDDiscardImages(stateP);
+    }
+#if MD_USE_IMPGRAPH
+    /* ImpGraph is not loaded by the PNG-only importer. */
+    if (stateP->imageLibrary != NullHandle) {
+        GeodeFreeLibrary(stateP->imageLibrary);
+    }
+#endif
     MemUnlock(stateH);
     MemFree(stateH);
     return error;

@@ -70,12 +70,13 @@ REVISION HISTORY:
 TransImport	proc	far	uses	di, si, es
 DBCS <	dosCodePage	local	DosCodePage	; for text xlate	>
 textObj		local	optr
+framePtr	local	dword
 sourceFile	local	hptr
 vmFile		local	hptr
 
 		.enter
 EC <		cmp	ds:[si].IF_formatNumber, IDSF__last		>
-EC <		jae	badFormatNumber 				>
+EC <		LONG jae badFormatNumber 				>
 
 if DBCS_PCGEOS
 		mov	cx, CODE_PAGE_SJIS
@@ -86,8 +87,10 @@ setCodePage:
 		mov	ss:[dosCodePage], cx
 endif
 	;
-	; Save the source file handle.
+	; Save the ImportFrame pointer before TextAllocClipboardObject changes
+	; BX:SI.
 	;
+		movdw	ss:[framePtr], dssi
 		mov	ax, ds:[si].IF_sourceFile
 		mov	ss:[sourceFile], ax
 	;
@@ -96,26 +99,47 @@ endif
 		mov	bx, ds:[si].IF_transferVMFile
 		mov	ss:[vmFile], bx
 		mov	ax, mask VTSF_MULTIPLE_CHAR_ATTRS or \
-			    mask VTSF_MULTIPLE_PARA_ATTRS ; no regions
+			    mask VTSF_MULTIPLE_PARA_ATTRS or \
+			    mask VTSF_GRAPHICS		; no regions
 		call	TextAllocClipboardObject
 		movdw	textObj, bxsi
 		call	InitializeClipboardObject
 	;
 	; Read in text from file.
 	;
-		push	ss:[sourceFile]
+		push	word ptr ss:[framePtr+2]
+		push	word ptr ss:[framePtr]
 		push	word ptr ss:[textObj+2]
 		push	word ptr ss:[textObj]
 		call	MDREADANDIMPORT
 						; ax <- TransError or 0
 		tst	ax
-		jnz	error
+		LONG jnz error
 	;
-	; Get the transfer format.
+	; Create the transfer format through the text object so nested graphic
+	; VM chains are included in the transfer tree.
 	;
 		movdw	bxsi, ss:[textObj]
-		mov	ax, TCO_RETURN_TRANSFER_FORMAT
-		call	TextFinishWithClipboardObject
+		mov	cx, ss:[vmFile]
+		push	bp
+		mov	dx, size CommonTransferParams
+		sub	sp, dx
+		mov	bp, sp
+		movdw	ss:[bp].CTP_range.VTR_start, 0
+		movdw	ss:[bp].CTP_range.VTR_end, TEXT_ADDRESS_PAST_END
+		clr	ss:[bp].CTP_pasteFrame
+		mov	ss:[bp].CTP_vmFile, cx
+		clr	ss:[bp].CTP_vmBlock
+		mov	ax, MSG_VIS_TEXT_CREATE_TRANSFER_FORMAT
+		mov	di, mask MF_CALL or mask MF_STACK
+		call	ObjMessage			; ax <- transfer header
+		add	sp, size CommonTransferParams
+		pop	bp
+
+		push	ax
+		movdw	bxsi, ss:[textObj]
+		call	FreeClipboardObject
+		pop	ax
 	;
 	; Append a block with the PageSetupInfo structure to the
 	; transfer format.
@@ -140,12 +164,28 @@ EC <		jmp	done						>
 error:
 		push	ax			; save TransError
 		movdw	bxsi, ss:[textObj]
-		mov	ax, TCO_RETURN_NOTHING
-		call	TextFinishWithClipboardObject
+		call	FreeClipboardObject
 		pop	ax			; restore TransError
 		jmp	done
 
 TransImport		endp
+
+;---
+
+FreeClipboardObject	proc	near uses ax, bx, cx, dx, si, di, bp, ds, es
+		.enter
+
+		push	bx
+		mov	ax, MSG_VIS_TEXT_FREE_ALL_STORAGE
+		mov	cx, TRUE
+		mov	di, mask MF_CALL
+		call	ObjMessage
+		pop	bx
+		call	MemFree
+
+		.leave
+		ret
+FreeClipboardObject	endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

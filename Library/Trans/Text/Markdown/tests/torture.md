@@ -52,7 +52,14 @@ A [label](url)) leaves the extra closing parenthesis visible.
 
 Broken [missing](url and [label without a target].
 A space breaks [label] (url), and references [label][id] stay literal.
-Images ![alt text](image.png) are not supported as images.
+PNG images are supported when the local relative file exists:
+![PNG fixture](../../../../PngLib/testsuite/basn0g01.png)
+![unsupported JPEG fixture](../../../../../Tools/build/product/bbxensem/Privdata/Windemo/home/tigger.jpg)
+![missing fixture](missing-image.png)
+![remote fixture](https://example.com/image.png)
+![unsupported fixture](unsupported.gif)
+![absolute fixture](C:\image.png)
+![malformed fixture](missing.png
 Autolinks <https://example.com> and <mailto:test@example.com> stay literal.
 Escaped \[not a link](url) is still link-shaped to this parser.
 

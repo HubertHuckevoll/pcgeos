@@ -4,6 +4,8 @@
 
 Normal **bold**, *italic*, `code`, and [a link](https://example.com).
 
+![Sample landscape](sample.png)
+
 > A quoted paragraph.
 
 - first

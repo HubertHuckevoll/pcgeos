@@ -157,7 +157,9 @@ markdownImport.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h xlatLib.h product.h \
-                htmlfstr.h awatcher.h htmlopt.h
+                parallDr.h hugearr.h fileEnum.h pnglib.h Ansi/stdio.h \
+                Ansi/stdlib.h Ansi/string.h zlib.h zconf.h htmldrv.h \
+                product.h math.h htmlfstr.h awatcher.h htmlprog.h \
+                xlatLib.h htmlopt.h
 
-markdownEC.geo markdown.geo : geos.ldf ui.ldf text.ldf html4par.ldf 
+markdownEC.geo markdown.geo : geos.ldf ui.ldf text.ldf html4par.ldf ansic.ldf pnglib.ldf 

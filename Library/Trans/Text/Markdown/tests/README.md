@@ -10,6 +10,11 @@ tables, fences, HTML, and extensions. It is not a golden-output fixture. Its
 last three probe lines are exactly 2042, 2043, and 2044 ASCII characters; the
 first two should import and the last should report TE_IMPORT_ERROR.
 
+The image section in torture.md uses a checked-in PNG through a relative path.
+The PNG should render in the document; the JPEG and GIF probes, missing files,
+URLs, absolute paths, and oversized images should remain visible as literal
+Markdown.
+
 To test malformed UTF-8, create invalid-utf8.md from invalid-utf8.hex as raw
 bytes. It contains c3 28, which must import as ?( without aborting.
 

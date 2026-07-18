@@ -81,6 +81,15 @@ Boolean MDPutChar(MDExportState *stateP, word *posP, byte value)
 {
     word unicode;
 
+    if (value == C_GRAPHIC) {
+        return MDPutByte(stateP, posP, '[') &&
+               MDPutByte(stateP, posP, 'i') &&
+               MDPutByte(stateP, posP, 'm') &&
+               MDPutByte(stateP, posP, 'a') &&
+               MDPutByte(stateP, posP, 'g') &&
+               MDPutByte(stateP, posP, 'e') &&
+               MDPutByte(stateP, posP, ']');
+    }
     unicode = stateP->unicode[value];
     if (unicode == 0) {
         unicode = '?';
