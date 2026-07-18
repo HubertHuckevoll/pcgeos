@@ -215,7 +215,8 @@ FJpegImport(TCHAR *file,
 #if PROGRESS_DISPLAY
            , _ImportProgressParams_
 #endif
-           , MimeStatus *mimeStatus
+           , MimeStatus *mimeStatus,
+           FileHandle suppliedFile
            )
 {
   /* This struct contains the JPEG decompression parameters and pointers to
@@ -252,6 +253,7 @@ EC(dword cbSize = 0;)
   Boolean gotAlloc = FALSE ;
   Boolean gotTempAlloc = FALSE ;
   Boolean headerErr = FALSE;
+  Boolean ownsFile = FALSE;
   word errorHandlerContext;
 #if PROGRESS_DISPLAY
   _LoadProgressParams_;
@@ -266,6 +268,13 @@ EC(dword cbSize = 0;)
   }
 #endif
 
+  if (!cinfo) {
+      *usedMem = 0;
+      return 0;
+  }
+
+  *usedMem = 0 ;
+
   /* only pure RGB displays supported by FJPEG, otherwise use the color reduction
    * and dithering feature of IJGJPEG */
   {
@@ -273,17 +282,20 @@ EC(dword cbSize = 0;)
     @call application::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME(&display) ;
     displayClass = (display.DS_displayType & DT_DISP_CLASS) ;
     if (displayClass != DC_CF_RGB) {
+      free(cinfo);
       return 0;
     }
   }
   
-  *usedMem = 0 ;
 #if PROGRESS_DISPLAY
   /* we don't need file if we've got a data stream to read from */
-  if (loadProgressDataP && loadProgressDataP->LPD_dataStream) {
+  if (suppliedFile) {
+      filehan = suppliedFile;
+  } else if (loadProgressDataP && loadProgressDataP->LPD_dataStream) {
       filehan = 0;
   } else {
       filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
+      ownsFile = TRUE;
       if(filehan == 0) {
 
         free(cinfo);
@@ -291,7 +303,12 @@ EC(dword cbSize = 0;)
       }
   }
 #else
-  filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
+  if (suppliedFile) {
+      filehan = suppliedFile;
+  } else {
+      filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
+      ownsFile = TRUE;
+  }
 
   if(filehan == 0) {
 
@@ -329,7 +346,7 @@ EC(dword cbSize = 0;)
       }
   } else {
       status = isJpeg(filehan);
-      if (status == FALSE) FileClose(filehan, TRUE);
+      if (status == FALSE && ownsFile) FileClose(filehan, TRUE);
   }
   if (status == FALSE) {
 
@@ -338,6 +355,7 @@ EC(dword cbSize = 0;)
   }
 #else
   if (!isJpeg(filehan)) {
+      if (ownsFile) FileClose(filehan, TRUE);
       free(cinfo);
       return 0 ;
   }
@@ -349,7 +367,7 @@ EC(dword cbSize = 0;)
   infile = fdopen(filehan, "r");
   if(infile == 0)
   {
-        FileClose(filehan, TRUE);
+        if (ownsFile) FileClose(filehan, TRUE);
         free(cinfo);
         return(0);
   }
@@ -572,7 +590,7 @@ EC(dword cbSize = 0;)
 
       if (infile) fdclose(infile);
 
-      if (filehan) FileClose(filehan, TRUE);  /* close source file */
+      if (ownsFile && filehan) FileClose(filehan, TRUE);
 
       /* Return the memory */
       if (gotAlloc)
@@ -773,6 +791,9 @@ EC(dword cbSize = 0;)
         flag = TRUE;
   }
 
+  if ((cinfo->output_scanline == cinfo->image_height) && !flag)
+      *p_completeGraphic = TRUE;
+
 #if SCANLINE_COMPRESS
   if (scanlineCompress) {
     if (cBuf) MemFree(cBuf);
@@ -787,7 +808,7 @@ EC(dword cbSize = 0;)
 
   if (infile) fdclose(infile);
 
-  if (filehan) FileClose(filehan, TRUE);   /* close source file */
+  if (ownsFile && filehan) FileClose(filehan, TRUE);
 
   if(flag == FALSE)
         dataVMBlock = bmblock;

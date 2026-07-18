@@ -21,7 +21,8 @@ JpegImport(TCHAR *file,
 #if PROGRESS_DISPLAY
            , _ImportProgressParams_
 #endif  
-           , MimeStatus *mimeStatus
+           , MimeStatus *mimeStatus,
+           FileHandle suppliedFile
            );
 
 VMBlockHandle
@@ -38,7 +39,8 @@ FJpegImport(TCHAR *file,
 #if PROGRESS_DISPLAY
            , _ImportProgressParams_
 #endif  
-           , MimeStatus *mimeStatus
+           , MimeStatus *mimeStatus,
+           FileHandle suppliedFile
            );
 
 #endif

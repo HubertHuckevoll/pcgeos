@@ -25,5 +25,9 @@ incminor
 
 export MIMEDRVGRAPHICEX
 
-usernotes "Copyright 1994-2002  Breadbox Computer Company LLC  All Rights Reserved"
+incminor
 
+export IMPGRAPHIMPORTFILE
+export IMPGRAPHIMPORTFILEHANDLE
+
+usernotes "Copyright 1994-2002  Breadbox Computer Company LLC  All Rights Reserved"

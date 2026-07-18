@@ -3,6 +3,7 @@
 #include <gstring.h>
 #include <initfile.h>
 #include <htmldrv.h>
+#include <impgraph.h>
 @include <STATBAR/statbar.goh>
 
 #include "IMPBMP/impgif.h"
@@ -14,6 +15,38 @@
 
 typedef MemHandle ImpGIFHandle ;
 extern void _pascal ImpGIFDestroy(ImpGIFHandle mem) ;
+
+typedef struct {
+    ImpGraphFormat format;
+    Boolean compress;
+    Boolean useSystemPalette;
+    optr status;
+} ImpGraphResolvedParams;
+
+typedef enum {
+    IMPGRAPH_WARNING_DIRECT_PARAMS_TOO_SMALL = 1,
+    IMPGRAPH_WARNING_DIRECT_FORMAT_INVALID,
+    IMPGRAPH_WARNING_DIRECT_SOURCE_RESET_FAILED,
+    IMPGRAPH_WARNING_DIRECT_FORMAT_NOT_RECOGNIZED,
+    IMPGRAPH_WARNING_DIRECT_WATCHER_CREATE_FAILED,
+    IMPGRAPH_WARNING_DIRECT_PNG_DECODE_FAILED,
+    IMPGRAPH_WARNING_DIRECT_JPEG_DECODE_FAILED,
+    IMPGRAPH_WARNING_DIRECT_GIF_DECODE_FAILED,
+    IMPGRAPH_WARNING_DIRECT_GRAPHIC_INCOMPLETE,
+    IMPGRAPH_WARNING_DIRECT_BITMAP_MISSING,
+    IMPGRAPH_WARNING_DIRECT_FILENAME_INVALID,
+    IMPGRAPH_WARNING_DIRECT_DEST_FILE_INVALID,
+    IMPGRAPH_WARNING_DIRECT_FILE_OPEN_FAILED,
+    IMPGRAPH_WARNING_DIRECT_SOURCE_HANDLE_INVALID
+} Warnings;
+
+/* Force the warning names into the EC symbols for Swat's why-warning. */
+#if ERROR_CHECK
+Warnings impGraphWarnings;
+#endif
+
+typedef char ImpGraphImportParamsV1SizeCheck[
+    (sizeof(ImpGraphImportParams) == IMP_GRAPH_IMPORT_PARAMS_V1_SIZE) ? 1 : -1];
 
 
 /*****************************************************************************
@@ -70,23 +103,26 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           ImpBmpParams *params, Boolean *isAnimation, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, VMFileHandle destFile,
           ImportProgressData *importProgressDataP,
-		  Boolean locAllowAnimations)
+		  Boolean locAllowAnimations, FileHandle suppliedFile,
+          Boolean locUseSysPal, optr statusOptr)
 #else
 ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           ImpBmpParams *params, Boolean *isAnimation, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock,
-		  Boolean locAllowAnimations)
+		  Boolean locAllowAnimations, FileHandle suppliedFile,
+          Boolean locUseSysPal, optr statusOptr)
 #endif
 {
     ImpBmpStatus status;
     MemHandle mem ;
     AnimationHeader *p_header ;
     VMChain *p_chain ;
+    Boolean ownsFile = FALSE;
 
   params->IBP_bitmap = NullHandle ;
   params->IBP_dest = vmf;
-  params->IBP_status = 0;              /* no status object */
+  params->IBP_status = statusOptr;
 #if PROGRESS_DISPLAY
   /* destination file for animated GIFs, they are written directly
      to destination file, not copied there later */
@@ -96,7 +132,12 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 #endif
 
   if (!locAllowAnimations)  {
-      params->IBP_source = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
+      if (suppliedFile) {
+          params->IBP_source = suppliedFile;
+      } else {
+          params->IBP_source = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
+          ownsFile = TRUE;
+      }
 
       if(!params->IBP_source)              /* error opening file: abort */
         return 0;
@@ -106,7 +147,7 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
                    watcher,
                    usedMem,
                    resolution,
-                   useSysPal,
+                   locUseSysPal,
                    MSG_SB_SET_STATUS_VALUE);
 
       /* Note if we got the whole graphic */
@@ -115,7 +156,7 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
       else
           iad->IAD_completeGraphic = TRUE ;
 
-      if (params->IBP_source)
+      if (ownsFile && params->IBP_source)
           FileClose(params->IBP_source,TRUE);  /* close source file */
 
       *isCompacted = FALSE ;
@@ -126,7 +167,7 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
                    watcher,
                    usedMem,
                    resolution,
-                   useSysPal,
+                   locUseSysPal,
                    MSG_SB_SET_STATUS_VALUE,
                    isAnimation,
                    &iad->IAD_completeGraphic);
@@ -212,13 +253,13 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
-          MimeStatus *mimeStatus)
+          MimeStatus *mimeStatus, FileHandle suppliedFile)
 #else
 ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock,
-          MimeStatus *mimeStatus)
+          MimeStatus *mimeStatus, FileHandle suppliedFile)
 #endif
 {
     ImpBmpStatus status;
@@ -240,6 +281,8 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
     iad->IAD_completeGraphic = FALSE ;
 
 @ifdef PRODUCT_FJPEG
+    if (suppliedFile)
+        FilePos(suppliedFile, 0, FILE_POS_START);
     *bmVMBlock =
         FJpegImport(file, vmf, &(iad->IAD_size), resolution, watcher, usedMem,
 #if SCANLINE_COMPRESS
@@ -249,13 +292,15 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 #if PROGRESS_DISPLAY
 	        , importProgressDataP
 #endif
-            , mimeStatus
+            , mimeStatus, suppliedFile
            );
 
     /* if fast import failed, try using IJGJPEG library */
     if(!(*bmVMBlock))
     {
 @endif
+        if (suppliedFile)
+            FilePos(suppliedFile, 0, FILE_POS_START);
         *bmVMBlock =
             JpegImport(file, vmf, &(iad->IAD_size), resolution, watcher, usedMem,
 #if SCANLINE_COMPRESS
@@ -265,7 +310,7 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 #if PROGRESS_DISPLAY
 	            , importProgressDataP
 #endif
-                , mimeStatus
+                , mimeStatus, suppliedFile
            );
 @ifdef PRODUCT_FJPEG
     }
@@ -293,24 +338,35 @@ ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
-          MimeStatus *mimeStatus)
+          MimeStatus *mimeStatus, FileHandle suppliedFile)
 #else
 ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock,
-          MimeStatus *mimeStatus)
+          MimeStatus *mimeStatus, FileHandle suppliedFile)
 #endif
 {
     ImpBmpStatus status = IBS_NO_ERROR;
 
-    *bmVMBlock = PngImport(file, vmf, &(iad->IAD_size), resolution, watcher, usedMem,
-    &iad->IAD_completeGraphic
+    if (suppliedFile)
+        FilePos(suppliedFile, 0, FILE_POS_START);
+
+    if (suppliedFile) {
+        *bmVMBlock = PngImportHandle(suppliedFile, vmf, &(iad->IAD_size),
+        resolution, watcher, usedMem, &iad->IAD_completeGraphic
 #if PROGRESS_DISPLAY
-	, importProgressDataP
+	    , importProgressDataP
 #endif
-    , mimeStatus
-    );
+        , mimeStatus);
+    } else {
+        *bmVMBlock = PngImport(file, vmf, &(iad->IAD_size), resolution,
+        watcher, usedMem, &iad->IAD_completeGraphic
+#if PROGRESS_DISPLAY
+	    , importProgressDataP
+#endif
+        , mimeStatus);
+    }
 
 /*
     FIXME: SCANLINE_COMPRESS
@@ -369,6 +425,284 @@ void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle 
     }
 }
 #endif
+
+static Boolean
+ImpGraphResolveParams(
+    const ImpGraphImportParams *paramsP,
+    ImpGraphResolvedParams *resolvedP)
+{
+    ImpGraphImportOptions optionMask;
+
+    InitGlobals();
+
+    resolvedP->format = IG_FORMAT_AUTO;
+    resolvedP->compress = doCompress;
+    resolvedP->useSystemPalette = useSysPal;
+    resolvedP->status = NullOptr;
+
+    if (!paramsP)
+        return TRUE;
+
+    if (paramsP->IGIP_size < IMP_GRAPH_IMPORT_PARAMS_V1_SIZE) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_PARAMS_TOO_SMALL);
+        return FALSE;
+    }
+
+    if (paramsP->IGIP_format > IG_FORMAT_GIF) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_FORMAT_INVALID);
+        return FALSE;
+    }
+
+    resolvedP->format = paramsP->IGIP_format;
+    resolvedP->status = paramsP->IGIP_status;
+    optionMask = paramsP->IGIP_optionMask;
+
+    if (optionMask & IGIO_COMPRESS) {
+        resolvedP->compress =
+            ((paramsP->IGIP_options & IGIO_COMPRESS) != 0);
+    }
+    if (optionMask & IGIO_USE_SYSTEM_PALETTE) {
+        resolvedP->useSystemPalette =
+            ((paramsP->IGIP_options & IGIO_USE_SYSTEM_PALETTE) != 0);
+    }
+
+    return TRUE;
+}
+
+static Boolean
+ImpGraphResetSource(FileHandle sourceFile)
+{
+    return (FilePos(sourceFile, 0, FILE_POS_START) == 0);
+}
+
+static Boolean
+ImpGraphRecognizeFormat(
+    FileHandle sourceFile,
+    ImpGraphFormat *formatP)
+{
+    byte header[8] = {0};
+    word bytesRead;
+    Boolean recognized = FALSE;
+
+    if (!ImpGraphResetSource(sourceFile)) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_SOURCE_RESET_FAILED);
+        return FALSE;
+    }
+
+    bytesRead = FileRead(sourceFile, header, sizeof(header), FALSE);
+
+    if (bytesRead == sizeof(header) &&
+        memcmp(header, "\211PNG\r\n\032\n", sizeof(header)) == 0) {
+        *formatP = IG_FORMAT_PNG;
+        recognized = TRUE;
+    } else if (bytesRead >= 3 &&
+               header[0] == 0xff && header[1] == 0xd8 &&
+               header[2] == 0xff) {
+        *formatP = IG_FORMAT_JPEG;
+        recognized = TRUE;
+    } else if (bytesRead >= 6 &&
+               (memcmp(header, "GIF87a", 6) == 0 ||
+                memcmp(header, "GIF89a", 6) == 0)) {
+        *formatP = IG_FORMAT_GIF;
+        recognized = TRUE;
+    }
+
+    if (!recognized) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_FORMAT_NOT_RECOGNIZED);
+    }
+
+    if (!ImpGraphResetSource(sourceFile)) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_SOURCE_RESET_FAILED);
+        return FALSE;
+    }
+
+    return recognized;
+}
+
+static VMBlockHandle
+ImpGraphFinalizeDirectBitmap(
+    VMFileHandle destFile,
+    VMBlockHandle bitmap,
+    Boolean compacted,
+    Boolean compress)
+{
+    VMBlockHandle compactedBitmap;
+
+    if (!bitmap || compacted || !compress)
+        return bitmap;
+
+    compactedBitmap = GrCompactBitmap(destFile, bitmap, destFile);
+    if (compactedBitmap) {
+        VMFreeVMChain(destFile, VMCHAIN_MAKE_FROM_VM_BLOCK(bitmap));
+        bitmap = compactedBitmap;
+    }
+
+    return bitmap;
+}
+
+static VMBlockHandle
+ImpGraphImportFileHandleResolved(
+    FileHandle sourceFile,
+    VMFileHandle destFile,
+    const ImpGraphResolvedParams *resolvedP)
+{
+    ImpGraphFormat format;
+    AllocWatcherHandle watcher;
+    dword usedMem = 0;
+    ImageAdditionalData iad;
+    MimeStatus mimeStatus;
+    ImpBmpParams privateParams;
+    ImpBmpStatus status = IBS_UNKNOWN_FORMAT;
+    VMBlockHandle bitmap = NullHandle;
+    Boolean isAnimation = FALSE;
+    Boolean isCompacted = FALSE;
+
+    format = resolvedP->format;
+    if (format == IG_FORMAT_AUTO) {
+        if (!ImpGraphRecognizeFormat(sourceFile, &format))
+            return NullHandle;
+    }
+
+    if (!ImpGraphResetSource(sourceFile)) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_SOURCE_RESET_FAILED);
+        return NullHandle;
+    }
+
+    watcher = AllocWatcherCreate(MIME_LIMIT_NONE);
+    if (!watcher) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_WATCHER_CREATE_FAILED);
+        return NullHandle;
+    }
+
+    memset(&iad, 0, sizeof(iad));
+    memset(&mimeStatus, 0, sizeof(mimeStatus));
+    memset(&privateParams, 0, sizeof(privateParams));
+    privateParams.IBP_mimeStatus = &mimeStatus;
+
+    switch (format) {
+    case IG_FORMAT_PNG:
+        status = ImpPNG((TCHAR *)0, destFile, &iad,
+                        MIME_RES_DISPLAY_DEFAULT, watcher, &usedMem,
+                        resolvedP->compress, &privateParams, &isCompacted,
+                        &bitmap
+#if PROGRESS_DISPLAY
+                        , (ImportProgressData *)0
+#endif
+                        , &mimeStatus, sourceFile);
+        break;
+
+    case IG_FORMAT_JPEG:
+        status = ImpJPG((TCHAR *)0, destFile, &iad,
+                        MIME_RES_DISPLAY_DEFAULT, watcher, &usedMem,
+                        resolvedP->compress, &privateParams, &isCompacted,
+                        &bitmap
+#if PROGRESS_DISPLAY
+                        , (ImportProgressData *)0
+#endif
+                        , &mimeStatus, sourceFile);
+        break;
+
+    case IG_FORMAT_GIF:
+        status = ImpGIF((TCHAR *)0, destFile, &iad,
+                        MIME_RES_DISPLAY_DEFAULT, watcher, &usedMem,
+                        &privateParams, &isAnimation, &isCompacted, &bitmap
+#if PROGRESS_DISPLAY
+                        , destFile, (ImportProgressData *)0
+#endif
+                        , FALSE, sourceFile,
+                        resolvedP->useSystemPalette, resolvedP->status);
+        if (!bitmap && privateParams.IBP_bitmap)
+            bitmap = privateParams.IBP_bitmap;
+        break;
+    }
+
+    AllocWatcherDestroy(watcher);
+
+    if (status != IBS_NO_ERROR) {
+        switch (format) {
+        case IG_FORMAT_PNG:
+            EC_WARNING(IMPGRAPH_WARNING_DIRECT_PNG_DECODE_FAILED);
+            break;
+        case IG_FORMAT_JPEG:
+            EC_WARNING(IMPGRAPH_WARNING_DIRECT_JPEG_DECODE_FAILED);
+            break;
+        case IG_FORMAT_GIF:
+            EC_WARNING(IMPGRAPH_WARNING_DIRECT_GIF_DECODE_FAILED);
+            break;
+        }
+    }
+    if (!iad.IAD_completeGraphic) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_GRAPHIC_INCOMPLETE);
+    }
+    if (!bitmap) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_BITMAP_MISSING);
+    }
+    if (status != IBS_NO_ERROR || !iad.IAD_completeGraphic || !bitmap) {
+        if (bitmap)
+            VMFreeVMChain(destFile, VMCHAIN_MAKE_FROM_VM_BLOCK(bitmap));
+        return NullHandle;
+    }
+
+    return ImpGraphFinalizeDirectBitmap(
+        destFile, bitmap, isCompacted, resolvedP->compress);
+}
+
+VMBlockHandle _export _pascal
+ImpGraphImportFile(
+    const TCHAR *fileP,
+    VMFileHandle destFile,
+    const ImpGraphImportParams *paramsP)
+{
+    ImpGraphResolvedParams resolved;
+    FileHandle sourceFile;
+    VMBlockHandle bitmap;
+
+    if (!ImpGraphResolveParams(paramsP, &resolved))
+        return NullHandle;
+
+    if (!fileP || !fileP[0]) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_FILENAME_INVALID);
+        return NullHandle;
+    }
+    if (!destFile) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_DEST_FILE_INVALID);
+        return NullHandle;
+    }
+
+    sourceFile = FileOpen(fileP, FILE_ACCESS_R | FILE_DENY_W);
+    if (!sourceFile) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_FILE_OPEN_FAILED);
+        return NullHandle;
+    }
+
+    bitmap = ImpGraphImportFileHandleResolved(sourceFile, destFile, &resolved);
+    FileClose(sourceFile, TRUE);
+
+    return bitmap;
+}
+
+VMBlockHandle _export _pascal
+ImpGraphImportFileHandle(
+    FileHandle sourceFile,
+    VMFileHandle destFile,
+    const ImpGraphImportParams *paramsP)
+{
+    ImpGraphResolvedParams resolved;
+
+    if (!ImpGraphResolveParams(paramsP, &resolved))
+        return NullHandle;
+
+    if (!sourceFile) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_SOURCE_HANDLE_INVALID);
+        return NullHandle;
+    }
+    if (!destFile) {
+        EC_WARNING(IMPGRAPH_WARNING_DIRECT_DEST_FILE_INVALID);
+        return NullHandle;
+    }
+
+    return ImpGraphImportFileHandleResolved(sourceFile, destFile, &resolved);
+}
 
 /*
  *  Import file whose name is specified in *file, assume it has the MIME
@@ -434,13 +768,14 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 
 #define IMP_GIF_PARAMS file, vmf, iad, resolution, watcher, usedMem, \
           &params, &isAnimation, &isCompacted, &bmVMBlock \
-          IMP_DESTFILE_PARAM IMP_PROGRESS_PARAM, locAllowAnimations
+          IMP_DESTFILE_PARAM IMP_PROGRESS_PARAM, locAllowAnimations, \
+          NullHandle, useSysPal, NullOptr
 #define IMP_JPG_PARAMS file, vmf, iad, resolution, watcher, usedMem, \
           locCompress, &params, &isCompacted, &bmVMBlock IMP_PROGRESS_PARAM \
-          , mimeStatus
+          , mimeStatus, NullHandle
 #define IMP_PNG_PARAMS file, vmf, iad, resolution, watcher, usedMem, \
           locCompress, &params, &isCompacted, &bmVMBlock IMP_PROGRESS_PARAM \
-          , mimeStatus
+          , mimeStatus, NullHandle
 
 
     if (strcmp(mimeType, _TEXT("image/gif")) == 0)
@@ -552,5 +887,3 @@ VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
 			0		// no specific flags here
 	);
 }
-
-

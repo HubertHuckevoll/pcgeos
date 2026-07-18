@@ -15,14 +15,15 @@ Supported Markdown is deliberately small:
 - block quotes
 - horizontal rules
 - links rendered as label (url)
-- local PNG images rendered as inline graphics
+- local PNG, JPEG, and GIF images rendered as inline graphics
 
-Image syntax is limited to `![alt](relative/path.png)` with a `.png`
-extension. The importer accepts images up to 2048x2048 pixels, with a
-one-megapixel limit. URLs, absolute paths, unsupported formats, malformed
-images, and images that exceed the importer limits remain visible as their
-original Markdown text. Imported graphics export as `[image]` because the
-original path and alt text are not stored in a VisText graphic.
+Image syntax is limited to `![alt](relative/path)`. PNG, JPEG, and GIF are
+recognized from their file contents rather than their filename extensions.
+The importer accepts images up to 2048x2048 pixels, with a one-megapixel
+limit. URLs, absolute paths, unsupported formats, malformed images, and images
+that exceed the importer limits remain visible as their original Markdown
+text. Imported graphics export as `[image]` because the original path and alt
+text are not stored in a VisText graphic.
 
 Export is optimized for documents produced by this importer. It writes UTF-8
 and conservatively recovers headings, isolated bold and italic runs, inline

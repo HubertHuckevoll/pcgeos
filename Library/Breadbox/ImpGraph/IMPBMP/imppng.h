@@ -19,4 +19,19 @@ PngImport(
     , MimeStatus *mimeStatus
 );
 
+VMBlockHandle
+PngImportHandle(
+    FileHandle sourceFile,
+    VMFileHandle vmf,
+    XYSize *picsize,
+    MimeRes resolution,
+    AllocWatcherHandle watcher,
+    dword *usedMem,
+    Boolean *p_completeGraphic
+#if PROGRESS_DISPLAY
+    , _ImportProgressParams_
+#endif
+    , MimeStatus *mimeStatus
+);
+
 #endif

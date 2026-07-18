@@ -107,11 +107,15 @@ endif
 	;
 	; Read in text from file.
 	;
+		push	ds			; preserve caller's dgroup
 		push	word ptr ss:[framePtr+2]
 		push	word ptr ss:[framePtr]
 		push	word ptr ss:[textObj+2]
 		push	word ptr ss:[textObj]
+		mov	ax, segment dgroup
+		mov	ds, ax			; static C data lives in our dgroup
 		call	MDREADANDIMPORT
+		pop	ds
 						; ax <- TransError or 0
 		tst	ax
 		LONG jnz error

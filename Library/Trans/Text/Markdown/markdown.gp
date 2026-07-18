@@ -47,7 +47,6 @@ library	ui
 library	text
 library	html4par
 library	ansic
-library	pnglib
 #
 # Define resources other than standard discardable code
 #
