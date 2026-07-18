@@ -421,9 +421,7 @@ Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
 
 #if ERROR_CHECK
 		stateP->imageLibrary = GeodeUseLibrary("EC Breadbox Graphics Imp Library", MD_IMPGRAPH_PROTO_MAJOR, MD_IMPGRAPH_PROTO_MINOR, &loadError);
-        //stateP->imageLibrary = GeodeUseLibrary("IMPGRAPH.GEO", MD_IMPGRAPH_PROTO_MAJOR, MD_IMPGRAPH_PROTO_MINOR, &loadError);
 #else
-		//stateP->imageLibrary = GeodeUseLibrary("IMPGRAPH.GEO", MD_IMPGRAPH_PROTO_MAJOR, MD_IMPGRAPH_PROTO_MINOR, &loadError);
         stateP->imageLibrary = GeodeUseLibrary("Breadbox Graphics Imp Library", MD_IMPGRAPH_PROTO_MAJOR, MD_IMPGRAPH_PROTO_MINOR, &loadError);
 #endif
         FilePopDir();
