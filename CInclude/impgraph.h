@@ -3,6 +3,12 @@
 
 #include <geos.h>
 
+#define IMP_GRAPH_PROTO_MAJOR               4
+#define IMP_GRAPH_PROTO_MINOR               3
+
+#define IMP_GRAPH_ENTRY_IMPORT_FILE         4
+#define IMP_GRAPH_ENTRY_IMPORT_FILE_HANDLE  5
+
 typedef word ImpGraphFormat;
 
 #define IG_FORMAT_AUTO       0
@@ -28,6 +34,18 @@ typedef struct {
 } ImpGraphImportParams;
 
 #define IMP_GRAPH_IMPORT_PARAMS_V1_SIZE 12
+
+typedef VMBlockHandle _pascal pcfm_ImpGraphImportFile(
+    const TCHAR *fileP,
+    VMFileHandle destFile,
+    const ImpGraphImportParams *paramsP,
+    void *pf);
+
+typedef VMBlockHandle _pascal pcfm_ImpGraphImportFileHandle(
+    FileHandle sourceFile,
+    VMFileHandle destFile,
+    const ImpGraphImportParams *paramsP,
+    void *pf);
 
 VMBlockHandle _export _pascal
 ImpGraphImportFile(

@@ -22,10 +22,11 @@
 #define MD_MAX_IMAGE_DIMENSION 2048
 #define MD_MAX_IMAGE_PIXELS 1048576UL
 
-/* The direct filename entry was appended at ImpGraph protocol 4.3, ordinal 4. */
-#define MD_IMPGRAPH_PROTO_MAJOR 4
-#define MD_IMPGRAPH_PROTO_MINOR 3
-#define MD_IMPGRAPH_IMPORT_FILE_ENTRY 4
+#if ERROR_CHECK
+#define MD_IMPGRAPH_FILE_NAME "EC Breadbox Graphics Imp Library"
+#else
+#define MD_IMPGRAPH_FILE_NAME "Breadbox Graphics Imp Library"
+#endif
 
 #define MD_STYLE_BOLD 0x0001
 #define MD_STYLE_ITALIC 0x0002
@@ -50,12 +51,6 @@ typedef enum {
 #if ERROR_CHECK
 Warnings markdownWarnings;
 #endif
-
-typedef VMBlockHandle _pascal MDImpGraphImportFileCall(
-    const TCHAR *fileP,
-    VMFileHandle destFile,
-    const ImpGraphImportParams *paramsP,
-    void *entryP);
 
 typedef struct {
     word start;
@@ -386,44 +381,23 @@ Boolean MDMakeImagePath(const char *textP, word start, word end,
     return TRUE;
 }
 
-Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
-                      VMBlockHandle *gstringP, XYSize *sizeP)
+void *MDGetImpGraphImportEntry(MDState *stateP)
 {
-    PathName imagePath;
-    ImpGraphImportParams params;
-    XYValueAsDWord bitmapSize;
-    VMBlockHandle bitmapBlock;
-    VMBlockHandle gstringBlock;
-    GStateHandle gstate;
-    GStringErrorType gstringError;
     GeodeLoadError loadError;
     void *entryP;
 
-    if (!MDMakeImagePath(stateP->input, pathStart, pathEnd, imagePath)) {
-        EC_WARNING(MD_WARNING_BAD_IMAGE_PATH);
-        return FALSE;
-    }
-
-    memset(&params, 0, sizeof(params));
-    params.IGIP_size = IMP_GRAPH_IMPORT_PARAMS_V1_SIZE;
-    params.IGIP_format = IG_FORMAT_AUTO;
-    params.IGIP_optionMask = IGIO_COMPRESS;
-    params.IGIP_status = NullOptr;
-
     if (stateP->imageLibrary == NullHandle) {
-        /* ATTENTION: ImpGraph must remain in system/impex for MIME-driver
-         * enumeration, so temporarily use the browser's established loader
-         * sequence. A direct client API that does not depend on the thread's
-         * current directory is the upgrade path.
+        /* ImpGraph remains in system/impex for MIME-driver enumeration.
+         * Load it lazily by its GEOS long filename instead of adding a
+         * forwarding library.
          */
         FilePushDir();
         FileSetStandardPath(SP_IMPORT_EXPORT_DRIVERS);
-
-#if ERROR_CHECK
-		stateP->imageLibrary = GeodeUseLibrary("EC Breadbox Graphics Imp Library", MD_IMPGRAPH_PROTO_MAJOR, MD_IMPGRAPH_PROTO_MINOR, &loadError);
-#else
-        stateP->imageLibrary = GeodeUseLibrary("Breadbox Graphics Imp Library", MD_IMPGRAPH_PROTO_MAJOR, MD_IMPGRAPH_PROTO_MINOR, &loadError);
-#endif
+        stateP->imageLibrary = GeodeUseLibrary(
+            MD_IMPGRAPH_FILE_NAME,
+            IMP_GRAPH_PROTO_MAJOR,
+            IMP_GRAPH_PROTO_MINOR,
+            &loadError);
         FilePopDir();
         if (stateP->imageLibrary == NullHandle) {
             switch (loadError) {
@@ -446,13 +420,43 @@ Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
                 EC_WARNING(MD_WARNING_IMPGRAPH_LOAD_FAILED);
                 break;
             }
-            return FALSE;
+            return (void *)0;
         }
     }
+
     entryP = ProcGetLibraryEntry(stateP->imageLibrary,
-                                 MD_IMPGRAPH_IMPORT_FILE_ENTRY);
+                                 IMP_GRAPH_ENTRY_IMPORT_FILE);
     if (entryP == (void *)0) {
         EC_WARNING(MD_WARNING_IMPGRAPH_ENTRY_MISSING);
+    }
+    return entryP;
+}
+
+Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
+                      VMBlockHandle *gstringP, XYSize *sizeP)
+{
+    PathName imagePath;
+    ImpGraphImportParams params;
+    XYValueAsDWord bitmapSize;
+    VMBlockHandle bitmapBlock;
+    VMBlockHandle gstringBlock;
+    GStateHandle gstate;
+    GStringErrorType gstringError;
+    void *entryP;
+
+    if (!MDMakeImagePath(stateP->input, pathStart, pathEnd, imagePath)) {
+        EC_WARNING(MD_WARNING_BAD_IMAGE_PATH);
+        return FALSE;
+    }
+
+    memset(&params, 0, sizeof(params));
+    params.IGIP_size = IMP_GRAPH_IMPORT_PARAMS_V1_SIZE;
+    params.IGIP_format = IG_FORMAT_AUTO;
+    params.IGIP_optionMask = IGIO_COMPRESS;
+    params.IGIP_status = NullOptr;
+
+    entryP = MDGetImpGraphImportEntry(stateP);
+    if (entryP == (void *)0) {
         return FALSE;
     }
 
@@ -464,7 +468,7 @@ Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
         return FALSE;
     }
     bitmapBlock =
-        ((MDImpGraphImportFileCall *)ProcCallFixedOrMovable_pascal)(
+        ((pcfm_ImpGraphImportFile *)ProcCallFixedOrMovable_pascal)(
             imagePath, stateP->transferFile, &params, entryP);
     FilePopDir();
 
