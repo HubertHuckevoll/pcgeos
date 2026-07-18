@@ -1,62 +1,76 @@
 #ifndef __IMPGRAPH_H
 #define __IMPGRAPH_H
 
-#include <geos.h>
+#include <file.h>
+#include <htmldrv.h>
+#include <library.h>
+#include <resource.h>
 
-#define IMP_GRAPH_PROTO_MAJOR               4
-#define IMP_GRAPH_PROTO_MINOR               3
+#define IMP_GRAPH_PROTO_MAJOR 4
+#define IMP_GRAPH_PROTO_MINOR 2
 
-#define IMP_GRAPH_ENTRY_IMPORT_FILE         4
-#define IMP_GRAPH_ENTRY_IMPORT_FILE_HANDLE  5
-
-typedef word ImpGraphFormat;
-
-#define IG_FORMAT_AUTO       0
-#define IG_FORMAT_PNG        1
-#define IG_FORMAT_JPEG       2
-#define IG_FORMAT_GIF        3
-
-typedef word ImpGraphImportOptions;
-
-#define IGIO_COMPRESS            0x0001
-#define IGIO_USE_SYSTEM_PALETTE  0x0002
+#if ERROR_CHECK
+#define IMP_GRAPH_LIBRARY_NAME "EC Breadbox Graphics Imp Library"
+#else
+#define IMP_GRAPH_LIBRARY_NAME "Breadbox Graphics Imp Library"
+#endif
 
 /*
- * Future versions may append fields.  The V1 fields and their types are
- * part of the library ABI and must not change.
+ * Store a used library handle in libraryH.  The caller may pass a null errorP.
+ * Release a successful result with GeodeFreeLibrary().
  */
-typedef struct {
-    word                    IGIP_size;
-    ImpGraphFormat          IGIP_format;
-    ImpGraphImportOptions   IGIP_optionMask;
-    ImpGraphImportOptions   IGIP_options;
-    optr                    IGIP_status;
-} ImpGraphImportParams;
+#define ImpGraphUseLibrary(libraryH, errorP)                              \
+    do {                                                                 \
+        GeodeLoadError impGraphError;                                    \
+        GeodeLoadError *impGraphErrorP = (errorP);                       \
+        if (impGraphErrorP == (void *)0)                                 \
+            impGraphErrorP = &impGraphError;                             \
+        FilePushDir();                                                   \
+        FileSetStandardPath(SP_IMPORT_EXPORT_DRIVERS);                   \
+        (libraryH) = GeodeUseLibrary(IMP_GRAPH_LIBRARY_NAME,             \
+                                     IMP_GRAPH_PROTO_MAJOR,              \
+                                     IMP_GRAPH_PROTO_MINOR,              \
+                                     impGraphErrorP);                    \
+        FilePopDir();                                                    \
+    } while (0)
 
-#define IMP_GRAPH_IMPORT_PARAMS_V1_SIZE 12
+#if PROGRESS_DISPLAY
+#define IMP_GRAPH_DEFAULT_PROGRESS , (ImportProgressData *)0
+#else
+#define IMP_GRAPH_DEFAULT_PROGRESS
+#endif
 
-typedef VMBlockHandle _pascal pcfm_ImpGraphImportFile(
-    const TCHAR *fileP,
-    VMFileHandle destFile,
-    const ImpGraphImportParams *paramsP,
-    void *pf);
-
-typedef VMBlockHandle _pascal pcfm_ImpGraphImportFileHandle(
-    FileHandle sourceFile,
-    VMFileHandle destFile,
-    const ImpGraphImportParams *paramsP,
-    void *pf);
-
-VMBlockHandle _export _pascal
-ImpGraphImportFile(
-    const TCHAR *fileP,
-    VMFileHandle destFile,
-    const ImpGraphImportParams *paramsP);
-
-VMBlockHandle _export _pascal
-ImpGraphImportFileHandle(
-    FileHandle sourceFile,
-    VMFileHandle destFile,
-    const ImpGraphImportParams *paramsP);
+/*
+ * Store a static HugeBitmap VM block in bitmap.  Relative paths use the
+ * caller's current directory.  The returned VM chain belongs to destFile and
+ * must be freed by the caller when it is no longer needed.
+ */
+#define ImpGraphImportBitmap(bitmap, libraryH, fileP, destFile)           \
+    do {                                                                 \
+        entry_MimeDrvGraphicEx *impGraphEntryP;                          \
+        GeodeHandle impGraphLibraryH = (libraryH);                       \
+        const TCHAR *impGraphFileP = (fileP);                            \
+        VMFileHandle impGraphDestFile = (destFile);                      \
+        VMBlockHandle impGraphBitmap = NullHandle;                       \
+        if (impGraphLibraryH != NullHandle &&                            \
+            impGraphFileP != (void *)0 &&                               \
+            impGraphFileP[0] != C_NULL &&                               \
+            impGraphDestFile != NullHandle) {                            \
+            impGraphEntryP = ProcGetLibraryEntry(                        \
+                impGraphLibraryH, MIME_ENTRY_GRAPHIC_EX);                \
+            if (impGraphEntryP != (void *)0) {                           \
+                impGraphBitmap = ((pcfm_MimeDrvGraphicEx *)              \
+                    ProcCallFixedOrMovable_pascal)(                      \
+                        (TCHAR *)0, (TCHAR *)impGraphFileP,               \
+                        impGraphDestFile,                                \
+                        (ImageAdditionalData *)0,                        \
+                        MIME_RES_DISPLAY_DEFAULT, NullWatcher,           \
+                        (dword *)0, (MimeStatus *)0                      \
+                        IMP_GRAPH_DEFAULT_PROGRESS,                      \
+                        MIME_GREX_NO_ANIMATIONS, impGraphEntryP);        \
+            }                                                            \
+        }                                                                \
+        (bitmap) = impGraphBitmap;                                       \
+    } while (0)
 
 #endif

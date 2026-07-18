@@ -4,7 +4,6 @@
 #include <graphics.h>
 #include <impgraph.h>
 #include <library.h>
-#include <resource.h>
 #include <xlatLib.h>
 @include <html4par.goh>
 #include <string.h>
@@ -22,12 +21,6 @@
 #define MD_MAX_IMAGE_DIMENSION 2048
 #define MD_MAX_IMAGE_PIXELS 1048576UL
 
-#if ERROR_CHECK
-#define MD_IMPGRAPH_FILE_NAME "EC Breadbox Graphics Imp Library"
-#else
-#define MD_IMPGRAPH_FILE_NAME "Breadbox Graphics Imp Library"
-#endif
-
 #define MD_STYLE_BOLD 0x0001
 #define MD_STYLE_ITALIC 0x0002
 #define MD_STYLE_CODE 0x0004
@@ -43,8 +36,7 @@ typedef enum {
     MD_WARNING_IMPGRAPH_PROTOCOL_ERROR,
     MD_WARNING_IMPGRAPH_LIBRARY_LOAD_ERROR,
     MD_WARNING_IMPGRAPH_LIBRARY_INIT_ERROR,
-    MD_WARNING_IMPGRAPH_LOAD_FAILED,
-    MD_WARNING_IMPGRAPH_ENTRY_MISSING
+    MD_WARNING_IMPGRAPH_LOAD_FAILED
 } Warnings;
 
 /* Force the warning names into the EC symbols for Swat's why-warning. */
@@ -381,24 +373,12 @@ Boolean MDMakeImagePath(const char *textP, word start, word end,
     return TRUE;
 }
 
-void *MDGetImpGraphImportEntry(MDState *stateP)
+Boolean MDUseImpGraph(MDState *stateP)
 {
     GeodeLoadError loadError;
-    void *entryP;
 
     if (stateP->imageLibrary == NullHandle) {
-        /* ImpGraph remains in system/impex for MIME-driver enumeration.
-         * Load it lazily by its GEOS long filename instead of adding a
-         * forwarding library.
-         */
-        FilePushDir();
-        FileSetStandardPath(SP_IMPORT_EXPORT_DRIVERS);
-        stateP->imageLibrary = GeodeUseLibrary(
-            MD_IMPGRAPH_FILE_NAME,
-            IMP_GRAPH_PROTO_MAJOR,
-            IMP_GRAPH_PROTO_MINOR,
-            &loadError);
-        FilePopDir();
+        ImpGraphUseLibrary(stateP->imageLibrary, &loadError);
         if (stateP->imageLibrary == NullHandle) {
             switch (loadError) {
             case GLE_FILE_NOT_FOUND:
@@ -420,43 +400,29 @@ void *MDGetImpGraphImportEntry(MDState *stateP)
                 EC_WARNING(MD_WARNING_IMPGRAPH_LOAD_FAILED);
                 break;
             }
-            return (void *)0;
+            return FALSE;
         }
     }
 
-    entryP = ProcGetLibraryEntry(stateP->imageLibrary,
-                                 IMP_GRAPH_ENTRY_IMPORT_FILE);
-    if (entryP == (void *)0) {
-        EC_WARNING(MD_WARNING_IMPGRAPH_ENTRY_MISSING);
-    }
-    return entryP;
+    return TRUE;
 }
 
 Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
                       VMBlockHandle *gstringP, XYSize *sizeP)
 {
     PathName imagePath;
-    ImpGraphImportParams params;
     XYValueAsDWord bitmapSize;
     VMBlockHandle bitmapBlock;
     VMBlockHandle gstringBlock;
     GStateHandle gstate;
     GStringErrorType gstringError;
-    void *entryP;
 
     if (!MDMakeImagePath(stateP->input, pathStart, pathEnd, imagePath)) {
         EC_WARNING(MD_WARNING_BAD_IMAGE_PATH);
         return FALSE;
     }
 
-    memset(&params, 0, sizeof(params));
-    params.IGIP_size = IMP_GRAPH_IMPORT_PARAMS_V1_SIZE;
-    params.IGIP_format = IG_FORMAT_AUTO;
-    params.IGIP_optionMask = IGIO_COMPRESS;
-    params.IGIP_status = NullOptr;
-
-    entryP = MDGetImpGraphImportEntry(stateP);
-    if (entryP == (void *)0) {
+    if (!MDUseImpGraph(stateP)) {
         return FALSE;
     }
 
@@ -467,9 +433,8 @@ Boolean MDImportImage(MDState *stateP, word pathStart, word pathEnd,
         FilePopDir();
         return FALSE;
     }
-    bitmapBlock =
-        ((pcfm_ImpGraphImportFile *)ProcCallFixedOrMovable_pascal)(
-            imagePath, stateP->transferFile, &params, entryP);
+    ImpGraphImportBitmap(bitmapBlock, stateP->imageLibrary, imagePath,
+                         stateP->transferFile);
     FilePopDir();
 
     if (bitmapBlock == NullHandle) {

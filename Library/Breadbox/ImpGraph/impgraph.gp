@@ -25,9 +25,4 @@ incminor
 
 export MIMEDRVGRAPHICEX
 
-incminor
-
-export IMPGRAPHIMPORTFILE
-export IMPGRAPHIMPORTFILEHANDLE
-
 usernotes "Copyright 1994-2002  Breadbox Computer Company LLC  All Rights Reserved"

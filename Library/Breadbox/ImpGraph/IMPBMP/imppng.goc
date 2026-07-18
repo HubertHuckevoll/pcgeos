@@ -20,41 +20,6 @@ VMBlockHandle PngImport(
     , MimeStatus *mimeStatus
 )
 {
-    FileHandle sourceFile;
-    VMBlockHandle bitmap;
-
-    *usedMem = 0;
-    *p_completeGraphic = FALSE;
-
-    sourceFile = FileOpen(file, FILE_ACCESS_R | FILE_DENY_W);
-    if (!sourceFile)
-        return NullHandle;
-
-    bitmap = PngImportHandle(sourceFile, vmf, picsize, resolution, watcher,
-                             usedMem, p_completeGraphic
-#if PROGRESS_DISPLAY
-                             , importProgressDataP
-#endif
-                             , mimeStatus);
-    FileClose(sourceFile, TRUE);
-
-    return bitmap;
-}
-
-VMBlockHandle PngImportHandle(
-    FileHandle filehan,
-    VMFileHandle vmf,
-    XYSize *picsize,
-    MimeRes resolution,
-    AllocWatcherHandle watcher,
-    dword *usedMem,
-    Boolean *p_completeGraphic
-#if PROGRESS_DISPLAY
-    , _ImportProgressParams_
-#endif
-    , MimeStatus *mimeStatus
-)
-{
     // new for PNG
     pngIHDRData ihdrData = {0};
     MemHandle idatChunksHan = NullHandle;
@@ -64,6 +29,7 @@ VMBlockHandle PngImportHandle(
     BMFormat fmt = 0;
     Boolean errorFlag = FALSE;
     pngAlphaTransformData pngAlphaTransform = {0};
+    FileHandle filehan = NullHandle;
     VMBlockHandle bmVMBlock = NullHandle;
     dword requiredMemory = 0;
     Boolean gotAlloc = FALSE ;
@@ -85,6 +51,7 @@ VMBlockHandle PngImportHandle(
     *usedMem = 0;
     *p_completeGraphic = FALSE ;
 
+    filehan = FileOpen(file, FILE_ACCESS_R | FILE_DENY_W);
     if(filehan)
     {
         pngAlphaTransform.method = PNG_AT_BLEND;
@@ -183,6 +150,8 @@ VMBlockHandle PngImportHandle(
                 }
             }
         }
+
+        FileClose(filehan, TRUE);   /* close source file */
     }
 
     /* Free the existing data if we have any */

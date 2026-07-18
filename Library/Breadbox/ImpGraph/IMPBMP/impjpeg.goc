@@ -200,8 +200,7 @@ JpegImport(TCHAR *file,
 #if PROGRESS_DISPLAY
            , _ImportProgressParams_
 #endif
-           , MimeStatus *mimeStatus,
-           FileHandle suppliedFile
+           , MimeStatus *mimeStatus
            )
 {
   /* This struct contains the JPEG decompression parameters and pointers to
@@ -238,7 +237,6 @@ EC(dword cbSize = 0;)
   Boolean gotAlloc = FALSE ;
   Boolean gotTempAlloc = FALSE ;
   Boolean headerErr = FALSE;
-  Boolean ownsFile = FALSE;
   word errorHandlerContext;
 #if PROGRESS_DISPLAY
   _LoadProgressParams_;
@@ -261,13 +259,10 @@ EC(dword cbSize = 0;)
   *usedMem = 0 ;
 #if PROGRESS_DISPLAY
   /* we don't need file if we've got a data stream to read from */
-  if (suppliedFile) {
-      filehan = suppliedFile;
-  } else if (loadProgressDataP && loadProgressDataP->LPD_dataStream) {
+  if (loadProgressDataP && loadProgressDataP->LPD_dataStream) {
       filehan = 0;
   } else {
       filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
-      ownsFile = TRUE;
       if(filehan == 0) {
 
         free(cinfo);
@@ -275,12 +270,7 @@ EC(dword cbSize = 0;)
       }
   }
 #else
-  if (suppliedFile) {
-      filehan = suppliedFile;
-  } else {
-      filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
-      ownsFile = TRUE;
-  }
+  filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
 
   if(filehan == 0) {
 
@@ -318,7 +308,7 @@ EC(dword cbSize = 0;)
       }
   } else {
       status = isJpeg(filehan);
-      if (status == FALSE && ownsFile) FileClose(filehan, TRUE);
+      if (status == FALSE) FileClose(filehan, TRUE);
   }
   if (status == FALSE) {
 
@@ -327,7 +317,7 @@ EC(dword cbSize = 0;)
   }
 #else
   if (!isJpeg(filehan)) {
-      if (ownsFile) FileClose(filehan, TRUE);
+      FileClose(filehan, TRUE);
       free(cinfo);
       return 0 ;
   }
@@ -339,7 +329,7 @@ EC(dword cbSize = 0;)
   infile = fdopen(filehan, "r");
   if(infile == 0)
   {
-        if (ownsFile) FileClose(filehan, TRUE);
+        FileClose(filehan, TRUE);
         free(cinfo);
         return(0);
   }
@@ -398,7 +388,7 @@ EC(dword cbSize = 0;)
       jpeg_set_error_handler_context((struct jpeg_common_struct*) cinfo, 0);
       jpeg_destroy_decompress(cinfo);
       if (infile) fdclose(infile);
-      if (ownsFile && filehan) FileClose(filehan, TRUE);
+      if (filehan) FileClose(filehan, TRUE);  /* close source file */
       /* Return the memory */
       if (gotAlloc)
 	  AllocWatcherFree(watcher, requiredMemory) ;
@@ -629,7 +619,7 @@ EC(dword cbSize = 0;)
 
       if (infile) fdclose(infile);
 
-      if (ownsFile && filehan) FileClose(filehan, TRUE);
+      if (filehan) FileClose(filehan, TRUE);  /* close source file */
 
       /* Return the memory */
       if (gotAlloc)
@@ -862,7 +852,7 @@ EC(dword cbSize = 0;)
 
   if (infile) fdclose(infile);
 
-  if (ownsFile && filehan) FileClose(filehan, TRUE);
+  if (filehan) FileClose(filehan, TRUE);   /* close source file */
 
   if(flag == FALSE)
         dataVMBlock = bmblock;
