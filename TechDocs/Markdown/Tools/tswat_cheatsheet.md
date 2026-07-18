@@ -66,8 +66,6 @@ Click on a line # in the source window to toggle a breakpoint there.
 
 `stop in routine` — Set breakpoint in routine
 `stop at [file.goc:]line` — Set breakpoint at line [of file.goc]
- This must contain the full path, as in:
- stop at /home/konstantinmeyer/pcgeos/Library/Trans/Text/Markdown/Import/markdownImport.goc:425
 `brk list` — Display breakpoint list
 `brk dis num` — Disable breakpoint num
 `brk en num` — Enable breakpoint num
