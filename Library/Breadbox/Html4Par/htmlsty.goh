@@ -555,6 +555,7 @@
   {"egrave",232, C_LATIN_SMALL_LETTER_E_GRAVE},
   {"eth",   240, HTML_SPECIAL_ENTITY_BASE+9},
   {"euml",  235, C_LATIN_SMALL_LETTER_E_DIAERESIS},
+  {"euro",  8364,C_EURO_SIGN},
   {"frac12",189, HTML_SPECIAL_ENTITY_BASE+6},
   {"frac14",188, HTML_SPECIAL_ENTITY_BASE+5},
   {"frac34",190, HTML_SPECIAL_ENTITY_BASE+7},
@@ -669,6 +670,7 @@
   {"egrave",232, 0x8F},
   {"eth",   240, HTML_SPECIAL_ENTITY_BASE+9},
   {"euml",  235, 0x91},
+  {"euro",  8364,C_CURRENCY},
   {"fnof",  131, 0xC4},   /* italic "f" currency symbol (?) */
   {"frac12",189, HTML_SPECIAL_ENTITY_BASE+6},
   {"frac14",188, HTML_SPECIAL_ENTITY_BASE+5},
