@@ -29,6 +29,8 @@ typedef struct {
     MemHandle charElementsH;
     optr charElementArray;
     TextRunArrayElement *nextRunP;
+    VMBlockHandle graphicRuns;
+    VMBlockHandle graphicElements;
     word currentToken;
     dword imageNumber;
     Boolean attrsValid;
@@ -383,23 +385,71 @@ cleanup:
     return error;
 }
 
+Boolean MDGetGraphic(MDExportState *stateP, dword position,
+                     VisTextGraphic *graphicP)
+{
+    TextRunArrayElement *runP;
+    LMemBlockHeader *elementsP;
+    VisTextGraphic *sourceP;
+    MemHandle elementsH;
+    optr elements;
+    dword runPosition;
+    word count;
+    word size;
+    word token;
+
+    if (stateP->graphicRuns == NullHandle ||
+        stateP->graphicElements == NullHandle) {
+        return FALSE;
+    }
+    runP = (void *)0;
+    token = CA_NULL_ELEMENT;
+    count = HugeArrayLock(stateP->vmFile, stateP->graphicRuns, 0,
+                          (void **)&runP, &size);
+    while (count != 0 && runP->TRAE_position.WAAH_high != -1) {
+        runPosition = ((dword)(byte)runP->TRAE_position.WAAH_high << 16) |
+                      runP->TRAE_position.WAAH_low;
+        if (runPosition >= position) {
+            if (runPosition == position) {
+                token = runP->TRAE_token;
+            }
+            break;
+        }
+        count = HugeArrayNext((void **)&runP, &size);
+    }
+    if (runP != (void *)0) {
+        HugeArrayUnlock(runP);
+    }
+    if (token == CA_NULL_ELEMENT) {
+        return FALSE;
+    }
+
+    elementsP = VMLock(stateP->vmFile, stateP->graphicElements,
+                       &elementsH);
+    if (elementsP == (void *)0) {
+        return FALSE;
+    }
+    elements = ConstructOptr(elementsH, elementsP->LMBH_offset);
+    sourceP = ChunkArrayElementToPtr(elements, token, (void *)0);
+    if (sourceP != (void *)0) {
+        memcpy(graphicP, sourceP, sizeof(*graphicP));
+    }
+    VMUnlock(elementsH);
+    return sourceP != (void *)0;
+}
+
 TransError MDPutGraphic(MDExportState *stateP, word *posP, dword position)
 {
     VisTextGraphic graphic;
-    VisTextRange range;
     char name[13];
     dword number;
     TransError error;
     word nameLength;
 
-    @call stateP->textObj::MSG_VIS_TEXT_GET_RUN_BOUNDS(
-        &range, OFFSET_FOR_GRAPHIC_RUNS, position);
-    if (range.VTR_start != position) {
+    memset(&graphic, 0, sizeof(graphic));
+    if (!MDGetGraphic(stateP, position, &graphic)) {
         return TE_INVALID_FORMAT;
     }
-    memset(&graphic, 0, sizeof(graphic));
-    @call stateP->textObj::MSG_VIS_TEXT_GET_GRAPHIC_AT_POSITION(
-        &graphic, position);
     if (graphic.VTG_type == VTGT_VARIABLE) {
         return MDPutString(stateP, posP, "[image]") ?
                    TE_NO_ERROR : TE_EXPORT_ERROR;
@@ -782,6 +832,8 @@ TransError _far _pascal MDExport(ExportFrame *frameP)
     MemHandle headerH;
     VMBlockHandle charRuns;
     VMBlockHandle charElements;
+    VMBlockHandle graphicRuns;
+    VMBlockHandle graphicElements;
     word count;
     word size;
 
@@ -820,7 +872,11 @@ TransError _far _pascal MDExport(ExportFrame *frameP)
         VMCHAIN_GET_VM_BLOCK(frameP->EF_transferVMChain), &headerH);
     charRuns = VMCHAIN_GET_VM_BLOCK(headerP->TTBH_charAttrRuns);
     charElements = VMCHAIN_GET_VM_BLOCK(headerP->TTBH_charAttrElements);
+    graphicRuns = VMCHAIN_GET_VM_BLOCK(headerP->TTBH_graphicRuns);
+    graphicElements = VMCHAIN_GET_VM_BLOCK(headerP->TTBH_graphicElements);
     VMUnlock(headerH);
+    stateP->graphicRuns = graphicRuns;
+    stateP->graphicElements = graphicElements;
     if (charRuns != NullHandle && charElements != NullHandle) {
         elementsP = VMLock(stateP->vmFile, charElements,
                            &stateP->charElementsH);
