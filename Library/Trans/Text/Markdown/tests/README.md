@@ -35,3 +35,22 @@ export-expected.md. Import the result again and verify that the headings,
 isolated inline styles, quote prefix, and list prefixes match the source
 document. Other unsafe and ambiguous formatting must remain visible plain
 text.
+
+For graphic export, import the PNG, JPEG, and GIF references in torture.md,
+then export the document. Each occurrence must produce a sibling PNG and a
+Markdown reference in document order, including repeated graphics and two
+graphics on one line. Import the exported Markdown again and verify all PNGs
+render. Resize or transform one graphic before export and verify its PNG uses
+the displayed dimensions and appearance.
+
+Export to a non-current directory with a long, punctuation-heavy Markdown
+name. Verify every generated filename is uppercase ASCII DOS 8.3, every link
+matches the filename case exactly, relative links resolve beside the Markdown
+file, and exporting again replaces the same PNGs without changing the links.
+Insert page-number and date fields and verify they remain
+`[image]` without consuming an image number.
+
+For failure cleanup, test an invalid graphic VM chain, a zero-sized graphic, a
+read-only or full output location, and forced bitmap-allocation failure. Export
+must return an error, remove the current incomplete PNG, and leave subsequent
+exports able to create their sidecars normally.

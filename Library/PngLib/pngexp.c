@@ -31,7 +31,7 @@ dword _pascal calculateScanlineBufferSize(dword width, BMFormat bitform);
 word _pascal calcBytesPerPixel(pngIHDRData* ihdrData);
 byte _pascal getFilterForScanline(byte* scanlinePtr, byte *prevScanlinePtr, word scanlineSize, word bytesPerPixel, word bitDepth);
 void _pascal filterScanline(byte* scanlinePtr, byte* filteredScanlinePtr, byte *prevScanlinePtr, word scanlineSize, word bytesPerPixel, word bitDepth);
-Boolean _pascal deflateScanline(void *filteredScanlinePtr, word scanlineSize, z_stream *zstrm, FileHandle file, dword *idatChunkSize, dword *crc);
+Boolean _pascal deflateScanline(void *filteredScanlinePtr, word scanlineSize, z_stream *zstrm, FileHandle file, dword *idatChunkSize, dword *crc, int flush);
 
 /* Utility Functions */
 word _pascal mapGEOSToPNGColorType(BMType bmptype);
@@ -610,7 +610,7 @@ PngError _pascal writeIDATChunk(FileHandle file, VMFileHandle srcfile, VMBlockHa
             memcpy(prevScanlinePtr, pngScanlinePtr, (word)pngRowBytes);
 
             /* Deflate and append to IDAT chunk */
-            if (!deflateScanline(filteredScanlinePtr, (word)scanlineSizeWithFilterByte, &zstrm, file, &idatChunkSize, &crc))
+            if (!deflateScanline(filteredScanlinePtr, (word)scanlineSizeWithFilterByte, &zstrm, file, &idatChunkSize, &crc, Z_SYNC_FLUSH))
             {
                 HugeArrayUnlock(scanlinePtr);
                 stat = PE_OTHER_ERROR; /* Compression failed */
@@ -622,8 +622,19 @@ PngError _pascal writeIDATChunk(FileHandle file, VMFileHandle srcfile, VMBlockHa
         }
         else
         {
-            break; /* whatever the reason, this is a REGULAR exit... */
+            stat = PE_INVALID_BITMAP;
+            break;
         }
+    }
+
+    if (stat != PE_NO_ERROR) {
+        goto exit;
+    }
+    if (!deflateScanline(filteredScanlinePtr, 0, &zstrm, file,
+                         &idatChunkSize, &crc,
+                         Z_FINISH)) {
+        stat = PE_OTHER_ERROR;
+        goto exit;
     }
 
     /* Update IDAT chunk length */
@@ -857,7 +868,7 @@ void _pascal filterScanline(byte* scanlinePtr, byte* filteredScanlinePtr, byte *
 /*********************************************************************
 * Map GEOS bitmap format flags to the corresponding PNG color type.
 *********************************************************************/
-Boolean _pascal deflateScanline(void *filteredScanlinePtr, word scanlineSize, z_stream *zstrm, FileHandle file, dword *idatChunkSize, dword *crc)
+Boolean _pascal deflateScanline(void *filteredScanlinePtr, word scanlineSize, z_stream *zstrm, FileHandle file, dword *idatChunkSize, dword *crc, int flush)
 {
     int ret = 0;
     dword compressedSize = 0;
@@ -888,7 +899,7 @@ Boolean _pascal deflateScanline(void *filteredScanlinePtr, word scanlineSize, z_
         zstrm->next_out = outBuffer;
         zstrm->avail_out = PNG_CHUNK_SIZE_OUT;
 
-        ret = deflate(zstrm, Z_SYNC_FLUSH); /* Ensure all output is flushed */
+        ret = deflate(zstrm, flush);
         if (ret != Z_OK && ret != Z_STREAM_END)
         {
             stat = FALSE; /* Compression failed */
@@ -909,7 +920,8 @@ Boolean _pascal deflateScanline(void *filteredScanlinePtr, word scanlineSize, z_
         *crc = crc32(*crc, outBuffer, compressedSize);
         *idatChunkSize += compressedSize;
 
-    } while (zstrm->avail_in > 0);
+    } while (zstrm->avail_in > 0 ||
+             (flush == Z_FINISH && ret != Z_STREAM_END));
 
 exit:
     /* Free memory */

@@ -3,6 +3,8 @@
 #include <vm.h>
 #include <xlatLib.h>
 #include <string.h>
+#include <extgraph.h>
+#include <pnglib.h>
 @include <html4par.goh>
 
 #define MD_EXPORT_LINE 2048
@@ -15,6 +17,7 @@
 typedef struct {
     optr textObj;
     FileHandle output;
+    ExportFrame *frameP;
     char line[MD_EXPORT_LINE];
     char rendered[MD_EXPORT_OUTPUT];
     byte kinds[MD_EXPORT_LINE];
@@ -24,6 +27,7 @@ typedef struct {
     optr charElementArray;
     TextRunArrayElement *nextRunP;
     word currentToken;
+    dword imageNumber;
     Boolean attrsValid;
     Boolean quote;
 } MDExportState;
@@ -79,19 +83,38 @@ Boolean MDPutByte(MDExportState *stateP, word *posP, byte value)
     return TRUE;
 }
 
+Boolean MDPutString(MDExportState *stateP, word *posP, const char *valueP)
+{
+    while (*valueP != C_NULL) {
+        if (!MDPutByte(stateP, posP, *valueP++)) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+Boolean MDPutNumber(MDExportState *stateP, word *posP, dword value)
+{
+    char digits[10];
+    word count;
+
+    count = 0;
+    do {
+        digits[count++] = '0' + (byte)(value % 10);
+        value /= 10;
+    } while (value != 0);
+    while (count != 0) {
+        if (!MDPutByte(stateP, posP, digits[--count])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 Boolean MDPutChar(MDExportState *stateP, word *posP, byte value)
 {
     word unicode;
 
-    if (value == C_GRAPHIC) {
-        return MDPutByte(stateP, posP, '[') &&
-               MDPutByte(stateP, posP, 'i') &&
-               MDPutByte(stateP, posP, 'm') &&
-               MDPutByte(stateP, posP, 'a') &&
-               MDPutByte(stateP, posP, 'g') &&
-               MDPutByte(stateP, posP, 'e') &&
-               MDPutByte(stateP, posP, ']');
-    }
     unicode = stateP->unicode[value];
     if (unicode == 0) {
         unicode = '?';
@@ -106,6 +129,288 @@ Boolean MDPutChar(MDExportState *stateP, word *posP, byte value)
     return MDPutByte(stateP, posP, 0xe0 | (unicode >> 12)) &&
            MDPutByte(stateP, posP, 0x80 | ((unicode >> 6) & 0x3f)) &&
            MDPutByte(stateP, posP, 0x80 | (unicode & 0x3f));
+}
+
+TransError MDExtGraphError(EGError error)
+{
+    switch (error) {
+    case EGE_BLOCK_LOCKING_FAILURE:
+    case EGE_CANT_CREATE_BITMAP:
+        return TE_OUT_OF_MEMORY;
+    case EGE_ILLEGAL_BITMAP_SIZE:
+        return TE_INVALID_FORMAT;
+    default:
+        return TE_EXPORT_ERROR;
+    }
+}
+
+TransError MDPngError(PngError error)
+{
+    switch (error) {
+    case PE_WRITE_PROBLEM:
+        return TE_FILE_WRITE;
+    case PE_BLOCK_LOCK_FAILURE:
+    case PE_OUT_OF_MEMORY:
+        return TE_OUT_OF_MEMORY;
+    case PE_INVALID_BITMAP:
+        return TE_EXPORT_ERROR;
+    default:
+        return TE_ERROR;
+    }
+}
+
+Boolean MDMakeImageName(const char *documentNameP, dword number,
+                        char *nameP)
+{
+    char digits[10];
+    word digitCount;
+    word documentLength;
+    word stemLength;
+    word lastDot;
+    word prefixLimit;
+    word source;
+    word dest;
+    byte value;
+
+    digitCount = 0;
+    do {
+        digits[digitCount++] = '0' + (byte)(number % 10);
+        number /= 10;
+    } while (number != 0);
+    /* ATTENTION: DOS 8.3 leaves six decimal digits when the name retains a
+     * stem character and separator.  Use base-36 if a text object can ever
+     * contain more than 999999 embedded GStrings.
+     */
+    if (digitCount > 6) {
+        return FALSE;
+    }
+
+    documentLength = 0;
+    lastDot = 0xffff;
+    while (documentNameP[documentLength] != C_NULL) {
+        if (documentNameP[documentLength] == '.') {
+            lastDot = documentLength;
+        }
+        ++documentLength;
+    }
+    stemLength = (lastDot == 0xffff) ? documentLength : lastDot;
+    prefixLimit = 8 - digitCount - 1;
+    dest = 0;
+    for (source = 0; source < stemLength && dest < prefixLimit; ++source) {
+        value = (byte)documentNameP[source];
+        if (!((value >= 'a' && value <= 'z') ||
+              (value >= 'A' && value <= 'Z') ||
+              (value >= '0' && value <= '9') ||
+              value == '_' || value == '-')) {
+            value = '_';
+        }
+        nameP[dest++] = value;
+    }
+    if (dest == 0) {
+        nameP[dest++] = 'i';
+    }
+    nameP[dest++] = '-';
+    while (digitCount != 0) {
+        nameP[dest++] = digits[--digitCount];
+    }
+    nameP[dest++] = '.';
+    nameP[dest++] = 'p';
+    nameP[dest++] = 'n';
+    nameP[dest++] = 'g';
+    nameP[dest] = C_NULL;
+    return TRUE;
+}
+
+TransError MDRasterizeGraphic(MDExportState *stateP,
+                              VisTextGraphic *graphicP,
+                              VMBlockHandle *bitmapP)
+{
+    dword chainSize;
+    word vmBlocks;
+    word dbItems;
+    VMBlockHandle sourceBlock;
+    VMBlockHandle renderedBlock;
+    VMBlockHandle bitmapBlock;
+    GStateHandle sourceGString;
+    GStateHandle renderedGString;
+    GStringErrorType endError;
+    GSRetType drawResult;
+    EGError bitmapError;
+    word lastElement;
+    TransError error;
+
+    *bitmapP = NullHandle;
+    sourceBlock = VMCHAIN_GET_VM_BLOCK(graphicP->VTG_vmChain);
+    if (sourceBlock == NullHandle ||
+        VMCHAIN_IS_DBITEM(graphicP->VTG_vmChain) ||
+        graphicP->VTG_size.XYS_width == 0 ||
+        graphicP->VTG_size.XYS_height == 0 ||
+        VMInfoVMChain(stateP->vmFile, graphicP->VTG_vmChain,
+                      &chainSize, &vmBlocks, &dbItems)) {
+        return TE_INVALID_FORMAT;
+    }
+
+    sourceGString = GrLoadGString(stateP->vmFile, GST_VMEM, sourceBlock);
+    if (sourceGString == NullHandle) {
+        return TE_INVALID_FORMAT;
+    }
+    renderedBlock = NullHandle;
+    renderedGString = GrCreateGString(stateP->vmFile, GST_VMEM,
+                                      &renderedBlock);
+    if (renderedGString == NullHandle || renderedBlock == NullHandle) {
+        GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
+        if (renderedGString != NullHandle) {
+            GrDestroyGString(renderedGString, 0, GSKT_KILL_DATA);
+        } else if (renderedBlock != NullHandle) {
+            VMFreeVMChain(stateP->vmFile,
+                          VMCHAIN_MAKE_FROM_VM_BLOCK(renderedBlock));
+        }
+        return TE_OUT_OF_MEMORY;
+    }
+
+    GrSetGStringBounds(renderedGString, 0, 0,
+                       graphicP->VTG_size.XYS_width,
+                       graphicP->VTG_size.XYS_height);
+    GrApplyTransform(renderedGString,
+        &graphicP->VTG_data.VTGD_gstring.VTGG_tmatrix);
+    GrRelMoveTo(renderedGString,
+        MakeWWFixed(graphicP->VTG_data.VTGD_gstring.VTGG_drawOffset.XYO_x),
+        MakeWWFixed(graphicP->VTG_data.VTGD_gstring.VTGG_drawOffset.XYO_y));
+    lastElement = 0;
+    drawResult = GrDrawGStringAtCP(renderedGString, sourceGString, 0,
+                                  &lastElement);
+    GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
+    if (drawResult == GSRT_FAULT) {
+        GrDestroyGString(renderedGString, 0, GSKT_KILL_DATA);
+        return TE_INVALID_FORMAT;
+    }
+    endError = GrEndGString(renderedGString);
+    if (endError != GSET_NO_ERROR) {
+        GrDestroyGString(renderedGString, 0, GSKT_KILL_DATA);
+        return TE_DISK_FULL;
+    }
+    GrDestroyGString(renderedGString, 0, GSKT_LEAVE_DATA);
+
+    bitmapError = EGE_NO_ERROR;
+    bitmapBlock = BmpGStringToBitmap(stateP->vmFile, renderedBlock,
+        stateP->vmFile, BMF_24BIT | BMT_MASK, &bitmapError);
+    VMFreeVMChain(stateP->vmFile,
+                  VMCHAIN_MAKE_FROM_VM_BLOCK(renderedBlock));
+    if (bitmapError != EGE_NO_ERROR || bitmapBlock == NullHandle) {
+        if (bitmapBlock != NullHandle) {
+            VMFreeVMChain(stateP->vmFile,
+                          VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+        }
+        error = (bitmapError == EGE_NO_ERROR) ? TE_OUT_OF_MEMORY :
+                                                MDExtGraphError(bitmapError);
+        return error;
+    }
+    *bitmapP = bitmapBlock;
+    return TE_NO_ERROR;
+}
+
+TransError MDWriteGraphicPNG(MDExportState *stateP,
+                             VisTextGraphic *graphicP, const char *nameP)
+{
+    VMBlockHandle bitmapBlock;
+    FileHandle fileH;
+    PngError pngError;
+    TransError error;
+    Boolean directoryPushed;
+    Boolean fileCreated;
+
+    bitmapBlock = NullHandle;
+    fileH = NullHandle;
+    directoryPushed = FALSE;
+    fileCreated = FALSE;
+    error = MDRasterizeGraphic(stateP, graphicP, &bitmapBlock);
+    if (error != TE_NO_ERROR) {
+        goto cleanup;
+    }
+
+    FilePushDir();
+    directoryPushed = TRUE;
+    if (!FileSetCurrentPath(stateP->frameP->EF_outputPathDisk,
+                            stateP->frameP->EF_outputPathName)) {
+        error = TE_FILE_OPEN;
+        goto cleanup;
+    }
+    fileH = FileCreate(nameP, FCF_NATIVE | FILE_CREATE_TRUNCATE |
+                       FILE_ACCESS_RW | FILE_DENY_RW, FILE_ATTR_NORMAL);
+    if (fileH == NullHandle) {
+        error = (ThreadGetError() == ERROR_INSUFFICIENT_MEMORY) ?
+                    TE_OUT_OF_MEMORY : TE_FILE_OPEN;
+        goto cleanup;
+    }
+    fileCreated = TRUE;
+    pngError = pngExportBitmapFHandle(stateP->vmFile, bitmapBlock, fileH);
+    if (pngError != PE_NO_ERROR) {
+        error = MDPngError(pngError);
+    }
+    if (FileClose(fileH, FALSE) != 0 && error == TE_NO_ERROR) {
+        error = TE_FILE_WRITE;
+    }
+    fileH = NullHandle;
+
+cleanup:
+    if (fileH != NullHandle) {
+        FileClose(fileH, FALSE);
+    }
+    if (fileCreated && error != TE_NO_ERROR) {
+        FileDelete(nameP);
+    }
+    if (directoryPushed) {
+        FilePopDir();
+    }
+    if (bitmapBlock != NullHandle) {
+        VMFreeVMChain(stateP->vmFile,
+                      VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+    }
+    return error;
+}
+
+TransError MDPutGraphic(MDExportState *stateP, word *posP, dword position)
+{
+    VisTextGraphic graphic;
+    char name[13];
+    dword number;
+    TransError error;
+    word nameLength;
+
+    memset(&graphic, 0, sizeof(graphic));
+    @call stateP->textObj::MSG_VIS_TEXT_GET_GRAPHIC_AT_POSITION(
+        &graphic, position);
+    if (graphic.VTG_type == VTGT_VARIABLE) {
+        return MDPutString(stateP, posP, "[image]") ?
+                   TE_NO_ERROR : TE_EXPORT_ERROR;
+    }
+    if (graphic.VTG_type != VTGT_GSTRING) {
+        return TE_INVALID_FORMAT;
+    }
+
+    number = stateP->imageNumber + 1;
+    if (number == 0 ||
+        !MDMakeImageName(stateP->frameP->EF_outputFileName, number, name)) {
+        return TE_FILE_TOO_LARGE;
+    }
+    error = MDWriteGraphicPNG(stateP, &graphic, name);
+    if (error != TE_NO_ERROR) {
+        return error;
+    }
+    for (nameLength = 0; name[nameLength] != C_NULL; ++nameLength) {
+        if (name[nameLength] >= 'a' && name[nameLength] <= 'z') {
+            name[nameLength] -= 'a' - 'A';
+        }
+    }
+    if (!MDPutString(stateP, posP, "![image ") ||
+        !MDPutNumber(stateP, posP, number) ||
+        !MDPutString(stateP, posP, "](") ||
+        !MDPutString(stateP, posP, name) ||
+        !MDPutByte(stateP, posP, ')')) {
+        return TE_EXPORT_ERROR;
+    }
+    stateP->imageNumber = number;
+    return TE_NO_ERROR;
 }
 
 Boolean MDRunReached(TextRunArrayElement *runP, dword position)
@@ -285,13 +590,17 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length,
     word kind;
     word nextKind;
     Boolean quoteEnd;
+    TransError error;
 
     headingSize = 0;
     heading = (length != 0);
     for (inPos = 0; inPos < length; ++inPos) {
         attrP = MDGetAttr(stateP, base + inPos);
-        stateP->kinds[inPos] = attrP ? MDAttrKind(attrP) : 0;
-        if (!attrP || !(attrP->VTCA_textStyles & TS_BOLD)) {
+        stateP->kinds[inPos] =
+            (attrP && (byte)stateP->line[inPos] != C_GRAPHIC) ?
+                MDAttrKind(attrP) : 0;
+        if ((byte)stateP->line[inPos] == C_GRAPHIC || !attrP ||
+            !(attrP->VTCA_textStyles & TS_BOLD)) {
             heading = 0;
         } else if (headingSize == 0) {
             headingSize = attrP->VTCA_pointSize.WBF_int;
@@ -377,10 +686,16 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length,
             return TE_EXPORT_ERROR;
         }
         while (inPos < runEnd) {
-            if (!MDPutChar(stateP, &outPos,
-                           (byte)stateP->line[inPos++])) {
-                return TE_EXPORT_ERROR;
+            if ((byte)stateP->line[inPos] == C_GRAPHIC) {
+                error = MDPutGraphic(stateP, &outPos, base + inPos);
+                if (error != TE_NO_ERROR) {
+                    return error;
+                }
+            } else if (!MDPutChar(stateP, &outPos,
+                                  (byte)stateP->line[inPos])) {
+                    return TE_EXPORT_ERROR;
             }
+            ++inPos;
         }
         if (kind && !MDPutDelimiter(stateP, &outPos, kind)) {
             return TE_EXPORT_ERROR;
@@ -452,7 +767,8 @@ TransError _far _pascal MDExport(ExportFrame *frameP)
     if (stateH == NullHandle) return TE_OUT_OF_MEMORY;
     stateP = (MDExportState *)MemDeref(stateH);
     textObj = TextAllocClipboardObject(frameP->EF_transferVMFile,
-        VTSF_MULTIPLE_CHAR_ATTRS | VTSF_MULTIPLE_PARA_ATTRS, 0);
+        VTSF_MULTIPLE_CHAR_ATTRS | VTSF_MULTIPLE_PARA_ATTRS |
+        VTSF_GRAPHICS, 0);
     if (!textObj) {
         MemUnlock(stateH);
         MemFree(stateH);
@@ -463,6 +779,7 @@ TransError _far _pascal MDExport(ExportFrame *frameP)
         frameP->EF_transferVMFile, 0, 0, 0);
     stateP->textObj = textObj;
     stateP->output = frameP->EF_outputFile;
+    stateP->frameP = frameP;
     stateP->vmFile = frameP->EF_transferVMFile;
     headerP = VMLock(stateP->vmFile,
         VMCHAIN_GET_VM_BLOCK(frameP->EF_transferVMChain), &headerH);

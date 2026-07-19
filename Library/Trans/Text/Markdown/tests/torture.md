@@ -153,9 +153,10 @@ A literal # in the middle of a paragraph is not a heading.
 
 Importing this fixture and exporting it again is useful for finding lossy
 formatting. Links become label (url), rules become visible hyphen text, and
-unsupported structures must not be silently mistaken for supported structures.
-The importer and exporter are intentionally conservative and do not implement
-full CommonMark.
+the three supported image fixtures become sibling PNG sidecars in document
+order. Unsupported structures must not be silently mistaken for supported
+structures. The importer and exporter are intentionally conservative and do
+not implement full CommonMark.
 
 ## 10. Input length boundary
 
