@@ -5,6 +5,7 @@
 #include <string.h>
 #include <extgraph.h>
 #include <pnglib.h>
+#include "markdown.h"
 @include <html4par.goh>
 
 #define MD_EXPORT_LINE 2048
@@ -19,7 +20,8 @@ typedef struct {
     FileHandle output;
     ExportFrame *frameP;
     char line[MD_EXPORT_LINE];
-    char rendered[MD_EXPORT_OUTPUT];
+    MemHandle renderedH;
+    char *renderedP;
     byte kinds[MD_EXPORT_LINE];
     word unicode[256];
     VMFileHandle vmFile;
@@ -79,7 +81,7 @@ Boolean MDPutByte(MDExportState *stateP, word *posP, byte value)
     if (*posP >= MD_EXPORT_OUTPUT) {
         return FALSE;
     }
-    stateP->rendered[(*posP)++] = value;
+    stateP->renderedP[(*posP)++] = value;
     return TRUE;
 }
 
@@ -323,6 +325,8 @@ TransError MDWriteGraphicPNG(MDExportState *stateP,
     fileH = NullHandle;
     directoryPushed = FALSE;
     fileCreated = FALSE;
+    MemUnlock(stateP->renderedH);
+    stateP->renderedP = (void *)0;
     error = MDRasterizeGraphic(stateP, graphicP, &bitmapBlock);
     if (error != TE_NO_ERROR) {
         goto cleanup;
@@ -356,15 +360,19 @@ cleanup:
     if (fileH != NullHandle) {
         FileClose(fileH, FALSE);
     }
+    if (bitmapBlock != NullHandle) {
+        VMFreeVMChain(stateP->vmFile,
+                      VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
+    }
+    stateP->renderedP = MemLock(stateP->renderedH);
+    if (stateP->renderedP == (void *)0 && error == TE_NO_ERROR) {
+        error = TE_OUT_OF_MEMORY;
+    }
     if (fileCreated && error != TE_NO_ERROR) {
         FileDelete(nameP);
     }
     if (directoryPushed) {
         FilePopDir();
-    }
-    if (bitmapBlock != NullHandle) {
-        VMFreeVMChain(stateP->vmFile,
-                      VMCHAIN_MAKE_FROM_VM_BLOCK(bitmapBlock));
     }
     return error;
 }
@@ -463,12 +471,12 @@ word MDAttrKind(VisTextCharAttr *attrP)
 word MDHeadingFromSize(word size)
 {
     switch (size) {
-    case 24: return 1;
-    case 18: return 2;
-    case 14: return 3;
-    case 12: return 4;
-    case 10: return 5;
-    case 9: return 6;
+    case MD_HEADING_1_SIZE: return 1;
+    case MD_HEADING_2_SIZE: return 2;
+    case MD_HEADING_3_SIZE: return 3;
+    case MD_HEADING_4_SIZE: return 4;
+    case MD_HEADING_5_SIZE: return 5;
+    case MD_HEADING_6_SIZE: return 6;
     }
     return 0;
 }
@@ -544,7 +552,7 @@ Boolean MDQuoteRegionValid(MDExportState *stateP, dword base,
         ++base;
     }
     reference.TR_type = TRT_POINTER;
-    reference.TR_ref.TRU_pointer.TRP_pointer = stateP->rendered;
+    reference.TR_ref.TRU_pointer.TRP_pointer = stateP->renderedP;
     while (base < size) {
         end = base + MD_EXPORT_LINE - 1;
         if (end > size) {
@@ -556,14 +564,14 @@ Boolean MDQuoteRegionValid(MDExportState *stateP, dword base,
             return FALSE;
         }
         length = 0;
-        while (length < (word)pulled && stateP->rendered[length] != C_CR) {
+        while (length < (word)pulled && stateP->renderedP[length] != C_CR) {
             ++length;
         }
         if (length == 0 ||
             !MDRangeItalic(stateP, base, base + length)) {
             return FALSE;
         }
-        if (MDLineEndsQuote(stateP->rendered, length)) {
+        if (MDLineEndsQuote(stateP->renderedP, length)) {
             return TRUE;
         }
         if (length == (word)pulled && base + pulled < size) {
@@ -600,10 +608,13 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length,
             (attrP && (byte)stateP->line[inPos] != C_GRAPHIC) ?
                 MDAttrKind(attrP) : 0;
         if ((byte)stateP->line[inPos] == C_GRAPHIC || !attrP ||
-            !(attrP->VTCA_textStyles & TS_BOLD)) {
+            !(attrP->VTCA_textStyles & TS_BOLD) ||
+            attrP->VTCA_pointSize.WBF_frac != 0) {
             heading = 0;
         } else if (headingSize == 0) {
             headingSize = attrP->VTCA_pointSize.WBF_int;
+        } else if (headingSize != attrP->VTCA_pointSize.WBF_int) {
+            heading = 0;
         }
     }
     heading = heading ? MDHeadingFromSize(headingSize) : 0;
@@ -708,7 +719,7 @@ TransError MDRenderLine(MDExportState *stateP, dword base, word length,
     if (quoteEnd) {
         stateP->quote = FALSE;
     }
-    return MDWrite(stateP->output, stateP->rendered, outPos);
+    return MDWrite(stateP->output, stateP->renderedP, outPos);
 }
 
 TransError MDExportObject(MDExportState *stateP)
@@ -766,10 +777,20 @@ TransError _far _pascal MDExport(ExportFrame *frameP)
                       HAF_ZERO_INIT | HAF_LOCK);
     if (stateH == NullHandle) return TE_OUT_OF_MEMORY;
     stateP = (MDExportState *)MemDeref(stateH);
+    stateP->renderedH = MemAlloc(MD_EXPORT_OUTPUT, HF_DYNAMIC,
+                                 HAF_ZERO_INIT | HAF_LOCK);
+    if (stateP->renderedH == NullHandle) {
+        MemUnlock(stateH);
+        MemFree(stateH);
+        return TE_OUT_OF_MEMORY;
+    }
+    stateP->renderedP = MemDeref(stateP->renderedH);
     textObj = TextAllocClipboardObject(frameP->EF_transferVMFile,
         VTSF_MULTIPLE_CHAR_ATTRS | VTSF_MULTIPLE_PARA_ATTRS |
         VTSF_GRAPHICS, 0);
     if (!textObj) {
+        MemUnlock(stateP->renderedH);
+        MemFree(stateP->renderedH);
         MemUnlock(stateH);
         MemFree(stateH);
         return TE_OUT_OF_MEMORY;
@@ -809,6 +830,10 @@ TransError _far _pascal MDExport(ExportFrame *frameP)
     }
     TextFinishWithClipboardObject(textObj, TCO_RETURN_NOTHING,
         HandleToOptr(GeodeGetProcessHandle()), "");
+    if (stateP->renderedP != (void *)0) {
+        MemUnlock(stateP->renderedH);
+    }
+    MemFree(stateP->renderedH);
     MemUnlock(stateH);
     MemFree(stateH);
     return error;

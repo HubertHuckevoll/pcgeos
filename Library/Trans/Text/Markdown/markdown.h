@@ -1,0 +1,12 @@
+#ifndef MARKDOWN_H
+#define MARKDOWN_H
+
+#define MD_HEADING_1_SIZE 24
+#define MD_HEADING_2_SIZE 18
+#define MD_HEADING_3_SIZE 14
+#define MD_HEADING_4_SIZE 12
+#define MD_HEADING_5_SIZE 10
+#define MD_HEADING_6_SIZE 9
+#define MD_BODY_SIZE 12
+
+#endif
