@@ -670,7 +670,7 @@
   {"egrave",232, 0x8F},
   {"eth",   240, HTML_SPECIAL_ENTITY_BASE+9},
   {"euml",  235, 0x91},
-  {"euro",  8364,C_CURRENCY},
+  {"euro",  8364,C_CURRENCY}, /* GEOS uses the international currency sign for the Euro */
   {"fnof",  131, 0xC4},   /* italic "f" currency symbol (?) */
   {"frac12",189, HTML_SPECIAL_ENTITY_BASE+6},
   {"frac14",188, HTML_SPECIAL_ENTITY_BASE+5},
