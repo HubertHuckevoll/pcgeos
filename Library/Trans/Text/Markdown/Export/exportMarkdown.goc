@@ -66,6 +66,8 @@ void MDInitUnicode(MDExportState *stateP)
     for (index = 0; index < sizeof(extra) / sizeof(extra[0]); ++index) {
         MDAddUnicode(stateP, extra[index]);
     }
+    /* GEOS uses the universal currency slot for the euro. */
+    stateP->unicode[C_CURRENCY] = 0x20ac;
 }
 
 Boolean MDPutByte(MDExportState *stateP, word *posP, byte value)
