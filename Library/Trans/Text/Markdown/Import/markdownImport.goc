@@ -2,7 +2,7 @@
 #include <file.h>
 #include <gstring.h>
 #include <graphics.h>
-#include <impgraph.h>
+#include "impgraph.h"
 #include <library.h>
 #include <xlatLib.h>
 @include <html4par.goh>

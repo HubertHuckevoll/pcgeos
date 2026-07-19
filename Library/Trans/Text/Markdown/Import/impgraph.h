@@ -3,8 +3,8 @@
  07/2026 MeyerK
 *********************************************************************/
 
-#ifndef __IMPGRAPH_H
-#define __IMPGRAPH_H
+#ifndef __MARKDOWN_IMPGRAPH_H
+#define __MARKDOWN_IMPGRAPH_H
 
 #include <file.h>
 #include <htmldrv.h>
