@@ -181,6 +181,12 @@ extern word set_error_handler(word *context);
 #define SLICE_HEIGHT 10
 #endif
 
+#ifndef JPEG_SCALING
+#define JPEG_SCALING TRUE
+#endif
+
+#define JPEG_TARGET_MAX 800
+
 /* Don't allow registers to be used in the local variables in JpegImport */
 /* so that if an error occurs from set_error_handler then we return and */
 /* can remove the existing incomplete bitmap (mainly when progressive). */
@@ -238,6 +244,10 @@ EC(dword cbSize = 0;)
   Boolean gotTempAlloc = FALSE ;
   Boolean headerErr = FALSE;
   word errorHandlerContext;
+#if JPEG_SCALING
+  word denom = 1;
+  dword longest;
+#endif
 #if PROGRESS_DISPLAY
   _LoadProgressParams_;
   Boolean status = FALSE;
@@ -429,6 +439,29 @@ EC(dword cbSize = 0;)
      suspending, JPEG_SUSPENDED means we got error looking for header
      data */
   headerErr = (jpeg_read_header(cinfo, TRUE) == JPEG_SUSPENDED);
+
+  if (!headerErr) {
+#if JPEG_SCALING
+      longest = cinfo->image_width;
+      if (cinfo->image_height > longest)
+          longest = cinfo->image_height;
+
+      while ((denom < 8) &&
+             (((longest + denom - 1) / denom) > JPEG_TARGET_MAX)) {
+          denom <<= 1;
+      }
+
+      cinfo->scale_num = 1;
+      cinfo->scale_denom = denom;
+#endif
+      jpeg_calc_output_dimensions(cinfo);
+#if JPEG_SCALING
+      EC_ERROR_IF(cinfo->output_width !=
+                  ((cinfo->image_width + denom - 1) / denom), -1);
+      EC_ERROR_IF(cinfo->output_height !=
+                  ((cinfo->image_height + denom - 1) / denom), -1);
+#endif
+  }
   /* We can ignore the return value from jpeg_read_header since
    *   (a) suspension is not possible with the stdio data source, and
    *   (b) we passed TRUE to reject a tables-only JPEG file as an error.
@@ -436,8 +469,8 @@ EC(dword cbSize = 0;)
    */
 
   /* give back size */
-  picsize->XYS_width = cinfo->image_width;
-  picsize->XYS_height = cinfo->image_height;
+  picsize->XYS_width = cinfo->output_width;
+  picsize->XYS_height = cinfo->output_height;
 
   /* Attempt to estimate the amount of temporary storage for progressive mode */
   if(cinfo->progressive_mode)
@@ -451,10 +484,10 @@ EC(dword cbSize = 0;)
 
   gotTempAlloc = AllocWatcherAllocate(watcher, requiredTempMemory) ;
 
-  /* Don't do graphics bigger than 1024 x or 1024 y (either way) */
+  /* Don't exceed 2048 in either dimension or one megapixel */
   if (headerErr==FALSE && gotTempAlloc &&
-      ((picsize->XYS_width <= 2048) && (picsize->XYS_height <= 2048)) &&
-      (((dword)(picsize->XYS_width) * (dword)(picsize->XYS_height)) <=
+      ((cinfo->output_width <= 2048) && (cinfo->output_height <= 2048)) &&
+      (((dword)(cinfo->output_width) * (dword)(cinfo->output_height)) <=
        (1024L * 1024L)))  {
       /* Step 4: set parameters for decompression */
 
@@ -490,7 +523,6 @@ EC(dword cbSize = 0;)
             cinfo->two_pass_quantize = FALSE;
             cinfo->desired_number_of_colors = 216 ;
         }
-        jpeg_calc_output_dimensions(cinfo) ;
       }
 
       /* Step 5: Start decompressor */

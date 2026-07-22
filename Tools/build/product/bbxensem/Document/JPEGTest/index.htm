@@ -1,0 +1,26 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>JPEG Scaling Tests</title>
+<meta http-equiv="Content-Type" content="text/html; charset=us-ascii">
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#0000cc" vlink="#660099">
+<h1>JPEG Scaling Tests</h1>
+<p>Open each test separately first. Use the combined page last to check
+multiple-image memory behavior.</p>
+<table border="1" cellpadding="5" cellspacing="0">
+<tr><th>Test</th><th>Source</th><th>Expected result</th></tr>
+<tr><td><a href="small.htm">Small baseline RGB</a></td><td>700 x 500</td><td>1/1, 700 x 500</td></tr>
+<tr><td><a href="half.htm">Baseline RGB, half</a></td><td>1200 x 800</td><td>1/2, 600 x 400</td></tr>
+<tr><td><a href="quart.htm">Portrait baseline RGB</a></td><td>2000 x 3000</td><td>1/4, 500 x 750</td></tr>
+<tr><td><a href="eight.htm">Large baseline RGB</a></td><td>6000 x 4000</td><td>1/8, 750 x 500</td></tr>
+<tr><td><a href="gray.htm">Baseline grayscale</a></td><td>1200 x 800</td><td>1/2, 600 x 400</td></tr>
+<tr><td><a href="prog2.htm">Progressive RGB, half</a></td><td>1200 x 800</td><td>1/2, 600 x 400</td></tr>
+<tr><td><a href="prog4.htm">Large progressive RGB</a></td><td>3000 x 2000</td><td>1/4, 750 x 500, or clean low-memory rejection</td></tr>
+<tr><td><a href="reject.htm">Over-limit baseline RGB</a></td><td>16400 x 64</td><td>1/8 gives 2050 x 8; clean rejection</td></tr>
+<tr><td><a href="all.htm">Combined stress page</a></td><td>Six images</td><td>Same results without red X placeholders</td></tr>
+</table>
+<p>A red X on an individual baseline test indicates an import failure. A red
+X only on the combined page suggests aggregate memory pressure instead.</p>
+</body>
+</html>
