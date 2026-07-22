@@ -6,6 +6,8 @@ Allow IMPGRAPH to import oversized JPEG images by using IJG JPEG’s native IDCT
 
 Target a maximum output dimension of approximately 800 pixels while preserving aspect ratio. Supported scaling factors are `1/1`, `1/2`, `1/4`, and `1/8`.
 
+Gate this behaviour behind a Compile flag, that is set to TRUE by default. Restrict this scaling to JPEG.
+
 ## Primary file
 
 `Library/Breadbox/ImpGraph/IMPBMP/impjpeg.goc`
