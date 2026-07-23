@@ -442,6 +442,58 @@ typedef struct {
 extern T_fetchEngineChild G_fetchChildren[];
 #endif
 
+void LOCAL NormalizeImageMimeType(TCHAR *mimeType)
+{
+    TCHAR *p;
+
+    if(!mimeType || !*mimeType)
+      return;
+
+    strlwr(mimeType);
+    p = strchr(mimeType, C_SEMICOLON);
+    if(p)
+      *p = 0;
+
+    if(!strcmp(mimeType, _TEXT("image/pjpeg")) ||
+       !strcmp(mimeType, _TEXT("image/jpg")))
+      strcpy(mimeType, _TEXT("image/jpeg"));
+    else if(!strcmp(mimeType, _TEXT("image/x-png")) ||
+            !strcmp(mimeType, _TEXT("application/x-png")))
+      strcpy(mimeType, _TEXT("image/png"));
+}
+
+Boolean LOCAL SniffImageMimeType(TCHAR *file, TCHAR *mimeType)
+{
+    FileHandle fileH;
+    byte signature[16];
+    word read;
+
+    fileH = FileOpen(file, FILE_ACCESS_R | FILE_DENY_NONE);
+    if(!fileH)
+      return FALSE;
+
+    read = FileRead(fileH, signature, sizeof(signature), FALSE);
+    FileClose(fileH, FALSE);
+
+    if(read >= 6 &&
+       (!memcmp(signature, "GIF87a", 6) ||
+        !memcmp(signature, "GIF89a", 6)))
+      strcpy(mimeType, _TEXT("image/gif"));
+    else if(read >= 3 && signature[0] == 0xff &&
+            signature[1] == 0xd8 && signature[2] == 0xff)
+      strcpy(mimeType, _TEXT("image/jpeg"));
+    else if(read >= 8 && signature[0] == 0x89 &&
+            signature[1] == 0x50 && signature[2] == 0x4e &&
+            signature[3] == 0x47 && signature[4] == 0x0d &&
+            signature[5] == 0x0a && signature[6] == 0x1a &&
+            signature[7] == 0x0a)
+      strcpy(mimeType, _TEXT("image/png"));
+    else
+      return FALSE;
+
+    return TRUE;
+}
+
 /* url must be pointer to dynamic NamePool buffer */
 word LoadURLByDriver(TCHAR *type, TCHAR **url, TCHAR *tmpname, TCHAR *mimeType,
   dword *ret, HTMLFormDataHandle postData, NameToken referer, dword token,
@@ -601,14 +653,39 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
     }
 
     if(req->URB_mimeType) {
-      TCHAR *m = LMemDerefHandles(reqBlock, req->URB_mimeType), *n;
+      TCHAR *m = LMemDerefHandles(reqBlock, req->URB_mimeType), *n, *end;
+      TCHAR endChar;
+      word paramLen;
+
       *mimeType = 0;
       /* if generic binary data, try to deduce from name, if any */
-      if ((LocalCmpStringsNoCase(m, _TEXT("application/octet-stream"), 24) == 0) &&
-	  /* hopefully lowercase-only check is sufficient */
-	  (n = strstr(m, _TEXT("name=")))) {
-	  /* this can handle a quoted "name" argument */
-	  IdentifyMimeType(n+5, mimeType);
+      if (LocalCmpStringsNoCase(m, _TEXT("application/octet-stream"), 24) == 0) {
+	for(n = m; *n; n++) {
+	  paramLen = 0;
+	  if((n == m || n[-1] == C_SEMICOLON || n[-1] <= C_SPACE) &&
+	     LocalCmpStringsNoCase(n, _TEXT("filename="), 9) == 0)
+	    paramLen = 9;
+	  else if((n == m || n[-1] == C_SEMICOLON || n[-1] <= C_SPACE) &&
+		  LocalCmpStringsNoCase(n, _TEXT("name="), 5) == 0)
+	    paramLen = 5;
+
+	  if(paramLen) {
+	    n += paramLen;
+	    while(*n && *n <= C_SPACE)
+	      n++;
+	    if(*n == C_QUOTE || *n == '\'')
+	      n++;
+
+	    for(end = n; *end && *end != C_QUOTE && *end != '\'' &&
+		*end != C_SEMICOLON && *end > C_SPACE; end++)
+	      ;
+	    endChar = *end;
+	    *end = 0;
+	    IdentifyMimeType(n, mimeType);
+	    *end = endChar;
+	    break;
+	  }
+	}
       }
       if (*mimeType == 0) {
 	  xstrncpy(mimeType, LMemDerefHandles(reqBlock, req->URB_mimeType),
@@ -619,6 +696,7 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
     else
       *mimeType = 0;
 #endif
+    NormalizeImageMimeType(mimeType);
 
     *ret = req->URB_message;
 #ifdef CACHE_VALIDATION
@@ -846,8 +924,11 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
         {
           cached = SrcCacheFindURL(*url, &id, curExt, mime CACHE_VAL_FIND_ARG);
                                         /* check for ID in cache */
-          if(cached)                    /* create name based on cache name */
+          if(cached) {
+            NormalizeImageMimeType(mime);
+                                        /* create name based on cache name */
             CreateTempName(id, curExt, tempname);
+          }
         }
         else
           cached = FALSE;               /* ignore existing source cache */
@@ -880,12 +961,20 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
           if(URLRequestGetRet(type)==URL_RET_FILE)
 #endif
           {
+            NormalizeImageMimeType(mime);
             /* still don't know mime type? */
-            if(!*mime||!strcmpi(mime, _TEXT("*/*"))||!strcmpi(mime, _TEXT("text/plain"))) {
-              IdentifyMimeType(urlP, localMime);
+            if(!*mime || !strcmpi(mime, _TEXT("*/*")) ||
+               !strcmpi(mime, _TEXT("text/plain")) ||
+               !strcmpi(mime, _TEXT("application/octet-stream")) ||
+               !strcmpi(mime, _TEXT("binary/octet-stream"))) {
+              if(!SniffImageMimeType(tempname, mime)) {
+                IdentifyMimeType(urlP, localMime);
                                         /* guess from extension */
-	      if (*localMime) strcpy(mime, localMime);
+	        if(*localMime)
+                  strcpy(mime, localMime);
+              }
 	    }
+            NormalizeImageMimeType(mime);
 	    /* don't cache any non-text/non-image/non-audio */
 	    if (LocalCmpStringsNoCase(mime, _TEXT("text/"), 5) &&
 		LocalCmpStringsNoCase(mime, _TEXT("image/"), 6) &&
@@ -893,14 +982,6 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
                 LocalCmpStringsNoCase(mime, _TEXT("application/x-javascript"), 24)) {
 		type |= URB_RF_NOCACHE;
 	    }
-
-            if(*mime)                   // normalize mime type
-            {
-              strlwr(mime);
-              p = strchr(mime, ';');
-              if(p)
-                *p = 0;
-            }
 
             if(!srcCache)
             {
@@ -1031,6 +1112,7 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
 
     if(mimeType)                        /* no MIME type passed: can't import */
     {
+      NormalizeImageMimeType(mimeType);
       /* Handle "WebMagick native" style drivers */
       if(NameAssocFindAssociation(assocTypeDriver,
            mimeType, driver, sizeof(driver), TRUE, NULL))

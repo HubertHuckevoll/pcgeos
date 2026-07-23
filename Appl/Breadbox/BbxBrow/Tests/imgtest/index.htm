@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+  "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>BbxBrow Image Recognition Test</title>
+  <meta http-equiv="Content-Type"
+        content="text/html; charset=iso-8859-1">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+  <h1>BbxBrow Image Recognition Test</h1>
+
+  <p>This is an HTML 4.01 test page. A supported image displays a
+  green, blue, and orange test pattern. Unsupported or deliberately
+  invalid cases should fail cleanly without stopping the page.</p>
+
+  <h2>Supported extension cases</h2>
+
+  <table border="1" cellspacing="0" cellpadding="6">
+    <tr>
+      <th>Case</th>
+      <th>File</th>
+      <th>Expected result</th>
+      <th>Image</th>
+    </tr>
+    <tr>
+      <td>JPEG standard extension</td>
+      <td><code>image.jpg</code></td>
+      <td>Displayed as image/jpeg</td>
+      <td><img src="image.jpg" width="160" height="96"
+               alt="JPEG test image"></td>
+    </tr>
+    <tr>
+      <td>JPEG long extension</td>
+      <td><code>image.jpeg</code></td>
+      <td>Displayed as image/jpeg</td>
+      <td><img src="image.jpeg" width="160" height="96"
+               alt="JPEG long-extension test image"></td>
+    </tr>
+    <tr>
+      <td>JPEG alternate extension</td>
+      <td><code>image.jpe</code></td>
+      <td>Displayed as image/jpeg</td>
+      <td><img src="image.jpe" width="160" height="96"
+               alt="JPE test image"></td>
+    </tr>
+    <tr>
+      <td>JPEG JFIF extension</td>
+      <td><code>image.jfif</code></td>
+      <td>Displayed as image/jpeg</td>
+      <td><img src="image.jfif" width="160" height="96"
+               alt="JFIF test image"></td>
+    </tr>
+    <tr>
+      <td>JPEG mixed-case extension</td>
+      <td><code>upper.JPEG</code></td>
+      <td>Displayed as image/jpeg</td>
+      <td><img src="upper.JPEG" width="160" height="96"
+               alt="Mixed-case JPEG test image"></td>
+    </tr>
+    <tr>
+      <td>GIF</td>
+      <td><code>image.gif</code></td>
+      <td>Displayed as image/gif</td>
+      <td><img src="image.gif" width="160" height="96"
+               alt="GIF test image"></td>
+    </tr>
+    <tr>
+      <td>PNG</td>
+      <td><code>image.png</code></td>
+      <td>Displayed as image/png</td>
+      <td><img src="image.png" width="160" height="96"
+               alt="PNG test image"></td>
+    </tr>
+    <tr>
+      <td>PNG mixed-case extension</td>
+      <td><code>upper.PNG</code></td>
+      <td>Displayed as image/png</td>
+      <td><img src="upper.PNG" width="160" height="96"
+               alt="Mixed-case PNG test image"></td>
+    </tr>
+  </table>
+
+  <h2>Magic-byte sniff cases</h2>
+
+  <p>These files contain valid image data but use a <code>.bin</code>
+  extension. They test magic-byte recognition only when this page is
+  fetched through HTTP and the server returns an empty or ambiguous
+  MIME type such as <code>application/octet-stream</code>. A local
+  <code>file:</code> URL uses the extension path and is not expected
+  to sniff these files.</p>
+
+  <table border="1" cellspacing="0" cellpadding="6">
+    <tr>
+      <th>Signature</th>
+      <th>File</th>
+      <th>Expected over HTTP</th>
+      <th>Image</th>
+    </tr>
+    <tr>
+      <td>JPEG FF D8 FF</td>
+      <td><code>jpgmagic.bin</code></td>
+      <td>Displayed as image/jpeg</td>
+      <td><img src="jpgmagic.bin" width="160" height="96"
+               alt="JPEG magic-byte test image"></td>
+    </tr>
+    <tr>
+      <td>GIF89a</td>
+      <td><code>gifmagic.bin</code></td>
+      <td>Displayed as image/gif</td>
+      <td><img src="gifmagic.bin" width="160" height="96"
+               alt="GIF magic-byte test image"></td>
+    </tr>
+    <tr>
+      <td>PNG signature</td>
+      <td><code>pngmagic.bin</code></td>
+      <td>Displayed as image/png</td>
+      <td><img src="pngmagic.bin" width="160" height="96"
+               alt="PNG magic-byte test image"></td>
+    </tr>
+  </table>
+
+  <h2>Unsupported format cases</h2>
+
+  <p>These are valid files in formats not currently supported by the
+  BbxBrow image import path. They should show their alternate text or a
+  broken-image placeholder, and the rest of the page should continue
+  loading.</p>
+
+  <table border="1" cellspacing="0" cellpadding="6">
+    <tr>
+      <th>Format</th>
+      <th>File</th>
+      <th>Expected result</th>
+      <th>Image</th>
+    </tr>
+    <tr>
+      <td>WebP</td>
+      <td><code>image.webp</code></td>
+      <td>Not displayed; page remains usable</td>
+      <td><img src="image.webp" width="160" height="96"
+               alt="Unsupported WebP test image"></td>
+    </tr>
+    <tr>
+      <td>SVG</td>
+      <td><code>image.svg</code></td>
+      <td>Not displayed; page remains usable</td>
+      <td><img src="image.svg" width="160" height="96"
+               alt="Unsupported SVG test image"></td>
+    </tr>
+  </table>
+
+  <p><strong>End marker:</strong> If this text is visible, the browser
+  completed the document after all image cases.</p>
+</body>
+</html>

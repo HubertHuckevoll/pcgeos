@@ -326,11 +326,29 @@ void IdentifyMimeType(TCHAR *name, TCHAR *mimeType)
     p = ToolsFindExtension(name);       /* find last dot indicating extension */
     if(p)                               /* found one */
     {
-      xstrncpy(curExt,p,4);             /* copy up to three characters */
-      strupr(curExt);                   /* extension should be upper case */
+      /* Manual checks: foo.jpeg/jfif -> image/jpeg; foo.png -> image/png. */
+      if(!strcmpi(p, _TEXT("jpg")) || !strcmpi(p, _TEXT("jpeg")) ||
+         !strcmpi(p, _TEXT("jpe")) || !strcmpi(p, _TEXT("jfif")))
+        strcpy(mimeType, _TEXT("image/jpeg"));
+      else if(!strcmpi(p, _TEXT("gif")))
+        strcpy(mimeType, _TEXT("image/gif"));
+      else if(!strcmpi(p, _TEXT("png")))
+        strcpy(mimeType, _TEXT("image/png"));
+      else if(!strcmpi(p, _TEXT("htm")) || !strcmpi(p, _TEXT("html")) ||
+              !strcmpi(p, _TEXT("shtml")))
+        strcpy(mimeType, _TEXT("text/html"));
+      else if(!strcmpi(p, _TEXT("txt")) || !strcmpi(p, _TEXT("text")))
+        strcpy(mimeType, _TEXT("text/plain"));
+      else if(!strcmpi(p, _TEXT("js")))
+        strcpy(mimeType, _TEXT("application/x-javascript"));
+      else
+      {
+        xstrncpy(curExt,p,4);           /* copy up to three characters */
+        strupr(curExt);                 /* extension should be upper case */
 
-      NameAssocFindAssociation(assocExtType, curExt, mimeType,
-        MIME_MAXBUF*sizeof(TCHAR), TRUE, NULL);       /* find mime type for extension */
+        NameAssocFindAssociation(assocExtType, curExt, mimeType,
+          MIME_MAXBUF*sizeof(TCHAR), TRUE, NULL);     /* find mime type for extension */
+      }
     }
 }
 
