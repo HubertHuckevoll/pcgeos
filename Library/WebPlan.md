@@ -20,6 +20,12 @@ Repository validation confirmed:
 - it must also be added to altSrcCacheExts, with the canonical WebP extension for DOS file systems (8.3):
 IMAGE.WEBP => IMAGE.WEB
 
+## Steps
+
+Work in two steps:
+1) create the needed files and folders first, integrate into ImpGraph and bbxensem.filetree as well as the Installed/Makefile. Create all of the needed function signatures and APIs first. The idea of the first step is to have a compiling but non-functional library. In case the second step should fail, it will be easier for subsequent runs to pick up and complete the work.
+2) In the second step, "fill in the blanks", add the funcion bodies and make the library functional.
+
 ## Scope and public interface
 
 Version one supports:
