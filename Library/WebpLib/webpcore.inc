@@ -2216,6 +2216,11 @@ static void swebp__yuv2rgb_plain(simplewebp_u8 y, simplewebp_u8 u, simplewebp_u8
 /* See https://stackoverflow.com/a/43784809 */
 
 
+static void swebp__vp8_bind_cache_buffers(
+	struct swebp__vp8 *vp8d,
+	simplewebp_u8 *lumaP,
+	simplewebp_u8 *chromaP);
+
 static void swebp__vp8_bind_buffers(
 	struct swebp__vp8 *vp8d,
 	WebPDecoder *decoderP,
@@ -2224,8 +2229,6 @@ static void swebp__vp8_bind_buffers(
 	simplewebp_u8 *chromaP)
 {
 	simplewebp_u8 *workP;
-	simplewebp_i32 extraRows;
-	simplewebp_i32 uvPlaneRows;
 
 	workP = contextP;
 	vp8d->intra_t = workP;
@@ -2242,6 +2245,18 @@ static void swebp__vp8_bind_buffers(
 	}
 	vp8d->yuv_b = workP;
 
+	swebp__vp8_bind_cache_buffers(vp8d, lumaP, chromaP);
+	(void)decoderP;
+}
+
+static void swebp__vp8_bind_cache_buffers(
+	struct swebp__vp8 *vp8d,
+	simplewebp_u8 *lumaP,
+	simplewebp_u8 *chromaP)
+{
+	simplewebp_i32 extraRows;
+	simplewebp_i32 uvPlaneRows;
+
 	vp8d->cache_y_stride = 16 * vp8d->mb_w;
 	vp8d->cache_uv_stride = 8 * vp8d->mb_w;
 	extraRows = swebp__fextrarows[vp8d->filter_type];
@@ -2252,7 +2267,6 @@ static void swebp__vp8_bind_buffers(
 	vp8d->cache_v = chromaP +
 		uvPlaneRows * vp8d->cache_uv_stride +
 		(extraRows / 2) * vp8d->cache_uv_stride;
-	(void)decoderP;
 }
 
 static simplewebp_error swebp__vp8_output_rows(
@@ -2270,6 +2284,7 @@ static simplewebp_error swebp__vp8_output_rows(
 	simplewebp_i32 line;
 	simplewebp_i32 uvHeight;
 	simplewebp_i32 uvWidth;
+	simplewebp_error error;
 
 	decoderP = destination->decoderP;
 	extraRows = swebp__fextrarows[vp8d->filter_type];
@@ -2286,11 +2301,19 @@ static simplewebp_error swebp__vp8_output_rows(
 	uvHeight = (vp8d->picture_header.height + 1) / 2;
 	destination->firstLine = decoderP->nextOutputLine;
 	destination->lineCount = 0;
+	error = SIMPLEWEBP_NO_ERROR;
+	lumaP = vp8d->cache_y - extraRows * vp8d->cache_y_stride;
+	chromaP = vp8d->cache_u -
+		(extraRows / 2) * vp8d->cache_uv_stride;
+	MemUnlock(decoderP->contextH);
+	destination->rgbP = MemLock(decoderP->rgbH);
+	destination->rgbP += WEBP_PACKBITS_GAP(decoderP->rowBytes);
 
 	for (line = decoderP->nextOutputLine; line < end; line++) {
 		simplewebp_u8 *yP;
 		simplewebp_u8 *uP;
 		simplewebp_u8 *vP;
+		simplewebp_u8 *packedP;
 		simplewebp_i32 chromaY;
 		simplewebp_i32 otherY;
 		simplewebp_i32 x;
@@ -2307,8 +2330,10 @@ static simplewebp_error swebp__vp8_output_rows(
 			otherY = chromaY + 1 < uvHeight ? chromaY + 1 : chromaY;
 		else
 			otherY = chromaY > 0 ? chromaY - 1 : chromaY;
-		if (chromaY < uvBase || otherY < uvBase)
-			return SIMPLEWEBP_CORRUPT_ERROR;
+		if (chromaY < uvBase || otherY < uvBase) {
+			error = SIMPLEWEBP_CORRUPT_ERROR;
+			break;
+		}
 		uP = vp8d->cache_u -
 			(vp8d->mb_y ? (extraRows / 2) *
 			 vp8d->cache_uv_stride : 0);
@@ -2348,14 +2373,14 @@ static simplewebp_error swebp__vp8_output_rows(
 				(struct swebp__pixel *)(destination->rgbP + x * 3));
 		}
 
-		MemUnlock(decoderP->contextH);
 		MemUnlock(decoderP->lumaH);
 		MemUnlock(decoderP->chromaH);
-		packedSize = WebPPackBits(destination->rgbP +
-			decoderP->rowBytes, destination->rgbP,
+		packedP = destination->rgbP -
+			WEBP_PACKBITS_GAP(decoderP->rowBytes);
+		packedSize = WebPPackBits(packedP, destination->rgbP,
 			decoderP->rowBytes);
 		HugeArrayAppend(decoderP->destination, decoderP->bitmap,
-			packedSize, destination->rgbP + decoderP->rowBytes);
+			packedSize, packedP);
 #ifndef WEBP_HOST_TEST
 		HugeArrayLockDir(decoderP->destination, decoderP->bitmap,
 			(void **)&bitmapHeaderP);
@@ -2363,15 +2388,18 @@ static simplewebp_error swebp__vp8_output_rows(
 		HugeArrayDirty(bitmapHeaderP);
 		HugeArrayUnlockDir(bitmapHeaderP);
 #endif
-		contextP = MemLock(decoderP->contextH);
 		lumaP = MemLock(decoderP->lumaH);
 		chromaP = MemLock(decoderP->chromaH);
-		swebp__vp8_bind_buffers(vp8d, decoderP,
-			contextP, lumaP, chromaP);
+		swebp__vp8_bind_cache_buffers(vp8d, lumaP, chromaP);
 		destination->lineCount++;
 	}
-	decoderP->nextOutputLine = end;
-	return SIMPLEWEBP_NO_ERROR;
+	MemUnlock(decoderP->rgbH);
+	contextP = MemLock(decoderP->contextH);
+	swebp__vp8_bind_buffers(vp8d, decoderP,
+		contextP, lumaP, chromaP);
+	if (error == SIMPLEWEBP_NO_ERROR)
+		decoderP->nextOutputLine = end;
+	return error;
 }
 
 static simplewebp_error swebp__vp8_process_row(struct swebp__vp8 *vp8d, struct swebp__yuvdst *destination)

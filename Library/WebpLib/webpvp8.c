@@ -27,6 +27,9 @@ typedef enum {
     SIMPLEWEBP_UNSUPPORTED_ERROR
 } simplewebp_error;
 
+/* Keep in-place PackBits output strictly before unread RGB bytes. */
+#define WEBP_PACKBITS_GAP(size)  (1 + (((size) + 127) >> 7))
+
 static simplewebp_i32
 swebp__clip(simplewebp_i32 value, simplewebp_i32 maximum)
 {
@@ -72,8 +75,8 @@ WebPPackBits(byte *destinationP, const byte *sourceP, word sourceSize)
                 literalCount++;
             }
             destinationP[destination++] = (byte)(literalCount - 1);
-            memcpy(destinationP + destination,
-                   sourceP + literalStart, literalCount);
+            memmove(destinationP + destination,
+                    sourceP + literalStart, literalCount);
             destination += literalCount;
         }
     }
@@ -141,7 +144,7 @@ WebPDecodeInit(WebPDecoder *decoderP)
     dword lumaSize;
     dword chromaSize;
     dword contextSize;
-    word packedSize;
+    word packedGap;
     word delay;
     simplewebp_error error;
 
@@ -184,9 +187,8 @@ WebPDecodeInit(WebPDecoder *decoderP)
                                HAF_ZERO_INIT);
     decoderP->chromaH = MemAlloc((word)chromaSize, HF_SWAPABLE,
                                  HAF_ZERO_INIT);
-    packedSize = decoderP->rowBytes + 2 +
-                 ((decoderP->rowBytes + 2) >> 7);
-    decoderP->rgbH = MemAlloc(decoderP->rowBytes + packedSize, HF_SWAPABLE,
+    packedGap = WEBP_PACKBITS_GAP(decoderP->rowBytes);
+    decoderP->rgbH = MemAlloc(decoderP->rowBytes + packedGap, HF_SWAPABLE,
                               HAF_ZERO_INIT);
     if (decoderP->contextH == NullHandle ||
         decoderP->lumaH == NullHandle ||
@@ -220,7 +222,6 @@ WebPDecodeRow(WebPDecoder *decoderP, word *firstLine, word *lineCount)
     byte *contextP;
     byte *lumaP;
     byte *chromaP;
-    byte *rgbP;
     simplewebp_error error;
 
     if (decoderP->mbY >= decoderP->mbHeight) {
@@ -233,13 +234,12 @@ WebPDecodeRow(WebPDecoder *decoderP, word *firstLine, word *lineCount)
     contextP = MemLock(decoderP->contextH);
     lumaP = MemLock(decoderP->lumaH);
     chromaP = MemLock(decoderP->chromaH);
-    rgbP = MemLock(decoderP->rgbH);
     WebPRebindCore(decoderP, coreP, contextP, lumaP, chromaP);
     vp8P->mb_y = decoderP->mbY;
     tokenP = &vp8P->parts[vp8P->mb_y & vp8P->nparts_minus_1];
     tokenP->reader.windowSize = 0;
     output.decoderP = decoderP;
-    output.rgbP = rgbP;
+    output.rgbP = (void *)0;
     output.firstLine = output.lineCount = 0;
     error = SIMPLEWEBP_NO_ERROR;
 
@@ -266,7 +266,6 @@ WebPDecodeRow(WebPDecoder *decoderP, word *firstLine, word *lineCount)
         *firstLine = output.firstLine;
         *lineCount = output.lineCount;
     }
-    MemUnlock(decoderP->rgbH);
     MemUnlock(decoderP->chromaH);
     MemUnlock(decoderP->lumaH);
     MemUnlock(decoderP->contextH);

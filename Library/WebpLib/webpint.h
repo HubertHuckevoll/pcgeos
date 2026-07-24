@@ -29,6 +29,7 @@ typedef enum {
 #define WEBP_INPUT_WINDOW        2048
 #define WEBP_INPUT_BUFFER_SIZE   (WEBP_INPUT_WINDOW * 2)
 #define WEBP_MAX_PARTITIONS      8
+#define WEBP_CORE_WORDS          1364
 
 #define WEBP_FOURCC(a, b, c, d) \
     ((dword)(byte)(a) | ((dword)(byte)(b) << 8) | \
@@ -75,7 +76,12 @@ typedef struct {
     MemHandle lumaH;
     MemHandle chromaH;
     MemHandle rgbH;
-    word core[2048];
+    /*
+     * ATTENTION: This is the Watcom target size of WebPCore, rounded up
+     * to words. WebPCoreSizeCheck fails if the core grows; remeasure and
+     * increase WEBP_CORE_WORDS in that case.
+     */
+    word core[WEBP_CORE_WORDS];
 } WebPDecoder;
 
 WebPResult _pascal WebPParseContainer(FileHandle source, WebPDecoder *decoderP);
