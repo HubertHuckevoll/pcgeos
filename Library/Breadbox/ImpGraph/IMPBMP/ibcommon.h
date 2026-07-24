@@ -41,7 +41,8 @@ typedef enum
   IBF_TIFF,
   IBF_JPEG,
   IBF_GIF,
-  IBF_PNG
+  IBF_PNG,
+  IBF_WEBP
 } ImpBmpFormat;
 
 typedef struct

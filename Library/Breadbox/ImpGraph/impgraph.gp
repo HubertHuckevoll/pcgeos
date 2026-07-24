@@ -16,6 +16,7 @@ else
 library ijgjpeg
 endif
 library pnglib
+library webplib
 
 export MIMEDRVGRAPHIC
 export MIMEDRVINFO
@@ -26,4 +27,3 @@ incminor
 export MIMEDRVGRAPHICEX
 
 usernotes "Copyright 1994-2002  Breadbox Computer Company LLC  All Rights Reserved"
-

@@ -8,6 +8,7 @@
 #include "IMPBMP/impgif.h"
 #include "IMPBMP/impjpeg.h"
 #include "IMPBMP/imppng.h"
+#include "IMPBMP/impwebp.h"
 
 @include <impex.goh>
 #include <Ansi/string.h>
@@ -441,6 +442,8 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 #define IMP_PNG_PARAMS file, vmf, iad, resolution, watcher, usedMem, \
           locCompress, &params, &isCompacted, &bmVMBlock IMP_PROGRESS_PARAM \
           , mimeStatus
+#define IMP_WEBP_PARAMS file, vmf, iad, watcher, usedMem, &params, \
+          &isCompacted, &bmVMBlock IMP_PROGRESS_PARAM, mimeStatus
 
 
     if (strcmp(mimeType, _TEXT("image/gif")) == 0)
@@ -450,6 +453,8 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
             status = ImpJPG(IMP_JPG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpPNG(IMP_PNG_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpWebP(IMP_WEBP_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/jpeg")) == 0 || 
 	     strcmp(mimeType, _TEXT("image/jpg")) == 0)
@@ -459,12 +464,26 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
             status = ImpGIF(IMP_GIF_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpPNG(IMP_PNG_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpWebP(IMP_WEBP_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/png")) == 0)
     {
         status = ImpPNG(IMP_PNG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpJPG(IMP_JPG_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpGIF(IMP_GIF_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpWebP(IMP_WEBP_PARAMS);
+    }
+    else if (strcmp(mimeType, _TEXT("image/webp")) == 0)
+    {
+        status = ImpWebP(IMP_WEBP_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpJPG(IMP_JPG_PARAMS);
+        if (status == IBS_UNKNOWN_FORMAT)
+            status = ImpPNG(IMP_PNG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
             status = ImpGIF(IMP_GIF_PARAMS);
     }
@@ -518,6 +537,9 @@ char * _pascal _export MimeDrvInfo(_MimeInfoParams_)
                     _TEXT("image/png\0") \
                       _TEXT("PNG\0") \
                       _TEXT("\0") \
+                    _TEXT("image/webp\0") \
+                      _TEXT("WEBP\0") \
+                      _TEXT("\0") \
                     _TEXT("\0")                /* end of format list */
 
     /* Return list of supported formats */
@@ -552,5 +574,4 @@ VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
 			0		// no specific flags here
 	);
 }
-
 

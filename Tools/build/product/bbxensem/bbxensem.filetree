@@ -453,6 +453,7 @@ DIR (ensemble) {
 		# introduced with FreeGEOS project...
 		#
 		Library/PngLib/pnglib{ec}.geo GFS LOCALPC
+		Library/WebpLib/webplib{ec}.geo GFS LOCALPC
 
 		#
 		# for Global Email
