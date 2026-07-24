@@ -8,8 +8,22 @@
 #include <lmem.h>
 #include <hugearr.h>
 #include <vm.h>
+#include <ec.h>
 #include <Ansi/string.h>
 #include <webplib.h>
+
+typedef enum {
+    WEBP_WARNING_LOSSLESS_NOT_SUPPORTED,
+    WEBP_WARNING_ALPHA_NOT_SUPPORTED,
+    WEBP_WARNING_ANIMATION_NOT_SUPPORTED,
+    WEBP_WARNING_PREDICTED_FRAME_NOT_SUPPORTED,
+    WEBP_WARNING_VP8_PROFILE_NOT_SUPPORTED,
+    WEBP_WARNING_HIDDEN_FRAME_NOT_SUPPORTED,
+    WEBP_WARNING_DECODER_ALLOCATION_FAILED,
+    WEBP_WARNING_INPUT_BUFFER_ALLOCATION_FAILED,
+    WEBP_WARNING_WORK_BUFFER_ALLOCATION_FAILED,
+    WEBP_WARNING_OUTPUT_BITMAP_ALLOCATION_FAILED
+} Warnings;
 
 #define WEBP_MAX_DIMENSION       2048
 #define WEBP_INPUT_WINDOW        2048
@@ -33,6 +47,11 @@ typedef struct {
     byte ioError;
     byte token;
 } WebPBoolReader;
+
+typedef struct {
+    HugeArrayDirectory directory;
+    CBitmap bitmap;
+} WebPBitmapHeader;
 
 typedef struct {
     FileHandle source;

@@ -30,6 +30,53 @@ WebPFreeDecoderBuffers(WebPDecoder *decoderP)
     }
 }
 
+static VMBlockHandle
+WebPCreateBitmap(WebPDecoder *decoderP)
+{
+#ifdef WEBP_HOST_TEST
+    return GrCreateBitmapRaw(BMF_24BIT | BMT_COMPLEX,
+                             decoderP->width, decoderP->height,
+                             decoderP->destination);
+#else
+    VMBlockHandle sourceBitmap;
+    VMBlockHandle bitmap;
+    WebPBitmapHeader *sourceHeaderP;
+    WebPBitmapHeader *headerP;
+    word headerSize;
+
+    sourceBitmap = GrCreateBitmapRaw(BMF_24BIT | BMT_COMPLEX,
+                                     1, 1,
+                                     decoderP->destination);
+    if (sourceBitmap == NullHandle) {
+        return NullHandle;
+    }
+    HugeArrayLockDir(decoderP->destination, sourceBitmap,
+                     (void **)&sourceHeaderP);
+    headerSize = sourceHeaderP->directory.HAD_header.LMBH_offset;
+    bitmap = HugeArrayCreate(decoderP->destination, 0, headerSize);
+    if (bitmap == NullHandle) {
+        HugeArrayUnlockDir(sourceHeaderP);
+        VMFreeVMChain(decoderP->destination,
+                      VMCHAIN_MAKE_FROM_VM_BLOCK(sourceBitmap));
+        return NullHandle;
+    }
+    HugeArrayLockDir(decoderP->destination, bitmap, (void **)&headerP);
+    memcpy(&headerP->bitmap, &sourceHeaderP->bitmap,
+           headerSize - sizeof(HugeArrayDirectory));
+    HugeArrayUnlockDir(sourceHeaderP);
+    VMFreeVMChain(decoderP->destination,
+                  VMCHAIN_MAKE_FROM_VM_BLOCK(sourceBitmap));
+
+    headerP->bitmap.CB_simple.B_width = decoderP->width;
+    headerP->bitmap.CB_simple.B_height = 0;
+    headerP->bitmap.CB_simple.B_compact = BMC_PACKBITS;
+    headerP->bitmap.CB_devInfo = 0;
+    HugeArrayDirty(headerP);
+    HugeArrayUnlockDir(headerP);
+    return bitmap;
+#endif
+}
+
 WebPResult _pascal _export
 WebPImportBegin(FileHandle source, VMFileHandle destination,
                 WebPImportHandle *decoder, VMBlockHandle *bitmap,
@@ -49,6 +96,7 @@ WebPImportBegin(FileHandle source, VMFileHandle destination,
     /* HF_FIXED blocks are already locked and cannot use this API pattern. */
     decoderH = MemAlloc(sizeof(WebPDecoder), HF_SWAPABLE, HAF_ZERO_INIT);
     if (decoderH == NullHandle) {
+        EC_WARNING(WEBP_WARNING_DECODER_ALLOCATION_FAILED);
         return WEBP_ERROR_OUT_OF_MEMORY;
     }
     decoderP = MemLock(decoderH);
@@ -60,11 +108,9 @@ WebPImportBegin(FileHandle source, VMFileHandle destination,
         result = WebPDecodeInit(decoderP);
     }
     if (result == WEBP_RESULT_OK) {
-        decoderP->bitmap = GrCreateBitmapRaw(BMF_24BIT | BMT_COMPLEX,
-                                             decoderP->width,
-                                             decoderP->height,
-                                             destination);
+        decoderP->bitmap = WebPCreateBitmap(decoderP);
         if (decoderP->bitmap == NullHandle) {
+            EC_WARNING(WEBP_WARNING_OUTPUT_BITMAP_ALLOCATION_FAILED);
             result = WEBP_ERROR_OUT_OF_MEMORY;
         }
     }

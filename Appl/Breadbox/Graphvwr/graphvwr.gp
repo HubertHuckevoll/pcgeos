@@ -30,6 +30,9 @@ exempt giflib
 library pnglib
 exempt pnglib
 
+library webplib
+exempt webplib
+
 library thumbdb
 library ijgjpeg
 

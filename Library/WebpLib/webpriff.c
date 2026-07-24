@@ -9,6 +9,10 @@
 #include "webpint.h"
 #endif
 
+#if ERROR_CHECK
+Warnings webpWarnings;
+#endif
+
 static WebPResult
 WebPRead(FileHandle source, dword position, void *dataP, word size)
 {
@@ -108,7 +112,12 @@ WebPParseContainer(FileHandle source, WebPDecoder *decoderP)
                 return WEBP_ERROR_READ;
             }
             haveVP8X = TRUE;
-            if (extended[0] & 0x12) {
+            if (extended[0] & 0x10) {
+                EC_WARNING(WEBP_WARNING_ALPHA_NOT_SUPPORTED);
+                return WEBP_ERROR_UNSUPPORTED;
+            }
+            if (extended[0] & 0x02) {
+                EC_WARNING(WEBP_WARNING_ANIMATION_NOT_SUPPORTED);
                 return WEBP_ERROR_UNSUPPORTED;
             }
             if (extended[0] & 0xc1) {
@@ -139,10 +148,15 @@ WebPParseContainer(FileHandle source, WebPDecoder *decoderP)
                        ((dword)frameHeader[1] << 8) |
                        ((dword)frameHeader[2] << 16);
             if (frameTag & 1) {
+                EC_WARNING(WEBP_WARNING_PREDICTED_FRAME_NOT_SUPPORTED);
                 return WEBP_ERROR_UNSUPPORTED;
             }
-            if (((frameHeader[0] >> 1) & 7) > 3 ||
-                !(frameHeader[0] & 0x10)) {
+            if (((frameHeader[0] >> 1) & 7) > 3) {
+                EC_WARNING(WEBP_WARNING_VP8_PROFILE_NOT_SUPPORTED);
+                return WEBP_ERROR_UNSUPPORTED;
+            }
+            if (!(frameHeader[0] & 0x10)) {
+                EC_WARNING(WEBP_WARNING_HIDDEN_FRAME_NOT_SUPPORTED);
                 return WEBP_ERROR_UNSUPPORTED;
             }
             if (frameHeader[3] != 0x9d || frameHeader[4] != 0x01 ||
@@ -162,10 +176,15 @@ WebPParseContainer(FileHandle source, WebPDecoder *decoderP)
             if (decoderP->firstPartitionLength >= chunkSize - 10) {
                 return WEBP_ERROR_CORRUPT;
             }
-        } else if (chunkType == WEBP_FOURCC('V', 'P', '8', 'L') ||
-                   chunkType == WEBP_FOURCC('A', 'L', 'P', 'H') ||
-                   chunkType == WEBP_FOURCC('A', 'N', 'I', 'M') ||
+        } else if (chunkType == WEBP_FOURCC('V', 'P', '8', 'L')) {
+            EC_WARNING(WEBP_WARNING_LOSSLESS_NOT_SUPPORTED);
+            return WEBP_ERROR_UNSUPPORTED;
+        } else if (chunkType == WEBP_FOURCC('A', 'L', 'P', 'H')) {
+            EC_WARNING(WEBP_WARNING_ALPHA_NOT_SUPPORTED);
+            return WEBP_ERROR_UNSUPPORTED;
+        } else if (chunkType == WEBP_FOURCC('A', 'N', 'I', 'M') ||
                    chunkType == WEBP_FOURCC('A', 'N', 'M', 'F')) {
+            EC_WARNING(WEBP_WARNING_ANIMATION_NOT_SUPPORTED);
             return WEBP_ERROR_UNSUPPORTED;
         } else if (chunkType == WEBP_FOURCC('I', 'C', 'C', 'P')) {
             if (haveVP8) {

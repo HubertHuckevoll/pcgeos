@@ -67,6 +67,7 @@ ImpWebP(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
         status = WebPMapResult(result);
         goto cleanup;
     }
+    *isCompacted = TRUE;
 
     iad->IAD_size.XYS_width = info.width;
     iad->IAD_size.XYS_height = info.height;

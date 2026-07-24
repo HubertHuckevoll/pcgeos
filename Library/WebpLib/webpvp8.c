@@ -36,6 +36,50 @@ swebp__clip(simplewebp_i32 value, simplewebp_i32 maximum)
     return value > maximum ? maximum : value;
 }
 
+static word _pascal
+WebPPackBits(byte *destinationP, const byte *sourceP, word sourceSize)
+{
+    word source;
+    word destination;
+    word literalStart;
+    word literalCount;
+    word run;
+
+    source = destination = 0;
+    while (source < sourceSize) {
+        run = 1;
+        while (run < 128 && source + run < sourceSize &&
+               sourceP[source] == sourceP[source + run]) {
+            run++;
+        }
+        if (run >= 3) {
+            destinationP[destination++] = (byte)(1 - run);
+            destinationP[destination++] = sourceP[source];
+            source += run;
+        } else {
+            literalStart = source;
+            literalCount = 0;
+            while (source < sourceSize && literalCount < 128) {
+                run = 1;
+                while (run < 128 && source + run < sourceSize &&
+                       sourceP[source] == sourceP[source + run]) {
+                    run++;
+                }
+                if (run >= 3) {
+                    break;
+                }
+                source++;
+                literalCount++;
+            }
+            destinationP[destination++] = (byte)(literalCount - 1);
+            memcpy(destinationP + destination,
+                   sourceP + literalStart, literalCount);
+            destination += literalCount;
+        }
+    }
+    return destination;
+}
+
 #include "webpcore.inc"
 
 typedef struct {
@@ -97,6 +141,7 @@ WebPDecodeInit(WebPDecoder *decoderP)
     dword lumaSize;
     dword chromaSize;
     dword contextSize;
+    word packedSize;
     word delay;
     simplewebp_error error;
 
@@ -110,6 +155,7 @@ WebPDecodeInit(WebPDecoder *decoderP)
     decoderP->inputH = MemAlloc(WEBP_INPUT_BUFFER_SIZE, HF_SWAPABLE,
                                 HAF_ZERO_INIT);
     if (decoderP->inputH == NullHandle) {
+        EC_WARNING(WEBP_WARNING_INPUT_BUFFER_ALLOCATION_FAILED);
         return WEBP_ERROR_OUT_OF_MEMORY;
     }
 
@@ -138,12 +184,15 @@ WebPDecodeInit(WebPDecoder *decoderP)
                                HAF_ZERO_INIT);
     decoderP->chromaH = MemAlloc((word)chromaSize, HF_SWAPABLE,
                                  HAF_ZERO_INIT);
-    decoderP->rgbH = MemAlloc(decoderP->rowBytes, HF_SWAPABLE,
+    packedSize = decoderP->rowBytes + 2 +
+                 ((decoderP->rowBytes + 2) >> 7);
+    decoderP->rgbH = MemAlloc(decoderP->rowBytes + packedSize, HF_SWAPABLE,
                               HAF_ZERO_INIT);
     if (decoderP->contextH == NullHandle ||
         decoderP->lumaH == NullHandle ||
         decoderP->chromaH == NullHandle ||
         decoderP->rgbH == NullHandle) {
+        EC_WARNING(WEBP_WARNING_WORK_BUFFER_ALLOCATION_FAILED);
         return WEBP_ERROR_OUT_OF_MEMORY;
     }
 

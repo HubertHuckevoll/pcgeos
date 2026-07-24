@@ -506,10 +506,10 @@ static void swebp__transform_wht(const simplewebp_i16 *in, simplewebp_i16 *out)
 	{
 		simplewebp_i32 a0, a1, a2, a3;
 
-		a0 = in[i] + in[i + 12];
-		a1 = in[i + 4] + in[i + 8];
-		a2 = in[i + 4] - in[i + 8];
-		a3 = in[i] - in[i + 12];
+		a0 = (simplewebp_i32)in[i] + in[i + 12];
+		a1 = (simplewebp_i32)in[i + 4] + in[i + 8];
+		a2 = (simplewebp_i32)in[i + 4] - in[i + 8];
+		a3 = (simplewebp_i32)in[i] - in[i + 12];
 		temp[i] = a0 + a1;
 		temp[i + 4] = a3 + a2;
 		temp[i + 8] = a0 - a1;
@@ -560,8 +560,8 @@ static void swebp__transform_one(const simplewebp_i16 *in, simplewebp_u8 *out)
 	{
 		simplewebp_i32 a, b, c, d;
 
-		a = in[i] + in[i + 8];
-		b = in[i] - in[i + 8];
+		a = (simplewebp_i32)in[i] + in[i + 8];
+		b = (simplewebp_i32)in[i] - in[i + 8];
 		c = swebp__mul2(in[i + 4]) - swebp__mul1(in[i + 12]);
 		d = swebp__mul1(in[i + 4]) + swebp__mul2(in[i + 12]);
 		tmp[i * 4] = a + d;
@@ -596,7 +596,7 @@ static void swebp__transform(const simplewebp_i16 *in, simplewebp_u8 *out, simpl
 static void swebp__transform_dc(const simplewebp_i16 *in, simplewebp_u8 *out)
 {
 	simplewebp_i32 dc, x, y;
-	dc = in[0] + 4;
+	dc = (simplewebp_i32)in[0] + 4;
 
 	for (y = 0; y < 4; y++)
 	{
@@ -617,7 +617,7 @@ static void swebp__transform_ac3(const simplewebp_i16 *in, simplewebp_u8 *out)
 {
 	simplewebp_i32 a, c4, d4, c1, d1;
 
-	a = in[0] + 4;
+	a = (simplewebp_i32)in[0] + 4;
 	c4 = swebp__mul2(in[4]);
 	d4 = swebp__mul1(in[4]);
 	c1 = swebp__mul2(in[1]);
@@ -2055,7 +2055,7 @@ static simplewebp_i32 swebp__vp8_decode_macroblock(struct swebp__vp8 *vp8d, stru
 			else
 			{
 				simplewebp_i32 i, dc0;
-				dc0 = (dc[0] + 3) >> 3;
+				dc0 = ((simplewebp_i32)dc[0] + 3) >> 3;
 				for (i = 0; i < 16; i++)
 					dst[i * 16] = dc0;
 			}
@@ -2294,9 +2294,10 @@ static simplewebp_error swebp__vp8_output_rows(
 		simplewebp_i32 chromaY;
 		simplewebp_i32 otherY;
 		simplewebp_i32 x;
-		void *bitmapRowP;
-		word bitmapRowSize;
-		dword lockResult;
+		word packedSize;
+#ifndef WEBP_HOST_TEST
+		WebPBitmapHeader *bitmapHeaderP;
+#endif
 
 		yP = (vp8d->cache_y - (vp8d->mb_y ?
 			extraRows * vp8d->cache_y_stride : 0)) +
@@ -2350,23 +2351,18 @@ static simplewebp_error swebp__vp8_output_rows(
 		MemUnlock(decoderP->contextH);
 		MemUnlock(decoderP->lumaH);
 		MemUnlock(decoderP->chromaH);
-		lockResult = HugeArrayLock(decoderP->destination,
-			decoderP->bitmap, (dword)line, &bitmapRowP,
-			&bitmapRowSize);
-		if (HAL_COUNT(lockResult) == 0 ||
-		    bitmapRowSize != decoderP->rowBytes) {
-			if (HAL_COUNT(lockResult) != 0)
-				HugeArrayUnlock(bitmapRowP);
-			contextP = MemLock(decoderP->contextH);
-			lumaP = MemLock(decoderP->lumaH);
-			chromaP = MemLock(decoderP->chromaH);
-			swebp__vp8_bind_buffers(vp8d, decoderP,
-				contextP, lumaP, chromaP);
-			return SIMPLEWEBP_IO_ERROR;
-		}
-		memcpy(bitmapRowP, destination->rgbP, decoderP->rowBytes);
-		HugeArrayDirty(bitmapRowP);
-		HugeArrayUnlock(bitmapRowP);
+		packedSize = WebPPackBits(destination->rgbP +
+			decoderP->rowBytes, destination->rgbP,
+			decoderP->rowBytes);
+		HugeArrayAppend(decoderP->destination, decoderP->bitmap,
+			packedSize, destination->rgbP + decoderP->rowBytes);
+#ifndef WEBP_HOST_TEST
+		HugeArrayLockDir(decoderP->destination, decoderP->bitmap,
+			(void **)&bitmapHeaderP);
+		bitmapHeaderP->bitmap.CB_simple.B_height++;
+		HugeArrayDirty(bitmapHeaderP);
+		HugeArrayUnlockDir(bitmapHeaderP);
+#endif
 		contextP = MemLock(decoderP->contextH);
 		lumaP = MemLock(decoderP->lumaH);
 		chromaP = MemLock(decoderP->chromaH);
@@ -2532,9 +2528,6 @@ static simplewebp_error swebp__vp8_process_row(struct swebp__vp8 *vp8d, struct s
 		extra_y_rows = swebp__fextrarows[vp8d->filter_type];
 		ysize = extra_y_rows * vp8d->cache_y_stride;
 		uvsize = (extra_y_rows / 2) * vp8d->cache_uv_stride;
-		ydst = vp8d->cache_y - ysize;
-		udst = vp8d->cache_u - uvsize;
-		vdst = vp8d->cache_v - uvsize;
 		mb_y = vp8d->mb_y;
 		is_last_row = mb_y >= vp8d->br_mb_y - 1;
 
@@ -2609,6 +2602,11 @@ static simplewebp_error swebp__vp8_process_row(struct swebp__vp8 *vp8d, struct s
 		if (swebp__vp8_output_rows(vp8d, destination) !=
 		    SIMPLEWEBP_NO_ERROR)
 			return SIMPLEWEBP_IO_ERROR;
+
+		/* output_rows may move the unlocked cache blocks. */
+		ydst = vp8d->cache_y - ysize;
+		udst = vp8d->cache_u - uvsize;
+		vdst = vp8d->cache_v - uvsize;
 
 		/* Rotate top samples */
 		if (!is_last_row)

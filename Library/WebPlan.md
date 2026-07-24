@@ -274,6 +274,6 @@ Defaults chosen for version one:
 
 - Only Begin, Next, and Destroy are public; unused probe and convenience exports are deferred.
 - Metadata is validated and ignored, not applied or returned.
-- Output is always an uncompacted 24-bit complex bitmap.
+- Output is always a PackBits-compacted 24-bit complex bitmap.
 - SimpleWebP commit d1a728a1f8ec7348ca2a5039b6dd813b83986fbb is the pinned donor baseline.
 - VP8L, alpha, animation, scaling, cropping, and encoding remain separate future projects.

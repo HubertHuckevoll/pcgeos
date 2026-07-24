@@ -53,6 +53,7 @@ typedef struct {
     word width;
     word height;
     word rowBytes;
+    word nextLine;
     byte *pixelsP;
 } HostBitmap;
 
@@ -109,6 +110,21 @@ typedef enum {
     WEBP_ERROR_IMAGE_TOO_LARGE,
     WEBP_ERROR_BAD_STATE
 } WebPResult;
+
+#define EC_WARNING(code) ((void)(code))
+
+typedef enum {
+    WEBP_WARNING_LOSSLESS_NOT_SUPPORTED,
+    WEBP_WARNING_ALPHA_NOT_SUPPORTED,
+    WEBP_WARNING_ANIMATION_NOT_SUPPORTED,
+    WEBP_WARNING_PREDICTED_FRAME_NOT_SUPPORTED,
+    WEBP_WARNING_VP8_PROFILE_NOT_SUPPORTED,
+    WEBP_WARNING_HIDDEN_FRAME_NOT_SUPPORTED,
+    WEBP_WARNING_DECODER_ALLOCATION_FAILED,
+    WEBP_WARNING_INPUT_BUFFER_ALLOCATION_FAILED,
+    WEBP_WARNING_WORK_BUFFER_ALLOCATION_FAILED,
+    WEBP_WARNING_OUTPUT_BITMAP_ALLOCATION_FAILED
+} Warnings;
 
 typedef struct {
     word width;
@@ -186,6 +202,54 @@ HugeArrayLock(VMFileHandle file, VMBlockHandle bitmapP, dword line,
     *rowP = bitmapP->pixelsP + line * bitmapP->rowBytes;
     *sizeP = bitmapP->rowBytes;
     return 1;
+}
+
+static dword WEBPTEST_UNUSED
+HugeArrayAppend(VMFileHandle file, VMBlockHandle bitmapP, word packedSize,
+                const void *packedDataP)
+{
+    const byte *sourceP;
+    byte *destinationP;
+    word source;
+    word destination;
+    word count;
+    sbyte control;
+
+    (void)file;
+    if (bitmapP->nextLine >= bitmapP->height) {
+        return 0;
+    }
+    sourceP = (const byte *)packedDataP;
+    destinationP = bitmapP->pixelsP +
+                   bitmapP->nextLine * bitmapP->rowBytes;
+    source = destination = 0;
+    while (source < packedSize && destination < bitmapP->rowBytes) {
+        control = (sbyte)sourceP[source++];
+        if (control >= 0) {
+            count = (word)control + 1;
+            if (source + count > packedSize ||
+                destination + count > bitmapP->rowBytes) {
+                return 0;
+            }
+            memcpy(destinationP + destination, sourceP + source, count);
+            source += count;
+        } else if (control != -128) {
+            count = (word)(1 - control);
+            if (source >= packedSize ||
+                destination + count > bitmapP->rowBytes) {
+                return 0;
+            }
+            memset(destinationP + destination, sourceP[source++], count);
+        } else {
+            count = 0;
+        }
+        destination += count;
+    }
+    if (source != packedSize || destination != bitmapP->rowBytes) {
+        return 0;
+    }
+    bitmapP->nextLine++;
+    return bitmapP->nextLine - 1;
 }
 
 #define HugeArrayDirty(rowP) ((void)(rowP))
