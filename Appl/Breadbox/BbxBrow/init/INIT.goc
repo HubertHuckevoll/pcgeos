@@ -950,7 +950,6 @@ void EnsureINISettings(AppAttachFlags attachFlags)
         InitFileDeleteCategory(cat) ;
 #endif
         InitFileWriteInteger(cat, "version", HTML_VIEW_INI_VERSION_NUMBER) ;
-        InitFileWriteInteger(cat, "memlimit", DEFAULT_ALLOCATE_WATCHER_LIMIT) ;
 #ifdef YAGO_2_BUILD
         InitFileDeleteEntry(fileManager, filenameTokens) ;
         InitFileWriteStringSection(fileManager, filenameTokens, _TEXT("         *.JPG = \"HTML\",0,\"WMK2\",16431")) ;
