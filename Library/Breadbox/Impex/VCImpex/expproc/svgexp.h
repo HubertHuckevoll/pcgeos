@@ -75,22 +75,22 @@ typedef struct
     word scratchCapacity;
     const byte *elementDataP;
     word elementSize;
-    Boolean forceNonScalingStroke;
 } VCImpexSVGExportContext;
 
 Boolean _pascal VCImpexSVGInitWriter(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteFooter(VCImpexSVGExportContext *context);
-Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint);
-Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean includeStroke, Boolean includeFill, Boolean filled);
-Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, const WWFixed *radiusX, const WWFixed *radiusY, Boolean includeStroke, Boolean includeFill, Boolean filled);
+Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint, const TransMatrix *tm);
+Boolean _pascal VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, Boolean includeStroke, Boolean includeFill, Boolean filled, const TransMatrix *tm);
+Boolean _pascal VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context, const PointWWFixed *corner1, const PointWWFixed *corner3, word radiusX, word radiusY, Boolean includeStroke, Boolean includeFill, Boolean filled, const TransMatrix *tm);
 Boolean _pascal VCImpexSVGWritePolygonBegin(VCImpexSVGExportContext *context,
                                             Boolean closeShape);
 Boolean _pascal VCImpexSVGWritePolygonPoint(VCImpexSVGExportContext *context,
                                             const PointWWFixed *point);
 Boolean _pascal VCImpexSVGWritePolygonEnd(VCImpexSVGExportContext *context,
                                           Boolean filled,
-                                          RegionFillRule fillRule);
+                                          RegionFillRule fillRule,
+                                          const TransMatrix *tm);
 Boolean _pascal VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
                                               const WWFixed *cx,
                                               const WWFixed *cy,
@@ -104,14 +104,15 @@ Boolean _pascal VCImpexSVGWriteCubicPathElement(VCImpexSVGExportContext *context
                                                 const PointWWFixed *start,
                                                 const PointWWFixed *cp1,
                                                 const PointWWFixed *cp2,
-                                                const PointWWFixed *end);
+                                                const PointWWFixed *end,
+                                                const TransMatrix *tm);
 Boolean _pascal VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
                                           WWFixedAsDWord cx,
                                           WWFixedAsDWord cy,
                                           WWFixedAsDWord rx,
                                           WWFixedAsDWord ry,
-                                          word startAngleDeg,
-                                          word endAngleDeg,
+                                          sword startAngleDeg,
+                                          sword endAngleDeg,
                                           ArcCloseType closeType,
                                           Boolean filled,
                                           const TransMatrix *tm);
@@ -128,11 +129,11 @@ Boolean _pascal VCImpexSVGWritePathClose(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWritePathEnd(VCImpexSVGExportContext *context,
                                        Boolean fillPath,
                                        Boolean strokePath,
-                                       RegionFillRule fillRule);
+                                       RegionFillRule fillRule,
+                                       const TransMatrix *tm);
 Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExportContext *context);
-void _pascal VCImpexSVGTransformPointFromInt(GStateHandle gstate, const Point *sourcePoint, PointWWFixed *targetPoint);
-void _pascal VCImpexSVGTransformPointFromFixed(GStateHandle gstate, const PointWWFixed *sourcePoint, PointWWFixed *targetPoint);
-void _pascal VCImpexSVGTransformRelativePoint(GStateHandle gstate, const PointWWFixed *deltaPoint, PointWWFixed *targetPoint);
+void _pascal VCImpexSVGPointFromInt(const Point *sourcePoint,
+                                    PointWWFixed *targetPoint);
 WWFixedAsDWord _pascal VCImpexSVGPackWWFixed(const WWFixed *value);
 void _pascal VCImpexSVGCopyPointWWFixed(PointWWFixed *destination, const PointWWFixed *source);
 Boolean _pascal VCImpexSVGEnsureScratch(VCImpexSVGExportContext *context,
@@ -159,7 +160,6 @@ word _pascal VCImpexSVGReadElement(VCImpexSVGExportContext *context,
 void _pascal VCImpexSVGReleaseElement(VCImpexSVGExportContext *context);
 word _pascal VCImpexSVGDecodeGeometry(
     word elementType,
-    GStateHandle playbackGState,
     const PointWWFixed *currentPosition,
     const byte *elementData,
     word elementSize,

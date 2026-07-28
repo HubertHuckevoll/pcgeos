@@ -272,6 +272,13 @@ VCImpexSVGValidateElement(const byte *elementData,
             {
                 return TE_EXPORT_ERROR;
             }
+            if ((elementType == GR_FILL_ARC) &&
+                (elementSize >= minimumSize) &&
+                (VCImpexSVGReadWord(elementData,
+                                    VCIMPEX_SVG_OPCODE_SIZE) == ACT_OPEN))
+            {
+                return TE_EXPORT_ERROR;
+            }
             break;
 
         case GR_DRAW_CURVE:
@@ -516,9 +523,25 @@ VCImpexSVGReleaseElement(VCImpexSVGExportContext *context)
     }
 }
 
+static void
+VCImpexSVGAddRelativePoint(const PointWWFixed *basePoint,
+                           const PointWWFixed *deltaPoint,
+                           PointWWFixed *targetPoint)
+{
+    VCImpexSVGSetWWFixedComponent(
+        &targetPoint->PF_x,
+        (WWFixedAsDWord)(
+            (dword)VCImpexSVGPackWWFixed(&basePoint->PF_x) +
+            (dword)VCImpexSVGPackWWFixed(&deltaPoint->PF_x)));
+    VCImpexSVGSetWWFixedComponent(
+        &targetPoint->PF_y,
+        (WWFixedAsDWord)(
+            (dword)VCImpexSVGPackWWFixed(&basePoint->PF_y) +
+            (dword)VCImpexSVGPackWWFixed(&deltaPoint->PF_y)));
+}
+
 word _pascal
 VCImpexSVGDecodeGeometry(word elementType,
-                         GStateHandle playbackGState,
                          const PointWWFixed *currentPosition,
                          const byte *elementData,
                          word elementSize,
@@ -558,8 +581,7 @@ VCImpexSVGDecodeGeometry(word elementType,
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            endPoint);
+            VCImpexSVGPointFromInt(&intPoint, endPoint);
             *geometryType = SVG_GEOMETRY_MOVE;
             break;
 
@@ -572,13 +594,12 @@ VCImpexSVGDecodeGeometry(word elementType,
                                   &tempPoint.PF_y);
             if (elementType == GR_MOVE_TO_WWFIXED)
             {
-                VCImpexSVGTransformPointFromFixed(playbackGState,
-                                                  &tempPoint, endPoint);
+                VCImpexSVGCopyPointWWFixed(endPoint, &tempPoint);
             }
             else
             {
-                VCImpexSVGTransformRelativePoint(playbackGState,
-                                                 &tempPoint, endPoint);
+                VCImpexSVGAddRelativePoint(currentPosition, &tempPoint,
+                                           endPoint);
             }
             *geometryType = SVG_GEOMETRY_MOVE;
             break;
@@ -588,39 +609,32 @@ VCImpexSVGDecodeGeometry(word elementType,
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            startPoint);
+            VCImpexSVGPointFromInt(&intPoint, startPoint);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            endPoint);
+            VCImpexSVGPointFromInt(&intPoint, endPoint);
             *geometryType = SVG_GEOMETRY_LINE;
             break;
 
         case GR_DRAW_LINE_TO:
-            VCImpexSVGTransformPointFromFixed(playbackGState,
-                                              currentPosition,
-                                              startPoint);
+            VCImpexSVGCopyPointWWFixed(startPoint, currentPosition);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            endPoint);
+            VCImpexSVGPointFromInt(&intPoint, endPoint);
             *geometryType = SVG_GEOMETRY_LINE;
             break;
 
         case GR_DRAW_REL_LINE_TO:
-            VCImpexSVGTransformPointFromFixed(playbackGState,
-                                              currentPosition,
-                                              startPoint);
+            VCImpexSVGCopyPointWWFixed(startPoint, currentPosition);
             VCImpexSVGReadWWFixed(elementData, offset,
                                   &tempPoint.PF_x);
             offset += sizeof(WWFixed);
             VCImpexSVGReadWWFixed(elementData, offset,
                                   &tempPoint.PF_y);
-            VCImpexSVGTransformRelativePoint(playbackGState, &tempPoint,
-                                             endPoint);
+            VCImpexSVGAddRelativePoint(currentPosition, &tempPoint,
+                                       endPoint);
             *geometryType = SVG_GEOMETRY_LINE;
             break;
 
@@ -631,11 +645,10 @@ VCImpexSVGDecodeGeometry(word elementType,
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             wordValue = VCImpexSVGReadWord(elementData, offset);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            startPoint);
+            VCImpexSVGPointFromInt(&intPoint, startPoint);
             componentValue =
-                ((WWFixedAsDWord)((sdword)(sword)wordValue)) << 16;
-            tempPoint = *currentPosition;
+                (WWFixedAsDWord)((sdword)(sword)wordValue * 65536L);
+            tempPoint = *startPoint;
             if (elementType == GR_DRAW_HLINE)
             {
                 VCImpexSVGSetWWFixedComponent(&tempPoint.PF_x,
@@ -646,19 +659,16 @@ VCImpexSVGDecodeGeometry(word elementType,
                 VCImpexSVGSetWWFixedComponent(&tempPoint.PF_y,
                                               componentValue);
             }
-            VCImpexSVGTransformPointFromFixed(playbackGState, &tempPoint,
-                                              endPoint);
+            VCImpexSVGCopyPointWWFixed(endPoint, &tempPoint);
             *geometryType = SVG_GEOMETRY_LINE;
             break;
 
         case GR_DRAW_HLINE_TO:
         case GR_DRAW_VLINE_TO:
-            VCImpexSVGTransformPointFromFixed(playbackGState,
-                                              currentPosition,
-                                              startPoint);
+            VCImpexSVGCopyPointWWFixed(startPoint, currentPosition);
             wordValue = VCImpexSVGReadWord(elementData, offset);
             componentValue =
-                ((WWFixedAsDWord)((sdword)(sword)wordValue)) << 16;
+                (WWFixedAsDWord)((sdword)(sword)wordValue * 65536L);
             tempPoint = *currentPosition;
             if (elementType == GR_DRAW_HLINE_TO)
             {
@@ -670,8 +680,7 @@ VCImpexSVGDecodeGeometry(word elementType,
                 VCImpexSVGSetWWFixedComponent(&tempPoint.PF_y,
                                               componentValue);
             }
-            VCImpexSVGTransformPointFromFixed(playbackGState, &tempPoint,
-                                              endPoint);
+            VCImpexSVGCopyPointWWFixed(endPoint, &tempPoint);
             *geometryType = SVG_GEOMETRY_LINE;
             break;
 
@@ -680,56 +689,45 @@ VCImpexSVGDecodeGeometry(word elementType,
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            startPoint);
+            VCImpexSVGPointFromInt(&intPoint, startPoint);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            control1);
+            VCImpexSVGPointFromInt(&intPoint, control1);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            control2);
+            VCImpexSVGPointFromInt(&intPoint, control2);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            endPoint);
+            VCImpexSVGPointFromInt(&intPoint, endPoint);
             *geometryType = SVG_GEOMETRY_CURVE;
             break;
 
         case GR_DRAW_CURVE_TO:
-            VCImpexSVGTransformPointFromFixed(playbackGState,
-                                              currentPosition,
-                                              startPoint);
+            VCImpexSVGCopyPointWWFixed(startPoint, currentPosition);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            control1);
+            VCImpexSVGPointFromInt(&intPoint, control1);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            control2);
+            VCImpexSVGPointFromInt(&intPoint, control2);
             intPoint.P_x = VCImpexSVGReadSword(elementData, offset);
             offset += sizeof(sword);
             intPoint.P_y = VCImpexSVGReadSword(elementData, offset);
-            VCImpexSVGTransformPointFromInt(playbackGState, &intPoint,
-                                            endPoint);
+            VCImpexSVGPointFromInt(&intPoint, endPoint);
             *geometryType = SVG_GEOMETRY_CURVE;
             break;
 
         case GR_DRAW_REL_CURVE_TO:
-            VCImpexSVGTransformPointFromFixed(playbackGState,
-                                              currentPosition,
-                                              startPoint);
+            VCImpexSVGCopyPointWWFixed(startPoint, currentPosition);
             tempPoint.PF_x.WWF_int =
                 VCImpexSVGReadSword(elementData, offset);
             tempPoint.PF_x.WWF_frac = 0;
@@ -738,8 +736,8 @@ VCImpexSVGDecodeGeometry(word elementType,
                 VCImpexSVGReadSword(elementData, offset);
             tempPoint.PF_y.WWF_frac = 0;
             offset += sizeof(sword);
-            VCImpexSVGTransformRelativePoint(playbackGState, &tempPoint,
-                                             control1);
+            VCImpexSVGAddRelativePoint(currentPosition, &tempPoint,
+                                       control1);
             tempPoint.PF_x.WWF_int =
                 VCImpexSVGReadSword(elementData, offset);
             tempPoint.PF_x.WWF_frac = 0;
@@ -748,8 +746,8 @@ VCImpexSVGDecodeGeometry(word elementType,
                 VCImpexSVGReadSword(elementData, offset);
             tempPoint.PF_y.WWF_frac = 0;
             offset += sizeof(sword);
-            VCImpexSVGTransformRelativePoint(playbackGState, &tempPoint,
-                                             control2);
+            VCImpexSVGAddRelativePoint(currentPosition, &tempPoint,
+                                       control2);
             tempPoint.PF_x.WWF_int =
                 VCImpexSVGReadSword(elementData, offset);
             tempPoint.PF_x.WWF_frac = 0;
@@ -757,8 +755,8 @@ VCImpexSVGDecodeGeometry(word elementType,
             tempPoint.PF_y.WWF_int =
                 VCImpexSVGReadSword(elementData, offset);
             tempPoint.PF_y.WWF_frac = 0;
-            VCImpexSVGTransformRelativePoint(playbackGState, &tempPoint,
-                                             endPoint);
+            VCImpexSVGAddRelativePoint(currentPosition, &tempPoint,
+                                       endPoint);
             *geometryType = SVG_GEOMETRY_CURVE;
             break;
 

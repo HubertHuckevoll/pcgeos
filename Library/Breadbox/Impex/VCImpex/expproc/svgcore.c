@@ -2,6 +2,14 @@
 
 #define VCISVG_FIXED_ONE ((VCISVGU32)65536L)
 
+static int
+VCISVGFormatFixedMagnitude(VCISVGU32 magnitude,
+                           VCISVGU16 negative,
+                           VCISVGU16 fractionDigits,
+                           char *buffer,
+                           VCISVGU16 bufferSize,
+                           VCISVGU16 *length);
+
 static VCISVGU16
 VCISVGTextLength(const char *text)
 {
@@ -30,6 +38,22 @@ VCISVGWriteFixed(VCISVGWriter *writer,
 
     if (!VCISVGFormatFixed(value, fractionDigits, number,
                            sizeof(number), &length))
+    {
+        return 0;
+    }
+    return VCISVGWrite(writer, number, length);
+}
+
+static int
+VCISVGWriteUFixed(VCISVGWriter *writer,
+                  VCISVGU32 value,
+                  VCISVGU16 fractionDigits)
+{
+    char number[24];
+    VCISVGU16 length;
+
+    if (!VCISVGFormatFixedMagnitude(value, 0, fractionDigits, number,
+                                    sizeof(number), &length))
     {
         return 0;
     }
@@ -204,12 +228,6 @@ VCISVGWriteStyle(VCISVGWriter *writer, const VCISVGStyle *style)
                 return 0;
             }
         }
-        if ((style->nonScalingStroke != 0) &&
-            !VCISVGWriteText(writer,
-                             " vector-effect=\"non-scaling-stroke\""))
-        {
-            return 0;
-        }
     }
     else if (!VCISVGWriteText(writer, " stroke=\"none\""))
     {
@@ -255,7 +273,13 @@ VCISVGWriteStyle(VCISVGWriter *writer, const VCISVGStyle *style)
 static int
 VCISVGWriteMatrix(VCISVGWriter *writer, const VCISVGMatrix *matrix)
 {
-    if ((matrix == (void*)0) || (matrix->present == 0))
+    if (matrix == (void*)0)
+    {
+        return 1;
+    }
+    if ((matrix->a == 0x00010000L) && (matrix->b == 0) &&
+        (matrix->c == 0) && (matrix->d == 0x00010000L) &&
+        (matrix->e == 0) && (matrix->f == 0))
     {
         return 1;
     }
@@ -269,9 +293,9 @@ VCISVGWriteMatrix(VCISVGWriter *writer, const VCISVGMatrix *matrix)
            VCISVGWriteText(writer, " ") &&
            VCISVGWriteFixed(writer, matrix->d, 6) &&
            VCISVGWriteText(writer, " ") &&
-           VCISVGWriteFixed(writer, matrix->e, 2) &&
+           VCISVGWriteFixed(writer, matrix->e, 6) &&
            VCISVGWriteText(writer, " ") &&
-           VCISVGWriteFixed(writer, matrix->f, 2) &&
+           VCISVGWriteFixed(writer, matrix->f, 6) &&
            VCISVGWriteText(writer, ")\"");
 }
 
@@ -335,24 +359,8 @@ VCISVGFormatFixed(VCISVGFixed value,
                   VCISVGU16 bufferSize,
                   VCISVGU16 *length)
 {
-    char integerDigits[10];
-    char fraction[6];
     VCISVGU32 magnitude;
-    VCISVGU32 integerPart;
-    VCISVGU32 fractionPart;
-    VCISVGU32 product;
-    VCISVGU16 integerCount;
-    VCISVGU16 fractionCount;
-    VCISVGU16 outputLength;
-    VCISVGU16 index;
     VCISVGU16 negative;
-    VCISVGU16 carry;
-
-    if ((buffer == (void*)0) || (length == (void*)0) ||
-        (bufferSize == 0) || (fractionDigits > 6))
-    {
-        return 0;
-    }
 
     negative = (value < 0) ? 1 : 0;
     if (negative != 0)
@@ -363,6 +371,34 @@ VCISVGFormatFixed(VCISVGFixed value,
     else
     {
         magnitude = (VCISVGU32)value;
+    }
+    return VCISVGFormatFixedMagnitude(magnitude, negative, fractionDigits,
+                                      buffer, bufferSize, length);
+}
+
+static int
+VCISVGFormatFixedMagnitude(VCISVGU32 magnitude,
+                           VCISVGU16 negative,
+                           VCISVGU16 fractionDigits,
+                           char *buffer,
+                           VCISVGU16 bufferSize,
+                           VCISVGU16 *length)
+{
+    char integerDigits[10];
+    char fraction[6];
+    VCISVGU32 integerPart;
+    VCISVGU32 fractionPart;
+    VCISVGU32 product;
+    VCISVGU16 integerCount;
+    VCISVGU16 fractionCount;
+    VCISVGU16 outputLength;
+    VCISVGU16 index;
+    VCISVGU16 carry;
+
+    if ((buffer == (void*)0) || (length == (void*)0) ||
+        (bufferSize == 0) || (fractionDigits > 6))
+    {
+        return 0;
     }
 
     integerPart = magnitude >> 16;
@@ -445,6 +481,49 @@ VCISVGFormatFixed(VCISVGFixed value,
     return 1;
 }
 
+#ifdef __GEOS__
+#pragma code_seg("svgarc_TEXT")
+#endif
+int
+VCISVGNormalizeArcAngles(VCISVGI16 startAngle,
+                         VCISVGI16 endAngle,
+                         VCISVGU16 *normalizedStart,
+                         VCISVGU16 *normalizedEnd,
+                         VCISVGU16 *sweepDegrees,
+                         VCISVGU16 *fullCircle)
+{
+    VCISVGI32 start;
+    VCISVGI32 difference;
+    VCISVGI32 sweep;
+
+    if ((normalizedStart == (void*)0) ||
+        (normalizedEnd == (void*)0) ||
+        (sweepDegrees == (void*)0) ||
+        (fullCircle == (void*)0))
+    {
+        return 0;
+    }
+    start = (VCISVGI32)startAngle % 360;
+    if (start < 0)
+    {
+        start += 360;
+    }
+    difference = (VCISVGI32)endAngle - (VCISVGI32)startAngle;
+    sweep = difference % 360;
+    if (sweep < 0)
+    {
+        sweep += 360;
+    }
+    *normalizedStart = (VCISVGU16)start;
+    *sweepDegrees = (VCISVGU16)sweep;
+    *normalizedEnd = (VCISVGU16)((start + sweep) % 360);
+    *fullCircle = ((difference != 0) && (sweep == 0)) ? 1 : 0;
+    return 1;
+}
+#ifdef __GEOS__
+#pragma code_seg()
+#endif
+
 int
 VCISVGEmitHeader(VCISVGWriter *writer,
                  VCISVGI32 left,
@@ -481,7 +560,8 @@ int
 VCISVGEmitLine(VCISVGWriter *writer,
                const VCISVGPoint *start,
                const VCISVGPoint *end,
-               const VCISVGStyle *style)
+               const VCISVGStyle *style,
+               const VCISVGMatrix *matrix)
 {
     if ((start == (void*)0) || (end == (void*)0) ||
         !VCISVGStyleIsValid(style))
@@ -499,6 +579,7 @@ VCISVGEmitLine(VCISVGWriter *writer,
            VCISVGWriteFixed(writer, end->y, 2) &&
            VCISVGWriteText(writer, "\"") &&
            VCISVGWriteStyle(writer, style) &&
+           VCISVGWriteMatrix(writer, matrix) &&
            VCISVGWriteText(writer, " />\n");
 }
 
@@ -519,9 +600,9 @@ VCISVGEmitRect(VCISVGWriter *writer,
         !VCISVGWriteText(writer, "\" y=\"") ||
         !VCISVGWriteFixed(writer, rect->y, 2) ||
         !VCISVGWriteText(writer, "\" width=\"") ||
-        !VCISVGWriteFixed(writer, rect->width, 2) ||
+        !VCISVGWriteUFixed(writer, rect->width, 2) ||
         !VCISVGWriteText(writer, "\" height=\"") ||
-        !VCISVGWriteFixed(writer, rect->height, 2) ||
+        !VCISVGWriteUFixed(writer, rect->height, 2) ||
         !VCISVGWriteText(writer, "\""))
     {
         return 0;
@@ -529,9 +610,9 @@ VCISVGEmitRect(VCISVGWriter *writer,
     if (rounded != 0)
     {
         if (!VCISVGWriteText(writer, " rx=\"") ||
-            !VCISVGWriteFixed(writer, rect->radiusX, 2) ||
+            !VCISVGWriteUFixed(writer, rect->radiusX, 2) ||
             !VCISVGWriteText(writer, "\" ry=\"") ||
-            !VCISVGWriteFixed(writer, rect->radiusY, 2) ||
+            !VCISVGWriteUFixed(writer, rect->radiusY, 2) ||
             !VCISVGWriteText(writer, "\""))
         {
             return 0;
@@ -607,6 +688,29 @@ VCISVGEmitCubic(VCISVGWriter *writer,
            VCISVGWriteText(writer, " />\n");
 }
 
+#ifdef __GEOS__
+#pragma code_seg("svgarc_TEXT")
+#endif
+static int
+VCISVGWriteArcCommand(VCISVGWriter *writer,
+                      const VCISVGArc *arc,
+                      const VCISVGPoint *end,
+                      VCISVGU16 largeArc)
+{
+    return VCISVGWriteText(writer, " A ") &&
+           VCISVGWriteFixed(writer, arc->radiusX, 2) &&
+           VCISVGWriteText(writer, " ") &&
+           VCISVGWriteFixed(writer, arc->radiusY, 2) &&
+           VCISVGWriteText(writer, " 0 ") &&
+           VCISVGWriteU32(writer, largeArc ? 1 : 0) &&
+           VCISVGWriteText(writer, " ") &&
+           VCISVGWriteU32(writer, arc->sweep ? 1 : 0) &&
+           VCISVGWriteText(writer, " ") &&
+           VCISVGWriteFixed(writer, end->x, 2) &&
+           VCISVGWriteText(writer, " ") &&
+           VCISVGWriteFixed(writer, end->y, 2);
+}
+
 int
 VCISVGEmitArc(VCISVGWriter *writer,
               const VCISVGArc *arc,
@@ -617,12 +721,16 @@ VCISVGEmitArc(VCISVGWriter *writer,
     {
         return 0;
     }
+    if (arc->closeType > VCISVG_ARC_PIE)
+    {
+        return 0;
+    }
 
     if (!VCISVGWriteText(writer, "  <path d=\"M "))
     {
         return 0;
     }
-    if (arc->filled && (arc->closeType == VCISVG_ARC_PIE))
+    if (arc->closeType == VCISVG_ARC_PIE)
     {
         if (!VCISVGWriteFixed(writer, arc->center.x, 2) ||
             !VCISVGWriteText(writer, " ") ||
@@ -634,23 +742,25 @@ VCISVGEmitArc(VCISVGWriter *writer,
     }
     if (!VCISVGWriteFixed(writer, arc->start.x, 2) ||
         !VCISVGWriteText(writer, " ") ||
-        !VCISVGWriteFixed(writer, arc->start.y, 2) ||
-        !VCISVGWriteText(writer, " A ") ||
-        !VCISVGWriteFixed(writer, arc->radiusX, 2) ||
-        !VCISVGWriteText(writer, " ") ||
-        !VCISVGWriteFixed(writer, arc->radiusY, 2) ||
-        !VCISVGWriteText(writer, " 0 ") ||
-        !VCISVGWriteU32(writer, arc->largeArc ? 1 : 0) ||
-        !VCISVGWriteText(writer, " ") ||
-        !VCISVGWriteU32(writer, arc->sweep ? 1 : 0) ||
-        !VCISVGWriteText(writer, " ") ||
-        !VCISVGWriteFixed(writer, arc->end.x, 2) ||
-        !VCISVGWriteText(writer, " ") ||
-        !VCISVGWriteFixed(writer, arc->end.y, 2))
+        !VCISVGWriteFixed(writer, arc->start.y, 2))
     {
         return 0;
     }
-    if (arc->filled && !VCISVGWriteText(writer, " Z"))
+    if (arc->fullCircle != 0)
+    {
+        if (!VCISVGWriteArcCommand(writer, arc, &arc->middle, 0) ||
+            !VCISVGWriteArcCommand(writer, arc, &arc->end, 0))
+        {
+            return 0;
+        }
+    }
+    else if (!VCISVGWriteArcCommand(writer, arc, &arc->end,
+                                    arc->largeArc))
+    {
+        return 0;
+    }
+    if ((arc->closeType != VCISVG_ARC_OPEN) &&
+        !VCISVGWriteText(writer, " Z"))
     {
         return 0;
     }
@@ -659,6 +769,9 @@ VCISVGEmitArc(VCISVGWriter *writer,
            VCISVGWriteMatrix(writer, matrix) &&
            VCISVGWriteText(writer, " />\n");
 }
+#ifdef __GEOS__
+#pragma code_seg()
+#endif
 
 int
 VCISVGEmitPolygonBegin(VCISVGWriter *writer, VCISVGU16 closed)

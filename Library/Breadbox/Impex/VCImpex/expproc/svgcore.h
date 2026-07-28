@@ -60,7 +60,6 @@ typedef struct
     VCISVGFixed d;
     VCISVGFixed e;
     VCISVGFixed f;
-    VCISVGU16 present;
 } VCISVGMatrix;
 
 typedef struct
@@ -83,30 +82,30 @@ typedef struct
     VCISVGU16 includeFill;
     VCISVGU16 filled;
     VCISVGU16 fillRule;
-    VCISVGU16 nonScalingStroke;
 } VCISVGStyle;
 
 typedef struct
 {
     VCISVGFixed x;
     VCISVGFixed y;
-    VCISVGFixed width;
-    VCISVGFixed height;
-    VCISVGFixed radiusX;
-    VCISVGFixed radiusY;
+    VCISVGU32 width;
+    VCISVGU32 height;
+    VCISVGU32 radiusX;
+    VCISVGU32 radiusY;
 } VCISVGRect;
 
 typedef struct
 {
     VCISVGPoint center;
     VCISVGPoint start;
+    VCISVGPoint middle;
     VCISVGPoint end;
     VCISVGFixed radiusX;
     VCISVGFixed radiusY;
     VCISVGU16 largeArc;
     VCISVGU16 sweep;
     VCISVGU16 closeType;
-    VCISVGU16 filled;
+    VCISVGU16 fullCircle;
 } VCISVGArc;
 
 void VCISVGWriterInit(VCISVGWriter *writer,
@@ -123,6 +122,12 @@ int VCISVGFormatFixed(VCISVGFixed value,
                       char *buffer,
                       VCISVGU16 bufferSize,
                       VCISVGU16 *length);
+int VCISVGNormalizeArcAngles(VCISVGI16 startAngle,
+                             VCISVGI16 endAngle,
+                             VCISVGU16 *normalizedStart,
+                             VCISVGU16 *normalizedEnd,
+                             VCISVGU16 *sweepDegrees,
+                             VCISVGU16 *fullCircle);
 
 int VCISVGEmitHeader(VCISVGWriter *writer,
                      VCISVGI32 left,
@@ -133,7 +138,8 @@ int VCISVGEmitFooter(VCISVGWriter *writer);
 int VCISVGEmitLine(VCISVGWriter *writer,
                    const VCISVGPoint *start,
                    const VCISVGPoint *end,
-                   const VCISVGStyle *style);
+                   const VCISVGStyle *style,
+                   const VCISVGMatrix *matrix);
 int VCISVGEmitRect(VCISVGWriter *writer,
                    const VCISVGRect *rect,
                    VCISVGU16 rounded,

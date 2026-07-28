@@ -67,6 +67,8 @@ VCImpexSVGNormalizeMatrix(const TransMatrix *source,
     memset(target, 0, sizeof(*target));
     if (source == (void*)0)
     {
+        target->a = 0x00010000L;
+        target->d = 0x00010000L;
         return;
     }
 
@@ -76,7 +78,6 @@ VCImpexSVGNormalizeMatrix(const TransMatrix *source,
     target->d = (VCISVGFixed)VCImpexSVGPackWWFixed(&source->TM_e22);
     target->e = VCImpexSVGPackDWFixed(&source->TM_e31);
     target->f = VCImpexSVGPackDWFixed(&source->TM_e32);
-    target->present = 1;
 }
 
 static VCISVGFixed
@@ -94,7 +95,6 @@ VCImpexSVGNormalizeStyle(const VCImpexSVGExportContext *context,
                          Boolean includeFill,
                          Boolean filled,
                          RegionFillRule fillRule,
-                         Boolean nonScalingStroke,
                          VCISVGStyle *style)
 {
     const word *dashValues;
@@ -175,7 +175,6 @@ VCImpexSVGNormalizeStyle(const VCImpexSVGExportContext *context,
     style->filled = (filled != FALSE);
     style->fillRule = (fillRule == ODD_EVEN) ?
                       VCISVG_FILL_EVENODD : VCISVG_FILL_NONZERO;
-    style->nonScalingStroke = (nonScalingStroke != FALSE);
 }
 
 Boolean _pascal
@@ -281,7 +280,6 @@ VCImpexSVGUpdateDrawingState(GStateHandle gstate,
     context->lineCap = GrGetLineEnd(gstate);
     context->miterLimit = GrGetMiterLimit(gstate);
     context->lineStyle = GrGetLineStyle(gstate);
-    context->forceNonScalingStroke = FALSE;
     if (context->lineStyle != LS_CUSTOM)
     {
         context->dashPairCount = 0;
@@ -297,11 +295,13 @@ VCImpexSVGUpdateDrawingState(GStateHandle gstate,
 Boolean _pascal
 VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context,
                            const PointWWFixed *startPoint,
-                           const PointWWFixed *endPoint)
+                           const PointWWFixed *endPoint,
+                           const TransMatrix *tm)
 {
     VCISVGPoint start;
     VCISVGPoint end;
     VCISVGStyle style;
+    VCISVGMatrix matrix;
 
     if ((context == (void*)0) || (startPoint == (void*)0) ||
         (endPoint == (void*)0))
@@ -311,10 +311,10 @@ VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context,
     VCImpexSVGNormalizePoint(startPoint, &start);
     VCImpexSVGNormalizePoint(endPoint, &end);
     VCImpexSVGNormalizeStyle(context, TRUE, FALSE, FALSE,
-                             context->fillRule,
-                             context->forceNonScalingStroke,
-                             &style);
-    return VCISVGEmitLine(&context->writer, &start, &end, &style) ?
+                             context->fillRule, &style);
+    VCImpexSVGNormalizeMatrix(tm, &matrix);
+    return VCISVGEmitLine(&context->writer, &start, &end, &style,
+                          &matrix) ?
            TRUE : FALSE;
 }
 
@@ -323,24 +323,34 @@ VCImpexSVGNormalizeRect(const PointWWFixed *corner1,
                         const PointWWFixed *corner3,
                         VCISVGRect *rect)
 {
+    VCISVGFixed left;
+    VCISVGFixed top;
     VCISVGFixed right;
     VCISVGFixed bottom;
 
-    rect->x = (VCISVGFixed)VCImpexSVGPackWWFixed(&corner1->PF_x);
-    rect->y = (VCISVGFixed)VCImpexSVGPackWWFixed(&corner1->PF_y);
+    left = (VCISVGFixed)VCImpexSVGPackWWFixed(&corner1->PF_x);
+    top = (VCISVGFixed)VCImpexSVGPackWWFixed(&corner1->PF_y);
     right = (VCISVGFixed)VCImpexSVGPackWWFixed(&corner3->PF_x);
     bottom = (VCISVGFixed)VCImpexSVGPackWWFixed(&corner3->PF_y);
-    rect->width = right - rect->x;
-    rect->height = bottom - rect->y;
-    if (rect->width < 0)
+    if (right < left)
     {
         rect->x = right;
-        rect->width = -rect->width;
+        rect->width = (VCISVGU32)left - (VCISVGU32)right;
     }
-    if (rect->height < 0)
+    else
+    {
+        rect->x = left;
+        rect->width = (VCISVGU32)right - (VCISVGU32)left;
+    }
+    if (bottom < top)
     {
         rect->y = bottom;
-        rect->height = -rect->height;
+        rect->height = (VCISVGU32)top - (VCISVGU32)bottom;
+    }
+    else
+    {
+        rect->y = top;
+        rect->height = (VCISVGU32)bottom - (VCISVGU32)top;
     }
     rect->radiusX = 0;
     rect->radiusY = 0;
@@ -352,10 +362,12 @@ VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context,
                            const PointWWFixed *corner3,
                            Boolean includeStroke,
                            Boolean includeFill,
-                           Boolean filled)
+                           Boolean filled,
+                           const TransMatrix *tm)
 {
     VCISVGRect rect;
     VCISVGStyle style;
+    VCISVGMatrix matrix;
 
     if ((context == (void*)0) || (corner1 == (void*)0) ||
         (corner3 == (void*)0))
@@ -364,41 +376,40 @@ VCImpexSVGWriteRectElement(VCImpexSVGExportContext *context,
     }
     VCImpexSVGNormalizeRect(corner1, corner3, &rect);
     VCImpexSVGNormalizeStyle(context, includeStroke, includeFill, filled,
-                             context->fillRule,
-                             context->forceNonScalingStroke,
-                             &style);
+                             context->fillRule, &style);
+    VCImpexSVGNormalizeMatrix(tm, &matrix);
     return VCISVGEmitRect(&context->writer, &rect, 0, &style,
-                          (void*)0) ? TRUE : FALSE;
+                          &matrix) ? TRUE : FALSE;
 }
 
 Boolean _pascal
 VCImpexSVGWriteRoundRectElement(VCImpexSVGExportContext *context,
                                 const PointWWFixed *corner1,
                                 const PointWWFixed *corner3,
-                                const WWFixed *radiusX,
-                                const WWFixed *radiusY,
+                                word radiusX,
+                                word radiusY,
                                 Boolean includeStroke,
                                 Boolean includeFill,
-                                Boolean filled)
+                                Boolean filled,
+                                const TransMatrix *tm)
 {
     VCISVGRect rect;
     VCISVGStyle style;
+    VCISVGMatrix matrix;
 
     if ((context == (void*)0) || (corner1 == (void*)0) ||
-        (corner3 == (void*)0) || (radiusX == (void*)0) ||
-        (radiusY == (void*)0))
+        (corner3 == (void*)0))
     {
         return FALSE;
     }
     VCImpexSVGNormalizeRect(corner1, corner3, &rect);
-    rect.radiusX = (VCISVGFixed)VCImpexSVGPackWWFixed(radiusX);
-    rect.radiusY = (VCISVGFixed)VCImpexSVGPackWWFixed(radiusY);
+    rect.radiusX = (VCISVGU32)radiusX * 65536L;
+    rect.radiusY = (VCISVGU32)radiusY * 65536L;
     VCImpexSVGNormalizeStyle(context, includeStroke, includeFill, filled,
-                             context->fillRule,
-                             context->forceNonScalingStroke,
-                             &style);
+                             context->fillRule, &style);
+    VCImpexSVGNormalizeMatrix(tm, &matrix);
     return VCISVGEmitRect(&context->writer, &rect, 1, &style,
-                          (void*)0) ? TRUE : FALSE;
+                          &matrix) ? TRUE : FALSE;
 }
 
 Boolean _pascal
@@ -406,13 +417,15 @@ VCImpexSVGWriteCubicPathElement(VCImpexSVGExportContext *context,
                                 const PointWWFixed *start,
                                 const PointWWFixed *control1,
                                 const PointWWFixed *control2,
-                                const PointWWFixed *end)
+                                const PointWWFixed *end,
+                                const TransMatrix *tm)
 {
     VCISVGPoint normalizedStart;
     VCISVGPoint normalizedControl1;
     VCISVGPoint normalizedControl2;
     VCISVGPoint normalizedEnd;
     VCISVGStyle style;
+    VCISVGMatrix matrix;
 
     if ((context == (void*)0) || (start == (void*)0) ||
         (control1 == (void*)0) || (control2 == (void*)0) ||
@@ -425,16 +438,15 @@ VCImpexSVGWriteCubicPathElement(VCImpexSVGExportContext *context,
     VCImpexSVGNormalizePoint(control2, &normalizedControl2);
     VCImpexSVGNormalizePoint(end, &normalizedEnd);
     VCImpexSVGNormalizeStyle(context, TRUE, FALSE, FALSE,
-                             context->fillRule,
-                             context->forceNonScalingStroke,
-                             &style);
+                             context->fillRule, &style);
+    VCImpexSVGNormalizeMatrix(tm, &matrix);
     return VCISVGEmitCubic(&context->writer,
                            &normalizedStart,
                            &normalizedControl1,
                            &normalizedControl2,
                            &normalizedEnd,
                            &style,
-                           (void*)0) ? TRUE : FALSE;
+                           &matrix) ? TRUE : FALSE;
 }
 
 Boolean _pascal
@@ -461,8 +473,7 @@ VCImpexSVGWriteEllipseElement(VCImpexSVGExportContext *context,
     center.x = (VCISVGFixed)VCImpexSVGPackWWFixed(centerX);
     center.y = (VCISVGFixed)VCImpexSVGPackWWFixed(centerY);
     VCImpexSVGNormalizeStyle(context, includeStroke, includeFill, filled,
-                             context->fillRule, (tm != (void*)0),
-                             &style);
+                             context->fillRule, &style);
     VCImpexSVGNormalizeMatrix(tm, &matrix);
     return VCISVGEmitEllipse(
         &context->writer, &center,
@@ -477,8 +488,8 @@ VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
                           WWFixedAsDWord centerY,
                           WWFixedAsDWord radiusX,
                           WWFixedAsDWord radiusY,
-                          word startAngleDeg,
-                          word endAngleDeg,
+                          sword startAngleDeg,
+                          sword endAngleDeg,
                           ArcCloseType closeType,
                           Boolean filled,
                           const TransMatrix *tm)
@@ -492,43 +503,56 @@ VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
     WWFixedAsDWord sine1;
     WWFixedAsDWord cosine2;
     WWFixedAsDWord sine2;
-    sdword difference;
+    WWFixedAsDWord cosineMiddle;
+    WWFixedAsDWord sineMiddle;
+    VCISVGU16 normalizedDifference;
+    VCISVGU16 normalizedStart;
+    VCISVGU16 normalizedEnd;
+    VCISVGU16 normalizedMiddle;
+    VCISVGU16 fullCircle;
 
     if (context == (void*)0)
     {
         return FALSE;
     }
 
-    angle1 = (WWFixedAsDWord)((sdword)startAngleDeg << 16);
-    angle2 = (WWFixedAsDWord)((sdword)endAngleDeg << 16);
+    if (!VCISVGNormalizeArcAngles(
+            (VCISVGI16)startAngleDeg, (VCISVGI16)endAngleDeg,
+            &normalizedStart, &normalizedEnd,
+            &normalizedDifference, &fullCircle))
+    {
+        return FALSE;
+    }
+    normalizedMiddle = (VCISVGU16)((normalizedStart + 180) % 360);
+
+    angle1 = (WWFixedAsDWord)((sdword)normalizedStart * 65536L);
+    angle2 = (WWFixedAsDWord)((sdword)normalizedEnd * 65536L);
     cosine1 = GrQuickCosine(angle1);
     sine1 = GrQuickSine(angle1);
     cosine2 = GrQuickCosine(angle2);
     sine2 = GrQuickSine(angle2);
+    angle1 = (WWFixedAsDWord)((sdword)normalizedMiddle * 65536L);
+    cosineMiddle = GrQuickCosine(angle1);
+    sineMiddle = GrQuickSine(angle1);
 
     arc.center.x = (VCISVGFixed)centerX;
     arc.center.y = (VCISVGFixed)centerY;
     arc.start.x = (VCISVGFixed)(centerX +
                   GrMulWWFixed(radiusX, cosine1));
-    arc.start.y = (VCISVGFixed)(centerY +
+    arc.start.y = (VCISVGFixed)(centerY -
                   GrMulWWFixed(radiusY, sine1));
     arc.end.x = (VCISVGFixed)(centerX +
                 GrMulWWFixed(radiusX, cosine2));
-    arc.end.y = (VCISVGFixed)(centerY +
+    arc.end.y = (VCISVGFixed)(centerY -
                 GrMulWWFixed(radiusY, sine2));
+    arc.middle.x = (VCISVGFixed)(centerX +
+                   GrMulWWFixed(radiusX, cosineMiddle));
+    arc.middle.y = (VCISVGFixed)(centerY -
+                   GrMulWWFixed(radiusY, sineMiddle));
     arc.radiusX = (VCISVGFixed)radiusX;
     arc.radiusY = (VCISVGFixed)radiusY;
-    difference = (sdword)endAngleDeg - (sdword)startAngleDeg;
-    while (difference < 0)
-    {
-        difference += 360;
-    }
-    while (difference >= 360)
-    {
-        difference -= 360;
-    }
-    arc.largeArc = (difference > 180);
-    arc.sweep = 1;
+    arc.largeArc = (normalizedDifference > 180);
+    arc.sweep = 0;
     arc.closeType = VCISVG_ARC_OPEN;
     if (closeType == ACT_CHORD)
     {
@@ -538,15 +562,13 @@ VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
     {
         arc.closeType = VCISVG_ARC_PIE;
     }
-    arc.filled = (filled != FALSE);
+    arc.fullCircle = fullCircle;
 
     VCImpexSVGNormalizeStyle(context,
                              (filled == FALSE),
                              (filled != FALSE),
                              filled,
-                             context->fillRule,
-                             (tm != (void*)0),
-                             &style);
+                             context->fillRule, &style);
     VCImpexSVGNormalizeMatrix(tm, &matrix);
     return VCISVGEmitArc(&context->writer, &arc, &style, &matrix) ?
            TRUE : FALSE;
@@ -582,19 +604,21 @@ VCImpexSVGWritePolygonPoint(VCImpexSVGExportContext *context,
 Boolean _pascal
 VCImpexSVGWritePolygonEnd(VCImpexSVGExportContext *context,
                           Boolean filled,
-                          RegionFillRule fillRule)
+                          RegionFillRule fillRule,
+                          const TransMatrix *tm)
 {
     VCISVGStyle style;
+    VCISVGMatrix matrix;
 
     if (context == (void*)0)
     {
         return FALSE;
     }
     VCImpexSVGNormalizeStyle(context, (filled == FALSE),
-                             (filled != FALSE), filled, fillRule,
-                             context->forceNonScalingStroke, &style);
+                             (filled != FALSE), filled, fillRule, &style);
+    VCImpexSVGNormalizeMatrix(tm, &matrix);
     return VCISVGEmitPolygonEnd(&context->writer, &style,
-                                (void*)0) ? TRUE : FALSE;
+                                &matrix) ? TRUE : FALSE;
 }
 
 Boolean _pascal
@@ -675,19 +699,21 @@ Boolean _pascal
 VCImpexSVGWritePathEnd(VCImpexSVGExportContext *context,
                        Boolean fillPath,
                        Boolean strokePath,
-                       RegionFillRule fillRule)
+                       RegionFillRule fillRule,
+                       const TransMatrix *tm)
 {
     VCISVGStyle style;
+    VCISVGMatrix matrix;
 
     if (context == (void*)0)
     {
         return FALSE;
     }
     VCImpexSVGNormalizeStyle(context, strokePath, fillPath, fillPath,
-                             fillRule, context->forceNonScalingStroke,
-                             &style);
+                             fillRule, &style);
+    VCImpexSVGNormalizeMatrix(tm, &matrix);
     return VCISVGEmitPathEnd(&context->writer, &style,
-                             (void*)0) ? TRUE : FALSE;
+                             &matrix) ? TRUE : FALSE;
 }
 
 WWFixedAsDWord _pascal
@@ -705,47 +731,13 @@ VCImpexSVGPackWWFixed(const WWFixed *value)
 }
 
 void _pascal
-VCImpexSVGTransformPointFromInt(GStateHandle gstate,
-                                const Point *sourcePoint,
-                                PointWWFixed *targetPoint)
+VCImpexSVGPointFromInt(const Point *sourcePoint,
+                       PointWWFixed *targetPoint)
 {
-    XYValueAsDWord transformedValue;
-
-    transformedValue = GrTransform(gstate,
-                                   sourcePoint->P_x,
-                                   sourcePoint->P_y);
-    targetPoint->PF_x.WWF_int = DWORD_X(transformedValue);
-    targetPoint->PF_y.WWF_int = DWORD_Y(transformedValue);
+    targetPoint->PF_x.WWF_int = sourcePoint->P_x;
+    targetPoint->PF_y.WWF_int = sourcePoint->P_y;
     targetPoint->PF_x.WWF_frac = 0;
     targetPoint->PF_y.WWF_frac = 0;
-}
-
-void _pascal
-VCImpexSVGTransformPointFromFixed(GStateHandle gstate,
-                                  const PointWWFixed *sourcePoint,
-                                  PointWWFixed *targetPoint)
-{
-    GrTransformWWFixed(gstate,
-        VCImpexSVGPackWWFixed(&sourcePoint->PF_x),
-        VCImpexSVGPackWWFixed(&sourcePoint->PF_y),
-        targetPoint);
-}
-
-void _pascal
-VCImpexSVGTransformRelativePoint(GStateHandle gstate,
-                                 const PointWWFixed *deltaPoint,
-                                 PointWWFixed *targetPoint)
-{
-    PointWWFixed currentPoint;
-    WWFixedAsDWord xValue;
-    WWFixedAsDWord yValue;
-
-    GrGetCurPosWWFixed(gstate, &currentPoint);
-    xValue = VCImpexSVGPackWWFixed(&currentPoint.PF_x) +
-             VCImpexSVGPackWWFixed(&deltaPoint->PF_x);
-    yValue = VCImpexSVGPackWWFixed(&currentPoint.PF_y) +
-             VCImpexSVGPackWWFixed(&deltaPoint->PF_y);
-    GrTransformWWFixed(gstate, xValue, yValue, targetPoint);
 }
 
 void _pascal
