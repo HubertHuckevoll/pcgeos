@@ -11,13 +11,12 @@
 #include <color.h>
 #include <localize.h>
 #include <Ansi/string.h>
-#include <Ansi/stdio.h>
-#include <Ansi/stdlib.h>
 #include <resource.h>
 #include <system.h>
-#include <math.h>
 
 #include <xlatLib.h>
+
+#include "svgcore.h"
 
 #define VCIMPEX_SVG_MAX_POLY_POINTS   512
 #define VCIMPEX_SVG_ELEMENT_BUFFER_SIZE   4096
@@ -26,6 +25,7 @@
 typedef struct
 {
     FileHandle svgFile;
+    VCISVGWriter writer;
     RectDWord bounds;
     WWFixedAsDWord lineWidth;
     RGBColorAsDWord lineColor;
@@ -42,6 +42,7 @@ typedef struct
     Boolean forceNonScalingStroke;
 } VCImpexSVGExportContext;
 
+Boolean _pascal VCImpexSVGInitWriter(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteHeader(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteFooter(VCImpexSVGExportContext *context);
 Boolean _pascal VCImpexSVGWriteLineElement(VCImpexSVGExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint);
@@ -77,21 +78,18 @@ Boolean _pascal VCImpexSVGWriteArcElement(VCImpexSVGExportContext *context,
                                           ArcCloseType closeType,
                                           Boolean filled,
                                           const TransMatrix *tm);
+Boolean _pascal VCImpexSVGWritePathElement(VCImpexSVGExportContext *context,
+                                           const char *pathData,
+                                           word pathLength,
+                                           Boolean fillPath,
+                                           Boolean strokePath,
+                                           RegionFillRule fillRule);
 Boolean _pascal VCImpexSVGUpdateDrawingState(GStateHandle gstate, VCImpexSVGExportContext *context);
-Boolean _pascal VCImpexSVGWriteRawString(VCImpexSVGExportContext *context, const char *text);
 void _pascal VCImpexSVGTransformPointFromInt(GStateHandle gstate, const Point *sourcePoint, PointWWFixed *targetPoint);
 void _pascal VCImpexSVGTransformPointFromFixed(GStateHandle gstate, const PointWWFixed *sourcePoint, PointWWFixed *targetPoint);
 void _pascal VCImpexSVGTransformRelativePoint(GStateHandle gstate, const PointWWFixed *deltaPoint, PointWWFixed *targetPoint);
 WWFixedAsDWord _pascal VCImpexSVGPackWWFixed(const WWFixed *value);
 void _pascal VCImpexSVGCopyPointWWFixed(PointWWFixed *destination, const PointWWFixed *source);
-void _pascal VCImpexSVGFormatFixed(WWFixedAsDWord value, char *buffer, word fractionDigits);
-Boolean _pascal VCImpexSVGStyleToAttributes(VCImpexSVGExportContext *context,
-                                            Boolean includeStroke,
-                                            Boolean includeFill,
-                                            Boolean filled,
-                                            RegionFillRule fillRule,
-                                            char *buffer,
-                                            word bufferSize);
 ChunkHandle _pascal VCImpexSVGAllocBuffer(VCImpexSVGExportContext *context, word size);
 void _pascal VCImpexSVGFreeBuffer(VCImpexSVGExportContext *context, ChunkHandle chunk);
 

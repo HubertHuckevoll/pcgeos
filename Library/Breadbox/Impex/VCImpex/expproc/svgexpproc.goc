@@ -868,6 +868,13 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
         return TE_FILE_WRITE;
     }
 
+    if (!VCImpexSVGInitWriter(&context))
+    {
+        MemFree(context.bufferHeapH);
+        GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
+        return TE_FILE_WRITE;
+    }
+
     error = VCImpexSVGExportGString(sourceGState, &context);
 
     if (context.bufferHeapH != NullHandle)
@@ -1624,10 +1631,8 @@ word VCImpexSVGEmitPath(GStateHandle playbackGState,
     WWFixedAsDWord componentValue;
     word wordValue1;
     word result = TE_NO_ERROR;
-    ChunkHandle styleChunk = NullChunk;
-    ChunkHandle bufferChunk = NullChunk;
-    Boolean strokeDisabled = FALSE;
-    WWFixedAsDWord savedLineWidth = 0;
+    MemHandle heapH;
+    char *pathData;
     GStringElement readElementType;
     VCImpexSVGOpcodeClass opcodeClass;
 
@@ -2084,109 +2089,30 @@ word VCImpexSVGEmitPath(GStateHandle playbackGState,
 
     if ((result == TE_NO_ERROR) && (builderReady != FALSE) && (builder.hasData != FALSE))
     {
-        char *buffer;
-        char *pathData;
-        word totalLength;
-        word styleLength = 0;
-
-        styleChunk = VCImpexSVGAllocBuffer(context, 256);
-        if (styleChunk == NullChunk)
+        heapH = context->bufferHeapH;
+        if (heapH == NullHandle)
         {
             result = TE_OUT_OF_MEMORY;
             goto cleanup;
         }
+        MemLock(heapH);
+        pathData = (builder.dataChunk != NullChunk) ?
+                   LMemDerefHandles(heapH, builder.dataChunk) : NULL;
+        if (pathData == NULL)
         {
-            MemHandle heapH = context->bufferHeapH;
-            char *styleText = NULL;
-
-            if (heapH == NullHandle)
-            {
-                result = TE_OUT_OF_MEMORY;
-                goto cleanup;
-            }
-
-            if ((strokePath == FALSE) && (context->lineWidth != 0))
-            {
-                strokeDisabled = TRUE;
-                savedLineWidth = context->lineWidth;
-                context->lineWidth = 0;
-            }
-
-            MemLock(heapH);
-            styleText = LMemDerefHandles(heapH, styleChunk);
-            if (!VCImpexSVGStyleToAttributes(context,
-                                             strokePath,
-                                             fillPath,
-                                             fillPath,
-                                             fillRule,
-                                             styleText,
-                                             256))
-            {
-                MemUnlock(heapH);
-                result = TE_FILE_WRITE;
-                goto cleanup;
-            }
-            styleLength = strlen(styleText);
-            totalLength = builder.length + styleLength + 48;
             MemUnlock(heapH);
-
-            if (strokeDisabled != FALSE)
-            {
-                context->lineWidth = savedLineWidth;
-            }
-        }
-
-        pathData = NULL;
-        bufferChunk = VCImpexSVGAllocBuffer(context, totalLength);
-        if (bufferChunk == NullChunk)
-        {
             result = TE_OUT_OF_MEMORY;
             goto cleanup;
         }
-
-        {
-            MemHandle heapH = context->bufferHeapH;
-            char *styleTextPtr;
-
-            if (heapH == NullHandle)
-            {
-                result = TE_OUT_OF_MEMORY;
-                goto cleanup;
-            }
-
-            MemLock(heapH);
-            pathData = (builder.dataChunk != NullChunk) ? LMemDerefHandles(heapH, builder.dataChunk) : NULL;
-            buffer = LMemDerefHandles(heapH, bufferChunk);
-            styleTextPtr = LMemDerefHandles(heapH, styleChunk);
-            if ((pathData == NULL) || (buffer == NULL) || (styleTextPtr == NULL))
-            {
-                MemUnlock(heapH);
-                result = TE_OUT_OF_MEMORY;
-                goto cleanup;
-            }
-            sprintf(buffer, "  <path d=\"%s\"%s />\n", pathData, styleTextPtr);
-            MemUnlock(heapH);
-        }
-        if (!VCImpexSVGWriteRawString(context, buffer))
+        if (!VCImpexSVGWritePathElement(context, pathData, builder.length,
+                                        fillPath, strokePath, fillRule))
         {
             result = TE_FILE_WRITE;
         }
+        MemUnlock(heapH);
     }
 
 cleanup:
-    if (strokeDisabled != FALSE)
-    {
-        context->lineWidth = savedLineWidth;
-    }
-
-    if (bufferChunk != NullChunk)
-    {
-        VCImpexSVGFreeBuffer(context, bufferChunk);
-    }
-    if (styleChunk != NullChunk)
-    {
-        VCImpexSVGFreeBuffer(context, styleChunk);
-    }
     if (builderReady != FALSE)
     {
         VCImpexSVGPathBuilderDestroy(context, &builder);
@@ -2716,13 +2642,19 @@ Boolean VCImpexSVGPathBuilderMoveTo(VCImpexSVGExportContext *context,
                                     VCImpexSVGPathBuilder *builder,
                                     const PointWWFixed *point)
 {
-    char xText[32];
-    char yText[32];
+    VCISVGPoint normalizedPoint;
+    VCISVGU16 segmentLength;
     char segment[96];
 
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&point->PF_x), xText, 2);
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&point->PF_y), yText, 2);
-    sprintf(segment, "M %s %s ", xText, yText);
+    normalizedPoint.x =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&point->PF_x);
+    normalizedPoint.y =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&point->PF_y);
+    if (!VCISVGFormatPathMove(&normalizedPoint, segment,
+                              sizeof(segment), &segmentLength))
+    {
+        return FALSE;
+    }
     if (!VCImpexSVGPathBuilderAppendString(context, builder, segment))
     {
         return FALSE;
@@ -2754,8 +2686,8 @@ Boolean VCImpexSVGPathBuilderLineTo(VCImpexSVGExportContext *context,
                                     const PointWWFixed *startPoint,
                                     const PointWWFixed *endPoint)
 {
-    char xText[32];
-    char yText[32];
+    VCISVGPoint normalizedPoint;
+    VCISVGU16 segmentLength;
     char segment[96];
 
     if (!VCImpexSVGPathBuilderEnsureSubpath(context, builder, startPoint))
@@ -2763,9 +2695,15 @@ Boolean VCImpexSVGPathBuilderLineTo(VCImpexSVGExportContext *context,
         return FALSE;
     }
 
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_x), xText, 2);
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_y), yText, 2);
-    sprintf(segment, "L %s %s ", xText, yText);
+    normalizedPoint.x =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&endPoint->PF_x);
+    normalizedPoint.y =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&endPoint->PF_y);
+    if (!VCISVGFormatPathLine(&normalizedPoint, segment,
+                              sizeof(segment), &segmentLength))
+    {
+        return FALSE;
+    }
     if (!VCImpexSVGPathBuilderAppendString(context, builder, segment))
     {
         return FALSE;
@@ -2782,7 +2720,10 @@ Boolean VCImpexSVGPathBuilderCurveTo(VCImpexSVGExportContext *context,
                                      const PointWWFixed *cp2,
                                      const PointWWFixed *endPoint)
 {
-    char c1x[32], c1y[32], c2x[32], c2y[32], ex[32], ey[32];
+    VCISVGPoint normalizedControl1;
+    VCISVGPoint normalizedControl2;
+    VCISVGPoint normalizedEnd;
+    VCISVGU16 segmentLength;
     char segment[192];
 
     if (!VCImpexSVGPathBuilderEnsureSubpath(context, builder, startPoint))
@@ -2790,13 +2731,26 @@ Boolean VCImpexSVGPathBuilderCurveTo(VCImpexSVGExportContext *context,
         return FALSE;
     }
 
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&cp1->PF_x), c1x, 2);
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&cp1->PF_y), c1y, 2);
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&cp2->PF_x), c2x, 2);
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&cp2->PF_y), c2y, 2);
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_x), ex, 2);
-    VCImpexSVGFormatFixed(VCImpexSVGPackWWFixed(&endPoint->PF_y), ey, 2);
-    sprintf(segment, "C %s %s %s %s %s %s ", c1x, c1y, c2x, c2y, ex, ey);
+    normalizedControl1.x =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&cp1->PF_x);
+    normalizedControl1.y =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&cp1->PF_y);
+    normalizedControl2.x =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&cp2->PF_x);
+    normalizedControl2.y =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&cp2->PF_y);
+    normalizedEnd.x =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&endPoint->PF_x);
+    normalizedEnd.y =
+        (VCISVGFixed)VCImpexSVGPackWWFixed(&endPoint->PF_y);
+    if (!VCISVGFormatPathCubic(&normalizedControl1,
+                               &normalizedControl2,
+                               &normalizedEnd,
+                               segment, sizeof(segment),
+                               &segmentLength))
+    {
+        return FALSE;
+    }
     if (!VCImpexSVGPathBuilderAppendString(context, builder, segment))
     {
         return FALSE;

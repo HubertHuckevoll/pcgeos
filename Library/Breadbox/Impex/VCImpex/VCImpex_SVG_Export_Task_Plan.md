@@ -34,6 +34,8 @@ Acceptance:
 - Comments, labels, and other approved non-rendering metadata do not fail an
   export.
 
+- Done!
+
 ## Milestone 2 - Introduce the shared C89 conversion core
 
 Create a small conversion core compiled unchanged by the DOS test runner and
