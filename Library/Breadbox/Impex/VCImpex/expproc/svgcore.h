@@ -123,20 +123,6 @@ int VCISVGFormatFixed(VCISVGFixed value,
                       char *buffer,
                       VCISVGU16 bufferSize,
                       VCISVGU16 *length);
-int VCISVGFormatPathMove(const VCISVGPoint *point,
-                         char *buffer,
-                         VCISVGU16 bufferSize,
-                         VCISVGU16 *length);
-int VCISVGFormatPathLine(const VCISVGPoint *point,
-                         char *buffer,
-                         VCISVGU16 bufferSize,
-                         VCISVGU16 *length);
-int VCISVGFormatPathCubic(const VCISVGPoint *control1,
-                          const VCISVGPoint *control2,
-                          const VCISVGPoint *end,
-                          char *buffer,
-                          VCISVGU16 bufferSize,
-                          VCISVGU16 *length);
 
 int VCISVGEmitHeader(VCISVGWriter *writer,
                      VCISVGI32 left,
@@ -177,10 +163,18 @@ int VCISVGEmitPolygonPoint(VCISVGWriter *writer,
 int VCISVGEmitPolygonEnd(VCISVGWriter *writer,
                          const VCISVGStyle *style,
                          const VCISVGMatrix *matrix);
-int VCISVGEmitPath(VCISVGWriter *writer,
-                   const char *pathData,
-                   VCISVGU16 pathLength,
-                   const VCISVGStyle *style,
-                   const VCISVGMatrix *matrix);
+int VCISVGEmitPathBegin(VCISVGWriter *writer);
+int VCISVGEmitPathMove(VCISVGWriter *writer,
+                       const VCISVGPoint *point);
+int VCISVGEmitPathLine(VCISVGWriter *writer,
+                       const VCISVGPoint *point);
+int VCISVGEmitPathCubic(VCISVGWriter *writer,
+                        const VCISVGPoint *control1,
+                        const VCISVGPoint *control2,
+                        const VCISVGPoint *end);
+int VCISVGEmitPathClose(VCISVGWriter *writer);
+int VCISVGEmitPathEnd(VCISVGWriter *writer,
+                      const VCISVGStyle *style,
+                      const VCISVGMatrix *matrix);
 
 #endif

@@ -109,6 +109,46 @@ CheckSinkFailure(void)
     return VCISVGWriterFailed(&writer) && (sink.calls == 3);
 }
 
+static int
+CheckStreamedPath(void)
+{
+    static const char expected[] =
+        "  <path d=\"M 1 2 L 3 4 Z \""
+        " stroke=\"none\" fill=\"#123456\""
+        " fill-rule=\"evenodd\" />\n";
+    TestSink sink;
+    VCISVGWriter writer;
+    VCISVGPoint point;
+    VCISVGStyle style;
+
+    memset(&sink, 0, sizeof(sink));
+    memset(&style, 0, sizeof(style));
+    VCISVGWriterInit(&writer, TestWrite, &sink);
+    style.fillRed = 0x12;
+    style.fillGreen = 0x34;
+    style.fillBlue = 0x56;
+    style.includeFill = 1;
+    style.filled = 1;
+    style.fillRule = VCISVG_FILL_EVENODD;
+    point.x = 0x00010000L;
+    point.y = 0x00020000L;
+    if (!VCISVGEmitPathBegin(&writer) ||
+        !VCISVGEmitPathMove(&writer, &point))
+    {
+        return 0;
+    }
+    point.x = 0x00030000L;
+    point.y = 0x00040000L;
+    if (!VCISVGEmitPathLine(&writer, &point) ||
+        !VCISVGEmitPathClose(&writer) ||
+        !VCISVGEmitPathEnd(&writer, &style, (void*)0))
+    {
+        return 0;
+    }
+    return (sink.length == sizeof(expected) - 1) &&
+           (memcmp(sink.data, expected, sink.length) == 0);
+}
+
 int
 main(void)
 {
@@ -135,6 +175,10 @@ main(void)
     if (!CheckSinkFailure())
     {
         return 6;
+    }
+    if (!CheckStreamedPath())
+    {
+        return 7;
     }
     return 0;
 }

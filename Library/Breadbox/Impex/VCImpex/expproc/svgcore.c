@@ -2,14 +2,6 @@
 
 #define VCISVG_FIXED_ONE ((VCISVGU32)65536L)
 
-typedef struct
-{
-    char *data;
-    VCISVGU16 capacity;
-    VCISVGU16 length;
-    VCISVGU16 failed;
-} VCISVGBuffer;
-
 static VCISVGU16
 VCISVGTextLength(const char *text)
 {
@@ -26,57 +18,6 @@ VCISVGTextLength(const char *text)
         length++;
     }
     return length;
-}
-
-static int
-VCISVGBufferAppendBytes(VCISVGBuffer *buffer,
-                        const char *data,
-                        VCISVGU16 byteCount)
-{
-    VCISVGU16 index;
-
-    if ((buffer == (void*)0) || (data == (void*)0) ||
-        (buffer->failed != 0))
-    {
-        return 0;
-    }
-    if ((byteCount >= buffer->capacity) ||
-        (buffer->length > buffer->capacity - byteCount - 1))
-    {
-        buffer->failed = 1;
-        return 0;
-    }
-
-    for (index = 0; index < byteCount; index++)
-    {
-        buffer->data[buffer->length + index] = data[index];
-    }
-    buffer->length += byteCount;
-    buffer->data[buffer->length] = '\0';
-    return 1;
-}
-
-static int
-VCISVGBufferAppendText(VCISVGBuffer *buffer, const char *text)
-{
-    return VCISVGBufferAppendBytes(buffer, text, VCISVGTextLength(text));
-}
-
-static int
-VCISVGBufferAppendFixed(VCISVGBuffer *buffer,
-                        VCISVGFixed value,
-                        VCISVGU16 fractionDigits)
-{
-    char number[24];
-    VCISVGU16 length;
-
-    if (!VCISVGFormatFixed(value, fractionDigits, number,
-                           sizeof(number), &length))
-    {
-        buffer->failed = 1;
-        return 0;
-    }
-    return VCISVGBufferAppendBytes(buffer, number, length);
 }
 
 static int
@@ -505,110 +446,6 @@ VCISVGFormatFixed(VCISVGFixed value,
 }
 
 int
-VCISVGFormatPathMove(const VCISVGPoint *point,
-                     char *buffer,
-                     VCISVGU16 bufferSize,
-                     VCISVGU16 *length)
-{
-    VCISVGBuffer output;
-
-    if ((point == (void*)0) || (buffer == (void*)0) ||
-        (length == (void*)0))
-    {
-        return 0;
-    }
-    output.data = buffer;
-    output.capacity = bufferSize;
-    output.length = 0;
-    output.failed = 0;
-    if (bufferSize != 0)
-    {
-        buffer[0] = '\0';
-    }
-
-    VCISVGBufferAppendText(&output, "M ");
-    VCISVGBufferAppendFixed(&output, point->x, 2);
-    VCISVGBufferAppendText(&output, " ");
-    VCISVGBufferAppendFixed(&output, point->y, 2);
-    VCISVGBufferAppendText(&output, " ");
-    *length = output.length;
-    return (output.failed == 0);
-}
-
-int
-VCISVGFormatPathLine(const VCISVGPoint *point,
-                     char *buffer,
-                     VCISVGU16 bufferSize,
-                     VCISVGU16 *length)
-{
-    VCISVGBuffer output;
-
-    if ((point == (void*)0) || (buffer == (void*)0) ||
-        (length == (void*)0))
-    {
-        return 0;
-    }
-    output.data = buffer;
-    output.capacity = bufferSize;
-    output.length = 0;
-    output.failed = 0;
-    if (bufferSize != 0)
-    {
-        buffer[0] = '\0';
-    }
-
-    VCISVGBufferAppendText(&output, "L ");
-    VCISVGBufferAppendFixed(&output, point->x, 2);
-    VCISVGBufferAppendText(&output, " ");
-    VCISVGBufferAppendFixed(&output, point->y, 2);
-    VCISVGBufferAppendText(&output, " ");
-    *length = output.length;
-    return (output.failed == 0);
-}
-
-int
-VCISVGFormatPathCubic(const VCISVGPoint *control1,
-                      const VCISVGPoint *control2,
-                      const VCISVGPoint *end,
-                      char *buffer,
-                      VCISVGU16 bufferSize,
-                      VCISVGU16 *length)
-{
-    VCISVGBuffer output;
-
-    if ((control1 == (void*)0) || (control2 == (void*)0) ||
-        (end == (void*)0) || (buffer == (void*)0) ||
-        (length == (void*)0))
-    {
-        return 0;
-    }
-    output.data = buffer;
-    output.capacity = bufferSize;
-    output.length = 0;
-    output.failed = 0;
-    if (bufferSize != 0)
-    {
-        buffer[0] = '\0';
-    }
-
-    VCISVGBufferAppendText(&output, "C ");
-    VCISVGBufferAppendFixed(&output, control1->x, 2);
-    VCISVGBufferAppendText(&output, " ");
-    VCISVGBufferAppendFixed(&output, control1->y, 2);
-    VCISVGBufferAppendText(&output, " ");
-    VCISVGBufferAppendFixed(&output, control2->x, 2);
-    VCISVGBufferAppendText(&output, " ");
-    VCISVGBufferAppendFixed(&output, control2->y, 2);
-    VCISVGBufferAppendText(&output, " ");
-    VCISVGBufferAppendFixed(&output, end->x, 2);
-    VCISVGBufferAppendText(&output, " ");
-    VCISVGBufferAppendFixed(&output, end->y, 2);
-    VCISVGBufferAppendText(&output, " ");
-    *length = output.length;
-    return (output.failed == 0);
-}
-
-int
 VCISVGEmitHeader(VCISVGWriter *writer,
                  VCISVGI32 left,
                  VCISVGI32 top,
@@ -861,19 +698,69 @@ VCISVGEmitPolygonEnd(VCISVGWriter *writer,
 }
 
 int
-VCISVGEmitPath(VCISVGWriter *writer,
-               const char *pathData,
-               VCISVGU16 pathLength,
-               const VCISVGStyle *style,
-               const VCISVGMatrix *matrix)
+VCISVGEmitPathBegin(VCISVGWriter *writer)
 {
-    if ((pathData == (void*)0) || !VCISVGStyleIsValid(style))
+    return VCISVGWriteText(writer, "  <path d=\"");
+}
+
+static int
+VCISVGWritePathPoint(VCISVGWriter *writer,
+                     const VCISVGPoint *point)
+{
+    if (point == (void*)0)
     {
         return 0;
     }
-    return VCISVGWriteText(writer, "  <path d=\"") &&
-           VCISVGWrite(writer, pathData, pathLength) &&
-           VCISVGWriteText(writer, "\"") &&
+    return VCISVGWriteFixed(writer, point->x, 2) &&
+           VCISVGWriteText(writer, " ") &&
+           VCISVGWriteFixed(writer, point->y, 2) &&
+           VCISVGWriteText(writer, " ");
+}
+
+int
+VCISVGEmitPathMove(VCISVGWriter *writer,
+                   const VCISVGPoint *point)
+{
+    return VCISVGWriteText(writer, "M ") &&
+           VCISVGWritePathPoint(writer, point);
+}
+
+int
+VCISVGEmitPathLine(VCISVGWriter *writer,
+                   const VCISVGPoint *point)
+{
+    return VCISVGWriteText(writer, "L ") &&
+           VCISVGWritePathPoint(writer, point);
+}
+
+int
+VCISVGEmitPathCubic(VCISVGWriter *writer,
+                    const VCISVGPoint *control1,
+                    const VCISVGPoint *control2,
+                    const VCISVGPoint *end)
+{
+    return VCISVGWriteText(writer, "C ") &&
+           VCISVGWritePathPoint(writer, control1) &&
+           VCISVGWritePathPoint(writer, control2) &&
+           VCISVGWritePathPoint(writer, end);
+}
+
+int
+VCISVGEmitPathClose(VCISVGWriter *writer)
+{
+    return VCISVGWriteText(writer, "Z ");
+}
+
+int
+VCISVGEmitPathEnd(VCISVGWriter *writer,
+                  const VCISVGStyle *style,
+                  const VCISVGMatrix *matrix)
+{
+    if (!VCISVGStyleIsValid(style))
+    {
+        return 0;
+    }
+    return VCISVGWriteText(writer, "\"") &&
            VCISVGWriteStyle(writer, style) &&
            VCISVGWriteMatrix(writer, matrix) &&
            VCISVGWriteText(writer, " />\n");
