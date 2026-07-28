@@ -114,7 +114,7 @@ svgexpproc.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h expproc/svgexp.h \
                 library.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h math.h \
-                xlatLib.h
+                xlatLib.h vconv_ui.h
 svgsubcode.obj \
 svgsubcode.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
