@@ -870,9 +870,9 @@ void _export FreeHTMLTransferItem(VMFileHandle vmf, VMChain vmc)
 }
 
 #ifdef __WATCOMC__
-#pragma code_seg("HTMLCLAS_UPDATE_TEXT")
+#pragma code_seg("HTMLCLAS_ATTACH_TEXT")
 #else
-#pragma codeseg HTMLCLAS_UPDATE_TEXT
+#pragma codeseg HTMLCLAS_ATTACH_TEXT
 #endif
 
 /* "-dc" causes vptrs for text constants if different code segments are used */
@@ -903,9 +903,9 @@ void LOCAL IMarkAllImagesUnresolved(optr imageArray)
 }
 
 #ifdef __WATCOMC__
-#pragma code_seg("HTMLCLAS_UPDATE_TEXT")
+#pragma code_seg("HTMLCLAS_ATTACH_TEXT")
 #else
-#pragma codeseg HTMLCLAS_UPDATE_TEXT
+#pragma codeseg HTMLCLAS_ATTACH_TEXT
 #endif
 
 /* "-dc" causes vptrs for text constants if different code segments are used */
@@ -964,9 +964,9 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
 }
 
 #ifdef __WATCOMC__
-#pragma code_seg("HTMLCLAS_UPDATE_TEXT")
+#pragma code_seg("HTMLCLAS_ATTACH_TEXT")
 #else
-#pragma codeseg HTMLCLAS_UPDATE_TEXT
+#pragma codeseg HTMLCLAS_ATTACH_TEXT
 #endif
 
 /* "-dc" causes vptrs for text constants if different code segments are used */

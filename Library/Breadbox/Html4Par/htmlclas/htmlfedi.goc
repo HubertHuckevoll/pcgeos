@@ -426,6 +426,15 @@ extern void FormElementInvalidate(
 @end FormButtonResource ;
 
 
+#ifdef __WATCOMC__
+#pragma code_seg("HTMLFEDI_SELECT_TEXT")
+#else
+#pragma codeseg HTMLFEDI_SELECT_TEXT
+#endif
+
+/* "-dc" causes vptrs for text constants if different code segments are used */
+#pragma option -dc-
+
 @method FormElementSelectListClass,
         MSG_FORM_ELEMENT_SELECT_LIST_QUERY_MONIKER
 {
@@ -748,6 +757,15 @@ void FormElementRemoveSelectList()
 
 @endif  /* IN_PLACE_SELECT_LIST *****************************************/
 
+#ifdef __WATCOMC__
+#pragma code_seg("htmlfedi_TEXT")
+#else
+#pragma codeseg htmlfedi_TEXT
+#endif
+
+/* restore strings in code segment */
+#pragma option -dc
+
 @extern method HTMLTextClass, MSG_HTML_TEXT_FORM_ELEMENT_INVALIDATE
 {
     HTMLformData *p_formData;
@@ -778,6 +796,15 @@ void FormElementRemoveSelectList()
     }
     MemUnlock(OptrToHandle(formArray));
 }
+
+#ifdef __WATCOMC__
+#pragma code_seg("HTMLFEDI_SELECT_TEXT")
+#else
+#pragma codeseg HTMLFEDI_SELECT_TEXT
+#endif
+
+/* "-dc" causes vptrs for text constants if different code segments are used */
+#pragma option -dc-
 
 @ifdef JAVASCRIPT_SUPPORT
 void FormElementEditSelectList(
@@ -931,6 +958,15 @@ void FormElementEditSelectList(
     MemUnlock(OptrToHandle(formArray)) ;
     UserDestroyDialog(box) ;
 }
+
+#ifdef __WATCOMC__
+#pragma code_seg("htmlfedi_TEXT")
+#else
+#pragma codeseg htmlfedi_TEXT
+#endif
+
+/* restore strings in code segment */
+#pragma option -dc
 
 @ifdef IN_PLACE_TEXT_ENTRY
 
@@ -1265,6 +1301,15 @@ void FormElementUpdateTextEntryPos(optr urlTextObj)
 /*
  * InPlaceTextEntryClass handlers
  */
+
+#ifdef __WATCOMC__
+#pragma code_seg("HTMLCLRT_SELECT_TEXT")
+#else
+#pragma codeseg HTMLCLRT_SELECT_TEXT
+#endif
+
+/* "-dc" causes vptrs for text constants if different code segments are used */
+#pragma option -dc-
 
 /*
  * initialize values needed later
@@ -1635,6 +1680,15 @@ void FormElementUpdateTextEntryPos(optr urlTextObj)
 	MemUnlock(OptrToHandle(pself->IPTEI_formArray));
     }
 }
+
+#ifdef __WATCOMC__
+#pragma code_seg("htmlfedi_TEXT")
+#else
+#pragma codeseg htmlfedi_TEXT
+#endif
+
+/* restore strings in code segment */
+#pragma option -dc
 
 @endif  /* IN_PLACE_TEXT_ENTRY */
 

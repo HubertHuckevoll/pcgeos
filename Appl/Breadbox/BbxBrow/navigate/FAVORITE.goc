@@ -670,6 +670,13 @@ dword FavoritesGetCount(void)
  *                                   or FAVORITE_BAD
  *
  **************************************************************************/
+#ifdef __WATCOMC__
+#pragma code_seg("FAVORITE_EDIT_TEXT")
+#else
+#pragma codeseg FAVORITE_EDIT_TEXT
+#endif
+#pragma option -dc-
+
 dword FavoriteAppend(void)
 {
     dword pos = FAVORITE_BAD ;

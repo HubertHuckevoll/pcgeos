@@ -67,6 +67,13 @@ extern void UserAbortEnd(void);
 @extern method URLTextClass, MSG_META_CLIPBOARD_COPY ;
 @extern method URLTextClass, MSG_URL_TEXT_COPY_IMAGE_TO_CLIPBOARD ;
 
+#ifdef __WATCOMC__
+#pragma code_seg("URLTEXT_GRAPHICS_TEXT")
+#else
+#pragma codeseg URLTEXT_GRAPHICS_TEXT
+#endif
+#pragma option -dc-
+
 @method URLTextClass, MSG_HTML_TEXT_INIT_STORAGE
 {
     AddCacheFileReference();            /* we're using the shared cache file */
@@ -1300,6 +1307,13 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
  *               this message then the print job will be cancelled
  *               by the spooler.
  *******************************************************************/
+#ifdef __WATCOMC__
+#pragma code_seg("URLTEXT_TEXT")
+#else
+#pragma codeseg URLTEXT_TEXT
+#endif
+#pragma option -dc
+
 @method URLTextClass, MSG_PRINT_GET_DOC_NAME
 {
     optr frame;

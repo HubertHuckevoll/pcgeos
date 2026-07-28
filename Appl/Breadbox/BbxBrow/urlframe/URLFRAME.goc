@@ -132,6 +132,13 @@ extern jseVariable globalObject;
 @extern method URLFrameClass, MSG_URL_FRAME_EXT_FILE_FETCHED;
 
 
+#ifdef __WATCOMC__
+#pragma code_seg("URLFRAME_TREE_TEXT")
+#else
+#pragma codeseg URLFRAME_TREE_TEXT
+#endif
+#pragma option -dc-
+
 @method URLFrameClass, MSG_URL_FRAME_CREATE_CHILD
 {
     MemHandle textBlock, frameBlock, viewBlock;
@@ -250,6 +257,13 @@ extern jseVariable globalObject;
     }
     @send @frameChildren::MSG_URL_FRAME_DESTRUCT_TEXT_TREE();
 }
+
+#ifdef __WATCOMC__
+#pragma code_seg("URLFRAME_TEXT")
+#else
+#pragma codeseg URLFRAME_TEXT
+#endif
+#pragma option -dc
 
 @method URLFrameClass, MSG_URL_FRAME_SET_TEXT_OBJ
 {
@@ -583,6 +597,13 @@ extern jseVariable globalObject;
  * taken from the saved frame state rather than the (nonexistent)
  * hypertext transfer item.
  */
+#ifdef __WATCOMC__
+#pragma code_seg("URLFRAME_TREE_TEXT")
+#else
+#pragma codeseg URLFRAME_TREE_TEXT
+#endif
+#pragma option -dc-
+
 @method URLFrameClass, MSG_URL_FRAME_FETCH_FRAMES
 {
     HTMLframeRec *frec;
@@ -986,6 +1007,13 @@ extern jseVariable globalObject;
     }
 }
 @endif
+
+#ifdef __WATCOMC__
+#pragma code_seg("URLFRAME_TEXT")
+#else
+#pragma codeseg URLFRAME_TEXT
+#endif
+#pragma option -dc
 
 @method URLFrameClass, MSG_URL_FRAME_GET_SIZE
 {

@@ -273,7 +273,8 @@ Boolean LOCAL UseAltCache(TCHAR *urlP)
  *                                 if not yet in local cache
  *
  **************************************************************************/
-NameToken LOCAL CacheGetLocalToken(optr cachePool, NameToken url)
+/* Must be far: called from both cache code resources. */
+NameToken _pascal CacheGetLocalToken(optr cachePool, NameToken url)
 {
     TCHAR urlbuf[HTML_STATIC_BUF], *urlP;
     NameToken ret;
@@ -918,7 +919,8 @@ word SrcCacheFindEntryByID(dword id, srcCacheData **data)
  *                                   be tested by making a request
  *
  **************************************************************************/
-Boolean LOCAL SrcCacheIsExpired(dword expiration, Boolean *tryModified)
+/* Must be far: called from both cache code resources. */
+Boolean _pascal SrcCacheIsExpired(dword expiration, Boolean *tryModified)
 {
     TimerDateAndTime nowTDAT;
     dword nowSecs;
@@ -1153,6 +1155,13 @@ Boolean SrcCacheExpireURL(NameToken url)
 /***************************************************************************
  *              Object ("Formatting") cache management
  ***************************************************************************/
+
+#ifdef __WATCOMC__
+#pragma code_seg("NAVCACHE_OBJECT_TEXT")
+#else
+#pragma codeseg NAVCACHE_OBJECT_TEXT
+#endif
+#pragma option -dc-
 
 /**************************************************************************
  *              LoadObjCacheArrays
