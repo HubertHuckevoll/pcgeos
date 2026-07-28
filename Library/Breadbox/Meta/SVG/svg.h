@@ -158,6 +158,7 @@ Boolean SvgStyleRunSelfTest(void);
 #endif
 
 /* ---- viewBox/viewport mapping ---- */
+void   SvgViewReset(void);
 void   SvgViewInitFromSvgTag(const char *tag);
 void   SvgViewInitDefault(void);
 sword  SvgViewMapPosX_F(WWFixedAsDWord fx);

@@ -20,8 +20,8 @@
 void SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP)
 {
     const char *s;
-    sword       x;
-    sword       y;
+    WWFixedAsDWord x;
+    WWFixedAsDWord y;
 
     s = points;
     *numPointsP = 0;
@@ -35,7 +35,7 @@ void SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP)
             WWFixedAsDWord f;
             const char *p;
             p = SvgUtilParseWWFixed16_16(s, &f);
-            x = SvgViewMapPosX_F(f);
+            x = f;
             while (*p) {
                 if (*p == ' ' || *p == ',' || *p == '\t' ||
                     *p == '\r' || *p == '\n' ||
@@ -53,7 +53,7 @@ void SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP)
             WWFixedAsDWord f;
             const char *p;
             p = SvgUtilParseWWFixed16_16(s, &f);
-            y = SvgViewMapPosY_F(f);
+            y = f;
             while (*p) {
                 if (*p == ' ' || *p == ',' || *p == '\t' ||
                     *p == '\r' || *p == '\n' ||
@@ -64,14 +64,14 @@ void SvgShapeParsePoints(const char *points, SVGScratch *sc, word *numPointsP)
             s = p;
         }
 
-        if (!SvgScratchEnsurePointCapacity(sc, (word)(*numPointsP + 1)))
+        if (!SvgScratchEnsureWWPointCapacity(sc, (word)(*numPointsP + 1)))
         {
             LOG_STR("[SHAPE]", "ParsePoints: ensure failed");
             break;
         }
 
-        sc->ptsP[*numPointsP].P_x = x;
-        sc->ptsP[*numPointsP].P_y = y;
+        sc->ptsWWFP[*numPointsP].x = x;
+        sc->ptsWWFP[*numPointsP].y = y;
         (*numPointsP)++;
 
         while (*s && (isspace(*s) || *s == ',')) s++;
@@ -115,6 +115,11 @@ void SvgShapeHandleLine(const char *tag)
         (void)SvgUtilParseWWFixed16_16(y2b, &fy2);
     }
 
+    if (!SvgStyleHasStroke(tag))
+    {
+        return;
+    }
+
     SvgStyleApplyStrokeAndFill(tag);
     SvgStyleApplyStrokeWidth(tag);
 
@@ -147,11 +152,19 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
     word      np;
     word      i;
     SvgMatrix worldM;
+    WWFixedAsDWord X;
+    WWFixedAsDWord Y;
+    WWFixedAsDWord Xp;
+    WWFixedAsDWord Yp;
+    Boolean fillPresent;
+    Boolean strokePresent;
+    Boolean forcedRoundJoin;
 
     sc->pb[0] = 0;
     if (SvgParserGetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
     {
         SvgStyleApplyStrokeAndFill(tag);
+        SvgStyleApplyFillRule(tag);
         SvgStyleApplyStrokeWidth(tag);
 
         /* parse points in user space */
@@ -160,17 +173,36 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
         {
             /* use full world CTM: View ∘ Group ∘ Element */
             SvgXformBuildWorld(tag, NULL, &worldM);
-
-            for (i = 0; i < np; i++) {
-                sword px = sc->ptsP[i].P_x;
-                sword py = sc->ptsP[i].P_y;
-                SvgXformApplyPoint(&px, &py, &worldM);
-                sc->ptsP[i].P_x = px;
-                sc->ptsP[i].P_y = py;
+            if (!SvgScratchEnsurePointCapacity(sc, np))
+            {
+                return;
             }
 
+            for (i = 0; i < np; i++) {
+                X = sc->ptsWWFP[i].x;
+                Y = sc->ptsWWFP[i].y;
+                Xp = GrAddWWFixed(
+                    GrAddWWFixed(GrMulWWFixed(worldM.a, X),
+                                 GrMulWWFixed(worldM.c, Y)),
+                    worldM.e);
+                Yp = GrAddWWFixed(
+                    GrAddWWFixed(GrMulWWFixed(worldM.b, X),
+                                 GrMulWWFixed(worldM.d, Y)),
+                    worldM.f);
+                sc->ptsP[i].P_x = SvgGeomWWFixedToSWordRound(Xp);
+                sc->ptsP[i].P_y = SvgGeomWWFixedToSWordRound(Yp);
+            }
+
+            fillPresent = SvgStyleHasFill(tag);
+            strokePresent = SvgStyleHasStroke(tag);
+            if (fillPresent && np > 2)
             {
-                Boolean forcedRoundJoin = SvgStyleForceRoundJoinForSegments(tag, np);
+                Meta_Polygon(sc->ptsP, np, TRUE, FALSE);
+            }
+            if (strokePresent)
+            {
+                forcedRoundJoin =
+                    SvgStyleForceRoundJoinForSegments(tag, np);
                 Meta_Polyline(sc->ptsP, np);
                 SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
             }
@@ -184,6 +216,10 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
     word      np;
     word      i;
     SvgMatrix worldM;
+    WWFixedAsDWord X;
+    WWFixedAsDWord Y;
+    WWFixedAsDWord Xp;
+    WWFixedAsDWord Yp;
 
     sc->pb[0] = 0;
     if (SvgParserGetAttrBounded(tag, "points", sc->pb, sizeof(sc->pb)))
@@ -198,13 +234,24 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
         {
             /* use full world CTM: View ∘ Group ∘ Element */
             SvgXformBuildWorld(tag, NULL, &worldM);
+            if (!SvgScratchEnsurePointCapacity(sc, np))
+            {
+                return;
+            }
 
             for (i = 0; i < np; i++) {
-                sword px = sc->ptsP[i].P_x;
-                sword py = sc->ptsP[i].P_y;
-                SvgXformApplyPoint(&px, &py, &worldM);
-                sc->ptsP[i].P_x = px;
-                sc->ptsP[i].P_y = py;
+                X = sc->ptsWWFP[i].x;
+                Y = sc->ptsWWFP[i].y;
+                Xp = GrAddWWFixed(
+                    GrAddWWFixed(GrMulWWFixed(worldM.a, X),
+                                 GrMulWWFixed(worldM.c, Y)),
+                    worldM.e);
+                Yp = GrAddWWFixed(
+                    GrAddWWFixed(GrMulWWFixed(worldM.b, X),
+                                 GrMulWWFixed(worldM.d, Y)),
+                    worldM.f);
+                sc->ptsP[i].P_x = SvgGeomWWFixedToSWordRound(Xp);
+                sc->ptsP[i].P_y = SvgGeomWWFixedToSWordRound(Yp);
             }
 
             {

@@ -329,6 +329,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     LOG_FILE("srcFile", srcFile);
     LOG_DWORD("totalBytes", total);
 
+    SvgViewReset();
     if (!SvgXformStackInit()) { status = TE_OUT_OF_MEMORY; goto cleanup; }
     if (!SvgStyleStackInit()) { status = TE_OUT_OF_MEMORY; goto cleanup; }
 
