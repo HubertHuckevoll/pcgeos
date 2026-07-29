@@ -312,7 +312,7 @@ VCImpexSVGValidateElement(const byte *elementData,
 
         case GR_APPLY_TRANSFORM:
         case GR_SET_TRANSFORM:
-            minimumSize = 33;
+            minimumSize = VCIMPEX_SVG_OPCODE_SIZE + sizeof(TransMatrix);
             break;
 
         case GR_SET_MIX_MODE:
