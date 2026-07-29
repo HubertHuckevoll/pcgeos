@@ -458,6 +458,7 @@ DIR (ensemble) {
 		# for vector (SVG) import
 		#
 		Library/Breadbox/Meta/meta{ec}.geo GFS LOCALPC
+		Library/Breadbox/Impex/VCImpex/vcimpex{ec}.geo GFS LOCALPC
 
 		#
 		# for Global Email
