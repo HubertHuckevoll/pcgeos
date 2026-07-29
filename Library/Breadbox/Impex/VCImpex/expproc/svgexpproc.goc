@@ -138,10 +138,12 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     VCImpexSVGExportContext context;
     word error;
 
+    EC_WARNING(VCIMPEX_WARNING_EXPORT_PROCEDURE_ENTERED);
+
     if (frame == NULL)
         return TE_EXPORT_ERROR;
 
-    if (frame->EF_formatNumber != FORMAT_SVG)
+    if (frame->EF_formatNumber != FORMAT_SVG_EXPORT)
         return TE_EXPORT_NOT_SUPPORTED;
 
     if (frame->EF_clipboardFormat != CIF_GRAPHICS_STRING)
@@ -157,17 +159,21 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     memset(&context, 0, sizeof(context));
     sourceGState = GrLoadGString(frame->EF_transferVMFile, GST_VMEM,
                                  VMCHAIN_GET_VM_BLOCK(frame->EF_transferVMChain));
+    EC_WARNING(VCIMPEX_WARNING_LOAD_GSTRING_RETURNED);
     if (sourceGState == 0)
         return TE_METAFILE_CREATION_ERROR;
 
     context.bufferHeapH = MemAllocLMem(LMEM_TYPE_GENERAL, 0);
+    EC_WARNING(VCIMPEX_WARNING_BUFFER_HEAP_ALLOC_RETURNED);
     if (context.bufferHeapH == NullHandle)
     {
         GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
         return TE_OUT_OF_MEMORY;
     }
 
+    EC_WARNING(VCIMPEX_WARNING_VALIDATION_ENTERED);
     error = VCImpexSVGValidateGString(sourceGState, &context);
+    EC_WARNING(VCIMPEX_WARNING_VALIDATION_RETURNED);
     if (error != TE_NO_ERROR)
     {
         MemFree(context.bufferHeapH);
@@ -175,9 +181,11 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
         return error;
     }
 
+    EC_WARNING(VCIMPEX_WARNING_BOUNDS_ENTERED);
     GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
     GrGetGStringBoundsDWord(sourceGState, 0, 0, &context.bounds);
     GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
+    EC_WARNING(VCIMPEX_WARNING_BOUNDS_RETURNED);
     if ((context.bounds.RD_right < context.bounds.RD_left) ||
         (context.bounds.RD_bottom < context.bounds.RD_top))
     {
@@ -210,8 +218,11 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
         GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
         return TE_FILE_WRITE;
     }
+    EC_WARNING(VCIMPEX_WARNING_OUTPUT_FILE_READY);
 
-    if (!VCImpexSVGInitWriter(&context))
+    error = VCImpexSVGInitWriter(&context);
+    EC_WARNING(VCIMPEX_WARNING_INIT_WRITER_RETURNED);
+    if (!error)
     {
         MemFree(context.bufferHeapH);
         GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
@@ -219,15 +230,21 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
     }
 
     error = VCImpexSVGExportGString(sourceGState, &context);
+    EC_WARNING(VCIMPEX_WARNING_EXPORT_GSTRING_RETURNED);
 
     if (context.bufferHeapH != NullHandle)
     {
+        EC_WARNING(VCIMPEX_WARNING_BUFFER_HEAP_FREE_ENTERED);
         MemFree(context.bufferHeapH);
+        EC_WARNING(VCIMPEX_WARNING_BUFFER_HEAP_FREE_RETURNED);
         context.bufferHeapH = NullHandle;
     }
 
+    EC_WARNING(VCIMPEX_WARNING_SOURCE_GSTRING_DESTROY_ENTERED);
     GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
+    EC_WARNING(VCIMPEX_WARNING_SOURCE_GSTRING_DESTROY_RETURNED);
 
+    EC_WARNING(VCIMPEX_WARNING_EXPORT_PROCEDURE_RETURNING);
     return error;
 }
 
@@ -239,30 +256,34 @@ word _pascal
 VCImpexSVGValidateGString(GStateHandle sourceGState,
                           VCImpexSVGExportContext *context)
 {
-    GStateHandle playbackGState;
+    GStringElement readType;
     VCImpexSVGOpcodeClass opcodeClass;
     word elementType;
+    word elementSize;
     word error;
     word pathDepth;
-    GSRetType gsr;
+    Boolean foundEnd;
 
     if ((sourceGState == 0) || (context == (void*)0))
         return TE_EXPORT_ERROR;
 
-    playbackGState = GrCreateState(0);
-    if (playbackGState == 0)
-        return TE_OUT_OF_MEMORY;
-
     error = TE_NO_ERROR;
     pathDepth = 0;
+    foundEnd = FALSE;
     GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
-    for (gsr = GrDrawGString(playbackGState, sourceGState, 0, 0,
-                             VCIMPEX_SVG_GSTRING_FLAGS, &elementType);
-         gsr == GSRT_ONE;
-         gsr = GrDrawGString(playbackGState, sourceGState, 0, 0,
-                             VCIMPEX_SVG_GSTRING_FLAGS, &elementType))
+    while (foundEnd == FALSE)
     {
-        error = VCImpexSVGReadElement(context, playbackGState,
+        readType = GrGetGStringElement(0, sourceGState, 0,
+                                       (void*)0, &elementSize);
+        if ((readType == VCIMPEX_SVG_INVALID_OPCODE) ||
+            (elementSize < VCIMPEX_SVG_OPCODE_SIZE))
+        {
+            error = TE_EXPORT_ERROR;
+            break;
+        }
+        elementType = (word)readType;
+
+        error = VCImpexSVGReadElement(context, 0,
                                       sourceGState, elementType);
         if (error != TE_NO_ERROR)
         {
@@ -283,7 +304,11 @@ VCImpexSVGValidateGString(GStateHandle sourceGState,
             break;
         }
 
-        if (elementType == GR_BEGIN_PATH)
+        if (elementType == GR_END_GSTRING)
+        {
+            foundEnd = TRUE;
+        }
+        else if (elementType == GR_BEGIN_PATH)
         {
             if (pathDepth == 0xffff)
             {
@@ -301,17 +326,21 @@ VCImpexSVGValidateGString(GStateHandle sourceGState,
             }
             pathDepth--;
         }
+
+        if (foundEnd == FALSE)
+        {
+            GrSetGStringPos(sourceGState, GSSPT_SKIP_1, 0);
+        }
     }
 
     VCImpexSVGReleaseElement(context);
     if ((error == TE_NO_ERROR) &&
-        ((gsr != GSRT_COMPLETE) || (pathDepth != 0)))
+        ((foundEnd == FALSE) || (pathDepth != 0)))
     {
         error = TE_EXPORT_ERROR;
     }
 
     GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
-    GrDestroyState(playbackGState);
     return error;
 }
 
@@ -334,21 +363,26 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     RegionFillRule pathFillRule;
     TransMatrix tm;
 
+    EC_WARNING(VCIMPEX_WARNING_EXPORT_GSTRING_ENTERED);
 
     playbackBlockH = MemAllocLMem(LMEM_TYPE_GENERAL, sizeof(LMemBlockHeader));
+    EC_WARNING(VCIMPEX_WARNING_PLAYBACK_HEAP_ALLOC_RETURNED);
     if (playbackBlockH == NullHandle)
     {
         return TE_OUT_OF_MEMORY;
     }
 
     playbackGState = GrCreateGString(playbackBlockH, GST_CHUNK, (word*) &playbackChunk);
+    EC_WARNING(VCIMPEX_WARNING_CREATE_PLAYBACK_GSTRING_RETURNED);
     if (playbackGState == 0)
     {
         MemFree(playbackBlockH);
         return TE_OUT_OF_MEMORY;
     }
 
-    if (!VCImpexSVGWriteHeader(context))
+    handlerResult = VCImpexSVGWriteHeader(context);
+    EC_WARNING(VCIMPEX_WARNING_WRITE_HEADER_RETURNED);
+    if (!handlerResult)
     {
         GrDestroyGString(playbackGState, 0, GSKT_KILL_DATA);
         return TE_FILE_WRITE;
@@ -357,6 +391,7 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
     error = TE_NO_ERROR;
 
     /* the main loop */
+    EC_WARNING(VCIMPEX_WARNING_DRAW_LOOP_ENTERED);
     for(gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType);
         gsr == GSRT_ONE;
         gsr = GrDrawGString(playbackGState, sourceGState, 0, 0, GSC_ONE, &elementType))
@@ -513,6 +548,7 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
             break;
         }
     }
+    EC_WARNING(VCIMPEX_WARNING_DRAW_LOOP_LEFT);
 
     VCImpexSVGReleaseElement(context);
     if ((error == TE_NO_ERROR) &&
@@ -529,7 +565,9 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
         }
     }
 
+    EC_WARNING(VCIMPEX_WARNING_PLAYBACK_GSTRING_DESTROY_ENTERED);
     GrDestroyGString(playbackGState, 0, GSKT_KILL_DATA);
+    EC_WARNING(VCIMPEX_WARNING_PLAYBACK_GSTRING_DESTROY_RETURNED);
 
     return error;
 }

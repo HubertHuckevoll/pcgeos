@@ -4,6 +4,36 @@ include Objects/gCtrlC.def
 
 UseLib math.def
 
+;
+; EC-only SVG export breadcrumbs. Keep this order synchronized with
+; VCImpexWarning in vconv_ui.h.
+;
+VCIMPEX_WARNING_TRANS_EXPORT_ENTERED		enum	Warnings
+VCIMPEX_WARNING_EXPORT_PROCEDURE_ENTERED	enum	Warnings
+VCIMPEX_WARNING_LOAD_GSTRING_RETURNED		enum	Warnings
+VCIMPEX_WARNING_BUFFER_HEAP_ALLOC_RETURNED	enum	Warnings
+VCIMPEX_WARNING_VALIDATION_ENTERED		enum	Warnings
+VCIMPEX_WARNING_VALIDATION_RETURNED		enum	Warnings
+VCIMPEX_WARNING_BOUNDS_ENTERED			enum	Warnings
+VCIMPEX_WARNING_BOUNDS_RETURNED			enum	Warnings
+VCIMPEX_WARNING_OUTPUT_FILE_READY		enum	Warnings
+VCIMPEX_WARNING_INIT_WRITER_RETURNED		enum	Warnings
+VCIMPEX_WARNING_EXPORT_GSTRING_ENTERED		enum	Warnings
+VCIMPEX_WARNING_PLAYBACK_HEAP_ALLOC_RETURNED	enum	Warnings
+VCIMPEX_WARNING_CREATE_PLAYBACK_GSTRING_RETURNED	enum	Warnings
+VCIMPEX_WARNING_WRITE_HEADER_RETURNED		enum	Warnings
+VCIMPEX_WARNING_DRAW_LOOP_ENTERED		enum	Warnings
+VCIMPEX_WARNING_DRAW_LOOP_LEFT			enum	Warnings
+VCIMPEX_WARNING_PLAYBACK_GSTRING_DESTROY_ENTERED enum	Warnings
+VCIMPEX_WARNING_PLAYBACK_GSTRING_DESTROY_RETURNED enum	Warnings
+VCIMPEX_WARNING_EXPORT_GSTRING_RETURNED		enum	Warnings
+VCIMPEX_WARNING_BUFFER_HEAP_FREE_ENTERED	enum	Warnings
+VCIMPEX_WARNING_BUFFER_HEAP_FREE_RETURNED	enum	Warnings
+VCIMPEX_WARNING_SOURCE_GSTRING_DESTROY_ENTERED	enum	Warnings
+VCIMPEX_WARNING_SOURCE_GSTRING_DESTROY_RETURNED	enum	Warnings
+VCIMPEX_WARNING_EXPORT_PROCEDURE_RETURNING	enum	Warnings
+VCIMPEX_WARNING_TRANS_EXPORT_RETURNED		enum	Warnings
+
 global _booleanOptions: nptr
 global _ImportSettings: nptr
 
@@ -54,11 +84,13 @@ ASM     segment resource
 TransExport proc far
         uses    es,ds,si,di
         .enter
+EC <      WARNING VCIMPEX_WARNING_TRANS_EXPORT_ENTERED			>
           push    ds
           push    si
           mov     ax,idata              ; DS=dgroup
           mov     ds,ax
           call    EXPORTPROCEDURE
+EC <      WARNING VCIMPEX_WARNING_TRANS_EXPORT_RETURNED			>
           mov     bx,dx
         .leave
         ret
@@ -195,12 +227,12 @@ InfoResource    segment lmem LMEM_TYPE_GENERAL,mask LMF_IN_RESOURCE
         dw      fmt_1_name,fmt_1_mask
           D_OPTR  _ImportSettings
           dw      0,0
-          dw      0C000h
+          dw      08000h
 
         dw      fmt_2_name,fmt_2_mask
           D_OPTR  _ImportSettings
           dw      0,0
-          dw      0C000h
+          dw      08000h
 
         dw      fmt_3_name,fmt_3_mask
           D_OPTR  0

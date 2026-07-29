@@ -23,7 +23,22 @@ static const word kVCImpexSVGBuiltinDashValues[][MAX_DASH_ARRAY_PAIRS * 2] =
 
 static const WWFixedAsDWord kVCImpexSVGHairlineWidth = 0x00001000;
 
-static int
+typedef int _pascal VCImpexSVGPCFMSink(void *userData,
+                                       const char *data,
+                                       VCISVGU16 byteCount,
+                                       VCISVGSink *sink);
+
+int _pascal
+VCImpexSVGInvokeSink(VCISVGSink *sink,
+                     void *userData,
+                     const char *data,
+                     VCISVGU16 byteCount)
+{
+    return ((VCImpexSVGPCFMSink *)ProcCallFixedOrMovable_pascal)(
+        userData, data, byteCount, sink);
+}
+
+static int _pascal
 VCImpexSVGFileSink(void *userData,
                    const char *data,
                    VCISVGU16 byteCount)

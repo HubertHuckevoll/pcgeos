@@ -1,5 +1,13 @@
 #include "svgcore.h"
 
+#if defined(__GEOS__)
+extern int _pascal
+VCImpexSVGInvokeSink(VCISVGSink *sink,
+                     void *userData,
+                     const char *data,
+                     VCISVGU16 byteCount);
+#endif
+
 #define VCISVG_FIXED_ONE ((VCISVGU32)65536L)
 
 static int
@@ -301,7 +309,7 @@ VCISVGWriteMatrix(VCISVGWriter *writer, const VCISVGMatrix *matrix)
 
 void
 VCISVGWriterInit(VCISVGWriter *writer,
-                 VCISVGSink sink,
+                 VCISVGSink *sink,
                  void *userData)
 {
     if (writer == (void*)0)
@@ -334,7 +342,12 @@ VCISVGWrite(VCISVGWriter *writer,
     {
         return 1;
     }
+#if defined(__GEOS__)
+    if (!VCImpexSVGInvokeSink(writer->sink, writer->userData,
+                              data, byteCount))
+#else
     if (!writer->sink(writer->userData, data, byteCount))
+#endif
     {
         writer->failed = 1;
         return 0;

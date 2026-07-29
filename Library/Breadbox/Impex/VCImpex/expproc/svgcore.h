@@ -33,13 +33,19 @@ typedef char VCISVGCheckU32[(sizeof(VCISVGU32) == 4) ? 1 : -1];
 #define VCISVG_ARC_CHORD        1
 #define VCISVG_ARC_PIE          2
 
-typedef int (*VCISVGSink)(void *userData,
-                          const char *data,
-                          VCISVGU16 byteCount);
+#if defined(__GEOS__)
+typedef int _pascal VCISVGSink(void *userData,
+                               const char *data,
+                               VCISVGU16 byteCount);
+#else
+typedef int VCISVGSink(void *userData,
+                       const char *data,
+                       VCISVGU16 byteCount);
+#endif
 
 typedef struct
 {
-    VCISVGSink sink;
+    VCISVGSink *sink;
     void *userData;
     VCISVGU16 failed;
 } VCISVGWriter;
@@ -109,7 +115,7 @@ typedef struct
 } VCISVGArc;
 
 void VCISVGWriterInit(VCISVGWriter *writer,
-                      VCISVGSink sink,
+                      VCISVGSink *sink,
                       void *userData);
 int VCISVGWriterFailed(const VCISVGWriter *writer);
 int VCISVGWrite(VCISVGWriter *writer,
