@@ -1,3 +1,8 @@
+/*
+ * Impex filters InfoResource by capability and renumbers each resulting
+ * list from zero. Import and export format numbers are independent.
+ * Keep these values synchronized with InfoResource order and capability flags.
+ */
 /* identifiers for list of formats which can be imported */
 #define FORMAT_CGM  0
 #define FORMAT_HPGL 1

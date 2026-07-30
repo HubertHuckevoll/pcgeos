@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgPath.goc — <path> handler + subcommands + flatteners
+ * svgPath.goc - <path> handler + subcommands + flatteners
  ***********************************************************************/
 @include <stdapp.goh>
 
@@ -183,14 +183,14 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     ddy = SvgGeomWWAbs(GrSubWWFixed(y1W, y0W));
     manhattan = GrAddWWFixed(ddx, ddy);
 
-    /* Transform into ellipse-aligned frame (primed) — back to original sign */
+    /* Transform into ellipse-aligned frame (primed) - back to original sign */
     dx  = GrSDivWWFixed(GrSubWWFixed(x0W, x1W), two);
     dy  = GrSDivWWFixed(GrSubWWFixed(y0W, y1W), two);
     x1p = GrAddWWFixed(GrMulWWFixed(cphi, dx),  GrMulWWFixed(sphi, dy));
     y1p = GrAddWWFixed((WWFixedAsDWord)(-(sdword)GrMulWWFixed(sphi, dx)),
                        GrMulWWFixed(cphi, dy));
 
-    /* Radius correction (λ = u^2 + v^2) */
+    /* Radius correction (lambda = u^2 + v^2) */
     u2  = GrSDivWWFixed(SvgGeomWWAbs(x1p), frx); u2 = GrMulWWFixed(u2, u2);
     v2  = GrSDivWWFixed(SvgGeomWWAbs(y1p), fry); v2 = GrMulWWFixed(v2, v2);
     lam = GrAddWWFixed(u2, v2);
@@ -209,7 +209,7 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     lam = GrAddWWFixed(u2, v2);
 
     /* Patch 1: clamp lam away from zero (smaller floor to avoid center bias) */
-    epsLam = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(16384)); /* 1/16384 ≈ 0.000061 */
+    epsLam = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(16384)); /* 1/16384 ~= 0.000061 */
     if ((sdword)lam <= 0)
     {
         lam = epsLam;
@@ -249,12 +249,12 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
     if (!swf) { if ((sdword)dth > 0) dth = GrSubWWFixed(dth, deg360); }
     else      { if ((sdword)dth < 0) dth = GrAddWWFixed(dth, deg360); }
 
-    /* Patch 2: near-coincident chord ⇒ near-full sweep (center untouched) */
+    /* Patch 2: near-coincident chord -> near-full sweep (center untouched) */
     minR = ((sdword)frx < (sdword)fry) ? frx : fry;
     tinyThresh = GrSDivWWFixed(minR, MakeWWFixed(64));        /* 1/64 of min radius */
     nearCoinc = ((sdword)manhattan <= (sdword)tinyThresh) ? TRUE : FALSE;
 
-    eps360 = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(10));  /* 0.1° */
+    eps360 = GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(10));  /* 0.1 degrees */
     if (nearCoinc)
     {
         if ((sdword)dth >= 0) {
@@ -268,13 +268,13 @@ SvgPathFlattenArc(SVGScratch *sc, word *pNp,
 
     isFull = ((sdword)absDth >= (sdword)GrSubWWFixed(deg360, eps360)) ? TRUE : FALSE;
 
-    /* Segment count (<= ~12° per segment) */
+    /* Segment count (<= ~12 degrees per segment) */
     nSegWW = GrSDivWWFixed(absDth, deltaMaxDeg);
     nSeg   = (word)SvgGeomWWFixedToSWordRound(nSegWW);
     if (GrMulWWFixed(MakeWWFixed(nSeg), deltaMaxDeg) < absDth) nSeg++;
     if (nSeg < 1) nSeg = 1;
 
-    if (nSeg == 1) LOG_STR("[WARN]", "nSeg==1 (very short arc) — may look like a chord");
+    if (nSeg == 1) LOG_STR("[WARN]", "nSeg==1 (very short arc) - may look like a chord");
 
     /* Prepare snap-to-start info (device space) */
     sxi = SvgGeomWWFixedToSWordRound(x0W);
@@ -1255,8 +1255,8 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
 
     hasStroke = SvgStyleHasStroke(tag);
 
-    /* Build WORLD matrix = VM ∘ currentGroup ∘ element(tag) */
-    SvgXformBuildWorld(tag, NULL, &worldM);   /* ← applies <g> transform too */
+    /* Build WORLD matrix = VM * currentGroup * element(tag) */
+    SvgXformBuildWorld(tag, NULL, &worldM);   /* applies <g> transform too */
 
     if (!SvgScratchEnsurePointCapacity(sc, np))
     {
@@ -1360,7 +1360,6 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     WWFixedAsDWord  lastQcyW;
     char            lastCmd;
     Boolean         haveCmd;
-    word            emitN;
     char            nextCmd;
     word            pathBufNeed;
 
@@ -1384,7 +1383,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     SvgStyleApplyFillRule(tag);
     SvgStyleApplyStrokeWidth(tag);
 
-    /* decide upfront whether we’ll accumulate a compound path for fill */
+    /* decide upfront whether we'll accumulate a compound path for fill */
     pathHasFill   = SvgStyleHasFill(tag);
     pathHasStroke = SvgStyleHasStroke(tag);
 
@@ -1427,9 +1426,9 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
             {
                 LOG_STR("[FLUSH]", "flush-before-M");
 
-                emitN = np;
+                LOGF(("[EMIT]", "emit n=%u closed=%d",
+                      np, (int)closed));
                 SvgPathEmitSubpath(tag, sc, &np, closed);
-                LOGF(("[EMIT]", "emit n=%u closed=%d", emitN, (int)closed));
 
                 closed = FALSE;
             }
@@ -1497,10 +1496,8 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
                                subStartXW, subStartYW, &lastWasCubic, &lastWasQuad);
 
             if (np > 1) {
-                word emitN = np;
+                LOGF(("[EMIT]", "emit n=%u closed=1", np));
                 SvgPathEmitSubpath(tag, sc, &np, TRUE);
-
-                LOGF(("[EMIT]", "emit n=%u closed=1", emitN));
             }
             closed  = FALSE;
             haveCmd = FALSE;   /* fetch next real command at top of loop */
@@ -1517,10 +1514,9 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     }
 
     if (np > 1) {
-        word emitN = np;
+        LOGF(("[EMIT]", "final-emit n=%u closed=%d",
+              np, (int)closed));
         SvgPathEmitSubpath(tag, sc, &np, closed);
-
-        LOGF(("[EMIT]", "final-emit n=%u closed=%d", emitN, (int)closed));
     }
 
     if (buildingCompound) {

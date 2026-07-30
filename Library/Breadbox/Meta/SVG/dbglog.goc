@@ -1,5 +1,6 @@
-#ifdef DEBUG_LOG
+#include <geos.h>
 
+#if ERROR_CHECK
 #include "SVG/dbglog.h"
 
 #define LOG_FILENAME "dbglog.txt"
@@ -60,7 +61,7 @@ _DbgWriteLine(const char *s)
     FileClose(fh, FALSE);
 }
 
-/* Public API — calling conventions match header */
+/* Public API - calling conventions match header */
 
 void _export _pascal
 DbgLogInit(void)
@@ -356,4 +357,4 @@ DbgLogStrAll(const char *label, const char *str)
     DbgLogStrSegment(label, str, 0, n);
 }
 
-#endif /* DEBUG_LOG */
+#endif /* ERROR_CHECK */

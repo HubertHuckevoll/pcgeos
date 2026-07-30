@@ -54,6 +54,18 @@ typedef struct
     PointWWFixed subpathStart;
 } VCImpexSVGPathBuilder;
 
+/*
+ * ATTENTION: GrGetLineStyle() cannot return a saved custom dash array.
+ * Mirror only that unavailable state here. Remove this side stack if the
+ * graphics API gains a custom-dash getter.
+ */
+typedef struct
+{
+    word pairCount;
+    word skipCount;
+    word pattern[MAX_DASH_ARRAY_PAIRS * 2];
+} VCImpexSVGDashState;
+
 typedef struct
 {
     FileHandle svgFile;
@@ -73,6 +85,10 @@ typedef struct
     MemHandle bufferHeapH;
     ChunkHandle scratchChunkH;
     word scratchCapacity;
+    ChunkHandle dashStackChunkH;
+    word dashStackCapacity;
+    word dashStackDepth;
+    word requiredDashStackDepth;
     const byte *elementDataP;
     word elementSize;
 } VCImpexSVGExportContext;

@@ -1,16 +1,17 @@
 #ifndef __DBGLOG_H
 #define __DBGLOG_H
 
+#include <geos.h>
+
 /* Call-site UX:
  *   LOG_INIT(); LOG_START();
  *   LOGF(("[PATH]", "Emit done: last=(%d,%d) ...", (int)x, (int)y, ...));
  *   LOGF0(("created %u nodes", (unsigned)n));
- * All compile to nothing when DEBUG_LOG is undefined.
+ * All compile to nothing in non-EC builds.
  */
 
-#ifdef DEBUG_LOG
+#if ERROR_CHECK
 
-#include <geos.h>
 #include <file.h>
 #include <timedate.h>
 #include <Ansi/stdio.h>
@@ -76,7 +77,7 @@ void _export _pascal DbgLogStrAll(const char *label, const char *str);
 #define LOG_STR_RANGE(label, str, from, to)         DbgLogStrRange((const char*)(label),(const char*)(str),(word)(from),(word)(to))
 #define LOG_STR_ALL(label, str)                     DbgLogStrAll((const char*)(label),(const char*)(str))
 
-#else   /* !DEBUG_LOG */
+#else   /* !ERROR_CHECK */
 
 /* All stubs compile to nothing; args not evaluated */
 #define LOG_INIT()                                  do { } while (0)
@@ -104,5 +105,5 @@ void _export _pascal DbgLogStrAll(const char *label, const char *str);
 #define LOG_STR_RANGE(label, str, from, to)         do { } while (0)
 #define LOG_STR_ALL(label, str)                     do { } while (0)
 
-#endif /* DEBUG_LOG */
+#endif /* ERROR_CHECK */
 #endif /* __DBGLOG_H */

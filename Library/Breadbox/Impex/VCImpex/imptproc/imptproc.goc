@@ -27,7 +27,8 @@
 
 #define VCIMPEX_DETECTION_BUFFER_SIZE   512
 
-char VCImpexToUpper(char value)
+char _pascal
+VCImpexToUpper(char value)
 {
     char uppercaseValue;
 
@@ -39,7 +40,8 @@ char VCImpexToUpper(char value)
     return uppercaseValue;
 }
 
-Boolean VCImpexIsHpglCommand(char firstChar, char secondChar)
+Boolean _pascal
+VCImpexIsHpglCommand(char firstChar, char secondChar)
 {
     Boolean result;
 
@@ -98,6 +100,51 @@ Boolean VCImpexIsHpglCommand(char firstChar, char secondChar)
             break;
     }
     return result;
+}
+
+Boolean _pascal
+VCImpexIsBinaryCGM(const byte *sampleP, word bytesRead)
+{
+    word header;
+    word argumentSize;
+    word payloadOffset;
+    word recordSize;
+
+    if ((sampleP == (void *)0) || (bytesRead < 2))
+    {
+        return FALSE;
+    }
+
+    header = ((word)sampleP[0] << 8) | sampleP[1];
+    if ((header >> 5) != 1)          /* class 0, element 1: Begin Metafile */
+    {
+        return FALSE;
+    }
+
+    argumentSize = header & 0x1f;
+    payloadOffset = 2;
+    if (argumentSize == 31)
+    {
+        if (bytesRead < 4)
+        {
+            return FALSE;
+        }
+        if ((sampleP[2] & 0x80) != 0)
+        {
+            return FALSE;
+        }
+        argumentSize = (((word)sampleP[2] & 0x7f) << 8) | sampleP[3];
+        payloadOffset = 4;
+    }
+
+    recordSize = payloadOffset + argumentSize + (argumentSize & 1);
+    if ((argumentSize == 0) || (recordSize > bytesRead))
+    {
+        return FALSE;
+    }
+
+    /* Begin Metafile has one length-prefixed string argument. */
+    return ((word)sampleP[payloadOffset] + 1 == argumentSize);
 }
 
 Boolean _export _pascal UpdateProgressPct(word pct)
@@ -170,12 +217,14 @@ dword _export _pascal ImportProcedure(ImportFrame *ieb,VMChain *vmc)
     {
         MemUnlock( ieb->IF_importOptions );
     }
-    *vmc = VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock);
-                                    /* return head of VMChain for item */
-
     if(ret!=TE_NO_ERROR) {
+        VMFreeVMChain(ieb->IF_transferVMFile,
+                      VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock));
+        *vmc = 0;
         return ret;
     }
+    *vmc = VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock);
+                                    /* return head of VMChain for item */
     return TE_NO_ERROR+(((dword)cif)<<16);
 }
 
@@ -186,9 +235,8 @@ sword _pascal GetFormat(FileHandle fh)
     byte *sampleByteP;
     word bytesRead;
     sword format;
-    Boolean hasBinary;
     Boolean foundSvg;
-    Boolean foundCgmToken;
+    Boolean foundBinaryCgm;
     Boolean hasHpglKeyword;
     word index;
     word startIndex;
@@ -203,7 +251,6 @@ sword _pascal GetFormat(FileHandle fh)
     char svgChar2;
     char svgChar3;
     char svgChar4;
-    char svgChar5;
 
     sampleH = MemAlloc(VCIMPEX_DETECTION_BUFFER_SIZE, HF_DYNAMIC, HAF_STANDARD | HAF_ZERO_INIT);
     if (sampleH == NullHandle)
@@ -227,9 +274,8 @@ sword _pascal GetFormat(FileHandle fh)
     FilePos(fh, 0L, FILE_POS_START);
 
     format = NO_IDEA_FORMAT;
-    hasBinary = FALSE;
     foundSvg = FALSE;
-    foundCgmToken = FALSE;
+    foundBinaryCgm = VCImpexIsBinaryCGM(sampleByteP, bytesRead);
     hasHpglKeyword = FALSE;
     startIndex = 0;
     startOfCommand = TRUE;
@@ -245,24 +291,9 @@ sword _pascal GetFormat(FileHandle fh)
         }
     }
 
-    if ((startIndex == 0) && (bytesRead >= 2))
-    {
-        if (((sampleByteP[0] == 0xff) && (sampleByteP[1] == 0xfe)) ||
-            ((sampleByteP[0] == 0xfe) && (sampleByteP[1] == 0xff)))
-        {
-            hasBinary = TRUE;
-        }
-    }
-
     for (index = startIndex; index < bytesRead; index++)
     {
         currentByte = sampleByteP[index];
-
-        if ((currentByte < 0x20) && (currentByte != 0x09) && (currentByte != 0x0a) &&
-            (currentByte != 0x0d) && (currentByte != 0x0c))
-        {
-            hasBinary = TRUE;
-        }
 
         if (!foundSvg && (currentByte == '<'))
         {
@@ -273,50 +304,19 @@ sword _pascal GetFormat(FileHandle fh)
             {
                 svgIndex++;
             }
-            if ((svgIndex + 2) < bytesRead)
+            if ((svgIndex + 3) < bytesRead)
             {
                 svgChar1 = VCImpexToUpper((char)sampleByteP[svgIndex]);
                 svgChar2 = VCImpexToUpper((char)sampleByteP[svgIndex + 1]);
                 svgChar3 = VCImpexToUpper((char)sampleByteP[svgIndex + 2]);
-                if ((svgChar1 == 'S') && (svgChar2 == 'V') && (svgChar3 == 'G'))
+                svgChar4 = (char)sampleByteP[svgIndex + 3];
+                if ((svgChar1 == 'S') && (svgChar2 == 'V') &&
+                    (svgChar3 == 'G') &&
+                    ((svgChar4 == '>') || (svgChar4 == '/') ||
+                     (svgChar4 == ' ') || (svgChar4 == '\t') ||
+                     (svgChar4 == '\r') || (svgChar4 == '\n')))
                 {
                     foundSvg = TRUE;
-                }
-            }
-        }
-
-        if (!foundCgmToken)
-        {
-            uppercaseChar = VCImpexToUpper((char)currentByte);
-            if ((uppercaseChar == 'B') && ((index + 4) < bytesRead))
-            {
-                svgChar1 = VCImpexToUpper((char)sampleByteP[index + 1]);
-                svgChar2 = VCImpexToUpper((char)sampleByteP[index + 2]);
-                svgChar3 = VCImpexToUpper((char)sampleByteP[index + 3]);
-                svgChar4 = VCImpexToUpper((char)sampleByteP[index + 4]);
-                if ((svgChar1 == 'E') && (svgChar2 == 'G') && (svgChar3 == 'M') && (svgChar4 == 'F'))
-                {
-                    foundCgmToken = TRUE;
-                }
-                else if ((svgChar1 == 'E') && (svgChar2 == 'G') && (svgChar3 == 'P') && (svgChar4 == 'I') &&
-                         ((index + 5) < bytesRead))
-                {
-                    svgChar5 = VCImpexToUpper((char)sampleByteP[index + 5]);
-                    if (svgChar5 == 'C')
-                    {
-                        foundCgmToken = TRUE;
-                    }
-                }
-            }
-            if (!foundCgmToken && (uppercaseChar == 'E') && ((index + 4) < bytesRead))
-            {
-                svgChar1 = VCImpexToUpper((char)sampleByteP[index + 1]);
-                svgChar2 = VCImpexToUpper((char)sampleByteP[index + 2]);
-                svgChar3 = VCImpexToUpper((char)sampleByteP[index + 3]);
-                svgChar4 = VCImpexToUpper((char)sampleByteP[index + 4]);
-                if ((svgChar1 == 'N') && (svgChar2 == 'D') && (svgChar3 == 'M') && (svgChar4 == 'F'))
-                {
-                    foundCgmToken = TRUE;
                 }
             }
         }
@@ -381,7 +381,7 @@ sword _pascal GetFormat(FileHandle fh)
     {
         format = FORMAT_SVG;
     }
-    else if (hasBinary || foundCgmToken)
+    else if (foundBinaryCgm)
     {
         format = FORMAT_CGM;
     }

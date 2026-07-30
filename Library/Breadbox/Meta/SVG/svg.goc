@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgParser.goc — streamed SAX-like parser, tag/attr utilities, ReadSVG
+ * svgParser.goc - streamed SAX-like parser, tag/attr utilities, ReadSVG
  ***********************************************************************/
 @include <stdapp.goh>
 
@@ -304,7 +304,8 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     dword done;
     MemHandle ioH;
     char *ioP;
-    Boolean sawSvg;
+    Boolean viewInitialized;
+    Boolean sawSvgRoot;
     word pct;
     Boolean abort=FALSE;
     TransError status;
@@ -316,7 +317,8 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     ioH = 0;
     ioP = NULL;
     done = 0;
-    sawSvg = FALSE;
+    viewInitialized = FALSE;
+    sawSvgRoot = FALSE;
     status = TE_NO_ERROR;
 
     LOG_INIT();
@@ -401,17 +403,18 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
             /* inherit root style like a group */
             SvgStyleGroupPush(scP->tagP);
             SvgViewInitFromSvgTag(scP->tagP);
-            sawSvg = TRUE;
+            viewInitialized = TRUE;
+            sawSvgRoot = TRUE;
             continue;
         }
 
-        if (!sawSvg)
+        if (!viewInitialized)
         {
             SvgViewInitDefault();
-            sawSvg = TRUE;
+            viewInitialized = TRUE;
         }
 
-        /* group open: <g ...> — no drawing */
+        /* group open: <g ...> - no drawing */
         if (SvgParserTagIs(scP->tagP, "g"))
         {
             LOG_STR("[DISPATCH]", "g");
@@ -461,7 +464,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         }
     }
 
-    if (!sawSvg)
+    if (!viewInitialized)
     {
         SvgViewInitDefault();
     }
@@ -485,6 +488,10 @@ cleanup:
     if (abort && status == TE_NO_ERROR) {
       LOG_STR("ReadSVG", "User aborted!");
       status = TE_ERROR;
+    }
+    else if (!sawSvgRoot && status == TE_NO_ERROR)
+    {
+        status = TE_INVALID_FORMAT;
     }
 
     LOG_END();

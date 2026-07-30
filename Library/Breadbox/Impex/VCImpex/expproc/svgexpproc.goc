@@ -18,6 +18,12 @@ word _pascal VCImpexSVGValidateGString(GStateHandle sourceGState,
                                        VCImpexSVGExportContext *context);
 
 void _pascal VCImpexSVGResetDashPattern(VCImpexSVGExportContext *context);
+Boolean _pascal
+VCImpexSVGEnsureDashStack(VCImpexSVGExportContext *context, word capacity);
+Boolean _pascal
+VCImpexSVGPushDashState(VCImpexSVGExportContext *context);
+Boolean _pascal
+VCImpexSVGPopDashState(VCImpexSVGExportContext *context);
 
 word _pascal VCImpexSVGHandleLineOpcode(word elementType, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, const TransMatrix *tm);
 word _pascal VCImpexSVGHandleRectangleOpcode(word elementType, VCImpexSVGExportContext *context, PointWWFixed *currentPosition, const TransMatrix *tm);
@@ -40,6 +46,115 @@ void _pascal VCImpexSVGResetDashPattern(VCImpexSVGExportContext *context)
     context->dashPairCount = 0;
     context->dashSkipCount = 0;
     memset(context->dashPattern, 0, sizeof(context->dashPattern));
+}
+
+Boolean _pascal
+VCImpexSVGEnsureDashStack(VCImpexSVGExportContext *context, word capacity)
+{
+    word size;
+
+    if ((context == (void *)0) ||
+        (context->bufferHeapH == NullHandle))
+    {
+        return FALSE;
+    }
+    if (capacity <= context->dashStackCapacity)
+    {
+        return TRUE;
+    }
+    if (capacity > (0xffffU / (word)sizeof(VCImpexSVGDashState)))
+    {
+        return FALSE;
+    }
+
+    size = (word)(capacity * (word)sizeof(VCImpexSVGDashState));
+    if (MemLock(context->bufferHeapH) == (void *)0)
+    {
+        return FALSE;
+    }
+    if (context->dashStackChunkH == NullChunk)
+    {
+        context->dashStackChunkH =
+            LMemAlloc(context->bufferHeapH, size);
+        if (context->dashStackChunkH == NullChunk)
+        {
+            MemUnlock(context->bufferHeapH);
+            return FALSE;
+        }
+    }
+    else if (LMemReAllocHandles(context->bufferHeapH,
+                                context->dashStackChunkH,
+                                size) != 0)
+    {
+        MemUnlock(context->bufferHeapH);
+        return FALSE;
+    }
+    context->dashStackCapacity = capacity;
+    MemUnlock(context->bufferHeapH);
+    return TRUE;
+}
+
+Boolean _pascal
+VCImpexSVGPushDashState(VCImpexSVGExportContext *context)
+{
+    VCImpexSVGDashState *stackP;
+    VCImpexSVGDashState *stateP;
+
+    if ((context == (void *)0) ||
+        (context->dashStackDepth >= context->dashStackCapacity))
+    {
+        return FALSE;
+    }
+    if (MemLock(context->bufferHeapH) == (void *)0)
+    {
+        return FALSE;
+    }
+    stackP = LMemDerefHandles(context->bufferHeapH,
+                              context->dashStackChunkH);
+    if (stackP == (void *)0)
+    {
+        MemUnlock(context->bufferHeapH);
+        return FALSE;
+    }
+
+    stateP = &stackP[context->dashStackDepth++];
+    stateP->pairCount = context->dashPairCount;
+    stateP->skipCount = context->dashSkipCount;
+    memcpy(stateP->pattern, context->dashPattern,
+           sizeof(stateP->pattern));
+    MemUnlock(context->bufferHeapH);
+    return TRUE;
+}
+
+Boolean _pascal
+VCImpexSVGPopDashState(VCImpexSVGExportContext *context)
+{
+    VCImpexSVGDashState *stackP;
+    VCImpexSVGDashState *stateP;
+
+    if ((context == (void *)0) || (context->dashStackDepth == 0))
+    {
+        return FALSE;
+    }
+    if (MemLock(context->bufferHeapH) == (void *)0)
+    {
+        return FALSE;
+    }
+    stackP = LMemDerefHandles(context->bufferHeapH,
+                              context->dashStackChunkH);
+    if (stackP == (void *)0)
+    {
+        MemUnlock(context->bufferHeapH);
+        return FALSE;
+    }
+
+    stateP = &stackP[--context->dashStackDepth];
+    context->dashPairCount = stateP->pairCount;
+    context->dashSkipCount = stateP->skipCount;
+    memcpy(context->dashPattern, stateP->pattern,
+           sizeof(context->dashPattern));
+    MemUnlock(context->bufferHeapH);
+    return TRUE;
 }
 
 Boolean _pascal VCImpexSVGHandleStyleStateOpcode(word elementType,
@@ -180,6 +295,13 @@ dword _export _pascal ExportProcedure(ExportFrame *frame)
         GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
         return error;
     }
+    if (!VCImpexSVGEnsureDashStack(
+            &context, context.requiredDashStackDepth))
+    {
+        MemFree(context.bufferHeapH);
+        GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
+        return TE_OUT_OF_MEMORY;
+    }
 
     EC_WARNING(VCIMPEX_WARNING_BOUNDS_ENTERED);
     GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
@@ -262,6 +384,8 @@ VCImpexSVGValidateGString(GStateHandle sourceGState,
     word elementSize;
     word error;
     word pathDepth;
+    word stateDepth;
+    word maximumStateDepth;
     Boolean foundEnd;
 
     if ((sourceGState == 0) || (context == (void*)0))
@@ -269,6 +393,8 @@ VCImpexSVGValidateGString(GStateHandle sourceGState,
 
     error = TE_NO_ERROR;
     pathDepth = 0;
+    stateDepth = 0;
+    maximumStateDepth = 0;
     foundEnd = FALSE;
     GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
     while (foundEnd == FALSE)
@@ -326,6 +452,28 @@ VCImpexSVGValidateGString(GStateHandle sourceGState,
             }
             pathDepth--;
         }
+        else if (elementType == GR_SAVE_STATE)
+        {
+            if (stateDepth == 0xffff)
+            {
+                error = TE_EXPORT_ERROR;
+                break;
+            }
+            stateDepth++;
+            if (stateDepth > maximumStateDepth)
+            {
+                maximumStateDepth = stateDepth;
+            }
+        }
+        else if (elementType == GR_RESTORE_STATE)
+        {
+            if (stateDepth == 0)
+            {
+                error = TE_EXPORT_ERROR;
+                break;
+            }
+            stateDepth--;
+        }
 
         if (foundEnd == FALSE)
         {
@@ -338,6 +486,10 @@ VCImpexSVGValidateGString(GStateHandle sourceGState,
         ((foundEnd == FALSE) || (pathDepth != 0)))
     {
         error = TE_EXPORT_ERROR;
+    }
+    if (error == TE_NO_ERROR)
+    {
+        context->requiredDashStackDepth = maximumStateDepth;
     }
 
     GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
@@ -432,6 +584,27 @@ word _pascal VCImpexSVGExportGString(GStateHandle sourceGState, VCImpexSVGExport
                 break;
             }
             VCImpexSVGReleaseElement(context);
+            continue;
+        }
+
+        if (elementType == GR_SAVE_STATE)
+        {
+            VCImpexSVGReleaseElement(context);
+            if (!VCImpexSVGPushDashState(context))
+            {
+                error = TE_OUT_OF_MEMORY;
+                break;
+            }
+            continue;
+        }
+        if (elementType == GR_RESTORE_STATE)
+        {
+            VCImpexSVGReleaseElement(context);
+            if (!VCImpexSVGPopDashState(context))
+            {
+                error = TE_EXPORT_ERROR;
+                break;
+            }
             continue;
         }
 

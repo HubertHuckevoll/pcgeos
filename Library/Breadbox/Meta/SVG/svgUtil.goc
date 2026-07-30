@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgUtil.goc — common ASCII helpers
+ * svgUtil.goc - common ASCII helpers
  ***********************************************************************/
 @include <stdapp.goh>
 
@@ -268,7 +268,7 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
         result = (WWFixedAsDWord)(0 - (sdword)result);
     }
 
-#ifdef DEBUG_LOG
+#if ERROR_CHECK
     if (scale >= 1000000UL && frac != 0) {
         LOG_STR("[SvgUtilParseWWFixed16_16]", "fraction scale capped at 1e6");
     }
@@ -285,4 +285,3 @@ Boolean SvgUtilIsNumStart(char c)
 {
     return (c=='+' || c=='-' || c=='.' || (c>='0' && c<='9'));
 }
-
