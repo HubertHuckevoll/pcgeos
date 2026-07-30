@@ -8,12 +8,19 @@ CGM             = cgm.h cgm.goc cgmraw.goc
 HPGL            = hpgl.goc
 META            = meta.goc
 SPLINEOP        = splineop.goc
+SVG             = svgPathSyntax.c dbglog.h svg.h svgPathSyntax.h dbglog.goc\
+                  svg.goc svgGeom.goc svgParse.goc svgPath.goc svgShape.goc\
+                  svgStyle.goc svgTransform.goc svgUtil.goc svgView.goc\
+                  colors.goh
 UI_TO_RDFS      =
-OBJS            = cgm.obj cgmraw.obj hpgl.obj meta.obj splineop.obj
+OBJS            = cgm.obj cgmraw.obj hpgl.obj meta.obj splineop.obj\
+                  svgPathSyntax.obj dbglog.obj svg.obj svgGeom.obj\
+                  svgParse.obj svgPath.obj svgShape.obj svgStyle.obj\
+                  svgTransform.obj svgUtil.obj svgView.obj
 COMMON          = metaint.h
 MODULES         =
-CMODULES        = CGM HPGL meta splineop
-SRCS            = $(CGM) $(HPGL) $(META) $(SPLINEOP) $(COMMON)
+CMODULES        = CGM HPGL meta splineop SVG
+SRCS            = $(CGM) $(HPGL) $(META) $(SPLINEOP) $(SVG) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = meta
