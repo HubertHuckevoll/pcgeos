@@ -309,6 +309,7 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     word pct;
     Boolean abort=FALSE;
     TransError status;
+    SvgScanResult scanResult;
 
     (void)settings;
 
@@ -357,7 +358,23 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
 
     for (;;)
     {
-        if (!SvgParserScanNextTag(srcFile, &scan, scP)) { break; }
+        scanResult = SvgParserScanNextTag(srcFile, &scan, scP);
+        if (scanResult != SVG_SCAN_TAG)
+        {
+            if (scanResult == SVG_SCAN_OUT_OF_MEMORY)
+            {
+                status = TE_OUT_OF_MEMORY;
+            }
+            else if (scanResult == SVG_SCAN_TRUNCATED)
+            {
+                status = TE_INVALID_FORMAT;
+            }
+            else if (scanResult != SVG_SCAN_EOF)
+            {
+                status = TE_ERROR;
+            }
+            break;
+        }
 
         LOG_STR_HEAD("[TAG] head", scP->tagP, 96);
 

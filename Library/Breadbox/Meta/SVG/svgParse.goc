@@ -8,6 +8,7 @@
 #include <file.h>
 
 #include "SVG/svg.h"
+#include "SVG/dbglog.h"
 
 
 /* skip common ASCII whitespace characters */
@@ -156,7 +157,25 @@ void SvgParserScanInit(SvgScanCtx *c)
     c->tagLen = 0;
 }
 
-Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
+static SvgScanResult
+SvgParserScanStop(FileHandle fh, SvgScanCtx *c, SvgScanResult result,
+                  const char *reason)
+{
+    (void)fh;
+    (void)c;
+    (void)reason;
+
+    LOG_STR("[SCAN STOP]", reason);
+    LOG_WORD("scan.pos", c->pos);
+    LOG_WORD("scan.bytes", c->bytes);
+    LOG_WORD("scan.tagLen", c->tagLen);
+    LOG_PTR("scan.ioP", c->ioP);
+    LOG_DWORD("scan.filePos", FilePos(fh, 0, FILE_POS_RELATIVE));
+    return result;
+}
+
+SvgScanResult
+SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
 {
     for (;;)
     {
@@ -164,9 +183,26 @@ Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
         {
             word r;
 
-            if (!c->ioP) return FALSE;
+            if (!c->ioP)
+            {
+                return SvgParserScanStop(fh, c, SVG_SCAN_NO_INPUT,
+                                         "missing input pointer");
+            }
             r = FileRead(fh, (void*)c->ioP, SVG_IO_BUF_SIZE, FALSE);
-            if (r == (word)-1 || r == 0) return FALSE;
+            if (r == (word)-1)
+            {
+                return SvgParserScanStop(fh, c, SVG_SCAN_IO_ERROR,
+                                         "FileRead error");
+            }
+            if (r == 0)
+            {
+                if (c->inTag)
+                {
+                    return SvgParserScanStop(fh, c, SVG_SCAN_TRUNCATED,
+                                             "EOF inside tag");
+                }
+                return SvgParserScanStop(fh, c, SVG_SCAN_EOF, "EOF");
+            }
             c->bytes = r;
             c->pos   = 0;
         }
@@ -192,26 +228,43 @@ Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
                 if (ch == c->quoteCh) c->inQuote = FALSE;
                 if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
                 {
-                    c->inTag = FALSE;
-                    c->inQuote = FALSE;
-                    c->tagLen = 0;
-                    return FALSE;
+                    return SvgParserScanStop(fh, c, SVG_SCAN_OUT_OF_MEMORY,
+                                             "tag growth in quote");
                 }
                 sc->tagP[c->tagLen++] = ch;
                 continue;
             }
             else
             {
+                if (c->tagLen >= 3 &&
+                    sc->tagP[0] == '!' &&
+                    sc->tagP[1] == '-' &&
+                    sc->tagP[2] == '-')
+                {
+                    if (ch != '>' ||
+                        sc->tagP[c->tagLen - 1] != '-' ||
+                        sc->tagP[c->tagLen - 2] != '-')
+                    {
+                        if (!SvgScratchEnsureTagCapacity(
+                                sc, (word)(c->tagLen + 2)))
+                        {
+                            return SvgParserScanStop(
+                                fh, c, SVG_SCAN_OUT_OF_MEMORY,
+                                "comment growth");
+                        }
+                        sc->tagP[c->tagLen++] = ch;
+                        continue;
+                    }
+                }
                 if (ch == '"' || ch == '\'')
                 {
                     c->inQuote = TRUE;
                     c->quoteCh = ch;
                     if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
                     {
-                        c->inTag = FALSE;
-                        c->inQuote = FALSE;
-                        c->tagLen = 0;
-                        return FALSE;
+                        return SvgParserScanStop(fh, c,
+                                                 SVG_SCAN_OUT_OF_MEMORY,
+                                                 "tag growth at quote");
                     }
                     sc->tagP[c->tagLen++] = ch;
                     continue;
@@ -220,10 +273,9 @@ Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
                 {
                     if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
                     {
-                        c->inTag = FALSE;
-                        c->inQuote = FALSE;
-                        c->tagLen = 0;
-                        return FALSE;
+                        return SvgParserScanStop(fh, c,
+                                                 SVG_SCAN_OUT_OF_MEMORY,
+                                                 "tag growth");
                     }
                     sc->tagP[c->tagLen++] = ch;
                     continue;
@@ -231,14 +283,12 @@ Boolean SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
 
                 if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 1)))
                 {
-                    c->inTag = FALSE;
-                    c->inQuote = FALSE;
-                    c->tagLen = 0;
-                    return FALSE;
+                    return SvgParserScanStop(fh, c, SVG_SCAN_OUT_OF_MEMORY,
+                                             "tag terminator growth");
                 }
                 sc->tagP[c->tagLen] = 0;
                 c->inTag = FALSE;
-                return TRUE;
+                return SVG_SCAN_TAG;
             }
         }
     }

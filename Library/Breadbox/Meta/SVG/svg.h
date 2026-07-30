@@ -95,6 +95,15 @@ typedef struct {
     word       tagLen;
 } SvgScanCtx;
 
+typedef enum {
+    SVG_SCAN_TAG,
+    SVG_SCAN_EOF,
+    SVG_SCAN_TRUNCATED,
+    SVG_SCAN_IO_ERROR,
+    SVG_SCAN_NO_INPUT,
+    SVG_SCAN_OUT_OF_MEMORY
+} SvgScanResult;
+
 /* ---- parser-layer (raw text scan) ---- */
 const char* SvgParserSkipWS(const char *p);
 const char* SvgParserSkipCommaWS(const char *p);
@@ -102,8 +111,8 @@ Boolean     SvgParserTagIs(const char *tag, const char *name);
 Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
                                     char *out, word outSize);
 void        SvgParserScanInit(SvgScanCtx *c);
-Boolean     SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c,
-                                 SVGScratch *sc);
+SvgScanResult SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c,
+                                   SVGScratch *sc);
 Boolean     SvgParseGetInlineStyleProp(const char *tag, const char *prop,
                                        char *out, word outSize);
 
@@ -186,6 +195,9 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser);
 void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld);
 void SvgXformGroupPush(const char *tag);
 void SvgXformGroupPop(void);
+#ifdef SVG_XFORM_ENABLE_SELF_TEST
+Boolean SvgXformRunSelfTest(void);
+#endif
 
 /* ---- tag handlers (dispatch targets) ---- */
 void SvgShapeHandleLine(const char *tag);
