@@ -1098,7 +1098,8 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 
 void URLTextInitializeImage(
          HTMLimageData *p,
-         ImageAdditionalData *iad)
+         ImageAdditionalData *iad,
+         word availableWidth)
 {
     p->HID_IADType = iad->IAD_type;
 
@@ -1154,6 +1155,27 @@ void URLTextInitializeImage(
       p->HID_tmatrixE11 = p->HID_tmatrixE22;
 
     /*
+     * SVG images are commonly given a large intrinsic size and scaled
+     * through CSS.  If HTML did not specify a size, fit an oversized
+     * inline GString to the content width.
+     */
+    if (iad->IAD_type == IAD_TYPE_GSTRING &&
+        p->pos < HTML_IMAGE_POS_RESERVED &&
+        !p->size.XYS_width && !p->size.XYS_height &&
+        availableWidth && iad->IAD_size.XYS_width > availableWidth)
+    {
+      *(WWFixedAsDWord *)&p->HID_tmatrixE11 =
+          GrUDivWWFixed(
+            MakeWWFixed(availableWidth),
+            MakeWWFixed(iad->IAD_size.XYS_width));
+      p->HID_tmatrixE22 = p->HID_tmatrixE11;
+
+      EC_ERROR_IF(
+        *(WWFixedAsDWord *)&p->HID_tmatrixE11 !=
+        *(WWFixedAsDWord *)&p->HID_tmatrixE22, -1);
+    }
+
+    /*
      * actual size follows from scaling factor and raw image size
      */
     p->HID_size.XYS_width =
@@ -1171,6 +1193,13 @@ void URLTextInitializeImage(
           &p->HID_tmatrixE22));
     if (p->HID_size.XYS_height == 0)
         p->HID_size.XYS_height = 1 ;
+
+    EC_ERROR_IF(
+      iad->IAD_type == IAD_TYPE_GSTRING &&
+      p->pos < HTML_IMAGE_POS_RESERVED &&
+      !p->size.XYS_width && !p->size.XYS_height &&
+      availableWidth && iad->IAD_size.XYS_width > availableWidth &&
+      p->HID_size.XYS_width > availableWidth, -1);
 
     /*
      * set origin of image
@@ -1198,6 +1227,8 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     VMFileHandle vmf;
     VMChain vmc;
     ImageAdditionalData iad;
+    HTMLTextInstance *textP;
+    word availableWidth;
 
     /* Add reference to entry in cache */
     ObjCacheLockItem(oct, &vmf, &vmc, &iad, sizeof(iad));
@@ -1206,7 +1237,24 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     p->HID_vmf = vmf;
     p->HID_vmb = VMCHAIN_GET_VM_BLOCK(vmc);
 
-    URLTextInitializeImage(p, &iad) ;
+    textP = ObjDerefVis(oself);
+    availableWidth = textP->HTI_viewWidth;
+    if (availableWidth > textP->HTI_pageLeftMargin)
+        availableWidth -= textP->HTI_pageLeftMargin;
+    else
+        availableWidth = 0;
+    if (availableWidth)
+        availableWidth--;              /* leave the formatter's right edge */
+    if (availableWidth > p->hspace)
+        availableWidth -= p->hspace;
+    else
+        availableWidth = 0;
+    if (availableWidth > p->hspace)
+        availableWidth -= p->hspace;
+    else
+        availableWidth = 0;
+
+    URLTextInitializeImage(p, &iad, availableWidth) ;
     @call oself::MSG_HTML_TEXT_RESOLVE_IMAGE(i, p, invalFrom, invalTo);
 @ifdef JAVASCRIPT_SUPPORT
     @call oself::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_LOAD,
