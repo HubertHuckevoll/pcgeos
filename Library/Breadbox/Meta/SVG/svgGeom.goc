@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgGeom.goc — shared fixed-point helpers (WWFixed 16.16)
+ * svgGeom.goc - shared fixed-point helpers (WWFixed 16.16)
  ***********************************************************************/
 @include <stdapp.goh>
 

@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgShape.goc — simple SVG elements: line/polyline/polygon/rect/ellipse/circle
+ * svgShape.goc - simple SVG elements: line/polyline/polygon/rect/ellipse/circle
  ***********************************************************************/
 @include <stdapp.goh>
 
@@ -123,7 +123,7 @@ void SvgShapeHandleLine(const char *tag)
     SvgStyleApplyStrokeAndFill(tag);
     SvgStyleApplyStrokeWidth(tag);
 
-    /* world CTM = View ∘ Element (parent CTM omitted here) */
+    /* world CTM = View composed with Element (no parent CTM here) */
     SvgXformBuildWorld(tag, NULL, &ctm);
 
     /* apply CTM to the two points (do math in 16.16 for precision) */
@@ -171,7 +171,7 @@ void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc)
         SvgShapeParsePoints(sc->pb, sc, &np);
         if (np > 1)
         {
-            /* use full world CTM: View ∘ Group ∘ Element */
+            /* use full world CTM: View, Group, then Element */
             SvgXformBuildWorld(tag, NULL, &worldM);
             if (!SvgScratchEnsurePointCapacity(sc, np))
             {
@@ -232,7 +232,7 @@ void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc)
         SvgShapeParsePoints(sc->pb, sc, &np);
         if (np > 2)
         {
-            /* use full world CTM: View ∘ Group ∘ Element */
+            /* use full world CTM: View, Group, then Element */
             SvgXformBuildWorld(tag, NULL, &worldM);
             if (!SvgScratchEnsurePointCapacity(sc, np))
             {

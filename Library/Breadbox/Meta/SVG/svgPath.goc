@@ -15,6 +15,7 @@
 #include <float.h>
 
 #include "SVG/svg.h"
+#include "SVG/svgPathSyntax.h"
 #include "SVG/dbglog.h"
 
 /* -------- tiny helpers specific to path handling --------- */
@@ -1344,9 +1345,10 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
     }
 }
 
-void SvgPathHandle(const char *tag, SVGScratch *sc)
+Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
 {
     const char     *sP;
+    const char     *iterationP;
     word            np;
     Boolean         closed;
     WWFixedAsDWord  lastxW;
@@ -1362,18 +1364,23 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     Boolean         haveCmd;
     char            nextCmd;
     word            pathBufNeed;
+    Boolean         valid;
 
     /* snapshot per-<path> style to decide compound path behavior */
     Boolean         pathHasFill, pathHasStroke, buildingCompound;
 
     pathBufNeed = (word)(strlen(tag) + 1);
     if (!SvgScratchEnsurePathBuf(sc, pathBufNeed)) {
-        return;
+        return FALSE;
     }
 
     sc->dbP[0] = 0;
     if (!SvgParserGetAttrBounded(tag, "d", sc->dbP, sc->dbCapacity)) {
-        return;
+        return TRUE;
+    }
+
+    if (!SvgPathDataIsValid(sc->dbP)) {
+        return FALSE;
     }
 
     LOG_STR_HEAD("[PATH d]", sc->dbP, strlen(sc->dbP));
@@ -1412,9 +1419,11 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
     lastQcyW      = MakeWWFixed(0);
 
     sP = sc->dbP;
+    valid = TRUE;
 
     while (*sP)
     {
+        iterationP = sP;
         sP = SvgParserSkipWS(sP);
         if (!*sP) break;
 
@@ -1439,6 +1448,7 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
         }
         else if (!haveCmd)
         {
+            valid = FALSE;
             break;
         }
 
@@ -1509,19 +1519,30 @@ void SvgPathHandle(const char *tag, SVGScratch *sc)
             SvgPathHandleUnknown(&sP, &lastWasCubic, &lastWasQuad);
             haveCmd = FALSE;
             lastCmd = 0;
+            valid = FALSE;
+            break;
+        }
+
+        if (sc->allocFailed || sP == iterationP)
+        {
+            valid = FALSE;
             break;
         }
     }
 
-    if (np > 1) {
+    if (valid && np > 1) {
         LOGF(("[EMIT]", "final-emit n=%u closed=%d",
               np, (int)closed));
         SvgPathEmitSubpath(tag, sc, &np, closed);
     }
 
     if (buildingCompound) {
-        Meta_EndPath(/*in=*/pathHasFill, /*edges=*/pathHasStroke);
+        Meta_EndPath(/*in=*/valid && pathHasFill,
+                     /*edges=*/valid && pathHasStroke);
 
-        LOGF(("[META]", "EndPath in=%d edges=%d", (int)pathHasFill, (int)pathHasStroke));
+        LOGF(("[META]", "EndPath in=%d edges=%d",
+              (int)(valid && pathHasFill), (int)(valid && pathHasStroke)));
     }
+
+    return (Boolean)(valid && !sc->allocFailed);
 }

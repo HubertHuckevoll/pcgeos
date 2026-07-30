@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgParse.goc — low-level parser helpers
+ * svgParse.goc - low-level parser helpers
  ***********************************************************************/
 @include <stdapp.goh>
 

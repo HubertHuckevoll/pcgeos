@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgView.goc — viewBox / viewport / preserveAspectRatio mapping
+ * svgView.goc - viewBox / viewport / preserveAspectRatio mapping
  ***********************************************************************/
 @include <stdapp.goh>
 

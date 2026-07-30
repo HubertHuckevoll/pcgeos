@@ -108,7 +108,7 @@ prefLibs	: prefvid prefts preftd \
 
 # Geos impex libraries
 impex_libs	: dib bmp clp ico pcx tif \
-		  dbase3 dbase4 htmlimpx meta vcimpex
+		  dbase3 dbase4 htmlimpx vcimpex
 #lot123 msmword msword wordperf5
 
 

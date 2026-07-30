@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgStyle.goc — styling: stroke/fill/width/fill-rule & color keywords
+ * svgStyle.goc - styling: stroke/fill/width/fill-rule and color keywords
  ***********************************************************************/
 @include <stdapp.goh>
 
@@ -415,7 +415,7 @@ static void SvgStyleApplyStrokeMiterLimit(const char *tag)
 }
 
 /* Called on <g ...> */
-void SvgStyleGroupPush(const char *tag)
+Boolean SvgStyleGroupPush(const char *tag)
 {
     SvgGroupStyle st;
     char buf[64];
@@ -427,7 +427,7 @@ void SvgStyleGroupPush(const char *tag)
 
     stack = SvgStyleStackLock();
     if (stack == NULL) {
-        return;
+        return FALSE;
     }
 
     st.fillSet = FALSE;
@@ -635,11 +635,14 @@ void SvgStyleGroupPush(const char *tag)
     }
 
     /* push */
-    if (gStyleDepth < SVG_STYLE_GSTACK_MAX) {
-        stack[gStyleDepth++] = st;
+    if (gStyleDepth >= SVG_STYLE_GSTACK_MAX) {
+        SvgStyleStackUnlock();
+        return FALSE;
     }
 
+    stack[gStyleDepth++] = st;
     SvgStyleStackUnlock();
+    return TRUE;
 }
 
 
@@ -649,7 +652,7 @@ void SvgStyleGroupPop(void)
 }
 
 
-/* resolve property with group fallback — strings only (fill/stroke) */
+/* resolve property with group fallback - strings only (fill/stroke) */
 static Boolean SvgStyleResolvePropWithGroups(const char *tag,
                                              const char *prop,
                                              char *out,

@@ -5,60 +5,24 @@
 
 #define LOG_FILENAME "dbglog.txt"
 
-/* Internal helpers */
-static FileHandle
-_DbgOpen(Boolean truncate)
-{
-    FileHandle fh;
-
-    fh = NullHandle;
-    FilePushDir();
-    FileSetStandardPath(SP_PRIVATE_DATA);
-
-    if (truncate)
-    {
-        FileDelete(LOG_FILENAME);
-    }
-
-    fh = FileOpen(LOG_FILENAME, FILE_ACCESS_RW | FILE_DENY_W);
-    if (fh == NullHandle)
-    {
-        fh = FileCreate(LOG_FILENAME,
-                        FILE_CREATE_TRUNCATE | FCF_NATIVE | FILE_ACCESS_RW | FILE_DENY_W,
-                        0);
-    }
-
-    FilePopDir();
-    return fh;
-}
+static FileHandle dbgLogFileH = NullHandle;
 
 static void
 _DbgWriteLine(const char *s)
 {
-    FileHandle fh;
     word len;
 
-    if (s == 0)
+    if (s == 0 || dbgLogFileH == NullHandle)
     {
         return;
     }
-
-    fh = _DbgOpen(FALSE);
-    if (fh == NullHandle)
-    {
-        return;
-    }
-
-    FilePos(fh, 0L, FILE_POS_END);
 
     len = (word)strlen(s);
     if (len != 0)
     {
-        FileWrite(fh, (void *)s, len, FALSE);
+        FileWrite(dbgLogFileH, (void *)s, len, FALSE);
     }
-    FileWrite(fh, (void *)"\r\n", 2, FALSE);
-
-    FileClose(fh, FALSE);
+    FileWrite(dbgLogFileH, (void *)"\r\n", 2, FALSE);
 }
 
 /* Public API - calling conventions match header */
@@ -66,13 +30,19 @@ _DbgWriteLine(const char *s)
 void _export _pascal
 DbgLogInit(void)
 {
-    FileHandle fh;
-
-    fh = _DbgOpen(TRUE);
-    if (fh != NullHandle)
+    if (dbgLogFileH != NullHandle)
     {
-        FileClose(fh, FALSE);
+        FileClose(dbgLogFileH, FALSE);
+        dbgLogFileH = NullHandle;
     }
+
+    FilePushDir();
+    FileSetStandardPath(SP_PRIVATE_DATA);
+    dbgLogFileH = FileCreate(LOG_FILENAME,
+                             FILE_CREATE_TRUNCATE | FCF_NATIVE |
+                             FILE_ACCESS_RW | FILE_DENY_W,
+                             0);
+    FilePopDir();
 }
 
 void _export _pascal
@@ -95,6 +65,11 @@ void _export _pascal
 DbgLogEnd(void)
 {
     _DbgWriteLine("=== LOG END ===");
+    if (dbgLogFileH != NullHandle)
+    {
+        FileClose(dbgLogFileH, FALSE);
+        dbgLogFileH = NullHandle;
+    }
 }
 
 /* Varargs must be cdecl */

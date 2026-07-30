@@ -4,17 +4,14 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = vcimpex
-VCIMPEX         = vcimpexManager.asm vcimpex_ui.goc
 IMPTPROC        = imptproc.goc
-EXPPROC         = svgcore.c svgexp.h svgcore.h svgexpproc.goc\
-                  svgsubcode.goc svgdecode.goc
+VCIMPEX         = vcimpexManager.asm vcimpex_ui.goc
 UI_TO_RDFS      =
-OBJS            = vcimpex_ui.obj imptproc.obj svgcore.obj svgexpproc.obj\
-                  svgsubcode.obj svgdecode.obj
+OBJS            = imptproc.obj vcimpex_ui.obj
 COMMON          = vconv_ui.h
 MODULES         = VCImpex
-CMODULES        = VCImpex imptproc expproc
-SRCS            = $(VCIMPEX) $(IMPTPROC) $(EXPPROC) $(COMMON)
+CMODULES        = imptproc VCImpex
+SRCS            = $(IMPTPROC) $(VCIMPEX) $(COMMON)
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = vcimpex

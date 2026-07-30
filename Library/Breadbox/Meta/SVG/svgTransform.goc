@@ -1,5 +1,5 @@
 /***********************************************************************
- * svgTransform.goc — CTM (affine) parsing + application (WWFixed 16.16)
+ * svgTransform.goc - CTM (affine) parsing and application (WWFixed 16.16)
  ***********************************************************************/
 @include <stdapp.goh>
 
@@ -146,7 +146,7 @@ static void SvgMatSkewY(SvgMatrix *m, WWFixedAsDWord deg)
     m->b = t; /* y' = y + tan(a)*x */
 }
 
-/* r = m2 ∘ m1  (apply m1 then m2) */
+/* r = m2 composed with m1 (apply m1 then m2) */
 static void SvgMatMul(const SvgMatrix *m1, const SvgMatrix *m2, SvgMatrix *r)
 {
     WWFixedAsDWord a, b, c, d, e, f;
@@ -265,9 +265,9 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
                 SvgMatRotateDeg(&R, v1);
                 SvgMatTranslate(&T2, (WWFixedAsDWord)(-(sdword)v2), (WWFixedAsDWord)(-(sdword)v3));
 
-                /* Need t = T1 ∘ R ∘ T2, but SvgMatMul(m1,m2,r) gives r = m2 ∘ m1 */
-                SvgMatMul(&T2, &R, &tmp);   /* tmp = R ∘ T2 */
-                SvgMatMul(&tmp, &T1, &t);   /* t   = T1 ∘ (R ∘ T2) */
+                /* Need T1, R, T2; SvgMatMul(m1,m2,r) applies m1 then m2. */
+                SvgMatMul(&T2, &R, &tmp);   /* tmp = R after T2 */
+                SvgMatMul(&tmp, &T1, &t);   /* t = T1 after tmp */
             } else {
                 if (*p == ')') p++;
                 SvgMatRotateDeg(&t, v1);
@@ -302,7 +302,7 @@ void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser)
 /* ------- group stuff -----------*/
 
 /* Called on <g ...> */
-void SvgXformGroupPush(const char *tag)
+Boolean SvgXformGroupPush(const char *tag)
 {
     SvgMatrix parent;
     SvgMatrix self;
@@ -310,19 +310,27 @@ void SvgXformGroupPush(const char *tag)
     SvgMatrix *stack;
 
     stack = SvgXformStackLock();
-    if (gCTMDepth > 0 && stack != NULL) {
+    if (stack == NULL)
+    {
+        return FALSE;
+    }
+    if (gCTMDepth > 0) {
         parent = stack[gCTMDepth-1];
     } else {
         SvgMatIdentity(&parent);
     }
 
     SvgXformParseAttrUser(tag, &self);         /* user-space element matrix */
-    SvgMatMul(&self, &parent, &out);           /* out = parent ∘ self */
-    if (stack != NULL && gCTMDepth < SVG_XFORM_GSTACK_MAX)
+    SvgMatMul(&self, &parent, &out);           /* apply self, then parent */
+    if (gCTMDepth >= SVG_XFORM_GSTACK_MAX)
     {
-        stack[gCTMDepth++] = out;
+        SvgXformStackUnlock(stack);
+        return FALSE;
     }
+
+    stack[gCTMDepth++] = out;
     SvgXformStackUnlock(stack);
+    return TRUE;
 }
 
 /* Called on </g> */
@@ -331,7 +339,7 @@ void SvgXformGroupPop(void)
     if (gCTMDepth > 0) gCTMDepth--;
 }
 
-/* Build WORLD-SPACE CTM = ViewMatrix ∘ Parent ∘ Element
+/* Build WORLD-SPACE CTM from ViewMatrix, Parent, and Element.
    If parentCTM==NULL, use current group CTM (if any). */
 void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld)
 {
@@ -351,7 +359,7 @@ void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *
 
     if (par)
     {
-        SvgMatMul(&elem, par, &tmp);  /* tmp = parent ∘ elem */
+        SvgMatMul(&elem, par, &tmp);  /* apply element, then parent */
         SvgMatMul(&tmp, &vm, outWorld);
     }
     else

@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------
- * svg.h — Master public header for the Meta SVG renderer (GEOS/GOC)
+ * svg.h - Master public header for the Meta SVG renderer (GEOS/GOC)
  *------------------------------------------------------------------*/
 
 #include <xlatLib.h>
@@ -21,11 +21,16 @@
 #define GrSubWWFixed(a,b) ((WWFixedAsDWord)((sdword)(a) - (sdword)(b)))
 #endif
 
+/* ATTENTION: SVG groups are limited to 16 levels to bound heap use.
+ * Replace the fixed stacks with growable blocks if deeper input is needed.
+ */
+#define SVG_GROUP_NESTING_MAX 16
+
 /* ---- transform stack (CTM) size ---- */
 #define SVG_XFORM_GSTACK_MAX 16
 
 /* ---- group style stack (fill/stroke/stroke-width) ---- */
-#define SVG_STYLE_GSTACK_MAX 16 /* max group nesting depth */
+#define SVG_STYLE_GSTACK_MAX 17 /* root style plus 16 nested groups */
 #define SVG_STYLE_APPROX_JOIN_SEG_THRESHOLD 12
 
 /* per-group style state */
@@ -160,7 +165,7 @@ Boolean SvgStyleForceRoundJoin(const char *tag);
 Boolean SvgStyleForceRoundJoinForSegments(const char *tag, word segmentCount);
 void    SvgStyleRestoreForcedJoin(const char *tag, Boolean forced);
 /* groups */
-void    SvgStyleGroupPush(const char *tag);
+Boolean SvgStyleGroupPush(const char *tag);
 void    SvgStyleGroupPop(void);
 #ifdef SVG_STYLE_ENABLE_SELF_TEST
 Boolean SvgStyleRunSelfTest(void);
@@ -193,7 +198,7 @@ void    SvgXformStackFree(void);
 void SvgXformApplyPoint(sword *xP, sword *yP, const SvgMatrix *m);
 void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser);
 void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld);
-void SvgXformGroupPush(const char *tag);
+Boolean SvgXformGroupPush(const char *tag);
 void SvgXformGroupPop(void);
 #ifdef SVG_XFORM_ENABLE_SELF_TEST
 Boolean SvgXformRunSelfTest(void);
@@ -208,7 +213,7 @@ void SvgShapeHandleEllipse(const char *tag);
 void SvgShapeHandleCircle(const char *tag);
 
 /* ---- tag handlers: path with subcommands ---- */
-void SvgPathHandle(const char *tag, SVGScratch *sc);
+Boolean SvgPathHandle(const char *tag, SVGScratch *sc);
 static void SvgPathHandleMoveTo   (const char **sPP, char *lastCmdP,
                                    SVGScratch *sc, word *npP,
                                    WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,

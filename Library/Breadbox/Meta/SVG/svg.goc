@@ -292,6 +292,19 @@ static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP
     return TRUE;
 }
 
+static Boolean
+SvgTagSelfCloses(const char *tag)
+{
+    const char *endP;
+
+    endP = tag + strlen(tag);
+    while (endP > tag && isspace((unsigned char)endP[-1]))
+    {
+        endP--;
+    }
+    return (Boolean)(endP > tag && endP[-1] == '/');
+}
+
 /*---------------------------------------------------------------
  * ReadSVG -- streamed, SAX-like; callback(last param) is percent
  *---------------------------------------------------------------*/
@@ -306,6 +319,8 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     char *ioP;
     Boolean viewInitialized;
     Boolean sawSvgRoot;
+    Boolean rootStyleActive;
+    word groupDepth;
     word pct;
     Boolean abort=FALSE;
     TransError status;
@@ -320,6 +335,8 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     done = 0;
     viewInitialized = FALSE;
     sawSvgRoot = FALSE;
+    rootStyleActive = FALSE;
+    groupDepth = 0;
     status = TE_NO_ERROR;
 
     LOG_INIT();
@@ -401,7 +418,13 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         if (scP->tagP[0] == '/' && SvgParserTagIs(scP->tagP + 1, "svg"))
         {
             LOG_STR("[DISPATCH]", "/svg");
+            if (!rootStyleActive || groupDepth != 0)
+            {
+                status = TE_INVALID_FORMAT;
+                goto cleanup;
+            }
             SvgStyleGroupPop();
+            rootStyleActive = FALSE;
             continue;
         }
 
@@ -409,20 +432,47 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         if (scP->tagP[0] == '/' && SvgParserTagIs(scP->tagP + 1, "g"))
         {
             LOG_STR("[DISPATCH]", "/g");
+            if (!rootStyleActive || groupDepth == 0)
+            {
+                status = TE_INVALID_FORMAT;
+                goto cleanup;
+            }
             SvgXformGroupPop();
             SvgStyleGroupPop();
+            groupDepth--;
             continue;
         }
 
         if (SvgParserTagIs(scP->tagP, "svg"))
         {
             LOG_STR("[SVG]", "root");
+            if (sawSvgRoot)
+            {
+                status = TE_INVALID_FORMAT;
+                goto cleanup;
+            }
             /* inherit root style like a group */
-            SvgStyleGroupPush(scP->tagP);
+            if (!SvgStyleGroupPush(scP->tagP))
+            {
+                status = TE_OUT_OF_MEMORY;
+                goto cleanup;
+            }
             SvgViewInitFromSvgTag(scP->tagP);
             viewInitialized = TRUE;
             sawSvgRoot = TRUE;
+            rootStyleActive = TRUE;
+            if (SvgTagSelfCloses(scP->tagP))
+            {
+                SvgStyleGroupPop();
+                rootStyleActive = FALSE;
+            }
             continue;
+        }
+
+        if (!rootStyleActive)
+        {
+            status = TE_INVALID_FORMAT;
+            goto cleanup;
         }
 
         if (!viewInitialized)
@@ -435,8 +485,27 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         if (SvgParserTagIs(scP->tagP, "g"))
         {
             LOG_STR("[DISPATCH]", "g");
-            SvgStyleGroupPush(scP->tagP);
-            SvgXformGroupPush(scP->tagP);
+            if (SvgTagSelfCloses(scP->tagP))
+            {
+                continue;
+            }
+            if (groupDepth >= SVG_GROUP_NESTING_MAX)
+            {
+                status = TE_IMPORT_NOT_SUPPORTED;
+                goto cleanup;
+            }
+            if (!SvgStyleGroupPush(scP->tagP))
+            {
+                status = TE_OUT_OF_MEMORY;
+                goto cleanup;
+            }
+            if (!SvgXformGroupPush(scP->tagP))
+            {
+                SvgStyleGroupPop();
+                status = TE_OUT_OF_MEMORY;
+                goto cleanup;
+            }
+            groupDepth++;
             continue;
         }
 
@@ -473,7 +542,12 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         else if (SvgParserTagIs(scP->tagP, "path"))
         {
             LOG_STR("[DISPATCH]", "path");
-            SvgPathHandle(scP->tagP, scP);
+            if (!SvgPathHandle(scP->tagP, scP))
+            {
+                status = scP->allocFailed ?
+                         TE_OUT_OF_MEMORY : TE_INVALID_FORMAT;
+                goto cleanup;
+            }
         }
         else
         {
@@ -506,7 +580,8 @@ cleanup:
       LOG_STR("ReadSVG", "User aborted!");
       status = TE_ERROR;
     }
-    else if (!sawSvgRoot && status == TE_NO_ERROR)
+    else if ((!sawSvgRoot || rootStyleActive || groupDepth != 0) &&
+             status == TE_NO_ERROR)
     {
         status = TE_INVALID_FORMAT;
     }
