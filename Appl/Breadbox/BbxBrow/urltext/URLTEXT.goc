@@ -1096,11 +1096,52 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     @call frame::MSG_URL_FRAME_DEC_PENDING();
 }
 
+word LOCAL URLTextGetAvailableImageWidth(
+         HTMLTextInstance *textP,
+         word hspace)
+{
+    word availableWidth;
+
+    availableWidth = textP->HTI_viewWidth;
+    if (availableWidth > textP->HTI_pageLeftMargin)
+        availableWidth -= textP->HTI_pageLeftMargin;
+    else
+        return 0;
+    if (availableWidth)
+        availableWidth--;              /* leave the formatter's right edge */
+    if (availableWidth > hspace)
+        availableWidth -= hspace;
+    else
+        return 0;
+    if (availableWidth > hspace)
+        availableWidth -= hspace;
+    else
+        return 0;
+
+    return availableWidth;
+}
+
+sword LOCAL URLTextScaleOffset(
+         sword offset,
+         WWFixedAsDWord scale)
+{
+    sdword scaled;
+
+    scaled = (sdword)GrMulWWFixed(MakeWWFixed(offset), scale);
+    if (scaled < 0)
+        return -(sword)RoundWWF((WWFixedAsDWord)-scaled);
+
+    return (sword)RoundWWF((WWFixedAsDWord)scaled);
+}
+
 void URLTextInitializeImage(
          HTMLimageData *p,
          ImageAdditionalData *iad,
          word availableWidth)
 {
+    word scaledWidth;
+    WWFixedAsDWord scale;
+
     p->HID_IADType = iad->IAD_type;
 
     /*
@@ -1155,24 +1196,31 @@ void URLTextInitializeImage(
       p->HID_tmatrixE11 = p->HID_tmatrixE22;
 
     /*
-     * SVG images are commonly given a large intrinsic size and scaled
-     * through CSS.  If HTML did not specify a size, fit an oversized
-     * inline GString to the content width.
+     * Modern pages commonly rely on CSS to constrain large images.
+     * Fit every oversized inline image to the content width.
      */
-    if (iad->IAD_type == IAD_TYPE_GSTRING &&
-        p->pos < HTML_IMAGE_POS_RESERVED &&
-        !p->size.XYS_width && !p->size.XYS_height &&
-        availableWidth && iad->IAD_size.XYS_width > availableWidth)
-    {
-      *(WWFixedAsDWord *)&p->HID_tmatrixE11 =
-          GrUDivWWFixed(
-            MakeWWFixed(availableWidth),
-            MakeWWFixed(iad->IAD_size.XYS_width));
-      p->HID_tmatrixE22 = p->HID_tmatrixE11;
+    scaledWidth = RoundWWF(GrMulWWFixed(
+      MakeWWFixed(iad->IAD_size.XYS_width),
+      *(WWFixedAsDWord *)&p->HID_tmatrixE11));
+    if (scaledWidth == 0)
+        scaledWidth = 1;
 
-      EC_ERROR_IF(
-        *(WWFixedAsDWord *)&p->HID_tmatrixE11 !=
-        *(WWFixedAsDWord *)&p->HID_tmatrixE22, -1);
+    if (p->pos < HTML_IMAGE_POS_RESERVED &&
+        availableWidth && scaledWidth > availableWidth)
+    {
+      scale = GrUDivWWFixed(
+        MakeWWFixed(availableWidth),
+        MakeWWFixed(scaledWidth));
+      *(WWFixedAsDWord *)&p->HID_tmatrixE11 =
+        GrMulWWFixed(
+          *(WWFixedAsDWord *)&p->HID_tmatrixE11,
+          scale);
+      *(WWFixedAsDWord *)&p->HID_tmatrixE22 =
+        GrMulWWFixed(
+          *(WWFixedAsDWord *)&p->HID_tmatrixE22,
+          scale);
+
+      EC_ERROR_IF(scale >= MakeWWFixed(1), -1);
     }
 
     /*
@@ -1195,11 +1243,14 @@ void URLTextInitializeImage(
         p->HID_size.XYS_height = 1 ;
 
     EC_ERROR_IF(
-      iad->IAD_type == IAD_TYPE_GSTRING &&
       p->pos < HTML_IMAGE_POS_RESERVED &&
-      !p->size.XYS_width && !p->size.XYS_height &&
-      availableWidth && iad->IAD_size.XYS_width > availableWidth &&
+      availableWidth &&
       p->HID_size.XYS_width > availableWidth, -1);
+    EC_ERROR_IF(
+      iad->IAD_type == IAD_TYPE_GSTRING &&
+      !p->size.XYS_width && !p->size.XYS_height &&
+      *(WWFixedAsDWord *)&p->HID_tmatrixE11 !=
+      *(WWFixedAsDWord *)&p->HID_tmatrixE22, -1);
 
     /*
      * set origin of image
@@ -1221,6 +1272,108 @@ void URLTextInitializeImage(
     p->HID_loopCount = 0 ;              /* Not looped any */
 }
 
+void LOCAL URLTextLimitImagesToView(optr oself)
+{
+    HTMLTextInstance *textP;
+    optr imageArray;
+    HTMLimageData *p;
+    HTMLimageData image;
+    VisTextGraphic graphic;
+    word i, n, size;
+    word oldWidth, oldHeight, availableWidth;
+    sdword graphicHeight;
+    WWFixedAsDWord scale;
+    Boolean changed = FALSE;
+
+    textP = ObjDerefVis(oself);
+    imageArray = textP->HTI_imageArray;
+    if (!imageArray)
+        return;
+
+    MemLock(OptrToHandle(imageArray));
+    n = ChunkArrayGetCount(imageArray);
+    MemUnlock(OptrToHandle(imageArray));
+
+    for (i=0; i<n; i++)
+    {
+      MemLock(OptrToHandle(imageArray));
+      p = ChunkArrayElementToPtr(imageArray, i, &size);
+      image = *p;
+      MemUnlock(OptrToHandle(imageArray));
+
+      if (image.pos >= HTML_IMAGE_POS_RESERVED)
+          continue;
+
+      textP = ObjDerefVis(oself);
+      availableWidth =
+        URLTextGetAvailableImageWidth(textP, image.hspace);
+      oldWidth = image.HID_size.XYS_width;
+      oldHeight = image.HID_size.XYS_height;
+      if (!availableWidth || oldWidth <= availableWidth)
+          continue;
+
+      scale = GrUDivWWFixed(
+        MakeWWFixed(availableWidth),
+        MakeWWFixed(oldWidth));
+      image.HID_size.XYS_width = availableWidth;
+      image.HID_size.XYS_height =
+        RoundWWF(GrMulWWFixed(
+          MakeWWFixed(image.HID_size.XYS_height),
+          scale));
+      if (image.HID_size.XYS_height == 0)
+          image.HID_size.XYS_height = 1;
+
+      if ((image.flags & HTML_IDF_RESOLVED) &&
+          !(image.flags & HTML_IDF_BROKEN))
+      {
+        *(WWFixedAsDWord *)&image.HID_tmatrixE11 =
+          GrMulWWFixed(
+            *(WWFixedAsDWord *)&image.HID_tmatrixE11,
+            scale);
+        *(WWFixedAsDWord *)&image.HID_tmatrixE22 =
+          GrMulWWFixed(
+            *(WWFixedAsDWord *)&image.HID_tmatrixE22,
+            scale);
+        image.HID_drawOffset.XYO_x =
+          URLTextScaleOffset(image.HID_drawOffset.XYO_x, scale);
+        image.HID_drawOffset.XYO_y =
+          URLTextScaleOffset(image.HID_drawOffset.XYO_y, scale);
+      }
+      image.flags |= HTML_IDF_SIZE_DIRTY;
+
+      MemLock(OptrToHandle(imageArray));
+      p = ChunkArrayElementToPtr(imageArray, i, &size);
+      *p = image;
+      MemUnlock(OptrToHandle(imageArray));
+
+      @call oself::MSG_VIS_TEXT_GET_GRAPHIC_AT_POSITION(
+        &graphic, image.pos);
+      graphicHeight = graphic.VTG_size.XYS_height;
+      graphicHeight += image.HID_size.XYS_height;
+      graphicHeight -= oldHeight;
+      graphic.VTG_size = image.HID_size;
+      graphic.VTG_size.XYS_width += 2*image.hspace;
+      if (graphicHeight < 0)
+          graphic.VTG_size.XYS_height = 0;
+      else if (graphicHeight > 0xFFFF)
+          graphic.VTG_size.XYS_height = 0xFFFF;
+      else
+          graphic.VTG_size.XYS_height = (word)graphicHeight;
+      @call oself::MSG_VIS_TEXT_UPDATE_GRAPHIC_ELEMENT(
+        VTUGF_NEW_ELEMENT, graphic, image.pos);
+
+      changed = TRUE;
+      EC_ERROR_IF(scale >= MakeWWFixed(1), -1);
+      EC_ERROR_IF(image.HID_size.XYS_width > availableWidth, -1);
+    }
+
+    if (changed)
+    {
+      textP = ObjDerefVis(oself);
+      textP->HTI_layoutState |= HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS;
+    }
+}
+
 void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
 		     word invalFrom, word invalTo)
 {
@@ -1238,21 +1391,8 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     p->HID_vmb = VMCHAIN_GET_VM_BLOCK(vmc);
 
     textP = ObjDerefVis(oself);
-    availableWidth = textP->HTI_viewWidth;
-    if (availableWidth > textP->HTI_pageLeftMargin)
-        availableWidth -= textP->HTI_pageLeftMargin;
-    else
-        availableWidth = 0;
-    if (availableWidth)
-        availableWidth--;              /* leave the formatter's right edge */
-    if (availableWidth > p->hspace)
-        availableWidth -= p->hspace;
-    else
-        availableWidth = 0;
-    if (availableWidth > p->hspace)
-        availableWidth -= p->hspace;
-    else
-        availableWidth = 0;
+    availableWidth =
+      URLTextGetAvailableImageWidth(textP, p->hspace);
 
     URLTextInitializeImage(p, &iad, availableWidth) ;
     @call oself::MSG_HTML_TEXT_RESOLVE_IMAGE(i, p, invalFrom, invalTo);
@@ -1997,6 +2137,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 
 @method URLTextClass, MSG_HTML_TEXT_FORMATTING_STARTED
 {
+     URLTextLimitImagesToView(oself);
      @call oself::MSG_URL_TEXT_INC_PENDING() ;
      @callsuper() ;
 }
