@@ -1229,15 +1229,15 @@ SvgPathHandleUnknown(const char **sPP,
 
 
 /* ---- sub path emitter ---- */
-static void
-SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
+static Boolean
+SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed,
+                   const SvgMatrix *worldMP, Boolean hasStroke,
+                   Boolean buildingCompound)
 {
     word i, np, w;
     sword px, py, firstx, firsty, lastx, lasty;
-    Boolean hasStroke;
     Boolean needStrokeClose;
     Boolean forcedRoundJoin;
-    SvgMatrix worldM;
     WWFixedAsDWord X;
     WWFixedAsDWord Y;
     WWFixedAsDWord Xw;
@@ -1251,18 +1251,14 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
     np = *npP;
     *npP = 0;
     if (np <= 1) {
-        return;
+        return FALSE;
     }
-
-    hasStroke = SvgStyleHasStroke(tag);
-
-    /* Build WORLD matrix = VM * currentGroup * element(tag) */
-    SvgXformBuildWorld(tag, NULL, &worldM);   /* applies <g> transform too */
+    if (!hasStroke && !buildingCompound) return FALSE;
 
     if (!SvgScratchEnsurePointCapacity(sc, np))
     {
         LOG_STR("[PATH]", "EmitSubpath: ensure failed for world points");
-        return;
+        return FALSE;
     }
 
     w = 0;
@@ -1270,12 +1266,12 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
         X = sc->ptsWWFP[i].x;
         Y = sc->ptsWWFP[i].y;
 
-        Xw = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(worldM.a, X),
-                                        GrMulWWFixed(worldM.c, Y)),
-                          worldM.e);
-        Yw = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(worldM.b, X),
-                                        GrMulWWFixed(worldM.d, Y)),
-                          worldM.f);
+        Xw = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(worldMP->a, X),
+                                        GrMulWWFixed(worldMP->c, Y)),
+                          worldMP->e);
+        Yw = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(worldMP->b, X),
+                                        GrMulWWFixed(worldMP->d, Y)),
+                          worldMP->f);
 
         px = SvgGeomWWFixedToSWordRound(Xw);
         py = SvgGeomWWFixedToSWordRound(Yw);
@@ -1294,7 +1290,7 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
     }
     np = w;
     if (np <= 1) {
-        return;
+        return FALSE;
     }
 
     forcedRoundJoin = hasStroke ? SvgStyleForceRoundJoinForSegments(tag, np) : FALSE;
@@ -1333,6 +1329,7 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
                 (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
         Meta_Polygon(sc->ptsP, np, FALSE, TRUE);
         SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
+        return TRUE;
     }
     else
     {
@@ -1342,10 +1339,11 @@ SvgPathEmitSubpath(const char *tag, SVGScratch *sc, word *npP, Boolean closed)
                 (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
         Meta_Polyline(sc->ptsP, np);
         SvgStyleRestoreForcedJoin(tag, forcedRoundJoin);
+        return TRUE;
     }
 }
 
-Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
+Boolean SvgPathHandle(const char *tag, SVGScratch *sc, Boolean *emittedP)
 {
     const char     *sP;
     const char     *iterationP;
@@ -1363,21 +1361,30 @@ Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
     char            lastCmd;
     Boolean         haveCmd;
     char            nextCmd;
-    word            pathBufNeed;
+    const char     *pathValueP;
+    word            pathLength;
+    SvgAttrResult   attrResult;
     Boolean         valid;
+    SvgMatrix       worldM;
 
     /* snapshot per-<path> style to decide compound path behavior */
     Boolean         pathHasFill, pathHasStroke, buildingCompound;
 
-    pathBufNeed = (word)(strlen(tag) + 1);
-    if (!SvgScratchEnsurePathBuf(sc, pathBufNeed)) {
+    *emittedP = FALSE;
+    attrResult = SvgParserGetAttrSpan(tag, "d", &pathValueP, &pathLength,
+                                      SVG_TEXT_MAX_SIZE);
+    if (attrResult == SVG_ATTR_TOO_LONG)
+    {
+        sc->failure = SVG_SCRATCH_LIMIT_EXCEEDED;
         return FALSE;
     }
-
-    sc->dbP[0] = 0;
-    if (!SvgParserGetAttrBounded(tag, "d", sc->dbP, sc->dbCapacity)) {
+    if (attrResult == SVG_ATTR_MISSING) {
         return TRUE;
     }
+    if (attrResult != SVG_ATTR_VALID) return FALSE;
+    if (!SvgScratchEnsurePathBuf(sc, (word)(pathLength + 1))) return FALSE;
+    if (pathLength != 0) memcpy(sc->dbP, pathValueP, pathLength);
+    sc->dbP[pathLength] = 0;
 
     if (!SvgPathDataIsValid(sc->dbP)) {
         return FALSE;
@@ -1386,13 +1393,19 @@ Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
     LOG_STR_HEAD("[PATH d]", sc->dbP, strlen(sc->dbP));
 
     /* styles once per <path> */
-    SvgStyleApplyStrokeAndFill(tag);
-    SvgStyleApplyFillRule(tag);
-    SvgStyleApplyStrokeWidth(tag);
-
     /* decide upfront whether we'll accumulate a compound path for fill */
     pathHasFill   = SvgStyleHasFill(tag);
     pathHasStroke = SvgStyleHasStroke(tag);
+    if (!pathHasFill && !pathHasStroke) return TRUE;
+    if (!SvgXformBuildWorld(tag, NULL, &worldM))
+    {
+        sc->unsupportedElement = TRUE;
+        return TRUE;
+    }
+
+    SvgStyleApplyStrokeAndFill(tag);
+    SvgStyleApplyFillRule(tag);
+    SvgStyleApplyStrokeWidth(tag, &worldM);
 
     LOGF(("[STYLE]", "style: fill=%d stroke=%d", (int)pathHasFill, (int)pathHasStroke));
 
@@ -1437,7 +1450,9 @@ Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
 
                 LOGF(("[EMIT]", "emit n=%u closed=%d",
                       np, (int)closed));
-                SvgPathEmitSubpath(tag, sc, &np, closed);
+                if (SvgPathEmitSubpath(tag, sc, &np, closed, &worldM,
+                                       pathHasStroke, buildingCompound))
+                    *emittedP = TRUE;
 
                 closed = FALSE;
             }
@@ -1507,7 +1522,9 @@ Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
 
             if (np > 1) {
                 LOGF(("[EMIT]", "emit n=%u closed=1", np));
-                SvgPathEmitSubpath(tag, sc, &np, TRUE);
+                if (SvgPathEmitSubpath(tag, sc, &np, TRUE, &worldM,
+                                       pathHasStroke, buildingCompound))
+                    *emittedP = TRUE;
             }
             closed  = FALSE;
             haveCmd = FALSE;   /* fetch next real command at top of loop */
@@ -1523,7 +1540,7 @@ Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
             break;
         }
 
-        if (sc->allocFailed || sP == iterationP)
+        if (sc->failure != SVG_SCRATCH_OK || sP == iterationP)
         {
             valid = FALSE;
             break;
@@ -1533,7 +1550,9 @@ Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
     if (valid && np > 1) {
         LOGF(("[EMIT]", "final-emit n=%u closed=%d",
               np, (int)closed));
-        SvgPathEmitSubpath(tag, sc, &np, closed);
+        if (SvgPathEmitSubpath(tag, sc, &np, closed, &worldM,
+                               pathHasStroke, buildingCompound))
+            *emittedP = TRUE;
     }
 
     if (buildingCompound) {
@@ -1544,5 +1563,5 @@ Boolean SvgPathHandle(const char *tag, SVGScratch *sc)
               (int)(valid && pathHasFill), (int)(valid && pathHasStroke)));
     }
 
-    return (Boolean)(valid && !sc->allocFailed);
+    return (Boolean)(valid && sc->failure == SVG_SCRATCH_OK);
 }

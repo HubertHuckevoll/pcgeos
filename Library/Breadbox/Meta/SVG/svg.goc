@@ -14,20 +14,17 @@
 #include <float.h>
 
 #include "SVG/svg.h"
+#include "SVG/svgCapacity.h"
 #include "SVG/dbglog.h"
 
 static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP,
                                              void **ptrP, word *capacityP,
-                                             word neededUnits, word unitSize);
+                                             word neededUnits, word unitSize,
+                                             word initialCapacity,
+                                             word maximumCapacity);
 
 Boolean SvgScratchInit(SVGScratch *sc)
 {
-    word tagSize;
-    word dbSize;
-    word ptsSize;
-    word ptsBytes;
-    word ptsWWFBytes;
-
     if (!sc)
     {
         return FALSE;
@@ -45,76 +42,8 @@ Boolean SvgScratchInit(SVGScratch *sc)
     sc->ptsWWFH = 0;
     sc->ptsWWFP = NULL;
     sc->ptsWWFCapacity = 0;
-    sc->allocFailed = FALSE;
-
-    tagSize = TAG_BUF_SIZE;
-    sc->tagH = MemAlloc(tagSize, HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!sc->tagH)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->tagP = (char*)MemLock(sc->tagH);
-    if (!sc->tagP)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->tagCapacity = tagSize;
-
-    dbSize = MAX_PATH_ATTR_SIZE;
-    sc->dbH = MemAlloc(dbSize, HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!sc->dbH)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->dbP = (char*)MemLock(sc->dbH);
-    if (!sc->dbP)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->dbCapacity = dbSize;
-
-    ptsSize = MAX_SVG_POINTS;
-    ptsBytes = (word)(ptsSize * sizeof(Point));
-    sc->ptsH = MemAlloc(ptsBytes, HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!sc->ptsH)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->ptsP = (Point*)MemLock(sc->ptsH);
-    if (!sc->ptsP)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->ptsCapacity = ptsSize;
-
-    ptsWWFBytes = (word)(ptsSize * sizeof(SvgWWPoint));
-    sc->ptsWWFH = MemAlloc(ptsWWFBytes, HF_DYNAMIC, HAF_ZERO_INIT);
-    if (!sc->ptsWWFH)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->ptsWWFP = (SvgWWPoint*)MemLock(sc->ptsWWFH);
-    if (!sc->ptsWWFP)
-    {
-        sc->allocFailed = TRUE;
-        SvgScratchFree(sc);
-        return FALSE;
-    }
-    sc->ptsWWFCapacity = ptsSize;
+    sc->failure = SVG_SCRATCH_OK;
+    sc->unsupportedElement = FALSE;
 
     return TRUE;
 }
@@ -179,102 +108,107 @@ Boolean SvgScratchEnsureTagCapacity(SVGScratch *sc, word neededBytes)
 {
     return SvgScratchEnsureCapacityCommon(sc, &sc->tagH, (void**)&sc->tagP,
                                           &sc->tagCapacity, neededBytes,
-                                          (word)sizeof(byte));
+                                          (word)sizeof(byte),
+                                          SVG_TEXT_INITIAL_SIZE,
+                                          SVG_TEXT_MAX_SIZE);
 }
 
 Boolean SvgScratchEnsurePathBuf(SVGScratch *sc, word neededBytes)
 {
     return SvgScratchEnsureCapacityCommon(sc, &sc->dbH, (void**)&sc->dbP,
                                           &sc->dbCapacity, neededBytes,
-                                          (word)sizeof(byte));
+                                          (word)sizeof(byte),
+                                          SVG_TEXT_INITIAL_SIZE,
+                                          SVG_TEXT_MAX_SIZE);
 }
 
 Boolean SvgScratchEnsurePointCapacity(SVGScratch *sc, word neededPoints)
 {
     return SvgScratchEnsureCapacityCommon(sc, &sc->ptsH, (void**)&sc->ptsP,
                                           &sc->ptsCapacity, neededPoints,
-                                          (word)sizeof(Point));
+                                          (word)sizeof(Point),
+                                          SVG_POINTS_INITIAL_CAPACITY,
+                                          MAX_SVG_POINTS);
 }
 
 Boolean SvgScratchEnsureWWPointCapacity(SVGScratch *sc, word neededPoints)
 {
     return SvgScratchEnsureCapacityCommon(sc, &sc->ptsWWFH, (void**)&sc->ptsWWFP,
                                           &sc->ptsWWFCapacity, neededPoints,
-                                          (word)sizeof(SvgWWPoint));
+                                          (word)sizeof(SvgWWPoint),
+                                          SVG_POINTS_INITIAL_CAPACITY,
+                                          MAX_SVG_POINTS);
 }
 
 static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP,
                                              void **ptrP, word *capacityP,
-                                             word neededUnits, word unitSize)
+                                             word neededUnits, word unitSize,
+                                             word initialCapacity,
+                                             word maximumCapacity)
 {
     MemHandle newH;
     void *newP;
-    word current;
-    word newCapacity;
+    unsigned long plannedCapacity;
+    unsigned long plannedBytes;
+    SvgCapacityResult plan;
     Boolean hadPointer;
-    Boolean needInit;
-    word maxUnits;
 
     if (!sc)
     {
         return FALSE;
     }
 
-    current = *capacityP;
-    if (neededUnits < current)
+    plan = SvgCapacityPlan((unsigned long)*capacityP,
+                           (unsigned long)neededUnits,
+                           (unsigned long)initialCapacity,
+                           (unsigned long)maximumCapacity,
+                           (unsigned long)unitSize,
+                           0xffffUL,
+                           &plannedCapacity, &plannedBytes);
+    if (plan == SVG_CAPACITY_NO_GROWTH)
     {
         return TRUE;
     }
-
-    maxUnits = (word)(0xFFFE / unitSize);
-    newCapacity = current;
-    needInit = (newCapacity == 0);
-    if (needInit)
+    if (plan == SVG_CAPACITY_LIMIT)
     {
-        newCapacity = neededUnits + 1;
-    }
-
-    while (newCapacity <= neededUnits)
-    {
-        if (newCapacity >= maxUnits)
-        {
-            newCapacity = maxUnits;
-            break;
-        }
-        if (newCapacity == 0)
-        {
-            newCapacity = neededUnits + 1;
-            break;
-        }
-        newCapacity = (word)(newCapacity << 1);
-    }
-
-    if (newCapacity <= neededUnits)
-    {
-        sc->allocFailed = TRUE;
+        sc->failure = SVG_SCRATCH_LIMIT_EXCEEDED;
         return FALSE;
     }
 
     if (!*handleP)
     {
-        sc->allocFailed = TRUE;
-        return FALSE;
+        *handleP = MemAlloc((word)plannedBytes, HF_DYNAMIC, HAF_ZERO_INIT);
+        if (!*handleP)
+        {
+            sc->failure = SVG_SCRATCH_ALLOCATION_FAILED;
+            return FALSE;
+        }
+        newP = (void*)MemLock(*handleP);
+        if (!newP)
+        {
+            sc->failure = SVG_SCRATCH_ALLOCATION_FAILED;
+            return FALSE;
+        }
+        *ptrP = newP;
+        *capacityP = (word)plannedCapacity;
+        return TRUE;
     }
 
     hadPointer = (*ptrP != NULL);
     if (hadPointer)
     {
         MemUnlock(*handleP);
+        *ptrP = NULL;
     }
 
-    newH = MemReAlloc(*handleP, (word)(newCapacity * unitSize), HAF_ZERO_INIT);
+    newH = MemReAlloc(*handleP, (word)plannedBytes, HAF_ZERO_INIT);
     if (!newH)
     {
         if (hadPointer)
         {
             *ptrP = (void*)MemLock(*handleP);
         }
-        sc->allocFailed = TRUE;
+        sc->failure = SVG_SCRATCH_ALLOCATION_FAILED;
         return FALSE;
     }
     *handleP = newH;
@@ -283,12 +217,12 @@ static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP
     if (!newP)
     {
         *ptrP = NULL;
-        sc->allocFailed = TRUE;
+        sc->failure = SVG_SCRATCH_ALLOCATION_FAILED;
         return FALSE;
     }
 
     *ptrP = newP;
-    *capacityP = newCapacity;
+    *capacityP = (word)plannedCapacity;
     return TRUE;
 }
 
@@ -303,6 +237,41 @@ SvgTagSelfCloses(const char *tag)
         endP--;
     }
     return (Boolean)(endP > tag && endP[-1] == '/');
+}
+
+static Boolean
+SvgTagIsOneOf(const char *tag, const char **namesP, word count)
+{
+    word i;
+
+    for (i = 0; i < count; i++)
+    {
+        if (SvgParserTagIs(tag, namesP[i])) return TRUE;
+    }
+    return FALSE;
+}
+
+static Boolean
+SvgTagDisplayNone(const char *tag)
+{
+    char value[24];
+
+    value[0] = 0;
+    if (!SvgParseGetInlineStyleProp(tag, "display", value, sizeof(value)))
+    {
+        (void)SvgParserGetAttrBounded(tag, "display", value, sizeof(value));
+    }
+    return SvgUtilAsciiNoCaseEq(value, "none");
+}
+
+static TransError
+SvgScratchError(const SVGScratch *sc)
+{
+    if (sc->failure == SVG_SCRATCH_ALLOCATION_FAILED)
+        return TE_OUT_OF_MEMORY;
+    if (sc->failure == SVG_SCRATCH_LIMIT_EXCEEDED)
+        return TE_FILE_TOO_LARGE;
+    return TE_NO_ERROR;
 }
 
 /*---------------------------------------------------------------
@@ -321,6 +290,12 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     Boolean sawSvgRoot;
     Boolean rootStyleActive;
     word groupDepth;
+    word skipDepth;
+    Boolean skippedRoot;
+    Boolean unsupportedVisible;
+    Boolean emittedGraphic;
+    Boolean emitted;
+    Boolean valid;
     word pct;
     Boolean abort=FALSE;
     TransError status;
@@ -337,6 +312,10 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     sawSvgRoot = FALSE;
     rootStyleActive = FALSE;
     groupDepth = 0;
+    skipDepth = 0;
+    skippedRoot = FALSE;
+    unsupportedVisible = FALSE;
+    emittedGraphic = FALSE;
     status = TE_NO_ERROR;
 
     LOG_INIT();
@@ -382,6 +361,10 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
             {
                 status = TE_OUT_OF_MEMORY;
             }
+            else if (scanResult == SVG_SCAN_LIMIT_EXCEEDED)
+            {
+                status = TE_FILE_TOO_LARGE;
+            }
             else if (scanResult == SVG_SCAN_TRUNCATED)
             {
                 status = TE_INVALID_FORMAT;
@@ -411,6 +394,25 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         /* handle comments/declarations, but DO NOT drop close tags blindly */
         if (scP->tagP[0] == '!' || scP->tagP[0] == '?')
         {
+            continue;
+        }
+
+        if (skipDepth != 0)
+        {
+            if (scP->tagP[0] == '/')
+            {
+                skipDepth--;
+                if (skipDepth == 0 && skippedRoot)
+                {
+                    SvgStyleGroupPop();
+                    rootStyleActive = FALSE;
+                    skippedRoot = FALSE;
+                }
+            }
+            else if (!SvgTagSelfCloses(scP->tagP))
+            {
+                skipDepth++;
+            }
             continue;
         }
 
@@ -466,6 +468,11 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
                 SvgStyleGroupPop();
                 rootStyleActive = FALSE;
             }
+            else if (SvgTagDisplayNone(scP->tagP))
+            {
+                skipDepth = 1;
+                skippedRoot = TRUE;
+            }
             continue;
         }
 
@@ -484,9 +491,20 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         /* group open: <g ...> - no drawing */
         if (SvgParserTagIs(scP->tagP, "g"))
         {
+            SvgMatrix ignoredM;
+            Boolean displayNone;
+
             LOG_STR("[DISPATCH]", "g");
             if (SvgTagSelfCloses(scP->tagP))
             {
+                continue;
+            }
+            displayNone = SvgTagDisplayNone(scP->tagP);
+            if (displayNone ||
+                !SvgXformParseAttrUser(scP->tagP, &ignoredM))
+            {
+                if (!displayNone) unsupportedVisible = TRUE;
+                skipDepth = 1;
                 continue;
             }
             if (groupDepth >= SVG_GROUP_NESTING_MAX)
@@ -509,43 +527,83 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
             continue;
         }
 
+        {
+            static const char *nonRendering[] = {
+                "defs", "symbol", "clipPath", "mask", "pattern", "marker",
+                "metadata", "title", "desc"
+            };
+            static const char *unsupported[] = {
+                "text", "image", "use", "foreignObject"
+            };
+
+            if (SvgTagDisplayNone(scP->tagP))
+            {
+                if (!SvgTagSelfCloses(scP->tagP)) skipDepth = 1;
+                continue;
+            }
+
+            if (SvgTagIsOneOf(scP->tagP, nonRendering,
+                              sizeof(nonRendering) / sizeof(nonRendering[0])))
+            {
+                if (!SvgTagSelfCloses(scP->tagP)) skipDepth = 1;
+                continue;
+            }
+            if (SvgTagIsOneOf(scP->tagP, unsupported,
+                              sizeof(unsupported) / sizeof(unsupported[0])))
+            {
+                if (SvgStyleElementIsVisible(scP->tagP))
+                    unsupportedVisible = TRUE;
+                if (!SvgTagSelfCloses(scP->tagP)) skipDepth = 1;
+                continue;
+            }
+        }
+
+        if (!SvgStyleElementIsVisible(scP->tagP))
+        {
+            continue;
+        }
+
+        emitted = FALSE;
+        valid = TRUE;
+        scP->unsupportedElement = FALSE;
+
         if (SvgParserTagIs(scP->tagP, "line"))
         {
             LOG_STR("[DISPATCH]", "line");
-            SvgShapeHandleLine(scP->tagP);
+            emitted = SvgShapeHandleLine(scP->tagP, scP);
         }
         else if (SvgParserTagIs(scP->tagP, "polyline"))
         {
             LOG_STR("[DISPATCH]", "polyline");
-            SvgShapeHandlePolyline(scP->tagP, scP);
+            emitted = SvgShapeHandlePolyline(scP->tagP, scP, &valid);
         }
         else if (SvgParserTagIs(scP->tagP, "polygon"))
         {
             LOG_STR("[DISPATCH]", "polygon");
-            SvgShapeHandlePolygon(scP->tagP, scP);
+            emitted = SvgShapeHandlePolygon(scP->tagP, scP, &valid);
         }
         else if (SvgParserTagIs(scP->tagP, "rect"))
         {
             LOG_STR("[DISPATCH]", "rect");
-            SvgShapeHandleRect(scP->tagP);
+            emitted = SvgShapeHandleRect(scP->tagP, scP);
         }
         else if (SvgParserTagIs(scP->tagP, "ellipse"))
         {
             LOG_STR("[DISPATCH]", "ellipse");
-            SvgShapeHandleEllipse(scP->tagP);
+            emitted = SvgShapeHandleEllipse(scP->tagP, scP);
         }
         else if (SvgParserTagIs(scP->tagP, "circle"))
         {
             LOG_STR("[DISPATCH]", "circle");
-            SvgShapeHandleCircle(scP->tagP);
+            emitted = SvgShapeHandleCircle(scP->tagP, scP);
         }
         else if (SvgParserTagIs(scP->tagP, "path"))
         {
             LOG_STR("[DISPATCH]", "path");
-            if (!SvgPathHandle(scP->tagP, scP))
+            if (!SvgPathHandle(scP->tagP, scP, &emitted))
             {
-                status = scP->allocFailed ?
-                         TE_OUT_OF_MEMORY : TE_INVALID_FORMAT;
+                status = SvgScratchError(scP);
+                if (status == TE_NO_ERROR) status = TE_INVALID_FORMAT;
                 goto cleanup;
             }
         }
@@ -553,6 +611,16 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
         {
             LOG_STR_HEAD("[UNHANDLED_TAG]", scP->tagP, 96);
         }
+
+        status = SvgScratchError(scP);
+        if (status != TE_NO_ERROR) goto cleanup;
+        if (scP->unsupportedElement) unsupportedVisible = TRUE;
+        if (!valid)
+        {
+            status = TE_INVALID_FORMAT;
+            goto cleanup;
+        }
+        if (emitted) emittedGraphic = TRUE;
     }
 
     if (!viewInitialized)
@@ -561,9 +629,9 @@ TransError _export _pascal ReadSVG(FileHandle srcFile, word settings, ProgressCa
     }
 
 cleanup:
-    if (scP && scP->allocFailed && status == TE_NO_ERROR)
+    if (scP && scP->failure != SVG_SCRATCH_OK && status == TE_NO_ERROR)
     {
-        status = TE_OUT_OF_MEMORY;
+        status = SvgScratchError(scP);
     }
     if (ioP) MemUnlock(ioH);
     if (ioH) MemFree(ioH);
@@ -584,6 +652,10 @@ cleanup:
              status == TE_NO_ERROR)
     {
         status = TE_INVALID_FORMAT;
+    }
+    else if (unsupportedVisible && !emittedGraphic && status == TE_NO_ERROR)
+    {
+        status = TE_IMPORT_NOT_SUPPORTED;
     }
 
     LOG_END();

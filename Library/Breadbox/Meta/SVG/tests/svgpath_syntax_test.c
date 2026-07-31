@@ -1,5 +1,7 @@
 #include "../SVG/svgPathSyntax.h"
 
+#include <string.h>
+
 static int
 ExpectValid(const char *dataP)
 {
@@ -15,6 +17,15 @@ ExpectInvalid(const char *dataP)
 int
 main(void)
 {
+    char longPoints[512];
+    int i;
+
+    longPoints[0] = 0;
+    for (i = 0; i < 45; i++)
+    {
+        strcat(longPoints, "1.25,-2.5 ");
+    }
+
     if (!ExpectValid("") ||
         !ExpectValid("M0 0 L10 10 20 20 H3 V4 Z") ||
         !ExpectValid("m.5,-.5 q1 2 3 4 t5 6") ||
@@ -26,7 +37,13 @@ main(void)
         !ExpectInvalid("M 0 0 X 1 2") ||
         !ExpectInvalid("M 0 0 L 1") ||
         !ExpectInvalid("M 0 0 L 1e 2") ||
-        !ExpectInvalid("M 0 0,"))
+        !ExpectInvalid("M 0 0,") ||
+        !SvgPointsDataIsValid(longPoints) ||
+        !SvgPointsDataIsValid("0,0 10-20 +30,+40") ||
+        SvgPointsDataIsValid("0 0 1") ||
+        SvgPointsDataIsValid("0 0 nope 1") ||
+        SvgPointsDataIsValid("0 0 1e 2") ||
+        SvgPointsDataIsValid("0 0,"))
     {
         return 1;
     }

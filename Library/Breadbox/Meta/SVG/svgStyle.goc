@@ -438,6 +438,7 @@ Boolean SvgStyleGroupPush(const char *tag)
     st.strokeWidth = SvgGeomMakeWWFixedFromInt(1);
     st.colorSet = FALSE;
     st.colorVal[0] = 0;
+    st.visible = TRUE;
 
     /* inherit from parent */
     st.frSet = FALSE; st.fr = 0;
@@ -454,7 +455,17 @@ Boolean SvgStyleGroupPush(const char *tag)
         st.lj    = stack[gStyleDepth-1].lj;
         st.mlSet = stack[gStyleDepth-1].mlSet;
         st.miterLimit = stack[gStyleDepth-1].miterLimit;
+        st.visible = stack[gStyleDepth-1].visible;
     }
+
+    buf[0] = 0;
+    if (!SvgParseGetInlineStyleProp(tag, "visibility", buf, sizeof(buf)))
+    {
+        (void)SvgParserGetAttrBounded(tag, "visibility", buf, sizeof(buf));
+    }
+    if (SvgUtilAsciiNoCaseEq(buf, "visible")) st.visible = TRUE;
+    else if (SvgUtilAsciiNoCaseEq(buf, "hidden") ||
+             SvgUtilAsciiNoCaseEq(buf, "collapse")) st.visible = FALSE;
 
     /* inline style/attributes: fill, stroke */
     if (SvgParseGetInlineStyleProp(tag, "fill", st.fillVal, sizeof(st.fillVal)) ||
@@ -928,9 +939,11 @@ void SvgStyleRestoreForcedJoin(const char *tag, Boolean forced)
     }
 }
 
-void SvgStyleApplyStrokeWidth(const char *tag)
+void SvgStyleApplyStrokeWidth(const char *tag, const SvgMatrix *worldMP)
 {
     WWFixedAsDWord lw;
+    WWFixedAsDWord determinant;
+    WWFixedAsDWord scale;
     char b[24];
     const char *pwalk;
     char save;
@@ -971,9 +984,46 @@ void SvgStyleApplyStrokeWidth(const char *tag)
         lw = SvgGeomMakeWWFixedFromInt(1);
     }
 
+    /* ATTENTION: Area scale is the v1 stroke approximation for nonuniform
+     * scale and shear. Upgrade by emitting transformed stroke outlines.
+     */
+    determinant = GrSubWWFixed(GrMulWWFixed(worldMP->a, worldMP->d),
+                               GrMulWWFixed(worldMP->b, worldMP->c));
+    determinant = SvgGeomWWAbs(determinant);
+    scale = SvgGeomWWSqrt(determinant);
+    lw = GrMulWWFixed(lw, scale);
+
     Meta_SetLineWidth(lw);
     SvgStyleApplyStrokeCapJoin(tag);
     SvgStyleApplyStrokeMiterLimit(tag);
+}
+
+Boolean SvgStyleElementIsVisible(const char *tag)
+{
+    SvgGroupStyle *stack;
+    Boolean visible;
+    char buf[24];
+
+    visible = TRUE;
+    if (gStyleDepth > 0)
+    {
+        stack = SvgStyleStackLock();
+        if (stack != NULL)
+        {
+            visible = stack[gStyleDepth-1].visible;
+            SvgStyleStackUnlock();
+        }
+    }
+
+    buf[0] = 0;
+    if (!SvgParseGetInlineStyleProp(tag, "visibility", buf, sizeof(buf)))
+    {
+        (void)SvgParserGetAttrBounded(tag, "visibility", buf, sizeof(buf));
+    }
+    if (SvgUtilAsciiNoCaseEq(buf, "visible")) return TRUE;
+    if (SvgUtilAsciiNoCaseEq(buf, "hidden") ||
+        SvgUtilAsciiNoCaseEq(buf, "collapse")) return FALSE;
+    return visible;
 }
 
 void SvgStyleApplyStrokeCapJoin(const char *tag)

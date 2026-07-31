@@ -6,10 +6,11 @@
 
 /* ---- global compile-time constants ---- */
 #define SVG_COLOR_NAME_LEN   32
-#define MAX_SVG_POINTS       4096
-#define SVG_IO_BUF_SIZE      1024
-#define TAG_BUF_SIZE         8192  /* must hold entire tag */
-#define MAX_PATH_ATTR_SIZE    8192   /* must hold entire attribute value - FIXME: can't be bigger or equal to tag size but is needed to be big for complex SVGs */
+#define SVG_IO_BUF_SIZE             1024
+#define SVG_TEXT_INITIAL_SIZE       1024
+#define SVG_TEXT_MAX_SIZE           8192
+#define SVG_POINTS_INITIAL_CAPACITY 128
+#define MAX_SVG_POINTS              4096
 
 /* Convenient 16.16 one */
 #define WWFIXED_ONE      ((WWFixedAsDWord)(1UL << 16))
@@ -44,7 +45,14 @@ typedef struct {
     Boolean         mlSet;  WWFixedAsDWord miterLimit; /* stroke-miterlimit */
     Boolean         colorSet;             /* CSS color property (for currentColor) */
     char            colorVal[64];
+    Boolean         visible;
 } SvgGroupStyle;
+
+typedef enum {
+    SVG_SCRATCH_OK,
+    SVG_SCRATCH_ALLOCATION_FAILED,
+    SVG_SCRATCH_LIMIT_EXCEEDED
+} SvgScratchFailure;
 
 /* ---- shared data types ---- */
 typedef struct {
@@ -59,6 +67,11 @@ typedef struct {
     WWFixedAsDWord x;
     WWFixedAsDWord y;
 } SvgWWPoint;
+
+/* SVG 2x3 affine matrix in user units: [a c e; b d f] */
+typedef struct {
+    WWFixedAsDWord a, b, c, d, e, f;
+} SvgMatrix;
 
 /* All sizeable scratch buffers kept on heap to keep stack tiny */
 typedef struct _SVGScratch {
@@ -78,15 +91,8 @@ typedef struct _SVGScratch {
     SvgWWPoint *ptsWWFP;
     word        ptsWWFCapacity;
 
-    Boolean     allocFailed;
-
-    char        pb[256];
-    char        xb[32], yb[32], x2b[32], y2b[32];
-    char        wb[32], hb[32];
-    char        cxb[32], cyb[32], rxb[32], ryb[32];
-    char        rb[32];
-    char        col[64];
-    char        tbuf[96];
+    SvgScratchFailure failure;
+    Boolean     unsupportedElement;
 } SVGScratch;
 
 typedef struct {
@@ -106,8 +112,16 @@ typedef enum {
     SVG_SCAN_TRUNCATED,
     SVG_SCAN_IO_ERROR,
     SVG_SCAN_NO_INPUT,
-    SVG_SCAN_OUT_OF_MEMORY
+    SVG_SCAN_OUT_OF_MEMORY,
+    SVG_SCAN_LIMIT_EXCEEDED
 } SvgScanResult;
+
+typedef enum {
+    SVG_ATTR_MISSING,
+    SVG_ATTR_VALID,
+    SVG_ATTR_MALFORMED,
+    SVG_ATTR_TOO_LONG
+} SvgAttrResult;
 
 /* ---- parser-layer (raw text scan) ---- */
 const char* SvgParserSkipWS(const char *p);
@@ -115,6 +129,9 @@ const char* SvgParserSkipCommaWS(const char *p);
 Boolean     SvgParserTagIs(const char *tag, const char *name);
 Boolean     SvgParserGetAttrBounded(const char *tag, const char *name,
                                     char *out, word outSize);
+SvgAttrResult SvgParserGetAttrSpan(const char *tag, const char *name,
+                                   const char **valuePP, word *lengthP,
+                                   word maximumBytes);
 void        SvgParserScanInit(SvgScanCtx *c);
 SvgScanResult SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c,
                                    SVGScratch *sc);
@@ -153,11 +170,12 @@ void    SvgStyleStackFree(void);
 
 /* ---- style (stroke/fill/colors) ---- */
 void    SvgStyleApplyStrokeAndFill(const char *tag);
-void    SvgStyleApplyStrokeWidth(const char *tag);
+void    SvgStyleApplyStrokeWidth(const char *tag, const SvgMatrix *worldMP);
 void    SvgStyleApplyFillRule(const char *tag);
 void    SvgStyleApplyStrokeCapJoin(const char *tag);
 Boolean SvgStyleHasStroke(const char *tag);
 Boolean SvgStyleHasFill(const char *tag);
+Boolean SvgStyleElementIsVisible(const char *tag);
 Boolean SvgStyleIsLineJoinExplicit(const char *tag);
 Boolean SvgStyleGroupStrokeWidthGet(WWFixedAsDWord *outW);
 Boolean SvgStyleGroupMiterLimitGet(WWFixedAsDWord *outLimit);
@@ -188,16 +206,11 @@ void   SvgViewGetMatrix(WWFixedAsDWord *a, WWFixedAsDWord *b,
 
 /* Transform layer (CTM) */
 /* ---- transform layer (CTM) ---- */
-/* SVG 2x3 affine matrix in user units: [a c e; b d f] */
-typedef struct {
-    WWFixedAsDWord a, b, c, d, e, f;
-} SvgMatrix;
-
 Boolean SvgXformStackInit(void);
 void    SvgXformStackFree(void);
 void SvgXformApplyPoint(sword *xP, sword *yP, const SvgMatrix *m);
-void SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser);
-void SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld);
+Boolean SvgXformParseAttrUser(const char *tag, SvgMatrix *outUser);
+Boolean SvgXformBuildWorld(const char *tag, const SvgMatrix *parentCTM, SvgMatrix *outWorld);
 Boolean SvgXformGroupPush(const char *tag);
 void SvgXformGroupPop(void);
 #ifdef SVG_XFORM_ENABLE_SELF_TEST
@@ -205,15 +218,17 @@ Boolean SvgXformRunSelfTest(void);
 #endif
 
 /* ---- tag handlers (dispatch targets) ---- */
-void SvgShapeHandleLine(const char *tag);
-void SvgShapeHandlePolyline(const char *tag, SVGScratch *sc);
-void SvgShapeHandlePolygon(const char *tag, SVGScratch *sc);
-void SvgShapeHandleRect(const char *tag);
-void SvgShapeHandleEllipse(const char *tag);
-void SvgShapeHandleCircle(const char *tag);
+Boolean SvgShapeHandleLine(const char *tag, SVGScratch *sc);
+Boolean SvgShapeHandlePolyline(const char *tag, SVGScratch *sc,
+                               Boolean *validP);
+Boolean SvgShapeHandlePolygon(const char *tag, SVGScratch *sc,
+                              Boolean *validP);
+Boolean SvgShapeHandleRect(const char *tag, SVGScratch *sc);
+Boolean SvgShapeHandleEllipse(const char *tag, SVGScratch *sc);
+Boolean SvgShapeHandleCircle(const char *tag, SVGScratch *sc);
 
 /* ---- tag handlers: path with subcommands ---- */
-Boolean SvgPathHandle(const char *tag, SVGScratch *sc);
+Boolean SvgPathHandle(const char *tag, SVGScratch *sc, Boolean *emittedP);
 static void SvgPathHandleMoveTo   (const char **sPP, char *lastCmdP,
                                    SVGScratch *sc, word *npP,
                                    WWFixedAsDWord *lastxWP, WWFixedAsDWord *lastyWP,

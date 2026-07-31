@@ -1,4 +1,5 @@
 #include "svgPathSyntax.h"
+#include "svgCapacity.h"
 
 static int
 SvgPathIsSpace(char c)
@@ -166,4 +167,92 @@ SvgPathDataIsValid(const char *dataP)
             }
         }
     }
+}
+
+int
+SvgPointsDataIsValid(const char *dataP)
+{
+    int numberCount;
+    int hadSpace;
+
+    numberCount = 0;
+    while (SvgPathIsSpace(*dataP)) dataP++;
+    while (*dataP)
+    {
+        if (!SvgPathValidateNumber(&dataP))
+        {
+            return 0;
+        }
+        numberCount++;
+
+        hadSpace = 0;
+        while (SvgPathIsSpace(*dataP))
+        {
+            hadSpace = 1;
+            dataP++;
+        }
+        if (*dataP == ',')
+        {
+            dataP++;
+            while (SvgPathIsSpace(*dataP)) dataP++;
+            if (!*dataP) return 0;
+        }
+        else if (*dataP && !hadSpace && *dataP != '+' && *dataP != '-')
+        {
+            return 0;
+        }
+    }
+    return (numberCount != 0 && (numberCount & 1) == 0);
+}
+
+SvgCapacityResult
+SvgCapacityPlan(unsigned long currentCapacity,
+                unsigned long neededUnits,
+                unsigned long initialCapacity,
+                unsigned long maximumCapacity,
+                unsigned long unitSize,
+                unsigned long maximumBytes,
+                unsigned long *capacityP,
+                unsigned long *bytesP)
+{
+    unsigned long capacity;
+    unsigned long bytes;
+
+    if (neededUnits <= currentCapacity)
+    {
+        return SVG_CAPACITY_NO_GROWTH;
+    }
+    if (neededUnits > maximumCapacity || unitSize == 0 ||
+        initialCapacity == 0 || maximumCapacity == 0 ||
+        initialCapacity > maximumCapacity)
+    {
+        return SVG_CAPACITY_LIMIT;
+    }
+
+    capacity = currentCapacity ? currentCapacity : initialCapacity;
+    while (capacity < neededUnits)
+    {
+        if (capacity > maximumCapacity / 2)
+        {
+            capacity = maximumCapacity;
+        }
+        else
+        {
+            capacity *= 2;
+        }
+    }
+
+    if (capacity == 0 || capacity > maximumBytes / unitSize)
+    {
+        return SVG_CAPACITY_LIMIT;
+    }
+    bytes = capacity * unitSize;
+    if (bytes == 0 || bytes > maximumBytes)
+    {
+        return SVG_CAPACITY_LIMIT;
+    }
+
+    *capacityP = capacity;
+    *bytesP = bytes;
+    return SVG_CAPACITY_GROW;
 }

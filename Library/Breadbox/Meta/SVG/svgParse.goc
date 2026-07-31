@@ -30,14 +30,15 @@ const char* SvgParserSkipCommaWS(const char *p)
     return p;
 }
 
-Boolean SvgParserGetAttrBounded(const char *tag, const char *name,
-                                char *out, word outSize)
+SvgAttrResult
+SvgParserGetAttrSpan(const char *tag, const char *name,
+                     const char **valuePP, word *lengthP, word maximumBytes)
 {
     const char *s;
-    word        nlen;
+    word nlen;
 
-    if (outSize == 0) return FALSE;
-    out[0] = 0;
+    *valuePP = NULL;
+    *lengthP = 0;
 
     s = tag;
     while (*s && !isspace(*s) && *s != '>' && *s != '/')
@@ -72,36 +73,36 @@ Boolean SvgParserGetAttrBounded(const char *tag, const char *name,
 
         if (alen == nlen && !memcmp(an, name, nlen))
         {
+            const char *valueP;
+            unsigned long length;
+
             while (*s && isspace(*s)) s++;
-            if (*s != '=') return FALSE;
+            if (*s != '=') return SVG_ATTR_MALFORMED;
             s++;
             while (*s && isspace(*s)) s++;
 
             if (*s == '"' || *s == '\'')
             {
-                char  q;
-                word  i;
+                char q;
 
                 q = *s++;
-                i = 0;
-                while (*s && *s != q && i < (outSize - 1))
-                {
-                    out[i++] = *s++;
-                }
-                out[i] = 0;
-                if (*s == q) s++;
+                valueP = s;
+                length = 0;
+                while (*s && *s != q) { s++; length++; }
+                if (*s != q) return SVG_ATTR_MALFORMED;
             }
             else
             {
-                word i;
-                i = 0;
-                while (*s && !isspace(*s) && *s != '>' && i < (outSize - 1))
-                {
-                    out[i++] = *s++;
-                }
-                out[i] = 0;
+                valueP = s;
+                length = 0;
+                while (*s && !isspace(*s) && *s != '>')
+                { s++; length++; }
+                if (length == 0) return SVG_ATTR_MALFORMED;
             }
-            return TRUE;
+            if (length + 1 > maximumBytes) return SVG_ATTR_TOO_LONG;
+            *valuePP = valueP;
+            *lengthP = (word)length;
+            return SVG_ATTR_VALID;
         }
         else
         {
@@ -112,9 +113,11 @@ Boolean SvgParserGetAttrBounded(const char *tag, const char *name,
                 while (*s && isspace(*s)) s++;
                 if (*s == '"' || *s == '\'')
                 {
-                    char q = *s++;
+                    char q;
+                    q = *s++;
                     while (*s && *s != q) s++;
-                    if (*s == q) s++;
+                    if (*s != q) return SVG_ATTR_MALFORMED;
+                    s++;
                 }
                 else
                 {
@@ -123,7 +126,25 @@ Boolean SvgParserGetAttrBounded(const char *tag, const char *name,
             }
         }
     }
-    return FALSE;
+    return SVG_ATTR_MISSING;
+}
+
+Boolean SvgParserGetAttrBounded(const char *tag, const char *name,
+                                char *out, word outSize)
+{
+    const char *valueP;
+    word length;
+
+    if (outSize == 0) return FALSE;
+    out[0] = 0;
+    if (SvgParserGetAttrSpan(tag, name, &valueP, &length, outSize) !=
+        SVG_ATTR_VALID)
+    {
+        return FALSE;
+    }
+    if (length != 0) memcpy(out, valueP, length);
+    out[length] = 0;
+    return TRUE;
 }
 
 Boolean SvgParserTagIs(const char *tag, const char *name)
@@ -226,6 +247,12 @@ SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
             if (c->inQuote)
             {
                 if (ch == c->quoteCh) c->inQuote = FALSE;
+                if (c->tagLen >= SVG_TEXT_MAX_SIZE - 1)
+                {
+                    return SvgParserScanStop(fh, c,
+                                             SVG_SCAN_LIMIT_EXCEEDED,
+                                             "tag ceiling in quote");
+                }
                 if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
                 {
                     return SvgParserScanStop(fh, c, SVG_SCAN_OUT_OF_MEMORY,
@@ -245,6 +272,12 @@ SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
                         sc->tagP[c->tagLen - 1] != '-' ||
                         sc->tagP[c->tagLen - 2] != '-')
                     {
+                        if (c->tagLen >= SVG_TEXT_MAX_SIZE - 1)
+                        {
+                            return SvgParserScanStop(
+                                fh, c, SVG_SCAN_LIMIT_EXCEEDED,
+                                "comment ceiling");
+                        }
                         if (!SvgScratchEnsureTagCapacity(
                                 sc, (word)(c->tagLen + 2)))
                         {
@@ -260,6 +293,12 @@ SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
                 {
                     c->inQuote = TRUE;
                     c->quoteCh = ch;
+                    if (c->tagLen >= SVG_TEXT_MAX_SIZE - 1)
+                    {
+                        return SvgParserScanStop(fh, c,
+                                                 SVG_SCAN_LIMIT_EXCEEDED,
+                                                 "tag ceiling at quote");
+                    }
                     if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
                     {
                         return SvgParserScanStop(fh, c,
@@ -271,6 +310,12 @@ SvgParserScanNextTag(FileHandle fh, SvgScanCtx *c, SVGScratch *sc)
                 }
                 if (ch != '>')
                 {
+                    if (c->tagLen >= SVG_TEXT_MAX_SIZE - 1)
+                    {
+                        return SvgParserScanStop(fh, c,
+                                                 SVG_SCAN_LIMIT_EXCEEDED,
+                                                 "tag ceiling");
+                    }
                     if (!SvgScratchEnsureTagCapacity(sc, (word)(c->tagLen + 2)))
                     {
                         return SvgParserScanStop(fh, c,
@@ -334,7 +379,11 @@ Boolean SvgParseGetInlineStyleProp(const char *tag, const char *prop,
 
         if (SvgUtilKeyEqNoCase(kb, ke, prop)) {
             n = (word)(ve - vb);
-            if (n >= outSize) n = (word)(outSize - 1);
+            if (n >= outSize)
+            {
+                out[0] = 0;
+                return FALSE;
+            }
             if (n > 0) memcpy(out, vb, n);
             out[n] = 0;
             return TRUE;
