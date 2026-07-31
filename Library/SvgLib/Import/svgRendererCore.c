@@ -6,6 +6,10 @@ SvgRendererCoreInit(SvgRendererState *stateP, SvgRendererWord windingRule)
     stateP->fillRule = windingRule;
     stateP->pathDepth = 0;
     stateP->coordinateDivisor = 1;
+    stateP->worldMinX = -32768;
+    stateP->worldMinY = -32768;
+    stateP->worldMaxX = 32767;
+    stateP->worldMaxY = 32767;
 }
 
 SvgRendererWord
@@ -23,9 +27,26 @@ SvgRendererCoreChooseDivisor(SvgRendererSWord width,
     return (maximum > 16383L) ? 4 : ((maximum > 8191L) ? 2 : 1);
 }
 
+SvgRendererSWord
+SvgRendererCoreCoordinate(const SvgRendererState *stateP,
+                          SvgRendererSWord value,
+                          SvgRendererSWord worldMinimum,
+                          SvgRendererSWord worldMaximum)
+{
+    /* Repair positive coordinates that wrapped into the negative sword
+       range, matching the old Meta renderer. */
+    if (value < worldMinimum &&
+        (long)worldMinimum - (long)value > 24576L)
+    {
+        value = worldMaximum;
+    }
+    return (SvgRendererSWord)(value /
+                              (SvgRendererSWord)stateP->coordinateDivisor);
+}
+
 SvgRendererWord
 SvgRendererCoreCompact(SvgRendererPoint *pointsP, SvgRendererWord count,
-                       SvgRendererWord divisor)
+                       const SvgRendererState *stateP)
 {
     SvgRendererWord source;
     SvgRendererWord destination;
@@ -35,10 +56,12 @@ SvgRendererCoreCompact(SvgRendererPoint *pointsP, SvgRendererWord count,
     destination = 0;
     for (source = 0; source < count; source++)
     {
-        x = (SvgRendererSWord)(pointsP[source].x /
-                               (SvgRendererSWord)divisor);
-        y = (SvgRendererSWord)(pointsP[source].y /
-                               (SvgRendererSWord)divisor);
+        x = SvgRendererCoreCoordinate(stateP, pointsP[source].x,
+                                      stateP->worldMinX,
+                                      stateP->worldMaxX);
+        y = SvgRendererCoreCoordinate(stateP, pointsP[source].y,
+                                      stateP->worldMinY,
+                                      stateP->worldMaxY);
         if (destination == 0 || pointsP[destination - 1].x != x ||
             pointsP[destination - 1].y != y)
         {

@@ -222,11 +222,16 @@ Boolean SvgShapeHandlePolyline(SvgImportContext *contextP, const char *tag, SVGS
             sc->ptsP[i].P_y = SvgGeomWWFixedToSWordRound(Yp);
         }
 
-        if (fillPresent || strokePresent)
+        if (fillPresent && np > 2)
         {
-            forcedRoundJoin = SvgStyleForceRoundJoinForSegments(contextP, tag, np);
-            SvgRendererPolyShape(contextP, sc->ptsP, np, FALSE,
-                                 fillPresent, strokePresent);
+            SvgRendererPolygon(contextP, sc->ptsP, np, TRUE, FALSE);
+            emitted = TRUE;
+        }
+        if (strokePresent)
+        {
+            forcedRoundJoin = SvgStyleForceRoundJoinForSegments(contextP,
+                                                                tag, np);
+            SvgRendererPolyline(contextP, sc->ptsP, np);
             emitted = TRUE;
             SvgStyleRestoreForcedJoin(contextP, tag, forcedRoundJoin);
         }
@@ -311,8 +316,8 @@ Boolean SvgShapeHandlePolygon(SvgImportContext *contextP, const char *tag, SVGSc
         }
 
         forcedRoundJoin = SvgStyleForceRoundJoinForSegments(contextP, tag, np);
-        SvgRendererPolyShape(contextP, sc->ptsP, np, TRUE,
-                             fillPresent, strokePresent);
+        SvgRendererPolygon(contextP, sc->ptsP, np,
+                           fillPresent, strokePresent);
         emitted = TRUE;
         SvgStyleRestoreForcedJoin(contextP, tag, forcedRoundJoin);
     }
@@ -404,9 +409,9 @@ Boolean SvgShapeHandleRect(SvgImportContext *contextP, const char *tag, SVGScrat
     pts[3].P_x = SvgGeomWWFixedToSWordRound(Xp);
     pts[3].P_y = SvgGeomWWFixedToSWordRound(Yp);
 
-    SvgRendererPolyShape(contextP, pts, 4, TRUE,
-                         SvgStyleHasFill(contextP, tag),
-                         SvgStyleHasStroke(contextP, tag));
+    SvgRendererPolygon(contextP, pts, 4,
+                       SvgStyleHasFill(contextP, tag),
+                       SvgStyleHasStroke(contextP, tag));
     return TRUE;
 }
 
@@ -534,8 +539,8 @@ Boolean SvgShapeHandleEllipse(SvgImportContext *contextP, const char *tag, SVGSc
             tDeg = GrAddWWFixed(tDeg, stepDeg);
         }
 
-        SvgRendererPolyShape(contextP, ptsP, SVG_ELLIPSE_SEGMENTS, TRUE,
-                             fillPresent, strokePresent);
+        SvgRendererPolygon(contextP, ptsP, SVG_ELLIPSE_SEGMENTS,
+                           fillPresent, strokePresent);
     }
 
     SvgStyleRestoreForcedJoin(contextP, tag, forcedRoundJoin);
@@ -653,8 +658,8 @@ Boolean SvgShapeHandleCircle(SvgImportContext *contextP, const char *tag, SVGScr
             tDeg = GrAddWWFixed(tDeg, stepDeg);
         }
 
-        SvgRendererPolyShape(contextP, ptsP, SVG_ELLIPSE_SEGMENTS, TRUE,
-                             fillPresent, strokePresent);
+        SvgRendererPolygon(contextP, ptsP, SVG_ELLIPSE_SEGMENTS,
+                           fillPresent, strokePresent);
     }
 
     SvgStyleRestoreForcedJoin(contextP, tag, forcedRoundJoin);

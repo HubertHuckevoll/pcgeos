@@ -13,15 +13,23 @@ typedef struct {
     SvgRendererWord fillRule;
     SvgRendererWord pathDepth;
     SvgRendererWord coordinateDivisor;
+    SvgRendererSWord worldMinX;
+    SvgRendererSWord worldMinY;
+    SvgRendererSWord worldMaxX;
+    SvgRendererSWord worldMaxY;
 } SvgRendererState;
 
 void SvgRendererCoreInit(SvgRendererState *stateP,
                          SvgRendererWord windingRule);
 SvgRendererWord SvgRendererCoreChooseDivisor(SvgRendererSWord width,
                                               SvgRendererSWord height);
+SvgRendererSWord SvgRendererCoreCoordinate(const SvgRendererState *stateP,
+                                            SvgRendererSWord value,
+                                            SvgRendererSWord worldMinimum,
+                                            SvgRendererSWord worldMaximum);
 SvgRendererWord SvgRendererCoreCompact(SvgRendererPoint *pointsP,
                                        SvgRendererWord count,
-                                       SvgRendererWord divisor);
+                                       const SvgRendererState *stateP);
 void SvgRendererCoreSetFillRule(SvgRendererState *stateP,
                                 SvgRendererWord fillRule);
 int SvgRendererCoreBeginPath(SvgRendererState *stateP);

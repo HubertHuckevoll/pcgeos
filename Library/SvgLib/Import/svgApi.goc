@@ -196,10 +196,8 @@ SvgImport(FileHandle sourceFile,
     {
         if (boundsP)
         {
-            boundsP->RD_left = 0;
-            boundsP->RD_top = 0;
-            boundsP->RD_right = contextP->outputWidth;
-            boundsP->RD_bottom = contextP->outputHeight;
+            GrSetGStringPos(gstate, GSSPT_BEGINNING, 0);
+            GrGetGStringBoundsDWord(gstate, 0, 0, boundsP);
         }
         GrDestroyGString(gstate, 0, GSKT_LEAVE_DATA);
         *resultChainP = VMCHAIN_MAKE_FROM_VM_BLOCK(gstringBlock);

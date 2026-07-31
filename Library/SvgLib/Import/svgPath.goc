@@ -1311,7 +1311,7 @@ SvgPathEmitSubpath(SvgImportContext *contextP, const char *tag, SVGScratch *sc, 
         }
     }
 
-    if (closed)
+    if (closed && hasStroke)
     {
         /* Drop the synthetic closing point; the native polygon closes it. */
         if (np > 1 && sc->ptsP[np-1].P_x == firstx && sc->ptsP[np-1].P_y == firsty)
@@ -1324,8 +1324,7 @@ SvgPathEmitSubpath(SvgImportContext *contextP, const char *tag, SVGScratch *sc, 
                 (unsigned)np,
                 (int)sc->ptsP[0].P_x, (int)sc->ptsP[0].P_y,
                 (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
-        SvgRendererPolyShape(contextP, sc->ptsP, np, TRUE, FALSE,
-                             hasStroke);
+        SvgRendererPolygon(contextP, sc->ptsP, np, FALSE, TRUE);
         SvgStyleRestoreForcedJoin(contextP, tag, forcedRoundJoin);
         return TRUE;
     }
@@ -1335,8 +1334,7 @@ SvgPathEmitSubpath(SvgImportContext *contextP, const char *tag, SVGScratch *sc, 
                 (int)closed, (unsigned)np,
                 (int)sc->ptsP[0].P_x, (int)sc->ptsP[0].P_y,
                 (int)sc->ptsP[np-1].P_x, (int)sc->ptsP[np-1].P_y));
-        SvgRendererPolyShape(contextP, sc->ptsP, np, FALSE, FALSE,
-                             hasStroke);
+        SvgRendererPolyline(contextP, sc->ptsP, np);
         SvgStyleRestoreForcedJoin(contextP, tag, forcedRoundJoin);
         return TRUE;
     }

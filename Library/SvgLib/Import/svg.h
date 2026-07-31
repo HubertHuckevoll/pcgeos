@@ -116,6 +116,13 @@ typedef enum {
 typedef struct {
     GStateHandle gstate;
     SvgRendererState renderer;
+    ColorQuad rendererLineColor;
+    ColorQuad rendererAreaColor;
+    WWFixedAsDWord rendererLineWidth;
+    Boolean rendererLineColorDirty;
+    Boolean rendererAreaColorDirty;
+    Boolean rendererLineWidthDirty;
+    Boolean rendererScaleDirty;
 
     Boolean viewInitialized;
     WWFixedAsDWord viewMinX, viewMinY, viewWidth, viewHeight;
@@ -243,11 +250,24 @@ void SvgRendererInitViewport(SvgImportContext *contextP, sword width,
                              sword height);
 word SvgRendererCompactPoints(SvgImportContext *contextP, Point *pointsP,
                               word count);
+void SvgRendererSetLineColor(SvgImportContext *contextP, ColorFlag flag,
+                             word redOrIndex, word green, word blue);
+void SvgRendererSetAreaColor(SvgImportContext *contextP, ColorFlag flag,
+                             word redOrIndex, word green, word blue);
+void SvgRendererSetFillRule(SvgImportContext *contextP,
+                            RegionFillRule fillRule);
+void SvgRendererSetLineWidth(SvgImportContext *contextP,
+                             WWFixedAsDWord width);
+void SvgRendererSetLineJoin(SvgImportContext *contextP, LineJoin join);
+void SvgRendererSetLineEnd(SvgImportContext *contextP, LineEnd end);
+void SvgRendererSetMiterLimit(SvgImportContext *contextP,
+                              WWFixedAsDWord limit);
 void SvgRendererLine(SvgImportContext *contextP, sword x1, sword y1,
                      sword x2, sword y2);
-void SvgRendererPolyShape(SvgImportContext *contextP, Point *pointsP,
-                          word count, Boolean closed, Boolean fill,
-                          Boolean stroke);
+void SvgRendererPolyline(SvgImportContext *contextP, Point *pointsP,
+                         word count);
+void SvgRendererPolygon(SvgImportContext *contextP, Point *pointsP,
+                        word count, Boolean fill, Boolean stroke);
 void SvgRendererEllipse(SvgImportContext *contextP, sword cx, sword cy,
                         sword rx, sword ry, Boolean fill, Boolean stroke);
 void SvgRendererBeginPath(SvgImportContext *contextP);

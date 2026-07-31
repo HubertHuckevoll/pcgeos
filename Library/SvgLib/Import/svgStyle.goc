@@ -404,7 +404,7 @@ static void SvgStyleApplyStrokeMiterLimit(SvgImportContext *contextP, const char
         limit = SvgStyleDefaultMiterLimit();
     }
 
-    GrSetMiterLimit(contextP->gstate, limit);
+    SvgRendererSetMiterLimit(contextP, limit);
 }
 
 /* Called on <g ...> */
@@ -769,7 +769,7 @@ void SvgStyleApplyStrokeAndFill(SvgImportContext *contextP, const char *tag)
     if (have) {
         if (SvgStyleResolvePaintToSolidOrNone(contextP, tag, "stroke", sStroke,
                                               &r, &g, &b)) {
-            GrSetLineColor(contextP->gstate, CF_RGB, r, g, b);
+            SvgRendererSetLineColor(contextP, CF_RGB, r, g, b);
         }
         /* else NONE: do not set a line color */
     }
@@ -780,11 +780,11 @@ void SvgStyleApplyStrokeAndFill(SvgImportContext *contextP, const char *tag)
                                          sizeof(contextP->work3), FALSE);
     if (!have) {
         /* property absent -> initial black */
-        GrSetAreaColor(contextP->gstate, CF_RGB, 0, 0, 0);
+        SvgRendererSetAreaColor(contextP, CF_RGB, 0, 0, 0);
     } else {
         if (SvgStyleResolvePaintToSolidOrNone(contextP, tag, "fill", sFill,
                                               &r, &g, &b)) {
-            GrSetAreaColor(contextP->gstate, CF_RGB, r, g, b);
+            SvgRendererSetAreaColor(contextP, CF_RGB, r, g, b);
         }
         /* else NONE: do not set an area color */
     }
@@ -807,8 +807,8 @@ void SvgStyleApplyFillRule(SvgImportContext *contextP, const char *tag)
 
     if (buf[0])
     {
-        if (SvgUtilAsciiNoCaseEq(buf, "evenodd")) { SvgRendererCoreSetFillRule(&contextP->renderer, ODD_EVEN); return; }
-        if (SvgUtilAsciiNoCaseEq(buf, "nonzero") || SvgUtilAsciiNoCaseEq(buf, "winding")) { SvgRendererCoreSetFillRule(&contextP->renderer, WINDING); return; }
+        if (SvgUtilAsciiNoCaseEq(buf, "evenodd")) { SvgRendererSetFillRule(contextP, ODD_EVEN); return; }
+        if (SvgUtilAsciiNoCaseEq(buf, "nonzero") || SvgUtilAsciiNoCaseEq(buf, "winding")) { SvgRendererSetFillRule(contextP, WINDING); return; }
         if (SvgUtilAsciiNoCaseEq(buf, "inherit")) { buf[0] = 0; } /* fall through to group */
     }
 
@@ -820,15 +820,15 @@ void SvgStyleApplyFillRule(SvgImportContext *contextP, const char *tag)
         {
             useEvenOdd = (int)stack[contextP->styleDepth-1].fr;
             SvgStyleStackUnlock(contextP);
-            if (useEvenOdd) { SvgRendererCoreSetFillRule(&contextP->renderer, ODD_EVEN); }
-            else { SvgRendererCoreSetFillRule(&contextP->renderer, WINDING); }
+            if (useEvenOdd) { SvgRendererSetFillRule(contextP, ODD_EVEN); }
+            else { SvgRendererSetFillRule(contextP, WINDING); }
             return;
         }
         SvgStyleStackUnlock(contextP);
     }
 
     /* initial */
-    SvgRendererCoreSetFillRule(&contextP->renderer, WINDING);
+    SvgRendererSetFillRule(contextP, WINDING);
 }
 
 
@@ -873,7 +873,7 @@ Boolean SvgStyleForceRoundJoin(SvgImportContext *contextP, const char *tag)
         return FALSE;
     }
 
-    GrSetLineJoin(contextP->gstate, LJ_ROUND);
+    SvgRendererSetLineJoin(contextP, LJ_ROUND);
     return TRUE;
 }
 
@@ -933,7 +933,7 @@ void SvgStyleRestoreForcedJoin(SvgImportContext *contextP, const char *tag, Bool
             lj = 0; /* default miter */
         }
 
-        GrSetLineJoin(contextP->gstate,  (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
+        SvgRendererSetLineJoin(contextP, (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
     }
 }
 
@@ -991,7 +991,7 @@ void SvgStyleApplyStrokeWidth(SvgImportContext *contextP, const char *tag, const
     scale = SvgGeomWWSqrt(determinant);
     lw = GrMulWWFixed(lw, scale);
 
-    GrSetLineWidth(contextP->gstate, lw);
+    SvgRendererSetLineWidth(contextP, lw);
     SvgStyleApplyStrokeCapJoin(contextP, tag);
     SvgStyleApplyStrokeMiterLimit(contextP, tag);
 }
@@ -1047,7 +1047,7 @@ void SvgStyleApplyStrokeCapJoin(SvgImportContext *contextP, const char *tag)
     if (!b[0] && stack != NULL && stack[contextP->styleDepth-1].lcSet) {
         lc = stack[contextP->styleDepth-1].lc;
     }
-    GrSetLineEnd(contextP->gstate,  (lc==1)? LE_ROUNDCAP : (lc==2)? LE_SQUARECAP : LE_BUTTCAP );
+    SvgRendererSetLineEnd(contextP, (lc==1)? LE_ROUNDCAP : (lc==2)? LE_SQUARECAP : LE_BUTTCAP);
 
     /* linejoin: element > group > initial(miter) */
     lj = 0;
@@ -1069,7 +1069,7 @@ void SvgStyleApplyStrokeCapJoin(SvgImportContext *contextP, const char *tag)
         SvgStyleStackUnlock(contextP);
     }
 
-    GrSetLineJoin(contextP->gstate,  (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
+    SvgRendererSetLineJoin(contextP, (lj==1) ? LJ_ROUND : ((lj==2)? LJ_BEVELED : LJ_MITERED));
 }
 
 Boolean SvgStyleHasStroke(SvgImportContext *contextP, const char *tag)
