@@ -16,7 +16,7 @@ else
 library ijgjpeg
 endif
 library pnglib
-library meta
+library svglib
 
 export MIMEDRVGRAPHIC
 export MIMEDRVINFO

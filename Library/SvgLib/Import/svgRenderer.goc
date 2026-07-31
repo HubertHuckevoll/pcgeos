@@ -1,0 +1,152 @@
+/* Native GString renderer used by the SVG importer. */
+
+@include <stdapp.goh>
+
+#include <graphics.h>
+
+#include "Import/svg.h"
+
+static sword
+SvgRendererCoordinate(SvgImportContext *contextP, sword value)
+{
+    return (sword)(value / (sword)contextP->renderer.coordinateDivisor);
+}
+
+void
+SvgRendererInit(SvgImportContext *contextP, GStateHandle gstate)
+{
+    contextP->gstate = gstate;
+    SvgRendererCoreInit(&contextP->renderer, WINDING);
+}
+
+void
+SvgRendererInitViewport(SvgImportContext *contextP, sword width, sword height)
+{
+    contextP->renderer.coordinateDivisor =
+        SvgRendererCoreChooseDivisor(width, height);
+    if (contextP->renderer.coordinateDivisor != 1)
+    {
+        GrApplyScale(contextP->gstate,
+                     MakeWWFixed(contextP->renderer.coordinateDivisor),
+                     MakeWWFixed(contextP->renderer.coordinateDivisor));
+    }
+}
+
+word
+SvgRendererCompactPoints(SvgImportContext *contextP, Point *pointsP,
+                         word count)
+{
+    return SvgRendererCoreCompact((SvgRendererPoint *)pointsP, count,
+                                  contextP->renderer.coordinateDivisor);
+}
+
+void
+SvgRendererLine(SvgImportContext *contextP, sword x1, sword y1,
+                sword x2, sword y2)
+{
+    x1 = SvgRendererCoordinate(contextP, x1);
+    y1 = SvgRendererCoordinate(contextP, y1);
+    x2 = SvgRendererCoordinate(contextP, x2);
+    y2 = SvgRendererCoordinate(contextP, y2);
+    if (contextP->renderer.pathDepth != 0)
+    {
+        GrMoveTo(contextP->gstate, x1, y1);
+        GrDrawLineTo(contextP->gstate, x2, y2);
+    }
+    else
+    {
+        GrDrawLine(contextP->gstate, x1, y1, x2, y2);
+    }
+}
+
+void
+SvgRendererPolyShape(SvgImportContext *contextP, Point *pointsP, word count,
+                     Boolean closed, Boolean fill, Boolean stroke)
+{
+    word i;
+
+    count = SvgRendererCompactPoints(contextP, pointsP, count);
+    if ((count > 1) &&
+        (pointsP[0].P_x == pointsP[count - 1].P_x) &&
+        (pointsP[0].P_y == pointsP[count - 1].P_y))
+    {
+        count--;
+    }
+    if (count < 2) return;
+
+    if (contextP->renderer.pathDepth != 0)
+    {
+        GrMoveTo(contextP->gstate, pointsP[0].P_x, pointsP[0].P_y);
+        for (i = 1; i < count; i++)
+        {
+            GrDrawLineTo(contextP->gstate,
+                         pointsP[i].P_x, pointsP[i].P_y);
+        }
+        if (closed)
+        {
+            GrCloseSubPath(contextP->gstate);
+        }
+        return;
+    }
+
+    if (fill && count > 2)
+    {
+        GrFillPolygon(contextP->gstate,
+                      (RegionFillRule)contextP->renderer.fillRule,
+                      pointsP, count);
+    }
+    if (stroke)
+    {
+        if (count == 2)
+        {
+            GrDrawLine(contextP->gstate,
+                       pointsP[0].P_x, pointsP[0].P_y,
+                       pointsP[1].P_x, pointsP[1].P_y);
+        }
+        else if (closed)
+        {
+            GrDrawPolygon(contextP->gstate, pointsP, count);
+        }
+        else
+        {
+            GrDrawPolyline(contextP->gstate, pointsP, count);
+        }
+    }
+}
+
+void
+SvgRendererEllipse(SvgImportContext *contextP, sword cx, sword cy,
+                   sword rx, sword ry, Boolean fill, Boolean stroke)
+{
+    sword left;
+    sword top;
+    sword right;
+    sword bottom;
+
+    left = SvgRendererCoordinate(contextP, (sword)(cx - rx));
+    top = SvgRendererCoordinate(contextP, (sword)(cy - ry));
+    right = SvgRendererCoordinate(contextP, (sword)(cx + rx));
+    bottom = SvgRendererCoordinate(contextP, (sword)(cy + ry));
+    if (fill) GrFillEllipse(contextP->gstate, left, top, right, bottom);
+    if (stroke) GrDrawEllipse(contextP->gstate, left, top, right, bottom);
+}
+
+void
+SvgRendererBeginPath(SvgImportContext *contextP)
+{
+    if (SvgRendererCoreBeginPath(&contextP->renderer))
+    {
+        GrBeginPath(contextP->gstate, PCT_REPLACE);
+    }
+}
+
+void
+SvgRendererEndPath(SvgImportContext *contextP, Boolean fill, Boolean stroke)
+{
+    if (!SvgRendererCoreEndPath(&contextP->renderer)) return;
+
+    GrEndPath(contextP->gstate);
+    if (fill) GrFillPath(contextP->gstate,
+                         (RegionFillRule)contextP->renderer.fillRule);
+    if (stroke) GrDrawPath(contextP->gstate);
+}

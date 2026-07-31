@@ -454,11 +454,7 @@ DIR (ensemble) {
 		#
 		Library/PngLib/pnglib{ec}.geo GFS LOCALPC
 
-		#
-		# for vector (SVG) import
-		#
-		Library/Breadbox/Meta/meta{ec}.geo GFS LOCALPC
-		Library/Breadbox/Impex/VCImpex/vcimpex{ec}.geo GFS LOCALPC
+		Library/SvgLib/svglib{ec}.geo GFS LOCALPC
 
 		#
 		# for Global Email
@@ -543,6 +539,7 @@ DIR (ensemble) {
 			Library/Trans/Graphics/Bitmap/Clp/clp{ec}.geo GFS LOCALPC
 			Library/Trans/Graphics/Bitmap/Ico/ico{ec}.geo GFS LOCALPC
 			Library/Trans/Graphics/Vector/EPS/eps{ec}.geo GFS LOCALPC
+			Library/Trans/Graphics/Vector/Svg/svg{ec}.geo GFS LOCALPC
 			#Library/Trans/Graphics/Bitmap/Gif/gif{ec}.geo GFS LOCALPC
 			Library/Trans/Web/HtmlImpx/htmlimpx{ec}.geo GFS LOCALPC
 			Library/Trans/Database/CSV/csv{ec}.geo GFS LOCALPC

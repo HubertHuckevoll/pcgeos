@@ -4,8 +4,6 @@
  * FILE:          ImpTProc.goc
  *
  * AUTHOR:        Marcus Groeber
- * DESCRIPTION:   ImpEx developed with V-Convert project (V-Convert ImpEx Translator)
- * NOTES:         "by Marcus Groeber 1995-97"
  *
  ***********************************************************************/
 
@@ -25,370 +23,53 @@
 #include <meta.h>
 #include "vconv_ui.h"
 
-#define VCIMPEX_DETECTION_BUFFER_SIZE   512
-
-char _pascal
-VCImpexToUpper(char value)
-{
-    char uppercaseValue;
-
-    uppercaseValue = value;
-    if ((uppercaseValue >= 'a') && (uppercaseValue <= 'z'))
-    {
-        uppercaseValue -= ('a' - 'A');
-    }
-    return uppercaseValue;
-}
-
-Boolean _pascal
-VCImpexIsHpglCommand(char firstChar, char secondChar)
-{
-    Boolean result;
-
-    result = FALSE;
-    switch (firstChar)
-    {
-        case 'A':
-            if ((secondChar == 'A') || (secondChar == 'R'))
-            {
-                result = TRUE;
-            }
-            break;
-        case 'C':
-            if ((secondChar == 'I') || (secondChar == 'A'))
-            {
-                result = TRUE;
-            }
-            break;
-        case 'D':
-            if (secondChar == 'C')
-            {
-                result = TRUE;
-            }
-            break;
-        case 'I':
-            if ((secondChar == 'N') || (secondChar == 'P') || (secondChar == 'W'))
-            {
-                result = TRUE;
-            }
-            break;
-        case 'L':
-            if (secondChar == 'T')
-            {
-                result = TRUE;
-            }
-            break;
-        case 'P':
-            if ((secondChar == 'U') || (secondChar == 'D') || (secondChar == 'A') || (secondChar == 'R'))
-            {
-                result = TRUE;
-            }
-            break;
-        case 'S':
-            if ((secondChar == 'P') || (secondChar == 'C'))
-            {
-                result = TRUE;
-            }
-            break;
-        case 'V':
-            if (secondChar == 'S')
-            {
-                result = TRUE;
-            }
-            break;
-        default:
-            break;
-    }
-    return result;
-}
-
-Boolean _pascal
-VCImpexIsBinaryCGM(const byte *sampleP, word bytesRead)
-{
-    word header;
-    word argumentSize;
-    word payloadOffset;
-    word recordSize;
-
-    if ((sampleP == (void *)0) || (bytesRead < 2))
-    {
-        return FALSE;
-    }
-
-    header = ((word)sampleP[0] << 8) | sampleP[1];
-    if ((header >> 5) != 1)          /* class 0, element 1: Begin Metafile */
-    {
-        return FALSE;
-    }
-
-    argumentSize = header & 0x1f;
-    payloadOffset = 2;
-    if (argumentSize == 31)
-    {
-        if (bytesRead < 4)
-        {
-            return FALSE;
-        }
-        if ((sampleP[2] & 0x80) != 0)
-        {
-            return FALSE;
-        }
-        argumentSize = (((word)sampleP[2] & 0x7f) << 8) | sampleP[3];
-        payloadOffset = 4;
-    }
-
-    recordSize = payloadOffset + argumentSize + (argumentSize & 1);
-    if ((argumentSize == 0) || (recordSize > bytesRead))
-    {
-        return FALSE;
-    }
-
-    /* Begin Metafile has one length-prefixed string argument. */
-    return ((word)sampleP[payloadOffset] + 1 == argumentSize);
-}
-
 Boolean _export _pascal UpdateProgressPct(word pct)
 {
-    return !ImpexUpdateImportExportStatus(NULL,pct);
+        return !ImpexUpdateImportExportStatus(NULL,pct);
 }
 
 dword _export _pascal ImportProcedure(ImportFrame *ieb,VMChain *vmc)
 {
-    word cif;
-    int ret;
-    struct ie_uidata *uidata;
-    VMBlockHandle gsblock;
-    GStateHandle tempGS;
-    struct ie_uidata defaultUidata;
-    word resolvedOptions;
-    Boolean optionsLocked;
+        word cif;
+        int ret;
+        struct ie_uidata *uidata;
+        VMBlockHandle gsblock;
+        GStateHandle tempGS;
 
-    ImpexUpdateImportExportStatus("File is being converted",-1);
+        ImpexUpdateImportExportStatus("File is being converted",-1);
 
-    optionsLocked = FALSE;
-    defaultUidata.booleanOptions = SETTINGS_DOTEXT | SETTINGS_DOARCS;
-    uidata = &defaultUidata;
-    if (ieb->IF_importOptions != NullHandle)
-    {
         uidata = (struct ie_uidata *)MemLock( ieb->IF_importOptions );
-        if (uidata != NULL)
+
+        tempGS = GrCreateGString( ieb->IF_transferVMFile, GST_VMEM, &gsblock );
+        Meta_Start( uidata->booleanOptions, tempGS, NULL,
+          ieb->IF_transferVMFile );     /* initialize drawing system */
+
+        switch( ieb->IF_formatNumber )
         {
-            optionsLocked = TRUE;
+          case 0:
+            ret = ReadCGM( ieb->IF_sourceFile, uidata->booleanOptions,
+	      UpdateProgressPct );
+            break;
+          case 1:
+            ret = ReadHPGL( ieb->IF_sourceFile, uidata->booleanOptions,
+	      UpdateProgressPct );
+            break;
+          default:
+            ret = TE_INVALID_FORMAT;
         }
-        else
-        {
-            uidata = &defaultUidata;
-        }
-    }
 
-    resolvedOptions = uidata->booleanOptions;
-    if (ieb->IF_formatNumber==FORMAT_SVG)
-    {
-        resolvedOptions |= SETTINGS_INPUT_Y_DOWN;    /* SVG is Y-down */
-    }
+        Meta_End();                     /* closing drawing system */
+        GrEndGString(tempGS);           /* close target gstring */
+        GrDestroyGString( tempGS, 0, GSKT_LEAVE_DATA );
 
-    uidata->booleanOptions = resolvedOptions;
+        cif = CIF_GRAPHICS_STRING;      /* we have created a gstring */
 
-    tempGS = GrCreateGString( ieb->IF_transferVMFile, GST_VMEM, &gsblock );
-    Meta_Start( resolvedOptions, tempGS, NULL, ieb->IF_transferVMFile );     /* initialize drawing system */
-
-    switch( ieb->IF_formatNumber )
-    {
-        case FORMAT_CGM:
-        ret = ReadCGM( ieb->IF_sourceFile, resolvedOptions, UpdateProgressPct );
-        break;
-        case FORMAT_HPGL:
-        ret = ReadHPGL( ieb->IF_sourceFile, resolvedOptions, UpdateProgressPct );
-        break;
-        case FORMAT_SVG:
-        ret = ReadSVG( ieb->IF_sourceFile, resolvedOptions, UpdateProgressPct );
-        break;
-        default:
-        ret = TE_INVALID_FORMAT;
-    }
-
-    Meta_End();                     /* closing drawing system */
-    GrEndGString(tempGS);           /* close target gstring */
-    GrDestroyGString( tempGS, 0, GSKT_LEAVE_DATA );
-
-    cif = CIF_GRAPHICS_STRING;      /* we have created a gstring */
-
-    if (optionsLocked != FALSE)
-    {
         MemUnlock( ieb->IF_importOptions );
-    }
-    if(ret!=TE_NO_ERROR) {
-        VMFreeVMChain(ieb->IF_transferVMFile,
-                      VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock));
-        *vmc = 0;
-        return ret;
-    }
-    *vmc = VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock);
-                                    /* return head of VMChain for item */
-    return TE_NO_ERROR+(((dword)cif)<<16);
-}
+        *vmc = VMCHAIN_MAKE_FROM_VM_BLOCK(gsblock);
+                                        /* return head of VMChain for item */
 
-sword _pascal GetFormat(FileHandle fh)
-{
-    MemHandle sampleH;
-    char *sampleP;
-    byte *sampleByteP;
-    word bytesRead;
-    sword format;
-    Boolean foundSvg;
-    Boolean foundBinaryCgm;
-    Boolean hasHpglKeyword;
-    word index;
-    word startIndex;
-    Boolean startOfCommand;
-    char firstCommandChar;
-    word commandLetterCount;
-    word hpglCommandCount;
-    byte currentByte;
-    char uppercaseChar;
-    word svgIndex;
-    char svgChar1;
-    char svgChar2;
-    char svgChar3;
-    char svgChar4;
-
-    sampleH = MemAlloc(VCIMPEX_DETECTION_BUFFER_SIZE, HF_DYNAMIC, HAF_STANDARD | HAF_ZERO_INIT);
-    if (sampleH == NullHandle)
-    {
-        return NO_IDEA_FORMAT;
-    }
-
-    sampleP = (char *)MemLock(sampleH);
-    if (sampleP == NULL)
-    {
-        MemFree(sampleH);
-        return NO_IDEA_FORMAT;
-    }
-
-    sampleByteP = (byte *)sampleP;
-    bytesRead = FileRead(fh, (void *)sampleP, VCIMPEX_DETECTION_BUFFER_SIZE, FALSE);
-    if (bytesRead == 0xffff)
-    {
-        bytesRead = 0;
-    }
-    FilePos(fh, 0L, FILE_POS_START);
-
-    format = NO_IDEA_FORMAT;
-    foundSvg = FALSE;
-    foundBinaryCgm = VCImpexIsBinaryCGM(sampleByteP, bytesRead);
-    hasHpglKeyword = FALSE;
-    startIndex = 0;
-    startOfCommand = TRUE;
-    firstCommandChar = 0;
-    commandLetterCount = 0;
-    hpglCommandCount = 0;
-
-    if (bytesRead >= 3)
-    {
-        if ((sampleByteP[0] == 0xef) && (sampleByteP[1] == 0xbb) && (sampleByteP[2] == 0xbf))
-        {
-            startIndex = 3;
-        }
-    }
-
-    for (index = startIndex; index < bytesRead; index++)
-    {
-        currentByte = sampleByteP[index];
-
-        if (!foundSvg && (currentByte == '<'))
-        {
-            svgIndex = index + 1;
-            while ((svgIndex < bytesRead) &&
-                   ((sampleByteP[svgIndex] == ' ') || (sampleByteP[svgIndex] == '\t') ||
-                    (sampleByteP[svgIndex] == '\r') || (sampleByteP[svgIndex] == '\n')))
-            {
-                svgIndex++;
-            }
-            if ((svgIndex + 3) < bytesRead)
-            {
-                svgChar1 = VCImpexToUpper((char)sampleByteP[svgIndex]);
-                svgChar2 = VCImpexToUpper((char)sampleByteP[svgIndex + 1]);
-                svgChar3 = VCImpexToUpper((char)sampleByteP[svgIndex + 2]);
-                svgChar4 = (char)sampleByteP[svgIndex + 3];
-                if ((svgChar1 == 'S') && (svgChar2 == 'V') &&
-                    (svgChar3 == 'G') &&
-                    ((svgChar4 == '>') || (svgChar4 == '/') ||
-                     (svgChar4 == ' ') || (svgChar4 == '\t') ||
-                     (svgChar4 == '\r') || (svgChar4 == '\n')))
-                {
-                    foundSvg = TRUE;
-                }
-            }
-        }
-
-        if (!hasHpglKeyword && ((index + 3) < bytesRead))
-        {
-            svgChar1 = VCImpexToUpper((char)sampleByteP[index]);
-            svgChar2 = VCImpexToUpper((char)sampleByteP[index + 1]);
-            svgChar3 = VCImpexToUpper((char)sampleByteP[index + 2]);
-            svgChar4 = VCImpexToUpper((char)sampleByteP[index + 3]);
-            if ((svgChar1 == 'H') && (svgChar2 == 'P') && (svgChar3 == 'G') && (svgChar4 == 'L'))
-            {
-                hasHpglKeyword = TRUE;
-            }
-        }
-
-        if (startOfCommand)
-        {
-            if ((currentByte == ' ') || (currentByte == '\t') ||
-                (currentByte == '\r') || (currentByte == '\n'))
-            {
-                continue;
-            }
-            uppercaseChar = VCImpexToUpper((char)currentByte);
-            if ((uppercaseChar >= 'A') && (uppercaseChar <= 'Z'))
-            {
-                if (commandLetterCount == 0)
-                {
-                    firstCommandChar = uppercaseChar;
-                    commandLetterCount = 1;
-                }
-                else
-                {
-                    if (VCImpexIsHpglCommand(firstCommandChar, uppercaseChar))
-                    {
-                        hpglCommandCount++;
-                    }
-                    startOfCommand = FALSE;
-                    commandLetterCount = 0;
-                }
-            }
-            else
-            {
-                startOfCommand = FALSE;
-                commandLetterCount = 0;
-            }
-        }
-        else
-        {
-            if ((currentByte == ';') || (currentByte == '\n') || (currentByte == '\r'))
-            {
-                startOfCommand = TRUE;
-                commandLetterCount = 0;
-            }
-        }
-    }
-
-    MemUnlock(sampleH);
-    MemFree(sampleH);
-
-    if (foundSvg)
-    {
-        format = FORMAT_SVG;
-    }
-    else if (foundBinaryCgm)
-    {
-        format = FORMAT_CGM;
-    }
-    else if ((hpglCommandCount >= 2) || hasHpglKeyword)
-    {
-        format = FORMAT_HPGL;
-    }
-
-    return format;
+        if(ret!=TE_NO_ERROR) {
+	  return ret;
+	}
+        return TE_NO_ERROR+(((dword)cif)<<16);
 }

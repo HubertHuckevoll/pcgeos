@@ -20,8 +20,6 @@ library ansic
 library grobj
 library math
 
-resource MetaSvgNamedColorRes lmem, shared, read-only
-
 export RAD
 export PHI
 export META_SETLINECOLOR
@@ -51,10 +49,3 @@ export META_END
 
 export READHPGL
 export READCGM
-
-incminor
-
-export META_SETMITERLIMIT
-export META_SETLINEJOIN
-export META_SETLINEEND
-export READSVG

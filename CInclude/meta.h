@@ -14,11 +14,10 @@
 #include <xlatLib.h>
 
 /* masks for conversion options */
-#define SETTINGS_DOTEXT         1         /* convert text objects? */
-#define SETTINGS_CREATE_GROBJ   2         /* create GrObjs, not GString */
-#define SETTINGS_OPT_SPLINES    4         /* attempt to create splines? */
-#define SETTINGS_INPUT_Y_DOWN   8         /* input coordinates are Y-down (SVG) */
-#define SETTINGS_DOARCS         32768     /* convert elliptical arcs? */
+#define SETTINGS_DOTEXT       1         /* convert text objects? */
+#define SETTINGS_CREATE_GROBJ 2         /* create GrObjs, not GString */
+#define SETTINGS_OPT_SPLINES  4         /* attempt to create splines? */
+#define SETTINGS_DOARCS       32768     /* convert elliptical arcs? */
 
 /* maximum number of points in a polyline */
 #define MAX_POINTS 4096
@@ -40,7 +39,6 @@ void _export _pascal Meta_SetLineStyle(LineStyle ls);
 void _export _pascal Meta_SetLineWidth(WWFixedAsDWord lw);
 void _export _pascal Meta_SetAreaFill(SystemDrawMask sdm);
 void _export _pascal Meta_SetLineFill(SystemDrawMask sdm);
-void _export _pascal Meta_SetMiterLimit(WWFixedAsDWord limit);
 
 void _export _pascal
 Meta_SetScaling(sword w_x1,sword w_y1,sword w_x2,sword w_y2,
@@ -79,9 +77,6 @@ void _export _pascal Meta_EndPath(Boolean in,Boolean edges);
 
 void _export _pascal Meta_TextAt(int x,int y,char *s,WWFixedAsDWord size,sword angle);
 
-void _export _pascal Meta_SetLineJoin(LineJoin lj);
-void _export _pascal Meta_SetLineEnd(LineEnd le);
-
 word _export _pascal Meta_Start(
   word settings,GStateHandle gs,optr body,VMFileHandle vmf);
 int _export _pascal Meta_End(void);
@@ -95,8 +90,6 @@ typedef Boolean _pascal pcfm_ProgressCallback(word percent, void *pf);
 TransError _export _pascal ReadHPGL(FileHandle srcFile,word settings,
   ProgressCallback *callback);
 TransError _export _pascal ReadCGM(FileHandle srcFile,word settings,
-  ProgressCallback *callback);
-TransError _export _pascal ReadSVG(FileHandle srcFile,word settings,
   ProgressCallback *callback);
 
 #endif
