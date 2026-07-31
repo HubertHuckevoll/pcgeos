@@ -15,12 +15,15 @@ SvgAdapterImport(ImportFrame *frameP, VMChain *resultChainP)
 {
     TransError status;
 
+    if (resultChainP != (void *)0)
+    {
+        *resultChainP = 0;
+    }
     if (frameP == (void *)0 || resultChainP == (void *)0 ||
         frameP->IF_formatNumber != 0)
     {
         return TE_INVALID_FORMAT;
     }
-    *resultChainP = 0;
     ImpexUpdateImportExportStatus("File is being converted", -1);
     status = SvgImport(frameP->IF_sourceFile, frameP->IF_transferVMFile,
                        resultChainP, (RectDWord *)0, SvgAdapterProgress);

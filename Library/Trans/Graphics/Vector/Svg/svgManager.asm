@@ -1,5 +1,7 @@
 include stdapp.def
 include vm.def
+include library.def
+DefLib Internal/xlatLib.def
 
 svgAdapter_TEXT segment public 'CODE'
         extrn SVGADAPTERIMPORT:far
@@ -54,6 +56,7 @@ TransImport proc far
         uses    es, ds, si, di
 resultChain local dword
         .enter
+        clrdw   resultChain
         push    ds
         push    si
         push    ss

@@ -11,6 +11,7 @@ TransError _export _pascal
 SvgImport(FileHandle sourceFile,
           VMFileHandle destinationFile,
           VMChain *resultChainP,
+          /* SVG viewport in generated GString coordinates, if requested. */
           RectDWord *boundsP,
           SvgProgressCallback *callback);
 

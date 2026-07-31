@@ -120,6 +120,7 @@ typedef struct {
     Boolean viewInitialized;
     WWFixedAsDWord viewMinX, viewMinY, viewWidth, viewHeight;
     WWFixedAsDWord viewportWidth, viewportHeight;
+    word outputWidth, outputHeight;
     WWFixedAsDWord scaleX, scaleY, addX, addY, inversePowerOfTwo;
     Boolean preserveNone, preserveSlice;
     SvgParAlign preserveX, preserveY;

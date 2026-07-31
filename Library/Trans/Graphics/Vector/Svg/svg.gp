@@ -1,6 +1,6 @@
 name svg.lib
 longname "SVG Translator"
-tokenchars "TLSV"
+tokenchars "TLGR"
 tokenid 0
 
 type library, single

@@ -22,6 +22,7 @@ SvgRendererInit(SvgImportContext *contextP, GStateHandle gstate)
 void
 SvgRendererInitViewport(SvgImportContext *contextP, sword width, sword height)
 {
+    GrSetClipRect(contextP->gstate, PCT_INTERSECTION, 0, 0, width, height);
     contextP->renderer.coordinateDivisor =
         SvgRendererCoreChooseDivisor(width, height);
     if (contextP->renderer.coordinateDivisor != 1)

@@ -139,8 +139,6 @@ void SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag)
 
         leftoverX = contextP->viewportWidth - GrMulWWFixed(contextP->viewWidth, uni);
         leftoverY = contextP->viewportHeight - GrMulWWFixed(contextP->viewHeight, uni);
-        if ((sdword)leftoverX < 0) leftoverX = 0;
-        if ((sdword)leftoverY < 0) leftoverY = 0;
 
         contextP->addX = (contextP->preserveX == SVG_PAR_ALIGN_MIN) ? 0
               : (contextP->preserveX == SVG_PAR_ALIGN_MID) ? GrSDivWWFixed(leftoverX, MakeWWFixed(2))
@@ -165,6 +163,8 @@ void SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag)
     worldH = (sword)(h0 / (sdword)reduce);
     if (worldW < 1) worldW = 1;
     if (worldH < 1) worldH = 1;
+    contextP->outputWidth = (word)worldW;
+    contextP->outputHeight = (word)worldH;
 
     LOGF(("[VIEW]", "vb=(%ld,%ld %ldx%ld) vp=%ldx%ld par:%s slice:%s",
             (sdword)contextP->viewMinX,(sdword)contextP->viewMinY,(sdword)contextP->viewWidth,(sdword)contextP->viewHeight,
@@ -193,6 +193,8 @@ void SvgViewInitDefault(SvgImportContext *contextP)
     contextP->addX   = 0;
     contextP->addY   = 0;
     contextP->inversePowerOfTwo= WWFIXED_ONE;
+    contextP->outputWidth = 1024;
+    contextP->outputHeight = 1024;
 
     LOGF(("[VIEW]", "vb=(%ld,%ld %ldx%ld) vp=%ldx%ld par:%s slice:%s",
             (sdword)contextP->viewMinX,(sdword)contextP->viewMinY,(sdword)contextP->viewWidth,(sdword)contextP->viewHeight,
