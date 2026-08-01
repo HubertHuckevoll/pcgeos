@@ -31,6 +31,9 @@
 #include <initfile.h>
 #include <graphics.h>
 #include <pnglib.h>
+#define TE_NO_ERROR SVG_TE_NO_ERROR
+#include <svgLib.h>
+#undef TE_NO_ERROR
 @include "bvdirmon.goh"
 
 @ifndef OLD_THUMBNAIL_DB
@@ -120,6 +123,10 @@ static void SendSelectNotify(VMBlockHandle bmpblock);
 #define BV_SHOW_GIF         4
 #define BV_SHOW_JPEG        5
 #define BV_SHOW_PNG         6
+#define BV_SHOW_SVG         7
+
+#define BV_DATA_BITMAP      0
+#define BV_DATA_GSTRING     1
 
 /**************************************************************************/
 
@@ -163,7 +170,8 @@ FileHandle BVThumbnailDB = 0;
 									  dword size,
 									  FileDateAndTime date,
 									  VMFileHandle file,
-									  VMBlockHandle block);
+									  VMBlockHandle block,
+									  byte dataType);
 
 @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_BV_FILE_FORMAT_CHANGED;
 @message (GEN_FILE_SELECTOR_NOTIFICATION_MSG) MSG_BV_FILE_SELECTION;
@@ -191,11 +199,21 @@ FileHandle BVThumbnailDB = 0;
 @instance MemHandle     BVPalette = 0;
 @instance word          BVAttrs = 0;
 @instance byte          BVType = 0;
+@instance byte          BVDataType = BV_DATA_BITMAP;
+@instance sword         BVOriginX = 0;
+@instance sword         BVOriginY = 0;
 @instance char          BVImpForm[31] = "";
 @message void MSG_BV_OPEN_BITMAP(FileHandle file,
 								 VMBlockHandle block,
 								 char *name,
 								 char *srcform);
+@message void MSG_BV_OPEN_GSTRING(FileHandle file,
+								  VMBlockHandle block,
+								  word width,
+								  word height,
+								  sword originX,
+								  sword originY,
+								  char *name);
 @message void MSG_BV_CLOSE_BITMAP();
 @message void MSG_BV_SET_PALETTE();
 @message void MSG_BV_RESET_PALETTE();
@@ -1131,6 +1149,7 @@ FileHandle BVThumbnailDB = 0;
 				  @BVImpFileShowAllMedia,
 				  @BVImpFileShowBMP,
 				  @BVImpFileShowPCX,
+				  @BVImpFileShowSVG,
 				  @BVImpFileShowPNG,
 @ifdef JPEG_SUPPORT
 				  @BVImpFileShowGIF,
@@ -1179,6 +1198,13 @@ FileHandle BVThumbnailDB = 0;
 @object GenItemClass BVImpFileShowPNG = {
 		GI_visMoniker = 'N', "Show .PNG Files";
 		GII_identifier = BV_SHOW_PNG;
+}
+
+/**************************************************************************/
+
+@object GenItemClass BVImpFileShowSVG = {
+		GI_visMoniker = 'S', "Show .SVG Files";
+		GII_identifier = BV_SHOW_SVG;
 }
 
 /**************************************************************************/
@@ -1576,16 +1602,55 @@ BuildBitmapTransferItem(FileHandle bmpfile, VMBlockHandle bmpblock,
 
 /**************************************************************************/
 
+static TransferBlockID
+BuildGStringTransferItem(FileHandle file, VMBlockHandle block,
+					 FileLongName name, word width, word height)
+{
+  MemHandle mem;
+  VMFileHandle transferFile;
+  VMBlockHandle transferItem;
+  ClipboardItemHeader *ptr;
+
+  transferFile = ClipboardGetClipboardFile();
+  transferItem = VMAlloc(transferFile, sizeof(ClipboardItemHeader), 0);
+  ptr = (ClipboardItemHeader *)VMLock(transferFile, transferItem, &mem);
+
+  ptr->CIH_owner = (optr) (((dword)GeodeGetProcessHandle()<<16) | 0);
+  ptr->CIH_flags = 0;
+  (void) strcpy(ptr->CIH_name, name);
+  ptr->CIH_formatCount = 1;
+  ptr->CIH_sourceID = 0;
+  ptr->CIH_formats[0].CIFI_format =
+	 FormatIDFromManufacturerAndType(MANUFACTURER_ID_GEOWORKS,
+					 CIF_GRAPHICS_STRING);
+  ptr->CIH_formats[0].CIFI_vmChain = VMCopyVMChain(file,
+	 VMCHAIN_MAKE_FROM_VM_BLOCK(block), transferFile);
+  ptr->CIH_formats[0].CIFI_extra1 = width;
+  ptr->CIH_formats[0].CIFI_extra2 = height;
+
+  VMDirty(mem);
+  VMUnlock(mem);
+  return (BlockIDFromFileAndBlock(transferFile, transferItem));
+}
+
+/**************************************************************************/
+
 static Boolean
 CopyCommon(ClipboardItemFlags transferFlags, FileHandle bmpfile,
 					   VMBlockHandle bmpblock, char *bmpname,
-						word bmpwidth, word bmpheight)
+						word bmpwidth, word bmpheight, byte dataType)
 {
   if (bmpblock != 0)
   {
-		 TransferBlockID transferItem = BuildBitmapTransferItem(bmpfile,
-									bmpblock, bmpname, bmpwidth, bmpheight);
-	 return ClipboardRegisterItem(transferItem, transferFlags);
+		 TransferBlockID transferItem;
+
+		 if(dataType == BV_DATA_GSTRING)
+			transferItem = BuildGStringTransferItem(bmpfile, bmpblock,
+								 bmpname, bmpwidth, bmpheight);
+		 else
+			transferItem = BuildBitmapTransferItem(bmpfile, bmpblock,
+								bmpname, bmpwidth, bmpheight);
+		 return ClipboardRegisterItem(transferItem, transferFlags);
   }
   else
   {
@@ -1676,7 +1741,8 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 {
   (void) CopyCommon(TIF_NORMAL, pself->BVBmpFile, pself->BVBmpBlock,
 							pself->GDI_fileName,
-						   pself->BVBmpWidth, pself->BVBmpHeight);
+						   pself->BVBmpWidth, pself->BVBmpHeight,
+						   pself->BVDataType);
 }
 
 /**************************************************************************/
@@ -1931,6 +1997,9 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   pself->BVBmpFile = file;
   pself->BVBmpBlock = block;
   pself->BVType = type;
+  pself->BVDataType = BV_DATA_BITMAP;
+  pself->BVOriginX = 0;
+  pself->BVOriginY = 0;
   strcpy(pself->BVImpForm, srcform);
   strcpy(pself->BVName ,name);
 
@@ -1971,6 +2040,40 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 
 /**************************************************************************/
 
+@method BVDocumentClass, MSG_BV_OPEN_GSTRING
+{
+  GStateHandle gstate;
+  VisUpdateModeAsWord update;
+
+  update.VUMAW_mode = VUM_DELAYED_VIA_APP_QUEUE;
+
+  @send pself->GCI_genView::MSG_GEN_VIEW_SET_ATTRS(0, GVA_SCALE_TO_FIT, update);
+  @send pself->GCI_genView::MSG_GEN_VIEW_SET_SCALE_FACTOR(0, 0,
+							SVT_AROUND_POINT,
+							MakeWWFixed(1.0), MakeWWFixed(1.0));
+  @send pself->GCI_genView::MSG_GEN_VIEW_SET_DOC_BOUNDS(1000, 1000, 0, 0);
+
+  pself->BVBmpWidth = width;
+  pself->BVBmpHeight = height;
+  pself->BVBmpFile = file;
+  pself->BVBmpBlock = block;
+  pself->BVType = 0;
+  pself->BVDataType = BV_DATA_GSTRING;
+  pself->BVOriginX = originX;
+  pself->BVOriginY = originY;
+  strcpy(pself->BVImpForm, ".SVG");
+  strcpy(pself->BVName, name);
+  pself->BVAttrs |= BVA_BITMAP_OPEN;
+
+  gstate = GrCreateState(pself->BVWindow);
+  GrInvalRect(gstate, 0, 0, width, height);
+  GrDestroyState(gstate);
+  if(pself->BVWindow != 0)
+	@call process::MSG_META_EXPOSED(pself->BVWindow);
+}
+
+/**************************************************************************/
+
 @method BVDocumentClass, MSG_BV_CLOSE_BITMAP
 {
   GStateHandle gstate;
@@ -2003,6 +2106,9 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   pself->BVBmpWidth = 0;
   pself->BVBmpHeight = 0;
   pself->BVType = 0;
+  pself->BVDataType = BV_DATA_BITMAP;
+  pself->BVOriginX = 0;
+  pself->BVOriginY = 0;
   pself->BVImpForm[0] = 0;
   pself->BVName[0] = 0;
 
@@ -2018,6 +2124,7 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 @method BVDocumentClass, MSG_META_EXPOSED
 {
   GStateHandle gstate;
+  GStateHandle gstring;
   byte *pal;
 
   gstate=GrCreateState(pself->BVWindow);
@@ -2026,7 +2133,21 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   /* is this a 256 color device */
   if((pself->BVAttrs&BVA_BITMAP_OPEN)==BVA_BITMAP_OPEN)
   {
-		 if(((pself->BVPalette != 0)&&((BVAttrs2&BVA_REALIZE_PALETTE)!=0))
+	 if(pself->BVDataType == BV_DATA_GSTRING)
+	 {
+		gstring = GrLoadGString(pself->BVBmpFile, GST_VMEM,
+							pself->BVBmpBlock);
+		if(gstring != 0)
+		{
+		  GrSaveState(gstate);
+		  GrApplyTranslationDWord(gstate, -(sdword)pself->BVOriginX,
+								 -(sdword)pself->BVOriginY);
+		  GrDrawGString(gstate, gstring, 0, 0, 0, (word *)0);
+		  GrRestoreState(gstate);
+		  GrDestroyGString(gstring, 0, GSKT_LEAVE_DATA);
+		}
+	 }
+	 else if(((pself->BVPalette != 0)&&((BVAttrs2&BVA_REALIZE_PALETTE)!=0))
 			 && (BVDisplayClass == DC_COLOR_8))
 	 {
 		GrCreatePalette(gstate);
@@ -2105,7 +2226,8 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   byte *pal;
   GStateHandle gstate;
 
-  if(BVBrowserFocus == TRUE)
+  if((BVBrowserFocus == TRUE) ||
+	 (pself->BVDataType != BV_DATA_BITMAP))
 	return;
 
   /* is this a 256 color device */
@@ -2134,6 +2256,8 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 {
   GStateHandle gstate;
 
+  if(pself->BVDataType != BV_DATA_BITMAP)
+	return;
 
   if(((pself->BVAttrs&(BVA_BITMAP_OPEN|BVA_SYS_TARGET|BVA_WIN_OPEN))
 	==(BVA_BITMAP_OPEN|BVA_SYS_TARGET|BVA_WIN_OPEN))
@@ -2182,7 +2306,8 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 		CQTF_COPY,0, 0, 0, oself))
   {
 		 if (CopyCommon(CIF_QUICK, pself->BVBmpFile, pself->BVBmpBlock,
-		  pself->GDI_fileName, pself->BVBmpWidth, pself->BVBmpHeight))
+		  pself->GDI_fileName, pself->BVBmpWidth, pself->BVBmpHeight,
+		  pself->BVDataType))
 	 {
 				@send pself->GCI_genView::MSG_GEN_VIEW_ALLOW_GLOBAL_TRANSFER();
 	 }
@@ -2266,9 +2391,14 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 	Boolean stat;
 	ImpBmpStatus status;
 	ImpBmpParams para;
+	TransError svgStatus;
+	VMChain svgChain;
+	RectDWord svgBounds;
+	sdword svgWidth, svgHeight;
 	char string[255];
 	VMBlockHandle bmpblock;
 	word count;
+	byte dataType;
 
 	MemLock(OptrToHandle(@BVImportingText));
 	strcpy(string, LMemDeref(@BVImportingText));
@@ -2297,15 +2427,57 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 	para.IBP_status = @BVImportStatus;
 
 	// start importing
-	status = Imp_BmpProcessFile(&para, IBF_AUTO);
+	dataType = BV_DATA_BITMAP;
+	if(SvgCheckHeader(para.IBP_source))
+	{
+		svgStatus = SvgImport(para.IBP_source, para.IBP_dest, &svgChain,
+						  &svgBounds, (SvgProgressCallback *)0);
+		if(svgStatus == SVG_TE_NO_ERROR)
+		{
+			svgWidth = svgBounds.RD_right - svgBounds.RD_left;
+			svgHeight = svgBounds.RD_bottom - svgBounds.RD_top;
+			if(svgBounds.RD_left < -32768L ||
+			   svgBounds.RD_left > 32767L ||
+			   svgBounds.RD_top < -32768L ||
+			   svgBounds.RD_top > 32767L ||
+			   svgWidth <= 0 || svgWidth > 32767L ||
+			   svgHeight <= 0 || svgHeight > 32767L)
+			{
+				VMFreeVMChain(para.IBP_dest, svgChain);
+				status = IBS_UNKNOWN_FORMAT;
+			}
+			else
+			{
+				para.IBP_bitmap = VMCHAIN_GET_VM_BLOCK(svgChain);
+				para.IBP_width = (word)svgWidth;
+				para.IBP_height = (word)svgHeight;
+				strcpy(para.IBP_impForm, ".SVG");
+				dataType = BV_DATA_GSTRING;
+				status = IBS_NO_ERROR;
+			}
+		}
+		else
+		{
+			status = IBS_UNKNOWN_FORMAT;
+		}
+	}
+	else
+	{
+		status = Imp_BmpProcessFile(&para, IBF_AUTO);
+	}
 
 	@send BVImportingDlg::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
 
 	if(status == IBS_NO_ERROR)
 	{
-		bmpblock = GrCompactBitmap(para.IBP_dest, para.IBP_bitmap, para.IBP_dest);
-		VMFreeVMChain(para.IBP_dest, VMCHAIN_MAKE_FROM_VM_BLOCK(para.IBP_bitmap));
-		para.IBP_bitmap = bmpblock;
+		if(dataType == BV_DATA_BITMAP)
+		{
+			bmpblock = GrCompactBitmap(para.IBP_dest, para.IBP_bitmap,
+							   para.IBP_dest);
+			VMFreeVMChain(para.IBP_dest,
+						  VMCHAIN_MAKE_FROM_VM_BLOCK(para.IBP_bitmap));
+			para.IBP_bitmap = bmpblock;
+		}
 
 		date = FileGetDateAndTime(pself->GDI_fileHandle) ;
 		/* this doesn't work in all fs drivers (only ms4) so we'll go with...
@@ -2316,14 +2488,24 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 		stat = @call BVOptionGroup::MSG_GEN_BOOLEAN_GROUP_IS_BOOLEAN_SELECTED(BV_AUTOCREAT_THUMB);
         	if(stat != FALSE)
 			@call process::MSG_BV_CREATE_THUMBNAIL(pself->GDI_fileName, size, date,
-				para.IBP_dest, para.IBP_bitmap);
+				para.IBP_dest, para.IBP_bitmap, dataType);
 
 		pself = ObjDerefGen(oself);
 		if((pself->BVAttrs & BVA_BITMAP_OPEN)!=0)
 			@call oself::MSG_BV_CLOSE_BITMAP();
 
-		@call oself::MSG_BV_OPEN_BITMAP(para.IBP_dest, para.IBP_bitmap,
-			pself->GDI_fileName, para.IBP_impForm);
+		if(dataType == BV_DATA_GSTRING)
+		{
+			@call oself::MSG_BV_OPEN_GSTRING(para.IBP_dest, para.IBP_bitmap,
+				para.IBP_width, para.IBP_height,
+				(sword)svgBounds.RD_left, (sword)svgBounds.RD_top,
+				pself->GDI_fileName);
+		}
+		else
+		{
+			@call oself::MSG_BV_OPEN_BITMAP(para.IBP_dest, para.IBP_bitmap,
+				pself->GDI_fileName, para.IBP_impForm);
+		}
 
 		stat = @call BVOptionGroup::
 			MSG_GEN_BOOLEAN_GROUP_IS_BOOLEAN_SELECTED(BV_IMP_INFO);
@@ -2522,7 +2704,11 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   LocalFixedToAscii(string, MakeWWFixed(pself->BVBmpHeight), 0);
   @call BVPicInfoY::MSG_VIS_TEXT_REPLACE_ALL_PTR(string,0);
 
-  switch((pself->BVType)&BMT_FORMAT)
+  if(pself->BVDataType == BV_DATA_GSTRING)
+  {
+	strcpy(string, "Vector");
+  }
+  else switch((pself->BVType)&BMT_FORMAT)
   {
      case BMF_MONO:
                 strcpy(string, "Monochrome (1 bit/pixel)");
@@ -2588,9 +2774,13 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 
 Boolean StrEnd(char *text, char *endstr)
 {
-	word pos;
+	word pos, textLen, endLen;
 
-	pos = strlen(text) - strlen(endstr);
+	textLen = strlen(text);
+	endLen = strlen(endstr);
+	if(textLen < endLen)
+		return(FALSE);
+	pos = textLen - endLen;
 
 	return((LocalCmpStringsNoCase(&(text[pos]), endstr, 0)) == 0);
 }
@@ -2723,6 +2913,13 @@ Boolean StrEnd(char *text, char *endstr)
 								filelist[count1] = filelist[count2];
 								count1++;
 							}
+							else
+								if(StrEnd(&filelist[count2].BVFA_name, ".SVG") && ((sel == BV_SHOW_SVG)
+									|| (sel == BV_SHOW_ALL_MEDIA)))
+								{
+									filelist[count1] = filelist[count2];
+									count1++;
+								}
 
 @ifdef JPEG_SUPPORT
 							else
@@ -3498,9 +3695,12 @@ BVCalcDriveName(char *text, word item)
 	return;
 
 @ifdef OLD_THUMBNAIL_DB
+  if(dataType == BV_DATA_GSTRING)
+	return;
   ThumbCreateItem(name, size, date, file, block);
 @else
-  ThumbCreateItem(name, size, date, file, block, TST_HUGE_BITMAP);
+  ThumbCreateItem(name, size, date, file, block,
+	(dataType == BV_DATA_GSTRING) ? TST_GSTRING : TST_HUGE_BITMAP);
 @endif
   if(BVFileList != 0)
   {
@@ -3806,7 +4006,7 @@ BVCalcDriveName(char *text, word item)
 			if(status == IBS_NO_ERROR)
 			{
 				@call process::MSG_BV_CREATE_THUMBNAIL(srcname, size, date,
-					para.IBP_dest, para.IBP_bitmap);
+					para.IBP_dest, para.IBP_bitmap, BV_DATA_BITMAP);
 
 				@send BVDynFileList::MSG_GEN_ITEM_GROUP_SET_ITEM_STATE(filenum2, 0);
 			}

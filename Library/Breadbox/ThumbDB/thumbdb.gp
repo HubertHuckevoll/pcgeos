@@ -11,6 +11,8 @@ tokenid    16431
 
 library geos
 library ansic
+library extgraph
+exempt extgraph
 
 platform geos201
 
@@ -21,4 +23,3 @@ export THUMBREMOVEITEM
 
 
 usernotes "Copyright 1994-2002  Breadbox Computer Company LLC  All Rights Reserved"
-

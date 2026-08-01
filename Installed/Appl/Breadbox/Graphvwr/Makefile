@@ -5,7 +5,7 @@
 #
 GEODE           = graphvwr
 GRAPH           = quant.c quant.h
-IMPBMP          = ibcommon.h impbmp.h impgif.h imppcx.h imp_bmp.h\
+IMPBMP          = imp_bmp.h impbmp.h impgif.h imppcx.h ibcommon.h\
                   impbmp.goc impgif.goc imppcx.goc imp_bmp.goc
 MAIN            = bmpview.goc strings.goh
 UI_TO_RDFS      =
