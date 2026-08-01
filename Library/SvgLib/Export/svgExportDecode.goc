@@ -487,7 +487,10 @@ SvgExportReadElement(SvgExportContext *context,
         return TE_OUT_OF_MEMORY;
     }
 
-    MemLock(context->bufferHeapH);
+    if (MemLock(context->bufferHeapH) == (void *)0)
+    {
+        return TE_OUT_OF_MEMORY;
+    }
     elementData = LMemDerefHandles(context->bufferHeapH,
                                    context->scratchChunkH);
     if (elementData == (void*)0)

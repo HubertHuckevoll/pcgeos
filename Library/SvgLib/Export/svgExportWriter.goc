@@ -215,7 +215,10 @@ SvgExportEnsureScratch(SvgExportContext *context, word size)
         return TRUE;
     }
 
-    MemLock(context->bufferHeapH);
+    if (MemLock(context->bufferHeapH) == (void *)0)
+    {
+        return FALSE;
+    }
     if (context->scratchChunkH == NullChunk)
     {
         context->scratchChunkH =

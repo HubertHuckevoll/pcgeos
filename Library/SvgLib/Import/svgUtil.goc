@@ -123,10 +123,15 @@ Boolean SvgUtilKeyEqNoCase(const char *kb, const char *ke, const char *prop)
 
 const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
 {
+    const char      *start;
     sdword           sign;
     dword            ip;
     dword            frac;
     dword            scale;
+    dword            digit;
+    dword            integerLimit;
+    dword            magnitude;
+    dword            magnitudeLimit;
     word             c;
     WWFixedAsDWord   result;
     dword            fpart;
@@ -138,12 +143,19 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
     const char      *expStart;
     WWFixedAsDWord   baseTen;
     sdword           expLoop;
+    Boolean          haveDigits;
+    Boolean          nonZeroFraction;
+    Boolean          outOfRange;
 
+    start = s;
     sign  = 1;
     ip    = 0;
     frac  = 0;
     scale = 1;
     exponent = 0;
+    haveDigits = FALSE;
+    nonZeroFraction = FALSE;
+    outOfRange = FALSE;
 
     while (*s && isspace((unsigned char)*s))
     {
@@ -159,9 +171,19 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
         s++;
     }
 
+    integerLimit = (sign < 0) ? 32768UL : 32767UL;
     while ((c = (word)(byte)*s) >= '0' && c <= '9')
     {
-        ip = ip * 10 + (c - '0');
+        digit = (dword)(c - '0');
+        haveDigits = TRUE;
+        if (ip > (integerLimit - digit) / 10UL)
+        {
+            outOfRange = TRUE;
+        }
+        else if (!outOfRange)
+        {
+            ip = ip * 10UL + digit;
+        }
         s++;
     }
 
@@ -170,6 +192,8 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
         s++;
         while ((c = (word)(byte)*s) >= '0' && c <= '9')
         {
+            haveDigits = TRUE;
+            if (c != '0') nonZeroFraction = TRUE;
             if (scale < 1000000UL)
             {
                 frac  = frac * 10 + (c - '0');
@@ -177,17 +201,6 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
             }
             s++;
         }
-    }
-
-    result = SvgGeomMakeWWFixedFromInt((int)ip);
-
-    fpart = 0;
-    if (scale != 0)
-    {
-        num   = (frac << 8);
-        num   = (num + (scale >> 1)) / scale;
-        fpart = (num << 8);
-        result += (WWFixedAsDWord)fpart;
     }
 
     expStart = s;
@@ -233,6 +246,35 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
         }
     }
 
+    /* ATTENTION: The mantissa must fit WWFixed before exponent scaling.
+     * Upgrade with a wider decimal accumulator to accept values such as
+     * 40000e-2 without losing range information.
+     */
+    if (!haveDigits || outOfRange ||
+        (sign < 0 && ip == 32768UL && nonZeroFraction))
+    {
+        *out = 0;
+        return start;
+    }
+
+    fpart = 0;
+    if (scale != 0)
+    {
+        num   = (frac << 8);
+        num   = (num + (scale >> 1)) / scale;
+        fpart = (num << 8);
+    }
+    magnitude = (ip << 16) + fpart;
+    magnitudeLimit = (sign < 0) ? 0x80000000UL : 0x7fffffffUL;
+    if (magnitude > magnitudeLimit)
+    {
+        *out = 0;
+        return start;
+    }
+    result = (sign < 0)
+        ? (WWFixedAsDWord)(0UL - magnitude)
+        : (WWFixedAsDWord)magnitude;
+
     if (exponent != 0)
     {
         baseTen = SvgGeomMakeWWFixedFromInt(10);
@@ -241,6 +283,14 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
             expLoop = exponent;
             while (expLoop > 0)
             {
+                magnitude = (sign < 0)
+                    ? (dword)(0UL - (dword)result)
+                    : (dword)result;
+                if (magnitude > magnitudeLimit / 10UL)
+                {
+                    *out = 0;
+                    return start;
+                }
                 result = GrMulWWFixed(result, baseTen);
                 expLoop--;
             }
@@ -258,11 +308,6 @@ const char* SvgUtilParseWWFixed16_16(const char *s, WWFixedAsDWord *out)
                 }
             }
         }
-    }
-
-    if (sign < 0)
-    {
-        result = (WWFixedAsDWord)(0 - (sdword)result);
     }
 
 #if ERROR_CHECK

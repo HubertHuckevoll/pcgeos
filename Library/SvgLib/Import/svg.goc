@@ -457,7 +457,11 @@ SvgImportParse(SvgImportContext *contextP, FileHandle srcFile,
                 status = TE_OUT_OF_MEMORY;
                 goto cleanup;
             }
-            SvgViewInitFromSvgTag(contextP, scP->tagP);
+            if (!SvgViewInitFromSvgTag(contextP, scP->tagP))
+            {
+                status = TE_IMPORT_NOT_SUPPORTED;
+                goto cleanup;
+            }
             viewInitialized = TRUE;
             sawSvgRoot = TRUE;
             rootStyleActive = TRUE;

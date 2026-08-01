@@ -213,7 +213,7 @@ Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag);
 void SvgStyleGroupPop(SvgImportContext *contextP);
 
 void SvgViewReset(SvgImportContext *contextP);
-void SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag);
+Boolean SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag);
 void SvgViewInitDefault(SvgImportContext *contextP);
 void SvgViewGetMatrix(SvgImportContext *contextP,
                       WWFixedAsDWord *a, WWFixedAsDWord *b,

@@ -16,6 +16,17 @@
 
 #define SVG_ELLIPSE_SEGMENTS 48
 
+static Boolean SvgShapeParseWWFixed(SVGScratch *sc, const char *text,
+                                    WWFixedAsDWord *valueP)
+{
+    if (SvgUtilParseWWFixed16_16(text, valueP) == text)
+    {
+        sc->unsupportedElement = TRUE;
+        return FALSE;
+    }
+    return TRUE;
+}
+
 /* ---- points parser (axis-aware) ---- */
 static Boolean SvgShapeParsePoints(SvgImportContext *contextP,
                                    const char *points, SVGScratch *sc,
@@ -93,22 +104,22 @@ Boolean SvgShapeHandleLine(SvgImportContext *contextP, const char *tag, SVGScrat
     if (SvgParserGetAttrBounded(tag, "x1", xb,
                                 sizeof(contextP->work1)))
     {
-        (void)SvgUtilParseWWFixed16_16(xb, &fx1);
+        if (!SvgShapeParseWWFixed(sc, xb, &fx1)) return FALSE;
     }
     if (SvgParserGetAttrBounded(tag, "y1", yb,
                                 sizeof(contextP->work2)))
     {
-        (void)SvgUtilParseWWFixed16_16(yb, &fy1);
+        if (!SvgShapeParseWWFixed(sc, yb, &fy1)) return FALSE;
     }
     if (SvgParserGetAttrBounded(tag, "x2", x2b,
                                 sizeof(contextP->work3)))
     {
-        (void)SvgUtilParseWWFixed16_16(x2b, &fx2);
+        if (!SvgShapeParseWWFixed(sc, x2b, &fx2)) return FALSE;
     }
     if (SvgParserGetAttrBounded(tag, "y2", y2b,
                                 sizeof(contextP->work4)))
     {
-        (void)SvgUtilParseWWFixed16_16(y2b, &fy2);
+        if (!SvgShapeParseWWFixed(sc, y2b, &fy2)) return FALSE;
     }
 
     if (!SvgStyleHasStroke(contextP, tag))
@@ -357,18 +368,18 @@ Boolean SvgShapeHandleRect(SvgImportContext *contextP, const char *tag, SVGScrat
         return FALSE;
     }
 
-    (void)SvgUtilParseWWFixed16_16(wb, &fw);
-    (void)SvgUtilParseWWFixed16_16(hb, &fh);
+    if (!SvgShapeParseWWFixed(sc, wb, &fw) ||
+        !SvgShapeParseWWFixed(sc, hb, &fh)) return FALSE;
 
     if (SvgParserGetAttrBounded(tag, "x", xb,
                                 sizeof(contextP->work1)))
     {
-        (void)SvgUtilParseWWFixed16_16(xb, &fx);
+        if (!SvgShapeParseWWFixed(sc, xb, &fx)) return FALSE;
     }
     if (SvgParserGetAttrBounded(tag, "y", yb,
                                 sizeof(contextP->work2)))
     {
-        (void)SvgUtilParseWWFixed16_16(yb, &fy);
+        if (!SvgShapeParseWWFixed(sc, yb, &fy)) return FALSE;
     }
 
     if (!SvgXformBuildWorld(contextP, tag, NULL, &ctm))
@@ -453,18 +464,18 @@ Boolean SvgShapeHandleEllipse(SvgImportContext *contextP, const char *tag, SVGSc
         return FALSE;
     }
 
-    (void)SvgUtilParseWWFixed16_16(rxb, &frx);
-    (void)SvgUtilParseWWFixed16_16(ryb, &fry);
+    if (!SvgShapeParseWWFixed(sc, rxb, &frx) ||
+        !SvgShapeParseWWFixed(sc, ryb, &fry)) return FALSE;
 
     if (SvgParserGetAttrBounded(tag, "cx", cxb,
                                 sizeof(contextP->work1)))
     {
-        (void)SvgUtilParseWWFixed16_16(cxb, &fcx);
+        if (!SvgShapeParseWWFixed(sc, cxb, &fcx)) return FALSE;
     }
     if (SvgParserGetAttrBounded(tag, "cy", cyb,
                                 sizeof(contextP->work2)))
     {
-        (void)SvgUtilParseWWFixed16_16(cyb, &fcy);
+        if (!SvgShapeParseWWFixed(sc, cyb, &fcy)) return FALSE;
     }
 
     fillPresent = SvgStyleHasFill(contextP, tag);
@@ -578,17 +589,17 @@ Boolean SvgShapeHandleCircle(SvgImportContext *contextP, const char *tag, SVGScr
         return FALSE;
     }
 
-    (void)SvgUtilParseWWFixed16_16(rb, &fr);
+    if (!SvgShapeParseWWFixed(sc, rb, &fr)) return FALSE;
 
     if (SvgParserGetAttrBounded(tag, "cx", cxb,
                                 sizeof(contextP->work1)))
     {
-        (void)SvgUtilParseWWFixed16_16(cxb, &fcx);
+        if (!SvgShapeParseWWFixed(sc, cxb, &fcx)) return FALSE;
     }
     if (SvgParserGetAttrBounded(tag, "cy", cyb,
                                 sizeof(contextP->work2)))
     {
-        (void)SvgUtilParseWWFixed16_16(cyb, &fcy);
+        if (!SvgShapeParseWWFixed(sc, cyb, &fcy)) return FALSE;
     }
 
     fillPresent = SvgStyleHasFill(contextP, tag);

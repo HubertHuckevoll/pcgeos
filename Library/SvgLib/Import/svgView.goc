@@ -64,19 +64,20 @@ static void SvgViewComputePar(SvgImportContext *contextP, const char *parStr)
     if (!strncmp(s, "slice", 5)) contextP->preserveSlice = TRUE;
 }
 
-void SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag)
+Boolean SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag)
 {
     char *vb;
     char *wb;
     char *hb;
     char *par;
     const char *s;
+    const char *numberStart;
     WWFixedAsDWord rawSx, rawSy, uni, leftoverX, leftoverY;
     sdword w0, h0;
     word   reduce;
     sword  worldW, worldH;
 
-    if (contextP->viewInitialized) return;
+    if (contextP->viewInitialized) return TRUE;
     vb = contextP->work1;
     wb = contextP->work2;
     hb = contextP->work3;
@@ -98,20 +99,30 @@ void SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag)
 
     if (SvgParserGetAttrBounded(tag, "width", wb,
                                 sizeof(contextP->work2))) {
-        (void)SvgUtilParseWWFixed16_16(wb, &contextP->viewportWidth);
+        if (SvgUtilParseWWFixed16_16(wb, &contextP->viewportWidth) == wb)
+            return FALSE;
     }
     if (SvgParserGetAttrBounded(tag, "height", hb,
                                 sizeof(contextP->work3))) {
-        (void)SvgUtilParseWWFixed16_16(hb, &contextP->viewportHeight);
+        if (SvgUtilParseWWFixed16_16(hb, &contextP->viewportHeight) == hb)
+            return FALSE;
     }
 
     if (SvgParserGetAttrBounded(tag, "viewBox", vb,
                                 sizeof(contextP->work1))) {
         s = vb;
+        numberStart = s;
         s = SvgUtilParseWWFixed16_16(s, &contextP->viewMinX);
-        s = SvgParserSkipWS(s); s = SvgUtilParseWWFixed16_16(s, &contextP->viewMinY);
-        s = SvgParserSkipWS(s); s = SvgUtilParseWWFixed16_16(s, &contextP->viewWidth);
-        s = SvgParserSkipWS(s); s = SvgUtilParseWWFixed16_16(s, &contextP->viewHeight);
+        if (s == numberStart) return FALSE;
+        s = SvgParserSkipWS(s); numberStart = s;
+        s = SvgUtilParseWWFixed16_16(s, &contextP->viewMinY);
+        if (s == numberStart) return FALSE;
+        s = SvgParserSkipWS(s); numberStart = s;
+        s = SvgUtilParseWWFixed16_16(s, &contextP->viewWidth);
+        if (s == numberStart) return FALSE;
+        s = SvgParserSkipWS(s); numberStart = s;
+        s = SvgUtilParseWWFixed16_16(s, &contextP->viewHeight);
+        if (s == numberStart) return FALSE;
     }
     if ((sdword)contextP->viewWidth <= 0 || (sdword)contextP->viewHeight <= 0) {
         if ((sdword)contextP->viewportWidth <= 0) contextP->viewportWidth = SvgGeomMakeWWFixedFromInt(100);
@@ -177,6 +188,7 @@ void SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag)
     SvgRendererInitViewport(contextP, worldW, worldH);
 
     contextP->viewInitialized = TRUE;
+    return TRUE;
 }
 
 void SvgViewInitDefault(SvgImportContext *contextP)

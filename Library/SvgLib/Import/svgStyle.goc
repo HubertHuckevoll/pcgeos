@@ -278,6 +278,7 @@ static Boolean SvgStyleParseMiterLimitToken(const char *token, WWFixedAsDWord *o
     WWFixedAsDWord value;
     char work[32];
     char *p;
+    const char *endP;
 
     if (token == NULL || out == NULL)
     {
@@ -305,7 +306,11 @@ static Boolean SvgStyleParseMiterLimitToken(const char *token, WWFixedAsDWord *o
     }
 
     *p = 0;
-    (void)SvgUtilParseWWFixed16_16(work, &value);
+    endP = SvgUtilParseWWFixed16_16(work, &value);
+    if (endP == work)
+    {
+        return FALSE;
+    }
 
     if ((sdword)value < 0)
     {
@@ -410,64 +415,72 @@ static void SvgStyleApplyStrokeMiterLimit(SvgImportContext *contextP, const char
 /* Called on <g ...> */
 Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag)
 {
-    SvgGroupStyle st;
-    char buf[64];
-    char frBuf[24];
-    char mlBuf[24];
+    SvgGroupStyle *stP;
+    char *buf;
     const char *pwalk;
     SvgGroupStyle *stack;
+    WWFixedAsDWord mlVal;
     word depth;
+    char save;
 
     stack = SvgStyleStackLock(contextP);
     if (stack == NULL) {
         return FALSE;
     }
+    if (contextP->styleDepth >= SVG_STYLE_GSTACK_MAX) {
+        SvgStyleStackUnlock(contextP);
+        return FALSE;
+    }
+    stP = &stack[contextP->styleDepth];
+    buf = contextP->work2;
 
-    st.fillSet = FALSE;
-    st.strokeSet = FALSE;
-    st.swSet = FALSE;
-    st.fillVal[0] = 0;
-    st.strokeVal[0] = 0;
-    st.strokeWidth = SvgGeomMakeWWFixedFromInt(1);
-    st.colorSet = FALSE;
-    st.colorVal[0] = 0;
-    st.visible = TRUE;
+    stP->fillSet = FALSE;
+    stP->strokeSet = FALSE;
+    stP->swSet = FALSE;
+    stP->fillVal[0] = 0;
+    stP->strokeVal[0] = 0;
+    stP->strokeWidth = SvgGeomMakeWWFixedFromInt(1);
+    stP->colorSet = FALSE;
+    stP->colorVal[0] = 0;
+    stP->visible = TRUE;
 
     /* inherit from parent */
-    st.frSet = FALSE; st.fr = 0;
-    st.lcSet = FALSE; st.lc = 0;
-    st.ljSet = FALSE; st.lj = 0;
-    st.mlSet = FALSE;
-    st.miterLimit = SvgStyleDefaultMiterLimit();
+    stP->frSet = FALSE; stP->fr = 0;
+    stP->lcSet = FALSE; stP->lc = 0;
+    stP->ljSet = FALSE; stP->lj = 0;
+    stP->mlSet = FALSE;
+    stP->miterLimit = SvgStyleDefaultMiterLimit();
     if (contextP->styleDepth > 0) {
-        st.frSet = stack[contextP->styleDepth-1].frSet;
-        st.fr    = stack[contextP->styleDepth-1].fr;
-        st.lcSet = stack[contextP->styleDepth-1].lcSet;
-        st.lc    = stack[contextP->styleDepth-1].lc;
-        st.ljSet = stack[contextP->styleDepth-1].ljSet;
-        st.lj    = stack[contextP->styleDepth-1].lj;
-        st.mlSet = stack[contextP->styleDepth-1].mlSet;
-        st.miterLimit = stack[contextP->styleDepth-1].miterLimit;
-        st.visible = stack[contextP->styleDepth-1].visible;
+        stP->frSet = stack[contextP->styleDepth-1].frSet;
+        stP->fr    = stack[contextP->styleDepth-1].fr;
+        stP->lcSet = stack[contextP->styleDepth-1].lcSet;
+        stP->lc    = stack[contextP->styleDepth-1].lc;
+        stP->ljSet = stack[contextP->styleDepth-1].ljSet;
+        stP->lj    = stack[contextP->styleDepth-1].lj;
+        stP->mlSet = stack[contextP->styleDepth-1].mlSet;
+        stP->miterLimit = stack[contextP->styleDepth-1].miterLimit;
+        stP->visible = stack[contextP->styleDepth-1].visible;
     }
 
     buf[0] = 0;
-    if (!SvgParseGetInlineStyleProp(contextP, tag, "visibility", buf, sizeof(buf)))
+    if (!SvgParseGetInlineStyleProp(contextP, tag, "visibility", buf,
+                                    sizeof(contextP->work2)))
     {
-        (void)SvgParserGetAttrBounded(tag, "visibility", buf, sizeof(buf));
+        (void)SvgParserGetAttrBounded(tag, "visibility", buf,
+                                      sizeof(contextP->work2));
     }
-    if (SvgUtilAsciiNoCaseEq(buf, "visible")) st.visible = TRUE;
+    if (SvgUtilAsciiNoCaseEq(buf, "visible")) stP->visible = TRUE;
     else if (SvgUtilAsciiNoCaseEq(buf, "hidden") ||
-             SvgUtilAsciiNoCaseEq(buf, "collapse")) st.visible = FALSE;
+             SvgUtilAsciiNoCaseEq(buf, "collapse")) stP->visible = FALSE;
 
     /* inline style/attributes: fill, stroke */
-    if (SvgParseGetInlineStyleProp(contextP, tag, "fill", st.fillVal, sizeof(st.fillVal)) ||
-        SvgParserGetAttrBounded(tag, "fill", st.fillVal, sizeof(st.fillVal))) {
-        st.fillSet = TRUE;
-        if (SvgUtilAsciiNoCaseEq(st.fillVal, "inherit"))
+    if (SvgParseGetInlineStyleProp(contextP, tag, "fill", stP->fillVal, sizeof(stP->fillVal)) ||
+        SvgParserGetAttrBounded(tag, "fill", stP->fillVal, sizeof(stP->fillVal))) {
+        stP->fillSet = TRUE;
+        if (SvgUtilAsciiNoCaseEq(stP->fillVal, "inherit"))
         {
-            st.fillSet = FALSE;
-            st.fillVal[0] = 0;
+            stP->fillSet = FALSE;
+            stP->fillVal[0] = 0;
             if (contextP->styleDepth > 0)
             {
                 depth = contextP->styleDepth;
@@ -476,23 +489,23 @@ Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag)
                     depth--;
                     if (stack[depth].fillSet)
                     {
-                        strncpy(st.fillVal, stack[depth].fillVal,
-                                sizeof(st.fillVal) - 1);
-                        st.fillVal[sizeof(st.fillVal) - 1] = 0;
-                        st.fillSet = TRUE;
+                        strncpy(stP->fillVal, stack[depth].fillVal,
+                                sizeof(stP->fillVal) - 1);
+                        stP->fillVal[sizeof(stP->fillVal) - 1] = 0;
+                        stP->fillSet = TRUE;
                         break;
                     }
                 }
             }
         }
     }
-    if (SvgParseGetInlineStyleProp(contextP, tag, "stroke", st.strokeVal, sizeof(st.strokeVal)) ||
-        SvgParserGetAttrBounded(tag, "stroke", st.strokeVal, sizeof(st.strokeVal))) {
-        st.strokeSet = TRUE;
-        if (SvgUtilAsciiNoCaseEq(st.strokeVal, "inherit"))
+    if (SvgParseGetInlineStyleProp(contextP, tag, "stroke", stP->strokeVal, sizeof(stP->strokeVal)) ||
+        SvgParserGetAttrBounded(tag, "stroke", stP->strokeVal, sizeof(stP->strokeVal))) {
+        stP->strokeSet = TRUE;
+        if (SvgUtilAsciiNoCaseEq(stP->strokeVal, "inherit"))
         {
-            st.strokeSet = FALSE;
-            st.strokeVal[0] = 0;
+            stP->strokeSet = FALSE;
+            stP->strokeVal[0] = 0;
             if (contextP->styleDepth > 0)
             {
                 depth = contextP->styleDepth;
@@ -501,10 +514,10 @@ Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag)
                     depth--;
                     if (stack[depth].strokeSet)
                     {
-                        strncpy(st.strokeVal, stack[depth].strokeVal,
-                                sizeof(st.strokeVal) - 1);
-                        st.strokeVal[sizeof(st.strokeVal) - 1] = 0;
-                        st.strokeSet = TRUE;
+                        strncpy(stP->strokeVal, stack[depth].strokeVal,
+                                sizeof(stP->strokeVal) - 1);
+                        stP->strokeVal[sizeof(stP->strokeVal) - 1] = 0;
+                        stP->strokeSet = TRUE;
                         break;
                     }
                 }
@@ -514,9 +527,11 @@ Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag)
 
     /* color */
     buf[0] = 0;
-    if (!SvgParseGetInlineStyleProp(contextP, tag, "color", buf, sizeof(buf)))
+    if (!SvgParseGetInlineStyleProp(contextP, tag, "color", buf,
+                                    sizeof(contextP->work2)))
     {
-        (void)SvgParserGetAttrBounded(tag, "color", buf, sizeof(buf));
+        (void)SvgParserGetAttrBounded(tag, "color", buf,
+                                      sizeof(contextP->work2));
     }
     if (buf[0])
     {
@@ -530,10 +545,10 @@ Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag)
                     depth--;
                     if (stack[depth].colorSet)
                     {
-                        strncpy(st.colorVal, stack[depth].colorVal,
-                                sizeof(st.colorVal) - 1);
-                        st.colorVal[sizeof(st.colorVal) - 1] = 0;
-                        st.colorSet = TRUE;
+                        strncpy(stP->colorVal, stack[depth].colorVal,
+                                sizeof(stP->colorVal) - 1);
+                        stP->colorVal[sizeof(stP->colorVal) - 1] = 0;
+                        stP->colorSet = TRUE;
                         break;
                     }
                 }
@@ -541,37 +556,39 @@ Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag)
         }
         else
         {
-            strncpy(st.colorVal, buf, sizeof(st.colorVal) - 1);
-            st.colorVal[sizeof(st.colorVal) - 1] = 0;
-            st.colorSet = TRUE;
+            strncpy(stP->colorVal, buf, sizeof(stP->colorVal) - 1);
+            stP->colorVal[sizeof(stP->colorVal) - 1] = 0;
+            stP->colorSet = TRUE;
         }
     }
 
     /* stroke-width */
     buf[0] = 0;
-    if (!SvgParseGetInlineStyleProp(contextP, tag, "stroke-width", buf, sizeof(buf))) {
-        (void)SvgParserGetAttrBounded(tag, "stroke-width", buf, sizeof(buf));
+    if (!SvgParseGetInlineStyleProp(contextP, tag, "stroke-width", buf,
+                                    sizeof(contextP->work2))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-width", buf,
+                                      sizeof(contextP->work2));
     }
     if (buf[0]) {
         pwalk = buf;
         while (*pwalk && (isdigit((byte)*pwalk) || *pwalk=='+' || *pwalk=='-' || *pwalk=='.')) pwalk++;
         if (pwalk != buf) {
-            char save = *pwalk;
+            save = *pwalk;
             *(char*)pwalk = 0;
-            (void)SvgUtilParseWWFixed16_16(buf, &st.strokeWidth);
+            if (SvgUtilParseWWFixed16_16(buf, &stP->strokeWidth) != buf)
+                stP->swSet = TRUE;
             *(char*)pwalk = save;
-            st.swSet = TRUE;
         }
     }
 
     /* stroke-miterlimit */
-    mlBuf[0] = 0;
-    if (SvgParseGetInlineStyleProp(contextP, tag, "stroke-miterlimit", mlBuf, sizeof(mlBuf)) ||
-        SvgParserGetAttrBounded(tag, "stroke-miterlimit", mlBuf, sizeof(mlBuf)))
+    buf[0] = 0;
+    if (SvgParseGetInlineStyleProp(contextP, tag, "stroke-miterlimit", buf, sizeof(contextP->work2)) ||
+        SvgParserGetAttrBounded(tag, "stroke-miterlimit", buf, sizeof(contextP->work2)))
     {
-        if (SvgUtilAsciiNoCaseEq(mlBuf, "inherit"))
+        if (SvgUtilAsciiNoCaseEq(buf, "inherit"))
         {
-            st.mlSet = FALSE;
+            stP->mlSet = FALSE;
             if (contextP->styleDepth > 0)
             {
                 depth = contextP->styleDepth;
@@ -580,71 +597,68 @@ Boolean SvgStyleGroupPush(SvgImportContext *contextP, const char *tag)
                     depth--;
                     if (stack[depth].mlSet)
                     {
-                        st.miterLimit = stack[depth].miterLimit;
-                        st.mlSet = TRUE;
+                        stP->miterLimit = stack[depth].miterLimit;
+                        stP->mlSet = TRUE;
                         break;
                     }
                 }
             }
-            if (!st.mlSet)
+            if (!stP->mlSet)
             {
-                st.miterLimit = SvgStyleDefaultMiterLimit();
-                st.mlSet = TRUE;
+                stP->miterLimit = SvgStyleDefaultMiterLimit();
+                stP->mlSet = TRUE;
             }
         }
         else
         {
-            WWFixedAsDWord mlVal;
-            if (SvgStyleParseMiterLimitToken(mlBuf, &mlVal))
+            if (SvgStyleParseMiterLimitToken(buf, &mlVal))
             {
-                st.miterLimit = mlVal;
-                st.mlSet = TRUE;
+                stP->miterLimit = mlVal;
+                stP->mlSet = TRUE;
             }
         }
     }
 
     /* fill-rule */
-    frBuf[0] = 0;
-    if (!SvgParseGetInlineStyleProp(contextP, tag, "fill-rule", frBuf, sizeof(frBuf))) {
-        (void)SvgParserGetAttrBounded(tag, "fill-rule", frBuf, sizeof(frBuf));
+    buf[0] = 0;
+    if (!SvgParseGetInlineStyleProp(contextP, tag, "fill-rule", buf, sizeof(contextP->work2))) {
+        (void)SvgParserGetAttrBounded(tag, "fill-rule", buf, sizeof(contextP->work2));
     }
-    if (frBuf[0]) {
-        if (SvgUtilAsciiNoCaseEq(frBuf, "evenodd")) { st.fr = 1; st.frSet = TRUE; }
-        else if (SvgUtilAsciiNoCaseEq(frBuf, "nonzero") || SvgUtilAsciiNoCaseEq(frBuf, "winding")) { st.fr = 0; st.frSet = TRUE; }
+    if (buf[0]) {
+        if (SvgUtilAsciiNoCaseEq(buf, "evenodd")) { stP->fr = 1; stP->frSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "nonzero") || SvgUtilAsciiNoCaseEq(buf, "winding")) { stP->fr = 0; stP->frSet = TRUE; }
         /* inherit/other -> keep */
     }
 
     /* stroke-linecap */
     buf[0] = 0;
-    if (!SvgParseGetInlineStyleProp(contextP, tag, "stroke-linecap", buf, sizeof(buf))) {
-        (void)SvgParserGetAttrBounded(tag, "stroke-linecap", buf, sizeof(buf));
+    if (!SvgParseGetInlineStyleProp(contextP, tag, "stroke-linecap", buf,
+                                    sizeof(contextP->work2))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-linecap", buf,
+                                      sizeof(contextP->work2));
     }
     if (buf[0]) {
-        if (SvgUtilAsciiNoCaseEq(buf, "round"))   { st.lc = 1; st.lcSet = TRUE; }
-        else if (SvgUtilAsciiNoCaseEq(buf, "square")) { st.lc = 2; st.lcSet = TRUE; }
-        else if (SvgUtilAsciiNoCaseEq(buf, "butt"))   { st.lc = 0; st.lcSet = TRUE; }
+        if (SvgUtilAsciiNoCaseEq(buf, "round"))   { stP->lc = 1; stP->lcSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "square")) { stP->lc = 2; stP->lcSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "butt"))   { stP->lc = 0; stP->lcSet = TRUE; }
         /* inherit/other -> keep */
     }
 
     /* stroke-linejoin */
     buf[0] = 0;
-    if (!SvgParseGetInlineStyleProp(contextP, tag, "stroke-linejoin", buf, sizeof(buf))) {
-        (void)SvgParserGetAttrBounded(tag, "stroke-linejoin", buf, sizeof(buf));
+    if (!SvgParseGetInlineStyleProp(contextP, tag, "stroke-linejoin", buf,
+                                    sizeof(contextP->work2))) {
+        (void)SvgParserGetAttrBounded(tag, "stroke-linejoin", buf,
+                                      sizeof(contextP->work2));
     }
     if (buf[0]) {
-        if (SvgUtilAsciiNoCaseEq(buf, "round"))  { st.lj = 1; st.ljSet = TRUE; }
-        else if (SvgUtilAsciiNoCaseEq(buf, "bevel")) { st.lj = 2; st.ljSet = TRUE; }
-        else if (SvgUtilAsciiNoCaseEq(buf, "miter")) { st.lj = 0; st.ljSet = TRUE; }
+        if (SvgUtilAsciiNoCaseEq(buf, "round"))  { stP->lj = 1; stP->ljSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "bevel")) { stP->lj = 2; stP->ljSet = TRUE; }
+        else if (SvgUtilAsciiNoCaseEq(buf, "miter")) { stP->lj = 0; stP->ljSet = TRUE; }
         /* inherit/other -> keep */
     }
 
-    /* push */
-    if (contextP->styleDepth >= SVG_STYLE_GSTACK_MAX) {
-        SvgStyleStackUnlock(contextP);
-        return FALSE;
-    }
-
-    stack[contextP->styleDepth++] = st;
+    contextP->styleDepth++;
     SvgStyleStackUnlock(contextP);
     return TRUE;
 }
@@ -946,6 +960,7 @@ void SvgStyleApplyStrokeWidth(SvgImportContext *contextP, const char *tag, const
     const char *pwalk;
     char save;
     Boolean haveWidth;
+    const char *endP;
 
     /* Try element-local width first */
     b[0] = 0;
@@ -962,9 +977,9 @@ void SvgStyleApplyStrokeWidth(SvgImportContext *contextP, const char *tag, const
         }
         save = *pwalk;
         *(char*)pwalk = 0;
-        (void)SvgUtilParseWWFixed16_16(b, &lw);
+        endP = SvgUtilParseWWFixed16_16(b, &lw);
         *(char*)pwalk = save;
-        haveWidth = TRUE;
+        haveWidth = (endP != b);
     }
 
     /* Else inherit from group */
