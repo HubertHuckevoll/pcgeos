@@ -11,6 +11,10 @@
 #include "svgExport.h"
 
 #define SVG_EXPORT_GSTRING_FLAGS   (GSC_ONE)
+#define SVG_EXPORT_ADD_WWFIXED(a, b) \
+    ((WWFixedAsDWord)((sdword)(a) + (sdword)(b)))
+#define SVG_EXPORT_SUB_WWFIXED(a, b) \
+    ((WWFixedAsDWord)((sdword)(a) - (sdword)(b)))
 
 word _pascal SvgExportGString(GStateHandle sourceGState, SvgExportContext *context);
 word _pascal SvgExportValidateGString(GStateHandle sourceGState,
@@ -37,6 +41,12 @@ word SvgExportEmitPath(GStateHandle playbackGState,
                         Boolean strokePath,
                         RegionFillRule fillRule,
                         const TransMatrix *tm);
+static word SvgExportAppendPointArrayToPath(
+    SvgExportContext *context, SvgExportPathBuilder *builder,
+    const byte *elementData, Boolean closeShape);
+static word SvgExportAppendEllipseToPath(
+    SvgExportContext *context, SvgExportPathBuilder *builder,
+    const byte *elementData);
 void _pascal SvgExportResetDashPattern(SvgExportContext *context)
 {
     if (context == NULL)
@@ -975,6 +985,178 @@ SvgExportHandlePolygonOpcode(word elementType,
     return TE_NO_ERROR;
 }
 
+static word
+SvgExportAppendPointArrayToPath(SvgExportContext *context,
+                                SvgExportPathBuilder *builder,
+                                const byte *elementData,
+                                Boolean closeShape)
+{
+    Point intPoint;
+    PointWWFixed point;
+    PointWWFixed previousPoint;
+    word pointCount;
+    word pointIndex;
+    word offset;
+
+    if ((context == (void*)0) || (builder == (void*)0) ||
+        (elementData == (void*)0))
+    {
+        return TE_EXPORT_ERROR;
+    }
+
+    pointCount = SvgExportReadWord(elementData, SVG_EXPORT_OPCODE_SIZE);
+    offset = SVG_EXPORT_POLY_HEADER_SIZE;
+    for (pointIndex = 0; pointIndex < pointCount; pointIndex++)
+    {
+        intPoint.P_x = SvgExportReadSword(elementData, offset);
+        offset += sizeof(sword);
+        intPoint.P_y = SvgExportReadSword(elementData, offset);
+        offset += sizeof(sword);
+        SvgExportPointFromInt(&intPoint, &point);
+
+        if (pointIndex == 0)
+        {
+            if (!SvgExportPathBuilderMoveTo(context, builder, &point))
+            {
+                return TE_FILE_WRITE;
+            }
+        }
+        else if (!SvgExportPathBuilderLineTo(context, builder,
+                                              &previousPoint, &point))
+        {
+            return TE_FILE_WRITE;
+        }
+        SvgExportCopyPointWWFixed(&previousPoint, &point);
+    }
+
+    if ((closeShape != FALSE) && (pointCount != 0) &&
+        !SvgExportPathBuilderClose(context, builder))
+    {
+        return TE_FILE_WRITE;
+    }
+    return TE_NO_ERROR;
+}
+
+static void
+SvgExportSetPathPoint(PointWWFixed *pointP,
+                      WWFixedAsDWord x, WWFixedAsDWord y)
+{
+    SvgExportSetWWFixedComponent(&pointP->PF_x, x);
+    SvgExportSetWWFixedComponent(&pointP->PF_y, y);
+}
+
+static word
+SvgExportAppendEllipseToPath(SvgExportContext *context,
+                             SvgExportPathBuilder *builder,
+                             const byte *elementData)
+{
+    const WWFixedAsDWord kappa = 0x00008d62L;
+    sword x1;
+    sword y1;
+    sword x2;
+    sword y2;
+    sdword delta;
+    WWFixedAsDWord centerX;
+    WWFixedAsDWord centerY;
+    WWFixedAsDWord radiusX;
+    WWFixedAsDWord radiusY;
+    WWFixedAsDWord controlX;
+    WWFixedAsDWord controlY;
+    PointWWFixed start;
+    PointWWFixed control1;
+    PointWWFixed control2;
+    PointWWFixed end;
+
+    if ((context == (void*)0) || (builder == (void*)0) ||
+        (elementData == (void*)0))
+    {
+        return TE_EXPORT_ERROR;
+    }
+
+    x1 = SvgExportReadSword(elementData, SVG_EXPORT_OPCODE_SIZE);
+    y1 = SvgExportReadSword(elementData, SVG_EXPORT_OPCODE_SIZE + 2);
+    x2 = SvgExportReadSword(elementData, SVG_EXPORT_OPCODE_SIZE + 4);
+    y2 = SvgExportReadSword(elementData, SVG_EXPORT_OPCODE_SIZE + 6);
+    centerX = (WWFixedAsDWord)(((sdword)x1 + (sdword)x2) * 32768L);
+    centerY = (WWFixedAsDWord)(((sdword)y1 + (sdword)y2) * 32768L);
+    delta = (sdword)x2 - (sdword)x1;
+    if (delta < 0) delta = -delta;
+    radiusX = (WWFixedAsDWord)(delta * 32768L);
+    delta = (sdword)y2 - (sdword)y1;
+    if (delta < 0) delta = -delta;
+    radiusY = (WWFixedAsDWord)(delta * 32768L);
+    controlX = GrMulWWFixed(radiusX, kappa);
+    controlY = GrMulWWFixed(radiusY, kappa);
+
+    SvgExportSetPathPoint(&start,
+        SVG_EXPORT_ADD_WWFIXED(centerX, radiusX), centerY);
+    if (!SvgExportPathBuilderMoveTo(context, builder, &start))
+    {
+        return TE_FILE_WRITE;
+    }
+
+    SvgExportSetPathPoint(&control1,
+        SVG_EXPORT_ADD_WWFIXED(centerX, radiusX),
+        SVG_EXPORT_ADD_WWFIXED(centerY, controlY));
+    SvgExportSetPathPoint(&control2,
+        SVG_EXPORT_ADD_WWFIXED(centerX, controlX),
+        SVG_EXPORT_ADD_WWFIXED(centerY, radiusY));
+    SvgExportSetPathPoint(&end, centerX,
+        SVG_EXPORT_ADD_WWFIXED(centerY, radiusY));
+    if (!SvgExportPathBuilderCurveTo(context, builder, &start,
+                                      &control1, &control2, &end))
+    {
+        return TE_FILE_WRITE;
+    }
+    SvgExportCopyPointWWFixed(&start, &end);
+
+    SvgExportSetPathPoint(&control1,
+        SVG_EXPORT_SUB_WWFIXED(centerX, controlX),
+        SVG_EXPORT_ADD_WWFIXED(centerY, radiusY));
+    SvgExportSetPathPoint(&control2,
+        SVG_EXPORT_SUB_WWFIXED(centerX, radiusX),
+        SVG_EXPORT_ADD_WWFIXED(centerY, controlY));
+    SvgExportSetPathPoint(&end,
+        SVG_EXPORT_SUB_WWFIXED(centerX, radiusX), centerY);
+    if (!SvgExportPathBuilderCurveTo(context, builder, &start,
+                                      &control1, &control2, &end))
+    {
+        return TE_FILE_WRITE;
+    }
+    SvgExportCopyPointWWFixed(&start, &end);
+
+    SvgExportSetPathPoint(&control1,
+        SVG_EXPORT_SUB_WWFIXED(centerX, radiusX),
+        SVG_EXPORT_SUB_WWFIXED(centerY, controlY));
+    SvgExportSetPathPoint(&control2,
+        SVG_EXPORT_SUB_WWFIXED(centerX, controlX),
+        SVG_EXPORT_SUB_WWFIXED(centerY, radiusY));
+    SvgExportSetPathPoint(&end, centerX,
+        SVG_EXPORT_SUB_WWFIXED(centerY, radiusY));
+    if (!SvgExportPathBuilderCurveTo(context, builder, &start,
+                                      &control1, &control2, &end))
+    {
+        return TE_FILE_WRITE;
+    }
+    SvgExportCopyPointWWFixed(&start, &end);
+
+    SvgExportSetPathPoint(&control1,
+        SVG_EXPORT_ADD_WWFIXED(centerX, controlX),
+        SVG_EXPORT_SUB_WWFIXED(centerY, radiusY));
+    SvgExportSetPathPoint(&control2,
+        SVG_EXPORT_ADD_WWFIXED(centerX, radiusX),
+        SVG_EXPORT_SUB_WWFIXED(centerY, controlY));
+    SvgExportSetPathPoint(&end,
+        SVG_EXPORT_ADD_WWFIXED(centerX, radiusX), centerY);
+    if (!SvgExportPathBuilderCurveTo(context, builder, &start,
+                                      &control1, &control2, &end) ||
+        !SvgExportPathBuilderClose(context, builder))
+    {
+        return TE_FILE_WRITE;
+    }
+    return TE_NO_ERROR;
+}
+
 word SvgExportEmitPath(GStateHandle playbackGState,
                         SvgExportContext *context,
                         Boolean fillPath,
@@ -1079,6 +1261,31 @@ word SvgExportEmitPath(GStateHandle playbackGState,
             result = TE_EXPORT_NOT_SUPPORTED;
             SvgExportReleaseElement(context);
             break;
+        }
+
+        if ((elementType == GR_DRAW_POLYLINE) ||
+            (elementType == GR_DRAW_POLYGON))
+        {
+            result = SvgExportAppendPointArrayToPath(
+                context, &builder, context->elementDataP,
+                (elementType == GR_DRAW_POLYGON));
+            SvgExportReleaseElement(context);
+            if (result != TE_NO_ERROR)
+            {
+                break;
+            }
+            continue;
+        }
+        if (elementType == GR_DRAW_ELLIPSE)
+        {
+            result = SvgExportAppendEllipseToPath(
+                context, &builder, context->elementDataP);
+            SvgExportReleaseElement(context);
+            if (result != TE_NO_ERROR)
+            {
+                break;
+            }
+            continue;
         }
 
         GrGetCurPosWWFixed(pathPlayback, &currentPosition);

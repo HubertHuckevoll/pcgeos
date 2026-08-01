@@ -60,6 +60,7 @@ SvgExportOpcodeClass _pascal SvgExportClassifyOpcode(word elementType)
         case GR_MOVE_TO:
         case GR_REL_MOVE_TO:
         case GR_SET_LINE_COLOR:
+        case GR_SET_LINE_COLOR_MAP:
         case GR_SET_LINE_MASK:
         case GR_SET_LINE_WIDTH:
         case GR_SET_LINE_JOIN:
@@ -70,6 +71,7 @@ SvgExportOpcodeClass _pascal SvgExportClassifyOpcode(word elementType)
         case GR_SET_LINE_COLOR_INDEX:
         case GR_SET_CUSTOM_LINE_STYLE:
         case GR_SET_AREA_COLOR:
+        case GR_SET_AREA_COLOR_MAP:
         case GR_SET_AREA_MASK:
         case GR_SET_AREA_ATTR:
         case GR_SET_AREA_COLOR_INDEX:
@@ -335,6 +337,16 @@ SvgExportValidateElement(const byte *elementData,
             minimumSize = 2;
             if ((elementSize >= minimumSize) &&
                 (elementData[SVG_EXPORT_OPCODE_SIZE] != SDM_100))
+            {
+                return TE_EXPORT_NOT_SUPPORTED;
+            }
+            break;
+
+        case GR_SET_LINE_COLOR_MAP:
+        case GR_SET_AREA_COLOR_MAP:
+            minimumSize = 2;
+            if ((elementSize >= minimumSize) &&
+                (elementData[SVG_EXPORT_OPCODE_SIZE] != CMT_DITHER))
             {
                 return TE_EXPORT_NOT_SUPPORTED;
             }
