@@ -1604,15 +1604,46 @@ BuildBitmapTransferItem(FileHandle bmpfile, VMBlockHandle bmpblock,
 
 static TransferBlockID
 BuildGStringTransferItem(FileHandle file, VMBlockHandle block,
-					 FileLongName name, word width, word height)
+					 FileLongName name, word width, word height,
+					 sword originX, sword originY)
 {
   MemHandle mem;
   VMFileHandle transferFile;
   VMBlockHandle transferItem;
   ClipboardItemHeader *ptr;
+  VMBlockHandle transferBlock;
+  GStateHandle sourceGString;
+  GStateHandle transferGString;
+  VMChain chain;
 
   transferFile = ClipboardGetClipboardFile();
+
+  sourceGString = GrLoadGString(file, GST_VMEM, block);
+  if(sourceGString == 0)
+	 return(0);
+
+  transferGString = GrCreateGString(transferFile, GST_VMEM, &transferBlock);
+  if(transferGString == 0)
+  {
+	 GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
+	 return(0);
+  }
+
+  GrSetGStringBounds(transferGString, 0, 0, width, height);
+  GrApplyTranslationDWord(transferGString, -(sdword)originX,
+									 -(sdword)originY);
+  GrCopyGString(sourceGString, transferGString, 0);
+  GrEndGString(transferGString);
+  GrDestroyGString(transferGString, 0, GSKT_LEAVE_DATA);
+  GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
+
+  chain = VMCHAIN_MAKE_FROM_VM_BLOCK(transferBlock);
   transferItem = VMAlloc(transferFile, sizeof(ClipboardItemHeader), 0);
+  if(transferItem == 0)
+  {
+	 VMFreeVMChain(transferFile, chain);
+	 return(0);
+  }
   ptr = (ClipboardItemHeader *)VMLock(transferFile, transferItem, &mem);
 
   ptr->CIH_owner = (optr) (((dword)GeodeGetProcessHandle()<<16) | 0);
@@ -1623,8 +1654,7 @@ BuildGStringTransferItem(FileHandle file, VMBlockHandle block,
   ptr->CIH_formats[0].CIFI_format =
 	 FormatIDFromManufacturerAndType(MANUFACTURER_ID_GEOWORKS,
 					 CIF_GRAPHICS_STRING);
-  ptr->CIH_formats[0].CIFI_vmChain = VMCopyVMChain(file,
-	 VMCHAIN_MAKE_FROM_VM_BLOCK(block), transferFile);
+  ptr->CIH_formats[0].CIFI_vmChain = chain;
   ptr->CIH_formats[0].CIFI_extra1 = width;
   ptr->CIH_formats[0].CIFI_extra2 = height;
 
@@ -1638,7 +1668,8 @@ BuildGStringTransferItem(FileHandle file, VMBlockHandle block,
 static Boolean
 CopyCommon(ClipboardItemFlags transferFlags, FileHandle bmpfile,
 					   VMBlockHandle bmpblock, char *bmpname,
-						word bmpwidth, word bmpheight, byte dataType)
+						word bmpwidth, word bmpheight, byte dataType,
+						sword originX, sword originY)
 {
   if (bmpblock != 0)
   {
@@ -1646,10 +1677,13 @@ CopyCommon(ClipboardItemFlags transferFlags, FileHandle bmpfile,
 
 		 if(dataType == BV_DATA_GSTRING)
 			transferItem = BuildGStringTransferItem(bmpfile, bmpblock,
-								 bmpname, bmpwidth, bmpheight);
+								 bmpname, bmpwidth, bmpheight,
+								 originX, originY);
 		 else
 			transferItem = BuildBitmapTransferItem(bmpfile, bmpblock,
 								bmpname, bmpwidth, bmpheight);
+		 if(transferItem == 0)
+			return(FALSE);
 		 return ClipboardRegisterItem(transferItem, transferFlags);
   }
   else
@@ -1742,7 +1776,8 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   (void) CopyCommon(TIF_NORMAL, pself->BVBmpFile, pself->BVBmpBlock,
 							pself->GDI_fileName,
 						   pself->BVBmpWidth, pself->BVBmpHeight,
-						   pself->BVDataType);
+						   pself->BVDataType, pself->BVOriginX,
+						   pself->BVOriginY);
 }
 
 /**************************************************************************/
@@ -2307,7 +2342,7 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   {
 		 if (CopyCommon(CIF_QUICK, pself->BVBmpFile, pself->BVBmpBlock,
 		  pself->GDI_fileName, pself->BVBmpWidth, pself->BVBmpHeight,
-		  pself->BVDataType))
+		  pself->BVDataType, pself->BVOriginX, pself->BVOriginY))
 	 {
 				@send pself->GCI_genView::MSG_GEN_VIEW_ALLOW_GLOBAL_TRANSFER();
 	 }
@@ -2385,20 +2420,109 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 
 /**************************************************************************/
 
+static Boolean _pascal
+BVImportSvgProgress(word percent)
+{
+	return(!(@call BVImportStatus::MSG_SB_SET_STATUS_VALUE(percent)));
+}
+
+/**************************************************************************/
+
+static Boolean _pascal
+BVThumbnailSvgProgress(word percent)
+{
+	return(!(@call BVThumbnailStatus::MSG_SB_SET_STATUS_VALUE(percent)));
+}
+
+/**************************************************************************/
+
+static void _pascal
+BVCloseTempFile(VMFileHandle file, char *name)
+{
+	if(file == 0)
+		return;
+
+	VMClose(file, FILE_NO_ERRORS);
+	FilePushDir();
+	FileSetCurrentPath(SP_WASTE_BASKET, ".");
+	FileDelete(name);
+	FilePopDir();
+}
+
+/**************************************************************************/
+
+static ImpBmpStatus _pascal
+BVImportGraphic(ImpBmpParams *paraP, byte *dataTypeP,
+				sword *originXP, sword *originYP,
+				SvgProgressCallback *callback)
+{
+	TransError svgStatus;
+	VMChain svgChain;
+	RectDWord svgBounds;
+	sdword svgWidth, svgHeight;
+	Boolean continued;
+
+	*dataTypeP = BV_DATA_BITMAP;
+	*originXP = 0;
+	*originYP = 0;
+
+	if(!SvgCheckHeader(paraP->IBP_source))
+		return(Imp_BmpProcessFile(paraP, IBF_AUTO));
+
+	@call paraP->IBP_status::MSG_SB_START_PROCESS();
+	svgStatus = SvgImport(paraP->IBP_source, paraP->IBP_dest, &svgChain,
+						  &svgBounds, callback);
+	continued = @call paraP->IBP_status::MSG_SB_SET_STATUS_VALUE(100);
+	if(svgStatus == SVG_TE_NO_ERROR && continued)
+		@call paraP->IBP_status::MSG_SB_END_PROCESS();
+	else
+		@call paraP->IBP_status::MSG_SB_STOP_PROCESS();
+
+	if(!continued)
+	{
+		if(svgStatus == SVG_TE_NO_ERROR)
+			VMFreeVMChain(paraP->IBP_dest, svgChain);
+		return(IBS_IMPORT_STOPPED);
+	}
+	if(svgStatus != SVG_TE_NO_ERROR)
+		return(IBS_UNKNOWN_FORMAT);
+
+	svgWidth = svgBounds.RD_right - svgBounds.RD_left;
+	svgHeight = svgBounds.RD_bottom - svgBounds.RD_top;
+	if(svgBounds.RD_left < -32768L ||
+	   svgBounds.RD_left > 32767L ||
+	   svgBounds.RD_top < -32768L ||
+	   svgBounds.RD_top > 32767L ||
+	   svgWidth <= 0 || svgWidth > 32767L ||
+	   svgHeight <= 0 || svgHeight > 32767L)
+	{
+		VMFreeVMChain(paraP->IBP_dest, svgChain);
+		return(IBS_UNKNOWN_FORMAT);
+	}
+
+	paraP->IBP_bitmap = VMCHAIN_GET_VM_BLOCK(svgChain);
+	paraP->IBP_width = (word)svgWidth;
+	paraP->IBP_height = (word)svgHeight;
+	strcpy(paraP->IBP_impForm, ".SVG");
+	*dataTypeP = BV_DATA_GSTRING;
+	*originXP = (sword)svgBounds.RD_left;
+	*originYP = (sword)svgBounds.RD_top;
+	return(IBS_NO_ERROR);
+}
+
+/**************************************************************************/
+
 @method BVDocumentClass, MSG_GEN_DOCUMENT_ATTACH_UI_TO_DOCUMENT
 {
 	dword date, size;
 	Boolean stat;
 	ImpBmpStatus status;
 	ImpBmpParams para;
-	TransError svgStatus;
-	VMChain svgChain;
-	RectDWord svgBounds;
-	sdword svgWidth, svgHeight;
 	char string[255];
 	VMBlockHandle bmpblock;
 	word count;
 	byte dataType;
+	sword originX, originY;
 
 	MemLock(OptrToHandle(@BVImportingText));
 	strcpy(string, LMemDeref(@BVImportingText));
@@ -2426,45 +2550,11 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 	FilePopDir();
 	para.IBP_status = @BVImportStatus;
 
-	// start importing
-	dataType = BV_DATA_BITMAP;
-	if(SvgCheckHeader(para.IBP_source))
-	{
-		svgStatus = SvgImport(para.IBP_source, para.IBP_dest, &svgChain,
-						  &svgBounds, (SvgProgressCallback *)0);
-		if(svgStatus == SVG_TE_NO_ERROR)
-		{
-			svgWidth = svgBounds.RD_right - svgBounds.RD_left;
-			svgHeight = svgBounds.RD_bottom - svgBounds.RD_top;
-			if(svgBounds.RD_left < -32768L ||
-			   svgBounds.RD_left > 32767L ||
-			   svgBounds.RD_top < -32768L ||
-			   svgBounds.RD_top > 32767L ||
-			   svgWidth <= 0 || svgWidth > 32767L ||
-			   svgHeight <= 0 || svgHeight > 32767L)
-			{
-				VMFreeVMChain(para.IBP_dest, svgChain);
-				status = IBS_UNKNOWN_FORMAT;
-			}
-			else
-			{
-				para.IBP_bitmap = VMCHAIN_GET_VM_BLOCK(svgChain);
-				para.IBP_width = (word)svgWidth;
-				para.IBP_height = (word)svgHeight;
-				strcpy(para.IBP_impForm, ".SVG");
-				dataType = BV_DATA_GSTRING;
-				status = IBS_NO_ERROR;
-			}
-		}
-		else
-		{
-			status = IBS_UNKNOWN_FORMAT;
-		}
-	}
+	if(para.IBP_dest != 0)
+		status = BVImportGraphic(&para, &dataType, &originX, &originY,
+							   BVImportSvgProgress);
 	else
-	{
-		status = Imp_BmpProcessFile(&para, IBF_AUTO);
-	}
+		status = IBS_SYS_ERROR;
 
 	@send BVImportingDlg::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
 
@@ -2498,7 +2588,7 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 		{
 			@call oself::MSG_BV_OPEN_GSTRING(para.IBP_dest, para.IBP_bitmap,
 				para.IBP_width, para.IBP_height,
-				(sword)svgBounds.RD_left, (sword)svgBounds.RD_top,
+				originX, originY,
 				pself->GDI_fileName);
 		}
 		else
@@ -2527,6 +2617,9 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 	}
 	else
 	{
+		pself = ObjDerefGen(oself);
+		BVCloseTempFile(para.IBP_dest, pself->BVTempName);
+		para.IBP_dest = 0;
 		stat = TRUE;
 
 		if(status == IBS_IMPORT_STOPPED)
@@ -3927,6 +4020,8 @@ BVCalcDriveName(char *text, word item)
   word count;
   ImpBmpStatus status;
   ImpBmpParams para;
+  byte dataType;
+  sword originX, originY;
   char string[255];
 
   if(BVFileList != 0)
@@ -3998,7 +4093,11 @@ BVCalcDriveName(char *text, word item)
 			FilePopDir();
 
 			para.IBP_status = @BVThumbnailStatus;
-			status = Imp_BmpProcessFile(&para, IBF_AUTO);
+			if(para.IBP_dest != 0)
+				status = BVImportGraphic(&para, &dataType, &originX,
+									 &originY, BVThumbnailSvgProgress);
+			else
+				status = IBS_SYS_ERROR;
 
 			@send BVThumbDlg::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
 
@@ -4006,7 +4105,7 @@ BVCalcDriveName(char *text, word item)
 			if(status == IBS_NO_ERROR)
 			{
 				@call process::MSG_BV_CREATE_THUMBNAIL(srcname, size, date,
-					para.IBP_dest, para.IBP_bitmap, BV_DATA_BITMAP);
+					para.IBP_dest, para.IBP_bitmap, dataType);
 
 				@send BVDynFileList::MSG_GEN_ITEM_GROUP_SET_ITEM_STATE(filenum2, 0);
 			}
@@ -4015,13 +4114,7 @@ BVCalcDriveName(char *text, word item)
 				filecount = filenum - 1;
 
 			FileClose(para.IBP_source, FILE_NO_ERRORS);
-			VMClose(para.IBP_dest, FILE_NO_ERRORS);
-
-			/* delete temp file */
-			FilePushDir();
-			FileSetCurrentPath(SP_WASTE_BASKET, ".");
-			FileDelete(tempname);
-			FilePopDir();
+			BVCloseTempFile(para.IBP_dest, tempname);
 		}
 	  }
 	  else

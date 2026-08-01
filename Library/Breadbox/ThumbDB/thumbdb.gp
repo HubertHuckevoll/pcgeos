@@ -11,8 +11,6 @@ tokenid    16431
 
 library geos
 library ansic
-library extgraph
-exempt extgraph
 
 platform geos201
 

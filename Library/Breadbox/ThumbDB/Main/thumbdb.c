@@ -6,11 +6,11 @@
 #include <thumbdb.h>
 #include <library.h>
 #include <graphics.h>
+#include <gstring.h>
 #include <Ansi/string.h>
 #include <sem.h>
 #include <dbase.h>
 #include <heap.h>
-#include <extgraph.h>
 
 
 /***************************************************************************/
@@ -202,8 +202,10 @@ ThumbCreateItem(FileLongName name, dword size, FileDateAndTime date,
     MemHandle mem;
     byte *ptr;
     byte type;
-    EGError graphError;
-    SizeAsDWord sourceSize;
+    Rectangle sourceBounds;
+    GStateHandle sourceGString = 0;
+    GSRetType drawResult;
+    word element;
     WWFixedAsDWord sx, sy;
     VMBlockHandle uncompact;
     GStateHandle gstate;
@@ -242,14 +244,17 @@ ThumbCreateItem(FileLongName name, dword size, FileDateAndTime date,
     }
     else if(ty == TST_GSTRING)
     {
-        sourceSize = ExtGrGetGStringSize(file, block, &graphError);
-        if(graphError != EGE_NO_ERROR)
+        sourceGString = GrLoadGString(file, GST_VMEM, block);
+        if((sourceGString == 0) ||
+           !GrGetGStringBounds(sourceGString, 0, 0, &sourceBounds))
         {
+            if(sourceGString != 0)
+                GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
             ThreadReleaseThreadLock(thumbLockSem);
             return(TE_THUMBNAIL_NOT_FOUND);
         }
-        width = DWORD_WIDTH(sourceSize);
-        height = DWORD_HEIGHT(sourceSize);
+        width = sourceBounds.R_right - sourceBounds.R_left;
+        height = sourceBounds.R_bottom - sourceBounds.R_top;
         type = BMF_8BIT;
     }
     else
@@ -260,6 +265,8 @@ ThumbCreateItem(FileLongName name, dword size, FileDateAndTime date,
 
     if((width == 0) || (height == 0))
     {
+        if(sourceGString != 0)
+            GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
         ThreadReleaseThreadLock(thumbLockSem);
         return(TE_THUMBNAIL_NOT_FOUND);
     }
@@ -284,6 +291,8 @@ ThumbCreateItem(FileLongName name, dword size, FileDateAndTime date,
                     thumbDBFile, 0, &gstate);
     if((uncompact == 0) || (gstate == 0))
     {
+        if(sourceGString != 0)
+            GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
         ThreadReleaseThreadLock(thumbLockSem);
         return(TE_THUMBNAIL_NOT_FOUND);
     }
@@ -293,11 +302,18 @@ ThumbCreateItem(FileLongName name, dword size, FileDateAndTime date,
     {
         GrDrawHugeBitmap(gstate, 0, 0, file, block);
     }
-    else if(ExtGrDrawGString(gstate, 0, 0, file, block) != EGE_NO_ERROR)
+    else
     {
-        GrDestroyBitmap(gstate, BMD_KILL_DATA);
-        ThreadReleaseThreadLock(thumbLockSem);
-        return(TE_THUMBNAIL_NOT_FOUND);
+        drawResult = GrDrawGString(gstate, sourceGString,
+                         -sourceBounds.R_left, -sourceBounds.R_top,
+                         0, &element);
+        GrDestroyGString(sourceGString, 0, GSKT_LEAVE_DATA);
+        if(drawResult == GSRT_FAULT)
+        {
+            GrDestroyBitmap(gstate, BMD_KILL_DATA);
+            ThreadReleaseThreadLock(thumbLockSem);
+            return(TE_THUMBNAIL_NOT_FOUND);
+        }
     }
     GrDestroyBitmap(gstate, BMD_LEAVE_DATA);
 
