@@ -42,6 +42,7 @@ export     TOOLSMAKEURLABSOLUTE
 export     TOOLSSTRINGSECTIONFINDKEY
 export     TOOLSFORMATMESSAGE
 export     XSTRNCPY
+incminor   HTMLTextCompactImages
 export     HTMLTextClass
 export     TOOLSFINDEXTENSION
 export     TOOLSNORMALIZEURL

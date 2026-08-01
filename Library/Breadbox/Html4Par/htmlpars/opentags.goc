@@ -448,7 +448,7 @@ NameToken LOCAL TokenizeImageLabel(char *altName, Boolean altExplicit,
     char *p, *end, saved;
     NameToken token;
 
-    if(altExplicit)
+    if(altExplicit && *altName)
         return NamePoolTokenizeDOS(NamePool, altName, FALSE);
 
     p = src;

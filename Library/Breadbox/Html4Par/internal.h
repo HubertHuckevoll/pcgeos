@@ -519,6 +519,10 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
                     ColorQuad *linkColor, word invalFrom, word invalTo);
 word CompactImagePrepareText(GStateHandle gstate, HTMLimageData *iae,
   optr namePool, TCHAR *buf, word bufSize, word *markerWidth);
+ImageLoadMode _pascal HTMLTextGetImageLoadMode(optr text);
+void _pascal HTMLTextSetImageLoadMode(optr text, ImageLoadMode mode);
+word _pascal HTMLTextGetCompactImageFocus(optr text);
+void _pascal HTMLTextSetCompactImageFocus(optr text, word image);
 
 /***************************************************************************
  *              Structures describing tag stacks used during parsing

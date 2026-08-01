@@ -242,7 +242,7 @@ extern void FormElementEditSelectList(
     dword p, bestPos, best_i;
     HTMLimageData *imageArrayElement;
 
-    compactImage = pself->HTI_compactImageFocus;
+    compactImage = HTMLTextGetCompactImageFocus(oself);
     if(mode == HTML_CHP_EXACT && compactImage != CA_NULL_ELEMENT)
     {
         if(@call self::MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(pos) ==
@@ -575,11 +575,12 @@ extern void FormElementEditSelectList(
 @extern method HTMLTextClass, MSG_HTML_TEXT_SELECT_LINK
 {
     HTMLanchorData *anchorArrayElement;
+    optr anchorArray = pself->HTI_anchorArray;
     word size;
 
-    MemLock(OptrToHandle(pself->HTI_anchorArray));
+    MemLock(OptrToHandle(anchorArray));
 
-    anchorArrayElement = ChunkArrayElementToPtr(pself->HTI_anchorArray,
+    anchorArrayElement = ChunkArrayElementToPtr(anchorArray,
       link, &size);
 
     if(!(anchorArrayElement->flags & HTML_ADF_MAP))
@@ -589,9 +590,8 @@ extern void FormElementEditSelectList(
         anchorArrayElement->pos);
     }
 
-    pself = ObjDerefVis(oself);
-    pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
-    MemUnlock(OptrToHandle(pself->HTI_anchorArray));
+    MemUnlock(OptrToHandle(anchorArray));
+    HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
 
     @call oself::MSG_HTML_TEXT_FORM_ELEMENT_RELEASE() ;
 }
@@ -617,8 +617,7 @@ extern void FormElementEditSelectList(
 
     @call oself::MSG_HTML_TEXT_FORM_ELEMENT_RELEASE();
     @call self::MSG_VIS_TEXT_SELECT_RANGE(pos, pos);
-    pself = ObjDerefVis(oself);
-    pself->HTI_compactImageFocus = nImage;
+    HTMLTextSetCompactImageFocus(oself, nImage);
 }
 
 #ifdef IN_PLACE_TEXT_ENTRY
@@ -644,7 +643,7 @@ void FormElementRemoveTextEntry(optr urlTextObj);
     } else
     @call self::MSG_VIS_TEXT_GET_SELECTION_RANGE(&range);
 
-    if(pself->HTI_compactImageFocus == CA_NULL_ELEMENT)
+    if(HTMLTextGetCompactImageFocus(oself) == CA_NULL_ELEMENT)
     {
       image = @call self::MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(
         range.VTR_start);
@@ -733,7 +732,7 @@ void FormElementRemoveTextEntry(optr urlTextObj);
     HTMLformData *p_formData;
     HTMLimageData *imageData;
 
-    image = pself->HTI_compactImageFocus;
+    image = HTMLTextGetCompactImageFocus(oself);
     if(image != CA_NULL_ELEMENT && pself->HTI_imageArray)
     {
       MemLock(OptrToHandle(pself->HTI_imageArray));
@@ -746,7 +745,8 @@ void FormElementRemoveTextEntry(optr urlTextObj);
       else
         imagePos = TEXT_ADDRESS_PAST_END;
       MemUnlock(OptrToHandle(pself->HTI_imageArray));
-      pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
+      HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
+      pself = ObjDerefVis(oself);
       link = CA_NULL_ELEMENT;
       if(imagePos != TEXT_ADDRESS_PAST_END)
         link = @call self::MSG_HTML_TEXT_FOCUS_FROM_POS(imagePos,
@@ -1365,7 +1365,8 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 	@call oself::MSG_HTML_TEXT_FORM_ELEMENT_RELEASE() ;
 
     pself->HTI_grabbedFormElement = formElement ;
-    pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
+    HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
+    pself = ObjDerefVis(oself);
     @call oself::MSG_HTML_TEXT_FORM_ELEMENT_INVALIDATE(formElement) ;
     MemLock(OptrToHandle(pself->HTI_formArray));
     p_formElement = ChunkArrayElementToPtr(pself->HTI_formArray, formElement, NULL) ;

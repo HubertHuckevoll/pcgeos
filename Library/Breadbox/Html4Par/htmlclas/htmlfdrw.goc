@@ -661,6 +661,7 @@ word CompactImagePrepareText(GStateHandle gstate, HTMLimageData *iae,
   optr namePool, TCHAR *buf, word bufSize, word *markerWidth)
 {
     TCHAR marker[2];
+    TCHAR *p, *end;
     word len, labelWidth, maxLabelWidth, dotsWidth;
 
 @ifdef DO_DBCS
@@ -683,8 +684,27 @@ word CompactImagePrepareText(GStateHandle gstate, HTMLimageData *iae,
         }
         else
         {
-            buf[0] = 'I'; buf[1] = 'm'; buf[2] = 'a'; buf[3] = 'g';
-            buf[4] = 'e'; buf[5] = 0;
+            NamePoolCopy(namePool, buf, bufSize, iae->imageURL, (void*)0);
+            p = end = buf;
+            while(*end && *end != '?' && *end != '#')
+            {
+                if(*end == '/' || *end == '\\')
+                    p = end + 1;
+                end++;
+            }
+            *end = 0;
+            if(p != buf)
+            {
+                end = buf;
+                while(*p)
+                    *end++ = *p++;
+                *end = 0;
+            }
+            if(!*buf)
+            {
+                buf[0] = 'I'; buf[1] = 'm'; buf[2] = 'a'; buf[3] = 'g';
+                buf[4] = 'e'; buf[5] = 0;
+            }
         }
     }
 
@@ -763,10 +783,10 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
 
       GrSetTextStyle(gstate, 0, TS_UNDERLINE);
       GrDrawText(gstate, COMPACT_IMAGE_PADDING,
-        iae->HID_size.XYS_height - 3, (char*)marker, 1);
+        FormGetPointSize() - 1, (char*)marker, 1);
       GrSetTextStyle(gstate, TS_UNDERLINE, 0);
       GrDrawText(gstate, COMPACT_IMAGE_PADDING + markerWidth +
-        COMPACT_IMAGE_GAP, iae->HID_size.XYS_height - 3, (char*)buf, 0);
+        COMPACT_IMAGE_GAP, FormGetPointSize() - 1, (char*)buf, 0);
     }
     else if(  (iae->flags & HTML_IDF_RESOLVED) &&
         !(iae->flags & HTML_IDF_BROKEN) )

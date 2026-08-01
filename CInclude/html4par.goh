@@ -943,8 +943,6 @@ typedef dword T_tableArrayHandle ;
   @instance dword          HTI_animationLastTime ;
   @instance MemHandle      HTI_animationChangeTable ;
   @instance word           HTI_grabbedFormElement = FORM_ELEMENT_INVALID ;
-  @instance word           HTI_compactImageFocus = CA_NULL_ELEMENT ;
-  @instance ImageLoadMode  HTI_imageLoadMode = IMAGE_LOAD_AUTOMATIC ;
 
   @instance word           HTI_pageTopMargin = 0 ;
   @instance word           HTI_pageLeftMargin = 0 ;
@@ -1032,6 +1030,8 @@ typedef dword T_tableArrayHandle ;
   @message void MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE(word nImage);
   @message void MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(word nImage);
   @message word MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(dword pos);
+  @vardata ImageLoadMode ATTR_HTML_TEXT_IMAGE_LOAD_MODE;
+  @vardata word ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS;
 
   @message void MSG_HTML_TEXT_TRACK_REPLACE(dword pos, sword len);
 

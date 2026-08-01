@@ -570,9 +570,8 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     }
     if(message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN)
     {
-      pself = ObjDerefVis(oself);
       @send,checkDuplicate,forceQueue self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(
-        pself->HTI_imageLoadMode);
+        HTMLTextGetImageLoadMode(oself));
     }
 
     return TRUE;                        /* successful */
@@ -1982,28 +1981,54 @@ VisTextGraphic *IFindGraphicForImage(
     return NULL;
 }
 
-Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
+ImageLoadMode _pascal HTMLTextGetImageLoadMode(optr text)
 {
-    HTMLanchorData *anchor;
-    word i, n, size;
+    ImageLoadMode *modeP;
 
-    if(!pself->HTI_anchorArray)
-        return FALSE;
+    modeP = ObjVarFindData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+    return modeP ? *modeP : IMAGE_LOAD_AUTOMATIC;
+}
 
-    MemLock(OptrToHandle(pself->HTI_anchorArray));
-    n = ChunkArrayGetCount(pself->HTI_anchorArray);
-    for(i=0; i<n; i++)
+void _pascal HTMLTextSetImageLoadMode(optr text, ImageLoadMode mode)
+{
+    ImageLoadMode *modeP;
+
+    modeP = ObjVarFindData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+    if(mode == IMAGE_LOAD_AUTOMATIC)
     {
-        anchor = ChunkArrayElementToPtr(pself->HTI_anchorArray, i, &size);
-        if(!(anchor->flags & (HTML_ADF_NAME | HTML_ADF_MAP)) &&
-           anchor->pos <= pos && anchor->pos + anchor->len > pos)
-        {
-            MemUnlock(OptrToHandle(pself->HTI_anchorArray));
-            return TRUE;
-        }
+        if(modeP)
+            ObjVarDeleteData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+        return;
     }
-    MemUnlock(OptrToHandle(pself->HTI_anchorArray));
-    return FALSE;
+    if(!modeP)
+        modeP = ObjVarAddData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE,
+          sizeof(*modeP));
+    *modeP = mode;
+}
+
+word _pascal HTMLTextGetCompactImageFocus(optr text)
+{
+    word *imageP;
+
+    imageP = ObjVarFindData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS);
+    return imageP ? *imageP : CA_NULL_ELEMENT;
+}
+
+void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
+{
+    word *imageP;
+
+    imageP = ObjVarFindData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS);
+    if(image == CA_NULL_ELEMENT)
+    {
+        if(imageP)
+            ObjVarDeleteData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS);
+        return;
+    }
+    if(!imageP)
+        imageP = ObjVarAddData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS,
+          sizeof(*imageP));
+    *imageP = image;
 }
 
 @method HTMLTextClass, MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE
@@ -2014,14 +2039,14 @@ Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
     MemHandle graphicMem;
     GStateHandle gstate;
     TCHAR buf[COMPACT_IMAGE_TEXT_MAX];
-    TCHAR first[2];
-    word i, n, size, markerWidth, labelWidth;
+    word i, n, size, markerWidth, labelWidth, compactFocus;
     XYSize newSize;
-    Boolean compact, changed, suppress;
+    Boolean compact, changed, clearFocus;
 
     if(mode < IMAGE_LOAD_DISABLED || mode > IMAGE_LOAD_COMPACT)
         mode = IMAGE_LOAD_AUTOMATIC;
-    pself->HTI_imageLoadMode = mode;
+    HTMLTextSetImageLoadMode(oself, mode);
+    pself = ObjDerefVis(oself);
 
     if(!pself->HTI_imageArray)
         return;
@@ -2031,6 +2056,8 @@ Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
         return;
 
     changed = FALSE;
+    clearFocus = FALSE;
+    compactFocus = HTMLTextGetCompactImageFocus(oself);
     gstate = GrCreateState(0);
     if(!gstate)
         return;
@@ -2048,31 +2075,11 @@ Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
                    (image->flags & HTML_IDF_BROKEN));
         if(compact)
         {
-            suppress = FALSE;
-            first[0] = 0;
-            if(image->imageALT != NAME_POOL_NONE)
-                NamePoolCopy(pself->HTI_namePool, first, sizeof(first),
-                  image->imageALT, (void*)0);
-            if((image->flags & HTML_IDF_ALT_EXPLICIT) && !first[0] &&
-               image->formElementIndex == CA_NULL_ELEMENT &&
-               image->usemap == NAME_POOL_NONE &&
-               !(image->flags & HTML_IDF_ISMAP))
-            {
-                suppress = !ImageHasAnchor(pself, image->pos);
-            }
-            if(suppress)
-            {
-                newSize.XYS_width = 0;
-                newSize.XYS_height = 0;
-            }
-            else
-            {
-                labelWidth = CompactImagePrepareText(gstate, image,
-                  pself->HTI_namePool, buf, sizeof(buf), &markerWidth);
-                newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + markerWidth +
-                  COMPACT_IMAGE_GAP + labelWidth;
-                newSize.XYS_height = FormGetPointSize() + 4;
-            }
+            labelWidth = CompactImagePrepareText(gstate, image,
+              pself->HTI_namePool, buf, sizeof(buf), &markerWidth);
+            newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + markerWidth +
+              COMPACT_IMAGE_GAP + labelWidth;
+            newSize.XYS_height = FormGetPointSize() + 4;
         }
         else
         {
@@ -2083,9 +2090,8 @@ Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
                 newSize.XYS_height = DEFAULT_IMAGE_HEIGHT;
         }
 
-        if(pself->HTI_compactImageFocus == i &&
-           (!compact || !newSize.XYS_width))
-            pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
+        if(compactFocus == i && (!compact || !newSize.XYS_width))
+            clearFocus = TRUE;
 
         if(image->HID_size.XYS_width == newSize.XYS_width &&
            image->HID_size.XYS_height == newSize.XYS_height &&
@@ -2097,7 +2103,7 @@ Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
             image->flags |= HTML_IDF_COMPACT;
         else
             image->flags &= ~HTML_IDF_COMPACT;
-        image->flags |= HTML_IDF_SIZE_DIRTY;
+        image->flags &= ~HTML_IDF_SIZE_DIRTY;
 
         graphic = IFindGraphicForImage(pself->VTI_vmFile, *graphicRuns, i,
           &graphicMem);
@@ -2119,12 +2125,18 @@ Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
     GrDestroyState(gstate);
 
+    if(clearFocus)
+        HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
+
     if(changed)
     {
         pself = ObjDerefVis(oself);
         pself->HTI_layoutState |= HTS_LAYOUT_DIRTY |
           HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
         @send,checkDuplicate,forceQueue self::MSG_HTML_TEXT_RECALC_PAGE();
+        if(pself->HTI_myView)
+            @send,forceQueue (pself->HTI_myView)::
+              MSG_GEN_VIEW_REDRAW_CONTENT();
     }
 }
 
@@ -2307,8 +2319,11 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     iae->flags &= ~(HTML_IDF_RESOLVING | HTML_IDF_BROKEN |
                     HTML_IDF_COMPACT);
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
-    if(pself->HTI_compactImageFocus == nImage)
-        pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
+    if(HTMLTextGetCompactImageFocus(oself) == nImage)
+    {
+        HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
+        pself = ObjDerefVis(oself);
+    }
 
     if(data->pos < HTML_IMAGE_POS_RESERVED)    
     {                                   // not changing background?
