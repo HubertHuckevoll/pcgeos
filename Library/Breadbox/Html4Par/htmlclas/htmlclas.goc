@@ -40,6 +40,7 @@
 #include "internal.h"
 #include "tableint.h"
 #include "errors.h"
+#include "htmlclas/formset.h"
 
 #define REPLACE_GRAPHIC_REGION_NEW_HEIGHT MAX_REGION_HEIGHT
 
@@ -57,6 +58,8 @@
 @extern method HTMLTextClass, MSG_HTML_TEXT_HIT_FROM_COORD;
 @extern method HTMLTextClass, MSG_HTML_TEXT_LINK_FROM_MAP;
 @extern method HTMLTextClass, MSG_HTML_TEXT_SELECT_LINK;
+@extern method HTMLTextClass, MSG_HTML_TEXT_SELECT_COMPACT_IMAGE;
+@extern method HTMLTextClass, MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS;
 @extern method HTMLTextClass, MSG_HTML_TEXT_PREV_HOTSPOT;
 @extern method HTMLTextClass, MSG_HTML_TEXT_NEXT_HOTSPOT;
 @extern method HTMLTextClass, MSG_HTML_TEXT_EXEC_HOTSPOT;
@@ -520,6 +523,7 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     word size;
     HTMLimageData *iae;
     WordFlags toClear, toSet;
+    Boolean redraw;
 
     switch(message)
     {
@@ -548,6 +552,9 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     /* Modify flags */
     iae->flags |= toSet;
     iae->flags &= ~toClear;
+    redraw = (message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN ||
+      (message == MSG_HTML_TEXT_MARK_IMAGE_RESOLVING &&
+       (iae->flags & HTML_IDF_COMPACT)));
 
     /* Make sure we're note associated with any graphic */
     iae->HID_cacheToken = 0;
@@ -557,9 +564,15 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
 
     /* force broken image to update */
+    if(redraw)
+    {
+      @call self::MSG_HTML_TEXT_INVALIDATE_IMAGE((void*)0, nImage, 0, 0xFFFF) ;
+    }
     if(message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN)
     {
-      @call self::MSG_HTML_TEXT_INVALIDATE_IMAGE(NULL, nImage, 0, 0xFFFF) ;
+      pself = ObjDerefVis(oself);
+      @send,checkDuplicate,forceQueue self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(
+        pself->HTI_imageLoadMode);
     }
 
     return TRUE;                        /* successful */
@@ -1969,6 +1982,156 @@ VisTextGraphic *IFindGraphicForImage(
     return NULL;
 }
 
+Boolean LOCAL ImageHasAnchor(HTMLTextInstance *pself, dword pos)
+{
+    HTMLanchorData *anchor;
+    word i, n, size;
+
+    if(!pself->HTI_anchorArray)
+        return FALSE;
+
+    MemLock(OptrToHandle(pself->HTI_anchorArray));
+    n = ChunkArrayGetCount(pself->HTI_anchorArray);
+    for(i=0; i<n; i++)
+    {
+        anchor = ChunkArrayElementToPtr(pself->HTI_anchorArray, i, &size);
+        if(!(anchor->flags & (HTML_ADF_NAME | HTML_ADF_MAP)) &&
+           anchor->pos <= pos && anchor->pos + anchor->len > pos)
+        {
+            MemUnlock(OptrToHandle(pself->HTI_anchorArray));
+            return TRUE;
+        }
+    }
+    MemUnlock(OptrToHandle(pself->HTI_anchorArray));
+    return FALSE;
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE
+{
+    HTMLimageData *image;
+    VisTextGraphic *graphic;
+    VMBlockHandle *graphicRuns;
+    MemHandle graphicMem;
+    GStateHandle gstate;
+    TCHAR buf[COMPACT_IMAGE_TEXT_MAX];
+    TCHAR first[2];
+    word i, n, size, markerWidth, labelWidth;
+    XYSize newSize;
+    Boolean compact, changed, suppress;
+
+    if(mode < IMAGE_LOAD_DISABLED || mode > IMAGE_LOAD_COMPACT)
+        mode = IMAGE_LOAD_AUTOMATIC;
+    pself->HTI_imageLoadMode = mode;
+
+    if(!pself->HTI_imageArray)
+        return;
+
+    graphicRuns = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
+    if(!graphicRuns)
+        return;
+
+    changed = FALSE;
+    gstate = GrCreateState(0);
+    if(!gstate)
+        return;
+    MemLock(OptrToHandle(pself->HTI_imageArray));
+    n = ChunkArrayGetCount(pself->HTI_imageArray);
+    for(i=0; i<n; i++)
+    {
+        image = ChunkArrayElementToPtr(pself->HTI_imageArray, i, &size);
+        if(image->pos >= HTML_IMAGE_POS_RESERVED ||
+           ((image->flags & HTML_IDF_RESOLVED) &&
+            !(image->flags & HTML_IDF_BROKEN)))
+            continue;
+
+        compact = ((mode == IMAGE_LOAD_COMPACT) ||
+                   (image->flags & HTML_IDF_BROKEN));
+        if(compact)
+        {
+            suppress = FALSE;
+            first[0] = 0;
+            if(image->imageALT != NAME_POOL_NONE)
+                NamePoolCopy(pself->HTI_namePool, first, sizeof(first),
+                  image->imageALT, (void*)0);
+            if((image->flags & HTML_IDF_ALT_EXPLICIT) && !first[0] &&
+               image->formElementIndex == CA_NULL_ELEMENT &&
+               image->usemap == NAME_POOL_NONE &&
+               !(image->flags & HTML_IDF_ISMAP))
+            {
+                suppress = !ImageHasAnchor(pself, image->pos);
+            }
+            if(suppress)
+            {
+                newSize.XYS_width = 0;
+                newSize.XYS_height = 0;
+            }
+            else
+            {
+                labelWidth = CompactImagePrepareText(gstate, image,
+                  pself->HTI_namePool, buf, sizeof(buf), &markerWidth);
+                newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + markerWidth +
+                  COMPACT_IMAGE_GAP + labelWidth;
+                newSize.XYS_height = FormGetPointSize() + 4;
+            }
+        }
+        else
+        {
+            newSize = image->size;
+            if(!newSize.XYS_width)
+                newSize.XYS_width = DEFAULT_IMAGE_WIDTH;
+            if(!newSize.XYS_height)
+                newSize.XYS_height = DEFAULT_IMAGE_HEIGHT;
+        }
+
+        if(pself->HTI_compactImageFocus == i &&
+           (!compact || !newSize.XYS_width))
+            pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
+
+        if(image->HID_size.XYS_width == newSize.XYS_width &&
+           image->HID_size.XYS_height == newSize.XYS_height &&
+           compact == ((image->flags & HTML_IDF_COMPACT) != 0))
+            continue;
+
+        image->HID_size = newSize;
+        if(compact)
+            image->flags |= HTML_IDF_COMPACT;
+        else
+            image->flags &= ~HTML_IDF_COMPACT;
+        image->flags |= HTML_IDF_SIZE_DIRTY;
+
+        graphic = IFindGraphicForImage(pself->VTI_vmFile, *graphicRuns, i,
+          &graphicMem);
+        if(graphic)
+        {
+            graphic->VTG_size = newSize;
+            if(!compact)
+            {
+                graphic->VTG_size.XYS_width += 2*image->hspace;
+                graphic->VTG_size.XYS_height += 2*image->vspace;
+            }
+            if(graphic->VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
+                graphic->VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR;
+            VMDirty(graphicMem);
+            VMUnlockChainifiedLMemBlock(graphicMem);
+        }
+        changed = TRUE;
+    }
+    MemUnlock(OptrToHandle(pself->HTI_imageArray));
+    GrDestroyState(gstate);
+
+    if(changed)
+    {
+        pself = ObjDerefVis(oself);
+        pself->HTI_layoutState |= HTS_LAYOUT_DIRTY |
+          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
+        @send,checkDuplicate,forceQueue self::MSG_HTML_TEXT_RECALC_PAGE();
+    }
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE
+{
+}
+
 /**************************************************************************
  *            MSG_HTML_TEXT_INVALIDATE_IMAGE for HTMLTextClass
  **************************************************************************
@@ -2045,7 +2208,8 @@ VisTextGraphic *IFindGraphicForImage(
           }
 
           GrApplyTranslationDWord(gstate, regpos.RD_left, regpos.RD_top) ;
-          DrawVarGraphic(gstate, imageArrayElement, pool, invalFrom, invalTo);
+          DrawVarGraphic(gstate, imageArrayElement, pool,
+            &pself->HTI_linkColor, invalFrom, invalTo);
         }
 
         GrDestroyState(gstate) ;
@@ -2140,8 +2304,11 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     iae = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);                                                           
     *iae = *data;                        
     iae->flags |= HTML_IDF_RESOLVED;
-    iae->flags &= ~(HTML_IDF_RESOLVING | HTML_IDF_BROKEN);
+    iae->flags &= ~(HTML_IDF_RESOLVING | HTML_IDF_BROKEN |
+                    HTML_IDF_COMPACT);
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
+    if(pself->HTI_compactImageFocus == nImage)
+        pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
 
     if(data->pos < HTML_IMAGE_POS_RESERVED)    
     {                                   // not changing background?
@@ -2654,4 +2821,3 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
 
     return FALSE ;
 }
-

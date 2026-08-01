@@ -657,8 +657,59 @@ SizeAsDWord LOCAL FormElementDraw(
  *     word invalTo               -- Last line of updated range
  *
  **************************************************************************/
+word CompactImagePrepareText(GStateHandle gstate, HTMLimageData *iae,
+  optr namePool, TCHAR *buf, word bufSize, word *markerWidth)
+{
+    TCHAR marker[2];
+    word len, labelWidth, maxLabelWidth, dotsWidth;
+
+@ifdef DO_DBCS
+    marker[0] = C_KATAKANA_MIDDLE_DOT;
+@else
+    marker[0] = C_DIAMONDBULLET;
+@endif
+    marker[1] = 0;
+
+    FormSetTextAttr(gstate);
+    *markerWidth = GrTextWidth(gstate, (char*)marker, 1);
+
+    NamePoolCopy(namePool, buf, bufSize, iae->imageALT, (void*)0);
+    if(!*buf)
+    {
+        if(iae->flags & HTML_IDF_SUBMIT)
+        {
+            buf[0] = 'S'; buf[1] = 'u'; buf[2] = 'b'; buf[3] = 'm';
+            buf[4] = 'i'; buf[5] = 't'; buf[6] = 0;
+        }
+        else
+        {
+            buf[0] = 'I'; buf[1] = 'm'; buf[2] = 'a'; buf[3] = 'g';
+            buf[4] = 'e'; buf[5] = 0;
+        }
+    }
+
+    maxLabelWidth = COMPACT_IMAGE_MAX_WIDTH - 2*COMPACT_IMAGE_PADDING -
+      COMPACT_IMAGE_GAP - *markerWidth;
+    labelWidth = GrTextWidth(gstate, (char*)buf, 0);
+    if(labelWidth > maxLabelWidth)
+    {
+        dotsWidth = GrTextWidth(gstate, (char*)_TEXT("..."), 3);
+        for(len=0; buf[len]; len++);
+        while(len && GrTextWidth(gstate, (char*)buf, len) + dotsWidth >
+              maxLabelWidth)
+            len--;
+        buf[len++] = '.';
+        buf[len++] = '.';
+        buf[len++] = '.';
+        buf[len] = 0;
+        labelWidth = GrTextWidth(gstate, (char*)buf, 0);
+    }
+
+    return labelWidth;
+}
+
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
-                    word invalFrom, word invalTo)
+                    ColorQuad *linkColor, word invalFrom, word invalTo)
 {
     AnimationHeader *p_header ;
     EditableBitmap *p_bitmap ;
@@ -673,6 +724,8 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     GStringElement *lastElement;
     Boolean allowInval;
     XYSize pixSize;
+    word markerWidth, labelWidth;
+    TCHAR marker[2];
 
     if(iae->HID_size.XYS_width<1 || iae->HID_size.XYS_height<1)
       return;                           /* Don't draw if graphic is too small */
@@ -680,7 +733,8 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     GrSaveState(gstate) ;
 
     GrApplyTranslationDWord(gstate, iae->HID_pos.P_x, iae->HID_pos.P_y) ;
-    GrApplyTranslationDWord(gstate, iae->hspace, iae->vspace);
+    if(!(iae->flags & HTML_IDF_COMPACT))
+        GrApplyTranslationDWord(gstate, iae->hspace, iae->vspace);
 
     /* TBD: may require more testing for GStrings with a nonzero origin */
     GrApplyTranslationDWord(gstate,
@@ -689,7 +743,32 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     /* if we got here, we're allowed to draw freely */
     iae->flags &= ~HTML_IDF_SIZE_DIRTY;
 
-    if(  (iae->flags & HTML_IDF_RESOLVED) &&
+    if(iae->flags & HTML_IDF_COMPACT)
+    {
+      labelWidth = CompactImagePrepareText(gstate, iae, namePool, buf,
+        sizeof(buf), &markerWidth);
+      (void)labelWidth;
+@ifdef DO_DBCS
+      marker[0] = C_KATAKANA_MIDDLE_DOT;
+@else
+      marker[0] = C_DIAMONDBULLET;
+@endif
+      marker[1] = 0;
+
+      if(iae->flags & HTML_IDF_RESOLVING)
+        GrSetTextColor(gstate, CF_INDEX, C_DARK_GRAY, 0, 0);
+      else
+        GrSetTextColor(gstate, linkColor->CQ_info,
+          linkColor->CQ_redOrIndex, linkColor->CQ_green, linkColor->CQ_blue);
+
+      GrSetTextStyle(gstate, 0, TS_UNDERLINE);
+      GrDrawText(gstate, COMPACT_IMAGE_PADDING,
+        iae->HID_size.XYS_height - 3, (char*)marker, 1);
+      GrSetTextStyle(gstate, TS_UNDERLINE, 0);
+      GrDrawText(gstate, COMPACT_IMAGE_PADDING + markerWidth +
+        COMPACT_IMAGE_GAP, iae->HID_size.XYS_height - 3, (char*)buf, 0);
+    }
+    else if(  (iae->flags & HTML_IDF_RESOLVED) &&
         !(iae->flags & HTML_IDF_BROKEN) )
     {
       /* Prepare the scaling matrix */
@@ -853,24 +932,6 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
         iae->HID_size.XYS_width - 1,
         iae->HID_size.XYS_height - 1);
 
-      /* put a red "X" across a broken graphic */
-      if((iae->flags & HTML_IDF_BROKEN) &&
-         iae->HID_size.XYS_width >= 4 && iae->HID_size.XYS_height >= 4)
-      {
-        GrSetLineColor(gstate, CF_INDEX, C_RED, 0, 0);
-        GrSetLineWidth(gstate, MakeWWFixed(1));
-        GrDrawLine(gstate,
-          1,
-          1,
-          iae->HID_size.XYS_width - 2,
-          iae->HID_size.XYS_height - 2);
-        GrDrawLine(gstate,
-          1,
-          iae->HID_size.XYS_height - 2,
-          iae->HID_size.XYS_width - 2,
-          1);
-      }
-
       alt = iae->imageALT;
       if(alt != NAME_POOL_NONE &&
          iae->HID_size.XYS_width >= 16 && iae->HID_size.XYS_height >= 16)
@@ -965,7 +1026,7 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
           /* only draw graphics if its bounds aren't in limbo... */
           if(!dirty)
             DrawVarGraphic(gstate, imageArrayElement, pself->HTI_namePool,
-              0xFFFF, 0xFFFF);
+              &pself->HTI_linkColor, 0xFFFF, 0xFFFF);
 
           MemUnlock(OptrToHandle(pself->HTI_imageArray));
 	  }
@@ -1343,4 +1404,3 @@ EC_ERROR_IF(p_imageRun->TRAE_token * sizeof(word) > MemGetInfo(pself->HTI_animat
             lowestTime,
             &pself->HTI_animationTimerID) ;
 }
-

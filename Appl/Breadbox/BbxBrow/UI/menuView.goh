@@ -130,23 +130,37 @@
 }
 @endif
 
-@object GenBooleanGroupClass NavigateLoadGraphics = {
-    GBGI_selectedBooleans = TRUE;
-    GBGI_destination = process;
-    GBGI_applyMsg = MSG_HMLVP_LOAD_GRAPHICS_CHANGED;
+@object GenItemGroupClass NavigateLoadGraphics = {
+    GIGI_selection = IMAGE_LOAD_AUTOMATIC;
+    GIGI_behaviorType = GIGBT_EXCLUSIVE;
+    GIGI_numSelections = 1;
+    GIGI_destination = process;
+    GIGI_applyMsg = MSG_HMLVP_LOAD_GRAPHICS_CHANGED;
     ATTR_GEN_INIT_FILE_KEY = "loadGraphics";
-    GI_comp = @NavigateLoadGraphicsToggle;
+    GI_comp = @NavigateLoadGraphicsDisabled,
+              @NavigateLoadGraphicsAutomatic,
+              @NavigateLoadGraphicsCompact;
 }
 
-@object GenBooleanClass NavigateLoadGraphicsToggle = {
-    GI_visMoniker = 'A',"Load Graphics Automatically";
-    GBI_identifier = TRUE;
+@object GenItemClass NavigateLoadGraphicsDisabled = {
+    GI_visMoniker = 'D',"Do Not Load Images";
+    GII_identifier = IMAGE_LOAD_DISABLED;
+}
+
+@object GenItemClass NavigateLoadGraphicsAutomatic = {
+    GI_visMoniker = 'A',"Load Images Automatically";
+    GII_identifier = IMAGE_LOAD_AUTOMATIC;
+}
+
+@object GenItemClass NavigateLoadGraphicsCompact = {
+    GI_visMoniker = 'C',"Show Images as Compact Links";
+    GII_identifier = IMAGE_LOAD_COMPACT;
 }
 
 @object GenTriggerClass NavigateLoadGraphicsNow = {
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_states = @default & ~GS_ENABLED;
-    GI_visMoniker = 'G',"Load Graphics Now";
+    GI_visMoniker = 'I',"Load Images Now";
     GI_kbdAccelerator = control 'G';
     GTI_actionMsg = MSG_URL_DOCUMENT_LOAD_GRAPHICS;
     GTI_destination = (TO_APP_MODEL);
@@ -203,4 +217,3 @@
     GI_comp = @HTMLSettingsGroup, @LoadGraphicsGroup;
     ATTR_GEN_INIT_FILE_PROPAGATE_TO_CHILDREN;
 }
-

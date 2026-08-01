@@ -133,6 +133,12 @@ typedef word HTMLmultiLength;
    when needed.
  */
 
+typedef enum {
+  IMAGE_LOAD_DISABLED = 0,
+  IMAGE_LOAD_AUTOMATIC = 1,
+  IMAGE_LOAD_COMPACT = 2
+} ImageLoadMode;
+
 typedef struct {
   VMChainTree HTBH_meta;
 
@@ -222,6 +228,8 @@ typedef struct {
     #define HTML_IDF_ISMAP      0x0002  /*  - image is a server side map */
     #define HTML_IDF_SUBMIT     0x0004  /*  - image is graphical submit btn */
     #define HTML_IDF_RESOLVING  0x0008  /*  - image has been requested */
+    #define HTML_IDF_ALT_EXPLICIT 0x0010 /* - ALT attribute was present */
+    #define HTML_IDF_COMPACT    0x0020  /*  - draw compact load link */
     #define HTML_IDF_SIZE_DIRTY 0x4000  /*  - size has changed recently */
     #define HTML_IDF_BROKEN     0x8000  /*  - image could not be resolved */
   XYSize size;                          /* target size, or 0 if not spec'd */
@@ -935,6 +943,8 @@ typedef dword T_tableArrayHandle ;
   @instance dword          HTI_animationLastTime ;
   @instance MemHandle      HTI_animationChangeTable ;
   @instance word           HTI_grabbedFormElement = FORM_ELEMENT_INVALID ;
+  @instance word           HTI_compactImageFocus = CA_NULL_ELEMENT ;
+  @instance ImageLoadMode  HTI_imageLoadMode = IMAGE_LOAD_AUTOMATIC ;
 
   @instance word           HTI_pageTopMargin = 0 ;
   @instance word           HTI_pageLeftMargin = 0 ;
@@ -1018,6 +1028,10 @@ typedef dword T_tableArrayHandle ;
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_RESOLVING(word nImage);
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_BROKEN(word nImage);
   @message void MSG_HTML_TEXT_MARK_ALL_BROKEN_AND_RESOLVING_IMAGES_UNRESOLVED() ;
+  @message void MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
+  @message void MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE(word nImage);
+  @message void MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(word nImage);
+  @message word MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(dword pos);
 
   @message void MSG_HTML_TEXT_TRACK_REPLACE(dword pos, sword len);
 

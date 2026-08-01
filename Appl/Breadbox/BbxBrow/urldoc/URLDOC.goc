@@ -937,6 +937,13 @@ extern Boolean G_pcBypassed;
     HWChecksumCheck() ;
 }
 
+@method URLDocumentClass, MSG_URL_DOCUMENT_SET_IMAGE_LOAD_MODE
+{
+    HWChecksumCheck() ;
+    @call (pself->UDCI_topFrame)::MSG_URL_FRAME_SET_IMAGE_LOAD_MODE(mode);
+    HWChecksumCheck() ;
+}
+
 @method URLDocumentClass, MSG_URL_DOCUMENT_GET_TOP_FRAME
 {
     HWChecksumCheck() ;

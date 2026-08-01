@@ -442,6 +442,39 @@ Boolean ParseVALIGN(optr paramArray, ByteFlags *cellFlags)
     return FALSE;
 }
 
+NameToken LOCAL TokenizeImageLabel(char *altName, Boolean altExplicit,
+                                   char *src)
+{
+    char *p, *end, saved;
+    NameToken token;
+
+    if(altExplicit)
+        return NamePoolTokenizeDOS(NamePool, altName, FALSE);
+
+    p = src;
+    end = src;
+    if(p)
+    {
+        while(*end && *end != '?' && *end != '#')
+        {
+            if(*end == '/' || *end == '\\')
+                p = end + 1;
+            end++;
+        }
+
+        if(end > p)
+        {
+            saved = *end;
+            *end = 0;
+            token = NamePoolTokenizeDOS(NamePool, p, FALSE);
+            *end = saved;
+            return token;
+        }
+    }
+
+    return NamePoolTokenizeDOS(NamePool, "Image", FALSE);
+}
+
 /*
  *  Handle attributes specific to image-style elements (including
  *  graphical submit buttons) and add entry to image array. If an
@@ -453,7 +486,8 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
     HTMLimageData id;
     VisTextCharAttr vcaImage;
     VisTextGraphic vtg;
-    char *altName, *p;
+    char *altName, *p, *src;
+    Boolean altExplicit;
 @ifdef DO_DBCS
     const char c_graphic[] = {C_SUBSTITUTE, 0};
 @else
@@ -476,8 +510,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
     AddParaCond();                      /* flush pending para end */
 
     altName = GetParamValue(paramArray,"ALT");
-    if(!altName)
-      altName = "Image";                /* default placeholder */
+    altExplicit = altName ? TRUE : FALSE;
 
     memset(&id, 0, sizeof(id));       /* default graphic data structure */
 
@@ -496,6 +529,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
     {
       while (*p == ' ') p++;            /* skip leading spaces */
     }
+    src = p;
 
     if ((parseName && id.name != NAME_POOL_NONE) || (p && *p)) {
 
@@ -511,6 +545,8 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
                                         /* embed placeholder character */
 
       id.flags = 0;                     /* no special attributes so far */
+      if(altExplicit)
+        id.flags |= HTML_IDF_ALT_EXPLICIT;
 
       id.formElementIndex = element;    /* associate with form element */
       if(element != CA_NULL_ELEMENT)    /* is specified: is graphical submit */
@@ -568,7 +604,10 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
 
       /* Always place a variable graphic */
       id.len = 1;                     /* only one character to be replaced */
-      id.imageALT = NamePoolTokenizeDOS(NamePool, altName, FALSE);
+      if((id.flags & HTML_IDF_SUBMIT) && (!altExplicit || !*altName))
+        id.imageALT = NamePoolTokenizeDOS(NamePool, "Submit", FALSE);
+      else
+        id.imageALT = TokenizeImageLabel(altName, altExplicit, src);
 
       /* Mark the graphic as at an unknown (-1, -1) position */
       id.HID_pos.P_x = -1 ;

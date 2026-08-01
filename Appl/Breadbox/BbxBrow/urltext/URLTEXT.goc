@@ -769,6 +769,72 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     return ret;
 }
 
+@method URLTextClass, MSG_URL_TEXT_LOAD_IMAGE
+{
+    HTMLimageData *p, *image2;
+    optr imageArray = pself->HTI_imageArray;
+    optr textPool = pself->HTI_namePool;
+    optr frame = pself->UTI_frame;
+    optr realFrame = NullOptr;
+    TCHAR name[HTML_STATIC_BUF], *nP;
+    NameToken referer = NAME_POOL_NONE;
+    Boolean objCache;
+    word i, n, size;
+
+    if(!imageArray || !frame)
+        return;
+
+    realFrame = @call frame::MSG_URL_FRAME_FIND_REAL_FRAME();
+    referer = @call realFrame::MSG_URL_FRAME_GET_URL();
+    objCache = (@call SettingsBoolGroup::
+      MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTMLV_OBJECT_CACHE);
+
+    MemLock(OptrToHandle(imageArray));
+    n = ChunkArrayGetCount(imageArray);
+    if(nImage < n)
+    {
+        p = ChunkArrayElementToPtr(imageArray, nImage, &size);
+        if(!(p->flags & HTML_IDF_RESOLVING) &&
+           (!(p->flags & HTML_IDF_RESOLVED) ||
+            (p->flags & HTML_IDF_BROKEN)) &&
+           p->imageURL != NAME_POOL_NONE)
+        {
+            if(!p->HID_resolvedURL)
+            {
+                NamePoolCopy(textPool, name, sizeof(name), p->imageURL, &nP);
+                @call frame::MSG_URL_FRAME_COMPLETE_URL(&nP);
+                p->HID_resolvedURL = NamePoolTokenize(namePool, nP, FALSE);
+                NamePoolDestroyIfDynamic(nP);
+            }
+
+            if(ProcessSingleGraphic(p, oself, referer, nImage, TRUE, FALSE,
+                                    objCache, TRUE))
+            {
+                for(i=0; i<n; i++)
+                {
+                    image2 = ChunkArrayElementToPtr(imageArray, i, &size);
+                    if((image2->flags &
+                        (HTML_IDF_RESOLVED | HTML_IDF_RESOLVING)) == 0 ||
+                       (image2->flags & HTML_IDF_BROKEN))
+                    {
+                        if(image2->HID_resolvedURL == p->HID_resolvedURL)
+                            @call self::MSG_HTML_TEXT_MARK_IMAGE_RESOLVING(i);
+                    }
+                }
+            }
+        }
+    }
+    MemUnlock(OptrToHandle(imageArray));
+
+    if(referer != NAME_POOL_NONE)
+        NamePoolReleaseToken(namePool, referer);
+}
+
+@method URLTextClass, MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE
+{
+    @call self::MSG_URL_TEXT_LOAD_IMAGE(nImage);
+}
+
 @method URLTextClass, MSG_URL_TEXT_PROCESS_GRAPHICS
 {
     word n,i,j,size;

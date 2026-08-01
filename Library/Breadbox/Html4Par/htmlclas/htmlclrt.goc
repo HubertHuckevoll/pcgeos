@@ -42,6 +42,10 @@ extern void FormElementEditSelectList(
          optr formArray,
          word selectElement) ;
 
+#define HTML_FOCUS_FORM_FLAG  0x8000
+#define HTML_FOCUS_IMAGE_FLAG 0x4000
+#define HTML_FOCUS_INDEX_MASK 0x3fff
+
 #ifdef __WATCOMC__
 #pragma code_seg("HTMLCLRT_HOTSPOT_TEXT")
 #else
@@ -203,13 +207,49 @@ extern void FormElementEditSelectList(
     return best_i;                      /* return best match */
 }
 
+@extern method HTMLTextClass, MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS
+{
+    HTMLimageData *image;
+    word i, n, size, found;
+
+    found = CA_NULL_ELEMENT;
+    if(!pself->HTI_imageArray)
+        return found;
+
+    MemLock(OptrToHandle(pself->HTI_imageArray));
+    n = ChunkArrayGetCount(pself->HTI_imageArray);
+    for(i=0; i<n && i<=HTML_FOCUS_INDEX_MASK; i++)
+    {
+        image = ChunkArrayElementToPtr(pself->HTI_imageArray, i, &size);
+        if(image->pos == pos && (image->flags & HTML_IDF_COMPACT) &&
+           !(image->flags & HTML_IDF_RESOLVING) &&
+           image->HID_size.XYS_width)
+        {
+            found = i;
+            break;
+        }
+    }
+    MemUnlock(OptrToHandle(pself->HTI_imageArray));
+    return found;
+}
+
 @extern method HTMLTextClass, MSG_HTML_TEXT_FOCUS_FROM_POS
 {
     optr array;
     HTMLanchorData *anchorArrayElement;
     HTMLformData *formArrayElement;
-    word i,size;
+    word i,size,compactImage;
     dword p, bestPos, best_i;
+    HTMLimageData *imageArrayElement;
+
+    compactImage = pself->HTI_compactImageFocus;
+    if(mode == HTML_CHP_EXACT && compactImage != CA_NULL_ELEMENT)
+    {
+        if(@call self::MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(pos) ==
+           compactImage)
+            return HTML_FOCUS_IMAGE_FLAG | compactImage;
+        pself = ObjDerefVis(oself);
+    }
 
     if(mode == HTML_CHP_PREVIOUS)       /* best link so far: none */
       bestPos = 0;
@@ -277,12 +317,41 @@ extern void FormElementEditSelectList(
                   (mode == HTML_CHP_EXACT && p==pos))
           {                             /* closer than previous best? */
             bestPos = p;
-            best_i = i | 0x8000;
+            best_i = i | HTML_FOCUS_FORM_FLAG;
           }
         }
       }
       MemUnlock(OptrToHandle(pself->HTI_formArray));
     }
+    }
+
+
+    if(mode != HTML_CHP_EXACT || best_i == CA_NULL_ELEMENT)
+    {
+      if(pself->HTI_imageArray)
+      {
+        MemLock(OptrToHandle(pself->HTI_imageArray));
+        array = pself->HTI_imageArray;
+        for(i=0; i<ChunkArrayGetCount(array) && i<=HTML_FOCUS_INDEX_MASK; i++)
+        {
+          imageArrayElement = ChunkArrayElementToPtr(array, i, &size);
+          if(!(imageArrayElement->flags & HTML_IDF_COMPACT) ||
+             (imageArrayElement->flags & HTML_IDF_RESOLVING) ||
+             !imageArrayElement->HID_size.XYS_width)
+            continue;
+          p = imageArrayElement->pos;
+          if((mode == HTML_CHP_EXACT && p == pos) ||
+             (mode == HTML_CHP_NEXT && p <= bestPos && p > pos) ||
+             (mode == HTML_CHP_PREVIOUS &&
+              ((best_i == CA_NULL_ELEMENT && p >= bestPos) ||
+               (best_i != CA_NULL_ELEMENT && p > bestPos)) && p < pos))
+          {
+            bestPos = p;
+            best_i = i | HTML_FOCUS_IMAGE_FLAG;
+          }
+        }
+        MemUnlock(OptrToHandle(pself->HTI_imageArray));
+      }
     }
 
     return best_i;                      /* return best match */
@@ -521,9 +590,35 @@ extern void FormElementEditSelectList(
     }
 
     pself = ObjDerefVis(oself);
+    pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
     MemUnlock(OptrToHandle(pself->HTI_anchorArray));
 
     @call oself::MSG_HTML_TEXT_FORM_ELEMENT_RELEASE() ;
+}
+
+@extern method HTMLTextClass, MSG_HTML_TEXT_SELECT_COMPACT_IMAGE
+{
+    HTMLimageData *image;
+    dword pos;
+    word size;
+
+    if(!pself->HTI_imageArray)
+        return;
+
+    MemLock(OptrToHandle(pself->HTI_imageArray));
+    if(nImage >= ChunkArrayGetCount(pself->HTI_imageArray))
+    {
+        MemUnlock(OptrToHandle(pself->HTI_imageArray));
+        return;
+    }
+    image = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);
+    pos = image->pos;
+    MemUnlock(OptrToHandle(pself->HTI_imageArray));
+
+    @call oself::MSG_HTML_TEXT_FORM_ELEMENT_RELEASE();
+    @call self::MSG_VIS_TEXT_SELECT_RANGE(pos, pos);
+    pself = ObjDerefVis(oself);
+    pself->HTI_compactImageFocus = nImage;
 }
 
 #ifdef IN_PLACE_TEXT_ENTRY
@@ -533,6 +628,7 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 @extern method HTMLTextClass, MSG_HTML_TEXT_PREV_HOTSPOT
 {
     word link;
+    word image;
     VisTextRange range;
     HTMLformData *p_formData;
 
@@ -547,6 +643,26 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 	MemUnlock(OptrToHandle(pself->HTI_formArray));
     } else
     @call self::MSG_VIS_TEXT_GET_SELECTION_RANGE(&range);
+
+    if(pself->HTI_compactImageFocus == CA_NULL_ELEMENT)
+    {
+      image = @call self::MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(
+        range.VTR_start);
+      pself = ObjDerefVis(oself);
+      if(image != CA_NULL_ELEMENT &&
+         @call self::MSG_HTML_TEXT_FOCUS_FROM_POS(range.VTR_start,
+           HTML_CHP_EXACT) != CA_NULL_ELEMENT)
+      {
+#ifdef IN_PLACE_TEXT_ENTRY
+        FormElementRemoveTextEntry(oself);
+        @call self::MSG_META_GRAB_FOCUS_EXCL();
+#endif
+        @call self::MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(image);
+        @call self::MSG_HTML_TEXT_HOTSPOT_PTR(
+          NullOptr, NAME_POOL_NONE, NAME_POOL_NONE);
+        return;
+      }
+    }
 
     link = CA_NULL_ELEMENT;
     if(range.VTR_start > 0)
@@ -572,13 +688,21 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 #ifdef IN_PLACE_TEXT_ENTRY
       FormElementRemoveTextEntry(oself);
       @call self::MSG_META_GRAB_FOCUS_EXCL();
-      if (link & 0x8000) {
+      if (link & HTML_FOCUS_IMAGE_FLAG) {
+        @call self::MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(
+          link & HTML_FOCUS_INDEX_MASK);
+        @call self::MSG_HTML_TEXT_HOTSPOT_PTR(
+          NullOptr, NAME_POOL_NONE, NAME_POOL_NONE);
+        return;
+      }
+      if (link & HTML_FOCUS_FORM_FLAG) {
 /*
       Point relPos;
       relPos.P_x = 0;
       relPos.P_y = 0;
 */
-      @call self::MSG_HTML_TEXT_FORM_ELEMENT_GRAB(link & 0x7fff);
+      @call self::MSG_HTML_TEXT_FORM_ELEMENT_GRAB(
+        link & HTML_FOCUS_INDEX_MASK);
       @call self::MSG_HTML_TEXT_HOTSPOT_PTR(
         NullOptr, NAME_POOL_NONE, NAME_POOL_NONE);
       return;
@@ -602,8 +726,51 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 @extern method HTMLTextClass, MSG_HTML_TEXT_NEXT_HOTSPOT
 {
     word link;
+    word image;
+    word size;
+    dword imagePos;
     VisTextRange range;
     HTMLformData *p_formData;
+    HTMLimageData *imageData;
+
+    image = pself->HTI_compactImageFocus;
+    if(image != CA_NULL_ELEMENT && pself->HTI_imageArray)
+    {
+      MemLock(OptrToHandle(pself->HTI_imageArray));
+      if(image < ChunkArrayGetCount(pself->HTI_imageArray))
+      {
+        imageData = ChunkArrayElementToPtr(pself->HTI_imageArray, image,
+          &size);
+        imagePos = imageData->pos;
+      }
+      else
+        imagePos = TEXT_ADDRESS_PAST_END;
+      MemUnlock(OptrToHandle(pself->HTI_imageArray));
+      pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
+      link = CA_NULL_ELEMENT;
+      if(imagePos != TEXT_ADDRESS_PAST_END)
+        link = @call self::MSG_HTML_TEXT_FOCUS_FROM_POS(imagePos,
+          HTML_CHP_EXACT);
+      if(link != CA_NULL_ELEMENT && !(link & HTML_FOCUS_IMAGE_FLAG))
+      {
+#ifdef IN_PLACE_TEXT_ENTRY
+        FormElementRemoveTextEntry(oself);
+        @call self::MSG_META_GRAB_FOCUS_EXCL();
+        if(link & HTML_FOCUS_FORM_FLAG)
+        {
+          @call self::MSG_HTML_TEXT_FORM_ELEMENT_GRAB(
+            link & HTML_FOCUS_INDEX_MASK);
+          @call self::MSG_HTML_TEXT_HOTSPOT_PTR(
+            NullOptr, NAME_POOL_NONE, NAME_POOL_NONE);
+          return;
+        }
+#endif
+        @call self::MSG_HTML_TEXT_SELECT_LINK(link);
+        @call self::MSG_HTML_TEXT_HOTSPOT_NOTIFY(link,
+          MSG_HTML_TEXT_HOTSPOT_PTR, (void*)0);
+        return;
+      }
+    }
 
     /* if there's a selected form element, start from there */
     if (pself->HTI_grabbedFormElement != FORM_ELEMENT_INVALID) {
@@ -638,8 +805,16 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 #ifdef IN_PLACE_TEXT_ENTRY
       FormElementRemoveTextEntry(oself);
       @call self::MSG_META_GRAB_FOCUS_EXCL();
-      if (link & 0x8000) {
-          @call self::MSG_HTML_TEXT_FORM_ELEMENT_GRAB(link & 0x7fff);
+      if (link & HTML_FOCUS_IMAGE_FLAG) {
+          @call self::MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(
+            link & HTML_FOCUS_INDEX_MASK);
+          @call self::MSG_HTML_TEXT_HOTSPOT_PTR(
+            NullOptr, NAME_POOL_NONE, NAME_POOL_NONE);
+          return;
+      }
+      if (link & HTML_FOCUS_FORM_FLAG) {
+          @call self::MSG_HTML_TEXT_FORM_ELEMENT_GRAB(
+            link & HTML_FOCUS_INDEX_MASK);
           @call self::MSG_HTML_TEXT_HOTSPOT_PTR(
             NullOptr, NAME_POOL_NONE, NAME_POOL_NONE);
           return;
@@ -662,10 +837,15 @@ void FormElementRemoveTextEntry(optr urlTextObj);
       HTML_CHP_EXACT);
     if (link != CA_NULL_ELEMENT)         /* start is inside a hotspot */
     {
-        if (link & 0x8000)  {
-            @call self::MSG_HTML_TEXT_FORM_ELEMENT_GRAB(link & 0x7fff);
+        if (link & HTML_FOCUS_IMAGE_FLAG)  {
+            @send self::MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE(
+              link & HTML_FOCUS_INDEX_MASK);
+        } else if (link & HTML_FOCUS_FORM_FLAG)  {
+            @call self::MSG_HTML_TEXT_FORM_ELEMENT_GRAB(
+              link & HTML_FOCUS_INDEX_MASK);
             point.P_x = point.P_y = 0 ;
-            @call self::MSG_HTML_TEXT_FORM_ELEMENT_START_AFTER_GRAB(link & 0x7fff, point) ;
+            @call self::MSG_HTML_TEXT_FORM_ELEMENT_START_AFTER_GRAB(
+              link & HTML_FOCUS_INDEX_MASK, point) ;
             @call self::MSG_HTML_TEXT_HOTSPOT_PTR(
               NullOptr, NAME_POOL_NONE, NAME_POOL_NONE);
         } else {
@@ -783,6 +963,8 @@ void FormElementRemoveTextEntry(optr urlTextObj);
     HTMLimageData *img;
     TCHAR buf[32];
     word size;
+    Boolean compactHot;
+    WordFlags imageFlags;
 @ifdef JAVASCRIPT_SUPPORT
     HTMLEventType msgevt = (message == MSG_META_LARGE_START_SELECT)?
       HTML_EVENT_CLICK : HTML_EVENT_MOUSEOVER;
@@ -808,6 +990,29 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 
       if(rel.P_x < 0)
         rel.P_x += img->HID_size.XYS_width;
+
+      compactHot = FALSE;
+      if(img->flags & HTML_IDF_COMPACT)
+      {
+        compactHot = (img->usemap != NAME_POOL_NONE ||
+          (img->flags & HTML_IDF_ISMAP) ||
+          (img->formElementIndex == CA_NULL_ELEMENT &&
+           link == CA_NULL_ELEMENT) ||
+          rel.P_x < img->HID_size.XYS_height);
+        if(compactHot)
+        {
+          imageFlags = img->flags;
+
+          MemUnlock(OptrToHandle(pself->HTI_imageArray));
+          if(message == MSG_META_LARGE_START_SELECT &&
+             !(imageFlags & HTML_IDF_RESOLVING))
+            @send self::MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE(image);
+
+          retVal->flags = MRF_PROCESSED | MRF_SET_POINTER_IMAGE;
+          retVal->ptrImage = @HotspotPointer;
+          return;
+        }
+      }
 
       if(img->usemap != NAME_POOL_NONE) /* client side map: find link */
       {
@@ -1160,6 +1365,7 @@ void FormElementRemoveTextEntry(optr urlTextObj);
 	@call oself::MSG_HTML_TEXT_FORM_ELEMENT_RELEASE() ;
 
     pself->HTI_grabbedFormElement = formElement ;
+    pself->HTI_compactImageFocus = CA_NULL_ELEMENT;
     @call oself::MSG_HTML_TEXT_FORM_ELEMENT_INVALIDATE(formElement) ;
     MemLock(OptrToHandle(pself->HTI_formArray));
     p_formElement = ChunkArrayElementToPtr(pself->HTI_formArray, formElement, NULL) ;

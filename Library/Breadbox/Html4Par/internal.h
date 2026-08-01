@@ -510,9 +510,15 @@ void SpreadCopyIndexArray(MemHandle state, T_columnIndex *p_indexArray) ;
 /* it is so that the bitmap is drawn one pixel lower causing it to properly */
 /* sit lower.  This avoids lines between graphics placed vertically. */
 #define IMAGE_HEIGHT_FUDGE_FACTOR   1
+#define COMPACT_IMAGE_MAX_WIDTH     160
+#define COMPACT_IMAGE_PADDING       2
+#define COMPACT_IMAGE_GAP           2
+#define COMPACT_IMAGE_TEXT_MAX      80
 
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
-                    word invalFrom, word invalTo);
+                    ColorQuad *linkColor, word invalFrom, word invalTo);
+word CompactImagePrepareText(GStateHandle gstate, HTMLimageData *iae,
+  optr namePool, TCHAR *buf, word bufSize, word *markerWidth);
 
 /***************************************************************************
  *              Structures describing tag stacks used during parsing
@@ -565,4 +571,3 @@ typedef struct {
 #define DEFAULT_IMAGE_WIDTH 20
 
 #define PARSE_ABORT_TIMEOUT  (3*60)
-

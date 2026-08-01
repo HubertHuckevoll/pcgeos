@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head><title>Compact image test</title></head>
+<body>
+<h1>Compact image test</h1>
+
+<p>ALT: <img src="../../../../TechDocs/html/docImages/up.gif"
+ alt="Up arrow"></p>
+<p>Filename with query and fragment: <img
+ src="../../../../TechDocs/html/docImages/next.gif?cache=1#next"></p>
+<p>Explicit empty ALT: <img
+ src="../../../../TechDocs/html/docImages/down.gif" alt=""></p>
+<p>Authored size: <img src="../../../../TechDocs/html/docImages/prev.gif"
+ alt="Authored dimensions" width="120" height="70"></p>
+<p>Duplicate images: <img src="../../../../TechDocs/html/docImages/ix.gif"
+ alt="Duplicate one"> <img src="../../../../TechDocs/html/docImages/ix.gif"
+ alt="Duplicate two"></p>
+<p>Linked image: <a href="#linked"><img
+ src="../../../../TechDocs/html/docImages/upTop.gif" alt="Follow link"></a></p>
+<p>Linked empty ALT: <a href="#linked"><img
+ src="../../../../TechDocs/html/docImages/upTop.gif" alt=""></a></p>
+<p>Image map: <img src="../../../../TechDocs/html/docImages/nextUp.gif"
+ alt="Mapped image" usemap="#directions"><map name="directions">
+ <area shape="rect" coords="0,0,100,100" href="#mapped" alt="Mapped area">
+</map></p>
+<form action="#submitted" method="get">
+ <p>Graphical submit: <input type="image"
+ src="../../../../TechDocs/html/docImages/prevUp.gif"></p>
+</form>
+<table border="1"><tr><td>Table image</td><td><img
+ src="../../../../TechDocs/html/docImages/down.gif" alt="Inside table"></td></tr>
+<tr><td>Large failure</td><td><img src="missing/large-image.gif"
+ alt="Retry missing image" width="500" height="300"></td></tr></table>
+
+<p><a name="linked">Linked target</a></p>
+<p><a name="mapped">Map target</a></p>
+<p><a name="submitted">Submit target</a></p>
+</body>
+</html>
