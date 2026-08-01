@@ -163,8 +163,7 @@ Boolean SvgViewInitFromSvgTag(SvgImportContext *contextP, const char *tag)
     h0 = ((sdword)contextP->viewportHeight) >> 16;  if (h0 <= 0) h0 = 1;
 
     reduce = 1;
-    while ((w0 / (sdword)reduce) > 32760 || (h0 / (sdword)reduce) > 32760) {
-        if (reduce >= 32768) break;
+    while ((w0 / (sdword)reduce) > 1024 || (h0 / (sdword)reduce) > 1024) {
         reduce <<= 1;
     }
     contextP->inversePowerOfTwo = (reduce > 1) ? GrSDivWWFixed(MakeWWFixed(1), MakeWWFixed(reduce))
