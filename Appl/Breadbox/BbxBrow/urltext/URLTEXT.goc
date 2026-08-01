@@ -799,13 +799,22 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
             (p->flags & HTML_IDF_BROKEN)) &&
            p->imageURL != NAME_POOL_NONE)
         {
-            if(!p->HID_resolvedURL)
+            /* Resolve every URL so duplicate instances share this result. */
+            for(i=0; i<n; i++)
             {
-                NamePoolCopy(textPool, name, sizeof(name), p->imageURL, &nP);
-                @call frame::MSG_URL_FRAME_COMPLETE_URL(&nP);
-                p->HID_resolvedURL = NamePoolTokenize(namePool, nP, FALSE);
-                NamePoolDestroyIfDynamic(nP);
+                image2 = ChunkArrayElementToPtr(imageArray, i, &size);
+                if(!image2->HID_resolvedURL &&
+                   image2->imageURL != NAME_POOL_NONE)
+                {
+                    NamePoolCopy(textPool, name, sizeof(name),
+                      image2->imageURL, &nP);
+                    @call frame::MSG_URL_FRAME_COMPLETE_URL(&nP);
+                    image2->HID_resolvedURL =
+                      NamePoolTokenize(namePool, nP, FALSE);
+                    NamePoolDestroyIfDynamic(nP);
+                }
             }
+            p = ChunkArrayElementToPtr(imageArray, nImage, &size);
 
             if(ProcessSingleGraphic(p, oself, referer, nImage, TRUE, FALSE,
                                     objCache, TRUE))

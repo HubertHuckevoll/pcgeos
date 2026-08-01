@@ -1032,6 +1032,7 @@ typedef dword T_tableArrayHandle ;
   @message word MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(dword pos);
   @vardata ImageLoadMode ATTR_HTML_TEXT_IMAGE_LOAD_MODE;
   @vardata word ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS;
+  @vardata word ATTR_HTML_TEXT_COMPACT_MARKER_END; /* label start X */
 
   @message void MSG_HTML_TEXT_TRACK_REPLACE(dword pos, sword len);
 

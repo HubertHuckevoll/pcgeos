@@ -963,6 +963,7 @@ void FormElementRemoveTextEntry(optr urlTextObj);
     HTMLimageData *img;
     TCHAR buf[32];
     word size;
+    word *markerEndP;
     Boolean compactHot;
     WordFlags imageFlags;
 @ifdef JAVASCRIPT_SUPPORT
@@ -994,11 +995,14 @@ void FormElementRemoveTextEntry(optr urlTextObj);
       compactHot = FALSE;
       if(img->flags & HTML_IDF_COMPACT)
       {
+        markerEndP = ObjVarFindData(oself,
+          ATTR_HTML_TEXT_COMPACT_MARKER_END);
         compactHot = (img->usemap != NAME_POOL_NONE ||
           (img->flags & HTML_IDF_ISMAP) ||
           (img->formElementIndex == CA_NULL_ELEMENT &&
            link == CA_NULL_ELEMENT) ||
-          rel.P_x < img->HID_size.XYS_height);
+          rel.P_x < (markerEndP ? *markerEndP :
+                     img->HID_size.XYS_height));
         if(compactHot)
         {
           imageFlags = img->flags;

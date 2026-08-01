@@ -2039,7 +2039,9 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     MemHandle graphicMem;
     GStateHandle gstate;
     TCHAR buf[COMPACT_IMAGE_TEXT_MAX];
+    TCHAR marker[2];
     word i, n, size, markerWidth, labelWidth, compactFocus;
+    word *markerEndP;
     XYSize newSize;
     Boolean compact, changed, clearFocus;
 
@@ -2051,16 +2053,34 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     if(!pself->HTI_imageArray)
         return;
 
+    gstate = GrCreateState(0);
+    if(!gstate)
+        return;
+@ifdef DO_DBCS
+    marker[0] = C_KATAKANA_MIDDLE_DOT;
+@else
+    marker[0] = C_DIAMONDBULLET;
+@endif
+    marker[1] = 0;
+    FormSetTextAttr(gstate);
+    markerWidth = GrTextWidth(gstate, (char*)marker, 1);
+    markerEndP = ObjVarFindData(oself, ATTR_HTML_TEXT_COMPACT_MARKER_END);
+    if(!markerEndP)
+        markerEndP = ObjVarAddData(oself,
+          ATTR_HTML_TEXT_COMPACT_MARKER_END, sizeof(*markerEndP));
+    *markerEndP = COMPACT_IMAGE_PADDING + markerWidth + COMPACT_IMAGE_GAP;
+
+    pself = ObjDerefVis(oself);
     graphicRuns = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
     if(!graphicRuns)
+    {
+        GrDestroyState(gstate);
         return;
+    }
 
     changed = FALSE;
     clearFocus = FALSE;
     compactFocus = HTMLTextGetCompactImageFocus(oself);
-    gstate = GrCreateState(0);
-    if(!gstate)
-        return;
     MemLock(OptrToHandle(pself->HTI_imageArray));
     n = ChunkArrayGetCount(pself->HTI_imageArray);
     for(i=0; i<n; i++)
@@ -2132,8 +2152,11 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     {
         pself = ObjDerefVis(oself);
         pself->HTI_layoutState |= HTS_LAYOUT_DIRTY |
-          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
-        @send,checkDuplicate,forceQueue self::MSG_HTML_TEXT_RECALC_PAGE();
+          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW |
+          HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS;
+        if(!(pself->VTI_intFlags & VTIF_SUSPENDED))
+            @send,checkDuplicate,forceQueue self::
+              MSG_HTML_TEXT_CALCULATE_LAYOUT();
         if(pself->HTI_myView)
             @send,forceQueue (pself->HTI_myView)::
               MSG_GEN_VIEW_REDRAW_CONTENT();
