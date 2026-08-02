@@ -388,7 +388,9 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
 #endif
 
 #define INTELLIGENT_IMAGE_MAX_PIXELS  (800L * 600L)
-#define INTELLIGENT_IMAGE_PROBE_BYTES 65536L
+/* ATTENTION: Keep speculative data to one stream block. Raise this only if
+ * the probe can discard consumed metadata without losing replay support. */
+#define INTELLIGENT_IMAGE_PROBE_BYTES 8192L
 
 MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
   TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data

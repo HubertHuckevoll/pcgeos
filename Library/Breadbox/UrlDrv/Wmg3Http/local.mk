@@ -32,4 +32,4 @@ GOCFLAGS += -DRECV_SPEED
 # Tell what *_PROTO_{MAJOR,MINOR} constants to use for the driver protocol
 #
 # PROTOCONST      = URL_DRV
-_PROTO = 7.1
+_PROTO = 8.0

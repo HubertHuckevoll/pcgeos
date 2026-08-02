@@ -60,7 +60,11 @@
                 @AddMarginOpt ,
 @endif
                 @viewTextColors,
-                @viewBackgroundImages;
+                @viewBackgroundImages
+@if defined(JAVASCRIPT_SUPPORT) || defined(COMPILE_OPTION_AUTO_BROWSE)
+            , @enableJavaScript
+@endif
+                ;
 }
 
 @ifdef COMPILE_OPTION_FAST_MODE_ON
@@ -86,6 +90,13 @@
     GI_visMoniker = 'B',"View Background Images";
     GBI_identifier = HTML_NO_BACKGROUND;
 }
+
+@if defined(JAVASCRIPT_SUPPORT) || defined(COMPILE_OPTION_AUTO_BROWSE)
+@object GenBooleanClass enableJavaScript = {
+    GI_visMoniker = 'J',"Enable JavaScript";
+    GBI_identifier = HTML_JAVASCRIPT;
+}
+@endif
 
 @object GenInteractionClass LoadGraphicsGroup = {
     GI_attrs = @default | GA_KBD_SEARCH_PATH;

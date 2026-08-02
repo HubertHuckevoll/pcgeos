@@ -386,10 +386,8 @@ typedef MimeGraphicProbeResult _pascal
 
 /* protocol version of compatible URL drivers */
 #if PROGRESS_DISPLAY
-/* new API */
-/*#define URL_DRV_PROTOMAJOR 6*/
-/* for referer support */
-#define URL_DRV_PROTOMAJOR 7
+/* intelligent image probing API */
+#define URL_DRV_PROTOMAJOR 8
 #else
 /*#define URL_DRV_PROTOMAJOR 5*/
 /* for referer support */

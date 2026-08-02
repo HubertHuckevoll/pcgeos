@@ -209,6 +209,11 @@ extern void UserAbortEnd(void);
 @endif
 
 @ifdef PROGRESS_DISPLAY
+#ifdef ALLOW_FETCH_WHILE_IMPORTING
+extern Boolean G_importActive[];
+extern Boolean G_fetchWhileImport;
+#endif
+
 /*
  * handle loading progress: start import thread
  */
@@ -226,6 +231,12 @@ extern void UserAbortEnd(void);
         loadProgressDataP))
     {
         loadProgressDataP->LPD_imageProbe = LPI_DEFERRED;
+#ifdef ALLOW_FETCH_WHILE_IMPORTING
+        if(G_fetchWhileImport)
+            G_importActive[loadProgressDataP->LPD_loadThread] = FALSE;
+        else
+#endif
+            ThreadVSem(loadProgressDataP->LPD_importSync);
     }
     }
 }
@@ -243,13 +254,6 @@ void AssumeGraphic(TCHAR *mimeType)
 
 extern void _pascal WakeUp(word *queueP);
 extern void _pascal Block(word *queueP, Boolean *flag);
-
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
-/* if import thread is actively importing */
-extern Boolean G_importActive[];
-
-extern Boolean G_fetchWhileImport;
-#endif
 
 #define USE_MEM_STREAM
 
@@ -369,13 +373,14 @@ word MemStreamRead(MemHandle stream, void *buffer, word bufSize, dword offset)
     return ret;
 }
 
-void MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
+word MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
 {
     MemStreamHeader *streamP;
     MemHandle *blkP;
     byte *dataP;
     word blockOffset, dataOffset;
     word bytesInFirstBlock, bytesInNextBlock;
+    word written = 0;
 
     streamP = MemPLock(stream);
     if ((streamP->tail + (dword)bufSize) < (dword)MEM_STREAM_BLOCK_SIZE*(dword)MEM_STREAM_INIT_BLKS) {
@@ -397,6 +402,7 @@ void MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
 		bytesInNextBlock = 0;
 	    }
 	    memcpy(dataP, buffer, bytesInFirstBlock);
+	    written += bytesInFirstBlock;
 	    MemUnlock(blkP[blockOffset]);
 	    /* copy to next block, if needed */
 	    if (bytesInNextBlock) {
@@ -406,13 +412,15 @@ void MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
 		if (blkP[blockOffset+1]) {
 		    dataP = MemLock(blkP[blockOffset+1]);
 		    memcpy(dataP, (byte *)buffer+bytesInFirstBlock, bytesInNextBlock);
+		    written += bytesInNextBlock;
 		    MemUnlock(blkP[blockOffset+1]);
 		}
 	    }
 	}
-	streamP->tail += bufSize;
+	streamP->tail += written;
     }
     MemUnlockV(stream);
+    return written;
 }
 
 #endif
@@ -428,6 +436,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     word returnVal = 0;  /* used for reads and header admission */
     Boolean peek = FALSE;
     Boolean preRead = FALSE;
+    word bytesWritten;
 #ifdef USE_MEM_STREAM
     word lt;
 #else
@@ -660,17 +669,22 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         ThreadPSem(loadProgressDataP->LPD_sem);
         /* append new data to stream */
 #ifdef USE_MEM_STREAM
-	/* ignore error */
-	MemStreamWrite(G_stream[lt], buffer, bufSize);
+	bytesWritten = G_stream[lt] ?
+	    MemStreamWrite(G_stream[lt], buffer, bufSize) : 0;
 #else
         HugeArrayAppend(loadProgressDataP->LPD_dataFile,
                 loadProgressDataP->LPD_dataStream,
                 bufSize, buffer);
+	bytesWritten = bufSize;
 #endif
-        loadProgressDataP->LPD_bytesAvail += bufSize;
+        loadProgressDataP->LPD_bytesAvail += bytesWritten;
+        if (bytesWritten != bufSize) {
+            loadProgressDataP->LPD_fileDone = TRUE;
+            loadProgressDataP->LPD_progress = FALSE;
+        }
         ThreadVSem(loadProgressDataP->LPD_sem);
         /* wake up reader, if time */
-        if (TimerGetCount() >=
+        if (bytesWritten != bufSize || TimerGetCount() >=
         loadProgressDataP->LPD_updateTime + progressLoadWait) {
         WakeUp(&(loadProgressDataP->LPD_emptyQueue));
         loadProgressDataP->LPD_updateTime = TimerGetCount();
@@ -1341,11 +1355,6 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
           @send,forceQueue oself::MSG_HTML_TEXT_ANIMATIONS_ON() ;
         }
     }
-    else if(!pself->UTI_doomed)
-    {
-        @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
-    }
-
     /* Relay operation status to frame */
     @call frame::MSG_URL_FRAME_DEC_PENDING();
 }
