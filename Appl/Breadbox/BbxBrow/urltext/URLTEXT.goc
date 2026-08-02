@@ -1469,6 +1469,9 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             imageP = ChunkArrayElementToPtr(imageArray, i, &size);
             if(url == imageP->HID_resolvedURL)
             {
+                if(imageP->HID_cacheToken)
+                    ObjCacheUnlockItem(
+                      (ObjCacheToken)imageP->HID_cacheToken);
                 imageP->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
                   HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY);
                 imageP->flags |= HTML_IDF_COMPACT;
