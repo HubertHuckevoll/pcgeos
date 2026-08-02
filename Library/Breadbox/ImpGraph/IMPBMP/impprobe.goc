@@ -1,6 +1,7 @@
 @include <stdapp.goh>
 #include <htmldrv.h>
 
+#include <Ansi/ctype.h>
 #include <Ansi/string.h>
 
 typedef struct {
@@ -16,7 +17,9 @@ typedef enum {
     IGP_FORMAT_UNKNOWN,
     IGP_FORMAT_GIF,
     IGP_FORMAT_JPEG,
-    IGP_FORMAT_PNG
+    IGP_FORMAT_PNG,
+    IGP_FORMAT_WEBP,
+    IGP_FORMAT_SVG
 } ImpGraphProbeFormat;
 
 static word _pascal
@@ -118,6 +121,9 @@ ImpGraphProbeDetect(ImpGraphProbeReader *readerP)
         format = IGP_FORMAT_PNG;
     else if(read >= 2 && signature[0] == 0xff && signature[1] == 0xd8)
         format = IGP_FORMAT_JPEG;
+    else if(read >= 12 && !memcmp(signature, "RIFF", 4) &&
+            !memcmp(signature + 8, "WEBP", 4))
+        format = IGP_FORMAT_WEBP;
 
     ImpGraphProbeReset(readerP);
     return format;
@@ -131,6 +137,261 @@ ImpGraphProbeGetBE32(const byte *p)
     value = ((dword)p[0] << 24) | ((dword)p[1] << 16) |
       ((dword)p[2] << 8) | p[3];
     return value;
+}
+
+static dword _pascal
+ImpGraphProbeGetLE24(const byte *p)
+{
+    return p[0] | ((dword)p[1] << 8) | ((dword)p[2] << 16);
+}
+
+static MimeGraphicProbeResult _pascal
+ImpGraphProbeWebP(ImpGraphProbeReader *readerP, MimeGraphicProbeData *dataP)
+{
+    byte header[30];
+
+    if(!ImpGraphProbeReadExact(readerP, header, sizeof(header)) ||
+       memcmp(header, "RIFF", 4) || memcmp(header + 8, "WEBP", 4))
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+
+    if(!memcmp(header + 12, "VP8X", 4))
+    {
+        dataP->MGPD_width = ImpGraphProbeGetLE24(header + 24) + 1;
+        dataP->MGPD_height = ImpGraphProbeGetLE24(header + 27) + 1;
+    }
+    else if(!memcmp(header + 12, "VP8L", 4) && header[20] == 0x2f)
+    {
+        dataP->MGPD_width = 1 + header[21] +
+          ((dword)(header[22] & 0x3f) << 8);
+        dataP->MGPD_height = 1 + (header[22] >> 6) +
+          ((dword)header[23] << 2) +
+          ((dword)(header[24] & 0x0f) << 10);
+    }
+    else if(!memcmp(header + 12, "VP8 ", 4) &&
+            header[23] == 0x9d && header[24] == 0x01 &&
+            header[25] == 0x2a)
+    {
+        dataP->MGPD_width =
+          (header[26] | ((word)header[27] << 8)) & 0x3fff;
+        dataP->MGPD_height =
+          (header[28] | ((word)header[29] << 8)) & 0x3fff;
+    }
+
+    return dataP->MGPD_width && dataP->MGPD_height ?
+      MIME_GRAPHIC_PROBE_FOUND : MIME_GRAPHIC_PROBE_UNKNOWN;
+}
+
+/* ATTENTION: Only scan 4095 bytes. Use the SVG parser if roots beyond this
+ * limit or non-pixel intrinsic units need to be admitted automatically. */
+#define IGP_SVG_SCAN_BYTES 4095
+
+static const char * _pascal
+ImpGraphProbeSVGAttribute(const char *tagP, const char *tagEndP,
+  const char *name, const char **valueEndPP)
+{
+    const char *p;
+    const char *valueP;
+    word nameLength;
+    char quote;
+
+    nameLength = 0;
+    while(name[nameLength])
+        nameLength++;
+    for(p = tagP; p + nameLength < tagEndP; p++)
+    {
+        if((p == tagP || isspace((byte)p[-1])) &&
+           !memcmp(p, name, nameLength))
+        {
+            valueP = p + nameLength;
+            while(valueP < tagEndP && isspace((byte)*valueP))
+                valueP++;
+            if(valueP == tagEndP || *valueP != '=')
+                continue;
+            valueP++;
+            while(valueP < tagEndP && isspace((byte)*valueP))
+                valueP++;
+            if(valueP == tagEndP ||
+               (*valueP != '\'' && *valueP != '"'))
+                continue;
+            quote = *valueP++;
+            p = valueP;
+            while(p < tagEndP && *p != quote)
+                p++;
+            if(p < tagEndP)
+            {
+                *valueEndPP = p;
+                return valueP;
+            }
+        }
+    }
+    return (void *)0;
+}
+
+static char * _pascal
+ImpGraphProbeFindASCII(char *startP, char *endP, const char *text,
+  word textLength)
+{
+    while(startP + textLength <= endP)
+    {
+        if(!memcmp(startP, text, textLength))
+            return startP;
+        startP++;
+    }
+    return (void *)0;
+}
+
+static Boolean _pascal
+ImpGraphProbeSVGNumber(const char **valuePP, const char *valueEndP,
+  dword *valueP, Boolean *negativeP)
+{
+    const char *p;
+    dword value;
+    Boolean haveDigit;
+    Boolean fraction;
+
+    p = *valuePP;
+    while(p < valueEndP && (isspace((byte)*p) || *p == ','))
+        p++;
+    *negativeP = FALSE;
+    if(p < valueEndP && (*p == '-' || *p == '+'))
+    {
+        *negativeP = *p == '-';
+        p++;
+    }
+
+    value = 0;
+    haveDigit = FALSE;
+    while(p < valueEndP && isdigit((byte)*p))
+    {
+        if(value > (0xffffffffUL - (*p - '0')) / 10)
+            return FALSE;
+        value = value * 10 + (*p++ - '0');
+        haveDigit = TRUE;
+    }
+
+    fraction = FALSE;
+    if(p < valueEndP && *p == '.')
+    {
+        p++;
+        while(p < valueEndP && isdigit((byte)*p))
+        {
+            if(*p != '0')
+                fraction = TRUE;
+            haveDigit = TRUE;
+            p++;
+        }
+    }
+    if(!haveDigit || (fraction && value == 0xffffffffUL))
+        return FALSE;
+    if(fraction)
+        value++;
+
+    *valuePP = p;
+    *valueP = value;
+    return TRUE;
+}
+
+static Boolean _pascal
+ImpGraphProbeSVGLength(const char *valueP, const char *valueEndP,
+  dword *lengthP)
+{
+    Boolean negative;
+
+    if(!ImpGraphProbeSVGNumber(&valueP, valueEndP, lengthP, &negative) ||
+       negative || !*lengthP)
+        return FALSE;
+    while(valueP < valueEndP && isspace((byte)*valueP))
+        valueP++;
+    if(valueEndP - valueP == 2 && valueP[0] == 'p' && valueP[1] == 'x')
+        valueP += 2;
+    while(valueP < valueEndP && isspace((byte)*valueP))
+        valueP++;
+    return valueP == valueEndP;
+}
+
+static Boolean _pascal
+ImpGraphProbeSVGViewBox(const char *valueP, const char *valueEndP,
+  dword *widthP, dword *heightP)
+{
+    dword ignored;
+    Boolean negative;
+
+    if(!ImpGraphProbeSVGNumber(&valueP, valueEndP, &ignored, &negative) ||
+       !ImpGraphProbeSVGNumber(&valueP, valueEndP, &ignored, &negative) ||
+       !ImpGraphProbeSVGNumber(&valueP, valueEndP, widthP, &negative) ||
+       negative || !*widthP ||
+       !ImpGraphProbeSVGNumber(&valueP, valueEndP, heightP, &negative) ||
+       negative || !*heightP)
+        return FALSE;
+    while(valueP < valueEndP && isspace((byte)*valueP))
+        valueP++;
+    return valueP == valueEndP;
+}
+
+static MimeGraphicProbeResult _pascal
+ImpGraphProbeSVG(ImpGraphProbeReader *readerP, MimeGraphicProbeData *dataP)
+{
+    MemHandle scanH;
+    char *scanP;
+    char *scanEndP;
+    char *svgP;
+    char *tagEndP;
+    const char *valueP;
+    const char *valueEndP;
+    word scanSize;
+    word read;
+    Boolean haveWidth;
+    Boolean haveHeight;
+
+    scanSize = IGP_SVG_SCAN_BYTES;
+    if(readerP->limit < scanSize)
+        scanSize = (word)readerP->limit;
+    if(!scanSize)
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+
+    scanH = MemAlloc(scanSize + 1, HF_DYNAMIC, HAF_ZERO_INIT);
+    if(!scanH)
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+    scanP = MemLock(scanH);
+    read = ImpGraphProbeRead(readerP, scanP, scanSize);
+    scanP[read] = 0;
+    scanEndP = scanP + read;
+
+    svgP = ImpGraphProbeFindASCII(scanP, scanEndP, "<svg", 4);
+    while(svgP && svgP[4] && !isspace((byte)svgP[4]) && svgP[4] != '>')
+        svgP = ImpGraphProbeFindASCII(svgP + 4, scanEndP, "<svg", 4);
+    tagEndP = svgP ? svgP + 4 : (void *)0;
+    while(tagEndP && tagEndP < scanEndP && *tagEndP != '>')
+        tagEndP++;
+    if(tagEndP == scanEndP)
+        tagEndP = (void *)0;
+    if(!tagEndP)
+        goto done;
+
+    valueP = ImpGraphProbeSVGAttribute(svgP + 4, tagEndP,
+      "width", &valueEndP);
+    haveWidth = valueP &&
+      ImpGraphProbeSVGLength(valueP, valueEndP, &dataP->MGPD_width);
+    valueP = ImpGraphProbeSVGAttribute(svgP + 4, tagEndP,
+      "height", &valueEndP);
+    haveHeight = valueP &&
+      ImpGraphProbeSVGLength(valueP, valueEndP, &dataP->MGPD_height);
+    if(!haveWidth || !haveHeight)
+    {
+        valueP = ImpGraphProbeSVGAttribute(svgP + 4, tagEndP,
+          "viewBox", &valueEndP);
+        if(!valueP || !ImpGraphProbeSVGViewBox(valueP, valueEndP,
+             &dataP->MGPD_width, &dataP->MGPD_height))
+        {
+            dataP->MGPD_width = dataP->MGPD_height = 0;
+        }
+    }
+
+done:
+    MemUnlock(scanH);
+    MemFree(scanH);
+    return dataP->MGPD_width && dataP->MGPD_height ?
+      MIME_GRAPHIC_PROBE_FOUND : MIME_GRAPHIC_PROBE_UNKNOWN;
 }
 
 static MimeGraphicProbeResult _pascal
@@ -264,7 +525,10 @@ MimeDrvGraphicProbe(_MimeGraphicProbeParams_)
             return MIME_GRAPHIC_PROBE_UNKNOWN;
     }
 
-    format = ImpGraphProbeDetect(&reader);
+    if(mimeType && !strcmp(mimeType, _TEXT("image/svg+xml")))
+        format = IGP_FORMAT_SVG;
+    else
+        format = ImpGraphProbeDetect(&reader);
     switch(format)
     {
       case IGP_FORMAT_GIF:
@@ -276,6 +540,12 @@ MimeDrvGraphicProbe(_MimeGraphicProbeParams_)
       case IGP_FORMAT_PNG:
         result = ImpGraphProbePNG(&reader, data);
         break;
+      case IGP_FORMAT_WEBP:
+        result = ImpGraphProbeWebP(&reader, data);
+        break;
+      case IGP_FORMAT_SVG:
+        result = ImpGraphProbeSVG(&reader, data);
+        break;
       default:
         result = MIME_GRAPHIC_PROBE_UNKNOWN;
         break;
@@ -285,6 +555,5 @@ MimeDrvGraphicProbe(_MimeGraphicProbeParams_)
     if(reader.file)
         FileClose(reader.file, FALSE);
 
-    (void)mimeType;
     return result;
 }
