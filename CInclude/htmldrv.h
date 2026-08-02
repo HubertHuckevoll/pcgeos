@@ -332,6 +332,41 @@ typedef VMBlockHandle _pascal _export entry_MimeDrvGraphicEx(_MimeGraphicParams_
 typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_,dword extFlags,void *pf);
 
 
+/*** Entry: Probe intrinsic graphic dimensions *******************************/
+
+#define MIME_ENTRY_GRAPHIC_PROBE 4
+
+typedef enum {
+    MIME_GRAPHIC_PROBE_UNKNOWN,
+    MIME_GRAPHIC_PROBE_FOUND
+} MimeGraphicProbeResult;
+
+typedef struct {
+    dword MGPD_width;
+    dword MGPD_height;
+} MimeGraphicProbeData;
+
+#if PROGRESS_DISPLAY
+#define _MimeGraphicProbeParams_ \
+            TCHAR *mimeType, \
+            TCHAR *file, \
+            dword maxBytes, \
+            MimeGraphicProbeData *data, \
+            LoadProgressData *loadProgressDataP
+#else
+#define _MimeGraphicProbeParams_ \
+            TCHAR *mimeType, \
+            TCHAR *file, \
+            dword maxBytes, \
+            MimeGraphicProbeData *data
+#endif
+
+typedef MimeGraphicProbeResult _pascal _export
+  entry_MimeDrvGraphicProbe(_MimeGraphicProbeParams_);
+typedef MimeGraphicProbeResult _pascal
+  pcfm_MimeDrvGraphicProbe(_MimeGraphicProbeParams_, void *pf);
+
+
 
 /***********************************************************************
  *      Impex style drivers

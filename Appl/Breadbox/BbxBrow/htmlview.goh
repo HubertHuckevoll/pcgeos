@@ -387,6 +387,13 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
   VMFileHandle vmf, ImageAdditionalData *size, dword *memUsed, MimeStatus *mimeStatus);
 #endif
 
+#define INTELLIGENT_IMAGE_MAX_PIXELS  (800L * 600L)
+#define INTELLIGENT_IMAGE_PROBE_BYTES 65536L
+
+MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
+  TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data
+  LOAD_PROGRESS_PARAMS_PROTO);
+
 
 /***************************************************************************
  *              Histroy buffer + management routines
@@ -1135,7 +1142,8 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @instance word UTI_doomed = FALSE;
 
   @message void MSG_URL_TEXT_LOAD_GRAPHICS();
-  @message void MSG_URL_TEXT_PROCESS_GRAPHICS(Boolean forceLoad);
+  @message void MSG_URL_TEXT_PROCESS_GRAPHICS(Boolean forceLoad,
+    Boolean bypassIntelligent);
   @message void MSG_URL_TEXT_LOAD_IMAGE(word nImage);
   @message void MSG_URL_TEXT_MARK_VISITED_LINKS();
 
@@ -1149,6 +1157,7 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
 
   @message void MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
     ObjCacheToken oct, NameToken url, word invalFrom, word invalTo);
+  @message void MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(NameToken url);
   @message void MSG_URL_TEXT_RECALCULATE() ;
   @message void MSG_URL_TEXT_INCREASE_USED_MEMORY(dword usedMem) ;
   @message dword MSG_URL_TEXT_GET_MEMORY_AVAILABLE() ;

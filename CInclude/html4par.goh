@@ -136,8 +136,10 @@ typedef word HTMLmultiLength;
 typedef enum {
   IMAGE_LOAD_DISABLED = 0,
   IMAGE_LOAD_AUTOMATIC = 1,
-  IMAGE_LOAD_COMPACT = 2
+  IMAGE_LOAD_INTELLIGENT = 2
 } ImageLoadMode;
+
+#define IMAGE_LOAD_COMPACT IMAGE_LOAD_INTELLIGENT
 
 typedef struct {
   VMChainTree HTBH_meta;

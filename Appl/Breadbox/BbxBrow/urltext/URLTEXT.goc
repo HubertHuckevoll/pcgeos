@@ -49,6 +49,7 @@
 @extern object HTMLVApp;
 @extern object SettingsBoolGroup;
 @extern object HTMLSettingsBoolGroup;
+@extern object NavigateLoadGraphics;
 
 @extern chunk MsgLoadImg;
 
@@ -216,12 +217,16 @@ extern void UserAbortEnd(void);
     static TCHAR nullName[] = _TEXT("");
 
     if (loadProgressDataP) {
-    ImportThreadRequestImportGraphic(
+    if(!ImportThreadRequestImportGraphic(
         oself,
         loadProgressDataP->LPD_nameT,
         loadProgressDataP->LPD_mimeType,
         nullName,  /* have data stream, don't need filename */
-        FALSE, loadProgressDataP);
+        FALSE, loadProgressDataP->LPD_imageProbeMaxPixels,
+        loadProgressDataP))
+    {
+        loadProgressDataP->LPD_imageProbe = LPI_DEFERRED;
+    }
     }
 }
 @endif
@@ -473,8 +478,9 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         loadProgressDataP->LPD_streamState = LPSS_EMPTY;
 	/* since we know this came from IMG tag, assume graphic */
 	AssumeGraphic(loadProgressDataP->LPD_mimeType);
-        /* only do progress display for JPEGs and GIFs */
-        if ((strcmp(loadProgressDataP->LPD_mimeType, _TEXT("image/jpeg")) == 0) ||
+        /* Intelligent mode probes every supported image format. */
+        if (loadProgressDataP->LPD_imageProbeMaxPixels ||
+        (strcmp(loadProgressDataP->LPD_mimeType, _TEXT("image/jpeg")) == 0) ||
         (strcmp(loadProgressDataP->LPD_mimeType, _TEXT("image/gif")) == 0)) {
 #ifndef USE_MEM_STREAM
         dword streamCount;
@@ -699,6 +705,7 @@ typedef struct {
     word index ;
     NameToken nameT ;
     Boolean objCache ;
+    dword imageProbeMaxPixels;
 } URLTextRequestGraphic ;
 
 void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
@@ -710,7 +717,8 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
                                    Boolean loadUnknownSize,
                                    Boolean forceLoad,
                                    Boolean objCache,
-				   Boolean replaceLike)
+				   Boolean replaceLike,
+                                   dword imageProbeMaxPixels)
 {
     word nameT;
     ObjCacheToken oct;
@@ -773,6 +781,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       /* Token is released when request is finished */
 
       p_request->objCache = objCache ;
+      p_request->imageProbeMaxPixels = imageProbeMaxPixels;
       URLFetchExtraMemoryUnlock(request) ;
 
 #if PROGRESS_DISPLAY
@@ -780,10 +789,16 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       loadProgressData.LPD_callback = loadProgressCallback;
       loadProgressData.LPD_textObj = oself;
       loadProgressData.LPD_nameT = nameT;
+      loadProgressData.LPD_imageProbeMaxPixels = imageProbeMaxPixels;
+      loadProgressData.LPD_imageProbeMaxBytes =
+        imageProbeMaxPixels ? INTELLIGENT_IMAGE_PROBE_BYTES : 0;
+      loadProgressData.LPD_imageProbe =
+        imageProbeMaxPixels ? LPI_PENDING : LPI_NONE;
       loadProgressData.LPD_progress =
-          progressDisplay && (p->pos < HTML_IMAGE_POS_RESERVED) &&
-          (!p->size.XYS_height ||
-           (p->size.XYS_height >= progressMinHeight));
+          imageProbeMaxPixels ||
+          (progressDisplay && (p->pos < HTML_IMAGE_POS_RESERVED) &&
+           (!p->size.XYS_height ||
+            (p->size.XYS_height >= progressMinHeight)));
       /* other fields are initialized by fetch thread */
       URLFetchRequest(
           nameT,
@@ -858,7 +873,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
             p = ChunkArrayElementToPtr(imageArray, nImage, &size);
 
             if(ProcessSingleGraphic(p, oself, referer, nImage, TRUE, FALSE,
-                                    objCache, TRUE))
+                                    objCache, TRUE, 0))
             {
                 for(i=0; i<n; i++)
                 {
@@ -895,6 +910,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     optr textPool = pself->HTI_namePool;
     optr frame = pself->UTI_frame;
     word pass;
+    ImageLoadMode imageMode;
+    dword imageProbeMaxPixels;
     NameToken referer = NAME_POOL_NONE;
     optr realFrame = NullOptr;
 
@@ -915,6 +932,11 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     objCache = (@call SettingsBoolGroup::
       MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTMLV_OBJECT_CACHE);
                                         /* object cache enabled? */
+    imageMode = @call NavigateLoadGraphics::
+      MSG_GEN_ITEM_GROUP_GET_SELECTION();
+    imageProbeMaxPixels = (!bypassIntelligent &&
+      imageMode == IMAGE_LOAD_INTELLIGENT) ?
+      INTELLIGENT_IMAGE_MAX_PIXELS : 0;
 
     MemLock(OptrToHandle(imageArray));
     n = ChunkArrayGetCount(imageArray);
@@ -950,7 +972,9 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
           continue;                     // Skip graphics that have been handled
 
         if(ProcessSingleGraphic(p, oself, referer, i,
-                                (pass==2), forceLoad, objCache, TRUE))
+                                (pass==2), forceLoad, objCache, TRUE,
+                                p->pos < HTML_IMAGE_POS_RESERVED ?
+                                  imageProbeMaxPixels : 0))
         {
           /* Mark this and all similar graphics further down */
           for (j=i; j<n; j++)  {
@@ -1117,10 +1141,28 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 @ifdef CACHE_ALL
 	     && !G_cacheAll
 @endif
-	    ), NULL) ;
-    } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS ||
-    URLRequestGetRet(result.retType) == URL_RET_PROGRESS_ABORT) {
-    /* nothing to do here */
+	    ), request.imageProbeMaxPixels, NULL) ;
+    } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS) {
+        if(request.imageProbeMaxPixels)
+        {
+            ImportThreadRequestImportGraphic(
+                oself,
+                request.nameT,
+                result.mimeType,
+                result.curHTML,
+                ((result.retType & URB_RF_NOCACHE)
+@ifdef CACHE_ALL
+	         && !G_cacheAll
+@endif
+	        ), request.imageProbeMaxPixels, NULL) ;
+        }
+    } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS_ABORT) {
+        if(request.imageProbeMaxPixels)
+        {
+            @call self::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
+              request.nameT);
+            @call self::MSG_URL_TEXT_DEC_PENDING();
+        }
 #else
         ImportThreadRequestImportGraphic(
             oself,
@@ -1131,7 +1173,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 @ifdef CACHE_ALL
 	     && !G_cacheAll
 @endif
-	    )) ;
+	    ), request.imageProbeMaxPixels) ;
 #endif
     } else {
         /* Does not appear to have come in correctly.  Release it */
@@ -1373,6 +1415,36 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
       ObjCacheUnlockItem(oct);
 
     NamePoolReleaseToken(namePool, url);// remove this reference to URL
+}
+
+@method URLTextClass, MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS
+{
+    word i, n, size;
+    HTMLimageData *imageP;
+    optr imageArray;
+
+    imageArray = pself->HTI_imageArray;
+    if(imageArray)
+    {
+        MemLock(OptrToHandle(imageArray));
+        n = ChunkArrayGetCount(imageArray);
+        for(i = 0; i < n; i++)
+        {
+            imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+            if(url == imageP->HID_resolvedURL)
+            {
+                imageP->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
+                  HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY);
+                imageP->flags |= HTML_IDF_COMPACT;
+                imageP->HID_cacheToken = 0;
+                imageP->HID_vmf = 0;
+                imageP->HID_vmb = 0;
+            }
+        }
+        MemUnlock(OptrToHandle(imageArray));
+    }
+
+    NamePoolReleaseToken(namePool, url);
 }
 
 @ifdef PROGRESS_DISPLAY
@@ -2132,6 +2204,8 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     optr frame = pself->UTI_frame;
     NameToken referer = NAME_POOL_NONE;
     optr realFrame = NullOptr;
+    ImageLoadMode imageMode;
+    dword imageProbeMaxPixels;
 
     if(!imageArray)                     /* avoid indenting all this stuff... */
       return;
@@ -2162,8 +2236,15 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
       objCache = (@call SettingsBoolGroup::
         MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTMLV_OBJECT_CACHE);
 
+      imageMode = @call NavigateLoadGraphics::
+        MSG_GEN_ITEM_GROUP_GET_SELECTION();
+      imageProbeMaxPixels = (imageMode == IMAGE_LOAD_INTELLIGENT &&
+        p->pos < HTML_IMAGE_POS_RESERVED) ?
+        INTELLIGENT_IMAGE_MAX_PIXELS : 0;
+
       /* load graphic or get it from cache */
-      ProcessSingleGraphic(p, oself, referer, i,  TRUE, FALSE, objCache, FALSE);
+      ProcessSingleGraphic(p, oself, referer, i, TRUE, FALSE, objCache,
+        FALSE, imageProbeMaxPixels);
 
       /* release referer */
       if (referer != NAME_POOL_NONE)
@@ -2223,6 +2304,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 	p_request->index = 0;  /* not used */
 	p_request->nameT = fullURL;
 	p_request->objCache = objCache;
+	p_request->imageProbeMaxPixels = 0;
 	URLFetchExtraMemoryUnlock(request);
 	URLFetchRequest(
 	    fullURL,
@@ -2281,7 +2363,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 @ifdef CACHE_ALL
 	     && !G_cacheAll
 @endif
-	    ), NULL) ;
+	    ), 0, NULL) ;
     } else {
 	@call oself::MSG_URL_TEXT_DEC_PENDING();
     }

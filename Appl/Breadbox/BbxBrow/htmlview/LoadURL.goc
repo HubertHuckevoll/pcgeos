@@ -1041,3 +1041,43 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
 
     return 0;                           /* didn't find a matching driver */
 }
+
+MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
+  TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data
+  LOAD_PROGRESS_PARAMS_PROTO)
+{
+    FileLongName driver;
+    GeodeHandle drv;
+    GeodeLoadError err;
+    ProtocolNumber protocol;
+    void *ProbeGraphic;
+    MimeGraphicProbeResult result;
+
+    if(!mimeType || !NameAssocFindAssociation(assocTypeDriver,
+       mimeType, driver, sizeof(driver), TRUE, (void *)0))
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+
+    ThreadPSem(MimeDriverSemaphore);
+    FileSetCurrentPath(SP_IMPORT_EXPORT_DRIVERS, _TEXT("."));
+    err = -1;
+    drv = GeodeUseLibrary(driver, MIME_DRV_PROTOMAJOR,
+      MIME_DRV_PROTOMINOR, &err);
+    ThreadVSem(MimeDriverSemaphore);
+    if(!drv || err != -1)
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+
+    GeodeGetInfo(drv, GGIT_GEODE_PROTOCOL, &protocol);
+    if(protocol.PN_major < 4 ||
+       (protocol.PN_major == 4 && protocol.PN_minor < 3))
+    {
+        GeodeFreeLibrary(drv);
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+    }
+
+    ProbeGraphic = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC_PROBE);
+    result = ((pcfm_MimeDrvGraphicProbe *)
+      ProcCallFixedOrMovable_pascal)(mimeType, file, maxBytes, data
+      LOAD_PROGRESS_DATAP_ARG, ProbeGraphic);
+    GeodeFreeLibrary(drv);
+    return result;
+}

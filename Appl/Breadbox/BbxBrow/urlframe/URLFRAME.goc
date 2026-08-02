@@ -1105,7 +1105,7 @@ extern jseVariable globalObject;
         if(text)
         {
             @send,forceQueue text::MSG_HTML_TEXT_MARK_ALL_BROKEN_AND_RESOLVING_IMAGES_UNRESOLVED() ;
-            @send,forceQueue text::MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);
+            @send,forceQueue text::MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE, TRUE);
         }
 
         @send @frameChildren::MSG_URL_FRAME_LOAD_GRAPHICS();
@@ -1121,8 +1121,10 @@ extern jseVariable globalObject;
         if(text)
         {
             @call text::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(mode);
-            if(mode == IMAGE_LOAD_AUTOMATIC)
-                @send,forceQueue text::MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);
+            if(mode == IMAGE_LOAD_AUTOMATIC ||
+               mode == IMAGE_LOAD_INTELLIGENT)
+                @send,forceQueue text::MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE,
+                  FALSE);
         }
 
         @send @frameChildren::MSG_URL_FRAME_SET_IMAGE_LOAD_MODE(mode);
@@ -1645,9 +1647,10 @@ EC_ERROR_IF(!NamePoolIsDynamic(*buf), -1);
             @call text::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(imageMode);
 
             /* start loading images if enabled */
-            if(imageMode == IMAGE_LOAD_AUTOMATIC)
+            if(imageMode == IMAGE_LOAD_AUTOMATIC ||
+               imageMode == IMAGE_LOAD_INTELLIGENT)
             {
-                @call text::MSG_URL_TEXT_PROCESS_GRAPHICS(reload);
+                @call text::MSG_URL_TEXT_PROCESS_GRAPHICS(reload, FALSE);
                 @call text::MSG_HTML_TEXT_SHOW_ITEM();
             }
             else

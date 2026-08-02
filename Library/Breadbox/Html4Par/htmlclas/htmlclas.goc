@@ -2045,7 +2045,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     XYSize newSize;
     Boolean compact, changed, clearFocus;
 
-    if(mode < IMAGE_LOAD_DISABLED || mode > IMAGE_LOAD_COMPACT)
+    if(mode < IMAGE_LOAD_DISABLED || mode > IMAGE_LOAD_INTELLIGENT)
         mode = IMAGE_LOAD_AUTOMATIC;
     HTMLTextSetImageLoadMode(oself, mode);
     pself = ObjDerefVis(oself);
@@ -2091,7 +2091,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
             !(image->flags & HTML_IDF_BROKEN)))
             continue;
 
-        compact = ((mode == IMAGE_LOAD_COMPACT) ||
+        compact = ((mode == IMAGE_LOAD_INTELLIGENT) ||
                    (image->flags & HTML_IDF_BROKEN));
         if(compact)
         {

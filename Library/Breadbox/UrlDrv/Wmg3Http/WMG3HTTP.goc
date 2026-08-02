@@ -1489,11 +1489,15 @@ word HTTPGet(HTTPConnectionHandle conn)
 #endif
 #if PROGRESS_DISPLAY
     word admissionResult;
+    Boolean imageDeferred;
 #endif
     MemHandle pathB = 0;
     int urlLen;
 
     p_conn = ConnectionLock(conn) ;
+#if PROGRESS_DISPLAY
+    imageDeferred = FALSE;
+#endif
 #ifdef PERSISTANT_CONNECTIONS
 #define handle_error(rc) {HandleErrorFunc(p_conn, &retry); rcode = rc; goto error_exit;}
 #else
@@ -2504,6 +2508,12 @@ word HTTPGet(HTTPConnectionHandle conn)
                                 p_conn->loadProgressDataP, LPCT_WRITE,
                                 p_conn->buffer, i,
                                 p_conn->loadProgressDataP->LPD_callback);
+                            if(p_conn->loadProgressDataP->LPD_imageProbe ==
+                               LPI_DEFERRED)
+                            {
+                                imageDeferred = TRUE;
+                                p_conn->allowSocketCache = FALSE;
+                            }
                         }
 #endif
                     }
@@ -2544,6 +2554,9 @@ word HTTPGet(HTTPConnectionHandle conn)
                             p_conn->callback);
 
                 } while ((!p_conn->aborted) &&
+#if PROGRESS_DISPLAY
+			 !imageDeferred &&
+#endif
 			 /* stop if got desired amount */
 			 length < contentlength &&
                     (i = SocketGetBlock(conn, &p_conn, FALSE)) > 0);
@@ -2594,7 +2607,7 @@ word HTTPGet(HTTPConnectionHandle conn)
 			    p_conn->loadProgressDataP, LPCT_CLOSE, 0, 0,
 			    p_conn->loadProgressDataP->LPD_callback);
 			/* signal progress finished (unless aborted) */
-			if (p_conn->aborted) {
+			if (p_conn->aborted || imageDeferred) {
 			    rcode = URLRequestMakeRet(URL_RET_PROGRESS_ABORT) | ((rcode & URB_RF_NOCACHE) ? URB_RF_NOCACHE : 0);
 			} else {
 			    rcode = URLRequestMakeRet(URL_RET_PROGRESS) | ((rcode & URB_RF_NOCACHE) ? URB_RF_NOCACHE : 0);

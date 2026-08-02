@@ -142,8 +142,8 @@
 }
 
 @object GenItemClass NavigateLoadGraphicsCompact = {
-    GI_visMoniker = 'C',"Show Images as Compact Links";
-    GII_identifier = IMAGE_LOAD_COMPACT;
+    GI_visMoniker = 't',"Load Images Intelligently";
+    GII_identifier = IMAGE_LOAD_INTELLIGENT;
 }
 
 @object GenTriggerClass NavigateLoadGraphicsNow = {

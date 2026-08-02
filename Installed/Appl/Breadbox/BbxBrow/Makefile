@@ -6,28 +6,28 @@
 GEODE           = bbxbrow
 ASMTOOLS        = asmtoolsManager.asm
 HTMLVIEW        = AWATCHER.goc GLBANIM.goc HTMLVIEW.goc ImportG.goc\
-                  LoadURL.goc OpenClos.goc scrapbk.goc StatText.goc\
-                  UIAction.goc UIOften.goc UIRare.goc
+                  OpenClos.goc StatText.goc UIAction.goc UIOften.goc\
+                  scrapbk.goc UIRare.goc LoadURL.goc
 INIT            = INIT.goc
-NAVIGATE        = BOOKCLAS.goc BOOKMARK.goc FAVORCLS.goc FAVORITE.goc\
-                  NAVCACHE.goc NAVIGATE.goc
+NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc BOOKMARK.goc NAVIGATE.goc\
+                  FAVORITE.goc NAVCACHE.goc
 URLDOC          = LOCALPAG.goc URLDOC.goc
 URLDOCCT        = URLDOCCT.goc
 URLFETCH        = URLFETCH.goc
 URLFRAME        = FRFETCH.goc URLFRAME.goc
-URLTEXT         = URLTEXT.goc URLTEXT2.goc
+URLTEXT         = URLTEXT2.goc URLTEXT.goc
 UI_TO_RDFS      =
 OBJS            = AWATCHER.obj GLBANIM.obj HTMLVIEW.obj ImportG.obj\
-                  LoadURL.obj OpenClos.obj scrapbk.obj StatText.obj\
-                  UIAction.obj UIOften.obj UIRare.obj INIT.obj BOOKCLAS.obj\
-                  BOOKMARK.obj FAVORCLS.obj FAVORITE.obj NAVCACHE.obj\
-                  NAVIGATE.obj LOCALPAG.obj URLDOC.obj URLDOCCT.obj\
-                  URLFETCH.obj FRFETCH.obj URLFRAME.obj URLTEXT.obj\
-                  URLTEXT2.obj
+                  OpenClos.obj StatText.obj UIAction.obj UIOften.obj\
+                  scrapbk.obj UIRare.obj LoadURL.obj INIT.obj BOOKCLAS.obj\
+                  FAVORCLS.obj BOOKMARK.obj NAVIGATE.obj FAVORITE.obj\
+                  NAVCACHE.obj LOCALPAG.obj URLDOC.obj URLDOCCT.obj\
+                  URLFETCH.obj FRFETCH.obj URLFRAME.obj URLTEXT2.obj\
+                  URLTEXT.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
-                  glbanim.goh htmlview.goh htmlv_ui.goh importg.goh\
-                  javascr.h options.goh prodbbx.goh prodgpc.goh prodndo.goh\
-                  stattext.goh urlfetch.goh
+                  glbanim.goh importg.goh javascr.h prodgpc.goh prodndo.goh\
+                  stattext.goh urlfetch.goh htmlv_ui.goh options.goh\
+                  prodbbx.goh htmlview.goh
 MODULES         = ASMTOOLS
 CMODULES        = htmlview init navigate urldoc urldocct urlfetch urlframe\
                   urltext

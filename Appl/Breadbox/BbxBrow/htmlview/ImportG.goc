@@ -70,6 +70,7 @@ typedef struct {
     PathName curHTML;
     Boolean temporary;
     Boolean objCache;
+    dword imageProbeMaxPixels;
 #if PROGRESS_DISPLAY
     ImportProgressData importProgressData;
 #endif
@@ -456,6 +457,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
+	    dword imageProbeMaxPixels,
 	    _LoadProgressParams_)
 #else
 Boolean ImportThreadRequestImportGraphic(
@@ -463,7 +465,8 @@ Boolean ImportThreadRequestImportGraphic(
             NameToken name,
             TCHAR *mimeType,
             TCHAR *curHTML,
-            Boolean temporary)
+            Boolean temporary,
+            dword imageProbeMaxPixels)
 #endif
 {
     T_importGraphicRequest *p_request ;
@@ -496,6 +499,7 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
             strncpy(p_request->mimeType, mimeType, (sizeof(p_request->mimeType)/sizeof(TCHAR))-1) ;
             strncpy(p_request->curHTML, curHTML, (sizeof(p_request->curHTML)/sizeof(TCHAR))-1) ;
             p_request->temporary = temporary;
+            p_request->imageProbeMaxPixels = imageProbeMaxPixels;
 
             /* Is the object cache turned on? */
             p_request->objCache = (@call SettingsBoolGroup::
@@ -648,6 +652,15 @@ void ImportThreadAbortAll(void)
     dword usedMem ;
     ObjCacheToken oct;
     word firstLine;
+    MimeGraphicProbeData probeData;
+    MimeGraphicProbeResult probeResult;
+    dword probeMaxBytes;
+    Boolean doImport;
+    Boolean deferred;
+    Boolean completePending;
+#if PROGRESS_DISPLAY
+    Boolean streamProbe;
+#endif
 #ifdef CACHE_FILE_HEADER_SIZE_LIMIT
     VMHeaderInfoStruct vmInfo;
 #endif
@@ -658,6 +671,7 @@ void ImportThreadAbortAll(void)
     memcpy(&request, p_request, sizeof(request)) ;
     MemUnlock(mem) ;
     MemFree(mem) ;
+    completePending = TRUE;
 
     if(pself->numAborts == 0)           /* don't start import if stopping */
     {
@@ -668,6 +682,51 @@ void ImportThreadAbortAll(void)
       @SendStatusUpdateOptr(
         @MsgLoadImg, HTML_STATUS_TYPE_IMPORTING);
 
+      doImport = TRUE;
+      deferred = FALSE;
+      FileSetStandardPath(SP_DOCUMENT);
+#if PROGRESS_DISPLAY
+      streamProbe = request.imageProbeMaxPixels &&
+        request.importProgressData.IPD_loadProgressDataP;
+#endif
+      probeMaxBytes = INTELLIGENT_IMAGE_PROBE_BYTES;
+#if PROGRESS_DISPLAY
+      if(streamProbe)
+        probeMaxBytes = request.importProgressData.IPD_loadProgressDataP->
+          LPD_imageProbeMaxBytes;
+#endif
+
+      if(request.imageProbeMaxPixels)
+      {
+#if PROGRESS_DISPLAY
+        probeResult = ToolsProbeGraphicByDriver(request.curHTML,
+          request.mimeType, probeMaxBytes, &probeData,
+          request.importProgressData.IPD_loadProgressDataP);
+#else
+        probeResult = ToolsProbeGraphicByDriver(request.curHTML,
+          request.mimeType, probeMaxBytes, &probeData);
+#endif
+        deferred = probeResult != MIME_GRAPHIC_PROBE_FOUND ||
+          !probeData.MGPD_width || !probeData.MGPD_height ||
+          probeData.MGPD_width >
+            request.imageProbeMaxPixels / probeData.MGPD_height;
+
+#if PROGRESS_DISPLAY
+        if(streamProbe)
+        {
+          request.importProgressData.IPD_loadProgressDataP->
+            LPD_imageProbe = deferred ? LPI_DEFERRED : LPI_ACCEPTED;
+          doImport = FALSE;
+          completePending = FALSE;
+        }
+        else
+#endif
+        if(deferred)
+          doImport = FALSE;
+      }
+
+      if(doImport)
+      {
       /* Find out what file to import into */
       vmf = ObjCacheGetVMFile(request.name);
 
@@ -676,9 +735,6 @@ void ImportThreadAbortAll(void)
 	 header.  If too big, bail on this graphic */
       VMGetHeaderInfo(vmf, &vmInfo);
 #endif
-
-      /* Make sure our path is relative to the document dir */
-      FileSetStandardPath(SP_DOCUMENT);
 
       /* Ok.  Here it is -- do the actual call to import */
       usedMem = 0 ;
@@ -692,17 +748,6 @@ void ImportThreadAbortAll(void)
       vmb = ToolsImportGraphicByDriver(request.curHTML, request.mimeType,
         vmf, &iad, &usedMem, request.mimeStatus, &(request.importProgressData));
 
-      /* import for loading progress finished, release fetch thread to
-	 handle new fetch requests */
-      if (request.importProgressData.IPD_loadProgressDataP) {
- #ifdef ALLOW_FETCH_WHILE_IMPORTING
-	  /* IPD_loadProgressDataP points into G_importLoadProgressData) */
-	  if (G_fetchWhileImport) {
-	      G_importActive[request.importProgressData.IPD_loadProgressDataP->LPD_loadThread] = FALSE;
-	  } else  /* encloses ThreadVSem only */
- #endif
-	  ThreadVSem(request.importProgressData.IPD_loadProgressDataP->LPD_importSync);
-      }
 #else
 #ifdef CACHE_FILE_HEADER_SIZE_LIMIT
       if (vmInfo.headerSize > G_cacheFileHeaderSizeLimit) {
@@ -766,6 +811,33 @@ void ImportThreadAbortAll(void)
       else
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
             OCT_NULL, request.name, 0, 0xFFFF);
+      }
+      else if(deferred
+#if PROGRESS_DISPLAY
+              && !streamProbe
+#endif
+             )
+      {
+          @send (request.textObj)::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
+            request.name);
+      }
+
+#if PROGRESS_DISPLAY
+      /* Release the fetch side after either probing or importing. */
+      if(request.importProgressData.IPD_loadProgressDataP)
+      {
+#ifdef ALLOW_FETCH_WHILE_IMPORTING
+          if(G_fetchWhileImport)
+          {
+              G_importActive[request.importProgressData.
+                IPD_loadProgressDataP->LPD_loadThread] = FALSE;
+          }
+          else
+#endif
+          ThreadVSem(request.importProgressData.
+            IPD_loadProgressDataP->LPD_importSync);
+      }
+#endif
 
       if(request.temporary)             /* destroy file if requested */
         FileDelete(request.curHTML);
@@ -777,7 +849,8 @@ void ImportThreadAbortAll(void)
 
     /* We have completed this operation on the text object.  Mark */
     /* it one less. */
-    @send (request.textObj)::MSG_URL_TEXT_DEC_PENDING() ;
+    if(completePending)
+      @send (request.textObj)::MSG_URL_TEXT_DEC_PENDING() ;
 }
 
 /*-------------------------------------------------------------------------
