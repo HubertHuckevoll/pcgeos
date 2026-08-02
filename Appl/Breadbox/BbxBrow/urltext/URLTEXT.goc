@@ -320,26 +320,31 @@ void MemStreamDelete(MemHandle stream, word bufSize, Boolean emptyLast)
     MemUnlockV(stream);
 }
 
-word MemStreamRead(MemHandle stream, void *buffer, word bufSize, word offset)
+word MemStreamRead(MemHandle stream, void *buffer, word bufSize, dword offset)
 {
     MemStreamHeader *streamP;
     MemHandle *blkP;
     byte *dataP;
+    dword dataPosition;
+    dword available;
     word blockOffset, dataOffset;
     word bytesInFirstBlock, bytesInNextBlock;
     word ret = 0;
 
     streamP = MemPLock(stream);
-    if (bufSize > (streamP->tail - streamP->head)) {
-	bufSize = streamP->tail - streamP->head;
-    }
+    available = streamP->tail - streamP->head;
+    if(offset >= available)
+        bufSize = 0;
+    else if(bufSize > available - offset)
+        bufSize = (word)(available - offset);
     if (bufSize) {  /* handles no more data because of write overflow */
 	(byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
 	/* copy from start block */
-	blockOffset = streamP->head/MEM_STREAM_BLOCK_SIZE;
+	dataPosition = streamP->head + offset;
+	blockOffset = dataPosition/MEM_STREAM_BLOCK_SIZE;
 	if (blkP[blockOffset]) {
 	    dataP = MemLock(blkP[blockOffset]);
-	    dataOffset = streamP->head % MEM_STREAM_BLOCK_SIZE;
+	    dataOffset = dataPosition % MEM_STREAM_BLOCK_SIZE;
 	    dataP += dataOffset;
 	    bytesInFirstBlock = MEM_STREAM_BLOCK_SIZE-dataOffset;
 	    if (bufSize > bytesInFirstBlock) {
@@ -348,7 +353,7 @@ word MemStreamRead(MemHandle stream, void *buffer, word bufSize, word offset)
 		bytesInFirstBlock = bufSize;
 		bytesInNextBlock = 0;
 	    }
-	    memcpy(buffer, dataP + offset, bytesInFirstBlock);
+	    memcpy(buffer, dataP, bytesInFirstBlock);
 	    ret += bytesInFirstBlock;
 	    MemUnlock(blkP[blockOffset]);
 	    /* copy from next block, if needed */
@@ -668,6 +673,10 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         WakeUp(&(loadProgressDataP->LPD_emptyQueue));
         loadProgressDataP->LPD_updateTime = TimerGetCount();
         }
+        break;
+    case LPCT_IMAGE_PROBE_STATUS:
+        if(loadProgressDataP->LPD_imageProbe == LPI_DEFERRED)
+            returnVal = LPCR_REJECT;
         break;
     case LPCT_FLUSH_FIRST:
         if (loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET) {

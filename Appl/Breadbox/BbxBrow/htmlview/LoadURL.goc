@@ -1057,12 +1057,14 @@ MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
        mimeType, driver, sizeof(driver), TRUE, (void *)0))
         return MIME_GRAPHIC_PROBE_UNKNOWN;
 
+    FilePushDir();
     ThreadPSem(MimeDriverSemaphore);
     FileSetCurrentPath(SP_IMPORT_EXPORT_DRIVERS, _TEXT("."));
     err = -1;
     drv = GeodeUseLibrary(driver, MIME_DRV_PROTOMAJOR,
       MIME_DRV_PROTOMINOR, &err);
     ThreadVSem(MimeDriverSemaphore);
+    FilePopDir();
     if(!drv || err != -1)
         return MIME_GRAPHIC_PROBE_UNKNOWN;
 

@@ -2504,12 +2504,17 @@ word HTTPGet(HTTPConnectionHandle conn)
                             p_conn->loadProgressDataP->LPD_callback &&
                             p_conn->loadProgressDataP->LPD_progress) {
                             /* notify of new data available */
-                            ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
+                            ((pcfm_LoadProgressCallback *)
+                              ProcCallFixedOrMovable_pascal)(
                                 p_conn->loadProgressDataP, LPCT_WRITE,
                                 p_conn->buffer, i,
                                 p_conn->loadProgressDataP->LPD_callback);
-                            if(p_conn->loadProgressDataP->LPD_imageProbe ==
-                               LPI_DEFERRED)
+                            admissionResult = ((pcfm_LoadProgressCallback *)
+                              ProcCallFixedOrMovable_pascal)(
+                                p_conn->loadProgressDataP,
+                                LPCT_IMAGE_PROBE_STATUS, (void *)0, 0,
+                                p_conn->loadProgressDataP->LPD_callback);
+                            if(admissionResult == LPCR_REJECT)
                             {
                                 imageDeferred = TRUE;
                                 p_conn->allowSocketCache = FALSE;
