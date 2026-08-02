@@ -430,6 +430,8 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     Boolean preRead = FALSE;
 #ifdef USE_MEM_STREAM
     word lt;
+#else
+    dword streamCount;
 #endif
 
     if (loadProgressDataP) {
@@ -675,8 +677,29 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         }
         break;
     case LPCT_IMAGE_PROBE_STATUS:
-        if(loadProgressDataP->LPD_imageProbe == LPI_DEFERRED)
-            returnVal = LPCR_REJECT;
+        if(loadProgressDataP->LPD_imageProbe == LPI_ACCEPTED ||
+           loadProgressDataP->LPD_imageProbe == LPI_DEFERRED)
+        {
+            ThreadPSem(loadProgressDataP->LPD_sem);
+#ifdef USE_MEM_STREAM
+            G_stream[lt] = MemStreamInit(G_stream[lt]);
+#else
+            streamCount = HugeArrayGetCount(
+                loadProgressDataP->LPD_dataFile,
+                loadProgressDataP->LPD_dataStream);
+            if(streamCount)
+                HugeArrayDelete(loadProgressDataP->LPD_dataFile,
+                    loadProgressDataP->LPD_dataStream, streamCount, 0);
+#endif
+            loadProgressDataP->LPD_bytesAvail = 0;
+            loadProgressDataP->LPD_preReadOffset = 0;
+            loadProgressDataP->LPD_streamState = LPSS_EMPTY;
+            if(loadProgressDataP->LPD_imageProbe == LPI_ACCEPTED)
+                loadProgressDataP->LPD_progress = FALSE;
+            ThreadVSem(loadProgressDataP->LPD_sem);
+            if(loadProgressDataP->LPD_imageProbe == LPI_DEFERRED)
+                returnVal = LPCR_REJECT;
+        }
         break;
     case LPCT_FLUSH_FIRST:
         if (loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET) {
@@ -1257,6 +1280,10 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
           /* When the frame is done, we can start the animations */
           @send,forceQueue oself::MSG_HTML_TEXT_ANIMATIONS_ON() ;
         }
+    }
+    else if(!pself->UTI_doomed)
+    {
+        @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
     }
 
     /* Relay operation status to frame */
