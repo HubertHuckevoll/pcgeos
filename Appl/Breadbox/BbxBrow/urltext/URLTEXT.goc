@@ -415,7 +415,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 				       void *buffer,
 				       word bufSize)
 {
-    word returnVal = 0;  /* only used for LPCT_READ and LPCT_PEEK */
+    word returnVal = 0;  /* used for reads and header admission */
     Boolean peek = FALSE;
     Boolean preRead = FALSE;
 #ifdef USE_MEM_STREAM
@@ -427,7 +427,49 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     lt = loadProgressDataP->LPD_loadThread;
 #endif
     switch (callbackType) {
+    case LPCT_HEADERS:
+    {
+        FileLongName driver;
+        TCHAR *mimeEnd;
+        TCHAR *mimeStart;
+
+        if (buffer && buffer != loadProgressDataP->LPD_mimeType) {
+            xstrncpy(loadProgressDataP->LPD_mimeType, buffer, MIME_MAXBUF);
+        } else if (!buffer) {
+            *loadProgressDataP->LPD_mimeType = 0;
+        }
+
+        mimeStart = loadProgressDataP->LPD_mimeType;
+        while (*mimeStart == ' ' || *mimeStart == '\t')
+            mimeStart++;
+        if (mimeStart != loadProgressDataP->LPD_mimeType) {
+            memmove(loadProgressDataP->LPD_mimeType, mimeStart,
+                    (strlen(mimeStart) + 1) * sizeof(TCHAR));
+        }
+        mimeEnd = strchr(loadProgressDataP->LPD_mimeType, ';');
+        if (!mimeEnd)
+            mimeEnd = loadProgressDataP->LPD_mimeType +
+                      strlen(loadProgressDataP->LPD_mimeType);
+        while (mimeEnd > loadProgressDataP->LPD_mimeType &&
+               (mimeEnd[-1] == ' ' || mimeEnd[-1] == '\t'))
+            mimeEnd--;
+        *mimeEnd = 0;
+        strlwr(loadProgressDataP->LPD_mimeType);
+
+        returnVal = LPCR_CONTINUE;
+        if (strncmp(loadProgressDataP->LPD_mimeType,
+                    _TEXT("image/"), 6) == 0 &&
+            !NameAssocFindAssociation(assocTypeDriver,
+                                      loadProgressDataP->LPD_mimeType,
+                                      driver, sizeof(driver), TRUE,
+                                      (void *)0)) {
+            returnVal = LPCR_REJECT;
+        }
+        break;
+    }
     case LPCT_OPEN:
+        if (!loadProgressDataP->LPD_progress)
+            break;
         loadProgressDataP->LPD_streamState = LPSS_EMPTY;
 	/* since we know this came from IMG tag, assume graphic */
 	AssumeGraphic(loadProgressDataP->LPD_mimeType);
@@ -470,8 +512,8 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         /* initial update time */
         loadProgressDataP->LPD_updateTime = TimerGetCount();
         } else {
-        /* doesn't support progress loading, stop future callbacks */
-        loadProgressDataP->LPD_callback = 0;
+        /* doesn't support progress loading, stop progress callbacks */
+        loadProgressDataP->LPD_progress = FALSE;
         }
         break;
     /* kind of several peeks */
@@ -738,6 +780,10 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       loadProgressData.LPD_callback = loadProgressCallback;
       loadProgressData.LPD_textObj = oself;
       loadProgressData.LPD_nameT = nameT;
+      loadProgressData.LPD_progress =
+          progressDisplay && (p->pos < HTML_IMAGE_POS_RESERVED) &&
+          (!p->size.XYS_height ||
+           (p->size.XYS_height >= progressMinHeight));
       /* other fields are initialized by fetch thread */
       URLFetchRequest(
           nameT,
@@ -747,12 +793,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
           oself,
           MSG_URL_TEXT_GRAPHIC_FETCHED,
           request,
-          /* no loading progress if not desired, or if background bitmap
-             or if image is fairly short (allow unsized ones to try
-             loading progress, will be rejected by http module if small) */
-          (!progressDisplay || (p->pos >= HTML_IMAGE_POS_RESERVED) ||
-           (p->size.XYS_height && (p->size.XYS_height < progressMinHeight)) ?
-           NULL : &loadProgressData)) ;
+          &loadProgressData) ;
 #else
       URLFetchRequest(
           nameT,

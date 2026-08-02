@@ -761,10 +761,9 @@ void URLFetchExtraMemoryUnlock(optr em)
 	    URLFetchExtraMemoryFree(loadProgressData);
  #ifdef ALLOW_FETCH_WHILE_IMPORTING
 	    /* cancel progressive loading if we are still importing the
-	       previous one for this fetch thread;
-	       cancel by clearing LPD_callback */
+	       previous one for this fetch thread; admission remains active */
 	    if (G_fetchWhileImport && G_importActive[childNum]) {
-		p_child->loadProgressData.LPD_callback = 0;
+		p_child->loadProgressData.LPD_progress = FALSE;
 	    }
  #endif
 	} else {
@@ -959,9 +958,7 @@ word far URLFetchChildThread(word childNum)
                 }
             } else {
 #if PROGRESS_DISPLAY
-		/* set up loading progress data and fetch (do not alter
-		   LPD_callback, that determines whether we really have
-		   a callback or not) */
+		/* set up loading progress data and fetch */
 		p_child->loadProgressData.LPD_loadThread = childNum;
 		p_child->loadProgressData.LPD_sem = G_fetchProgressSem[childNum];
 		p_child->loadProgressData.LPD_emptyQueue = 0;  /* sem */
@@ -976,7 +973,7 @@ word far URLFetchChildThread(word childNum)
  #ifdef ALLOW_FETCH_WHILE_IMPORTING
 		if (G_fetchWhileImport) {
 		    /* copy load progress data to safe place */
-		    if (p_child->loadProgressData.LPD_callback) {
+		    if (p_child->loadProgressData.LPD_progress) {
 			memcpy(&(G_importLoadProgressData[childNum]), &(p_child->loadProgressData), sizeof(LoadProgressData));
 			lpd = &(G_importLoadProgressData[childNum]);
 		    }

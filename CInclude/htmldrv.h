@@ -533,6 +533,9 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
 
 #define URL_RET_AUTHORIZATION   104     /* Authorization failed */
 
+#define URL_RET_UNSUPPORTED_IMAGE 105  /* IMG response declared an image type
+                                           with no registered driver */
+
 
 /*** Entry: Abort URL retrieval ***********************************************/
 

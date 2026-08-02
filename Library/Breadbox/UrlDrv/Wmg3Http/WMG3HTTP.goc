@@ -1487,6 +1487,9 @@ word HTTPGet(HTTPConnectionHandle conn)
 #ifdef GET_RANGE
     Boolean deleteFile = FALSE;
 #endif
+#if PROGRESS_DISPLAY
+    word admissionResult;
+#endif
     MemHandle pathB = 0;
     int urlLen;
 
@@ -2361,11 +2364,32 @@ word HTTPGet(HTTPConnectionHandle conn)
         p_conn = ConnectionLock(conn) ;
 
 #if PROGRESS_DISPLAY
-        /* disable loading progress if small file */
-        if (contentlength < progressMinCL) {
-            if (p_conn->loadProgressDataP) {
-                p_conn->loadProgressDataP->LPD_callback = NULL;
+        /* Give the client the final MIME type before accepting the body. */
+        if (URLRequestGetRet(rcode) == URL_RET_FILE &&
+            p_conn->loadProgressDataP &&
+            p_conn->loadProgressDataP->LPD_callback) {
+            admissionResult =
+                ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
+                    p_conn->loadProgressDataP, LPCT_HEADERS,
+                    *p_conn->loadProgressDataP->LPD_mimeType ?
+                        p_conn->loadProgressDataP->LPD_mimeType : (void *)0,
+                    *p_conn->loadProgressDataP->LPD_mimeType ?
+                        (strlen(p_conn->loadProgressDataP->LPD_mimeType) + 1) *
+                            sizeof(TCHAR) : 0,
+                    p_conn->loadProgressDataP->LPD_callback);
+            if (admissionResult == LPCR_REJECT) {
+                rcode = URLRequestMakeRet(URL_RET_UNSUPPORTED_IMAGE) |
+                        URB_RF_NOCACHE;
+#ifdef PERSISTANT_CONNECTIONS
+                p_conn->allowSocketCache = FALSE;
+#endif
             }
+        }
+
+        /* disable loading progress if small file */
+        if (URLRequestGetRet(rcode) == URL_RET_FILE &&
+            contentlength < progressMinCL && p_conn->loadProgressDataP) {
+            p_conn->loadProgressDataP->LPD_progress = FALSE;
         }
 #endif
 
@@ -2453,7 +2477,9 @@ word HTTPGet(HTTPConnectionHandle conn)
 
 #if PROGRESS_DISPLAY
                 /* notify of loading progress (only first time through) */
-                if ((length == 0) && p_conn->loadProgressDataP && p_conn->loadProgressDataP->LPD_callback) {
+                if ((length == 0) && p_conn->loadProgressDataP &&
+                    p_conn->loadProgressDataP->LPD_callback &&
+                    p_conn->loadProgressDataP->LPD_progress) {
                     ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
                         p_conn->loadProgressDataP, LPCT_OPEN, 0, 0,
                         p_conn->loadProgressDataP->LPD_callback);
@@ -2470,7 +2496,9 @@ word HTTPGet(HTTPConnectionHandle conn)
 
 #if PROGRESS_DISPLAY
                         /* update loading progress data stream */
-                        if (p_conn->loadProgressDataP && p_conn->loadProgressDataP->LPD_callback) {
+                        if (p_conn->loadProgressDataP &&
+                            p_conn->loadProgressDataP->LPD_callback &&
+                            p_conn->loadProgressDataP->LPD_progress) {
                             /* notify of new data available */
                             ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
                                 p_conn->loadProgressDataP, LPCT_WRITE,
@@ -2557,7 +2585,9 @@ word HTTPGet(HTTPConnectionHandle conn)
 
 #if PROGRESS_DISPLAY
                 /* finish loading progress data stream */
-                if (p_conn->loadProgressDataP && p_conn->loadProgressDataP->LPD_callback) {
+                if (p_conn->loadProgressDataP &&
+                    p_conn->loadProgressDataP->LPD_callback &&
+                    p_conn->loadProgressDataP->LPD_progress) {
                     /* if have data, notify of data finished */
 		    if (length) {
 			((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
@@ -2605,7 +2635,7 @@ word HTTPGet(HTTPConnectionHandle conn)
                 p_conn->msg = @MsgFileError;
             }
 #ifdef PERSISTANT_CONNECTIONS
-	} else {
+	} else if (URLRequestGetRet(rcode) != URL_RET_UNSUPPORTED_IMAGE) {
 	    /* eat data for non-URL_RET_FILE or not-modifieds */
 	    do {
 	    } while ((!p_conn->aborted) &&
