@@ -518,7 +518,8 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
  **************************************************************************/
 @method HTMLTextClass, MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED,
                        MSG_HTML_TEXT_MARK_IMAGE_RESOLVING,
-                       MSG_HTML_TEXT_MARK_IMAGE_BROKEN
+                       MSG_HTML_TEXT_MARK_IMAGE_BROKEN,
+                       MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED
 {
     word size;
     HTMLimageData *iae;
@@ -529,18 +530,27 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     {
       case MSG_HTML_TEXT_MARK_IMAGE_BROKEN:
         toSet = HTML_IDF_BROKEN | HTML_IDF_RESOLVED;
+        toClear = HTML_IDF_RESOLVING | HTML_IDF_UNSUPPORTED |
+                  HTML_IDF_SIZE_DIRTY;
+        break;
+
+      case MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED:
+        toSet = HTML_IDF_BROKEN | HTML_IDF_RESOLVED |
+                HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED;
         toClear = HTML_IDF_RESOLVING | HTML_IDF_SIZE_DIRTY;
         break;
 
       case MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED:
         toSet = 0;
         toClear = HTML_IDF_RESOLVING | HTML_IDF_RESOLVED | 
-                  HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY;
+                  HTML_IDF_BROKEN | HTML_IDF_UNSUPPORTED |
+                  HTML_IDF_SIZE_DIRTY;
         break;
       
       case MSG_HTML_TEXT_MARK_IMAGE_RESOLVING:
         toSet = HTML_IDF_RESOLVING;
-        toClear = HTML_IDF_RESOLVED | HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY;
+        toClear = HTML_IDF_RESOLVED | HTML_IDF_BROKEN |
+                  HTML_IDF_UNSUPPORTED | HTML_IDF_SIZE_DIRTY;
         break;
     }
 
@@ -553,6 +563,7 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     iae->flags |= toSet;
     iae->flags &= ~toClear;
     redraw = (message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN ||
+      message == MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED ||
       (message == MSG_HTML_TEXT_MARK_IMAGE_RESOLVING &&
        (iae->flags & HTML_IDF_COMPACT)));
 
@@ -568,7 +579,8 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     {
       @call self::MSG_HTML_TEXT_INVALIDATE_IMAGE((void*)0, nImage, 0, 0xFFFF) ;
     }
-    if(message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN)
+    if(message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN ||
+       message == MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED)
     {
       @send,checkDuplicate,forceQueue self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(
         HTMLTextGetImageLoadMode(oself));
@@ -902,7 +914,8 @@ void LOCAL IMarkAllImagesUnresolved(optr imageArray)
       for(i=ChunkArrayGetCount(imageArray)-1; (int)i>=0; i--)  {
         imageArrayElement = ChunkArrayElementToPtr(imageArray, i, NULL);
         imageArrayElement->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING | 
-                                      HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY) ;
+                                      HTML_IDF_BROKEN | HTML_IDF_UNSUPPORTED |
+                                      HTML_IDF_SIZE_DIRTY) ;
 
         /* Make sure we're note associated with any graphic */
         imageArrayElement->HID_cacheToken = 0;
@@ -2038,11 +2051,10 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     VMBlockHandle *graphicRuns;
     MemHandle graphicMem;
     GStateHandle gstate;
-    TCHAR buf[COMPACT_IMAGE_TEXT_MAX];
     TCHAR marker[2];
-    word i, n, size, markerWidth, labelWidth, compactFocus;
+    word i, n, size, markerWidth, compactFocus;
     word *markerEndP;
-    XYSize newSize;
+    XYSize newSize, textSize;
     Boolean compact, changed, clearFocus;
 
     if(mode < IMAGE_LOAD_DISABLED || mode > IMAGE_LOAD_INTELLIGENT)
@@ -2095,11 +2107,11 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
                    (image->flags & HTML_IDF_BROKEN));
         if(compact)
         {
-            labelWidth = CompactImagePrepareText(gstate, image,
-              pself->HTI_namePool, buf, sizeof(buf), &markerWidth);
+            CompactImageLayoutText(gstate, image, pself->HTI_namePool,
+              markerWidth, FALSE, FALSE, &textSize);
             newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + markerWidth +
-              COMPACT_IMAGE_GAP + labelWidth;
-            newSize.XYS_height = FormGetPointSize() + 4;
+              COMPACT_IMAGE_GAP + textSize.XYS_width;
+            newSize.XYS_height = textSize.XYS_height + 4;
         }
         else
         {
@@ -2110,7 +2122,9 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
                 newSize.XYS_height = DEFAULT_IMAGE_HEIGHT;
         }
 
-        if(compactFocus == i && (!compact || !newSize.XYS_width))
+        if(compactFocus == i &&
+           (!compact || !newSize.XYS_width ||
+            (image->flags & HTML_IDF_UNSUPPORTED)))
             clearFocus = TRUE;
 
         if(image->HID_size.XYS_width == newSize.XYS_width &&
@@ -2340,7 +2354,7 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     *iae = *data;                        
     iae->flags |= HTML_IDF_RESOLVED;
     iae->flags &= ~(HTML_IDF_RESOLVING | HTML_IDF_BROKEN |
-                    HTML_IDF_COMPACT);
+                    HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED);
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
     if(HTMLTextGetCompactImageFocus(oself) == nImage)
     {
@@ -2562,7 +2576,9 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
       for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)
       {
         imageArrayElement = ChunkArrayElementToPtr(array, i, &size);
-        if(imageArrayElement->flags & (HTML_IDF_BROKEN | HTML_IDF_RESOLVING))
+        if((imageArrayElement->flags &
+            (HTML_IDF_BROKEN | HTML_IDF_RESOLVING)) &&
+           !(imageArrayElement->flags & HTML_IDF_UNSUPPORTED))
         {
           ret = TRUE;                   /* found unresolved image? abort */
           break;
@@ -2588,6 +2604,8 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
       array = pself->HTI_imageArray;
       for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)  {
         imageArrayElement = ChunkArrayElementToPtr(array, i, NULL);
+        if(imageArrayElement->flags & HTML_IDF_UNSUPPORTED)
+            continue;
         if (imageArrayElement->flags & HTML_IDF_BROKEN) 
             imageArrayElement->flags &= 
                  ~(HTML_IDF_BROKEN | HTML_IDF_RESOLVED) ;

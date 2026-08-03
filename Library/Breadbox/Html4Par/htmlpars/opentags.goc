@@ -448,7 +448,7 @@ NameToken LOCAL TokenizeImageLabel(char *altName, Boolean altExplicit,
     char *p, *end, saved;
     NameToken token;
 
-    if(altExplicit && *altName)
+    if(altExplicit)
         return NamePoolTokenizeDOS(NamePool, altName, FALSE);
 
     p = src;
@@ -604,7 +604,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
 
       /* Always place a variable graphic */
       id.len = 1;                     /* only one character to be replaced */
-      if((id.flags & HTML_IDF_SUBMIT) && (!altExplicit || !*altName))
+      if((id.flags & HTML_IDF_SUBMIT) && !altExplicit)
         id.imageALT = NamePoolTokenizeDOS(NamePool, "Submit", FALSE);
       else
         id.imageALT = TokenizeImageLabel(altName, altExplicit, src);

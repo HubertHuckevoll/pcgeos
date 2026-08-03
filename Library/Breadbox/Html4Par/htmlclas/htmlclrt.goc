@@ -222,7 +222,8 @@ extern void FormElementEditSelectList(
     {
         image = ChunkArrayElementToPtr(pself->HTI_imageArray, i, &size);
         if(image->pos == pos && (image->flags & HTML_IDF_COMPACT) &&
-           !(image->flags & HTML_IDF_RESOLVING) &&
+           !(image->flags &
+             (HTML_IDF_RESOLVING | HTML_IDF_UNSUPPORTED)) &&
            image->HID_size.XYS_width)
         {
             found = i;
@@ -336,7 +337,8 @@ extern void FormElementEditSelectList(
         {
           imageArrayElement = ChunkArrayElementToPtr(array, i, &size);
           if(!(imageArrayElement->flags & HTML_IDF_COMPACT) ||
-             (imageArrayElement->flags & HTML_IDF_RESOLVING) ||
+             (imageArrayElement->flags &
+              (HTML_IDF_RESOLVING | HTML_IDF_UNSUPPORTED)) ||
              !imageArrayElement->HID_size.XYS_width)
             continue;
           p = imageArrayElement->pos;
@@ -612,6 +614,12 @@ extern void FormElementEditSelectList(
         return;
     }
     image = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);
+    if(image->flags & HTML_IDF_UNSUPPORTED)
+    {
+        MemUnlock(OptrToHandle(pself->HTI_imageArray));
+        HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
+        return;
+    }
     pos = image->pos;
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
 
@@ -993,7 +1001,8 @@ void FormElementRemoveTextEntry(optr urlTextObj);
         rel.P_x += img->HID_size.XYS_width;
 
       compactHot = FALSE;
-      if(img->flags & HTML_IDF_COMPACT)
+      if((img->flags & HTML_IDF_COMPACT) &&
+         !(img->flags & HTML_IDF_UNSUPPORTED))
       {
         markerEndP = ObjVarFindData(oself,
           ATTR_HTML_TEXT_COMPACT_MARKER_END);

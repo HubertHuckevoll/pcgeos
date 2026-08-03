@@ -5,6 +5,8 @@
 <h1>Intelligent image test</h1>
 
 <p>The large document background must still load automatically.</p>
+<p>For unsupported MIME tests, serve this directory with
+ <code>python3 -m http.server</code> and open this page over HTTP.</p>
 
 <p>Accepted PNG (463472 pixels): <img
  src="../../../../TechDocs/Markdown/Objects/Figures/Fig9-1.png"
@@ -34,6 +36,24 @@
  src="../../../../TechDocs/html/docImages/upTop.gif" alt="Follow link"></a></p>
 <p>Linked empty ALT: <a href="#linked"><img
  src="../../../../TechDocs/html/docImages/upTop.gif" alt=""></a></p>
+<h2>Unsupported image MIME</h2>
+<p>Unlinked AVIF: <img src="unsupported.avif"
+ alt="Unsupported unlinked image"></p>
+<p>AVIF without ALT: <img src="unsupported.avif?no-alt"></p>
+<p>AVIF with empty ALT: <img src="unsupported.avif?empty-alt" alt=""></p>
+<p>Long word-wrapped AVIF ALT: <img src="unsupported.avif?long"
+ alt="Every word in this deliberately lengthy alternative description must remain visible even when the compact placeholder needs several lines to display all of it"></p>
+<p>Long unbroken AVIF ALT: <img src="unsupported.avif?unbroken"
+ alt="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"></p>
+<p>Long AVIF filename without ALT: <img
+ src="this-is-a-deliberately-very-long-unsupported-image-filename-for-middle-ellipsis-testing.avif"></p>
+<p>Duplicate AVIF instances: <img src="unsupported.avif?duplicate"
+ alt="Duplicate one"> <img src="unsupported.avif?duplicate"
+ alt="Duplicate two"></p>
+<p>Linked AVIF: <a href="#linked"><img src="unsupported.avif?linked"
+ alt="Follow surrounding link"></a></p>
+<p>Retryable HTTP failure: <img src="missing-http-image.gif"
+ alt="Retry missing HTTP image"></p>
 <p>Image map: <img src="../../../../TechDocs/html/docImages/nextUp.gif"
  alt="Mapped image" usemap="#directions"><map name="directions">
  <area shape="rect" coords="0,0,100,100" href="#mapped" alt="Mapped area">

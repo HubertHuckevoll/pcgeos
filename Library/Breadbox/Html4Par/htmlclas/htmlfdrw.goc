@@ -43,6 +43,11 @@
 @extern chunk FormButtonTextSubmit ;
 @extern chunk FormButtonTextReset ;
 
+@start CompactImageStringResource, data;
+    @chunk TCHAR CompactImageUnsupportedSuffix[] = _TEXT("[unsupported]");
+    @localize { "Status appended to an image placeholder when its format is unsupported" 1-30 };
+@end CompactImageStringResource;
+
 #include "htmlclas/formset.h"
 #include <htmldrv.h>
 
@@ -640,92 +645,282 @@ SizeAsDWord LOCAL FormElementDraw(
 #define DRAW_BROKEN_ANI
 
 /**************************************************************************
- * Routine: DrawVarGraphic
- **************************************************************************
- *
- * Description:
- *     Draws the current frame of the passed image to the passed GState.
- *     If a range of lines is specified, the routine tries to minimize
- *     the effort of updating by restricting redraws to this area.
- *     If invalFrom==0xFFFF, the image is always fully redrawn.
- *
- * Inputs:
- *     GStateHandle gstate        -- GState to draw to
- *     HTMLimageData *iae         -- Data of image to draw
- *     optr namePool              -- Name pool (for alt text entries)
- *     word invalFrom             -- First line of updated range
- *     word invalTo               -- Last line of updated range
- *
+ * Compact image label layout
  **************************************************************************/
-word CompactImagePrepareText(GStateHandle gstate, HTMLimageData *iae,
-  optr namePool, TCHAR *buf, word bufSize, word *markerWidth)
+void LOCAL CompactImageGetLabel(HTMLimageData *iae, optr namePool,
+  TCHAR *buf, word bufSize, TCHAR **textPP)
 {
-    TCHAR marker[2];
     TCHAR *p, *end;
-    word len, labelWidth, maxLabelWidth, dotsWidth;
 
-@ifdef DO_DBCS
-    marker[0] = C_KATAKANA_MIDDLE_DOT;
-@else
-    marker[0] = C_DIAMONDBULLET;
-@endif
-    marker[1] = 0;
+    /* ATTENTION: On allocation failure NamePoolCopy returns a safe bounded
+       prefix. A streaming NamePool reader is the upgrade path. */
+    NamePoolCopy(namePool, buf, bufSize, iae->imageALT, textPP);
+    if(**textPP || (iae->flags & HTML_IDF_ALT_EXPLICIT))
+        return;
 
-    FormSetTextAttr(gstate);
-    *markerWidth = GrTextWidth(gstate, (char*)marker, 1);
-
-    NamePoolCopy(namePool, buf, bufSize, iae->imageALT, (void*)0);
-    if(!*buf)
+    if(iae->flags & HTML_IDF_SUBMIT)
     {
-        if(iae->flags & HTML_IDF_SUBMIT)
+        strcpy(*textPP, _TEXT("Submit"));
+        return;
+    }
+
+    NamePoolDestroyIfDynamic(*textPP);
+    NamePoolCopy(namePool, buf, bufSize, iae->imageURL, textPP);
+    p = end = *textPP;
+    while(*end && *end != '?' && *end != '#')
+    {
+        if(*end == '/' || *end == '\\')
+            p = end + 1;
+        end++;
+    }
+    *end = 0;
+    if(p != *textPP)
+        memmove(*textPP, p, (strlen(p) + 1) * sizeof(TCHAR));
+    if(!**textPP)
+        strcpy(*textPP, _TEXT("Image"));
+}
+
+Boolean LOCAL CompactImageEllipsizeFilename(GStateHandle gstate,
+  TCHAR *textP, word maxWidth)
+{
+    TCHAR *extensionP;
+    word len, prefixLen, suffixStart, dotsWidth;
+    word prefixWidth, suffixWidth;
+
+    if(GrTextWidth(gstate, (char*)textP, 0) <= maxWidth)
+        return FALSE;
+
+    len = strlen(textP);
+    dotsWidth = GrTextWidth(gstate, (char*)_TEXT("..."), 3);
+    extensionP = strrchr(textP, '.');
+    if(extensionP && extensionP != textP)
+    {
+        suffixStart = extensionP - textP;
+        suffixWidth = GrTextWidth(gstate, (char*)extensionP, 0);
+        if(suffixStart < 4 || suffixWidth + dotsWidth >= maxWidth)
+            return TRUE;
+        prefixLen = suffixStart - 3;
+        while(prefixLen)
         {
-            buf[0] = 'S'; buf[1] = 'u'; buf[2] = 'b'; buf[3] = 'm';
-            buf[4] = 'i'; buf[5] = 't'; buf[6] = 0;
+            prefixWidth = GrTextWidth(gstate, (char*)textP, prefixLen);
+            if(prefixWidth + dotsWidth + suffixWidth <= maxWidth)
+                break;
+            prefixLen--;
+        }
+        if(!prefixLen)
+            return TRUE;
+    }
+    else
+    {
+        if(len < 5 || dotsWidth >= maxWidth)
+            return TRUE;
+        prefixLen = (len - 3) / 2;
+        suffixStart = prefixLen + 3;
+        suffixWidth = GrTextWidth(gstate, (char*)textP + suffixStart,
+          len - suffixStart);
+        while(prefixLen)
+        {
+            prefixWidth = GrTextWidth(gstate, (char*)textP, prefixLen);
+            if(prefixWidth + dotsWidth + suffixWidth <= maxWidth)
+                break;
+            if(prefixWidth > suffixWidth)
+                prefixLen--;
+            else
+            {
+                suffixStart++;
+                suffixWidth = GrTextWidth(gstate,
+                  (char*)textP + suffixStart, len - suffixStart);
+            }
+        }
+        if(!prefixLen || suffixStart >= len)
+            return TRUE;
+    }
+
+    memmove(textP + prefixLen + 3, textP + suffixStart,
+      (len - suffixStart + 1) * sizeof(TCHAR));
+    textP[prefixLen] = '.';
+    textP[prefixLen + 1] = '.';
+    textP[prefixLen + 2] = '.';
+    len = strlen(textP);
+    while(prefixLen && GrTextWidth(gstate, (char*)textP, 0) > maxWidth)
+    {
+        memmove(textP + prefixLen - 1, textP + prefixLen,
+          (len - prefixLen + 1) * sizeof(TCHAR));
+        prefixLen--;
+        len--;
+    }
+    return FALSE;
+}
+
+void LOCAL CompactImageFindLine(GStateHandle gstate, TCHAR *textP,
+  word textLen, word from, word maxWidth, word *lineStartP,
+  word *lineLenP, word *nextP, word *lineWidthP)
+{
+    word start, remaining, fit, breakLen, drawLen, next;
+
+    start = from;
+    while(start < textLen && LocalIsSpace(textP[start]))
+        start++;
+    if(start >= textLen)
+    {
+        *lineStartP = start;
+        *lineLenP = 0;
+        *nextP = textLen;
+        *lineWidthP = 0;
+        return;
+    }
+
+    remaining = textLen - start;
+    fit = 1;
+    while(fit <= remaining &&
+          GrTextWidth(gstate, (char*)textP + start, fit) <= maxWidth)
+        fit++;
+    if(fit > remaining)
+        fit = remaining;
+    else if(fit > 1)
+        fit--;
+
+    if(fit < remaining)
+    {
+        breakLen = fit;
+        while(breakLen && !LocalIsSpace(textP[start + breakLen - 1]))
+            breakLen--;
+        if(breakLen)
+            fit = breakLen;
+    }
+
+    drawLen = fit;
+    while(drawLen && LocalIsSpace(textP[start + drawLen - 1]))
+        drawLen--;
+    next = start + fit;
+    while(next < textLen && LocalIsSpace(textP[next]))
+        next++;
+
+    *lineStartP = start;
+    *lineLenP = drawLen;
+    *nextP = next;
+    *lineWidthP = drawLen ?
+      GrTextWidth(gstate, (char*)textP + start, drawLen) : 0;
+}
+
+void CompactImageLayoutText(GStateHandle gstate, HTMLimageData *iae,
+  optr namePool, word markerWidth, Boolean draw, Boolean measureForm,
+  XYSize *textSize)
+{
+    TCHAR buf[COMPACT_IMAGE_TEXT_MAX];
+    TCHAR *textP, *suffixP;
+    word textLen, maxWidth, lineStart, lineLen, next, lineWidth;
+    word maxLineWidth, lastLineWidth, lineCount, pointSize;
+    word suffixLen, suffixWidth, spaceWidth, textX;
+    Boolean wrap;
+
+    CompactImageGetLabel(iae, namePool, buf, sizeof(buf), &textP);
+    textLen = strlen(textP);
+    maxWidth = COMPACT_IMAGE_MAX_WIDTH - 2*COMPACT_IMAGE_PADDING -
+      COMPACT_IMAGE_GAP - markerWidth;
+    wrap = (iae->flags & HTML_IDF_ALT_EXPLICIT) != 0;
+
+    suffixP = (TCHAR*)0;
+    suffixLen = suffixWidth = spaceWidth = 0;
+    if(iae->flags & HTML_IDF_UNSUPPORTED)
+    {
+        MemLock(OptrToHandle(@CompactImageUnsupportedSuffix));
+        suffixP = LMemDeref(@CompactImageUnsupportedSuffix);
+        suffixLen = strlen(suffixP);
+    }
+
+    if(measureForm)
+    {
+        GrSaveState(gstate);
+        FormSetTextAttr(gstate);
+    }
+    if(!(iae->flags & (HTML_IDF_ALT_EXPLICIT | HTML_IDF_SUBMIT)))
+        wrap = CompactImageEllipsizeFilename(gstate, textP, maxWidth);
+    if(suffixP)
+    {
+        suffixWidth = GrTextWidth(gstate, (char*)suffixP, suffixLen);
+        spaceWidth = GrTextWidth(gstate, (char*)_TEXT(" "), 1);
+    }
+    if(measureForm)
+        GrRestoreState(gstate);
+
+    textLen = strlen(textP);
+    textX = COMPACT_IMAGE_PADDING + markerWidth + COMPACT_IMAGE_GAP;
+    pointSize = FormGetPointSize();
+    maxLineWidth = lastLineWidth = lineCount = 0;
+    next = 0;
+    do
+    {
+        if(wrap && textLen)
+        {
+            if(measureForm)
+            {
+                GrSaveState(gstate);
+                FormSetTextAttr(gstate);
+            }
+            CompactImageFindLine(gstate, textP, textLen, next, maxWidth,
+              &lineStart, &lineLen, &next, &lineWidth);
+            if(measureForm)
+                GrRestoreState(gstate);
         }
         else
         {
-            NamePoolCopy(namePool, buf, bufSize, iae->imageURL, (void*)0);
-            p = end = buf;
-            while(*end && *end != '?' && *end != '#')
+            lineStart = 0;
+            lineLen = textLen;
+            next = textLen;
+            if(measureForm)
             {
-                if(*end == '/' || *end == '\\')
-                    p = end + 1;
-                end++;
+                GrSaveState(gstate);
+                FormSetTextAttr(gstate);
             }
-            *end = 0;
-            if(p != buf)
-            {
-                end = buf;
-                while(*p)
-                    *end++ = *p++;
-                *end = 0;
-            }
-            if(!*buf)
-            {
-                buf[0] = 'I'; buf[1] = 'm'; buf[2] = 'a'; buf[3] = 'g';
-                buf[4] = 'e'; buf[5] = 0;
-            }
+            lineWidth = GrTextWidth(gstate, (char*)textP, textLen);
+            if(measureForm)
+                GrRestoreState(gstate);
         }
-    }
 
-    maxLabelWidth = COMPACT_IMAGE_MAX_WIDTH - 2*COMPACT_IMAGE_PADDING -
-      COMPACT_IMAGE_GAP - *markerWidth;
-    labelWidth = GrTextWidth(gstate, (char*)buf, 0);
-    if(labelWidth > maxLabelWidth)
+        if(draw && lineLen)
+            GrDrawText(gstate, textX, pointSize - 1 + lineCount * pointSize,
+              (char*)textP + lineStart, lineLen);
+        if(lineWidth > maxLineWidth)
+            maxLineWidth = lineWidth;
+        lastLineWidth = lineWidth;
+        lineCount++;
+    } while(wrap && next < textLen);
+
+    if(suffixP)
     {
-        dotsWidth = GrTextWidth(gstate, (char*)_TEXT("..."), 3);
-        for(len=0; buf[len]; len++);
-        while(len && GrTextWidth(gstate, (char*)buf, len) + dotsWidth >
-              maxLabelWidth)
-            len--;
-        buf[len++] = '.';
-        buf[len++] = '.';
-        buf[len++] = '.';
-        buf[len] = 0;
-        labelWidth = GrTextWidth(gstate, (char*)buf, 0);
+        if(!textLen)
+        {
+            if(draw)
+                GrDrawText(gstate, textX,
+                  pointSize - 1 + (lineCount - 1) * pointSize,
+                  (char*)suffixP, suffixLen);
+            lastLineWidth = suffixWidth;
+        }
+        else if(lastLineWidth + spaceWidth + suffixWidth <= maxWidth)
+        {
+            if(draw)
+                GrDrawText(gstate, textX + lastLineWidth + spaceWidth,
+                  pointSize - 1 + (lineCount - 1) * pointSize,
+                  (char*)suffixP, suffixLen);
+            lastLineWidth += spaceWidth + suffixWidth;
+        }
+        else
+        {
+            if(draw)
+                GrDrawText(gstate, textX, pointSize - 1 + lineCount * pointSize,
+                  (char*)suffixP, suffixLen);
+            lastLineWidth = suffixWidth;
+            lineCount++;
+        }
+        if(lastLineWidth > maxLineWidth)
+            maxLineWidth = lastLineWidth;
+        MemUnlock(OptrToHandle(@CompactImageUnsupportedSuffix));
     }
 
-    return labelWidth;
+    textSize->XYS_width = maxLineWidth;
+    textSize->XYS_height = lineCount * pointSize;
+    NamePoolDestroyIfDynamic(textP);
 }
 
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
@@ -743,8 +938,8 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     GStateHandle gstring;
     GStringElement *lastElement;
     Boolean allowInval;
-    XYSize pixSize;
-    word markerWidth, labelWidth;
+    XYSize pixSize, compactTextSize;
+    word markerWidth;
     TCHAR marker[2];
 
     if(iae->HID_size.XYS_width<1 || iae->HID_size.XYS_height<1)
@@ -765,9 +960,6 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
 
     if(iae->flags & HTML_IDF_COMPACT)
     {
-      labelWidth = CompactImagePrepareText(gstate, iae, namePool, buf,
-        sizeof(buf), &markerWidth);
-      (void)labelWidth;
 @ifdef DO_DBCS
       marker[0] = C_KATAKANA_MIDDLE_DOT;
 @else
@@ -775,18 +967,24 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
 @endif
       marker[1] = 0;
 
-      if(iae->flags & HTML_IDF_RESOLVING)
-        GrSetTextColor(gstate, CF_INDEX, C_DARK_GRAY, 0, 0);
-      else
-        GrSetTextColor(gstate, linkColor->CQ_info,
-          linkColor->CQ_redOrIndex, linkColor->CQ_green, linkColor->CQ_blue);
+      FormSetTextAttr(gstate);
+      markerWidth = GrTextWidth(gstate, (char*)marker, 1);
 
-      GrSetTextStyle(gstate, 0, TS_UNDERLINE);
+      if(!(iae->flags & HTML_IDF_UNSUPPORTED))
+      {
+        if(iae->flags & HTML_IDF_RESOLVING)
+          GrSetTextColor(gstate, CF_INDEX, C_DARK_GRAY, 0, 0);
+        else
+          GrSetTextColor(gstate, linkColor->CQ_info,
+            linkColor->CQ_redOrIndex, linkColor->CQ_green, linkColor->CQ_blue);
+        GrSetTextStyle(gstate, 0, TS_UNDERLINE);
+      }
       GrDrawText(gstate, COMPACT_IMAGE_PADDING,
         FormGetPointSize() - 1, (char*)marker, 1);
-      GrSetTextStyle(gstate, TS_UNDERLINE, 0);
-      GrDrawText(gstate, COMPACT_IMAGE_PADDING + markerWidth +
-        COMPACT_IMAGE_GAP, FormGetPointSize() - 1, (char*)buf, 0);
+      if(!(iae->flags & HTML_IDF_UNSUPPORTED))
+        GrSetTextStyle(gstate, TS_UNDERLINE, 0);
+      CompactImageLayoutText(gstate, iae, namePool, markerWidth, TRUE,
+        (iae->flags & HTML_IDF_UNSUPPORTED) != 0, &compactTextSize);
     }
     else if(  (iae->flags & HTML_IDF_RESOLVED) &&
         !(iae->flags & HTML_IDF_BROKEN) )

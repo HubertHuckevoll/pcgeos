@@ -754,61 +754,6 @@ typedef struct {
     dword imageProbeMaxPixels;
 } URLTextRequestGraphic ;
 
-#define IMAGE_URL_EXTENSION_MAX 16
-
-/*
- * Return TRUE only when the URL gives us a known image type and no installed
- * MIME driver handles it. Unknown and extensionless URLs must reach HTTP.
- */
-static Boolean _pascal
-ImageURLHasUnsupportedType(NameToken nameT)
-{
-    TCHAR url[HTML_STATIC_BUF];
-    TCHAR extension[IMAGE_URL_EXTENSION_MAX];
-    TCHAR mimeType[MIME_MAXBUF];
-    FileLongName driver;
-    TCHAR *urlP;
-    TCHAR *end;
-    TCHAR *fragment;
-    TCHAR *slash;
-    TCHAR *dot;
-    word extensionLength;
-    Boolean unsupported;
-
-    unsupported = FALSE;
-    NamePoolCopy(namePool, url, sizeof(url), nameT, &urlP);
-
-    end = strchr(urlP, '?');
-    fragment = strchr(urlP, '#');
-    if(!end || (fragment && fragment < end))
-        end = fragment;
-    if(end)
-        *end = 0;
-
-    slash = strrchr(urlP, '/');
-    dot = strrchr(urlP, '.');
-    if(dot && (!slash || dot > slash) && dot[1])
-    {
-        extensionLength = strlen(dot + 1);
-        if(extensionLength < IMAGE_URL_EXTENSION_MAX)
-        {
-            strcpy(extension, dot + 1);
-            strupr(extension);
-            if(NameAssocFindAssociation(assocExtType, extension,
-                 mimeType, sizeof(mimeType), TRUE, (void *)0) &&
-               !LocalCmpStringsNoCase(mimeType, _TEXT("image/"), 6) &&
-               !NameAssocFindAssociation(assocTypeDriver, mimeType,
-                 driver, sizeof(driver), TRUE, (void *)0))
-            {
-                unsupported = TRUE;
-            }
-        }
-    }
-
-    NamePoolDestroyIfDynamic(urlP);
-    return unsupported;
-}
-
 void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
 		     word invalFrom, word invalTo);
 
@@ -832,6 +777,9 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
 #endif
     Boolean ret = FALSE;
     extern Boolean G_stopped ;
+
+    if(p->flags & HTML_IDF_UNSUPPORTED)
+        return FALSE;
 
     nameT = p->HID_resolvedURL;         /* fully resolved URL */
 
@@ -865,11 +813,6 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
 	 ObjCacheUnlockItem(oct);
 	 NamePoolReleaseToken(namePool, nameT);
      }
-    }
-    else if(ImageURLHasUnsupportedType(nameT))
-    {
-      @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(OCT_NULL,
-        nameT, 0, 0xFFFF);
     }
     else if ((loadUnknownSize || !p->size.XYS_height || !p->size.XYS_width) && (!G_stopped))
     {                                   // possibly load even if size unknown
@@ -956,7 +899,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     if(nImage < n)
     {
         p = ChunkArrayElementToPtr(imageArray, nImage, &size);
-        if(!(p->flags & HTML_IDF_RESOLVING) &&
+        if(!(p->flags & (HTML_IDF_RESOLVING | HTML_IDF_UNSUPPORTED)) &&
            (!(p->flags & HTML_IDF_RESOLVED) ||
             (p->flags & HTML_IDF_BROKEN)) &&
            p->imageURL != NAME_POOL_NONE)
@@ -1003,7 +946,26 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
 
 @method URLTextClass, MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE
 {
-    @call self::MSG_URL_TEXT_LOAD_IMAGE(nImage);
+    HTMLimageData *imageP;
+    optr imageArray;
+    word count, size;
+    Boolean load;
+
+    imageArray = pself->HTI_imageArray;
+    if(!imageArray)
+        return;
+    load = FALSE;
+    MemLock(OptrToHandle(imageArray));
+    count = ChunkArrayGetCount(imageArray);
+    if(nImage < count)
+    {
+        imageP = ChunkArrayElementToPtr(imageArray, nImage, &size);
+        if(!(imageP->flags & HTML_IDF_UNSUPPORTED))
+            load = TRUE;
+    }
+    MemUnlock(OptrToHandle(imageArray));
+    if(load)
+        @call self::MSG_URL_TEXT_LOAD_IMAGE(nImage);
 }
 
 @method URLTextClass, MSG_URL_TEXT_PROCESS_GRAPHICS
@@ -1074,7 +1036,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       for(i=0; i<n; i++)
       {
         p = ChunkArrayElementToPtr(imageArray, i, &size);
-        if((p->flags & (HTML_IDF_RESOLVED|HTML_IDF_RESOLVING)))
+        if((p->flags & (HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
+                        HTML_IDF_UNSUPPORTED)))
           continue;                     // Skip graphics that have been handled
 
         if(ProcessSingleGraphic(p, oself, referer, i,
@@ -1281,6 +1244,11 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 @endif
 	    ), request.imageProbeMaxPixels) ;
 #endif
+    } else if(URLRequestGetRet(result.retType) ==
+              URL_RET_UNSUPPORTED_IMAGE) {
+        @call oself::MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
+          request.nameT);
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
     } else {
         /* Does not appear to have come in correctly.  Release it */
         /* If a message make sure we free the message block. We should */
@@ -1520,6 +1488,40 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
       ObjCacheUnlockItem(oct);
 
     NamePoolReleaseToken(namePool, url);// remove this reference to URL
+}
+
+@method URLTextClass,
+        MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED
+{
+    word i, n, size;
+    HTMLimageData *imageP;
+    optr imageArray;
+
+    imageArray = pself->HTI_imageArray;
+    if(imageArray)
+    {
+        MemLock(OptrToHandle(imageArray));
+        n = ChunkArrayGetCount(imageArray);
+        for(i=0; i<n; i++)
+        {
+            imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+            if(url == imageP->HID_resolvedURL)
+            {
+                if(imageP->HID_cacheToken)
+                    ObjCacheUnlockItem(
+                      (ObjCacheToken)imageP->HID_cacheToken);
+                imageP->HID_cacheToken = OCT_NULL;
+                @call oself::MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED(i);
+@ifdef JAVASCRIPT_SUPPORT
+                @call self::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_ERROR,
+                  HTML_EVENT_OBJECT_IMAGE, i);
+@endif
+            }
+        }
+        MemUnlock(OptrToHandle(imageArray));
+    }
+
+    NamePoolReleaseToken(namePool, url);
 }
 
 @method URLTextClass, MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS

@@ -43,6 +43,7 @@ export     TOOLSSTRINGSECTIONFINDKEY
 export     TOOLSFORMATMESSAGE
 export     XSTRNCPY
 incminor   HTMLTextCompactImages
+incminor   HTMLTextUnsupportedImages
 export     HTMLTextClass
 export     TOOLSFINDEXTENSION
 export     TOOLSNORMALIZEURL
@@ -95,6 +96,7 @@ resource   EntityResource  lmem read-only shared
 resource   ColorResource   lmem read-only shared
 resource   PointerResource lmem read-only shared
 resource   FormButtonResource lmem read-only shared
+resource   CompactImageStringResource lmem read-only shared
 resource   ASM_TEXT fixed
 
 # only needed if IN_PLACE_TEXT_ENTRY in options.goh

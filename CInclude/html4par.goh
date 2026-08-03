@@ -232,6 +232,7 @@ typedef struct {
     #define HTML_IDF_RESOLVING  0x0008  /*  - image has been requested */
     #define HTML_IDF_ALT_EXPLICIT 0x0010 /* - ALT attribute was present */
     #define HTML_IDF_COMPACT    0x0020  /*  - draw compact load link */
+    #define HTML_IDF_UNSUPPORTED 0x0040 /*  - no image import driver */
     #define HTML_IDF_SIZE_DIRTY 0x4000  /*  - size has changed recently */
     #define HTML_IDF_BROKEN     0x8000  /*  - image could not be resolved */
   XYSize size;                          /* target size, or 0 if not spec'd */
@@ -1192,6 +1193,7 @@ typedef dword T_tableArrayHandle ;
   @message word MSG_HTML_TEXT_ADD_OPTION_ELEMENT(HTMLformData *data);
   @message void MSG_HTML_TEXT_REMOVE_OPTION_ELEMENT(word index);
   @message void MSG_HTML_TEXT_FORM_ELEMENT_REMOVE_TEXT_ENTRY();
+  @message Boolean MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED(word nImage);
 @ifdef DO_DBCS
   @instance DosCodePage HTI_codePage = 0;
 @endif

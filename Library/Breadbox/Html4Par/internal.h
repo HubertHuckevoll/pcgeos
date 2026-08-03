@@ -517,8 +517,9 @@ void SpreadCopyIndexArray(MemHandle state, T_columnIndex *p_indexArray) ;
 
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
                     ColorQuad *linkColor, word invalFrom, word invalTo);
-word CompactImagePrepareText(GStateHandle gstate, HTMLimageData *iae,
-  optr namePool, TCHAR *buf, word bufSize, word *markerWidth);
+void CompactImageLayoutText(GStateHandle gstate, HTMLimageData *iae,
+  optr namePool, word markerWidth, Boolean draw, Boolean measureForm,
+  XYSize *textSize);
 ImageLoadMode _pascal HTMLTextGetImageLoadMode(optr text);
 void _pascal HTMLTextSetImageLoadMode(optr text, ImageLoadMode mode);
 word _pascal HTMLTextGetCompactImageFocus(optr text);
