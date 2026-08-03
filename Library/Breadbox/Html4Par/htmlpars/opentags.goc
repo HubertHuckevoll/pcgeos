@@ -510,7 +510,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
     AddParaCond();                      /* flush pending para end */
 
     altName = GetParamValue(paramArray,"ALT");
-    altExplicit = altName ? TRUE : FALSE;
+    altExplicit = (altName && *altName) ? TRUE : FALSE;
 
     memset(&id, 0, sizeof(id));       /* default graphic data structure */
 

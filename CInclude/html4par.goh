@@ -230,7 +230,7 @@ typedef struct {
     #define HTML_IDF_ISMAP      0x0002  /*  - image is a server side map */
     #define HTML_IDF_SUBMIT     0x0004  /*  - image is graphical submit btn */
     #define HTML_IDF_RESOLVING  0x0008  /*  - image has been requested */
-    #define HTML_IDF_ALT_EXPLICIT 0x0010 /* - ALT attribute was present */
+    #define HTML_IDF_ALT_EXPLICIT 0x0010 /* - non-empty ALT was present */
     #define HTML_IDF_COMPACT    0x0020  /*  - draw compact load link */
     #define HTML_IDF_UNSUPPORTED 0x0040 /*  - no image import driver */
     #define HTML_IDF_SIZE_DIRTY 0x4000  /*  - size has changed recently */
