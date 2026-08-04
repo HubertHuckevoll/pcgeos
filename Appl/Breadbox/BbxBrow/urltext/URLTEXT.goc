@@ -280,7 +280,7 @@ MemHandle MemStreamInit(MemHandle stream)
 
     if (stream) {
 	streamP = MemPLock(stream);
-	(byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+	blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
 	for (i = 0; i < streamP->maxBlk; i++) {
 	    if (!blkP[i]) break;
 	    MemFree(blkP[i]);
@@ -314,7 +314,7 @@ void MemStreamDelete(MemHandle stream, word bufSize, Boolean emptyLast)
     last = streamP->head/MEM_STREAM_BLOCK_SIZE;
     if (emptyLast && (streamP->head == streamP->tail)) last++;
     /* free blocks before head */
-    (byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+    blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
     for (i = 0; i < last; i++) {
 	if (blkP[i]) {
 	    MemFree(blkP[i]);
@@ -342,7 +342,7 @@ word MemStreamRead(MemHandle stream, void *buffer, word bufSize, dword offset)
     else if(bufSize > available - offset)
         bufSize = (word)(available - offset);
     if (bufSize) {  /* handles no more data because of write overflow */
-	(byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+	blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
 	/* copy from start block */
 	dataPosition = streamP->head + offset;
 	blockOffset = dataPosition/MEM_STREAM_BLOCK_SIZE;
@@ -384,7 +384,7 @@ word MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
 
     streamP = MemPLock(stream);
     if ((streamP->tail + (dword)bufSize) < (dword)MEM_STREAM_BLOCK_SIZE*(dword)MEM_STREAM_INIT_BLKS) {
-	(byte *)blkP = (byte *)streamP + sizeof(MemStreamHeader);
+	blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
 	/* copy to start block */
 	blockOffset = streamP->tail/MEM_STREAM_BLOCK_SIZE;
 	if (!blkP[blockOffset]) {

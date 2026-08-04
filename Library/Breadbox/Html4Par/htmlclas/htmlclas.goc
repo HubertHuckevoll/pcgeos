@@ -1015,6 +1015,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       habh->_itemArray = ch;
 
     RegionPurgeCache(oself) ;
+    pself = ObjDerefVis(oself);
 
     /* initialize main hypertext element header */
     htbh = VMLock(pself->VTI_vmFile, VMCHAIN_GET_VM_BLOCK(pself->HTI_transferItem),
@@ -2352,6 +2353,7 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     Boolean wasDirty = FALSE ;  
 
     RegionPurgeCache(oself) ;
+    pself = ObjDerefVis(oself);
     /* 
      * Update image record in table 
      */
