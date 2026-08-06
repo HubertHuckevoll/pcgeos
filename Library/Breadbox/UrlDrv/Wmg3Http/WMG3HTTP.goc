@@ -2504,15 +2504,10 @@ word HTTPGet(HTTPConnectionHandle conn)
                             p_conn->loadProgressDataP->LPD_callback &&
                             p_conn->loadProgressDataP->LPD_progress) {
                             /* notify of new data available */
-                            ((pcfm_LoadProgressCallback *)
+                            admissionResult = ((pcfm_LoadProgressCallback *)
                               ProcCallFixedOrMovable_pascal)(
                                 p_conn->loadProgressDataP, LPCT_WRITE,
                                 p_conn->buffer, i,
-                                p_conn->loadProgressDataP->LPD_callback);
-                            admissionResult = ((pcfm_LoadProgressCallback *)
-                              ProcCallFixedOrMovable_pascal)(
-                                p_conn->loadProgressDataP,
-                                LPCT_IMAGE_PROBE_STATUS, (void *)0, 0,
                                 p_conn->loadProgressDataP->LPD_callback);
                             if(admissionResult == LPCR_REJECT)
                             {
@@ -2608,11 +2603,16 @@ word HTTPGet(HTTPConnectionHandle conn)
                     p_conn->loadProgressDataP->LPD_progress) {
                     /* if have data, notify of data finished */
 		    if (length) {
-			((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
+			admissionResult = ((pcfm_LoadProgressCallback *)
+			  ProcCallFixedOrMovable_pascal)(
 			    p_conn->loadProgressDataP, LPCT_CLOSE, 0, 0,
 			    p_conn->loadProgressDataP->LPD_callback);
+			if(admissionResult == LPCR_REJECT) {
+			    imageDeferred = TRUE;
+			    p_conn->allowSocketCache = FALSE;
+			}
 			/* signal progress finished (unless aborted) */
-			if (p_conn->aborted || imageDeferred) {
+			if (p_conn->aborted) {
 			    rcode = URLRequestMakeRet(URL_RET_PROGRESS_ABORT) | ((rcode & URB_RF_NOCACHE) ? URB_RF_NOCACHE : 0);
 			} else {
 			    rcode = URLRequestMakeRet(URL_RET_PROGRESS) | ((rcode & URB_RF_NOCACHE) ? URB_RF_NOCACHE : 0);
@@ -2625,6 +2625,12 @@ word HTTPGet(HTTPConnectionHandle conn)
 			rcode = URLRequestMakeRet(URL_RET_MESSAGE) | URB_RF_NOCACHE;
 		    }
                 }
+#endif
+
+#if PROGRESS_DISPLAY
+		if (imageDeferred && !p_conn->aborted)
+		    rcode = URLRequestMakeRet(URL_RET_IMAGE_DEFERRED) |
+		      URB_RF_NOCACHE;
 #endif
 
 #if PROGRESS_DISPLAY

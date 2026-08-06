@@ -425,6 +425,54 @@ word MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
 
 #endif
 
+static void _pascal
+LoadGraphicProbeClear(LoadProgressData *loadProgressDataP)
+{
+#ifdef USE_MEM_STREAM
+    word lt;
+
+    lt = loadProgressDataP->LPD_loadThread;
+#else
+    dword streamCount;
+#endif
+#ifdef USE_MEM_STREAM
+    G_stream[lt] = MemStreamInit(G_stream[lt]);
+#else
+    streamCount = HugeArrayGetCount(loadProgressDataP->LPD_dataFile,
+      loadProgressDataP->LPD_dataStream);
+    if(streamCount)
+        HugeArrayDelete(loadProgressDataP->LPD_dataFile,
+          loadProgressDataP->LPD_dataStream, streamCount, 0);
+#endif
+    loadProgressDataP->LPD_bytesAvail = 0;
+    loadProgressDataP->LPD_preReadOffset = 0;
+    loadProgressDataP->LPD_streamState = LPSS_EMPTY;
+}
+
+static word _pascal
+LoadGraphicProbeNow(LoadProgressData *loadProgressDataP)
+{
+    MimeGraphicProbeData probeData;
+    MimeGraphicProbeResult probeResult;
+    Boolean deferred;
+
+    probeResult = ToolsProbeGraphicByDriver((TCHAR *)0,
+      loadProgressDataP->LPD_mimeType,
+      loadProgressDataP->LPD_imageProbeMaxBytes, &probeData,
+      loadProgressDataP);
+    deferred = probeResult != MIME_GRAPHIC_PROBE_FOUND ||
+      !probeData.MGPD_width || !probeData.MGPD_height ||
+      probeData.MGPD_width > loadProgressDataP->LPD_imageProbeMaxPixels /
+        probeData.MGPD_height;
+    ThreadPSem(loadProgressDataP->LPD_sem);
+    loadProgressDataP->LPD_imageProbe =
+      deferred ? LPI_DEFERRED : LPI_ACCEPTED;
+    LoadGraphicProbeClear(loadProgressDataP);
+    loadProgressDataP->LPD_progress = FALSE;
+    ThreadVSem(loadProgressDataP->LPD_sem);
+    return deferred ? LPCR_REJECT : LPCR_CONTINUE;
+}
+
 /*
  * loading progress callback routine: notify text object
  */
@@ -504,6 +552,12 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 
 #ifdef USE_MEM_STREAM
 	G_stream[lt] = MemStreamInit(G_stream[lt]);
+	if(!G_stream[lt])
+	{
+	    loadProgressDataP->LPD_imageProbe = LPI_NONE;
+	    loadProgressDataP->LPD_progress = FALSE;
+	    break;
+	}
 #else
         /* this shouldn't be necessary, but it seems there are some
            graphics that finish before using all their file data, so
@@ -519,6 +573,8 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
                     streamCount, 0);
         }
 #endif
+	if(loadProgressDataP->LPD_imageProbeMaxPixels)
+	    break;
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
 	if (G_fetchWhileImport) {
 	/* stop subsequent requests on the associated fetch thread from
@@ -665,9 +721,53 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     }
 
     case LPCT_WRITE:
-        /* get exclusive access to loading progress data stream */
+    {
+        word bytesToWrite;
+        dword bytesRemaining;
+        Boolean probeNow;
+
+        if(loadProgressDataP->LPD_imageProbe == LPI_PENDING)
+        {
+            bytesToWrite = bufSize;
+            probeNow = FALSE;
+            ThreadPSem(loadProgressDataP->LPD_sem);
+            if(loadProgressDataP->LPD_bytesAvail >=
+              loadProgressDataP->LPD_imageProbeMaxBytes)
+                bytesRemaining = 0;
+            else
+                bytesRemaining = loadProgressDataP->LPD_imageProbeMaxBytes -
+                  loadProgressDataP->LPD_bytesAvail;
+            if(bytesRemaining < bytesToWrite)
+                bytesToWrite = (word)bytesRemaining;
+#ifdef USE_MEM_STREAM
+            bytesWritten = G_stream[lt] ?
+              MemStreamWrite(G_stream[lt], buffer, bytesToWrite) : 0;
+#else
+            HugeArrayAppend(loadProgressDataP->LPD_dataFile,
+              loadProgressDataP->LPD_dataStream, bytesToWrite, buffer);
+            bytesWritten = bytesToWrite;
+#endif
+            loadProgressDataP->LPD_bytesAvail += bytesWritten;
+            if(bytesWritten != bytesToWrite)
+            {
+                loadProgressDataP->LPD_imageProbe = LPI_NONE;
+                loadProgressDataP->LPD_progress = FALSE;
+                LoadGraphicProbeClear(loadProgressDataP);
+            }
+            else
+            {
+                probeNow = loadProgressDataP->LPD_bytesAvail >=
+                  loadProgressDataP->LPD_imageProbeMaxBytes;
+EC(             EC_ERROR_IF(loadProgressDataP->LPD_bytesAvail >
+                  loadProgressDataP->LPD_imageProbeMaxBytes, -1); )
+            }
+            ThreadVSem(loadProgressDataP->LPD_sem);
+            if(probeNow)
+                returnVal = LoadGraphicProbeNow(loadProgressDataP);
+            break;
+        }
+
         ThreadPSem(loadProgressDataP->LPD_sem);
-        /* append new data to stream */
 #ifdef USE_MEM_STREAM
 	bytesWritten = G_stream[lt] ?
 	    MemStreamWrite(G_stream[lt], buffer, bufSize) : 0;
@@ -678,43 +778,18 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 	bytesWritten = bufSize;
 #endif
         loadProgressDataP->LPD_bytesAvail += bytesWritten;
-        if (bytesWritten != bufSize) {
+        if(bytesWritten != bufSize) {
             loadProgressDataP->LPD_fileDone = TRUE;
             loadProgressDataP->LPD_progress = FALSE;
         }
         ThreadVSem(loadProgressDataP->LPD_sem);
-        /* wake up reader, if time */
-        if (bytesWritten != bufSize || TimerGetCount() >=
-        loadProgressDataP->LPD_updateTime + progressLoadWait) {
-        WakeUp(&(loadProgressDataP->LPD_emptyQueue));
-        loadProgressDataP->LPD_updateTime = TimerGetCount();
+        if(bytesWritten != bufSize || TimerGetCount() >=
+           loadProgressDataP->LPD_updateTime + progressLoadWait) {
+            WakeUp(&(loadProgressDataP->LPD_emptyQueue));
+            loadProgressDataP->LPD_updateTime = TimerGetCount();
         }
         break;
-    case LPCT_IMAGE_PROBE_STATUS:
-        if(loadProgressDataP->LPD_imageProbe == LPI_ACCEPTED ||
-           loadProgressDataP->LPD_imageProbe == LPI_DEFERRED)
-        {
-            ThreadPSem(loadProgressDataP->LPD_sem);
-#ifdef USE_MEM_STREAM
-            G_stream[lt] = MemStreamInit(G_stream[lt]);
-#else
-            streamCount = HugeArrayGetCount(
-                loadProgressDataP->LPD_dataFile,
-                loadProgressDataP->LPD_dataStream);
-            if(streamCount)
-                HugeArrayDelete(loadProgressDataP->LPD_dataFile,
-                    loadProgressDataP->LPD_dataStream, streamCount, 0);
-#endif
-            loadProgressDataP->LPD_bytesAvail = 0;
-            loadProgressDataP->LPD_preReadOffset = 0;
-            loadProgressDataP->LPD_streamState = LPSS_EMPTY;
-            if(loadProgressDataP->LPD_imageProbe == LPI_ACCEPTED)
-                loadProgressDataP->LPD_progress = FALSE;
-            ThreadVSem(loadProgressDataP->LPD_sem);
-            if(loadProgressDataP->LPD_imageProbe == LPI_DEFERRED)
-                returnVal = LPCR_REJECT;
-        }
-        break;
+    }
     case LPCT_FLUSH_FIRST:
         if (loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET) {
 #ifdef USE_MEM_STREAM
@@ -731,16 +806,23 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         loadProgressDataP->LPD_preReadOffset = 0;
         break;
     case LPCT_CLOSE:
+	{
+	Boolean probePending;
+
 	/* we don't need to atomically set fileDone and WakeUp here since
 	   we set fileDone before we try to WakeUp; the reader thread will
 	   see fileDone and not Block, or it will already be blocked and
 	   will be woken up */
         ThreadPSem(loadProgressDataP->LPD_sem);
         loadProgressDataP->LPD_fileDone = TRUE;
+        probePending = loadProgressDataP->LPD_imageProbe == LPI_PENDING;
         ThreadVSem(loadProgressDataP->LPD_sem);
         /* make sure reader knows we're done */
         WakeUp(&(loadProgressDataP->LPD_emptyQueue));
+	if(probePending)
+	    returnVal = LoadGraphicProbeNow(loadProgressDataP);
         break;
+	}
     }
     }
     return returnVal;
@@ -1225,13 +1307,16 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 @endif
 	        ), request.imageProbeMaxPixels, NULL) ;
         }
-    } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS_ABORT) {
+    } else if (URLRequestGetRet(result.retType) == URL_RET_IMAGE_DEFERRED) {
         if(request.imageProbeMaxPixels)
         {
             @call self::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
               request.nameT);
             @call self::MSG_URL_TEXT_DEC_PENDING();
         }
+    } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS_ABORT) {
+        if(request.imageProbeMaxPixels)
+            @call self::MSG_URL_TEXT_DEC_PENDING();
 #else
         ImportThreadRequestImportGraphic(
             oself,

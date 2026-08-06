@@ -30,10 +30,9 @@ typedef enum {
     LPCT_CLOSE,           /* finish writing to data stream */
 	LPCT_PRE_READ,		/* just as read but keeps the data,
 						 * so we can go back by flush */
-    LPCT_HEADERS,         /* response headers are complete,
+    LPCT_HEADERS          /* response headers are complete,
 			    pass: MIME value or NULL,
 			    return: LoadProgressCallbackResult */
-    LPCT_IMAGE_PROBE_STATUS /* return LPCR_REJECT to stop this image */
 } LoadProgressCallbackType;
 
 typedef enum {

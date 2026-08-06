@@ -544,6 +544,7 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
 #if PROGRESS_DISPLAY
 #define URL_RET_PROGRESS	4   /* load progress finished */
 #define URL_RET_PROGRESS_ABORT  5   /* load progress aborted */
+#define URL_RET_IMAGE_DEFERRED  6   /* intelligent image probe rejected */
 #endif
 
 /* Return codes indicating specific failure conditions */
