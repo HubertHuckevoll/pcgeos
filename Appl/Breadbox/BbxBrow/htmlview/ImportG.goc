@@ -822,30 +822,32 @@ void ImportThreadAbortAll(void)
             request.name);
       }
 
-#if PROGRESS_DISPLAY
-      /* Release the fetch side after either probing or importing. */
-      if(request.importProgressData.IPD_loadProgressDataP)
-      {
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
-          if(G_fetchWhileImport)
-          {
-              G_importActive[request.importProgressData.
-                IPD_loadProgressDataP->LPD_loadThread] = FALSE;
-          }
-          else
-#endif
-          ThreadVSem(request.importProgressData.
-            IPD_loadProgressDataP->LPD_importSync);
-      }
-#endif
-
-      if(request.temporary)             /* destroy file if requested */
-        FileDelete(request.curHTML);
-
       /* Done with this graphic */
       @SendStatusUpdateOptr(
         @MsgBlank, HTML_STATUS_TYPE_IMPORTING);
     }
+    else
+      NamePoolReleaseToken(namePool, request.name);
+
+#if PROGRESS_DISPLAY
+    /* Release the fetch side after probing, importing, or discarding. */
+    if(request.importProgressData.IPD_loadProgressDataP)
+    {
+#ifdef ALLOW_FETCH_WHILE_IMPORTING
+        if(G_fetchWhileImport)
+        {
+            G_importActive[request.importProgressData.
+              IPD_loadProgressDataP->LPD_loadThread] = FALSE;
+        }
+        else
+#endif
+        ThreadVSem(request.importProgressData.
+          IPD_loadProgressDataP->LPD_importSync);
+    }
+#endif
+
+    if(request.temporary)               /* destroy file if requested */
+      FileDelete(request.curHTML);
 
     /* We have completed this operation on the text object.  Mark */
     /* it one less. */
