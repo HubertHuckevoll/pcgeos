@@ -344,7 +344,6 @@ Boolean LOCAL HandleScriptURL(optr oself, NameToken url)
 
         /* Request the URL to be loaded */
         /* (when loaded, MSG_URL_FRAME_URL_FETCHED is called) */
-#if PROGRESS_DISPLAY
 	/* XXX: should use loading progress since it could be a graphic */
         URLFetchRequest(
              url,
@@ -354,16 +353,6 @@ Boolean LOCAL HandleScriptURL(optr oself, NameToken url)
              oself,
              MSG_URL_FRAME_URL_FETCHED,
              requestState, 0) ;
-#else
-        URLFetchRequest(
-             url,
-             forceLoad? ULM_ALWAYS:ULM_CACHE,
-             postData,
-	     referer,
-             oself,
-             MSG_URL_FRAME_URL_FETCHED,
-             requestState) ;
-#endif
 
         /* Keep post data because it is still referenced */
         postData = NullHandle ;
@@ -608,11 +597,7 @@ VMBlockHandle LOCAL ReadFileIntoHA(VMFileHandle vmf, TCHAR *name)
       /* attempt to get it into a file if it can be done without using
          a URL driver (either cached or because it's a local file). */
       type = LoadURLToFile(url, retPath, mime, ULM_NEVER, &ret, NullHandle,
-                           NAME_POOL_NONE, NULL, 0xFFFF, NULL
-#if PROGRESS_DISPLAY
-                           ,NULL
-#endif
-                           );
+                           NAME_POOL_NONE, NULL, 0xFFFF, NULL, NULL);
 
       pself = ObjDeref(oself, 0);
 
@@ -641,10 +626,8 @@ VMBlockHandle LOCAL ReadFileIntoHA(VMFileHandle vmf, TCHAR *name)
 		          referer,      // referer: this frame
 		          oself,        // send message to this frame
 		          MSG_URL_FRAME_EXT_FILE_FETCHED,
-		          (dword)*url  // opaque extra data: original URL
-#if PROGRESS_DISPLAY
-		          ,0            // load progress
-#endif
+		          (dword)*url, // opaque extra data: original URL
+		          0            // load progress/image admission
 		          );
 
           /* make sure to keep track of pending requests for this frame */
@@ -2192,10 +2175,8 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
 				    NAME_POOL_NONE,    /* referer */
 				    oself,             /* return obj, msg */
 				    MSG_URL_FRAME_EMBED_FETCHED,
-				    0                  /* extra data */
-#if PROGRESS_DISPLAY
-				    ,0                 /* load progress */
-#endif
+				    0,                 /* extra data */
+				    0                  /* load progress/image admission */
 			            );
 		}
 		NamePoolDestroyIfDynamic(embedBufP);

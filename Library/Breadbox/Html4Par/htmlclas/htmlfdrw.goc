@@ -51,9 +51,7 @@
 #include "htmlclas/formset.h"
 #include <htmldrv.h>
 
-#if PROGRESS_DISPLAY
 #define RoundWWF(wwf) (IntegerOf(wwf) + ((FractionOf(wwf) >= 0x8000) ? 1 : 0))
-#endif
 
 SizeAsDWord FormElementGetSize(
                 HTMLformData *p_formData,

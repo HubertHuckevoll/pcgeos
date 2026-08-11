@@ -632,8 +632,10 @@ void _pascal fjpeg_init_loadProgress(j_decompress_ptr cinfo,
 #define smallocarr(cinfo,size,elements) \
 										fjpeg_smallocarr(cinfo,size,elements)
 #define smfree(cinfo,ptr)				fjpeg_smfree(cinfo,ptr)
+#if PROGRESS_DISPLAY
 #define jpeg_init_loadProgress(cinfo,loadProgressDataP) \
 										fjpeg_init_loadProgress(cinfo,loadProgressDataP)
+#endif
 
 
 /* Additional entry points for buffered-image mode. ??? */

@@ -745,10 +745,12 @@ EC(dword cbSize = 0;)
 	    ((pcfm_ImportProgressCallback *)ProcCallFixedOrMovable_pascal)
                 (importProgressDataP, importProgressDataP->IPD_callback);
 	}
+#endif
 	/* mark the graphic as completed, if so */
 	if (cinfo->output_scanline == cinfo->image_height)
 	    *p_completeGraphic = TRUE ;
 
+#if PROGRESS_DISPLAY
     /* Stop here if we are aborting and we're NOT progressive */
     if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)  {
         if ((loadProgressDataP) && (importProgressDataP->IPD_bitmap != NullHandle))  {

@@ -6,9 +6,7 @@
 
 typedef struct {
     FileHandle file;
-#if PROGRESS_DISPLAY
     LoadProgressData *progressP;
-#endif
     dword offset;
     dword limit;
 } ImpGraphProbeReader;
@@ -35,7 +33,6 @@ ImpGraphProbeRead(ImpGraphProbeReader *readerP, void *buffer, word count)
     if(remaining < count)
         count = (word)remaining;
 
-#if PROGRESS_DISPLAY
     if(readerP->progressP)
     {
         LoadProgressData *progressP;
@@ -46,7 +43,6 @@ ImpGraphProbeRead(ImpGraphProbeReader *readerP, void *buffer, word count)
           buffer, count, progressP->LPD_callback);
     }
     else
-#endif
     {
         read = FileRead(readerP->file, buffer, count, FALSE);
     }
@@ -83,7 +79,6 @@ static void _pascal
 ImpGraphProbeReset(ImpGraphProbeReader *readerP)
 {
     readerP->offset = 0;
-#if PROGRESS_DISPLAY
     if(readerP->progressP)
     {
         LoadProgressData *progressP;
@@ -94,7 +89,6 @@ ImpGraphProbeReset(ImpGraphProbeReader *readerP)
           progressP->LPD_callback);
     }
     else
-#endif
     {
         FilePos(readerP->file, 0, FILE_POS_START);
     }
@@ -508,15 +502,11 @@ MimeDrvGraphicProbe(_MimeGraphicProbeParams_)
 
     data->MGPD_width = data->MGPD_height = 0;
     reader.file = NullHandle;
-#if PROGRESS_DISPLAY
     reader.progressP = loadProgressDataP;
-#endif
     reader.offset = 0;
     reader.limit = maxBytes;
 
-#if PROGRESS_DISPLAY
     if(!reader.progressP)
-#endif
     {
         if(!file || !*file)
             return MIME_GRAPHIC_PROBE_UNKNOWN;

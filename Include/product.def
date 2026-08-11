@@ -11,10 +11,10 @@ AUTHOR:		Martin Turon,  February 9, 1999
 MACROS:
 	Name			Description
 	----			-----------
-	NDO2000			Generate code for NewDeal Office 2000	
+	NDO2000			Generate code for NewDeal Office 2000
 	GPC1999			Generate code for Global PC 1999
 	NDO1998			Generate code for NewDeal Office Release 3
-		
+
 REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
@@ -27,7 +27,7 @@ DESCRIPTION:
 	To make full use of this header, define an environment flag
 	PRODUCT=<X> and add an entry in Tools/scripts/perl/product_flags
 	to map your product into the proper flags to pass to the
-	compilation tools.  This file may have to be split into separate 
+	compilation tools.  This file may have to be split into separate
 	Internal/product<X>.def files at some later date.
 
  $Id: product.def,v 1.1 1999/12/14 01:54:28 (c)turon Exp martin $
@@ -73,14 +73,14 @@ endif
 ;===========================================================================
 ;	Product Features -- default feature flags for all products
 ;===========================================================================
-	
+
 	; browser flags
-	PROGRESS_DISPLAY	 = TRUE
+	PROGRESS_DISPLAY	 = FALSE
 
 	; kernel flags
 	SUPPORT_32BIT_DATA_REGS	 = TRUE
 	UTILITY_MAPPING_WINDOW	 = FALSE
-	
+
 ;===========================================================================
 ;	Product Features -- feature flags global to a particular product
 ;===========================================================================
@@ -107,8 +107,8 @@ if _NDO2000 or _BBX2001
 	GPC_DEBUG_MODE               =   FALSE	; crashes drive access...
 	GPC_NAMES_AND_DETAILS_TITLES =   FALSE	; crashes drive access...
         GPC_SIGN_UP_ICON             =   FALSE  ; no ISP sign-up icons
-	GPC_NO_FUNCTION_KEYS	     =   FALSE  ; use function keys. 
-	
+	GPC_NO_FUNCTION_KEYS	     =   FALSE  ; use function keys.
+
 	;*** GeoDex defaults for NewDeal
 	_OPTIONS_MENU		     =   TRUE
 	_IMPEX_MERGE		     =   TRUE
@@ -118,7 +118,7 @@ else
 	_NEW_DEAL	= 0
 endif
 
-	
+
 if _GPC1999
 	_BITMAP_EDITING		equ FALSE	; GeoDraw and other apps.
 	_DOS_LONG_NAME_SUPPORT	equ TRUE
@@ -131,7 +131,7 @@ if _GPC1999
 else
 endif
 
-	
+
 if _NDO1998
 	;;  Override flags for NewDeal Release3 compatability.
 	_OPTIONS_MENU		     =   TRUE
@@ -143,7 +143,7 @@ endif
 ;===========================================================================
 ;	Product Features -- setting flags here overrides *all* products
 ;===========================================================================
-	
+
 ;===========================================================================
 ;	Product Macros
 ;===========================================================================
@@ -154,10 +154,10 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Only sets the product feature flag if it isn't set already.
-		This provides a handy way to make sure flags defined 
+		This provides a handy way to make sure flags defined
 		globally aren't overwritten while allowing custom
-		compilation flags to set non-product related features 
-		in one's local.mk. 
+		compilation flags to set non-product related features
+		in one's local.mk.
 
 PASS:		feature_flag	= PRODUCT_FEATURE_FLAG
 		value		= TRUE | FALSE | 0 | 1 | -1
@@ -167,7 +167,7 @@ KNOWN BUGS/SIDE EFFECTS/IDEAS:
 	Could add auto-handling of local.mk -DFEATURE_ flags by adding:
 		ifdef FEATURE_feature_flag
 		  feature_flag = TRUE
-		else	
+		else
 		  feature_flag = value
 		endif
 
@@ -244,9 +244,9 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Include code only in the GPC1999 version of PC/GEOS
-		GPC1999 stands for Global PC 1999 -- the first release 
-		version of a consumer market product that bundles PC/GEOS 
-		on pentium class hardware for sale in the consumer retail 
+		GPC1999 stands for Global PC 1999 -- the first release
+		version of a consumer market product that bundles PC/GEOS
+		on pentium class hardware for sale in the consumer retail
 		channel.
 
 PASS:		line - line of source code
@@ -273,8 +273,8 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 SYNOPSIS:	Include code only in the NDO1998 version of PC/GEOS
-		NDO1998 stands for NewDeal Office 1998, and includes 
-		all "Release 3" or "Office 98" versions of the NewDeal 
+		NDO1998 stands for NewDeal Office 1998, and includes
+		all "Release 3" or "Office 98" versions of the NewDeal
 		products (SchoolSuite, WebSuite, etc.)
 
 PASS:		line - line of source code
@@ -295,5 +295,5 @@ line
 	endif
 endm
 
- 
+
 

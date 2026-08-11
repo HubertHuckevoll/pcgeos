@@ -238,10 +238,10 @@ EC(dword cbSize = 0;)
   Boolean gotTempAlloc = FALSE ;
   Boolean headerErr = FALSE;
   word errorHandlerContext;
+  Boolean onErrorDontKeepPartial = TRUE ;
 #if PROGRESS_DISPLAY
   _LoadProgressParams_;
   Boolean status = FALSE;
-  Boolean onErrorDontKeepPartial = TRUE ;
 
   /* point to load progress data, if any */
   if (importProgressDataP && importProgressDataP->IPD_callback) {
@@ -785,10 +785,12 @@ EC(dword cbSize = 0;)
 	       keep partial graphic */
 	    break;
 	}
+#endif
 	/* mark the graphic as completed, if so */
 	if (cinfo->output_scanline == cinfo->output_height)
 	    *p_completeGraphic = TRUE ;
 
+#if PROGRESS_DISPLAY
     /* Stop here if we are aborting and we're NOT progressive */
     if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)  {
         if ((loadProgressDataP) && (importProgressDataP->IPD_bitmap != NullHandle))  {

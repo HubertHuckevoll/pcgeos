@@ -40,7 +40,6 @@
 @include "urlfetch.goh"
 @include "options.goh"
 
-#define MAX_FETCH_ENGINE_CHILDREN 2
 #define FETCH_CHILD_STACK_SIZE      3500
 
 typedef byte T_fetchChildAction ;
@@ -69,12 +68,10 @@ typedef struct {
 
     void *abortRoutine ;
 
-#if PROGRESS_DISPLAY
     LoadProgressData loadProgressData;  /* loading progress data */
-#endif
 } T_fetchEngineChild ;
 
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
+#if PROGRESS_DISPLAY && defined(ALLOW_FETCH_WHILE_IMPORTING)
 /* holds copy of load progress data of associated fetch thread, so it can
    continue subsequent fetches while we are still importing */
 static LoadProgressData G_importLoadProgressData[MAX_FETCH_ENGINE_CHILDREN];
@@ -123,7 +120,6 @@ typedef word (*thread_ptr)(word value) ;
         @instance sword numAborts = 0 ;
 
         @message void MSG_URL_FETCH_ENGINE_KILL() ;
-@ifdef PROGRESS_DISPLAY
         @message void MSG_URL_FETCH_ENGINE_GET_URL(
                           NameToken url,
                           word loadMode,
@@ -132,16 +128,6 @@ typedef word (*thread_ptr)(word value) ;
                           optr ackObject,
                           Message ackMessage,
                           dword extraData, dword loadProgressData) ;
-@else
-        @message void MSG_URL_FETCH_ENGINE_GET_URL(
-                          NameToken url,
-                          word loadMode,
-                          HTMLFormDataHandle postData,
-			  NameToken referer,
-                          optr ackObject,
-                          Message ackMessage,
-                          dword extraData) ;
-@endif
         @message void MSG_URL_FETCH_ENGINE_START_ABORT(Boolean ignoreAbortMsg) ;
         @message void MSG_URL_FETCH_ENGINE_END_ABORT() ;
 
@@ -163,14 +149,14 @@ T_fetchEngineChild G_fetchChildren[MAX_FETCH_ENGINE_CHILDREN] ;
 word G_numChildren = 0;
 Boolean G_abortPending = FALSE;
 
+/* this semaphore is used to synchronize load thread and import thread */
+SemaphoreHandle G_fetchProgressSem[MAX_FETCH_ENGINE_CHILDREN];
+
 #if PROGRESS_DISPLAY
 
 /* number of fetch threads, need by import subsystem to create import
    threads */
 int G_numFetchChildren;
-
-/* this semaphore is used to synchronize load thread and import thread */
-SemaphoreHandle G_fetchProgressSem[MAX_FETCH_ENGINE_CHILDREN];
 
 /* each fetch thread has an associated VM file (for import progress
    bitmap) and VM huge array (for buffering load data between fetch
@@ -284,9 +270,9 @@ Boolean URLFetchEngineStart(void)
             G_fetchChildren[i].isBusy = FALSE ;
             G_fetchChildren[i].isAbort = FALSE ;
             G_fetchChildren[i].abortRoutine = NULL ;
-#if PROGRESS_DISPLAY
-	    /* allocate load progress semaphore, freed on exit? */
+	    /* allocate load progress/image admission semaphore, freed on exit? */
 	    G_fetchProgressSem[i] = ThreadAllocSem(1);
+#if PROGRESS_DISPLAY
 	    /* create VM file */
 #ifdef GLOBAL_INTERNET_BUILD
 	    FileSetCurrentPath(vmCacheSP, vmCacheDir);
@@ -378,7 +364,6 @@ void URLFetchEngineStop(void)
  |    LES  01/16/98  Created
  |
  *-----------------------------------------------------------------------*/
-#if PROGRESS_DISPLAY
 void URLFetchRequest(
          NameToken url,
          word loadMode,
@@ -387,20 +372,8 @@ void URLFetchRequest(
          optr ackObject,
          Message ackMessage,
          dword extraData, _LoadProgressParams_)
-#else
-void URLFetchRequest(
-         NameToken url,
-         word loadMode,
-         HTMLFormDataHandle postData,
-	 NameToken referer,
-         optr ackObject,
-         Message ackMessage,
-         dword extraData)
-#endif
 {
-#if PROGRESS_DISPLAY
     dword loadProgressData = 0;
-#endif
 
     /* For now, we'll just forward the request to the fetch engine. */
     /* In the future, we will probably allow for multiple requests */
@@ -410,14 +383,15 @@ void URLFetchRequest(
     NamePoolUseToken(namePool, url);    /* token is freed by message (allowing
                                            it to be @sent) */
 
-#if PROGRESS_DISPLAY
     /* set up loading progress data and start fetch, we must copy load
        progress data since the fetch is asynchronous from here */
     if (loadProgressDataP) {
 	loadProgressData = URLFetchExtraMemoryAlloc(sizeof(LoadProgressData));
-	URLFetchExtraMemoryLock(loadProgressData);
-	memcpy(URLFetchExtraMemoryDeref(loadProgressData), loadProgressDataP, sizeof(LoadProgressData));
-	URLFetchExtraMemoryUnlock(loadProgressData);
+	if (loadProgressData) {
+	    URLFetchExtraMemoryLock(loadProgressData);
+	    memcpy(URLFetchExtraMemoryDeref(loadProgressData), loadProgressDataP, sizeof(LoadProgressData));
+	    URLFetchExtraMemoryUnlock(loadProgressData);
+	}
     }
     @send ,forceQueue G_urlFetchObj::MSG_URL_FETCH_ENGINE_GET_URL(
                           url,
@@ -427,16 +401,6 @@ void URLFetchRequest(
                           ackObject,
                           ackMessage,
                           extraData, loadProgressData) ;
-#else
-    @send ,forceQueue G_urlFetchObj::MSG_URL_FETCH_ENGINE_GET_URL(
-                          url,
-                          loadMode,
-                          postData,
-			  referer,
-                          ackObject,
-                          ackMessage,
-                          extraData) ;
-#endif
 }
 
 /*-------------------------------------------------------------------------
@@ -619,14 +583,19 @@ void URLFetchExtraMemoryUnlock(optr em)
         p_child = G_fetchChildren+i ;
         while (p_child->action != FETCH_CHILD_ACTION_DEAD)
             {}
-#if PROGRESS_DISPLAY
-	/* free semaphore */
+	/* free per-child semaphores */
+	ThreadFreeSem(p_child->sem);
+	p_child->sem = NullHandle;
 	ThreadFreeSem(G_fetchProgressSem[i]);
+	G_fetchProgressSem[i] = NullHandle;
+#if PROGRESS_DISPLAY
 	/* free VM file and data stream */
 	if (G_fetchProgressVMFile[i]) {
 	    HugeArrayDestroy(G_fetchProgressVMFile[i],
 			     G_fetchProgressDataStream[i]);
 	    VMClose(G_fetchProgressVMFile[i], FILE_NO_ERRORS);
+	    G_fetchProgressVMFile[i] = NullHandle;
+	    G_fetchProgressDataStream[i] = NullHandle;
 	    sprintf(workFileName, WORK_FILENAME, i);
 #ifdef GLOBAL_INTERNET_BUILD
 	    FileSetCurrentPath(vmCacheSP, vmCacheDir);
@@ -639,8 +608,29 @@ void URLFetchExtraMemoryUnlock(optr em)
         /* Each child ends its own thread */
     }
 
-    if(lastURLDriver)
+#if PROGRESS_DISPLAY && defined(ALLOW_FETCH_WHILE_IMPORTING)
+    /* A progressive import may outlive its fetch when this option is on. */
+    if (G_fetchWhileImport) {
+	for (i = 0; i < pself->UFEI_numChildren; i++) {
+	    while (G_importActive[i])
+		{}
+	}
+    }
+#endif
+    LoadGraphicStreamsFree();
+    if (G_fetchSemaphore) {
+	ThreadFreeSem(G_fetchSemaphore);
+	G_fetchSemaphore = NullHandle;
+    }
+    if (G_allocBlock) {
+	MemFree(G_allocBlock);
+	G_allocBlock = NullHandle;
+    }
+
+    if(lastURLDriver) {
       GeodeFreeLibrary(lastURLDriver);
+      lastURLDriver = NullHandle;
+    }
 
     /* Destroy the thread we are currently in */
     @send ConstructOptr(ThreadGetInfo(0, TGIT_THREAD_HANDLE), 0)::
@@ -701,12 +691,10 @@ void URLFetchExtraMemoryUnlock(optr em)
             MemFree(postData) ;
             postData = NullHandle ;
         }
-#if PROGRESS_DISPLAY
 	/* clean this up too */
 	if (loadProgressData) {
 	    URLFetchExtraMemoryFree(loadProgressData);
 	}
-#endif
 
         /* Send the bad results */
         mem = MemAlloc(
@@ -752,24 +740,25 @@ void URLFetchExtraMemoryUnlock(optr em)
         p_child->ackMessage = ackMessage ;
         p_child->extraData = extraData ;
         p_child->action = FETCH_CHILD_ACTION_GET_URL ;
-#if PROGRESS_DISPLAY
 	/* copy loading progress data into static thread structure */
 	if (loadProgressData) {
 	    URLFetchExtraMemoryLock(loadProgressData);
 	    memcpy(&(p_child->loadProgressData), URLFetchExtraMemoryDeref(loadProgressData), sizeof(LoadProgressData));
 	    URLFetchExtraMemoryUnlock(loadProgressData);
 	    URLFetchExtraMemoryFree(loadProgressData);
+#if PROGRESS_DISPLAY
  #ifdef ALLOW_FETCH_WHILE_IMPORTING
 	    /* cancel progressive loading if we are still importing the
 	       previous one for this fetch thread; admission remains active */
-	    if (G_fetchWhileImport && G_importActive[childNum]) {
+	    if (G_fetchWhileImport && G_importActive[childNum] &&
+	        !p_child->loadProgressData.LPD_imageProbeMaxPixels) {
 		p_child->loadProgressData.LPD_progress = FALSE;
 	    }
  #endif
+#endif
 	} else {
 	    memset(&(p_child->loadProgressData), 0, sizeof(LoadProgressData));
 	}
-#endif
 
         /* Release the child from the semaphore */
         ThreadVSem(p_child->sem);
@@ -957,19 +946,21 @@ word far URLFetchChildThread(word childNum)
                     p_child->postData = NullHandle ;
                 }
             } else {
-#if PROGRESS_DISPLAY
-		/* set up loading progress data and fetch */
+		/* set up loading progress or intelligent-image admission data */
 		p_child->loadProgressData.LPD_loadThread = childNum;
 		p_child->loadProgressData.LPD_sem = G_fetchProgressSem[childNum];
 		p_child->loadProgressData.LPD_emptyQueue = 0;  /* sem */
 		p_child->loadProgressData.LPD_bytesAvail = 0;
 		p_child->loadProgressData.LPD_preReadOffset = 0;
 		p_child->loadProgressData.LPD_fileDone = FALSE;
+#if PROGRESS_DISPLAY
 		/* even though we point to the stream here, it won't be
 		   used unless we go out to the MIME driver */
 		p_child->loadProgressData.LPD_dataFile = G_fetchProgressVMFile[childNum];
 		p_child->loadProgressData.LPD_dataStream = G_fetchProgressDataStream[childNum];
+#endif
 		lpd = &(p_child->loadProgressData);
+#if PROGRESS_DISPLAY
  #ifdef ALLOW_FETCH_WHILE_IMPORTING
 		if (G_fetchWhileImport) {
 		    /* copy load progress data to safe place */
@@ -1014,7 +1005,8 @@ word far URLFetchChildThread(word childNum)
 					p_child->referer,
 					&urlResult.anchor,
                                         childNum,
-                                        &(p_child->abortRoutine));
+                                        &(p_child->abortRoutine),
+					lpd);
 #endif
             }
 

@@ -6,10 +6,10 @@
 GEODE           = wmg3http
 ASM_TO_OBJS     = asmtools.asm
 UI_TO_RDFS      =
-SRCS            = asmtools.asm WMG3CON.goc cookies.goc WMG3HTTP.goc\
-                  userpass.goc wmg3http.goh wmg3con.goh
-OBJS            = asmtools.obj WMG3CON.obj cookies.obj WMG3HTTP.obj\
-                  userpass.obj
+SRCS            = asmtools.asm WMG3CON.goc cookies.goc userpass.goc\
+                  WMG3HTTP.goc wmg3http.goh wmg3con.goh
+OBJS            = asmtools.obj WMG3CON.obj cookies.obj userpass.obj\
+                  WMG3HTTP.obj
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = wmg3http

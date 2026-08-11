@@ -559,10 +559,8 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
     req->URB_url = urlChunk;
     req->URB_file = fileChunk;
     req->URB_progress = callback;
-#if PROGRESS_DISPLAY
-    /* point to loading progress data */
+    /* point to loading progress or intelligent-image admission data */
     req->URB_loadProgressDataP = loadProgressDataP;
-#endif
     req->URB_referer = refererChunk;
 #ifdef CACHE_VALIDATION
     /* last mod date determines if we make conditional or unconditional
@@ -1021,7 +1019,13 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
     /* call library to handle URL */
     dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
       (mtype, file, vmf, iad, MIME_RES_DISPLAY_DEFAULT, G_allocWatcher,
-      usedMem, mimeStatus IMPORT_PROGRESS_DATAP_ARG, ImportGraphic);
+      usedMem, mimeStatus,
+#if PROGRESS_DISPLAY
+      importProgressDataP,
+#else
+      (void *)0,
+#endif
+      ImportGraphic);
 
     LOG(LogPrintfLine("<I");)
 
@@ -1085,7 +1089,8 @@ MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
     ProbeGraphic = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC_PROBE);
     result = ((pcfm_MimeDrvGraphicProbe *)
       ProcCallFixedOrMovable_pascal)(mimeType, file, maxBytes, data
-      LOAD_PROGRESS_DATAP_ARG, ProbeGraphic);
+      , loadProgressDataP
+      , ProbeGraphic);
     GeodeFreeLibrary(drv);
     return result;
 }

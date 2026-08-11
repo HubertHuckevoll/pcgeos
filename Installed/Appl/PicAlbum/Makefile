@@ -4,16 +4,16 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = picalbum
-CLASS           = cThumbV.goc popups.goc
+CLASS           = popups.goc cThumbV.goc
 MAIN            = mAlbum.goc mImport.goc
-PROCESS         = awatcher.goc pBmpOp.goc pCamera.goc pMain.goc pPrint.goc\
-                  pSlide.goc pUtils.goc
+PROCESS         = pCamera.goc pUtils.goc pBmpOp.goc pPrint.goc awatcher.goc\
+                  pMain.goc pSlide.goc
 UI              = uiMain.goc
 UICLASS         = uicVDLC.goc
 UI_TO_RDFS      =
-OBJS            = cThumbV.obj popups.obj mAlbum.obj mImport.obj\
-                  awatcher.obj pBmpOp.obj pCamera.obj pMain.obj pPrint.obj\
-                  pSlide.obj pUtils.obj uiMain.obj uicVDLC.obj
+OBJS            = popups.obj cThumbV.obj mAlbum.obj mImport.obj pCamera.obj\
+                  pUtils.obj pBmpOp.obj pPrint.obj awatcher.obj pMain.obj\
+                  pSlide.obj uiMain.obj uicVDLC.obj
 COMMON          = PicAlbum.goh
 MODULES         =
 CMODULES        = Class Main Process UI UIClass

@@ -30,8 +30,8 @@ typedef struct {
     sword	R_bottom;
 } Rectangle;
 #endif
-#include <htmldrv.h>
 #endif
+#include <htmldrv.h>
 
 typedef enum
 {

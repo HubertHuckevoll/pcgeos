@@ -43,8 +43,7 @@
 @extern object HTMLVApp;
 
 #if PROGRESS_DISPLAY
-/* must be MAX_FETCH_ENGINE_CHILDREN + 1 */
-#define MAX_IMPORT_THREADS 3
+#define MAX_IMPORT_THREADS (MAX_FETCH_ENGINE_CHILDREN + 1)
 #define IMPORT_WORK_FILENAME _TEXT("IMPORTWK.%03d")
 
 /* queue for import progress data */
@@ -74,7 +73,6 @@ typedef struct {
 #if PROGRESS_DISPLAY
     ImportProgressData importProgressData;
 #endif
-    Boolean *p_stop ;
     MimeStatus *mimeStatus ;
 } T_importGraphicRequest;
 
@@ -243,8 +241,6 @@ Boolean ImportThreadEngineStart(void)
 
     return status ;
 }
-typedef void _pascal _export proc_ImportProgressCallback(_ImportProgressParams_);
-
 /*-------------------------------------------------------------------------
  | Routine:  ImportThreadEngineStop
  *-------------------------------------------------------------------------
@@ -486,7 +482,7 @@ Boolean ImportThreadRequestImportGraphic(
 
     /* All we need to do is create a block and copy all the requested */
     /* info.  The request is then sent to the thread for processing. */
-    mem = MemAlloc(sizeof(*p_request), HF_DYNAMIC, 0) ;
+    mem = MemAlloc(sizeof(*p_request), HF_DYNAMIC, HAF_ZERO_INIT) ;
     if (mem)  {
         p_request = MemLock(mem) ;
         if (p_request)  {
@@ -498,6 +494,8 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
 
             strncpy(p_request->mimeType, mimeType, (sizeof(p_request->mimeType)/sizeof(TCHAR))-1) ;
             strncpy(p_request->curHTML, curHTML, (sizeof(p_request->curHTML)/sizeof(TCHAR))-1) ;
+            p_request->mimeType[(sizeof(p_request->mimeType)/sizeof(TCHAR))-1] = 0 ;
+            p_request->curHTML[(sizeof(p_request->curHTML)/sizeof(TCHAR))-1] = 0 ;
             p_request->temporary = temporary;
             p_request->imageProbeMaxPixels = imageProbeMaxPixels;
 
@@ -541,6 +539,8 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
 #endif
 
             didRequest = TRUE ;
+        } else {
+            MemFree(mem) ;
         }
     }
 
@@ -704,7 +704,7 @@ void ImportThreadAbortAll(void)
           request.importProgressData.IPD_loadProgressDataP);
 #else
         probeResult = ToolsProbeGraphicByDriver(request.curHTML,
-          request.mimeType, probeMaxBytes, &probeData);
+          request.mimeType, probeMaxBytes, &probeData, (void *)0);
 #endif
         deferred = probeResult != MIME_GRAPHIC_PROBE_FOUND ||
           !probeData.MGPD_width || !probeData.MGPD_height ||

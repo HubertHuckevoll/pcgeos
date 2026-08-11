@@ -56,9 +56,7 @@ typedef struct {
 #ifdef RECV_SPEED
     long startTime ;
 #endif
-#if PROGRESS_DISPLAY
     _LoadProgressParams_;
-#endif
     ChunkHandle refererChunk;
 #ifdef PERSISTANT_CONNECTIONS
     Boolean allowSocketCache;
@@ -97,4 +95,3 @@ HTTPConnectionHandle ConnectionFind(dword token, T_HTTPConnection **pp_conn) ;
 void ConnectionFree(HTTPConnectionHandle conn) ;
 void ConnectionsInit(void) ;
 void ConnectionsDeinit(void) ;
-

@@ -199,6 +199,7 @@ Boolean fill_input_buffer_a (j_decompress_ptr cinfo)
 {
   size_t nbytes;
 
+#if PROGRESS_DISPLAY
   if (cinfo->src.loadProgressDataP) {
       /* get data */
       nbytes = ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
@@ -206,8 +207,9 @@ Boolean fill_input_buffer_a (j_decompress_ptr cinfo)
 	  cinfo->src.buffer, INPUT_BUF_SIZE,
 	  cinfo->src.loadProgressDataP->LPD_callback);
 
-  } else {
-
+  } else
+#endif
+  {
 	  nbytes = (size_t) fread( (void *) cinfo->src.buffer,
                            (size_t) 1,
                            (size_t) INPUT_BUF_SIZE,

@@ -36,9 +36,7 @@
 @include "htmlview.goh"
 @include "importg.goh"
 
-#if PROGRESS_DISPLAY
 #include <sem.h>
-#endif
 
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
 @include <parentc.goh>
@@ -250,19 +248,20 @@ void AssumeGraphic(TCHAR *mimeType)
     }
 }
 
-@ifdef PROGRESS_DISPLAY
-
 extern void _pascal WakeUp(word *queueP);
 extern void _pascal Block(word *queueP, Boolean *flag);
 
 #define USE_MEM_STREAM
 
 #ifdef USE_MEM_STREAM
-/* MAX_FETCH_ENGINE_CHILDREN elements */
-MemHandle G_stream[2] = {0, 0};
+MemHandle G_stream[MAX_FETCH_ENGINE_CHILDREN] = {0};
 
 #define MEM_STREAM_BLOCK_SIZE 8192
+#if PROGRESS_DISPLAY
 #define MEM_STREAM_INIT_BLKS 200  /* supports up to 1.6M files w/o growth */
+#else
+#define MEM_STREAM_INIT_BLKS 1
+#endif
 
 typedef struct {
     dword head;
@@ -271,23 +270,32 @@ typedef struct {
     /* followed by block pointers */
 } MemStreamHeader;
 
-MemHandle MemStreamInit(MemHandle stream)
+static void _pascal
+MemStreamEmpty(MemHandle stream)
 {
     MemStreamHeader *streamP;
     MemHandle *blkP;
-    MemHandle ret = stream;
     int i;
 
+    streamP = MemPLock(stream);
+    blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
+    for (i = 0; i < streamP->maxBlk; i++) {
+        if (blkP[i]) {
+            MemFree(blkP[i]);
+            blkP[i] = 0;
+        }
+    }
+    streamP->head = streamP->tail = 0;
+    MemUnlockV(stream);
+}
+
+MemHandle MemStreamInit(MemHandle stream)
+{
+    MemStreamHeader *streamP;
+    MemHandle ret = stream;
+
     if (stream) {
-	streamP = MemPLock(stream);
-	blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
-	for (i = 0; i < streamP->maxBlk; i++) {
-	    if (!blkP[i]) break;
-	    MemFree(blkP[i]);
-	    blkP[i] = 0;
-	}
-	streamP->head = streamP->tail = 0;
-	MemUnlockV(stream);
+	MemStreamEmpty(stream);
     } else {
 	ret = MemAlloc(sizeof(MemStreamHeader)+(MEM_STREAM_INIT_BLKS*sizeof(MemHandle)),
 		 HF_DYNAMIC, HAF_STANDARD|HAF_ZERO_INIT);
@@ -298,6 +306,19 @@ MemHandle MemStreamInit(MemHandle stream)
 	}
     }
     return ret;
+}
+
+void LoadGraphicStreamsFree(void)
+{
+    int i;
+
+    for (i = 0; i < MAX_FETCH_ENGINE_CHILDREN; i++) {
+        if (G_stream[i]) {
+            MemStreamEmpty(G_stream[i]);
+            MemFree(G_stream[i]);
+            G_stream[i] = NullHandle;
+        }
+    }
 }
 
 void MemStreamDelete(MemHandle stream, word bufSize, Boolean emptyLast)
@@ -382,8 +403,10 @@ word MemStreamWrite(MemHandle stream, void *buffer, word bufSize)
     word bytesInFirstBlock, bytesInNextBlock;
     word written = 0;
 
+    if (!bufSize)
+        return 0;
     streamP = MemPLock(stream);
-    if ((streamP->tail + (dword)bufSize) < (dword)MEM_STREAM_BLOCK_SIZE*(dword)MEM_STREAM_INIT_BLKS) {
+    if ((streamP->tail + (dword)bufSize) <= (dword)MEM_STREAM_BLOCK_SIZE*(dword)MEM_STREAM_INIT_BLKS) {
 	blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
 	/* copy to start block */
 	blockOffset = streamP->tail/MEM_STREAM_BLOCK_SIZE;
@@ -455,10 +478,17 @@ LoadGraphicProbeNow(LoadProgressData *loadProgressDataP)
     MimeGraphicProbeData probeData;
     MimeGraphicProbeResult probeResult;
     Boolean deferred;
+    dword probeBytes;
+
+    ThreadPSem(loadProgressDataP->LPD_sem);
+    probeBytes = loadProgressDataP->LPD_bytesAvail;
+    if (probeBytes > loadProgressDataP->LPD_imageProbeMaxBytes)
+        probeBytes = loadProgressDataP->LPD_imageProbeMaxBytes;
+    ThreadVSem(loadProgressDataP->LPD_sem);
 
     probeResult = ToolsProbeGraphicByDriver((TCHAR *)0,
       loadProgressDataP->LPD_mimeType,
-      loadProgressDataP->LPD_imageProbeMaxBytes, &probeData,
+      probeBytes, &probeData,
       loadProgressDataP);
     deferred = probeResult != MIME_GRAPHIC_PROBE_FOUND ||
       !probeData.MGPD_width || !probeData.MGPD_height ||
@@ -575,6 +605,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 #endif
 	if(loadProgressDataP->LPD_imageProbeMaxPixels)
 	    break;
+@ifdef PROGRESS_DISPLAY
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
 	if (G_fetchWhileImport) {
 	/* stop subsequent requests on the associated fetch thread from
@@ -589,6 +620,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         @send (loadProgressDataP->LPD_textObj)::MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS(loadProgressDataP);
         /* initial update time */
         loadProgressDataP->LPD_updateTime = TimerGetCount();
+@endif
         } else {
         /* doesn't support progress loading, stop progress callbacks */
         loadProgressDataP->LPD_progress = FALSE;
@@ -767,6 +799,7 @@ EC(             EC_ERROR_IF(loadProgressDataP->LPD_bytesAvail >
             break;
         }
 
+#if PROGRESS_DISPLAY
         ThreadPSem(loadProgressDataP->LPD_sem);
 #ifdef USE_MEM_STREAM
 	bytesWritten = G_stream[lt] ?
@@ -788,6 +821,7 @@ EC(             EC_ERROR_IF(loadProgressDataP->LPD_bytesAvail >
             WakeUp(&(loadProgressDataP->LPD_emptyQueue));
             loadProgressDataP->LPD_updateTime = TimerGetCount();
         }
+#endif
         break;
     }
     case LPCT_FLUSH_FIRST:
@@ -818,7 +852,9 @@ EC(             EC_ERROR_IF(loadProgressDataP->LPD_bytesAvail >
         probePending = loadProgressDataP->LPD_imageProbe == LPI_PENDING;
         ThreadVSem(loadProgressDataP->LPD_sem);
         /* make sure reader knows we're done */
+#if PROGRESS_DISPLAY
         WakeUp(&(loadProgressDataP->LPD_emptyQueue));
+#endif
 	if(probePending)
 	    returnVal = LoadGraphicProbeNow(loadProgressDataP);
         break;
@@ -827,7 +863,6 @@ EC(             EC_ERROR_IF(loadProgressDataP->LPD_bytesAvail >
     }
     return returnVal;
 }
-@endif
 
 typedef struct {
     word index ;
@@ -852,11 +887,9 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
     ObjCacheToken oct;
     optr request ;
     URLTextRequestGraphic *p_request ;
-#if PROGRESS_DISPLAY
     /* get vfptr to callback routine */
     static proc_LoadProgressCallback *loadProgressCallback = LoadGraphicProgressCallback;
     LoadProgressData loadProgressData;
-#endif
     Boolean ret = FALSE;
     extern Boolean G_stopped ;
 
@@ -902,6 +935,11 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
       @call oself::MSG_URL_TEXT_INC_PENDING() ;
 
       request = URLFetchExtraMemoryAlloc(sizeof(URLTextRequestGraphic)) ;
+      if (!request) {
+        NamePoolReleaseToken(namePool, nameT);
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
+        return FALSE;
+      }
       URLFetchExtraMemoryLock(request) ;
       p_request = URLFetchExtraMemoryDeref(request) ;
       p_request->index = i ;
@@ -915,8 +953,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       p_request->imageProbeMaxPixels = imageProbeMaxPixels;
       URLFetchExtraMemoryUnlock(request) ;
 
-#if PROGRESS_DISPLAY
       /* set up loading progress data and make fetch request */
+      memset(&loadProgressData, 0, sizeof(loadProgressData));
       loadProgressData.LPD_callback = loadProgressCallback;
       loadProgressData.LPD_textObj = oself;
       loadProgressData.LPD_nameT = nameT;
@@ -925,11 +963,15 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         imageProbeMaxPixels ? INTELLIGENT_IMAGE_PROBE_BYTES : 0;
       loadProgressData.LPD_imageProbe =
         imageProbeMaxPixels ? LPI_PENDING : LPI_NONE;
+#if PROGRESS_DISPLAY
       loadProgressData.LPD_progress =
           imageProbeMaxPixels ||
           (progressDisplay && (p->pos < HTML_IMAGE_POS_RESERVED) &&
            (!p->size.XYS_height ||
             (p->size.XYS_height >= progressMinHeight)));
+#else
+      loadProgressData.LPD_progress = imageProbeMaxPixels != 0;
+#endif
       /* other fields are initialized by fetch thread */
       URLFetchRequest(
           nameT,
@@ -940,16 +982,6 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
           MSG_URL_TEXT_GRAPHIC_FETCHED,
           request,
           &loadProgressData) ;
-#else
-      URLFetchRequest(
-          nameT,
-          forceLoad? ULM_ALWAYS:ULM_CACHE,
-          NullHandle,
-	  referer,
-          oself,
-          MSG_URL_TEXT_GRAPHIC_FETCHED,
-          request) ;
-#endif
       ret = TRUE;
     }
 
@@ -1231,6 +1263,9 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     URLTextRequestGraphic request ;
     URLFetchResult *p_result ;
     URLFetchResult result ;
+    Boolean importQueued;
+    Boolean temporary;
+    dword importProbeMaxPixels;
 #ifdef CACHE_VALIDATION
     ObjCacheToken oct ;
 #endif
@@ -1252,6 +1287,14 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     URLFetchExtraMemoryUnlock(result.extraData) ;
     URLFetchExtraMemoryFree(result.extraData) ;
 EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
+
+    temporary = (result.retType & URB_RF_NOCACHE)
+@ifdef CACHE_ALL
+      && !G_cacheAll
+@endif
+      ;
+    importProbeMaxPixels = (result.retType & URB_RF_IMAGE_PROBED) ?
+      0 : request.imageProbeMaxPixels;
 
 #ifdef CACHE_VALIDATION
     /* If the item has not been modified on the server, we can still
@@ -1283,29 +1326,35 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 #if PROGRESS_DISPLAY
     /* URL_RET_FILE is returned for non-loading progress graphics, just
        import without loading progress */
-        ImportThreadRequestImportGraphic(
+        importQueued = ImportThreadRequestImportGraphic(
             oself,
             request.nameT,
             result.mimeType,
             result.curHTML,
-            ((result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
-	     && !G_cacheAll
-@endif
-	    ), request.imageProbeMaxPixels, NULL) ;
+            temporary, importProbeMaxPixels, NULL) ;
+        if (!importQueued) {
+            if (temporary)
+                FileDelete(result.curHTML);
+            @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
+              OCT_NULL, request.nameT, 0, 0xFFFF);
+            @call oself::MSG_URL_TEXT_DEC_PENDING();
+        }
     } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS) {
         if(request.imageProbeMaxPixels)
         {
-            ImportThreadRequestImportGraphic(
+            importQueued = ImportThreadRequestImportGraphic(
                 oself,
                 request.nameT,
                 result.mimeType,
                 result.curHTML,
-                ((result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
-	         && !G_cacheAll
-@endif
-	        ), request.imageProbeMaxPixels, NULL) ;
+                temporary, importProbeMaxPixels, NULL) ;
+            if (!importQueued) {
+                if (temporary)
+                    FileDelete(result.curHTML);
+                @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
+                  OCT_NULL, request.nameT, 0, 0xFFFF);
+                @call oself::MSG_URL_TEXT_DEC_PENDING();
+            }
         }
     } else if (URLRequestGetRet(result.retType) == URL_RET_IMAGE_DEFERRED) {
         if(request.imageProbeMaxPixels)
@@ -1318,16 +1367,26 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         if(request.imageProbeMaxPixels)
             @call self::MSG_URL_TEXT_DEC_PENDING();
 #else
-        ImportThreadRequestImportGraphic(
+        importQueued = ImportThreadRequestImportGraphic(
             oself,
             request.nameT,
             result.mimeType,
             result.curHTML,
-            ((result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
-	     && !G_cacheAll
-@endif
-	    ), request.imageProbeMaxPixels) ;
+            temporary, importProbeMaxPixels) ;
+        if (!importQueued) {
+            if (temporary)
+                FileDelete(result.curHTML);
+            @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
+              OCT_NULL, request.nameT, 0, 0xFFFF);
+            @call oself::MSG_URL_TEXT_DEC_PENDING();
+        }
+    } else if (URLRequestGetRet(result.retType) == URL_RET_IMAGE_DEFERRED) {
+        if(request.imageProbeMaxPixels)
+        {
+            @call self::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
+              request.nameT);
+            @call self::MSG_URL_TEXT_DEC_PENDING();
+        }
 #endif
     } else if(URLRequestGetRet(result.retType) ==
               URL_RET_UNSUPPORTED_IMAGE) {
@@ -2496,22 +2555,27 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 	/* decremented from acknowledge message handler */
 	@call oself::MSG_URL_TEXT_INC_PENDING();
 	request = URLFetchExtraMemoryAlloc(sizeof(URLTextRequestGraphic));
-	URLFetchExtraMemoryLock(request);
-	p_request = URLFetchExtraMemoryDeref(request);
-	p_request->index = 0;  /* not used */
-	p_request->nameT = fullURL;
-	p_request->objCache = objCache;
-	p_request->imageProbeMaxPixels = 0;
-	URLFetchExtraMemoryUnlock(request);
-	URLFetchRequest(
-	    fullURL,
-	    ULM_CACHE,  /* use src cache */
-	    NullHandle,
-	    referer,
-	    oself,
-	    MSG_URL_TEXT_GRAPHIC_PRELOADED,
-	    request,
-	    NULL);
+	if (request) {
+	    URLFetchExtraMemoryLock(request);
+	    p_request = URLFetchExtraMemoryDeref(request);
+	    p_request->index = 0;  /* not used */
+	    p_request->nameT = fullURL;
+	    p_request->objCache = objCache;
+	    p_request->imageProbeMaxPixels = 0;
+	    URLFetchExtraMemoryUnlock(request);
+	    URLFetchRequest(
+		fullURL,
+		ULM_CACHE,  /* use src cache */
+		NullHandle,
+		referer,
+		oself,
+		MSG_URL_TEXT_GRAPHIC_PRELOADED,
+		request,
+		NULL);
+	} else {
+	    NamePoolReleaseToken(namePool, fullURL);
+	    @call oself::MSG_URL_TEXT_DEC_PENDING();
+	}
     } else {
 	NamePoolReleaseToken(namePool, fullURL);
     }
@@ -2532,6 +2596,8 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     URLTextRequestGraphic request ;
     URLFetchResult *p_result ;
     URLFetchResult result ;
+    Boolean importQueued;
+    Boolean temporary;
 
     /* get result locally */
     p_result = MemLock(urlFetchMem);
@@ -2548,20 +2614,29 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     URLFetchExtraMemoryUnlock(result.extraData) ;
     URLFetchExtraMemoryFree(result.extraData);
 
+    temporary = (result.retType & URB_RF_NOCACHE)
+@ifdef CACHE_ALL
+      && !G_cacheAll
+@endif
+      ;
+
     /* import */
     if(URLRequestGetRet(result.retType) == URL_RET_FILE &&
        !(result.retType & URB_RF_UNTOUCHED)) {
-        ImportThreadRequestImportGraphic(
+        importQueued = ImportThreadRequestImportGraphic(
             oself,
             request.nameT,
             result.mimeType,
             result.curHTML,
-            ((result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
-	     && !G_cacheAll
-@endif
-	    ), 0, NULL) ;
+            temporary, 0, NULL) ;
+        if (!importQueued) {
+            if (temporary)
+                FileDelete(result.curHTML);
+            NamePoolReleaseToken(namePool, request.nameT);
+            @call oself::MSG_URL_TEXT_DEC_PENDING();
+        }
     } else {
+	NamePoolReleaseToken(namePool, request.nameT);
 	@call oself::MSG_URL_TEXT_DEC_PENDING();
     }
 

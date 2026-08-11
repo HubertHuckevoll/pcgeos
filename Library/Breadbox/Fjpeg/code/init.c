@@ -71,14 +71,16 @@ Boolean fill_input_buffer_i (j_decompress_ptr cinfo)
 {
   size_t nbytes;
 
+#if PROGRESS_DISPLAY
   if (cinfo->src.loadProgressDataP) {
       /* get data */
       nbytes = ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
 		  cinfo->src.loadProgressDataP, cinfo->global_state == DSTATE_INHEADER ? LPCT_PRE_READ : LPCT_READ,
 	  cinfo->src.buffer, INPUT_BUF_SIZE,
 	  cinfo->src.loadProgressDataP->LPD_callback);
-  } else {
-
+  } else
+#endif
+  {
 	  nbytes = (size_t) fread( (void *) cinfo->src.buffer,
                            (size_t) 1,
                            (size_t) INPUT_BUF_SIZE,
@@ -1840,5 +1842,12 @@ void _pascal fjpeg_init_loadProgress(j_decompress_ptr cinfo,
 		       LoadProgressData *loadProgressDataP)
 {
     cinfo->src.loadProgressDataP = loadProgressDataP;
+}
+#else
+void _pascal fjpeg_init_loadProgress(j_decompress_ptr cinfo,
+		       void *loadProgressDataP)
+{
+    (void)cinfo;
+    (void)loadProgressDataP;
 }
 #endif

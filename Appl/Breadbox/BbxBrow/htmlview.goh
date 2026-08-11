@@ -390,11 +390,12 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
 #define INTELLIGENT_IMAGE_MAX_PIXELS  (800L * 600L)
 /* ATTENTION: Keep speculative data to one stream block. Raise this only if
  * the probe can discard consumed metadata without losing replay support. */
-#define INTELLIGENT_IMAGE_PROBE_BYTES 8192L
+#define INTELLIGENT_IMAGE_PROBE_BYTES 4096L
 
 MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
   TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data
   LOAD_PROGRESS_PARAMS_PROTO);
+void LoadGraphicStreamsFree(void);
 
 
 /***************************************************************************
@@ -648,17 +649,10 @@ extern Boolean G_cacheAll;
  *              URL handling
  ***************************************************************************/
 
-#if PROGRESS_DISPLAY
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
                    word loadMode, dword *ret, HTMLFormDataHandle postData,
 		   NameToken referer, NameToken *anchor,
                    dword token, void **abortRoutine, _LoadProgressParams_);
-#else
-word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
-                   word loadMode, dword *ret, HTMLFormDataHandle postData,
-		   NameToken referer, NameToken *anchor,
-                   dword token, void **abortRoutine);
-#endif
 #define ULM_NEVER  0
 #define ULM_CACHE  1
 #define ULM_ALWAYS 2

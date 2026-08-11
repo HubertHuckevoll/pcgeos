@@ -3,7 +3,7 @@
 	Copyright (c) NewDeal 1999 -- All Rights Reserved
 
 PROJECT:	NewDeal
-MODULE:		
+MODULE:
 FILE:		product.h
 
 AUTHOR:		Martin Turon, February 9, 1999
@@ -16,7 +16,7 @@ REVISION HISTORY:
 MACROS:
 	Name			Description
 	----			-----------
-	NDO2000			Generate code for NewDeal Office 2000	
+	NDO2000			Generate code for NewDeal Office 2000
 	GPC1999			Generate code for Global PC 1999
 
 DESCRIPTION:
@@ -25,7 +25,7 @@ DESCRIPTION:
 	To make full use of this header, define an environment flag
 	PRODUCT=<X> and add an entry in Tools/scripts/perl/product_flags
 	to map your product into the proper flags to pass to the
-	compilation tools.  This file may have to be split into separate 
+	compilation tools.  This file may have to be split into separate
 	Internal/product<X>.h files at some later date.
 
 	$Id$
@@ -57,7 +57,7 @@ DESCRIPTION:
 
 #if _NDO2000
     /*
-     * #define GLOBAL_FEATURE_1   -1 
+     * #define GLOBAL_FEATURE_1   -1
      * #define GLOBAL_FEATURE_2    0
      * ...etc.
      */
@@ -68,7 +68,7 @@ DESCRIPTION:
 #endif
 
      /* browser flags */
-     #define PROGRESS_DISPLAY	-1
+     #define PROGRESS_DISPLAY	0
      #define EMBED_SUPPORT      -1
 
 /*=========================================================================
@@ -127,7 +127,7 @@ REVISION HISTORY:
 #if _NDO2000
 #define NDO2000(line)          line
 #else
-#define NDO2000(line)          
+#define NDO2000(line)
 #endif
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -154,7 +154,7 @@ REVISION HISTORY:
 #if _GPC1999
 #define GPC1999(line)          line
 #else
-#define GPC1999(line)          
+#define GPC1999(line)
 #endif
 
 #endif

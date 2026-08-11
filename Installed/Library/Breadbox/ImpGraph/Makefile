@@ -4,13 +4,13 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = impgraph
-ASMIMP          = asmimpManager.asm impgif.asm iimpgif.def
+ASMIMP          = impgif.asm asmimpManager.asm iimpgif.def
 IMPBMP          = impgif.h impjpeg.h imppng.h ibcommon.h impgifc.goc\
-                  impfjpeg.goc imppng.goc impjpeg.goc impprobe.goc
+                  impfjpeg.goc imppng.goc impprobe.goc impjpeg.goc
 MAIN            = awatcher.goc impgraph.goc
 UI_TO_RDFS      =
-OBJS            = impgifc.obj impfjpeg.obj imppng.obj impjpeg.obj\
-                  impprobe.obj awatcher.obj impgraph.obj
+OBJS            = impgifc.obj impfjpeg.obj imppng.obj impprobe.obj\
+                  impjpeg.obj awatcher.obj impgraph.obj
 COMMON          =
 MODULES         = ASMIMP
 CMODULES        = IMPBMP MAIN

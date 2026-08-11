@@ -283,15 +283,9 @@ char fileKey[] = "add";
 	     */
 	    FilePushDir();
 	    FileSetStandardPath(SP_TOP);
-#if PROGRESS_DISPLAY
 	    dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
-		(mimeType, file, vmf, &iad, MIME_RES_DISPLAY_DEFAULT, NULL, 
-		 &usedMem, NULL, ImportGraphic);          
-#else
-	    dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
-		(mimeType, file, vmf, &iad, MIME_RES_DISPLAY_DEFAULT, NULL, 
-		 &usedMem, ImportGraphic);          
-#endif
+		(mimeType, file, vmf, &iad, MIME_RES_DISPLAY_DEFAULT, NULL,
+		 &usedMem, NULL, NULL, ImportGraphic);
 	    MemFree(mh);
 
 	    if (dataVMBlock) {
