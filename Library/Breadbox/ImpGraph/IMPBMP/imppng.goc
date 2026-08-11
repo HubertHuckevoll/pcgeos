@@ -39,7 +39,6 @@ VMBlockHandle PngImport(
 #define SLICE_HEIGHT 10
 //    Boolean status = FALSE;
     _LoadProgressParams_;
-    Boolean onErrorDontKeepPartial = TRUE ;
     // point to load progress data, if any
     if (importProgressDataP && importProgressDataP->IPD_callback) {
         loadProgressDataP = importProgressDataP->IPD_loadProgressDataP;
@@ -128,7 +127,6 @@ VMBlockHandle PngImport(
                                     errorFlag = FALSE ; // FIXME
                                     /* But keep the partial image we have (we don't need a big red X) */
                                     /* We aren't complete either */
-                                    onErrorDontKeepPartial = FALSE ;
                                 }
                                 else
                                 {
@@ -157,17 +155,15 @@ VMBlockHandle PngImport(
     }
 
 
-#if PROGRESS_DISPLAY
     /* Free the existing data if we have any */
     if (errorFlag)
     {
-        if (onErrorDontKeepPartial)
+        if (bmVMBlock)
         {
             VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmVMBlock));
             bmVMBlock = 0;
         }
     }
-#endif
 
     if ((bmVMBlock == 0) && (gotAlloc))
     {

@@ -807,8 +807,10 @@ EC(dword cbSize = 0;)
 
 #else /* !PROGRESS_DISPLAY */
     /* Stop here if we are aborting */
-    if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
+    if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) {
+        flag = TRUE ;
         break ;
+    }
 #endif
     }
     else
