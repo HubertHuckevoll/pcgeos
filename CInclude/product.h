@@ -68,7 +68,7 @@ DESCRIPTION:
 #endif
 
      /* browser flags */
-     #define PROGRESS_DISPLAY	0
+     #define PROGRESS_DISPLAY	-1
      #define EMBED_SUPPORT      -1
 
 /*=========================================================================

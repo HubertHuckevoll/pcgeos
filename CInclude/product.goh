@@ -52,7 +52,7 @@ DESCRIPTION:
  *=========================================================================*/
 
     /* browser flags */
-//  @define PROGRESS_DISPLAY
+  @define PROGRESS_DISPLAY
 //  @define JAVASCRIPT_SUPPORT
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
