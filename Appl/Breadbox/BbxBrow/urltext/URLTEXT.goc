@@ -218,8 +218,28 @@ extern Boolean G_fetchWhileImport;
 @method URLTextClass, MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS
 {
     static TCHAR nullName[] = _TEXT("");
+    extern Boolean G_stopped;
 
     if (loadProgressDataP) {
+    if(G_stopped)
+    {
+        ThreadPSem(loadProgressDataP->LPD_sem);
+        loadProgressDataP->LPD_progress = FALSE;
+        ThreadVSem(loadProgressDataP->LPD_sem);
+#ifdef ALLOW_FETCH_WHILE_IMPORTING
+        if(G_fetchWhileImport)
+            G_importActive[loadProgressDataP->LPD_loadThread] = FALSE;
+        else
+#endif
+            ThreadVSem(loadProgressDataP->LPD_importSync);
+        if(!loadProgressDataP->LPD_imageProbeMaxPixels)
+        {
+            @call oself::MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(
+              loadProgressDataP->LPD_nameT);
+            @call oself::MSG_URL_TEXT_DEC_PENDING();
+        }
+        return;
+    }
     if(!ImportThreadRequestImportGraphic(
         oself,
         loadProgressDataP->LPD_nameT,
@@ -1266,6 +1286,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     Boolean importQueued;
     Boolean temporary;
     dword importProbeMaxPixels;
+    word ret;
+    extern Boolean G_stopped;
 #ifdef CACHE_VALIDATION
     ObjCacheToken oct ;
 #endif
@@ -1295,6 +1317,32 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
       ;
     importProbeMaxPixels = (result.retType & URB_RF_IMAGE_PROBED) ?
       0 : request.imageProbeMaxPixels;
+    ret = URLRequestGetRet(result.retType);
+
+    /* A fetch acknowledgement can arrive after the import abort barrier. */
+#if PROGRESS_DISPLAY
+    if(G_stopped &&
+       !((ret == URL_RET_PROGRESS || ret == URL_RET_PROGRESS_ABORT) &&
+         !request.imageProbeMaxPixels))
+#else
+    if(G_stopped)
+#endif
+    {
+        if(ret == URL_RET_MESSAGE && OptrToHandle(result.htmlMsg) &&
+           OptrToChunk(result.htmlMsg) == 0)
+            MemFree(OptrToHandle(result.htmlMsg));
+        if(temporary && (ret == URL_RET_FILE
+#if PROGRESS_DISPLAY
+            || ret == URL_RET_PROGRESS
+#endif
+           ))
+            FileDelete(result.curHTML);
+        @call oself::MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(
+          request.nameT);
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
+        NamePoolReleaseToken(namePool, result.url);
+        return;
+    }
 
 #ifdef CACHE_VALIDATION
     /* If the item has not been modified on the server, we can still
@@ -1402,16 +1450,13 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         if (URLRequestGetRet(result.retType) == URL_RET_MESSAGE)
             if (OptrToHandle(result.htmlMsg) && OptrToChunk(result.htmlMsg)==0)
                 MemFree(OptrToHandle(result.htmlMsg)) ;
-        /* Mark image as broken */
-#ifdef GLOBAL_INTERNET_BUILD
-	/* only if not aborted (if aborted don't show red X) */
-	/* (URL_RET_MESSAGE and NullOptr means ignored user abort) */
-	if ((URLRequestGetRet(result.retType) != URL_RET_ABORTED) &&
-	    !((URLRequestGetRet(result.retType) == URL_RET_MESSAGE) &&
-	      (result.htmlMsg == NullOptr)))
-#endif
-        @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(OCT_NULL,
-          request.nameT, 0, 0xFFFF);
+        if(ret == URL_RET_ABORTED ||
+           (ret == URL_RET_MESSAGE && result.htmlMsg == NullOptr))
+            @call oself::MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(
+              request.nameT);
+        else
+            @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
+              OCT_NULL, request.nameT, 0, 0xFFFF);
         @call oself::MSG_URL_TEXT_DEC_PENDING() ;
     }
 
@@ -1632,6 +1677,53 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
       ObjCacheUnlockItem(oct);
 
     NamePoolReleaseToken(namePool, url);// remove this reference to URL
+}
+
+@method URLTextClass, MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS
+{
+    word i, n, size;
+    HTMLimageData *imageP;
+    optr imageArray;
+    ImageAdditionalData iad;
+    Boolean complete;
+
+    imageArray = pself->HTI_imageArray;
+    if(imageArray)
+    {
+        MemLock(OptrToHandle(imageArray));
+        n = ChunkArrayGetCount(imageArray);
+        for(i=0; i<n; i++)
+        {
+            imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+            if(url == imageP->HID_resolvedURL)
+            {
+                complete = FALSE;
+                if(imageP->HID_cacheToken)
+                {
+                    ObjCacheLockItem(
+                      (ObjCacheToken)imageP->HID_cacheToken,
+                      (void *)0, (void *)0, &iad, sizeof(iad));
+                    complete = iad.IAD_completeGraphic;
+                    ObjCacheUnlockItem(
+                      (ObjCacheToken)imageP->HID_cacheToken);
+                }
+                if(!complete &&
+                   ((imageP->flags & HTML_IDF_RESOLVING) ||
+                    imageP->HID_cacheToken))
+                {
+                  if(imageP->HID_cacheToken)
+                    ObjCacheUnlockItem(
+                      (ObjCacheToken)imageP->HID_cacheToken);
+                  @call oself::MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED(i);
+                  @call oself::MSG_HTML_TEXT_INVALIDATE_IMAGE(
+                    (void *)0, i, 0, 0xFFFF);
+                }
+            }
+        }
+        MemUnlock(OptrToHandle(imageArray));
+    }
+
+    NamePoolReleaseToken(namePool, url);
 }
 
 @method URLTextClass,
@@ -2598,6 +2690,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     URLFetchResult result ;
     Boolean importQueued;
     Boolean temporary;
+    extern Boolean G_stopped;
 
     /* get result locally */
     p_result = MemLock(urlFetchMem);
@@ -2620,8 +2713,15 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 @endif
       ;
 
+    if(G_stopped)
+    {
+        if(temporary && URLRequestGetRet(result.retType) == URL_RET_FILE)
+            FileDelete(result.curHTML);
+        NamePoolReleaseToken(namePool, request.nameT);
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
+    }
     /* import */
-    if(URLRequestGetRet(result.retType) == URL_RET_FILE &&
+    else if(URLRequestGetRet(result.retType) == URL_RET_FILE &&
        !(result.retType & URB_RF_UNTOUCHED)) {
         importQueued = ImportThreadRequestImportGraphic(
             oself,

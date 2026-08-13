@@ -377,6 +377,7 @@ void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
     ImportProgressData *newDataP, *pendingDataP;
     int i;
     Boolean updated = FALSE;
+    ObjCacheToken oct;
 
     if (importProgressDataP) {
 	/* if import progress is already pending for this graphic, update it */
@@ -414,7 +415,7 @@ void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
 	if (updated) return;
 
         /* create/reference a token for this entry */
-        ImportLockCacheToken(importProgressDataP);
+        oct = ImportLockCacheToken(importProgressDataP);
 
 	/* copy notification data then send to text obj asynchronously */
 	importProgressData = MemAlloc(sizeof(ImportProgressData),
@@ -440,8 +441,10 @@ void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
 	    } else {
 		/* couldn't lock, memory error, dump this progress */
 		MemFree(importProgressData);
+                ObjCacheUnlockItem(oct);
 	    }
-	}
+	} else
+            ObjCacheUnlockItem(oct);
     }
 }
 @endif
@@ -656,6 +659,7 @@ void ImportThreadAbortAll(void)
     Boolean doImport;
     Boolean deferred;
     Boolean completePending;
+    Boolean canceled;
 #if PROGRESS_DISPLAY
     Boolean streamProbe;
 #endif
@@ -670,6 +674,7 @@ void ImportThreadAbortAll(void)
     MemUnlock(mem) ;
     MemFree(mem) ;
     completePending = TRUE;
+    canceled = FALSE;
 
     if(pself->numAborts == 0)           /* don't start import if stopping */
     {
@@ -758,6 +763,8 @@ void ImportThreadAbortAll(void)
         vmf, &iad, &usedMem, request.mimeStatus);
 #endif
 
+      canceled = (request.mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) != 0;
+
       /* If we actually found the data, replace */
       /* all the similar images. */
       if (vmb)  {
@@ -770,6 +777,24 @@ void ImportThreadAbortAll(void)
 	     really need to hold their memory */
           AllocWatcherFree(G_allocWatcher, usedMem);
 @endif
+
+          if(canceled && !iad.IAD_completeGraphic)
+          {
+#if PROGRESS_DISPLAY
+              request.importProgressData.IPD_vmFile = vmf;
+              request.importProgressData.IPD_bitmap = vmb;
+              request.importProgressData.IPD_iad = iad;
+              oct = ImportLockCacheToken(&(request.importProgressData));
+              ObjCacheUnlockItem(oct);
+              ObjCacheUnlockItem(oct);
+#else
+              VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(vmb));
+#endif
+              @send (request.textObj)::
+                MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
+          }
+          else
+          {
 
 #if PROGRESS_DISPLAY
           /* simulate final progress update with real graphic */
@@ -807,6 +832,17 @@ void ImportThreadAbortAll(void)
           /* Replace the images. Cache and Name token are replaced by receiver */
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
             oct, request.name, firstLine, iad.IAD_size.XYS_height-1);
+          }
+      }
+      else if(canceled)
+      {
+#if PROGRESS_DISPLAY
+          if(request.importProgressData.IPD_cacheItem != OCT_NULL)
+              ObjCacheUnlockItem((ObjCacheToken)
+                request.importProgressData.IPD_cacheItem);
+#endif
+          @send (request.textObj)::
+            MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
       }
       else
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
@@ -827,7 +863,8 @@ void ImportThreadAbortAll(void)
         @MsgBlank, HTML_STATUS_TYPE_IMPORTING);
     }
     else
-      NamePoolReleaseToken(namePool, request.name);
+      @send (request.textObj)::
+        MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
 
 #if PROGRESS_DISPLAY
     /* Release the fetch side after probing, importing, or discarding. */
