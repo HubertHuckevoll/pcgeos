@@ -36,6 +36,53 @@
  src="../../../../TechDocs/html/docImages/upTop.gif" alt="Follow link"></a></p>
 <p>Linked empty ALT: <a href="#linked"><img
  src="../../../../TechDocs/html/docImages/upTop.gif" alt=""></a></p>
+
+<h2>Smallest srcset image</h2>
+<p>SRC only, expect up: <img
+ src="../../../../TechDocs/html/docImages/up.gif" alt="SRC only"></p>
+<p>Sorted width, expect down: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="../../../../TechDocs/html/docImages/down.gif 320w, ../../../../TechDocs/html/docImages/next.gif 640w, ../../../../TechDocs/html/docImages/prev.gif 1280w"
+ alt="Sorted width"></p>
+<p>Unsorted width, expect down: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="../../../../TechDocs/html/docImages/prev.gif 1280w, ../../../../TechDocs/html/docImages/down.gif 320w, ../../../../TechDocs/html/docImages/next.gif 640w"
+ alt="Unsorted width"></p>
+<p>Density, expect down: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="../../../../TechDocs/html/docImages/prev.gif 2x, ../../../../TechDocs/html/docImages/down.gif 1x"
+ alt="Density"></p>
+<p>Decimal density, expect down: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="../../../../TechDocs/html/docImages/prev.gif 2x, ../../../../TechDocs/html/docImages/down.gif .75x, ../../../../TechDocs/html/docImages/next.gif 1.5x"
+ alt="Decimal density"></p>
+<p>Exponent density, expect down: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="../../../../TechDocs/html/docImages/prev.gif 2e0x, ../../../../TechDocs/html/docImages/down.gif 1e0x"
+ alt="Exponent density"></p>
+<p>Mixed descriptors prefer width, expect next: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="../../../../TechDocs/html/docImages/down.gif .5x, ../../../../TechDocs/html/docImages/next.gif 640w"
+ alt="Mixed descriptors"></p>
+<p>Garbage falls back, expect up: <img
+ src="../../../../TechDocs/html/docImages/up.gif" srcset="garbage"
+ alt="Garbage fallback"></p>
+<p>Empty srcset falls back, expect up: <img
+ src="../../../../TechDocs/html/docImages/up.gif" srcset=""
+ alt="Empty srcset fallback"></p>
+<p>Invalid descriptors fall back, expect up: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="zero.gif 0w, negative.gif -1x, malformed.gif 1.x"
+ alt="Invalid descriptor fallback"></p>
+<p>Overlong candidate ignored, expect down: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="this-srcset-candidate-name-is-deliberately-more-than-one-hundred-and-twenty-seven-characters-long-so-the-parser-must-ignore-it-without-overflowing-the-selection-buffer.gif 1w, ../../../../TechDocs/html/docImages/down.gif 320w"
+ alt="Overlong candidate ignored"></p>
+<p>Only overlong candidate falls back, expect up: <img
+ src="../../../../TechDocs/html/docImages/up.gif"
+ srcset="this-srcset-candidate-name-is-deliberately-more-than-one-hundred-and-twenty-seven-characters-long-so-the-parser-must-ignore-it-without-overflowing-the-selection-buffer.gif 1w"
+ alt="Overlong candidate fallback"></p>
+
 <h2>Unsupported image MIME</h2>
 <p>Unlinked AVIF: <img src="unsupported.avif"
  alt="Unsupported unlinked image"></p>
