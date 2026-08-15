@@ -5,20 +5,20 @@
 <script type="text/javascript">
 var unterminatedString = "SCRIPT FAIL: document remainder was consumed;
 </script>
-<script type="text/javascript">
-/* SCRIPT FAIL: document remainder was consumed
-</script>
 <style type="text/css">
-<meta http-equiv="refresh" content="0; url=style-subtree-fail.html">
+<meta http-equiv="refresh" content="0; url=styfail.htm">
 </style>
 </head>
 <body>
-<applet code="missing.class">
-<meta http-equiv="refresh" content="0; url=applet-subtree-fail.html">
-<p>APPLET FAIL: unsupported applet subtree was evaluated.</p>
+<applet code="missing.cla">
+<meta http-equiv="refresh" content="0; url=appfail.htm">
+<p>APPLET FAIL: unsupported applet contents were evaluated.</p>
 </applet>
+<template>
+<p>TEMPLATE FAIL: template contents were displayed.</p>
+</template>
 <p>PASS: parsing continued after malformed script content.</p>
-<p>PASS: STYLE and APPLET subtrees were ignored.</p>
+<p>PASS: STYLE, APPLET and TEMPLATE contents were ignored.</p>
 <noscript><p>PASS: NOSCRIPT fallback is visible without JavaScript.</p></noscript>
 </body>
 </html>

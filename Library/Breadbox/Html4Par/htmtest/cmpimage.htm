@@ -1,0 +1,60 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head><title>Intelligent image loading test</title></head>
+<body background="bodybg.gif">
+<h1>Intelligent image loading test</h1>
+
+<p>Select View, Load Images Intelligently before opening this page. Inline
+images of at most 480,000 intrinsic pixels load automatically. Larger images
+remain compact until activated. Background images always load.</p>
+
+<h2>Intrinsic size probe</h2>
+<p>Green PNG, 800 by 600 = 480,000 pixels: loads automatically.<br>
+<img src="limit.png" width="160" height="120" alt="Green limit image"></p>
+<p>Orange JPEG, 160 by 120: loads automatically.<br>
+<img src="small.jpg" alt="Orange small image"></p>
+<p>Magenta GIF, 801 by 600 = 480,600 pixels: remains compact. Activating its
+label loads it at the authored size.<br>
+<img src="large.gif" width="160" height="120"
+ alt="Load magenta image"></p>
+<p>The pale yellow page background is also 801 by 600, but backgrounds bypass
+the inline image limit.</p>
+<table border="1" background="tablebg.gif">
+<tr><td width="240" height="60">This pale cyan table background is also
+801 by 600 and loads automatically.</td></tr>
+</table>
+
+<h2>Compact labels</h2>
+<p>No ALT uses the filename: <img src="large.gif" width="80" height="60"></p>
+<p>Empty ALT also uses the filename:
+<img src="large.gif" width="80" height="60" alt=""></p>
+<p>A linked compact image remains a load action before its surrounding link:
+<a href="#target"><img src="large.gif" width="80" height="60"
+ alt="Load linked magenta image"></a></p>
+<p>Unsupported SVG with ALT:
+<img src="unsup.svg" alt="Violet SVG fill"></p>
+<p>Unsupported SVG without ALT: <img src="unsup.svg"></p>
+<p>A missing image remains retryable:
+<img src="missing.gif" alt="Retry missing image"></p>
+<form action="#target" method="get">
+<p>A missing graphical submit uses the Submit label:
+<input type="image" src="missing.gif"></p>
+</form>
+
+<h2>Smallest srcset candidate</h2>
+<p>Smallest width is green:
+<img src="red.gif" srcset="blue.gif 640w, green.gif 320w"
+ alt="Expected green fill"></p>
+<p>Smallest density is green:
+<img src="red.gif" srcset="blue.gif 2x, green.gif .75x"
+ alt="Expected green fill"></p>
+<p>A width candidate takes priority over density, so this is blue:
+<img src="red.gif" srcset="green.gif .5x, blue.gif 640w"
+ alt="Expected blue fill"></p>
+<p>Invalid descriptors fall back to SRC, so this is red:
+<img src="red.gif" srcset="none.gif 0w, none.gif 1.x"
+ alt="Expected red fill"></p>
+
+<p><a name="target">Linked target.</a></p>
+</body>
+</html>
