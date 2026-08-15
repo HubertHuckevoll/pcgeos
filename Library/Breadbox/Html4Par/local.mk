@@ -1,34 +1,25 @@
+#
+# Only regular SBCS NC and EC builds are supported by default. pmake
+# command-line variables override this assignment, so unsupported variants
+# remain available with, for example, pmake "PRODUCTS=JS" full.
+#
+PRODUCTS =
+
 #include <$(SYSMAKEFILE)>
 
-# The manual says I should do this... ;-)
-XGOCFLAGS = -L html4par
-
+#
+# Regular and DBCS builds exclude JavaScript and AutoBrowse support.
+# JS/JSDBCS and AB/ABDBCS builds enable their respective features.
+# Keep caller-supplied COMPILE_OPTIONS separate because pmake command-line
+# variables cannot be appended to by a makefile.
+#
 COMPILE_OPTIONS ?=
-COMPILE_OPTIONS += $(.TARGET:X\\[JS\\]/*:S|JS| -DJAVASCRIPT_SUPPORT |g)
-COMPILE_OPTIONS += $(.TARGET:X\\[JSDBCS\\]/*:S|JSDBCS| -DJAVASCRIPT_SUPPORT |g)
-COMPILE_OPTIONS += $(.TARGET:X\\[AB\\]/*:S|AB| -DCOMPILE_OPTION_AUTO_BROWSE |g)
-COMPILE_OPTIONS += $(.TARGET:X\\[ABDBCS\\]/*:S|ABDBCS| -DCOMPILE_OPTION_AUTO_BROWSE |g)
+_HTML4PAR_OPTIONS := $(COMPILE_OPTIONS)
+_HTML4PAR_OPTIONS += $(.TARGET:X\\[JS\\]/*:S|JS| -DJAVASCRIPT_SUPPORT |g)
+_HTML4PAR_OPTIONS += $(.TARGET:X\\[JSDBCS\\]/*:S|JSDBCS| -DJAVASCRIPT_SUPPORT |g)
+_HTML4PAR_OPTIONS += $(.TARGET:X\\[AB\\]/*:S|AB| -DCOMPILE_OPTION_AUTO_BROWSE |g)
+_HTML4PAR_OPTIONS += $(.TARGET:X\\[ABDBCS\\]/*:S|ABDBCS| -DCOMPILE_OPTION_AUTO_BROWSE |g)
 
-XGOCFLAGS += $(COMPILE_OPTIONS)
-GOCFLAGS += $(COMPILE_OPTIONS)
-
-# -WDE: Make sure that SS!=DS situation in library is observed
-# -d:   Merge duplicate strings
-# -O:   Some other optimizations...
-# -Z:   Suppress register reloads
-# JavaScript code uses #if rather than #ifdef
-#XCCOMFLAGS = -d -O -Z -WDE $(COMPILE_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
-XCCOMFLAGS = -zu $(COMPILE_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
-#if $(PRODUCT) != "NDO2000"
-# -dc: Breaks mkmf...  Removed from NDO2000 build.
-##XCCOMFLAGS += -dc 
-#endif
-
-# -N:  Add stack probes to every routine (only for EC builds)
-#ifndef NO_EC
-#  XCCOMFLAGS += -N
-#endif
-
-# Set Copyright notice
-//XLINKFLAGS = -N \(C\)98\20Breadbox\20Computer\20Company $(COMPILE_OPTIONS)
-XLINKFLAGS = $(COMPILE_OPTIONS)
+GOCFLAGS += $(_HTML4PAR_OPTIONS)
+CCOMFLAGS += $(_HTML4PAR_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
+LINKFLAGS += $(_HTML4PAR_OPTIONS)
