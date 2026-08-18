@@ -1221,6 +1221,23 @@ Repository-wide confirm that no active caller still uses:
 - ImportProgressData
 - load-progress access from ImpGraph codecs
 
+## Codec-library compatibility boundary
+
+This step removes only obsolete ImpGraph driver entries, adapters, and
+progress/load integration.
+
+Do not remove or change the existing exported APIs or ordinary file-import
+behavior of:
+
+- `ijgjpeg`
+- `fjpeg`
+- `pnglib`
+- `giflib`
+
+Incremental support must remain internal to ImpGraph or use additive
+codec-library interfaces. Existing direct codec-library consumers, including
+Graphvwr, must continue to compile and work unchanged.
+
 ## Remove
 
 - `ImportProgressData`
@@ -1237,9 +1254,12 @@ Repository-wide confirm that no active caller still uses:
 - PNG import-progress callback code
 - ImpGraph `LoadProgressData` usage
 - old graphic-probe driver implementations
-- obsolete JPEG load-progress source path
-- obsolete GIF load-progress path
-- obsolete PNG load-progress path
+- obsolete ImpGraph-only JPEG load-progress source path
+- obsolete ImpGraph-only GIF load-progress adapter path
+- obsolete ImpGraph-only PNG load-progress adapter path
+
+Do not interpret these removals as permission to delete or alter legacy
+file-based entry points exported by the codec libraries.
 
 Do not reuse removed selector numbers immediately.
 
@@ -1256,6 +1276,8 @@ GRAPHIC_DESTROY
 - ImpGraph has no load callback.
 - ImpGraph has no progress callback.
 - ImpGraph has no separate probe entry.
+- Existing `ijgjpeg`, `fjpeg`, `pnglib`, and `giflib` consumers require no
+  source changes.
 
 **Do not begin Step 21.**
 
