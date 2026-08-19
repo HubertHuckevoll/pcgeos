@@ -12,7 +12,7 @@ the bytes into HugeBitmap or animation VM chains.
 
 ImpGraph may report decoder facts through a generic observer. It must not know
 why the caller wants those facts or what the caller does with them.
-
+j
 New ImpGraph core and codec paths must not know about:
 
 - BbxBrow objects or messages
@@ -94,59 +94,65 @@ synchronous import entry returns. ImpGraph must not retain them afterward.
 ### Generic source
 
     typedef enum {
-        MGRS_DATA,
-        MGRS_EOF,
-        MGRS_ERROR,
-        MGRS_ABORT
-    } MimeGraphicReadStatus;
-
-    typedef MimeGraphicReadStatus _pascal
-    proc_MimeGraphicRead(
-        dword context,
-        byte *bufferP,
-        word bufferSize,
-        word *bytesReadP);
-
-    typedef MimeGraphicReadStatus _pascal
-    pcfm_MimeGraphicRead(
-        dword context,
-        byte *bufferP,
-        word bufferSize,
-        word *bytesReadP,
-        void *pf);
-
-    typedef enum {
+        MGSO_READ,
         MGSO_MARK,
         MGSO_RESET,
         MGSO_COMMIT
     } MimeGraphicSourceOperation;
 
-    typedef Boolean _pascal
-    proc_MimeGraphicSourceControl(
-        dword context,
-        MimeGraphicSourceOperation operation);
+    typedef enum {
+        MGSR_OK,
+        MGSR_DATA,
+        MGSR_EOF,
+        MGSR_ERROR,
+        MGSR_ABORT
+    } MimeGraphicSourceResult;
 
-    typedef Boolean _pascal
-    pcfm_MimeGraphicSourceControl(
+    typedef MimeGraphicSourceResult _pascal
+    proc_MimeGraphicSource(
         dword context,
         MimeGraphicSourceOperation operation,
+        byte *bufferP,
+        word bufferSize,
+        word *bytesReadP);
+
+    typedef MimeGraphicSourceResult _pascal
+    pcfm_MimeGraphicSource(
+        dword context,
+        MimeGraphicSourceOperation operation,
+        byte *bufferP,
+        word bufferSize,
+        word *bytesReadP,
         void *pf);
 
     typedef struct {
-        void _pascal *MGS_read;
-        void _pascal *MGS_control;
+        void _pascal *MGS_callback;
         dword MGS_context;
     } MimeGraphicSource;
 
-The reader contract is:
+Implement one private SourceCall helper in ImpGraph. It validates arguments,
+calls MGS_callback through ProcCallFixedOrMovable_pascal, and validates the
+returned operation/result combination. All codec paths use this helper.
 
-- MGRS_DATA returns at least one byte in *bytesReadP.
-- MGRS_EOF, MGRS_ERROR, and MGRS_ABORT return zero bytes.
-- Short reads are valid.
-- The reader may block until bytes, EOF, error, or cancellation are known.
-- ImpGraph never requests zero bytes and never retains bufferP.
-- MGRS_ERROR maps to MGE_SOURCE_ERROR.
-- MGRS_ABORT maps to MGE_CANCELLED.
+The source contract is:
+
+- MGSO_READ requires non-null bufferP and bytesReadP and nonzero bufferSize.
+  SourceCall initializes *bytesReadP to zero before invoking the callback.
+- MGSR_DATA is valid only for MGSO_READ and returns between one and bufferSize
+  bytes in *bytesReadP. Short reads are valid.
+- MGSR_EOF, MGSR_ERROR, and MGSR_ABORT are valid for MGSO_READ and return zero
+  bytes.
+- MGSO_MARK, MGSO_RESET, and MGSO_COMMIT receive bufferP and bytesReadP as
+  (void *)0 and bufferSize as zero. Their valid results are MGSR_OK,
+  MGSR_ERROR, and MGSR_ABORT.
+- MGSR_OK is invalid for MGSO_READ. MGSR_DATA and MGSR_EOF are invalid for
+  checkpoint operations.
+- Any invalid operation, result, argument, or byte count is an EC error and
+  maps to MGE_SOURCE_ERROR in a normal build.
+- A read may block until bytes, EOF, error, or cancellation are known.
+- ImpGraph never retains bufferP.
+- MGSR_ERROR maps to MGE_SOURCE_ERROR.
+- MGSR_ABORT maps to MGE_CANCELLED for every operation.
 
 The checkpoint is required for codec selection and Fjpeg-to-IJG fallback.
 Fjpeg may consume an arbitrary part of the JPEG header before deciding that it
@@ -155,7 +161,7 @@ byte zero.
 
 The exact checkpoint sequence is:
 
-- ImpGraph calls MGSO_MARK exactly once before the first source read.
+- ImpGraph calls MGSO_MARK exactly once before the first MGSO_READ.
 - Signature detection occurs while the checkpoint is active.
 - ImpGraph may use a small prefix buffer so a selected decoder can see bytes
   already read for signature detection.
@@ -165,7 +171,10 @@ The exact checkpoint sequence is:
 - Source error, cancellation, malformed input, or allocation failure does not
   trigger IJG fallback.
 - ImpGraph performs no checkpoint operation after commit.
-- A failed control operation is MGE_SOURCE_ERROR and stops codec fallback.
+- MGSR_ERROR from a checkpoint operation is MGE_SOURCE_ERROR and stops codec
+  fallback.
+- MGSR_ABORT from a checkpoint operation is MGE_CANCELLED and stops codec
+  fallback.
 
 The source must retain every byte consumed after MARK until COMMIT. RESET
 restores the logical position and terminal status that an uninterrupted read
@@ -293,7 +302,7 @@ Validation and result rules are:
 - MGIP_vmFile, MGIP_watcher, and MGIP_statusP are required.
 - MGIP_resolution must be a defined MimeRes value.
 - MGIP_file is required when MGIP_sourceP is null and ignored otherwise.
-- A supplied source requires both callbacks.
+- A supplied source requires MGS_callback.
 - A supplied observer requires its callback.
 - MGIP_mimeHint is optional and is only a hint for the new entry.
 - MGIP_flags carries the existing graphic-ex flags.
@@ -304,8 +313,8 @@ Error mapping is centralized in the private coordinator:
 
 - no recognized signature: MGE_UNSUPPORTED_FORMAT
 - recognized but invalid data: MGE_MALFORMED_INPUT
-- generic reader error: MGE_SOURCE_ERROR
-- reader abort, observer rejection, or MIME_STATUS_ABORT: MGE_CANCELLED
+- MGSR_ERROR from the source: MGE_SOURCE_ERROR
+- MGSR_ABORT, observer rejection, or MIME_STATUS_ABORT: MGE_CANCELLED
 - allocation refusal: MGE_NO_MEMORY
 - streaming format requiring the completed file: MGE_REQUIRES_FILE
 - otherwise unclassified codec failure: MGE_IMPORT_ERROR
@@ -381,8 +390,8 @@ signatures and ordinals. MimeDrvGraphicProbe remains a compatibility entry.
 
 ### GIF
 
-Feed ImpGIFProcess through the generic reader in chunks no larger than 512
-bytes. Do not fill the nominal 2048-byte ring: equal start and end indices
+Feed ImpGIFProcess through MGSO_READ in chunks no larger than 512 bytes. Do
+not fill the nominal 2048-byte ring: equal start and end indices
 cannot represent a full ring, and its EC invariant requires more free space
 than the incoming count.
 
@@ -396,8 +405,8 @@ the provisional preview rules.
 ### IJG JPEG
 
 Add an ImpGraph-owned IJG source manager. Do not change or append an Ijgjpeg
-public export. Its fill callback uses the generic reader and records terminal
-reader status in ImpGraph context.
+public export. Its fill callback uses SourceCall with MGSO_READ and records the
+terminal source result in ImpGraph context.
 
 The browser reader blocks for new bytes, so temporary lack of network data is
 not reported to IJG as EOF. Preserve the existing IJG end-of-input and partial
@@ -416,8 +425,9 @@ export after FJPEG_INIT_LOADPROGRESS:
 
 Declare fjpeg_init_generic_source and its private source descriptor in a
 private header shared only by Fjpeg and ImpGraph. The descriptor contains a
-fixed-or-movable read callback, dword context, and last generic read status.
-It contains no browser type.
+fixed-or-movable ImpGraph read bridge, dword context, and last source result.
+The bridge calls SourceCall with MGSO_READ; Fjpeg never issues checkpoint
+operations. The descriptor contains no browser type.
 
 Do not change the size or layout of fjpeg_decompress_struct. Use the existing
 src.infile slot to hold the private generic source descriptor and reserve a
@@ -437,9 +447,9 @@ The generic setup order is create decompress, call the existing stdio-source
 initializer with a null FILE to allocate its input buffer, then call
 fjpeg_init_generic_source to install the descriptor and mode bit.
 
-In both Fjpeg fill functions, MGRS_DATA supplies the returned bytes and
-MGRS_EOF follows the codec's existing synthetic-EOI behavior. MGRS_ERROR and
-MGRS_ABORT record the terminal status and stop decoding; they must not be
+In both Fjpeg fill functions, MGSR_DATA supplies the returned bytes and
+MGSR_EOF follows the codec's existing synthetic-EOI behavior. MGSR_ERROR and
+MGSR_ABORT record the terminal result and stop decoding; they must not be
 converted into synthetic EOF or unsupported input.
 
 Fjpeg must return a private result that distinguishes supported, unsupported,
@@ -466,14 +476,18 @@ module that owns the existing stream storage so both HugeArray and USE_MEM_STREA
 builds use the same correct storage operations. Implement the observer and
 final ownership handling in htmlview/ImportG.goc.
 
+BbxBrow exposes one source callback. It switches on MimeGraphicSourceOperation
+and delegates to small browser-owned read, mark, reset, and commit helpers as
+needed. Do not expose separate public read and checkpoint callbacks.
+
 Use two callback contexts because they have different lifetime and locking
 requirements.
 
 The source context is small and valid only for the synchronous entry call. It
 contains the stable LoadProgressData pointer, checkpoint state, logical read
-offset, admission byte count, and terminal status. Its steady-state read and
-control callbacks must not lock or dereference G_allocBlock. They may acquire
-LPD_sem, but release it before blocking for more data.
+offset, admission byte count, and terminal status. Its source callback must not
+lock or dereference G_allocBlock. It may acquire LPD_sem, but must release it
+before blocking for more data.
 
 The observer context is a stable job optr when queued preview state must outlive
 the import stack. Lock G_allocBlock only long enough to re-dereference the job
@@ -531,7 +545,8 @@ The observer applies browser admission policy to MGPE_HEADER_READY:
   byte limit applies.
 - While LPI_DECODER_PENDING, the reader never supplies more than the existing
   imageProbeMaxBytes before a header event.
-- Reaching that limit without a header sets LPI_DEFERRED and returns MGRS_ABORT.
+- Reaching that limit without a header sets LPI_DEFERRED and returns
+  MGSR_ABORT.
 - Reject zero dimensions.
 - Compare width against maxPixels divided by height so multiplication cannot
   overflow.
@@ -599,7 +614,7 @@ compatibility areas:
 - the existing Fjpeg FJPEG_INIT_LOADPROGRESS declaration and implementation
 - BbxBrow and Wmg3Http transport code
 
-The new coordinator, new public entry, generic reader, generic observer,
+The new coordinator, new public entry, generic source wrapper, generic observer,
 ImpGraph codec integrations, and Fjpeg generic descriptor must contain no
 LoadProgressData, ImportProgressData, LPD_, IPD_, ObjCache, NameToken, or browser
 message reference.
@@ -624,7 +639,7 @@ Files in scope:
 - one new ImpGraph legacy-adapter source file
 
 Add selector 5, the exact public types, parameter validation, the private
-context, file reader, generic reader wrapper, signature detection, centralized
+context, file source, generic source wrapper, signature detection, centralized
 result mapping, and legacy wrappers. Initially codecs may still call their
 existing internals through private adapters, but all entries must compile and
 legacy dispatch order must remain unchanged.
@@ -663,7 +678,7 @@ Add the source and observer adapters, exact admission states, selector-5
 protocol check, old-driver fallback, completed-file fallback, result flag, and
 queued preview ownership.
 
-Build BbxBrow and its AB variant in EC and non-EC form. Then build GPCMail,
+Build BbxBrow in EC and non-EC form. Then build GPCMail,
 PicAlbum, Graphvwr, Ijgjpeg, Fjpeg, and both ImpGraph variants.
 
 Use the matching Installed directories and the normal generated build flow.
@@ -695,7 +710,7 @@ At minimum verify:
 - ordinary and progressive JPEG through IJG
 - JPEG accepted by Fjpeg
 - JPEG rejected by Fjpeg and replayed from byte zero through IJG
-- source checkpoint mark, reset, commit, and control failure
+- source checkpoint mark, reset, commit, error, and abort
 - one-byte reads and short reads
 - GIF fragmentation at 511, 512, and 513 bytes
 - ordinary PNG and streamed PNG completed-file fallback
@@ -715,7 +730,7 @@ At minimum verify:
 
 Use Swat where needed to verify:
 
-- fixed and movable reader, control, observer, and entry callbacks
+- fixed and movable source, observer, and entry callbacks
 - callback-context lifetime
 - no retained source buffer or progress pointer
 - G_allocBlock unlocked during blocking reads and source semaphore waits
@@ -730,7 +745,8 @@ Use Swat where needed to verify:
 The work is complete only when:
 
 - ImpGraph remains synchronous.
-- BbxBrow passes no browser structure through selector 5.
+- Selector 5 exposes no browser type. BbxBrow may pass an opaque callback
+  context, but only BbxBrow callbacks may interpret or dereference it.
 - ImpGraph core only selects codecs, reads bytes, creates VM chains, reports
   decoder facts, and normalizes codec results.
 - BbxBrow alone owns transport, admission, ObjCache, UI coalescing, and URL
