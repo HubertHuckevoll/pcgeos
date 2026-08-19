@@ -1,874 +1,746 @@
-# BbxBrow / ImpGraph Maintainability and Decoupling Plan
+# BbxBrow / ImpGraph Progress Refactor
 
 ## Goal
 
-Make ImpGraph easier to maintain and remove browser-specific state from its
-implementation without replacing the current synchronous import design.
+Decouple BbxBrow from ImpGraph and make ImpGraph a synchronous graphics
+conversion library with no browser policy.
 
-ImpGraph remains a blocking, file-oriented graphics importer. Progressive GIF
-and JPEG imports may continue to pull bytes from BbxBrow while the download is
-in progress. ImpGraph receives those bytes through a generic reader callback
-instead of through `LoadProgressData`.
+BbxBrow receives bytes, owns the transport state, decides whether an image is
+allowed, manages ObjCache, and schedules UI updates. ImpGraph receives either a
+file or a generic blocking byte source, selects an existing codec, and converts
+the bytes into HugeBitmap or animation VM chains.
 
-The final dependency direction is:
+ImpGraph may report decoder facts through a generic observer. It must not know
+why the caller wants those facts or what the caller does with them.
 
-```text
-Wmg3Http <-> BbxBrow transport state
-                 |
-                 | generic blocking byte reader
-                 | generic decoder progress observer
-                 v
-              ImpGraph
-                 |
-                 v
-        GIF / IJG JPEG / Fjpeg / PNG
-```
+New ImpGraph core and codec paths must not know about:
 
-ImpGraph core code must not know about:
-
-- BbxBrow objects
-- `LoadProgressData`
-- `ImportProgressData`
-- NameTokens
-- ObjCache
-- fetch threads or fetch slots
-- browser semaphores
-- browser progress-display policy
+- BbxBrow objects or messages
+- LoadProgressData or ImportProgressData
+- NameTokens or ObjCache
+- fetch threads, fetch slots, or browser semaphores
+- browser redraw throttling
 - browser image-admission policy
+- URL return codes
 
-Browser-specific compatibility code may temporarily exist behind one clearly
-identified legacy boundary in each geode that owns an existing ABI export.
-New core and codec paths must not use those boundaries.
+The dependency direction is BbxBrow to ImpGraph to the GIF, IJG JPEG, Fjpeg,
+and PNG codecs. No new dependency points back toward BbxBrow.
 
 ## Non-goals
 
-This project does not introduce:
+Do not add:
 
-- Begin / Advance / Destroy decoder sessions
-- a push decoder API
-- an asynchronous ImpGraph API
-- a new BbxBrow input queue
-- unconditional fetch/import concurrency
+- asynchronous ImpGraph entry points
+- decoder session objects or a push decoder API
+- a new browser input queue
 - a Wmg3Http protocol redesign
 - incremental PNG decoding
-- breaking changes to exported `ijgjpeg`, `fjpeg`, `pnglib`, or `giflib` APIs
-- removal or renumbering of existing MIME driver selectors
+- a global PROGRESS_DISPLAY cleanup
+- breaking changes to existing MIME, Ijgjpeg, Fjpeg, PNG, or GIF exports
+- removal or renumbering of existing MIME selectors
+- unrelated codec cleanup
 
-Animated GIF behavior and ordinary file imports must remain compatible.
+Ordinary file imports and animated GIF behavior must remain compatible.
 
-## Design rules
+## Existing compatibility facts
 
-The new API is additive. Existing callers continue to use:
+The existing ImpGraph selector ordinals are:
 
-```text
-MIME_ENTRY_GRAPHIC
-MIME_ENTRY_GRAPHIC_EX
-MIME_ENTRY_GRAPHIC_PROBE
-```
+- 0: MIME_ENTRY_GRAPHIC
+- 1: MIME_ENTRY_INFO
+- 2: MIME_ENTRY_TEXT
+- 3: MIME_ENTRY_GRAPHIC_EX
+- 4: MIME_ENTRY_GRAPHIC_PROBE
 
-Add one new struct-based entry after all existing exports. Do not remove old
-exports or shift their ordinals. Increase ImpGraph from protocol 4.3 to 4.4 by
-the normal `.gp` export process, but leave the global
-`MIME_DRV_PROTOMINOR` at 0 so older MIME drivers still load. A caller must
-verify protocol 4.4 or later before requesting the new entry.
+ImpGraph is currently protocol 4.3. Append the new entry as selector 5 and
+raise only ImpGraph to protocol 4.4. Keep MIME_DRV_PROTOMINOR at 0 so older
+MIME drivers still load.
 
-The new entry remains synchronous. All parameter, source, observer, and
-callback-context storage supplied by the caller must remain valid until the
-entry returns. ImpGraph must not retain any of it after returning.
+BbxBrow currently calls selectors 0 and 4. GPCMail calls selector 0. PicAlbum
+calls selector 3 and uses MIME_GREX_NO_ANIMATIONS where appropriate. Graphvwr
+uses its existing direct GIF code and must continue to compile without source
+changes.
 
-Callbacks are cross-geode callbacks. Store callback pointers as
-`void _pascal *` and invoke them through `ProcCallFixedOrMovable_pascal` using
-the corresponding `pcfm_*` typedef. The new driver entry also has both
-`entry_*` and `pcfm_*` typedefs.
+The existing entries remain ABI-compatible. Their implementations will become
+legacy adapters to the same private coordinator used by the new entry. Legacy
+MIME-driven codec order, return values, compaction, animation behavior, and
+probe behavior must not change.
 
-Use a `dword` callback cookie. BbxBrow can therefore pass a stable optr instead
-of a movable LMem pointer. A browser callback may lock `G_allocBlock` only long
-enough to re-dereference the job and copy stable identifiers or state. It must
-unlock the block before waiting for source data or acquiring a source
-semaphore. If it must update the job afterward, it re-locks the block and
-re-dereferences the optr. It never retains an LMem pointer across the unlock.
+## Public ImpGraph API
 
-## New generic API
+Add the declarations to CInclude/htmldrv.h. Use the exact names below.
 
-Add public types with names consistent with the surrounding MIME driver API.
-The exact prefixes may be adjusted while implementing, but the contract must
-remain the same.
+Add this selector:
 
-### Source reader
+    #define MIME_ENTRY_GRAPHIC_IMPORT 5
 
-```c
-typedef enum {
-    MGRS_DATA,
-    MGRS_EOF,
-    MGRS_ERROR,
-    MGRS_ABORT
-} MimeGraphicReadStatus;
+Append this to Library/Breadbox/ImpGraph/impgraph.gp:
 
-typedef MimeGraphicReadStatus _pascal
-proc_MimeGraphicRead(
-    dword context,
-    byte *bufferP,
-    word bufferSize,
-    word *bytesReadP);
+    incminor
+    export MIMEDRVGRAPHICIMPORT
 
-typedef MimeGraphicReadStatus _pascal
-pcfm_MimeGraphicRead(
-    dword context,
-    byte *bufferP,
-    word bufferSize,
-    word *bytesReadP,
-    void *pf);
+Do not reorder any existing export.
 
-typedef enum {
-    MGSO_MARK,
-    MGSO_RESET,
-    MGSO_COMMIT
-} MimeGraphicSourceOperation;
+### Callback rules
 
-typedef Boolean _pascal
-proc_MimeGraphicSourceControl(
-    dword context,
-    MimeGraphicSourceOperation operation);
+All callbacks are cross-geode callbacks. Store callback pointers as
+void _pascal * and call them through ProcCallFixedOrMovable_pascal using the
+matching pcfm_* typedef.
 
-typedef Boolean _pascal
-pcfm_MimeGraphicSourceControl(
-    dword context,
-    MimeGraphicSourceOperation operation,
-    void *pf);
+Use a dword callback context. The caller owns every parameter, descriptor,
+callback context, and callback argument. Those values remain valid until the
+synchronous import entry returns. ImpGraph must not retain them afterward.
 
-typedef struct {
-    void _pascal *MGS_read;
-    void _pascal *MGS_control;
-    dword MGS_context;
-} MimeGraphicSource;
-```
+### Generic source
 
-Reader contract:
+    typedef enum {
+        MGRS_DATA,
+        MGRS_EOF,
+        MGRS_ERROR,
+        MGRS_ABORT
+    } MimeGraphicReadStatus;
 
-- `MGRS_DATA` returns one or more bytes in `*bytesReadP`.
+    typedef MimeGraphicReadStatus _pascal
+    proc_MimeGraphicRead(
+        dword context,
+        byte *bufferP,
+        word bufferSize,
+        word *bytesReadP);
+
+    typedef MimeGraphicReadStatus _pascal
+    pcfm_MimeGraphicRead(
+        dword context,
+        byte *bufferP,
+        word bufferSize,
+        word *bytesReadP,
+        void *pf);
+
+    typedef enum {
+        MGSO_MARK,
+        MGSO_RESET,
+        MGSO_COMMIT
+    } MimeGraphicSourceOperation;
+
+    typedef Boolean _pascal
+    proc_MimeGraphicSourceControl(
+        dword context,
+        MimeGraphicSourceOperation operation);
+
+    typedef Boolean _pascal
+    pcfm_MimeGraphicSourceControl(
+        dword context,
+        MimeGraphicSourceOperation operation,
+        void *pf);
+
+    typedef struct {
+        void _pascal *MGS_read;
+        void _pascal *MGS_control;
+        dword MGS_context;
+    } MimeGraphicSource;
+
+The reader contract is:
+
+- MGRS_DATA returns at least one byte in *bytesReadP.
+- MGRS_EOF, MGRS_ERROR, and MGRS_ABORT return zero bytes.
 - Short reads are valid.
-- `MGRS_EOF`, `MGRS_ERROR`, and `MGRS_ABORT` return zero bytes.
-- The reader may block until data, EOF, error, or cancellation.
-- ImpGraph never calls the reader with a zero buffer size.
-- ImpGraph never retains `bufferP` after the callback returns.
-- The source is sequential and has no arbitrary seek or browser-specific
-  operations.
-- `MGSO_MARK` starts the one codec-selection checkpoint before source bytes are
-  consumed.
-- `MGSO_RESET` restores the logical read position to that checkpoint. It may be
-  used more than once before commit.
-- `MGSO_COMMIT` ends the checkpoint at the current logical position and permits
-  retained bytes to be released.
-- Mark, reset, and commit preserve the same byte sequence and terminal status
-  that an uninterrupted read would have produced.
-- A control failure is a source error. ImpGraph does not continue with another
-  codec after such a failure.
+- The reader may block until bytes, EOF, error, or cancellation are known.
+- ImpGraph never requests zero bytes and never retains bufferP.
+- MGRS_ERROR maps to MGE_SOURCE_ERROR.
+- MGRS_ABORT maps to MGE_CANCELLED.
+
+The checkpoint is required for codec selection and Fjpeg-to-IJG fallback.
+Fjpeg may consume an arbitrary part of the JPEG header before deciding that it
+does not support the image. IJG must then receive the identical stream from
+byte zero.
+
+The exact checkpoint sequence is:
+
+- ImpGraph calls MGSO_MARK exactly once before the first source read.
+- Signature detection occurs while the checkpoint is active.
+- ImpGraph may use a small prefix buffer so a selected decoder can see bytes
+  already read for signature detection.
+- When a codec is final, ImpGraph calls MGSO_COMMIT once and continues reading.
+- If Fjpeg reports unsupported, ImpGraph calls MGSO_RESET, then MGSO_COMMIT at
+  the reset position, disables prefix replay, and starts IJG from byte zero.
+- Source error, cancellation, malformed input, or allocation failure does not
+  trigger IJG fallback.
 - ImpGraph performs no checkpoint operation after commit.
+- A failed control operation is MGE_SOURCE_ERROR and stops codec fallback.
 
-ImpGraph starts the checkpoint before signature detection. It also owns a small
-prefix buffer for signature handling. The checkpoint is only for codec
-selection and Fjpeg-to-IJG fallback, not general seeking or decoder sessions.
+The source must retain every byte consumed after MARK until COMMIT. RESET
+restores the logical position and terminal status that an uninterrupted read
+would have produced. The private prefix reader has its own replay position:
+signature detection fills it, the first selected decoder sees it once, and an
+Fjpeg-to-IJG reset clears prefix replay because IJG then reads the retained
+bytes directly from source position zero.
 
-The generic streaming source initially supports the formats that already have
-progressive browser paths: GIF, IJG JPEG, and Fjpeg. PNG continues to use the
-completed source file. If a streaming source is identified as PNG, ImpGraph
-returns a specific `MGE_REQUIRES_FILE` result so BbxBrow can finish the download
-and queue an ordinary file import.
+### Generic observer
 
-### Progress observer
+    typedef WordFlags MimeGraphicProgressEvents;
 
-```c
-typedef WordFlags MimeGraphicProgressEvents;
+    #define MGPE_HEADER_READY       0x0001
+    #define MGPE_OUTPUT_READY       0x0002
+    #define MGPE_BITMAP_CHANGED     0x0004
+    #define MGPE_OUTPUT_PROVISIONAL 0x0008
 
-#define MGPE_HEADER_READY       0x0001
-#define MGPE_OUTPUT_READY       0x0002
-#define MGPE_BITMAP_CHANGED     0x0004
-#define MGPE_OUTPUT_PROVISIONAL 0x0008
+    typedef struct {
+        MimeGraphicProgressEvents MGP_events;
+        VMFileHandle MGP_vmFile;
+        VMBlockHandle MGP_bitmap;
+        ImageAdditionalData MGP_iad;
+        word MGP_firstLine;
+        word MGP_lastLine;
+    } MimeGraphicProgress;
 
-typedef struct {
-    MimeGraphicProgressEvents MGP_events;
-    VMFileHandle MGP_vmFile;
-    VMBlockHandle MGP_bitmap;
-    ImageAdditionalData MGP_iad;
-    word MGP_firstLine;
-    word MGP_lastLine;
-} MimeGraphicProgress;
+    typedef Boolean _pascal
+    proc_MimeGraphicObserver(
+        dword context,
+        const MimeGraphicProgress *progressP);
 
-typedef Boolean _pascal
-proc_MimeGraphicObserver(
-    dword context,
-    const MimeGraphicProgress *progressP);
+    typedef Boolean _pascal
+    pcfm_MimeGraphicObserver(
+        dword context,
+        const MimeGraphicProgress *progressP,
+        void *pf);
 
-typedef Boolean _pascal
-pcfm_MimeGraphicObserver(
-    dword context,
-    const MimeGraphicProgress *progressP,
-    void *pf);
+    typedef struct {
+        void _pascal *MGO_callback;
+        dword MGO_context;
+    } MimeGraphicObserver;
 
-typedef struct {
-    void _pascal *MGO_callback;
-    dword MGO_context;
-} MimeGraphicObserver;
-```
+Observer events are decoder facts:
 
-Observer contract:
-
-- The observer receives decoder facts, not browser policy requests.
-- `MGPE_HEADER_READY` is sent once dimensions and required header information
-  are known, before expensive output allocation where practical.
-- Returning `FALSE` requests a synchronous abort.
-- `MGPE_OUTPUT_READY` is sent once when a displayable output bitmap first
-  exists.
-- `MGPE_OUTPUT_PROVISIONAL` is valid only together with
-  `MGPE_OUTPUT_READY`. It means the reported bitmap may be a preview rather
-  than the final returned object.
-- JPEG and GIF imports using `MIME_GREX_NO_ANIMATIONS` never report provisional
-  output. Their reported output handle is the final output handle.
-- An animation-capable streamed GIF reports its first displayable bitmap with
-  `MGPE_OUTPUT_READY | MGPE_OUTPUT_PROVISIONAL`, because animation status is
-  not known until the stream reaches sufficient input.
-- `MGPE_BITMAP_CHANGED` follows or accompanies `MGPE_OUTPUT_READY` and
-  identifies a conservative changed scanline range. The range fields are
-  valid only for this event, are zero-based and inclusive, and satisfy
-  `0 <= MGP_firstLine <= MGP_lastLine < MGP_iad.IAD_size.XYS_height`.
-- ImpGraph clamps legacy codec ranges to the image bounds and suppresses an
-  empty range rather than reporting invalid line numbers.
-- `progressP` is valid only during the callback. A recipient queues copied
+- MGPE_HEADER_READY is sent once dimensions and required header facts are
+  known, before expensive output allocation where the codec permits it.
+- A header event has MGP_bitmap zero. MGP_iad contains the dimensions and
+  output type known at that point. Its changed-range fields are ignored.
+- Returning FALSE from any event requests synchronous cancellation.
+- MGPE_OUTPUT_READY is sent once when an observer-visible bitmap first exists.
+  This event establishes the borrowed-handle lifetime and is not replaced by a
+  bitmap-change event.
+- MGPE_OUTPUT_PROVISIONAL is valid only with MGPE_OUTPUT_READY.
+- MGPE_BITMAP_CHANGED reports a nonempty, conservative scanline range.
+- The changed-range fields are valid only with MGPE_BITMAP_CHANGED.
+- OUTPUT_READY may be combined with the first BITMAP_CHANGED event.
+- Changed ranges are zero-based, inclusive, and within the reported height.
+- ImpGraph clamps legacy codec ranges and suppresses empty ranges.
+- progressP is valid only during the callback. The receiver queues copied
   values, never the pointer.
-- The bitmap is borrowed during the import. The observer must not free it.
-- Ownership is decided when the import entry returns.
-
-ImpGraph performs no redraw throttling, ObjCache work, text-object messaging,
-or image-admission policy.
-
-### Import parameters
-
-```c
-typedef enum {
-    MGE_NONE = 0,
-    MGE_INVALID_PARAMETER = 1,
-    MGE_UNSUPPORTED_FORMAT = 2,
-    MGE_REQUIRES_FILE = 3,
-    MGE_NO_MEMORY = 4,
-    MGE_MALFORMED_INPUT = 5,
-    MGE_SOURCE_ERROR = 6,
-    MGE_CANCELLED = 7,
-    MGE_IMPORT_ERROR = 8
-} MimeGraphicError;
-
-typedef struct {
-    word MGIP_size;
-
-    TCHAR *MGIP_mimeHint;
-    TCHAR *MGIP_file;
-    VMFileHandle MGIP_vmFile;
-    MimeRes MGIP_resolution;
-    AllocWatcherHandle MGIP_watcher;
-    MimeStatus *MGIP_statusP;
-    dword MGIP_flags;
-
-    MimeGraphicSource *MGIP_sourceP;
-    MimeGraphicObserver *MGIP_observerP;
-
-    VMBlockHandle MGIP_output;
-    VMBlockHandle MGIP_preview;
-    ImageAdditionalData MGIP_iad;
-    dword MGIP_usedMem;
-    MimeGraphicError MGIP_error;
-} MimeGraphicImportParams;
-
-#define MIME_GRAPHIC_IMPORT_PARAMS_V1_SIZE \
-    (offsetof(MimeGraphicImportParams, MGIP_error) + \
-     sizeof(MimeGraphicError))
-```
-
-Keep the version-1 size anchored to the end of `MGIP_error` when later fields
-are appended; do not redefine it as the future structure's full size.
-
-Add one entry with the normal exported and fixed-or-movable typedefs:
-
-```c
-typedef VMBlockHandle _pascal _export
-entry_MimeDrvGraphicImport(MimeGraphicImportParams *paramsP);
-
-typedef VMBlockHandle _pascal
-pcfm_MimeDrvGraphicImport(
-    MimeGraphicImportParams *paramsP,
-    void *pf);
-```
-
-Parameter contract:
-
-- `paramsP` is required.
-- `MGIP_size` must be at least
-  `MIME_GRAPHIC_IMPORT_PARAMS_V1_SIZE`. If it is smaller, the entry returns
-  `NullHandle` without accessing any member after `MGIP_size`. A larger size
-  is accepted; ImpGraph accesses only fields it knows whose complete storage
-  is present within `MGIP_size`. Later versions append fields only.
-- `MGIP_mimeHint` is optional and is only a hint.
-- `MGIP_vmFile`, `MGIP_watcher`, and `MGIP_statusP` are required and valid for
-  the whole call. `MGIP_resolution` must be a defined `MimeRes` value.
-- `MGIP_file` is required when `MGIP_sourceP` is null and is ignored when a
-  source is supplied.
-- `MGIP_sourceP` selects generic streaming input when non-null. Its read and
-  control callbacks are both required. The source descriptor and its callback
-  context remain valid for the whole call.
-- `MGIP_observerP` is optional.
-- If supplied, its callback is required, and the observer descriptor and its
-  callback context remain valid for the whole call.
-- `MGIP_flags` carries the existing graphic-ex options.
-- ImpGraph initializes every known output field present in `MGIP_size` before
-  doing work.
-- The returned handle and `MGIP_output` are identical.
-- `MGIP_preview` is nonzero only when provisional output was reported and the
-  final `MGIP_output` is a different VM chain.
-- `MGIP_iad` describes `MGIP_output`; preview metadata is supplied by the
-  observer event.
-- `MGIP_usedMem` counts every distinct returned VM chain exactly once,
-  including `MGIP_preview` when nonzero.
-- `MGE_NONE` means complete success. A recognized format that cannot be
-  decoded is malformed; input with no recognized signature is unsupported.
-  `MGRS_ERROR` maps to `MGE_SOURCE_ERROR`. `MGRS_ABORT`, observer rejection,
-  or `MIME_STATUS_ABORT` maps to `MGE_CANCELLED`. Allocation refusal maps to
-  `MGE_NO_MEMORY`. An otherwise unclassifiable codec failure maps to
-  `MGE_IMPORT_ERROR`.
-- `MGE_REQUIRES_FILE` returns no output and requests the completed-file path.
-- A usable partial output may accompany `MGE_CANCELLED`, `MGE_SOURCE_ERROR`,
-  or `MGE_MALFORMED_INPUT`; fatal errors before usable output return no chain.
-- A returned partial bitmap has `IAD_completeGraphic == FALSE`.
+- The observer borrows the bitmap and must not free or replace it while the
+  entry is active.
+
+Preserve the current minimum batching of approximately ten scanlines for GIF,
+IJG JPEG, Fjpeg, and PNG. Extra events are allowed for an interlace pass
+boundary or final partial slice. Do not make one cross-geode callback per
+scanline.
+
+ImpGraph does not throttle display updates, access ObjCache, send UI messages,
+or apply image-admission limits.
+
+### Import parameters and errors
+
+    typedef enum {
+        MGE_NONE = 0,
+        MGE_INVALID_PARAMETER = 1,
+        MGE_UNSUPPORTED_FORMAT = 2,
+        MGE_REQUIRES_FILE = 3,
+        MGE_NO_MEMORY = 4,
+        MGE_MALFORMED_INPUT = 5,
+        MGE_SOURCE_ERROR = 6,
+        MGE_CANCELLED = 7,
+        MGE_IMPORT_ERROR = 8
+    } MimeGraphicError;
+
+    typedef struct {
+        word MGIP_size;
+
+        TCHAR *MGIP_mimeHint;
+        TCHAR *MGIP_file;
+        VMFileHandle MGIP_vmFile;
+        MimeRes MGIP_resolution;
+        AllocWatcherHandle MGIP_watcher;
+        MimeStatus *MGIP_statusP;
+        dword MGIP_flags;
+
+        MimeGraphicSource *MGIP_sourceP;
+        MimeGraphicObserver *MGIP_observerP;
+
+        VMBlockHandle MGIP_output;
+        VMBlockHandle MGIP_preview;
+        ImageAdditionalData MGIP_iad;
+        dword MGIP_usedMem;
+        MimeGraphicError MGIP_error;
+    } MimeGraphicImportParams;
+
+    #define MIME_GRAPHIC_IMPORT_PARAMS_V1_SIZE \
+        (offsetof(MimeGraphicImportParams, MGIP_error) + \
+         sizeof(MimeGraphicError))
+
+    typedef VMBlockHandle _pascal _export
+    entry_MimeDrvGraphicImport(MimeGraphicImportParams *paramsP);
+
+    typedef VMBlockHandle _pascal
+    pcfm_MimeDrvGraphicImport(
+        MimeGraphicImportParams *paramsP,
+        void *pf);
+
+Validation and result rules are:
+
+- paramsP is required.
+- MGIP_size smaller than MIME_GRAPHIC_IMPORT_PARAMS_V1_SIZE returns NullHandle
+  without accessing any member after MGIP_size.
+- Larger structures are accepted. Version 1 accesses only version-1 fields.
+- MGIP_vmFile, MGIP_watcher, and MGIP_statusP are required.
+- MGIP_resolution must be a defined MimeRes value.
+- MGIP_file is required when MGIP_sourceP is null and ignored otherwise.
+- A supplied source requires both callbacks.
+- A supplied observer requires its callback.
+- MGIP_mimeHint is optional and is only a hint for the new entry.
+- MGIP_flags carries the existing graphic-ex flags.
+- Initialize every version-1 output before doing import work.
+- The return value and MGIP_output are identical.
+
+Error mapping is centralized in the private coordinator:
+
+- no recognized signature: MGE_UNSUPPORTED_FORMAT
+- recognized but invalid data: MGE_MALFORMED_INPUT
+- generic reader error: MGE_SOURCE_ERROR
+- reader abort, observer rejection, or MIME_STATUS_ABORT: MGE_CANCELLED
+- allocation refusal: MGE_NO_MEMORY
+- streaming format requiring the completed file: MGE_REQUIRES_FILE
+- otherwise unclassified codec failure: MGE_IMPORT_ERROR
+
+Do not infer all failures from a null bitmap. Add private codec results where
+needed so unsupported, malformed, source error, cancellation, and allocation
+failure remain distinct.
+
+Missing or empty MIME tests apply to direct calls to selector 5. BbxBrow still
+uses its MIME association to locate the driver before calling the entry.
+
+## Output ownership
+
+ImpGraph owns every output chain until the entry returns. The observer only
+borrows observer-visible chains.
+
+After MGPE_OUTPUT_READY, a non-provisional output handle remains stable and is
+the returned output. ImpGraph must not free an observer-visible chain and then
+return NullHandle. Cancellation, source failure, or malformed trailing input
+after output exists returns that usable bitmap with IAD_completeGraphic FALSE.
+
+An animation-capable streamed GIF has special provisional ownership because
+animation status is not known when its first bitmap becomes displayable:
 
-## Ownership
+- The first bitmap is reported with OUTPUT_READY and OUTPUT_PROVISIONAL.
+- The preview chain remains valid until the import entry returns.
+- A single-frame GIF returns that chain as MGIP_output and sets MGIP_preview to
+  zero.
+- An animated GIF returns an independent animation root as MGIP_output and the
+  preview as MGIP_preview.
+- The final animation must not reference MGIP_preview.
+- If decoding stops before a usable final object exists, promote the preview
+  to incomplete MGIP_output and set MGIP_preview to zero.
+- JPEG and GIF imports using MIME_GREX_NO_ANIMATIONS never report provisional
+  output.
 
-ImpGraph owns every output and preview VM chain until the import entry returns.
+On return, every nonzero output and preview belongs to the caller. MGIP_usedMem
+includes each distinct returned chain once. The caller may release an
+independent preview only after all queued preview UI work has finished.
 
-The progress observer only borrows the bitmap. BbxBrow may prepare cache and UI
-state while importing, but it must not free or replace the VM chain before the
-entry returns. A provisional preview keeps the same valid VM chain until that
-return, although the decoder may continue updating its contents.
+Ordinary file imports retain their current final compaction behavior.
+Non-provisional observer-visible output must not be replaced by compaction.
 
-On complete success, `MGIP_output` belongs to the caller. If `MGIP_preview` is
-nonzero, it is a separate caller-owned chain. The final animation must not
-reference `MGIP_preview`, so the caller can release the preview independently.
+## Private ImpGraph architecture
 
-For an animation-capable streamed GIF:
+Create one private ImpGraphImportContext. It contains normalized parameters,
+source state, observer state, ownership state, selected codec, private codec
+result, dispatch mode, and the existing ImpBmpParams data.
 
-- if the GIF is single-frame, `MGIP_output` is the same handle reported as the
-  provisional preview and `MGIP_preview` is zero;
-- if the GIF is animated, `MGIP_output` is the final animation root and
-  `MGIP_preview` is the independently owned preview chain;
-- if cancellation, source failure, truncation, or malformed trailing input
-  occurs after a preview exists but before a usable final object exists, the
-  preview is promoted to `MGIP_output`, `MGIP_preview` is zero, and
-  `IAD_completeGraphic` is `FALSE`.
+Implement one coordinator:
 
-After output has been reported, cancellation, source failure, or malformed
-trailing input must return the usable partial bitmap with
-`IAD_completeGraphic == FALSE`. The caller then decides whether to retain or
-free it. ImpGraph must not free an output that it has reported to the observer
-and then return a null handle.
+    static VMBlockHandle
+    ImpGraphImport(ImpGraphImportContext *contextP);
 
-Before output has been reported, an error leaves cleanup entirely to ImpGraph
-and returns null `MGIP_output` and `MGIP_preview` handles.
+It has two explicit dispatch modes:
 
-Ordinary file import may retain the existing final compaction behavior before
-returning the bitmap. Non-provisional progressive output must not be replaced
-after `MGPE_OUTPUT_READY` because the observer may already have copied its
-handle. Provisional GIF output follows the explicit preview handoff above.
+- New entry: signature-first selection; MIME is only a hint.
+- Legacy entries: preserve the existing MIME-driven order and fallback rules.
 
-Animated GIF output retains its current file-import behavior. Do not force an
-animation into the progressive single-HugeBitmap ownership rules. The
-provisional preview contract formalizes the new streaming path only. Preserve
-the existing no-animation option used by callers that require a plain bitmap.
+The new entry and legacy wrappers initialize the context and call the same
+coordinator. Only the coordinator maps private terminal results to
+MimeGraphicError and performs final ownership cleanup.
 
-## Implementation steps
+Put legacy translation in one clearly named ImpGraph compatibility source
+file. That file may mention LoadProgressData and ImportProgressData. It adapts
+old source and progress callbacks to the generic private context. Do not copy
+legacy conditionals into the coordinator or codecs.
 
-Do not renumber these steps. Implement and build one step at a time.
+MimeDrvGraphic, MimeDrvGraphicEx, and MimeDrvGraphicProbe keep their exact
+signatures and ordinals. MimeDrvGraphicProbe remains a compatibility entry.
 
-After each step:
+## Codec changes
 
-- build every component changed by that step;
-- build EC and non-EC variants where relevant;
-- fix issues caused by the step before continuing;
-- preserve existing line endings;
-- review `git diff --ignore-space-at-eol`;
-- do not perform unrelated cleanup.
+### GIF
 
-# Step 1 - Record the baseline
+Feed ImpGIFProcess through the generic reader in chunks no larger than 512
+bytes. Do not fill the nominal 2048-byte ring: equal start and end indices
+cannot represent a full ring, and its EC invariant requires more free space
+than the incoming count.
 
-Search the complete repository for:
+Add an EC check for the 512-byte maximum. Verify source fragmentation at 511,
+512, and 513 bytes and confirm no decoder call receives more than 512 bytes.
 
-- all MIME graphic selectors and callers
-- `LoadProgressData`
-- `ImportProgressData`
-- `PROGRESS_DISPLAY`
-- `ImpGIFCreate` and `ImpGIFProcess`
-- IJG JPEG source managers
-- Fjpeg input handling
-- PNG import and progress handling
-- `FreeViaProgress`
+Convert header, first output, and changed-range reporting to the generic
+observer. Preserve interlace-pass updates, batching, animation behavior, and
+the provisional preview rules.
 
-Record which callers require animated GIFs and which pass
-`MIME_GREX_NO_ANIMATIONS`.
+### IJG JPEG
 
-Build current EC and non-EC variants of ImpGraph and BbxBrow. Also establish
-the relevant IJG and Fjpeg variant builds.
+Add an ImpGraph-owned IJG source manager. Do not change or append an Ijgjpeg
+public export. Its fill callback uses the generic reader and records terminal
+reader status in ImpGraph context.
 
-Completion criteria:
+The browser reader blocks for new bytes, so temporary lack of network data is
+not reported to IJG as EOF. Preserve the existing IJG end-of-input and partial
+decode behavior. Convert progress reporting to the generic observer.
 
-- No behavior change.
-- Caller and ABI inventory is recorded.
-- Baseline builds pass or pre-existing failures are recorded.
+JPEG_INIT_LOADPROGRESS and its old source manager remain only for existing
+external callers.
 
-# Step 2 - Add the struct-based driver entry
+### Fjpeg
 
-Add the generic public types and the single new MIME driver selector.
+Fjpeg remains first in the PRODUCT_FJPEG ImpGraph variant. Append one private
+export after FJPEG_INIT_LOADPROGRESS:
 
-Append the new export after the existing ImpGraph exports. Do not delete,
-reorder, or repurpose selectors 0 through 4. Set the ImpGraph protocol to 4.4
-and add a helper or explicit 4.4-or-later check for new callers. Do not raise
-the shared minimum protocol used to load older MIME drivers.
+    incminor
+    export FJPEG_INIT_GENERIC_SOURCE
 
-Implement a skeleton entry that:
+Declare fjpeg_init_generic_source and its private source descriptor in a
+private header shared only by Fjpeg and ImpGraph. The descriptor contains a
+fixed-or-movable read callback, dword context, and last generic read status.
+It contains no browser type.
 
-- validates `MGIP_size`, required parameters, and resolution without reading
-  beyond the caller's declared structure size;
-- initializes all output fields;
-- reports unsupported until the internal core is connected.
+Do not change the size or layout of fjpeg_decompress_struct. Use the existing
+src.infile slot to hold the private generic source descriptor and reserve a
+private high bit in decomp_mode to identify generic-source mode. Existing
+decomp_mode operations already preserve unrelated bits. The generic fill path
+checks that bit before the legacy file and load-progress branches. Apply the
+same generic branch to fill_input_buffer_i in code/init.c and
+fill_input_buffer_a in code/decode.c.
 
-Keep all old entries unchanged.
+Add this required comment beside the private mode bit:
 
-Completion criteria:
+    ATTENTION: This bit and src.infile reuse preserve the public Fjpeg
+    structure layout. The ceiling is one active source mode per decompressor.
+    Replace this with an opaque Fjpeg context if a new public ABI is introduced.
 
-- Old callers still build and run through the old entries.
-- The new entry can be found only after a protocol/capability check.
-- Public `proc_*`, `pcfm_*`, and entry typedefs compile for fixed and movable
-  callback targets.
-- Null required parameters, undersized structures, and larger compatible
-  structures follow the documented contract.
-- EC and non-EC ImpGraph builds pass.
+The generic setup order is create decompress, call the existing stdio-source
+initializer with a null FILE to allocate its input buffer, then call
+fjpeg_init_generic_source to install the descriptor and mode bit.
 
-# Step 3 - Introduce the private ImpGraph import context
+In both Fjpeg fill functions, MGRS_DATA supplies the returned bytes and
+MGRS_EOF follows the codec's existing synthetic-EOI behavior. MGRS_ERROR and
+MGRS_ABORT record the terminal status and stop decoding; they must not be
+converted into synthetic EOF or unsupported input.
 
-Create one private `ImpGraphImportContext` containing normalized inputs,
-outputs, ownership state, selected codec, source state, observer state, a
-dispatch mode, and the existing shared `ImpBmpParams` data.
+Fjpeg must return a private result that distinguishes supported, unsupported,
+malformed, source error, cancellation, and allocation failure. Only unsupported
+causes MGSO_RESET and retry through IJG. Decide support before output allocation
+or observer-visible output. Once Fjpeg is committed or output is reported, do
+not switch to IJG.
 
-Use two private dispatch modes:
+Keep FJPEG_INIT_LOADPROGRESS and its existing declaration and behavior.
 
-- the new entry uses signature-first selection and treats MIME as a hint;
-- the old graphic, graphic-ex, and probe wrappers preserve their existing
-  MIME-driven dispatch and codec fallback order.
+### PNG
 
-Do not let conversion to a shared coordinator change which codec a legacy
-caller reaches or how an unrecognized legacy MIME value is handled.
+PNG continues reading a completed file. If the new entry receives a generic
+source whose signature is PNG, return MGE_REQUIRES_FILE with no output.
 
-Implement one internal coordinator:
+Convert file-based PNG progress reporting to the generic observer so the PNG
+codec core no longer receives ImportProgressData. Preserve its current
+batching and normalize first and last partial ranges.
 
-```c
-static VMBlockHandle
-ImpGraphImport(ImpGraphImportContext *contextP);
-```
+## BbxBrow adapters and state transitions
 
-The new public entry initializes the context and calls this coordinator.
+BbxBrow owns all browser behavior. Implement the source adapter in the browser
+module that owns the existing stream storage so both HugeArray and USE_MEM_STREAM
+builds use the same correct storage operations. Implement the observer and
+final ownership handling in htmlview/ImportG.goc.
 
-Convert `MimeDrvGraphic()` and `MimeDrvGraphicEx()` into thin wrappers that
-initialize the same context and call the same coordinator. Preserve their
-exact ABI and behavior.
+Use two callback contexts because they have different lifetime and locking
+requirements.
 
-Keep ImpGraph legacy progress translation isolated in one compatibility source
-file rather than conditional browser code throughout the main dispatcher.
-Other geodes retain their own clearly named compatibility boundaries when an
-existing export requires one.
+The source context is small and valid only for the synchronous entry call. It
+contains the stable LoadProgressData pointer, checkpoint state, logical read
+offset, admission byte count, and terminal status. Its steady-state read and
+control callbacks must not lock or dereference G_allocBlock. They may acquire
+LPD_sem, but release it before blocking for more data.
 
-Add one status-normalization point in the coordinator. Codec-specific results
-must be translated there to `MimeGraphicError` according to the public
-contract; individual public wrappers must not invent different mappings.
+The observer context is a stable job optr when queued preview state must outlive
+the import stack. Lock G_allocBlock only long enough to re-dereference the job
+and copy or update state. Never retain an LMem pointer across unlock. Never hold
+G_allocBlock while waiting for source data, acquiring LPD_sem, doing ObjCache
+work, or sending a queued message.
 
-Completion criteria:
+The browser source maps checkpoint operations as follows:
 
-- All public entries use one internal coordinator.
-- New and legacy dispatch modes have separate tests and preserve their defined
-  selection order.
-- All terminal internal statuses map to one documented `MimeGraphicError`.
-- Format behavior, animation behavior, compaction, and return values match the
-  baseline.
-- Codec implementations have not yet been broadly rewritten.
+- MARK starts retained reads at logical offset zero.
+- Reads before COMMIT copy without deleting and advance the logical offset.
+- RESET restores the logical offset to zero without changing stored bytes.
+- COMMIT deletes bytes before the current logical offset, adjusts bytesAvail,
+  and changes subsequent reads to consuming mode.
 
-# Step 4 - Add generic input and signature buffering
+The adapter must implement these operations directly for the configured stream
+storage. Do not expose LoadProgressData through the ImpGraph call.
 
-Implement a small internal reader wrapper that obtains bytes from either:
-
-- the generic source callback; or
-- the existing ordinary file path.
-
-For a generic source, mark the codec-selection checkpoint before reading the
-small prefix required for signature detection. Detect GIF, JPEG, and PNG
-without consulting BbxBrow. Commit once codec selection is irreversible.
-
-MIME remains a hint. Test correct, empty, missing, and incorrect MIME values.
+### Starting a new streamed import
 
-Adapt the existing incremental GIF path to receive bounded chunks from the
-generic reader. Retain the existing maximum feed of 512 bytes per
-`ImpGIFProcess()` call. Do not attempt to fill the nominal 2048-byte ring: its
-EC invariant requires strictly more free space than the incoming byte count,
-and equal start and end indexes cannot represent a full ring. Add an EC check
-that no feed exceeds 512 bytes and tests with 511-, 512-, and 513-byte source
-fragmentation.
-
-Add an ImpGraph-only generic IJG source manager. Use IJG's existing custom
-source-manager mechanism; do not add or change any public Ijgjpeg API. Preserve
-IJG suspension behavior. The source manager must not mention
-`LoadProgressData`.
-
-Fjpeg remains first for JPEG in the FJPEG ImpGraph variant. Add one private
-generic-source initialization entry to Fjpeg after all existing exports and
-increase only the Fjpeg protocol minor version. Declare it in a private header
-shared with ImpGraph, not in the public Fjpeg header. Do not change the
-signatures, ordinals, behavior, or public declarations of any existing Fjpeg
-export, including `FJPEG_INIT_LOADPROGRESS`. Do not change the size or layout of
-`fjpeg_decompress_struct`.
-
-The private Fjpeg entry accepts only an opaque generic source descriptor with
-fixed-or-movable read callback and context. It must not accept, construct, or
-reference `LoadProgressData`. Fjpeg internally distinguishes this generic
-source mode from its preserved standalone file and load-progress modes.
-
-Keep the checkpoint active while Fjpeg determines whether it supports the
-JPEG, and make that decision before output allocation or observer-visible
-output. Then:
-
-- on supported input, commit the checkpoint and continue with Fjpeg;
-- on unsupported input, reset to the checkpoint, commit at that position, and
-  retry with the ImpGraph-owned IJG source manager;
-- on source error, cancellation, or malformed input, do not retry as
-  unsupported;
-- after Fjpeg has committed or reported output, do not replace it with IJG.
-
-The ImpGraph Fjpeg integration must therefore preserve distinct supported,
-unsupported, malformed, source-error, and cancellation results instead of
-using a null bitmap as the only fallback signal.
-
-Do not make PNG incremental. Return `MGE_REQUIRES_FILE` when a generic stream
-is detected as PNG.
-
-Completion criteria:
-
-- Streaming GIF, IJG JPEG, and Fjpeg input uses only the generic reader.
-- The FJPEG variant tries Fjpeg first and replays the same source bytes to IJG
-  only when Fjpeg reports unsupported input.
-- Ordinary GIF, JPEG, Fjpeg, PNG, and animated GIF file imports remain
-  unchanged.
-- ImpGraph's IJG and Fjpeg generic integration and Fjpeg's private generic
-  source path contain no `LoadProgressData` reference.
-- Existing public Ijgjpeg and Fjpeg APIs and export ordinals are unchanged; the
-  new private Fjpeg export is appended.
-
-# Step 5 - Replace codec progress data with the generic observer
-
-Route header, output-ready, and bitmap-change facts through the generic
-observer.
-
-Convert GIF, IJG JPEG, Fjpeg, and PNG progress reporting one codec at a time.
-The PNG input remains file based, but its optional progress reporting uses the
-same observer.
-
-Keep display throttling out of ImpGraph. Report the decoder's natural changed
-range, normalize it to the zero-based inclusive observer contract, and let
-BbxBrow coalesce notifications.
-
-Implement the ownership contract before removing `FreeViaProgress()` from the
-core. A legacy adapter may retain equivalent compatibility behavior while old
-callers exist.
-
-For an animation-capable streamed GIF, mark the first displayable bitmap as
-provisional. Keep that preview stable until return. Return the same chain as
-the final output for a single-frame GIF, or return an independently owned final
-animation root plus the preview chain for an animated GIF. If decoding stops
-after the preview but before a usable final object exists, promote the preview
-to an incomplete final output. Do not apply provisional handling to JPEG or to
-GIF imports using `MIME_GREX_NO_ANIMATIONS`.
-
-Completion criteria:
-
-- New core and codec paths contain no `ImportProgressData` reference.
-- Header rejection causes a clean synchronous abort.
-- Cancellation after output returns a partial bitmap rather than freeing an
-  observer-visible chain.
-- Every bitmap-change event has a nonempty in-bounds range, including the first
-  and last partial PNG slices and full-height GIF updates.
-- Animated streamed GIF output uses the explicit provisional-preview handoff;
-  the final animation does not reference the separately returned preview.
-- New paths do not use `FreeViaProgress()` to infer output ownership.
-- Animated GIF behavior remains unchanged.
-
-# Step 6 - Migrate BbxBrow to the new entry
-
-Add BbxBrow-private adapters:
-
-- a reader that blocks on the existing browser byte storage and returns
-  generic reader statuses;
-- source control that maps the generic codec-selection checkpoint onto the
-  existing retained-read behavior: marked reads retain bytes, reset restores
-  the retained start, and commit switches to ordinary consuming reads;
-- an observer that applies admission policy, updates ObjCache state, coalesces
-  scanline ranges, and queues copied UI update data.
-
-Use a stable optr as each callback cookie. The reader locks `G_allocBlock` only
-to re-dereference the job and copy its stable BbxBrow source descriptor or
-fetch-slot identity. It unlocks `G_allocBlock` before waiting on the source
-semaphore or blocking for network data. After a wait, it re-locks and
-re-dereferences the job before changing job state. Never retain an LMem pointer
-across an unlock.
-
-Track whether the observer reported provisional output in that stable job
-state. A provisional preview may be displayed and represented by a transient
-ObjCache entry, but it must not be made permanently cacheable.
-
-Replace the separate probe in the new streamed-import path with header
-admission through the same import call:
-
-- if the pixel limit is disabled, mark admission accepted before importing and
-  do not apply a pre-header byte limit;
-- while admission is undecided, the BbxBrow reader counts source bytes and
-  does not read beyond the existing probe-byte limit;
-- if that limit is reached before `MGPE_HEADER_READY`, mark the job deferred
-  and return `MGRS_ABORT`;
-- on `MGPE_HEADER_READY`, reject zero dimensions and compare the dimensions to
-  the existing pixel limit using division so the calculation cannot overflow;
-- on acceptance, mark the job accepted and return `TRUE` from the observer;
-- on rejection, mark the job deferred and return `FALSE`;
-- whenever admission becomes accepted or deferred, mirror that result into the
-  existing BbxBrow-owned `LPD_imageProbe` transport field under `LPD_sem`; the
-  `LoadProgressData` pointer remains entirely inside the BbxBrow adapter;
-- when the import returns, BbxBrow interprets its own deferred job state as
-  intentional image deferral, suppresses import-failure UI, and follows the
-  existing `URL_RET_IMAGE_DEFERRED` behavior.
-
-Do not call `MIME_ENTRY_GRAPHIC_PROBE` before the new streamed import. Retain
-that selector for old callers and non-migrated paths only. No admission result
-or probe limit is added to the generic ImpGraph API.
-
-After the import returns, queue final replacement behind every already queued
-preview update. For an animated GIF, replace the transient preview with the
-final animation root, then release the independently returned preview only
-after that replacement has been processed. For a single-frame GIF or a partial
-result that promoted the preview to `MGIP_output`, retain the output normally
-and perform no separate preview release. This ordering ensures that queued UI
-work never observes a freed preview chain.
-
-The browser must keep the loaded ImpGraph library referenced for the entire
-synchronous import call. It must verify the new selector's protocol version
-before calling it and fall back to the legacy entry when necessary.
-
-For a streamed PNG or another `MGE_REQUIRES_FILE` result, hand the operation
-back to the existing completed-file path:
-
-- lock `LPD_sem`, set `LPD_progress` to `FALSE`, and unlock `LPD_sem`;
-- record locally that completed-file fallback is pending;
-- release the existing fetch/import synchronization normally;
-- do not report import failure, replace the image, decrement the pending
-  operation, or delete the destination file from the streaming import;
-- let transport completion return through the existing `URL_RET_FILE` path;
-- let that path queue exactly one ordinary file import using the completed
-  destination file.
-
-The URL completion path retains responsibility for network failure,
-cancellation, temporary-file cleanup, and eventual pending-operation
-completion. No new `LoadProgressData` field or Wmg3Http change is required.
-Do not add incremental PNG work to this project.
-
-Wmg3Http and the existing BbxBrow transport contract remain unchanged.
-`LoadProgressData` may continue to exist between those components, but it is
-not passed into ImpGraph's new entry.
-
-Completion criteria:
-
-- BbxBrow uses the new entry for supported ImpGraph drivers.
-- BbxBrow progress and dimension admission comes from generic observer events;
-  its reader enforces the pre-header byte budget.
-- The new streaming path performs header admission in the import call, honors
-  both probe limits, and maps rejection or a missing header within the byte
-  limit to intentional deferral rather than import failure.
-- BbxBrow-specific data never crosses the new driver entry.
-- Fjpeg-to-IJG fallback replays the same bytes without exposing
-  `LoadProgressData` to ImpGraph or either new generic codec path.
-- Completed-file fallback queues exactly one ordinary import without an
-  intermediate failure notification or premature pending-count decrement.
-- A provisional GIF preview is only transiently cached, final replacement is
-  ordered after preview updates, and an independent preview is released only
-  after that replacement is processed.
-- `G_allocBlock` is not locked while a source callback waits for input or a
-  source semaphore.
-
-# Step 7 - Quarantine legacy compatibility code
-
-Repository-wide verify that the new ImpGraph coordinator, generic probe, and
-new codec paths no longer depend on:
-
-- `LoadProgressData`
-- `ImportProgressData`
-- `LPD_` fields
-- `IPD_` fields
-- browser callbacks
-- ObjCache or text objects
-
-Keep the old graphic selectors and their ordinals. Their wrappers may translate
-legacy parameters into the new private context. Keep `MimeDrvGraphicProbe()` as
-a legacy wrapper around a generic probe reader. Do not remove these entries in
-this project.
-
-Keep existing exported codec-library APIs unchanged. Direct consumers such as
-Graphvwr must compile without source changes.
-
-The appended private Fjpeg generic-source entry is an internal ImpGraph/Fjpeg
-integration boundary, not part of the standalone public Fjpeg API. It must not
-reuse `FJPEG_INIT_LOADPROGRESS` or any `LoadProgressData` compatibility type.
-
-Legacy compatibility is isolated per exporting geode:
-
-- ImpGraph owns the old graphic-entry and probe wrappers that translate
-  `ImportProgressData` and `LoadProgressData`;
-- Ijgjpeg retains `JPEG_INIT_LOADPROGRESS` and its old load-progress source
-  path behind an Ijgjpeg compatibility boundary;
-- Fjpeg retains `FJPEG_INIT_LOADPROGRESS` and its old load-progress source path
-  behind an Fjpeg compatibility boundary.
-
-These named legacy files and public legacy declarations are exempt from the
-new-path dependency search. Maintain an explicit allowlist and verify that no
-other ImpGraph or codec file contains `LoadProgressData`, `ImportProgressData`,
-`LPD_`, or `IPD_` references. The new private Fjpeg generic-source entry and
-the ImpGraph code that calls it are not exempt and must pass this search.
-
-Remove obsolete conditional branches only when repository-wide searches prove
-that the new core no longer needs them. Do not turn this step into a global
-`PROGRESS_DISPLAY` removal project; browser and transport code may still use
-that option.
-
-Completion criteria:
-
-- Browser coupling is isolated to BbxBrow and one documented legacy boundary
-  in each geode that owns a preserved ABI export.
-- The maintainable ImpGraph path uses one context, one reader contract, and one
-  observer contract.
-- Legacy wrappers select the explicit legacy dispatch mode; the new entry uses
-  signature-first dispatch.
-- Existing ABI exports remain intact.
-- Existing public Ijgjpeg and Fjpeg APIs remain unchanged, and the private
-  Fjpeg integration export is appended without shifting an existing ordinal.
-
-# Step 8 - Build and behavioral validation
-
-Build EC and non-EC variants where relevant:
-
-- ImpGraph
-- ImpGraph FJPEG variant
-- BbxBrow
-- BbxBrow AB variant
-- Ijgjpeg
-- Fjpeg
-- GPCMail
-- PicAlbum
-- Graphvwr
-
-Build from matching `Installed/` directories with the normal generated build
-workflow. Do not manually edit generated Makefiles or dependency files.
-
-Test at least:
-
-- ordinary GIF
-- interlaced GIF
-- animated GIF
-- ordinary and progressive JPEG
-- progressive JPEG where supported
-- Fjpeg
-- streamed JPEG accepted by Fjpeg
-- streamed JPEG rejected by Fjpeg and replayed successfully to IJG
-- checkpoint mark, repeated reset, and commit ordering
-- checkpoint-control failure before and during Fjpeg selection
-- ordinary PNG
-- streamed PNG completed-file fallback
-- network failure after completed-file fallback begins
+At LPCT_OPEN, preserve the legacy path for drivers older than protocol 4.4.
+For ImpGraph 4.4 or later, start the new streamed import when the existing code
+would start progressive GIF/JPEG work or when image admission is pending.
+
+Append BbxBrow-private states to LoadProgressImageProbe rather than adding a
+new LoadProgressData field:
+
+- LPI_DECODER_PENDING = 4
+- LPI_STREAM_HANDLED = 5
+- LPI_FILE_REQUIRED = 6
+
+Keep the numeric values of existing states unchanged.
+
+When admission is enabled, set LPI_DECODER_PENDING before queuing the import.
+The old LPI_PENDING state continues to mean that the legacy standalone probe
+owns admission.
+
+LPCT_WRITE behavior is:
+
+- LPI_PENDING uses the existing legacy probe path.
+- LPI_DECODER_PENDING or LPI_ACCEPTED appends normally and wakes the reader.
+- LPI_DEFERRED returns LPCR_REJECT.
+- Other existing states retain their current behavior.
+
+LPCT_CLOSE sets fileDone and wakes the reader. The existing legacy probe runs
+only for LPI_PENDING. A decoder-pending import finishes after the reader sees
+EOF; fetch/import synchronization ensures its final state is known before the
+fetch result is delivered.
+
+### Same-pass admission
+
+The observer applies browser admission policy to MGPE_HEADER_READY:
+
+- With the pixel limit disabled, admission starts accepted and no pre-header
+  byte limit applies.
+- While LPI_DECODER_PENDING, the reader never supplies more than the existing
+  imageProbeMaxBytes before a header event.
+- Reaching that limit without a header sets LPI_DEFERRED and returns MGRS_ABORT.
+- Reject zero dimensions.
+- Compare width against maxPixels divided by height so multiplication cannot
+  overflow.
+- Acceptance sets LPI_ACCEPTED and returns TRUE.
+- Rejection sets LPI_DEFERRED and returns FALSE.
+- Update LPD_imageProbe only while holding LPD_sem.
+
+When any new streamed import returns, set LPI_STREAM_HANDLED unless the final
+state is LPI_DEFERRED or LPI_FILE_REQUIRED. Do this even if the decoder returned
+a normal import error or cancellation; BbxBrow has already handled that result
+and must not queue a second file import.
+
+Add this BbxBrow result flag to CInclude/htmldrv.h:
+
+    #define URB_RF_IMAGE_IMPORTED 0x1000
+
+It means that the streamed image import was already handled.
+URLFetchChildThread sets it after fetch/import synchronization when it sees
+LPI_STREAM_HANDLED. The graphic fetch-result handler must not queue another
+import or decrement the pending operation for that progress result.
+
+If admission ends as LPI_DEFERRED, map the synchronized fetch result to the
+existing URL_RET_IMAGE_DEFERRED behavior and suppress import-failure UI.
+
+### Completed-file fallback
+
+For MGE_REQUIRES_FILE:
+
+- Set LPI_FILE_REQUIRED under LPD_sem.
+- Set LPD_progress FALSE under the same semaphore.
+- Release fetch/import synchronization normally.
+- Do not report import failure, replace the image, decrement pending, or
+  delete the destination file from the streaming import.
+- After synchronization, map LPI_FILE_REQUIRED to URL_RET_FILE when transport
+  itself succeeded.
+- Preserve the original pixel limit so the completed-file import performs the
+  existing probe when admission has not already succeeded.
+- Queue exactly one ordinary file import from the normal URL_RET_FILE path.
+
+Transport completion remains responsible for network error, cancellation,
+temporary-file cleanup, and eventual pending completion. Wmg3Http requires no
+new entry point or protocol change.
+
+### Progress UI and final ownership
+
+The observer copies event values, applies browser coalescing, creates transient
+ObjCache state, and queues UI work. A provisional preview must never be made
+permanently cacheable.
+
+Queue final replacement after all preview updates. For an animated GIF, the
+queued final replacement owns responsibility for releasing the independent
+preview after replacement is processed. For a single-frame GIF or promoted
+partial preview, MGIP_preview is zero and no separate release is queued.
+
+Keep the ImpGraph library referenced for the entire synchronous call. Check
+protocol 4.4 before requesting selector 5 and use the legacy entry otherwise.
+
+## Legacy boundaries
+
+After conversion, browser-specific names are allowed only in these documented
+compatibility areas:
+
+- the ImpGraph source file that implements selectors 0, 3, and 4 adapters
+- the existing Ijgjpeg JPEG_INIT_LOADPROGRESS declaration and implementation
+- the existing Fjpeg FJPEG_INIT_LOADPROGRESS declaration and implementation
+- BbxBrow and Wmg3Http transport code
+
+The new coordinator, new public entry, generic reader, generic observer,
+ImpGraph codec integrations, and Fjpeg generic descriptor must contain no
+LoadProgressData, ImportProgressData, LPD_, IPD_, ObjCache, NameToken, or browser
+message reference.
+
+Maintain an explicit search allowlist for the compatibility files. Do not make
+all PROGRESS_DISPLAY code part of this project.
+
+## Implementation order and build gates
+
+Implement this as one change in the following order. Intermediate states need
+not be committed or shipped, but do not cross a build gate while a changed
+component fails to compile.
+
+### Gate 1: ABI and private coordinator
+
+Files in scope:
+
+- CInclude/htmldrv.h
+- Library/Breadbox/ImpGraph/impgraph.gp
+- Library/Breadbox/ImpGraph/MAIN/impgraph.goc
+- one new private ImpGraph context header
+- one new ImpGraph legacy-adapter source file
+
+Add selector 5, the exact public types, parameter validation, the private
+context, file reader, generic reader wrapper, signature detection, centralized
+result mapping, and legacy wrappers. Initially codecs may still call their
+existing internals through private adapters, but all entries must compile and
+legacy dispatch order must remain unchanged.
+
+Build EC and non-EC ImpGraph and the FJPEG ImpGraph variant. Verify selectors
+0 through 4 retain their ordinals and selector 5 is present only in protocol
+4.4 or later.
+
+### Gate 2: codecs and ownership
+
+Files in scope:
+
+- ImpGraph GIF, IJG JPEG, Fjpeg, and PNG integration files
+- the private Fjpeg generic-source header
+- Fjpeg source input implementation and fjpeg.gp
+
+Convert one codec at a time in this order: IJG JPEG, Fjpeg, non-animation GIF,
+animation-capable GIF, then PNG observer reporting. Build the changed codec and
+both ImpGraph variants after each conversion.
+
+Before passing this gate, generic codec paths contain no browser state, every
+private terminal result maps correctly, observer ranges are valid, Fjpeg only
+falls back on unsupported input, and provisional GIF ownership follows the
+public contract.
+
+### Gate 3: BbxBrow migration
+
+Files in scope:
+
+- Appl/Breadbox/BbxBrow/htmlview/ImportG.goc
+- Appl/Breadbox/BbxBrow/htmlview/LoadURL.goc
+- Appl/Breadbox/BbxBrow/urltext/URLTEXT.goc
+- the minimum matching BbxBrow headers and URL fetch result handling
+
+Add the source and observer adapters, exact admission states, selector-5
+protocol check, old-driver fallback, completed-file fallback, result flag, and
+queued preview ownership.
+
+Build BbxBrow and its AB variant in EC and non-EC form. Then build GPCMail,
+PicAlbum, Graphvwr, Ijgjpeg, Fjpeg, and both ImpGraph variants.
+
+Use the matching Installed directories and the normal generated build flow.
+If dependencies changed, run mkmf and pmake depend. Do not manually edit
+Makefile or dependencies.mk.
+
+After every gate, preserve line endings, review git diff --ignore-space-at-eol,
+and make no unrelated cleanup.
+
+The BbxBrow import thread has a 4000-byte stack. Do not add an automatic buffer
+larger than the existing 512-byte GIF buffer. Inspect generated Watcom code for
+new coordinator and callback frame sizes. If safe headroom cannot be shown,
+move persistent observer state to the existing LMem job or a temporary GEOS
+memory block instead of increasing the thread stack.
+
+## Validation
+
+Record exact fixture names, commands, and expected results while implementing.
+Do not leave a claim such as "tested JPEG" without identifying the file and
+observed output.
+
+At minimum verify:
+
+- selectors 0 through 4 with existing callers
+- selector 5 parameter sizes below, at, and above version 1
+- null required parameters and each public error mapping
+- correct, empty, missing, and incorrect MIME hints in direct selector-5 tests
+- ordinary, interlaced, single-frame, and animated GIF
+- ordinary and progressive JPEG through IJG
+- JPEG accepted by Fjpeg
+- JPEG rejected by Fjpeg and replayed from byte zero through IJG
+- source checkpoint mark, reset, commit, and control failure
+- one-byte reads and short reads
+- GIF fragmentation at 511, 512, and 513 bytes
+- ordinary PNG and streamed PNG completed-file fallback
+- header admission accepted, rejected, and byte-limit deferred
+- zero dimensions and overflow-safe pixel comparison
+- EOF before a header and truncation after output exists
+- malformed input, source error, and cancellation before and after output
 - cancellation and shutdown while completed-file fallback is pending
-- exactly one ordinary import and one pending-operation completion per fallback
-- correct MIME
-- missing MIME
-- empty MIME
-- incorrect MIME with a recognized signature
-- legacy MIME-driven dispatch and codec fallback order
-- null required parameters
-- import-parameter sizes below, at, and above the version-1 size
-- each public `MimeGraphicError` mapping, including partial-output cases
-- one-byte reader results
-- short reader results
-- GIF source fragmentation at 511, 512, and 513 bytes, with no decoder feed
-  exceeding 512 bytes
-- EOF before header
-- truncated input after output exists
-- malformed input
-- source error
-- cancellation before header
-- header rejection
-- header admission accepted below the pixel limit
-- header admission rejected for zero dimensions or above the pixel limit
-- admission deferred when no header is available within the probe-byte limit
-- cancellation after output is visible
-- streamed single-frame GIF whose provisional preview becomes `MGIP_output`
-  with a null `MGIP_preview`
-- streamed animated GIF with distinct final and preview chains, and no final
-  animation reference to the preview
-- cancellation, source failure, truncation, and malformed trailing input after
-  a GIF preview, promoting the preview to an incomplete `MGIP_output`
-- queued preview updates completing before independent preview release
-- `MGIP_usedMem` accounting each distinct final and preview chain once
-- success, cancellation, and shutdown cleanup without a preview double free
+- exactly one file import and one pending completion per fallback
+- changed ranges at first, last, and interlace-pass boundaries
+- streamed single-frame GIF preview promotion
+- streamed animated GIF with independent final and preview chains
+- preview updates processed before independent preview release
+- ObjCache enabled and disabled
+- AllocWatcher accounting with final and preview chains
 - early application shutdown
-- ObjCache enabled and disabled, including provisional preview lifetime
-- old graphic entry callers
-- graphic-ex no-animation callers
-- legacy probe callers
 
-Verify with Swat where useful:
+Use Swat where needed to verify:
 
-- callback invocation through fixed-or-movable code
-- callback cookie and job optr lifetime
-- no retained source buffer pointer
-- no retained progress pointer
-- fixed and movable reader, control, observer, and driver-entry calls
-- `G_allocBlock` unlocked throughout a blocking source wait
-- zero-based inclusive changed ranges within the reported image height
-- output VM chain ownership
-- provisional preview promotion, replacement ordering, and independent release
-- partial bitmap return behavior
-- AllocWatcher accounting
-- loaded ImpGraph library lifetime
-- Fjpeg checkpoint release after commit, error, cancellation, and IJG fallback
+- fixed and movable reader, control, observer, and entry callbacks
+- callback-context lifetime
+- no retained source buffer or progress pointer
+- G_allocBlock unlocked during blocking reads and source semaphore waits
+- stable observer-visible handles
+- output and preview VM-chain ownership
+- no double free on cancellation or shutdown
+- loaded ImpGraph lifetime
+- Fjpeg checkpoint cleanup on success, fallback, error, and cancellation
 
-Final acceptance criteria:
+## Final acceptance
+
+The work is complete only when:
 
 - ImpGraph remains synchronous.
-- Existing file and animated GIF behavior is preserved.
-- Existing MIME driver selector ordinals are preserved.
-- The callback ABI includes fixed-or-movable typedefs and invocation rules.
-- Required parameters, compatible structure sizes, and normalized errors have
-  one public contract.
-- New callers pass one import-parameter pointer.
-- ImpGraph core receives streaming bytes through a generic reader.
-- The FJPEG variant tries Fjpeg first and uses the source checkpoint to retry
-  unsupported JPEGs with IJG.
-- ImpGraph core reports decoder facts through a generic observer.
-- Changed-line events use nonempty zero-based inclusive in-bounds ranges.
-- Non-provisional observer output remains the stable returned output chain.
-- Provisional animated GIF output has explicit ownership: it remains valid
-  through return, and a distinct final animation and preview are independently
-  caller-owned.
-- New ImpGraph core and codec paths contain no browser state; preserved legacy
-  ABI boundaries are documented and allowlisted.
-- BbxBrow owns progress display, ObjCache, and admission policy.
-- New streamed imports perform admission from the same decoder pass without
-  holding `G_allocBlock` during blocking source reads.
-- Wmg3Http requires no protocol redesign.
-- PNG requires no incremental rewrite.
-- Existing public Ijgjpeg and Fjpeg APIs and export ordinals are unchanged; the
-  private Fjpeg integration export is appended.
-- No bitmap, VM chain, watcher allocation, callback context, or library
-  reference leaks.
+- BbxBrow passes no browser structure through selector 5.
+- ImpGraph core only selects codecs, reads bytes, creates VM chains, reports
+  decoder facts, and normalizes codec results.
+- BbxBrow alone owns transport, admission, ObjCache, UI coalescing, and URL
+  completion behavior.
+- File and animated GIF compatibility is preserved.
+- Existing selectors and codec exports retain their ordinals and signatures.
+- Fjpeg-to-IJG fallback replays the identical byte stream from byte zero.
+- PNG remains file based.
+- Observer-visible bitmap handles obey the ownership contract.
+- No blocking read holds G_allocBlock or a browser source semaphore.
+- Legacy browser coupling is confined to the documented compatibility files.
+- No VM chain, bitmap, watcher allocation, callback context, library reference,
+  temporary file, pending operation, or preview is leaked or freed twice.
