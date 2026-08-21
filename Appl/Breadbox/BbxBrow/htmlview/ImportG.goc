@@ -728,6 +728,17 @@ void ImportThreadAbortAll(void)
 #endif
         if(deferred)
           doImport = FALSE;
+
+        if(!deferred &&
+           !(request.mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) &&
+           probeData.MGPD_width <= 0xffff &&
+           probeData.MGPD_height <= 0xffff) {
+          /* The queued receiver owns this additional token reference. */
+          NamePoolUseToken(namePool, request.name);
+          @send,forceQueue (request.textObj)::
+            MSG_URL_TEXT_INTERNAL_ACCEPT_LIKE_GRAPHICS(request.name,
+              probeData.MGPD_width, probeData.MGPD_height);
+        }
       }
 
       if(doImport)
@@ -815,8 +826,9 @@ void ImportThreadAbortAll(void)
              by MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS. */
           ObjCacheUnlockItem(oct);
 
-          firstLine = request.importProgressData.IPD_callback?
-              iad.IAD_size.XYS_height-1:0;
+          /* Progress updates may be coalesced or skipped.  The completion
+             notification must expose the entire finished bitmap. */
+          firstLine = 0;
 #else
           /* Add to the cache if we are allowed to */
           /* Only add if we actually got the whole graphic */
@@ -844,6 +856,11 @@ void ImportThreadAbortAll(void)
           @send (request.textObj)::
             MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
       }
+      else if(request.imageProbeMaxPixels &&
+              (request.mimeStatus->MS_mimeFlags &
+               MIME_STATUS_MEMORY_LIMIT))
+          @send (request.textObj)::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
+            request.name);
       else
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
             OCT_NULL, request.name, 0, 0xFFFF);

@@ -266,7 +266,8 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
            );
 
     /* if fast import failed, try using IJGJPEG library */
-    if(!(*bmVMBlock))
+    if(!(*bmVMBlock) &&
+       !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
     {
 @endif
         *bmVMBlock =
@@ -292,7 +293,8 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
       params->IBP_bitmap = *bmVMBlock;
     }
     else
-      status = IBS_UNKNOWN_FORMAT;
+      status = (mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT) ?
+        IBS_NO_MEMORY : IBS_UNKNOWN_FORMAT;
 
     return status;
 }
@@ -342,7 +344,8 @@ ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
     }
     else
     {
-      status = IBS_UNKNOWN_FORMAT;
+      status = (mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT) ?
+        IBS_NO_MEMORY : IBS_UNKNOWN_FORMAT;
       params->IBP_bitmap = NullHandle;
     }
 
@@ -459,26 +462,32 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
     if (strcmp(mimeType, _TEXT("image/gif")) == 0)
     {
         status = ImpGIF(IMP_GIF_PARAMS);
-        if (status == IBS_UNKNOWN_FORMAT)
+        if (status == IBS_UNKNOWN_FORMAT &&
+            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
             status = ImpJPG(IMP_JPG_PARAMS);
-        if (status == IBS_UNKNOWN_FORMAT)
+        if (status == IBS_UNKNOWN_FORMAT &&
+            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
             status = ImpPNG(IMP_PNG_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/jpeg")) == 0 || 
 	     strcmp(mimeType, _TEXT("image/jpg")) == 0)
     {
         status = ImpJPG(IMP_JPG_PARAMS);
-        if (status == IBS_UNKNOWN_FORMAT)
+        if (status == IBS_UNKNOWN_FORMAT &&
+            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
             status = ImpGIF(IMP_GIF_PARAMS);
-        if (status == IBS_UNKNOWN_FORMAT)
+        if (status == IBS_UNKNOWN_FORMAT &&
+            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
             status = ImpPNG(IMP_PNG_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/png")) == 0)
     {
         status = ImpPNG(IMP_PNG_PARAMS);
-        if (status == IBS_UNKNOWN_FORMAT)
+        if (status == IBS_UNKNOWN_FORMAT &&
+            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
             status = ImpJPG(IMP_JPG_PARAMS);
-        if (status == IBS_UNKNOWN_FORMAT)
+        if (status == IBS_UNKNOWN_FORMAT &&
+            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
             status = ImpGIF(IMP_GIF_PARAMS);
     }
 
@@ -563,4 +572,3 @@ VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
 			0		// no specific flags here
 	);
 }
-

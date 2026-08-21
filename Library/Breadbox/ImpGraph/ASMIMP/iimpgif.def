@@ -31,7 +31,8 @@ MAX_NUM_CODE_BITS = 12           ; Number of bits per code max
 
 MimeStatusFlags	record
     MIME_STATUS_ABORT:1
-	:15
+    MIME_STATUS_MEMORY_LIMIT:1
+	:14
 MimeStatusFlags end
 
 MimeStatus struct

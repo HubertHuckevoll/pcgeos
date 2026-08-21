@@ -437,6 +437,8 @@ EC(dword cbSize = 0;)
       }
 
       gotTempAlloc = AllocWatcherAllocate(watcher, requiredTempMemory) ;
+      if(!gotTempAlloc)
+          mimeStatus->MS_mimeFlags |= MIME_STATUS_MEMORY_LIMIT;
   }
 
   /* Don't do graphics bigger than 1024 x or 1024 y (either way) */
@@ -485,6 +487,8 @@ EC(dword cbSize = 0;)
 
       /* Only create the bitmap if we have enough memory */
       gotAlloc = AllocWatcherAllocate(watcher, requiredMemory) ;
+      if(!gotAlloc)
+          mimeStatus->MS_mimeFlags |= MIME_STATUS_MEMORY_LIMIT;
       if (gotAlloc)  {
 #if SCANLINE_COMPRESS
 	  if (scanlineCompress) {

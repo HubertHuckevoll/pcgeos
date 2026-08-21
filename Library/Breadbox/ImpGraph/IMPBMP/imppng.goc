@@ -68,6 +68,8 @@ VMBlockHandle PngImport(
             /* Only create the bitmap if we have enough memory */
             requiredMemory = pngCalcLineAllocSize(ihdrData.width, ihdrData.colorType, ihdrData.bitDepth) * ihdrData.height;
             gotAlloc = AllocWatcherAllocate(watcher, requiredMemory);
+            if(!gotAlloc)
+                mimeStatus->MS_mimeFlags |= MIME_STATUS_MEMORY_LIMIT;
             if (gotAlloc)
             {
                 fmt = pngImportWhatOutputFormat(ihdrData.colorType, ihdrData.bitDepth, &pngAlphaTransform);

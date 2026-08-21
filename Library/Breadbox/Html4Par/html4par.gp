@@ -44,6 +44,7 @@ export     TOOLSFORMATMESSAGE
 export     XSTRNCPY
 incminor   HTMLTextCompactImages
 incminor   HTMLTextUnsupportedImages
+incminor   HTMLTextImageGeometry
 export     HTMLTextClass
 export     TOOLSFINDEXTENSION
 export     TOOLSNORMALIZEURL

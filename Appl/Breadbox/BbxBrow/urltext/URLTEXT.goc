@@ -498,6 +498,10 @@ LoadGraphicProbeNow(LoadProgressData *loadProgressDataP)
     MimeGraphicProbeData probeData;
     MimeGraphicProbeResult probeResult;
     Boolean deferred;
+    Boolean acceptGeometry;
+    NameToken geometryName;
+    optr geometryText;
+    extern Boolean G_stopped;
     dword probeBytes;
 
     ThreadPSem(loadProgressDataP->LPD_sem);
@@ -514,12 +518,26 @@ LoadGraphicProbeNow(LoadProgressData *loadProgressDataP)
       !probeData.MGPD_width || !probeData.MGPD_height ||
       probeData.MGPD_width > loadProgressDataP->LPD_imageProbeMaxPixels /
         probeData.MGPD_height;
+    acceptGeometry = !deferred && !G_stopped &&
+      probeData.MGPD_width <= 0xffff && probeData.MGPD_height <= 0xffff;
     ThreadPSem(loadProgressDataP->LPD_sem);
     loadProgressDataP->LPD_imageProbe =
       deferred ? LPI_DEFERRED : LPI_ACCEPTED;
     LoadGraphicProbeClear(loadProgressDataP);
     loadProgressDataP->LPD_progress = FALSE;
+    if (acceptGeometry) {
+        geometryName = loadProgressDataP->LPD_nameT;
+        geometryText = loadProgressDataP->LPD_textObj;
+        /* The queued receiver owns this additional token reference. */
+        NamePoolUseToken(namePool, geometryName);
+    }
     ThreadVSem(loadProgressDataP->LPD_sem);
+
+    if (acceptGeometry) {
+        @send,forceQueue geometryText::
+          MSG_URL_TEXT_INTERNAL_ACCEPT_LIKE_GRAPHICS(
+            geometryName, probeData.MGPD_width, probeData.MGPD_height);
+    }
     return deferred ? LPCR_REJECT : LPCR_CONTINUE;
 }
 
@@ -1472,6 +1490,8 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 /* Be sure to avoid 1 0 1 0 1 0 bouncing that would cause multiple */
 /* post load updates to occur. */
 
+#define PENDING_REDRAW_BATCH_MASK 0x000f
+
 @method URLTextClass, MSG_URL_TEXT_INC_PENDING
 {
     pself->UTI_numPendingRequests++;
@@ -1488,15 +1508,19 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 @method URLTextClass, MSG_URL_TEXT_DEC_PENDING
 {
     optr frame = pself->UTI_frame;
+    optr view = pself->HTI_myView;
+    Boolean doomed = pself->UTI_doomed;
+    Boolean redraw;
 
     pself->UTI_numPendingRequests-- ;
+    redraw = !(pself->UTI_numPendingRequests & PENDING_REDRAW_BATCH_MASK);
     ObjDecInUseCount(OptrToHandle(oself));
     EC_ERROR_IF(pself->UTI_numPendingRequests >= MAX_NUM_REQUESTS, -1) ;
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
      @SendUpdateProgress(PI_DONE_ITEM, 0);
 @endif
     if (pself->UTI_numPendingRequests == 0)  {
-        if(pself->UTI_doomed)           /* we have only been waiting for this */
+        if(doomed)                      /* we have only been waiting for this */
         {
           @call self::MSG_URL_TEXT_SELF_DESTRUCT();
         }
@@ -1512,27 +1536,30 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
           @send,forceQueue oself::MSG_HTML_TEXT_ANIMATIONS_ON() ;
         }
     }
+    /* ATTENTION: Batch full view redraws to prevent image-heavy pages from
+       building large window update regions.  The zero-pending batch always
+       supplies the final redraw. */
+    if(redraw && view && !doomed)
+        @send,checkDuplicate,forceQueue view::MSG_GEN_VIEW_REDRAW_CONTENT();
     /* Relay operation status to frame */
     @call frame::MSG_URL_FRAME_DEC_PENDING();
 }
 
-void URLTextInitializeImage(
-         HTMLimageData *p,
-         ImageAdditionalData *iad)
+static void _pascal
+URLTextInitializeImageGeometry(HTMLimageData *p, word intrinsicWidth,
+                               word intrinsicHeight)
 {
-    p->HID_IADType = iad->IAD_type;
-
     /*
      * rescale image in horizontal direction if required, by
      * putting the appropriate scaling factor into the
      * transformation matrix for the GString
      */
-    if(p->size.XYS_width && iad->IAD_size.XYS_width)
+    if(p->size.XYS_width && intrinsicWidth)
     {
       *(WWFixedAsDWord *)&p->HID_tmatrixE11 =
           GrUDivWWFixed(
             MakeWWFixed(p->size.XYS_width),
-            MakeWWFixed(iad->IAD_size.XYS_width));
+            MakeWWFixed(intrinsicWidth));
 
 #ifdef COMPILE_OPTION_LIMIT_SCALING
       /* Maximum scaling */
@@ -1550,12 +1577,12 @@ void URLTextInitializeImage(
     /*
      * rescale image in vertical direction if required
      */
-    if(p->size.XYS_height && iad->IAD_size.XYS_height)
+    if(p->size.XYS_height && intrinsicHeight)
     {
       *(WWFixedAsDWord *)&p->HID_tmatrixE22 =
           GrUDivWWFixed(
             MakeWWFixed(p->size.XYS_height),
-            MakeWWFixed(iad->IAD_size.XYS_height));
+            MakeWWFixed(intrinsicHeight));
 
 #ifdef COMPILE_OPTION_LIMIT_SCALING
       /* Maximum scaling */
@@ -1578,7 +1605,7 @@ void URLTextInitializeImage(
      */
     p->HID_size.XYS_width =
       RoundWWF(GrMulWWFixed(
-        MakeWWFixed(iad->IAD_size.XYS_width),
+        MakeWWFixed(intrinsicWidth),
         *(WWFixedAsDWord *)
           &p->HID_tmatrixE11));
     if (p->HID_size.XYS_width == 0)
@@ -1586,11 +1613,21 @@ void URLTextInitializeImage(
 
     p->HID_size.XYS_height =
       RoundWWF(GrMulWWFixed(
-        MakeWWFixed(iad->IAD_size.XYS_height),
+        MakeWWFixed(intrinsicHeight),
         *(WWFixedAsDWord *)
           &p->HID_tmatrixE22));
     if (p->HID_size.XYS_height == 0)
         p->HID_size.XYS_height = 1 ;
+}
+
+void URLTextInitializeImage(
+         HTMLimageData *p,
+         ImageAdditionalData *iad)
+{
+    p->HID_IADType = iad->IAD_type;
+
+    URLTextInitializeImageGeometry(p, iad->IAD_size.XYS_width,
+      iad->IAD_size.XYS_height);
 
     /*
      * set origin of image
@@ -1632,6 +1669,53 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     @call oself::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_LOAD,
 					 HTML_EVENT_OBJECT_IMAGE, i);
 @endif
+}
+
+@method URLTextClass, MSG_URL_TEXT_INTERNAL_ACCEPT_LIKE_GRAPHICS
+{
+    HTMLimageData image;
+    HTMLimageData *imageP;
+    optr imageArray;
+    word i;
+    word n;
+    word size;
+    Boolean match;
+
+    imageArray = pself->HTI_imageArray;
+    if (intrinsicWidth && intrinsicHeight &&
+        intrinsicWidth <= 0xffff && intrinsicHeight <= 0xffff && imageArray) {
+        MemLock(OptrToHandle(imageArray));
+        n = ChunkArrayGetCount(imageArray);
+        MemUnlock(OptrToHandle(imageArray));
+
+        for (i = 0; i < n; i++) {
+            pself = ObjDerefVis(oself);
+            if (pself->HTI_imageArray != imageArray)
+                break;
+
+            MemLock(OptrToHandle(imageArray));
+            if (i >= ChunkArrayGetCount(imageArray)) {
+                MemUnlock(OptrToHandle(imageArray));
+                break;
+            }
+            imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+            image = *imageP;
+            match = url == image.HID_resolvedURL &&
+              (image.flags & (HTML_IDF_COMPACT | HTML_IDF_RESOLVING)) ==
+                (HTML_IDF_COMPACT | HTML_IDF_RESOLVING) &&
+              !(image.flags & (HTML_IDF_RESOLVED | HTML_IDF_UNSUPPORTED));
+            MemUnlock(OptrToHandle(imageArray));
+
+            if (match) {
+                URLTextInitializeImageGeometry(&image, (word)intrinsicWidth,
+                  (word)intrinsicHeight);
+                @call oself::MSG_HTML_TEXT_COMMIT_IMAGE_GEOMETRY(i,
+                  image.HID_size.XYS_width, image.HID_size.XYS_height);
+            }
+        }
+    }
+
+    NamePoolReleaseToken(namePool, url);
 }
 
 @method URLTextClass, MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS
@@ -1765,8 +1849,12 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     word i, n, size;
     HTMLimageData *imageP;
     optr imageArray;
+    ImageLoadMode *imageModeP;
+    ImageLoadMode imageMode;
+    Boolean relayout;
 
     imageArray = pself->HTI_imageArray;
+    relayout = FALSE;
     if(imageArray)
     {
         MemLock(OptrToHandle(imageArray));
@@ -1776,6 +1864,8 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             imageP = ChunkArrayElementToPtr(imageArray, i, &size);
             if(url == imageP->HID_resolvedURL)
             {
+                if(!(imageP->flags & HTML_IDF_COMPACT))
+                    relayout = TRUE;
                 if(imageP->HID_cacheToken)
                     ObjCacheUnlockItem(
                       (ObjCacheToken)imageP->HID_cacheToken);
@@ -1788,6 +1878,14 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             }
         }
         MemUnlock(OptrToHandle(imageArray));
+    }
+
+    if(relayout)
+    {
+        imageModeP = ObjVarFindData(oself,
+          ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+        imageMode = imageModeP ? *imageModeP : IMAGE_LOAD_AUTOMATIC;
+        @call oself::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(imageMode);
     }
 
     NamePoolReleaseToken(namePool, url);

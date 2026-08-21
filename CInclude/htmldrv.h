@@ -85,6 +85,7 @@ typedef struct {
 /* Nice generic structure containing the state of the Mime import activity */
 typedef word MimeStatusFlags;
 #define MIME_STATUS_ABORT 0x8000
+#define MIME_STATUS_MEMORY_LIMIT 0x4000
 typedef struct {
     MimeStatusFlags MS_mimeFlags ;
 } MimeStatus ;
