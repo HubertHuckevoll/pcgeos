@@ -203,7 +203,7 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
       NamePoolVMUnload(pself->HTI_namePool);
       pself->HTI_namePool = NullOptr;   // Detach from name pool
     }
-    
+
     if(pself->HTI_imageArray)
     {
       MemFree(OptrToHandle(pself->HTI_imageArray));
@@ -324,7 +324,7 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
 /*
  * Magic character marking an anchor that describes a text position as an
  * 8-digit hex number.
- */ 
+ */
 #define POSITION_ANCHOR_MARKER '\x01'
 
 @method HTMLTextClass, MSG_HTML_TEXT_GOTO_ANCHOR
@@ -361,7 +361,7 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
 
         MemUnlock(OptrToHandle(array));
       }
-      
+
       /* not found - try default anchors */
       if ((int)i < 0) {
 	  if (NamePoolTestEqualI(pself->HTI_namePool, myAnchor, _TEXT("top"))) {
@@ -453,10 +453,10 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     dword pos;
     PointDWord origin;
     PointDWFixed p;
-    
+
     /* Get current position of view... */
     @call pself->HTI_myView::MSG_GEN_VIEW_GET_ORIGIN(&origin);
-    
+
     /* ...blow it up into a PointDWFixed... */
     p.PDF_x.DWF_int = origin.PD_x;
     p.PDF_y.DWF_int = origin.PD_y;
@@ -468,7 +468,7 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     if(pos)                             // Only use anchor for non-zero position
       sprintf(buf, _TEXT("\x23%c%08ld"), POSITION_ANCHOR_MARKER, pos);
     else
-      *buf = 0;    
+      *buf = 0;
 }
 
 @method HTMLTextClass, MSG_HTML_TEXT_GET_IMAGE_COUNT
@@ -544,11 +544,11 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
 
       case MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED:
         toSet = 0;
-        toClear = HTML_IDF_RESOLVING | HTML_IDF_RESOLVED | 
+        toClear = HTML_IDF_RESOLVING | HTML_IDF_RESOLVED |
                   HTML_IDF_BROKEN | HTML_IDF_UNSUPPORTED |
                   HTML_IDF_SIZE_DIRTY;
         break;
-      
+
       case MSG_HTML_TEXT_MARK_IMAGE_RESOLVING:
         toSet = HTML_IDF_RESOLVING;
         toClear = HTML_IDF_RESOLVED | HTML_IDF_BROKEN |
@@ -891,7 +891,7 @@ void _export FreeHTMLTransferItem(VMFileHandle vmf, VMChain vmc)
     VMUnlock(memHandle);
 #endif
     VMUnlock(hypertextHeaderMem);
-        
+
     VMFreeVMChain(vmf, vmc);            // Remove the chain itself
 }
 
@@ -915,7 +915,7 @@ void LOCAL IMarkAllImagesUnresolved(optr imageArray)
       MemLock(OptrToHandle(imageArray));
       for(i=ChunkArrayGetCount(imageArray)-1; (int)i>=0; i--)  {
         imageArrayElement = ChunkArrayElementToPtr(imageArray, i, NULL);
-        imageArrayElement->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING | 
+        imageArrayElement->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
                                       HTML_IDF_BROKEN | HTML_IDF_UNSUPPORTED |
                                       HTML_IDF_SIZE_DIRTY) ;
 
@@ -978,7 +978,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
         newarr = ConstructOptr(dstMem, dstArray);
         LMemReAlloc(newarr, size);      // reallocate to match source size
       }
-      else                              // no: allocate a new one  
+      else                              // no: allocate a new one
       {
         dstArray = LMemAlloc(dstMem, size);
         newarr = ConstructOptr(dstMem, dstArray);
@@ -986,7 +986,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       memcpy(LMemDeref(newarr), LMemDeref(array), size);
       MemUnlock(OptrToHandle(array));
     }
-    
+
     return dstArray;
 }
 
@@ -1006,7 +1006,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
     MemHandle memHandle, hypertextHeaderMem;
     ChunkHandle ch;
 #if (!COMPILE_OPTION_HUGE_ARRAY_REGIONS)
-    word size;   
+    word size;
 #endif
 
     #define UpdateArray(_itemArray, _objArray) \
@@ -1034,23 +1034,23 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
     UpdateArray(HABH_eventArray, HTI_eventArray);
 #endif
 #if (!COMPILE_OPTION_HUGE_ARRAY_CELLS)
-    UpdateArray(HABH_cellArray, HTI_cellArray);      
+    UpdateArray(HABH_cellArray, HTI_cellArray);
 #endif
 #if (!COMPILE_OPTION_HUGE_ARRAY_TABLES)
     UpdateArray(HABH_tableArray, HTI_tableArray);
 #endif
 
-    /* The small region array is updated in the same way as the others, but 
+    /* The small region array is updated in the same way as the others, but
        it needs special treatment because it resides in our own block. */
 #if (!COMPILE_OPTION_HUGE_ARRAY_REGIONS)
     size = LMemGetChunkSizeHandles(OptrToHandle(oself), pself->VLTI_regionArray);
-    
+
     if(habh->HABH_regionArray)        // do we have a chunk to update?
     {
-      LMemReAllocHandles(memHandle, habh->HABH_regionArray, size);      
+      LMemReAllocHandles(memHandle, habh->HABH_regionArray, size);
                                       // reallocate to match source size
     }
-    else                              // no: allocate a new one  
+    else                              // no: allocate a new one
     {
       ch = LMemAlloc(memHandle, size);
       habh = MemDeref(memHandle);
@@ -1058,8 +1058,8 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
     }
 
     memcpy(
-      LMemDerefHandles(memHandle, habh->HABH_regionArray), 
-      LMemDerefHandles(OptrToHandle(oself), pself->VLTI_regionArray), 
+      LMemDerefHandles(memHandle, habh->HABH_regionArray),
+      LMemDerefHandles(OptrToHandle(oself), pself->VLTI_regionArray),
       size);
 #else
     htbh->HTBH_regionArrayLink = VMCHAIN_MAKE_FROM_VM_BLOCK(pself->VLTI_regionArray);
@@ -1094,7 +1094,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
     HypertextArrayBlockHeader *habh;
     optr ret;
     word formattedWidth ;
-#if !(COMPILE_OPTION_HUGE_ARRAY_REGIONS)       
+#if !(COMPILE_OPTION_HUGE_ARRAY_REGIONS)
     ChunkHandle newRegionArray ;
     word size ;
 #endif
@@ -1132,7 +1132,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       /* Free all items that are copied into the object on attaching */
       @call self::MSG_HTML_TEXT_DEINIT_EXTRA();
 
-#if !(COMPILE_OPTION_HUGE_ARRAY_REGIONS)       
+#if !(COMPILE_OPTION_HUGE_ARRAY_REGIONS)
       /* Also free old copy of region array */
       pself = ObjDerefVis(oself);
       if (pself->VLTI_regionArray)
@@ -1144,7 +1144,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       /* Set state in such a way that MSG_VIS_LARGE_TEXT_CREATE_DATA_STRUCTURES
          will not care about the existing transfer item. */
       pself = ObjDerefVis(oself);
-      pself->VTI_storageFlags &= ~(VTSF_MULTIPLE_CHAR_ATTRS | 
+      pself->VTI_storageFlags &= ~(VTSF_MULTIPLE_CHAR_ATTRS |
         VTSF_MULTIPLE_PARA_ATTRS | VTSF_GRAPHICS | VTSF_LARGE);
       pself->VTI_lines = 0;
       pself->VTI_text = 0;
@@ -1180,11 +1180,11 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       /*
        * Transfer selected contents of regular text transfer item
        */
-      ttbh = VMLock(vmf, VMCHAIN_GET_VM_BLOCK(htbh->HTBH_transferItem), 
+      ttbh = VMLock(vmf, VMCHAIN_GET_VM_BLOCK(htbh->HTBH_transferItem),
         &textHeaderMem);
 
       pself = ObjDerefVis(oself);
-      pself->VTI_storageFlags |= VTSF_MULTIPLE_CHAR_ATTRS | 
+      pself->VTI_storageFlags |= VTSF_MULTIPLE_CHAR_ATTRS |
         VTSF_MULTIPLE_PARA_ATTRS | VTSF_GRAPHICS | VTSF_LARGE;
       pself->VTI_text = VMCHAIN_GET_VM_BLOCK(ttbh->TTBH_text);
       pself->VTI_charAttrRuns = VMCHAIN_GET_VM_BLOCK(ttbh->TTBH_charAttrRuns);
@@ -1195,7 +1195,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       /* Transfer some data in array block from VM into our own memory block */
       if(htbh->HTBH_arrayBlock)
       {
-        pself->HTI_namePool = NamePoolVMLoad(vmf, 
+        pself->HTI_namePool = NamePoolVMLoad(vmf,
           htbh->HTBH_other.HTBHO_namePoolToUse);
                                           /* load copy of name pool */
 
@@ -1214,7 +1214,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
         GetArray(HTI_tableArray, HABH_tableArray);
 #else
         if (htbh->HTBH_tableArrayLink)  {
-          pself->HTI_tableArray = ConstructOptr(vmf, 
+          pself->HTI_tableArray = ConstructOptr(vmf,
             VMCHAIN_GET_VM_BLOCK(htbh->HTBH_tableArrayLink));
         } else {
           pself->HTI_tableArray = 0 ;
@@ -1237,20 +1237,20 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
            region array around. */
         pself->VTI_selectStart = 0;
         pself->VTI_selectEnd = 1;
-        pself->VTI_cursorRegion = 0;              
+        pself->VTI_cursorRegion = 0;
 
-#if !(COMPILE_OPTION_HUGE_ARRAY_REGIONS)       
+#if !(COMPILE_OPTION_HUGE_ARRAY_REGIONS)
         if (habh->HABH_regionArray)
         {
           ret = ConstructOptr(hypertextArrayMem, habh->HABH_regionArray) ;
           size = LMemGetChunkSize(ret) ;
           newRegionArray = LMemAlloc(OptrToHandle(oself), size) ;
           memcpy(LMemDerefHandles(OptrToHandle(oself), newRegionArray), LMemDeref(ret), size) ;
-              
+
           pself = ObjDerefVis(oself) ;
           pself->VLTI_regionArray = newRegionArray ;
 #else
-        if (htbh->HTBH_regionArrayLink) 
+        if (htbh->HTBH_regionArrayLink)
         {
           pself->VLTI_regionArray = VMCHAIN_GET_VM_BLOCK(htbh->HTBH_regionArrayLink);
 #endif
@@ -1264,9 +1264,9 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
               @send,forceQueue @visParent::MSG_VIS_INVALIDATE();
         }
         else
-        { 
+        {
           PrepareCellNextIndices(
-              pself->HTI_cellArray, 
+              pself->HTI_cellArray,
               pself->HTI_tableArray) ;
 
           @call self::MSG_VIS_TEXT_CREATE_STORAGE(0, TRUE);
@@ -1280,7 +1280,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
 
         VMUnlockChainifiedLMemBlock(hypertextArrayMem);
       }
-      
+
       RegionPurgeCache(oself) ;
 
       pself = ObjDerefVis(oself);
@@ -1346,7 +1346,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
               /* but make sure we draw everything.  We are coming in with */
               /* a blank page so we can't have optimized drawing occuring, */
               /* just optimized formatting.  -- lshields 09/03/2000 */
-              pself->HTI_layoutState |= 
+              pself->HTI_layoutState |=
                   HTS_LAYOUT_DIRTY | HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
           }
       } else {
@@ -1370,11 +1370,11 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       pself->VTI_selectStart = 0;
       pself->VTI_selectEnd = 1;
       pself->VTI_cursorRegion = 0;
-           
+
       /* Everything is set up, create line array */
       @call self::MSG_VIS_NOTIFY_GEOMETRY_VALID();
     }
-    
+
     RegionPurgeCache(oself) ;
     @call oself::MSG_VIS_TEXT_SELECT_START();
     HWChecksumCheck() ;
@@ -1429,10 +1429,10 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
         GrBeginUpdate(gstate) ;
 
         GrSetAreaColor(
-            gstate, 
+            gstate,
             pself->VTI_washColor.CQ_info,
-            pself->VTI_washColor.CQ_redOrIndex, 
-            pself->VTI_washColor.CQ_green, 
+            pself->VTI_washColor.CQ_redOrIndex,
+            pself->VTI_washColor.CQ_green,
             pself->VTI_washColor.CQ_blue) ;
 
         GrFillRect(gstate, 0, 0, 0x1FFF, 0x1FFF) ;
@@ -1534,7 +1534,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       sPageSize.PSR_width, sPageSize.PSR_height );
 
     @call printCtrlOD::MSG_PRINT_CONTROL_SET_DOC_MARGINS(
-      &sPageSize.PSR_margins);  
+      &sPageSize.PSR_margins);
 }
 
 /********************************************************************
@@ -1623,7 +1623,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
        */
     range = @call printCtrlOD::MSG_PRINT_CONTROL_GET_SELECTED_PAGE_RANGE();
     total = @call printCtrlOD::MSG_PRINT_CONTROL_GET_TOTAL_PAGE_RANGE();
-    
+
       /*
        * This loop is from Concepts Code Display 23-1 on p809.
        * It is the main printing loop. It translates the text up
@@ -1631,11 +1631,11 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
        * translates it one page the first time, two pages the
        * second time, three pages the third time, and so on.
        */
-    for(iCurPage = range.PCPR_firstPage-1; 
-        iCurPage < range.PCPR_lastPage; 
+    for(iCurPage = range.PCPR_firstPage-1;
+        iCurPage < range.PCPR_lastPage;
         iCurPage++)
     {
-          /* 
+          /*
            * Start of page in document space. We cut right through lines of
            * text or graphics if necessary...
            */
@@ -1769,7 +1769,7 @@ static void IInvalAreaInvalidate(optr oself, RectDWord *p_invalArea)
     GStateHandle gstate ;
 
     /* Only process if we have something */
-    if ((p_invalArea->RD_right > p_invalArea->RD_left) && 
+    if ((p_invalArea->RD_right > p_invalArea->RD_left) &&
             (p_invalArea->RD_bottom > p_invalArea->RD_top))  {
         /* Invalidate that large rectangle and reset */
         gstate = @call oself::MSG_VIS_VUP_CREATE_GSTATE() ;
@@ -1883,7 +1883,7 @@ static word IReplaceTableBackground(
     if (p_table->HTD_firstCell < pself->HTI_numFormattedCells)  {
         /* If the background here is a match and we don't need to recalcualte, */
         /* then make this section get invalidated */
-        if ((p_table->HTD_backgroundImage == imageIndex) && 
+        if ((p_table->HTD_backgroundImage == imageIndex) &&
                 (!(p_table->HTD_flags & HTML_TABLE_DIRTY_LAYOUT_MASK))) {
             if (p_table->HTD_lastX < p_invalArea->RD_left)
                 p_invalArea->RD_left = p_table->HTD_lastX ;
@@ -1921,8 +1921,8 @@ static word IReplaceTableBackground(
 
     MemLock(OptrToHandle(pself->HTI_imageArray));
     imageFlags = ((HTMLimageData *)ChunkArrayElementToPtr(
-                        pself->HTI_imageArray, 
-                        nImage, 
+                        pself->HTI_imageArray,
+                        nImage,
                         &size))->flags ;
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
 
@@ -1989,11 +1989,11 @@ VisTextGraphic *IFindGraphicForImage(
       graphic = ChunkArrayElementToPtrHandles(*mem, array, i, &size);
       if(graphic->VTG_meta.REH_refCount.WAAH_high == 0 &&
          graphic->VTG_type==VTGT_VARIABLE &&
-         graphic->VTG_data.VTGD_variable.VTGV_manufacturerID==HTML_VARGRAPH_MFGID && 
+         graphic->VTG_data.VTGD_variable.VTGV_manufacturerID==HTML_VARGRAPH_MFGID &&
          graphic->VTG_data.VTGD_variable.VTGV_type==HTML_VARGRAPH_TYPE_IMAGE &&
          HIGV->HIGV_imageIndex==nImage)
       {
-        return graphic;                 // Got it: return pointer to entry                      
+        return graphic;                 // Got it: return pointer to entry
       }
     }
 
@@ -2205,12 +2205,12 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
  **************************************************************************
  *
  * Description:
- *     Invalidate the rectangle of a graphic causing the background 
+ *     Invalidate the rectangle of a graphic causing the background
  *     and graphic to redraw .
  *
  * Inputs:
  *     VisTextGraphic *p_graphic  -- VTG of image (can be NULL)
- *     word nImage                -- Index of image in image array                    
+ *     word nImage                -- Index of image in image array
  *     word invalFrom             -- First line of updated range
  *     word invalTo               -- Last line of updated range
  *
@@ -2239,7 +2239,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
 
     if(pself->HTI_drawingOn<0)          /* if drawing is off, observe it */
       return;
-    
+
     ObjLockObjBlock(OptrToHandle(imageArray));
     imageArrayElement = ChunkArrayElementToPtr(imageArray,
       nImage, &elsize);                 /* deference token to image record */
@@ -2342,7 +2342,8 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     TableArrayEndAccess(pself->HTI_tableArray);
 }
 
-#define EARLY_IMAGE_LAYOUT_BATCH_MASK 0x000f
+/* Layout at most once per batch of early geometry commits. */
+#define EARLY_IMAGE_LAYOUT_BATCH_SIZE 64
 
 static void _pascal
 HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
@@ -2453,11 +2454,11 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
         VMDirty(mem);
 
         /* ATTENTION: Batch early geometry layouts to bound transient layout
-           memory.  Up to 15 later images wait for the next batch or final
+           memory.  Up to 31 later images wait for the next batch or final
            layout; replace this with timer coalescing if lower latency is
            required. */
         if (completeRedraw &&
-            !(nImage & EARLY_IMAGE_LAYOUT_BATCH_MASK)) {
+            (nImage % EARLY_IMAGE_LAYOUT_BATCH_SIZE) == 0) {
             @send,checkDuplicate,forceQueue oself::
               MSG_HTML_TEXT_CALCULATE_LAYOUT();
         }
@@ -2495,12 +2496,12 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
 
     RegionPurgeCache(oself) ;
     pself = ObjDerefVis(oself);
-    /* 
-     * Update image record in table 
+    /*
+     * Update image record in table
      */
     MemLock(OptrToHandle(pself->HTI_imageArray));
-    iae = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);                                                           
-    *iae = *data;                        
+    iae = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);
+    *iae = *data;
     iae->flags |= HTML_IDF_RESOLVED;
     iae->flags &= ~(HTML_IDF_RESOLVING | HTML_IDF_BROKEN |
                     HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED);
@@ -2511,13 +2512,13 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
         pself = ObjDerefVis(oself);
     }
 
-    if(data->pos < HTML_IMAGE_POS_RESERVED)    
+    if(data->pos < HTML_IMAGE_POS_RESERVED)
     {                                   // not changing background?
       HTMLTextUpdateImageGeometry(oself, nImage, data, invalFrom, invalTo,
         FALSE);
     }
     else if (data->pos == HTML_IMAGE_POS_DOCUMENT_BACKGROUND)
-    { 
+    {
                                /* change in background */
       @call self::MSG_HTML_TEXT_SET_BACKGROUND(nImage);
     } else {
@@ -2676,10 +2677,10 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
         imageArrayElement = ChunkArrayElementToPtr(array, i, NULL);
         if(imageArrayElement->flags & HTML_IDF_UNSUPPORTED)
             continue;
-        if (imageArrayElement->flags & HTML_IDF_BROKEN) 
-            imageArrayElement->flags &= 
+        if (imageArrayElement->flags & HTML_IDF_BROKEN)
+            imageArrayElement->flags &=
                  ~(HTML_IDF_BROKEN | HTML_IDF_RESOLVED) ;
-        if (imageArrayElement->flags & HTML_IDF_RESOLVING) 
+        if (imageArrayElement->flags & HTML_IDF_RESOLVING)
             imageArrayElement->flags &= ~HTML_IDF_RESOLVING ;
       }
       MemUnlock(OptrToHandle(pself->HTI_imageArray));
@@ -2717,8 +2718,8 @@ typedef struct {
     /* Only create if its not there */
     if (!pself->HTI_waitingImages)  {
         pself->HTI_waitingImages = MemAlloc(
-                sizeof(T_waitingImagesBlock), 
-                HF_DYNAMIC|HF_SHARABLE, 
+                sizeof(T_waitingImagesBlock),
+                HF_DYNAMIC|HF_SHARABLE,
                 HAF_NO_ERR);
     }
 

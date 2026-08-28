@@ -1482,15 +1482,8 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     NamePoolReleaseToken(namePool, result.url);
 }
 
-/* The pending count is used to determine when all requests for the page */
-/* have been processed.  Call MSG_URL_TEXT_INC_PENDING for each action */
-/* that will keep the URLText object to not be done. */
-/* Call MSG_URL_TEXT_DEC_PENDING for each completed task.  When the count */
-/* goes back down to zero, the post actions occur. */
-/* Be sure to avoid 1 0 1 0 1 0 bouncing that would cause multiple */
-/* post load updates to occur. */
-
-#define PENDING_REDRAW_BATCH_MASK 0x000f
+/* Redraw the view at most once per batch of completed requests. */
+#define PENDING_REDRAW_BATCH_SIZE 64
 
 @method URLTextClass, MSG_URL_TEXT_INC_PENDING
 {
@@ -1513,7 +1506,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     Boolean redraw;
 
     pself->UTI_numPendingRequests-- ;
-    redraw = !(pself->UTI_numPendingRequests & PENDING_REDRAW_BATCH_MASK);
+    redraw = (pself->UTI_numPendingRequests % PENDING_REDRAW_BATCH_SIZE) == 0;
     ObjDecInUseCount(OptrToHandle(oself));
     EC_ERROR_IF(pself->UTI_numPendingRequests >= MAX_NUM_REQUESTS, -1) ;
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
