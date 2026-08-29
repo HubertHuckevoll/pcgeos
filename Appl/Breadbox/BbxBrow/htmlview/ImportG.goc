@@ -728,17 +728,6 @@ void ImportThreadAbortAll(void)
 #endif
         if(deferred)
           doImport = FALSE;
-
-        if(!deferred &&
-           !(request.mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) &&
-           probeData.MGPD_width <= 0xffff &&
-           probeData.MGPD_height <= 0xffff) {
-          /* The queued receiver owns this additional token reference. */
-          NamePoolUseToken(namePool, request.name);
-          @send,forceQueue (request.textObj)::
-            MSG_URL_TEXT_INTERNAL_ACCEPT_LIKE_GRAPHICS(request.name,
-              probeData.MGPD_width, probeData.MGPD_height);
-        }
       }
 
       if(doImport)

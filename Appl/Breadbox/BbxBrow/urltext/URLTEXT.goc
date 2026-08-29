@@ -498,10 +498,6 @@ LoadGraphicProbeNow(LoadProgressData *loadProgressDataP)
     MimeGraphicProbeData probeData;
     MimeGraphicProbeResult probeResult;
     Boolean deferred;
-    Boolean acceptGeometry;
-    NameToken geometryName;
-    optr geometryText;
-    extern Boolean G_stopped;
     dword probeBytes;
 
     ThreadPSem(loadProgressDataP->LPD_sem);
@@ -518,26 +514,12 @@ LoadGraphicProbeNow(LoadProgressData *loadProgressDataP)
       !probeData.MGPD_width || !probeData.MGPD_height ||
       probeData.MGPD_width > loadProgressDataP->LPD_imageProbeMaxPixels /
         probeData.MGPD_height;
-    acceptGeometry = !deferred && !G_stopped &&
-      probeData.MGPD_width <= 0xffff && probeData.MGPD_height <= 0xffff;
     ThreadPSem(loadProgressDataP->LPD_sem);
     loadProgressDataP->LPD_imageProbe =
       deferred ? LPI_DEFERRED : LPI_ACCEPTED;
     LoadGraphicProbeClear(loadProgressDataP);
     loadProgressDataP->LPD_progress = FALSE;
-    if (acceptGeometry) {
-        geometryName = loadProgressDataP->LPD_nameT;
-        geometryText = loadProgressDataP->LPD_textObj;
-        /* The queued receiver owns this additional token reference. */
-        NamePoolUseToken(namePool, geometryName);
-    }
     ThreadVSem(loadProgressDataP->LPD_sem);
-
-    if (acceptGeometry) {
-        @send,forceQueue geometryText::
-          MSG_URL_TEXT_INTERNAL_ACCEPT_LIKE_GRAPHICS(
-            geometryName, probeData.MGPD_width, probeData.MGPD_height);
-    }
     return deferred ? LPCR_REJECT : LPCR_CONTINUE;
 }
 
@@ -1483,7 +1465,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 }
 
 /* Redraw the view at most once per batch of completed requests. */
-#define PENDING_REDRAW_BATCH_SIZE 64
+#define PENDING_REDRAW_BATCH_SIZE 128
 
 @method URLTextClass, MSG_URL_TEXT_INC_PENDING
 {
@@ -1506,7 +1488,8 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     Boolean redraw;
 
     pself->UTI_numPendingRequests-- ;
-    redraw = (pself->UTI_numPendingRequests % PENDING_REDRAW_BATCH_SIZE) == 0;
+    redraw = pself->UTI_numPendingRequests &&
+      (pself->UTI_numPendingRequests % PENDING_REDRAW_BATCH_SIZE) == 0;
     ObjDecInUseCount(OptrToHandle(oself));
     EC_ERROR_IF(pself->UTI_numPendingRequests >= MAX_NUM_REQUESTS, -1) ;
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
@@ -1530,8 +1513,8 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         }
     }
     /* ATTENTION: Batch full view redraws to prevent image-heavy pages from
-       building large window update regions.  The zero-pending batch always
-       supplies the final redraw. */
+       building large window update regions.  The zero-pending batch performs
+       the final layout instead. */
     if(redraw && view && !doomed)
         @send,checkDuplicate,forceQueue view::MSG_GEN_VIEW_REDRAW_CONTENT();
     /* Relay operation status to frame */
@@ -1662,53 +1645,6 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     @call oself::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_LOAD,
 					 HTML_EVENT_OBJECT_IMAGE, i);
 @endif
-}
-
-@method URLTextClass, MSG_URL_TEXT_INTERNAL_ACCEPT_LIKE_GRAPHICS
-{
-    HTMLimageData image;
-    HTMLimageData *imageP;
-    optr imageArray;
-    word i;
-    word n;
-    word size;
-    Boolean match;
-
-    imageArray = pself->HTI_imageArray;
-    if (intrinsicWidth && intrinsicHeight &&
-        intrinsicWidth <= 0xffff && intrinsicHeight <= 0xffff && imageArray) {
-        MemLock(OptrToHandle(imageArray));
-        n = ChunkArrayGetCount(imageArray);
-        MemUnlock(OptrToHandle(imageArray));
-
-        for (i = 0; i < n; i++) {
-            pself = ObjDerefVis(oself);
-            if (pself->HTI_imageArray != imageArray)
-                break;
-
-            MemLock(OptrToHandle(imageArray));
-            if (i >= ChunkArrayGetCount(imageArray)) {
-                MemUnlock(OptrToHandle(imageArray));
-                break;
-            }
-            imageP = ChunkArrayElementToPtr(imageArray, i, &size);
-            image = *imageP;
-            match = url == image.HID_resolvedURL &&
-              (image.flags & (HTML_IDF_COMPACT | HTML_IDF_RESOLVING)) ==
-                (HTML_IDF_COMPACT | HTML_IDF_RESOLVING) &&
-              !(image.flags & (HTML_IDF_RESOLVED | HTML_IDF_UNSUPPORTED));
-            MemUnlock(OptrToHandle(imageArray));
-
-            if (match) {
-                URLTextInitializeImageGeometry(&image, (word)intrinsicWidth,
-                  (word)intrinsicHeight);
-                @call oself::MSG_HTML_TEXT_COMMIT_IMAGE_GEOMETRY(i,
-                  image.HID_size.XYS_width, image.HID_size.XYS_height);
-            }
-        }
-    }
-
-    NamePoolReleaseToken(namePool, url);
 }
 
 @method URLTextClass, MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS

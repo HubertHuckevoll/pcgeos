@@ -1194,9 +1194,6 @@ typedef dword T_tableArrayHandle ;
   @message void MSG_HTML_TEXT_REMOVE_OPTION_ELEMENT(word index);
   @message void MSG_HTML_TEXT_FORM_ELEMENT_REMOVE_TEXT_ENTRY();
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED(word nImage);
-
-  @message void MSG_HTML_TEXT_COMMIT_IMAGE_GEOMETRY(word nImage, word width,
-    word height);
 @ifdef DO_DBCS
   @instance DosCodePage HTI_codePage = 0;
 @endif

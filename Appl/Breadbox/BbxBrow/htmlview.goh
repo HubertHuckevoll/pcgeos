@@ -1153,8 +1153,6 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
 
   @message void MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
     ObjCacheToken oct, NameToken url, word invalFrom, word invalTo);
-  @message void MSG_URL_TEXT_INTERNAL_ACCEPT_LIKE_GRAPHICS(NameToken url,
-    dword intrinsicWidth, dword intrinsicHeight);
   @message void MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(NameToken url);
   @message void MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
     NameToken url);

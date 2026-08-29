@@ -2342,13 +2342,9 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     TableArrayEndAccess(pself->HTI_tableArray);
 }
 
-/* Layout at most once per batch of early geometry commits. */
-#define EARLY_IMAGE_LAYOUT_BATCH_SIZE 64
-
 static void _pascal
 HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
-                            word invalFrom, word invalTo,
-                            Boolean completeRedraw)
+                            word invalFrom, word invalTo)
 {
     HTMLTextInstance *pself;
     HTMLimageData *imageP;
@@ -2387,9 +2383,6 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
         (graphic->VTG_size.XYS_height != oldSize.XYS_height)) {
         pself = ObjDerefVis(oself);
         pself->HTI_layoutState |= HTS_LAYOUT_DIRTY;
-        if (completeRedraw)
-            pself->HTI_layoutState |=
-              HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
 
         MemLock(OptrToHandle(pself->HTI_imageArray));
         imageP = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);
@@ -2453,16 +2446,7 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
         CellArrayEndAccess(pself->HTI_cellArray);
         VMDirty(mem);
 
-        /* ATTENTION: Batch early geometry layouts to bound transient layout
-           memory.  Up to 31 later images wait for the next batch or final
-           layout; replace this with timer coalescing if lower latency is
-           required. */
-        if (completeRedraw &&
-            (nImage % EARLY_IMAGE_LAYOUT_BATCH_SIZE) == 0) {
-            @send,checkDuplicate,forceQueue oself::
-              MSG_HTML_TEXT_CALCULATE_LAYOUT();
-        }
-        else if (!wasDirty) {
+        if (!wasDirty) {
             @call oself::MSG_HTML_TEXT_WAITING_IMAGE_ADD(nImage, cellIndex);
         }
     }
@@ -2514,8 +2498,7 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
 
     if(data->pos < HTML_IMAGE_POS_RESERVED)
     {                                   // not changing background?
-      HTMLTextUpdateImageGeometry(oself, nImage, data, invalFrom, invalTo,
-        FALSE);
+      HTMLTextUpdateImageGeometry(oself, nImage, data, invalFrom, invalTo);
     }
     else if (data->pos == HTML_IMAGE_POS_DOCUMENT_BACKGROUND)
     {
@@ -2526,45 +2509,6 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
     }
 
     return TRUE;                        /* successful */
-}
-
-@method HTMLTextClass, MSG_HTML_TEXT_COMMIT_IMAGE_GEOMETRY
-{
-    HTMLimageData data;
-    HTMLimageData *imageP;
-    word count;
-    word size;
-
-    pself = ObjDerefVis(oself);
-    if (!width || !height || !pself->HTI_imageArray)
-        return;
-
-    MemLock(OptrToHandle(pself->HTI_imageArray));
-    count = ChunkArrayGetCount(pself->HTI_imageArray);
-    if (nImage >= count) {
-        MemUnlock(OptrToHandle(pself->HTI_imageArray));
-        return;
-    }
-
-    imageP = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);
-    if ((imageP->flags & (HTML_IDF_COMPACT | HTML_IDF_RESOLVING)) !=
-          (HTML_IDF_COMPACT | HTML_IDF_RESOLVING) ||
-        (imageP->flags & (HTML_IDF_RESOLVED | HTML_IDF_UNSUPPORTED))) {
-        MemUnlock(OptrToHandle(pself->HTI_imageArray));
-        return;
-    }
-
-    imageP->HID_size.XYS_width = width;
-    imageP->HID_size.XYS_height = height;
-    imageP->flags &= ~HTML_IDF_COMPACT;
-    data = *imageP;
-    MemUnlock(OptrToHandle(pself->HTI_imageArray));
-
-    if (HTMLTextGetCompactImageFocus(oself) == nImage)
-        HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
-
-    RegionPurgeCache(oself);
-    HTMLTextUpdateImageGeometry(oself, nImage, &data, 0, 0xffff, TRUE);
 }
 
 /**************************************************************************
@@ -2694,7 +2638,7 @@ void IRegionPurgeCache(optr obj)
 
 /* --------------------- */
 
-#define MAX_WAITING_IMAGES  200
+#define MAX_WAITING_IMAGES  128
 
 typedef struct {
     word WIE_imageIndex ;
@@ -2912,8 +2856,11 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
     if (pself->HTI_waitingImages)  {
         numLeft = @call oself::MSG_HTML_TEXT_WAITING_IMAGES_FLUSH_ONES_WITH_CELLS_CALCULATED() ;
         if (numLeft)  {
-            // Update layout (delayed through queue to allow for combining)
-            @send ,checkDuplicate ,forceQueue self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
+            /* An active layout already tracks images in its current range
+               and requests one more pass for images it has passed. */
+            pself = ObjDerefVis(oself);
+            if (!(pself->HTI_layoutState & HTS_CALCULATING_LAYOUT))
+                @send ,checkDuplicate ,forceQueue self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
 
             /* Clear the list if we are done. */
             if (isLastUpdate)

@@ -1058,7 +1058,6 @@ MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
 {
     FileLongName driver;
     GeodeHandle drv;
-    GeodeLoadError err;
     ProtocolNumber protocol;
     void *ProbeGraphic;
     MimeGraphicProbeResult result;
@@ -1069,20 +1068,21 @@ MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
 
     FilePushDir();
     ThreadPSem(MimeDriverSemaphore);
-    FileSetCurrentPath(SP_IMPORT_EXPORT_DRIVERS, _TEXT("."));
-    err = -1;
-    drv = GeodeUseLibrary(driver, MIME_DRV_PROTOMAJOR,
-      MIME_DRV_PROTOMINOR, &err);
+    if(lastMimeDriver==NullHandle || strcmp(driver, lastMimeName))
+        LoadNewMimeDriver(driver);
+    drv = lastMimeDriver;
+    if(drv)
+        GeodeAddReference(drv);
     ThreadVSem(MimeDriverSemaphore);
     FilePopDir();
-    if(!drv || err != -1)
+    if(!drv)
         return MIME_GRAPHIC_PROBE_UNKNOWN;
 
     GeodeGetInfo(drv, GGIT_GEODE_PROTOCOL, &protocol);
     if(protocol.PN_major < 4 ||
        (protocol.PN_major == 4 && protocol.PN_minor < 3))
     {
-        GeodeFreeLibrary(drv);
+        GeodeRemoveReference(drv);
         return MIME_GRAPHIC_PROBE_UNKNOWN;
     }
 
@@ -1091,6 +1091,6 @@ MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
       ProcCallFixedOrMovable_pascal)(mimeType, file, maxBytes, data
       , loadProgressDataP
       , ProbeGraphic);
-    GeodeFreeLibrary(drv);
+    GeodeRemoveReference(drv);
     return result;
 }
