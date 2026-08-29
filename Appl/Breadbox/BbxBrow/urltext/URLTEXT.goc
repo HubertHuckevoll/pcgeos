@@ -984,9 +984,12 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       loadProgressData.LPD_imageProbe =
         imageProbeMaxPixels ? LPI_PENDING : LPI_NONE;
 #if PROGRESS_DISPLAY
+      /* Import explicit compact-image loads once after download instead of
+         redrawing them in slices. */
       loadProgressData.LPD_progress =
           imageProbeMaxPixels ||
-          (progressDisplay && (p->pos < HTML_IMAGE_POS_RESERVED) &&
+          (progressDisplay && !(p->flags & HTML_IDF_COMPACT) &&
+           (p->pos < HTML_IMAGE_POS_RESERVED) &&
            (!p->size.XYS_height ||
             (p->size.XYS_height >= progressMinHeight)));
 #else
