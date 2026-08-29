@@ -1760,12 +1760,13 @@ int LOCAL GetText(int cc, int ce, char *buf, word formMode,
  */
 
 const char endScript[] = "</SCRIPT";
+const char endStyle[] = "</STYLE";
 
 /*
- * SCRIPT is a raw-text element even when JavaScript support is absent.
- * Consume its contents without interpreting embedded markup.
+ * SCRIPT and STYLE are raw-text elements.  Consume their contents without
+ * interpreting embedded markup.
  */
-int LOCAL SkipScriptContent(int c)
+int LOCAL SkipRawTextContent(const char *endTag, int c)
 {
     int n;
 
@@ -1773,16 +1774,16 @@ int LOCAL SkipScriptContent(int c)
         c=HTMLgetc();
 
     do {
-        while(c!=EOF && c!=endScript[0])
+        while(c!=EOF && c!=endTag[0])
             c=HTMLgetc();
 
         n = 0;
-        while(c!=EOF && c<128 && (toupper(c)==endScript[n]))
+        while(c!=EOF && c<128 && (toupper(c)==endTag[n]))
         {
             n++;
             c=HTMLgetc();
         }
-    } while(c!=EOF && endScript[n]);
+    } while(c!=EOF && endTag[n]);
 
     return c;
 }
@@ -1943,18 +1944,18 @@ int Open_SCRIPT(optr paramArray, int c)
     if(!accept)
     {
       htbh->HTBH_other.HTBHO_fileInfo |= HTML_FI_NON_JS_SCRIPT;
-      return SkipScriptContent(c);
+      return SkipRawTextContent(endScript, c);
     }
 
     if(!(HTMLext->HE_options & HTML_JAVASCRIPT))
-      return SkipScriptContent(c);
+      return SkipRawTextContent(endScript, c);
 
     /* Possibly read external script if specified*/
     p = GetParamValue(paramArray, "SRC");
     if(p && *p)
     {
       /* NS and IE ignore the contents of the tag if a SRC is specified */
-      ret = SkipScriptContent(c);
+      ret = SkipRawTextContent(endScript, c);
       HandleExternalScript(p);
     }
     else
@@ -2024,7 +2025,7 @@ int LOCAL HandleTag(MemHandle localHeap)
         c=HTMLgetc();
       }
 
-      c=SkipScriptContent(c);
+      c=SkipRawTextContent(endScript, c);
       if(c=='>')
         c=HTMLgetc();
       return c;
@@ -2036,6 +2037,25 @@ int LOCAL HandleTag(MemHandle localHeap)
     MemLock( OptrToHandle(@HTMLStylesChunk) );
     tagStyleEntry = ((HTMLStylesTable *)LMemDeref(@HTMLStylesChunk))[tagStyle];
     MemUnlock( OptrToHandle(@HTMLStylesChunk) );
+
+    /* STYLE is raw text and must not let CSS markup affect tag parsing. */
+    if(openTag && !ignoreTags && tagStyleEntry.spec==SPEC_STYLE)
+    {
+      ce=0;
+      while(c!=EOF && (c!='>' || ce))
+      {
+        if(!ce && (c=='"' || c=='\''))
+          ce=c;
+        else if(c==ce)
+          ce=0;
+        c=HTMLgetc();
+      }
+
+      c=SkipRawTextContent(endStyle, c);
+      if(c=='>')
+        c=HTMLgetc();
+      return c;
+    }
 
     paramArray = NullOptr;              /* no parameters yet */
     paramBytes = 0;
