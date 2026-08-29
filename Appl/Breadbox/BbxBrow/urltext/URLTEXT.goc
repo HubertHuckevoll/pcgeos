@@ -1021,6 +1021,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     TCHAR name[HTML_STATIC_BUF], *nP;
     NameToken referer = NAME_POOL_NONE;
     Boolean objCache;
+    Boolean finishPending = FALSE;
     word i, n, size;
 
     if(!imageArray || !frame)
@@ -1058,6 +1059,10 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
             }
             p = ChunkArrayElementToPtr(imageArray, nImage, &size);
 
+            /* Cache hits resolve synchronously, so bracket this like the
+               normal graphics pass to ensure the final layout runs. */
+            @call oself::MSG_URL_TEXT_INC_PENDING();
+            finishPending = TRUE;
             if(ProcessSingleGraphic(p, oself, referer, nImage, TRUE, FALSE,
                                     objCache, TRUE, 0))
             {
@@ -1076,6 +1081,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         }
     }
     MemUnlock(OptrToHandle(imageArray));
+    if(finishPending)
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
 
     if(referer != NAME_POOL_NONE)
         NamePoolReleaseToken(namePool, referer);
