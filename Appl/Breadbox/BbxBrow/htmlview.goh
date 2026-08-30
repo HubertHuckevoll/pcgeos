@@ -1156,7 +1156,8 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @message void MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(NameToken url);
   @message void MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
     NameToken url);
-  @message void MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(NameToken url);
+  @message void MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(NameToken url,
+    word formatFlags);
   @message void MSG_URL_TEXT_RECALCULATE() ;
   @message void MSG_URL_TEXT_INCREASE_USED_MEMORY(dword usedMem) ;
   @message dword MSG_URL_TEXT_GET_MEMORY_AVAILABLE() ;

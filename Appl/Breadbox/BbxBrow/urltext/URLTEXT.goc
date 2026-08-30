@@ -246,6 +246,7 @@ extern Boolean G_fetchWhileImport;
         loadProgressDataP->LPD_mimeType,
         nullName,  /* have data stream, don't need filename */
         FALSE, loadProgressDataP->LPD_imageProbeMaxPixels,
+        URLTextImageFormatFromMime(loadProgressDataP->LPD_mimeType),
         loadProgressDataP))
     {
         loadProgressDataP->LPD_imageProbe = LPI_DEFERRED;
@@ -266,6 +267,26 @@ void AssumeGraphic(TCHAR *mimeType)
 	/* assume GIF, will fall through to JPG */
 	strcpy(mimeType, _TEXT("image/gif"));
     }
+}
+
+word _pascal URLTextImageFormatFromMime(TCHAR *mimeType)
+{
+    if(!mimeType)
+        return 0;
+    if(!strcmpi(mimeType, _TEXT("image/jpeg")) ||
+       !strcmpi(mimeType, _TEXT("image/jpg")) ||
+       !strcmpi(mimeType, _TEXT("image/pjpeg")))
+        return HTML_IDF_FORMAT_JPEG;
+    if(!strcmpi(mimeType, _TEXT("image/png")))
+        return HTML_IDF_FORMAT_PNG;
+    if(!strcmpi(mimeType, _TEXT("image/gif")))
+        return HTML_IDF_FORMAT_GIF;
+    if(!strcmpi(mimeType, _TEXT("image/webp")))
+        return HTML_IDF_FORMAT_WEBP;
+    if(!strcmpi(mimeType, _TEXT("image/svg")) ||
+       !strcmpi(mimeType, _TEXT("image/svg+xml")))
+        return HTML_IDF_FORMAT_SVG;
+    return 0;
 }
 
 extern void _pascal WakeUp(word *queueP);
@@ -1296,6 +1317,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     Boolean importQueued;
     Boolean temporary;
     dword importProbeMaxPixels;
+    word resultFormatFlags;
     word ret;
     extern Boolean G_stopped;
 #ifdef CACHE_VALIDATION
@@ -1309,6 +1331,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     MemUnlock(urlFetchMem) ;
     MemFree(urlFetchMem) ;
 
+    resultFormatFlags = URLTextImageFormatFromMime(result.mimeType);
     /* since we know this came from IMG tag, assume graphic */
     AssumeGraphic(result.mimeType);
 
@@ -1389,7 +1412,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
             request.nameT,
             result.mimeType,
             result.curHTML,
-            temporary, importProbeMaxPixels, NULL) ;
+            temporary, importProbeMaxPixels, resultFormatFlags, NULL) ;
         if (!importQueued) {
             if (temporary)
                 FileDelete(result.curHTML);
@@ -1405,7 +1428,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
                 request.nameT,
                 result.mimeType,
                 result.curHTML,
-                temporary, importProbeMaxPixels, NULL) ;
+                temporary, importProbeMaxPixels, resultFormatFlags, NULL) ;
             if (!importQueued) {
                 if (temporary)
                     FileDelete(result.curHTML);
@@ -1418,7 +1441,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         if(request.imageProbeMaxPixels)
         {
             @call self::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
-              request.nameT);
+              request.nameT, resultFormatFlags);
             @call self::MSG_URL_TEXT_DEC_PENDING();
         }
     } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS_ABORT) {
@@ -1430,7 +1453,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
             request.nameT,
             result.mimeType,
             result.curHTML,
-            temporary, importProbeMaxPixels) ;
+            temporary, importProbeMaxPixels, resultFormatFlags) ;
         if (!importQueued) {
             if (temporary)
                 FileDelete(result.curHTML);
@@ -1442,7 +1465,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         if(request.imageProbeMaxPixels)
         {
             @call self::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
-              request.nameT);
+              request.nameT, resultFormatFlags);
             @call self::MSG_URL_TEXT_DEC_PENDING();
         }
 #endif
@@ -1791,6 +1814,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     ImageLoadMode *imageModeP;
     ImageLoadMode imageMode;
     Boolean relayout;
+    word oldFormat;
 
     imageArray = pself->HTI_imageArray;
     relayout = FALSE;
@@ -1803,7 +1827,9 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             imageP = ChunkArrayElementToPtr(imageArray, i, &size);
             if(url == imageP->HID_resolvedURL)
             {
-                if(!(imageP->flags & HTML_IDF_COMPACT))
+                oldFormat = imageP->flags & HTML_IDF_FORMAT_MASK;
+                if(!(imageP->flags & HTML_IDF_COMPACT) ||
+                   oldFormat != (formatFlags & HTML_IDF_FORMAT_MASK))
                     relayout = TRUE;
                 if(imageP->HID_cacheToken)
                     ObjCacheUnlockItem(
@@ -1811,6 +1837,8 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
                 imageP->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
                   HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY);
                 imageP->flags |= HTML_IDF_COMPACT;
+                imageP->flags = (imageP->flags & ~HTML_IDF_FORMAT_MASK) |
+                  (formatFlags & HTML_IDF_FORMAT_MASK);
                 imageP->HID_cacheToken = 0;
                 imageP->HID_vmf = 0;
                 imageP->HID_vmb = 0;
@@ -2727,6 +2755,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     URLFetchResult result ;
     Boolean importQueued;
     Boolean temporary;
+    word resultFormatFlags;
     extern Boolean G_stopped;
 
     /* get result locally */
@@ -2734,6 +2763,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     memcpy(&result, p_result, sizeof(result));
     MemFree(urlFetchMem);
 
+    resultFormatFlags = URLTextImageFormatFromMime(result.mimeType);
     /* since we know this came from IMG tag, assume graphic */
     AssumeGraphic(result.mimeType);
 
@@ -2765,7 +2795,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
             request.nameT,
             result.mimeType,
             result.curHTML,
-            temporary, 0, NULL) ;
+            temporary, 0, resultFormatFlags, NULL) ;
         if (!importQueued) {
             if (temporary)
                 FileDelete(result.curHTML);

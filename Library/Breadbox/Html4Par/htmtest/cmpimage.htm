@@ -40,6 +40,14 @@ the inline image limit.</p>
 <p>Unsupported SVG with ALT:
 <img src="unsup.svg" alt="Violet SVG fill"></p>
 <p>Unsupported SVG without ALT: <img src="unsup.svg"></p>
+<p>ALT text wraps above a separate filename and format row:<br>
+<img src="large.gif?probe=1#fragment" alt="This is deliberately long alternative text that should wrap in the compact placeholder"></p>
+<p>An unlinked compact filename does not activate from its upper rows:
+<img src="large.gif?query=1#target"></p>
+<p>A linked compact upper block keeps normal link behavior:
+<a href="#target"><img src="large.gif?linked=1" alt="Long linked alternative text for testing"></a></p>
+<p>A linked compact image without ALT uses its filename:
+<a href="#target"><img src="large.gif?linked=no-alt"></a></p>
 <p>A missing image remains retryable:
 <img src="missing.gif" alt="Retry missing image"></p>
 <form action="#target" method="get">

@@ -2058,9 +2058,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     VMBlockHandle *graphicRuns;
     MemHandle graphicMem;
     GStateHandle gstate;
-    TCHAR marker[2];
-    word i, n, size, markerWidth, compactFocus;
-    word *markerEndP;
+    word i, n, size, compactFocus;
     XYSize newSize, textSize;
     ImageLoadMode oldMode;
     Boolean compact, changed, clearFocus, preserveGeometry;
@@ -2077,19 +2075,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     gstate = GrCreateState(0);
     if(!gstate)
         return;
-@ifdef DO_DBCS
-    marker[0] = C_KATAKANA_MIDDLE_DOT;
-@else
-    marker[0] = C_DIAMONDBULLET;
-@endif
-    marker[1] = 0;
     FormSetTextAttr(gstate);
-    markerWidth = GrTextWidth(gstate, (char*)marker, 1);
-    markerEndP = ObjVarFindData(oself, ATTR_HTML_TEXT_COMPACT_MARKER_END);
-    if(!markerEndP)
-        markerEndP = ObjVarAddData(oself,
-          ATTR_HTML_TEXT_COMPACT_MARKER_END, sizeof(*markerEndP));
-    *markerEndP = COMPACT_IMAGE_PADDING + markerWidth + COMPACT_IMAGE_GAP;
 
     pself = ObjDerefVis(oself);
     graphicRuns = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
@@ -2127,9 +2113,8 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
         if(compact)
         {
             CompactImageLayoutText(gstate, image, pself->HTI_namePool,
-              markerWidth, FALSE, FALSE, &textSize);
-            newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + markerWidth +
-              COMPACT_IMAGE_GAP + textSize.XYS_width;
+              (ColorQuad *)0, FALSE, TRUE, &textSize);
+            newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + textSize.XYS_width;
             newSize.XYS_height = textSize.XYS_height + 4;
         }
         else
@@ -2231,6 +2216,8 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     optr pool;
     T_cellArrayHandle cellArray;
     ColorQuad linkColor;
+    VisTextCharAttrDiffs diffs;
+    VisTextCharAttr attrs;
 
     imageArray = pself->HTI_imageArray;
     pool = pself->HTI_namePool;
@@ -2284,6 +2271,17 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
             p_graphic = &vtg;
           }
 
+          /* Invalidation starts with a fresh gstate. Restore the character
+             attributes so compact text keeps its enclosing link styling. */
+          @call oself::MSG_VIS_TEXT_GET_CHAR_ATTR(0, &diffs, &attrs,
+            imageArrayElement->pos + imageArrayElement->len,
+            imageArrayElement->pos);
+          GrSetFont(gstate, attrs.VTCA_fontID,
+            MakeWWFixed(attrs.VTCA_pointSize.WBF_int));
+          GrSetTextStyle(gstate, attrs.VTCA_textStyles, 0);
+          GrSetTextColor(gstate, attrs.VTCA_color.CQ_info,
+            attrs.VTCA_color.CQ_redOrIndex, attrs.VTCA_color.CQ_green,
+            attrs.VTCA_color.CQ_blue);
           GrApplyTranslationDWord(gstate, regpos.RD_left, regpos.RD_top) ;
           DrawVarGraphic(gstate, imageArrayElement, pool,
             &linkColor, invalFrom, invalTo);

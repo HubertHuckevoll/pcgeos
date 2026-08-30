@@ -559,13 +559,12 @@ void SpreadCopyIndexArray(MemHandle state, T_columnIndex *p_indexArray) ;
 #define IMAGE_HEIGHT_FUDGE_FACTOR   1
 #define COMPACT_IMAGE_MAX_WIDTH     160
 #define COMPACT_IMAGE_PADDING       2
-#define COMPACT_IMAGE_GAP           2
 #define COMPACT_IMAGE_TEXT_MAX      80
 
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
                     ColorQuad *linkColor, word invalFrom, word invalTo);
 void CompactImageLayoutText(GStateHandle gstate, HTMLimageData *iae,
-  optr namePool, word markerWidth, Boolean draw, Boolean measureForm,
+  optr namePool, ColorQuad *linkColor, Boolean draw, Boolean measureForm,
   XYSize *textSize);
 ImageLoadMode _pascal HTMLTextGetImageLoadMode(optr text);
 void _pascal HTMLTextSetImageLoadMode(optr text, ImageLoadMode mode);

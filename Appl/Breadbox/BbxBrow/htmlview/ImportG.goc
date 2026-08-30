@@ -70,6 +70,7 @@ typedef struct {
     Boolean temporary;
     Boolean objCache;
     dword imageProbeMaxPixels;
+    word formatFlags;
 #if PROGRESS_DISPLAY
     ImportProgressData importProgressData;
 #endif
@@ -457,6 +458,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *curHTML,
             Boolean temporary,
 	    dword imageProbeMaxPixels,
+	    word formatFlags,
 	    _LoadProgressParams_)
 #else
 Boolean ImportThreadRequestImportGraphic(
@@ -465,7 +467,8 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
-            dword imageProbeMaxPixels)
+            dword imageProbeMaxPixels,
+            word formatFlags)
 #endif
 {
     T_importGraphicRequest *p_request ;
@@ -501,6 +504,7 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
             p_request->curHTML[(sizeof(p_request->curHTML)/sizeof(TCHAR))-1] = 0 ;
             p_request->temporary = temporary;
             p_request->imageProbeMaxPixels = imageProbeMaxPixels;
+            p_request->formatFlags = formatFlags & HTML_IDF_FORMAT_MASK;
 
             /* Is the object cache turned on? */
             p_request->objCache = (@call SettingsBoolGroup::
@@ -849,7 +853,7 @@ void ImportThreadAbortAll(void)
               (request.mimeStatus->MS_mimeFlags &
                MIME_STATUS_MEMORY_LIMIT))
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
-            request.name);
+            request.name, request.formatFlags);
       else
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
             OCT_NULL, request.name, 0, 0xFFFF);
@@ -861,7 +865,7 @@ void ImportThreadAbortAll(void)
              )
       {
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
-            request.name);
+            request.name, request.formatFlags);
       }
 
       /* Done with this graphic */
