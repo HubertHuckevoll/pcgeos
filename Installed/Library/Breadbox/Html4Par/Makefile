@@ -5,23 +5,23 @@
 #
 GEODE           = html4par
 ASMTOOLS        = asmtoolsManager.asm
-HTMLCLAS        = formset.h htmlcol.goc htmltabl.goc htmlclrt.goc\
-                  htmlfdrw.goc htmlfsiz.goc htmltcel.goc htmltdrw.goc\
-                  htmltpos.goc htmltpre.goc htmlclas.goc htmlfedi.goc\
-                  htmlform.goc
+HTMLCLAS        = formset.h htmlcol.goc htmltabl.goc htmlfedi.goc\
+                  htmlfsiz.goc htmltdrw.goc htmltpos.goc htmltpre.goc\
+                  htmlclas.goc htmlclrt.goc htmlfdrw.goc htmlform.goc\
+                  htmltcel.goc
 HTMLEXPT        = htmlexpt.goc
-HTMLPARS        = parsinit.goc awatcher.goc stylesh.goc parstags.goc\
-                  htmlpars.goc opentags.goc
+HTMLPARS        = parsinit.goc stylesh.goc awatcher.goc htmlpars.goc\
+                  opentags.goc parstags.goc
 WWWTOOLS        = dialogt.goc namepool.goc wwwtools.goc
 UI_TO_RDFS      =
-OBJS            = htmlcol.obj htmltabl.obj htmlclrt.obj htmlfdrw.obj\
-                  htmlfsiz.obj htmltcel.obj htmltdrw.obj htmltpos.obj\
-                  htmltpre.obj htmlclas.obj htmlfedi.obj htmlform.obj\
-                  htmlexpt.obj parsinit.obj awatcher.obj stylesh.obj\
-                  parstags.obj htmlpars.obj opentags.obj dialogt.obj\
+OBJS            = htmlcol.obj htmltabl.obj htmlfedi.obj htmlfsiz.obj\
+                  htmltdrw.obj htmltpos.obj htmltpre.obj htmlclas.obj\
+                  htmlclrt.obj htmlfdrw.obj htmlform.obj htmltcel.obj\
+                  htmlexpt.obj parsinit.obj stylesh.obj awatcher.obj\
+                  htmlpars.obj opentags.obj parstags.obj dialogt.obj\
                   namepool.obj wwwtools.obj
 COMMON          = dialogt.goh radio0.goh radio1.goh regiont.h tableint.h\
-                  options.goh internal.h errors.h htmlsty.goh
+                  options.goh errors.h htmlsty.goh internal.h
 MODULES         = asmtools
 CMODULES        = htmlclas htmlexpt htmlpars wwwtools
 SRCS            = $(ASMTOOLS) $(HTMLCLAS) $(HTMLEXPT) $(HTMLPARS)\
@@ -30,7 +30,7 @@ LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = html4par
 
-PRODUCTS        = DBCS JS JSDBCS AB 
+PRODUCTS        = DBCS JS JSDBCS AB ABDBCS 
 
 SYSMAKEFILE     = geode.mk
 
@@ -61,4 +61,8 @@ SYSMAKEFILE     = geode.mk
 
 #if exists(AB/$(DEPFILE))
 #include "AB/$(DEPFILE)"
+#endif
+
+#if exists(ABDBCS/$(DEPFILE))
+#include "ABDBCS/$(DEPFILE)"
 #endif

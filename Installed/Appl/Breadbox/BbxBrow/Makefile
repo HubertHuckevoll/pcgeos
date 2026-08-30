@@ -5,29 +5,29 @@
 #
 GEODE           = bbxbrow
 ASMTOOLS        = asmtoolsManager.asm
-HTMLVIEW        = AWATCHER.goc GLBANIM.goc HTMLVIEW.goc OpenClos.goc\
-                  StatText.goc UIAction.goc UIOften.goc scrapbk.goc\
-                  UIRare.goc ImportG.goc LoadURL.goc
+HTMLVIEW        = AWATCHER.goc GLBANIM.goc OpenClos.goc StatText.goc\
+                  UIOften.goc scrapbk.goc HTMLVIEW.goc ImportG.goc\
+                  UIAction.goc UIRare.goc LoadURL.goc
 INIT            = INIT.goc
-NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc BOOKMARK.goc NAVIGATE.goc\
-                  FAVORITE.goc NAVCACHE.goc
+NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc FAVORITE.goc BOOKMARK.goc\
+                  NAVCACHE.goc NAVIGATE.goc
 URLDOC          = LOCALPAG.goc URLDOC.goc
 URLDOCCT        = URLDOCCT.goc
 URLFETCH        = URLFETCH.goc
 URLFRAME        = FRFETCH.goc URLFRAME.goc
 URLTEXT         = URLTEXT2.goc URLTEXT.goc
 UI_TO_RDFS      =
-OBJS            = AWATCHER.obj GLBANIM.obj HTMLVIEW.obj OpenClos.obj\
-                  StatText.obj UIAction.obj UIOften.obj scrapbk.obj\
-                  UIRare.obj ImportG.obj LoadURL.obj INIT.obj BOOKCLAS.obj\
-                  FAVORCLS.obj BOOKMARK.obj NAVIGATE.obj FAVORITE.obj\
-                  NAVCACHE.obj LOCALPAG.obj URLDOC.obj URLDOCCT.obj\
+OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
+                  UIOften.obj scrapbk.obj HTMLVIEW.obj ImportG.obj\
+                  UIAction.obj UIRare.obj LoadURL.obj INIT.obj BOOKCLAS.obj\
+                  FAVORCLS.obj FAVORITE.obj BOOKMARK.obj NAVCACHE.obj\
+                  NAVIGATE.obj LOCALPAG.obj URLDOC.obj URLDOCCT.obj\
                   URLFETCH.obj FRFETCH.obj URLFRAME.obj URLTEXT2.obj\
                   URLTEXT.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
-                  stattext.goh urlfetch.goh htmlv_ui.goh prodbbx.goh\
-                  options.goh htmlview.goh importg.goh
+                  stattext.goh htmlv_ui.goh htmlview.goh importg.goh\
+                  options.goh prodbbx.goh urlfetch.goh
 MODULES         = ASMTOOLS
 CMODULES        = htmlview init navigate urldoc urldocct urlfetch urlframe\
                   urltext
@@ -35,7 +35,7 @@ SRCS            = $(ASMTOOLS) $(HTMLVIEW) $(INIT) $(NAVIGATE) $(URLDOC)\
                   $(URLDOCCT) $(URLFETCH) $(URLFRAME) $(URLTEXT) $(COMMON)
 LOBJS           =
 
-PRODUCTS        = AB 
+PRODUCTS        = AB DBCS ABDBCS 
 
 SYSMAKEFILE     = geode.mk
 
@@ -54,4 +54,12 @@ SYSMAKEFILE     = geode.mk
 
 #if exists(AB/$(DEPFILE))
 #include "AB/$(DEPFILE)"
+#endif
+
+#if exists(DBCS/$(DEPFILE))
+#include "DBCS/$(DEPFILE)"
+#endif
+
+#if exists(ABDBCS/$(DEPFILE))
+#include "ABDBCS/$(DEPFILE)"
 #endif
