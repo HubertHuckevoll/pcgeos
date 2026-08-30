@@ -912,6 +912,61 @@ typedef struct {
     dword imageProbeMaxPixels;
 } URLTextRequestGraphic ;
 
+#define IMAGE_URL_EXTENSION_MAX 16
+
+/* Return TRUE only when the URL gives us a known image type and no installed
+ * MIME driver handles it. Unknown and extensionless URLs must reach HTTP. */
+static Boolean _pascal
+ImageURLGetUnsupportedFormat(NameToken nameT, word *formatFlagsP)
+{
+    TCHAR url[HTML_STATIC_BUF];
+    TCHAR extension[IMAGE_URL_EXTENSION_MAX];
+    TCHAR mimeType[MIME_MAXBUF];
+    FileLongName driver;
+    TCHAR *urlP;
+    TCHAR *end;
+    TCHAR *fragment;
+    TCHAR *slash;
+    TCHAR *dot;
+    word extensionLength;
+    Boolean unsupported;
+
+    unsupported = FALSE;
+    *formatFlagsP = 0;
+    NamePoolCopy(namePool, url, sizeof(url), nameT, &urlP);
+
+    end = strchr(urlP, '?');
+    fragment = strchr(urlP, '#');
+    if(!end || (fragment && fragment < end))
+        end = fragment;
+    if(end)
+        *end = 0;
+
+    slash = strrchr(urlP, '/');
+    dot = strrchr(urlP, '.');
+    if(dot && (!slash || dot > slash) && dot[1])
+    {
+        extensionLength = strlen(dot + 1);
+        if(extensionLength < IMAGE_URL_EXTENSION_MAX)
+        {
+            strcpy(extension, dot + 1);
+            strupr(extension);
+            if(NameAssocFindAssociation(assocExtType, extension,
+                 mimeType, sizeof(mimeType), TRUE, (void *)0) &&
+               !LocalCmpStringsNoCase(mimeType, _TEXT("image/"), 6) &&
+               !NameAssocFindAssociation(assocTypeDriver, mimeType,
+                 driver, sizeof(driver), TRUE, (void *)0))
+            {
+                unsupported = TRUE;
+                *formatFlagsP = URLTextImageFormatFromMime(mimeType);
+            }
+        }
+    }
+
+    NamePoolDestroyIfDynamic(urlP);
+    return unsupported;
+}
+
 void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
 		     word invalFrom, word invalTo);
 
@@ -932,6 +987,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
     static proc_LoadProgressCallback *loadProgressCallback = LoadGraphicProgressCallback;
     LoadProgressData loadProgressData;
     Boolean ret = FALSE;
+    word formatFlags;
     extern Boolean G_stopped ;
 
     if(p->flags & HTML_IDF_UNSUPPORTED)
@@ -969,6 +1025,11 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
 	 ObjCacheUnlockItem(oct);
 	 NamePoolReleaseToken(namePool, nameT);
      }
+    }
+    else if(ImageURLGetUnsupportedFormat(nameT, &formatFlags))
+    {
+      @call oself::MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
+        nameT, formatFlags);
     }
     else if ((loadUnknownSize || !p->size.XYS_height || !p->size.XYS_width) && (!G_stopped))
     {                                   // possibly load even if size unknown
@@ -1472,7 +1533,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     } else if(URLRequestGetRet(result.retType) ==
               URL_RET_UNSUPPORTED_IMAGE) {
         @call oself::MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
-          request.nameT);
+          request.nameT, resultFormatFlags);
         @call oself::MSG_URL_TEXT_DEC_PENDING();
     } else {
         /* Does not appear to have come in correctly.  Release it */
@@ -1789,6 +1850,8 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             imageP = ChunkArrayElementToPtr(imageArray, i, &size);
             if(url == imageP->HID_resolvedURL)
             {
+                imageP->flags = (imageP->flags & ~HTML_IDF_FORMAT_MASK) |
+                  (formatFlags & HTML_IDF_FORMAT_MASK);
                 if(imageP->HID_cacheToken)
                     ObjCacheUnlockItem(
                       (ObjCacheToken)imageP->HID_cacheToken);

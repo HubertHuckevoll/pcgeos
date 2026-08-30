@@ -701,7 +701,13 @@ void InitNavigation(void)
     assocTypeDriver = NameAssocCreate(assocCacheBlock, namePool);
     assocSchemeDriver = NameAssocCreate(assocCacheBlock, namePool);
 
-    /* Known types are hints; installed MIME drivers remain authoritative. */
+    /*
+     * Seed known extension-to-MIME mappings even without support, so URL
+     * image preflight avoids fetching recognized formats with no installed
+     * MIME driver. LoadMimeTypes() runs next; installed driver associations
+     * take precedence, so listed formats become supported automatically when
+     * advertised and need not be removed here.
+     */
     NameAssocAssociate(assocExtType, _TEXT("APNG"), _TEXT("image/apng"));
     NameAssocAssociate(assocExtType, _TEXT("AVIF"), _TEXT("image/avif"));
     NameAssocAssociate(assocExtType, _TEXT("BMP"), _TEXT("image/bmp"));
