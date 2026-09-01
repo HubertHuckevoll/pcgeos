@@ -972,7 +972,10 @@ void FormElementRemoveTextEntry(optr urlTextObj);
     TCHAR buf[32];
     word size;
     Boolean compactHot;
-    sword loadRowStart;
+    GStateHandle compactGState;
+    XYSize compactTextSize;
+    CompactImageHit compactHit;
+    Boolean compactPunctuation;
     WordFlags imageFlags;
 @ifdef JAVASCRIPT_SUPPORT
     HTMLEventType msgevt = (message == MSG_META_LARGE_START_SELECT)?
@@ -1001,12 +1004,20 @@ void FormElementRemoveTextEntry(optr urlTextObj);
         rel.P_x += img->HID_size.XYS_width;
 
       compactHot = FALSE;
-      if((img->flags & HTML_IDF_COMPACT) &&
-         !(img->flags & HTML_IDF_UNSUPPORTED))
+      compactPunctuation = FALSE;
+      if(img->flags & HTML_IDF_COMPACT)
       {
-        loadRowStart = img->HID_size.XYS_height - COMPACT_IMAGE_PADDING -
-          FormGetPointSize();
-        compactHot = rel.P_y >= loadRowStart;
+        compactPunctuation = TRUE;
+        compactGState = @call self::MSG_VIS_VUP_CREATE_GSTATE();
+        if(compactGState)
+        {
+          compactHit = CompactImageLayoutText(compactGState, img,
+            pself->HTI_namePool, (ColorQuad *)0, FALSE, TRUE,
+            &compactTextSize, &rel);
+          GrDestroyState(compactGState);
+          compactHot = compactHit == CIH_LOAD;
+          compactPunctuation = compactHit == CIH_PLAIN;
+        }
         if(compactHot)
         {
           imageFlags = img->flags;
@@ -1022,7 +1033,8 @@ void FormElementRemoveTextEntry(optr urlTextObj);
         }
       }
 
-      if(img->usemap != NAME_POOL_NONE) /* client side map: find link */
+      if(!compactPunctuation && img->usemap != NAME_POOL_NONE)
+                                        /* client side map: find link */
       {
         link = @call self::MSG_HTML_TEXT_LINK_FROM_MAP(img, &rel);
 @ifdef JAVASCRIPT_SUPPORT
@@ -1034,13 +1046,21 @@ void FormElementRemoveTextEntry(optr urlTextObj);
         }
 @endif
       }
-      else if(img->flags & HTML_IDF_ISMAP)
+      else if(!compactPunctuation && (img->flags & HTML_IDF_ISMAP))
       {                                 /* server side map: append coords */
         sprintf(buf,_TEXT("?%d,%d"),rel.P_x,rel.P_y);
       }
 
-      /* make sure we're using the proper form element with a submit image: */
-      formElement = img->formElementIndex;
+      if(compactPunctuation)
+      {
+        link = CA_NULL_ELEMENT;
+        formElement = CA_NULL_ELEMENT;
+      }
+      else
+      {
+        /* make sure we're using the proper form element with a submit image: */
+        formElement = img->formElementIndex;
+      }
 
       MemUnlock(OptrToHandle(pself->HTI_imageArray));
     }

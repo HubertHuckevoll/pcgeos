@@ -561,11 +561,17 @@ void SpreadCopyIndexArray(MemHandle state, T_columnIndex *p_indexArray) ;
 #define COMPACT_IMAGE_PADDING       2
 #define COMPACT_IMAGE_TEXT_MAX      80
 
+typedef enum {
+    CIH_PLAIN,
+    CIH_CAPTION,
+    CIH_LOAD
+} CompactImageHit;
+
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
                     ColorQuad *linkColor, word invalFrom, word invalTo);
-void CompactImageLayoutText(GStateHandle gstate, HTMLimageData *iae,
+CompactImageHit CompactImageLayoutText(GStateHandle gstate, HTMLimageData *iae,
   optr namePool, ColorQuad *linkColor, Boolean draw, Boolean measureForm,
-  XYSize *textSize);
+  XYSize *textSize, Point *hitP);
 ImageLoadMode _pascal HTMLTextGetImageLoadMode(optr text);
 void _pascal HTMLTextSetImageLoadMode(optr text, ImageLoadMode mode);
 word _pascal HTMLTextGetCompactImageFocus(optr text);

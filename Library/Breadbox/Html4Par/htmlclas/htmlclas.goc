@@ -2113,7 +2113,8 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
         if(compact)
         {
             CompactImageLayoutText(gstate, image, pself->HTI_namePool,
-              (ColorQuad *)0, FALSE, TRUE, &textSize);
+              (ColorQuad *)0, FALSE, TRUE, &textSize,
+              (Point *)0);
             newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + textSize.XYS_width;
             newSize.XYS_height = textSize.XYS_height + 4;
         }
