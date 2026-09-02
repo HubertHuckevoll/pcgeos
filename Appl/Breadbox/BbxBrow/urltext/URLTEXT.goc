@@ -915,7 +915,9 @@ typedef struct {
 #define IMAGE_URL_EXTENSION_MAX 16
 
 /* Return TRUE only when the URL gives us a known image type and no installed
- * MIME driver handles it. Unknown and extensionless URLs must reach HTTP. */
+ * MIME driver handles it. formatFlagsP also receives any compact-label format
+ * recognized from the extension, including supported formats, so the
+ * placeholder has a useful label before HTTP headers arrive. */
 static Boolean _pascal
 ImageURLGetUnsupportedFormat(NameToken nameT, word *formatFlagsP)
 {
@@ -952,13 +954,13 @@ ImageURLGetUnsupportedFormat(NameToken nameT, word *formatFlagsP)
             strcpy(extension, dot + 1);
             strupr(extension);
             if(NameAssocFindAssociation(assocExtType, extension,
-                 mimeType, sizeof(mimeType), TRUE, (void *)0) &&
-               !LocalCmpStringsNoCase(mimeType, _TEXT("image/"), 6) &&
-               !NameAssocFindAssociation(assocTypeDriver, mimeType,
-                 driver, sizeof(driver), TRUE, (void *)0))
+                 mimeType, sizeof(mimeType), TRUE, (void *)0))
             {
-                unsupported = TRUE;
                 *formatFlagsP = URLTextImageFormatFromMime(mimeType);
+                if(!LocalCmpStringsNoCase(mimeType, _TEXT("image/"), 6) &&
+                   !NameAssocFindAssociation(assocTypeDriver, mimeType,
+                     driver, sizeof(driver), TRUE, (void *)0))
+                    unsupported = TRUE;
             }
         }
     }
@@ -1104,7 +1106,11 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     NameToken referer = NAME_POOL_NONE;
     Boolean objCache;
     Boolean finishPending = FALSE;
+    Boolean formatChanged;
+    word formatFlags, oldFormat;
     word i, n, size;
+    ImageLoadMode *imageModeP;
+    ImageLoadMode imageMode;
 
     if(!imageArray || !frame)
         return;
@@ -1113,6 +1119,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     referer = @call realFrame::MSG_URL_FRAME_GET_URL();
     objCache = (@call SettingsBoolGroup::
       MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTMLV_OBJECT_CACHE);
+    formatChanged = FALSE;
 
     MemLock(OptrToHandle(imageArray));
     n = ChunkArrayGetCount(imageArray);
@@ -1137,6 +1144,17 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                     image2->HID_resolvedURL =
                       NamePoolTokenize(namePool, nP, FALSE);
                     NamePoolDestroyIfDynamic(nP);
+                }
+                oldFormat = image2->flags & HTML_IDF_FORMAT_MASK;
+                if(!oldFormat && image2->HID_resolvedURL)
+                {
+                    ImageURLGetUnsupportedFormat(image2->HID_resolvedURL,
+                      &formatFlags);
+                    if(formatFlags)
+                    {
+                        image2->flags |= formatFlags;
+                        formatChanged = TRUE;
+                    }
                 }
             }
             p = ChunkArrayElementToPtr(imageArray, nImage, &size);
@@ -1163,6 +1181,13 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         }
     }
     MemUnlock(OptrToHandle(imageArray));
+    if(formatChanged)
+    {
+        imageModeP = ObjVarFindData(oself,
+          ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+        imageMode = imageModeP ? *imageModeP : IMAGE_LOAD_AUTOMATIC;
+        @call self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(imageMode);
+    }
     if(finishPending)
         @call oself::MSG_URL_TEXT_DEC_PENDING();
 
@@ -1204,10 +1229,12 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     optr textPool = pself->HTI_namePool;
     optr frame = pself->UTI_frame;
     word pass;
+    word formatFlags, oldFormat;
     ImageLoadMode imageMode;
     dword imageProbeMaxPixels;
     NameToken referer = NAME_POOL_NONE;
     optr realFrame = NullOptr;
+    Boolean formatChanged;
 
     @call self::MSG_URL_TEXT_INC_PENDING();
 
@@ -1232,6 +1259,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       imageMode == IMAGE_LOAD_INTELLIGENT) ?
       INTELLIGENT_IMAGE_MAX_PIXELS : 0;
 
+    formatChanged = FALSE;
+
     MemLock(OptrToHandle(imageArray));
     n = ChunkArrayGetCount(imageArray);
 
@@ -1251,6 +1280,14 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
 
         p->HID_resolvedURL = NamePoolTokenize(namePool, nP, FALSE);
 	NamePoolDestroyIfDynamic(nP);
+      }
+
+      oldFormat = p->flags & HTML_IDF_FORMAT_MASK;
+      ImageURLGetUnsupportedFormat(p->HID_resolvedURL, &formatFlags);
+      if(!oldFormat && formatFlags)
+      {
+        p->flags |= formatFlags;
+        formatChanged = TRUE;
       }
     }
 
@@ -1286,6 +1323,9 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     }
 
     MemUnlock(OptrToHandle(imageArray));
+
+    if(formatChanged)
+        @call self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(imageMode);
 
     @call self::MSG_URL_TEXT_DEC_PENDING() ;
 
@@ -1837,6 +1877,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
         MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED
 {
     word i, n, size;
+    word imageFormat;
     HTMLimageData *imageP;
     optr imageArray;
 
@@ -1850,8 +1891,11 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             imageP = ChunkArrayElementToPtr(imageArray, i, &size);
             if(url == imageP->HID_resolvedURL)
             {
+                imageFormat = imageP->flags & HTML_IDF_FORMAT_MASK;
+                if(formatFlags & HTML_IDF_FORMAT_MASK)
+                    imageFormat = formatFlags & HTML_IDF_FORMAT_MASK;
                 imageP->flags = (imageP->flags & ~HTML_IDF_FORMAT_MASK) |
-                  (formatFlags & HTML_IDF_FORMAT_MASK);
+                  imageFormat;
                 if(imageP->HID_cacheToken)
                     ObjCacheUnlockItem(
                       (ObjCacheToken)imageP->HID_cacheToken);
@@ -1877,7 +1921,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     ImageLoadMode *imageModeP;
     ImageLoadMode imageMode;
     Boolean relayout;
-    word oldFormat;
+    word oldFormat, imageFormat;
 
     imageArray = pself->HTI_imageArray;
     relayout = FALSE;
@@ -1891,8 +1935,11 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             if(url == imageP->HID_resolvedURL)
             {
                 oldFormat = imageP->flags & HTML_IDF_FORMAT_MASK;
+                imageFormat = formatFlags & HTML_IDF_FORMAT_MASK;
+                if(!imageFormat)
+                    imageFormat = oldFormat;
                 if(!(imageP->flags & HTML_IDF_COMPACT) ||
-                   oldFormat != (formatFlags & HTML_IDF_FORMAT_MASK))
+                   oldFormat != imageFormat)
                     relayout = TRUE;
                 if(imageP->HID_cacheToken)
                     ObjCacheUnlockItem(
@@ -1901,7 +1948,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
                   HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY);
                 imageP->flags |= HTML_IDF_COMPACT;
                 imageP->flags = (imageP->flags & ~HTML_IDF_FORMAT_MASK) |
-                  (formatFlags & HTML_IDF_FORMAT_MASK);
+                  imageFormat;
                 imageP->HID_cacheToken = 0;
                 imageP->HID_vmf = 0;
                 imageP->HID_vmb = 0;
@@ -2672,7 +2719,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 
 @method URLTextClass, MSG_URL_TEXT_CHANGE_GRAPHIC
 {
-    word size;
+    word size, oldFormat, formatFlags;
     TCHAR name[HTML_STATIC_BUF], *nP;
     HTMLimageData *p;
     Boolean objCache;
@@ -2682,6 +2729,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     optr realFrame = NullOptr;
     ImageLoadMode imageMode;
     dword imageProbeMaxPixels;
+    Boolean formatChanged;
 
     if(!imageArray)                     /* avoid indenting all this stuff... */
       return;
@@ -2693,6 +2741,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     MemLock(OptrToHandle(imageArray));
 
     p = ChunkArrayElementToPtr(imageArray, i, &size);
+    formatChanged = FALSE;
 
     NamePoolCopy(namePool, name, sizeof(name), url, &nP);
 
@@ -2703,6 +2752,15 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     if(!NamePoolTestEqual(namePool, p->HID_resolvedURL, nP))
     {
       p->HID_resolvedURL = NamePoolTokenize(namePool, nP, FALSE);
+      oldFormat = p->flags & HTML_IDF_FORMAT_MASK;
+      ImageURLGetUnsupportedFormat(p->HID_resolvedURL, &formatFlags);
+      formatFlags &= HTML_IDF_FORMAT_MASK;
+      if(oldFormat != formatFlags)
+      {
+        p->flags = (p->flags & ~HTML_IDF_FORMAT_MASK) |
+          formatFlags;
+        formatChanged = TRUE;
+      }
 
       /* set up referer (marked in-use by GET_URL) */
       if(frame)
@@ -2729,6 +2787,9 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     NamePoolDestroyIfDynamic(nP);
 
     MemUnlock(OptrToHandle(imageArray));
+
+    if(formatChanged)
+        @call self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(imageMode);
 
     /* We release this token here so the message can be safely sent */
     NamePoolReleaseToken(namePool, url);

@@ -2059,9 +2059,11 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     MemHandle graphicMem;
     GStateHandle gstate;
     word i, n, size, compactFocus;
+    optr graphicRunsArray, imageArray, namePool;
+    VMFileHandle vmFile;
     XYSize newSize, textSize;
     ImageLoadMode oldMode;
-    Boolean compact, changed, clearFocus, preserveGeometry;
+    Boolean compact, changed, clearFocus, preserveGeometry, hasLink;
 
     oldMode = HTMLTextGetImageLoadMode(oself);
     if(mode < IMAGE_LOAD_DISABLED || mode > IMAGE_LOAD_INTELLIGENT)
@@ -2084,15 +2086,19 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
         GrDestroyState(gstate);
         return;
     }
+    graphicRunsArray = *graphicRuns;
+    imageArray = pself->HTI_imageArray;
+    namePool = pself->HTI_namePool;
+    vmFile = pself->VTI_vmFile;
 
     changed = FALSE;
     clearFocus = FALSE;
     compactFocus = HTMLTextGetCompactImageFocus(oself);
-    MemLock(OptrToHandle(pself->HTI_imageArray));
-    n = ChunkArrayGetCount(pself->HTI_imageArray);
+    MemLock(OptrToHandle(imageArray));
+    n = ChunkArrayGetCount(imageArray);
     for(i=0; i<n; i++)
     {
-        image = ChunkArrayElementToPtr(pself->HTI_imageArray, i, &size);
+        image = ChunkArrayElementToPtr(imageArray, i, &size);
         if(image->pos >= HTML_IMAGE_POS_RESERVED ||
            ((image->flags & HTML_IDF_RESOLVED) &&
             !(image->flags & HTML_IDF_BROKEN)))
@@ -2112,9 +2118,10 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
                    (image->flags & HTML_IDF_BROKEN));
         if(compact)
         {
-            CompactImageLayoutText(gstate, image, pself->HTI_namePool,
-              (ColorQuad *)0, FALSE, TRUE, &textSize,
-              (Point *)0);
+            hasLink = @call self::MSG_HTML_TEXT_LINK_FROM_POS(image->pos,
+              HTML_CHP_EXACT) != CA_NULL_ELEMENT;
+            CompactImageLayoutText(gstate, image, namePool,
+              (ColorQuad *)0, hasLink, FALSE, TRUE, &textSize, (Point *)0);
             newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + textSize.XYS_width;
             newSize.XYS_height = textSize.XYS_height + 4;
         }
@@ -2144,7 +2151,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
             image->flags &= ~HTML_IDF_COMPACT;
         image->flags &= ~HTML_IDF_SIZE_DIRTY;
 
-        graphic = IFindGraphicForImage(pself->VTI_vmFile, *graphicRuns, i,
+        graphic = IFindGraphicForImage(vmFile, graphicRunsArray, i,
           &graphicMem);
         if(graphic)
         {
@@ -2161,7 +2168,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
         }
         changed = TRUE;
     }
-    MemUnlock(OptrToHandle(pself->HTI_imageArray));
+    MemUnlock(OptrToHandle(imageArray));
     GrDestroyState(gstate);
 
     if(clearFocus)
@@ -2219,6 +2226,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     ColorQuad linkColor;
     VisTextCharAttrDiffs diffs;
     VisTextCharAttr attrs;
+    Boolean hasLink;
 
     imageArray = pself->HTI_imageArray;
     pool = pself->HTI_namePool;
@@ -2238,6 +2246,8 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     /* Only do this if the data is not -1, -1 (unknown) */
     if ((x != -1) && (y != -1) && (pos < HTML_IMAGE_POS_RESERVED))
     {
+        hasLink = @call self::MSG_HTML_TEXT_LINK_FROM_POS(pos,
+          HTML_CHP_EXACT) != CA_NULL_ELEMENT;
         gstate = @call oself::MSG_VIS_VUP_CREATE_GSTATE() ;
 
         cell = @call oself::MSG_HTML_TEXT_GET_REGION_POSITION(pos, &regpos);
@@ -2285,7 +2295,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
             attrs.VTCA_color.CQ_blue);
           GrApplyTranslationDWord(gstate, regpos.RD_left, regpos.RD_top) ;
           DrawVarGraphic(gstate, imageArrayElement, pool,
-            &linkColor, invalFrom, invalTo);
+            &linkColor, hasLink, invalFrom, invalTo);
         }
 
         GrDestroyState(gstate) ;

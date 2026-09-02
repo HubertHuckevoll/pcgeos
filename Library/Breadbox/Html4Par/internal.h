@@ -568,10 +568,11 @@ typedef enum {
 } CompactImageHit;
 
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
-                    ColorQuad *linkColor, word invalFrom, word invalTo);
+                    ColorQuad *linkColor, Boolean hasLink,
+                    word invalFrom, word invalTo);
 CompactImageHit CompactImageLayoutText(GStateHandle gstate, HTMLimageData *iae,
-  optr namePool, ColorQuad *linkColor, Boolean draw, Boolean measureForm,
-  XYSize *textSize, Point *hitP);
+  optr namePool, ColorQuad *linkColor, Boolean hasLink, Boolean draw,
+  Boolean measureForm, XYSize *textSize, Point *hitP);
 ImageLoadMode _pascal HTMLTextGetImageLoadMode(optr text);
 void _pascal HTMLTextSetImageLoadMode(optr text, ImageLoadMode mode);
 word _pascal HTMLTextGetCompactImageFocus(optr text);
