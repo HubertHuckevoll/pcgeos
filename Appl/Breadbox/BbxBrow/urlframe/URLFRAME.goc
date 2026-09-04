@@ -1105,10 +1105,29 @@ extern jseVariable globalObject;
         if(text)
         {
             @send,forceQueue text::MSG_HTML_TEXT_MARK_ALL_BROKEN_AND_RESOLVING_IMAGES_UNRESOLVED() ;
-            @send,forceQueue text::MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);
+            @send,forceQueue text::MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE, TRUE);
         }
 
         @send @frameChildren::MSG_URL_FRAME_LOAD_GRAPHICS();
+    }
+}
+
+@method URLFrameClass, MSG_URL_FRAME_SET_IMAGE_LOAD_MODE
+{
+    optr text = pself->UFI_text;
+
+    if(pself->UFI_frameState & FS_ACTIVE)
+    {
+        if(text)
+        {
+            @call text::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(mode);
+            if(mode == IMAGE_LOAD_AUTOMATIC ||
+               mode == IMAGE_LOAD_INTELLIGENT)
+                @send,forceQueue text::MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE,
+                  FALSE);
+        }
+
+        @send @frameChildren::MSG_URL_FRAME_SET_IMAGE_LOAD_MODE(mode);
     }
 }
 
@@ -1552,7 +1571,6 @@ EC_ERROR_IF(!NamePoolIsDynamic(*buf), -1);
     /* If someone aborted, then we need to check if we */
     /* have a blank page and put up an abort message if we do. */
     if (G_stopped)  {
-        G_stopped = FALSE ;
         isEmpty = @call text::MSG_HTML_TEXT_IS_EMPTY() ;
         if (isEmpty)  {
             mem = MemAlloc(
@@ -1593,6 +1611,7 @@ EC_ERROR_IF(!NamePoolIsDynamic(*buf), -1);
     VMChain item;
     optr text = pself->UFI_text;
     ObjCacheToken oldToken;
+    ImageLoadMode imageMode;
 
     if(text)
     {
@@ -1622,10 +1641,15 @@ EC_ERROR_IF(!NamePoolIsDynamic(*buf), -1);
             /* Change color of visited (i.e. cached) links */
             @call text::MSG_URL_TEXT_MARK_VISITED_LINKS();
 
+            imageMode = @call NavigateLoadGraphics::
+              MSG_GEN_ITEM_GROUP_GET_SELECTION();
+            @call text::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(imageMode);
+
             /* start loading images if enabled */
-            if(@call NavigateLoadGraphics::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS())
+            if(imageMode == IMAGE_LOAD_AUTOMATIC ||
+               imageMode == IMAGE_LOAD_INTELLIGENT)
             {
-                @call text::MSG_URL_TEXT_PROCESS_GRAPHICS(reload);
+                @call text::MSG_URL_TEXT_PROCESS_GRAPHICS(reload, FALSE);
                 @call text::MSG_HTML_TEXT_SHOW_ITEM();
             }
             else

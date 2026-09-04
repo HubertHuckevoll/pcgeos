@@ -929,12 +929,10 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 					 case new item doesn't have last-mod-
 					 date */
 #endif
-#if PROGRESS_DISPLAY
     /* initialize mime type, we'll use this to determine whether we
        start an import */
     if (p_conn->loadProgressDataP)
         *p_conn->loadProgressDataP->LPD_mimeType = 0;
-#endif
     contentlength = CL_UNKNOWN;
     if (sock_getline(conn, &p_conn) <= 0) {
         if (p_conn->aborted) {        /* abort signal? */
@@ -1053,7 +1051,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
             /* ignore content type for "Not Modified" (WebOne proxy) */
 	    if (*responseCode != 304) {
               ChunkStrcpySBCS(p_conn->heap, &(p_conn->mimeTypeChunk), s);
-#if PROGRESS_DISPLAY
               /* get mime type from HTTP header */
               if (p_conn->loadProgressDataP)
 @ifdef DO_DBCS
@@ -1061,7 +1058,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 @else
                   xstrncpy(p_conn->loadProgressDataP->LPD_mimeType, s, sizeof(p_conn->loadProgressDataP->LPD_mimeType));
 @endif
-#endif
 	    }
         } else if (LocalCmpStringsNoCaseSBCS(p, strn("Location:")) == 0) {
             if (*responseCode == 301 || *responseCode == 302) {
@@ -1487,10 +1483,13 @@ word HTTPGet(HTTPConnectionHandle conn)
 #ifdef GET_RANGE
     Boolean deleteFile = FALSE;
 #endif
+    word admissionResult;
+    Boolean imageDeferred;
     MemHandle pathB = 0;
     int urlLen;
 
     p_conn = ConnectionLock(conn) ;
+    imageDeferred = FALSE;
 #ifdef PERSISTANT_CONNECTIONS
 #define handle_error(rc) {HandleErrorFunc(p_conn, &retry); rcode = rc; goto error_exit;}
 #else
@@ -2360,12 +2359,34 @@ word HTTPGet(HTTPConnectionHandle conn)
 #endif
         p_conn = ConnectionLock(conn) ;
 
+        /* Give the client the final MIME type before accepting the body. */
+        if (URLRequestGetRet(rcode) == URL_RET_FILE &&
+            p_conn->loadProgressDataP &&
+            p_conn->loadProgressDataP->LPD_callback) {
+            admissionResult =
+                ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
+                    p_conn->loadProgressDataP, LPCT_HEADERS,
+                    *p_conn->loadProgressDataP->LPD_mimeType ?
+                        p_conn->loadProgressDataP->LPD_mimeType : (void *)0,
+                    *p_conn->loadProgressDataP->LPD_mimeType ?
+                        (strlen(p_conn->loadProgressDataP->LPD_mimeType) + 1) *
+                            sizeof(TCHAR) : 0,
+                    p_conn->loadProgressDataP->LPD_callback);
+            if (admissionResult == LPCR_REJECT) {
+                rcode = URLRequestMakeRet(URL_RET_UNSUPPORTED_IMAGE) |
+                        URB_RF_NOCACHE;
+#ifdef PERSISTANT_CONNECTIONS
+                p_conn->allowSocketCache = FALSE;
+#endif
+            }
+        }
+
 #if PROGRESS_DISPLAY
         /* disable loading progress if small file */
-        if (contentlength < progressMinCL) {
-            if (p_conn->loadProgressDataP) {
-                p_conn->loadProgressDataP->LPD_callback = NULL;
-            }
+        if (URLRequestGetRet(rcode) == URL_RET_FILE &&
+            contentlength < progressMinCL && p_conn->loadProgressDataP &&
+            !p_conn->loadProgressDataP->LPD_imageProbeMaxPixels) {
+            p_conn->loadProgressDataP->LPD_progress = FALSE;
         }
 #endif
 
@@ -2451,14 +2472,14 @@ word HTTPGet(HTTPConnectionHandle conn)
 			    }
 			}
 
-#if PROGRESS_DISPLAY
                 /* notify of loading progress (only first time through) */
-                if ((length == 0) && p_conn->loadProgressDataP && p_conn->loadProgressDataP->LPD_callback) {
+                if ((length == 0) && p_conn->loadProgressDataP &&
+                    p_conn->loadProgressDataP->LPD_callback &&
+                    p_conn->loadProgressDataP->LPD_progress) {
                     ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
                         p_conn->loadProgressDataP, LPCT_OPEN, 0, 0,
                         p_conn->loadProgressDataP->LPD_callback);
                 }
-#endif
 
                         if (FileWrite(output, p_conn->buffer, i, FALSE) != i) {
                             /* report error if write fails */
@@ -2468,16 +2489,22 @@ word HTTPGet(HTTPConnectionHandle conn)
                         }
                         length += i;
 
-#if PROGRESS_DISPLAY
                         /* update loading progress data stream */
-                        if (p_conn->loadProgressDataP && p_conn->loadProgressDataP->LPD_callback) {
+                        if (p_conn->loadProgressDataP &&
+                            p_conn->loadProgressDataP->LPD_callback &&
+                            p_conn->loadProgressDataP->LPD_progress) {
                             /* notify of new data available */
-                            ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
+                            admissionResult = ((pcfm_LoadProgressCallback *)
+                              ProcCallFixedOrMovable_pascal)(
                                 p_conn->loadProgressDataP, LPCT_WRITE,
                                 p_conn->buffer, i,
                                 p_conn->loadProgressDataP->LPD_callback);
+                            if(admissionResult == LPCR_REJECT)
+                            {
+                                imageDeferred = TRUE;
+                                p_conn->allowSocketCache = FALSE;
+                            }
                         }
-#endif
                     }
 
 #ifdef RECV_SPEED
@@ -2516,6 +2543,7 @@ word HTTPGet(HTTPConnectionHandle conn)
                             p_conn->callback);
 
                 } while ((!p_conn->aborted) &&
+			 !imageDeferred &&
 			 /* stop if got desired amount */
 			 length < contentlength &&
                     (i = SocketGetBlock(conn, &p_conn, FALSE)) > 0);
@@ -2555,20 +2583,28 @@ word HTTPGet(HTTPConnectionHandle conn)
 
                 FileClose(output, FALSE);
 
-#if PROGRESS_DISPLAY
                 /* finish loading progress data stream */
-                if (p_conn->loadProgressDataP && p_conn->loadProgressDataP->LPD_callback) {
+                if (p_conn->loadProgressDataP &&
+                    p_conn->loadProgressDataP->LPD_callback &&
+                    p_conn->loadProgressDataP->LPD_progress) {
                     /* if have data, notify of data finished */
 		    if (length) {
-			((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
+			admissionResult = ((pcfm_LoadProgressCallback *)
+			  ProcCallFixedOrMovable_pascal)(
 			    p_conn->loadProgressDataP, LPCT_CLOSE, 0, 0,
 			    p_conn->loadProgressDataP->LPD_callback);
+			if(admissionResult == LPCR_REJECT) {
+			    imageDeferred = TRUE;
+			    p_conn->allowSocketCache = FALSE;
+			}
 			/* signal progress finished (unless aborted) */
+#if PROGRESS_DISPLAY
 			if (p_conn->aborted) {
 			    rcode = URLRequestMakeRet(URL_RET_PROGRESS_ABORT) | ((rcode & URB_RF_NOCACHE) ? URB_RF_NOCACHE : 0);
 			} else {
 			    rcode = URLRequestMakeRet(URL_RET_PROGRESS) | ((rcode & URB_RF_NOCACHE) ? URB_RF_NOCACHE : 0);
 			}
+#endif
 		    } else {
 			/* no data received */
 			if (!p_conn->msg) {
@@ -2577,7 +2613,19 @@ word HTTPGet(HTTPConnectionHandle conn)
 			rcode = URLRequestMakeRet(URL_RET_MESSAGE) | URB_RF_NOCACHE;
 		    }
                 }
+
+		if (imageDeferred && !p_conn->aborted)
+		    rcode = URLRequestMakeRet(URL_RET_IMAGE_DEFERRED) |
+		      URB_RF_NOCACHE;
+		else if (p_conn->loadProgressDataP &&
+		         p_conn->loadProgressDataP->LPD_imageProbe ==
+		           LPI_ACCEPTED &&
+		         (URLRequestGetRet(rcode) == URL_RET_FILE
+#if PROGRESS_DISPLAY
+		          || URLRequestGetRet(rcode) == URL_RET_PROGRESS
 #endif
+		         ))
+		    rcode |= URB_RF_IMAGE_PROBED;
 
 #if PROGRESS_DISPLAY
                 if (URLRequestGetRet(rcode) != URL_RET_FILE &&
@@ -2605,7 +2653,7 @@ word HTTPGet(HTTPConnectionHandle conn)
                 p_conn->msg = @MsgFileError;
             }
 #ifdef PERSISTANT_CONNECTIONS
-	} else {
+	} else if (URLRequestGetRet(rcode) != URL_RET_UNSUPPORTED_IMAGE) {
 	    /* eat data for non-URL_RET_FILE or not-modifieds */
 	    do {
 	    } while ((!p_conn->aborted) &&
@@ -2617,7 +2665,9 @@ word HTTPGet(HTTPConnectionHandle conn)
 
 	/* if success, cache socket */
 	if (URLRequestGetRet(rcode) != URL_RET_MESSAGE &&
+#if PROGRESS_DISPLAY
 	    URLRequestGetRet(rcode) != URL_RET_PROGRESS_ABORT &&
+#endif
 	    p_conn->allowSocketCache &&
 	    !p_conn->secure &&  /* SSL sockets aren't cached */
 	    persistantConnections) {
@@ -2839,10 +2889,8 @@ word _pascal _export URLDrvMain(_URLMainParams_)
     req->URB_date = URL_TIME_UNKNOWN;   /* dates unknown yet */
     req->URB_expireDate = URL_TIME_UNKNOWN;
 
-#if PROGRESS_DISPLAY
     /* set up loading progress data */
     p_conn->loadProgressDataP = req->URB_loadProgressDataP;
-#endif
 
     ConnectionUnlock(conn) ;
     MemUnlock(request);

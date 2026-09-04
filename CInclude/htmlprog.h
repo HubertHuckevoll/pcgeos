@@ -28,15 +28,30 @@ typedef enum {
 			    pass: bufSize */
     LPCT_RESET_STREAM_STATE,  /* reset stream state */
     LPCT_CLOSE,           /* finish writing to data stream */
-	LPCT_PRE_READ		/* just as read but keeps the data,
+	LPCT_PRE_READ,		/* just as read but keeps the data,
 						 * so we can go back by flush */
+    LPCT_HEADERS          /* response headers are complete,
+			    pass: MIME value or NULL,
+			    return: LoadProgressCallbackResult */
 } LoadProgressCallbackType;
+
+typedef enum {
+    LPCR_CONTINUE = 0,
+    LPCR_REJECT = 1
+} LoadProgressCallbackResult;
 
 typedef enum {
     LPSS_EMPTY,            /* stream empty */
     LPSS_FIRST_PACKET,     /* start data */
     LPSS_MORE_DATA         /* more data */
 } LoadProgressStreamState;
+
+typedef enum {
+    LPI_NONE,
+    LPI_PENDING,
+    LPI_ACCEPTED,
+    LPI_DEFERRED
+} LoadProgressImageProbe;
 
 typedef struct {
     word LPD_importSync;        /* synchronizes fetch and import threads */
@@ -59,6 +74,10 @@ typedef struct {
     word LPD_fileDone;          /* finished writing */
     LoadProgressStreamState LPD_streamState;       /* data stream state */
     dword LPD_updateTime;       /* last notification for LPCT_WRITE */
+    Boolean LPD_progress;       /* use progressive import callbacks */
+    dword LPD_imageProbeMaxPixels; /* 0 disables intelligent probing */
+    dword LPD_imageProbeMaxBytes;  /* maximum speculative input */
+    LoadProgressImageProbe LPD_imageProbe;
 } LoadProgressData;
 
 #define _LoadProgressParams_ LoadProgressData *loadProgressDataP

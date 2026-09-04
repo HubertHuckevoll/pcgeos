@@ -133,6 +133,14 @@ typedef word HTMLmultiLength;
    when needed.
  */
 
+typedef enum {
+  IMAGE_LOAD_DISABLED = 0,
+  IMAGE_LOAD_AUTOMATIC = 1,
+  IMAGE_LOAD_INTELLIGENT = 2
+} ImageLoadMode;
+
+#define IMAGE_LOAD_COMPACT IMAGE_LOAD_INTELLIGENT
+
 typedef struct {
   VMChainTree HTBH_meta;
 
@@ -222,6 +230,16 @@ typedef struct {
     #define HTML_IDF_ISMAP      0x0002  /*  - image is a server side map */
     #define HTML_IDF_SUBMIT     0x0004  /*  - image is graphical submit btn */
     #define HTML_IDF_RESOLVING  0x0008  /*  - image has been requested */
+    #define HTML_IDF_ALT_EXPLICIT 0x0010 /* - non-empty ALT was present */
+    #define HTML_IDF_COMPACT    0x0020  /*  - draw compact load link */
+    #define HTML_IDF_UNSUPPORTED 0x0040 /*  - no image import driver */
+    #define HTML_IDF_FORMAT_MASK 0x0380  /* compact image format */
+    #define HTML_IDF_FORMAT_UNKNOWN 0x0000
+    #define HTML_IDF_FORMAT_JPEG 0x0080
+    #define HTML_IDF_FORMAT_PNG  0x0100
+    #define HTML_IDF_FORMAT_GIF  0x0180
+    #define HTML_IDF_FORMAT_WEBP 0x0200
+    #define HTML_IDF_FORMAT_SVG  0x0280
     #define HTML_IDF_SIZE_DIRTY 0x4000  /*  - size has changed recently */
     #define HTML_IDF_BROKEN     0x8000  /*  - image could not be resolved */
   XYSize size;                          /* target size, or 0 if not spec'd */
@@ -1018,6 +1036,12 @@ typedef dword T_tableArrayHandle ;
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_RESOLVING(word nImage);
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_BROKEN(word nImage);
   @message void MSG_HTML_TEXT_MARK_ALL_BROKEN_AND_RESOLVING_IMAGES_UNRESOLVED() ;
+  @message void MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
+  @message void MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE(word nImage);
+  @message void MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(word nImage);
+  @message word MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(dword pos);
+  @vardata ImageLoadMode ATTR_HTML_TEXT_IMAGE_LOAD_MODE;
+  @vardata word ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS;
 
   @message void MSG_HTML_TEXT_TRACK_REPLACE(dword pos, sword len);
 
@@ -1175,6 +1199,7 @@ typedef dword T_tableArrayHandle ;
   @message word MSG_HTML_TEXT_ADD_OPTION_ELEMENT(HTMLformData *data);
   @message void MSG_HTML_TEXT_REMOVE_OPTION_ELEMENT(word index);
   @message void MSG_HTML_TEXT_FORM_ELEMENT_REMOVE_TEXT_ENTRY();
+  @message Boolean MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED(word nImage);
 @ifdef DO_DBCS
   @instance DosCodePage HTI_codePage = 0;
 @endif

@@ -10,7 +10,6 @@
 /* Routines: */
 Boolean URLFetchEngineStart(void) ;
 void URLFetchEngineStop(void) ;
-#if PROGRESS_DISPLAY
 void URLFetchRequest(
          NameToken url,
          word loadMode,
@@ -19,16 +18,6 @@ void URLFetchRequest(
          optr ackObject,
          Message ackMessage,
          dword extraData, _LoadProgressParams_) ;
-#else
-void URLFetchRequest(
-         NameToken url,
-         word loadMode,
-         HTMLFormDataHandle postData,
-	 NameToken referer,
-         optr ackObject,
-         Message ackMessage,
-         dword extraData) ;
-#endif
 void URLFetchEngineAbortAll(Boolean ignoreAbortMsg) ;
 optr URLFetchExtraMemoryAlloc(word size) ;
 void URLFetchExtraMemoryFree(optr extraMem) ;
@@ -69,4 +58,3 @@ typedef struct {
     Boolean objCache ;     /* Cache flag when request made */
     word dir ;
 } HTMLV_URLRequestState ;
-

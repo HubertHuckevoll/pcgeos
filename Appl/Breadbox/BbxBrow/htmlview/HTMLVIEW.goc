@@ -433,11 +433,7 @@ void RestoreTVBW(void)
     url = NamePoolTokenize(namePool, bufP, TRUE);
     MemUnlock(bufH);
     tempname[0] = 0;
-#if PROGRESS_DISPLAY
     type = LoadURLToFile(&url, tempname, mime, ULM_CACHE, &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL, NULL);
-#else
-    type = LoadURLToFile(&url, tempname, mime, ULM_CACHE, &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL);
-#endif
     NamePoolReleaseToken(namePool, url);
 
     if(type==URL_RET_MESSAGE)           /* returned some kind of message */

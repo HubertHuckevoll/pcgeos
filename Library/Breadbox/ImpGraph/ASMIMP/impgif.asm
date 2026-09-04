@@ -1094,6 +1094,8 @@ AllocWatcherAllocateAsm endp
 ;----------------------------------------------------------------------------
 
 ITryToAllocate proc near
+	uses es, di
+	.enter
         mov al, [IGS_format]
         mov bx, [IGS_localImage.GLID_width]
         and al, not mask BMT_MASK
@@ -1152,8 +1154,14 @@ local_is_taller:
         or bx, bx
         je no_alloc_watcher
         call AllocWatcherAllocateAsm
+		jnc no_alloc_watcher
+		les di, [IGS_mimeStatus]
+		or es:[di].MS_mimeFlags, mask MIME_STATUS_MEMORY_LIMIT
+	; The OR clears carry, so restore the allocation failure result.
+		stc
 no_alloc_watcher:
 
+	.leave
         ret
 ITryToAllocate endp
 

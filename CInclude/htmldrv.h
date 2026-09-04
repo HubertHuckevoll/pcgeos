@@ -22,12 +22,7 @@
  ***********************************************************************/
 
 /* protocol version of compatible MIME image drivers */
-#if PROGRESS_DISPLAY
-/* upped for new API */
 #define MIME_DRV_PROTOMAJOR 4
-#else
-#define MIME_DRV_PROTOMAJOR 3
-#endif
 #define MIME_DRV_PROTOMINOR 0
 
 /* token for auto-recognition of Mime drivers */
@@ -90,9 +85,12 @@ typedef struct {
 /* Nice generic structure containing the state of the Mime import activity */
 typedef word MimeStatusFlags;
 #define MIME_STATUS_ABORT 0x8000
+#define MIME_STATUS_MEMORY_LIMIT 0x4000
 typedef struct {
     MimeStatusFlags MS_mimeFlags ;
 } MimeStatus ;
+
+#include <htmlprog.h>
 
 #if PROGRESS_DISPLAY
 
@@ -104,8 +102,6 @@ typedef struct {
 #define PROGRESS_DEFAULT_CL (4*1024)
 #define PROGRESS_INI_HEIGHT_KEY "height"
 #define PROGRESS_DEFAULT_HEIGHT 30
-
-#include <htmlprog.h>
 
 /* import progress data */
 typedef struct {
@@ -129,6 +125,13 @@ typedef struct {
 typedef void _pascal _export proc_ImportProgressCallback(_ImportProgressParams_);
 typedef void _pascal pcfm_ImportProgressCallback(_ImportProgressParams_, void *pf);
 
+#else  /* PROGRESS_DISPLAY */
+
+/* Keep the protocol 4 stack layout without exposing progress internals. */
+#define _ImportProgressParams_ void *importProgressDataP
+
+#endif  /* PROGRESS_DISPLAY */
+
 #define _MimeGraphicParams_   \
             TCHAR *mimeType, \
             TCHAR *file, \
@@ -139,20 +142,6 @@ typedef void _pascal pcfm_ImportProgressCallback(_ImportProgressParams_, void *p
             dword *usedMem, \
             MimeStatus *mimeStatus, \
 	    _ImportProgressParams_
-
-#else  /* PROGRESS_DISPLAY */
-
-#define _MimeGraphicParams_   \
-            TCHAR *mimeType, \
-            TCHAR *file, \
-            VMFileHandle vmf, \
-            ImageAdditionalData *iad, \
-            MimeRes resolution, \
-            AllocWatcherHandle watcher, \
-            dword *usedMem, \
-            MimeSatus *mimeStatus
-
-#endif  /* PROGRESS_DISPLAY */
 
 #define MIME_LIMIT_NONE       0xFF000001
 
@@ -332,6 +321,33 @@ typedef VMBlockHandle _pascal _export entry_MimeDrvGraphicEx(_MimeGraphicParams_
 typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_,dword extFlags,void *pf);
 
 
+/*** Entry: Probe intrinsic graphic dimensions *******************************/
+
+#define MIME_ENTRY_GRAPHIC_PROBE 4
+
+typedef enum {
+    MIME_GRAPHIC_PROBE_UNKNOWN,
+    MIME_GRAPHIC_PROBE_FOUND
+} MimeGraphicProbeResult;
+
+typedef struct {
+    dword MGPD_width;
+    dword MGPD_height;
+} MimeGraphicProbeData;
+
+#define _MimeGraphicProbeParams_ \
+            TCHAR *mimeType, \
+            TCHAR *file, \
+            dword maxBytes, \
+            MimeGraphicProbeData *data, \
+            LoadProgressData *loadProgressDataP
+
+typedef MimeGraphicProbeResult _pascal _export
+  entry_MimeDrvGraphicProbe(_MimeGraphicProbeParams_);
+typedef MimeGraphicProbeResult _pascal
+  pcfm_MimeDrvGraphicProbe(_MimeGraphicProbeParams_, void *pf);
+
+
 
 /***********************************************************************
  *      Impex style drivers
@@ -350,16 +366,7 @@ typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_,dword ex
  ***********************************************************************/
 
 /* protocol version of compatible URL drivers */
-#if PROGRESS_DISPLAY
-/* new API */
-/*#define URL_DRV_PROTOMAJOR 6*/
-/* for referer support */
-#define URL_DRV_PROTOMAJOR 7
-#else
-/*#define URL_DRV_PROTOMAJOR 5*/
-/* for referer support */
-#define URL_DRV_PROTOMAJOR 6
-#endif
+#define URL_DRV_PROTOMAJOR 8
 #define URL_DRV_PROTOMINOR 0
 
 /* standard location for URL drivers */
@@ -467,10 +474,8 @@ typedef struct {
      not be freed. */
   optr                  URB_message;
 
-#if PROGRESS_DISPLAY
-  /* loading progress data */
+  /* loading progress or intelligent-image admission data */
   LoadProgressData      *URB_loadProgressDataP;
-#endif
 
   /* referer URL */
   ChunkHandle           URB_referer;
@@ -499,6 +504,7 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
 #define URB_RF_NOCACHE     0x0100       /* delete file after use, don't cache */
 #define URB_RF_FILE_REDIR  0x0200       /* passed filename was overriden */
 #define URB_RF_UNTOUCHED   0x0400       /* laterDate condition was not met */
+#define URB_RF_IMAGE_PROBED 0x0800      /* image dimensions were admitted */
 
 #define URB_RF_RET         0x00FF       /* mask: return code */
 #define URLRequestGetRet(x) ((x) & URB_RF_RET)
@@ -512,6 +518,7 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
 #define URL_RET_PROGRESS	4   /* load progress finished */
 #define URL_RET_PROGRESS_ABORT  5   /* load progress aborted */
 #endif
+#define URL_RET_IMAGE_DEFERRED  6   /* intelligent image probe rejected */
 
 /* Return codes indicating specific failure conditions */
 #define URL_RET_FIRST_FAILURE   100
@@ -532,6 +539,9 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
                                            additional bytes needed. */
 
 #define URL_RET_AUTHORIZATION   104     /* Authorization failed */
+
+#define URL_RET_UNSUPPORTED_IMAGE 105  /* IMG response declared an image type
+                                           with no registered driver */
 
 
 /*** Entry: Abort URL retrieval ***********************************************/

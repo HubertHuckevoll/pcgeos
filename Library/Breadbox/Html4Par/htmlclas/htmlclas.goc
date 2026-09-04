@@ -40,6 +40,7 @@
 #include "internal.h"
 #include "tableint.h"
 #include "errors.h"
+#include "htmlclas/formset.h"
 
 #define REPLACE_GRAPHIC_REGION_NEW_HEIGHT MAX_REGION_HEIGHT
 
@@ -57,6 +58,8 @@
 @extern method HTMLTextClass, MSG_HTML_TEXT_HIT_FROM_COORD;
 @extern method HTMLTextClass, MSG_HTML_TEXT_LINK_FROM_MAP;
 @extern method HTMLTextClass, MSG_HTML_TEXT_SELECT_LINK;
+@extern method HTMLTextClass, MSG_HTML_TEXT_SELECT_COMPACT_IMAGE;
+@extern method HTMLTextClass, MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS;
 @extern method HTMLTextClass, MSG_HTML_TEXT_PREV_HOTSPOT;
 @extern method HTMLTextClass, MSG_HTML_TEXT_NEXT_HOTSPOT;
 @extern method HTMLTextClass, MSG_HTML_TEXT_EXEC_HOTSPOT;
@@ -515,28 +518,39 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
  **************************************************************************/
 @method HTMLTextClass, MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED,
                        MSG_HTML_TEXT_MARK_IMAGE_RESOLVING,
-                       MSG_HTML_TEXT_MARK_IMAGE_BROKEN
+                       MSG_HTML_TEXT_MARK_IMAGE_BROKEN,
+                       MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED
 {
     word size;
     HTMLimageData *iae;
     WordFlags toClear, toSet;
+    Boolean redraw;
 
     switch(message)
     {
       case MSG_HTML_TEXT_MARK_IMAGE_BROKEN:
         toSet = HTML_IDF_BROKEN | HTML_IDF_RESOLVED;
+        toClear = HTML_IDF_RESOLVING | HTML_IDF_UNSUPPORTED |
+                  HTML_IDF_SIZE_DIRTY;
+        break;
+
+      case MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED:
+        toSet = HTML_IDF_BROKEN | HTML_IDF_RESOLVED |
+                HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED;
         toClear = HTML_IDF_RESOLVING | HTML_IDF_SIZE_DIRTY;
         break;
 
       case MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED:
         toSet = 0;
-        toClear = HTML_IDF_RESOLVING | HTML_IDF_RESOLVED | 
-                  HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY;
+        toClear = HTML_IDF_RESOLVING | HTML_IDF_RESOLVED |
+                  HTML_IDF_BROKEN | HTML_IDF_UNSUPPORTED |
+                  HTML_IDF_SIZE_DIRTY;
         break;
       
       case MSG_HTML_TEXT_MARK_IMAGE_RESOLVING:
         toSet = HTML_IDF_RESOLVING;
-        toClear = HTML_IDF_RESOLVED | HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY;
+        toClear = HTML_IDF_RESOLVED | HTML_IDF_BROKEN |
+                  HTML_IDF_UNSUPPORTED | HTML_IDF_SIZE_DIRTY;
         break;
     }
 
@@ -548,6 +562,10 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     /* Modify flags */
     iae->flags |= toSet;
     iae->flags &= ~toClear;
+    redraw = (message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN ||
+      message == MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED ||
+      (message == MSG_HTML_TEXT_MARK_IMAGE_RESOLVING &&
+       (iae->flags & HTML_IDF_COMPACT)));
 
     /* Make sure we're note associated with any graphic */
     iae->HID_cacheToken = 0;
@@ -557,9 +575,15 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
 
     /* force broken image to update */
-    if(message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN)
+    if(redraw)
     {
-      @call self::MSG_HTML_TEXT_INVALIDATE_IMAGE(NULL, nImage, 0, 0xFFFF) ;
+      @call self::MSG_HTML_TEXT_INVALIDATE_IMAGE((void*)0, nImage, 0, 0xFFFF) ;
+    }
+    if(message == MSG_HTML_TEXT_MARK_IMAGE_BROKEN ||
+       message == MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED)
+    {
+      @send,checkDuplicate,forceQueue self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(
+        HTMLTextGetImageLoadMode(oself));
     }
 
     return TRUE;                        /* successful */
@@ -889,8 +913,9 @@ void LOCAL IMarkAllImagesUnresolved(optr imageArray)
       MemLock(OptrToHandle(imageArray));
       for(i=ChunkArrayGetCount(imageArray)-1; (int)i>=0; i--)  {
         imageArrayElement = ChunkArrayElementToPtr(imageArray, i, NULL);
-        imageArrayElement->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING | 
-                                      HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY) ;
+        imageArrayElement->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
+                                      HTML_IDF_BROKEN | HTML_IDF_UNSUPPORTED |
+                                      HTML_IDF_SIZE_DIRTY) ;
 
         /* Make sure we're note associated with any graphic */
         imageArrayElement->HID_cacheToken = 0;
@@ -988,6 +1013,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       habh->_itemArray = ch;
 
     RegionPurgeCache(oself) ;
+    pself = ObjDerefVis(oself);
 
     /* initialize main hypertext element header */
     htbh = VMLock(pself->VTI_vmFile, VMCHAIN_GET_VM_BLOCK(pself->HTI_transferItem),
@@ -1969,6 +1995,198 @@ VisTextGraphic *IFindGraphicForImage(
     return NULL;
 }
 
+ImageLoadMode _pascal HTMLTextGetImageLoadMode(optr text)
+{
+    ImageLoadMode *modeP;
+
+    modeP = ObjVarFindData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+    return modeP ? *modeP : IMAGE_LOAD_AUTOMATIC;
+}
+
+void _pascal HTMLTextSetImageLoadMode(optr text, ImageLoadMode mode)
+{
+    ImageLoadMode *modeP;
+
+    modeP = ObjVarFindData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+    if(mode == IMAGE_LOAD_AUTOMATIC)
+    {
+        if(modeP)
+            ObjVarDeleteData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE);
+        return;
+    }
+    if(!modeP)
+        modeP = ObjVarAddData(text, ATTR_HTML_TEXT_IMAGE_LOAD_MODE,
+          sizeof(*modeP));
+    *modeP = mode;
+}
+
+word _pascal HTMLTextGetCompactImageFocus(optr text)
+{
+    word *imageP;
+
+    imageP = ObjVarFindData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS);
+    return imageP ? *imageP : CA_NULL_ELEMENT;
+}
+
+void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
+{
+    word *imageP;
+
+    imageP = ObjVarFindData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS);
+    if(image == CA_NULL_ELEMENT)
+    {
+        if(imageP)
+            ObjVarDeleteData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS);
+        return;
+    }
+    if(!imageP)
+        imageP = ObjVarAddData(text, ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS,
+          sizeof(*imageP));
+    *imageP = image;
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE
+{
+    HTMLimageData *image;
+    VisTextGraphic *graphic;
+    VMBlockHandle *graphicRuns;
+    MemHandle graphicMem;
+    GStateHandle gstate;
+    word i, n, size, compactFocus;
+    optr graphicRunsArray, imageArray, namePool;
+    VMFileHandle vmFile;
+    XYSize newSize, textSize;
+    ImageLoadMode oldMode;
+    Boolean compact, changed, clearFocus, preserveGeometry, hasLink;
+
+    oldMode = HTMLTextGetImageLoadMode(oself);
+    if(mode < IMAGE_LOAD_DISABLED || mode > IMAGE_LOAD_INTELLIGENT)
+        mode = IMAGE_LOAD_AUTOMATIC;
+    HTMLTextSetImageLoadMode(oself, mode);
+    pself = ObjDerefVis(oself);
+
+    if(!pself->HTI_imageArray)
+        return;
+
+    gstate = GrCreateState(0);
+    if(!gstate)
+        return;
+    FormSetTextAttr(gstate);
+
+    pself = ObjDerefVis(oself);
+    graphicRuns = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
+    if(!graphicRuns)
+    {
+        GrDestroyState(gstate);
+        return;
+    }
+    graphicRunsArray = *graphicRuns;
+    imageArray = pself->HTI_imageArray;
+    namePool = pself->HTI_namePool;
+    vmFile = pself->VTI_vmFile;
+
+    changed = FALSE;
+    clearFocus = FALSE;
+    compactFocus = HTMLTextGetCompactImageFocus(oself);
+    MemLock(OptrToHandle(imageArray));
+    n = ChunkArrayGetCount(imageArray);
+    for(i=0; i<n; i++)
+    {
+        image = ChunkArrayElementToPtr(imageArray, i, &size);
+        if(image->pos >= HTML_IMAGE_POS_RESERVED ||
+           ((image->flags & HTML_IDF_RESOLVED) &&
+            !(image->flags & HTML_IDF_BROKEN)))
+            continue;
+
+        preserveGeometry = oldMode == IMAGE_LOAD_INTELLIGENT &&
+          mode == IMAGE_LOAD_INTELLIGENT &&
+          !(image->flags & (HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED)) &&
+          (((image->flags & HTML_IDF_RESOLVING) &&
+            !(image->flags & HTML_IDF_RESOLVED)) ||
+           ((image->flags & (HTML_IDF_RESOLVED | HTML_IDF_BROKEN)) ==
+            (HTML_IDF_RESOLVED | HTML_IDF_BROKEN)));
+        if(preserveGeometry)
+            continue;
+
+        compact = ((mode == IMAGE_LOAD_INTELLIGENT) ||
+                   (image->flags & HTML_IDF_BROKEN));
+        if(compact)
+        {
+            hasLink = @call self::MSG_HTML_TEXT_LINK_FROM_POS(image->pos,
+              HTML_CHP_EXACT) != CA_NULL_ELEMENT;
+            CompactImageLayoutText(gstate, image, namePool,
+              (ColorQuad *)0, hasLink, FALSE, TRUE, &textSize, (Point *)0);
+            newSize.XYS_width = 2*COMPACT_IMAGE_PADDING + textSize.XYS_width;
+            newSize.XYS_height = textSize.XYS_height + 4;
+        }
+        else
+        {
+            newSize = image->size;
+            if(!newSize.XYS_width)
+                newSize.XYS_width = DEFAULT_IMAGE_WIDTH;
+            if(!newSize.XYS_height)
+                newSize.XYS_height = DEFAULT_IMAGE_HEIGHT;
+        }
+
+        if(compactFocus == i &&
+           (!compact || !newSize.XYS_width ||
+            (image->flags & HTML_IDF_UNSUPPORTED)))
+            clearFocus = TRUE;
+
+        if(image->HID_size.XYS_width == newSize.XYS_width &&
+           image->HID_size.XYS_height == newSize.XYS_height &&
+           compact == ((image->flags & HTML_IDF_COMPACT) != 0))
+            continue;
+
+        image->HID_size = newSize;
+        if(compact)
+            image->flags |= HTML_IDF_COMPACT;
+        else
+            image->flags &= ~HTML_IDF_COMPACT;
+        image->flags &= ~HTML_IDF_SIZE_DIRTY;
+
+        graphic = IFindGraphicForImage(vmFile, graphicRunsArray, i,
+          &graphicMem);
+        if(graphic)
+        {
+            graphic->VTG_size = newSize;
+            if(!compact)
+            {
+                graphic->VTG_size.XYS_width += 2*image->hspace;
+                graphic->VTG_size.XYS_height += 2*image->vspace;
+            }
+            if(graphic->VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
+                graphic->VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR;
+            VMDirty(graphicMem);
+            VMUnlockChainifiedLMemBlock(graphicMem);
+        }
+        changed = TRUE;
+    }
+    MemUnlock(OptrToHandle(imageArray));
+    GrDestroyState(gstate);
+
+    if(clearFocus)
+        HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
+
+    if(changed)
+    {
+        pself = ObjDerefVis(oself);
+        pself->HTI_layoutState |= HTS_LAYOUT_DIRTY |
+          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW |
+          HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS;
+        if(!(pself->VTI_intFlags & VTIF_SUSPENDED))
+            @send,checkDuplicate,forceQueue self::
+              MSG_HTML_TEXT_CALCULATE_LAYOUT();
+        if(pself->HTI_myView)
+            @send,forceQueue (pself->HTI_myView)::
+              MSG_GEN_VIEW_REDRAW_CONTENT();
+    }
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE
+{
+}
+
 /**************************************************************************
  *            MSG_HTML_TEXT_INVALIDATE_IMAGE for HTMLTextClass
  **************************************************************************
@@ -1996,13 +2214,24 @@ VisTextGraphic *IFindGraphicForImage(
     word cell;
     HTMLcellData *p_cell ;
     ByteFlags dirty;
-    optr pool = pself->HTI_namePool;
+    optr imageArray;
+    optr pool;
+    T_cellArrayHandle cellArray;
+    ColorQuad linkColor;
+    VisTextCharAttrDiffs diffs;
+    VisTextCharAttr attrs;
+    Boolean hasLink;
+
+    imageArray = pself->HTI_imageArray;
+    pool = pself->HTI_namePool;
+    linkColor = pself->HTI_linkColor;
+    /* Keep values used after drawing independent of a movable pself. */
 
     if(pself->HTI_drawingOn<0)          /* if drawing is off, observe it */
       return;
     
-    ObjLockObjBlock(OptrToHandle(pself->HTI_imageArray));
-    imageArrayElement = ChunkArrayElementToPtr(pself->HTI_imageArray,
+    ObjLockObjBlock(OptrToHandle(imageArray));
+    imageArrayElement = ChunkArrayElementToPtr(imageArray,
       nImage, &elsize);                 /* deference token to image record */
     x = imageArrayElement->HID_pos.P_x ;
     y = imageArrayElement->HID_pos.P_y ;
@@ -2011,6 +2240,8 @@ VisTextGraphic *IFindGraphicForImage(
     /* Only do this if the data is not -1, -1 (unknown) */
     if ((x != -1) && (y != -1) && (pos < HTML_IMAGE_POS_RESERVED))
     {
+        hasLink = @call self::MSG_HTML_TEXT_LINK_FROM_POS(pos,
+          HTML_CHP_EXACT) != CA_NULL_ELEMENT;
         gstate = @call oself::MSG_VIS_VUP_CREATE_GSTATE() ;
 
         cell = @call oself::MSG_HTML_TEXT_GET_REGION_POSITION(pos, &regpos);
@@ -2023,12 +2254,13 @@ VisTextGraphic *IFindGraphicForImage(
         else if(imageArrayElement->flags & HTML_IDF_SIZE_DIRTY)
         {
           pself = ObjDerefVis(oself) ;
+          cellArray = pself->HTI_cellArray;
 
-          CellArrayStartAccess(pself->HTI_cellArray) ;
-          CellLock(pself->HTI_cellArray, cell, &p_cell, &elsize) ;
+          CellArrayStartAccess(cellArray) ;
+          CellLock(cellArray, cell, &p_cell, &elsize) ;
           dirty = p_cell->HCD_flags2 & HTML_CELL_DIRTY_LAYOUT_MASK ;
           CellUnlock(p_cell);
-          CellArrayEndAccess(pself->HTI_cellArray) ;
+          CellArrayEndAccess(cellArray) ;
         }
         else
         {
@@ -2044,14 +2276,26 @@ VisTextGraphic *IFindGraphicForImage(
             p_graphic = &vtg;
           }
 
+          /* Invalidation starts with a fresh gstate. Restore the character
+             attributes so compact text keeps its enclosing link styling. */
+          @call oself::MSG_VIS_TEXT_GET_CHAR_ATTR(0, &diffs, &attrs,
+            imageArrayElement->pos + imageArrayElement->len,
+            imageArrayElement->pos);
+          GrSetFont(gstate, attrs.VTCA_fontID,
+            MakeWWFixed(attrs.VTCA_pointSize.WBF_int));
+          GrSetTextStyle(gstate, attrs.VTCA_textStyles, 0);
+          GrSetTextColor(gstate, attrs.VTCA_color.CQ_info,
+            attrs.VTCA_color.CQ_redOrIndex, attrs.VTCA_color.CQ_green,
+            attrs.VTCA_color.CQ_blue);
           GrApplyTranslationDWord(gstate, regpos.RD_left, regpos.RD_top) ;
-          DrawVarGraphic(gstate, imageArrayElement, pool, invalFrom, invalTo);
+          DrawVarGraphic(gstate, imageArrayElement, pool,
+            &linkColor, hasLink, invalFrom, invalTo);
         }
 
         GrDestroyState(gstate) ;
     }
 
-    MemUnlock(OptrToHandle(pself->HTI_imageArray));
+    MemUnlock(OptrToHandle(imageArray));
 }
 
 /**************************************************************************
@@ -2101,6 +2345,122 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     TableArrayEndAccess(pself->HTI_tableArray);
 }
 
+static void _pascal
+HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
+                            word invalFrom, word invalTo)
+{
+    HTMLTextInstance *pself;
+    HTMLimageData *imageP;
+    MemHandle mem;
+    VisTextGraphic *graphic;
+    XYSize oldSize;
+    VMBlockHandle *runP;
+    word region;
+    VisLargeTextRegionArrayElement *regionP;
+    T_regionArrayHandle regionArray;
+    HTMLcellData *cellP;
+    word cellIndex;
+    word size;
+    Boolean wasDirty;
+
+    wasDirty = FALSE;
+    pself = ObjDerefVis(oself);
+    runP = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
+    if (!runP)
+        return;
+
+    graphic = IFindGraphicForImage(pself->VTI_vmFile, *runP, nImage, &mem);
+    if (!graphic)
+        return;
+
+    oldSize = graphic->VTG_size;
+    graphic->VTG_size = dataP->HID_size;
+    graphic->VTG_size.XYS_width += 2*dataP->hspace;
+    graphic->VTG_size.XYS_height += 2*dataP->vspace;
+    if (graphic->VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
+        graphic->VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR;
+    else
+        graphic->VTG_size.XYS_height = 0;
+
+    if ((graphic->VTG_size.XYS_width != oldSize.XYS_width) ||
+        (graphic->VTG_size.XYS_height != oldSize.XYS_height)) {
+        pself = ObjDerefVis(oself);
+        pself->HTI_layoutState |= HTS_LAYOUT_DIRTY;
+
+        MemLock(OptrToHandle(pself->HTI_imageArray));
+        imageP = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);
+        imageP->flags |= HTML_IDF_SIZE_DIRTY;
+        MemUnlock(OptrToHandle(pself->HTI_imageArray));
+
+        regionArray = RegionArrayConstruct(oself, pself);
+        region = FindRegionAtPosition(regionArray, dataP->pos);
+        RegionLock(regionArray, region, &regionP, &size);
+        cellIndex = regionP->VLTRAE_section;
+        RegionUnlock(regionP);
+
+        CellArrayStartAccess(pself->HTI_cellArray);
+        CellLock(pself->HTI_cellArray, cellIndex, &cellP, &size);
+        if (cellP->HCD_flags2 & HTML_CELL_DIRTY_LAYOUT_MASK) {
+            wasDirty = TRUE;
+        }
+        else {
+            cellP->HCD_flags2 |= HTML_CELL_DIRTY_LAYOUT_MASK;
+            CellDirty(cellP);
+        }
+
+        if (graphic->VTG_size.XYS_width < oldSize.XYS_width) {
+            cellP->HCD_hardMinWidth = MINIMUM_COLUMN_WIDTH;
+            cellP->HCD_minWidth = MINIMUM_COLUMN_WIDTH;
+            pself->HTI_layoutState |=
+              HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS;
+        }
+
+        if (graphic->VTG_size.XYS_width > cellP->HCD_hardMinWidth)
+            cellP->HCD_hardMinWidth = graphic->VTG_size.XYS_width;
+        else if (oldSize.XYS_width == DEFAULT_IMAGE_WIDTH)
+            cellP->HCD_hardMinWidth = graphic->VTG_size.XYS_width;
+
+        if (graphic->VTG_size.XYS_width > cellP->HCD_minWidth)
+            cellP->HCD_minWidth = graphic->VTG_size.XYS_width;
+        else if (oldSize.XYS_width == DEFAULT_IMAGE_WIDTH)
+            cellP->HCD_minWidth = graphic->VTG_size.XYS_width;
+
+        if (!wasDirty) {
+            TableArrayStartAccess(pself->HTI_tableArray);
+            MarkTableLayoutDirty(pself, cellP->HCD_table);
+            TableArrayEndAccess(pself->HTI_tableArray);
+
+            if (pself->HTI_layoutStack) {
+                T_layoutStack *stackP;
+
+                stackP = LayoutStackLock(pself->HTI_layoutStack);
+                if ((cellIndex >= stackP->LS_currentMasterCell) &&
+                    (cellIndex <= stackP->LS_currentCell)) {
+                    stackP->LS_currentMasterCellGotImage = TRUE;
+                }
+                else if (cellIndex < stackP->LS_currentCell) {
+                    stackP->LS_oneMorePass = TRUE;
+                }
+                LayoutStackUnlock(stackP);
+            }
+        }
+
+        CellUnlock(cellP);
+        CellArrayEndAccess(pself->HTI_cellArray);
+        VMDirty(mem);
+
+        if (!wasDirty) {
+            @call oself::MSG_HTML_TEXT_WAITING_IMAGE_ADD(nImage, cellIndex);
+        }
+    }
+
+    if (!wasDirty)
+        @call oself::MSG_HTML_TEXT_INVALIDATE_IMAGE(graphic, nImage,
+          invalFrom, invalTo);
+
+    VMUnlockChainifiedLMemBlock(mem);
+}
+
 /**************************************************************************
  *               MSG_HTML_TEXT_RESOLVE_IMAGE for HTMLTextClass
  **************************************************************************
@@ -2120,151 +2480,28 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
 {
     word size;
     HTMLimageData *iae;
-    MemHandle mem ;
-    VisTextGraphic *graphic ;
-    XYSize oldSize;
-    VMBlockHandle *p_run ;
-    word region ;
-    VisLargeTextRegionArrayElement *p_region ;
-    T_regionArrayHandle regionArray ;
-    HTMLcellData *p_cell ;
-    word cellIndex ;
-    /* Notes if the cell the image is in is marked dirty for layout */
-    Boolean wasDirty = FALSE ;  
 
     RegionPurgeCache(oself) ;
-    /* 
-     * Update image record in table 
+    pself = ObjDerefVis(oself);
+    /*
+     * Update image record in table
      */
     MemLock(OptrToHandle(pself->HTI_imageArray));
-    iae = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);                                                           
-    *iae = *data;                        
+    iae = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);
+    *iae = *data;
     iae->flags |= HTML_IDF_RESOLVED;
-    iae->flags &= ~(HTML_IDF_RESOLVING | HTML_IDF_BROKEN);
+    iae->flags &= ~(HTML_IDF_RESOLVING | HTML_IDF_BROKEN |
+                    HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED);
     MemUnlock(OptrToHandle(pself->HTI_imageArray));
+    if(HTMLTextGetCompactImageFocus(oself) == nImage)
+    {
+        HTMLTextSetCompactImageFocus(oself, CA_NULL_ELEMENT);
+        pself = ObjDerefVis(oself);
+    }
 
-    if(data->pos < HTML_IMAGE_POS_RESERVED)    
+    if(data->pos < HTML_IMAGE_POS_RESERVED)
     {                                   // not changing background?
-      p_run = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS) ;
-      if (p_run)
-      {
-        /* Now let's find the corresponding token in the */
-        /* graphic run array */
-        graphic = IFindGraphicForImage(pself->VTI_vmFile, *p_run, nImage, &mem);
-
-        if (graphic)                    // Found the graphic 
-        {
-          oldSize = graphic->VTG_size;  // Remember old size of graphic
-          graphic->VTG_size = data->HID_size;
-                                        // Update graphic size
-
-          graphic->VTG_size.XYS_width += 2*data->hspace;
-          graphic->VTG_size.XYS_height += 2*data->vspace;
-                                      // add spacing around graphic
-          
-          if (graphic->VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
-            graphic->VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR ;
-          else
-            graphic->VTG_size.XYS_height = 0 ;
-
-          /* If we are doing a replace where the size of the graphic */
-          /* changes, then mark the table layout dirty */
-          if ((graphic->VTG_size.XYS_width != oldSize.XYS_width) ||
-              (graphic->VTG_size.XYS_height != oldSize.XYS_height))  
-          {
-            /* mark layout as "dirty", meaning that we should redraw eventually */
-            pself = ObjDerefVis(oself);
-            pself->HTI_layoutState |= HTS_LAYOUT_DIRTY;
-
-            /* tell image that its size has changed */
-            MemLock(OptrToHandle(pself->HTI_imageArray));
-            iae = ChunkArrayElementToPtr(pself->HTI_imageArray, nImage, &size);                                                           
-            iae->flags |= HTML_IDF_SIZE_DIRTY;
-            MemUnlock(OptrToHandle(pself->HTI_imageArray));
-
-            /* Get the region so we can get the cell */
-            regionArray = RegionArrayConstruct(oself, pself) ;
-            region = FindRegionAtPosition(regionArray, data->pos) ;
-            RegionLock(regionArray, region, &p_region, &size) ;
-            cellIndex = p_region->VLTRAE_section ;
-            RegionUnlock(p_region) ;
-
-            /* Reset the cell's hard minium width */
-            CellArrayStartAccess(pself->HTI_cellArray) ;
-            CellLock(pself->HTI_cellArray, cellIndex, &p_cell, &size) ;
-            if (p_cell->HCD_flags2 & HTML_CELL_DIRTY_LAYOUT_MASK)  {
-                wasDirty = TRUE ;
-            } else {
-                p_cell->HCD_flags2 |= HTML_CELL_DIRTY_LAYOUT_MASK ;
-                CellDirty(p_cell) ;
-            }
-
-            /* In the very rare case that we get smaller, we need */
-            /* to reset the minimum width of the cell's width that the */
-            /* image is within.  Do so here.  On the next formatting pass, */
-            /* the whole area will get recalculated. */
-            if ((graphic->VTG_size.XYS_width < oldSize.XYS_width) /* ||
-                (graphic->VTG_size.XYS_height < oldSize.XYS_height) */ )  
-            {
-                p_cell->HCD_hardMinWidth = MINIMUM_COLUMN_WIDTH ;
-                p_cell->HCD_minWidth = MINIMUM_COLUMN_WIDTH ;
-                pself->HTI_layoutState |= HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS ;
-            }
-
-            if (graphic->VTG_size.XYS_width > p_cell->HCD_hardMinWidth)  
-                p_cell->HCD_hardMinWidth = graphic->VTG_size.XYS_width ;
-            else if (oldSize.XYS_width == DEFAULT_IMAGE_WIDTH)
-                p_cell->HCD_hardMinWidth = graphic->VTG_size.XYS_width ;
-
-            if (graphic->VTG_size.XYS_width > p_cell->HCD_minWidth)
-                p_cell->HCD_minWidth = graphic->VTG_size.XYS_width ;
-            else if (oldSize.XYS_width == DEFAULT_IMAGE_WIDTH)
-                p_cell->HCD_minWidth = graphic->VTG_size.XYS_width ;
-    
-            /* Mark the table this cell is in as 'dirty' */
-            if (!wasDirty)  {
-                TableArrayStartAccess(pself->HTI_tableArray) ;
-                MarkTableLayoutDirty(pself, p_cell->HCD_table) ;
-                TableArrayEndAccess(pself->HTI_tableArray) ;
-
-                /* Check to see if we are invalidating within a table */
-                /* currently being formatted.  If so, we have to put the */
-                /* formatter in a mode where we keep all dirty tags until */
-                /* we are done with the master table and go at it again. */
-                if (pself->HTI_layoutStack)  {
-                    T_layoutStack *p_stack ;
-                    p_stack = LayoutStackLock(pself->HTI_layoutStack) ;
-                    if ((cellIndex >= p_stack->LS_currentMasterCell) &&
-                        (cellIndex <= p_stack->LS_currentCell))  {
-                        p_stack->LS_currentMasterCellGotImage = TRUE ;
-                    } else if (cellIndex < p_stack->LS_currentCell)  {
-                        /* If we passed up the graphic, we'll have to go */
-                        /* back and format it again. */
-                        p_stack->LS_oneMorePass = TRUE ;
-                    }
-                    LayoutStackUnlock(p_stack) ;
-                }
-            }
-
-            CellUnlock(p_cell) ;
-            CellArrayEndAccess(pself->HTI_cellArray) ;
-            
-            VMDirty(mem);
-
-            /* If we found a dirty location, add it to the list */
-            if (!wasDirty)
-                @call oself::MSG_HTML_TEXT_WAITING_IMAGE_ADD(nImage, cellIndex) ;
-          }
-
-          /* Only invalidate if we are not already dirtied */
-          if (!wasDirty)  {
-              @call self::MSG_HTML_TEXT_INVALIDATE_IMAGE(graphic, nImage,
-                invalFrom, invalTo) ;
-          }
-          /* Balance VMLockChainifiedLMemBlock() in IFindGraphicForImage() */
-          VMUnlockChainifiedLMemBlock(mem);
-        }
-      }
+      HTMLTextUpdateImageGeometry(oself, nImage, data, invalFrom, invalTo);
     }
     else if (data->pos == HTML_IMAGE_POS_DOCUMENT_BACKGROUND)
     { 
@@ -2357,7 +2594,9 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
       for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)
       {
         imageArrayElement = ChunkArrayElementToPtr(array, i, &size);
-        if(imageArrayElement->flags & (HTML_IDF_BROKEN | HTML_IDF_RESOLVING))
+        if((imageArrayElement->flags &
+            (HTML_IDF_BROKEN | HTML_IDF_RESOLVING)) &&
+           !(imageArrayElement->flags & HTML_IDF_UNSUPPORTED))
         {
           ret = TRUE;                   /* found unresolved image? abort */
           break;
@@ -2383,7 +2622,9 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
       array = pself->HTI_imageArray;
       for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)  {
         imageArrayElement = ChunkArrayElementToPtr(array, i, NULL);
-        if (imageArrayElement->flags & HTML_IDF_BROKEN) 
+        if(imageArrayElement->flags & HTML_IDF_UNSUPPORTED)
+            continue;
+        if (imageArrayElement->flags & HTML_IDF_BROKEN)
             imageArrayElement->flags &= 
                  ~(HTML_IDF_BROKEN | HTML_IDF_RESOLVED) ;
         if (imageArrayElement->flags & HTML_IDF_RESOLVING) 
@@ -2400,7 +2641,7 @@ void IRegionPurgeCache(optr obj)
 
 /* --------------------- */
 
-#define MAX_WAITING_IMAGES  200
+#define MAX_WAITING_IMAGES  128
 
 typedef struct {
     word WIE_imageIndex ;
@@ -2532,10 +2773,12 @@ typedef struct {
     word size ;
     word next ;
     word stillWaiting = 0 ;
+    MemHandle waitingImagesH ;
 
-    EC_ERROR_IF(pself->HTI_waitingImages==NullHandle, ERROR_WAITING_IMAGES_LIST_DOES_NOT_EXIST) ;
-    if (pself->HTI_waitingImages)  {
-        p_block = MemLock(pself->HTI_waitingImages) ;
+    waitingImagesH = pself->HTI_waitingImages ;
+    EC_ERROR_IF(waitingImagesH==NullHandle, ERROR_WAITING_IMAGES_LIST_DOES_NOT_EXIST) ;
+    if (waitingImagesH)  {
+        p_block = MemLock(waitingImagesH) ;
 
         /* Walk the used list looking for ones with cells that are no longer dirty */
         i = p_block->WIB_usedStart ;
@@ -2551,7 +2794,6 @@ typedef struct {
             CellLock(pself->HTI_cellArray, p_entry->WIE_cellIndex, &p_cell, &size) ;
             if (!(p_cell->HCD_flags2 & HTML_CELL_DIRTY_LAYOUT_MASK))  {
                 /* No longer dirty.  Remove this item from the used list and put on the free list. */
-                /* TBD:  Invalidate the image?  Or is it part of the recalc? */
                 if (p_previous)  {
                     p_previous->WIE_next = p_entry->WIE_next ;
                 } else {
@@ -2561,14 +2803,14 @@ typedef struct {
                 p_block->WIB_freeStart = i ;
             } else {
                 stillWaiting++ ;
+                p_previous = p_entry ;
             }
             CellUnlock(p_cell) ;
 
-            p_previous = p_entry ;
             i = next ;
         }
 
-        MemUnlock(pself->HTI_waitingImages) ;
+        MemUnlock(waitingImagesH) ;
     }
 
     return stillWaiting ;
@@ -2613,11 +2855,14 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
     /* 1) Too much time between graphic updates */
     /* 2) Too much time for the complete update */
     /* Of course, if the list is FULL, then we need to do a recalc */
-    EC_ERROR_IF(pself->HTI_waitingImages==NullHandle, ERROR_WAITING_IMAGES_LIST_DOES_NOT_EXIST) ;
+    /* A queued update may outlive the document's waiting-image block. */
     if (pself->HTI_waitingImages)  {
         numLeft = @call oself::MSG_HTML_TEXT_WAITING_IMAGES_FLUSH_ONES_WITH_CELLS_CALCULATED() ;
         if (numLeft)  {
-            // Update layout (delayed through queue to allow for combining)
+            /* An active layout already tracks images in its current range
+               and requests one more pass for images it has passed. */
+            pself = ObjDerefVis(oself);
+            if (!(pself->HTI_layoutState & HTS_CALCULATING_LAYOUT))
             @send ,checkDuplicate ,forceQueue self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
 
             /* Clear the list if we are done. */
@@ -2654,4 +2899,3 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
 
     return FALSE ;
 }
-

@@ -24,6 +24,8 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
+	    dword imageProbeMaxPixels,
+	    word formatFlags,
 	    _LoadProgressParams_) ;
 
 #else
@@ -33,6 +35,10 @@ Boolean ImportThreadRequestImportGraphic(
             NameToken name,
             TCHAR *mimeType,
             TCHAR *curHTML,
-            Boolean temporary) ;
+            Boolean temporary,
+            dword imageProbeMaxPixels,
+            word formatFlags) ;
 
 #endif
+
+word _pascal URLTextImageFormatFromMime(TCHAR *mimeType);

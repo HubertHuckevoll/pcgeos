@@ -43,12 +43,15 @@
 @extern chunk FormButtonTextSubmit ;
 @extern chunk FormButtonTextReset ;
 
+@start CompactImageStringResource, data;
+    @chunk TCHAR CompactImageMoreText[] = _TEXT("[... more]");
+    @localize { "Link following a deferred image description" 1-30 };
+@end CompactImageStringResource;
+
 #include "htmlclas/formset.h"
 #include <htmldrv.h>
 
-#if PROGRESS_DISPLAY
 #define RoundWWF(wwf) (IntegerOf(wwf) + ((FractionOf(wwf) >= 0x8000) ? 1 : 0))
-#endif
 
 SizeAsDWord FormElementGetSize(
                 HTMLformData *p_formData,
@@ -640,24 +643,370 @@ SizeAsDWord LOCAL FormElementDraw(
 #define DRAW_BROKEN_ANI
 
 /**************************************************************************
- * Routine: DrawVarGraphic
- **************************************************************************
- *
- * Description:
- *     Draws the current frame of the passed image to the passed GState.
- *     If a range of lines is specified, the routine tries to minimize
- *     the effort of updating by restricting redraws to this area.
- *     If invalFrom==0xFFFF, the image is always fully redrawn.
- *
- * Inputs:
- *     GStateHandle gstate        -- GState to draw to
- *     HTMLimageData *iae         -- Data of image to draw
- *     optr namePool              -- Name pool (for alt text entries)
- *     word invalFrom             -- First line of updated range
- *     word invalTo               -- Last line of updated range
- *
+ * Compact image label layout
  **************************************************************************/
+Boolean LOCAL CompactImageEllipsizeFilename(GStateHandle gstate,
+  TCHAR *textP, word maxWidth)
+{
+    TCHAR *extensionP;
+    word len, prefixLen, suffixStart, dotsWidth;
+    word prefixWidth, suffixWidth;
+
+    if(GrTextWidth(gstate, (char*)textP, 0) <= maxWidth)
+        return FALSE;
+
+    len = strlen(textP);
+    dotsWidth = GrTextWidth(gstate, (char*)_TEXT("..."), 3);
+    extensionP = strrchr(textP, '.');
+    if(extensionP)
+    {
+        suffixStart = extensionP - textP;
+        suffixWidth = GrTextWidth(gstate, (char*)extensionP, 0);
+        if(suffixStart < 4 || suffixWidth + dotsWidth >= maxWidth)
+            return TRUE;
+        prefixLen = suffixStart - 3;
+        while(prefixLen > 1)
+        {
+            prefixWidth = GrTextWidth(gstate, (char*)textP, prefixLen);
+            if(prefixWidth + dotsWidth + suffixWidth <= maxWidth)
+                break;
+            prefixLen--;
+        }
+    }
+    else
+    {
+        if(len < 5 || dotsWidth >= maxWidth)
+            return TRUE;
+        prefixLen = (len - 3) / 2;
+        suffixStart = prefixLen + 3;
+        suffixWidth = GrTextWidth(gstate, (char*)textP + suffixStart,
+          len - suffixStart);
+        while(prefixLen)
+        {
+            prefixWidth = GrTextWidth(gstate, (char*)textP, prefixLen);
+            if(prefixWidth + dotsWidth + suffixWidth <= maxWidth)
+                break;
+            if(prefixWidth > suffixWidth)
+                prefixLen--;
+            else
+            {
+                suffixStart++;
+                suffixWidth = GrTextWidth(gstate,
+                  (char*)textP + suffixStart, len - suffixStart);
+            }
+        }
+        if(!prefixLen || suffixStart >= len)
+            return TRUE;
+    }
+
+    memmove(textP + prefixLen + 3, textP + suffixStart,
+      (len - suffixStart + 1) * sizeof(TCHAR));
+    textP[prefixLen] = '.';
+    textP[prefixLen + 1] = '.';
+    textP[prefixLen + 2] = '.';
+    len = strlen(textP);
+    while(prefixLen && GrTextWidth(gstate, (char*)textP, 0) > maxWidth)
+    {
+        memmove(textP + prefixLen - 1, textP + prefixLen,
+          (len - prefixLen + 1) * sizeof(TCHAR));
+        prefixLen--;
+        len--;
+    }
+    return FALSE;
+}
+
+void LOCAL CompactImageFindLine(GStateHandle gstate, TCHAR *textP,
+  word textLen, word from, word maxWidth, word *lineStartP,
+  word *lineLenP, word *nextP, word *lineWidthP)
+{
+    word start, remaining, fit, breakLen, drawLen, next;
+
+    start = from;
+    while(start < textLen && LocalIsSpace(textP[start]))
+        start++;
+    if(start >= textLen)
+    {
+        *lineStartP = start;
+        *lineLenP = 0;
+        *nextP = textLen;
+        *lineWidthP = 0;
+        return;
+    }
+
+    remaining = textLen - start;
+    fit = 1;
+    while(fit <= remaining &&
+          GrTextWidth(gstate, (char*)textP + start, fit) <= maxWidth)
+        fit++;
+    if(fit > remaining)
+        fit = remaining;
+    else if(fit > 1)
+        fit--;
+
+    if(fit < remaining)
+    {
+        breakLen = fit;
+        while(breakLen && !LocalIsSpace(textP[start + breakLen - 1]))
+            breakLen--;
+        if(breakLen)
+            fit = breakLen;
+    }
+
+    drawLen = fit;
+    while(drawLen && LocalIsSpace(textP[start + drawLen - 1]))
+        drawLen--;
+    next = start + fit;
+    while(next < textLen && LocalIsSpace(textP[next]))
+        next++;
+
+    *lineStartP = start;
+    *lineLenP = drawLen;
+    *nextP = next;
+    *lineWidthP = drawLen ?
+      GrTextWidth(gstate, (char*)textP + start, drawLen) : 0;
+}
+
+CompactImageHit CompactImageLayoutText(GStateHandle gstate,
+  HTMLimageData *iae,
+  optr namePool, ColorQuad *linkColor, Boolean hasLink, Boolean draw,
+  Boolean measureForm, XYSize *textSize, Point *hitP)
+{
+    TCHAR buf[COMPACT_IMAGE_TEXT_MAX];
+    TCHAR *fileP, *ownedFileP, *scanP;
+    TCHAR *altP, *ownedAltP;
+    TCHAR format[12];
+    TCHAR *moreP;
+    word fileLen, altLen, lineStart, lineLen, next, lineWidth, pointSize;
+    word maxWidth, formatLen, formatWidth, spaceWidth;
+    word bracketWidth, closeWidth, filenameMaxWidth, identityWidth;
+    word lineCount, maxLineWidth, rowWidth, textX, moreX;
+    word moreLen, moreWidth;
+    Boolean hasAlt;
+    CompactImageHit hit;
+
+    NamePoolCopy(namePool, buf, sizeof(buf), iae->imageURL, &fileP);
+    ownedFileP = fileP;
+    scanP = fileP;
+    while(*scanP && *scanP != '?' && *scanP != '#')
+        scanP++;
+    *scanP = 0;
+    scanP = fileP;
+    while(*scanP)
+    {
+        if(*scanP == '/' || *scanP == '\\')
+            fileP = scanP + 1;
+        scanP++;
+    }
+    if(fileP != ownedFileP)
+        memmove(ownedFileP, fileP,
+          (strlen(fileP) + 1) * sizeof(TCHAR));
+    fileP = ownedFileP;
+    if(!*fileP)
+    {
+        NamePoolDestroyIfDynamic(ownedFileP);
+        ownedFileP = (TCHAR *)0;
+        strcpy(buf, _TEXT("Image"));
+        fileP = buf;
+    }
+
+    pointSize = FormGetPointSize();
+    maxWidth = COMPACT_IMAGE_MAX_WIDTH - 2*COMPACT_IMAGE_PADDING;
+    if(measureForm)
+    {
+        GrSaveState(gstate);
+        FormSetTextAttr(gstate);
+        pointSize = FormGetPointSize();
+    }
+
+    format[0] = 0;
+    switch(iae->flags & HTML_IDF_FORMAT_MASK)
+    {
+      case HTML_IDF_FORMAT_JPEG: strcpy(format, _TEXT("JPEG")); break;
+      case HTML_IDF_FORMAT_PNG:  strcpy(format, _TEXT("PNG")); break;
+      case HTML_IDF_FORMAT_GIF:  strcpy(format, _TEXT("GIF")); break;
+      case HTML_IDF_FORMAT_WEBP: strcpy(format, _TEXT("WebP")); break;
+      case HTML_IDF_FORMAT_SVG:  strcpy(format, _TEXT("SVG")); break;
+      default:                   strcpy(format, _TEXT("image")); break;
+    }
+    formatLen = strlen(format);
+    formatWidth = formatLen ? GrTextWidth(gstate, (char*)format, formatLen) : 0;
+
+    bracketWidth = GrTextWidth(gstate, (char*)_TEXT("["), 1);
+    closeWidth = GrTextWidth(gstate, (char*)_TEXT("]"), 1);
+    spaceWidth = GrTextWidth(gstate, (char*)_TEXT(" "), 1);
+    if(bracketWidth + spaceWidth + formatWidth + closeWidth < maxWidth)
+        filenameMaxWidth = maxWidth - bracketWidth - spaceWidth -
+          formatWidth - closeWidth;
+    else
+        filenameMaxWidth = 1;
+    if(GrTextWidth(gstate, (char*)fileP, 0) > filenameMaxWidth &&
+       CompactImageEllipsizeFilename(gstate, fileP, filenameMaxWidth))
+    {
+        if(ownedFileP)
+            NamePoolDestroyIfDynamic(ownedFileP);
+        ownedFileP = (TCHAR *)0;
+        strcpy(buf, _TEXT("..."));
+        fileP = buf;
+    }
+    fileLen = strlen(fileP);
+    identityWidth = bracketWidth +
+      GrTextWidth(gstate, (char*)fileP, fileLen) + spaceWidth +
+      formatWidth + closeWidth;
+
+    lineCount = 1;
+    maxLineWidth = identityWidth;
+    hit = CIH_PLAIN;
+
+    if(hitP && !(iae->flags & HTML_IDF_UNSUPPORTED) &&
+       hitP->P_y >= COMPACT_IMAGE_PADDING &&
+       hitP->P_y < COMPACT_IMAGE_PADDING + pointSize &&
+       hitP->P_x >= COMPACT_IMAGE_PADDING &&
+       hitP->P_x < COMPACT_IMAGE_PADDING + identityWidth)
+        hit = CIH_LOAD;
+
+    if(draw)
+    {
+        GrSaveState(gstate);
+        if((iae->flags & HTML_IDF_UNSUPPORTED) || !linkColor)
+            FormSetTextAttr(gstate);
+        else
+        {
+            if(iae->flags & HTML_IDF_RESOLVING)
+                GrSetTextColor(gstate, CF_INDEX, C_DARK_GRAY, 0, 0);
+            else
+                GrSetTextColor(gstate, linkColor->CQ_info,
+                  linkColor->CQ_redOrIndex, linkColor->CQ_green,
+                  linkColor->CQ_blue);
+            GrSetTextStyle(gstate, TS_UNDERLINE, 0);
+        }
+        textX = COMPACT_IMAGE_PADDING;
+        GrDrawText(gstate, textX, COMPACT_IMAGE_PADDING + pointSize - 1,
+          (char*)_TEXT("["), 1);
+        textX += bracketWidth;
+        GrDrawText(gstate, textX, COMPACT_IMAGE_PADDING + pointSize - 1,
+          (char*)fileP, fileLen);
+        textX += GrTextWidth(gstate, (char*)fileP, fileLen);
+        GrDrawText(gstate, textX, COMPACT_IMAGE_PADDING + pointSize - 1,
+          (char*)_TEXT(" "), 1);
+        textX += spaceWidth;
+        GrDrawText(gstate, textX, COMPACT_IMAGE_PADDING + pointSize - 1,
+          (char*)format, formatLen);
+        textX += formatWidth;
+        GrDrawText(gstate, textX, COMPACT_IMAGE_PADDING + pointSize - 1,
+          (char*)_TEXT("]"), 1);
+        GrRestoreState(gstate);
+    }
+
+    if(ownedFileP)
+        NamePoolDestroyIfDynamic(ownedFileP);
+    NamePoolCopy(namePool, buf, sizeof(buf), iae->imageALT, &altP);
+    ownedAltP = altP;
+    altLen = strlen(altP);
+    hasAlt = (iae->flags & HTML_IDF_ALT_EXPLICIT) && altLen;
+
+    moreP = (TCHAR *)0;
+    moreLen = moreWidth = 0;
+    if(hasLink)
+    {
+        MemLock(OptrToHandle(@CompactImageMoreText));
+        moreP = LMemDeref(@CompactImageMoreText);
+        moreLen = strlen(moreP);
+        moreWidth = GrTextWidth(gstate, (char*)moreP, moreLen);
+    }
+
+    /* Wrap all ALT text before deciding whether the link fits its last row. */
+    next = 0;
+    while(hasAlt && next < altLen)
+    {
+        CompactImageFindLine(gstate, altP, altLen, next, maxWidth,
+          &lineStart, &lineLen, &next, &lineWidth);
+        textX = COMPACT_IMAGE_PADDING;
+        if(draw)
+        {
+            GrSaveState(gstate);
+            FormSetTextAttr(gstate);
+            GrDrawText(gstate, textX,
+              COMPACT_IMAGE_PADDING + pointSize - 1 + lineCount * pointSize,
+              (char*)altP + lineStart, lineLen);
+            GrRestoreState(gstate);
+        }
+        rowWidth = lineWidth;
+        if(next >= altLen && hasLink &&
+           lineWidth + spaceWidth + moreWidth <= maxWidth)
+        {
+            moreX = textX + lineWidth + spaceWidth;
+            rowWidth += spaceWidth + moreWidth;
+            if(hitP &&
+               hitP->P_y >= COMPACT_IMAGE_PADDING + lineCount * pointSize &&
+               hitP->P_y < COMPACT_IMAGE_PADDING +
+                 (lineCount + 1) * pointSize &&
+               hitP->P_x >= moreX && hitP->P_x < moreX + moreWidth)
+                hit = CIH_CAPTION;
+            if(draw)
+            {
+                GrSaveState(gstate);
+                if(linkColor)
+                {
+                    GrSetTextColor(gstate, linkColor->CQ_info,
+                      linkColor->CQ_redOrIndex, linkColor->CQ_green,
+                      linkColor->CQ_blue);
+                    GrSetTextStyle(gstate, TS_UNDERLINE, 0);
+                }
+                GrDrawText(gstate, moreX,
+                  COMPACT_IMAGE_PADDING + pointSize - 1 +
+                    lineCount * pointSize, (char*)moreP, moreLen);
+                GrRestoreState(gstate);
+            }
+            hasLink = FALSE;
+        }
+        if(rowWidth > maxLineWidth)
+            maxLineWidth = rowWidth;
+        lineCount++;
+    }
+
+    if(hasLink)
+    {
+        moreX = COMPACT_IMAGE_PADDING;
+        if(hitP &&
+           hitP->P_y >= COMPACT_IMAGE_PADDING + lineCount * pointSize &&
+           hitP->P_y < COMPACT_IMAGE_PADDING +
+             (lineCount + 1) * pointSize &&
+           hitP->P_x >= moreX && hitP->P_x < moreX + moreWidth)
+            hit = CIH_CAPTION;
+        if(draw)
+        {
+            GrSaveState(gstate);
+            if(linkColor)
+            {
+                GrSetTextColor(gstate, linkColor->CQ_info,
+                  linkColor->CQ_redOrIndex, linkColor->CQ_green,
+                  linkColor->CQ_blue);
+                GrSetTextStyle(gstate, TS_UNDERLINE, 0);
+            }
+            GrDrawText(gstate, moreX,
+              COMPACT_IMAGE_PADDING + pointSize - 1 + lineCount * pointSize,
+              (char*)moreP, moreLen);
+            GrRestoreState(gstate);
+        }
+        if(moreWidth > maxLineWidth)
+            maxLineWidth = moreWidth;
+        lineCount++;
+    }
+
+    if(measureForm)
+        GrRestoreState(gstate);
+    if(moreP)
+        MemUnlock(OptrToHandle(@CompactImageMoreText));
+
+    if(ownedAltP)
+        NamePoolDestroyIfDynamic(ownedAltP);
+    textSize->XYS_width = maxLineWidth;
+    textSize->XYS_height = lineCount * pointSize;
+    return hit;
+}
+
 void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
+                    ColorQuad *linkColor, Boolean hasLink,
                     word invalFrom, word invalTo)
 {
     AnimationHeader *p_header ;
@@ -672,7 +1021,9 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     GStateHandle gstring;
     GStringElement *lastElement;
     Boolean allowInval;
-    XYSize pixSize;
+    XYSize pixSize, compactTextSize;
+    RGBColorAsDWord inheritedColor;
+    word inheritedStyle;
 
     if(iae->HID_size.XYS_width<1 || iae->HID_size.XYS_height<1)
       return;                           /* Don't draw if graphic is too small */
@@ -680,6 +1031,7 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     GrSaveState(gstate) ;
 
     GrApplyTranslationDWord(gstate, iae->HID_pos.P_x, iae->HID_pos.P_y) ;
+    if(!(iae->flags & HTML_IDF_COMPACT))
     GrApplyTranslationDWord(gstate, iae->hspace, iae->vspace);
 
     /* TBD: may require more testing for GStrings with a nonzero origin */
@@ -689,7 +1041,18 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     /* if we got here, we're allowed to draw freely */
     iae->flags &= ~HTML_IDF_SIZE_DIRTY;
 
-    if(  (iae->flags & HTML_IDF_RESOLVED) &&
+    if(iae->flags & HTML_IDF_COMPACT)
+    {
+      inheritedColor = GrGetTextColor(gstate);
+      inheritedStyle = GrGetTextStyle(gstate);
+      FormSetTextAttr(gstate);
+      GrSetTextColor(gstate, CF_RGB, RGB_RED(inheritedColor),
+        RGB_GREEN(inheritedColor), RGB_BLUE(inheritedColor));
+      GrSetTextStyle(gstate, inheritedStyle, 0);
+      CompactImageLayoutText(gstate, iae, namePool, linkColor, hasLink,
+        TRUE, FALSE, &compactTextSize, (Point *)0);
+    }
+    else if(  (iae->flags & HTML_IDF_RESOLVED) &&
         !(iae->flags & HTML_IDF_BROKEN) )
     {
       /* Prepare the scaling matrix */
@@ -853,24 +1216,6 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
         iae->HID_size.XYS_width - 1,
         iae->HID_size.XYS_height - 1);
 
-      /* put a red "X" across a broken graphic */
-      if((iae->flags & HTML_IDF_BROKEN) &&
-         iae->HID_size.XYS_width >= 4 && iae->HID_size.XYS_height >= 4)
-      {
-        GrSetLineColor(gstate, CF_INDEX, C_RED, 0, 0);
-        GrSetLineWidth(gstate, MakeWWFixed(1));
-        GrDrawLine(gstate,
-          1,
-          1,
-          iae->HID_size.XYS_width - 2,
-          iae->HID_size.XYS_height - 2);
-        GrDrawLine(gstate,
-          1,
-          iae->HID_size.XYS_height - 2,
-          iae->HID_size.XYS_width - 2,
-          1);
-      }
-
       alt = iae->imageALT;
       if(alt != NAME_POOL_NONE &&
          iae->HID_size.XYS_width >= 16 && iae->HID_size.XYS_height >= 16)
@@ -907,6 +1252,7 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
     word cell;
     HTMLcellData *p_cell ;
     ByteFlags dirty ;
+    Boolean hasLink;
 #ifdef DO_DBCS
     extern DosCodePage G_htmlCodePage;
 #endif
@@ -964,8 +1310,13 @@ void DrawVarGraphic(GStateHandle gstate, HTMLimageData *iae, optr namePool,
 
           /* only draw graphics if its bounds aren't in limbo... */
           if(!dirty)
+          {
+            hasLink = @call self::MSG_HTML_TEXT_LINK_FROM_POS(
+              imageArrayElement->pos, HTML_CHP_EXACT) != CA_NULL_ELEMENT;
+            pself = ObjDerefVis(oself);
             DrawVarGraphic(gstate, imageArrayElement, pself->HTI_namePool,
-              0xFFFF, 0xFFFF);
+              &pself->HTI_linkColor, hasLink, 0xFFFF, 0xFFFF);
+          }
 
           MemUnlock(OptrToHandle(pself->HTI_imageArray));
 	  }
@@ -1343,4 +1694,3 @@ EC_ERROR_IF(p_imageRun->TRAE_token * sizeof(word) > MemGetInfo(pself->HTI_animat
             lowestTime,
             &pself->HTI_animationTimerID) ;
 }
-

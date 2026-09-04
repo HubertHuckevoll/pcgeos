@@ -39,7 +39,6 @@ VMBlockHandle PngImport(
 #define SLICE_HEIGHT 10
 //    Boolean status = FALSE;
     _LoadProgressParams_;
-    Boolean onErrorDontKeepPartial = TRUE ;
     // point to load progress data, if any
     if (importProgressDataP && importProgressDataP->IPD_callback) {
         loadProgressDataP = importProgressDataP->IPD_loadProgressDataP;
@@ -69,6 +68,8 @@ VMBlockHandle PngImport(
             /* Only create the bitmap if we have enough memory */
             requiredMemory = pngCalcLineAllocSize(ihdrData.width, ihdrData.colorType, ihdrData.bitDepth) * ihdrData.height;
             gotAlloc = AllocWatcherAllocate(watcher, requiredMemory);
+            if(!gotAlloc)
+                mimeStatus->MS_mimeFlags |= MIME_STATUS_MEMORY_LIMIT;
             if (gotAlloc)
             {
                 fmt = pngImportWhatOutputFormat(ihdrData.colorType, ihdrData.bitDepth, &pngAlphaTransform);
@@ -114,11 +115,12 @@ VMBlockHandle PngImport(
                                 ((pcfm_ImportProgressCallback *)ProcCallFixedOrMovable_pascal)
                                         (importProgressDataP, importProgressDataP->IPD_callback);
                             }
-
+#endif
                             /* mark the graphic as completed, if so */
                             if ((state.lineNo) == ihdrData.height)
                                 *p_completeGraphic = TRUE;
 
+#if PROGRESS_DISPLAY
                             /* Stop here if we are aborting and we're NOT progressive (???) */
                             if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
                             {
@@ -127,7 +129,6 @@ VMBlockHandle PngImport(
                                     errorFlag = FALSE ; // FIXME
                                     /* But keep the partial image we have (we don't need a big red X) */
                                     /* We aren't complete either */
-                                    onErrorDontKeepPartial = FALSE ;
                                 }
                                 else
                                 {
@@ -156,17 +157,15 @@ VMBlockHandle PngImport(
     }
 
 
-#if PROGRESS_DISPLAY
     /* Free the existing data if we have any */
     if (errorFlag)
     {
-        if (onErrorDontKeepPartial)
+        if (bmVMBlock)
         {
             VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmVMBlock));
             bmVMBlock = 0;
         }
     }
-#endif
 
     if ((bmVMBlock == 0) && (gotAlloc))
     {

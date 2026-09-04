@@ -162,11 +162,9 @@ void UpdateTitleAndURL(NameToken title, NameToken url)
 {
     EventHandle evt;
 
-    if(selectedBooleans)                /* enabled loading of graphics? */
-    {                                   /* load them in the current document */
-        evt = @record URLDocumentClass::MSG_URL_DOCUMENT_LOAD_GRAPHICS();
-        @call application::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
-    }
+    evt = @record URLDocumentClass::MSG_URL_DOCUMENT_SET_IMAGE_LOAD_MODE(
+      selection);
+    @call application::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
 }
 
 @ifdef TV_BW_OPTION

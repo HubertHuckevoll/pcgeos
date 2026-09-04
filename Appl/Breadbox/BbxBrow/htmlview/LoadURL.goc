@@ -556,10 +556,8 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
     req->URB_url = urlChunk;
     req->URB_file = fileChunk;
     req->URB_progress = callback;
-#if PROGRESS_DISPLAY
-    /* point to loading progress data */
+    /* point to loading progress or intelligent-image admission data */
     req->URB_loadProgressDataP = loadProgressDataP;
-#endif
     req->URB_referer = refererChunk;
 #ifdef CACHE_VALIDATION
     /* last mod date determines if we make conditional or unconditional
@@ -1015,7 +1013,13 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
     /* call library to handle URL */
     dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
       (mtype, file, vmf, iad, MIME_RES_DISPLAY_DEFAULT, G_allocWatcher,
-      usedMem, mimeStatus IMPORT_PROGRESS_DATAP_ARG, ImportGraphic);
+      usedMem, mimeStatus,
+#if PROGRESS_DISPLAY
+      importProgressDataP,
+#else
+      (void *)0,
+#endif
+      ImportGraphic);
 
     LOG(LogPrintfLine("<I");)
 
@@ -1040,4 +1044,47 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
     }
 
     return 0;                           /* didn't find a matching driver */
+}
+
+MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
+  TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data
+  LOAD_PROGRESS_PARAMS_PROTO)
+{
+    FileLongName driver;
+    GeodeHandle drv;
+    ProtocolNumber protocol;
+    void *ProbeGraphic;
+    MimeGraphicProbeResult result;
+
+    if(!mimeType || !NameAssocFindAssociation(assocTypeDriver,
+       mimeType, driver, sizeof(driver), TRUE, (void *)0))
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+
+    FilePushDir();
+    ThreadPSem(MimeDriverSemaphore);
+    if(lastMimeDriver==NullHandle || strcmp(driver, lastMimeName))
+        LoadNewMimeDriver(driver);
+    drv = lastMimeDriver;
+    if(drv)
+        GeodeAddReference(drv);
+    ThreadVSem(MimeDriverSemaphore);
+    FilePopDir();
+    if(!drv)
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+
+    GeodeGetInfo(drv, GGIT_GEODE_PROTOCOL, &protocol);
+    if(protocol.PN_major < 4 ||
+       (protocol.PN_major == 4 && protocol.PN_minor < 3))
+    {
+        GeodeRemoveReference(drv);
+        return MIME_GRAPHIC_PROBE_UNKNOWN;
+    }
+
+    ProbeGraphic = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC_PROBE);
+    result = ((pcfm_MimeDrvGraphicProbe *)
+      ProcCallFixedOrMovable_pascal)(mimeType, file, maxBytes, data
+      , loadProgressDataP
+      , ProbeGraphic);
+    GeodeRemoveReference(drv);
+    return result;
 }

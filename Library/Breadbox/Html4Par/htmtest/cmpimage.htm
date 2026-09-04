@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head><title>Intelligent image loading test</title></head>
+<body background="bodybg.gif">
+<h1>Intelligent image loading test</h1>
+
+<p>Select View, Load Images Intelligently before opening this page. Inline
+images of at most 480,000 intrinsic pixels load automatically. Larger images
+remain compact until activated. Background images always load.</p>
+
+<h2>Intrinsic size probe</h2>
+<p>Green PNG, 800 by 600 = 480,000 pixels: loads automatically.<br>
+<img src="limit.png" width="160" height="120" alt="Green limit image"></p>
+<p>Orange JPEG, 160 by 120: loads automatically.<br>
+<img src="small.jpg" alt="Orange small image"></p>
+<p>Duplicate accepted JPEGs retain independent authored geometry:<br>
+natural <img src="small.jpg" alt="Natural duplicate">
+width only <img src="small.jpg" width="80" alt="Width-only duplicate">
+height only <img src="small.jpg" height="60" alt="Height-only duplicate">
+width and height <img src="small.jpg" width="100" height="50"
+ alt="Independent width-height duplicate"></p>
+<p>Magenta GIF, 801 by 600 = 480,600 pixels: remains compact. Activating its
+label loads it at the authored size.<br>
+<img src="large.gif" width="160" height="120"
+ alt="Load magenta image"></p>
+<p>The pale yellow page background is also 801 by 600, but backgrounds bypass
+the inline image limit.</p>
+<table border="1" background="tablebg.gif">
+<tr><td width="240" height="60">This pale cyan table background is also
+801 by 600 and loads automatically.</td></tr>
+</table>
+
+<h2>Compact labels</h2>
+<p>No ALT shows only the image identity:
+<img src="large.gif" width="80" height="60"></p>
+<p>Empty ALT also shows only the image identity:
+<img src="large.gif" width="80" height="60" alt=""></p>
+<p>A linked compact image has a load action followed by ALT and a more link:
+<a href="#target"><img src="large.gif" width="80" height="60"
+ alt="Load linked magenta image"></a></p>
+<p>A linked compact image without ALT puts the more link on the second line:
+<a href="#target"><img src="large.gif?linked=no-alt"></a></p>
+<p>Unsupported SVG with ALT:
+<img src="unsup.svg" alt="Violet SVG fill"></p>
+<p>Unsupported SVG without ALT: <img src="unsup.svg"></p>
+<p>Linked unsupported SVG with ALT:
+<a href="#target"><img src="unsup.svg?linked=alt"
+ alt="Linked violet SVG fill"></a></p>
+<p>Linked unsupported SVG without ALT:
+<a href="#target"><img src="unsup.svg?linked=no-alt"></a></p>
+<p>ALT text wraps below the filename and format row, with the more link on
+the final line if it fits:<br>
+<a href="#target">
+<img src="large.gif?probe=1#fragment"
+ alt="This is deliberately long alternative text that should wrap in the compact placeholder"></a></p>
+<p>A long path is stripped and the filename is ellipsized without losing its
+extension:
+<img src="images/a-very-long-news-photo-filename-for-ellipsizing.large.gif?query=1#target"></p>
+<p>A long filename without an extension is ellipsized at both ends:
+<img src="images/a-very-long-filename-without-an-extension"></p>
+<p>An unlinked compact ALT line does not activate:
+<img src="large.gif?query=1#target" alt="Plain unlinked ALT text"></p>
+<p>Only the more text, not the linked compact ALT text, follows the article
+link:
+<a href="#target"><img src="large.gif?linked=1"
+ alt="Long linked alternative text for testing"></a></p>
+<p>A missing image remains retryable:
+<img src="missing.gif" alt="Retry missing image"></p>
+<form action="#target" method="get">
+<p>A missing graphical submit still identifies its image by filename:
+<input type="image" src="missing.gif"></p>
+</form>
+
+<p><a name="target">Linked target.</a></p>
+</body>
+</html>
