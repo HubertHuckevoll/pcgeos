@@ -81,9 +81,10 @@ static const char *drivers[] = {
     "image/gif",
     "image/jpeg",
     "image/png",
-    "image/webp",
     (const char *)0
 };
+
+static Boolean webpDriver = TRUE;
 
 static void NamePoolCopy(optr pool, TCHAR *dst, word dstSize,
                          NameToken token, TCHAR **resultP)
@@ -125,6 +126,11 @@ static Boolean NameAssocFindAssociation(optr assoc, TCHAR *key, TCHAR *value,
                 return TRUE;
             }
         }
+        if (webpDriver && !strcasecmp(key, "image/webp")) {
+            strncpy(value, "mock-driver", valueSize - 1);
+            value[valueSize - 1] = 0;
+            return TRUE;
+        }
     }
     return FALSE;
 }
@@ -151,9 +157,20 @@ int main(void)
 {
     if (!check("https://example.test/image.BMP", TRUE, 0))
         return 1;
+    if (!check("https://example.test/image.jpg", FALSE,
+               HTML_IDF_FORMAT_JPEG))
+        return 1;
+    if (!check("https://example.test/image.gif", FALSE,
+               HTML_IDF_FORMAT_GIF))
+        return 1;
     if (!check("https://example.test/image.svg#frag?query", TRUE,
                HTML_IDF_FORMAT_SVG))
         return 1;
+    webpDriver = FALSE;
+    if (!check("https://example.test/image.WeBp?x=1#frag", TRUE,
+               HTML_IDF_FORMAT_WEBP))
+        return 1;
+    webpDriver = TRUE;
     if (!check("https://example.test/image.WeBp?x=1#frag", FALSE,
                HTML_IDF_FORMAT_WEBP))
         return 1;
