@@ -2183,6 +2183,17 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
     }
 }
 
+/**************************************************************************
+ *       MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE for HTMLTextClass
+ **************************************************************************
+ *
+ * Description:
+ *     Subclass hook for activating an image shown in compact form.
+ *     HTMLTextClass has no image-loading policy, so the base implementation
+ *     intentionally does nothing. URL-aware subclasses override this
+ *     message to start loading the selected image.
+ *
+ **************************************************************************/
 @method HTMLTextClass, MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE
 {
 }
