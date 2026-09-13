@@ -63,6 +63,16 @@ extern void UserAbortEnd(void);
 
 @classdecl URLTextClass;
 
+typedef struct {
+    word index;
+    NameToken nameT;
+    Boolean objCache;
+    dword imageProbeMaxPixels;
+#if PROGRESS_DISPLAY
+    Boolean progressCanceled;
+#endif
+} URLTextRequestGraphic;
+
 @extern method URLTextClass, MSG_META_CLIPBOARD_COPY ;
 @extern method URLTextClass, MSG_URL_TEXT_COPY_IMAGE_TO_CLIPBOARD ;
 
@@ -218,13 +228,31 @@ extern Boolean G_fetchWhileImport;
 @method URLTextClass, MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS
 {
     static TCHAR nullName[] = _TEXT("");
+    URLTextRequestGraphic *requestP;
+    Boolean canceled;
     extern Boolean G_stopped;
 
     if (loadProgressDataP) {
-    if(G_stopped)
+    canceled = G_stopped;
+    if(!canceled)
+        canceled = !ImportThreadRequestImportGraphic(
+          oself,
+          loadProgressDataP->LPD_nameT,
+          loadProgressDataP->LPD_mimeType,
+          nullName,  /* have data stream, don't need filename */
+          FALSE, 0,
+          URLTextImageFormatFromMime(loadProgressDataP->LPD_mimeType),
+          loadProgressDataP);
+    if(canceled)
     {
+EC(     EC_ERROR_IF(!loadProgressDataP->LPD_request, -1); )
+        URLFetchExtraMemoryLock(loadProgressDataP->LPD_request);
+        requestP = URLFetchExtraMemoryDeref(
+          loadProgressDataP->LPD_request);
+        requestP->progressCanceled = TRUE;
+        URLFetchExtraMemoryUnlock(loadProgressDataP->LPD_request);
         ThreadPSem(loadProgressDataP->LPD_sem);
-        loadProgressDataP->LPD_callback = NULL;
+        loadProgressDataP->LPD_callback = 0;
         ThreadVSem(loadProgressDataP->LPD_sem);
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
         if(G_fetchWhileImport)
@@ -232,16 +260,8 @@ extern Boolean G_fetchWhileImport;
         else
 #endif
             ThreadVSem(loadProgressDataP->LPD_importSync);
-        return;
+        /* Fetch acknowledgement owns the name token and pending count. */
     }
-    ImportThreadRequestImportGraphic(
-        oself,
-        loadProgressDataP->LPD_nameT,
-        loadProgressDataP->LPD_mimeType,
-        nullName,  /* have data stream, don't need filename */
-        FALSE, 0,
-        URLTextImageFormatFromMime(loadProgressDataP->LPD_mimeType),
-        loadProgressDataP);
     }
 }
 @endif
@@ -685,13 +705,6 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 }
 @endif
 
-typedef struct {
-    word index ;
-    NameToken nameT ;
-    Boolean objCache ;
-    dword imageProbeMaxPixels;
-} URLTextRequestGraphic ;
-
 #define IMAGE_URL_EXTENSION_MAX 16
 
 static Boolean _pascal
@@ -847,6 +860,9 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       /* Token is released when request is finished */
 
       p_request->objCache = objCache ;
+#if PROGRESS_DISPLAY
+      p_request->progressCanceled = FALSE;
+#endif
       p_request->imageProbeMaxPixels = imageProbeMaxPixels;
       URLFetchExtraMemoryUnlock(request) ;
 
@@ -870,6 +886,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         loadProgressData.LPD_callback = loadProgressCallback;
         loadProgressData.LPD_textObj = oself;
         loadProgressData.LPD_nameT = nameT;
+        loadProgressData.LPD_request = request;
         URLFetchRequest(
             nameT,
             forceLoad? ULM_ALWAYS:ULM_CACHE,
@@ -1260,9 +1277,9 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 
     /* A fetch acknowledgement can arrive after the import abort barrier. */
 #if PROGRESS_DISPLAY
-    if(G_stopped &&
-       !((ret == URL_RET_PROGRESS || ret == URL_RET_PROGRESS_ABORT) &&
-         !request.imageProbeMaxPixels))
+    if(request.progressCanceled ||
+       (G_stopped && ret != URL_RET_PROGRESS &&
+        ret != URL_RET_PROGRESS_ABORT))
 #else
     if(G_stopped)
 #endif
@@ -1270,11 +1287,8 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         if(ret == URL_RET_MESSAGE && OptrToHandle(result.htmlMsg) &&
            OptrToChunk(result.htmlMsg) == 0)
             MemFree(OptrToHandle(result.htmlMsg));
-        if(temporary && (ret == URL_RET_FILE
-#if PROGRESS_DISPLAY
-            || ret == URL_RET_PROGRESS
-#endif
-           ))
+        if(temporary &&
+           (ret == URL_RET_FILE || ret == URL_RET_PROGRESS))
             FileDelete(result.curHTML);
         @call oself::MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(
           request.nameT);
@@ -1319,50 +1333,38 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         }
         else
         {
-        /* Put in a request to import the image */
+          /* Put in a request to import the image. */
 #if PROGRESS_DISPLAY
-    /* URL_RET_FILE is returned for non-loading progress graphics, just
-       import without loading progress */
-        importQueued = ImportThreadRequestImportGraphic(
-            oself,
-            request.nameT,
-            result.mimeType,
-            result.curHTML,
-            temporary, importProbeMaxPixels, resultFormatFlags, NULL) ;
-        if (!importQueued) {
-            if (temporary)
-                FileDelete(result.curHTML);
-            @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
-              OCT_NULL, request.nameT, 0, 0xFFFF);
-            @call oself::MSG_URL_TEXT_DEC_PENDING();
-        }
+          importQueued = ImportThreadRequestImportGraphic(
+            oself, request.nameT, result.mimeType, result.curHTML,
+            temporary, importProbeMaxPixels, resultFormatFlags, NULL);
 #else
-        importQueued = ImportThreadRequestImportGraphic(
-            oself,
-            request.nameT,
-            result.mimeType,
-            result.curHTML,
-            temporary, importProbeMaxPixels, resultFormatFlags) ;
-        if (!importQueued) {
-            if (temporary)
-                FileDelete(result.curHTML);
-            @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
-              OCT_NULL, request.nameT, 0, 0xFFFF);
-            @call oself::MSG_URL_TEXT_DEC_PENDING();
-        }
+          importQueued = ImportThreadRequestImportGraphic(
+            oself, request.nameT, result.mimeType, result.curHTML,
+            temporary, importProbeMaxPixels, resultFormatFlags);
 #endif
+          if(!importQueued)
+          {
+              if(temporary)
+                  FileDelete(result.curHTML);
+              @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
+                OCT_NULL, request.nameT, 0, 0xFFFF);
+              @call oself::MSG_URL_TEXT_DEC_PENDING();
+          }
         }
+    }
 #if PROGRESS_DISPLAY
-    } else if(ret == URL_RET_PROGRESS || ret == URL_RET_PROGRESS_ABORT) {
+    else if(ret == URL_RET_PROGRESS || ret == URL_RET_PROGRESS_ABORT) {
         /* The ordinary progressive importer owns completion. */
+    }
 #endif
-    } else {
+    else {
         /* Does not appear to have come in correctly.  Release it */
         /* If a message make sure we free the message block. We should */
         /* NOT free a message that isn't located at the start of its own */
         /* memory block, because it is stored in one of our string table */
         /* resources, where message are held in localizable LMem chunks. */
-        if (URLRequestGetRet(result.retType) == URL_RET_MESSAGE)
+        if (ret == URL_RET_MESSAGE)
             if (OptrToHandle(result.htmlMsg) && OptrToChunk(result.htmlMsg)==0)
                 MemFree(OptrToHandle(result.htmlMsg)) ;
         if(ret == URL_RET_ABORTED ||
@@ -1642,6 +1644,9 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
                   if(imageP->HID_cacheToken)
                     ObjCacheUnlockItem(
                       (ObjCacheToken)imageP->HID_cacheToken);
+                  imageP->HID_cacheToken = OCT_NULL;
+                  imageP->HID_vmf = 0;
+                  imageP->HID_vmb = 0;
                   @call oself::MSG_HTML_TEXT_MARK_IMAGE_UNRESOLVED(i);
                   @call oself::MSG_HTML_TEXT_INVALIDATE_IMAGE(
                     (void *)0, i, 0, 0xFFFF);
@@ -2318,6 +2323,7 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
     pself->HTI_codePage = G_codePage;
 #endif
 
+#if JAVASCRIPT_SUPPORT
     /* Reset the status bar for javascript messages */
     @SendStatusUpdateOptr(
               @MsgBlank,
@@ -2325,6 +2331,7 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
     @SendStatusUpdateOptr(
               @MsgBlank,
               HTML_STATUS_TYPE_JAVASCRIPT_DEFAULT);
+#endif
 
     /* Free the supposedly attached memory */
     AllocWatcherFree(G_allocWatcher, pself->UTI_usedMem) ;
@@ -2446,7 +2453,9 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 @method URLTextClass, MSG_HTML_TEXT_FORMATTING_ENDED
 {
      @callsuper() ;
-     @call oself::MSG_URL_TEXT_DEC_PENDING() ;
+     /* Stop may have already canceled this pending operation. */
+     if(pself->UTI_numPendingRequests)
+         @call oself::MSG_URL_TEXT_DEC_PENDING() ;
 }
 
 @method URLTextClass, MSG_URL_TEXT_STOP
@@ -2621,7 +2630,10 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 	p_request->index = 0;  /* not used */
 	p_request->nameT = fullURL;
 	p_request->objCache = objCache;
-	    p_request->imageProbeMaxPixels = 0;
+#if PROGRESS_DISPLAY
+	p_request->progressCanceled = FALSE;
+#endif
+	p_request->imageProbeMaxPixels = 0;
 	URLFetchExtraMemoryUnlock(request);
 	URLFetchRequest(
 	    fullURL,
@@ -2686,6 +2698,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 @endif
       ;
 
+    /* import */
     if(G_stopped)
     {
         if(temporary && URLRequestGetRet(result.retType) == URL_RET_FILE)
@@ -2693,17 +2706,26 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
         NamePoolReleaseToken(namePool, request.nameT);
         @call oself::MSG_URL_TEXT_DEC_PENDING();
     }
-    /* import */
     else if(URLRequestGetRet(result.retType) == URL_RET_FILE &&
        !(result.retType & URB_RF_UNTOUCHED)) {
+#if PROGRESS_DISPLAY
         importQueued = ImportThreadRequestImportGraphic(
             oself,
             request.nameT,
             result.mimeType,
             result.curHTML,
             temporary, 0, resultFormatFlags, NULL) ;
-        if (!importQueued) {
-            if (temporary)
+#else
+        importQueued = ImportThreadRequestImportGraphic(
+            oself,
+            request.nameT,
+            result.mimeType,
+            result.curHTML,
+            temporary, 0, resultFormatFlags) ;
+#endif
+        if(!importQueued)
+        {
+            if(temporary)
                 FileDelete(result.curHTML);
             NamePoolReleaseToken(namePool, request.nameT);
             @call oself::MSG_URL_TEXT_DEC_PENDING();
