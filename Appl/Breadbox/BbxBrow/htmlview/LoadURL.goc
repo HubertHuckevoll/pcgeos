@@ -556,8 +556,10 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
     req->URB_url = urlChunk;
     req->URB_file = fileChunk;
     req->URB_progress = callback;
-    /* point to loading progress or intelligent-image admission data */
+#if PROGRESS_DISPLAY
+    /* point to loading progress data */
     req->URB_loadProgressDataP = loadProgressDataP;
+#endif
     req->URB_referer = refererChunk;
 #ifdef CACHE_VALIDATION
     /* last mod date determines if we make conditional or unconditional
@@ -982,7 +984,8 @@ endLoop:;
 }
 
 VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
-  VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus IMPORT_PROGRESS_PARAMS_PROTO)
+  VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus,
+  _ImportProgressParams_)
 {
     VMBlockHandle dataVMBlock;
     void *ImportGraphic;
@@ -1013,13 +1016,7 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
     /* call library to handle URL */
     dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
       (mtype, file, vmf, iad, MIME_RES_DISPLAY_DEFAULT, G_allocWatcher,
-      usedMem, mimeStatus,
-#if PROGRESS_DISPLAY
-      importProgressDataP,
-#else
-      (void *)0,
-#endif
-      ImportGraphic);
+      usedMem, mimeStatus, importProgressDataP, ImportGraphic);
 
     LOG(LogPrintfLine("<I");)
 
@@ -1029,7 +1026,8 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
 }
 
 VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
-  TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus IMPORT_PROGRESS_PARAMS_PROTO)
+  TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem,
+  MimeStatus *mimeStatus, _ImportProgressParams_)
 {
     FileLongName driver;
 
@@ -1039,7 +1037,8 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
       if(NameAssocFindAssociation(assocTypeDriver,
            mimeType, driver, sizeof(driver), TRUE, NULL))
       {
-        return ImportGraphicByNative(mimeType, file, driver, vmf, iad, usedMem, mimeStatus IMPORT_PROGRESS_DATAP_ARG);
+        return ImportGraphicByNative(mimeType, file, driver, vmf, iad, usedMem,
+          mimeStatus, importProgressDataP);
       }
     }
 
@@ -1047,8 +1046,7 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
 }
 
 MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
-  TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data
-  LOAD_PROGRESS_PARAMS_PROTO)
+  TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data)
 {
     FileLongName driver;
     GeodeHandle drv;
@@ -1082,9 +1080,8 @@ MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
 
     ProbeGraphic = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC_PROBE);
     result = ((pcfm_MimeDrvGraphicProbe *)
-      ProcCallFixedOrMovable_pascal)(mimeType, file, maxBytes, data
-      , loadProgressDataP
-      , ProbeGraphic);
+      ProcCallFixedOrMovable_pascal)(mimeType, file, maxBytes, data,
+      (void *)0, ProbeGraphic);
     GeodeRemoveReference(drv);
     return result;
 }

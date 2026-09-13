@@ -1,9 +1,11 @@
                 include stdapp.def
 		include product.def
+if PROGRESS_DISPLAY
 		include Internal/semInt.def
+		include thread.def
 		include Internal/heapInt.def
 		include Internal/interrup.def
-		include thread.def
+endif
 		include driver.def
 		include geode.def
 		include Internal/videoDr.def
@@ -31,6 +33,7 @@ F_CHKSTK@       proc far
 F_CHKSTK@       endp
         endif
 
+if PROGRESS_DISPLAY
 	global	WAKEUP:far
 WAKEUP	proc	far	queueP:fptr
 	.enter
@@ -76,6 +79,7 @@ noBlock:
 	.leave
 	ret
 BLOCK	endp
+endif
 
 ;should be conditional on TV_BW_OPTION
 	global SETVIDBW:far

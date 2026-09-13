@@ -12,5 +12,6 @@ XGOCFLAGS = -L wmg3ext
 # Tell what *_PROTO_{MAJOR,MINOR} constants to use for the driver protocol
 #
 # PROTOCONST      = URL_DRV
-_PROTO = 8.0
+_PROTO = 7.0
+
 

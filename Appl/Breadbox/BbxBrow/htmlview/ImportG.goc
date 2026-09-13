@@ -43,7 +43,7 @@
 @extern object HTMLVApp;
 
 #if PROGRESS_DISPLAY
-#define MAX_IMPORT_THREADS (MAX_FETCH_ENGINE_CHILDREN + 1)
+#define MAX_IMPORT_THREADS 3
 #define IMPORT_WORK_FILENAME _TEXT("IMPORTWK.%03d")
 
 /* queue for import progress data */
@@ -522,7 +522,7 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
 	    /* point to callback routine, unless .ini setting turned
 	       progressDisplay off */
 	    p_request->importProgressData.IPD_callback =
-                (progressDisplay
+                (progressDisplay && !imageProbeMaxPixels
 #ifndef COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
                   /* no import progress if no loading progress */
                   && loadProgressDataP
@@ -662,11 +662,7 @@ void ImportThreadAbortAll(void)
     dword probeMaxBytes;
     Boolean doImport;
     Boolean deferred;
-    Boolean completePending;
     Boolean canceled;
-#if PROGRESS_DISPLAY
-    Boolean streamProbe;
-#endif
 #ifdef CACHE_FILE_HEADER_SIZE_LIMIT
     VMHeaderInfoStruct vmInfo;
 #endif
@@ -677,7 +673,6 @@ void ImportThreadAbortAll(void)
     memcpy(&request, p_request, sizeof(request)) ;
     MemUnlock(mem) ;
     MemFree(mem) ;
-    completePending = TRUE;
     canceled = FALSE;
 
     if(pself->numAborts == 0)           /* don't start import if stopping */
@@ -694,42 +689,17 @@ void ImportThreadAbortAll(void)
       doImport = TRUE;
       deferred = FALSE;
       FileSetStandardPath(SP_DOCUMENT);
-#if PROGRESS_DISPLAY
-      streamProbe = request.imageProbeMaxPixels &&
-        request.importProgressData.IPD_loadProgressDataP;
-#endif
       probeMaxBytes = INTELLIGENT_IMAGE_PROBE_BYTES;
-#if PROGRESS_DISPLAY
-      if(streamProbe)
-        probeMaxBytes = request.importProgressData.IPD_loadProgressDataP->
-          LPD_imageProbeMaxBytes;
-#endif
 
       if(request.imageProbeMaxPixels)
       {
-#if PROGRESS_DISPLAY
         probeResult = ToolsProbeGraphicByDriver(request.curHTML,
-          request.mimeType, probeMaxBytes, &probeData,
-          request.importProgressData.IPD_loadProgressDataP);
-#else
-        probeResult = ToolsProbeGraphicByDriver(request.curHTML,
-          request.mimeType, probeMaxBytes, &probeData, (void *)0);
-#endif
+          request.mimeType, probeMaxBytes, &probeData);
         deferred = probeResult != MIME_GRAPHIC_PROBE_FOUND ||
           !probeData.MGPD_width || !probeData.MGPD_height ||
           probeData.MGPD_width >
             request.imageProbeMaxPixels / probeData.MGPD_height;
 
-#if PROGRESS_DISPLAY
-        if(streamProbe)
-        {
-          request.importProgressData.IPD_loadProgressDataP->
-            LPD_imageProbe = deferred ? LPI_DEFERRED : LPI_ACCEPTED;
-          doImport = FALSE;
-          completePending = FALSE;
-        }
-        else
-#endif
         if(deferred)
           doImport = FALSE;
       }
@@ -757,6 +727,18 @@ void ImportThreadAbortAll(void)
       vmb = ToolsImportGraphicByDriver(request.curHTML, request.mimeType,
         vmf, &iad, &usedMem, request.mimeStatus, &(request.importProgressData));
 
+      /* Only ordinary Automatic loading-progress imports hold this barrier. */
+      if(request.importProgressData.IPD_loadProgressDataP) {
+#ifdef ALLOW_FETCH_WHILE_IMPORTING
+          if(G_fetchWhileImport) {
+              G_importActive[request.importProgressData.
+                IPD_loadProgressDataP->LPD_loadThread] = FALSE;
+          } else
+#endif
+          ThreadVSem(request.importProgressData.
+            IPD_loadProgressDataP->LPD_importSync);
+      }
+
 #else
 #ifdef CACHE_FILE_HEADER_SIZE_LIMIT
       if (vmInfo.headerSize > G_cacheFileHeaderSizeLimit) {
@@ -764,7 +746,7 @@ void ImportThreadAbortAll(void)
       } else
 #endif
       vmb = ToolsImportGraphicByDriver(request.curHTML, request.mimeType,
-        vmf, &iad, &usedMem, request.mimeStatus);
+        vmf, &iad, &usedMem, request.mimeStatus, (void *)0);
 #endif
 
       canceled = (request.mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) != 0;
@@ -858,11 +840,7 @@ void ImportThreadAbortAll(void)
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
             OCT_NULL, request.name, 0, 0xFFFF);
       }
-      else if(deferred
-#if PROGRESS_DISPLAY
-              && !streamProbe
-#endif
-             )
+      else if(deferred)
       {
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
             request.name, request.formatFlags);
@@ -876,29 +854,11 @@ void ImportThreadAbortAll(void)
       @send (request.textObj)::
         MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
 
-#if PROGRESS_DISPLAY
-    /* Release the fetch side after probing, importing, or discarding. */
-    if(request.importProgressData.IPD_loadProgressDataP)
-    {
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
-        if(G_fetchWhileImport)
-        {
-            G_importActive[request.importProgressData.
-              IPD_loadProgressDataP->LPD_loadThread] = FALSE;
-        }
-        else
-#endif
-        ThreadVSem(request.importProgressData.
-          IPD_loadProgressDataP->LPD_importSync);
-    }
-#endif
-
     if(request.temporary)               /* destroy file if requested */
       FileDelete(request.curHTML);
 
     /* We have completed this operation on the text object.  Mark */
     /* it one less. */
-    if(completePending)
     @send (request.textObj)::MSG_URL_TEXT_DEC_PENDING() ;
 }
 

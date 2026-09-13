@@ -366,7 +366,16 @@ typedef MimeGraphicProbeResult _pascal
  ***********************************************************************/
 
 /* protocol version of compatible URL drivers */
-#define URL_DRV_PROTOMAJOR 8
+#if PROGRESS_DISPLAY
+/* new API */
+/*#define URL_DRV_PROTOMAJOR 6*/
+/* for referer support */
+#define URL_DRV_PROTOMAJOR 7
+#else
+/*#define URL_DRV_PROTOMAJOR 5*/
+/* for referer support */
+#define URL_DRV_PROTOMAJOR 6
+#endif
 #define URL_DRV_PROTOMINOR 0
 
 /* standard location for URL drivers */
@@ -474,8 +483,10 @@ typedef struct {
      not be freed. */
   optr                  URB_message;
 
-  /* loading progress or intelligent-image admission data */
+#if PROGRESS_DISPLAY
+  /* loading progress data */
   LoadProgressData      *URB_loadProgressDataP;
+#endif
 
   /* referer URL */
   ChunkHandle           URB_referer;
@@ -504,7 +515,6 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
 #define URB_RF_NOCACHE     0x0100       /* delete file after use, don't cache */
 #define URB_RF_FILE_REDIR  0x0200       /* passed filename was overriden */
 #define URB_RF_UNTOUCHED   0x0400       /* laterDate condition was not met */
-#define URB_RF_IMAGE_PROBED 0x0800      /* image dimensions were admitted */
 
 #define URB_RF_RET         0x00FF       /* mask: return code */
 #define URLRequestGetRet(x) ((x) & URB_RF_RET)
@@ -518,7 +528,6 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
 #define URL_RET_PROGRESS	4   /* load progress finished */
 #define URL_RET_PROGRESS_ABORT  5   /* load progress aborted */
 #endif
-#define URL_RET_IMAGE_DEFERRED  6   /* intelligent image probe rejected */
 
 /* Return codes indicating specific failure conditions */
 #define URL_RET_FIRST_FAILURE   100
@@ -539,9 +548,6 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
                                            additional bytes needed. */
 
 #define URL_RET_AUTHORIZATION   104     /* Authorization failed */
-
-#define URL_RET_UNSUPPORTED_IMAGE 105  /* IMG response declared an image type
-                                           with no registered driver */
 
 
 /*** Entry: Abort URL retrieval ***********************************************/

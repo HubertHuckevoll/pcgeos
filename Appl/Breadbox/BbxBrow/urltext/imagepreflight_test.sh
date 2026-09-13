@@ -5,7 +5,7 @@ src=`dirname "$0"`/URLTEXT.goc
 tmp=`mktemp -d /tmp/pcgeos-image-preflight.XXXXXX`
 trap 'rm -rf "$tmp"' 0 1 2 3 15
 
-sed -n '/^word _pascal URLTextImageFormatFromMime(TCHAR \*mimeType)$/,/^extern void _pascal WakeUp/p' "$src" |
+sed -n '/^word _pascal URLTextImageFormatFromMime(TCHAR \*mimeType)$/,/^@ifdef PROGRESS_DISPLAY$/p' "$src" |
     sed '$d' > "$tmp/format.inc"
 sed -n '/^#define IMAGE_URL_EXTENSION_MAX 16$/,/^void IReplaceGraphic(optr oself/p' "$src" |
     sed '$d' > "$tmp/helper.inc"
@@ -153,8 +153,29 @@ static Boolean check(const char *url, Boolean expectedUnsupported,
     return TRUE;
 }
 
+static Boolean checkMime(const char *mime, Boolean expectedUnsupported,
+                         word expectedFormat)
+{
+    Boolean unsupported;
+    word format;
+
+    unsupported = ImageMIMEGetUnsupportedFormat((TCHAR *)mime, &format);
+    if (unsupported != expectedUnsupported || format != expectedFormat) {
+        fprintf(stderr, "failed MIME: %s (unsupported=%u format=0x%04x)\n",
+                mime, unsupported, format);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 int main(void)
 {
+    if (!checkMime("image/png", FALSE, HTML_IDF_FORMAT_PNG))
+        return 1;
+    if (!checkMime("image/bmp", TRUE, 0))
+        return 1;
+    if (!checkMime("text/plain", FALSE, 0))
+        return 1;
     if (!check("https://example.test/image.BMP", TRUE, 0))
         return 1;
     if (!check("https://example.test/image.jpg", FALSE,
