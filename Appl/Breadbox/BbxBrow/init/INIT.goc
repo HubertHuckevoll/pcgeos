@@ -167,7 +167,9 @@ void LoadMimeTypes(void)
 
     NameAssocAssociate(assocExtType, _TEXT("HTM"), _TEXT("text/html"));
     NameAssocAssociate(assocExtType, _TEXT("TXT"), _TEXT("text/plain"));
+@if defined(JAVASCRIPT_SUPPORT) || defined(COMPILE_OPTION_AUTO_BROWSE)
     NameAssocAssociate(assocExtType, _TEXT("JS"), _TEXT("application/x-javascript"));
+@endif
 
     while (!InitFileReadStringSectionBlock(HTMLVIEW_CATEGORY, "mimeDrivers",
                                            i++, &iniData, IFRF_READ_ALL,
@@ -546,7 +548,8 @@ void SetPortalCookie(void)
         if (formUserInfo) {
             FormStringConvertAndAppend(formUserInfo, userInfoP);
             formUserInfoP = MemLock(formUserInfo);
-            if (formUserInfoP) {
+            if (formUserInfoP &&
+                !(formUserInfoP->flags & FORM_STRING_FLAG_TRUNCATED)) {
                 FileSetStandardPath(SP_PRIVATE_DATA);
                 cookieFile = FileOpen(_TEXT("cookies.txt"),
                                       FILE_DENY_W | FILE_ACCESS_RW);
@@ -592,6 +595,9 @@ void SetPortalCookie(void)
                     /* successfully wrote cookie, don't do it again */
                     InitFileDeleteEntry("browserSetup", "userInfo");
                 }
+            }
+            if (formUserInfoP) {
+                MemUnlock(formUserInfo);
             }
             MemFree(formUserInfo);
         }
@@ -699,6 +705,20 @@ void InitNavigation(void)
     assocExtType = NameAssocCreate(assocCacheBlock, namePool);
     assocTypeDriver = NameAssocCreate(assocCacheBlock, namePool);
     assocSchemeDriver = NameAssocCreate(assocCacheBlock, namePool);
+
+    /* Known types are hints; installed MIME drivers remain authoritative. */
+    NameAssocAssociate(assocExtType, _TEXT("APNG"), _TEXT("image/apng"));
+    NameAssocAssociate(assocExtType, _TEXT("AVIF"), _TEXT("image/avif"));
+    NameAssocAssociate(assocExtType, _TEXT("BMP"), _TEXT("image/bmp"));
+    NameAssocAssociate(assocExtType, _TEXT("HEIC"), _TEXT("image/heic"));
+    NameAssocAssociate(assocExtType, _TEXT("HEIF"), _TEXT("image/heif"));
+    NameAssocAssociate(assocExtType, _TEXT("ICO"), _TEXT("image/x-icon"));
+    NameAssocAssociate(assocExtType, _TEXT("JP2"), _TEXT("image/jp2"));
+    NameAssocAssociate(assocExtType, _TEXT("JXL"), _TEXT("image/jxl"));
+    NameAssocAssociate(assocExtType, _TEXT("TIF"), _TEXT("image/tiff"));
+    NameAssocAssociate(assocExtType, _TEXT("TIFF"), _TEXT("image/tiff"));
+    NameAssocAssociate(assocExtType, _TEXT("WEBP"), _TEXT("image/webp"));
+    NameAssocAssociate(assocExtType, _TEXT("SVG"), _TEXT("image/svg+xml"));
 
     HWChecksumCheck() ;
     LoadMimeTypes();                    /* load Mime type associations */
