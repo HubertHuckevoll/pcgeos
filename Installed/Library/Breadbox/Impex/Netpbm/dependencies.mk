@@ -34,6 +34,7 @@ exp.eobj: geos.h Ansi/stdio.h Ansi/stdlib.h Ansi/string.h graphics.h \
 imp.obj \
 imp.eobj: geos.h Ansi/stdio.h Ansi/stdlib.h Ansi/string.h graphics.h \
                 fontID.h font.h color.h vm.h lmem.h hugearr.h xlatLib.h \
-                file.h geode.h geoworks.h extgraph.h gstring.h heap.h
+                file.h geode.h geoworks.h extgraph.h gstring.h heap.h \
+                system.h
 
 netpbmEC.geo netpbm.geo : geos.ldf ui.ldf impex.ldf extgraph.ldf ansic.ldf 

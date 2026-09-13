@@ -26,6 +26,7 @@
 
 dword _pascal writePBMText(ExportFrame *frame, VMBlockHandle bmpBlock);
 
+
 /****************************************************************************
 *  GLOBALS
 ****************************************************************************/
@@ -73,6 +74,9 @@ dword _pascal ExportProcedure(ExportFrame *frame)
 
 
     err = writePBMText(frame, bmpBlock);
+
+    // free bmblock
+    VMFreeVMChain(frame->EF_transferVMFile, VMCHAIN_MAKE_FROM_VM_BLOCK(bmpBlock));
 
     return err;
 
