@@ -24,6 +24,7 @@
 #include <heap.h>
 #include <file.h>
 
+dword _pascal writePBMText(ExportFrame *frame, VMBlockHandle bmpBlock);
 
 /****************************************************************************
 *  GLOBALS
@@ -36,13 +37,14 @@ dword _pascal ExportProcedure(ExportFrame *frame)
 {
     BMType desttype;
     EGError egstat = EGE_NO_ERROR;
-    VMBlockHandle bmblock;
+    VMBlockHandle bmpBlock;
+    dword err = TE_NO_ERROR;
 
     desttype = BMF_MONO;
 
         // convert gstring to bmp
 
-    bmblock = BmpGStringToBitmap(
+    bmpBlock = BmpGStringToBitmap(
         frame->EF_transferVMFile,
         VMCHAIN_GET_VM_BLOCK(frame->EF_transferVMChain),
         frame->EF_transferVMFile,
@@ -66,14 +68,13 @@ dword _pascal ExportProcedure(ExportFrame *frame)
         }
     }
 
-    if(!bmblock) return(TE_OUT_OF_MEMORY);
+    if(!bmpBlock) return(TE_OUT_OF_MEMORY);
 
 
 
-    	  FileWrite(frame->EF_outputFile,
-					"hallo",
-					strlen("hallo"),
-					FALSE);
+    err = writePBMText(frame, bmpBlock);
+
+    return err;
 
 // Fehlerdefinitionen in pcgeos/Include/Internal/xlatLib.def
 
@@ -166,7 +167,7 @@ dword _pascal ExportProcedure(ExportFrame *frame)
         }
     }
 */
-    return(TE_NO_ERROR);
+    //return(TE_NO_ERROR);
 }
 
 
@@ -174,8 +175,13 @@ dword _pascal writePBMText(ExportFrame *frame, VMBlockHandle bmpBlock)
 {
 
     void *lineptr;
-    word size, y;
-    char header[32] = {0};
+    word size, y, z;
+    char header[72] = {0};
+    //char info[20] = {0};
+    byte pixelValue;
+    byte index;
+    Boolean isEnd;
+    int i, iMin;
 
     dword width = 0;
     dword height = 0;
@@ -188,7 +194,7 @@ dword _pascal writePBMText(ExportFrame *frame, VMBlockHandle bmpBlock)
      /* Determine bitmap size */
     size_xy = BmpGetBitmapSize(frame->EF_transferVMFile, bmpBlock, &egStat);
     if (egStat != EGE_NO_ERROR) {
-        return PE_INVALID_BITMAP;
+        return TE_EXPORT_ERROR;
     }
     width = DWORD_WIDTH(size_xy);
     height = DWORD_HEIGHT(size_xy);
@@ -199,7 +205,7 @@ dword _pascal writePBMText(ExportFrame *frame, VMBlockHandle bmpBlock)
     sprintf(header, "P1\n%lu %lu\n", width, height);
     if (FileWrite(frame->EF_outputFile, header, strlen(header), FALSE) != strlen(header))
     {
-        FileClose(frame->EF_outputFile, 0);
+        //FileClose(frame->EF_outputFile, 0);
         return(TE_EXPORT_ERROR);
     }
 
@@ -207,10 +213,70 @@ dword _pascal writePBMText(ExportFrame *frame, VMBlockHandle bmpBlock)
 
 
     // Write each scanline as raw RGB data
+    index = 0;
     for (y = 0; y < height; y++)
     {
         if (HAL_COUNT(HugeArrayLock(frame->EF_transferVMFile, bmpBlock, y, &lineptr, &size)))
         {
+/*
+            sprintf(info, "AAA%u-%u-", y, size);
+            if (FileWrite(frame->EF_outputFile, info, strlen(info), FALSE) != strlen(info))
+                        {
+                            HugeArrayUnlock(lineptr);
+                            //FileClose(frame->EF_outputFile, 0);
+                            return(TE_EXPORT_ERROR); // Writing failed
+                        }
+*/
+
+            for (z = 0; z < size; z++)
+            {
+                // Convert each pixel to ASCII '0' or '1' for PBM format
+                pixelValue = ((byte*) lineptr)[z] ;
+
+
+                if (z == size - 1)
+                {
+                    iMin = (width % 8 > 0) ? 8 - (width % 8) : 0; // Last pixel in the row
+                }
+                else
+                {
+                    iMin = 0; // Not the last pixel, write whole byte
+                }
+
+                for (i = 7; i >= iMin; i--)
+                {
+                    header[index++] = ((pixelValue >> i) & 1) ? '1' : '0';
+
+                    isEnd = (y == height - 1) && (z == size - 1) && (i == iMin);
+
+                    if (index == 70 || isEnd) // Limit line length to 70 characters
+                    {
+                        header[index] = '\n';
+                        if (FileWrite(frame->EF_outputFile, header, index + 1, FALSE) != index + 1)
+                        {
+                            HugeArrayUnlock(lineptr);
+                            //FileClose(frame->EF_outputFile, 0);
+                            return(TE_EXPORT_ERROR); // Writing failed
+                        }
+/*
+                        for (index = 0; index < 72; index++) // Reset header buffer
+                        {
+                            header[index] = 0;
+                        }
+*/
+                        index = 0;
+                    }
+                }
+            }
+/*
+            if (FileWrite(frame->EF_outputFile, "XXX", 3, FALSE) != 3)
+                        {
+                            HugeArrayUnlock(lineptr);
+                            //FileClose(frame->EF_outputFile, 0);
+                            return(TE_EXPORT_ERROR); // Writing failed
+                        }
+*/
+/*
             // Directly write the RGB scanline data (already in 24-bit format)
             if (FileWrite(frame->EF_outputFile, lineptr, size, FALSE) != size)
             {
@@ -218,20 +284,17 @@ dword _pascal writePBMText(ExportFrame *frame, VMBlockHandle bmpBlock)
                 FileClose(frame->EF_outputFile, 0);
                 return(TE_EXPORT_ERROR); // Writing failed
             }
-
+*/
             HugeArrayUnlock(lineptr);
         }
         else
         {
-            FileClose(frame->EF_outputFile, 0);
-            return FALSE; // Failed to lock scanline
+            //FileClose(frame->EF_outputFile, 0);
+            return TE_EXPORT_ERROR; // Failed to lock scanline
         }
     }
 
-    // Close the file after writing all data
-    FileClose(frame->EF_outputFile, 0);
-    FilePopDir();
 
-    return TRUE;
+    return TE_NO_ERROR;
 
 }
