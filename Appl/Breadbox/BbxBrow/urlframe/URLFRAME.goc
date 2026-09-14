@@ -2501,6 +2501,8 @@ typedef struct {
     }
 }
 
+@endif
+
 /*
  *  Clear frame from object cache.
  */
@@ -2513,6 +2515,8 @@ typedef struct {
         @send @frameChildren::MSG_URL_FRAME_CLEAR_OBJ_CACHE();
     }
 }
+
+@ifdef JAVASCRIPT_SUPPORT
 
 @method URLFrameClass, MSG_URL_FRAME_SET_NO_URL
 {
