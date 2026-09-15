@@ -42,9 +42,6 @@ export     TOOLSMAKEURLABSOLUTE
 export     TOOLSSTRINGSECTIONFINDKEY
 export     TOOLSFORMATMESSAGE
 export     XSTRNCPY
-incminor   HTMLTextCompactImages
-incminor   HTMLTextUnsupportedImages
-incminor   HTMLTextImageGeometry
 export     HTMLTextClass
 export     TOOLSFINDEXTENSION
 export     TOOLSNORMALIZEURL
@@ -152,3 +149,6 @@ export     NAMEPOOLTOKENIZELENDOS
 incminor
 
 resource   FormStringCallbackMultiStrings lmem read-only shared
+
+incminor   HTMLTextCompactImages
+incminor   HTMLTextUnsupportedImages

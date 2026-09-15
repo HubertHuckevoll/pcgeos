@@ -7,6 +7,8 @@
  *
  ***********************************************************************/
 
+@deflib html4par
+
 @include <product.goh>
 #include <product.h>
 
@@ -1036,12 +1038,6 @@ typedef dword T_tableArrayHandle ;
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_RESOLVING(word nImage);
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_BROKEN(word nImage);
   @message void MSG_HTML_TEXT_MARK_ALL_BROKEN_AND_RESOLVING_IMAGES_UNRESOLVED() ;
-  @message void MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
-  @message void MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE(word nImage);
-  @message void MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(word nImage);
-  @message word MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(dword pos);
-  @vardata ImageLoadMode ATTR_HTML_TEXT_IMAGE_LOAD_MODE;
-  @vardata word ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS;
 
   @message void MSG_HTML_TEXT_TRACK_REPLACE(dword pos, sword len);
 
@@ -1199,8 +1195,27 @@ typedef dword T_tableArrayHandle ;
   @message word MSG_HTML_TEXT_ADD_OPTION_ELEMENT(HTMLformData *data);
   @message void MSG_HTML_TEXT_REMOVE_OPTION_ELEMENT(word index);
   @message void MSG_HTML_TEXT_FORM_ELEMENT_REMOVE_TEXT_ENTRY();
-  @message Boolean MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED(word nImage);
 @ifdef DO_DBCS
   @instance DosCodePage HTI_codePage = 0;
 @endif
+
+@ifndef HTML4PAR_BUILD
+@protominor HTMLTextCompactImages
+@endif
+  @message void MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
+  @message void MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE(word nImage);
+  @message void MSG_HTML_TEXT_SELECT_COMPACT_IMAGE(word nImage);
+  @message word MSG_HTML_TEXT_COMPACT_IMAGE_FROM_POS(dword pos);
+  @vardata ImageLoadMode ATTR_HTML_TEXT_IMAGE_LOAD_MODE;
+  @vardata word ATTR_HTML_TEXT_COMPACT_IMAGE_FOCUS;
+@ifndef HTML4PAR_BUILD
+@protoreset
+@protominor HTMLTextUnsupportedImages
+@endif
+  @message Boolean MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED(word nImage);
+@ifndef HTML4PAR_BUILD
+@protoreset
+@endif
 @endc;
+
+@endlib

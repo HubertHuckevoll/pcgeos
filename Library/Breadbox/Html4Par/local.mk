@@ -7,6 +7,7 @@
 # for example: pmake "PRODUCTS=JS" full
 #
 PRODUCTS =
+XGOCFLAGS += -DHTML4PAR_BUILD
 
 #include <$(SYSMAKEFILE)>
 

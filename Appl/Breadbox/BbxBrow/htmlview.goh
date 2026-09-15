@@ -758,7 +758,6 @@ typedef struct {
   @message void MSG_URL_DOCUMENT_SOURCE();
   @message void MSG_URL_DOCUMENT_SAVE();
   @message void MSG_URL_DOCUMENT_LOAD_GRAPHICS();
-  @message void MSG_URL_DOCUMENT_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
 
   @message optr MSG_URL_DOCUMENT_GET_TOP_FRAME();
 
@@ -813,6 +812,7 @@ typedef struct {
 @else
   @message void MSG_URL_DOCUMENT_CLEAR_OBJ_CACHE();
 @endif
+  @message void MSG_URL_DOCUMENT_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
 @endc;
 
 
@@ -975,7 +975,6 @@ typedef struct {
   @message void MSG_URL_FRAME_SOURCE();
   @message void MSG_URL_FRAME_SAVE();
   @message void MSG_URL_FRAME_LOAD_GRAPHICS();
-  @message void MSG_URL_FRAME_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
 
   @message void MSG_URL_FRAME_HANDLE_LINK(
        NameToken link, NameToken target, HTMLFormDataHandle postData,
@@ -1122,6 +1121,7 @@ typedef struct {
 @ifndef JAVASCRIPT_SUPPORT
   @message void MSG_URL_FRAME_CLEAR_OBJ_CACHE();
 @endif
+  @message void MSG_URL_FRAME_SET_IMAGE_LOAD_MODE(ImageLoadMode mode);
 @endc;
 
 Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
@@ -1146,7 +1146,6 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @message void MSG_URL_TEXT_LOAD_GRAPHICS();
   @message void MSG_URL_TEXT_PROCESS_GRAPHICS(Boolean forceLoad,
     Boolean bypassIntelligent);
-  @message void MSG_URL_TEXT_LOAD_IMAGE(word nImage);
   @message void MSG_URL_TEXT_MARK_VISITED_LINKS();
 
   @message void MSG_URL_TEXT_SET_FRAME_OBJ(optr frameObject);
@@ -1159,11 +1158,6 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
 
   @message void MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
     ObjCacheToken oct, NameToken url, word invalFrom, word invalTo);
-  @message void MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(NameToken url);
-  @message void MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
-    NameToken url, word formatFlags);
-  @message void MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(NameToken url,
-    word formatFlags);
   @message void MSG_URL_TEXT_RECALCULATE() ;
   @message void MSG_URL_TEXT_INCREASE_USED_MEMORY(dword usedMem) ;
   @message dword MSG_URL_TEXT_GET_MEMORY_AVAILABLE() ;
@@ -1192,6 +1186,12 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @message word MSG_URL_TEXT_FIND_FORM_FROM_NAME(NameToken nameT);
   @message word MSG_URL_TEXT_FIND_ELEMENT_FROM_NAME(NameToken nameT, word head);
 @endif
+  @message void MSG_URL_TEXT_LOAD_IMAGE(word nImage);
+  @message void MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(NameToken url);
+  @message void MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
+    NameToken url, word formatFlags);
+  @message void MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(NameToken url,
+    word formatFlags);
 @endc;
 
 
