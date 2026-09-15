@@ -110,8 +110,12 @@ VMBlockHandle PngImport(
                                 importProgressDataP->IPD_iad.IAD_size.XYS_height = ihdrData.height;
                                 /* this invalidates too much for the last partial slice, but
                                 it doesn't matter */
-                                importProgressDataP->IPD_firstLine = state.lineNo-1-SLICE_HEIGHT;
-                                importProgressDataP->IPD_lastLine = state.lineNo-1-1;
+                                importProgressDataP->IPD_firstLine =
+                                    (state.lineNo > SLICE_HEIGHT) ?
+                                    state.lineNo - SLICE_HEIGHT : 0;
+                                importProgressDataP->IPD_lastLine = state.lineNo - 1;
+                                EC_ERROR_IF(importProgressDataP->IPD_firstLine >
+                                    importProgressDataP->IPD_lastLine, -1);
                                 ((pcfm_ImportProgressCallback *)ProcCallFixedOrMovable_pascal)
                                         (importProgressDataP, importProgressDataP->IPD_callback);
                             }

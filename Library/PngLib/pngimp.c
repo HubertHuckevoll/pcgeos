@@ -95,7 +95,7 @@ int _pascal _export pngImportProcessChunks(FileHandle file, pngIHDRData* ihdrDat
     pngIDATChunkEntry* idatChunks;
     unsigned int bytesRead = 0;
     unsigned int headerSize = sizeof(pngIHDRData);
-    unsigned int lineSize = 0;
+    unsigned long lineSize = 0;
 
 	 /* make sure we start at the beginning, but after the PNG header */
 	FilePos(file, sizeof(PNG_SIGNATURE), FILE_POS_START);
@@ -122,8 +122,14 @@ int _pascal _export pngImportProcessChunks(FileHandle file, pngIHDRData* ihdrDat
                 ihdrData->width = swapEndian(ihdrData->width);
                 ihdrData->height = swapEndian(ihdrData->height);
 
+                if ((ihdrData->width == 0) ||
+                    (ihdrData->height == 0) ||
+                    (ihdrData->width > 0xffffUL) ||
+                    (ihdrData->height > 0xffffUL))
+                    return 0;
+
                 lineSize = pngCalcBytesPerRow(ihdrData->width, ihdrData->colorType, ihdrData->bitDepth);
-                if (lineSize > PNG_MAX_SCANLINE_SIZE)
+                if ((lineSize == 0) || (lineSize > PNG_MAX_SCANLINE_SIZE))
                     return 0;
 
                 /* now that we seem to have a valid IHDR, create the memory for an array of IDATChunks */
@@ -286,6 +292,10 @@ int _pascal _export pngImportGetNextIDATScanline(pngIDATState* state)
     int ret;  /* Return value of the zlib inflate function */
 
     unsigned long rowBytes = state->rowBytes;  /* Total number of bytes per scanline (excluding the filter byte) */
+
+    EC_ERROR_IF(state->lineNo > state->ihdr.height, -1);
+    if (state->lineNo >= state->ihdr.height)
+        return 0;
 
     do
     {
