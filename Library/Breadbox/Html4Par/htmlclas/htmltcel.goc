@@ -676,8 +676,13 @@ word IRegionRepositionResizeAndReflow(
     p_stack->LS_seekedLine = lineIndex ;
 
     ProfPoint("IRegionRepositionResizeAndReflow--Seek") ;
+    /* Determine the character range to invalidate for this region.
+       VisTextRange uses a half-open interval, so VTR_end is the position
+       after the last affected character.  Use the full character count,
+       not the last character index, and use TEXT_ADDRESS_PAST_END if the
+       range reaches the end of the text. */
     RegionLock(regArray, regionNum, &p_region, &size) ;
-    range.VTR_end = range.VTR_start + p_region->VLTRAE_charCount-1 ;
+    range.VTR_end = range.VTR_start + p_region->VLTRAE_charCount ;
     maxLen = HugeArrayGetCount(pself->VTI_vmFile, (word) pself->VTI_text)-1 ;
     if (range.VTR_end >= maxLen)
         range.VTR_end = TEXT_ADDRESS_PAST_END ;
