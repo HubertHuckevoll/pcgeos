@@ -390,11 +390,4 @@ jpeg_init_loadProgress(j_decompress_ptr cinfo,
 {
     cinfo->inputctl->loadProgressDataP = loadProgressDataP;
 }
-#else
-GLOBAL(void)
-jpeg_init_loadProgress(j_decompress_ptr cinfo, void *loadProgressDataP)
-{
-    (void)cinfo;
-    (void)loadProgressDataP;
-}
 #endif
