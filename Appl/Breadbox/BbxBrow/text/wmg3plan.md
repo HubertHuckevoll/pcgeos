@@ -56,7 +56,8 @@ LoadURLToFile()
                              yes              no
                               │               │
                               ▼               ▼
-                           import        DEFER_LIKE_GRAPHICS
+                    progressive import  DEFER_LIKE_GRAPHICS
+                    from completed file
                                               │
                                               ▼
                                        HTML_IDF_COMPACT
@@ -67,7 +68,7 @@ LoadURLToFile()
 
 The crucial thing is that **today the protection happens after the download**.
 
-`ImportG.goc` receives `imageProbeMaxPixels`. In intelligent mode it calls `ToolsProbeGraphicByDriver()` before the real import. If dimensions are unknown, zero, or exceed the pixel budget, it doesn't import and sends `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS`.
+`ImportG.goc` receives `imageProbeMaxPixels`. In intelligent mode it calls `ToolsProbeGraphicByDriver()` before the real import. If dimensions are unknown, zero, or exceed the pixel budget, it doesn't import and sends `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS`. If the probe succeeds, the completed file is imported with local-file progress callbacks so supported decoders display scanline updates.
 
 Html4Par then represents that state using the already-existing `HTML_IDF_COMPACT`. There is no special "too large" image type. That's good architecture.
 
@@ -326,6 +327,8 @@ The current branch already implements intelligent image import limiting.
 
 If the image cannot be safely probed or exceeds the pixel budget, it sends `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS`, which marks matching images `HTML_IDF_COMPACT`.
 
+If the probe succeeds, import starts from the completed source file with local-file progress callbacks enabled. Geometry-changing first updates schedule the existing waiting-image layout pass, after which subsequent scanline ranges are drawn progressively. This does not overlap HTTP downloading and decoding.
+
 Activating a compact image reaches `MSG_URL_TEXT_LOAD_IMAGE()`, which calls `ProcessSingleGraphic()` with `imageProbeMaxPixels == 0`.
 
 This retry currently uses `ULM_CACHE`. Preserve that. A pixel-deferred image may already exist in the source cache and must not be redownloaded merely because the user activates it.
@@ -507,7 +510,9 @@ The existing non-success cleanup should delete the partial temporary file. Verif
 
 This per-block check must run even if `Content-Length` was present, so a lying or malformed server cannot exceed the configured limit by sending more data than declared.
 
-For a size-limited request, disable progressive import/loading before receiving the body. Intelligent-mode requests already pass no loading-progress callback, but WMG3HTTP should not allow a generic caller to stream partial image data and later return `URL_RET_TOO_LARGE`.
+For a size-limited request, disable progressive loading from the network stream before receiving the body. Intelligent-mode requests already pass no loading-progress callback, but WMG3HTTP should not allow a generic caller to stream partial image data and later return `URL_RET_TOO_LARGE`.
+
+Do not disable post-download local-file import progress. After WMG3HTTP returns the completed file and the intrinsic-pixel probe accepts it, the existing import-progress callback and waiting-image layout path must display supported formats incrementally while decoding.
 
 Use the same semaphore-safe callback disabling pattern already used by the `contentlength < progressMinCL` path.
 
@@ -636,7 +641,7 @@ UFF_IGNORE_SIZE_LIMIT
 
 Explicit override wins if both flags are present.
 
-Preserve the existing rule that intelligent limited requests do not use progressive image importing.
+Preserve the existing split: Intelligent limited requests do not import concurrently with network loading, but accepted completed files do use local-file progressive display after the intrinsic-pixel probe succeeds.
 
 ## Compact-image activation
 
@@ -770,7 +775,7 @@ Serve this directory through HTTP when testing WMG3HTTP. Loading it as `file:` d
 
    Serve `cmpimage.htm` through HTTP in Intelligent mode.
 
-   `limit.png` and `small.jpg` must download normally.
+   `limit.png` and `small.jpg` must download normally, pass the intrinsic-pixel probe, and display progressive scanline updates while importing from their completed source files.
 
    `large.gif` must return `URL_RET_TOO_LARGE` before full download and appear as the compact image UI.
 
@@ -781,6 +786,8 @@ Serve this directory through HTTP when testing WMG3HTTP. Loading it as `file:` d
    `large.gif` must now download successfully because 2380 bytes is below 3 KiB.
 
    Its 801x600 intrinsic dimensions must then trigger the existing pixel probe and compact UI.
+
+   It must not produce import-progress display before entering the compact state.
 
    Activating it must reuse the source-cache file and must not require another HTTP transfer.
 
