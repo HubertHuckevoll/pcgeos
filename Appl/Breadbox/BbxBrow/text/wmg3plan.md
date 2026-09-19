@@ -438,6 +438,19 @@ Use dword arithmetic when converting KB to bytes:
 (dword)downloadSizeLimitKB * 1024L
 ```
 
+Do not test the limit by adding untrusted lengths. Use subtraction-based,
+overflow-safe comparisons. Define `bytesSoFar` as the number of bytes already
+present in the destination, including `resumePos` when `GET_RANGE` is enabled.
+Reject when:
+
+```c
+bytesSoFar > sizeLimitBytes ||
+nextBytes > sizeLimitBytes - bytesSoFar
+```
+
+Only evaluate the subtraction after the `bytesSoFar > sizeLimitBytes` test has
+failed.
+
 ## WMG3HTTP known-Content-Length rejection
 
 Do not put the size decision in `header()`.
@@ -465,7 +478,11 @@ contentlength != CL_UNKNOWN
 
 Reject only when the total expected downloaded data is strictly greater than the configured limit. Exactly-at-limit is allowed.
 
-Account for `resumePos` when `GET_RANGE` is enabled so a resumed transfer cannot bypass the total limit.
+For a known `Content-Length`, use the overflow-safe comparison above with
+`bytesSoFar` equal to `resumePos` when `GET_RANGE` is enabled, or zero
+otherwise, and `nextBytes` equal to `contentlength`. This prevents a resumed
+transfer from bypassing the total limit without relying on
+`resumePos + contentlength`.
 
 On rejection:
 
@@ -488,15 +505,23 @@ Because `allowSocketCache` is FALSE, let the existing socket-cache cleanup remov
 
 Keep the existing outer receive loop and `SocketGetBlock()` chunk handling.
 
-Immediately before each `FileWrite()` calculate whether writing the next block would make the total response exceed the configured byte limit.
+Immediately before each `FileWrite()` determine whether writing the next block
+would make the total response exceed the configured byte limit.
 
-Use dword arithmetic and include `resumePos` when applicable.
+Set `startBytes` to `resumePos` when `GET_RANGE` is enabled, or zero otherwise.
+First reject if `startBytes > sizeLimitBytes` or if
+`(dword)length > sizeLimitBytes - startBytes`. Only after those checks pass,
+form `bytesSoFar = startBytes + (dword)length`; the addition is then known not
+to exceed the limit. Finally compare `(dword)i` with
+`sizeLimitBytes - bytesSoFar`.
 
 Conceptually:
 
 ```c
 if (DownloadSizeLimitActive(p_conn) &&
-    totalBytesAfterThisBlock > sizeLimitBytes)
+    (startBytes > sizeLimitBytes ||
+     (dword)length > sizeLimitBytes - startBytes ||
+     (dword)i > sizeLimitBytes - startBytes - (dword)length))
 {
     rcode = URLRequestMakeRet(URL_RET_TOO_LARGE) | URB_RF_NOCACHE;
     p_conn->allowSocketCache = FALSE;
@@ -508,7 +533,12 @@ Perform this check before `FileWrite()`. Never write bytes past the configured c
 
 The existing non-success cleanup should delete the partial temporary file. Verify this for both normal and `GET_RANGE` builds rather than adding duplicate deletion logic.
 
-This per-block check must run even if `Content-Length` was present, so a lying or malformed server cannot exceed the configured limit by sending more data than declared.
+This per-block check must run even if `Content-Length` was present, so any
+received block that would cross the configured limit is rejected before it is
+written. Do not claim to detect arbitrary bytes sent after the complete
+declared body: the existing receive loop stops when `length` reaches
+`contentlength`, so such trailing bytes are outside this change's detection
+guarantee.
 
 For a size-limited request, disable progressive loading from the network stream before receiving the body. Intelligent-mode requests already pass no loading-progress callback, but WMG3HTTP should not allow a generic caller to stream partial image data and later return `URL_RET_TOO_LARGE`.
 
@@ -699,7 +729,17 @@ ret = URLRequestGetRet(result.retType);
 
 handle `URL_RET_TOO_LARGE` before the generic failure branch.
 
-For an Intelligent-mode limited request, send:
+The HTTP MIME type is already available at this point. If `unsupportedMime`
+is true, preserve the existing unsupported-format behavior by sending:
+
+```c
+MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
+    request.nameT,
+    resultFormatFlags);
+```
+
+Only supported or unknown formats from an Intelligent-mode limited request
+should be deferred by sending:
 
 ```c
 MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
@@ -707,7 +747,7 @@ MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
     resultFormatFlags);
 ```
 
-then decrement pending count normally.
+Both paths decrement pending count normally.
 
 Do not mark the image broken.
 
@@ -715,7 +755,11 @@ Do not show an HTTP error page.
 
 Do not synthesize `OCT_NULL` replacement graphics.
 
-The MIME header has already been parsed by WMG3HTTP before the rejection, so continue using the current MIME/format detection to populate `resultFormatFlags`.
+The MIME header has already been parsed by WMG3HTTP before the rejection, so
+continue using the current MIME/format detection to populate
+`unsupportedMime` and `resultFormatFlags`. An oversized response with an
+unsupported `image/*` MIME type must become `HTML_IDF_UNSUPPORTED` without a
+body download; it must not first become an ordinary compact deferred image.
 
 Use `request.imageProbeMaxPixels != 0` as the assertion that this was an intelligent limited image request. An unexpected `URL_RET_TOO_LARGE` on an explicit forced request should follow the generic failure path rather than silently re-entering the compact state forever.
 
@@ -806,9 +850,12 @@ Serve this directory through HTTP when testing WMG3HTTP. Loading it as `file:` d
 
    WMG3HTTP may receive data up to the threshold, but must never write beyond it, must delete the partial temporary file, return `URL_RET_TOO_LARGE`, and close rather than cache the socket.
 
-7. Test a server that declares a Content-Length below the limit but sends excess data.
+7. Test a response that declares a Content-Length below the limit but whose
+   received block would cross the configured cap.
 
-   The per-block check must still enforce the cap.
+   The per-block check must reject before `FileWrite()`, write no bytes beyond
+   the cap, and return `URL_RET_TOO_LARGE`. This test does not require detection
+   of arbitrary trailing bytes after the declared body is complete.
 
 8. After rejecting an oversized response on a persistent connection, load another image from the same host.
 
@@ -830,9 +877,12 @@ Serve this directory through HTTP when testing WMG3HTTP. Loading it as `file:` d
 
     They must enter and leave compact state together using the existing `*_LIKE_GRAPHICS` machinery.
 
-13. Test an unsupported format.
+13. Test a response with `Content-Length` above the configured limit whose
+    unsupported `image/*` format is learned from the HTTP `Content-Type`,
+    rather than from the URL extension.
 
-    Preserve `HTML_IDF_UNSUPPORTED`; do not convert unsupported images into ordinary size-deferred images.
+    Reject it before downloading the body and preserve `HTML_IDF_UNSUPPORTED`;
+    do not convert it into an ordinary compact size-deferred image.
 
 14. Test redirects.
 
