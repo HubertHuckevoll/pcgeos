@@ -643,14 +643,17 @@ extern Boolean G_cacheAll;
  *              URL handling
  ***************************************************************************/
 
+/* fetchFlags controls transport policy; loadMode controls source caching. */
 #if PROGRESS_DISPLAY
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
-                   word loadMode, dword *ret, HTMLFormDataHandle postData,
+                   word loadMode, URLFetchFlags fetchFlags, dword *ret,
+                   HTMLFormDataHandle postData,
 		   NameToken referer, NameToken *anchor,
                    dword token, void **abortRoutine, _LoadProgressParams_);
 #else
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
-                   word loadMode, dword *ret, HTMLFormDataHandle postData,
+                   word loadMode, URLFetchFlags fetchFlags, dword *ret,
+                   HTMLFormDataHandle postData,
 		   NameToken referer, NameToken *anchor,
                    dword token, void **abortRoutine);
 #endif

@@ -435,9 +435,13 @@ void RestoreTVBW(void)
     MemUnlock(bufH);
     tempname[0] = 0;
 #if PROGRESS_DISPLAY
-    type = LoadURLToFile(&url, tempname, mime, ULM_CACHE, &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL, NULL);
+    type = LoadURLToFile(&url, tempname, mime, ULM_CACHE,
+      UFF_NONE, /* no transport-size policy */
+      &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL, NULL);
 #else
-    type = LoadURLToFile(&url, tempname, mime, ULM_CACHE, &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL);
+    type = LoadURLToFile(&url, tempname, mime, ULM_CACHE,
+      UFF_NONE, /* no transport-size policy */
+      &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL);
 #endif
     NamePoolReleaseToken(namePool, url);
 

@@ -59,13 +59,14 @@ typedef struct {
     T_fetchChildAction action ;
 
     /* Passed data */
-    NameToken url ;
-    word loadMode ;
-    HTMLFormDataHandle postData ;
-    NameToken referer;
-    optr ackObject ;
-    Message ackMessage ;
-    dword extraData ;
+    NameToken url ;               /* resource requested by this child */
+    word loadMode ;               /* ULM_* source-cache policy */
+    URLFetchFlags fetchFlags;     /* UFF_* transport policy */
+    HTMLFormDataHandle postData ; /* ownership passes to LoadURLToFile */
+    NameToken referer;            /* request Referer header source */
+    optr ackObject ;              /* receiver of completion message */
+    Message ackMessage ;          /* URL_FETCH_ACK completion message */
+    dword extraData ;             /* opaque state returned in acknowledgement */
 
     void *abortRoutine ;
 
@@ -127,6 +128,7 @@ typedef word (*thread_ptr)(word value) ;
         @message void MSG_URL_FETCH_ENGINE_GET_URL(
                           NameToken url,
                           word loadMode,
+                          URLFetchFlags fetchFlags,
                           HTMLFormDataHandle postData,
 			  NameToken referer,
                           optr ackObject,
@@ -136,6 +138,7 @@ typedef word (*thread_ptr)(word value) ;
         @message void MSG_URL_FETCH_ENGINE_GET_URL(
                           NameToken url,
                           word loadMode,
+                          URLFetchFlags fetchFlags,
                           HTMLFormDataHandle postData,
 			  NameToken referer,
                           optr ackObject,
@@ -368,6 +371,7 @@ void URLFetchEngineStop(void)
  | Inputs:
  |    NameToken url               -- URL to fetch (in global namePool)
  |    word loadMode               -- Form of caching
+ |    URLFetchFlags fetchFlags    -- Transport policy passed to URL driver
  |    HTMLFormDataHandle postData -- Post data block
  |    optr ackObject              -- Object to receive message when done
  |    word ackMessage             -- Message to send when done
@@ -382,6 +386,7 @@ void URLFetchEngineStop(void)
 void URLFetchRequest(
          NameToken url,
          word loadMode,
+         URLFetchFlags fetchFlags,
          HTMLFormDataHandle postData,
 	 NameToken referer,
          optr ackObject,
@@ -391,6 +396,7 @@ void URLFetchRequest(
 void URLFetchRequest(
          NameToken url,
          word loadMode,
+         URLFetchFlags fetchFlags,
          HTMLFormDataHandle postData,
 	 NameToken referer,
          optr ackObject,
@@ -422,6 +428,7 @@ void URLFetchRequest(
     @send ,forceQueue G_urlFetchObj::MSG_URL_FETCH_ENGINE_GET_URL(
                           url,
                           loadMode,
+                          fetchFlags,
                           postData,
 			  referer,
                           ackObject,
@@ -431,6 +438,7 @@ void URLFetchRequest(
     @send ,forceQueue G_urlFetchObj::MSG_URL_FETCH_ENGINE_GET_URL(
                           url,
                           loadMode,
+                          fetchFlags,
                           postData,
 			  referer,
                           ackObject,
@@ -767,6 +775,7 @@ void URLFetchExtraMemoryUnlock(optr em)
         /* Fill the structure with passed in data */
         p_child->url = url ;
         p_child->loadMode = loadMode ;
+        p_child->fetchFlags = fetchFlags; /* keep policy with async request */
         p_child->postData = postData ;
 	p_child->referer = referer ;
         p_child->ackObject = ackObject ;
@@ -1010,6 +1019,7 @@ word far URLFetchChildThread(word childNum)
                                         urlResult.curHTML,
                                         urlResult.mimeType,
                                         p_child->loadMode,
+                                        p_child->fetchFlags,
                                         &urlResult.htmlMsg,
                                         p_child->postData,
 					p_child->referer,
@@ -1033,6 +1043,7 @@ word far URLFetchChildThread(word childNum)
                                         urlResult.curHTML,
                                         urlResult.mimeType,
                                         p_child->loadMode,
+                                        p_child->fetchFlags,
                                         &urlResult.htmlMsg,
                                         p_child->postData,
 					p_child->referer,

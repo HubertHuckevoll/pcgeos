@@ -349,6 +349,7 @@ Boolean LOCAL HandleScriptURL(optr oself, NameToken url)
         URLFetchRequest(
              url,
              forceLoad? ULM_ALWAYS:ULM_CACHE,
+             UFF_NONE,  /* page loads have no transport-size policy */
              postData,
 	     referer,
              oself,
@@ -358,6 +359,7 @@ Boolean LOCAL HandleScriptURL(optr oself, NameToken url)
         URLFetchRequest(
              url,
              forceLoad? ULM_ALWAYS:ULM_CACHE,
+             UFF_NONE,  /* page loads have no transport-size policy */
              postData,
 	     referer,
              oself,
@@ -607,7 +609,10 @@ VMBlockHandle LOCAL ReadFileIntoHA(VMFileHandle vmf, TCHAR *name)
 
       /* attempt to get it into a file if it can be done without using
          a URL driver (either cached or because it's a local file). */
-      type = LoadURLToFile(url, retPath, mime, ULM_NEVER, &ret, NullHandle,
+      type = LoadURLToFile(url, retPath, mime, ULM_NEVER,
+                           UFF_NONE,  /* local/cache-only lookup */
+                           &ret,
+                           NullHandle,
                            NAME_POOL_NONE, NULL, 0xFFFF, NULL
 #if PROGRESS_DISPLAY
                            ,NULL
@@ -637,6 +642,7 @@ VMBlockHandle LOCAL ReadFileIntoHA(VMFileHandle vmf, TCHAR *name)
                                         // held in extra data as original URL
           URLFetchRequest(*url,         // URL token
 		          ULM_CACHE,    // NYI: possibly pass through reload
+		          UFF_NONE,     // external file is unrestricted
 		          NullHandle,   // post data
 		          referer,      // referer: this frame
 		          oself,        // send message to this frame
@@ -2185,6 +2191,7 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
 		    URLFetchRequest(embedURL,          /* URL token */
 				    (flags & GUF_RELOAD) ?
 				    ULM_ALWAYS : ULM_CACHE,  /* caching */
+				    UFF_NONE,          /* embedded audio unrestricted */
 				    NullHandle,        /* post data */
 				    NAME_POOL_NONE,    /* referer */
 				    oself,             /* return obj, msg */

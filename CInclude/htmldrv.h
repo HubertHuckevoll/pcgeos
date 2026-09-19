@@ -439,6 +439,8 @@ typedef struct {
 
   WordFlags             URB_reqFlags;
     #define URB_RQ_ALWAYS       0x0001  /* don't use URB_laterDate or caching */
+    #define URB_RQ_LIMIT_SIZE   0x0002  /* enforce configured transfer limit */
+    #define URB_RQ_IGNORE_SIZE_LIMIT 0x0004 /* explicit action overrides limit */
 
   /* Application-defined identifier for this loading thread. */
   dword                 URB_token;
@@ -548,6 +550,9 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
                                            additional bytes needed. */
 
 #define URL_RET_AUTHORIZATION   104     /* Authorization failed */
+
+#define URL_RET_TOO_LARGE       105     /* response exceeds transfer limit;
+                                           no complete file was returned */
 
 
 /*** Entry: Abort URL retrieval ***********************************************/

@@ -433,12 +433,14 @@ typedef struct {
     Boolean isAbort ;
     SemaphoreHandle sem ;
     byte action ;
-    NameToken url ;
-    word loadMode ;
-    HTMLFormDataHandle postData ;
-    optr ackObject ;
-    Message ackMessage ;
-    dword extraData ;
+    NameToken url ;               /* resource requested by this child */
+    word loadMode ;               /* ULM_* source-cache policy */
+    URLFetchFlags fetchFlags;     /* UFF_* transport policy */
+    HTMLFormDataHandle postData ; /* ownership passes to LoadURLToFile */
+    NameToken referer;            /* request Referer header source */
+    optr ackObject ;              /* receiver of completion message */
+    Message ackMessage ;          /* URL_FETCH_ACK completion message */
+    dword extraData ;             /* opaque state returned in acknowledgement */
     void *abortRoutine ;
     LoadProgressData loadProgressData;  /* loading progress data */
 } T_fetchEngineChild ;
@@ -447,7 +449,8 @@ extern T_fetchEngineChild G_fetchChildren[];
 
 /* url must be pointer to dynamic NamePool buffer */
 word LoadURLByDriver(TCHAR *type, TCHAR **url, TCHAR *tmpname, TCHAR *mimeType,
-  dword *ret, HTMLFormDataHandle postData, NameToken referer, dword token,
+  URLFetchFlags fetchFlags, dword *ret, HTMLFormDataHandle postData,
+  NameToken referer, dword token,
   void **abortRoutine LOAD_PROGRESS_PARAMS_PROTO CACHE_VAL_LOAD_PROTO)
 {
     void *ProcessURL;
@@ -555,6 +558,11 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
 
     req = MemDeref(reqBlock);           /* refresh pointer */
     req->URB_reqFlags = URB_RQ_ALWAYS;
+    /* Translate browser transport policy without changing cache policy. */
+    if(fetchFlags & UFF_LIMIT_SIZE)
+        req->URB_reqFlags |= URB_RQ_LIMIT_SIZE;
+    if(fetchFlags & UFF_IGNORE_SIZE_LIMIT)
+        req->URB_reqFlags |= URB_RQ_IGNORE_SIZE_LIMIT;
     req->URB_token = token;
     req->URB_url = urlChunk;
     req->URB_file = fileChunk;
@@ -691,7 +699,8 @@ abort:
  *              callback routine that can be used to abort fetching.
  */
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
-  word loadMode, dword *ret, HTMLFormDataHandle postData, NameToken referer, NameToken *anchor, dword token,
+  word loadMode, URLFetchFlags fetchFlags, dword *ret,
+  HTMLFormDataHandle postData, NameToken referer, NameToken *anchor, dword token,
   void **abortRoutine LOAD_PROGRESS_PARAMS_PROTO)
 {
     TCHAR curType[URL_MAX_TYPE], curExt[4];
@@ -883,7 +892,8 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
           if(!cached)                   /* create new temp file or reuse old */
             CreateTempName(id, _TEXT("$$$"), tempname);
 
-          type = LoadURLByDriver(curType, &urlP, tempname, mime, ret, postData,
+          type = LoadURLByDriver(curType, &urlP, tempname, mime, fetchFlags,
+                                 ret, postData,
 				 referer,
             token, abortRoutine LOAD_PROGRESS_DATAP_ARG CACHE_VAL_LOAD_ARG);
 
@@ -891,6 +901,16 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
 #if SINGLE_POST  /* preserve post data for redirect, freed in LoadURLToFile */
           postData = NullHandle ;
 #endif
+
+          /* Size rejection still returns the response MIME header.  Match
+             successful-file normalization before image classification. */
+          if(URLRequestGetRet(type)==URL_RET_TOO_LARGE && *mime)
+          {
+            strlwr(mime);
+            p = strchr(mime, ';');
+            if(p)
+              *p = 0;
+          }
 
 #if PROGRESS_DISPLAY
           if(URLRequestGetRet(type)==URL_RET_FILE ||

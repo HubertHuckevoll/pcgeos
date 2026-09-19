@@ -8,6 +8,10 @@
 images of at most 480,000 intrinsic pixels load automatically. Larger images
 remain compact until activated. Background images always load.</p>
 
+<p>To test HTTP transfer limits, serve this directory over HTTP. With
+downloadSizeLimitKB set to 2, large.gif is compact before download completes;
+with 3, it downloads and is then compact because of its intrinsic size.</p>
+
 <h2>Intrinsic size probe</h2>
 <p>Green PNG, 800 by 600 = 480,000 pixels: loads automatically.<br>
 <img src="limit.png" width="160" height="120" alt="Green limit image"></p>

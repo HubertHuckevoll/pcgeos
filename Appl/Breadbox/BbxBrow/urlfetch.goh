@@ -7,6 +7,13 @@
  *
  ***********************************************************************/
 
+/* Transport policy is independent of ULM_* source-cache policy. */
+typedef WordFlags URLFetchFlags;
+
+#define UFF_NONE               0x0000  /* ordinary unrestricted fetch */
+#define UFF_LIMIT_SIZE         0x0001  /* request driver transfer cap */
+#define UFF_IGNORE_SIZE_LIMIT  0x0002  /* explicit user override */
+
 /* Routines: */
 Boolean URLFetchEngineStart(void) ;
 void URLFetchEngineStop(void) ;
@@ -14,6 +21,7 @@ void URLFetchEngineStop(void) ;
 void URLFetchRequest(
          NameToken url,
          word loadMode,
+         URLFetchFlags fetchFlags,
          HTMLFormDataHandle postData,
 	 NameToken referer,
          optr ackObject,
@@ -23,6 +31,7 @@ void URLFetchRequest(
 void URLFetchRequest(
          NameToken url,
          word loadMode,
+         URLFetchFlags fetchFlags,
          HTMLFormDataHandle postData,
 	 NameToken referer,
          optr ackObject,
@@ -69,4 +78,3 @@ typedef struct {
     Boolean objCache ;     /* Cache flag when request made */
     word dir ;
 } HTMLV_URLRequestState ;
-

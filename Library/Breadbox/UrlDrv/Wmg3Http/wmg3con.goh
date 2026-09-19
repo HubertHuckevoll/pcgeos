@@ -22,6 +22,7 @@
 
 typedef struct {
     dword token ;
+    WordFlags reqFlags;       /* caller's URB_RQ_* transport policy */
     Socket sock ;
     Boolean aborted ;
     word socketState ;
@@ -97,4 +98,3 @@ HTTPConnectionHandle ConnectionFind(dword token, T_HTTPConnection **pp_conn) ;
 void ConnectionFree(HTTPConnectionHandle conn) ;
 void ConnectionsInit(void) ;
 void ConnectionsDeinit(void) ;
-

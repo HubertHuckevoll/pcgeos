@@ -83,6 +83,7 @@ TCHAR videoStr[30] = _TEXT("");
 TCHAR osVerStr[20] = _TEXT("");
 TCHAR langStr[10] = _TEXT("");
 TCHAR countryStr[10] = _TEXT("");
+word downloadSizeLimitKB = 0;  /* zero preserves unlimited legacy behavior */
 
 #if PROGRESS_DISPLAY
 word progressMinCL = PROGRESS_DEFAULT_CL;
@@ -1461,6 +1462,31 @@ static void * _pascal LoadProgressCallbackSnapshot(LoadProgressData *loadProgres
 }
 #endif
 
+/* Apply the configured cap only when the caller requests it.  An explicit
+   user action wins if both policy bits are present. */
+static Boolean _pascal DownloadSizeLimitActive(T_HTTPConnection *p_conn)
+{
+    return downloadSizeLimitKB &&
+           (p_conn->reqFlags & URB_RQ_LIMIT_SIZE) &&
+           !(p_conn->reqFlags & URB_RQ_IGNORE_SIZE_LIMIT);
+}
+
+/* Use subtraction so untrusted byte counts cannot overflow while being
+   added.  bytesSoFar may equal the limit; only a following byte fails. */
+static Boolean _pascal DownloadSizeLimitExceeded(T_HTTPConnection *p_conn,
+                                                  dword bytesSoFar,
+                                                  dword nextBytes)
+{
+    dword sizeLimitBytes;
+
+    if (!DownloadSizeLimitActive(p_conn))
+        return FALSE;
+
+    sizeLimitBytes = (dword)downloadSizeLimitKB * 1024L;
+    return bytesSoFar > sizeLimitBytes ||
+           nextBytes > sizeLimitBytes - bytesSoFar;
+}
+
 /* we'll try twice with SSL2/SSL3/TLS1, then twice with SSL2 */
 #define NUM_SSL_ALL_RETRIES 2
 #define NUM_SSL_S2_RETRIES 2
@@ -1511,6 +1537,8 @@ word HTTPGet(HTTPConnectionHandle conn)
 #endif
     MemHandle pathB = 0;
     int urlLen;
+    dword startBytes;       /* bytes already retained by a resumed transfer */
+    dword bytesSoFar;       /* retained bytes plus this response's writes */
 
     p_conn = ConnectionLock(conn) ;
 #ifdef PERSISTANT_CONNECTIONS
@@ -2382,9 +2410,30 @@ word HTTPGet(HTTPConnectionHandle conn)
 #endif
         p_conn = ConnectionLock(conn) ;
 
+        /* Reject a known final entity before FileCreate().  Redirect bodies
+           are protocol metadata and must not replace URL_RET_URL_REDIR. */
+        if (URLRequestGetRet(rcode) == URL_RET_FILE &&
+            contentlength != CL_UNKNOWN) {
+#ifdef GET_RANGE
+            /* A 200 response replaces the partial file; only 206 appends. */
+            startBytes = (p_conn->resumePos && responseCode == 206) ?
+                         (dword)p_conn->resumePos : 0;
+#else
+            startBytes = 0;
+#endif
+            if (DownloadSizeLimitExceeded(p_conn, startBytes,
+                                           (dword)contentlength)) {
+                rcode = URLRequestMakeRet(URL_RET_TOO_LARGE) |
+                        URB_RF_NOCACHE;
+                /* The unread entity body makes this socket unreusable. */
+                p_conn->allowSocketCache = FALSE;
+            }
+        }
+
 #if PROGRESS_DISPLAY
-        /* disable loading progress if small file */
-        if (contentlength < progressMinCL) {
+        /* Size-limited streams must not expose partial image data. */
+        if (DownloadSizeLimitActive(p_conn) ||
+            contentlength < progressMinCL) {
             if (p_conn->loadProgressDataP) {
                 ThreadPSem(p_conn->loadProgressDataP->LPD_sem);
                 p_conn->loadProgressDataP->LPD_callback = NULL;
@@ -2487,6 +2536,41 @@ word HTTPGet(HTTPConnectionHandle conn)
                     }
                 }
 #endif
+
+                        /* Check final file responses before writing.  The
+                           same loop also consumes redirect bodies. */
+                        if (URLRequestGetRet(rcode) == URL_RET_FILE) {
+#ifdef GET_RANGE
+                            /* A 200 replaces the partial file; only 206 adds
+                               the saved prefix to the byte total. */
+                            startBytes =
+                              (p_conn->resumePos && responseCode == 206) ?
+                              (dword)p_conn->resumePos : 0;
+#else
+                            startBytes = 0;
+#endif
+                            /* Validate the accumulated length before forming
+                               startBytes + length. */
+                            if (DownloadSizeLimitExceeded(p_conn, startBytes,
+                                                           (dword)length)) {
+                                rcode = URLRequestMakeRet(URL_RET_TOO_LARGE) |
+                                        URB_RF_NOCACHE;
+                                /* Do not reuse a socket with an unread body. */
+                                p_conn->allowSocketCache = FALSE;
+                                break;
+                            }
+                            bytesSoFar = startBytes + (dword)length;
+                            /* Reject the complete block rather than writing
+                               bytes beyond the configured boundary. */
+                            if (DownloadSizeLimitExceeded(p_conn, bytesSoFar,
+                                                           (dword)i)) {
+                                rcode = URLRequestMakeRet(URL_RET_TOO_LARGE) |
+                                        URB_RF_NOCACHE;
+                                /* Do not reuse a socket with an unread body. */
+                                p_conn->allowSocketCache = FALSE;
+                                break;
+                            }
+                        }
 
                         if (FileWrite(output, p_conn->buffer, i, FALSE) != i) {
                             /* report error if write fails */
@@ -2637,8 +2721,9 @@ word HTTPGet(HTTPConnectionHandle conn)
                 p_conn->msg = @MsgFileError;
             }
 #ifdef PERSISTANT_CONNECTIONS
-	} else {
-	    /* eat data for non-URL_RET_FILE or not-modifieds */
+	} else if (URLRequestGetRet(rcode) != URL_RET_TOO_LARGE) {
+	    /* Eat ordinary non-file bodies.  Oversized bodies stay unread so
+	       socket cleanup closes rather than caches the connection. */
 	    do {
 	    } while ((!p_conn->aborted) &&
 		     (SocketGetBlock(conn, &p_conn, TRUE)) > 0);
@@ -2851,6 +2936,7 @@ word _pascal _export URLDrvMain(_URLMainParams_)
     p_conn->aborted = FALSE;                    /* not aborted yet */
 
     p_conn->msg = NullOptr ;
+    p_conn->reqFlags = req->URB_reqFlags;       /* preserve request policy */
     p_conn->callback = req->URB_progress ;
     p_conn->postData = postData ;
 
@@ -3073,6 +3159,9 @@ void Initialize(void)
 				 countryStr, sizeof(countryStr), &size)) {
 	strcpy(countryStr, _TEXT("US"));
     }
+    /* Missing keys leave the zero/unlimited default unchanged. */
+    InitFileReadInteger("http", "downloadSizeLimitKB",
+                        &downloadSizeLimitKB);
 #if PROGRESS_DISPLAY
     /* get minimum content length for progress display */
     InitFileReadInteger(PROGRESS_INI_CAT, PROGRESS_INI_CL_KEY, &progressMinCL);

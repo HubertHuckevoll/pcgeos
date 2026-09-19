@@ -783,7 +783,8 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
                                    Boolean forceLoad,
                                    Boolean objCache,
 				   Boolean replaceLike,
-                                   dword imageProbeMaxPixels)
+                                   dword imageProbeMaxPixels,
+                                   Boolean ignoreDownloadSizeLimit)
 {
     word nameT;
     ObjCacheToken oct;
@@ -796,7 +797,15 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
 #endif
     Boolean ret = FALSE;
     word formatFlags;
+    URLFetchFlags fetchFlags;  /* transport policy for this image request */
     extern Boolean G_stopped ;
+
+    /* Only Intelligent inline images have a nonzero intrinsic-pixel cap. */
+    fetchFlags = imageProbeMaxPixels ? UFF_LIMIT_SIZE : UFF_NONE;
+    /* Explicit image activation overrides transport size independently of
+       forceLoad, which controls only source-cache reuse. */
+    if(ignoreDownloadSizeLimit)
+        fetchFlags |= UFF_IGNORE_SIZE_LIMIT;
 
     if(p->flags & HTML_IDF_UNSUPPORTED)
         return FALSE;
@@ -872,6 +881,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         URLFetchRequest(
             nameT,
             forceLoad? ULM_ALWAYS:ULM_CACHE,
+            fetchFlags,
             NullHandle,
 	    referer,
             oself,
@@ -890,6 +900,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         URLFetchRequest(
             nameT,
             forceLoad? ULM_ALWAYS:ULM_CACHE,
+            fetchFlags,
             NullHandle,
 	    referer,
             oself,
@@ -904,6 +915,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       URLFetchRequest(
           nameT,
           forceLoad? ULM_ALWAYS:ULM_CACHE,
+          fetchFlags,
           NullHandle,
 	  referer,
           oself,
@@ -984,8 +996,10 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                normal graphics pass to ensure the final layout runs. */
             @call oself::MSG_URL_TEXT_INC_PENDING();
             finishPending = TRUE;
+            /* Explicit compact-image activation overrides both limits but
+               still permits a source-cache hit. */
             if(ProcessSingleGraphic(p, oself, referer, nImage, TRUE, FALSE,
-                                    objCache, TRUE, 0))
+                                    objCache, TRUE, 0, TRUE))
             {
                 for(i=0; i<n; i++)
                 {
@@ -1124,10 +1138,12 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                         HTML_IDF_UNSUPPORTED)))
           continue;                     // Skip graphics that have been handled
 
+        /* View -> Load Graphics bypasses both intelligent-image gates. */
         if(ProcessSingleGraphic(p, oself, referer, i,
                                 (pass==2), forceLoad, objCache, TRUE,
                                 p->pos < HTML_IMAGE_POS_RESERVED ?
-                                  imageProbeMaxPixels : 0))
+                                  imageProbeMaxPixels : 0,
+                                bypassIntelligent))
         {
           /* Mark this and all similar graphics further down */
           for (j=i; j<n; j++)  {
@@ -1352,6 +1368,19 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
               @call oself::MSG_URL_TEXT_DEC_PENDING();
           }
         }
+    }
+    /* Only an Intelligent limited request becomes a retryable compact image.
+       A forced request returning this code follows generic failure handling. */
+    else if(ret == URL_RET_TOO_LARGE && request.imageProbeMaxPixels != 0)
+    {
+        if(unsupportedMime)
+            /* MIME unsupported takes precedence over size deferral. */
+            @call oself::MSG_URL_TEXT_INTERNAL_MARK_LIKE_GRAPHICS_UNSUPPORTED(
+              request.nameT, resultFormatFlags);
+        else
+            @call oself::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
+              request.nameT, resultFormatFlags);
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
     }
 #if PROGRESS_DISPLAY
     else if(ret == URL_RET_PROGRESS || ret == URL_RET_PROGRESS_ABORT) {
@@ -2570,7 +2599,8 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 
       /* load graphic or get it from cache */
       ProcessSingleGraphic(p, oself, referer, i, TRUE, FALSE, objCache,
-        FALSE, imageProbeMaxPixels);
+        FALSE, imageProbeMaxPixels,
+        FALSE);  /* URL replacement is not an explicit size override */
 
       /* release referer */
       if (referer != NAME_POOL_NONE)
@@ -2642,6 +2672,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 	URLFetchRequest(
 	    fullURL,
 	    ULM_CACHE,  /* use src cache */
+	    UFF_NONE,   /* preload is outside Intelligent admission */
 	    NullHandle,
 	    referer,
 	    oself,
