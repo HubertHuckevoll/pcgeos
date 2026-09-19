@@ -557,13 +557,10 @@ LoadURLToFile()
 LoadURLByDriver()
 ```
 
-Run:
-
-```bash
-rg "URLFetchRequest\(" Appl/Breadbox/BbxBrow
-rg "LoadURLToFile\(" Appl/Breadbox/BbxBrow
-rg "LoadURLByDriver\(" Appl/Breadbox/BbxBrow
-```
+Use aihelp.py to scan for
+"URLFetchRequest" in BbxBrow
+"LoadURLToFile" in BbxBrow
+"LoadURLByDriver" in BbxBrow
 
 and update every caller explicitly. Ordinary non-image requests pass `UFF_NONE`.
 
@@ -844,18 +841,11 @@ Serve this directory through HTTP when testing WMG3HTTP. Loading it as `file:` d
 ## Build checks
 
 Build the shared headers/dependents and the three affected modules from the branch:
+- Wmg3Http
+- Html4Par
+- BbxBrow
 
-```bash
-cd Library/Breadbox/UrlDrv/Wmg3Http
-pmake
-
-cd ../../Html4Par
-pmake
-
-cd ../../../Appl/Breadbox/BbxBrow
-pmake
-```
-
+Use `aihelp` to compile as described in the AGENTS.md.
 Use the repository's normal EC and non-EC build workflow if wrappers exist in the current checkout.
 
 At minimum verify both EC and non-EC variants because the changes touch shared request structures, asynchronous fetch state, persistent socket handling, and GOC message signatures.
@@ -892,5 +882,3 @@ No production Html4Par source change is expected. Its existing compact-image sta
 Before editing, use `rg` to verify all `URLFetchRequest`, `LoadURLToFile`, `LoadURLByDriver`, `T_fetchEngineChild`, `URB_reqFlags`, and `URL_RET_*` call sites/definitions and adjust this file list if the current branch has moved them.
 
 Keep the patch narrowly scoped. Do not refactor WMG3HTTP header parsing, URL caching, image state, or progressive-import architecture beyond what is required for the size gate.
-
-One thing I particularly like about this design is the 2 KiB/3 KiB test trick with your existing `large.gif`: at 2 KiB it exercises the **new download gate**, while at 3 KiB the exact same image gets through HTTP and exercises the **existing 480,000-pixel gate**. That's an unusually clean way to prove the two patches aren't accidentally masking each other.
