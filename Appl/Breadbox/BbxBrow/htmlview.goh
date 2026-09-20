@@ -450,6 +450,7 @@ extern AllocWatcherHandle G_allocWatcher ;
 
 #if PROGRESS_DISPLAY
 extern Boolean progressDisplay;
+extern Boolean imagesWhileLoading;
 extern word progressLoadWait;
 extern word progressMinHeight;
 #endif

@@ -536,6 +536,8 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
 #ifndef COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
                   /* no import progress if no loading progress */
                   && loadProgressDataP
+#else
+                  && (loadProgressDataP || imagesWhileLoading)
 #endif
 		) ? importProgressCallback : NULL;
 #else

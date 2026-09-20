@@ -103,6 +103,7 @@ AllocWatcherHandle G_allocWatcher = NullWatcher ;
  */
 #if PROGRESS_DISPLAY
 Boolean progressDisplay = TRUE;
+Boolean imagesWhileLoading = TRUE;
 
 /* time interval for sending load progress notification from fetch thread
    to import thread */
@@ -780,6 +781,9 @@ void InitNavigation(void)
 
 #if PROGRESS_DISPLAY
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "progressDisplay", &progressDisplay);
+    InitFileReadBoolean(PROGRESS_INI_CAT,
+                        PROGRESS_INI_IMAGES_WHILE_LOADING_KEY,
+                        &imagesWhileLoading);
     /* get wait before sending load progress notification */
     InitFileReadInteger(PROGRESS_INI_CAT, PROGRESS_INI_WAIT_KEY,
                         &progressLoadWait);
