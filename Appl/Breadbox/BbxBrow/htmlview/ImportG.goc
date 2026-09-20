@@ -529,8 +529,8 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
 	    p_request->importProgressData.IPD_nameT = name;
         p_request->mimeStatus = G_importMimeStatus + importThread ;
             p_request->importProgressData.IPD_cacheItem = OCT_NULL;
-	    /* point to callback routine when progress display is enabled;
-	       local-file progress does not require loading progress data */
+	    /* progressDisplay is the master switch. With local progress
+	       support, completed-file imports also require imagesWhileLoading. */
 	    p_request->importProgressData.IPD_callback =
                 (progressDisplay
 #ifndef COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
