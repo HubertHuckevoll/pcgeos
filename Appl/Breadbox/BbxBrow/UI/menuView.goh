@@ -169,8 +169,8 @@
     GIGI_applyMsg = MSG_HMLVP_LOAD_GRAPHICS_CHANGED;
     ATTR_GEN_INIT_FILE_KEY = "loadGraphics";
     GI_comp = @NavigateLoadGraphicsDisabled,
-              @NavigateLoadGraphicsAutomatic,
-              @NavigateLoadGraphicsCompact;
+              @NavigateLoadGraphicsCompact,
+              @NavigateLoadGraphicsAutomatic;
 }
 
 @object GenItemClass NavigateLoadGraphicsDisabled = {
@@ -179,12 +179,12 @@
 }
 
 @object GenItemClass NavigateLoadGraphicsAutomatic = {
-    GI_visMoniker = 'A',"Load Images Automatically";
+    GI_visMoniker = 'A',"Load All Images";
     GII_identifier = IMAGE_LOAD_AUTOMATIC;
 }
 
 @object GenItemClass NavigateLoadGraphicsCompact = {
-    GI_visMoniker = 't',"Load Images Intelligently";
+    GI_visMoniker = 'S',"Load Smaller Images";
     GII_identifier = IMAGE_LOAD_INTELLIGENT;
 }
 
