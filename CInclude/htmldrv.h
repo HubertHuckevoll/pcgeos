@@ -102,7 +102,6 @@ typedef struct {
 #define PROGRESS_DEFAULT_CL (4*1024)
 #define PROGRESS_INI_HEIGHT_KEY "height"
 #define PROGRESS_DEFAULT_HEIGHT 30
-#define PROGRESS_INI_IMAGES_WHILE_LOADING_KEY "imagesWhileLoading"
 
 /* import progress data */
 typedef struct {

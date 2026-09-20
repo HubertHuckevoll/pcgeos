@@ -102,8 +102,7 @@ AllocWatcherHandle G_allocWatcher = NullWatcher ;
  * Turn on/off progress display of graphics when loading/importing
  */
 #if PROGRESS_DISPLAY
-Boolean progressDisplay = TRUE;
-Boolean imagesWhileLoading = TRUE;
+ImageProgressMode imageProgressMode = IMAGE_PROGRESS_STREAM;
 
 /* time interval for sending load progress notification from fetch thread
    to import thread */
@@ -617,6 +616,10 @@ void InitNavigation(void)
     WWFixed wwf;
     dword availMem ;
     word Kavail ;
+#if PROGRESS_DISPLAY
+    word progressMode;
+    Boolean legacyProgressDisplay;
+#endif
 #if defined(ALT_SRC_CACHE) || defined(GLOBAL_INTERNET_BUILD)
     word dataSize;
 #endif
@@ -780,10 +783,21 @@ void InitNavigation(void)
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "busyOff", &isBusyOff);
 
 #if PROGRESS_DISPLAY
-    InitFileReadBoolean(HTMLVIEW_CATEGORY, "progressDisplay", &progressDisplay);
-    InitFileReadBoolean(PROGRESS_INI_CAT,
-                        PROGRESS_INI_IMAGES_WHILE_LOADING_KEY,
-                        &imagesWhileLoading);
+    /* image progress mode; invalid values keep the STREAM default */
+    imageProgressMode = IMAGE_PROGRESS_STREAM;
+    progressMode = IMAGE_PROGRESS_STREAM;
+    if (!InitFileReadInteger(HTMLVIEW_CATEGORY, "progressDisplay",
+                             &progressMode)) {
+        if (progressMode <= IMAGE_PROGRESS_STREAM)
+            imageProgressMode = (ImageProgressMode)progressMode;
+    } else if (!InitFileReadBoolean(HTMLVIEW_CATEGORY, "progressDisplay",
+                                    &legacyProgressDisplay)) {
+        /* Replace either legacy Boolean value with the STREAM mode. */
+        InitFileWriteInteger(HTMLVIEW_CATEGORY, "progressDisplay",
+                             IMAGE_PROGRESS_STREAM);
+    }
+    EC(EC_ERROR_IF(imageProgressMode < IMAGE_PROGRESS_FINAL ||
+                   imageProgressMode > IMAGE_PROGRESS_STREAM, -1);)
     /* get wait before sending load progress notification */
     InitFileReadInteger(PROGRESS_INI_CAT, PROGRESS_INI_WAIT_KEY,
                         &progressLoadWait);

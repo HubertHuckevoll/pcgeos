@@ -906,7 +906,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
             oself,
             MSG_URL_TEXT_GRAPHIC_FETCHED,
             request,
-            (!progressDisplay || (p->pos >= HTML_IMAGE_POS_RESERVED) ||
+            (imageProgressMode != IMAGE_PROGRESS_STREAM ||
+             (p->pos >= HTML_IMAGE_POS_RESERVED) ||
              (p->size.XYS_height &&
               (p->size.XYS_height < progressMinHeight)) ?
              NULL : &loadProgressData)) ;

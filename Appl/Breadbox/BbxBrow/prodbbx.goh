@@ -208,10 +208,6 @@
 #define IMPORT_PROGRESS_DATAP_ARG
 #endif
 
-/* turn on to make sure that local graphics are also imported with
-   progressive display. This is mostly for progressive debugging... */
-// #define COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
-
 /* EC num request checking */
 #define MAX_NUM_REQUESTS 250
 

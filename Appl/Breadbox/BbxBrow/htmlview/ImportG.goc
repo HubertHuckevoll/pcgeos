@@ -529,17 +529,12 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
 	    p_request->importProgressData.IPD_nameT = name;
         p_request->mimeStatus = G_importMimeStatus + importThread ;
             p_request->importProgressData.IPD_cacheItem = OCT_NULL;
-	    /* progressDisplay is the master switch. With local progress
-	       support, completed-file imports also require imagesWhileLoading. */
+	    /* Any non-final mode shows progress while importing a
+	       completely downloaded file; streaming requests also carry
+	       live load progress data. */
 	    p_request->importProgressData.IPD_callback =
-                (progressDisplay
-#ifndef COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
-                  /* no import progress if no loading progress */
-                  && loadProgressDataP
-#else
-                  && (loadProgressDataP || imagesWhileLoading)
-#endif
-		) ? importProgressCallback : NULL;
+                (imageProgressMode != IMAGE_PROGRESS_FINAL) ?
+                    importProgressCallback : NULL;
 #else
         p_request->mimeStatus = &G_importMimeStatus ;
 #endif

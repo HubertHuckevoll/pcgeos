@@ -449,8 +449,17 @@ extern optr assocSchemeDriver;
 extern AllocWatcherHandle G_allocWatcher ;
 
 #if PROGRESS_DISPLAY
-extern Boolean progressDisplay;
-extern Boolean imagesWhileLoading;
+
+/* three-state image progress mode (see [HTMLView] progressDisplay) */
+typedef enum {
+    IMAGE_PROGRESS_FINAL = 0,   /* only final replacement */
+    IMAGE_PROGRESS_IMPORT = 1,  /* progressive display during import of
+                                   completely downloaded files */
+    IMAGE_PROGRESS_STREAM = 2   /* streaming, import fallback for
+                                   images without load progress data */
+} ImageProgressMode;
+
+extern ImageProgressMode imageProgressMode;
 extern word progressLoadWait;
 extern word progressMinHeight;
 #endif
