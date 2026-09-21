@@ -64,6 +64,7 @@ typedef struct {
     optr LPD_request;           /* opaque client request state */
     word LPD_discard;           /* ignore buffered data after
 						 * LPCT_DISCARD */
+    word LPD_layoutRestartRequested; /* one geometry restart per stream */
 } LoadProgressData;
 
 #define _LoadProgressParams_ LoadProgressData *loadProgressDataP

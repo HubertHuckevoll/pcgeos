@@ -491,6 +491,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     case LPCT_OPEN:
         loadProgressDataP->LPD_streamState = LPSS_EMPTY;
         loadProgressDataP->LPD_discard = FALSE;
+        loadProgressDataP->LPD_layoutRestartRequested = FALSE;
 	/* since we know this came from IMG tag, assume graphic */
 	AssumeGraphic(loadProgressDataP->LPD_mimeType);
         /* only do progress display for JPEGs and GIFs */
@@ -1789,6 +1790,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
 @method URLTextClass, MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS
 {
     _ImportProgressParams_;
+    Boolean restartLayout;
 
     if (importProgressData && pself->HTI_imageArray) {
 	ImportRemoveProgressDataFromQueue(importProgressData);
@@ -1808,10 +1810,23 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
           @call self::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
           if(importProgressDataP->IPD_loadProgressDataP)
           {
-              /* A live page layout normally postpones changed cells until
-                 its final extra pass. Request its existing restart path now
-                 so streamed pixels become visible before page completion. */
-              @call self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
+              restartLayout = FALSE;
+              ThreadPSem(importProgressDataP->
+                IPD_loadProgressDataP->LPD_sem);
+              if(!importProgressDataP->IPD_loadProgressDataP->
+                   LPD_layoutRestartRequested)
+              {
+                  importProgressDataP->IPD_loadProgressDataP->
+                    LPD_layoutRestartRequested = TRUE;
+                  restartLayout = TRUE;
+              }
+              ThreadVSem(importProgressDataP->
+                IPD_loadProgressDataP->LPD_sem);
+
+              /* Only the compact-to-real geometry transition needs the
+                 active layout restart. Later slices invalidate in place. */
+              if(restartLayout)
+                  @call self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
           }
 	}
 	MemFree(importProgressData);
