@@ -17,6 +17,7 @@ PngImport(
     , _ImportProgressParams_
 #endif
     , MimeStatus *mimeStatus
+    , dword maxPixels
 );
 
 #endif

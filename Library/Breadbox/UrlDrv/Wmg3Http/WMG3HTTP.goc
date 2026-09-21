@@ -2431,8 +2431,11 @@ word HTTPGet(HTTPConnectionHandle conn)
         }
 
 #if PROGRESS_DISPLAY
-        /* Size-limited streams must not expose partial image data. */
-        if (DownloadSizeLimitActive(p_conn) ||
+        /* A known size has already passed the transfer cap above and can
+           stream safely.  Unknown-size limited bodies stay download-first:
+           they may cross the cap after partial pixels were published. */
+        if ((DownloadSizeLimitActive(p_conn) &&
+             contentlength == CL_UNKNOWN) ||
             contentlength < progressMinCL) {
             if (p_conn->loadProgressDataP) {
                 ThreadPSem(p_conn->loadProgressDataP->LPD_sem);

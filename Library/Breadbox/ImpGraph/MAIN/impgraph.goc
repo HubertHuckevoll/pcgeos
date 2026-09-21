@@ -263,11 +263,14 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 	        , importProgressDataP
 #endif
             , mimeStatus
+            , params->IBP_maxPixels
            );
 
-    /* if fast import failed, try using IJGJPEG library */
+    /* if fast import failed, try using IJGJPEG library.
+       DEFERRED and MEMORY_LIMIT stop the fallback chain. */
     if(!(*bmVMBlock) &&
-       !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
+       !(mimeStatus->MS_mimeFlags &
+         (MIME_STATUS_MEMORY_LIMIT | MIME_STATUS_DEFERRED)))
     {
 @endif
         *bmVMBlock =
@@ -280,6 +283,7 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 	            , importProgressDataP
 #endif
                 , mimeStatus
+                , params->IBP_maxPixels
            );
 @ifdef PRODUCT_FJPEG
     }
@@ -325,6 +329,7 @@ ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 	, importProgressDataP
 #endif
     , mimeStatus
+    , params->IBP_maxPixels
     );
 
 /*
@@ -391,8 +396,13 @@ void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle 
  *  type that is passed in *mimeType. The file is converted to a VMChain
  *  in the file specified by vmf. The size of the objects bounding box is
  *  passed back in *size.
+ *
+ *  maxPixels limits the intrinsic pixels a format may decode; 0 imports
+ *  unrestricted. Oversized images are rejected with MIME_STATUS_DEFERRED
+ *  and no bitmap (caller-policy rejection, distinct from abort/memory).
  */
-VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFlags)
+VMBlockHandle _pascal MimeDrvGraphicCommon(_MimeGraphicParams_,
+                                           dword extFlags, dword maxPixels)
 {
 	Boolean locAllowAnimations;
 	Boolean locCompress;
@@ -420,6 +430,7 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 	}
 
     params.IBP_mimeStatus = mimeStatus ;
+    params.IBP_maxPixels = maxPixels ;
 #if PROGRESS_DISPLAY
     /* use local work file, if available */
     if (importProgressDataP && importProgressDataP->IPD_callback) {
@@ -459,14 +470,19 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
           , mimeStatus
 
 
+/* MIME fallback chains stop on a deferred or memory-limited import so an
+ * oversized image is never retried by another decoder. */
+
     if (strcmp(mimeType, _TEXT("image/gif")) == 0)
     {
         status = ImpGIF(IMP_GIF_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT &&
-            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
+            !(mimeStatus->MS_mimeFlags &
+              (MIME_STATUS_MEMORY_LIMIT | MIME_STATUS_DEFERRED)))
             status = ImpJPG(IMP_JPG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT &&
-            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
+            !(mimeStatus->MS_mimeFlags &
+              (MIME_STATUS_MEMORY_LIMIT | MIME_STATUS_DEFERRED)))
             status = ImpPNG(IMP_PNG_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/jpeg")) == 0 || 
@@ -474,20 +490,24 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
     {
         status = ImpJPG(IMP_JPG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT &&
-            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
+            !(mimeStatus->MS_mimeFlags &
+              (MIME_STATUS_MEMORY_LIMIT | MIME_STATUS_DEFERRED)))
             status = ImpGIF(IMP_GIF_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT &&
-            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
+            !(mimeStatus->MS_mimeFlags &
+              (MIME_STATUS_MEMORY_LIMIT | MIME_STATUS_DEFERRED)))
             status = ImpPNG(IMP_PNG_PARAMS);
     }
     else if (strcmp(mimeType, _TEXT("image/png")) == 0)
     {
         status = ImpPNG(IMP_PNG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT &&
-            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
+            !(mimeStatus->MS_mimeFlags &
+              (MIME_STATUS_MEMORY_LIMIT | MIME_STATUS_DEFERRED)))
             status = ImpJPG(IMP_JPG_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT &&
-            !(mimeStatus->MS_mimeFlags & MIME_STATUS_MEMORY_LIMIT))
+            !(mimeStatus->MS_mimeFlags &
+              (MIME_STATUS_MEMORY_LIMIT | MIME_STATUS_DEFERRED)))
             status = ImpGIF(IMP_GIF_PARAMS);
     }
 
@@ -559,7 +579,8 @@ char * _pascal _export MimeDrvText(_MimeTextParams_)
 
 VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
 {
-	return MimeDrvGraphicEx(
+    /* entry 0, protocol 4.0: no admission policy */
+    return MimeDrvGraphicCommon(
             mimeType,
             file,
             vmf,
@@ -568,7 +589,41 @@ VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
             watcher,
             usedMem,
             mimeStatus,
-			importProgressDataP,
-			0		// no specific flags here
-	);
+            importProgressDataP,
+            0,			// no specific flags here
+            0);			// no pixel limit here
+}
+
+VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFlags)
+{
+    /* entry 3, protocol 4.2: no admission policy */
+    return MimeDrvGraphicCommon(
+            mimeType,
+            file,
+            vmf,
+            iad,
+            resolution,
+            watcher,
+            usedMem,
+            mimeStatus,
+            importProgressDataP,
+            extFlags,
+            0);			// no pixel limit here
+}
+
+VMBlockHandle _pascal _export MimeDrvGraphicEx2(_MimeGraphicParams_, dword extFlags, dword maxPixels)
+{
+    /* entry 4, protocol 4.3: import-time pixel admission */
+    return MimeDrvGraphicCommon(
+            mimeType,
+            file,
+            vmf,
+            iad,
+            resolution,
+            watcher,
+            usedMem,
+            mimeStatus,
+            importProgressDataP,
+            extFlags,
+            maxPixels);
 }

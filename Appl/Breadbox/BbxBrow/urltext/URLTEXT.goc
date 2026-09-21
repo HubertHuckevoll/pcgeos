@@ -67,7 +67,7 @@ typedef struct {
     word index;
     NameToken nameT;
     Boolean objCache;
-    dword imageProbeMaxPixels;
+    dword imageMaxPixels;
 #if PROGRESS_DISPLAY
     Boolean progressCanceled;
 #endif
@@ -230,19 +230,28 @@ extern Boolean G_fetchWhileImport;
     static TCHAR nullName[] = _TEXT("");
     URLTextRequestGraphic *requestP;
     Boolean canceled;
+    dword imageMaxPixels;
     extern Boolean G_stopped;
 
     if (loadProgressDataP) {
     canceled = G_stopped;
     if(!canceled)
+    {
+        /* inherit the pixel policy of the request that started this
+           streamed fetch */
+        URLFetchExtraMemoryLock(loadProgressDataP->LPD_request);
+        requestP = URLFetchExtraMemoryDeref(loadProgressDataP->LPD_request);
+        imageMaxPixels = requestP->imageMaxPixels;
+        URLFetchExtraMemoryUnlock(loadProgressDataP->LPD_request);
         canceled = !ImportThreadRequestImportGraphic(
           oself,
           loadProgressDataP->LPD_nameT,
           loadProgressDataP->LPD_mimeType,
           nullName,  /* have data stream, don't need filename */
-          FALSE, 0,
+          FALSE, imageMaxPixels,
           URLTextImageFormatFromMime(loadProgressDataP->LPD_mimeType),
           loadProgressDataP);
+    }
     if(canceled)
     {
 EC(     EC_ERROR_IF(!loadProgressDataP->LPD_request, -1); )
@@ -481,6 +490,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     switch (callbackType) {
     case LPCT_OPEN:
         loadProgressDataP->LPD_streamState = LPSS_EMPTY;
+        loadProgressDataP->LPD_discard = FALSE;
 	/* since we know this came from IMG tag, assume graphic */
 	AssumeGraphic(loadProgressDataP->LPD_mimeType);
         /* only do progress display for JPEGs and GIFs */
@@ -652,9 +662,39 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         break;
     }
 
+    case LPCT_DISCARD:
+        /* A constrained import finished with a caller-policy rejection.
+           Drop the buffered bytes and ignore further writes, but keep the
+           callback installed so the fetch thread still completes the
+           source file and returns its normal progress acknowledgement. */
+        ThreadPSem(loadProgressDataP->LPD_sem);
+        loadProgressDataP->LPD_discard = TRUE;
+#ifdef USE_MEM_STREAM
+	G_stream[lt] = MemStreamInit(G_stream[lt]);
+#else
+        streamCount = HugeArrayGetCount(
+            loadProgressDataP->LPD_dataFile,
+            loadProgressDataP->LPD_dataStream);
+        if (streamCount) {
+            HugeArrayDelete(loadProgressDataP->LPD_dataFile,
+                    loadProgressDataP->LPD_dataStream,
+                    streamCount, 0);
+        }
+#endif
+        loadProgressDataP->LPD_bytesAvail = 0;
+        loadProgressDataP->LPD_preReadOffset = 0;
+        loadProgressDataP->LPD_streamState = LPSS_EMPTY;
+        ThreadVSem(loadProgressDataP->LPD_sem);
+        break;
+
     case LPCT_WRITE:
     {
         ThreadPSem(loadProgressDataP->LPD_sem);
+        if (loadProgressDataP->LPD_discard) {
+            /* data was discarded, stop buffering */
+            ThreadVSem(loadProgressDataP->LPD_sem);
+            break;
+        }
 #ifdef USE_MEM_STREAM
 	/* ignore error */
 	MemStreamWrite(G_stream[lt], buffer, bufSize);
@@ -783,7 +823,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
                                    Boolean forceLoad,
                                    Boolean objCache,
 				   Boolean replaceLike,
-                                   dword imageProbeMaxPixels,
+                                   dword imageMaxPixels,
                                    Boolean ignoreDownloadSizeLimit)
 {
     word nameT;
@@ -801,7 +841,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
     extern Boolean G_stopped ;
 
     /* Only Intelligent inline images have a nonzero intrinsic-pixel cap. */
-    fetchFlags = imageProbeMaxPixels ? UFF_LIMIT_SIZE : UFF_NONE;
+    fetchFlags = imageMaxPixels ? UFF_LIMIT_SIZE : UFF_NONE;
     /* Explicit image activation overrides transport size independently of
        forceLoad, which controls only source-cache reuse. */
     if(ignoreDownloadSizeLimit)
@@ -872,46 +912,32 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
 #if PROGRESS_DISPLAY
       p_request->progressCanceled = FALSE;
 #endif
-      p_request->imageProbeMaxPixels = imageProbeMaxPixels;
+      p_request->imageMaxPixels = imageMaxPixels;
       URLFetchExtraMemoryUnlock(request) ;
 
 #if PROGRESS_DISPLAY
-      if(imageProbeMaxPixels)
-      {
-        URLFetchRequest(
-            nameT,
-            forceLoad? ULM_ALWAYS:ULM_CACHE,
-            fetchFlags,
-            NullHandle,
-	    referer,
-            oself,
-            MSG_URL_TEXT_GRAPHIC_FETCHED,
-            request,
-            (void *)0) ;
-      }
-      else
-      {
-        /* Preserve ordinary Automatic-mode progressive loading. */
-        memset(&loadProgressData, 0, sizeof(loadProgressData));
-        loadProgressData.LPD_callback = loadProgressCallback;
-        loadProgressData.LPD_textObj = oself;
-        loadProgressData.LPD_nameT = nameT;
-        loadProgressData.LPD_request = request;
-        URLFetchRequest(
-            nameT,
-            forceLoad? ULM_ALWAYS:ULM_CACHE,
-            fetchFlags,
-            NullHandle,
-	    referer,
-            oself,
-            MSG_URL_TEXT_GRAPHIC_FETCHED,
-            request,
-            (imageProgressMode != IMAGE_PROGRESS_STREAM ||
-             (p->pos >= HTML_IMAGE_POS_RESERVED) ||
-             (p->size.XYS_height &&
-              (p->size.XYS_height < progressMinHeight)) ?
-             NULL : &loadProgressData)) ;
-      }
+      /* Constrained GIF/JPEG imports stream like unconstrained ones and
+         are rejected by the importer itself; PNG is refused by the
+         progress callback and downloads completely first. */
+      memset(&loadProgressData, 0, sizeof(loadProgressData));
+      loadProgressData.LPD_callback = loadProgressCallback;
+      loadProgressData.LPD_textObj = oself;
+      loadProgressData.LPD_nameT = nameT;
+      loadProgressData.LPD_request = request;
+      URLFetchRequest(
+          nameT,
+          forceLoad? ULM_ALWAYS:ULM_CACHE,
+          fetchFlags,
+          NullHandle,
+	  referer,
+          oself,
+          MSG_URL_TEXT_GRAPHIC_FETCHED,
+          request,
+          (imageProgressMode != IMAGE_PROGRESS_STREAM ||
+           (p->pos >= HTML_IMAGE_POS_RESERVED) ||
+           (p->size.XYS_height &&
+            (p->size.XYS_height < progressMinHeight))) ?
+           NULL : &loadProgressData) ;
 #else
       URLFetchRequest(
           nameT,
@@ -1067,7 +1093,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     word pass;
     word formatFlags, oldFormat;
     ImageLoadMode imageMode;
-    dword imageProbeMaxPixels;
+    dword imageMaxPixels;
     NameToken referer = NAME_POOL_NONE;
     optr realFrame = NullOptr;
     Boolean formatChanged;
@@ -1091,7 +1117,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                                         /* object cache enabled? */
     imageMode = @call NavigateLoadGraphics::
       MSG_GEN_ITEM_GROUP_GET_SELECTION();
-    imageProbeMaxPixels = (!bypassIntelligent &&
+    imageMaxPixels = (!bypassIntelligent &&
       imageMode == IMAGE_LOAD_INTELLIGENT) ?
       INTELLIGENT_IMAGE_MAX_PIXELS : 0;
 
@@ -1143,7 +1169,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         if(ProcessSingleGraphic(p, oself, referer, i,
                                 (pass==2), forceLoad, objCache, TRUE,
                                 p->pos < HTML_IMAGE_POS_RESERVED ?
-                                  imageProbeMaxPixels : 0,
+                                  imageMaxPixels : 0,
                                 bypassIntelligent))
         {
           /* Mark this and all similar graphics further down */
@@ -1256,7 +1282,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     Boolean importQueued;
     Boolean temporary;
     Boolean unsupportedMime;
-    dword importProbeMaxPixels;
+    dword importMaxPixels;
     word resultFormatFlags;
     word ret;
     extern Boolean G_stopped;
@@ -1289,7 +1315,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
       && !G_cacheAll
 @endif
       ;
-    importProbeMaxPixels = request.imageProbeMaxPixels;
+    importMaxPixels = request.imageMaxPixels;
     ret = URLRequestGetRet(result.retType);
 
     /* A fetch acknowledgement can arrive after the import abort barrier. */
@@ -1354,11 +1380,11 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 #if PROGRESS_DISPLAY
           importQueued = ImportThreadRequestImportGraphic(
             oself, request.nameT, result.mimeType, result.curHTML,
-            temporary, importProbeMaxPixels, resultFormatFlags, NULL);
+            temporary, importMaxPixels, resultFormatFlags, NULL);
 #else
           importQueued = ImportThreadRequestImportGraphic(
             oself, request.nameT, result.mimeType, result.curHTML,
-            temporary, importProbeMaxPixels, resultFormatFlags);
+            temporary, importMaxPixels, resultFormatFlags);
 #endif
           if(!importQueued)
           {
@@ -1372,7 +1398,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     }
     /* Only an Intelligent limited request becomes a retryable compact image.
        A forced request returning this code follows generic failure handling. */
-    else if(ret == URL_RET_TOO_LARGE && request.imageProbeMaxPixels != 0)
+    else if(ret == URL_RET_TOO_LARGE && request.imageMaxPixels != 0)
     {
         if(unsupportedMime)
             /* MIME unsupported takes precedence over size deferral. */
@@ -2550,7 +2576,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     NameToken referer = NAME_POOL_NONE;
     optr realFrame = NullOptr;
     ImageLoadMode imageMode;
-    dword imageProbeMaxPixels;
+    dword imageMaxPixels;
     Boolean formatChanged;
 
     if(!imageArray)                     /* avoid indenting all this stuff... */
@@ -2594,13 +2620,13 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 
       imageMode = @call NavigateLoadGraphics::
         MSG_GEN_ITEM_GROUP_GET_SELECTION();
-      imageProbeMaxPixels = (imageMode == IMAGE_LOAD_INTELLIGENT &&
+      imageMaxPixels = (imageMode == IMAGE_LOAD_INTELLIGENT &&
         p->pos < HTML_IMAGE_POS_RESERVED) ?
         INTELLIGENT_IMAGE_MAX_PIXELS : 0;
 
       /* load graphic or get it from cache */
       ProcessSingleGraphic(p, oself, referer, i, TRUE, FALSE, objCache,
-        FALSE, imageProbeMaxPixels,
+        FALSE, imageMaxPixels,
         FALSE);  /* URL replacement is not an explicit size override */
 
       /* release referer */
@@ -2668,7 +2694,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 #if PROGRESS_DISPLAY
 	p_request->progressCanceled = FALSE;
 #endif
-	p_request->imageProbeMaxPixels = 0;
+	p_request->imageMaxPixels = 0;
 	URLFetchExtraMemoryUnlock(request);
 	URLFetchRequest(
 	    fullURL,

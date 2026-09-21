@@ -5,14 +5,14 @@
 <h1>Intelligent image loading test</h1>
 
 <p>Select View, Load Images Intelligently before opening this page. Inline
-images of at most 480,000 intrinsic pixels load automatically. Larger images
+images of at most 480,000 pixels import automatically. Larger images
 remain compact until activated. Background images always load.</p>
 
 <p>To test HTTP transfer limits, serve this directory over HTTP. With
 downloadSizeLimitKB set to 2, large.gif is compact before download completes;
 with 3, it downloads and is then compact because of its intrinsic size.</p>
 
-<h2>Intrinsic size probe</h2>
+<h2>Import-time admission</h2>
 <p>Green PNG, 800 by 600 = 480,000 pixels: loads automatically.<br>
 <img src="limit.png" width="160" height="120" alt="Green limit image"></p>
 <p>Orange JPEG, 160 by 120: loads automatically.<br>
@@ -55,7 +55,7 @@ the inline image limit.</p>
 <p>ALT text wraps below the filename and format row, with the more link on
 the final line if it fits:<br>
 <a href="#target">
-<img src="large.gif?probe=1#fragment"
+<img src="large.gif?import=1#fragment"
  alt="This is deliberately long alternative text that should wrap in the compact placeholder"></a></p>
 <p>A long path is stripped and the filename is ellipsized without losing its
 extension:

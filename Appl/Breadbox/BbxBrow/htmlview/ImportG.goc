@@ -69,7 +69,7 @@ typedef struct {
     PathName curHTML;
     Boolean temporary;
     Boolean objCache;
-    dword imageProbeMaxPixels;
+    dword imageMaxPixels;
     word formatFlags;
 #if PROGRESS_DISPLAY
     ImportProgressData importProgressData;
@@ -467,7 +467,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
-	    dword imageProbeMaxPixels,
+	    dword imageMaxPixels,
 	    word formatFlags,
 	    _LoadProgressParams_)
 #else
@@ -477,7 +477,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
-            dword imageProbeMaxPixels,
+            dword imageMaxPixels,
             word formatFlags)
 #endif
 {
@@ -513,7 +513,7 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
             p_request->mimeType[(sizeof(p_request->mimeType)/sizeof(TCHAR))-1] = 0 ;
             p_request->curHTML[(sizeof(p_request->curHTML)/sizeof(TCHAR))-1] = 0 ;
             p_request->temporary = temporary;
-            p_request->imageProbeMaxPixels = imageProbeMaxPixels;
+            p_request->imageMaxPixels = imageMaxPixels;
             p_request->formatFlags = formatFlags & HTML_IDF_FORMAT_MASK;
 
             /* Is the object cache turned on? */
@@ -664,12 +664,10 @@ void ImportThreadAbortAll(void)
     dword usedMem ;
     ObjCacheToken oct;
     word firstLine;
-    MimeGraphicProbeData probeData;
-    MimeGraphicProbeResult probeResult;
-    dword probeMaxBytes;
-    Boolean doImport;
-    Boolean deferred;
     Boolean canceled;
+#if PROGRESS_DISPLAY
+    void _pascal *discardCallback;
+#endif
 #ifdef CACHE_FILE_HEADER_SIZE_LIMIT
     VMHeaderInfoStruct vmInfo;
 #endif
@@ -693,26 +691,8 @@ void ImportThreadAbortAll(void)
       @SendStatusUpdateOptr(
         @MsgLoadImg, HTML_STATUS_TYPE_IMPORTING);
 
-      doImport = TRUE;
-      deferred = FALSE;
       FileSetStandardPath(SP_DOCUMENT);
-      probeMaxBytes = INTELLIGENT_IMAGE_PROBE_BYTES;
 
-      if(request.imageProbeMaxPixels)
-      {
-        probeResult = ToolsProbeGraphicByDriver(request.curHTML,
-          request.mimeType, probeMaxBytes, &probeData);
-        deferred = probeResult != MIME_GRAPHIC_PROBE_FOUND ||
-          !probeData.MGPD_width || !probeData.MGPD_height ||
-          probeData.MGPD_width >
-            request.imageProbeMaxPixels / probeData.MGPD_height;
-
-        if(deferred)
-          doImport = FALSE;
-      }
-
-      if(doImport)
-      {
       /* Find out what file to import into */
       vmf = ObjCacheGetVMFile(request.name);
 
@@ -732,7 +712,8 @@ void ImportThreadAbortAll(void)
       } else
 #endif
       vmb = ToolsImportGraphicByDriver(request.curHTML, request.mimeType,
-        vmf, &iad, &usedMem, request.mimeStatus, &(request.importProgressData));
+        vmf, &iad, &usedMem, request.mimeStatus, request.imageMaxPixels,
+        &(request.importProgressData));
 #else
 #ifdef CACHE_FILE_HEADER_SIZE_LIMIT
       if (vmInfo.headerSize > G_cacheFileHeaderSizeLimit) {
@@ -740,7 +721,8 @@ void ImportThreadAbortAll(void)
       } else
 #endif
       vmb = ToolsImportGraphicByDriver(request.curHTML, request.mimeType,
-        vmf, &iad, &usedMem, request.mimeStatus, (void *)0);
+        vmf, &iad, &usedMem, request.mimeStatus, request.imageMaxPixels,
+        (void *)0);
 #endif
 
       canceled = (request.mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) != 0;
@@ -825,20 +807,37 @@ void ImportThreadAbortAll(void)
           @send (request.textObj)::
             MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
       }
-      else if(request.imageProbeMaxPixels &&
+      else if(request.imageMaxPixels &&
               (request.mimeStatus->MS_mimeFlags &
-               MIME_STATUS_MEMORY_LIMIT))
+               (MIME_STATUS_DEFERRED | MIME_STATUS_MEMORY_LIMIT)))
+      {
+#if PROGRESS_DISPLAY
+          /* A streamed constrained import finished with a caller-policy
+             rejection: drop the buffered stream data without touching the
+             HTTP fetch, so the source file still completes normally. */
+          if(request.importProgressData.IPD_loadProgressDataP)
+          {
+              ThreadPSem(request.importProgressData.
+                IPD_loadProgressDataP->LPD_sem);
+              discardCallback = request.importProgressData.
+                IPD_loadProgressDataP->LPD_callback;
+              ThreadVSem(request.importProgressData.
+                IPD_loadProgressDataP->LPD_sem);
+              if(discardCallback)
+              {
+                  ((pcfm_LoadProgressCallback *)
+                    ProcCallFixedOrMovable_pascal)(
+                    request.importProgressData.IPD_loadProgressDataP,
+                    LPCT_DISCARD, (void *)0, 0, discardCallback);
+              }
+          }
+#endif
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
             request.name, request.formatFlags);
+      }
       else
           @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
             OCT_NULL, request.name, 0, 0xFFFF);
-      }
-      else if(deferred)
-      {
-          @send (request.textObj)::MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS(
-            request.name, request.formatFlags);
-      }
 
       /* Done with this graphic */
       @SendStatusUpdateOptr(

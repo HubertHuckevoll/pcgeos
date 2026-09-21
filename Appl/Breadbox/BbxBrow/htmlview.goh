@@ -381,15 +381,11 @@ optr HandleUnknownType(TCHAR *file, NameToken url, TCHAR *mimeType,
 
 VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
   VMFileHandle vmf, ImageAdditionalData *size, dword *memUsed, MimeStatus *mimeStatus,
-  _ImportProgressParams_);
+  dword maxPixels, _ImportProgressParams_);
 
+/* Intrinsic pixel budget for Intelligent image loading; 0 loads without
+ * the admission policy. */
 #define INTELLIGENT_IMAGE_MAX_PIXELS  (800L * 600L)
-/* ATTENTION: Keep speculative data to one stream block. Raise this only if
- * the probe can discard consumed metadata without losing replay support. */
-#define INTELLIGENT_IMAGE_PROBE_BYTES 4096L
-
-MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
-  TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data);
 
 
 /***************************************************************************

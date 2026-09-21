@@ -466,10 +466,14 @@ is_a_gif:
         call InBufferGetWord
         mov [IGS_width], cx
         mov [IGS_xClip], cx
+	or cx, cx
+	jz not_a_gif
 	cmp cx, 2048
 	ja not_a_gif
         call InBufferGetWord
         mov [IGS_height], cx
+	or cx, cx
+	jz not_a_gif
 	cmp cx, 2048
 	ja not_a_gif
 	mov ax, cx
@@ -478,6 +482,31 @@ is_a_gif:
 	cmp dx, 16h
 	pop dx
 	jae not_a_gif
+
+	; Enforce the caller's pixel admission limit, if any, before any
+	; palette or bitmap work happens for this GIF.
+	mov ax, [IGS_maxPixelsLo]
+	or ax, [IGS_maxPixelsHi]
+	jz header_limit_ok
+	push dx
+	mov ax, [IGS_height]
+	mul [IGS_width]		; dx:ax = intrinsic pixel area
+	cmp dx, [IGS_maxPixelsHi]
+	jb header_limit_ok_pop
+	ja header_limit_deferred
+	cmp ax, [IGS_maxPixelsLo]
+	jbe header_limit_ok_pop
+header_limit_deferred:
+	pop dx
+	push es, di
+	les di, [IGS_mimeStatus]
+	or es:[di].MS_mimeFlags, mask MIME_STATUS_DEFERRED
+	pop es, di
+	mov ax, IG_STATUS_DEFERRED
+	ret
+header_limit_ok_pop:
+	pop dx
+header_limit_ok:
         call InBufferGetByte
         mov [IGS_gifInfo], al
         call InBufferGetByte
@@ -1192,6 +1221,54 @@ IStatePrepareImage proc near
         ; What format is this image?  (put in IGS_format)
         call IDetermineFormat
 
+        ; A decoded frame must have real dimensions even for unrestricted
+        ; imports.  This is a format error, not a policy deferral.
+	mov ax, [IGS_localImage.GLID_width]
+	or ax, ax
+	jz frame_invalid
+	mov ax, [IGS_localImage.GLID_height]
+	or ax, ax
+	jz frame_invalid
+
+        ; Reject frames whose area exceeds the caller's pixel limit so a
+        ; large local image cannot bypass the logical screen check.
+	push dx
+	mov ax, [IGS_maxPixelsLo]
+	or ax, [IGS_maxPixelsHi]
+	jz frame_limit_ok_pop
+	mov ax, [IGS_localImage.GLID_width]
+	cmp ax, [IGS_width]
+	jge frame_wider
+	mov ax, [IGS_width]
+frame_wider:
+	mov bx, ax
+	mov ax, [IGS_localImage.GLID_height]
+	cmp ax, [IGS_height]
+	jge frame_taller
+	mov ax, [IGS_height]
+frame_taller:
+	or ax, ax
+	jz frame_limit_ok_pop
+	or bx, bx
+	jz frame_limit_ok_pop
+	mul bx			; dx:ax = frame pixel area
+	cmp dx, [IGS_maxPixelsHi]
+	jb frame_limit_ok_pop
+	ja frame_limit_deferred
+	cmp ax, [IGS_maxPixelsLo]
+	jbe frame_limit_ok_pop
+frame_limit_deferred:
+	pop dx
+	push es, di
+	les di, [IGS_mimeStatus]
+	or es:[di].MS_mimeFlags, mask MIME_STATUS_DEFERRED
+	pop es, di
+	mov ax, IG_STATUS_DEFERRED
+	ret
+frame_limit_ok_pop:
+	pop dx
+frame_limit_ok:
+
         ; Make sure we have enough memory for this bitmap before
         ; creating it through the fake memory allocation limitation
         ; routines.
@@ -1274,6 +1351,9 @@ clip_is_set:
 could_not_create_bitmap:
         mov ax, IG_STATUS_COULD_NOT_CREATE
         ret
+frame_invalid:
+	mov ax, IG_STATUS_ERROR
+	ret
 IStatePrepareImage endp
 
 
@@ -3391,6 +3471,17 @@ no_size_needed_no_status:
         ; Now that we have a file, let's work with it
         mov impgifhandle, bx
 
+        ; Store the pixel admission limit into the GIF state
+        push ds
+        mov bx, impgifhandle
+        call MemLock
+        mov ds, ax
+        movdw dxax, es:[di].IBP_maxPixels
+        mov [IGS_maxPixelsLo], ax
+        mov [IGS_maxPixelsHi], dx
+        call MemUnlock
+        pop ds
+
         push es, di
 
         ; Create a buffer to hold incoming data
@@ -3535,7 +3626,8 @@ errorTransTable  word  IBS_NO_ERROR,       ; IG_STATUS_OK
                        IBS_IMPORT_STOPPED, ; IG_STATUS_FOUND_END_OF_GIF
                        IBS_NO_MEMORY,      ; IG_STATUS_COULD_NOT_CREATE
                        IBS_IMPORT_STOPPED, ; IG_STATUS_NO_GRAPHIC
-                       IBS_IMPORT_STOPPED  ; IG_STATUS_ABORTED
+                       IBS_IMPORT_STOPPED, ; IG_STATUS_ABORTED
+                       IBS_IMPORT_STOPPED  ; IG_STATUS_DEFERRED
 
 ;----------------------------------------------------------------------------
 ; Routine:  ImpGIFGetInfo
@@ -3624,8 +3716,8 @@ ImpGIFGetInfo endp
 ;----------------------------------------------------------------------------
 ; C stubs:
 ;----------------------------------------------------------------------------
-IMPGIFCREATE proc far file:word, allocwatcher:word, useSysPal:word, mimeStatus:fptr
-        uses bx, cx, dx, es, si, di
+IMPGIFCREATE proc far file:word, allocwatcher:word, useSysPal:word, mimeStatus:fptr, maxPixels:dword
+        uses bx, cx, dx, es, si, di, ds
         .enter
 
 	movdw esdi, mimeStatus, ax
@@ -3633,8 +3725,22 @@ IMPGIFCREATE proc far file:word, allocwatcher:word, useSysPal:word, mimeStatus:f
         mov cx, allocwatcher
         mov si, useSysPal
         call ImpGIFCreate
+        jnc store_limit
         mov ax, bx
-
+        jmp create_done
+store_limit:
+        ; Record the pixel admission limit in the GIF state
+        push bx
+        call MemLock
+        mov ds, ax
+        mov ax, maxPixels.low
+        mov dx, maxPixels.high
+        mov [IGS_maxPixelsLo], ax
+        mov [IGS_maxPixelsHi], dx
+        pop bx
+        call MemUnlock
+        mov ax, bx
+create_done:
         .leave
         ret
 IMPGIFCREATE endp

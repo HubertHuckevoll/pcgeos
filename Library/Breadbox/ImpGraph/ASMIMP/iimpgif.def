@@ -32,7 +32,8 @@ MAX_NUM_CODE_BITS = 12           ; Number of bits per code max
 MimeStatusFlags	record
     MIME_STATUS_ABORT:1
     MIME_STATUS_MEMORY_LIMIT:1
-	:14
+    MIME_STATUS_DEFERRED:1
+	:13
 MimeStatusFlags end
 
 MimeStatus struct
@@ -267,6 +268,10 @@ ImpGIFStruct struct
 
 		; Pointer to a boolean that is set to TRUE when an abort is requested
 	IGS_mimeStatus					fptr.MimeStatus
+
+		; Import-time pixel admission limit (0 = unrestricted)
+	IGS_maxPixelsLo					word
+	IGS_maxPixelsHi					word
 ImpGIFStruct ends
 
 ImpGIFInfo struct
@@ -307,6 +312,7 @@ IG_STATUS_FOUND_END_OF_GIF   enum ImpGIFStatus ; End of GIF found, stop please
 IG_STATUS_COULD_NOT_CREATE   enum ImpGIFStatus ; could not create bitmap
 IG_STATUS_NO_GRAPHIC         enum ImpGIFStatus ; No graphic found
 IG_STATUS_ABORTED            enum ImpGIFStatus ; User requested stop
+IG_STATUS_DEFERRED           enum ImpGIFStatus ; Caller pixel policy rejects
 
 ImpBmpParamsAsm struct
     IBP_source       hptr.FileHandle
@@ -322,6 +328,7 @@ if PROGRESS_DISPLAY
     IBP_importProgressDataP  fptr.byte  ; placeholder only
 endif
 	IBP_mimeStatus	 fptr.MimeStatus
+	IBP_maxPixels	 dword
 ImpBmpParamsAsm ends
 
 ImpBmpStatus etype word

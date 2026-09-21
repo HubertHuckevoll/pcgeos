@@ -18,6 +18,7 @@ VMBlockHandle PngImport(
     , _ImportProgressParams_
 #endif
     , MimeStatus *mimeStatus
+    , dword maxPixels
 )
 {
     // new for PNG
@@ -65,6 +66,23 @@ VMBlockHandle PngImport(
             picsize->XYS_width = ihdrData.width;
             picsize->XYS_height = ihdrData.height;
 
+            /* Import-time admission: reject before any allocation, bitmap
+               or IDAT work. Zero dimensions are invalid, not a
+               caller-policy rejection. */
+            if (maxPixels && ihdrData.width && ihdrData.height &&
+                ihdrData.width > (maxPixels / ihdrData.height))
+            {
+                mimeStatus->MS_mimeFlags |= MIME_STATUS_DEFERRED;
+                /* release the buffered IDAT chunk directory explicitly;
+                   the normal cleanup below only closes the file */
+                if (idatChunksHan != NullHandle)
+                {
+                    MemFree(idatChunksHan);
+                    idatChunksHan = NullHandle;
+                }
+            }
+            else if (ihdrData.width && ihdrData.height)
+            {
             /* Only create the bitmap if we have enough memory */
             requiredMemory = pngCalcLineAllocSize(ihdrData.width, ihdrData.colorType, ihdrData.bitDepth) * ihdrData.height;
             gotAlloc = AllocWatcherAllocate(watcher, requiredMemory);
@@ -154,6 +172,7 @@ VMBlockHandle PngImport(
                         pngImportCleanupIDATProcessingState(&state);
                     }
                 }
+            }
             }
         }
 
