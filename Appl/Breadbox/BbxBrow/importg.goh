@@ -24,7 +24,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
-	    dword imageProbeMaxPixels,
+	    dword imageMaxPixels,
 	    word formatFlags,
 	    _LoadProgressParams_) ;
 
@@ -36,7 +36,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
-            dword imageProbeMaxPixels,
+            dword imageMaxPixels,
             word formatFlags) ;
 
 #endif

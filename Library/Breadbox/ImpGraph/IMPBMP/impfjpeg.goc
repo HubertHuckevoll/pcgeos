@@ -216,6 +216,7 @@ FJpegImport(TCHAR *file,
            , _ImportProgressParams_
 #endif
            , MimeStatus *mimeStatus
+           , dword maxPixels
            )
 {
   /* This struct contains the JPEG decompression parameters and pointers to
@@ -422,6 +423,21 @@ EC(dword cbSize = 0;)
       picsize->XYS_width = cinfo->image_width;
       picsize->XYS_height = cinfo->image_height;
 
+      /* Zero dimensions are invalid, not a caller-policy rejection. */
+      if (!cinfo->image_width || !cinfo->image_height)
+          headerErr = TRUE;
+
+      /* Import-time admission: reject before any temp estimate,
+         allocation or decompression work. */
+      if (headerErr==FALSE && maxPixels &&
+          cinfo->image_width > (maxPixels / cinfo->image_height))
+      {
+          mimeStatus->MS_mimeFlags |= MIME_STATUS_DEFERRED;
+          headerErr = TRUE;
+      }
+
+      if (headerErr==FALSE)
+      {
       /* Attempt to estimate the amount of temporary storage for progressive mode */
       if(cinfo->progressive_mode)
       {
@@ -439,6 +455,7 @@ EC(dword cbSize = 0;)
       gotTempAlloc = AllocWatcherAllocate(watcher, requiredTempMemory) ;
       if(!gotTempAlloc)
           mimeStatus->MS_mimeFlags |= MIME_STATUS_MEMORY_LIMIT;
+      }
   }
 
   /* Don't do graphics bigger than 1024 x or 1024 y (either way) */

@@ -16,10 +16,10 @@ BbxBrow URLTextClass
 MSG_URL_TEXT_PROCESS_GRAPHICS
    │
    ├─ Automatic mode
-   │      imageProbeMaxPixels = 0
+   │      imageMaxPixels = 0
    │
    └─ Intelligent mode
-          imageProbeMaxPixels = 800*600
+          imageMaxPixels = 800*600
    │
    ▼
 ProcessSingleGraphic()
@@ -49,16 +49,16 @@ LoadURLToFile()
                          ImportThreadRequestImportGraphic()
                                       │
                                       ▼
-                         ImpGraph GRAPHIC_PROBE
+                         MimeDrvGraphicEx2 (entry 4)
                                       │
-                           dimensions <= 480k pixels?
+                           intrinsic area <= 480k pixels?
                               │               │
                              yes              no
                               │               │
                               ▼               ▼
-                    progressive import  DEFER_LIKE_GRAPHICS
-                    from completed file
-                                              │
+                    streamed progressive  DEFER_LIKE_GRAPHICS
+                    import                (buffered stream data
+                                              │            is discarded)
                                               ▼
                                        HTML_IDF_COMPACT
                                               │
@@ -66,9 +66,10 @@ LoadURLToFile()
                                      clickable [image GIF]
 ```
 
-The crucial thing is that **today the protection happens after the download**.
+The crucial thing is that **the pixel protection happens at import time,
+after the download**.
 
-`ImportG.goc` receives `imageProbeMaxPixels`. In intelligent mode it calls `ToolsProbeGraphicByDriver()` before the real import. If dimensions are unknown, zero, or exceed the pixel budget, it doesn't import and sends `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS`. If the probe succeeds, the completed file is imported with local-file progress callbacks so supported decoders display scanline updates.
+`ImportG.goc` receives `imageMaxPixels` and always starts the real import. The MIME drivers enforce the pixel budget themselves (MIME entry 4, `MimeDrvGraphicEx2`): after reading the format header and before any bitmap work, an image whose width exceeds `maxPixels / height` is rejected with `MIME_STATUS_DEFERRED` and no bitmap. Constrained GIF/JPEG imports stream from the network like unconstrained ones; when the import defers, the buffered stream data is discarded via `LPCT_DISCARD` and the fetch keeps running. Either way the browser then sends `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS`, and supported decoders display scanline updates while importing.
 
 Html4Par then represents that state using the already-existing `HTML_IDF_COMPACT`. There is no special "too large" image type. That's good architecture.
 
@@ -79,10 +80,10 @@ MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE
         ↓
 MSG_URL_TEXT_LOAD_IMAGE
         ↓
-ProcessSingleGraphic(... imageProbeMaxPixels = 0)
+ProcessSingleGraphic(... imageMaxPixels = 0)
 ```
 
-So the second attempt bypasses the pixel probe.
+So the second attempt bypasses the pixel admission policy.
 
 Even better, that retry deliberately uses `ULM_CACHE`, not `ULM_ALWAYS`. Thus if the image was already downloaded and merely rejected by the **pixel** limit, clicking it imports the cached file instead of downloading it again.
 
@@ -229,7 +230,7 @@ Then intelligent mode becomes:
                     download/import
 ```
 
-If the compressed file is small enough to download but has enormous intrinsic dimensions, it passes WMG3HTTP and then gets stopped by the existing ImpGraph probe.
+If the compressed file is small enough to download but has enormous intrinsic dimensions, it passes WMG3HTTP and then gets rejected by the import-time pixel admission in ImpGraph.
 
 So we get:
 
@@ -240,11 +241,11 @@ Gate 2: image pixels     protects decoder + memory + rendering
 
 That separation is excellent.
 
-There is also a lovely consequence of how your current code is structured. Intelligent mode currently gives `imageProbeMaxPixels` only to ordinary inline images:
+There is also a lovely consequence of how your current code is structured. Intelligent mode currently gives `imageMaxPixels` only to ordinary inline images:
 
 ```c
 p->pos < HTML_IMAGE_POS_RESERVED ?
-    imageProbeMaxPixels : 0
+    imageMaxPixels : 0
 ```
 
 Background images therefore bypass the existing pixel gate. If the new HTTP-limit flag is derived from the same intelligent-image decision, backgrounds automatically retain their current "always load" behavior. No second background-image special case is needed.
@@ -301,7 +302,7 @@ Here's the Codex-ready plan. I’ve made one concrete configuration choice: **51
 
 ## Goal
 
-Extend the current `split/04-intelligent-image-loading-file-probe` implementation so Intelligent Image Loading can reject oversized HTTP image downloads before importing them, while preserving the existing intrinsic-pixel probe and allowing explicit user actions to override both restrictions.
+Extend the current `split/04-intelligent-image-loading-file-probe` implementation so Intelligent Image Loading can reject oversized HTTP image downloads before importing them, while preserving the existing import-time pixel admission and allowing explicit user actions to override both restrictions.
 
 The two limits must remain independent:
 
@@ -319,17 +320,17 @@ A user-activated compact image must bypass the download-size limit without unnec
 
 The current branch already implements intelligent image import limiting.
 
-`MSG_URL_TEXT_PROCESS_GRAPHICS()` sets `imageProbeMaxPixels = INTELLIGENT_IMAGE_MAX_PIXELS` only for ordinary inline images in Intelligent mode.
+`MSG_URL_TEXT_PROCESS_GRAPHICS()` sets `imageMaxPixels = INTELLIGENT_IMAGE_MAX_PIXELS` only for ordinary inline images in Intelligent mode.
 
 `ProcessSingleGraphic()` downloads/caches the source file.
 
-`ImportThreadEngineClass::MSG_IMPORT_THREAD_ENGINE_IMPORT_GRAPHIC` calls `ToolsProbeGraphicByDriver()` when `imageProbeMaxPixels != 0`.
+`ImportThreadEngineClass::MSG_IMPORT_THREAD_ENGINE_IMPORT_GRAPHIC` always imports and passes `imageMaxPixels` into the driver.
 
-If the image cannot be safely probed or exceeds the pixel budget, it sends `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS`, which marks matching images `HTML_IDF_COMPACT`.
+If the constrained import reports `MIME_STATUS_DEFERRED` (or a constrained `MIME_STATUS_MEMORY_LIMIT` with no bitmap), it discards any buffered stream data via `LPCT_DISCARD` and sends `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS`, which marks matching images `HTML_IDF_COMPACT`. The HTTP transfer itself is not cancelled.
 
-If the probe succeeds, import starts from the completed source file with local-file progress callbacks enabled. Geometry-changing first updates schedule the existing waiting-image layout pass, after which subsequent scanline ranges are drawn progressively. This does not overlap HTTP downloading and decoding.
+If the driver accepts the image, the import proceeds with progress callbacks enabled. For streamed imports, geometry-changing first updates schedule the existing waiting-image layout pass, after which subsequent scanline ranges are drawn progressively while the HTTP download continues.
 
-Activating a compact image reaches `MSG_URL_TEXT_LOAD_IMAGE()`, which calls `ProcessSingleGraphic()` with `imageProbeMaxPixels == 0`.
+Activating a compact image reaches `MSG_URL_TEXT_LOAD_IMAGE()`, which calls `ProcessSingleGraphic()` with `imageMaxPixels == 0`.
 
 This retry currently uses `ULM_CACHE`. Preserve that. A pixel-deferred image may already exist in the source cache and must not be redownloaded merely because the user activates it.
 
@@ -357,7 +358,7 @@ Do not add fields to `URLRequestBlock`.
 
 Do not call the result `IMG_TOO_BIG`: the URL driver is enforcing transfer size, not image dimensions.
 
-Do not bump `URL_DRV_PROTOMAJOR` or change structure layout. This is a backwards-compatible flag/return-code extension. Older drivers may ignore the new request bits; in that case the existing import probe remains the fallback protection.
+Do not bump `URL_DRV_PROTOMAJOR` or change structure layout. This is a backwards-compatible flag/return-code extension. Older drivers may ignore the new request bits; in that case the import-time pixel admission remains the fallback protection.
 
 ## WMG3HTTP request state and configuration
 
@@ -512,7 +513,7 @@ This per-block check must run even if `Content-Length` was present, so a lying o
 
 For a size-limited request, disable progressive loading from the network stream before receiving the body. Intelligent-mode requests already pass no loading-progress callback, but WMG3HTTP should not allow a generic caller to stream partial image data and later return `URL_RET_TOO_LARGE`.
 
-Do not disable post-download local-file import progress. After WMG3HTTP returns the completed file and the intrinsic-pixel probe accepts it, the existing import-progress callback and waiting-image layout path must display supported formats incrementally while decoding.
+Do not disable post-download local-file import progress. After WMG3HTTP returns the completed file and the import-time pixel admission accepts it, the existing import-progress callback and waiting-image layout path must display supported formats incrementally while decoding.
 
 Use the same semaphore-safe callback disabling pattern already used by the `contentlength < progressMinCL` path.
 
@@ -618,7 +619,7 @@ Do not reuse `forceLoad`.
 
 Build `URLFetchFlags` inside `ProcessSingleGraphic()`.
 
-For ordinary Intelligent-mode inline images, `imageProbeMaxPixels != 0` already identifies the requests that participate in intelligent limiting. Set:
+For ordinary Intelligent-mode inline images, `imageMaxPixels != 0` already identifies the requests that participate in intelligent limiting. Set:
 
 ```c
 UFF_LIMIT_SIZE
@@ -626,7 +627,7 @@ UFF_LIMIT_SIZE
 
 for those requests.
 
-Do not set it for backgrounds, because their current `imageProbeMaxPixels` is zero and they intentionally bypass the intelligent-image restriction.
+Do not set it for backgrounds, because their current `imageMaxPixels` is zero and they intentionally bypass the intelligent-image restriction.
 
 Do not set it for normal Automatic mode.
 
@@ -638,7 +639,7 @@ UFF_IGNORE_SIZE_LIMIT
 
 Explicit override wins if both flags are present.
 
-Preserve the existing split: Intelligent limited requests do not import concurrently with network loading, but accepted completed files do use local-file progressive display after the intrinsic-pixel probe succeeds.
+Preserve the existing behavior: Intelligent limited requests may import streamed constrained GIF/JPEG data concurrently with network loading, but a deferred import discards the buffered stream data, and accepted images use progressive display after the import-time pixel admission succeeds.
 
 ## Compact-image activation
 
@@ -648,7 +649,7 @@ Keep:
 
 ```text
 loadMode = ULM_CACHE
-imageProbeMaxPixels = 0
+imageMaxPixels = 0
 ```
 
 and call `ProcessSingleGraphic()` with:
@@ -659,7 +660,7 @@ ignoreDownloadSizeLimit = TRUE
 
 This produces the desired two cases.
 
-Case A: the source file had already downloaded but exceeded the intrinsic-pixel limit. `ULM_CACHE` reuses the existing source file, no HTTP transfer occurs, and `imageProbeMaxPixels == 0` forces import.
+Case A: the source file had already downloaded but exceeded the intrinsic-pixel limit. `ULM_CACHE` reuses the existing source file, no HTTP transfer occurs, and `imageMaxPixels == 0` forces import.
 
 Case B: WMG3HTTP rejected the original transfer because the encoded file itself was too large. There is no source-cache file, so `ULM_CACHE` falls through to HTTP. `UFF_IGNORE_SIZE_LIMIT` becomes `URB_RQ_IGNORE_SIZE_LIMIT`, and WMG3HTTP downloads the complete file.
 
@@ -717,7 +718,7 @@ Do not synthesize `OCT_NULL` replacement graphics.
 
 The MIME header has already been parsed by WMG3HTTP before the rejection, so continue using the current MIME/format detection to populate `resultFormatFlags`.
 
-Use `request.imageProbeMaxPixels != 0` as the assertion that this was an intelligent limited image request. An unexpected `URL_RET_TOO_LARGE` on an explicit forced request should follow the generic failure path rather than silently re-entering the compact state forever.
+Use `request.imageMaxPixels != 0` as the assertion that this was an intelligent limited image request. An unexpected `URL_RET_TOO_LARGE` on an explicit forced request should follow the generic failure path rather than silently re-entering the compact state forever.
 
 `MSG_URL_TEXT_INTERNAL_DEFER_LIKE_GRAPHICS` already updates all matching image instances and marks them `HTML_IDF_COMPACT`; reuse it unchanged.
 
@@ -772,7 +773,7 @@ Serve this directory through HTTP when testing WMG3HTTP. Loading it as `file:` d
 
    Serve `cmpimage.htm` through HTTP in Intelligent mode.
 
-   `limit.png` and `small.jpg` must download normally, pass the intrinsic-pixel probe, and display progressive scanline updates while importing from their completed source files.
+   `limit.png` and `small.jpg` must download normally, pass the import-time pixel admission, and display progressive scanline updates while importing.
 
    `large.gif` must return `URL_RET_TOO_LARGE` before full download and appear as the compact image UI.
 
@@ -782,7 +783,7 @@ Serve this directory through HTTP when testing WMG3HTTP. Loading it as `file:` d
 
    `large.gif` must now download successfully because 2380 bytes is below 3 KiB.
 
-   Its 801x600 intrinsic dimensions must then trigger the existing pixel probe and compact UI.
+   Its 801x600 intrinsic dimensions must then trigger the import-time pixel admission and compact UI.
 
    It must not produce import-progress display before entering the compact state.
 

@@ -22,6 +22,7 @@ JpegImport(TCHAR *file,
            , _ImportProgressParams_
 #endif  
            , MimeStatus *mimeStatus
+           , dword maxPixels
            );
 
 VMBlockHandle
@@ -39,6 +40,7 @@ FJpegImport(TCHAR *file,
            , _ImportProgressParams_
 #endif  
            , MimeStatus *mimeStatus
+           , dword maxPixels
            );
 
 #endif

@@ -34,6 +34,7 @@ typedef struct {
     ImpGIFStatus status ;
     AllocWatcherHandle watcher ;
     Boolean useSysPal ;
+    dword maxPixels ;
 #if PROGRESS_DISPLAY
     _ImportProgressParams_;  /* import progress data */
 #define LPDP p_work->importProgressDataP->IPD_loadProgressDataP
@@ -401,7 +402,8 @@ Boolean IGIFAnimStart(GIFAnimWorkStruct *p_work)
                                p_work->vmFile,
                                p_work->watcher,
                                p_work->useSysPal,
-                               p_work->mimeStatus) ;
+                               p_work->mimeStatus,
+                               p_work->maxPixels) ;
         if (p_work->GIFState)  {
             didStart = TRUE ;
             p_work->status = IG_STATUS_NEED_DATA ;
@@ -1269,6 +1271,7 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
     p_work->watcher = watcher ;
     p_work->useSysPal = useSysPal ;
     p_work->mimeStatus = params->IBP_mimeStatus ;
+    p_work->maxPixels = params->IBP_maxPixels ;
 #if PROGRESS_DISPLAY
     /* point to import progress data */
     p_work->importProgressDataP = params->IBP_importProgressDataP;
@@ -1484,6 +1487,10 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
             } else if ((p_work->status == IG_STATUS_END_DATA) || 
                     (p_work->status == IG_STATUS_NO_GRAPHIC)) {
                 *p_isComplete = FALSE ;
+            } else if (p_work->status == IG_STATUS_DEFERRED) {
+                /* Deferred import: stopped without any bitmap. */
+                *p_isComplete = FALSE ;
+                status = IBS_IMPORT_STOPPED ;
             } else {
                 *p_isComplete = TRUE ;
             }
@@ -1581,8 +1588,10 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
                         status = IBS_NO_ERROR ;
                 }
             } else {
-                /* No frames, pass back nothing */
-                status = IBS_UNKNOWN_FORMAT ;
+                /* No frames, pass back nothing.  A deferred import must
+                   stay "stopped" instead of looking like a broken file. */
+                if (status != IBS_IMPORT_STOPPED)
+                    status = IBS_UNKNOWN_FORMAT ;
                 params->IBP_width = 1 ;
                 params->IBP_height = 1 ;
                 params->IBP_format = BMF_MONO ;

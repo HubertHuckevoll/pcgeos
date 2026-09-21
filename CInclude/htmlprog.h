@@ -29,7 +29,9 @@ typedef enum {
     LPCT_RESET_STREAM_STATE,  /* reset stream state */
     LPCT_CLOSE,           /* finish writing to data stream */
 	LPCT_PRE_READ		/* just as read but keeps the data,
-						 * so we can go back by flush */
+						 * so we can go back by flush */,
+    LPCT_DISCARD		/* discard buffered data after a
+						 * deferred import; fetch keeps running */
 } LoadProgressCallbackType;
 
 typedef enum {
@@ -60,6 +62,8 @@ typedef struct {
     LoadProgressStreamState LPD_streamState;       /* data stream state */
     dword LPD_updateTime;       /* last notification for LPCT_WRITE */
     optr LPD_request;           /* opaque client request state */
+    word LPD_discard;           /* ignore buffered data after
+						 * LPCT_DISCARD */
 } LoadProgressData;
 
 #define _LoadProgressParams_ LoadProgressData *loadProgressDataP

@@ -86,6 +86,7 @@ typedef struct {
 typedef word MimeStatusFlags;
 #define MIME_STATUS_ABORT 0x8000
 #define MIME_STATUS_MEMORY_LIMIT 0x4000
+#define MIME_STATUS_DEFERRED 0x2000
 typedef struct {
     MimeStatusFlags MS_mimeFlags ;
 } MimeStatus ;
@@ -321,31 +322,24 @@ typedef VMBlockHandle _pascal _export entry_MimeDrvGraphicEx(_MimeGraphicParams_
 typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_,dword extFlags,void *pf);
 
 
-/*** Entry: Probe intrinsic graphic dimensions *******************************/
+/*** Entry: Import as graphic extended 2 (import-time admission) ********/
 
-#define MIME_ENTRY_GRAPHIC_PROBE 4
+/*
+ * maxPixels caps the intrinsic pixels a driver may decode:
+ *
+ *     0         unrestricted import (no admission policy).
+ *     nonzero   reject with MIME_STATUS_DEFERRED and no bitmap when the
+ *               intrinsic dimensions exceed the budget. DEFERRED is a
+ *               caller-policy rejection (retry later, e.g. after explicit
+ *               user activation) and is distinct from MIME_STATUS_ABORT
+ *               and MIME_STATUS_MEMORY_LIMIT.
+ */
 
-typedef enum {
-    MIME_GRAPHIC_PROBE_UNKNOWN,
-    MIME_GRAPHIC_PROBE_FOUND
-} MimeGraphicProbeResult;
+#define MIME_ENTRY_GRAPHIC_EX2 4
+			// protocol 4.3
 
-typedef struct {
-    dword MGPD_width;
-    dword MGPD_height;
-} MimeGraphicProbeData;
-
-#define _MimeGraphicProbeParams_ \
-            TCHAR *mimeType, \
-            TCHAR *file, \
-            dword maxBytes, \
-            MimeGraphicProbeData *data, \
-            LoadProgressData *loadProgressDataP
-
-typedef MimeGraphicProbeResult _pascal _export
-  entry_MimeDrvGraphicProbe(_MimeGraphicProbeParams_);
-typedef MimeGraphicProbeResult _pascal
-  pcfm_MimeDrvGraphicProbe(_MimeGraphicProbeParams_, void *pf);
+typedef VMBlockHandle _pascal _export entry_MimeDrvGraphicEx2(_MimeGraphicParams_, dword extFlags, dword maxPixels);
+typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx2(_MimeGraphicParams_,dword extFlags,dword maxPixels,void *pf);
 
 
 

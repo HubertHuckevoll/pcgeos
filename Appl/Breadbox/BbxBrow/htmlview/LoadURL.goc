@@ -1007,11 +1007,12 @@ endLoop:;
 
 VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
   VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus,
-  _ImportProgressParams_)
+  dword maxPixels, _ImportProgressParams_)
 {
     VMBlockHandle dataVMBlock;
     void *ImportGraphic;
     GeodeHandle drv;
+    ProtocolNumber protocol;
 
     ThreadPSem(MimeDriverSemaphore);    /* permission to load/release drivers */
 
@@ -1031,6 +1032,38 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
 
     ThreadVSem(MimeDriverSemaphore);    /* finished with drivers  */
 
+    if(maxPixels)
+    {
+        /* admission requested: use the extended entry when the loaded
+           protocol supports it, otherwise never import unrestricted */
+        GeodeGetInfo(drv, GGIT_GEODE_PROTOCOL, &protocol);
+        if(protocol.PN_major > MIME_DRV_PROTOMAJOR ||
+           (protocol.PN_major == MIME_DRV_PROTOMAJOR &&
+            protocol.PN_minor >= 3))
+        {
+            ImportGraphic = ProcGetLibraryEntry(drv,
+              MIME_ENTRY_GRAPHIC_EX2);
+            LOG(LogPrintfLine(">I2");)
+
+            dataVMBlock = ((pcfm_MimeDrvGraphicEx2 *)
+              ProcCallFixedOrMovable_pascal)
+              (mtype, file, vmf, iad, MIME_RES_DISPLAY_DEFAULT,
+              G_allocWatcher, usedMem, mimeStatus, importProgressDataP,
+              0, maxPixels, ImportGraphic);
+
+            LOG(LogPrintfLine("<I2");)
+
+            GeodeRemoveReference(drv);
+            return dataVMBlock;
+        }
+
+        /* older drivers cannot honor the caller's pixel policy; report
+           the image as deferred instead of importing it unrestricted */
+        mimeStatus->MS_mimeFlags |= MIME_STATUS_DEFERRED;
+        GeodeRemoveReference(drv);
+        return 0;
+    }
+
     ImportGraphic = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC);
                                         /* get entry point in library */
     LOG(LogPrintfLine(">I");)
@@ -1049,7 +1082,7 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
 
 VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
   TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem,
-  MimeStatus *mimeStatus, _ImportProgressParams_)
+  MimeStatus *mimeStatus, dword maxPixels, _ImportProgressParams_)
 {
     FileLongName driver;
 
@@ -1060,50 +1093,9 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
            mimeType, driver, sizeof(driver), TRUE, NULL))
       {
         return ImportGraphicByNative(mimeType, file, driver, vmf, iad, usedMem,
-          mimeStatus, importProgressDataP);
+          mimeStatus, maxPixels, importProgressDataP);
       }
     }
 
     return 0;                           /* didn't find a matching driver */
-}
-
-MimeGraphicProbeResult ToolsProbeGraphicByDriver(TCHAR *file,
-  TCHAR *mimeType, dword maxBytes, MimeGraphicProbeData *data)
-{
-    FileLongName driver;
-    GeodeHandle drv;
-    ProtocolNumber protocol;
-    void *ProbeGraphic;
-    MimeGraphicProbeResult result;
-
-    if(!mimeType || !NameAssocFindAssociation(assocTypeDriver,
-       mimeType, driver, sizeof(driver), TRUE, (void *)0))
-        return MIME_GRAPHIC_PROBE_UNKNOWN;
-
-    FilePushDir();
-    ThreadPSem(MimeDriverSemaphore);
-    if(lastMimeDriver==NullHandle || strcmp(driver, lastMimeName))
-        LoadNewMimeDriver(driver);
-    drv = lastMimeDriver;
-    if(drv)
-        GeodeAddReference(drv);
-    ThreadVSem(MimeDriverSemaphore);
-    FilePopDir();
-    if(!drv)
-        return MIME_GRAPHIC_PROBE_UNKNOWN;
-
-    GeodeGetInfo(drv, GGIT_GEODE_PROTOCOL, &protocol);
-    if(protocol.PN_major < 4 ||
-       (protocol.PN_major == 4 && protocol.PN_minor < 3))
-    {
-        GeodeRemoveReference(drv);
-        return MIME_GRAPHIC_PROBE_UNKNOWN;
-    }
-
-    ProbeGraphic = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC_PROBE);
-    result = ((pcfm_MimeDrvGraphicProbe *)
-      ProcCallFixedOrMovable_pascal)(mimeType, file, maxBytes, data,
-      (void *)0, ProbeGraphic);
-    GeodeRemoveReference(drv);
-    return result;
 }

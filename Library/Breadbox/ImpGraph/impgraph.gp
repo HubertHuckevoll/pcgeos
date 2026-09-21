@@ -27,6 +27,6 @@ export MIMEDRVGRAPHICEX
 
 incminor
 
-export MIMEDRVGRAPHICPROBE
+export MIMEDRVGRAPHICEX2
 
 usernotes "Copyright 1994-2002  Breadbox Computer Company LLC  All Rights Reserved"

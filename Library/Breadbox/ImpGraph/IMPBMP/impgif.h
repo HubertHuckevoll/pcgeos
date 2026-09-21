@@ -74,7 +74,8 @@ typedef enum {
     IG_STATUS_FOUND_END_OF_GIF,
     IG_STATUS_COULD_NOT_CREATE,
     IG_STATUS_NO_GRAPHIC,
-    IG_STATUS_ABORTED
+    IG_STATUS_ABORTED,
+    IG_STATUS_DEFERRED
 } ImpGIFStatus ;
 
 typedef MemHandle GIFHandle ;
@@ -148,7 +149,8 @@ GIFHandle _pascal ImpGIFCreate(
                       VMFileHandle vm,
                       AllocWatcherHandle watcher,
                       Boolean useSysPal,
-                      MimeStatus *mimeStatus) ;
+                      MimeStatus *mimeStatus,
+                      dword maxPixels) ;
 
 void _pascal ImpGIFDestroy(GIFHandle impgifhandle) ;
 

@@ -59,6 +59,8 @@ typedef struct
   ImportProgressData *IBP_importProgressDataP;
 #endif
   MimeStatus    *IBP_mimeStatus ;
+  dword         IBP_maxPixels; /* import-time pixel admission limit,
+                                0 = unrestricted */
 } ImpBmpParams;
 
 typedef enum
