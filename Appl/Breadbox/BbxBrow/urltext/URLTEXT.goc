@@ -1802,10 +1802,10 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             importProgressDataP->IPD_nameT,
             importProgressDataP->IPD_firstLine,
             importProgressDataP->IPD_lastLine);
-          /* Local-file import has no network wait during which a
-             geometry-changing first update can be laid out. */
-          if(!importProgressDataP->IPD_loadProgressDataP)
-              @call self::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
+          /* A first progress bitmap changes the image geometry. Resolve it
+             now for both streamed and completed-file imports; otherwise a
+             streamed image remains a placeholder until final page layout. */
+          @call self::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
 	}
 	MemFree(importProgressData);
     }
