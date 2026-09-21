@@ -1806,6 +1806,13 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
              now for both streamed and completed-file imports; otherwise a
              streamed image remains a placeholder until final page layout. */
           @call self::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
+          if(importProgressDataP->IPD_loadProgressDataP)
+          {
+              /* A live page layout normally postpones changed cells until
+                 its final extra pass. Request its existing restart path now
+                 so streamed pixels become visible before page completion. */
+              @call self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
+          }
 	}
 	MemFree(importProgressData);
     }
