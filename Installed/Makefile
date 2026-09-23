@@ -107,7 +107,7 @@ prefLibs	: prefvid prefts preftd \
 # prefs not used preflvl prefuic prefui prefts prefspui prefsock preflink preflang
 
 # Geos impex libraries
-impex_libs	: dib bmp clp ico pcx tif \
+impex_libs	: dib bmp clp ico pcx tif webp \
 		  dbase3 dbase4 htmlimpx vcimpex
 #lot123 msmword msword wordperf5
 
@@ -277,6 +277,9 @@ Installed/Library/Hash:	kernel MAKELIB
 
 pnglib	: Installed/Library/PngLib
 Installed/Library/PngLib:	ansic zlib MAKELIB
+
+webplib	: Installed/Library/WebpLib
+Installed/Library/WebpLib:	ansic MAKELIB
 
 impex	: Installed/Library/Impex
 Installed/Library/Impex: 	ui MAKELIB
@@ -1433,7 +1436,7 @@ Installed/Library/SSL:				ansic socket mapheap hostif MAKELIB
 
 # product-specific dependency on fjpeg
 impgraph	: Installed/Library/Breadbox/ImpGraph
-Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg pnglib fjpeg MAKELIB
+Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg pnglib webplib fjpeg MAKELIB
 
 ijgjpeg	: 	Installed/Library/Breadbox/Ijgjpeg
 Installed/Library/Breadbox/Ijgjpeg:		ui ansic MAKELIB
@@ -1511,6 +1514,9 @@ Installed/Library/Trans/Graphics/Bitmap/Pcx:	math dib MAKELIB
 
 tif	: 	Installed/Library/Trans/Graphics/Bitmap/Tif
 Installed/Library/Trans/Graphics/Bitmap/Tif:	math dib MAKELIB
+
+webp	: 	Installed/Library/Trans/Graphics/Bitmap/Webp
+Installed/Library/Trans/Graphics/Bitmap/Webp:	impex webplib MAKELIB
 
 #lot123	: 	Installed/Library/Trans/Text/Lotus123
 Installed/Library/Trans/Text/Lotus123:		ansic impex msmfile MAKELIB

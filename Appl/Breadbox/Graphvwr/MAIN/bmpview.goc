@@ -120,6 +120,7 @@ static void SendSelectNotify(VMBlockHandle bmpblock);
 #define BV_SHOW_GIF         4
 #define BV_SHOW_JPEG        5
 #define BV_SHOW_PNG         6
+#define BV_SHOW_WEBP        7
 
 /**************************************************************************/
 
@@ -1132,6 +1133,7 @@ FileHandle BVThumbnailDB = 0;
 				  @BVImpFileShowBMP,
 				  @BVImpFileShowPCX,
 				  @BVImpFileShowPNG,
+				  @BVImpFileShowWebP,
 @ifdef JPEG_SUPPORT
 				  @BVImpFileShowGIF,
 				  @BVImpFileShowJPEG;
@@ -1179,6 +1181,13 @@ FileHandle BVThumbnailDB = 0;
 @object GenItemClass BVImpFileShowPNG = {
 		GI_visMoniker = 'N', "Show .PNG Files";
 		GII_identifier = BV_SHOW_PNG;
+}
+
+/**************************************************************************/
+
+@object GenItemClass BVImpFileShowWebP = {
+		GI_visMoniker = 'W', "Show .WEB Files";
+		GII_identifier = BV_SHOW_WEBP;
 }
 
 /**************************************************************************/
@@ -1428,6 +1437,10 @@ FileHandle BVThumbnailDB = 0;
 
 	 case IBF_PNG:
 		strcpy(mask, "*.PNG");
+		break;
+
+	 case IBF_WEBP:
+		strcpy(mask, "*.WEB");
 		break;
 
 	 case IBF_GIF:
@@ -2303,9 +2316,18 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 
 	if(status == IBS_NO_ERROR)
 	{
-		bmpblock = GrCompactBitmap(para.IBP_dest, para.IBP_bitmap, para.IBP_dest);
-		VMFreeVMChain(para.IBP_dest, VMCHAIN_MAKE_FROM_VM_BLOCK(para.IBP_bitmap));
-		para.IBP_bitmap = bmpblock;
+		/* WebpLib already writes PackBits-compacted scanlines. */
+		if(para.IBP_format != IBF_WEBP)
+		{
+			bmpblock = GrCompactBitmap(para.IBP_dest, para.IBP_bitmap,
+									 para.IBP_dest);
+			if(bmpblock != 0)
+			{
+				VMFreeVMChain(para.IBP_dest,
+					VMCHAIN_MAKE_FROM_VM_BLOCK(para.IBP_bitmap));
+				para.IBP_bitmap = bmpblock;
+			}
+		}
 
 		date = FileGetDateAndTime(pself->GDI_fileHandle) ;
 		/* this doesn't work in all fs drivers (only ms4) so we'll go with...
@@ -2588,9 +2610,13 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 
 Boolean StrEnd(char *text, char *endstr)
 {
-	word pos;
+	word pos, textLen, endLen;
 
-	pos = strlen(text) - strlen(endstr);
+	textLen = strlen(text);
+	endLen = strlen(endstr);
+	if(textLen < endLen)
+	  return(FALSE);
+	pos = textLen - endLen;
 
 	return((LocalCmpStringsNoCase(&(text[pos]), endstr, 0)) == 0);
 }
@@ -2723,6 +2749,13 @@ Boolean StrEnd(char *text, char *endstr)
 								filelist[count1] = filelist[count2];
 								count1++;
 							}
+							else
+								if(StrEnd(&filelist[count2].BVFA_name, ".WEB") &&
+								   ((sel == BV_SHOW_WEBP) || (sel == BV_SHOW_ALL_MEDIA)))
+								{
+									filelist[count1] = filelist[count2];
+									count1++;
+								}
 
 @ifdef JPEG_SUPPORT
 							else
