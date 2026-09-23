@@ -2618,6 +2618,9 @@ T_layoutLevelTable *LayoutStackTableLevelAccess(T_layoutStack *p_stack, word lev
     if (pself->HTI_layoutState & HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS)  {
         IBlastTableAndCellMinWidths(pself->HTI_cellArray, pself->HTI_tableArray) ;
         pself->HTI_layoutState &= (~HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS) ;
+        /* Restore content widths before distributing table columns. */
+        CalculateCellArrayLongestLines(p_stack->LS_regionArray,
+            pself->HTI_cellArray, oself, 0, 0xFFFF) ;
     }
     ICalculateCellMinMax(NULL, pself, 0, 0xFFFF, &topMin, &topMax, &topSoftMin, &percent) ;
     CellArrayEndAccess(pself->HTI_cellArray) ;
