@@ -826,7 +826,7 @@ CompactImageHit CompactImageLayoutText(GStateHandle gstate,
       case HTML_IDF_FORMAT_GIF:  strcpy(format, _TEXT("GIF")); break;
       case HTML_IDF_FORMAT_WEBP: strcpy(format, _TEXT("WebP")); break;
       case HTML_IDF_FORMAT_SVG:  strcpy(format, _TEXT("SVG")); break;
-      default:                   strcpy(format, _TEXT("image")); break;
+      default:                   strcpy(format, _TEXT("Image")); break;
     }
     formatLen = strlen(format);
     formatWidth = formatLen ? GrTextWidth(gstate, (char*)format, formatLen) : 0;
