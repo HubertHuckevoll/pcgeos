@@ -107,7 +107,7 @@ prefLibs	: prefvid prefts preftd \
 # prefs not used preflvl prefuic prefui prefts prefspui prefsock preflink preflang
 
 # Geos impex libraries
-impex_libs	: dib bmp clp ico pcx tif webp \
+impex_libs	: dib bmp clp ico pcx tif webp svg \
 		  dbase3 dbase4 htmlimpx vcimpex
 #lot123 msmword msword wordperf5
 
@@ -281,6 +281,9 @@ Installed/Library/PngLib:	ansic zlib MAKELIB
 webplib	: Installed/Library/WebpLib
 Installed/Library/WebpLib:	ansic MAKELIB
 
+svglib	: Installed/Library/SvgLib
+Installed/Library/SvgLib:	ansic MAKELIB
+
 impex	: Installed/Library/Impex
 Installed/Library/Impex: 	ui MAKELIB
 
@@ -310,6 +313,9 @@ Installed/Library/Breadbox/Impex/PNG: ui impex extgraph pnglib MAKELIB
 
 wmf : Installed/Library/Trans/Graphics/Vector/Wmf
 Installed/Library/Trans/Graphics/Vector/Wmf: ui impex ansic MAKELIB
+
+svg : Installed/Library/Trans/Graphics/Vector/Svg
+Installed/Library/Trans/Graphics/Vector/Svg: impex svglib MAKELIB
 
 ascii	: Installed/Library/Trans/Text/Ascii
 Installed/Library/Trans/Text/Ascii: 	ui text MAKELIB
@@ -1436,7 +1442,7 @@ Installed/Library/SSL:				ansic socket mapheap hostif MAKELIB
 
 # product-specific dependency on fjpeg
 impgraph	: Installed/Library/Breadbox/ImpGraph
-Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg pnglib webplib fjpeg MAKELIB
+Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg pnglib webplib fjpeg svglib MAKELIB
 
 ijgjpeg	: 	Installed/Library/Breadbox/Ijgjpeg
 Installed/Library/Breadbox/Ijgjpeg:		ui ansic MAKELIB
@@ -1582,7 +1588,7 @@ Installed/Appl/Breadbox/BBGrmt:			ui ansic spool text MAKEAPPL
 
 graphvwr : Installed/Appl/Breadbox/Graphvwr
 Installed/Appl/Breadbox/Graphvwr:	ui ansic extui giflib thumbdb ijgjpeg pnglib \
-					MAKEAPPL
+					webplib svglib MAKEAPPL
 
 macror	: Installed/Appl/Breadbox/MacroR
 Installed/Appl/Breadbox/MacroR:		ui ansic MAKEAPPL
