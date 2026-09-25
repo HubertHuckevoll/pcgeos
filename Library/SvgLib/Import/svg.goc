@@ -164,6 +164,16 @@ static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP
                            &plannedCapacity, &plannedBytes);
     if (plan == SVG_CAPACITY_NO_GROWTH)
     {
+        /* The previous tag may have left this block unlocked. */
+        if (*handleP && !*ptrP)
+        {
+            *ptrP = (void*)MemLock(*handleP);
+            if (!*ptrP)
+            {
+                sc->failure = SVG_SCRATCH_ALLOCATION_FAILED;
+                return FALSE;
+            }
+        }
         return TRUE;
     }
     if (plan == SVG_CAPACITY_LIMIT)
@@ -343,16 +353,26 @@ SvgImportParse(SvgImportContext *contextP, FileHandle srcFile,
 
     ioH = MemAlloc(SVG_IO_BUF_SIZE, HF_DYNAMIC, HAF_ZERO_INIT);
     if (!ioH) { status = TE_OUT_OF_MEMORY; goto cleanup; }
-    ioP = (char*) MemLock(ioH);
-    if (!ioP) { status = TE_OUT_OF_MEMORY; goto cleanup; }
 
     SvgParserScanInit(&scan);
     scan.ioH = ioH;
-    scan.ioP = ioP;
 
     for (;;)
     {
+        /* Let the heap move or swap idle scratch blocks between tags. */
+        if (scP->tagP) { MemUnlock(scP->tagH); scP->tagP = NULL; }
+        if (scP->dbP) { MemUnlock(scP->dbH); scP->dbP = NULL; }
+        if (scP->ptsP) { MemUnlock(scP->ptsH); scP->ptsP = NULL; }
+        if (scP->ptsWWFP) { MemUnlock(scP->ptsWWFH); scP->ptsWWFP = NULL; }
+
+        ioP = (char*) MemLock(ioH);
+        if (!ioP) { status = TE_OUT_OF_MEMORY; goto cleanup; }
+        scan.ioP = ioP;
         scanResult = SvgParserScanNextTag(contextP, srcFile, &scan, scP);
+        /* The scanner is done with input bytes while this tag is rendered. */
+        MemUnlock(ioH);
+        ioP = NULL;
+        scan.ioP = NULL;
         if (scanResult != SVG_SCAN_TAG)
         {
             if (scanResult == SVG_SCAN_OUT_OF_MEMORY)
