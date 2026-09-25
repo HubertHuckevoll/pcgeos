@@ -409,8 +409,12 @@ ImpBmpStatus ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
                       (SvgProgressCallback *)0);
     if (error != TE_NO_ERROR)
     {
+        if (error == TE_OUT_OF_MEMORY)
+        {
+            mimeStatus->MS_mimeFlags |= MIME_STATUS_MEMORY_LIMIT;
+        }
         FileClose(srcFile, TRUE);
-        return IBS_UNKNOWN_FORMAT;
+        return (error == TE_OUT_OF_MEMORY) ? IBS_NO_MEMORY : IBS_UNKNOWN_FORMAT;
     }
 
     width = bounds.RD_right - bounds.RD_left;
