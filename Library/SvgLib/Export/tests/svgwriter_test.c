@@ -1,6 +1,39 @@
 #include <string.h>
 
 #include "../svgWriter.h"
+#include "../../svgLimits.h"
+
+static int
+CheckTagLimit(void)
+{
+    SvgWriterTagCounter counter;
+    char tag[SVG_TEXT_MAX_SIZE + 2];
+    unsigned index;
+
+    memset(&counter, 0, sizeof(counter));
+    tag[0] = '<';
+    for (index = 1; index < SVG_TEXT_MAX_SIZE; index++) tag[index] = 'x';
+    tag[10] = '\n';
+    tag[20] = '"';
+    tag[30] = '>';
+    tag[40] = '"';
+    tag[SVG_TEXT_MAX_SIZE] = '>';
+    if (!SvgWriterCountTags(&counter, tag, 101,
+                             SVG_TEXT_MAX_SIZE - 1) ||
+        !SvgWriterCountTags(&counter, tag + 101,
+                             SVG_TEXT_MAX_SIZE - 100,
+                             SVG_TEXT_MAX_SIZE - 1) ||
+        counter.length != SVG_TEXT_MAX_SIZE - 1 || counter.inTag)
+    {
+        return 0;
+    }
+    memset(&counter, 0, sizeof(counter));
+    tag[SVG_TEXT_MAX_SIZE] = 'x';
+    tag[SVG_TEXT_MAX_SIZE + 1] = '>';
+    return !SvgWriterCountTags(&counter, tag,
+                                SVG_TEXT_MAX_SIZE + 2,
+                                SVG_TEXT_MAX_SIZE - 1);
+}
 
 typedef struct
 {
@@ -447,6 +480,10 @@ CheckStreamedPath(void)
 int
 main(void)
 {
+    if (!CheckTagLimit())
+    {
+        return 14;
+    }
     if (!CheckFixed(0x00018000L, 2, "1.5"))
     {
         return 1;

@@ -5,12 +5,13 @@
 
 #include <svgLib.h>
 
+#include "svgLimits.h"
+
 #include "Import/svgRendererCore.h"
 
 #define SVG_COLOR_NAME_LEN              32
 #define SVG_IO_BUF_SIZE                 1024
 #define SVG_TEXT_INITIAL_SIZE           1024
-#define SVG_TEXT_MAX_SIZE               8192
 #define SVG_POINTS_INITIAL_CAPACITY     128
 #define MAX_SVG_POINTS                  4096
 #define SVG_GROUP_NESTING_MAX           16

@@ -57,6 +57,21 @@ void _pascal SvgExportResetDashPattern(SvgExportContext *context)
     memset(context->dashPattern, 0, sizeof(context->dashPattern));
 }
 
+static void
+SvgExportResetState(SvgExportContext *context)
+{
+    context->lineWidth = 0;
+    context->lineColor = 0;
+    context->fillColor = 0;
+    context->lineJoin = LJ_MITERED;
+    context->lineCap = LE_BUTTCAP;
+    context->miterLimit = 0;
+    context->lineStyle = LS_SOLID;
+    context->fillRule = WINDING;
+    context->dashStackDepth = 0;
+    SvgExportResetDashPattern(context);
+}
+
 Boolean _pascal
 SvgExportEnsureDashStack(SvgExportContext *context, word capacity)
 {
@@ -312,15 +327,22 @@ SvgExport(FileHandle outputFile, VMFileHandle sourceFile,
     }
 
     context.svgFile = outputFile;
-    context.lineWidth = 0;
-    context.lineColor = 0;
-    context.fillColor = 0;
-    context.lineJoin = LJ_MITERED;
-    context.lineCap = LE_BUTTCAP;
-    context.miterLimit = 0;
-    context.lineStyle = LS_SOLID;
-    SvgExportResetDashPattern(&context);
-    context.fillRule = WINDING;
+    SvgExportResetState(&context);
+    SvgExportInitCountingWriter(&context);
+    error = SvgExportGString(sourceGState, &context);
+    if (error != TE_NO_ERROR)
+    {
+        if (context.tagTooLarge)
+        {
+            error = TE_FILE_TOO_LARGE;
+        }
+        MemFree(context.bufferHeapH);
+        GrDestroyGString(sourceGState, 0, GSKT_LEAVE_DATA);
+        return error;
+    }
+
+    GrSetGStringPos(sourceGState, GSSPT_BEGINNING, 0);
+    SvgExportResetState(&context);
 
     if (FileTruncate(context.svgFile, 0, FALSE) != 0)
     {

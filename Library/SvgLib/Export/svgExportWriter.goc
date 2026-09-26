@@ -53,6 +53,31 @@ SvgExportFileSink(void *userData,
     return (FileWrite(context->svgFile, data, byteCount, FALSE) == byteCount);
 }
 
+static int _pascal
+SvgExportCountingSink(void *userData,
+                      const char *data,
+                      SvgWriterU16 byteCount)
+{
+    SvgExportContext *context;
+
+    context = (SvgExportContext *)userData;
+    if (!SvgWriterCountTags(&context->tagCounter, data, byteCount,
+                            SVG_TEXT_MAX_SIZE - 1))
+    {
+        context->tagTooLarge = TRUE;
+        return 0;
+    }
+    return 1;
+}
+
+void _pascal
+SvgExportInitCountingWriter(SvgExportContext *context)
+{
+    memset(&context->tagCounter, 0, sizeof(context->tagCounter));
+    context->tagTooLarge = FALSE;
+    SvgWriterInit(&context->writer, SvgExportCountingSink, context);
+}
+
 static SvgWriterFixed
 SvgExportPackDWFixed(const DWFixed *value)
 {

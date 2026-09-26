@@ -1,5 +1,48 @@
 #include "svgWriter.h"
 
+int
+SvgWriterCountTags(SvgWriterTagCounter *counter, const char *data,
+                   SvgWriterU16 byteCount, SvgWriterU16 maximumLength)
+{
+    SvgWriterU16 index;
+    char ch;
+
+    for (index = 0; index < byteCount; index++)
+    {
+        ch = data[index];
+        if (!counter->inTag)
+        {
+            if (ch == '<')
+            {
+                counter->inTag = 1;
+                counter->inQuote = 0;
+                counter->length = 0;
+            }
+            continue;
+        }
+        if (!counter->inQuote && ch == '>')
+        {
+            counter->inTag = 0;
+            continue;
+        }
+        if (counter->length >= maximumLength)
+        {
+            return 0;
+        }
+        counter->length++;
+        if (counter->inQuote)
+        {
+            if (ch == counter->quote) counter->inQuote = 0;
+        }
+        else if (ch == '"' || ch == '\'')
+        {
+            counter->inQuote = 1;
+            counter->quote = ch;
+        }
+    }
+    return 1;
+}
+
 #if defined(__GEOS__)
 extern int _pascal
 SvgExportInvokeSink(SvgWriterSink *sink,
