@@ -346,11 +346,22 @@ Boolean SvgShapeHandleRect(SvgImportContext *contextP, const char *tag, SVGScrat
     WWFixedAsDWord  fy;
     WWFixedAsDWord  fw;
     WWFixedAsDWord  fh;
+    WWFixedAsDWord  frx;
+    WWFixedAsDWord  fry;
     SvgMatrix       ctm;
     Point           pts[4];
     WWFixedAsDWord  X, Y, Xp, Yp;
     Boolean        hasWidth;
     Boolean        hasHeight;
+    Boolean        hasRx;
+    Boolean        hasRy;
+    Boolean        forcedRoundJoin;
+    word           corner;
+    word           i;
+    WWFixedAsDWord  cx;
+    WWFixedAsDWord  cy;
+    WWFixedAsDWord  tDeg;
+    WWFixedAsDWord  stepDeg;
 
     xb = contextP->work1;
     yb = contextP->work2;
@@ -358,6 +369,8 @@ Boolean SvgShapeHandleRect(SvgImportContext *contextP, const char *tag, SVGScrat
     hb = contextP->work4;
     fx = MakeWWFixed(0);
     fy = MakeWWFixed(0);
+    frx = MakeWWFixed(0);
+    fry = MakeWWFixed(0);
 
     hasWidth = SvgParserGetAttrBounded(tag, "width", wb,
                                        sizeof(contextP->work3));
@@ -382,6 +395,21 @@ Boolean SvgShapeHandleRect(SvgImportContext *contextP, const char *tag, SVGScrat
         if (!SvgShapeParseWWFixed(sc, yb, &fy)) return FALSE;
     }
 
+    hasRx = SvgParserGetAttrBounded(tag, "rx", wb,
+                                    sizeof(contextP->work3));
+    hasRy = SvgParserGetAttrBounded(tag, "ry", hb,
+                                    sizeof(contextP->work4));
+    if (hasRx && !SvgShapeParseWWFixed(sc, wb, &frx)) return FALSE;
+    if (hasRy && !SvgShapeParseWWFixed(sc, hb, &fry)) return FALSE;
+    if (!hasRx && hasRy) frx = fry;
+    if (!hasRy && hasRx) fry = frx;
+    if ((sdword)fw <= 0 || (sdword)fh <= 0 ||
+        (sdword)frx < 0 || (sdword)fry < 0) return FALSE;
+    if ((sdword)frx > (sdword)fw / 2)
+        frx = (WWFixedAsDWord)((sdword)fw / 2);
+    if ((sdword)fry > (sdword)fh / 2)
+        fry = (WWFixedAsDWord)((sdword)fh / 2);
+
     if (!SvgXformBuildWorld(contextP, tag, NULL, &ctm))
     {
         sc->unsupportedElement = TRUE;
@@ -391,6 +419,44 @@ Boolean SvgShapeHandleRect(SvgImportContext *contextP, const char *tag, SVGScrat
     SvgStyleApplyStrokeAndFill(contextP, tag);
     SvgStyleApplyFillRule(contextP, tag);
     SvgStyleApplyStrokeWidth(contextP, tag, &ctm);
+
+    /* ATTENTION: 48 straight segments limit arc smoothness at high zoom;
+       use GString curves if the renderer gains curve support. */
+    if (frx != 0 && fry != 0)
+    {
+        if (!SvgScratchEnsurePointCapacity(sc, SVG_ELLIPSE_SEGMENTS))
+            return FALSE;
+        stepDeg = MakeWWFixed(90) / (SVG_ELLIPSE_SEGMENTS / 4);
+        for (corner = 0; corner < 4; corner++)
+        {
+            cx = GrAddWWFixed(fx, corner < 2 ?
+                              GrSubWWFixed(fw, frx) : frx);
+            cy = GrAddWWFixed(fy, corner == 0 || corner == 3 ?
+                              fry : GrSubWWFixed(fh, fry));
+            tDeg = MakeWWFixed((int)corner * 90 - 90);
+            for (i = 0; i < SVG_ELLIPSE_SEGMENTS / 4; i++)
+            {
+                X = GrAddWWFixed(cx, GrMulWWFixed(frx, GrQuickCosine(tDeg)));
+                Y = GrAddWWFixed(cy, GrMulWWFixed(fry, GrQuickSine(tDeg)));
+                Xp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.a, X),
+                                               GrMulWWFixed(ctm.c, Y)), ctm.e);
+                Yp = GrAddWWFixed(GrAddWWFixed(GrMulWWFixed(ctm.b, X),
+                                               GrMulWWFixed(ctm.d, Y)), ctm.f);
+                sc->ptsP[corner * (SVG_ELLIPSE_SEGMENTS / 4) + i].P_x =
+                    SvgGeomWWFixedToSWordRound(Xp);
+                sc->ptsP[corner * (SVG_ELLIPSE_SEGMENTS / 4) + i].P_y =
+                    SvgGeomWWFixedToSWordRound(Yp);
+                tDeg = GrAddWWFixed(tDeg, stepDeg);
+            }
+        }
+        forcedRoundJoin = SvgStyleForceRoundJoinForSegments(contextP, tag,
+                                                             SVG_ELLIPSE_SEGMENTS);
+        SvgRendererPolygon(contextP, sc->ptsP, SVG_ELLIPSE_SEGMENTS,
+                           SvgStyleHasFill(contextP, tag),
+                           SvgStyleHasStroke(contextP, tag));
+        SvgStyleRestoreForcedJoin(contextP, tag, forcedRoundJoin);
+        return TRUE;
+    }
 
     /* p0 = (x,      y)      */
     X = fx;            Y = fy;
