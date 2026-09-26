@@ -18,6 +18,7 @@
 #include <svgLib.h>
 
 #include "svgWriter.h"
+#include "svgLimits.h"
 
 #define SVG_EXPORT_INVALID_OPCODE  0xff
 #define SVG_EXPORT_OPCODE_SIZE     1
@@ -74,6 +75,8 @@ typedef struct
 {
     FileHandle svgFile;
     SvgWriter writer;
+    SvgWriterTagCounter tagCounter;
+    Boolean tagTooLarge;
     RectDWord bounds;
     WWFixedAsDWord lineWidth;
     RGBColorAsDWord lineColor;
@@ -98,6 +101,7 @@ typedef struct
 } SvgExportContext;
 
 Boolean _pascal SvgExportInitWriter(SvgExportContext *context);
+void _pascal SvgExportInitCountingWriter(SvgExportContext *context);
 Boolean _pascal SvgExportWriteHeader(SvgExportContext *context);
 Boolean _pascal SvgExportWriteFooter(SvgExportContext *context);
 Boolean _pascal SvgExportWriteLineElement(SvgExportContext *context, const PointWWFixed *startPoint, const PointWWFixed *endPoint, const TransMatrix *tm);

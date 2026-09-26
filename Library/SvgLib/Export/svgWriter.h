@@ -50,6 +50,17 @@ typedef struct
     SvgWriterU16 failed;
 } SvgWriter;
 
+typedef struct
+{
+    SvgWriterU16 length;
+    SvgWriterU16 inTag;
+    SvgWriterU16 inQuote;
+    char quote;
+} SvgWriterTagCounter;
+
+int SvgWriterCountTags(SvgWriterTagCounter *counter, const char *data,
+                       SvgWriterU16 byteCount, SvgWriterU16 maximumLength);
+
 typedef SvgWriterI32 SvgWriterFixed;
 
 typedef struct

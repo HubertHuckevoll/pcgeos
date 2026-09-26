@@ -13,6 +13,7 @@
 #include <graphics.h>
 #include <gstring.h>
 #include "Import/svg.h"
+#include "Import/svgDash.h"
 #include "Import/dbglog.h"
 
 Boolean SvgStyleStackInit(SvgImportContext *contextP)
@@ -951,6 +952,39 @@ void SvgStyleRestoreForcedJoin(SvgImportContext *contextP, const char *tag, Bool
     }
 }
 
+static void
+SvgStyleApplyDash(SvgImportContext *contextP, const char *tag,
+                  WWFixedAsDWord width)
+{
+    const char *arrayP;
+    const char *offsetP;
+    word arrayLength;
+    word offsetLength;
+    SvgDashPattern pattern;
+    SvgAttrResult result;
+
+    GrSetLineStyle(contextP->gstate, LS_SOLID, 0, (void*)0, 0);
+    /* ATTENTION: SvgExport emits dash attributes only. Resolve inherited
+     * and inline CSS dash properties when broader SVG styling is needed.
+     */
+    result = SvgParserGetAttrSpan(tag, "stroke-dasharray", &arrayP,
+                                  &arrayLength, SVG_TEXT_MAX_SIZE);
+    if (result != SVG_ATTR_VALID || (sdword)width <= 0)
+    {
+        return;
+    }
+    result = SvgParserGetAttrSpan(tag, "stroke-dashoffset", &offsetP,
+                                  &offsetLength, SVG_TEXT_MAX_SIZE);
+    if (result != SVG_ATTR_MISSING && result != SVG_ATTR_VALID) return;
+    if (SvgDashParse(arrayP, arrayLength, offsetP, offsetLength,
+                     (unsigned long)width, &pattern))
+    {
+        GrSetLineStyle(contextP->gstate, LS_CUSTOM, pattern.skip,
+                       (const DashPairArray *)pattern.values,
+                       pattern.pairCount);
+    }
+}
+
 void SvgStyleApplyStrokeWidth(SvgImportContext *contextP, const char *tag, const SvgMatrix *worldMP)
 {
     WWFixedAsDWord lw;
@@ -996,6 +1030,8 @@ void SvgStyleApplyStrokeWidth(SvgImportContext *contextP, const char *tag, const
     {
         lw = SvgGeomMakeWWFixedFromInt(1);
     }
+
+    SvgStyleApplyDash(contextP, tag, lw);
 
     /* ATTENTION: Area scale is the v1 stroke approximation for nonuniform
      * scale and shear. Upgrade by emitting transformed stroke outlines.
