@@ -2478,6 +2478,153 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
     VMUnlockChainifiedLMemBlock(mem);
 }
 
+static sword _pascal
+HTMLTextScaleDrawOffset(sword offset, WWFixedAsDWord factor)
+{
+    WWFixedAsDWord scaled;
+    word fraction;
+
+    scaled = GrMulWWFixed(MakeWWFixed(offset), factor);
+    fraction = FractionOf(scaled);
+    if(offset < 0)
+        return IntegerOf(scaled) + (fraction > 0x8000);
+    return IntegerOf(scaled) + (fraction >= 0x8000);
+}
+
+static Boolean _pascal
+HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
+                          word viewportHeight)
+{
+    dword available;
+    WWFixedAsDWord factor;
+    WWFixedAsDWord scale;
+    dword scaledPixels;
+    word maxWidth, maxHeight;
+    Boolean spacingChanged;
+
+    spacingChanged = FALSE;
+    available = 2L * imageP->hspace;
+    if(available >= viewportWidth)
+    {
+        imageP->hspace = (viewportWidth - 1) / 2;
+        available = 2L * imageP->hspace;
+        spacingChanged = TRUE;
+    }
+    maxWidth = viewportWidth > available ? viewportWidth - available : 1;
+    available = 2L * imageP->vspace;
+    if(available >= viewportHeight)
+    {
+        imageP->vspace = (viewportHeight - 1) / 2;
+        available = 2L * imageP->vspace;
+        spacingChanged = TRUE;
+    }
+    maxHeight = viewportHeight > available ? viewportHeight - available : 1;
+
+    if(imageP->HID_size.XYS_width <= maxWidth &&
+       imageP->HID_size.XYS_height <= maxHeight)
+        return spacingChanged;
+
+    factor = MakeWWFixed(1);
+    if(imageP->HID_size.XYS_width > maxWidth)
+    {
+        scale = GrUDivWWFixed((dword)maxWidth << 16,
+          (dword)imageP->HID_size.XYS_width << 16);
+        if(scale < factor)
+            factor = scale;
+    }
+    if(imageP->HID_size.XYS_height > maxHeight)
+    {
+        scale = GrUDivWWFixed((dword)maxHeight << 16,
+          (dword)imageP->HID_size.XYS_height << 16);
+        if(scale < factor)
+            factor = scale;
+    }
+
+    *(WWFixedAsDWord *)&imageP->HID_tmatrixE11 = GrMulWWFixed(
+      *(WWFixedAsDWord *)&imageP->HID_tmatrixE11, factor);
+    *(WWFixedAsDWord *)&imageP->HID_tmatrixE22 = GrMulWWFixed(
+      *(WWFixedAsDWord *)&imageP->HID_tmatrixE22, factor);
+    imageP->HID_drawOffset.XYO_x = HTMLTextScaleDrawOffset(
+      imageP->HID_drawOffset.XYO_x, factor);
+    imageP->HID_drawOffset.XYO_y = HTMLTextScaleDrawOffset(
+      imageP->HID_drawOffset.XYO_y, factor);
+
+    scaledPixels = (dword)imageP->HID_size.XYS_width * FractionOf(factor);
+    imageP->HID_size.XYS_width = (scaledPixels + 0x8000L) >> 16;
+    if(imageP->HID_size.XYS_width == 0)
+        imageP->HID_size.XYS_width = 1;
+    if(imageP->HID_size.XYS_width > maxWidth)
+        imageP->HID_size.XYS_width = maxWidth;
+
+    scaledPixels = (dword)imageP->HID_size.XYS_height * FractionOf(factor);
+    imageP->HID_size.XYS_height = (scaledPixels + 0x8000L) >> 16;
+    if(imageP->HID_size.XYS_height == 0)
+        imageP->HID_size.XYS_height = 1;
+    if(imageP->HID_size.XYS_height > maxHeight)
+        imageP->HID_size.XYS_height = maxHeight;
+
+    return TRUE;
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT
+{
+    HTMLimageData *imageP;
+    VisTextGraphic *graphic;
+    VMBlockHandle *graphicRunsP;
+    optr imageArray;
+    MemHandle imageArrayH, graphicMem;
+    VMFileHandle vmFile;
+    word graphicRuns, i, n, size;
+    Boolean changed;
+
+    imageArray = pself->HTI_imageArray;
+    if(!imageArray || !viewportWidth || !viewportHeight)
+        return;
+    graphicRunsP = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
+    if(!graphicRunsP)
+        return;
+    graphicRuns = *graphicRunsP;
+    vmFile = pself->VTI_vmFile;
+
+    imageArrayH = OptrToHandle(imageArray);
+    MemLock(imageArrayH);
+    n = ChunkArrayGetCount(imageArray);
+    changed = FALSE;
+    for(i = 0; i < n; i++)
+    {
+        imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+        if(imageP->pos < HTML_IMAGE_POS_RESERVED &&
+           !(imageP->flags & (HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED |
+                              HTML_IDF_BROKEN)) &&
+           HTMLTextFitImageToViewport(imageP, viewportWidth,
+             viewportHeight))
+        {
+            imageP->flags |= HTML_IDF_SIZE_DIRTY;
+            graphic = IFindGraphicForImage(vmFile, graphicRuns, i,
+              &graphicMem);
+            if(graphic)
+            {
+                graphic->VTG_size = imageP->HID_size;
+                graphic->VTG_size.XYS_width += 2*imageP->hspace;
+                graphic->VTG_size.XYS_height += 2*imageP->vspace;
+                if(graphic->VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
+                    graphic->VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR;
+                VMDirty(graphicMem);
+                VMUnlockChainifiedLMemBlock(graphicMem);
+            }
+            changed = TRUE;
+        }
+    }
+    MemUnlock(imageArrayH);
+    if(changed)
+    {
+        pself = ObjDerefVis(oself);
+        pself->HTI_layoutState |= HTS_LAYOUT_DIRTY |
+          HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS |
+          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
+    }
+}
+
 /**************************************************************************
  *               MSG_HTML_TEXT_RESOLVE_IMAGE for HTMLTextClass
  **************************************************************************

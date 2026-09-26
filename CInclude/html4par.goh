@@ -1224,6 +1224,12 @@ typedef dword T_tableArrayHandle ;
   @message Boolean MSG_HTML_TEXT_MARK_IMAGE_UNSUPPORTED(word nImage);
 @ifndef HTML4PAR_BUILD
 @protoreset
+@protominor HTMLTextViewportImages
+@endif
+  @message void MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT(word viewportWidth,
+    word viewportHeight);
+@ifndef HTML4PAR_BUILD
+@protoreset
 @endif
 @endc;
 
