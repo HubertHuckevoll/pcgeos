@@ -76,6 +76,56 @@ typedef struct {
 @extern method URLTextClass, MSG_META_CLIPBOARD_COPY ;
 @extern method URLTextClass, MSG_URL_TEXT_COPY_IMAGE_TO_CLIPBOARD ;
 
+@method URLTextClass, MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT
+{
+    RectDWord visible;
+    dword width, height;
+    word viewportWidth, viewportHeight;
+
+    if(pself->UTI_imageViewportWidth || !pself->HTI_myView ||
+       !pself->HTI_imageArray || !pself->HTI_cellArray ||
+       !pself->VLTI_regionArray)
+        return FALSE;
+
+    @call pself->HTI_myView::MSG_GEN_VIEW_GET_VISIBLE_RECT(&visible);
+    if(visible.RD_right <= visible.RD_left ||
+       visible.RD_bottom <= visible.RD_top)
+        return FALSE;
+
+    width = visible.RD_right - visible.RD_left;
+    height = visible.RD_bottom - visible.RD_top;
+    /* ATTENTION: dimensions are words; wider viewports need a wider image ABI. */
+    if(width > 0xffff)
+        width = 0xffff;
+    if(height > 0xffff)
+        height = 0xffff;
+
+    viewportWidth = width;
+    viewportHeight = height;
+    pself = ObjDerefVis(oself);
+    pself->UTI_imageViewportWidth = viewportWidth;
+    pself->UTI_imageViewportHeight = viewportHeight;
+    return TRUE;
+}
+
+@method URLTextClass, MSG_META_CONTENT_VIEW_SIZE_CHANGED
+{
+    @call self::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+    @callsuper();
+}
+
+@method URLTextClass, MSG_HTML_TEXT_SHOW_ITEM
+{
+    @call self::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+    @callsuper();
+}
+
+@method URLTextClass, MSG_VIS_OPEN
+{
+    @callsuper();
+    @call self::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+}
+
 @method URLTextClass, MSG_HTML_TEXT_INIT_STORAGE
 {
     AddCacheFileReference();            /* we're using the shared cache file */
@@ -1475,6 +1525,15 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         }
         else
         {
+          /* ATTENTION: Oversized placeholders remain until completion. If
+             earlier fitting is needed, batch it before layout rather than
+             invalidating each image during import. */
+          @call oself::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+          pself = ObjDerefVis(oself);
+          if(pself->UTI_imageViewportWidth && pself->UTI_imageViewportHeight)
+              @call oself::MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT(
+                pself->UTI_imageViewportWidth,
+                pself->UTI_imageViewportHeight);
           /* for now, force an update of the entire table structure */
           @call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT() ;
 
@@ -2385,6 +2444,9 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
     word i,n,size;
     HTMLimageData *p;
 
+    pself->UTI_imageViewportWidth = 0;
+    pself->UTI_imageViewportHeight = 0;
+
 #ifdef DO_DBCS
     /* set code page */
     pself->HTI_codePage = G_codePage;
@@ -2430,6 +2492,7 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
     }
 
     @callsuper() ;
+    @call self::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
 
 @ifdef COMPILE_OPTION_AUTO_BROWSE
     /* In AutoBrowsing build, also show JS diagnostics if enabled */

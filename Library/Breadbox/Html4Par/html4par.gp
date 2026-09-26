@@ -152,3 +152,4 @@ resource   FormStringCallbackMultiStrings lmem read-only shared
 
 incminor   HTMLTextCompactImages
 incminor   HTMLTextUnsupportedImages
+incminor   HTMLTextViewportImages

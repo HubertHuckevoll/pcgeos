@@ -1144,6 +1144,8 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
 
   @instance optr UTI_frame;
   @instance word UTI_numPendingRequests = 0 ;
+  @instance word UTI_imageViewportWidth = 0;
+  @instance word UTI_imageViewportHeight = 0;
 
   /* Tracks the amount of memory used by this text object */
   @instance dword UTI_usedMem = 0 ;
@@ -1156,6 +1158,7 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @message void MSG_URL_TEXT_PROCESS_GRAPHICS(Boolean forceLoad,
     Boolean bypassIntelligent);
   @message void MSG_URL_TEXT_MARK_VISITED_LINKS();
+  @message Boolean MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
 
   @message void MSG_URL_TEXT_SET_FRAME_OBJ(optr frameObject);
   @message optr MSG_URL_TEXT_GET_FRAME_OBJ();
