@@ -348,9 +348,11 @@ typedef struct {
   NameToken     HFD_value;              // Initial value or text of element
                                         //  FILE: accept=...
                                         //  TEXTAREA: contents of token
+                                        //  BUTTON: submitted value
                                         //  HEADER: target= ...
   NameToken     HFD_prompt;             // Prompt for text input and choice
                                         // list dialogs
+                                        //  BUTTON: displayed caption
                                         //  HEADER: name=
 
   dword         HFD_runtimeState;       /* may be used to hold current
@@ -414,6 +416,7 @@ typedef struct {
       word        flags ;
         #define HTML_SUBMIT_PRESSED 0x0001
 	#define HTML_BUTTON_ONCLICK 0x0002
+	#define HTML_BUTTON_CONTENT 0x0004
     } submit ;
   } HFD_var;
 

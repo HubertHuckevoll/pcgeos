@@ -2905,12 +2905,14 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
         {
           if(EnclosingCount(SPEC_TITLE, NULL) ||
              EnclosingCount(SPEC_TEXTAREA, NULL) ||
-             EnclosingCount(SPEC_OPTION, NULL))
+             EnclosingCount(SPEC_OPTION, NULL) ||
+             EnclosingCount(SPEC_BUTTON, NULL))
           {
-	      /* nuke trailing spaces for TITLE and OPTION (all whitespace
+	      /* nuke trailing spaces for TITLE, OPTION, and BUTTON (all whitespace
 	         is equal (i.e. ignored)) */
 	      if (EnclosingCount(SPEC_TITLE, NULL) ||
-		  EnclosingCount(SPEC_OPTION, NULL)) {
+		  EnclosingCount(SPEC_OPTION, NULL) ||
+		  EnclosingCount(SPEC_BUTTON, NULL)) {
 		  while(STRLENSB(buf) && (buf[(STRLENSB(buf)-1)] == ' ')) {
 		      buf[(STRLENSB(buf)-1)] = C_NULL;
 		  }

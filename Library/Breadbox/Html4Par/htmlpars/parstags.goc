@@ -510,6 +510,47 @@ void LOCAL PopStyle(word n)
       break;
 
     /*------------------------------------------------------------------------*/
+    case SPEC_BUTTON:
+      {
+        HTMLformData fd;
+        char *p;
+        word element;
+
+        if(!KeepFormControl())
+        {
+            if(storedContent != NAME_POOL_NONE)
+                NamePoolReleaseToken(NamePool, storedContent);
+            storedContent = NAME_POOL_NONE;
+            break;
+        }
+
+        memset(&fd, 0, sizeof(fd));
+        fd.HFD_itemType = HTML_FORM_SUBMIT;
+        p = GetParamValue(paramArray, "TYPE");
+        if(p)
+        {
+            if(!STRCMPISB(p, "RESET"))
+                fd.HFD_itemType = HTML_FORM_RESET;
+            else if(!STRCMPISB(p, "BUTTON"))
+                fd.HFD_itemType = HTML_FORM_BUTTON;
+        }
+
+        p = GetParamValue(paramArray, "NAME");
+        if(p && *p)
+            fd.HFD_name = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        p = GetParamValue(paramArray, "VALUE");
+        if(p && *p)
+            fd.HFD_value = NamePoolTokenizeDOS(NamePool, p, FALSE);
+        fd.HFD_prompt = storedContent;
+        storedContent = NAME_POOL_NONE;
+        fd.HFD_var.submit.flags |= HTML_BUTTON_CONTENT;
+
+        element = AddFormElement(&fd);
+        ParseEvents(paramArray, HTML_EVENT_OBJECT_ELEMENT, element);
+      }
+      break;
+
+    /*------------------------------------------------------------------------*/
     case SPEC_TEXTAREA:
       {
         HTMLformData fd;

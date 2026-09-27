@@ -213,7 +213,10 @@
         0,
         },
 
-  /*** BUTTON: to be implemented ***/
+  {"BUTTON",    OptrToChunk(@vcdNone), OptrToChunk(@vpdNone),
+        SPEC_BUTTON,
+        TAG_IS_PAR_STYLE|TAG_NO_FORMATTING|TAG_FLUSH_TEXT|TAG_IGNORE_TAGS,
+        },
   /*** CAPTION: to be implemented ***/
 
   {"CENTER",    OptrToChunk(@vcdNone), OptrToChunk(@vpdCenter),
