@@ -864,6 +864,11 @@ void _pascal Open_A(TagOpenArguments *arg)
     }
 }
 
+void _pascal Open_BUTTON(TagOpenArguments *arg)
+{
+    arg->preserveParams = TRUE;
+}
+
 #pragma argsused
 void _pascal Open_Hx(TagOpenArguments *arg)
 {
@@ -1887,6 +1892,7 @@ OpenHandlerEntry OpenHandlers[] =
   {SPEC_MAP,            Open_MAP},
   {SPEC_OPTION,         Open_OPTION},
   {SPEC_TEXTAREA,       Open_TEXTAREA},
+  {SPEC_BUTTON,         Open_BUTTON},
   {SPEC_TABLE,          Open_TABLE},
   {SPEC_TR,             Open_TR},
   {SPEC_TD,             Open_TD},
