@@ -389,6 +389,7 @@ void GetCharacterBase(VisTextCharAttr *cs);
 void GetParagraphBase(VisTextParaAttr *cs);
 
 word EnclosingCount(SpecialTagType spec, word *top);
+Boolean _pascal KeepFormControl(void);
 void GetCurrentStyles(void);
 void FixupStartPos(dword pos);
 void InitTagStacks(MemHandle localHeap);

@@ -1414,6 +1414,18 @@ void _pascal Open_FORM_INPUT_SELECT(TagOpenArguments *arg)
     char *p, *p1, *p2, *p3;
     word element;
 
+    /* Drop stray controls before they add form records. FORM itself is
+     * pushed after this handler, so it must bypass this check.
+     */
+    if((arg->spec == SPEC_INPUT || arg->spec == SPEC_SELECT) &&
+       !KeepFormControl())
+    {
+        /* A rejected SELECT must not leave an earlier menu active. */
+        if(arg->spec == SPEC_SELECT)
+            currentMenu = CA_NULL_ELEMENT;
+        return;
+    }
+
     memset(&fd, 0, sizeof(fd));     /* set form record to default */
 
     p1 = GetParamValue(arg->paramArray, "NAME");
