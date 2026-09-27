@@ -143,6 +143,15 @@ word EnclosingCount(SpecialTagType spec, word *top)
     return n;                           /* return count */
 }
 
+/* Without JavaScript, omit controls with no FORM ancestor so stray
+ * controls do not clutter the document. Scripts may still use them.
+ */
+Boolean _pascal KeepFormControl(void)
+{
+    return ((HTMLext->HE_options & HTML_JAVASCRIPT) ||
+            EnclosingCount(SPEC_FORM, NULL));
+}
+
 /*
  * Requires localHeap to be locked.
  */
@@ -507,6 +516,21 @@ void LOCAL PopStyle(word n)
         char *p;
 	word element;
 
+        if(!KeepFormControl())
+        {
+            /* A stray TEXTAREA adds no control; release its collected
+             * content instead of storing it in a form record.
+             */
+            /* ATTENTION: Closing-time form membership can suppress a
+             * TEXTAREA whose FORM was already closed; store opening-time
+             * membership on the tag stack if malformed markup needs support.
+             */
+            if(storedContent != NAME_POOL_NONE)
+                NamePoolReleaseToken(NamePool, storedContent);
+            storedContent = NAME_POOL_NONE;
+            break;
+        }
+
         memset(&fd, 0, sizeof(fd));     /* set form record to default */
 
         p = GetParamValue(paramArray, "ROWS");
@@ -553,7 +577,13 @@ void LOCAL PopStyle(word n)
         char *p;
 
         if(currentMenu==CA_NULL_ELEMENT)
-          break;                        /* ignore unconnected options */
+        {
+            /* An OPTION with no active SELECT adds no record; release its text. */
+            if(storedContent != NAME_POOL_NONE)
+                NamePoolReleaseToken(NamePool, storedContent);
+            storedContent = NAME_POOL_NONE;
+            break;                      /* ignore unconnected options */
+        }
 
         memset(&fd, 0, sizeof(fd));     /* set form record to default */
 
@@ -580,6 +610,8 @@ void LOCAL PopStyle(word n)
     /*------------------------------------------------------------------------*/
     case SPEC_SELECT:
       ForceCloseStyle(SPEC_OPTION, SPEC_DONT_MATCH);
+      /* Following OPTIONs must not attach to the closed menu. */
+      currentMenu = CA_NULL_ELEMENT;
       break;
 
     /*------------------------------------------------------------------------*/
