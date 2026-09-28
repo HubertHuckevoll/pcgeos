@@ -918,6 +918,10 @@ void LOCAL IMarkAllImagesUnresolved(optr imageArray)
         imageArrayElement->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
                                       HTML_IDF_BROKEN | HTML_IDF_UNSUPPORTED |
                                       HTML_IDF_SIZE_DIRTY) ;
+        if ((imageArrayElement->flags & HTML_IDF_INLINE_SVG) &&
+            (!imageArrayElement->svgSourceLength ||
+             (imageArrayElement->flags & HTML_IDF_SVG_UNSUPPORTED)))
+            imageArrayElement->flags |= HTML_IDF_BROKEN;
 
         /* Make sure we're note associated with any graphic */
         imageArrayElement->HID_cacheToken = 0;
@@ -2594,6 +2598,7 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
     {
         imageP = ChunkArrayElementToPtr(imageArray, i, &size);
         if(imageP->pos < HTML_IMAGE_POS_RESERVED &&
+           (!inlineSVGOnly || (imageP->flags & HTML_IDF_INLINE_SVG)) &&
            !(imageP->flags & (HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED |
                               HTML_IDF_BROKEN)) &&
            HTMLTextFitImageToViewport(imageP, viewportWidth,
@@ -2647,6 +2652,8 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
 
     RegionPurgeCache(oself) ;
     pself = ObjDerefVis(oself);
+    if(data->pos < HTML_IMAGE_POS_RESERVED && viewportWidth && viewportHeight)
+        HTMLTextFitImageToViewport(data, viewportWidth, viewportHeight);
     /*
      * Update image record in table
      */
@@ -2760,7 +2767,8 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
         imageArrayElement = ChunkArrayElementToPtr(array, i, &size);
         if((imageArrayElement->flags &
             (HTML_IDF_BROKEN | HTML_IDF_RESOLVING)) &&
-           !(imageArrayElement->flags & HTML_IDF_UNSUPPORTED))
+           !(imageArrayElement->flags &
+             (HTML_IDF_UNSUPPORTED | HTML_IDF_SVG_UNSUPPORTED)))
         {
           ret = TRUE;                   /* found unresolved image? abort */
           break;
@@ -2786,12 +2794,14 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
       array = pself->HTI_imageArray;
       for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)  {
         imageArrayElement = ChunkArrayElementToPtr(array, i, NULL);
-        if(imageArrayElement->flags & HTML_IDF_UNSUPPORTED)
+        if(imageArrayElement->flags &
+           (HTML_IDF_UNSUPPORTED | HTML_IDF_SVG_UNSUPPORTED))
             continue;
         if (imageArrayElement->flags & HTML_IDF_BROKEN)
             imageArrayElement->flags &= 
                  ~(HTML_IDF_BROKEN | HTML_IDF_RESOLVED) ;
-        if (imageArrayElement->flags & HTML_IDF_RESOLVING) 
+        if ((imageArrayElement->flags & HTML_IDF_RESOLVING) &&
+            !(imageArrayElement->flags & HTML_IDF_INLINE_SVG))
             imageArrayElement->flags &= ~HTML_IDF_RESOLVING ;
       }
       MemUnlock(OptrToHandle(pself->HTI_imageArray));

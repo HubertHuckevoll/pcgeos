@@ -1471,6 +1471,78 @@ int lc;
 ReadHTML_getc *gc;
 dword data;
 
+static char svgSource[1024];
+static word svgSourceUsed;
+static dword svgSourceLen;
+static dword svgSourceOffset;
+static VMBlockHandle svgSourceBlock;
+static Boolean svgSourceFailed;
+static Boolean svgHasShape;
+static Boolean svgUnsupported;
+static Boolean captureTagBytes;
+word svgImageIndex;
+
+static Boolean LOCAL SVGAppend(int c)
+{
+    dword count, appendPos;
+
+    if (svgSourceFailed || svgSourceUsed >= sizeof(svgSource))
+        return FALSE;
+    svgSource[svgSourceUsed++] = (char)c;
+    if (svgSourceUsed < sizeof(svgSource))
+        return TRUE;
+    if (!svgSourceBlock || svgSourceFailed)
+    {
+        svgSourceFailed = TRUE;
+        svgSourceUsed = 0;
+        return FALSE;
+    }
+    count = HugeArrayGetCount(HTMLext->HE_vmFile, svgSourceBlock);
+    appendPos = HugeArrayAppend(HTMLext->HE_vmFile, svgSourceBlock,
+                                svgSourceUsed, svgSource);
+    if (appendPos != count ||
+        HugeArrayGetCount(HTMLext->HE_vmFile, svgSourceBlock) !=
+          count + svgSourceUsed)
+        svgSourceFailed = TRUE;
+    else
+        svgSourceLen += svgSourceUsed;
+    svgSourceUsed = 0;
+    return !svgSourceFailed;
+}
+
+void LOCAL SVGStartSource(void)
+{
+    dword appendPos;
+
+    svgSourceBlock = VMCHAIN_GET_VM_BLOCK(htbh->HTBH_svgSourceData);
+    if (!svgSourceBlock)
+    {
+        svgSourceBlock = HugeArrayCreate(HTMLext->HE_vmFile, 1, 0);
+        if (svgSourceBlock)
+        {
+            htbh->HTBH_svgSourceData =
+              VMCHAIN_MAKE_FROM_VM_BLOCK(svgSourceBlock);
+            VMDirty(hypertextHeaderMem);
+        }
+    }
+    if (!svgSourceBlock)
+    {
+        svgSourceFailed = TRUE;
+        return;
+    }
+    svgSourceOffset = HugeArrayGetCount(HTMLext->HE_vmFile, svgSourceBlock);
+    if (svgSourceUsed)
+    {
+        appendPos = HugeArrayAppend(HTMLext->HE_vmFile, svgSourceBlock,
+                                    svgSourceUsed, svgSource);
+        if (appendPos != svgSourceOffset)
+            svgSourceFailed = TRUE;
+        else
+            svgSourceLen += svgSourceUsed;
+        svgSourceUsed = 0;
+    }
+}
+
 int LOCAL HTMLgetcLow()
 {
     int c;
@@ -1481,8 +1553,11 @@ int LOCAL HTMLgetcLow()
 	(byte *)scriptSrc += HTMLext->HE_scriptSrcOffset;
 	if (scriptSrc->block) {
 	    c = getcScriptURL((dword)scriptSrc);
-	    if(c != EOF)
+	    if(c != EOF) {
+		if (captureTagBytes)
+		    SVGAppend(c);
 		return c;
+	    }
 	    lc = 0;  /* make sure we don't match CR/LF from script and HTML */
 	}
     }
@@ -1499,10 +1574,201 @@ int LOCAL HTMLgetcLow()
 	    if( ((HTMLFILE *)data)->HTMLbufl==0 )
 	      return EOF;               /* read against end of file */
         }
-        return ((HTMLFILE *)data)->HTMLbuf[ ((HTMLFILE *)data)->HTMLbufp++ ];
+        c = ((HTMLFILE *)data)->HTMLbuf[ ((HTMLFILE *)data)->HTMLbufp++ ];
                                         /* return next character from file */
     }
+    if (captureTagBytes && c != EOF)
+        SVGAppend(c);
     return c;
+}
+
+/* Keep scanning after a storage failure so the HTML parser resumes after
+ * </svg>; the source itself is appended incrementally to the page HugeArray. */
+Boolean LOCAL ScanSVGContent()
+{
+    int c, q;
+    word nameLen;
+    char name[16];
+    Boolean inTag, closing, selfClose, complete, nameDone, inComment;
+    byte commentDashes;
+    sword depth;
+
+    inTag = FALSE;
+    closing = FALSE;
+    selfClose = FALSE;
+    complete = FALSE;
+    depth = 1;
+    q = 0;
+    inComment = FALSE;
+    commentDashes = 0;
+    nameDone = FALSE;
+    nameLen = 0;
+    name[0] = 0;
+    while (!G_abortParse && !G_hitAllocLimit &&
+           (c = HTMLgetcLow()) != EOF)
+    {
+        SVGAppend(c);
+        if (inComment)
+        {
+            if (c == '-')
+            {
+                if (commentDashes < 2)
+                    commentDashes++;
+            }
+            else if (c == '>' && commentDashes == 2)
+                inComment = FALSE;
+            else
+                commentDashes = 0;
+            continue;
+        }
+        if (!inTag)
+        {
+            if (c == '<')
+            {
+                inTag = TRUE;
+                closing = FALSE;
+                selfClose = FALSE;
+                q = 0;
+                nameLen = 0;
+                nameDone = FALSE;
+                name[0] = 0;
+            }
+            continue;
+        }
+        if (q)
+        {
+            if (c == q)
+                q = 0;
+            continue;
+        }
+        if (c == '"' || c == '\'')
+        {
+            q = c;
+            continue;
+        }
+        if (!nameLen && !nameDone && c == '/')
+        {
+            closing = TRUE;
+            continue;
+        }
+        if (c == '>' || c == ' ' || c == '\r' || c == '\n' ||
+            c == '\t' || c == '/')
+            nameDone = TRUE;
+        else if (!nameDone)
+        {
+            if (nameLen < 15)
+                name[nameLen] = (char)((c >= 'A' && c <= 'Z') ? c + 32 : c);
+            if (nameLen < 16)
+                nameLen++;
+            if (nameLen <= 15)
+                name[nameLen] = 0;
+            if (nameLen == 3 && !strcmp(name, "!--"))
+            {
+                inComment = TRUE;
+                inTag = FALSE;
+                commentDashes = 0;
+                continue;
+            }
+        }
+        if (c == '/')
+            selfClose = TRUE;
+        else if (c != ' ' && c != '\r' && c != '\n' && c != '\t')
+            selfClose = FALSE;
+        if (c == '>')
+        {
+            if (!closing)
+            {
+                if (!strcmp(name, "path") || !strcmp(name, "line") ||
+                    !strcmp(name, "polyline") || !strcmp(name, "polygon") ||
+                    !strcmp(name, "rect") || !strcmp(name, "ellipse") ||
+                    !strcmp(name, "circle"))
+                    svgHasShape = TRUE;
+                if (!strcmp(name, "use") || !strcmp(name, "text") ||
+                    !strcmp(name, "image") || !strcmp(name, "script") ||
+                    !strcmp(name, "foreignobject"))
+                    svgUnsupported = TRUE;
+            }
+            if (nameLen == 3 && !strcmp(name, "svg"))
+            {
+                if (closing)
+                {
+                    if (--depth == 0)
+                    {
+                        complete = TRUE;
+                        break;
+                    }
+                }
+                else if (!selfClose)
+                    depth++;
+            }
+            inTag = FALSE;
+        }
+    }
+    return complete;
+}
+
+void LOCAL StoreSVGSource(Boolean complete)
+{
+    HTMLimageData image;
+    HypertextArrayBlockHeader *arrays;
+    HTMLimageData *imageP;
+    VMBlockHandle sourceBlock;
+    VMBlockHandle arrayBlock;
+    MemHandle memHandle;
+    MemHandle arrayMem;
+    ChunkHandle imageChunk;
+    optr imageArray;
+    optr imageO;
+    dword count;
+    dword appendPos;
+    Boolean stored;
+
+    if (svgImageIndex == HTML_IMAGE_INDEX_NONE)
+        return;
+    sourceBlock = svgSourceBlock;
+    if (svgSourceUsed && sourceBlock && !svgSourceFailed)
+    {
+        count = HugeArrayGetCount(HTMLext->HE_vmFile, sourceBlock);
+        appendPos = HugeArrayAppend(HTMLext->HE_vmFile, sourceBlock,
+                                    svgSourceUsed, svgSource);
+        if (appendPos != count ||
+            HugeArrayGetCount(HTMLext->HE_vmFile, sourceBlock) !=
+              count + svgSourceUsed)
+            svgSourceFailed = TRUE;
+        else
+            svgSourceLen += svgSourceUsed;
+    }
+    svgSourceUsed = 0;
+    stored = complete && !svgSourceFailed && svgSourceLen && sourceBlock;
+    if (stored)
+    {
+        arrayBlock = VMCHAIN_GET_VM_BLOCK(htbh->HTBH_arrayBlock);
+        arrays = VMLock(HTMLext->HE_vmFile, arrayBlock, &memHandle);
+        imageArray = ConstructOptr(memHandle, arrays->HABH_imageArray);
+        imageP = ChunkArrayElementToPtr(imageArray, svgImageIndex, NULL);
+        image = *imageP;
+        VMUnlock(memHandle);
+        image.svgSourceOffset = svgSourceOffset;
+        image.svgSourceLength = svgSourceLen;
+        if (svgUnsupported || !svgHasShape)
+            image.flags |= HTML_IDF_SVG_UNSUPPORTED | HTML_IDF_BROKEN;
+        ModifyHypertextArray(HTA_IMAGE_ARRAY, &image, sizeof(image),
+                             svgImageIndex);
+    }
+    else
+    {
+        arrays = VMLock(HTMLext->HE_vmFile,
+          VMCHAIN_GET_VM_BLOCK(htbh->HTBH_arrayBlock), &arrayMem);
+        imageChunk = arrays->HABH_imageArray;
+        if (imageChunk)
+        {
+            imageO = ConstructOptr(arrayMem, imageChunk);
+            imageP = ChunkArrayElementToPtr(imageO, svgImageIndex, NULL);
+            imageP->flags |= HTML_IDF_BROKEN;
+            VMDirty(arrayMem);
+        }
+        VMUnlock(arrayMem);
+    }
 }
 
 int LOCAL HTMLgetc(void)
@@ -2114,7 +2380,18 @@ int LOCAL HandleTag(MemHandle localHeap)
     char tag[HTML_MAXTAG+1];
     byte seenAttributes[HTML_ATTRIBUTE_SEEN_BYTES];
     word paramBytes;
+    Boolean svgComplete;
 
+    svgSourceUsed = 0;
+    svgSourceLen = 0;
+    svgSourceOffset = 0;
+    svgSourceBlock = 0;
+    svgSourceFailed = FALSE;
+    svgHasShape = FALSE;
+    svgUnsupported = FALSE;
+    svgImageIndex = HTML_IMAGE_INDEX_NONE;
+    captureTagBytes = TRUE;
+    SVGAppend('<');
     c=HTMLgetc();
     if(c=='/')
     {
@@ -2151,6 +2428,7 @@ int LOCAL HandleTag(MemHandle localHeap)
     if(openTag && !STRCMPSB(tag, "SCRIPT"))
 #endif
     {
+      captureTagBytes = FALSE;
       ce=0;
       while(c!=EOF && (c!='>' || ce))
       {
@@ -2164,6 +2442,7 @@ int LOCAL HandleTag(MemHandle localHeap)
       c=SkipRawTextContent(endScript, c);
       if(c=='>')
         c=HTMLgetc();
+      captureTagBytes = FALSE;
       return c;
     }
 
@@ -2173,6 +2452,10 @@ int LOCAL HandleTag(MemHandle localHeap)
     MemLock( OptrToHandle(@HTMLStylesChunk) );
     tagStyleEntry = ((HTMLStylesTable *)LMemDeref(@HTMLStylesChunk))[tagStyle];
     MemUnlock( OptrToHandle(@HTMLStylesChunk) );
+    if (!openTag || tagStyleEntry.spec != SPEC_SVG)
+        captureTagBytes = FALSE;
+    else
+        SVGStartSource();
 
     /* STYLE is raw text and must not let CSS markup affect tag parsing. */
     if(openTag && !ignoreTags && tagStyleEntry.spec==SPEC_STYLE)
@@ -2190,6 +2473,7 @@ int LOCAL HandleTag(MemHandle localHeap)
       c=SkipRawTextContent(endStyle, c);
       if(c=='>')
         c=HTMLgetc();
+      captureTagBytes = FALSE;
       return c;
     }
 
@@ -2376,8 +2660,22 @@ int LOCAL HandleTag(MemHandle localHeap)
                 EnclosingCount(SPEC_OBJECT, NULL))) {
             ignoreTags++ ;
         }
-	paramArray = NullOptr;		/* params were consumed */
+        paramArray = NullOptr;		/* params were consumed */
     }
+    if (openTag && tagStyleEntry.spec == SPEC_SVG && !ignoreTags)
+    {
+        captureTagBytes = FALSE;
+        svgComplete = (c == '>') ?
+          (closeTag ? TRUE : ScanSVGContent()) : FALSE;
+        StoreSVGSource(svgComplete);
+        if (c != '>')
+            return c;
+        if (G_abortParse || G_hitAllocLimit)
+            return EOF;
+        lc = 0;
+        return HTMLgetc();
+    }
+    captureTagBytes = FALSE;
     if(closeTag) {                      /* closing a tag? */
         /* ignore if should ignore enclosed tags */
         if ((tagStyleEntry.flags & TAG_IGNORE_TAGS) ||

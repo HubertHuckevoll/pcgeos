@@ -647,7 +647,8 @@ char * LOCAL FindSmallestSrcset(char *srcset, char *src, word *selectedLen)
  *  array element index is passend in the element parameter, the image
  *  is marked as a submit button and linked to the specified form element.
  */
-word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
+word LOCAL ParseImage(optr paramArray, word element, Boolean parseName,
+                      Boolean inlineSVG)
 {
     HTMLimageData id;
     VisTextCharAttr vcaImage;
@@ -655,6 +656,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
     char *altName, *p, *src, *srcset;
     Boolean altExplicit;
     word selectedSrcLen, srcLen;
+    char inlineName[24];
 @ifdef DO_DBCS
     const char c_graphic[] = {C_SUBSTITUTE, 0};
 @else
@@ -707,7 +709,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
     srcLen = selectedSrcLen ? selectedSrcLen :
       (src ? STRLENSB(src) : 0);
 
-    if ((parseName && id.name != NAME_POOL_NONE) || (p && *p)) {
+    if ((parseName && id.name != NAME_POOL_NONE) || (p && *p) || inlineSVG) {
 
       GetCharacterBase(&vcaImage);      /* image style based on default */
       vcaImage.VTCA_pointSize.WBF_frac = 0 ;
@@ -721,6 +723,8 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
                                         /* embed placeholder character */
 
       id.flags = 0;                     /* no special attributes so far */
+      if (inlineSVG)
+        id.flags |= HTML_IDF_INLINE_SVG;
       if(altExplicit)
         id.flags |= HTML_IDF_ALT_EXPLICIT;
 
@@ -729,7 +733,10 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
         id.flags |= HTML_IDF_SUBMIT;
 
       id.imageALT = NAME_POOL_NONE;     /* default: no alternative text */
-      if (p && *p) {
+      if (inlineSVG) {
+          sprintf(inlineName, "inline-svg-%u", G_imageCount);
+          id.imageURL = NamePoolTokenizeDOS(NamePool, inlineName, FALSE);
+      } else if (p && *p) {
 	  id.imageURL = selectedSrcLen ?
             NamePoolTokenizeLenDOS(NamePool, p, selectedSrcLen, FALSE) :
             NamePoolTokenizeDOS(NamePool, p, FALSE);
@@ -825,6 +832,8 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
           vtg.VTG_size.XYS_height = 0 ;
  
       ret = AppendToHypertextArray(HTA_IMAGE_ARRAY, &id);
+      if (inlineSVG)
+          svgImageIndex = ret;
                                         /* add image record to array */
       ((HTMLimageGraphicVariable *)
         &vtg.VTG_data.VTGD_variable.VTGV_privateData)->HIGV_imageIndex = ret;         
@@ -988,9 +997,12 @@ void _pascal Open_IMG(TagOpenArguments *arg)
     if ((p) && (*p))
         if ((0==STRCMPISB(p, "LEFT")) || (0==STRCMPISB(p, "RIGHT")))
             haveAlign = TRUE ;
+    if (arg->spec == SPEC_SVG)
+        haveAlign = FALSE;
 
     if ((insideHere) || (!haveAlign))  {
-        image = ParseImage(arg->paramArray, CA_NULL_ELEMENT, TRUE);
+        image = ParseImage(arg->paramArray, CA_NULL_ELEMENT, TRUE,
+                           arg->spec == SPEC_SVG);
         
         /* Attach event handlers */
         if(image != CA_NULL_ELEMENT)
@@ -1594,7 +1606,7 @@ void _pascal Open_FORM_INPUT_SELECT(TagOpenArguments *arg)
 
         /* Handle image part of <INPUT type=image ...> and embed graphic. */
         if(fd.HFD_itemType == HTML_FORM_IMAGE)
-          ParseImage(arg->paramArray, element, FALSE);
+          ParseImage(arg->paramArray, element, FALSE, FALSE);
 
         /* Create entries for event handlers, if any */
         ParseEvents(arg->paramArray, 
@@ -1916,6 +1928,7 @@ OpenHandlerEntry OpenHandlers[] =
   {SPEC_HR,             Open_HR},
   {SPEC_BR,             Open_BR},
   {SPEC_IMG,            Open_IMG},
+  {SPEC_SVG,            Open_IMG},
   {SPEC_BODY,           Open_BODY},
   {SPEC_BASEFONT,       Open_BASEFONT},
   {SPEC_FONT,           Open_FONT},

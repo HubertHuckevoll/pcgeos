@@ -81,8 +81,9 @@ typedef struct {
     RectDWord visible;
     dword width, height;
     word viewportWidth, viewportHeight;
+    word oldWidth, oldHeight;
 
-    if(pself->UTI_imageViewportWidth || !pself->HTI_myView ||
+    if(!pself->HTI_myView ||
        !pself->HTI_imageArray || !pself->HTI_cellArray ||
        !pself->VLTI_regionArray)
         return FALSE;
@@ -90,7 +91,12 @@ typedef struct {
     @call pself->HTI_myView::MSG_GEN_VIEW_GET_VISIBLE_RECT(&visible);
     if(visible.RD_right <= visible.RD_left ||
        visible.RD_bottom <= visible.RD_top)
+    {
+        pself = ObjDerefVis(oself);
+        pself->UTI_imageViewportWidth = 0;
+        pself->UTI_imageViewportHeight = 0;
         return FALSE;
+    }
 
     width = visible.RD_right - visible.RD_left;
     height = visible.RD_bottom - visible.RD_top;
@@ -103,8 +109,15 @@ typedef struct {
     viewportWidth = width;
     viewportHeight = height;
     pself = ObjDerefVis(oself);
+    oldWidth = pself->UTI_imageViewportWidth;
+    oldHeight = pself->UTI_imageViewportHeight;
     pself->UTI_imageViewportWidth = viewportWidth;
     pself->UTI_imageViewportHeight = viewportHeight;
+    if((!oldWidth && viewportWidth) || (!oldHeight && viewportHeight) ||
+       (oldWidth && viewportWidth < oldWidth) ||
+       (oldHeight && viewportHeight < oldHeight))
+        @call oself::MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT(
+          viewportWidth, viewportHeight, TRUE);
     return TRUE;
 }
 
@@ -866,6 +879,332 @@ ImageURLGetUnsupportedFormat(NameToken nameT, word *formatFlagsP)
 void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
 		     word invalFrom, word invalTo);
 
+NameToken LOCAL URLTextInlineSVGName(URLTextInstance *textP,
+                                     word imageIndex)
+{
+    TCHAR name[48];
+
+    sprintf(name, _TEXT("inline-svg:%u:%u:%u"), textP->VTI_vmFile,
+      VMCHAIN_GET_VM_BLOCK(textP->HTI_transferItem), imageIndex);
+    return NamePoolTokenize(namePool, name, FALSE);
+}
+
+word LOCAL ProcessInlineSVG(HTMLimageData *p, optr oself,
+                           URLTextInstance *textP)
+{
+    HypertextTransferBlockHeader *htbh;
+    MemHandle headMem;
+    VMBlockHandle sourceBlock;
+    VMFileHandle vmf;
+    FileHandle file;
+    TCHAR tempPath[PATH_BUFFER_SIZE/sizeof(TCHAR) + 14];
+    TCHAR *tempPathP;
+    word count, toCopy, written;
+    dword offset;
+    char *sourceP;
+    Boolean ok;
+    FileError closeError;
+    NameToken nameT;
+    ObjCacheToken oct;
+    extern Boolean G_stopped;
+
+    if ((p->flags & HTML_IDF_SVG_UNSUPPORTED) ||
+        !p->svgSourceLength || G_stopped)
+        return FALSE;
+    nameT = p->HID_resolvedURL;
+    if(textP->UTI_svgObjCache && !textP->UTI_svgForceLoad)
+    {
+        oct = ObjCacheFindURL(OCT_GSTRING, nameT, TRUE, TRUE);
+        if(oct != OCT_NULL)
+        {
+            NamePoolUseToken(namePool, nameT);
+            @call oself::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
+              oct, nameT, 0, 0xFFFF);
+            return 2;
+        }
+    }
+    vmf = textP->VTI_vmFile;
+    htbh = VMLock(vmf, VMCHAIN_GET_VM_BLOCK(textP->HTI_transferItem),
+                  &headMem);
+    sourceBlock = VMCHAIN_GET_VM_BLOCK(htbh->HTBH_svgSourceData);
+    VMUnlock(headMem);
+    if (!sourceBlock)
+        return FALSE;
+
+    memset(tempPath, 0, sizeof(tempPath));
+    tempPathP = tempPath;
+#ifdef GLOBAL_INTERNET_BUILD
+    FileConstructFullPath(&tempPathP, PATH_BUFFER_SIZE,
+                          vmCacheSP, vmCacheDir, TRUE);
+#else
+    FileConstructFullPath(&tempPathP, PATH_BUFFER_SIZE,
+                          HTML_VMCACHE_SP, HTML_VMCACHE_DIR, TRUE);
+#endif
+    if (strlen(tempPath) + 14 >= PATH_BUFFER_SIZE/sizeof(TCHAR))
+        return FALSE;
+    file = FileCreateTempFile(tempPath,
+      FCF_NATIVE|FILE_DENY_RW|FILE_ACCESS_RW, 0);
+    if (!file)
+        return FALSE;
+
+    ok = TRUE;
+    offset = p->svgSourceOffset;
+    while (offset < (dword)p->svgSourceOffset + p->svgSourceLength &&
+           !G_stopped)
+    {
+        count = HAL_COUNT(HugeArrayLock(vmf, sourceBlock, offset,
+                                        (void **)&sourceP, &written));
+        if (!count)
+        {
+            ok = FALSE;
+            break;
+        }
+        toCopy = (word)((p->svgSourceLength -
+          (offset - p->svgSourceOffset)) < count ?
+          (p->svgSourceLength - (offset - p->svgSourceOffset)) : count);
+        written = FileWrite(file, sourceP, toCopy, FALSE);
+        HugeArrayUnlock(sourceP);
+        if (written != toCopy)
+        {
+            ok = FALSE;
+            break;
+        }
+        offset += toCopy;
+    }
+    closeError = FileClose(file, FALSE);
+    if (offset != (dword)p->svgSourceOffset + p->svgSourceLength ||
+        G_stopped || closeError)
+        ok = FALSE;
+    if (!ok)
+    {
+        FileDelete(tempPath);
+        return FALSE;
+    }
+
+    NamePoolUseToken(namePool, nameT);
+#if PROGRESS_DISPLAY
+    ok = ImportThreadRequestImportGraphic(oself, nameT,
+      _TEXT("image/svg+xml"), tempPath, TRUE, 0, HTML_IDF_FORMAT_SVG, NULL);
+#else
+    ok = ImportThreadRequestImportGraphic(oself, nameT,
+      _TEXT("image/svg+xml"), tempPath, TRUE, 0, HTML_IDF_FORMAT_SVG);
+#endif
+    if (!ok)
+    {
+        FileDelete(tempPath);
+        NamePoolReleaseToken(namePool, nameT);
+        return FALSE;
+    }
+    return 1;
+}
+
+#define MAX_INLINE_SVG_IMPORTS 2
+#define INLINE_SVG_BATCH_SIZE 8
+#define INLINE_SVG_PAUSE_TICKS 30
+
+Boolean LOCAL URLTextHasPendingInlineSVG(optr imageArray)
+{
+    HTMLimageData *imageP;
+    word i, n, size;
+    Boolean found;
+
+    found = FALSE;
+    if (!imageArray)
+        return FALSE;
+    MemLock(OptrToHandle(imageArray));
+    n = ChunkArrayGetCount(imageArray);
+    for (i = 0; i < n; i++)
+    {
+        imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+        if ((imageP->flags & HTML_IDF_INLINE_SVG) &&
+            !(imageP->flags & (HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
+                               HTML_IDF_SVG_UNSUPPORTED)) &&
+            imageP->svgSourceLength)
+        {
+            found = TRUE;
+            break;
+        }
+    }
+    MemUnlock(OptrToHandle(imageArray));
+    return found;
+}
+
+void LOCAL URLTextFinishInlineSVG(optr oself)
+{
+    URLTextInstance *textP;
+
+    textP = ObjDerefVis(oself);
+    if (textP->UTI_svgTimer)
+    {
+        TimerStop(textP->UTI_svgTimer, textP->UTI_svgTimerID);
+        textP->UTI_svgTimer = NullHandle;
+    }
+    textP->UTI_svgPreferredIndex = HTML_IMAGE_INDEX_NONE;
+    if (textP->UTI_svgCampaign || textP->UTI_svgRestartPending)
+    {
+        textP->UTI_svgCampaign = FALSE;
+        textP->UTI_svgRestartPending = FALSE;
+        textP->UTI_svgPaused = FALSE;
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
+    }
+}
+
+Boolean LOCAL URLTextIsOutstandingInlineSVG(URLTextInstance *textP,
+                                            NameToken url)
+{
+    return url != NAME_POOL_NONE &&
+      (textP->UTI_svgImportName1 == url ||
+       textP->UTI_svgImportName2 == url);
+}
+
+void LOCAL URLTextInlineSVGResult(optr oself, NameToken url,
+                                  Boolean inlineSVG)
+{
+    URLTextInstance *textP;
+    TimerHandle timerH;
+    Boolean request;
+
+    textP = ObjDerefVis(oself);
+    request = URLTextIsOutstandingInlineSVG(textP, url);
+    if (textP->UTI_svgImportName1 == url && url != NAME_POOL_NONE)
+        textP->UTI_svgImportName1 = NAME_POOL_NONE;
+    else if (textP->UTI_svgImportName2 == url && url != NAME_POOL_NONE)
+        textP->UTI_svgImportName2 = NAME_POOL_NONE;
+    if (!request && !inlineSVG)
+        return;
+    if (request && textP->UTI_svgOutstanding)
+    {
+        textP->UTI_svgOutstanding--;
+        if(!textP->UTI_svgOutstanding)
+            textP->UTI_svgIgnoreOutstanding = FALSE;
+    }
+    if (!textP->UTI_svgCampaign)
+    {
+        if(textP->UTI_svgRestartPending && !textP->UTI_svgOutstanding)
+            @send,forceQueue oself::MSG_URL_TEXT_START_INLINE_SVG_CAMPAIGN();
+        return;
+    }
+    textP->UTI_svgBatchResults++;
+    if (textP->UTI_svgBatchResults == INLINE_SVG_BATCH_SIZE &&
+        textP->UTI_svgBatchAdmissions == INLINE_SVG_BATCH_SIZE &&
+        !textP->UTI_svgOutstanding)
+    {
+        @call oself::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+        textP = ObjDerefVis(oself);
+        if (textP->UTI_imageViewportWidth && textP->UTI_imageViewportHeight)
+            @call oself::MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT(
+              textP->UTI_imageViewportWidth,
+              textP->UTI_imageViewportHeight, TRUE);
+        if (URLTextHasPendingInlineSVG(textP->HTI_imageArray))
+        {
+            timerH = TimerStart(TIMER_EVENT_ONE_SHOT, oself,
+              INLINE_SVG_PAUSE_TICKS, MSG_URL_TEXT_INLINE_SVG_TIMER, 0,
+              &textP->UTI_svgTimerID);
+            textP = ObjDerefVis(oself);
+            if(timerH)
+            {
+                textP->UTI_svgPaused = TRUE;
+                textP->UTI_svgTimer = timerH;
+            }
+            else
+            {
+                textP->UTI_svgPaused = FALSE;
+                textP->UTI_svgBatchAdmissions = 0;
+                textP->UTI_svgBatchResults = 0;
+                @send,forceQueue oself::MSG_URL_TEXT_ADMIT_INLINE_SVGS();
+            }
+        }
+        else
+            URLTextFinishInlineSVG(oself);
+    }
+    else if (!textP->UTI_svgOutstanding &&
+             !URLTextHasPendingInlineSVG(textP->HTI_imageArray))
+        URLTextFinishInlineSVG(oself);
+    else
+        @send,forceQueue oself::MSG_URL_TEXT_ADMIT_INLINE_SVGS();
+}
+
+void LOCAL ProcessPendingInlineSVG(optr oself)
+{
+    URLTextInstance *textP;
+    optr imageArray;
+    HTMLimageData *imageP;
+    HTMLimageData imageCopy;
+    word i, n, size, active, admitted, pass, end, preferred, result;
+    extern Boolean G_stopped;
+
+    textP = ObjDerefVis(oself);
+    imageArray = textP->HTI_imageArray;
+    if (!imageArray || textP->UTI_doomed || G_stopped ||
+        !textP->UTI_svgCampaign || textP->UTI_svgPaused)
+        return;
+
+    MemLock(OptrToHandle(imageArray));
+    n = ChunkArrayGetCount(imageArray);
+    active = textP->UTI_svgOutstanding;
+    admitted = 0;
+    preferred = textP->UTI_svgPreferredIndex;
+    for (pass = 0; pass < 2 && active < MAX_INLINE_SVG_IMPORTS &&
+         textP->UTI_svgBatchAdmissions < INLINE_SVG_BATCH_SIZE; pass++)
+    {
+        if(pass == 0 && preferred != HTML_IMAGE_INDEX_NONE)
+        {
+            textP->UTI_svgPreferredIndex = HTML_IMAGE_INDEX_NONE;
+            i = preferred;
+            end = preferred < n ? preferred + 1 : preferred;
+        }
+        else
+        {
+            i = 0;
+            end = n;
+        }
+        for(; i < end && active < MAX_INLINE_SVG_IMPORTS &&
+             textP->UTI_svgBatchAdmissions < INLINE_SVG_BATCH_SIZE; i++)
+        {
+            imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+            if (!(imageP->flags & HTML_IDF_INLINE_SVG) ||
+                (imageP->flags & (HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
+                                  HTML_IDF_SVG_UNSUPPORTED)) ||
+                !imageP->svgSourceLength)
+                continue;
+            imageCopy = *imageP;
+            textP->UTI_svgBatchAdmissions++;
+            admitted++;
+            MemUnlock(OptrToHandle(imageArray));
+            @call oself::MSG_URL_TEXT_INC_PENDING();
+            result = ProcessInlineSVG(&imageCopy, oself, ObjDerefVis(oself));
+            if (result == 1)
+            {
+                @call oself::MSG_HTML_TEXT_MARK_IMAGE_RESOLVING(i);
+                active++;
+                textP = ObjDerefVis(oself);
+                textP->UTI_svgOutstanding++;
+                if(textP->UTI_svgImportName1 == NAME_POOL_NONE)
+                    textP->UTI_svgImportName1 = imageCopy.HID_resolvedURL;
+                else
+                    textP->UTI_svgImportName2 = imageCopy.HID_resolvedURL;
+            }
+            else if (result == 2)
+            {
+                @call oself::MSG_URL_TEXT_DEC_PENDING();
+            }
+            else
+            {
+                @call oself::MSG_HTML_TEXT_MARK_IMAGE_BROKEN(i);
+                @call oself::MSG_URL_TEXT_DEC_PENDING();
+                URLTextInlineSVGResult(oself, NAME_POOL_NONE, TRUE);
+            }
+            textP = ObjDerefVis(oself);
+            MemLock(OptrToHandle(imageArray));
+            n = ChunkArrayGetCount(imageArray);
+        }
+    }
+    MemUnlock(OptrToHandle(imageArray));
+    textP = ObjDerefVis(oself);
+    if (!admitted && !active && !URLTextHasPendingInlineSVG(imageArray))
+        URLTextFinishInlineSVG(oself);
+}
+
 Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
                                    NameToken referer,
                                    word i,
@@ -1018,6 +1357,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     Boolean finishPending = FALSE;
     Boolean formatChanged;
     word formatFlags, oldFormat;
+    extern Boolean G_stopped;
     word i, n, size;
     ImageLoadMode *imageModeP;
     ImageLoadMode imageMode;
@@ -1048,6 +1388,14 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                 if(!image2->HID_resolvedURL &&
                    image2->imageURL != NAME_POOL_NONE)
                 {
+                    if (image2->flags & HTML_IDF_INLINE_SVG)
+                    {
+                        image2->HID_resolvedURL = URLTextInlineSVGName(
+                          pself, i);
+                        if (!image2->HID_resolvedURL)
+                            image2->flags |= HTML_IDF_BROKEN;
+                        continue;
+                    }
                     NamePoolCopy(textPool, name, sizeof(name),
                       image2->imageURL, &nP);
                     @call frame::MSG_URL_FRAME_COMPLETE_URL(&nP);
@@ -1055,6 +1403,8 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                       NamePoolTokenize(namePool, nP, FALSE);
                     NamePoolDestroyIfDynamic(nP);
                 }
+                if (image2->flags & HTML_IDF_INLINE_SVG)
+                    continue;
                 oldFormat = image2->flags & HTML_IDF_FORMAT_MASK;
                 if(!oldFormat && image2->HID_resolvedURL)
                 {
@@ -1073,11 +1423,20 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                normal graphics pass to ensure the final layout runs. */
             @call oself::MSG_URL_TEXT_INC_PENDING();
             finishPending = TRUE;
-            /* Explicit compact-image activation overrides both limits but
-               still permits a source-cache hit. */
-            if(ProcessSingleGraphic(p, oself, referer, nImage, TRUE, FALSE,
-                                    objCache, TRUE, 0, TRUE))
+            if (p->flags & HTML_IDF_INLINE_SVG)
             {
+                pself->UTI_svgPreferredIndex = nImage;
+                pself->UTI_svgObjCache = objCache;
+                pself->UTI_svgForceLoad = FALSE;
+                @call self::MSG_URL_TEXT_START_INLINE_SVG_CAMPAIGN();
+            }
+            else
+            {
+              /* Explicit compact-image activation overrides both limits but
+                 still permits a source-cache hit. */
+              if(ProcessSingleGraphic(p, oself, referer, nImage, TRUE, FALSE,
+                                    objCache, TRUE, 0, TRUE))
+              {
                 for(i=0; i<n; i++)
                 {
                     image2 = ChunkArrayElementToPtr(imageArray, i, &size);
@@ -1089,6 +1448,7 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
                             @call self::MSG_HTML_TEXT_MARK_IMAGE_RESOLVING(i);
                     }
                 }
+              }
             }
         }
     }
@@ -1105,6 +1465,91 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
 
     if(referer != NAME_POOL_NONE)
         NamePoolReleaseToken(namePool, referer);
+}
+
+@method URLTextClass, MSG_URL_TEXT_START_INLINE_SVG_CAMPAIGN
+{
+    extern Boolean G_stopped;
+
+    if(pself->UTI_doomed || G_stopped)
+    {
+        URLTextFinishInlineSVG(oself);
+        return;
+    }
+    if(pself->UTI_svgCampaign)
+    {
+        if(pself->UTI_svgPreferredIndex != HTML_IMAGE_INDEX_NONE)
+        {
+            if(pself->UTI_svgTimer)
+            {
+                TimerStop(pself->UTI_svgTimer, pself->UTI_svgTimerID);
+                pself->UTI_svgTimer = NullHandle;
+                pself->UTI_svgPaused = FALSE;
+                pself->UTI_svgBatchAdmissions = 0;
+                pself->UTI_svgBatchResults = 0;
+            }
+            @send,forceQueue oself::MSG_URL_TEXT_ADMIT_INLINE_SVGS();
+        }
+        return;
+    }
+    if(pself->UTI_svgOutstanding)
+    {
+        if(pself->UTI_svgIgnoreOutstanding &&
+           !URLTextHasPendingInlineSVG(pself->HTI_imageArray))
+            return;
+        if(!pself->UTI_svgRestartPending)
+        {
+            pself->UTI_svgRestartPending = TRUE;
+            @call oself::MSG_URL_TEXT_INC_PENDING();
+        }
+        return;
+    }
+    if(!URLTextHasPendingInlineSVG(pself->HTI_imageArray))
+    {
+        if(pself->UTI_svgRestartPending)
+            URLTextFinishInlineSVG(oself);
+        return;
+    }
+    if(pself->UTI_svgRestartPending)
+        pself->UTI_svgRestartPending = FALSE;
+    else
+        @call oself::MSG_URL_TEXT_INC_PENDING();
+    pself = ObjDerefVis(oself);
+    pself->UTI_svgCampaign = TRUE;
+    pself->UTI_svgPaused = FALSE;
+    pself->UTI_svgBatchAdmissions = 0;
+    pself->UTI_svgBatchResults = 0;
+    @send,forceQueue oself::MSG_URL_TEXT_ADMIT_INLINE_SVGS();
+}
+
+@method URLTextClass, MSG_URL_TEXT_ADMIT_INLINE_SVGS
+{
+    ProcessPendingInlineSVG(oself);
+}
+
+@method URLTextClass, MSG_URL_TEXT_INLINE_SVG_TIMER
+{
+    extern Boolean G_stopped;
+
+    pself = ObjDerefVis(oself);
+    if(!pself->UTI_svgCampaign || !pself->UTI_svgPaused)
+        return;
+    pself->UTI_svgTimer = NullHandle;
+    if(G_stopped || pself->UTI_doomed)
+    {
+        URLTextFinishInlineSVG(oself);
+        return;
+    }
+    pself->UTI_svgPaused = FALSE;
+    pself->UTI_svgBatchAdmissions = 0;
+    pself->UTI_svgBatchResults = 0;
+    @call oself::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+    pself = ObjDerefVis(oself);
+    if(pself->UTI_imageViewportWidth && pself->UTI_imageViewportHeight)
+        @call oself::MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT(
+          pself->UTI_imageViewportWidth, pself->UTI_imageViewportHeight,
+          TRUE);
+    @call oself::MSG_URL_TEXT_ADMIT_INLINE_SVGS();
 }
 
 @method URLTextClass, MSG_HTML_TEXT_ACTIVATE_COMPACT_IMAGE
@@ -1185,6 +1630,13 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
 
       if(!p->HID_resolvedURL)           /* name not resolved yet */
       {
+        if (p->flags & HTML_IDF_INLINE_SVG)
+        {
+          p->HID_resolvedURL = URLTextInlineSVGName(pself, i);
+          if (!p->HID_resolvedURL)
+              p->flags |= HTML_IDF_BROKEN;
+          continue;
+        }
         NamePoolCopy(textPool, name, sizeof(name), p->imageURL, &nP);
 
         @call frame::MSG_URL_FRAME_COMPLETE_URL(&nP);
@@ -1193,6 +1645,9 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
         p->HID_resolvedURL = NamePoolTokenize(namePool, nP, FALSE);
 	NamePoolDestroyIfDynamic(nP);
       }
+
+      if (p->flags & HTML_IDF_INLINE_SVG)
+        continue;
 
       oldFormat = p->flags & HTML_IDF_FORMAT_MASK;
       ImageURLGetUnsupportedFormat(p->HID_resolvedURL, &formatFlags);
@@ -1212,8 +1667,14 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
       {
         p = ChunkArrayElementToPtr(imageArray, i, &size);
         if((p->flags & (HTML_IDF_RESOLVED | HTML_IDF_RESOLVING |
-                        HTML_IDF_UNSUPPORTED)))
+                        HTML_IDF_UNSUPPORTED)) ||
+           ((p->flags & HTML_IDF_INLINE_SVG) &&
+            (!p->svgSourceLength ||
+             (p->flags & HTML_IDF_SVG_UNSUPPORTED))))
           continue;                     // Skip graphics that have been handled
+
+        if (p->flags & HTML_IDF_INLINE_SVG)
+          continue;
 
         /* View -> Load Graphics bypasses both intelligent-image gates. */
         if(ProcessSingleGraphic(p, oself, referer, i,
@@ -1237,6 +1698,11 @@ EC(   NamePoolIsTokenValid(namePool, nameT, TRUE) ; )
     }
 
     MemUnlock(OptrToHandle(imageArray));
+
+    pself = ObjDerefVis(oself);
+    pself->UTI_svgObjCache = objCache;
+    pself->UTI_svgForceLoad = forceLoad;
+    @call self::MSG_URL_TEXT_START_INLINE_SVG_CAMPAIGN();
 
     if(formatChanged)
         @call self::MSG_HTML_TEXT_SET_IMAGE_LOAD_MODE(imageMode);
@@ -1533,7 +1999,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
           if(pself->UTI_imageViewportWidth && pself->UTI_imageViewportHeight)
               @call oself::MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT(
                 pself->UTI_imageViewportWidth,
-                pself->UTI_imageViewportHeight);
+                pself->UTI_imageViewportHeight, FALSE);
           /* for now, force an update of the entire table structure */
           @call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT() ;
 
@@ -1663,6 +2129,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     VMFileHandle vmf;
     VMChain vmc;
     ImageAdditionalData iad;
+    URLTextInstance *textP;
 
     /* Add reference to entry in cache */
     ObjCacheLockItem(oct, &vmf, &vmc, &iad, sizeof(iad));
@@ -1672,7 +2139,13 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     p->HID_vmb = VMCHAIN_GET_VM_BLOCK(vmc);
 
     URLTextInitializeImage(p, &iad) ;
-    @call oself::MSG_HTML_TEXT_RESOLVE_IMAGE(i, p, invalFrom, invalTo);
+    @call oself::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+    textP = ObjDerefVis(oself);
+    @call oself::MSG_HTML_TEXT_RESOLVE_IMAGE(i, p, invalFrom, invalTo,
+      (p->flags & HTML_IDF_INLINE_SVG) ?
+        textP->UTI_imageViewportWidth : 0,
+      (p->flags & HTML_IDF_INLINE_SVG) ?
+        textP->UTI_imageViewportHeight : 0);
 @ifdef JAVASCRIPT_SUPPORT
     @call oself::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_LOAD,
 					 HTML_EVENT_OBJECT_IMAGE, i);
@@ -1684,8 +2157,13 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     word i, n, size ;
     HTMLimageData p;
     optr imageArray = pself->HTI_imageArray;
+    Boolean inlineSVG = FALSE;
+    Boolean staleSVG;
 
-    if(imageArray)                      // Guard against "stale" images
+    staleSVG = pself->UTI_svgIgnoreOutstanding &&
+      URLTextIsOutstandingInlineSVG(pself, url);
+
+    if(imageArray && !staleSVG)         // Guard against stale images
     {
       MemLock(OptrToHandle(imageArray));
 
@@ -1696,6 +2174,8 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
 
           if (url == p.HID_resolvedURL)   /* Found a match!  Replace image here */
           {
+              if (p.flags & HTML_IDF_INLINE_SVG)
+                  inlineSVG = TRUE;
               /* Release previous cached item */
               if(p.HID_cacheToken)
                 ObjCacheUnlockItem((ObjCacheToken)p.HID_cacheToken);
@@ -1722,6 +2202,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
       ObjCacheUnlockItem(oct);
 
     NamePoolReleaseToken(namePool, url);// remove this reference to URL
+    URLTextInlineSVGResult(oself, url, inlineSVG);
 }
 
 @method URLTextClass, MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS
@@ -1731,9 +2212,14 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     optr imageArray;
     ImageAdditionalData iad;
     Boolean complete;
+    Boolean inlineSVG;
+    Boolean staleSVG;
 
     imageArray = pself->HTI_imageArray;
-    if(imageArray)
+    inlineSVG = FALSE;
+    staleSVG = pself->UTI_svgIgnoreOutstanding &&
+      URLTextIsOutstandingInlineSVG(pself, url);
+    if(imageArray && !staleSVG)
     {
         MemLock(OptrToHandle(imageArray));
         n = ChunkArrayGetCount(imageArray);
@@ -1742,6 +2228,8 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             imageP = ChunkArrayElementToPtr(imageArray, i, &size);
             if(url == imageP->HID_resolvedURL)
             {
+                if(imageP->flags & HTML_IDF_INLINE_SVG)
+                    inlineSVG = TRUE;
                 complete = FALSE;
                 if(imageP->HID_cacheToken)
                 {
@@ -1772,6 +2260,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     }
 
     NamePoolReleaseToken(namePool, url);
+    URLTextInlineSVGResult(oself, url, inlineSVG);
 }
 
 @method URLTextClass,
@@ -2448,6 +2937,10 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
     word i,n,size;
     HTMLimageData *p;
 
+    if(pself->UTI_svgCampaign || pself->UTI_svgRestartPending)
+        URLTextFinishInlineSVG(oself);
+    pself = ObjDerefVis(oself);
+    pself->UTI_svgIgnoreOutstanding = pself->UTI_svgOutstanding != 0;
     pself->UTI_imageViewportWidth = 0;
     pself->UTI_imageViewportHeight = 0;
 
@@ -2515,10 +3008,25 @@ void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
        count reaches zero. This message will be called again by
        DEC_PENDING... */
 
+    if(pself->UTI_svgTimer)
+    {
+      TimerStop(pself->UTI_svgTimer, pself->UTI_svgTimerID);
+      pself->UTI_svgTimer = NullHandle;
+    }
     if(pself->UTI_numPendingRequests)
     {
       /* abort current operation quickly */
       pself->UTI_doomed = TRUE;
+      if(pself->UTI_svgCampaign || pself->UTI_svgRestartPending)
+      {
+        pself->UTI_svgCampaign = FALSE;
+        pself->UTI_svgPaused = FALSE;
+        pself->UTI_svgRestartPending = FALSE;
+        @call oself::MSG_URL_TEXT_DEC_PENDING();
+        pself = ObjDerefVis(oself);
+        if(!pself->UTI_numPendingRequests)
+            return;
+      }
       @call self::MSG_HTML_TEXT_LAYOUT_STOP();
       @AbortOperation(FALSE, FALSE, pself->UTI_frame);
     }
@@ -2594,6 +3102,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
 
 @method URLTextClass, MSG_URL_TEXT_STOP
 {
+    URLTextFinishInlineSVG(oself);
     @call oself::MSG_HTML_TEXT_LAYOUT_STOP() ;
 }
 
