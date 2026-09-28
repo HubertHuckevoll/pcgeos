@@ -1953,9 +1953,6 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     NamePoolReleaseToken(namePool, result.url);
 }
 
-/* Redraw the view at most once per batch of completed requests. */
-#define PENDING_REDRAW_BATCH_SIZE 128
-
 @method URLTextClass, MSG_URL_TEXT_INC_PENDING
 {
     pself->UTI_numPendingRequests++;
@@ -1972,13 +1969,9 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 @method URLTextClass, MSG_URL_TEXT_DEC_PENDING
 {
     optr frame = pself->UTI_frame;
-    optr view = pself->HTI_myView;
     Boolean doomed = pself->UTI_doomed;
-    Boolean redraw;
 
     pself->UTI_numPendingRequests-- ;
-    redraw = pself->UTI_numPendingRequests &&
-      (pself->UTI_numPendingRequests % PENDING_REDRAW_BATCH_SIZE) == 0;
     ObjDecInUseCount(OptrToHandle(oself));
     EC_ERROR_IF(pself->UTI_numPendingRequests >= MAX_NUM_REQUESTS, -1) ;
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
@@ -1991,6 +1984,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         }
         else
         {
+          @call oself::MSG_HTML_TEXT_WAITING_IMAGES_CLEAR();
           /* ATTENTION: Oversized placeholders remain until completion. If
              earlier fitting is needed, batch it before layout rather than
              invalidating each image during import. */
@@ -2010,11 +2004,6 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
           @send,forceQueue oself::MSG_HTML_TEXT_ANIMATIONS_ON() ;
         }
     }
-    /* ATTENTION: Batch full view redraws to prevent image-heavy pages from
-       building large window update regions.  The zero-pending batch performs
-       the final layout instead. */
-    if(redraw && view && !doomed)
-        @send,checkDuplicate,forceQueue view::MSG_GEN_VIEW_REDRAW_CONTENT();
     /* Relay operation status to frame */
     @call frame::MSG_URL_FRAME_DEC_PENDING();
 }

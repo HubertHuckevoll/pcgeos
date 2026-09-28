@@ -2110,13 +2110,18 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
 
         preserveGeometry = oldMode == IMAGE_LOAD_INTELLIGENT &&
           mode == IMAGE_LOAD_INTELLIGENT &&
-          !(image->flags & (HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED)) &&
+          !(image->flags & (HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED |
+                            HTML_IDF_BROKEN)) &&
           (((image->flags & HTML_IDF_RESOLVING) &&
             !(image->flags & HTML_IDF_RESOLVED)) ||
            ((image->flags & (HTML_IDF_RESOLVED | HTML_IDF_BROKEN)) ==
             (HTML_IDF_RESOLVED | HTML_IDF_BROKEN)));
         if(!(image->flags & HTML_IDF_INLINE_SVG) &&
-           preserveGeometry)
+           (preserveGeometry ||
+            (mode == IMAGE_LOAD_INTELLIGENT &&
+             !(image->flags & (HTML_IDF_COMPACT | HTML_IDF_UNSUPPORTED |
+                               HTML_IDF_BROKEN)) &&
+             image->size.XYS_width && image->size.XYS_height)))
             continue;
 
         compact = !(image->flags & HTML_IDF_INLINE_SVG) &&
@@ -2372,6 +2377,8 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     TableArrayEndAccess(pself->HTI_tableArray);
 }
 
+#define IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE 12
+
 static void _pascal
 HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
                             word invalFrom, word invalTo)
@@ -2479,6 +2486,20 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
         if (!wasDirty) {
             @call oself::MSG_HTML_TEXT_WAITING_IMAGE_ADD(nImage, cellIndex);
         }
+
+        pself = ObjDerefVis(oself);
+        if(pself->HTI_waitingImageChanges++ == 0 &&
+           !pself->HTI_waitingImageTimer)
+        {
+            pself->HTI_waitingImageTimer = TimerStart(
+              TIMER_EVENT_ONE_SHOT, oself, 60,
+              MSG_HTML_TEXT_WAITING_IMAGES_IDLE, 0,
+              &pself->HTI_waitingImageTimerID);
+        }
+        pself = ObjDerefVis(oself);
+        if(pself->HTI_waitingImageChanges >=
+           IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE)
+            @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
     }
 
     if (!wasDirty)
@@ -3004,6 +3025,13 @@ typedef struct {
     T_waitingImageEntry *p_entry ;
 
     EC_ERROR_IF(pself->HTI_waitingImages==NullHandle, ERROR_WAITING_IMAGES_LIST_DOES_NOT_EXIST) ;
+    if(pself->HTI_waitingImageTimer)
+    {
+        TimerStop(pself->HTI_waitingImageTimer,
+          pself->HTI_waitingImageTimerID);
+        pself->HTI_waitingImageTimer = NullHandle;
+    }
+    pself->HTI_waitingImageChanges = 0;
     if (pself->HTI_waitingImages)  {
         /* Just brute force reset everything */
         p_block = MemLock(pself->HTI_waitingImages) ;
@@ -3026,9 +3054,33 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
 }
 
   /* Tries to free all images, but if any are left, causes a recalculation to occur. */
+@method HTMLTextClass, MSG_HTML_TEXT_WAITING_IMAGES_IDLE
+{
+    /* TimerStop can leave an old notification queued. */
+    if(!pself->HTI_waitingImageChanges)
+        return;
+    @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(TRUE);
+}
+
 @method HTMLTextClass, MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE
 {
     word numLeft ;
+    Boolean flush;
+
+    flush = isLastUpdate || pself->HTI_waitingImageChanges >=
+      IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE;
+    if(flush)
+    {
+        if(pself->HTI_waitingImageTimer)
+        {
+            TimerStop(pself->HTI_waitingImageTimer,
+              pself->HTI_waitingImageTimerID);
+            pself->HTI_waitingImageTimer = NullHandle;
+        }
+        pself->HTI_waitingImageChanges = 0;
+    }
+    EC_ERROR_IF(pself->HTI_waitingImageChanges >=
+      IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE, -1);
 
     /* TBD:  Do we want time based code in here? */
     /* Two cases to consider: */
@@ -3038,17 +3090,19 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
     /* A queued update may outlive the document's waiting-image block. */
     if (pself->HTI_waitingImages)  {
         numLeft = @call oself::MSG_HTML_TEXT_WAITING_IMAGES_FLUSH_ONES_WITH_CELLS_CALCULATED() ;
-        if (numLeft)  {
+        if (numLeft && flush)  {
             /* An active layout already tracks images in its current range
                and requests one more pass for images it has passed. */
             pself = ObjDerefVis(oself);
             if (!(pself->HTI_layoutState & HTS_CALCULATING_LAYOUT))
             @send ,checkDuplicate ,forceQueue self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
 
-            /* Clear the list if we are done. */
+            /* Clear the list if this is an idle or final partial batch. */
             if (isLastUpdate)
                 @call oself::MSG_HTML_TEXT_WAITING_IMAGES_CLEAR() ;
         }
+        else if(!numLeft)
+            pself->HTI_waitingImageChanges = 0;
     }
 }
 
@@ -3065,6 +3119,13 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
 @method HTMLTextClass, MSG_HTML_TEXT_WAITING_IMAGES_DESTROY
 {
     EC_ERROR_IF(pself->HTI_waitingImages==NullHandle, ERROR_WAITING_IMAGES_LIST_DOES_NOT_EXIST) ;
+    if(pself->HTI_waitingImageTimer)
+    {
+        TimerStop(pself->HTI_waitingImageTimer,
+          pself->HTI_waitingImageTimerID);
+        pself->HTI_waitingImageTimer = NullHandle;
+    }
+    pself->HTI_waitingImageChanges = 0;
     if (pself->HTI_waitingImages)  {
         MemFree(pself->HTI_waitingImages) ;
         pself->HTI_waitingImages = NullHandle ;
