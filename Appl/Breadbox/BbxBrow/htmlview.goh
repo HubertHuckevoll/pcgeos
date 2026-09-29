@@ -629,6 +629,7 @@ Boolean SrcCacheExpireURL(NameToken url);
 void AttachToObjCache(void);
 void DetachFromObjCache(void);
 VMFileHandle ObjCacheGetVMFile(NameToken url);
+void _pascal EnforceObjCacheHandleLimits(VMFileHandle vmf);
 ObjCacheToken ObjCacheFindURL(ByteEnum type, NameToken url, Boolean doLock,
                               Boolean checkExp);
 ObjCacheToken ObjCacheAddURL(VMFileHandle vmf, VMChain data, ByteEnum type,

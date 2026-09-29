@@ -1591,7 +1591,7 @@ void LOCAL EnforceObjCacheSizeLimits(void)
 				       to avoid running into that limit
 				       when enforcing out limit */
 #define SGIT_FREE_HANDLE_COUNT 32782
-void LOCAL EnforceObjCacheHandleLimits(VMFileHandle vmf)
+void _pascal EnforceObjCacheHandleLimits(VMFileHandle vmf)
 {
     int i;
 

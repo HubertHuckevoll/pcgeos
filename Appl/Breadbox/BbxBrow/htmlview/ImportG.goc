@@ -381,6 +381,8 @@ void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
     ObjCacheToken oct;
 
     if (importProgressDataP) {
+        /* Growing VM bitmaps can exhaust handles after cache insertion. */
+        EnforceObjCacheHandleLimits(importProgressDataP->IPD_vmFile);
 	/* if import progress is already pending for this graphic, update it */
 	ThreadPSem(G_importProgressDataQueueSem);
 	for (i = 0; i < IMPORT_PROGRESS_DATA_QUEUE_SIZE; i++) {
