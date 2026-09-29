@@ -77,6 +77,7 @@ typedef struct {
 typedef struct {
     FileHandle source;
     MemHandle inputH;
+    byte *inputP;
     dword riffEnd;
     dword vp8Start;
     dword vp8Length;

@@ -13,7 +13,6 @@
 static word
 WebPBoolLoadByte(WebPDecoder *decoderP, WebPBoolReader *readerP)
 {
-    byte *inputP;
     word halfOffset;
     word wanted;
     dword left;
@@ -28,26 +27,22 @@ WebPBoolLoadByte(WebPDecoder *decoderP, WebPBoolReader *readerP)
         left = readerP->start + readerP->length - readerP->next;
         wanted = left > WEBP_INPUT_WINDOW ? WEBP_INPUT_WINDOW : (word)left;
         halfOffset = readerP->token ? WEBP_INPUT_WINDOW : 0;
-        inputP = MemLock(decoderP->inputH);
         if (FilePos(decoderP->source, readerP->next, FILE_POS_START) !=
                 readerP->next ||
-            FileRead(decoderP->source, inputP + halfOffset, wanted, FALSE) !=
+            FileRead(decoderP->source, decoderP->inputP + halfOffset, wanted,
+                     FALSE) !=
                 wanted) {
-            MemUnlock(decoderP->inputH);
             readerP->eof = TRUE;
             readerP->ioError = TRUE;
             return 0;
         }
-        MemUnlock(decoderP->inputH);
         readerP->windowStart = readerP->next;
         readerP->windowSize = wanted;
     }
 
     halfOffset = readerP->token ? WEBP_INPUT_WINDOW : 0;
-    inputP = MemLock(decoderP->inputH);
-    wanted = inputP[halfOffset +
-                    (word)(readerP->next - readerP->windowStart)];
-    MemUnlock(decoderP->inputH);
+    wanted = decoderP->inputP[halfOffset +
+                              (word)(readerP->next - readerP->windowStart)];
     readerP->next++;
     return wanted;
 }

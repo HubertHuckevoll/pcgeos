@@ -2318,10 +2318,6 @@ static simplewebp_error swebp__vp8_output_rows(
 		simplewebp_i32 otherY;
 		simplewebp_i32 x;
 		word packedSize;
-#ifndef WEBP_HOST_TEST
-		WebPBitmapHeader *bitmapHeaderP;
-#endif
-
 		yP = (vp8d->cache_y - (vp8d->mb_y ?
 			extraRows * vp8d->cache_y_stride : 0)) +
 			(line - yBase) * vp8d->cache_y_stride;
@@ -2381,13 +2377,6 @@ static simplewebp_error swebp__vp8_output_rows(
 			decoderP->rowBytes);
 		HugeArrayAppend(decoderP->destination, decoderP->bitmap,
 			packedSize, packedP);
-#ifndef WEBP_HOST_TEST
-		HugeArrayLockDir(decoderP->destination, decoderP->bitmap,
-			(void **)&bitmapHeaderP);
-		bitmapHeaderP->bitmap.CB_simple.B_height++;
-		HugeArrayDirty(bitmapHeaderP);
-		HugeArrayUnlockDir(bitmapHeaderP);
-#endif
 		lumaP = MemLock(decoderP->lumaH);
 		chromaP = MemLock(decoderP->chromaH);
 		swebp__vp8_bind_cache_buffers(vp8d, lumaP, chromaP);

@@ -130,9 +130,11 @@ main(int argc, char **argv)
     result = WebPImportBegin(&source, (void *)0, &decoder,
                              &bitmap, &info, 0);
     assert(result == WEBP_RESULT_OK);
+    assert(((WebPDecoder *)MemLock(decoder))->inputP == (void *)0);
     expectedLine = 0;
     do {
         result = WebPImportNext(decoder, &firstLine, &lineCount);
+        assert(((WebPDecoder *)MemLock(decoder))->inputP == (void *)0);
         if (result == WEBP_RESULT_OK) {
             assert(lineCount != 0);
             assert(firstLine == expectedLine);

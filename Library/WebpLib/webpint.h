@@ -72,6 +72,7 @@ typedef struct {
     byte terminal;
     byte done;
     MemHandle inputH;
+    byte *inputP;
     MemHandle contextH;
     MemHandle lumaH;
     MemHandle chromaH;

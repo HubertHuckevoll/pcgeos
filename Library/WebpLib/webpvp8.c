@@ -162,7 +162,10 @@ WebPDecodeInit(WebPDecoder *decoderP)
         return WEBP_ERROR_OUT_OF_MEMORY;
     }
 
+    decoderP->inputP = MemLock(decoderP->inputH);
     error = swebp__load_vp8_header(decoderP, vp8P);
+    MemUnlock(decoderP->inputH);
+    decoderP->inputP = (void *)0;
     if (error != SIMPLEWEBP_NO_ERROR) {
         return WebPMapCoreError(error);
     }
@@ -223,6 +226,10 @@ WebPDecodeRow(WebPDecoder *decoderP, word *firstLine, word *lineCount)
     byte *lumaP;
     byte *chromaP;
     simplewebp_error error;
+    Boolean inputLocked;
+#ifndef WEBP_HOST_TEST
+    WebPBitmapHeader *bitmapHeaderP;
+#endif
 
     if (decoderP->mbY >= decoderP->mbHeight) {
         decoderP->done = TRUE;
@@ -234,6 +241,8 @@ WebPDecodeRow(WebPDecoder *decoderP, word *firstLine, word *lineCount)
     contextP = MemLock(decoderP->contextH);
     lumaP = MemLock(decoderP->lumaH);
     chromaP = MemLock(decoderP->chromaH);
+    decoderP->inputP = MemLock(decoderP->inputH);
+    inputLocked = TRUE;
     WebPRebindCore(decoderP, coreP, contextP, lumaP, chromaP);
     vp8P->mb_y = decoderP->mbY;
     tokenP = &vp8P->parts[vp8P->mb_y & vp8P->nparts_minus_1];
@@ -255,6 +264,11 @@ WebPDecodeRow(WebPDecoder *decoderP, word *firstLine, word *lineCount)
                 SIMPLEWEBP_IO_ERROR : SIMPLEWEBP_CORRUPT_ERROR;
             break;
         }
+        if (vp8P->mb_x == vp8P->mb_w - 1) {
+            MemUnlock(decoderP->inputH);
+            decoderP->inputP = (void *)0;
+            inputLocked = FALSE;
+        }
         error = swebp__vp8_process_row(vp8P, &output);
         if (error != SIMPLEWEBP_NO_ERROR) {
             break;
@@ -266,9 +280,22 @@ WebPDecodeRow(WebPDecoder *decoderP, word *firstLine, word *lineCount)
         *firstLine = output.firstLine;
         *lineCount = output.lineCount;
     }
+    if (inputLocked) {
+        MemUnlock(decoderP->inputH);
+        decoderP->inputP = (void *)0;
+    }
     MemUnlock(decoderP->chromaH);
     MemUnlock(decoderP->lumaH);
     MemUnlock(decoderP->contextH);
+#ifndef WEBP_HOST_TEST
+    if (output.lineCount != 0) {
+        HugeArrayLockDir(decoderP->destination, decoderP->bitmap,
+            (void **)&bitmapHeaderP);
+        bitmapHeaderP->bitmap.CB_simple.B_height += output.lineCount;
+        HugeArrayDirty(bitmapHeaderP);
+        HugeArrayUnlockDir(bitmapHeaderP);
+    }
+#endif
     return WebPMapCoreError(error);
 }
 

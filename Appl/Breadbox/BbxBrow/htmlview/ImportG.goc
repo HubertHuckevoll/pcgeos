@@ -437,18 +437,8 @@ void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
 	        }
 	        ThreadVSem(G_importProgressDataQueueSem);
 
-		if(importProgressDataP->IPD_loadProgressDataP)
-		{
-		    @send, forceQueue importProgressDataP->IPD_textObj::
-			MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(importProgressData);
-		}
-		else
-		{
-		    /* Local-file imports do not block for incoming data, so
-		       draw each update before decoding continues. */
-		    @call importProgressDataP->IPD_textObj::
-			MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(importProgressData);
-		}
+		@send, forceQueue importProgressDataP->IPD_textObj::
+		    MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(importProgressData);
 	    } else {
 		/* couldn't lock, memory error, dump this progress */
 		MemFree(importProgressData);

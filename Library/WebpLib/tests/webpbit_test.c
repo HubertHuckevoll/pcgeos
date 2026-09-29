@@ -107,6 +107,7 @@ CheckLength(word length)
     file.position = 0;
     decoder.source = &file;
     decoder.inputH = input;
+    decoder.inputP = input;
     WebPBoolInit(&decoder, &actual, 7, length, TRUE);
     ReferenceInit(&expected, data + 7, length);
 
