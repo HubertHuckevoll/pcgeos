@@ -717,6 +717,12 @@ void ImportThreadAbortAll(void)
 
       canceled = (request.mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) != 0;
 
+#if PROGRESS_DISPLAY
+      if (!vmb && request.importProgressData.IPD_cacheItem != OCT_NULL)
+          ObjCacheUnlockItem((ObjCacheToken)
+            request.importProgressData.IPD_cacheItem);
+#endif
+
       /* If we actually found the data, replace */
       /* all the similar images. */
       if (vmb)  {
@@ -789,11 +795,6 @@ void ImportThreadAbortAll(void)
       }
       else if(canceled)
       {
-#if PROGRESS_DISPLAY
-          if(request.importProgressData.IPD_cacheItem != OCT_NULL)
-              ObjCacheUnlockItem((ObjCacheToken)
-                request.importProgressData.IPD_cacheItem);
-#endif
           @send (request.textObj)::
             MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
       }

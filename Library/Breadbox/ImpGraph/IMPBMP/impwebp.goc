@@ -137,7 +137,8 @@ cleanup:
         params->IBP_bitmap = localBitmap;
         *usedMem = requiredMemory;
     } else if (published) {
-        *usedMem = requiredMemory;
+        /* The progress cache owns the partial bitmap, not this import. */
+        AllocWatcherFree(watcher, requiredMemory);
     } else {
         if (localBitmap != NullHandle && !published) {
             VMFreeVMChain(vmf,
