@@ -706,6 +706,10 @@ WARNING_CANNOT_SET_HYPERLINK_ON_NIL_TEXT_RANGE			enum Warnings
 ; new hyperlink are identical. No hyperlink will be set.
 ;
 
+WARNING_RIPPLED_REGION_HEIGHT_MISMATCH		       enum Warnings
+; A completed region has a stored height different from its line heights
+; immediately after a ripple. The normal EC validator will catch it later.
+
 
 endif
 

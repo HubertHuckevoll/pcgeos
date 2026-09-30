@@ -833,6 +833,11 @@ RippleLinesToNextRegion	proc	near
 if _REGION_LIMIT		
 	jc	done
 endif
+EC <	push	cx					>
+EC <	mov	cx, ss:[bp].LICL_region		>
+EC <	dec	cx					>
+EC <	call	ECWarnCompletedRegionHeight		>
+EC <	pop	cx					>
 		
 	clr	ax
 	clrwbf	ss:[bp].LICL_lineBottom, ax	; Set previous line top
@@ -3687,6 +3692,43 @@ noLinesInRegion:
 	clr	ax
 	jmp	gotLineSum
 ECFixupSingleRegion	endp
+
+;
+; Warn at the first completed-region boundary after a ripple. At the
+; warning, cx is the region, bp.bl its line-height sum, and dx.al its
+; stored computed height. The normal EC validator remains fatal.
+;
+if ERROR_CHECK
+ECWarnCompletedRegionHeight	proc	far
+	uses	ax, bx, cx, dx, di, bp
+	pushf
+	.enter
+	push	cx				; Save completed region
+	call	TR_RegionGetTopLine	; bx.di <- first line
+	call	TR_RegionGetLineCount	; cx <- line count
+	jcxz	noLines
+	clr	dx
+	mov	ax, cx
+	adddw	dxax, bxdi		; dx.ax <- end of range
+	clr	cx
+	call	TL_LineSumAndMarkRange	; cx.dx.ax <- sum
+	movwbf	bpbl, dxah		; Save sum
+	jmp	gotSum
+noLines:
+	clrwbf	bpbl
+gotSum:
+	pop	cx				; cx <- completed region
+	call	TR_RegionGetHeight	; dx.al <- stored height
+	cmpwbf	dxal, bpbl
+	je	done
+ECWarnCompletedRegionHeightMismatch::
+	WARNING	WARNING_RIPPLED_REGION_HEIGHT_MISMATCH
+done:
+	.leave
+	popf
+	ret
+ECWarnCompletedRegionHeight	endp
+endif
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

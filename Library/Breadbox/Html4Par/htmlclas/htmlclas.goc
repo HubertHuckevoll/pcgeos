@@ -2115,12 +2115,18 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
             !(image->flags & HTML_IDF_RESOLVED)) ||
            ((image->flags & (HTML_IDF_RESOLVED | HTML_IDF_BROKEN)) ==
             (HTML_IDF_RESOLVED | HTML_IDF_BROKEN)));
-        if(preserveGeometry)
+        if(!(image->flags & HTML_IDF_INLINE_SVG) &&
+           preserveGeometry)
             continue;
 
-        compact = ((mode == IMAGE_LOAD_INTELLIGENT) ||
-                   (image->flags & HTML_IDF_BROKEN));
-        if(compact)
+        compact = !(image->flags & HTML_IDF_INLINE_SVG) &&
+          ((mode == IMAGE_LOAD_INTELLIGENT) ||
+           (image->flags & HTML_IDF_BROKEN));
+        if(image->flags & HTML_IDF_INLINE_SVG)
+        {
+            newSize.XYS_width = newSize.XYS_height = 0;
+        }
+        else if(compact)
         {
             hasLink = @call self::MSG_HTML_TEXT_LINK_FROM_POS(image->pos,
               HTML_CHP_EXACT) != CA_NULL_ELEMENT;
@@ -2160,7 +2166,7 @@ void _pascal HTMLTextSetCompactImageFocus(optr text, word image)
         if(graphic)
         {
             graphic->VTG_size = newSize;
-            if(!compact)
+            if(!compact && !(image->flags & HTML_IDF_INLINE_SVG))
             {
                 graphic->VTG_size.XYS_width += 2*image->hspace;
                 graphic->VTG_size.XYS_height += 2*image->vspace;
