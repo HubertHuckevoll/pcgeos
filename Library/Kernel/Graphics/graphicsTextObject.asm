@@ -2494,7 +2494,7 @@ FXIP<	call	ProcCallFixedOrMovable				>
 	call	NearLockFont			; ax <- segment
 						; bx <- handle
 	mov	es, ax				; Establish seg addr of font.
-DBCS <	mov	ss:[bp].TMS_fontHandle, bx	; may have changed	>
+	mov	ss:[bp].TMS_fontHandle, bx	; may have changed
 
 	.leave
 	ret

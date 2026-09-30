@@ -396,7 +396,7 @@ MemHandle MemStreamInit(MemHandle stream)
 	streamP = MemPLock(stream);
 	blkP = (MemHandle *)((byte *)streamP + sizeof(MemStreamHeader));
 	for (i = 0; i < streamP->maxBlk; i++) {
-	    if (!blkP[i]) break;
+	    if (!blkP[i]) continue;
 	    MemFree(blkP[i]);
 	    blkP[i] = 0;
 	}
