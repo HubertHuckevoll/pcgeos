@@ -2377,13 +2377,14 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     TableArrayEndAccess(pself->HTI_tableArray);
 }
 
-#define IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE 12
+#define IMAGE_GEOMETRY_LAYOUT_DELAY 60
 
 static void _pascal
 HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
                             word invalFrom, word invalTo)
 {
     HTMLTextInstance *pself;
+    T_layoutStack *stackP;
     HTMLimageData *imageP;
     MemHandle mem;
     VisTextGraphic *graphic;
@@ -2463,20 +2464,19 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
             TableArrayStartAccess(pself->HTI_tableArray);
             MarkTableLayoutDirty(pself, cellP->HCD_table);
             TableArrayEndAccess(pself->HTI_tableArray);
+        }
 
-            if (pself->HTI_layoutStack) {
-                T_layoutStack *stackP;
-
-                stackP = LayoutStackLock(pself->HTI_layoutStack);
-                if ((cellIndex >= stackP->LS_currentMasterCell) &&
-                    (cellIndex <= stackP->LS_currentCell)) {
-                    stackP->LS_currentMasterCellGotImage = TRUE;
-                }
-                else if (cellIndex < stackP->LS_currentCell) {
-                    stackP->LS_oneMorePass = TRUE;
-                }
-                LayoutStackUnlock(stackP);
+        /* Even an already-dirty cell may have changed after layout passed it. */
+        if (pself->HTI_layoutStack) {
+            stackP = LayoutStackLock(pself->HTI_layoutStack);
+            if ((cellIndex >= stackP->LS_currentMasterCell) &&
+                (cellIndex <= stackP->LS_currentCell)) {
+                stackP->LS_currentMasterCellGotImage = TRUE;
             }
+            else if (cellIndex < stackP->LS_currentCell) {
+                stackP->LS_oneMorePass = TRUE;
+            }
+            LayoutStackUnlock(stackP);
         }
 
         CellUnlock(cellP);
@@ -2488,18 +2488,13 @@ HTMLTextUpdateImageGeometry(optr oself, word nImage, HTMLimageData *dataP,
         }
 
         pself = ObjDerefVis(oself);
-        if(pself->HTI_waitingImageChanges++ == 0 &&
-           !pself->HTI_waitingImageTimer)
-        {
+        if (!pself->HTI_waitingImageChanges) {
+            pself->HTI_waitingImageChanges = 1;
             pself->HTI_waitingImageTimer = TimerStart(
-              TIMER_EVENT_ONE_SHOT, oself, 60,
+              TIMER_EVENT_ONE_SHOT, oself, IMAGE_GEOMETRY_LAYOUT_DELAY,
               MSG_HTML_TEXT_WAITING_IMAGES_IDLE, 0,
               &pself->HTI_waitingImageTimerID);
         }
-        pself = ObjDerefVis(oself);
-        if(pself->HTI_waitingImageChanges >=
-           IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE)
-            @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
     }
 
     if (!wasDirty)
@@ -2919,15 +2914,7 @@ typedef struct {
     if (pself->HTI_waitingImages)  {
         p_block = MemLock(pself->HTI_waitingImages) ;
 
-        /* On the first try, if we are full try to empty and maybe do a recalculation */
-        if (p_block->WIB_freeStart == WAITING_IMAGE_NULL)
-            @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE) ;
-
-        /* If we are still full, force a recalculation and clear the list */
-        if (p_block->WIB_freeStart == WAITING_IMAGE_NULL)
-            @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(TRUE) ;
-
-        /* Add a new item to the list */
+        /* This list only helps discard completed cells; the timer owns layout. */
         if (p_block->WIB_freeStart != WAITING_IMAGE_NULL)  {
             /* Pull an entry off the free list and add it to the used list */
             newEntry = p_block->WIB_freeStart ;
@@ -3053,56 +3040,33 @@ NEC(     memset(p_block, 0x00, sizeof(*p_block)) ;  )
     }
 }
 
-  /* Tries to free all images, but if any are left, causes a recalculation to occur. */
 @method HTMLTextClass, MSG_HTML_TEXT_WAITING_IMAGES_IDLE
 {
-    /* TimerStop can leave an old notification queued. */
-    if(!pself->HTI_waitingImageChanges)
+    /* TimerStop may leave an old event queued. One-shot events carry the
+       timer ID in bp, so only the current batch may consume its timer. */
+    if (!pself->HTI_waitingImageTimer ||
+        timerID != pself->HTI_waitingImageTimerID)
         return;
+    pself->HTI_waitingImageTimer = NullHandle;
     @call oself::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(TRUE);
 }
 
 @method HTMLTextClass, MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE
 {
-    word numLeft ;
-    Boolean flush;
-
-    flush = isLastUpdate || pself->HTI_waitingImageChanges >=
-      IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE;
-    if(flush)
-    {
-        if(pself->HTI_waitingImageTimer)
-        {
-            TimerStop(pself->HTI_waitingImageTimer,
-              pself->HTI_waitingImageTimerID);
-            pself->HTI_waitingImageTimer = NullHandle;
-        }
-        pself->HTI_waitingImageChanges = 0;
-    }
-    EC_ERROR_IF(pself->HTI_waitingImageChanges >=
-      IMAGE_GEOMETRY_LAYOUT_BATCH_SIZE, -1);
-
-    /* TBD:  Do we want time based code in here? */
-    /* Two cases to consider: */
-    /* 1) Too much time between graphic updates */
-    /* 2) Too much time for the complete update */
-    /* Of course, if the list is FULL, then we need to do a recalc */
     /* A queued update may outlive the document's waiting-image block. */
-    if (pself->HTI_waitingImages)  {
-        numLeft = @call oself::MSG_HTML_TEXT_WAITING_IMAGES_FLUSH_ONES_WITH_CELLS_CALCULATED() ;
-        if (numLeft && flush)  {
-            /* An active layout already tracks images in its current range
-               and requests one more pass for images it has passed. */
-            pself = ObjDerefVis(oself);
-            if (!(pself->HTI_layoutState & HTS_CALCULATING_LAYOUT))
-            @send ,checkDuplicate ,forceQueue self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
-
-            /* Clear the list if this is an idle or final partial batch. */
-            if (isLastUpdate)
-                @call oself::MSG_HTML_TEXT_WAITING_IMAGES_CLEAR() ;
-        }
-        else if(!numLeft)
-            pself->HTI_waitingImageChanges = 0;
+    if (!pself->HTI_waitingImages)
+        return;
+    if (isLastUpdate) {
+        @call oself::MSG_HTML_TEXT_WAITING_IMAGES_CLEAR();
+        pself = ObjDerefVis(oself);
+        /* The active pass already retries its current range and remembers
+           changed cells it has passed for one follow-up pass. */
+        if ((pself->HTI_layoutState & HTS_LAYOUT_DIRTY) &&
+            !(pself->HTI_layoutState & HTS_CALCULATING_LAYOUT))
+            @call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT();
+    }
+    else if (pself->HTI_waitingImages) {
+        @call oself::MSG_HTML_TEXT_WAITING_IMAGES_FLUSH_ONES_WITH_CELLS_CALCULATED();
     }
 }
 

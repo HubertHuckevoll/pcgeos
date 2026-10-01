@@ -998,6 +998,7 @@ typedef dword T_tableArrayHandle ;
 
   @instance NameToken      HTI_pendingAnchor = NAME_POOL_NONE;
   @instance MemHandle      HTI_waitingImages = NullHandle ;
+  /* Pending geometry batch flag, not an image counter. */
   @instance word           HTI_waitingImageChanges = 0;
   @instance TimerHandle    HTI_waitingImageTimer = NullHandle;
   @instance word           HTI_waitingImageTimerID = 0;
@@ -1162,7 +1163,7 @@ typedef dword T_tableArrayHandle ;
 
   /* Tries to free all images, but if any are left, causes a recalculation to occur. */
   @message void MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(Boolean isLastUpdate) ;
-  @message void MSG_HTML_TEXT_WAITING_IMAGES_IDLE();
+  @message void MSG_HTML_TEXT_WAITING_IMAGES_IDLE(word timerID = bp);
 
   /* Get rid of the block associate with waiting images */
   @message void MSG_HTML_TEXT_WAITING_IMAGES_DESTROY() ;

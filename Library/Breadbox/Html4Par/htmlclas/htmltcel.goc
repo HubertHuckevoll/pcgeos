@@ -2671,6 +2671,7 @@ T_layoutLevelTable *LayoutStackTableLevelAccess(T_layoutStack *p_stack, word lev
 @extern method HTMLTextClass, MSG_HTML_TEXT_LAYOUT_STOP
 {
     T_layoutStack *p_stack ;
+    Boolean notifyFormattingEnded = FALSE;
 
     if (pself->HTI_layoutStack)  {
         if (!(pself->HTI_layoutState & HTS_RESTARTING_LAYOUT))  {
@@ -2682,8 +2683,8 @@ T_layoutLevelTable *LayoutStackTableLevelAccess(T_layoutStack *p_stack, word lev
             /* Update our boundaries */
             @call oself::MSG_HTML_TEXT_CALCULATE_BOUNDARIES() ;
 
-            /* Let the sub-class know that we are finished */
-            @call oself::MSG_HTML_TEXT_FORMATTING_ENDED() ;
+            /* The subclass may flush image geometry and start another pass. */
+            notifyFormattingEnded = TRUE;
 
             @call oself::MSG_HTML_TEXT_INTERNAL_FLUSH_INVAL_AREA() ;
         }
@@ -2705,6 +2706,8 @@ T_layoutLevelTable *LayoutStackTableLevelAccess(T_layoutStack *p_stack, word lev
     }
 
     ProfPoint("MSG_HTML_TEXT_LAYOUT_STOP") ;
+    if(notifyFormattingEnded)
+        @call oself::MSG_HTML_TEXT_FORMATTING_ENDED() ;
 }
 
 void IHideCells(T_layoutStack *p_stack, word startCell, word endCell)

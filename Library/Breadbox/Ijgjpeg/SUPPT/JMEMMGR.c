@@ -30,6 +30,8 @@
 #include "jmemsys.h"
 
 #include <heap.h>
+#include <file.h>
+#include <vm.h>
 
 #ifndef NO_GETENV
 #ifndef HAVE_STDLIB_H		/* <stdlib.h> should declare getenv() */
@@ -146,6 +148,9 @@ typedef struct {
    * array routines.
    */
   JDIMENSION last_rowsperchunk;	/* from most recent alloc_sarray/barray */
+
+  VMFileHandle tempVMFile;
+  FileLongName tempName;
 } my_memory_mgr;
 
 typedef my_memory_mgr * my_mem_ptr;
@@ -175,6 +180,7 @@ struct jvirt_sarray_control {
   backing_store_info b_s_info;	/* System-dependent control info */
 
   MemHandle store;
+  MemHandle *lock_handles;
 };
 
 
@@ -195,6 +201,7 @@ struct jvirt_barray_control {
   backing_store_info b_s_info;	/* System-dependent control info */
 
   MemHandle store;
+  MemHandle *lock_handles;
 };
 
 
@@ -601,91 +608,77 @@ EC(if (pool_id != JPOOL_IMAGE)
 }
 
 
-typedef struct {
-    word numrows;
-    boolean pre_zero;
-    word blocksize;
-    MemHandle blockArray[1] ;
-} T_arrayStoreHeader ;
-
-MemHandle ArrayStoreCreate(word numrows, word blocksize, boolean pre_zero)
+LOCAL(void)
+open_array_store (j_common_ptr cinfo)
 {
-    MemHandle mh;
-    T_arrayStoreHeader *p_header ;
-  
-    mh = MemAlloc(sizeof(*p_header) + (numrows-1) * sizeof(p_header->blockArray[0]), 
-      HF_DYNAMIC|HF_SHARABLE, HAF_ZERO_INIT | HAF_NO_ERR);
+  my_mem_ptr mem = (my_mem_ptr) cinfo->mem;
 
-    p_header = MemLock(mh);
-    p_header->numrows = numrows;
-    p_header->blocksize = blocksize;
-    p_header->pre_zero = pre_zero;
-    MemUnlock(mh);
-
-    return mh;
+  if (mem->tempVMFile == NullHandle) {
+    FilePushDir();
+    FileSetStandardPath(SP_PRIVATE_DATA);
+    memset(mem->tempName, 0, sizeof(mem->tempName));
+    mem->tempVMFile = VMOpen(mem->tempName, VMAF_FORCE_READ_WRITE,
+                             VMO_TEMP_FILE, 0);
+    FilePopDir();
+    if (mem->tempVMFile == NullHandle)
+      ERREXITS(cinfo, JERR_TFILE_CREATE, mem->tempName);
+  }
 }
 
-void ArrayStoreDestroy(MemHandle backStore)
+LOCAL(MemHandle)
+ArrayStoreCreate (j_common_ptr cinfo, JDIMENSION numrows)
 {
-    T_arrayStoreHeader *p_header ;
-    MemHandle *p_block ;
-    word i ;
+  long bytes = (long) numrows * (long) SIZEOF(VMBlockHandle);
+  MemHandle store;
 
-    /* Destroy all the blocks in the list (if they exist) */
-    p_header = MemLock(backStore) ;
-    p_block = p_header->blockArray ;
-    for (i=0; i<p_header->numrows; i++, p_block++)  {
-        if (*p_block)  {
-            MemFree(*p_block) ;
-            *p_block = NullHandle ;
-        }
+  if (bytes <= 0 || bytes > 65535L)
+    out_of_memory(cinfo, 3);
+  store = MemAlloc((word) bytes, HF_DYNAMIC|HF_SHARABLE,
+                   HAF_ZERO_INIT);
+  if (store == NullHandle)
+    out_of_memory(cinfo, 1);
+  return store;
+}
+
+LOCAL(void FAR *)
+ArrayStoreLockBlock (j_common_ptr cinfo, MemHandle store,
+                     JDIMENSION blockIndex, long blockSize,
+                     MemHandle *lockHandleP)
+{
+  my_mem_ptr mem = (my_mem_ptr) cinfo->mem;
+  VMBlockHandle *blocksP;
+  VMBlockHandle block;
+  void FAR *dataP;
+  MemHandle rowH;
+
+  if (blockSize <= 0 || blockSize > 65535L)
+    out_of_memory(cinfo, 3);
+
+  blocksP = (VMBlockHandle *) MemLock(store);
+  block = blocksP[blockIndex];
+  if (block == NullHandle) {
+    /* Allocate explicitly so a row shortage uses IJG error cleanup. */
+    rowH = MemAlloc((word) blockSize, HF_DYNAMIC|HF_SHARABLE, HAF_ZERO_INIT);
+    if (rowH == NullHandle) {
+      MemUnlock(store);
+      out_of_memory(cinfo, 1);
     }
+    block = VMAttach(mem->tempVMFile, 0, rowH);
+    blocksP[blockIndex] = block;
+  }
+  MemUnlock(store);
 
-    /* Unlock and free the backstore index */
-    MemUnlock(backStore) ;
-    MemFree(backStore) ;
+  dataP = VMLock(mem->tempVMFile, block, lockHandleP);
+  if (dataP == (void FAR *) 0)
+    out_of_memory(cinfo, 1);
+  return dataP;
 }
 
-void * ArrayStoreLockBlock(MemHandle backStore, word blockIndex)
+LOCAL(void)
+ArrayStoreDestroy (MemHandle store)
 {
-    MemHandle *p_block ;
-    MemHandle block ;
-    T_arrayStoreHeader *p_header ;
-
-    p_header = MemLock(backStore) ;
-    
-    /* check if access beyond storage bounds */
-    EC_ERROR_IF(blockIndex >= p_header->numrows, -1);
-
-    p_block = p_header->blockArray + blockIndex ;
-    if (!(*p_block))  {
-        *p_block = MemAlloc(p_header->blocksize, HF_DYNAMIC|HF_SHARABLE, 
-          (p_header->pre_zero? HAF_ZERO_INIT : 0) | HAF_NO_ERR) ;
-    }
-
-    block = *p_block ;
-
-    MemUnlock(backStore) ;
-
-    return MemLock(block);
-}
-
-void ArrayStoreUnlockBlock(MemHandle backStore, word blockIndex)
-{
-    MemHandle block ;
-    T_arrayStoreHeader *p_header ;
-
-    p_header = MemLock(backStore) ;
-    
-    /* check if access beyond storage bounds */
-    EC_ERROR_IF(blockIndex >= p_header->numrows, -1);
-
-    block = p_header->blockArray[blockIndex] ;
-    EC_ERROR_IF(!block, -1);            /* uninitialized block */
-
-    MemUnlock(backStore) ;
-
-    MemUnlock(block);
+  if (store != NullHandle)
+    MemFree(store);
 }
 
 METHODDEF(void)
@@ -704,13 +697,13 @@ realize_virt_arrays (j_common_ptr cinfo)
 
       /* allocate pointer array */
       sptr->mem_buffer = alloc_small(cinfo, JPOOL_IMAGE,
-	(size_t) (sptr->rows_in_mem * SIZEOF(JSAMPROW)));
+	(size_t) (sptr->rows_in_mem * (SIZEOF(JSAMPROW) + SIZEOF(MemHandle))));
+      sptr->lock_handles = (MemHandle *)
+	((char *) sptr->mem_buffer + sptr->rows_in_mem * SIZEOF(JSAMPROW));
 
       /* allocate control structures */
-      sptr->store = ArrayStoreCreate(
-        sptr->rows_in_array, 
-        (long) sptr->samplesperrow * (long) SIZEOF(JSAMPLE),
-        sptr->pre_zero);
+      open_array_store(cinfo);
+      sptr->store = ArrayStoreCreate(cinfo, sptr->rows_in_array);
       sptr->b_s_open = TRUE;
          
       sptr->rowsperchunk = 1;
@@ -727,13 +720,13 @@ realize_virt_arrays (j_common_ptr cinfo)
 
       /* allocate pointer array */
       bptr->mem_buffer = alloc_small(cinfo, JPOOL_IMAGE,
-	(size_t) (bptr->rows_in_mem * SIZEOF(JBLOCKROW)));
+	(size_t) (bptr->rows_in_mem * (SIZEOF(JBLOCKROW) + SIZEOF(MemHandle))));
+      bptr->lock_handles = (MemHandle *)
+	((char *) bptr->mem_buffer + bptr->rows_in_mem * SIZEOF(JBLOCKROW));
 
       /* allocate control structures */
-      bptr->store = ArrayStoreCreate(
-        bptr->rows_in_array, 
-        (long) bptr->blocksperrow * (long) SIZEOF(JBLOCK),
-        bptr->pre_zero);
+      open_array_store(cinfo);
+      bptr->store = ArrayStoreCreate(cinfo, bptr->rows_in_array);
       bptr->b_s_open = TRUE;
      
       bptr->rowsperchunk = 1;
@@ -755,28 +748,39 @@ access_virt_sarray (j_common_ptr cinfo, jvirt_sarray_ptr _ptr,
 {
   JDIMENSION i;
   jmemmgr_sarray_ptr ptr = (jmemmgr_sarray_ptr)_ptr;
-EC(JDIMENSION end_row = start_row + num_rows;)
 
 
-  /* debugging check */
-EC(if (end_row > ptr->rows_in_array || num_rows > ptr->maxaccess ||
-      ptr->mem_buffer == NULL)
-    ERREXIT(cinfo, JERR_BAD_VIRTUAL_ACCESS); )
+  if (start_row > ptr->rows_in_array ||
+      num_rows > ptr->rows_in_array - start_row ||
+      num_rows > ptr->maxaccess || ptr->mem_buffer == NULL)
+    ERREXIT(cinfo, JERR_BAD_VIRTUAL_ACCESS);
 
-  /* unlock all currently used rows */
-  for(i=0; i<ptr->cur_rows_in_mem; i++)
-    ArrayStoreUnlockBlock(ptr->store, ptr->cur_start_row + i);
+  /* Save changed rows and release their resident VM handles. */
+  for(i=0; i<ptr->cur_rows_in_mem; i++) {
+    if (ptr->dirty)
+      VMDirty(ptr->lock_handles[i]);
+    VMUnlock(ptr->lock_handles[i]);
+  }
+  VMEnforceHandleLimits(((my_mem_ptr) cinfo->mem)->tempVMFile, 20, 30);
 
   /* store new position in array */
   ptr->cur_start_row = start_row;
-  ptr->cur_rows_in_mem = num_rows;
+  ptr->cur_rows_in_mem = 0;
+  ptr->dirty = writable;
   
   /* lock newly used rows */
-  for(i=0; i<ptr->rows_in_mem; i++)
-    if(i<ptr->cur_rows_in_mem)
-      ptr->mem_buffer[i] = ArrayStoreLockBlock(ptr->store, ptr->cur_start_row + i);
-    else
+  for(i=0; i<ptr->rows_in_mem; i++) {
+    if(i<num_rows) {
+      ptr->mem_buffer[i] = (JSAMPROW) ArrayStoreLockBlock(cinfo, ptr->store,
+        ptr->cur_start_row + i,
+        (long) ptr->samplesperrow * SIZEOF(JSAMPLE),
+        &ptr->lock_handles[i]);
+      ptr->cur_rows_in_mem++;
+    } else {
       ptr->mem_buffer[i] = NULL;
+      ptr->lock_handles[i] = NullHandle;
+    }
+  }
 
   /* return number of rows in buffer */
   return ptr->mem_buffer;
@@ -792,27 +796,38 @@ access_virt_barray (j_common_ptr cinfo, jvirt_barray_ptr _ptr,
 {
   JDIMENSION i;
   jmemmgr_barray_ptr ptr = (jmemmgr_barray_ptr)_ptr;
-EC(JDIMENSION end_row = start_row + num_rows;)
 
-  /* debugging check */
-EC(if (end_row > ptr->rows_in_array || num_rows > ptr->maxaccess ||
-      ptr->mem_buffer == NULL)
-    ERREXIT(cinfo, JERR_BAD_VIRTUAL_ACCESS); )
+  if (start_row > ptr->rows_in_array ||
+      num_rows > ptr->rows_in_array - start_row ||
+      num_rows > ptr->maxaccess || ptr->mem_buffer == NULL)
+    ERREXIT(cinfo, JERR_BAD_VIRTUAL_ACCESS);
 
-  /* unlock all currently used rows */
-  for(i=0; i<ptr->cur_rows_in_mem; i++)
-    ArrayStoreUnlockBlock(ptr->store, ptr->cur_start_row + i);
+  /* Save changed rows and release their resident VM handles. */
+  for(i=0; i<ptr->cur_rows_in_mem; i++) {
+    if (ptr->dirty)
+      VMDirty(ptr->lock_handles[i]);
+    VMUnlock(ptr->lock_handles[i]);
+  }
+  VMEnforceHandleLimits(((my_mem_ptr) cinfo->mem)->tempVMFile, 20, 30);
 
   /* store new position in array */
   ptr->cur_start_row = start_row;
-  ptr->cur_rows_in_mem = num_rows;
+  ptr->cur_rows_in_mem = 0;
+  ptr->dirty = writable;
   
   /* lock newly used rows */
-  for(i=0; i<ptr->rows_in_mem; i++)
-    if(i<ptr->cur_rows_in_mem)
-      ptr->mem_buffer[i] = ArrayStoreLockBlock(ptr->store, ptr->cur_start_row + i);
-    else
+  for(i=0; i<ptr->rows_in_mem; i++) {
+    if(i<num_rows) {
+      ptr->mem_buffer[i] = (JBLOCKROW) ArrayStoreLockBlock(cinfo, ptr->store,
+        ptr->cur_start_row + i,
+        (long) ptr->blocksperrow * SIZEOF(JBLOCK),
+        &ptr->lock_handles[i]);
+      ptr->cur_rows_in_mem++;
+    } else {
       ptr->mem_buffer[i] = NULL;
+      ptr->lock_handles[i] = NullHandle;
+    }
+  }
 
   /* return number of rows in buffer */
   return ptr->mem_buffer;
@@ -828,6 +843,7 @@ free_pool (j_common_ptr cinfo, int pool_id)
   small_pool_ptr shdr_ptr;
   large_pool_ptr lhdr_ptr;
   size_t space_freed;
+  JDIMENSION i;
 
 EC(if (pool_id < 0 || pool_id >= JPOOL_NUMPOOLS)
     ERREXIT1(cinfo, JERR_BAD_POOL_ID, pool_id); /* safety check */ )
@@ -845,6 +861,8 @@ EC(if (pool_id < 0 || pool_id >= JPOOL_NUMPOOLS)
     for (sptr = mem->virt_sarray_list; sptr != NULL; sptr = sptr->next) {
       if (sptr->b_s_open) {	/* there may be no backing store */
 	sptr->b_s_open = FALSE;	/* prevent recursive close if error */
+        for (i = 0; i < sptr->cur_rows_in_mem; i++)
+          VMUnlock(sptr->lock_handles[i]);
         ArrayStoreDestroy(sptr->store);
       }
     }
@@ -852,10 +870,21 @@ EC(if (pool_id < 0 || pool_id >= JPOOL_NUMPOOLS)
     for (bptr = mem->virt_barray_list; bptr != NULL; bptr = bptr->next) {
       if (bptr->b_s_open) {	/* there may be no backing store */
 	bptr->b_s_open = FALSE;	/* prevent recursive close if error */
+        for (i = 0; i < bptr->cur_rows_in_mem; i++)
+          VMUnlock(bptr->lock_handles[i]);
         ArrayStoreDestroy(bptr->store);
       }      
     }
     mem->virt_barray_list = NULL;
+
+    if (mem->tempVMFile != NullHandle) {
+      VMClose(mem->tempVMFile, FILE_NO_ERRORS);
+      mem->tempVMFile = NullHandle;
+      FilePushDir();
+      FileSetStandardPath(SP_PRIVATE_DATA);
+      FileDelete(mem->tempName);
+      FilePopDir();
+    }
   }
 
   /* Release large objects */
@@ -979,6 +1008,8 @@ EC(if ((long) test_mac != MAX_ALLOC_CHUNK ||
   }
   mem->virt_sarray_list = NULL;
   mem->virt_barray_list = NULL;
+  mem->tempVMFile = NullHandle;
+  mem->tempName[0] = '\0';
 
   mem->total_space_allocated = SIZEOF(my_memory_mgr);
 

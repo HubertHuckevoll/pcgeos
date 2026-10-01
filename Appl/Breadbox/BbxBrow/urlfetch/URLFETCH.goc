@@ -299,9 +299,6 @@ Boolean URLFetchEngineStart(void)
 	    sprintf(workFileName, WORK_FILENAME, i);
 	    G_fetchProgressVMFile[i] = VMOpen(workFileName, VMAF_FORCE_READ_WRITE, VMO_CREATE_TRUNCATE, 1);
 	    if (G_fetchProgressVMFile[i]) {
-		/* set sync update so stuff will stay in memory for faster
-		   access */
-		VMSetAttributes(G_fetchProgressVMFile[i], VMA_SYNC_UPDATE, 0) ;
 		/* create data stream */
 		G_fetchProgressDataStream[i] = HugeArrayCreate(G_fetchProgressVMFile[i], 1, 0);
 	    }

@@ -368,10 +368,11 @@ word _pascal URLTextImageFormatFromMime(TCHAR *mimeType)
 
 @ifdef PROGRESS_DISPLAY
 extern void _pascal WakeUp(word *queueP);
-extern void _pascal Block(word *queueP, Boolean *flag);
+extern void _pascal Block(word *queueP, Boolean *flag,
+                          dword *bytesAvailP, dword *preReadOffsetP,
+                          word needed);
 
-#define USE_MEM_STREAM
-
+/* Use the VM-backed stream so queued downloads can release RAM handles. */
 #ifdef USE_MEM_STREAM
 MemHandle G_stream[2] = {0, 0};
 
@@ -544,6 +545,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     word lt;
 #else
     dword streamCount;
+    word deleteCount;
 #endif
 
     if (loadProgressDataP) {
@@ -559,10 +561,6 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         /* only do progress display for JPEGs and GIFs */
         if ((strcmp(loadProgressDataP->LPD_mimeType, _TEXT("image/jpeg")) == 0) ||
         (strcmp(loadProgressDataP->LPD_mimeType, _TEXT("image/gif")) == 0)) {
-#ifndef USE_MEM_STREAM
-        dword streamCount;
-#endif
-
 #ifdef USE_MEM_STREAM
 	G_stream[lt] = MemStreamInit(G_stream[lt]);
 #else
@@ -574,10 +572,12 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         streamCount = HugeArrayGetCount(
             loadProgressDataP->LPD_dataFile,
             loadProgressDataP->LPD_dataStream);
-        if (streamCount) {
+        while (streamCount) {
+            deleteCount = streamCount > 65535L ? 0xffff : (word) streamCount;
             HugeArrayDelete(loadProgressDataP->LPD_dataFile,
                     loadProgressDataP->LPD_dataStream,
-                    streamCount, 0);
+                    deleteCount, 0);
+            streamCount -= deleteCount;
         }
 #endif
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
@@ -619,12 +619,12 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 
             ThreadVSem(loadProgressDataP->LPD_sem);
 
-	        /* there is a timing hole right here, after we've checked fileDone,
-	           where the fetch thread could set fileDone and WakeUp no-one
-	           (since we aren't blocked yet); to catch this, we now atomically
-	           check fileDone and block */
+	        /* Recheck fileDone and available bytes atomically before blocking;
+	           WakeUp drops signals when the reader is not queued yet. */
             Block(&(loadProgressDataP->LPD_emptyQueue),
-	                                &loadProgressDataP->LPD_fileDone);
+	                &loadProgressDataP->LPD_fileDone,
+	                &loadProgressDataP->LPD_bytesAvail,
+	                &loadProgressDataP->LPD_preReadOffset, bufSize);
             ThreadPSem(loadProgressDataP->LPD_sem);
         }
 
@@ -633,22 +633,28 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 #else
         if (loadProgressDataP->LPD_dataStream) {
 
-            int thisRound, toCopy, toGo = bufSize;
+            word thisRound, toCopy, toGo = bufSize;
             void *dataP, *destP = buffer;
             word elemSize;
 #endif
 
             if (!peek && loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET) {
 
-                /* delete first data packet before getting next,
-                   we never get here for sub-bufSize streams,
-                   so always delete bufSize bytes */
+                /* Drop the retained first packet using its actual size,
+                   even if this request uses a different buffer size. */
 #ifdef USE_MEM_STREAM
 	            MemStreamDelete(G_stream[lt], bufSize + loadProgressDataP->LPD_preReadOffset, FALSE);
 #else
-                HugeArrayDelete(loadProgressDataP->LPD_dataFile,
-                    loadProgressDataP->LPD_dataStream,
-                    bufSize + loadProgressDataP->LPD_preReadOffset, 0);
+                streamCount = HugeArrayGetCount(loadProgressDataP->LPD_dataFile,
+                    loadProgressDataP->LPD_dataStream) -
+                    loadProgressDataP->LPD_bytesAvail +
+                    loadProgressDataP->LPD_preReadOffset;
+                while (streamCount) {
+                    deleteCount = streamCount > 65535L ? 0xffff : (word) streamCount;
+                    HugeArrayDelete(loadProgressDataP->LPD_dataFile,
+                        loadProgressDataP->LPD_dataStream, deleteCount, 0);
+                    streamCount -= deleteCount;
+                }
 #endif
                 loadProgressDataP->LPD_streamState = LPSS_MORE_DATA;
 		loadProgressDataP->LPD_bytesAvail -= loadProgressDataP->LPD_preReadOffset;
@@ -665,21 +671,30 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
                     G_stream[lt], sizeRead, loadProgressDataP->LPD_fileDone);
 	        }
 #else
+            if (toGo > loadProgressDataP->LPD_bytesAvail -
+                       loadProgressDataP->LPD_preReadOffset)
+                toGo = loadProgressDataP->LPD_bytesAvail -
+                       loadProgressDataP->LPD_preReadOffset;
+
             while (toGo) {
 
-                /* if firstData, need to skip bytes read last time */
+                /* Retained reads and peeks advance without deleting data. */
                 thisRound = HAL_COUNT(HugeArrayLock(
                             loadProgressDataP->LPD_dataFile,
                             loadProgressDataP->LPD_dataStream,
-                            (loadProgressDataP->LPD_streamState == LPSS_EMPTY ?
-                                (loadProgressDataP->LPD_preReadOffset + sizeRead) : 0),
+                            (loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET ?
+                                HugeArrayGetCount(loadProgressDataP->LPD_dataFile,
+                                    loadProgressDataP->LPD_dataStream) -
+                                    loadProgressDataP->LPD_bytesAvail : 0) +
+                            ((peek || loadProgressDataP->LPD_streamState == LPSS_EMPTY) ?
+                                loadProgressDataP->LPD_preReadOffset + sizeRead : 0),
                             &dataP, &elemSize));
 
                 if (thisRound) {
 
                     toCopy = (toGo < thisRound) ? toGo : thisRound;
                     memcpy(destP, dataP, toCopy);
-                    (char *)destP += toCopy;
+                    destP = (char *)destP + toCopy;
                     toGo = toGo - toCopy;
                     sizeRead += toCopy;
                     HugeArrayUnlock(dataP);
@@ -738,10 +753,12 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         streamCount = HugeArrayGetCount(
             loadProgressDataP->LPD_dataFile,
             loadProgressDataP->LPD_dataStream);
-        if (streamCount) {
+        while (streamCount) {
+            deleteCount = streamCount > 65535L ? 0xffff : (word) streamCount;
             HugeArrayDelete(loadProgressDataP->LPD_dataFile,
                     loadProgressDataP->LPD_dataStream,
-                    streamCount, 0);
+                    deleteCount, 0);
+            streamCount -= deleteCount;
         }
 #endif
         loadProgressDataP->LPD_bytesAvail = 0;
@@ -765,6 +782,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         HugeArrayAppend(loadProgressDataP->LPD_dataFile,
                 loadProgressDataP->LPD_dataStream,
                 bufSize, buffer);
+        VMEnforceHandleLimits(loadProgressDataP->LPD_dataFile, 20, 30);
 #endif
         loadProgressDataP->LPD_bytesAvail += bufSize;
         ThreadVSem(loadProgressDataP->LPD_sem);
@@ -777,7 +795,10 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         break;
     }
     case LPCT_FLUSH_FIRST:
-        if (loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET) {
+    case LPCT_RESET_STREAM_STATE:
+        ThreadPSem(loadProgressDataP->LPD_sem);
+        if (callbackType == LPCT_FLUSH_FIRST &&
+            loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET) {
 #ifdef USE_MEM_STREAM
         MemStreamDelete(G_stream[lt], bufSize, FALSE);
 #else
@@ -786,10 +807,17 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
                 bufSize, 0);
 #endif
         }
-        /* fall through to reset stream state */
-    case LPCT_RESET_STREAM_STATE:
+#ifndef USE_MEM_STREAM
+        /* A failed probe replays the retained packet; a flush consumed it.
+           Reconcile the count while the producer cannot append more data. */
+        if (loadProgressDataP->LPD_streamState == LPSS_FIRST_PACKET)
+            loadProgressDataP->LPD_bytesAvail = HugeArrayGetCount(
+                loadProgressDataP->LPD_dataFile,
+                loadProgressDataP->LPD_dataStream);
+#endif
         loadProgressDataP->LPD_streamState = LPSS_EMPTY;
         loadProgressDataP->LPD_preReadOffset = 0;
+        ThreadVSem(loadProgressDataP->LPD_sem);
         break;
     case LPCT_CLOSE:
 	/* we don't need to atomically set fileDone and WakeUp here since
@@ -1994,8 +2022,12 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
               @call oself::MSG_HTML_TEXT_CLAMP_IMAGES_TO_VIEWPORT(
                 pself->UTI_imageViewportWidth,
                 pself->UTI_imageViewportHeight, FALSE);
-          /* for now, force an update of the entire table structure */
-          @call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT() ;
+          /* The active layout consumes these geometry changes through its
+             cell retry/extra pass. Starting another calculation here would
+             turn the final flush into a restart from the page top. */
+          pself = ObjDerefVis(oself);
+          if(!(pself->HTI_layoutState & HTS_CALCULATING_LAYOUT))
+              @call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT() ;
 
           /* Inform the frame that we are done. */
           @send frame::MSG_URL_FRAME_NOTIFY_FRAME_COMPLETE();
@@ -2368,20 +2400,6 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
             importProgressDataP->IPD_nameT,
             importProgressDataP->IPD_firstLine,
             importProgressDataP->IPD_lastLine);
-          if (pself->HTI_imageArray)
-          {
-              /* A first progress bitmap changes the image geometry. Resolve it
-                 now for both streamed and completed-file imports; otherwise a
-                 streamed image remains a placeholder until final page layout. */
-              @call self::MSG_HTML_TEXT_WAITING_IMAGES_RESOLVE(FALSE);
-              if(importProgressDataP->IPD_loadProgressDataP)
-              {
-                  /* A live page layout normally postpones changed cells until
-                     its final extra pass. Request its existing restart path now
-                     so streamed pixels become visible before page completion. */
-                  @call self::MSG_HTML_TEXT_CALCULATE_LAYOUT();
-              }
-          }
           MemUnlock(importProgressData);
 	}
 	MemFree(importProgressData);
