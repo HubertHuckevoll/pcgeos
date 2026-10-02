@@ -880,10 +880,26 @@ void _export FreeHTMLTransferItem(VMFileHandle vmf, VMChain vmc)
 /* "-dc" causes vptrs for text constants if different code segments are used */
 #pragma option -dc-
 
-void LOCAL IMarkAllImagesUnresolved(optr imageArray)
+VisTextGraphic *IFindGraphicForImage(VMFileHandle file, VMBlockHandle graphicRun,
+                                    word nImage, MemHandle *mem);
+
+void LOCAL IMarkAllImagesUnresolved(optr oself, optr imageArray)
 {
     HTMLimageData *imageArrayElement;
+    HTMLTextInstance *textP;
+    VisTextGraphic *graphicP;
+    VMBlockHandle *graphicRunsP;
+    VMFileHandle vmFile;
+    MemHandle graphicH;
+    word graphicRuns;
+    Boolean changed;
     word i ;
+
+    textP = ObjDerefVis(oself);
+    vmFile = textP->VTI_vmFile;
+    graphicRunsP = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
+    graphicRuns = graphicRunsP ? *graphicRunsP : 0;
+    changed = FALSE;
 
     /* Go through all the images and if a broken image is found, it */
     /* is converted to 'unresolved' and not broken. */
@@ -894,6 +910,29 @@ void LOCAL IMarkAllImagesUnresolved(optr imageArray)
         imageArrayElement->flags &= ~(HTML_IDF_RESOLVED | HTML_IDF_RESOLVING | 
                                       HTML_IDF_BROKEN | HTML_IDF_SIZE_DIRTY) ;
 
+        if (imageArrayElement->flags & HTML_IDF_INLINE_SVG)
+        {
+            /* Cached pages must start with invisible SVG placeholders too. */
+            imageArrayElement->HID_size.XYS_width = 0;
+            imageArrayElement->HID_size.XYS_height = 0;
+            if (!imageArrayElement->svgSourceLength ||
+                (imageArrayElement->flags & HTML_IDF_SVG_UNSUPPORTED))
+                imageArrayElement->flags |= HTML_IDF_BROKEN;
+            graphicP = graphicRuns ? IFindGraphicForImage(vmFile, graphicRuns,
+              i, &graphicH) : (void *)0;
+            if (graphicP)
+            {
+                if (graphicP->VTG_size.XYS_width ||
+                    graphicP->VTG_size.XYS_height)
+                {
+                    graphicP->VTG_size = imageArrayElement->HID_size;
+                    VMDirty(graphicH);
+                    changed = TRUE;
+                }
+                VMUnlockChainifiedLMemBlock(graphicH);
+            }
+        }
+
         /* Make sure we're note associated with any graphic */
         imageArrayElement->HID_cacheToken = 0;
         imageArrayElement->HID_resolvedURL = NAME_POOL_NONE;
@@ -901,6 +940,13 @@ void LOCAL IMarkAllImagesUnresolved(optr imageArray)
         imageArrayElement->HID_vmb = 0;
       }
       MemUnlock(OptrToHandle(imageArray));
+    }
+    if (changed)
+    {
+        textP = ObjDerefVis(oself);
+        textP->HTI_layoutState |= HTS_LAYOUT_DIRTY |
+          HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS |
+          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
     }
 }
 
@@ -1259,7 +1305,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       RegionPurgeCache(oself) ;
 
       pself = ObjDerefVis(oself);
-      IMarkAllImagesUnresolved(pself->HTI_imageArray);
+      IMarkAllImagesUnresolved(oself, pself->HTI_imageArray);
                                         // we haven't checked the cache yet
 
       @call self::MSG_HTML_TEXT_INITIALIZE_FORM_ELEMENTS() ;
@@ -2108,6 +2154,163 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
     TableArrayEndAccess(pself->HTI_tableArray);
 }
 
+static sword _pascal
+HTMLTextScaleDrawOffset(sword offset, WWFixedAsDWord factor)
+{
+    WWFixedAsDWord scaled;
+    word fraction;
+
+    scaled = GrMulWWFixed(MakeWWFixed(offset), factor);
+    fraction = FractionOf(scaled);
+    if(offset < 0)
+        return IntegerOf(scaled) + (fraction > 0x8000);
+    return IntegerOf(scaled) + (fraction >= 0x8000);
+}
+
+static Boolean _pascal
+HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
+                          word viewportHeight)
+{
+    dword available;
+    WWFixedAsDWord factor;
+    WWFixedAsDWord scale;
+    dword scaledPixels;
+    word maxWidth, maxHeight;
+    Boolean spacingChanged;
+
+    spacingChanged = FALSE;
+    available = 2L * imageP->hspace;
+    if(available >= viewportWidth)
+    {
+        imageP->hspace = (viewportWidth - 1) / 2;
+        available = 2L * imageP->hspace;
+        spacingChanged = TRUE;
+    }
+    maxWidth = viewportWidth > available ? viewportWidth - available : 1;
+    available = 2L * imageP->vspace;
+    if(available >= viewportHeight)
+    {
+        imageP->vspace = (viewportHeight - 1) / 2;
+        available = 2L * imageP->vspace;
+        spacingChanged = TRUE;
+    }
+    maxHeight = viewportHeight > available ? viewportHeight - available : 1;
+
+    if(imageP->HID_size.XYS_width <= maxWidth &&
+       imageP->HID_size.XYS_height <= maxHeight)
+        return spacingChanged;
+
+    factor = MakeWWFixed(1);
+    if(imageP->HID_size.XYS_width > maxWidth)
+    {
+        scale = GrUDivWWFixed((dword)maxWidth << 16,
+          (dword)imageP->HID_size.XYS_width << 16);
+        if(scale < factor)
+            factor = scale;
+    }
+    if(imageP->HID_size.XYS_height > maxHeight)
+    {
+        scale = GrUDivWWFixed((dword)maxHeight << 16,
+          (dword)imageP->HID_size.XYS_height << 16);
+        if(scale < factor)
+            factor = scale;
+    }
+
+    *(WWFixedAsDWord *)&imageP->HID_tmatrixE11 = GrMulWWFixed(
+      *(WWFixedAsDWord *)&imageP->HID_tmatrixE11, factor);
+    *(WWFixedAsDWord *)&imageP->HID_tmatrixE22 = GrMulWWFixed(
+      *(WWFixedAsDWord *)&imageP->HID_tmatrixE22, factor);
+    imageP->HID_drawOffset.XYO_x = HTMLTextScaleDrawOffset(
+      imageP->HID_drawOffset.XYO_x, factor);
+    imageP->HID_drawOffset.XYO_y = HTMLTextScaleDrawOffset(
+      imageP->HID_drawOffset.XYO_y, factor);
+
+    scaledPixels = (dword)imageP->HID_size.XYS_width * FractionOf(factor);
+    imageP->HID_size.XYS_width = (scaledPixels + 0x8000L) >> 16;
+    if(imageP->HID_size.XYS_width == 0)
+        imageP->HID_size.XYS_width = 1;
+    if(imageP->HID_size.XYS_width > maxWidth)
+        imageP->HID_size.XYS_width = maxWidth;
+
+    scaledPixels = (dword)imageP->HID_size.XYS_height * FractionOf(factor);
+    imageP->HID_size.XYS_height = (scaledPixels + 0x8000L) >> 16;
+    if(imageP->HID_size.XYS_height == 0)
+        imageP->HID_size.XYS_height = 1;
+    if(imageP->HID_size.XYS_height > maxHeight)
+        imageP->HID_size.XYS_height = maxHeight;
+
+    return TRUE;
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_CLAMP_INLINE_SVG_TO_VIEWPORT
+{
+    HTMLimageData *imageP;
+    VisTextGraphic *graphic;
+    VMBlockHandle *graphicRunsP;
+    optr imageArray;
+    MemHandle imageArrayH, graphicMem;
+    VMFileHandle vmFile;
+    word graphicRuns, i, n, size;
+    Boolean changed;
+
+    imageArray = pself->HTI_imageArray;
+    if(!imageArray || !viewportWidth || !viewportHeight)
+        return;
+    graphicRunsP = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
+    if(!graphicRunsP)
+        return;
+    graphicRuns = *graphicRunsP;
+    vmFile = pself->VTI_vmFile;
+
+    imageArrayH = OptrToHandle(imageArray);
+    MemLock(imageArrayH);
+    n = ChunkArrayGetCount(imageArray);
+    changed = FALSE;
+    for(i = 0; i < n; i++)
+    {
+        imageP = ChunkArrayElementToPtr(imageArray, i, &size);
+        if(imageP->pos < HTML_IMAGE_POS_RESERVED &&
+           (imageP->flags & HTML_IDF_INLINE_SVG) &&
+           (imageP->flags & HTML_IDF_RESOLVED) &&
+           !(imageP->flags & (HTML_IDF_BROKEN | HTML_IDF_SVG_UNSUPPORTED)) &&
+           HTMLTextFitImageToViewport(imageP, viewportWidth,
+             viewportHeight))
+        {
+            imageP->flags |= HTML_IDF_SIZE_DIRTY;
+            graphic = IFindGraphicForImage(vmFile, graphicRuns, i,
+              &graphicMem);
+            if(graphic)
+            {
+                graphic->VTG_size = imageP->HID_size;
+                graphic->VTG_size.XYS_width += 2*imageP->hspace;
+                graphic->VTG_size.XYS_height += 2*imageP->vspace;
+                if(graphic->VTG_size.XYS_height >= IMAGE_HEIGHT_FUDGE_FACTOR)
+                    graphic->VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR;
+                VMDirty(graphicMem);
+                VMUnlockChainifiedLMemBlock(graphicMem);
+            }
+            changed = TRUE;
+        }
+    }
+    MemUnlock(imageArrayH);
+    if(changed)
+    {
+        pself = ObjDerefVis(oself);
+        pself->HTI_layoutState |= HTS_LAYOUT_DIRTY |
+          HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS |
+          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
+    }
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_RESOLVE_INLINE_SVG
+{
+    if ((data->flags & HTML_IDF_INLINE_SVG) &&
+        data->pos < HTML_IMAGE_POS_RESERVED && viewportWidth && viewportHeight)
+        HTMLTextFitImageToViewport(data, viewportWidth, viewportHeight);
+    return @call self::MSG_HTML_TEXT_RESOLVE_IMAGE(nImage, data,
+      invalFrom, invalTo);
+}
+
 /**************************************************************************
  *               MSG_HTML_TEXT_RESOLVE_IMAGE for HTMLTextClass
  **************************************************************************
@@ -2364,7 +2567,8 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
       for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)
       {
         imageArrayElement = ChunkArrayElementToPtr(array, i, &size);
-        if(imageArrayElement->flags & (HTML_IDF_BROKEN | HTML_IDF_RESOLVING))
+        if((imageArrayElement->flags & (HTML_IDF_BROKEN | HTML_IDF_RESOLVING)) &&
+           !(imageArrayElement->flags & HTML_IDF_SVG_UNSUPPORTED))
         {
           ret = TRUE;                   /* found unresolved image? abort */
           break;
@@ -2390,10 +2594,13 @@ void MarkTableLayoutDirty(HTMLTextInstance *pself, word tableIndex)
       array = pself->HTI_imageArray;
       for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)  {
         imageArrayElement = ChunkArrayElementToPtr(array, i, NULL);
+        if(imageArrayElement->flags & HTML_IDF_SVG_UNSUPPORTED)
+            continue;
         if (imageArrayElement->flags & HTML_IDF_BROKEN) 
             imageArrayElement->flags &= 
                  ~(HTML_IDF_BROKEN | HTML_IDF_RESOLVED) ;
-        if (imageArrayElement->flags & HTML_IDF_RESOLVING) 
+        if ((imageArrayElement->flags & HTML_IDF_RESOLVING) &&
+            !(imageArrayElement->flags & HTML_IDF_INLINE_SVG))
             imageArrayElement->flags &= ~HTML_IDF_RESOLVING ;
       }
       MemUnlock(OptrToHandle(pself->HTI_imageArray));

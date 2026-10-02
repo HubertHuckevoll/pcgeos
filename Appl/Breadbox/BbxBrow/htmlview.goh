@@ -547,8 +547,9 @@ typedef struct {
 /* version 2.1: add name to HTMLimageData */
 /* version 2.2: add referer to HTMLframeData */
 /* version 2.3: add flags to HTMLformData HFD_var.textarea */
+/* version 2.4: add inline SVG source chain and image source spans */
 #define OBJ_CACHE_MAJOR_VERSION 2
-#define OBJ_CACHE_MINOR_VERSION 3
+#define OBJ_CACHE_MINOR_VERSION 4
 
 extern optr srcCachePool, objCachePool;
 extern VMFileHandle srcCacheBlock;
@@ -1130,6 +1131,22 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
 
   @instance optr UTI_frame;
   @instance word UTI_numPendingRequests = 0 ;
+  @instance word UTI_imageViewportWidth = 0;
+  @instance word UTI_imageViewportHeight = 0;
+  @instance word UTI_svgCampaign = 0;
+  @instance word UTI_svgPaused = 0;
+  @instance word UTI_svgBatchAdmissions = 0;
+  @instance word UTI_svgBatchResults = 0;
+  @instance word UTI_svgOutstanding = 0;
+  @instance NameToken UTI_svgImportName1 = NAME_POOL_NONE;
+  @instance NameToken UTI_svgImportName2 = NAME_POOL_NONE;
+  @instance word UTI_svgIgnoreOutstanding = 0;
+  @instance word UTI_svgPreferredIndex = 0xFFFF;
+  @instance word UTI_svgObjCache = 0;
+  @instance word UTI_svgForceLoad = 0;
+  @instance word UTI_svgRestartPending = 0;
+  @instance TimerHandle UTI_svgTimer = NullHandle;
+  @instance word UTI_svgTimerID = 0;
 
   /* Tracks the amount of memory used by this text object */
   @instance dword UTI_usedMem = 0 ;
@@ -1181,6 +1198,10 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @message word MSG_URL_TEXT_FIND_FORM_FROM_NAME(NameToken nameT);
   @message word MSG_URL_TEXT_FIND_ELEMENT_FROM_NAME(NameToken nameT, word head);
 @endif
+  @message Boolean MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
+  @message void MSG_URL_TEXT_START_INLINE_SVG_CAMPAIGN();
+  @message void MSG_URL_TEXT_ADMIT_INLINE_SVGS();
+  @message void MSG_URL_TEXT_INLINE_SVG_TIMER();
 @endc;
 
 

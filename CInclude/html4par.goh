@@ -7,6 +7,8 @@
  *
  ***********************************************************************/
 
+@deflib html4par
+
 @include <product.goh>
 #include <product.h>
 
@@ -165,6 +167,7 @@ typedef struct {
   VMChain       HTBH_lineArrayLink ;    /* VMChain to huge array of lines calculated */
   VMChain       HTBH_regionArrayLink ;  /* VMChain to huge array of regions */
   VMChain       HTBH_scriptCode;        /* VMChain to huge array of main script code */
+  VMChain       HTBH_svgSourceData;     /* raw inline SVG bytes */
 } HypertextTransferBlockHeader;
 
 
@@ -222,6 +225,8 @@ typedef struct {
     #define HTML_IDF_ISMAP      0x0002  /*  - image is a server side map */
     #define HTML_IDF_SUBMIT     0x0004  /*  - image is graphical submit btn */
     #define HTML_IDF_RESOLVING  0x0008  /*  - image has been requested */
+    #define HTML_IDF_INLINE_SVG  0x0400  /* source in HTBH_svgSourceData */
+    #define HTML_IDF_SVG_UNSUPPORTED 0x0800 /* no importable inline content */
     #define HTML_IDF_SIZE_DIRTY 0x4000  /*  - size has changed recently */
     #define HTML_IDF_BROKEN     0x8000  /*  - image could not be resolved */
   XYSize size;                          /* target size, or 0 if not spec'd */
@@ -255,6 +260,8 @@ typedef struct {
     #define HTML_ANIMATION_VAR_FRAME_NOT_STARTED  0xFFFF
   word          HID_delay ;             /*   Current delay til next frame */
   word          HID_loopCount ;         /*   Number of times left to loop */
+  dword         svgSourceOffset;        /* persistent SVG source byte offset */
+  dword         svgSourceLength;        /* persistent SVG source byte length */
 } HTMLimageData;
 
 #define HTML_IMAGE_INDEX_NONE 0xFFFF
@@ -1178,4 +1185,18 @@ typedef dword T_tableArrayHandle ;
 @ifdef DO_DBCS
   @instance DosCodePage HTI_codePage = 0;
 @endif
+
+@ifndef HTML4PAR_BUILD
+@protominor HTMLTextInlineSVG
+@endif
+  @message Boolean MSG_HTML_TEXT_RESOLVE_INLINE_SVG(word nImage,
+    HTMLimageData *data, word invalFrom, word invalTo,
+    word viewportWidth, word viewportHeight);
+  @message void MSG_HTML_TEXT_CLAMP_INLINE_SVG_TO_VIEWPORT(word viewportWidth,
+    word viewportHeight);
+@ifndef HTML4PAR_BUILD
+@protoreset
+@endif
 @endc;
+
+@endlib

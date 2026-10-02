@@ -218,7 +218,7 @@ typedef enum {
   SPEC_A,
   SPEC_P,       SPEC_Hx,
   SPEC_HTML,    SPEC_HEAD,      SPEC_BODY,
-  SPEC_TITLE,   SPEC_BASE,
+  SPEC_TITLE,   SPEC_BASE,      SPEC_SVG,
   SPEC_HR,      SPEC_BR,        SPEC_IMG,
   SPEC_LI,      SPEC_OL,        SPEC_UL,
   SPEC_FONT,    SPEC_BASEFONT,
@@ -303,6 +303,7 @@ typedef struct {
 extern HTMLextra *HTMLext;
 extern TextTransferBlockHeader *ttbh;
 extern HypertextTransferBlockHeader *htbh;
+extern word svgImageIndex;
 extern MemHandle transferHeaderMem, hypertextHeaderMem;
 extern optr NamePool;
 extern dword textpos;

@@ -1,0 +1,29 @@
+<html>
+<head><title>SVG integration check</title></head>
+<body>
+<h1>SVG integration check</h1>
+<p>The external SVG should render through the ordinary image path.</p>
+<img src="../../../SvgLib/Import/tests/mvp.svg" width="200" height="200">
+<p>The inline SVG should render a rounded rectangle, circle and dashed line.</p>
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="100"
+     viewBox="0 0 240 100">
+<title>This SVG title must not replace the HTML page title</title>
+<rect x="2" y="2" width="236" height="96" rx="12" fill="lightblue"/>
+<circle cx="50" cy="50" r="25" fill="red"/>
+<path d="M 100 50 L 220 50" fill="none" stroke="black"
+      stroke-width="4" stroke-dasharray="8 4"/>
+</svg>
+<p>This text must remain visible after inline SVG.</p>
+<svg width="20" height="20"><svg/><rect width="20" height="20"/></svg>
+<p>This text must remain visible after nested self-closing SVG.</p>
+<svg width="20" height="20"/>
+<p>An empty SVG must not leave a broken-image box.</p>
+<svg width="20" height="20"><use href="#missing"/></svg>
+<p>Unsupported SVG must remain invisible. Revisit or reload this page,
+resize the view, and test Stop while SVG imports are queued.</p>
+<p>The ordinary image and form below should behave as before.</p>
+<img src="red.gif" width="20" height="20" alt="Ordinary image">
+<form action="svg.htm"><input type="text" name="check" value="unchanged">
+<input type="submit" value="Submit"></form>
+</body>
+</html>
