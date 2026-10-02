@@ -16,6 +16,7 @@ else
 library ijgjpeg
 endif
 library pnglib
+library webplib
 library svglib
 
 export MIMEDRVGRAPHIC

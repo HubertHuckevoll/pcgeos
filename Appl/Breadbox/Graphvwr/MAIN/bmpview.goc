@@ -123,6 +123,7 @@ static void SendSelectNotify(VMBlockHandle bmpblock);
 #define BV_SHOW_GIF         4
 #define BV_SHOW_JPEG        5
 #define BV_SHOW_PNG         6
+#define BV_SHOW_WEBP        7
 #define BV_SHOW_SVG         8
 
 #define BV_DATA_BITMAP      0
@@ -1152,6 +1153,7 @@ FileHandle BVThumbnailDB = 0;
 				  @BVImpFileShowPCX,
 				  @BVImpFileShowSVG,
 				  @BVImpFileShowPNG,
+				  @BVImpFileShowWebP,
 @ifdef JPEG_SUPPORT
 				  @BVImpFileShowGIF,
 				  @BVImpFileShowJPEG;
@@ -1199,6 +1201,13 @@ FileHandle BVThumbnailDB = 0;
 @object GenItemClass BVImpFileShowPNG = {
 		GI_visMoniker = 'N', "Show .PNG Files";
 		GII_identifier = BV_SHOW_PNG;
+}
+
+/**************************************************************************/
+
+@object GenItemClass BVImpFileShowWebP = {
+		GI_visMoniker = 'W', "Show .WEB Files";
+		GII_identifier = BV_SHOW_WEBP;
 }
 
 /**************************************************************************/
@@ -1455,6 +1464,10 @@ FileHandle BVThumbnailDB = 0;
 
 	 case IBF_PNG:
 		strcpy(mask, "*.PNG");
+		break;
+
+	 case IBF_WEBP:
+		strcpy(mask, "*.WEB");
 		break;
 
 	 case IBF_GIF:
@@ -2561,8 +2574,8 @@ BVImportGraphic(ImpBmpParams *paraP, byte *dataTypeP,
 
 	if(status == IBS_NO_ERROR)
 	{
-		/* SVG is already a GString. */
-		if(dataType == BV_DATA_BITMAP)
+		/* SVG is a GString; WebpLib writes PackBits-compacted scanlines. */
+		if(dataType == BV_DATA_BITMAP && para.IBP_format != IBF_WEBP)
 		{
 			bmpblock = GrCompactBitmap(para.IBP_dest, para.IBP_bitmap,
 									 para.IBP_dest);
@@ -3011,6 +3024,13 @@ Boolean StrEnd(char *text, char *endstr)
 								filelist[count1] = filelist[count2];
 								count1++;
 							}
+							else
+								if(StrEnd(&filelist[count2].BVFA_name, ".WEB") &&
+								   ((sel == BV_SHOW_WEBP) || (sel == BV_SHOW_ALL_MEDIA)))
+								{
+									filelist[count1] = filelist[count2];
+									count1++;
+								}
 							else
 								if(StrEnd(&filelist[count2].BVFA_name, ".SVG") &&
 								   ((sel == BV_SHOW_SVG) || (sel == BV_SHOW_ALL_MEDIA)))
