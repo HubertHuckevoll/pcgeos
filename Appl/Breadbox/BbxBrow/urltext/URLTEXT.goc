@@ -1223,6 +1223,8 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
         }
         else
         {
+          @call oself::MSG_URL_TEXT_HIDE_BROKEN_IMAGES();
+
           /* for now, force an update of the entire table structure */
           @call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT() ;
 
@@ -1236,6 +1238,34 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 
     /* Relay operation status to frame */
     @call frame::MSG_URL_FRAME_DEC_PENDING();
+}
+
+@method URLTextClass, MSG_URL_TEXT_HIDE_BROKEN_IMAGES
+{
+    word i, n;
+    HTMLimageData image;
+#ifdef ERROR_CHECK
+    VisTextGraphic graphic;
+#endif
+
+    n = @call oself::MSG_HTML_TEXT_GET_IMAGE_COUNT();
+    for(i = 0; i < n; i++) {
+        @call oself::MSG_HTML_TEXT_GET_IMAGE(i, &image);
+        if(!(image.flags & HTML_IDF_BROKEN) ||
+           image.pos >= HTML_IMAGE_POS_RESERVED)
+            continue;
+
+        image.HID_size.XYS_width = image.HID_size.XYS_height = 0;
+        image.hspace = image.vspace = 0;
+        /* ATTENTION: Resolving clears BROKEN, so "Load Images Now" skips
+         * these images. Page reload resets loading state and retries them. */
+        @call oself::MSG_HTML_TEXT_RESOLVE_IMAGE(i, &image, 0, 0xFFFF);
+#ifdef ERROR_CHECK
+        @call oself::MSG_VIS_TEXT_GET_GRAPHIC_AT_POSITION(&graphic, image.pos);
+        EC_ERROR_IF(graphic.VTG_size.XYS_width ||
+                    graphic.VTG_size.XYS_height, -1);
+#endif
+    }
 }
 
 void URLTextInitializeImage(
