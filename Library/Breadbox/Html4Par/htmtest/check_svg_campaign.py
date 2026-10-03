@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Runnable check for inline SVG batch admission and pending ownership."""
+"""Runnable check for image completion, placeholders and pending ownership."""
 
 
 from pathlib import Path
@@ -90,19 +90,36 @@ def check_cached_placeholders():
 
     repo = Path(__file__).resolve().parents[4]
     source = (repo / "Library/Breadbox/Html4Par/htmlclas/htmlclas.goc").read_text()
-    start = source.index("void LOCAL IMarkAllImagesUnresolved(")
+    start = source.index("typedef struct {", source.index("VisTextGraphic *IFindGraphicForImage("))
     end = source.index("\n#ifdef __WATCOMC__", start)
+    find_start = source.index("typedef struct {", source.index(" * Routine: IFindGraphicForImage"))
+    find_end = source.index("\n/**************************************************************************", find_start)
+    collapse_start = source.index("@method HTMLTextClass, MSG_HTML_TEXT_COLLAPSE_BROKEN_IMAGES")
+    collapse_end = source.index("\n@method", collapse_start + 1)
+    collapse = source[collapse_start:collapse_end].replace(
+        "@method HTMLTextClass, MSG_HTML_TEXT_COLLAPSE_BROKEN_IMAGES",
+        "static void CollapseBrokenImages(optr oself, HTMLTextInstance *pself)")
+    completion = browser[browser.index("@method URLTextClass, MSG_URL_TEXT_DEC_PENDING"):
+                         browser.index("void URLTextInitializeImage(")]
+    assert completion.index("MSG_HTML_TEXT_COLLAPSE_BROKEN_IMAGES") < completion.index(
+        "MSG_HTML_TEXT_CALCULATE_LAYOUT")
     header = (repo / "CInclude/html4par.goh").read_text()
     defines = "\n".join(line for line in header.splitlines()
-                        if line.lstrip().startswith("#define HTML_IDF_") or
-                        line.lstrip().startswith("#define HTS_LAYOUT_"))
+                        if line.lstrip().startswith(("#define HTML_IDF_",
+                            "#define HTS_LAYOUT_", "#define HTML_IMAGE_POS_")))
     harness = r'''
 #include <assert.h>
 #include <string.h>
 #define LOCAL
+#define _pascal
+#define _export
+#define VTGT_VARIABLE 1
+#define HTML_VARGRAPH_MFGID 2
+#define HTML_VARGRAPH_TYPE_IMAGE 3
 #define TRUE 1
 #define FALSE 0
 #define NAME_POOL_NONE 0
+#define TEXT_ADDRESS_PAST_END 0xffffffffUL
 #define ATTR_VIS_TEXT_GRAPHIC_RUNS 0
 #define OptrToHandle(o) (o)
 /* GEOS word and int have equal widths, as this reverse loop requires. */
@@ -112,35 +129,84 @@ typedef word optr, VMFileHandle, VMBlockHandle, MemHandle;
 typedef int Boolean;
 typedef struct { word XYS_width, XYS_height; } XYSize;
 typedef struct {
-    word flags;
-    XYSize HID_size;
+    word flags, hspace, vspace;
+    XYSize size, HID_size;
+    dword pos;
     dword svgSourceLength, HID_cacheToken;
     word HID_resolvedURL, HID_vmf, HID_vmb;
 } HTMLimageData;
-typedef struct { XYSize VTG_size; } VisTextGraphic;
-typedef struct { VMFileHandle VTI_vmFile; word HTI_layoutState; } HTMLTextInstance;
+typedef struct { word HIGV_imageIndex; } HTMLimageGraphicVariable;
+typedef struct {
+    XYSize VTG_size;
+    struct { struct { word WAAH_high; } REH_refCount; } VTG_meta;
+    word VTG_type;
+    struct { struct {
+        word VTGV_manufacturerID, VTGV_type;
+        word VTGV_privateData[1];
+    } VTGD_variable; } VTG_data;
+} VisTextGraphic;
+typedef struct { VMBlockHandle TLRAH_elementVMBlock; } TextLargeRunArrayHeader;
+typedef struct { word LMBH_offset; } LMemBlockHeader;
+typedef struct {
+    VMFileHandle VTI_vmFile;
+    word HTI_layoutState;
+    optr HTI_imageArray;
+} HTMLTextInstance;
 static HTMLTextInstance text;
-static HTMLimageData images[3];
-static VisTextGraphic graphics[3];
-static word runs = 7, dirty, unlocked, arrayLocks;
+static HTMLimageData images[260];
+static VisTextGraphic graphics[266];
+static word runs = 7, arrayLocks, imageCount = 3;
+static word dirtyCalls, unlockCalls, graphicVisits, vmLocks, graphicLocks;
+static word graphicEnums;
+static word graphicCount = 3;
+static TextLargeRunArrayHeader runHeader = {8};
+static LMemBlockHeader graphicHeader = {9};
 static HTMLTextInstance *ObjDerefVis(optr o) { (void)o; return &text; }
 static VMBlockHandle *ObjVarFindData(optr o, word v)
-{ (void)o; (void)v; return &runs; }
+{ (void)o; (void)v; return runs ? &runs : (void *)0; }
 static void MemLock(word h) { (void)h; arrayLocks++; }
 static void MemUnlock(word h) { (void)h; arrayLocks--; }
-static word ChunkArrayGetCount(optr o) { (void)o; return 3; }
+static word ChunkArrayGetCount(optr o) { (void)o; return imageCount; }
 static HTMLimageData *ChunkArrayElementToPtr(optr o, word i, void *size)
 { (void)o; (void)size; return &images[i]; }
-static VisTextGraphic *IFindGraphicForImage(VMFileHandle f, VMBlockHandle r,
-                                           word i, MemHandle *h)
-{ (void)f; (void)r; *h = i + 1; return &graphics[i]; }
-static void VMDirty(MemHandle h) { dirty |= 1 << h; }
-static void VMUnlockChainifiedLMemBlock(MemHandle h) { unlocked |= 1 << h; }
-''' + defines + "\n" + source[start:end] + r'''
+static TextLargeRunArrayHeader *VMLock(VMFileHandle f, VMBlockHandle b, MemHandle *h)
+{ (void)f; assert(b == runs); *h = 10; vmLocks++; return &runHeader; }
+static void VMUnlock(MemHandle h) { assert(h == 10 && vmLocks); vmLocks--; }
+static LMemBlockHeader *VMLockChainifiedLMemBlock(VMFileHandle f, VMBlockHandle b,
+                                               MemHandle *h)
+{ (void)f; assert(b == 8); *h = 11; graphicLocks++; return &graphicHeader; }
+static Boolean ChunkArrayEnumHandles(MemHandle h, word a, void *dataP,
+    Boolean (*callback)(void *, void *))
+{
+    word i;
+    assert(h == 11 && a == 9 && graphicLocks);
+    graphicEnums++;
+    for(i = 0; i < graphicCount; i++) {
+        graphicVisits++;
+        if(callback(&graphics[i], dataP))
+            return TRUE;
+    }
+    return FALSE;
+}
+static void VMDirty(MemHandle h) { assert(h == 11); dirtyCalls++; }
+static void VMUnlockChainifiedLMemBlock(MemHandle h)
+{ assert(h == 11 && graphicLocks); graphicLocks--; unlockCalls++; }
+static void initGraphic(word i, word imageIndex)
+{
+    memset(&graphics[i], 0, sizeof(graphics[i]));
+    graphics[i].VTG_type = VTGT_VARIABLE;
+    graphics[i].VTG_data.VTGD_variable.VTGV_manufacturerID = HTML_VARGRAPH_MFGID;
+    graphics[i].VTG_data.VTGD_variable.VTGV_type = HTML_VARGRAPH_TYPE_IMAGE;
+    graphics[i].VTG_data.VTGD_variable.VTGV_privateData[0] = imageIndex;
+}
+''' + defines + "\n" + source[start:end] + "\n" + source[find_start:find_end] + "\n" + collapse + r'''
 int main(void)
 {
     word i;
+    MemHandle graphicH;
+    VisTextGraphic *graphicP;
     for (i = 0; i < 3; i++) {
+        initGraphic(i, i);
         images[i].flags = HTML_IDF_RESOLVED;
         images[i].HID_cacheToken = images[i].HID_resolvedURL = 99;
         images[i].HID_vmf = images[i].HID_vmb = 99;
@@ -167,11 +233,120 @@ int main(void)
     assert(images[1].svgSourceLength == 5000);
     assert(!(images[1].flags & HTML_IDF_BROKEN));
     assert(images[2].flags & HTML_IDF_BROKEN);
-    assert(dirty == ((1 << 2) | (1 << 3)) && unlocked == dirty);
+    assert(dirtyCalls == 1 && unlockCalls == 1 && graphicVisits == 3);
+    assert(graphicEnums == 1);
     assert(text.HTI_layoutState & HTS_LAYOUT_DIRTY);
-    dirty = unlocked = 0;
+    dirtyCalls = unlockCalls = graphicVisits = 0;
     IMarkAllImagesUnresolved(1, 1);
-    assert(!dirty && unlocked == ((1 << 2) | (1 << 3)) && !arrayLocks);
+    assert(!dirtyCalls && unlockCalls == 1 && graphicVisits == 3 && !arrayLocks);
+
+    /* More failures than the waiting list holds, with authored spacing. */
+    imageCount = 260;
+    graphicCount = 266;
+    text.HTI_imageArray = 1;
+    text.HTI_layoutState = dirtyCalls = unlockCalls = graphicVisits = 0;
+    for(i = 0; i < imageCount; i++) {
+        /* Graphic order need not match image order. */
+        initGraphic(i, imageCount - i - 1);
+        images[i].flags = HTML_IDF_BROKEN | HTML_IDF_RESOLVED;
+        images[i].pos = i;
+        images[i].size.XYS_width = images[i].HID_size.XYS_width = 120;
+        images[i].size.XYS_height = images[i].HID_size.XYS_height = 80;
+        images[i].hspace = 7;
+        images[i].vspace = 9;
+        graphics[i].VTG_size.XYS_width = 134;
+        graphics[i].VTG_size.XYS_height = 97;
+    }
+    images[0].flags = HTML_IDF_RESOLVED;
+    images[1].flags = HTML_IDF_RESOLVING;
+    images[2].pos = HTML_IMAGE_POS_DOCUMENT_BACKGROUND;
+    images[3].flags |= HTML_IDF_SUBMIT;
+    images[4].pos = HTML_IMAGE_POS_TABLE_OR_CELL_BACKGROUND;
+    images[5].HID_size.XYS_width = images[5].HID_size.XYS_height = 0;
+    graphics[253].VTG_size.XYS_width = graphics[253].VTG_size.XYS_height = 0;
+    for(i = imageCount; i < graphicCount; i++) {
+        initGraphic(i, 7);
+        graphics[i].VTG_size.XYS_width = 134;
+    }
+    graphics[260].VTG_meta.REH_refCount.WAAH_high = 255; /* free element */
+    graphics[261].VTG_type = 0;
+    graphics[262].VTG_data.VTGD_variable.VTGV_manufacturerID = 0;
+    graphics[263].VTG_data.VTGD_variable.VTGV_type = 0;
+    graphics[264].VTG_data.VTGD_variable.VTGV_privateData[0] = imageCount;
+    graphics[265].VTG_data.VTGD_variable.VTGV_privateData[0] = 65535;
+    CollapseBrokenImages(1, &text);
+    assert(dirtyCalls == 1 && unlockCalls == 1 && graphicVisits == graphicCount);
+    assert(!arrayLocks && !vmLocks && !graphicLocks);
+    assert(text.HTI_layoutState == (HTS_LAYOUT_DIRTY |
+        HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS |
+        HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW));
+    for(i = 0; i < imageCount; i++) {
+        assert(images[i].size.XYS_width == 120 && images[i].size.XYS_height == 80);
+        assert(images[i].hspace == 7 && images[i].vspace == 9);
+        if(i < 5) {
+            assert(images[i].HID_size.XYS_width == 120);
+            assert(graphics[imageCount - i - 1].VTG_size.XYS_width == 134);
+            assert(!(images[i].flags & HTML_IDF_SIZE_DIRTY));
+        } else {
+            assert(!images[i].HID_size.XYS_width && !images[i].HID_size.XYS_height);
+            assert(!graphics[imageCount - i - 1].VTG_size.XYS_width &&
+                !graphics[imageCount - i - 1].VTG_size.XYS_height);
+            assert(images[i].flags == (HTML_IDF_BROKEN | HTML_IDF_RESOLVED |
+                HTML_IDF_SIZE_DIRTY));
+        }
+    }
+    text.HTI_layoutState = dirtyCalls = unlockCalls = graphicVisits = 0;
+    CollapseBrokenImages(1, &text);
+    assert(!dirtyCalls && !text.HTI_layoutState && !arrayLocks);
+    assert(unlockCalls == 1 && graphicVisits == graphicCount);
+    for(i = imageCount; i < graphicCount; i++)
+        assert(graphics[i].VTG_size.XYS_width == 134);
+    text.HTI_imageArray = 0;
+    CollapseBrokenImages(1, &text);
+    text.HTI_imageArray = 1;
+    runs = 0;
+    CollapseBrokenImages(1, &text);
+    assert(!dirtyCalls && unlockCalls == 1 && !arrayLocks);
+    assert(graphicVisits == graphicCount && !vmLocks && !graphicLocks);
+    runs = 7;
+    runHeader.TLRAH_elementVMBlock = 0;
+    CollapseBrokenImages(1, &text);
+    assert(unlockCalls == 1 && !vmLocks && !graphicLocks);
+    runHeader.TLRAH_elementVMBlock = 8;
+
+    /* Search is linear even in EC; successful lookup keeps its VM lock. */
+    graphicVisits = graphicEnums = unlockCalls = 0;
+    graphicP = IFindGraphicForImage(1, runs, 7, &graphicH);
+    assert(graphicP == &graphics[252]);
+    assert(graphicVisits == 253 && graphicEnums == 1 && !vmLocks);
+    assert(graphicLocks == 1 && !unlockCalls);
+    VMUnlockChainifiedLMemBlock(graphicH);
+    /* All invalid graphic types must be skipped even with matching indices. */
+    for(i = imageCount; i < graphicCount; i++)
+        graphics[i].VTG_data.VTGD_variable.VTGV_privateData[0] = imageCount;
+    graphicVisits = graphicEnums = unlockCalls = 0;
+    graphics[264].VTG_type = 0;
+    graphics[265].VTG_type = 0;
+    assert(!IFindGraphicForImage(1, runs, 260, &graphicH));
+    assert(graphicVisits == graphicCount && graphicEnums == 1);
+    assert(unlockCalls == 1 && !vmLocks && !graphicLocks);
+    graphicVisits = graphicEnums = unlockCalls = 0;
+    assert(IFindGraphicForImage(1, runs, 259, &graphicH) == &graphics[0]);
+    assert(graphicVisits == 1 && graphicEnums == 1 && graphicLocks == 1);
+    VMUnlockChainifiedLMemBlock(graphicH);
+
+    /* Fresh SVG placeholders still use one scan before drawing is enabled. */
+    graphicCount = imageCount;
+    text.HTI_layoutState = dirtyCalls = unlockCalls = graphicVisits = 0;
+    for(i = 0; i < imageCount; i++) {
+        initGraphic(i, imageCount - i - 1);
+        images[i].flags = HTML_IDF_INLINE_SVG | HTML_IDF_RESOLVED;
+        images[i].svgSourceLength = 50;
+        images[i].HID_size.XYS_width = images[i].HID_size.XYS_height = 0;
+    }
+    IMarkAllImagesUnresolved(1, 1);
+    assert(graphicVisits == graphicCount && unlockCalls == 1 && !dirtyCalls);
+    assert(!text.HTI_layoutState && !arrayLocks && !vmLocks && !graphicLocks);
     return 0;
 }
 '''

@@ -883,23 +883,98 @@ void _export FreeHTMLTransferItem(VMFileHandle vmf, VMChain vmc)
 VisTextGraphic *IFindGraphicForImage(VMFileHandle file, VMBlockHandle graphicRun,
                                     word nImage, MemHandle *mem);
 
+typedef struct {
+    optr imageArray;
+    word imageFlag, imageCount;
+    Boolean changed;
+} CollapseImageData;
+
+Boolean _pascal _export ICollapseImageGraphic(void *elementP, void *dataP)
+{
+    CollapseImageData *collapseP = dataP;
+    VisTextGraphic *graphicP = elementP;
+    HTMLimageData *imageP;
+    word imageIndex;
+
+    if(graphicP->VTG_meta.REH_refCount.WAAH_high != 0 ||
+       graphicP->VTG_type != VTGT_VARIABLE ||
+       graphicP->VTG_data.VTGD_variable.VTGV_manufacturerID != HTML_VARGRAPH_MFGID ||
+       graphicP->VTG_data.VTGD_variable.VTGV_type != HTML_VARGRAPH_TYPE_IMAGE)
+        return FALSE;
+    imageIndex = ((HTMLimageGraphicVariable *)
+      graphicP->VTG_data.VTGD_variable.VTGV_privateData)->HIGV_imageIndex;
+    if(imageIndex >= collapseP->imageCount)
+        return FALSE;
+    imageP = ChunkArrayElementToPtr(collapseP->imageArray, imageIndex, (void *)0);
+    if(!(imageP->flags & collapseP->imageFlag) ||
+       (collapseP->imageFlag == HTML_IDF_BROKEN &&
+        (imageP->pos >= HTML_IMAGE_POS_RESERVED ||
+         (imageP->flags & HTML_IDF_SUBMIT))))
+        return FALSE;
+    if(imageP->HID_size.XYS_width || imageP->HID_size.XYS_height ||
+       graphicP->VTG_size.XYS_width || graphicP->VTG_size.XYS_height) {
+        /* ATTENTION: The text character still has normal line height.
+           Removing it would require updating all stored text positions. */
+        imageP->HID_size.XYS_width = imageP->HID_size.XYS_height = 0;
+        graphicP->VTG_size = imageP->HID_size;
+        if(collapseP->imageFlag == HTML_IDF_BROKEN)
+            imageP->flags |= HTML_IDF_SIZE_DIRTY;
+        collapseP->changed = TRUE;
+    }
+    return FALSE;
+}
+
+/* Enumeration validates the variable-size graphics array once in EC. */
+void LOCAL ICollapseImageGraphics(optr oself, optr imageArray, word imageFlag)
+{
+    HTMLTextInstance *textP;
+    TextLargeRunArrayHeader *runsP;
+    LMemBlockHeader *blockP;
+    VMBlockHandle *graphicRunsP;
+    VMBlockHandle graphicArray;
+    VMFileHandle vmFile;
+    MemHandle imageArrayH, runsH, graphicH;
+    CollapseImageData collapse;
+
+    if(!imageArray)
+        return;
+    textP = ObjDerefVis(oself);
+    graphicRunsP = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
+    if(!graphicRunsP || !*graphicRunsP)
+        return;
+    vmFile = textP->VTI_vmFile;
+    runsP = VMLock(vmFile, *graphicRunsP, &runsH);
+    graphicArray = runsP->TLRAH_elementVMBlock;
+    VMUnlock(runsH);
+    if(!graphicArray)
+        return;
+
+    imageArrayH = OptrToHandle(imageArray);
+    MemLock(imageArrayH);
+    collapse.imageArray = imageArray;
+    collapse.imageFlag = imageFlag;
+    collapse.imageCount = ChunkArrayGetCount(imageArray);
+    collapse.changed = FALSE;
+    blockP = VMLockChainifiedLMemBlock(vmFile, graphicArray, &graphicH);
+    ChunkArrayEnumHandles(graphicH, blockP->LMBH_offset, &collapse,
+                          ICollapseImageGraphic);
+    if(collapse.changed)
+        VMDirty(graphicH);
+    VMUnlockChainifiedLMemBlock(graphicH);
+    MemUnlock(imageArrayH);
+    if(collapse.changed) {
+        textP = ObjDerefVis(oself);
+        textP->HTI_layoutState |= HTS_LAYOUT_DIRTY |
+          HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS |
+          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
+    }
+}
+
 void LOCAL IMarkAllImagesUnresolved(optr oself, optr imageArray)
 {
     HTMLimageData *imageArrayElement;
-    HTMLTextInstance *textP;
-    VisTextGraphic *graphicP;
-    VMBlockHandle *graphicRunsP;
-    VMFileHandle vmFile;
-    MemHandle graphicH;
-    word graphicRuns;
-    Boolean changed;
     word i ;
-
-    textP = ObjDerefVis(oself);
-    vmFile = textP->VTI_vmFile;
-    graphicRunsP = ObjVarFindData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS);
-    graphicRuns = graphicRunsP ? *graphicRunsP : 0;
-    changed = FALSE;
+    Boolean haveSVG = FALSE;
 
     /* Go through all the images and if a broken image is found, it */
     /* is converted to 'unresolved' and not broken. */
@@ -912,25 +987,13 @@ void LOCAL IMarkAllImagesUnresolved(optr oself, optr imageArray)
 
         if (imageArrayElement->flags & HTML_IDF_INLINE_SVG)
         {
+            haveSVG = TRUE;
             /* Cached pages must start with invisible SVG placeholders too. */
             imageArrayElement->HID_size.XYS_width = 0;
             imageArrayElement->HID_size.XYS_height = 0;
             if (!imageArrayElement->svgSourceLength ||
                 (imageArrayElement->flags & HTML_IDF_SVG_UNSUPPORTED))
                 imageArrayElement->flags |= HTML_IDF_BROKEN;
-            graphicP = graphicRuns ? IFindGraphicForImage(vmFile, graphicRuns,
-              i, &graphicH) : (void *)0;
-            if (graphicP)
-            {
-                if (graphicP->VTG_size.XYS_width ||
-                    graphicP->VTG_size.XYS_height)
-                {
-                    graphicP->VTG_size = imageArrayElement->HID_size;
-                    VMDirty(graphicH);
-                    changed = TRUE;
-                }
-                VMUnlockChainifiedLMemBlock(graphicH);
-            }
         }
 
         /* Make sure we're note associated with any graphic */
@@ -941,13 +1004,8 @@ void LOCAL IMarkAllImagesUnresolved(optr oself, optr imageArray)
       }
       MemUnlock(OptrToHandle(imageArray));
     }
-    if (changed)
-    {
-        textP = ObjDerefVis(oself);
-        textP->HTI_layoutState |= HTS_LAYOUT_DIRTY |
-          HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS |
-          HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
-    }
+    if(haveSVG)
+        ICollapseImageGraphics(oself, imageArray, HTML_IDF_INLINE_SVG);
 }
 
 #ifdef __WATCOMC__
@@ -1973,53 +2031,52 @@ static word IReplaceTableBackground(
  *     MemHandle *mem             -- mem handle of VM block with graphic
  *
  **************************************************************************/
+typedef struct {
+    word imageIndex;
+    VisTextGraphic *graphicP;
+} FindImageGraphicData;
+
+Boolean _pascal _export IFindImageGraphic(void *elementP, void *dataP)
+{
+    FindImageGraphicData *findP = dataP;
+    VisTextGraphic *graphicP = elementP;
+
+    if(graphicP->VTG_meta.REH_refCount.WAAH_high == 0 &&
+       graphicP->VTG_type == VTGT_VARIABLE &&
+       graphicP->VTG_data.VTGD_variable.VTGV_manufacturerID == HTML_VARGRAPH_MFGID &&
+       graphicP->VTG_data.VTGD_variable.VTGV_type == HTML_VARGRAPH_TYPE_IMAGE &&
+       ((HTMLimageGraphicVariable *)graphicP->VTG_data.VTGD_variable.
+         VTGV_privateData)->HIGV_imageIndex == findP->imageIndex) {
+        findP->graphicP = graphicP;
+        return TRUE;
+    }
+    return FALSE;
+}
+
 VisTextGraphic *IFindGraphicForImage(
          VMFileHandle file,
          VMBlockHandle graphicRun,
          word nImage,
          MemHandle *mem)
 {
-    MemHandle runmem ;
-    VMBlockHandle graphicArray ;
-    word size ;
-    VisTextGraphic *graphic ;
-    TextLargeRunArrayHeader *p_dir ;
-    LMemBlockHeader *p_lmem ;
-    word array ;
-    word n,i;
+    MemHandle runmem;
+    VMBlockHandle graphicArray;
+    TextLargeRunArrayHeader *runsP;
+    LMemBlockHeader *blockP;
+    FindImageGraphicData find;
 
-    #define HIGV ((HTMLimageGraphicVariable *)\
-      (graphic->VTG_data.VTGD_variable.VTGV_privateData))
+    runsP = VMLock(file, graphicRun, &runmem);
+    graphicArray = runsP->TLRAH_elementVMBlock;
+    VMUnlock(runmem);
 
-    /* Start by extracting the handle to the huge array of graphics */
-    /* from the header of the graphic run array. */
-    p_dir = VMLock(file, graphicRun, &runmem) ;
-    graphicArray = p_dir->TLRAH_elementVMBlock ;
-    VMUnlock(runmem) ;
-
-    /* Lock up this block */
-    p_lmem = VMLockChainifiedLMemBlock(file, graphicArray, mem) ;
-
-    /* Get the offset into the lmem for the first entry */
-    array = p_lmem->LMBH_offset ;
-
-    /* Now find in the particular VisTextGraphic element */
-    n = ChunkArrayGetCountHandles(*mem, array);
-    for(i=0; i<n; i++)
-    {
-      graphic = ChunkArrayElementToPtrHandles(*mem, array, i, &size);
-      if(graphic->VTG_meta.REH_refCount.WAAH_high == 0 &&
-         graphic->VTG_type==VTGT_VARIABLE &&
-         graphic->VTG_data.VTGD_variable.VTGV_manufacturerID==HTML_VARGRAPH_MFGID && 
-         graphic->VTG_data.VTGD_variable.VTGV_type==HTML_VARGRAPH_TYPE_IMAGE &&
-         HIGV->HIGV_imageIndex==nImage)
-      {
-        return graphic;                 // Got it: return pointer to entry                      
-      }
-    }
-
-    VMUnlockChainifiedLMemBlock(*mem);  // No need for this block any more
-    return NULL;
+    blockP = VMLockChainifiedLMemBlock(file, graphicArray, mem);
+    find.imageIndex = nImage;
+    find.graphicP = (void *)0;
+    /* Indexed lookups validate the whole variable-size array each time in EC. */
+    ChunkArrayEnumHandles(*mem, blockP->LMBH_offset, &find, IFindImageGraphic);
+    if(!find.graphicP)
+        VMUnlockChainifiedLMemBlock(*mem);
+    return find.graphicP;
 }
 
 /**************************************************************************
@@ -2309,6 +2366,11 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
           HTS_LAYOUT_NEED_TO_BLAST_HARD_MIN_WIDTHS |
           HTS_LAYOUT_NEED_COMPLETE_PROGRESSIVE_REDRAW;
     }
+}
+
+@method HTMLTextClass, MSG_HTML_TEXT_COLLAPSE_BROKEN_IMAGES
+{
+    ICollapseImageGraphics(oself, pself->HTI_imageArray, HTML_IDF_BROKEN);
 }
 
 @method HTMLTextClass, MSG_HTML_TEXT_RESOLVE_INLINE_SVG

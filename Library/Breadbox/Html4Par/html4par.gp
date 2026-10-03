@@ -153,3 +153,5 @@ incminor   HTMLTextInlineSVG
 
 incminor   HTMLImageSources
 export     PARSEANYFILEWITHIMAGESOURCES
+
+incminor   HTMLTextBrokenImages

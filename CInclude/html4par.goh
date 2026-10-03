@@ -1217,6 +1217,14 @@ typedef dword T_tableArrayHandle ;
 @ifndef HTML4PAR_BUILD
 @protoreset
 @endif
+@ifndef HTML4PAR_BUILD
+@protominor HTMLTextBrokenImages
+@endif
+  /* Collapse broken inline graphics; the caller requests layout once. */
+  @message void MSG_HTML_TEXT_COLLAPSE_BROKEN_IMAGES();
+@ifndef HTML4PAR_BUILD
+@protoreset
+@endif
 @endc;
 
 @endlib

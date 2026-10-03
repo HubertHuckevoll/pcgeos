@@ -2420,7 +2420,7 @@ int LOCAL HandleTag(MemHandle localHeap)
       c=HTMLgetc();
     }
     tag[p]=0;                           /* terminate tag */
-    if(!ignoreTags)
+    if(!ignoreTags && imageSourceState.inPicture)
         PictureBeforeTag(tag, openTag);
 
     /* Skip scripts before allocating their potentially huge attributes. */
@@ -2920,7 +2920,8 @@ int _pascal ParseHTMLFileWithImageSources(ReadHTML_getc *p_gc, dword p_data,
          */
         if(!(currentFlags & TAG_FLUSH_TEXT))
         {
-          PictureText(buf);
+          if(imageSourceState.inPicture)
+              PictureText(buf);
           if(*buf || c=='\r')
           {
             AddParaCond();              /* flush pending para end */

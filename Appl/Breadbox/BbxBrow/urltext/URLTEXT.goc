@@ -1728,6 +1728,7 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
               @call oself::MSG_HTML_TEXT_CLAMP_INLINE_SVG_TO_VIEWPORT(
                 pself->UTI_imageViewportWidth,
                 pself->UTI_imageViewportHeight);
+          @call oself::MSG_HTML_TEXT_COLLAPSE_BROKEN_IMAGES();
           /* for now, force an update of the entire table structure */
           @call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT() ;
 
