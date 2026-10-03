@@ -241,6 +241,7 @@ typedef enum {
   SPEC_NOEMBED,
   SPEC_OBJECT,  SPEC_STYLE,
   SPEC_NOSCRIPT, SPEC_SCRIPT,
+  SPEC_SVG,
   SPEC_DONT_MATCH,
 } SpecialTagType;
 
@@ -401,6 +402,9 @@ word ICellGetNextIndex(HTMLTextInstance *pself, word cellIndex) ;
 
 Boolean TranslateColor(char *p,ColorQuad *qc);
 char *GetParamValue(optr array, char *par);
+Boolean _pascal CanParseImage(void);
+word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
+                        NameToken svgFile);
 void ForceCloseStyle(SpecialTagType spec, SpecialTagType upTo);
 void AddQuote(char *quoteList);
 word AddFormElement(HTMLformData *fd);

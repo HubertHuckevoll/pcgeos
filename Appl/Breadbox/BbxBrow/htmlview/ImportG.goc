@@ -69,6 +69,7 @@ typedef struct {
     TCHAR mimeType[MIME_MAXBUF] ;
     PathName curHTML;
     Boolean temporary;
+    ObjCacheToken pageOwner;            /* source survives page detachment */
     Boolean objCache;
 #if PROGRESS_DISPLAY
     ImportProgressData importProgressData;
@@ -459,6 +460,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *mimeType,
             TCHAR *curHTML,
             Boolean temporary,
+            ObjCacheToken pageOwner,
 	    _LoadProgressParams_)
 #else
 Boolean ImportThreadRequestImportGraphic(
@@ -466,7 +468,8 @@ Boolean ImportThreadRequestImportGraphic(
             NameToken name,
             TCHAR *mimeType,
             TCHAR *curHTML,
-            Boolean temporary)
+            Boolean temporary,
+            ObjCacheToken pageOwner)
 #endif
 {
     T_importGraphicRequest *p_request ;
@@ -486,7 +489,7 @@ Boolean ImportThreadRequestImportGraphic(
 
     /* All we need to do is create a block and copy all the requested */
     /* info.  The request is then sent to the thread for processing. */
-    mem = MemAlloc(sizeof(*p_request), HF_DYNAMIC, 0) ;
+    mem = MemAlloc(sizeof(*p_request), HF_DYNAMIC, HAF_ZERO_INIT) ;
     if (mem)  {
         p_request = MemLock(mem) ;
         if (p_request)  {
@@ -499,11 +502,15 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
             strncpy(p_request->mimeType, mimeType, (sizeof(p_request->mimeType)/sizeof(TCHAR))-1) ;
             strncpy(p_request->curHTML, curHTML, (sizeof(p_request->curHTML)/sizeof(TCHAR))-1) ;
             p_request->temporary = temporary;
+            p_request->pageOwner = pageOwner;
+            if(pageOwner)
+                ObjCacheLockItem(pageOwner, NULL, NULL, NULL, 0);
 
-            /* Is the object cache turned on? */
+            /* Inline source filenames can be reused after page eviction;
+               keep their graphics only while the text holds a reference. */
             p_request->objCache = (@call SettingsBoolGroup::
               MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() &
-                HTMLV_OBJECT_CACHE);
+                HTMLV_OBJECT_CACHE) && !pageOwner;
 
 #if PROGRESS_DISPLAY
 	    /* set up import progress data */
@@ -816,6 +823,9 @@ void ImportThreadAbortAll(void)
 
     if(request.temporary)               /* destroy file if requested */
       FileDelete(request.curHTML);
+
+    if(request.pageOwner)
+        ObjCacheUnlockItem(request.pageOwner);
 
     /* We have completed this operation on the text object.  Mark */
     /* it one less. */

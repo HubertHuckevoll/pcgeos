@@ -1637,7 +1637,7 @@ Boolean LOCAL testScriptCode(VMFileHandle file, VMBlockHandle code, dword offset
       else                              // We are missing some files
       {
         /* The parsed item is unusable */
-        VMFreeVMChain(ext.HE_vmFile, VMCHAIN_MAKE_FROM_VM_BLOCK(item));
+        FreeHTMLTransferItem(ext.HE_vmFile, VMCHAIN_MAKE_FROM_VM_BLOCK(item));
 
         /* Store the acknowledgement, so we can resend it later */
         pself->UFI_pendingFetchMem = urlFetchMem;

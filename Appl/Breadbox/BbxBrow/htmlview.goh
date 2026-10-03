@@ -548,7 +548,8 @@ typedef struct {
 /* version 2.2: add referer to HTMLframeData */
 /* version 2.3: add flags to HTMLformData HFD_var.textarea */
 #define OBJ_CACHE_MAJOR_VERSION 2
-#define OBJ_CACHE_MINOR_VERSION 3
+/* version 2.4: page-owned SVG filename in HTMLimageData */
+#define OBJ_CACHE_MINOR_VERSION 4
 
 extern optr srcCachePool, objCachePool;
 extern VMFileHandle srcCacheBlock;
@@ -1117,6 +1118,8 @@ typedef struct {
 @ifndef JAVASCRIPT_SUPPORT
   @message void MSG_URL_FRAME_CLEAR_OBJ_CACHE();
 @endif
+  @message ObjCacheToken MSG_URL_FRAME_GET_CACHE_TOKEN();
+
 @endc;
 
 Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);

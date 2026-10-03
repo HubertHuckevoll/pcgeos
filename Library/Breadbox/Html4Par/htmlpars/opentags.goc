@@ -614,13 +614,26 @@ char * LOCAL FindSmallestSrcset(char *srcset, char *src, word *selectedLen)
     return (char *)0;
 }
 
+Boolean _pascal CanParseImage(void)
+{
+    if(currentFlags & TAG_FLUSH_TEXT)
+        return FALSE;
+
+    if(!G_imageLimit &&
+       InitFileReadInteger("HTMLView", "imagelimit", &G_imageLimit) == TRUE)
+        G_imageLimit = DEFAULT_IMAGE_LIMIT;
+
+    return G_imageCount < G_imageLimit;
+}
+
 /*
  *  Handle attributes specific to image-style elements (including
  *  graphical submit buttons) and add entry to image array. If an
  *  array element index is passend in the element parameter, the image
  *  is marked as a submit button and linked to the specified form element.
  */
-word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
+word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
+                        NameToken svgFile)
 {
     HTMLimageData id;
     VisTextCharAttr vcaImage;
@@ -634,16 +647,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
 @endif
     word ret = CA_NULL_ELEMENT;
 
-    if(currentFlags & TAG_FLUSH_TEXT)   /* abort if supposed to ignore text */
-      return ret;
-
-    /* check maximum number of images */
-    if (G_imageLimit==0)
-        if (InitFileReadInteger("HTMLView", "imagelimit", &G_imageLimit) == TRUE)
-            G_imageLimit = DEFAULT_IMAGE_LIMIT ;
-
-    /* too many images - abort */
-    if(G_imageCount >= G_imageLimit)
+    if(!CanParseImage())
         return ret;
 
     AddParaCond();                      /* flush pending para end */
@@ -677,7 +681,7 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
       while (*p == ' ') p++;            /* skip leading spaces */
     }
 
-    if ((parseName && id.name != NAME_POOL_NONE) || (p && *p)) {
+    if (svgFile || (parseName && id.name != NAME_POOL_NONE) || (p && *p)) {
 
       GetCharacterBase(&vcaImage);      /* image style based on default */
       vcaImage.VTCA_pointSize.WBF_frac = 0 ;
@@ -690,7 +694,8 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
       id.pos = AddText(&vcaImage, (char*)c_graphic);
                                         /* embed placeholder character */
 
-      id.flags = 0;                     /* no special attributes so far */
+      id.flags = svgFile ? HTML_IDF_INLINE_SVG : 0;
+      id.svgFile = svgFile;
 
       id.formElementIndex = element;    /* associate with form element */
       if(element != CA_NULL_ELEMENT)    /* is specified: is graphical submit */
@@ -790,6 +795,8 @@ word LOCAL ParseImage(optr paramArray, word element, Boolean parseName)
           vtg.VTG_size.XYS_height = 0 ;
  
       ret = AppendToHypertextArray(HTA_IMAGE_ARRAY, &id);
+      if(svgFile && ret!=CA_NULL_ELEMENT)
+        htbh->HTBH_other.HTBHO_fileInfo |= HTML_FI_INLINE_SVG;
                                         /* add image record to array */
       ((HTMLimageGraphicVariable *)
         &vtg.VTG_data.VTGD_variable.VTGV_privateData)->HIGV_imageIndex = ret;         
@@ -955,7 +962,7 @@ void _pascal Open_IMG(TagOpenArguments *arg)
             haveAlign = TRUE ;
 
     if ((insideHere) || (!haveAlign))  {
-        image = ParseImage(arg->paramArray, CA_NULL_ELEMENT, TRUE);
+        image = ParseImage(arg->paramArray, CA_NULL_ELEMENT, TRUE, NAME_POOL_NONE);
         
         /* Attach event handlers */
         if(image != CA_NULL_ELEMENT)
@@ -1559,7 +1566,7 @@ void _pascal Open_FORM_INPUT_SELECT(TagOpenArguments *arg)
 
         /* Handle image part of <INPUT type=image ...> and embed graphic. */
         if(fd.HFD_itemType == HTML_FORM_IMAGE)
-          ParseImage(arg->paramArray, element, FALSE);
+          ParseImage(arg->paramArray, element, FALSE, NAME_POOL_NONE);
 
         /* Create entries for event handlers, if any */
         ParseEvents(arg->paramArray, 
