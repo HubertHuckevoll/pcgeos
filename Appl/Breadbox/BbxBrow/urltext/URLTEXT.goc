@@ -1855,7 +1855,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     p->HID_vmb = VMCHAIN_GET_VM_BLOCK(vmc);
 
     URLTextInitializeImage(p, &iad) ;
-    if (p->flags & HTML_IDF_INLINE_SVG)
+    if (p->flags & (HTML_IDF_INLINE_SVG | HTML_IDF_PICTURE))
     {
         @call oself::MSG_URL_TEXT_CAPTURE_IMAGE_VIEWPORT();
         textP = ObjDerefVis(oself);

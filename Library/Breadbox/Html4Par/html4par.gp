@@ -150,3 +150,6 @@ incminor
 resource   FormStringCallbackMultiStrings lmem read-only shared
 
 incminor   HTMLTextInlineSVG
+
+incminor   HTMLImageSources
+export     PARSEANYFILEWITHIMAGESOURCES

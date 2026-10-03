@@ -1174,6 +1174,9 @@ void CloseTag(word tagStyle, HTMLStylesTable *tagStyleEntry, optr paramArray)
 
     tagStack = LMemDeref(tagStackO);
 
+    if(spec == SPEC_PICTURE)
+        ClearPicture();
+
     if(paramArray)                      /* if there is one to be released... */
       LMemFree(paramArray);             /* ignore closing tag parameters */
 

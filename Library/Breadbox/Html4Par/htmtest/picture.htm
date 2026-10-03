@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head><title>Picture source selection</title></head>
+<body>
+<p>Tagesschau-shaped sources: 640 at 400px, 768 at 640px, fallback at 800px.</p>
+<picture>
+  <source type="image/webp" media="(max-width: 420px)" srcset="img640.webp">
+  <source type="image/webp" media="(max-width: 767px)" srcset="img768.webp">
+  <source type="image/jpeg" media="(max-width: 420px)" srcset="img640.jpg">
+  <source type="image/jpeg" media="(max-width: 767px)" srcset="img768.jpg">
+  <img src="img1280.jpg" alt="News image"
+       data-expect-400="img640.webp" data-jpeg-400="img640.jpg"
+       data-expect-640="img768.webp" data-jpeg-640="img768.jpg"
+       data-expect-800="img1280.jpg" data-expect-0="img1280.jpg">
+</picture>
+<p>Sources create no image or paragraph. This aligned IMG keeps its attributes.</p>
+<picture>
+  <source type="image/unknown" srcset="red.gif">
+  <source type="image/gif" srcset="green.gif">
+  <source type="image/gif" srcset="blue.gif">
+  <img src="red.gif" srcset="blue.gif 640w" align="left" alt="Selected picture"
+       width="40" height="20" hspace="2" vspace="3" usemap="#map" ismap
+       onload="loaded()" data-expect="green.gif">
+</picture>
+<picture>
+  <source type="image/png" media="(max-width: broken)" srcset="red.gif">
+  <source type="image/svg+xml" media="(min-width: 0px) and (max-width: 800px)" srcset="red.gif">
+  <img src="blue.gif" srcset="green.gif" data-expect="green.gif">
+</picture>
+<picture><source srcset="red.gif"></picture>
+<img src="blue.gif" data-expect="blue.gif">
+<picture><source srcset="green.gif">
+  <!-- A comment and whitespace do not discard the source. -->
+  <img src="red.gif" data-expect="green.gif">
+  <source srcset="red.gif">
+  <img src="blue.gif" data-expect="blue.gif">
+</picture>
+<picture><source srcset="red.gif"><div></div>
+  <img src="blue.gif" data-expect="blue.gif">
+</picture>
+<picture><source srcset="red.gif">Unexpected text
+  <img src="blue.gif" data-expect="blue.gif">
+</picture>
+<picture><source srcset="red.gif"><picture>
+  <source srcset="green.gif"><img src="blue.gif" data-expect="blue.gif">
+</picture></picture>
+<picture><source srcset="red.gif">
+  <script>ignored()</script><img src="blue.gif" data-expect="blue.gif">
+</picture>
+<picture><source srcset="red.gif">
+  <svg><path d="M0 0h1v1z"/></svg><img src="blue.gif" data-expect="blue.gif">
+</picture>
+<picture><source srcset="red.gif">
+  <input type="image" src="green.gif"><img src="blue.gif" data-expect="blue.gif">
+</picture>
+</body>
+</html>

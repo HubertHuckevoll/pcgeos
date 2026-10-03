@@ -2169,7 +2169,7 @@ HTMLTextScaleDrawOffset(sword offset, WWFixedAsDWord factor)
 
 static Boolean _pascal
 HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
-                          word viewportHeight)
+                          word viewportHeight, word leftMargin)
 {
     dword available;
     WWFixedAsDWord factor;
@@ -2178,6 +2178,15 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
     word maxWidth, maxHeight;
     Boolean spacingChanged;
 
+    /* Picture sources may exceed the CSS viewport even when selected
+       correctly. Fit width only; tall pictures remain vertically scrollable. */
+    if(imageP->flags & HTML_IDF_PICTURE)
+    {
+        available = (dword)leftMargin + 1;
+        viewportWidth = viewportWidth > available ?
+          viewportWidth - available : 1;
+        viewportHeight = 0xffff;
+    }
     spacingChanged = FALSE;
     available = 2L * imageP->hspace;
     if(available >= viewportWidth)
@@ -2270,11 +2279,11 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
     {
         imageP = ChunkArrayElementToPtr(imageArray, i, &size);
         if(imageP->pos < HTML_IMAGE_POS_RESERVED &&
-           (imageP->flags & HTML_IDF_INLINE_SVG) &&
+           (imageP->flags & (HTML_IDF_INLINE_SVG | HTML_IDF_PICTURE)) &&
            (imageP->flags & HTML_IDF_RESOLVED) &&
            !(imageP->flags & (HTML_IDF_BROKEN | HTML_IDF_SVG_UNSUPPORTED)) &&
            HTMLTextFitImageToViewport(imageP, viewportWidth,
-             viewportHeight))
+             viewportHeight, pself->HTI_pageLeftMargin))
         {
             imageP->flags |= HTML_IDF_SIZE_DIRTY;
             graphic = IFindGraphicForImage(vmFile, graphicRuns, i,
@@ -2304,9 +2313,10 @@ HTMLTextFitImageToViewport(HTMLimageData *imageP, word viewportWidth,
 
 @method HTMLTextClass, MSG_HTML_TEXT_RESOLVE_INLINE_SVG
 {
-    if ((data->flags & HTML_IDF_INLINE_SVG) &&
+    if ((data->flags & (HTML_IDF_INLINE_SVG | HTML_IDF_PICTURE)) &&
         data->pos < HTML_IMAGE_POS_RESERVED && viewportWidth && viewportHeight)
-        HTMLTextFitImageToViewport(data, viewportWidth, viewportHeight);
+        HTMLTextFitImageToViewport(data, viewportWidth, viewportHeight,
+          pself->HTI_pageLeftMargin);
     return @call self::MSG_HTML_TEXT_RESOLVE_IMAGE(nImage, data,
       invalFrom, invalTo);
 }

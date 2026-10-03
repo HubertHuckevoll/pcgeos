@@ -227,6 +227,7 @@ typedef struct {
     #define HTML_IDF_RESOLVING  0x0008  /*  - image has been requested */
     #define HTML_IDF_INLINE_SVG  0x0400  /* source in HTBH_svgSourceData */
     #define HTML_IDF_SVG_UNSUPPORTED 0x0800 /* no importable inline content */
+    #define HTML_IDF_PICTURE    0x1000  /* fit picture IMG to viewport width */
     #define HTML_IDF_SIZE_DIRTY 0x4000  /*  - size has changed recently */
     #define HTML_IDF_BROKEN     0x8000  /*  - image could not be resolved */
   XYSize size;                          /* target size, or 0 if not spec'd */
@@ -799,6 +800,21 @@ int _pascal _export ParseAnyFile(word fileType, word fileSource, dword data,
   HTMLextra *ext, VMBlockHandle *item, AllocWatcherHandle watcher, dword *p_memUsed);
 void _pascal _export ParseAbort(void) ;
 
+/* Optional image-source inputs. The parser measures view at parse startup.
+ * mimeSupported receives an ASCII MIME type and must not reenter the parser.
+ */
+typedef Boolean _pascal _export proc_HTMLImageMimeSupported(char *mimeP);
+typedef Boolean _pascal pcfm_HTMLImageMimeSupported(char *mimeP, void *callbackP);
+typedef struct {
+    optr view;
+    proc_HTMLImageMimeSupported *mimeSupported;
+} HTMLImageSourceContext;
+
+int _pascal _export ParseAnyFileWithImageSources(word fileType,
+    word fileSource, dword data, HTMLextra *ext, VMBlockHandle *item,
+    AllocWatcherHandle watcher, dword *usedMemP,
+    HTMLImageSourceContext *imageSourcesP);
+
 /***************************************************************************
  *              HTML Export
  ***************************************************************************/
@@ -1192,6 +1208,7 @@ typedef dword T_tableArrayHandle ;
 @ifndef HTML4PAR_BUILD
 @protominor HTMLTextInlineSVG
 @endif
+  /* Also fit picture images, using width only. */
   @message Boolean MSG_HTML_TEXT_RESOLVE_INLINE_SVG(word nImage,
     HTMLimageData *data, word invalFrom, word invalTo,
     word viewportWidth, word viewportHeight);

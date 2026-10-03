@@ -2,21 +2,23 @@
 <html>
 <head><title>SRCSET parsing test</title></head>
 <body>
-<p>Smallest width should select green.gif:
-<img src="red.gif" srcset="blue.gif 640w, green.gif 320w"></p>
+<p>Width selection: green.gif up to 320px (or unknown), otherwise blue.gif:
+<img src="red.gif" srcset="blue.gif 640w, green.gif 320w" data-expect-0="green.gif" data-expect-400="blue.gif" data-expect-640="blue.gif" data-expect-800="blue.gif"></p>
 <p>Smallest density should select green.gif:
-<img src="red.gif" srcset="blue.gif 2x, green.gif .75x"></p>
+<img src="red.gif" srcset="blue.gif 2x, green.gif .75x" data-expect="green.gif"></p>
 <p>A width candidate takes priority and should select blue.gif:
-<img src="red.gif" srcset="green.gif .5x, blue.gif 640w"></p>
+<img src="red.gif" srcset="green.gif .5x, blue.gif 640w" data-expect="blue.gif"></p>
 <p>Malformed descriptors should fall back to red.gif:
-<img src="red.gif" srcset="none.gif 0w, none.gif 1.x"></p>
+<img src="red.gif" srcset="none.gif 0w, none.gif 1.x" data-expect="red.gif"></p>
 <p>Implicit SRC at 1x should select green.gif:
-<img src="green.gif" srcset="blue.gif 2x"></p>
+<img src="green.gif" srcset="blue.gif 2x" data-expect="green.gif"></p>
 <p>Explicit 1x should override SRC and select green.gif:
-<img src="red.gif" srcset="blue.gif 2x, green.gif 1x"></p>
+<img src="red.gif" srcset="blue.gif 2x, green.gif 1x" data-expect="green.gif"></p>
 <p>Density below 1x should override SRC and select green.gif:
-<img src="red.gif" srcset="green.gif .5x, blue.gif 2x"></p>
+<img src="red.gif" srcset="green.gif .5x, blue.gif 2x" data-expect="green.gif"></p>
 <p>Width candidates ignore SRC and should select green.gif:
-<img src="red.gif" srcset="green.gif 640w"></p>
+<img src="red.gif" srcset="green.gif 640w" data-expect="green.gif"></p>
+<p>A single bare URL selects green.gif:
+<img src="red.gif" srcset="green.gif" data-expect="green.gif"></p>
 </body>
 </html>

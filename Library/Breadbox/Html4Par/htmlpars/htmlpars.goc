@@ -76,6 +76,7 @@ const sword fontRampNoSmall[] = {12,14,14,18,18,24,28};
 /* (These variables may eventually go into a session-specific state block.) */
 
 HTMLextra *HTMLext;
+HTMLImageSourceState imageSourceState;
 TextTransferBlockHeader *ttbh;
 HypertextTransferBlockHeader *htbh;
 MemHandle transferHeaderMem, hypertextHeaderMem;
@@ -2419,6 +2420,8 @@ int LOCAL HandleTag(MemHandle localHeap)
       c=HTMLgetc();
     }
     tag[p]=0;                           /* terminate tag */
+    if(!ignoreTags)
+        PictureBeforeTag(tag, openTag);
 
     /* Skip scripts before allocating their potentially huge attributes. */
 #if HTML_SCRIPT_SUPPORT
@@ -2759,11 +2762,33 @@ int /*LOCAL*/ getcScriptURL(dword data)
 int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
   VMBlockHandle *item)
 {
+    return ParseHTMLFileWithImageSources(p_gc, p_data, ext, item, (void *)0);
+}
+
+int _pascal ParseHTMLFileWithImageSources(ReadHTML_getc *p_gc, dword p_data,
+    HTMLextra *ext, VMBlockHandle *item, HTMLImageSourceContext *imageSourcesP)
+{
     int c;
     HTMLFILE fHTML;
     MemHandle localHeap;
     extern word G_cellCount, G_imageCount ;
     word retValue = 0 ;
+    RectDWord visible;
+    dword viewportWidth;
+
+    memset(&imageSourceState, 0, sizeof(imageSourceState));
+    if(imageSourcesP) {
+        imageSourceState.mimeSupported = imageSourcesP->mimeSupported;
+        if(imageSourcesP->view) {
+            @call imageSourcesP->view::MSG_GEN_VIEW_GET_VISIBLE_RECT(&visible);
+            if(visible.RD_right > visible.RD_left) {
+                viewportWidth = (dword)visible.RD_right - (dword)visible.RD_left;
+                if(viewportWidth > 0xffffUL)
+                    viewportWidth = 0xffffUL;
+                imageSourceState.viewportWidth = (word)viewportWidth;
+            }
+        }
+    }
 
     G_isParsing = TRUE ;
 
@@ -2895,6 +2920,7 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
          */
         if(!(currentFlags & TAG_FLUSH_TEXT))
         {
+          PictureText(buf);
           if(*buf || c=='\r')
           {
             AddParaCond();              /* flush pending para end */
@@ -2970,11 +2996,14 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
     if(!gc)
       CloseFileURL( &fHTML );           /* close internally opened file */
 
+    ClearPicture();                    /* pool is disposed by Finish */
     FinishTransferItem();
 
     FreeStoredContent();                /* release content intermediate token */
 
 cleanupExit:
+    ClearPicture();
+    memset(&imageSourceState, 0, sizeof(imageSourceState));
     if (localHeap)
         MemFree( localHeap );
 
