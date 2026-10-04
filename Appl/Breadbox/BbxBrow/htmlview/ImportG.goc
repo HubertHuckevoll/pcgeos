@@ -102,8 +102,8 @@ static Boolean G_importThreadStarted = FALSE ;
 #if PROGRESS_DISPLAY
 
 /* array of import threads */
-/* we have one import thread per fetch thread, plus one for import
-   operations without progress feedback */
+/* One per fetch thread plus one without loading progress, or one shared. */
+static int G_numImportThreads;
 static MemHandle G_importThreadMemory[MAX_IMPORT_THREADS];
 static optr G_importThreadObj[MAX_IMPORT_THREADS];
 static VMFileHandle G_importWorkFile[MAX_IMPORT_THREADS];
@@ -163,12 +163,17 @@ Boolean ImportThreadEngineStart(void)
 #if PROGRESS_DISPLAY
     int i;
     FileLongName workFileName;
+    Boolean forceSingleImportThread = FALSE;
 #endif
 
     EC_ERROR_IF(G_importThreadStarted, -1) ;
     if (!G_importThreadStarted)  {
 
 #if PROGRESS_DISPLAY
+        InitFileReadBoolean(HTMLVIEW_CATEGORY, "forceSingleImportThread",
+            &forceSingleImportThread);
+        G_numImportThreads = forceSingleImportThread ? 1 : G_numFetchChildren + 1;
+
  #ifdef ALLOW_FETCH_WHILE_IMPORTING
 	/* init import state */
 	for (i = 0; i < MAX_IMPORT_THREADS-1; i++) {
@@ -181,7 +186,7 @@ Boolean ImportThreadEngineStart(void)
 	    G_importProgressDataQueue[i] = 0;
 	}
 
-	for (i = 0; i < G_numFetchChildren+1; i++) {
+	for (i = 0; i < G_numImportThreads; i++) {
 #endif
         /* First create a thread that has an event queue */
         @call process::MSG_PROCESS_CREATE_EVENT_THREAD(
@@ -272,7 +277,7 @@ void ImportThreadEngineStop(void)
 	/* free progress data queue semaphore */
 	ThreadFreeSem(G_importProgressDataQueueSem);
 
-	for (i = 0; i < G_numFetchChildren+1; i++) {
+	for (i = 0; i < G_numImportThreads; i++) {
 	    @send ,insertAtFront ,forceQueue
 		 (G_importThreadObj[i])::MSG_IMPORT_THREAD_ENGINE_KILL() ;
 	    G_importThreadObj[i] = NullHandle ;
@@ -479,10 +484,10 @@ Boolean ImportThreadRequestImportGraphic(
 #if PROGRESS_DISPLAY
     /* creates vfptr to callback routine */
     static proc_ImportProgressCallback *importProgressCallback = ImportGraphicProgressCallback;
-    int importThread = 0;  /* default to non-loading progress import thread */
+    int importThread = 0;  /* shared, or used without loading progress */
 
-    /* G_importThreadObj[0] is non-blocking one for non-progress requests */
-    if (loadProgressDataP) {
+    /* Separate streamed requests only when multiple importers exist. */
+    if (loadProgressDataP && G_numImportThreads > 1) {
 	importThread = loadProgressDataP->LPD_loadThread+1;
     }
 #endif
@@ -582,7 +587,7 @@ void ImportThreadAbortAll(void)
         /* the end of the queue (thus straddling all the events */
         /* to be ignore/removed). */
 #if PROGRESS_DISPLAY
-	for (i = 0; i < G_numFetchChildren+1; i++) {
+	for (i = 0; i < G_numImportThreads; i++) {
         /* Mark the thread for abort */
         G_importMimeStatus[i].MS_mimeFlags |= MIME_STATUS_ABORT ;
 	    @send ,forceQueue ,insertAtFront G_importThreadObj[i]::MSG_IMPORT_THREAD_ENGINE_START_ABORT() ;
