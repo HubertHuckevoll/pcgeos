@@ -191,9 +191,9 @@ SvgImport(FileHandle sourceFile,
 
     SvgRendererInit(contextP, gstate);
     status = SvgImportParse(contextP, sourceFile, callback);
-    GrEndGString(gstate);
     if (status == TE_NO_ERROR)
     {
+        GrEndGString(gstate);
         if (boundsP)
         {
             GrSetGStringPos(gstate, GSSPT_BEGINNING, 0);
