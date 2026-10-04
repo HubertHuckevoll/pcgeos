@@ -1186,6 +1186,7 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @message word MSG_URL_TEXT_FIND_ELEMENT_FROM_NAME(NameToken nameT, word head);
 @endif
   @message void MSG_URL_TEXT_HIDE_BROKEN_IMAGES();
+  @message word MSG_URL_TEXT_GET_IMAGE_SOURCE_WIDTH();
 @endc;
 
 

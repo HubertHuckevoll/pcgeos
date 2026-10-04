@@ -76,6 +76,7 @@ const sword fontRampNoSmall[] = {12,14,14,18,18,24,28};
 /* (These variables may eventually go into a session-specific state block.) */
 
 HTMLextra *HTMLext;
+HTMLImageSourceState imageSourceState;
 TextTransferBlockHeader *ttbh;
 HypertextTransferBlockHeader *htbh;
 MemHandle transferHeaderMem, hypertextHeaderMem;
@@ -2425,6 +2426,9 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
     byte seenAttributes[HTML_ATTRIBUTE_SEEN_BYTES];
     word paramBytes;
 
+    if(!ignoreTags)
+        PictureBeforeTag(tag, openTag);
+
     /* Skip scripts before allocating their potentially huge attributes. */
 #if HTML_SCRIPT_SUPPORT
     if(openTag &&
@@ -2746,11 +2750,23 @@ int /*LOCAL*/ getcScriptURL(dword data)
 int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
   VMBlockHandle *item)
 {
+    return ParseHTMLFileWithImageSources(p_gc, p_data, ext, item, (void *)0);
+}
+
+int _pascal ParseHTMLFileWithImageSources(ReadHTML_getc *p_gc, dword p_data,
+    HTMLextra *ext, VMBlockHandle *item, HTMLImageSourceContext *imageSourcesP)
+{
     int c;
     HTMLFILE fHTML;
     MemHandle localHeap;
     extern word G_cellCount, G_imageCount ;
     word retValue = 0 ;
+
+    memset(&imageSourceState, 0, sizeof(imageSourceState));
+    if(imageSourcesP) {
+        imageSourceState.viewportWidth = imageSourcesP->viewportWidth;
+        imageSourceState.mimeSupported = imageSourcesP->mimeSupported;
+    }
 
     G_isParsing = TRUE ;
 
@@ -2882,6 +2898,7 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
          */
         if(!(currentFlags & TAG_FLUSH_TEXT))
         {
+          PictureText(buf);
           if(*buf || c=='\r')
           {
             AddParaCond();              /* flush pending para end */
@@ -2957,11 +2974,14 @@ int EXPORT ParseHTMLFile(ReadHTML_getc *p_gc, dword p_data, HTMLextra *ext,
     if(!gc)
       CloseFileURL( &fHTML );           /* close internally opened file */
 
+    ClearPicture();                    /* pool is disposed by Finish */
     FinishTransferItem();
 
     FreeStoredContent();                /* release content intermediate token */
 
 cleanupExit:
+    ClearPicture();
+    memset(&imageSourceState, 0, sizeof(imageSourceState));
     if (localHeap)
         MemFree( localHeap );
 

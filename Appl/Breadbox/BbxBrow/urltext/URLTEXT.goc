@@ -77,6 +77,13 @@ typedef struct {
 @extern method URLTextClass, MSG_META_CLIPBOARD_COPY ;
 @extern method URLTextClass, MSG_URL_TEXT_COPY_IMAGE_TO_CLIPBOARD ;
 
+@method URLTextClass, MSG_URL_TEXT_GET_IMAGE_SOURCE_WIDTH
+{
+    HTMLTextInstance *textP = ObjDerefVis(oself);
+
+    return (textP->HTI_state & HTS_VIEW_NOT_OPENED) ? 0 : textP->HTI_viewWidth;
+}
+
 @method URLTextClass, MSG_HTML_TEXT_INIT_STORAGE
 {
     AddCacheFileReference();            /* we're using the shared cache file */

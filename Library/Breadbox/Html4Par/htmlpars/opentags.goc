@@ -512,7 +512,8 @@ Boolean LOCAL ParseSrcsetDensity(char *start, char *end,
     return TRUE;
 }
 
-char * LOCAL FindSmallestSrcset(char *srcset, char *src, word *selectedLen)
+char * _pascal SelectSrcsetCandidate(char *srcset, char *src,
+                                    word targetWidth, word *selectedLen)
 {
     char *p, *candidate, *candidateEnd, *descriptor, *descriptorEnd;
     char *urlEnd, *q, *selected;
@@ -524,6 +525,10 @@ char * LOCAL FindSmallestSrcset(char *srcset, char *src, word *selectedLen)
     if(!srcset || !selectedLen)
         return (char *)0;
 
+    *selectedLen = 0;
+#if HTML_IMAGE_SELECT_SMALLEST
+    targetWidth = 0;
+#endif
     haveWidth = FALSE;
     haveDensity = FALSE;
     selected = (char *)0;
@@ -549,6 +554,13 @@ char * LOCAL FindSmallestSrcset(char *srcset, char *src, word *selectedLen)
         while(descriptor > candidate &&
               !IS_SRCSET_SPACE(descriptor[-1]))
             descriptor--;
+
+        /* A single URL without a descriptor is a usable resource. */
+        if(descriptor == candidate && descriptorEnd > candidate &&
+           p == srcset && !*candidateEnd) {
+            *selectedLen = (word)(descriptorEnd - candidate);
+            return candidate;
+        }
 
         urlEnd = descriptor;
         while(urlEnd > candidate && IS_SRCSET_SPACE(urlEnd[-1]))
@@ -577,7 +589,13 @@ char * LOCAL FindSmallestSrcset(char *srcset, char *src, word *selectedLen)
                     }
                     q++;
                 }
-                if(valid && width && (!haveWidth || width < bestWidth)) {
+                if(valid && width && (!haveWidth ||
+                   (!targetWidth && width < bestWidth) ||
+                   (targetWidth &&
+                    ((width >= targetWidth &&
+                      (bestWidth < targetWidth || width < bestWidth)) ||
+                     (width < targetWidth && bestWidth < targetWidth &&
+                      width > bestWidth))))) {
                     selected = candidate;
                     bestLen = urlLen;
                     bestWidth = width;
@@ -614,6 +632,140 @@ char * LOCAL FindSmallestSrcset(char *srcset, char *src, word *selectedLen)
     return (char *)0;
 }
 
+/* Picture selection owns at most one name-pool reference. */
+void _pascal ClearPicture(void)
+{
+    if(imageSourceState.pictureSource)
+        NamePoolReleaseToken(NamePool, imageSourceState.pictureSource);
+    imageSourceState.pictureSource = NAME_POOL_NONE;
+    imageSourceState.inPicture = FALSE;
+}
+
+/* Called only for input markup, not Open_IMG's synthetic alignment tables. */
+void _pascal PictureBeforeTag(char *tagP, Boolean opening)
+{
+    if(tagP[0] != '!' && STRCMPISB(tagP, "PICTURE") &&
+       STRCMPISB(tagP, "SOURCE") &&
+       (!opening || STRCMPISB(tagP, "IMG")))
+        ClearPicture();
+}
+
+void _pascal PictureText(char *textP)
+{
+    while(*textP && IS_SRCSET_SPACE(*textP))
+        textP++;
+    if(*textP)
+        ClearPicture();
+}
+
+NameToken _pascal TakePictureSource(void)
+{
+    NameToken source;
+
+    source = imageSourceState.pictureSource;
+    imageSourceState.pictureSource = NAME_POOL_NONE;
+    ClearPicture();
+    return source;                      /* transfer, do not release */
+}
+
+Boolean _pascal PictureMediaMatches(char *mediaP, word viewportWidth)
+{
+    char *nameP;
+    char *expectedP;
+    word i;
+    dword width;
+    Boolean minimum;
+
+    if(!mediaP || !*mediaP)
+        return TRUE;
+    if(!viewportWidth)
+        return FALSE;
+    while(IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    if(*mediaP++ != '(')
+        return FALSE;
+    while(IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    nameP = mediaP;
+    while(*mediaP && *mediaP != ':' && !IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    if(mediaP - nameP != 9)
+        return FALSE;
+    minimum = (nameP[1] == 'i' || nameP[1] == 'I');
+    expectedP = minimum ? "min-width" : "max-width";
+    for(i = 0; i < 9; i++)
+        if(tolower((unsigned char)nameP[i]) != expectedP[i])
+            return FALSE;
+    while(IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    if(*mediaP++ != ':')
+        return FALSE;
+    while(IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    if(!isdigit((unsigned char)*mediaP))
+        return FALSE;
+    width = 0;
+    while(isdigit((unsigned char)*mediaP)) {
+        if(width > (0xffffffffUL - (*mediaP - '0')) / 10)
+            return FALSE;
+        width = width * 10 + (*mediaP++ - '0');
+    }
+    while(IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    if((*mediaP != 'p' && *mediaP != 'P') ||
+       (mediaP[1] != 'x' && mediaP[1] != 'X'))
+        return FALSE;
+    mediaP += 2;
+    while(IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    if(*mediaP++ != ')')
+        return FALSE;
+    while(IS_SRCSET_SPACE(*mediaP))
+        mediaP++;
+    /* ATTENTION: One integer-pixel width expression only. Extend this
+       matcher for additional media syntax; selection stays parse-time only. */
+    return !*mediaP && (minimum ? viewportWidth >= width :
+                                 viewportWidth <= width);
+}
+
+#pragma argsused
+void _pascal Open_PICTURE(TagOpenArguments *arg)
+{
+    Boolean nested;
+
+    nested = imageSourceState.inPicture;
+    ClearPicture();
+    /* ATTENTION: A nested opener discards pending selection. A nesting
+       stack is the upgrade path for preserving enclosing picture context. */
+    if(!nested && !(currentFlags & TAG_FLUSH_TEXT))
+        imageSourceState.inPicture = TRUE;
+}
+
+void _pascal Open_SOURCE(TagOpenArguments *arg)
+{
+    char *srcsetP, *typeP, *selectedP;
+    word selectedLen;
+
+    if(!imageSourceState.inPicture || imageSourceState.pictureSource ||
+       (currentFlags & TAG_FLUSH_TEXT))
+        return;
+    if(!PictureMediaMatches(GetParamValue(arg->paramArray, "MEDIA"),
+                            imageSourceState.viewportWidth))
+        return;
+    srcsetP = GetParamValue(arg->paramArray, "SRCSET");
+    selectedP = SelectSrcsetCandidate(srcsetP, (void *)0,
+        imageSourceState.viewportWidth, &selectedLen);
+    if(!selectedP)
+        return;
+    typeP = GetParamValue(arg->paramArray, "TYPE");
+    if(typeP && *typeP && (!imageSourceState.mimeSupported ||
+       !((pcfm_HTMLImageMimeSupported *)ProcCallFixedOrMovable_pascal)
+         (typeP, imageSourceState.mimeSupported)))
+        return;
+    imageSourceState.pictureSource = NamePoolTokenizeLenDOS(NamePool,
+        selectedP, selectedLen, FALSE);
+}
+
 Boolean _pascal CanParseImage(void)
 {
     if(currentFlags & TAG_FLUSH_TEXT)
@@ -640,6 +792,7 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
     VisTextGraphic vtg;
     char *altName, *p, *src, *srcset;
     word selectedSrcLen;
+    NameToken pictureSource;
 @ifdef DO_DBCS
     const char c_graphic[] = {C_SUBSTITUTE, 0};
 @else
@@ -647,8 +800,10 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
 @endif
     word ret = CA_NULL_ELEMENT;
 
+    pictureSource = (parseName && !svgFile) ? TakePictureSource() :
+                                            NAME_POOL_NONE;
     if(!CanParseImage())
-        return ret;
+        goto imageExit;
 
     AddParaCond();                      /* flush pending para end */
 
@@ -671,8 +826,9 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
     src = GetParamValue(paramArray, "SRC");
     srcset = parseName ? GetParamValue(paramArray, "SRCSET") : (char *)0;
     selectedSrcLen = 0;
-    p = (srcset && *srcset) ?
-        FindSmallestSrcset(srcset, src, &selectedSrcLen) :
+    p = (!pictureSource && srcset && *srcset) ?
+        SelectSrcsetCandidate(srcset, src, imageSourceState.viewportWidth,
+                              &selectedSrcLen) :
         (char *)0;
     if(!p)
         p = src;
@@ -681,7 +837,7 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
       while (*p == ' ') p++;            /* skip leading spaces */
     }
 
-    if (svgFile || (parseName && id.name != NAME_POOL_NONE) || (p && *p)) {
+    if (pictureSource || svgFile || (parseName && id.name != NAME_POOL_NONE) || (p && *p)) {
 
       GetCharacterBase(&vcaImage);      /* image style based on default */
       vcaImage.VTCA_pointSize.WBF_frac = 0 ;
@@ -702,7 +858,10 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
         id.flags |= HTML_IDF_SUBMIT;
 
       id.imageALT = NAME_POOL_NONE;     /* default: no alternative text */
-      if (p && *p) {
+      if (pictureSource) {
+          id.imageURL = pictureSource;
+          pictureSource = NAME_POOL_NONE; /* image record owns reference */
+      } else if (p && *p) {
 	  id.imageURL = selectedSrcLen ?
             NamePoolTokenizeLenDOS(NamePool, p, selectedSrcLen, FALSE) :
             NamePoolTokenizeDOS(NamePool, p, FALSE);
@@ -809,6 +968,9 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
     }
 
     c2 = '.';                           /* treat as character */
+imageExit:
+    if(pictureSource)
+        NamePoolReleaseToken(NamePool, pictureSource);
     return ret;                         /* return image index */
 }
 
@@ -1888,6 +2050,8 @@ OpenHandlerEntry OpenHandlers[] =
   {SPEC_HR,             Open_HR},
   {SPEC_BR,             Open_BR},
   {SPEC_IMG,            Open_IMG},
+  {SPEC_PICTURE,        Open_PICTURE},
+  {SPEC_SOURCE,         Open_SOURCE},
   {SPEC_BODY,           Open_BODY},
   {SPEC_BASEFONT,       Open_BASEFONT},
   {SPEC_FONT,           Open_FONT},

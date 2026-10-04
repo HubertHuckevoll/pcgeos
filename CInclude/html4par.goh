@@ -797,6 +797,21 @@ int _pascal _export ParseAnyFile(word fileType, word fileSource, dword data,
   HTMLextra *ext, VMBlockHandle *item, AllocWatcherHandle watcher, dword *p_memUsed);
 void _pascal _export ParseAbort(void) ;
 
+/* Optional image-source inputs. viewportWidth is zero when unknown.
+ * mimeSupported receives an ASCII MIME type and must not reenter the parser.
+ */
+typedef Boolean _pascal _export proc_HTMLImageMimeSupported(char *mimeP);
+typedef Boolean _pascal pcfm_HTMLImageMimeSupported(char *mimeP, void *callbackP);
+typedef struct {
+    word viewportWidth;
+    proc_HTMLImageMimeSupported *mimeSupported;
+} HTMLImageSourceContext;
+
+int _pascal _export ParseAnyFileWithImageSources(word fileType,
+    word fileSource, dword data, HTMLextra *ext, VMBlockHandle *item,
+    AllocWatcherHandle watcher, dword *usedMemP,
+    HTMLImageSourceContext *imageSourcesP);
+
 /***************************************************************************
  *              HTML Export
  ***************************************************************************/

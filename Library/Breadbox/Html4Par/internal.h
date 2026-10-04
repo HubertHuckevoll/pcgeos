@@ -242,6 +242,7 @@ typedef enum {
   SPEC_OBJECT,  SPEC_STYLE,
   SPEC_NOSCRIPT, SPEC_SCRIPT,
   SPEC_SVG,
+  SPEC_PICTURE, SPEC_SOURCE,
   SPEC_DONT_MATCH,
 } SpecialTagType;
 
@@ -303,6 +304,23 @@ typedef struct {
 } HTMLFILE;
 
 extern HTMLextra *HTMLext;
+/* 1: smallest candidate; 0: select for viewport width. MEDIA always uses it. */
+#define HTML_IMAGE_SELECT_SMALLEST 1
+
+/* Transient state for the existing, serialized parser session. */
+typedef struct {
+    word viewportWidth;
+    proc_HTMLImageMimeSupported *mimeSupported;
+    Boolean inPicture;
+    NameToken pictureSource;
+} HTMLImageSourceState;
+extern HTMLImageSourceState imageSourceState;
+void _pascal ClearPicture(void);
+void _pascal PictureBeforeTag(char *tagP, Boolean opening);
+void _pascal PictureText(char *textP);
+int _pascal ParseHTMLFileWithImageSources(ReadHTML_getc *gcP, dword data,
+    HTMLextra *extP, VMBlockHandle *itemP,
+    HTMLImageSourceContext *imageSourcesP);
 extern TextTransferBlockHeader *ttbh;
 extern HypertextTransferBlockHeader *htbh;
 extern MemHandle transferHeaderMem, hypertextHeaderMem;
@@ -486,9 +504,9 @@ typedef struct {
 } HTMLAttributeName;
 
 #if HTML_SCRIPT_SUPPORT
-#define HTML_ATTRIBUTE_COUNT 72
+#define HTML_ATTRIBUTE_COUNT 73
 #else
-#define HTML_ATTRIBUTE_COUNT 58
+#define HTML_ATTRIBUTE_COUNT 59
 #endif
 #define HTML_ATTRIBUTE_SEEN_BYTES ((HTML_ATTRIBUTE_COUNT+7)/8)
 
