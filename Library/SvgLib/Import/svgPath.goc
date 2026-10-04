@@ -1553,6 +1553,11 @@ Boolean SvgPathHandle(SvgImportContext *contextP, const char *tag, SVGScratch *s
     }
 
     if (buildingCompound) {
+        /* Scratch data is no longer needed while the native path is rendered. */
+        if (sc->tagP) { MemUnlock(sc->tagH); sc->tagP = (void*)0; }
+        if (sc->dbP) { MemUnlock(sc->dbH); sc->dbP = (void*)0; }
+        if (sc->ptsP) { MemUnlock(sc->ptsH); sc->ptsP = (void*)0; }
+        if (sc->ptsWWFP) { MemUnlock(sc->ptsWWFH); sc->ptsWWFP = (void*)0; }
         SvgRendererEndPath(contextP, /*in=*/valid && pathHasFill,
                      /*edges=*/valid && pathHasStroke);
 
