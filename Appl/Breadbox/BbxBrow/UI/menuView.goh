@@ -182,8 +182,11 @@
     GI_comp = @NavigateFitToWindowToggle;
 }
 
+/*
+    window here also means html4 frame
+*/
 @object GenBooleanClass NavigateFitToWindowToggle = {
-    GI_visMoniker = 'w',"Fit to window";
+    GI_visMoniker = 'w',"Fit To Window";
     GBI_identifier = TRUE;
 }
 
