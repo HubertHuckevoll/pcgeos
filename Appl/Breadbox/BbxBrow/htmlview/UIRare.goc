@@ -172,6 +172,16 @@ void UpdateTitleAndURL(NameToken title, NameToken url)
     }
 }
 
+@extern method HTMLVProcessClass, MSG_HMLVP_FIT_TO_WINDOW_CHANGED
+{
+    EventHandle evt;
+
+    if (modifiedBooleans) {
+        evt = @record URLDocumentClass::MSG_URL_DOCUMENT_RELOAD();
+        @send application::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
+    }
+}
+
 @extern method HTMLVProcessClass, MSG_HMLVP_DEFAULT_FONT_CHANGED
 {
     EventHandle evt;

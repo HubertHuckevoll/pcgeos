@@ -102,9 +102,9 @@
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
 @ifdef TV_BW_OPTION
     GI_comp = @NavigateTVBW,
-    @NavigateLoadGraphics,@NavigateLoadGraphicsNow
+    @NavigateLoadGraphics,@NavigateFitToWindow,@NavigateLoadGraphicsNow
 @else
-    GI_comp = @NavigateLoadGraphics,@NavigateLoadGraphicsNow
+    GI_comp = @NavigateLoadGraphics,@NavigateFitToWindow,@NavigateLoadGraphicsNow
 @endif
 @ifdef DO_DBCS
     ,@EncodingMenu;
@@ -171,6 +171,19 @@
 
 @object GenBooleanClass NavigateLoadGraphicsToggle = {
     GI_visMoniker = 'A',"Load Graphics Automatically";
+    GBI_identifier = TRUE;
+}
+
+@object GenBooleanGroupClass NavigateFitToWindow = {
+    GBGI_selectedBooleans = TRUE;
+    GBGI_destination = process;
+    GBGI_applyMsg = MSG_HMLVP_FIT_TO_WINDOW_CHANGED;
+    ATTR_GEN_INIT_FILE_KEY = "fitToWindow";
+    GI_comp = @NavigateFitToWindowToggle;
+}
+
+@object GenBooleanClass NavigateFitToWindowToggle = {
+    GI_visMoniker = 'w',"Fit to window";
     GBI_identifier = TRUE;
 }
 

@@ -49,6 +49,7 @@
 @extern object HTMLVApp;
 @extern object SettingsBoolGroup;
 @extern object HTMLSettingsBoolGroup;
+@extern object NavigateFitToWindow;
 
 @extern chunk MsgLoadImg;
 
@@ -1295,10 +1296,16 @@ EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
     }
 }
 
-void URLTextInitializeImage(
+void _pascal URLTextInitializeImage(
+         optr oself,
          HTMLimageData *p,
          ImageAdditionalData *iad)
 {
+    HTMLTextInstance *textP;
+    dword horizontalSpace;
+    word maxWidth;
+    WWFixedAsDWord maxScale, fitScale;
+
     p->HID_IADType = iad->IAD_type;
 
     /*
@@ -1351,6 +1358,38 @@ void URLTextInitializeImage(
 
     if(!p->size.XYS_width)              /* no width given, maintain aspect */
       p->HID_tmatrixE11 = p->HID_tmatrixE22;
+
+    /* Fit inline images before deriving both layout and drawing geometry. */
+    if (p->pos < HTML_IMAGE_POS_RESERVED &&
+        @call NavigateFitToWindow::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS()) {
+        textP = ObjDerefVis(oself);
+        if (!(textP->HTI_state & HTS_VIEW_NOT_OPENED) &&
+            textP->HTI_viewWidth && iad->IAD_size.XYS_width) {
+            horizontalSpace = (dword)textP->HTI_pageLeftMargin + 1 +
+                              2L * p->hspace;
+            /* ATTENTION: margins/spacing can exceed the viewport themselves.
+             * Keep a one-pixel image; fixing that requires layout changes.
+             */
+            maxWidth = horizontalSpace < textP->HTI_viewWidth ?
+                       textP->HTI_viewWidth - horizontalSpace : 1;
+            /* Compare scales: a height-only width can overflow WWFixed. */
+            maxScale = GrUDivWWFixed(MakeWWFixed(maxWidth),
+                                    MakeWWFixed(iad->IAD_size.XYS_width));
+            if (*(WWFixedAsDWord *)&p->HID_tmatrixE11 > maxScale) {
+                fitScale = GrUDivWWFixed(maxScale,
+                                        *(WWFixedAsDWord *)&p->HID_tmatrixE11);
+                *(WWFixedAsDWord *)&p->HID_tmatrixE11 = GrMulWWFixed(
+                    *(WWFixedAsDWord *)&p->HID_tmatrixE11, fitScale);
+                *(WWFixedAsDWord *)&p->HID_tmatrixE22 = GrMulWWFixed(
+                    *(WWFixedAsDWord *)&p->HID_tmatrixE22, fitScale);
+                /* Keep inverse scales representable at the one-pixel floor. */
+                if (*(WWFixedAsDWord *)&p->HID_tmatrixE11 < 2)
+                    p->HID_tmatrixE11.WWF_frac = 2;
+                if (*(WWFixedAsDWord *)&p->HID_tmatrixE22 < 2)
+                    p->HID_tmatrixE22.WWF_frac = 2;
+            }
+        }
+    }
 
     /*
      * actual size follows from scaling factor and raw image size
@@ -1405,7 +1444,7 @@ void IReplaceGraphic(optr oself, ObjCacheToken oct, HTMLimageData *p, word i,
     p->HID_vmf = vmf;
     p->HID_vmb = VMCHAIN_GET_VM_BLOCK(vmc);
 
-    URLTextInitializeImage(p, &iad) ;
+    URLTextInitializeImage(oself, p, &iad) ;
     @call oself::MSG_HTML_TEXT_RESOLVE_IMAGE(i, p, invalFrom, invalTo);
 @ifdef JAVASCRIPT_SUPPORT
     @call oself::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_LOAD,
