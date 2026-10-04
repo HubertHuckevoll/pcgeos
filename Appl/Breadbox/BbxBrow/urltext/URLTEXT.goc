@@ -276,7 +276,9 @@ void AssumeGraphic(TCHAR *mimeType)
 @ifdef PROGRESS_DISPLAY
 
 extern void _pascal WakeUp(word *queueP);
-extern void _pascal Block(word *queueP, Boolean *flag);
+extern void _pascal Block(word *queueP, Boolean *flag,
+                          dword *bytesAvailP, dword *preReadOffsetP,
+                          word needed);
 
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
 /* if import thread is actively importing */
@@ -533,12 +535,12 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 
             ThreadVSem(loadProgressDataP->LPD_sem);
 
-	        /* there is a timing hole right here, after we've checked fileDone,
-	           where the fetch thread could set fileDone and WakeUp no-one
-	           (since we aren't blocked yet); to catch this, we now atomically
-	           check fileDone and block */
+            /* Recheck completion and available bytes atomically before
+               blocking; WakeUp drops signals if no reader is queued. */
             Block(&(loadProgressDataP->LPD_emptyQueue),
-	                                &loadProgressDataP->LPD_fileDone);
+                  &loadProgressDataP->LPD_fileDone,
+                  &loadProgressDataP->LPD_bytesAvail,
+                  &loadProgressDataP->LPD_preReadOffset, bufSize);
             ThreadPSem(loadProgressDataP->LPD_sem);
         }
 

@@ -29,6 +29,7 @@
 @include <stdapp.goh>
 @include <Ansi/string.h>
 #include <library.h>
+#include <initfile.h>
 
 @include "htmlview.goh"
 @include "importg.goh"
