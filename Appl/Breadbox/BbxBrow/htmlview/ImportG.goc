@@ -44,7 +44,6 @@
 @extern object HTMLVApp;
 
 #if PROGRESS_DISPLAY
-/* must be MAX_FETCH_ENGINE_CHILDREN + 1 */
 #define MAX_IMPORT_THREADS 3
 #define IMPORT_WORK_FILENAME _TEXT("IMPORTWK.%03d")
 
@@ -103,8 +102,9 @@ static Boolean G_importThreadStarted = FALSE ;
 #if PROGRESS_DISPLAY
 
 /* array of import threads */
-/* One per fetch thread plus one without loading progress, or one shared. */
+/* Requests rotate through the configured import threads. */
 static int G_numImportThreads;
+static int G_nextImportThread;
 static MemHandle G_importThreadMemory[MAX_IMPORT_THREADS];
 static optr G_importThreadObj[MAX_IMPORT_THREADS];
 static VMFileHandle G_importWorkFile[MAX_IMPORT_THREADS];
@@ -116,8 +116,8 @@ static MemHandle G_importProgressDataQueue[IMPORT_PROGRESS_DATA_QUEUE_SIZE];
 static SemaphoreHandle G_importProgressDataQueueSem = 0;
 
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
-/* if import thread is actively importing */
-Boolean G_importActive[MAX_IMPORT_THREADS-1];
+/* Each fetch worker may have one outstanding streamed import. */
+Boolean G_importActive[MAX_FETCH_ENGINE_CHILDREN];
 #endif
 
 #else
@@ -164,20 +164,23 @@ Boolean ImportThreadEngineStart(void)
 #if PROGRESS_DISPLAY
     int i;
     FileLongName workFileName;
-    Boolean forceSingleImportThread = FALSE;
+    word numImportThreads = 1;
 #endif
 
     EC_ERROR_IF(G_importThreadStarted, -1) ;
     if (!G_importThreadStarted)  {
 
 #if PROGRESS_DISPLAY
-        InitFileReadBoolean(HTMLVIEW_CATEGORY, "forceSingleImportThread",
-            &forceSingleImportThread);
-        G_numImportThreads = forceSingleImportThread ? 1 : G_numFetchChildren + 1;
+        InitFileReadInteger(HTMLVIEW_CATEGORY, "numImportThreads",
+            &numImportThreads);
+        if (numImportThreads < 1 || numImportThreads > MAX_IMPORT_THREADS)
+            numImportThreads = 1;
+        G_numImportThreads = numImportThreads;
+        G_nextImportThread = 0;
 
  #ifdef ALLOW_FETCH_WHILE_IMPORTING
 	/* init import state */
-	for (i = 0; i < MAX_IMPORT_THREADS-1; i++) {
+	for (i = 0; i < MAX_FETCH_ENGINE_CHILDREN; i++) {
 	    G_importActive[i] = FALSE;
 	}
  #endif
@@ -485,12 +488,14 @@ Boolean ImportThreadRequestImportGraphic(
 #if PROGRESS_DISPLAY
     /* creates vfptr to callback routine */
     static proc_ImportProgressCallback *importProgressCallback = ImportGraphicProgressCallback;
-    int importThread = 0;  /* shared, or used without loading progress */
+    int importThread;
 
-    /* Separate streamed requests only when multiple importers exist. */
-    if (loadProgressDataP && G_numImportThreads > 1) {
-	importThread = loadProgressDataP->LPD_loadThread+1;
-    }
+    /* Reuse the progress queue lock to protect round-robin assignment. */
+    ThreadPSem(G_importProgressDataQueueSem);
+    importThread = G_nextImportThread;
+    if (++G_nextImportThread == G_numImportThreads)
+        G_nextImportThread = 0;
+    ThreadVSem(G_importProgressDataQueueSem);
 #endif
 
     /* All we need to do is create a block and copy all the requested */

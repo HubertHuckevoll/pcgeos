@@ -17,7 +17,7 @@ sub extract {
 }
 
 my $start = extract($code, qr/^(Boolean ImportThreadEngineStart\(.*?^})/ms);
-my $bool = extract($start, qr/(Boolean forceSingleImportThread[^;]*;)/);
+my $count = extract($start, qr/(word numImportThreads[^;]*;)/);
 $start = extract($start, qr/(if \(!G_importThreadStarted\).*?)(?=        \/\* First create)/s);
 $start =~ s/#endif\s*\z// or die "Missing creation guard\n";
 $start .= "CreateImporter(i);\n}\n#endif\nG_importThreadStarted = TRUE;\n}\n";
@@ -36,7 +36,7 @@ $abort =~ s/\@send\s*,forceQueue G_importThreadObj\[i\]::MSG_IMPORT_THREAD_ENGIN
     or die "Missing back abort event\n";
 $abort .= "#endif\n}\n";
 
-my $route = extract($code, qr/(int importThread = 0;.*?)(?=\n#endif)/s);
+my $route = extract($code, qr/(int importThread;.*?)(?=\n#endif)/s);
 for my $field (qw(importProgressData.IPD_vmFile
                   importProgressData.IPD_loadProgressDataP mimeStatus)) {
     $route .= extract($code, qr/(p_request->\Q$field\E\s*=.*?;)/s) . "\n";
@@ -51,7 +51,16 @@ $cleanup =~ s/\@send \(request.textObj\)::\s*MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_G
 $cleanup =~ s/\@send \(request.textObj\)::MSG_URL_TEXT_DEC_PENDING\(\)/DecPending(request.textObj)/;
 my $begin = extract($code, qr/\@method ImportThreadEngineClass, MSG_IMPORT_THREAD_ENGINE_START_ABORT\s*\{.*?(pself->numAborts\+\+\s*;)/s);
 my $end = extract($code, qr/\@method ImportThreadEngineClass, MSG_IMPORT_THREAD_ENGINE_END_ABORT\s*\{.*?(pself->numAborts--\s*;)/s);
-my $globals = extract($code, qr/(static int G_numImportThreads;)/);
+my $globals = extract($code, qr/(static int G_numImportThreads;\nstatic int G_nextImportThread;)/);
+open my $fetchSource, '<:raw', "$FindBin::Bin/../urlfetch/URLFETCH.goc" or die $!;
+my $fetchCode = <$fetchSource>;
+my $fetchCount = extract($fetchCode, qr/(word numChildren = DEFAULT_FETCH_ENGINE_CHILDREN;)/);
+$fetchCount .= extract($fetchCode, qr/(InitFileReadInteger\(HTMLVIEW_CATEGORY, "numConn".*?numChildren = DEFAULT_FETCH_ENGINE_CHILDREN\s*;)/s);
+open my $options, '<:raw', "$FindBin::Bin/../options.goh" or die $!;
+my $default = extract(<$options>, qr/(#define DEFAULT_FETCH_ENGINE_CHILDREN\s+\d+)/);
+open my $fetchHeader, '<:raw', "$FindBin::Bin/../urlfetch.goh" or die $!;
+my $fetchMax = extract(<$fetchHeader>, qr/(#define MAX_FETCH_ENGINE_CHILDREN\s+\d+)/);
+my $importMax = extract($code, qr/(#define MAX_IMPORT_THREADS\s+\d+)/);
 
 my $tmp = tempdir(CLEANUP => 1);
 open my $test, '>', "$tmp/check.c" or die $!;
@@ -61,7 +70,6 @@ print $test <<'C';
 #include <string.h>
 #define PROGRESS_DISPLAY 1
 #define ALLOW_FETCH_WHILE_IMPORTING
-#define MAX_IMPORT_THREADS 3
 #define IMPORT_PROGRESS_DATA_QUEUE_SIZE 20
 #define HTMLVIEW_CATEGORY "HTMLView"
 #define IMPORT_WORK_FILENAME "IMPORTWK.%03d"
@@ -88,29 +96,37 @@ typedef struct {
 } Request;
 typedef struct { int type; Request *requestP; } Event;
 typedef struct { int numAborts; } Engine;
-static int G_numFetchChildren, G_importThreadStarted, G_fetchWhileImport;
+typedef unsigned short word;
+static int G_importThreadStarted, G_fetchWhileImport;
 static int G_importThreadObj[3], G_importThreadMemory[3], G_importWorkFile[3];
 static int G_importActive[2], G_importProgressDataQueue[20];
 static int G_importProgressDataQueueSem;
 static MimeStatus G_importMimeStatus[3];
 static Event queue[3][8];
-static int queued[3], created[3], killed[3], closed[3], decoded[3];
-static int pending[3], canceled[3], deleted[3], unlocked[3], released[2];
-static int setting = -1;
-static void InitFileReadBoolean(const char *categoryP, const char *keyP,
-                                Boolean *valueP)
+static int queued[3], created[3], killed[3], closed[3];
+static int decoded[6], pending[6], canceled[6], deleted[6], unlocked[6], released[2];
+static int setting = -1, fetchSetting = -1, progressLocked;
+static void InitFileReadInteger(const char *categoryP, const char *keyP,
+                               word *valueP)
 {
+    int value;
     assert(strcmp(categoryP, "HTMLView") == 0);
-    assert(strcmp(keyP, "forceSingleImportThread") == 0);
-    if (setting >= 0) *valueP = setting;
+    assert(strcmp(keyP, "numImportThreads") == 0 || strcmp(keyP, "numConn") == 0);
+    value = strcmp(keyP, "numConn") == 0 ? fetchSetting : setting;
+    if (value != -1) *valueP = (word)value;
 }
 static int ThreadAllocSem(int count) { assert(count == 1); return 1; }
 static void ThreadFreeSem(int sem) { assert(sem == 1); }
-static void ThreadVSem(int sem) { assert(sem >= 10 && sem < 12); released[sem-10]++; }
+static void ThreadPSem(int sem) { assert(sem == 1 && !progressLocked); progressLocked = 1; }
+static void ThreadVSem(int sem)
+{
+    if (sem == 1) { assert(progressLocked); progressLocked = 0; }
+    else { assert(sem >= 10 && sem < 12); released[sem-10]++; }
+}
 static void FileSetCurrentPath(int sp, const char *pathP) { (void)sp; (void)pathP; }
 static void VMClose(int file, int flags) { (void)flags; assert(file >= 10 && file < 13); closed[file-10]++; }
-static void FileDelete(const char *pathP) { assert(pathP[0] >= '0' && pathP[0] <= '2'); deleted[pathP[0]-'0']++; }
-static void ObjCacheUnlockItem(int owner) { assert(owner >= 1 && owner <= 3); unlocked[owner-1]++; }
+static void FileDelete(const char *pathP) { assert(pathP[0] >= '0' && pathP[0] <= '5'); deleted[pathP[0]-'0']++; }
+static void ObjCacheUnlockItem(int owner) { assert(owner >= 1 && owner <= 6); unlocked[owner-1]++; }
 static void DecPending(int obj) { assert(pending[obj-1] == 1); pending[obj-1]--; }
 static void Cancel(int obj, int name) { assert(name == obj); canceled[obj-1]++; }
 static void CreateImporter(int i)
@@ -140,8 +156,9 @@ static void QueueAbort(int obj, int front)
     queued[i]++;
 }
 C
-print $test "$globals\n";
-print $test "static void Start(void)\n{ int i; $bool\n$start}\n";
+print $test "$default\n$fetchMax\n$importMax\n$globals\n";
+print $test "static int FetchCount(void)\n{ $fetchCount\n    return numChildren;\n}\n";
+print $test "static void Start(void)\n{ int i; $count\n$start}\n";
 print $test "static void Stop(void)\n{ int i; FileLongName workFileName;\n$stop}\n";
 print $test "static void Abort(void)\n{ int i;\n$abort}\n";
 print $test "static void Route(Request *p_request, LoadProgressData *loadProgressDataP)\n{ Request *mem = p_request;\n$route\n}\n";
@@ -151,11 +168,12 @@ print $test "static void End(Engine *pself) { $end }\n";
 print $test <<'C';
 static void Check(int option, int children, int fetch, int aborting)
 {
-    Request request[3];
+    Request request[6];
     LoadProgressData stream[2];
-    int i, count = option == 1 ? 1 : children+1;
+    int i, j, count = option >= 1 && option <= 3 ? option : 1;
     setting = option;
-    G_numFetchChildren = children;
+    fetchSetting = children;
+    assert(FetchCount() == children);
     G_fetchWhileImport = fetch;
     memset(created, 0, sizeof(created));
     memset(killed, 0, sizeof(killed));
@@ -173,27 +191,26 @@ static void Check(int option, int children, int fetch, int aborting)
     assert(!G_importActive[0] && !G_importActive[1]);
     /* The count stays fixed even if configuration changes while running. */
     setting = !option;
-    G_numFetchChildren = 2;
     assert(G_numImportThreads == count);
     for (i = 0; i < 3; i++) assert(created[i] == (i < count));
-    for (i = 0; i <= children; i++) {
+    for (i = 0; i < 6; i++) {
         request[i].textObj = request[i].name = request[i].pageOwner = i+1;
         request[i].temporary = 1;
         request[i].curHTML[0] = (char)('0'+i);
         pending[i] = 1;
-        if (i) {
+        if (i && i <= children) {
             stream[i-1].LPD_loadThread = i-1;
             stream[i-1].LPD_importSync = 9+i;
             G_importActive[i-1] = fetch;
         }
-        Route(request+i, i ? stream+i-1 : (void*)0);
+        Route(request+i, i && i <= children ? stream+i-1 : (void*)0);
         assert(request[i].importProgressData.IPD_loadProgressDataP ==
-               (i ? stream+i-1 : (void*)0));
-        assert(request[i].importProgressData.IPD_vmFile ==
-               (option == 1 ? 10 : 10+i));
-        assert(request[i].mimeStatus == G_importMimeStatus+(option == 1 ? 0 : i));
+               (i && i <= children ? stream+i-1 : (void*)0));
+        assert(request[i].importProgressData.IPD_vmFile == 10+i%count);
+        assert(request[i].mimeStatus == G_importMimeStatus+i%count);
+        assert(!progressLocked);
     }
-    if (option == 1) assert(queued[0] == children+1);
+    for (i = 0; i < count; i++) assert(queued[i] == (5-i)/count+1);
     if (aborting) {
         Abort();
         for (i = 0; i < 3; i++)
@@ -210,18 +227,19 @@ static void Check(int option, int children, int fetch, int aborting)
             else if (event.type == 2) End(&engine);
             else {
                 Handle(&engine, *event.requestP);
-                if (children == 2 && event.requestP == request+1) {
-                    assert(G_importActive[1] == fetch);
-                    assert(released[1] == 0 && pending[2] == 1);
+                for (j = 0; j < children; j++) {
+                    assert(G_importActive[j] == (pending[j+1] ? fetch : 0));
+                    assert(released[j] == (pending[j+1] ? 0 : !fetch));
                 }
             }
         }
         assert(engine.numAborts == 0);
     }
-    for (i = 0; i <= children; i++) {
+    for (i = 0; i < 6; i++) {
         assert(decoded[i] == !aborting && canceled[i] == aborting);
         assert(!pending[i] && deleted[i] == 1 && unlocked[i] == 1);
-        if (i) assert(!G_importActive[i-1] && released[i-1] == !fetch);
+        if (i && i <= children)
+            assert(!G_importActive[i-1] && released[i-1] == !fetch);
     }
     Stop();
     for (i = 0; i < 3; i++) {
@@ -232,15 +250,18 @@ static void Check(int option, int children, int fetch, int aborting)
 }
 int main(void)
 {
-    int children, fetch, aborting;
+    int children, imports, fetch, aborting, i;
+    int options[] = {-1, 0, 1, 2, 3, 4, -2, 65535};
+    for (i = 0; i < 8; i++) {
+        fetchSetting = options[i];
+        assert(FetchCount() == (fetchSetting >= 1 && fetchSetting <= 2 ? fetchSetting : 1));
+    }
     for (children = 1; children <= 2; children++)
-        for (fetch = 0; fetch <= 1; fetch++)
-            for (aborting = 0; aborting <= 1; aborting++) {
-                Check(1, children, fetch, aborting);
-                Check(-1, children, fetch, aborting);
-                Check(0, children, fetch, aborting);
-            }
-    puts("Importer selection, routing, queue abort and cleanup checks passed (24 cases).");
+        for (imports = 0; imports < 8; imports++)
+            for (fetch = 0; fetch <= 1; fetch++)
+                for (aborting = 0; aborting <= 1; aborting++)
+                    Check(options[imports], children, fetch, aborting);
+    puts("Fetch/import counts, round-robin routing, abort and cleanup checks passed (64 cases).");
     return 0;
 }
 C
