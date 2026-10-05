@@ -1285,6 +1285,13 @@ SvgPathEmitSubpath(SvgImportContext *contextP, const char *tag, SVGScratch *sc, 
             lasty = py;
         }
     }
+    /*
+     * Pair with SvgPathAddPt()'s SvgScratchEnsureWWPointCapacity() lock
+     * in SvgScratchEnsureCapacityCommon(). Only GEOS points are needed now;
+     * a later SvgPathAddPt() reacquires the lock for the next subpath.
+     */
+    MemUnlock(sc->ptsWWFH);
+    sc->ptsWWFP = (void*)0;
     np = w;
     if (np <= 1) {
         return FALSE;

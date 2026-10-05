@@ -196,6 +196,10 @@ Boolean SvgShapeHandlePolyline(SvgImportContext *contextP, const char *tag, SVGS
     }
 
     if (!SvgShapeParsePoints(contextP, sc->dbP, sc, &np)) return FALSE;
+    /* Pair with SvgScratchEnsurePathBuf()'s lock in
+     * SvgScratchEnsureCapacityCommon(); parsing no longer needs dbP. */
+    MemUnlock(sc->dbH);
+    sc->dbP = (void*)0;
     fillPresent = SvgStyleHasFill(contextP, tag);
     strokePresent = SvgStyleHasStroke(contextP, tag);
     if (np <= 1 || (!strokePresent && !(fillPresent && np > 2)))
@@ -232,6 +236,11 @@ Boolean SvgShapeHandlePolyline(SvgImportContext *contextP, const char *tag, SVGS
             sc->ptsP[i].P_x = SvgGeomWWFixedToSWordRound(Xp);
             sc->ptsP[i].P_y = SvgGeomWWFixedToSWordRound(Yp);
         }
+
+        /* Pair with SvgShapeParsePoints()'s SvgScratchEnsureWWPointCapacity()
+         * lock in SvgScratchEnsureCapacityCommon(); rendering uses GEOS points. */
+        MemUnlock(sc->ptsWWFH);
+        sc->ptsWWFP = (void*)0;
 
         if (fillPresent && np > 2)
         {
@@ -290,6 +299,10 @@ Boolean SvgShapeHandlePolygon(SvgImportContext *contextP, const char *tag, SVGSc
     }
 
     if (!SvgShapeParsePoints(contextP, sc->dbP, sc, &np)) return FALSE;
+    /* Pair with SvgScratchEnsurePathBuf()'s lock in
+     * SvgScratchEnsureCapacityCommon(); parsing no longer needs dbP. */
+    MemUnlock(sc->dbH);
+    sc->dbP = (void*)0;
     fillPresent = SvgStyleHasFill(contextP, tag);
     strokePresent = SvgStyleHasStroke(contextP, tag);
     if (np <= 2 || (!fillPresent && !strokePresent)) return FALSE;
@@ -325,6 +338,11 @@ Boolean SvgShapeHandlePolygon(SvgImportContext *contextP, const char *tag, SVGSc
             sc->ptsP[i].P_x = SvgGeomWWFixedToSWordRound(Xp);
             sc->ptsP[i].P_y = SvgGeomWWFixedToSWordRound(Yp);
         }
+
+        /* Pair with SvgShapeParsePoints()'s SvgScratchEnsureWWPointCapacity()
+         * lock in SvgScratchEnsureCapacityCommon(); rendering uses GEOS points. */
+        MemUnlock(sc->ptsWWFH);
+        sc->ptsWWFP = (void*)0;
 
         forcedRoundJoin = SvgStyleForceRoundJoinForSegments(contextP, tag, np);
         SvgRendererPolygon(contextP, sc->ptsP, np,

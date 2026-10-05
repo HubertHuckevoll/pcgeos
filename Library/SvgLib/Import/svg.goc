@@ -137,6 +137,13 @@ Boolean SvgScratchEnsureWWPointCapacity(SVGScratch *sc, word neededPoints)
                                           MAX_SVG_POINTS);
 }
 
+/*
+ * Each non-NULL scratch pointer owns one lock; repeated ensures reuse it.
+ * dbH: SvgShapeHandlePolyline()/SvgShapeHandlePolygon() unlock after parsing.
+ * ptsWWFH: those handlers and SvgPathEmitSubpath() unlock after conversion.
+ * Other active locks end in SvgPathHandle(), SvgImportParse(), or
+ * SvgScratchFree(), including early-return and error paths.
+ */
 static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP,
                                              void **ptrP, word *capacityP,
                                              word neededUnits, word unitSize,
@@ -164,9 +171,10 @@ static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP
                            &plannedCapacity, &plannedBytes);
     if (plan == SVG_CAPACITY_NO_GROWTH)
     {
-        /* The previous tag may have left this block unlocked. */
+        /* A previous tag or subpath may have left this block unlocked. */
         if (*handleP && !*ptrP)
         {
+            /* Reacquire for the caller unlocks documented above. */
             *ptrP = (void*)MemLock(*handleP);
             if (!*ptrP)
             {
@@ -190,6 +198,7 @@ static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP
             sc->failure = SVG_SCRATCH_ALLOCATION_FAILED;
             return FALSE;
         }
+        /* Initial lock, paired with the caller unlocks documented above. */
         newP = (void*)MemLock(*handleP);
         if (!newP)
         {
@@ -213,6 +222,7 @@ static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP
     {
         if (hadPointer)
         {
+            /* Restore the lock; the caller still releases it as above. */
             *ptrP = (void*)MemLock(*handleP);
         }
         sc->failure = SVG_SCRATCH_ALLOCATION_FAILED;
@@ -220,6 +230,7 @@ static Boolean SvgScratchEnsureCapacityCommon(SVGScratch *sc, MemHandle *handleP
     }
     *handleP = newH;
 
+    /* Lock after growth, paired with the caller unlocks documented above. */
     newP = (void*)MemLock(*handleP);
     if (!newP)
     {
