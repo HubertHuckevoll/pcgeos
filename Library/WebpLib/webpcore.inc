@@ -646,6 +646,7 @@ static void swebp__transform_dcuv(const simplewebp_i16 *in, simplewebp_u8 *out)
 		swebp__transform_dc(in + 48, out + 132);
 }
 
+#ifdef WEBP_HOST_TEST
 static simplewebp_i32 swebp__abs(simplewebp_i32 v)
 {
 	return v < 0 ? -v : v;
@@ -660,12 +661,14 @@ static simplewebp_i32 swebp__sclip2_value(simplewebp_i32 v)
 {
 	return v < -16 ? -16 : (v > 15 ? 15 : v);
 }
+#endif
 
 static simplewebp_u8 swebp__clip1_value(simplewebp_i32 v)
 {
 	return v < 0 ? 0 : (v > 255 ? 255 : (simplewebp_u8) v);
 }
 
+#ifdef WEBP_HOST_TEST
 static simplewebp_i32 swebp__needsfilter2(const simplewebp_u8 *p, simplewebp_i32 step, simplewebp_i32 t, simplewebp_i32 it)
 {
 	simplewebp_i32 p3, p2, p1, p0, q0, q1, q2, q3;
@@ -759,11 +762,6 @@ static void swebp__filterloop26(simplewebp_u8 *p, simplewebp_i32 hstride, simple
 	}
 }
 
-static void swebp__vfilter16(simplewebp_u8 *p, simplewebp_i32 stride, simplewebp_i32 thresh, simplewebp_i32 ithresh, simplewebp_i32 hev_thresh)
-{
-	swebp__filterloop26(p, stride, 1, 16, thresh, ithresh, hev_thresh);
-}
-
 static void swebp__do_filter4(simplewebp_u8 *p, simplewebp_i32 step)
 {
 	simplewebp_i32 p1, p0, q0, q1, a, a1, a2, a3;
@@ -800,6 +798,15 @@ static void swebp__filterloop24(simplewebp_u8 *p, simplewebp_i32 hstride, simple
 		p += vstride;
 	}
 }
+#else
+#define swebp__filterloop24 WebPFilter24
+#define swebp__filterloop26 WebPFilter26
+#endif
+
+static void swebp__vfilter16(simplewebp_u8 *p, simplewebp_i32 stride, simplewebp_i32 thresh, simplewebp_i32 ithresh, simplewebp_i32 hev_thresh)
+{
+	swebp__filterloop26(p, stride, 1, 16, thresh, ithresh, hev_thresh);
+}
 
 static void swebp__vfilter16_i(simplewebp_u8 *p, simplewebp_i32 stride, simplewebp_i32 thresh, simplewebp_i32 ithresh, simplewebp_i32 hev_thresh)
 {
@@ -829,6 +836,7 @@ static void swebp__vfilter8_i(simplewebp_u8 *u, simplewebp_u8 *v, simplewebp_i32
 	swebp__filterloop24(v + 4 * stride, stride, 1, 8, thresh, ithresh, hev_thresh);
 }
 
+#ifdef WEBP_HOST_TEST
 static simplewebp_bool swebp__needsfilter(const simplewebp_u8 *p, simplewebp_i32 step, simplewebp_i32 t)
 {
 	simplewebp_i32 p1, p0, q0, q1;
@@ -839,9 +847,11 @@ static simplewebp_bool swebp__needsfilter(const simplewebp_u8 *p, simplewebp_i32
 	q1 = p[step];
 	return (4 * swebp__abs(p0 - q0) + swebp__abs(p1 - q1)) <= t;
 }
+#endif
 
 static void swebp__simple_vfilter16(simplewebp_u8 *p, simplewebp_i32 stride, simplewebp_i32 thresh)
 {
+#ifdef WEBP_HOST_TEST
 	simplewebp_i32 i, thresh2;
 
 	thresh2 = 2 * thresh + 1;
@@ -850,10 +860,14 @@ static void swebp__simple_vfilter16(simplewebp_u8 *p, simplewebp_i32 stride, sim
 		if (swebp__needsfilter(p + i, stride, thresh2))
 			swebp__do_filter2(p + i, stride);
 	}
+#else
+	WebPFilterSimple(p, stride, 1, 16, thresh);
+#endif
 }
 
 static void swebp__simple_hfilter16(simplewebp_u8 *p, simplewebp_i32 stride, simplewebp_i32 thresh)
 {
+#ifdef WEBP_HOST_TEST
 	simplewebp_i32 i, thresh2;
 	simplewebp_u8 *target;
 
@@ -865,6 +879,9 @@ static void swebp__simple_hfilter16(simplewebp_u8 *p, simplewebp_i32 stride, sim
 		if (swebp__needsfilter(target, 1, thresh2))
 			swebp__do_filter2(target, 1);
 	}
+#else
+	WebPFilterSimple(p, 1, stride, 16, thresh);
+#endif
 }
 
 static void swebp__simple_vfilter16_i(simplewebp_u8 *p, simplewebp_i32 stride, simplewebp_i32 thresh)

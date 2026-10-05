@@ -100,4 +100,14 @@ word _pascal WebPBoolGetValue(WebPDecoder *decoderP,
 
 void _pascal WebPYUVToRGB(byte y, byte u, byte v, byte *rgbP);
 
+/* Locked pixel buffers; acrossStep crosses an edge, alongStep follows it. */
+void _pascal WebPFilterSimple(byte *pixelsP, word acrossStep, word alongStep,
+                              word count, word thresh);
+void _pascal WebPFilter24(byte *pixelsP, word acrossStep, word alongStep,
+                          word count, word thresh, word innerThresh,
+                          word hevThresh);
+void _pascal WebPFilter26(byte *pixelsP, word acrossStep, word alongStep,
+                          word count, word thresh, word innerThresh,
+                          word hevThresh);
+
 #endif

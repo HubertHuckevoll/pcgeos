@@ -4,12 +4,12 @@
 # If you edit it, you will lose your changes, should it be regenerated.
 #
 GEODE           = webplib
-ASM_TO_OBJS     =
+ASM_TO_OBJS     = webpfilter.asm
 UI_TO_RDFS      =
-SRCS            = webpapi.c webpdsp.c webpriff.c webpbit.c webpvp8.c\
-                  webpint.h
-OBJS            = webpapi.obj webpdsp.obj webpriff.obj webpbit.obj\
-                  webpvp8.obj
+SRCS            = webpfilter.asm webpdsp.c webpriff.c webpbit.c webpvp8.c\
+                  webpapi.c webpint.h
+OBJS            = webpfilter.obj webpdsp.obj webpriff.obj webpbit.obj\
+                  webpvp8.obj webpapi.obj
 LOBJS           =
 LIBOBJ          = $(DEVEL_DIR)/Include/$(GEODE).ldf
 LIBNAME         = webplib
