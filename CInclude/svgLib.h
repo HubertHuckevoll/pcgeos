@@ -13,7 +13,11 @@ SvgImport(FileHandle sourceFile,
           VMChain *resultChainP,
           /* SVG viewport in generated GString coordinates, if requested. */
           RectDWord *boundsP,
-          SvgProgressCallback *callback);
+          SvgProgressCallback *callback,
+          /* Optional live flag: nonzero cancels between tags.
+           * Keep storage valid and cancellation set until return.
+           * Cancellation frees partial output and returns TE_ERROR. */
+          const volatile Boolean *cancelP);
 
 TransError _export _pascal
 SvgExport(FileHandle outputFile,

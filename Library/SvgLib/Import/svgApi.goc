@@ -151,7 +151,8 @@ SvgImport(FileHandle sourceFile,
           VMFileHandle destinationFile,
           VMChain *resultChainP,
           RectDWord *boundsP,
-          SvgProgressCallback *callback)
+          SvgProgressCallback *callback,
+          const volatile Boolean *cancelP)
 {
     MemHandle contextH;
     SvgImportContext *contextP;
@@ -166,6 +167,11 @@ SvgImport(FileHandle sourceFile,
     if (!sourceFile || !destinationFile || !resultChainP)
     {
         return TE_INVALID_FORMAT;
+    }
+
+    if (cancelP && *cancelP)
+    {
+        return TE_ERROR;
     }
 
     contextH = MemAlloc((word)sizeof(SvgImportContext), HF_DYNAMIC,
@@ -190,7 +196,7 @@ SvgImport(FileHandle sourceFile,
     }
 
     SvgRendererInit(contextP, gstate);
-    status = SvgImportParse(contextP, sourceFile, callback);
+    status = SvgImportParse(contextP, sourceFile, callback, cancelP);
     if (status == TE_NO_ERROR)
     {
         GrEndGString(gstate);

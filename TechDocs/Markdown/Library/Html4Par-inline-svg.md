@@ -37,6 +37,16 @@ persistent source HTML can be parsed again. MSG_HTML_TEXT_STORE_CONTENTS is
 currently disabled, so native-page saving does not copy these page resources.
 
 ImpGraph ImpSVG opens the supplied filename and calls SvgImport on that file.
+SvgImport accepts an optional pointer to a live Boolean cancellation flag after
+its progress callback. SvgLib checks for nonzero between tags even without a
+progress callback. ImpGraph casts its MS_mimeFlags pointer to the Boolean pointer
+at this boundary: GEOS Boolean and MimeStatusFlags are signed and unsigned
+16-bit words, and MIME_STATUS_ABORT is the only defined status flag.
+Cancellation returns TE_ERROR with no output chain, and ImpGraph reports
+IBS_IMPORT_STOPPED. The flag storage must remain valid and cancellation set
+until the call returns.
+Graphvwr and the SVG translator pass a null cancellation pointer, retaining
+their existing progress callbacks and callback-based cancellation.
 ImportThreadRequestImportGraphic queues requests on the existing serial
 non-streaming import thread. Its temporary flag means delete after import and
 must be false for page resources. Each outstanding inline request must lock

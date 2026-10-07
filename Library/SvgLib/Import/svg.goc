@@ -297,7 +297,8 @@ SvgScratchError(const SVGScratch *sc)
  *---------------------------------------------------------------*/
 TransError
 SvgImportParse(SvgImportContext *contextP, FileHandle srcFile,
-               SvgProgressCallback *callback)
+               SvgProgressCallback *callback,
+               const volatile Boolean *cancelP)
 {
     SvgScanCtx scan;
     SVGScratch *scP;
@@ -370,6 +371,13 @@ SvgImportParse(SvgImportContext *contextP, FileHandle srcFile,
 
     for (;;)
     {
+        /* Poll the caller-owned flag independently of progress reporting. */
+        if (cancelP && *cancelP)
+        {
+            abort = TRUE;
+            break;
+        }
+
         /* Let the heap move or swap idle scratch blocks between tags. */
         if (scP->tagP) { MemUnlock(scP->tagH); scP->tagP = NULL; }
         if (scP->dbP) { MemUnlock(scP->dbH); scP->dbP = NULL; }

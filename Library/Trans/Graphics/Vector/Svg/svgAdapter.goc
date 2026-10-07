@@ -26,7 +26,8 @@ SvgAdapterImport(ImportFrame *frameP, VMChain *resultChainP)
     }
     ImpexUpdateImportExportStatus("File is being converted", -1);
     status = SvgImport(frameP->IF_sourceFile, frameP->IF_transferVMFile,
-                       resultChainP, (RectDWord *)0, SvgAdapterProgress);
+                       resultChainP, (RectDWord *)0, SvgAdapterProgress,
+                       (void*)0);
     if (status != TE_NO_ERROR)
     {
         return status;

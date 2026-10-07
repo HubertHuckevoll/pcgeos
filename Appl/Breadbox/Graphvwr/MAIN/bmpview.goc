@@ -2485,7 +2485,7 @@ BVImportGraphic(ImpBmpParams *paraP, byte *dataTypeP,
 
 	@call paraP->IBP_status::MSG_SB_START_PROCESS();
 	svgStatus = SvgImport(paraP->IBP_source, paraP->IBP_dest, &svgChain,
-						  &svgBounds, callback);
+						  &svgBounds, callback, (void*)0);
 	continued = @call paraP->IBP_status::MSG_SB_SET_STATUS_VALUE(100);
 	if(svgStatus == SVG_TE_NO_ERROR && continued)
 		@call paraP->IBP_status::MSG_SB_END_PROCESS();

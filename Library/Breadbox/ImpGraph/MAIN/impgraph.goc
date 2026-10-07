@@ -366,7 +366,6 @@ ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *
     (void)resolution;
     (void)watcher;
     (void)doCompress;
-    (void)mimeStatus;
 #if PROGRESS_DISPLAY
     (void)importProgressDataP;
 #endif
@@ -385,11 +384,16 @@ ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *
         return IBS_UNKNOWN_FORMAT;
     }
 
+    /* ATTENTION: Boolean is sword; MS_mimeFlags is word with only ABORT.
+     * If other flags are added, supply a separate live Boolean. */
     error = SvgImport(srcFile, vmf, &gstringChain, &bounds,
-                      (SvgProgressCallback *)0);
+                      (SvgProgressCallback *)0,
+                      (const volatile Boolean *)&mimeStatus->MS_mimeFlags);
     if (error != TE_NO_ERROR)
     {
         FileClose(srcFile, TRUE);
+        if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
+            return IBS_IMPORT_STOPPED;
         return (error == TE_OUT_OF_MEMORY) ? IBS_NO_MEMORY : IBS_UNKNOWN_FORMAT;
     }
 

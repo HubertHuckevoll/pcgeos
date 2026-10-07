@@ -276,6 +276,7 @@ void SvgRendererEndPath(SvgImportContext *contextP, Boolean fill,
                         Boolean stroke);
 
 TransError SvgImportParse(SvgImportContext *contextP, FileHandle sourceFile,
-                          SvgProgressCallback *callback);
+                          SvgProgressCallback *callback,
+                          const volatile Boolean *cancelP);
 
 #endif
