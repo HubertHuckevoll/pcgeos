@@ -14,7 +14,7 @@ sub read_source {
 }
 
 my $root = "$FindBin::Bin/../../../..";
-my $source = read_source("$FindBin::Bin/URLTEXT.goc");
+my $source = read_source("$FindBin::Bin/URLTextImages.goc");
 $source =~ /^(void _pascal URLTextInitializeImage\(.*?^})/ms
     or die "Cannot find image initialization\n";
 my $sizing = $1;

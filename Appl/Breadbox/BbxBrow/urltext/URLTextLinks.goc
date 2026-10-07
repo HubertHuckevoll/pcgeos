@@ -1,0 +1,228 @@
+/*
+ * URLTextClass link interaction and visited-link presentation.
+ *
+ * Hotspot and pointer methods forward interaction to the owning frame and
+ * coordinate the busy cursor. Visited-link marking uses the source cache
+ * and preserves overridden link colors.
+ *
+ * URLTEXT.goc owns the class declaration and dispatch table. This file
+ * implements external methods in the same URLTEXT_TEXT code resource.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <Ansi/string.h>
+@include "htmlview.goh"
+
+@extern object HTMLVApp;
+
+/* Source split only: keep these methods in the original code resource. */
+#ifdef __BORLANDC__
+#pragma codeseg URLTEXT_TEXT
+#pragma option -dc-
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLTEXT_TEXT")
+#endif
+
+/*
+ * Forward link activation or form submission using tokens in the local pool.
+ * Release the copied tokens before calling the superclass handler.
+ */
+@extern method URLTextClass, MSG_HTML_TEXT_HOTSPOT_SELECT
+{
+    TCHAR linkbuf[HTML_STATIC_BUF], *linkName;
+    NameToken myLink, myTarget;
+
+    myLink = NamePoolTokenizeFromPool(namePool, pool, link, FALSE);
+    // Copy link token to local pool
+    myTarget = NamePoolTokenizeFromPool(namePool, pool, target, FALSE);
+    // Copy target token to local pool
+
+    /* if postData but no link, assume form submission, so use default path */
+    if (NamePoolInitializeDynamic(linkbuf, sizeof(linkbuf), 0, &linkName)) {
+        if (postData && !myLink) {
+            @call (pself->UTI_frame)::MSG_URL_FRAME_COMPLETE_URL(&linkName);
+            myLink = NamePoolTokenize(namePool, linkName, FALSE);
+        }
+        NamePoolDestroyIfDynamic(linkName);
+
+        /* Pass on message to associated frame which is the holder of the URL,
+         * so it knows how to handle this link.
+         */
+        @call (pself->UTI_frame)::MSG_URL_FRAME_HANDLE_LINK(myLink, myTarget,
+            postData, TRUE);
+    }
+
+    if(myTarget != NAME_POOL_NONE)
+        NamePoolReleaseToken(namePool, myTarget);
+    if(myLink != NAME_POOL_NONE)
+        NamePoolReleaseToken(namePool, myLink);
+
+    /* release token? */
+    @callsuper();
+}
+
+/* Forward the hovered link to the frame for display, then release its tokens. */
+@extern method URLTextClass, MSG_HTML_TEXT_HOTSPOT_PTR
+{
+    NameToken myLink, myTarget;
+
+    myLink = NamePoolTokenizeFromPool(namePool, pool, link, FALSE);
+    // Copy link token to local pool
+    myTarget = NamePoolTokenizeFromPool(namePool, pool, target, FALSE);
+    // Copy target token to local pool
+
+    /* Pass on message to associated frame which is the holder of the URL,
+     * so it knows how to display this link.
+     */
+    @call (pself->UTI_frame)::MSG_URL_FRAME_HANDLE_LINK(myLink, myTarget,
+        NullHandle, FALSE);
+
+    if(myTarget != NAME_POOL_NONE)
+        NamePoolReleaseToken(namePool, myTarget);
+    if(myLink != NAME_POOL_NONE)
+        NamePoolReleaseToken(namePool, myLink);
+
+    @callsuper();
+}
+
+/* Override the busy cursor for HTML pointer images when input is enabled. */
+@extern method URLTextClass, MSG_META_LARGE_PTR
+{
+    @callsuper();
+    if ((retVal->flags & MRF_SET_POINTER_IMAGE) &&
+@ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
+        (@call application::MSG_HMLVA_IGNORING_INPUT() == FALSE) &&
+@endif
+        (MemGetInfo(OptrToHandle(retVal->ptrImage),
+            MGIT_OWNER_OR_VM_FILE_HANDLE) == G_Html4Par)) {
+        @call application::MSG_HMLVA_OVERRIDE_BUSY();
+    } else {
+        @call application::MSG_HMLVA_RESTORE_BUSY();
+    }
+}
+
+@ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
+/* Reject selection while input is disabled; otherwise use superclass handling. */
+@extern method URLTextClass, MSG_META_LARGE_START_SELECT
+{
+    if (@call application::MSG_HMLVA_IGNORING_INPUT() == FALSE) {
+        @callsuper();
+    } else {
+        /* eat it */
+        UserStandardSound(SST_NO_INPUT);
+        retVal->flags = MRF_PROCESSED;
+    }
+}
+@endif
+
+@ifndef COMPILE_OPTION_DRAG_COPY_WEB_PAGES
+/*
+ *  Only overload START_MOVE_COPY in non-NewDeal versions,
+ *  as it eliminates the drag copy web page feature.
+*/
+@ifdef GLOBAL_INTERNET_BUILD
+/* Display an image's ALT text and consume the move/copy event. */
+@extern method URLTextClass, MSG_META_LARGE_START_MOVE_COPY
+{
+    word link, formElement, image;
+    dword p;
+    Point rel;
+    HTMLimageData *img;
+    TCHAR buf[80];
+    word size;
+
+    @call self::MSG_HTML_TEXT_HIT_FROM_COORD(largeMouseDataStruct,
+        &p, &rel, &link, &formElement, &image);
+
+    pself = ObjDerefVis(oself);
+
+    if(image != CA_NULL_ELEMENT)        /* hit an image? */
+    {
+        MemLock(OptrToHandle(pself->HTI_imageArray));
+
+        img = ChunkArrayElementToPtr(pself->HTI_imageArray, image, &size);
+
+        /* grab ALT attr, if any */
+        if (img->imageALT != NAME_POOL_NONE) {
+            NamePoolCopy(pself->HTI_namePool, buf, sizeof(buf),
+                img->imageALT, NULL);
+            @CallStatusUpdate(buf, HTML_STATUS_TYPE_URL_HIGHLIGHT);
+        }
+
+        MemUnlock(OptrToHandle(pself->HTI_imageArray));
+    }
+
+    /* processed, no need to call superclass handling */
+    retVal->flags = MRF_PROCESSED;
+}
+@endif
+@endif
+
+/*
+ * Color cached links as visited only when their text still has the link color.
+ * Resolve URLs through the frame and omit fragments before the cache lookup.
+ */
+@extern method URLTextClass, MSG_URL_TEXT_MARK_VISITED_LINKS
+{
+    optr linkArray = pself->HTI_anchorArray;
+    optr textPool = pself->HTI_namePool;
+    optr frame = pself->UTI_frame;
+    ColorQuad vlinkColor = pself->HTI_vlinkColor,
+        linkColor = pself->HTI_linkColor;
+    word i,n,size;
+    HTMLanchorData *p;
+    TCHAR name[HTML_STATIC_BUF], *nP, *hash;
+    NameToken url;
+    TCHAR curExt[4],mime[MIME_MAXBUF];
+    dword id;
+    VisTextCharAttrDiffs diffs;
+    VisTextCharAttr attrs;
+#ifdef CACHE_VALIDATION
+    Boolean tryModified;
+    CompressedDateTime lastModDate;
+#endif
+
+    if(!linkArray)                      // avoid indenting all this stuff...
+        return;
+
+    MemLock(OptrToHandle(linkArray));
+    n = ChunkArrayGetCount(linkArray);
+    for(i=0; i<n; i++)
+    {
+        p = ChunkArrayElementToPtr(linkArray, i, &size);
+        if(!(p->flags & (HTML_ADF_NAME | HTML_ADF_MAP)))
+        {
+            NamePoolCopy(textPool, name, sizeof(name), p->linkOrName, &nP);
+
+            @call frame::MSG_URL_FRAME_COMPLETE_URL(&nP);
+            /* make it an absolute canonical name */
+
+            /* Cut off anchor that specifies positions within the page */
+            hash = strchr(nP, '\x23');
+            if(hash)
+                *hash = 0;
+
+            url = NamePoolTokenize(namePool, nP, FALSE);
+            NamePoolDestroyIfDynamic(nP);
+
+            /* Check if page is in the cache? */
+            if(SrcCacheFindURL(url, &id, curExt, mime CACHE_VAL_FIND_ARG))
+            {
+                @call self::MSG_VIS_TEXT_GET_CHAR_ATTR(0, &diffs, &attrs,
+                    p->pos+p->len, p->pos);
+
+                if(!(diffs.VTCAD_diffs & VTCAF_MULTIPLE_COLORS) &&
+                    !memcmp(&attrs.VTCA_color, &linkColor, sizeof(ColorQuad)))
+                {                             // Mark if color has not been overridden
+                    @call self::MSG_VIS_TEXT_SET_COLOR(vlinkColor,
+                        p->pos+p->len, p->pos);
+                }
+            }
+            NamePoolReleaseToken(namePool, url);
+        }
+    }
+    MemUnlock(OptrToHandle(linkArray));
+}
+

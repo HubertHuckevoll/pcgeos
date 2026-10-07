@@ -94,6 +94,150 @@ GLBANIM.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h
+OpenClos.obj \
+OpenClos.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
+                Objects/colorC.goh Objects/styles.goh htmlview.goh \
+                product.goh Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                parentc.goh favorite.goh importg.goh iapp.h \
+                Objects/gSysC.goh
+OpenClos.obj \
+OpenClos.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
+                sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
+                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
+                math.h htmlprog.h hwlib.h medium.h
+StatText.obj \
+StatText.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh Ansi/string.h stattext.goh \
+                htmlview.goh product.goh Objects/gViewCC.goh options.goh \
+                html4par.goh Objects/vLTextC.goh htmlstat.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh
+StatText.obj \
+StatText.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
+                medium.h
+UIOften.obj \
+UIOften.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
+                Objects/colorC.goh Objects/styles.goh htmlview.goh \
+                product.goh Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                parentc.goh favorite.goh importg.goh Objects/gSysC.goh
+UIOften.obj \
+UIOften.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
+                sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
+                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
+                math.h htmlprog.h hwlib.h medium.h
+scrapbk.obj \
+scrapbk.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
+                Objects/colorC.goh Objects/styles.goh htmlview.goh \
+                product.goh Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                parentc.goh favorite.goh importg.goh
+scrapbk.obj \
+scrapbk.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
+                sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
+                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
+                math.h htmlprog.h hwlib.h medium.h
 HTMLVIEW.obj \
 HTMLVIEW.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -178,9 +322,9 @@ ImportG.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h library.h product.h \
-                htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h medium.h Ansi/stdio.h sem.h
+                parallDr.h hugearr.h fileEnum.h library.h initfile.h \
+                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
+                math.h htmlprog.h hwlib.h medium.h Ansi/stdio.h sem.h
 LoadURL.obj \
 LoadURL.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -218,114 +362,6 @@ LoadURL.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Ansi/stdio.h Ansi/stdlib.h geoMisc.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
                 medium.h initfile.h
-OpenClos.obj \
-OpenClos.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
-                Objects/inputC.goh Objects/clipbrd.goh \
-                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
-                Objects/gProcC.goh alb.goh Objects/processC.goh \
-                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
-                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
-                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
-                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
-                Objects/gCtrlC.goh gcnlist.goh spool.goh \
-                Objects/gFSelC.goh Objects/gGlyphC.goh \
-                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
-                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
-                Objects/gEditCC.goh Objects/gBoolGC.goh \
-                Objects/gItemGC.goh Objects/gDListC.goh \
-                Objects/gItemC.goh Objects/gBoolC.goh \
-                Objects/gGadgetC.goh Objects/gToolCC.goh \
-                Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
-                Objects/colorC.goh Objects/styles.goh htmlview.goh \
-                product.goh Objects/gViewCC.goh options.goh html4par.goh \
-                Objects/vLTextC.goh htmlstat.goh stattext.goh \
-                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
-                parentc.goh favorite.goh importg.goh iapp.h \
-                Objects/gSysC.goh
-OpenClos.obj \
-OpenClos.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
-                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
-                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
-                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
-                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
-                sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
-                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h medium.h
-scrapbk.obj \
-scrapbk.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
-                Objects/inputC.goh Objects/clipbrd.goh \
-                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
-                Objects/gProcC.goh alb.goh Objects/processC.goh \
-                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
-                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
-                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
-                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
-                Objects/gCtrlC.goh gcnlist.goh spool.goh \
-                Objects/gFSelC.goh Objects/gGlyphC.goh \
-                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
-                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
-                Objects/gEditCC.goh Objects/gBoolGC.goh \
-                Objects/gItemGC.goh Objects/gDListC.goh \
-                Objects/gItemC.goh Objects/gBoolC.goh \
-                Objects/gGadgetC.goh Objects/gToolCC.goh \
-                Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
-                Objects/colorC.goh Objects/styles.goh htmlview.goh \
-                product.goh Objects/gViewCC.goh options.goh html4par.goh \
-                Objects/vLTextC.goh htmlstat.goh stattext.goh \
-                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
-                parentc.goh favorite.goh importg.goh
-scrapbk.obj \
-scrapbk.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
-                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
-                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
-                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
-                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
-                sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
-                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h medium.h
-StatText.obj \
-StatText.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
-                Objects/inputC.goh Objects/clipbrd.goh \
-                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
-                Objects/gProcC.goh alb.goh Objects/processC.goh \
-                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
-                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
-                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
-                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
-                Objects/gCtrlC.goh gcnlist.goh spool.goh \
-                Objects/gFSelC.goh Objects/gGlyphC.goh \
-                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
-                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
-                Objects/gEditCC.goh Objects/gBoolGC.goh \
-                Objects/gItemGC.goh Objects/gDListC.goh \
-                Objects/gItemC.goh Objects/gBoolC.goh \
-                Objects/gGadgetC.goh Objects/gToolCC.goh \
-                Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh Ansi/string.h stattext.goh \
-                htmlview.goh product.goh Objects/gViewCC.goh options.goh \
-                html4par.goh Objects/vLTextC.goh htmlstat.goh \
-                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
-                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
-                Objects/styles.goh parentc.goh
-StatText.obj \
-StatText.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
-                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
-                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
-                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
-                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
-                medium.h
 UIAction.obj \
 UIAction.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -352,42 +388,6 @@ UIAction.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 parentc.goh favorite.goh importg.goh
 UIAction.obj \
 UIAction.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
-                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
-                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
-                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
-                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
-                sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
-                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h medium.h
-UIOften.obj \
-UIOften.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
-                Objects/inputC.goh Objects/clipbrd.goh \
-                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
-                Objects/gProcC.goh alb.goh Objects/processC.goh \
-                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
-                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
-                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
-                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
-                Objects/gCtrlC.goh gcnlist.goh spool.goh \
-                Objects/gFSelC.goh Objects/gGlyphC.goh \
-                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
-                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
-                Objects/gEditCC.goh Objects/gBoolGC.goh \
-                Objects/gItemGC.goh Objects/gDListC.goh \
-                Objects/gItemC.goh Objects/gBoolC.goh \
-                Objects/gGadgetC.goh Objects/gToolCC.goh \
-                Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh Objects/Text/tCtrlC.goh ruler.goh \
-                Objects/colorC.goh Objects/styles.goh htmlview.goh \
-                product.goh Objects/gViewCC.goh options.goh html4par.goh \
-                Objects/vLTextC.goh htmlstat.goh stattext.goh \
-                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
-                parentc.goh favorite.goh importg.goh Objects/gSysC.goh
-UIOften.obj \
-UIOften.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
                 dbase.h localize.h Ansi/ctype.h timedate.h file.h \
                 sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
@@ -499,34 +499,6 @@ BOOKCLAS.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h
-BOOKMARK.obj \
-BOOKMARK.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
-                Objects/inputC.goh Objects/clipbrd.goh \
-                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
-                Objects/gProcC.goh alb.goh Objects/processC.goh \
-                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
-                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
-                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
-                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
-                Objects/gCtrlC.goh gcnlist.goh spool.goh \
-                Objects/gFSelC.goh Objects/gGlyphC.goh \
-                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
-                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
-                Objects/gEditCC.goh Objects/gBoolGC.goh \
-                Objects/gItemGC.goh Objects/gDListC.goh \
-                Objects/gItemC.goh Objects/gBoolC.goh \
-                Objects/gGadgetC.goh Objects/gToolCC.goh \
-                Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh Ansi/string.h options.goh product.goh
-BOOKMARK.obj \
-BOOKMARK.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
-                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
-                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
-                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
-                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h product.h
 FAVORCLS.obj \
 FAVORCLS.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -562,6 +534,34 @@ FAVORCLS.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
                 medium.h
+BOOKMARK.obj \
+BOOKMARK.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh Ansi/string.h options.goh product.goh
+BOOKMARK.obj \
+BOOKMARK.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h product.h
 FAVORITE.obj \
 FAVORITE.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -591,43 +591,6 @@ FAVORITE.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h
-NAVCACHE.obj \
-NAVCACHE.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
-                Objects/inputC.goh Objects/clipbrd.goh \
-                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
-                Objects/gProcC.goh alb.goh Objects/processC.goh \
-                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
-                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
-                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
-                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
-                Objects/gCtrlC.goh gcnlist.goh spool.goh \
-                Objects/gFSelC.goh Objects/gGlyphC.goh \
-                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
-                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
-                Objects/gEditCC.goh Objects/gBoolGC.goh \
-                Objects/gItemGC.goh Objects/gDListC.goh \
-                Objects/gItemC.goh Objects/gBoolC.goh \
-                Objects/gGadgetC.goh Objects/gToolCC.goh \
-                Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh htmlview.goh product.goh \
-                Objects/gViewCC.goh options.goh html4par.goh \
-                Objects/vLTextC.goh htmlstat.goh stattext.goh \
-                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
-                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
-                Objects/styles.goh parentc.goh dialogt.goh glbanim.goh \
-                sem.h
-NAVCACHE.obj \
-NAVCACHE.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
-                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
-                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
-                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
-                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h library.h Ansi/string.h \
-                Ansi/stdio.h Ansi/stdlib.h geoMisc.h initfile.h product.h \
-                htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h medium.h sysstats.h
 NAVIGATE.obj \
 NAVIGATE.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -665,6 +628,43 @@ NAVIGATE.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Ansi/stdio.h Ansi/stdlib.h geoMisc.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
                 medium.h initfile.h
+NAVCACHE.obj \
+NAVCACHE.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh htmlview.goh product.goh \
+                Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh dialogt.goh glbanim.goh \
+                sem.h
+NAVCACHE.obj \
+NAVCACHE.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h library.h Ansi/string.h \
+                Ansi/stdio.h Ansi/stdlib.h geoMisc.h initfile.h product.h \
+                htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
+                htmlprog.h hwlib.h medium.h sysstats.h
 LOCALPAG.obj \
 LOCALPAG.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -808,42 +808,6 @@ URLFETCH.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h product.h library.h \
                 Ansi/stdio.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
                 math.h htmlprog.h hwlib.h medium.h
-FRFETCH.obj \
-FRFETCH.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
-                Objects/inputC.goh Objects/clipbrd.goh \
-                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
-                Objects/gProcC.goh alb.goh Objects/processC.goh \
-                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
-                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
-                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
-                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
-                Objects/gCtrlC.goh gcnlist.goh spool.goh \
-                Objects/gFSelC.goh Objects/gGlyphC.goh \
-                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
-                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
-                Objects/gEditCC.goh Objects/gBoolGC.goh \
-                Objects/gItemGC.goh Objects/gDListC.goh \
-                Objects/gItemC.goh Objects/gBoolC.goh \
-                Objects/gGadgetC.goh Objects/gToolCC.goh \
-                Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh htmlview.goh product.goh \
-                Objects/gViewCC.goh options.goh html4par.goh \
-                Objects/vLTextC.goh htmlstat.goh stattext.goh \
-                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
-                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
-                Objects/styles.goh parentc.goh wav.goh
-FRFETCH.obj \
-FRFETCH.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
-                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
-                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
-                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
-                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
-                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
-                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
-                Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
-                htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h medium.h javascr.h cookies.h
 URLFRAME.obj \
 URLFRAME.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -880,6 +844,42 @@ URLFRAME.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
                 htmlprog.h hwlib.h medium.h javascr.h
+FRFETCH.obj \
+FRFETCH.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh htmlview.goh product.goh \
+                Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh wav.goh
+FRFETCH.obj \
+FRFETCH.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
+                Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
+                htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
+                htmlprog.h hwlib.h medium.h javascr.h cookies.h
 URLTEXT.obj \
 URLTEXT.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -915,9 +915,9 @@ URLTEXT.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
-                medium.h sem.h
-URLTEXT2.obj \
-URLTEXT2.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                medium.h urltext/URLTextInternal.h sem.h
+URLTextLinks.obj \
+URLTextLinks.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
                 Objects/uiInputC.goh iacp.goh Objects/winC.goh \
                 Objects/gProcC.goh alb.goh Objects/processC.goh \
@@ -940,8 +940,151 @@ URLTEXT2.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 urlfetch.goh mailhub.goh socket.goh sockmisc.h \
                 Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
                 Objects/styles.goh parentc.goh
-URLTEXT2.obj \
-URLTEXT2.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+URLTextLinks.obj \
+URLTextLinks.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
+                product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
+                math.h htmlprog.h hwlib.h medium.h
+URLTextPrint.obj \
+URLTextPrint.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh htmlview.goh product.goh \
+                Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh
+URLTextPrint.obj \
+URLTextPrint.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
+                Ansi/stdio.h product.h htmlfstr.h awatcher.h htmlopt.h \
+                htmldrv.h math.h htmlprog.h hwlib.h medium.h
+URLTextImages.obj \
+URLTextImages.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh htmlview.goh product.goh \
+                Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh importg.goh
+URLTextImages.obj \
+URLTextImages.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
+                Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
+                medium.h urltext/URLTextInternal.h
+URLTextImageProgress.obj \
+URLTextImageProgress.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh htmlview.goh product.goh \
+                Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh importg.goh
+URLTextImageProgress.obj \
+URLTextImageProgress.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
+                Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
+                medium.h urltext/URLTextInternal.h sem.h \
+                urltext/MemStream.h
+URLTextScript.obj \
+URLTextScript.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh htmlview.goh product.goh \
+                Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh
+URLTextScript.obj \
+URLTextScript.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
                 dbase.h localize.h Ansi/ctype.h timedate.h file.h \
                 sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
@@ -952,5 +1095,44 @@ URLTEXT2.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
                 awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
                 medium.h
+URLTextClipboard.obj \
+URLTextClipboard.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
+                Objects/inputC.goh Objects/clipbrd.goh \
+                Objects/uiInputC.goh iacp.goh Objects/winC.goh \
+                Objects/gProcC.goh alb.goh Objects/processC.goh \
+                Objects/visC.goh Objects/vCompC.goh Objects/vCntC.goh \
+                Objects/gAppC.goh Objects/genC.goh Objects/gInterC.goh \
+                Objects/gPrimC.goh Objects/gDispC.goh Objects/gTrigC.goh \
+                Objects/gViewC.goh Objects/gTextC.goh Objects/vTextC.goh \
+                Objects/gCtrlC.goh gcnlist.goh spool.goh \
+                Objects/gFSelC.goh Objects/gGlyphC.goh \
+                Objects/gDocCtrl.goh Objects/gDocGrpC.goh \
+                Objects/gDocC.goh Objects/gContC.goh Objects/gDCtrlC.goh \
+                Objects/gEditCC.goh Objects/gBoolGC.goh \
+                Objects/gItemGC.goh Objects/gDListC.goh \
+                Objects/gItemC.goh Objects/gBoolC.goh \
+                Objects/gGadgetC.goh Objects/gToolCC.goh \
+                Objects/gValueC.goh Objects/gToolGC.goh \
+                Objects/helpCC.goh htmlview.goh product.goh \
+                Objects/gViewCC.goh options.goh html4par.goh \
+                Objects/vLTextC.goh htmlstat.goh stattext.goh \
+                urlfetch.goh mailhub.goh socket.goh sockmisc.h \
+                Objects/Text/tCtrlC.goh ruler.goh Objects/colorC.goh \
+                Objects/styles.goh parentc.goh
+URLTextClipboard.obj \
+URLTextClipboard.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
+                graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \
+                dbase.h localize.h Ansi/ctype.h timedate.h file.h \
+                sllang.h system.h geoworks.h chunkarr.h Objects/helpCC.h \
+                disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
+                Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
+                driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
+                parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
+                Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
+                medium.h
+MemStream.obj \
+MemStream.eobj: product.h urltext/MemStream.h geos.h heap.h ec.h \
+                Ansi/string.h
 
 bbxbrowEC.geo bbxbrow.geo : geos.ldf ui.ldf ansic.ldf text.ldf spool.ldf html4par.ldf ibms.ldf netutils.ldf cookies.ldf parentc.ldf idialc.ldf wav.ldf mailhub.ldf socket.ldf 

@@ -495,8 +495,8 @@ function($tags, 'CloseTag') =~ /if\(spec == SPEC_PICTURE\)\s*ClearPicture\(\)/
 my $frame = function($browser, 'ParseFrameHTML');
 $frame =~ /MSG_URL_TEXT_GET_IMAGE_SOURCE_WIDTH/ or die "Missing width handoff\n";
 $frame !~ /MSG_HTML_TEXT_GET_VIEW_OBJ|MSG_GEN_VIEW_GET_VISIBLE_RECT/ or die "View query\n";
-my $text = read_source("$root/Appl/Breadbox/BbxBrow/urltext/URLTEXT.goc");
-$text =~ /\@method URLTextClass, MSG_URL_TEXT_GET_IMAGE_SOURCE_WIDTH\n\{(.*?)^}/ms
+my $text = read_source("$root/Appl/Breadbox/BbxBrow/urltext/URLTextImages.goc");
+$text =~ /\@extern method URLTextClass, MSG_URL_TEXT_GET_IMAGE_SOURCE_WIDTH\n\{(.*?)^}/ms
     or die "Missing width getter\n";
 my $getter = $1;
 $getter =~ /HTS_VIEW_NOT_OPENED.*?\? 0 : textP->HTI_viewWidth/s or die "Unguarded width\n";

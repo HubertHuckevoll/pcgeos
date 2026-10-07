@@ -1,0 +1,162 @@
+/*
+ * URLTextClass print job naming and page ornaments.
+ *
+ * The owning frame supplies the title and URL. The print methods provide
+ * the spooler job name and draw page numbers, the title and URL around the
+ * printed page. DrawText is the existing width-limited ornament helper.
+ *
+ * URLTEXT.goc owns the class declaration and dispatch table. Keep these
+ * external methods and their helper in the original URLTEXT_TEXT resource.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+@include "htmlview.goh"
+
+/* Source split only: preserve the original code resource. */
+#ifdef __BORLANDC__
+#pragma codeseg URLTEXT_TEXT
+#pragma option -dc-
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLTEXT_TEXT")
+#endif
+
+/********************************************************************
+ *              MSG_PRINT_GET_DOC_NAME
+ ********************************************************************
+ * SYNOPSIS:     Sent by the PrintControl before it spools the
+ *               print job. Must send back a job "name" or it won't
+ *               print.
+ * CALLED BY:    PrintControl
+ * PARAMETERS:   optr printCtrlOD
+ * RETURNS:      void
+ * SIDE EFFECTS: none
+ * STRATEGY:     Set the name of the print job. If we don't handle
+ *               this message then the print job will be cancelled
+ *               by the spooler.
+ *******************************************************************/
+@extern method URLTextClass, MSG_PRINT_GET_DOC_NAME
+{
+    optr frame;
+    NameToken tok;
+    TCHAR title[80], *p;
+
+    frame = @call (pself->UTI_frame)::MSG_URL_FRAME_FIND_REAL_FRAME();
+
+    if(frame)
+    {
+        tok = @call frame::MSG_URL_FRAME_GET_TITLE();
+        if(tok == NAME_POOL_NONE)
+            tok = @call frame::MSG_URL_FRAME_GET_URL();
+    }
+    else
+        tok = NAME_POOL_NONE;
+
+    if(tok == NAME_POOL_NONE)           /* no title - use placeholder */
+    {
+        @call printCtrlOD::MSG_PRINT_CONTROL_SET_DOC_NAME(_TEXT("?"));
+    }
+    else
+    {
+        NamePoolCopy(namePool, title, sizeof(title), tok, &p);
+        /* get title */
+        @call printCtrlOD::MSG_PRINT_CONTROL_SET_DOC_NAME(p);
+        NamePoolDestroyIfDynamic(p);      /* release dynamic buffer, if any */
+
+        NamePoolReleaseToken(namePool, tok);
+        /* free string token */
+    }
+}
+
+/* Draw a fitting prefix of the ornament text, optionally right-justified. */
+sword DrawText(GStateHandle gstate, sword x, sword y, sword maxwidth,
+    TCHAR *buf, Boolean rightJustify)
+{
+    Rectangle bounds;
+    int len;
+    sword width;
+
+    if(maxwidth<=0) return 0;           /* no space - get off */
+
+    len = strlen(buf) + 1;
+
+    /* truncate string until it fits */
+    do {
+        --len;
+        GrGetTextBounds(gstate, buf, 0, 0, len, &bounds);
+        width = bounds.R_right - bounds.R_left;
+    } while(len > 0 && width > maxwidth);
+
+    if(rightJustify)
+        x += maxwidth - width;
+
+    GrDrawText(gstate, x, y, buf, len);
+
+    return width;
+}
+
+/* Draw the page header and footer after superclass ornament handling. */
+@extern method URLTextClass, MSG_HTML_TEXT_PRINT_PAGE_ORNAMENTS
+{
+    const LineAttr la = {CF_INDEX, {C_BLACK, 0, 0}, SDM_100, CMT_CLOSEST,
+        LE_BUTTCAP, LJ_MITERED, LS_SOLID, {32767, 0}};
+    const TextAttr ta = {{C_BLACK, CF_INDEX, 0, 0},
+        SDM_100, {PT_SOLID, 0},
+        0, TS_OUTLINE | TS_BOLD | TS_ITALIC | TS_SUPERSCRIPT | TS_SUBSCRIPT |
+            TS_STRIKE_THRU | TS_UNDERLINE,
+        TM_DRAW_BASE|TM_DRAW_ACCENT, TM_DRAW_OPTIONAL_HYPHENS,
+        {0,0}, FID_DTC_URW_ROMAN, {0,10}, 0, 100, 100};
+
+    optr frame;
+    TCHAR buf[80];
+    sword pageNrWidth;
+    NameToken tok;
+
+    frame = @call (pself->UTI_frame)::MSG_URL_FRAME_FIND_REAL_FRAME();
+
+    @callsuper();                       /* draw standard elements, if any */
+
+    /* Draw top and bottom delimiter */
+    GrSetLineAttr(gstate, &la);         /* set line attributes to defaults */
+    GrDrawHLine(gstate,
+        page->R_left, page->R_top + HTML_TEXT_ORNAMENT_MARGIN - 9,
+        page->R_right);
+    GrDrawHLine(gstate,
+        page->R_left, page->R_bottom - HTML_TEXT_ORNAMENT_MARGIN + 4,
+        page->R_right);
+
+    GrSetTextAttr(gstate, &ta);
+
+    /* print page number into header (right justified) */
+    sprintf(buf, _TEXT("%u/%u"), curPage+1, numPages);
+    pageNrWidth = DrawText(gstate,
+        page->R_left, page->R_top + 16, page->R_right - page->R_left, buf, TRUE);
+
+    /* print document title into remaining space of header */
+    tok = @call frame::MSG_URL_FRAME_GET_TITLE();
+    if(tok != NAME_POOL_NONE)
+    {
+        NamePoolCopy(namePool, buf, sizeof(buf), tok, NULL);
+        DrawText(gstate,
+            page->R_left, page->R_top + 16,
+            page->R_right - page->R_left - pageNrWidth - 10, buf, FALSE);
+        NamePoolReleaseToken(namePool, tok);
+        /* free string token */
+    }
+
+    /* print URL into footer */
+    tok = @call frame::MSG_URL_FRAME_GET_URL();
+    if(tok != NAME_POOL_NONE)
+    {
+        NamePoolCopy(namePool, buf, sizeof(buf), tok, NULL);
+        DrawText(gstate,
+            page->R_left, page->R_bottom - 12,
+            page->R_right - page->R_left, buf, FALSE);
+        NamePoolReleaseToken(namePool, tok);
+        /* free string token */
+    }
+}
+
