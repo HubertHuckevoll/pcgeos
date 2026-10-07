@@ -20,7 +20,7 @@ $asm =~ /BLOCK\s+proc\s+far\s+([^\n]+).*?INT_OFF\s+push\s+ds, si\s+(.*?)^doBlock
 my ($params, $predicate) = ($1, $2);
 $params eq 'queueP:fptr, flag:fptr, bytesAvailP:fptr, preReadOffsetP:fptr, needed:word'
     or die "Unexpected BLOCK parameters\n";
-my $source = read_source("$FindBin::Bin/URLTextImageProgress.goc");
+my $source = read_source("$FindBin::Bin/../urltext/URLTextImageProgress.goc");
 $source =~ /Block\(&\(loadProgressDataP->LPD_emptyQueue\),\s*&loadProgressDataP->LPD_fileDone,\s*&loadProgressDataP->LPD_bytesAvail,\s*&loadProgressDataP->LPD_preReadOffset, bufSize\)/
     or die "Caller does not pass the wait inputs\n";
 
