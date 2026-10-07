@@ -15,15 +15,20 @@ URLDOC          = LOCALPAG.goc URLDOC.goc
 URLDOCCT        = URLDOCCT.goc
 URLFETCH        = URLFETCH.goc
 URLFRAME        = FRFETCH.goc URLFRAME.goc
-URLTEXT         = URLTEXT2.goc URLTEXT.goc
+URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
+                  URLTextClipboard.goc URLTEXT.goc URLTextImages.goc\
+                  URLTextImageProgress.goc URLTextLinks.goc\
+                  URLTextPrint.goc URLTextScript.goc
 UI_TO_RDFS      =
 OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
                   UIOften.obj scrapbk.obj HTMLVIEW.obj ImportG.obj\
                   LoadURL.obj UIAction.obj UIRare.obj INIT.obj BOOKCLAS.obj\
                   FAVORCLS.obj BOOKMARK.obj FAVORITE.obj NAVCACHE.obj\
                   NAVIGATE.obj LOCALPAG.obj URLDOC.obj URLDOCCT.obj\
-                  URLFETCH.obj FRFETCH.obj URLFRAME.obj URLTEXT2.obj\
-                  URLTEXT.obj
+                  URLFETCH.obj FRFETCH.obj URLFRAME.obj MemStream.obj\
+                  URLTextClipboard.obj URLTEXT.obj URLTextImages.obj\
+                  URLTextImageProgress.obj URLTextLinks.obj\
+                  URLTextPrint.obj URLTextScript.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\

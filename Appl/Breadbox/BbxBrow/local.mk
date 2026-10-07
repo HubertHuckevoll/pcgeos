@@ -13,6 +13,11 @@ PRODUCTS =
 # ABDBCS enables it together with DBCS. JavaScript or AutoBrowse causes the
 # matching Html4Par build to derive HTML_SCRIPT_SUPPORT.
 #
+# Glue file-local lookup needs Images to establish the shared URLTEXT_TEXT segment.
+OBJS := URLTextImages.obj $(OBJS:NURLTextImages.obj)
+EOBJS := URLTextImages.eobj $(EOBJS:NURLTextImages.eobj)
+GOBJS := URLTextImages.gobj $(GOBJS:NURLTextImages.gobj)
+
 #include <$(SYSMAKEFILE)>
 
 COMPILE_OPTIONS ?=
@@ -35,6 +40,17 @@ GOCFLAGS += $(COMPILE_OPTIONS)
 #XCCOMFLAGS = -d -dc -Z -Os -O $(COMPILE_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
 XCCOMFLAGS = -zu $(COMPILE_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
 # removed -zc because it is not compatible with code_seg() pragma
+
+# Match compiler defaults to the source pragmas; avoid unused filename segments.
+#if !empty(CCOM:M*wcc*)
+XCCOMFLAGS += $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLTEXT_TEXT|) \
+             $(.TARGET:T:R:MURLTextImages:S|URLTextImages|-nt=URLTEXT_TEXT|) \
+             $(.TARGET:T:R:MURLTextImageProgress:S|URLTextImageProgress|-nt=URLTEXT_TEXT|) \
+             $(.TARGET:T:R:MURLTextLinks:S|URLTextLinks|-nt=URLTEXT_TEXT|) \
+             $(.TARGET:T:R:MURLTextPrint:S|URLTextPrint|-nt=URLTEXT_TEXT|) \
+             $(.TARGET:T:R:MURLTextScript:S|URLTextScript|-nt=URLTEXT_TEXT|) \
+             $(.TARGET:T:R:MURLTextClipboard:S|URLTextClipboard|-nt=URLTEXT2_TEXT|)
+#endif
 
 # -N:  Add stack probes to every routine (only for EC builds)
 #ifndef NO_EC

@@ -13,7 +13,7 @@ sub read_source {
 }
 sub method {
     my ($text, $name, $args) = @_;
-    $text =~ /^\@method URLTextClass, \Q$name\E\n\{(.*?)^}/ms
+    $text =~ /^\@(?:extern )?method URLTextClass, \Q$name\E\n\{(.*?)^}/ms
         or die "Cannot find $name\n";
     return "static void $name($args)\n{\n$1}\n";
 }
@@ -29,6 +29,8 @@ sub goc_to_c {
 }
 my $root = "$FindBin::Bin/../../../..";
 my $source = read_source("$FindBin::Bin/../urltext/URLTEXT.goc");
+$source .= read_source("$FindBin::Bin/../urltext/$_") for
+    qw(URLTextInternal.h URLTextImages.goc URLTextImageProgress.goc);
 my $header = read_source("$root/CInclude/html4par.goh");
 my $class = read_source("$root/Library/Breadbox/Html4Par/htmlclas/htmlclas.goc");
 my $import = read_source("$FindBin::Bin/../htmlview/ImportG.goc");

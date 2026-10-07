@@ -1,0 +1,527 @@
+/*
+ * URLTextClass script events, name lookup and AutoBrowse diagnostics.
+ *
+ * Retain the independent JavaScript and AutoBrowse build guards.
+ * Script-driven image requests stay with their near helper in Images.
+ *
+ * URLTEXT.goc owns URLTextClass and registers these external methods.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+@include "htmlview.goh"
+
+/* Source organization does not change code-resource placement. */
+#ifdef __BORLANDC__
+#pragma codeseg URLTEXT_TEXT
+#pragma option -dc-
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLTEXT_TEXT")
+#endif
+
+@ifdef COMPILE_OPTION_AUTO_BROWSE
+
+#define JS_EMBEDDED_SCRIPT 0x0001
+#define JS_EXTERNAL_SCRIPT 0x0002
+#define JS_JAVASCRIPT_URLS 0x0004
+#define JS_EVENT_HANDLERS  0x00F0
+#define JS_EVENT_MOUSE     0x0010
+#define JS_EVENT_FORM      0x0020
+#define JS_EVENT_FOCUS     0x0040
+#define JS_EVENT_LOAD      0x0080
+#define JS_FEATURES        0xFFFFFF00L
+#define JS_DOCUMENT_WRITE  0x0100
+#define JS_WINDOW_OPEN     0x0200
+#define JS_DOCUMENT_WRITELN 0x0400
+#define JS_FORM_ACTION     0x0800
+/* this space available */
+#define JS_FRAMES          0x2000
+#define JS_DOCUMENT_APPLETS 0x4000
+#define JS_DOCUMENT_EMBEDS 0x8000
+#define JS_DOCUMENT_PLUGINS 0x10000L
+#define JS_LOCATION_HOST 0x20000L
+#define JS_LOCATION_HOSTNAME 0x40000L
+#define JS_LOCATION_PATHNAME 0x80000L
+#define JS_LOCATION_PORT 0x100000L
+#define JS_LOCATION_PROTOCOL 0x200000L
+#define JS_LOCATION_SEARCH 0x400000L
+#define JS_MIMETYPE 0x800000L
+#define JS_WINDOW_CLOSE 0x1000000L
+#define JS_WINDOW_FOCUS 0x2000000L
+#define JS_LAYERS 0x4000000L
+#define JS_STYLES 0x8000000L
+#define JS_NEW_OPTION 0x10000000L
+#define JS_INNERWIDTH 0x20000000L
+#define JS_INNERHEIGHT 0x40000000L
+
+typedef struct {
+    dword flag;
+    char *detectString;
+    char *logString;
+    word count;
+} FeatureEntry;
+
+extern sdword bulkTestCount;
+sdword errorPageCount = 0;
+
+/* this is in dgroup so we can write to the 'count' field */
+FeatureEntry featuresTable[] = {
+    {JS_DOCUMENT_WRITE, "document.write(", "document.write", 0},
+    {JS_WINDOW_OPEN, "document.open", NULL, 0},
+    {JS_DOCUMENT_WRITELN, "document.writeln(", "document.writeln", 0},
+    {JS_FORM_ACTION, ".action", "form.action", 0},
+    {JS_FRAMES, ".frames", "frames array", 0},
+    {JS_DOCUMENT_APPLETS, "document.applets", NULL, 0},
+    {JS_DOCUMENT_EMBEDS, "document.embeds", NULL, 0},
+    {JS_DOCUMENT_PLUGINS, "document.plugins", NULL, 0},
+    {JS_LOCATION_HOST, "location.host", NULL, 0},
+    {JS_LOCATION_HOSTNAME, "location.hostname", NULL, 0},
+    {JS_LOCATION_PATHNAME, "location.pathname", NULL, 0},
+    {JS_LOCATION_PORT, "location.port", NULL, 0},
+    {JS_LOCATION_PROTOCOL, "location.protocol", NULL, 0},
+    {JS_LOCATION_SEARCH, "location.search", NULL, 0},
+    {JS_MIMETYPE, "mimeType", NULL, 0},
+    {JS_WINDOW_CLOSE, "window.close", NULL, 0},
+    {JS_WINDOW_FOCUS, "window.focus", NULL, 0},
+    {JS_LAYERS, ".layers", "layers array", 0},
+    {JS_STYLES, ".style", "style sheets", 0},
+    {JS_NEW_OPTION, "new Option(", "new Option()", 0},
+    {JS_INNERWIDTH, "innerWidth", NULL, 0},
+    {JS_INNERHEIGHT, "innerHeight", NULL, 0}
+};
+/* these don't have table entries, but we want to keep count */
+word extScript = 0;
+word docWriteAndExtScript = 0;
+
+/* Collect the existing AutoBrowse feature flags from script text. */
+void CheckScript(char *script, dword *features)
+{
+    word i;
+
+    for (i = 0; i < (sizeof(featuresTable)/sizeof(FeatureEntry)); i++) {
+        if (strstr(script, MemLockFixedOrMovable(
+            featuresTable[i].detectString)))
+            *features |= featuresTable[i].flag;
+        MemUnlockFixedOrMovable(featuresTable[i].detectString);
+    }
+}
+
+static Boolean toFile;
+
+/* Append diagnostic text using the existing SBCS/DBCS conversion path. */
+void fstrcat(char *buf, char *str)
+{
+@ifdef DO_DBCS
+    strcatsbcs(buf, str);
+    if (toFile) {
+        strcatsbcs(buf, "\n");
+    }
+@else
+    strcat(buf, str);
+    if (toFile) {
+        strcat(buf, "\n");
+    }
+@endif
+}
+
+@extern object AutoBrowseOptions;
+
+#ifdef DO_DBCS
+#define STRCPYSB(s,t) strcpysbcs(s,t)
+#define STRCATSB(s,t) strcatsbcs(s,t)
+#define SPRINTFSB sprintfsbcs
+#else
+#define STRCPYSB(s,t) strcpy(s,t)
+#define STRCATSB(s,t) strcat(s,t)
+#define SPRINTFSB sprintf
+#endif
+
+/* Inspect attached page script features and update AutoBrowse diagnostics. */
+void ShowJSAnalysis(URLTextInstance *pself, VMFileHandle vmf, VMChain vmc)
+{
+    char buf[1024], *p;
+    dword features = 0;
+    optr array;
+    optr pool = pself->HTI_namePool;
+    word i,size;
+    HTMLeventData *p_eventData ;
+    HTMLanchorData *anchorArrayElement;
+    HypertextTransferBlockHeader *htbh;
+    MemHandle hypertextHeaderMem;
+    VMBlockHandle vmb;
+    char *script;
+    dword halret;
+    dword first, count;
+    char statBuf[15];
+    static sdword maxTestCount;
+    static sdword cleanCount;
+    static sdword noJSCount;
+@ifdef DO_DBCS
+    DosCodePage cp = G_codePage;
+    word status, backup;
+@endif
+
+    toFile = (@call AutoBrowseOptions::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & AB_OPTION_JAVA_TO_LOG);
+
+    /* keep track of last one for totals */
+    if (bulkTestCount > 1) maxTestCount = bulkTestCount;
+    /* report previous totals once per list, or each time (if requested) */
+    if ((bulkTestCount == 1) || (@call AutoBrowseOptions::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & AB_OPTION_JS_TOTALS_ON_EACH_PAGE)) {
+        STRCPYSB(buf, "\r\nJS feature totals:\r\n");
+        STRCATSB(buf, "   external .js files (not checked) ");
+        SPRINTFSB(statBuf, "(%d/%d)\r\n", extScript, (word)(maxTestCount-errorPageCount));
+        STRCATSB(buf, statBuf);
+        for (i = 0; i < (sizeof(featuresTable)/sizeof(FeatureEntry)); i++) {
+            STRCATSB(buf, "   ");
+            if (featuresTable[i].logString) {
+                strcat(buf, MemLockFixedOrMovable(featuresTable[i].logString));
+                MemUnlockFixedOrMovable(featuresTable[i].logString);
+            } else {
+                strcat(buf, MemLockFixedOrMovable(featuresTable[i].detectString));
+                MemUnlockFixedOrMovable(featuresTable[i].detectString);
+            }
+            SPRINTFSB(statBuf, " (%d/%d)\r\n", featuresTable[i].count, (word)(maxTestCount-errorPageCount));
+            STRCATSB(buf, statBuf);
+        }
+        STRCATSB(buf, "   both document.write & external scripts");
+        SPRINTFSB(statBuf, " (%d/%d)\r\n", docWriteAndExtScript, (word)(maxTestCount-errorPageCount));
+        STRCATSB(buf, statBuf);
+        STRCATSB(buf, "   page load errors: ");
+        SPRINTFSB(statBuf, "%d\r\n", (word)errorPageCount);
+        STRCATSB(buf, statBuf);
+        STRCATSB(buf, "   all good JS count: ");
+        SPRINTFSB(statBuf, "%d\r\n", (word)cleanCount);
+        STRCATSB(buf, statBuf);
+        STRCATSB(buf, "   no JS count: ");
+        SPRINTFSB(statBuf, "%d\r\n", (word)(noJSCount-errorPageCount));
+        STRCATSB(buf, statBuf);
+        ABLog(buf);
+    }
+    /* if looping around, now init counts */
+    if (bulkTestCount == 1) {
+        maxTestCount = 1;
+        cleanCount = 0; noJSCount = 0; errorPageCount = 0;
+    }
+
+    /* clear stats if restarting list */
+    if (bulkTestCount == 1) {  /* bulkTestCount starts at 1 */
+        /* then clear */
+        for (i = 0; i < (sizeof(featuresTable)/sizeof(FeatureEntry)); i++) {
+            featuresTable[i].count = 0;
+        }
+        extScript = 0;
+        docWriteAndExtScript = 0;
+    }
+
+    /* Only evaluate if we have an array of event elements */
+    array = pself->HTI_eventArray;
+    if (array)
+    {
+        /* See if the given position matches any of the event handlers */
+        MemLock(OptrToHandle(array)) ;
+        for (i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)
+        {
+            p_eventData = ChunkArrayElementToPtr(array, i, &size) ;
+            switch(p_eventData->HED_evt)
+            {
+            case HTML_EVENT_ABORT:
+            case HTML_EVENT_ERROR:
+            case HTML_EVENT_LOAD:
+            case HTML_EVENT_UNLOAD:
+                features |= JS_EVENT_LOAD;
+                break;
+
+            case HTML_EVENT_BLUR:
+            case HTML_EVENT_FOCUS:
+                features |= JS_EVENT_FOCUS;
+                break;
+
+            case HTML_EVENT_CHANGE:
+            case HTML_EVENT_RESET:
+            case HTML_EVENT_SUBMIT:
+            case HTML_EVENT_SELECT:
+                features |= JS_EVENT_FORM;
+                break;
+
+            case HTML_EVENT_CLICK:
+            case HTML_EVENT_MOUSEOVER:
+            case HTML_EVENT_MOUSEOUT:
+                features |= JS_EVENT_MOUSE;
+                break;
+
+            }
+            NamePoolCopy(pool, buf, sizeof(buf), p_eventData->HED_code, NULL);
+            CheckScript(buf, &features);
+        }
+        MemUnlock(OptrToHandle(array)) ;
+    }
+
+    /* Only evaluate if we have an array of link elements */
+    array = pself->HTI_anchorArray;
+    if(array)
+    {
+        MemLock(OptrToHandle(array));
+        for(i=ChunkArrayGetCount(array)-1; (int)i>=0; i--)
+        {
+            anchorArrayElement = ChunkArrayElementToPtr(array, i, &size);
+            if(!(anchorArrayElement->flags & (HTML_ADF_NAME | HTML_ADF_MAP)))
+            {
+                NamePoolCopy(pool, (TCHAR *)buf, sizeof(buf), anchorArrayElement->linkOrName, NULL);
+                if(LocalCmpStringsNoCase((TCHAR *)buf, "javascript:", 11)==0)
+                {
+                    features |= JS_JAVASCRIPT_URLS;
+@ifdef DO_DBCS
+                    /* convert JS URL code from Unicode to DOS for feature logging */
+                    size = strlen(buf)+1;  /* include null */
+                    LocalGeosToDos(buf, buf, &size, DEFCHAR, &cp, 0, &status, &backup);
+@endif
+                    CheckScript(buf, &features);
+                }
+            }
+        }
+        MemUnlock(OptrToHandle(array));
+    }
+
+    /* Get info from transfer item */
+    htbh = VMLock(vmf, VMCHAIN_GET_VM_BLOCK(vmc), &hypertextHeaderMem);
+    vmb = VMCHAIN_GET_VM_BLOCK(htbh->HTBH_scriptCode);
+    if(htbh->HTBH_other.HTBHO_fileInfo & HTML_FI_EXT_SCRIPT)
+        features |= JS_EXTERNAL_SCRIPT;
+    VMUnlock(hypertextHeaderMem);
+
+    /* check embedded script, if any */
+    if(vmb)
+    {
+        features |= JS_EMBEDDED_SCRIPT;
+
+        /* Allocate temporary block for script. We may as well use malloc as we
+           won't ever let it move during its lifetime anyway. */
+        count = HugeArrayGetCount(vmf, vmb);
+        script = malloc(count+1);
+
+        /* Transfer contents from HugeArray into block on heap */
+        first = 0;
+        do {
+            halret = HugeArrayLock(vmf, vmb, first, (void**)&p, &size);
+            memcpy(script+first, p, HAL_COUNT(halret));
+            HugeArrayUnlock(p);
+            first += HAL_COUNT(halret);
+        } while(first<count);
+        script[count] = 0;
+
+        CheckScript(script, &features);
+
+        free(script);
+    }
+
+    if(features)
+    {
+        if (toFile) {
+            STRCPYSB(buf, "\r\n");
+        } else {
+            STRCPYSB(buf, "");
+        }
+        fstrcat(buf, "JavaScript stored in:\r");
+        if(features & JS_EMBEDDED_SCRIPT) fstrcat(buf, " + <script>\r");
+        if(features & JS_JAVASCRIPT_URLS) fstrcat(buf, " + javascript: URLs\r");
+        if(features & JS_EVENT_HANDLERS) fstrcat(buf, " + event handlers\r");
+        if(features & JS_EVENT_MOUSE) fstrcat(buf, "   - mouse events\r");
+        if(features & JS_EVENT_FORM) fstrcat(buf, "   - form events\r");
+        if(features & JS_EVENT_FOCUS) fstrcat(buf, "   - focus events\r");
+        if(features & JS_EVENT_LOAD) fstrcat(buf, "   - load events\r");
+        if(features & JS_EXTERNAL_SCRIPT) {
+            extScript++;
+            STRCATSB(buf, " + external .js files (not checked) ");
+            SPRINTFSB(statBuf, "(%d/%d)\r", extScript, (word)bulkTestCount);
+            fstrcat(buf, statBuf);
+        }
+        if (!toFile) STRCATSB(buf, "\r");  /* spacer */
+        fstrcat(buf, "Special features used:\r");
+        if(features & JS_FEATURES)
+        {
+            for (i = 0; i < (sizeof(featuresTable)/sizeof(FeatureEntry)); i++) {
+                if (features & featuresTable[i].flag) {
+                    featuresTable[i].count++;
+                    STRCATSB(buf, " + ");
+                    if (featuresTable[i].logString) {
+                        STRCATSB(buf, MemLockFixedOrMovable(featuresTable[i].logString));
+                        MemUnlockFixedOrMovable(featuresTable[i].logString);
+                    } else {
+                        STRCATSB(buf, MemLockFixedOrMovable(featuresTable[i].detectString));
+                        MemUnlockFixedOrMovable(featuresTable[i].detectString);
+                    }
+                    SPRINTFSB(statBuf, " (%d/%d)\r", featuresTable[i].count, (word)bulkTestCount);
+                    fstrcat(buf, statBuf);
+                }
+            }
+            if ((features & JS_DOCUMENT_WRITE) &&
+                (features & JS_EXTERNAL_SCRIPT)) {
+                docWriteAndExtScript++;
+                STRCATSB(buf, " + both document.write & external scripts");
+                SPRINTFSB(statBuf, " (%d/%d)\r", docWriteAndExtScript, (word)bulkTestCount);
+                fstrcat(buf, statBuf);
+            }
+        }
+        else
+            fstrcat(buf, " (none)\r");
+        if ((features & JS_FEATURES) == 0  &&
+            (features & JS_EXTERNAL_SCRIPT) == 0)
+            cleanCount++;
+
+        if (toFile) {
+            ABLog(buf);
+        } else {
+@ifdef DO_DBCS
+            MemHandle bufH = MemAlloc(strlensbcs(buf)*sizeof(TCHAR), HF_DYNAMIC, HAF_STANDARD);
+            TCHAR *bufP;
+            if (bufH) {
+                bufP = MemLock(bufH);
+                sprintf(_TEXT("%S"), buf);  /* cheap SBCS -> DBCS conversion */
+                UserStandardDialog(0, 0, 0, 0, bufP,
+                    (CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
+                    (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+                MemFree(bufH);
+            }
+@else
+            UserStandardDialog(0, 0, 0, 0, buf,
+                (CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
+                (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+@endif
+        }
+    } else {
+        if (bulkTestCount) noJSCount++;
+    }
+}
+
+@endif
+
+@ifdef JAVASCRIPT_SUPPORT
+/* Forward a script event through the frame using a copied local name token. */
+@extern method URLTextClass, MSG_HTML_TEXT_HANDLE_EVENT
+{
+    NameToken myCode;
+    Boolean ret;
+
+    myCode = NamePoolTokenizeFromPool(namePool, pself->HTI_namePool, code, FALSE);
+    // Copy link token to local pool
+
+    ret = @call (pself->UTI_frame)::MSG_URL_FRAME_HANDLE_EVENT(evt, type, obj, myCode);
+
+    if(myCode != NAME_POOL_NONE)
+        NamePoolReleaseToken(namePool, myCode);
+
+    return ret;
+}
+
+/* Preserve the legacy compiler behavior: codeseg affects Borland only. */
+#pragma codeseg URLTextJS
+#pragma option -dc-
+
+/* Find a non-map anchor with the supplied link name. */
+@extern method URLTextClass, MSG_URL_TEXT_FIND_LINK_FROM_NAME
+{
+    optr array = pself->HTI_anchorArray;
+    HTMLanchorData *anc;
+    word i, count, size;
+    word ret = 0xffff;
+
+    if (array) {
+        MemLock(OptrToHandle(array));
+        count = ChunkArrayGetCount(array);
+        if (count) anc = ChunkArrayElementToPtr(array, 0, &size);
+        for (i = 0; i < count; i++) {
+            if ((anc->flags & (HTML_ADF_NAME | HTML_ADF_MAP)) == 0 && anc->linkOrName == nameT) {
+                /* found it */
+                ret = i;
+                break;
+            }
+            anc++;
+        }
+        MemUnlock(OptrToHandle(array));
+    }
+    return ret;
+}
+
+/* Find an image with the supplied object name. */
+@extern method URLTextClass, MSG_URL_TEXT_FIND_IMAGE_FROM_NAME
+{
+    optr array = pself->HTI_imageArray;
+    HTMLimageData *img;
+    word i, count, size;
+    word ret = 0xffff;
+
+    if (array) {
+        MemLock(OptrToHandle(array));
+        count = ChunkArrayGetCount(array);
+        if (count) img = ChunkArrayElementToPtr(array, 0, &size);
+        for (i = 0; i < count; i++) {
+            if (img->pos < HTML_IMAGE_POS_RESERVED && img->name == nameT) {
+                /* found it */
+                ret = i;
+                break;
+            }
+            img++;
+        }
+        MemUnlock(OptrToHandle(array));
+    }
+    return ret;
+}
+
+/* Find a form with the supplied object name. */
+@extern method URLTextClass, MSG_URL_TEXT_FIND_FORM_FROM_NAME
+{
+    optr array = pself->HTI_formArray;
+    HTMLformData *frm;
+    word i, count, size;
+    word ret = 0xffff;
+
+    if (array) {
+        MemLock(OptrToHandle(array));
+        count = ChunkArrayGetCount(array);
+        if (count) frm = ChunkArrayElementToPtr(array, 0, &size);
+        for (i = 0; i < count; i++) {
+            if (frm->HFD_itemType == HTML_FORM_HEADER && frm->HFD_prompt == nameT) {
+                /* found it */
+                ret = i;
+                break;
+            }
+            frm++;
+        }
+        MemUnlock(OptrToHandle(array));
+    }
+    return ret;
+}
+
+/* Find a form element with the supplied name, starting at head. */
+@extern method URLTextClass, MSG_URL_TEXT_FIND_ELEMENT_FROM_NAME
+{
+    optr array = pself->HTI_formArray;
+    HTMLformData *elm;
+    word i, count, size;
+    word ret = 0xffff;
+
+    if (array) {
+        MemLock(OptrToHandle(array));
+        count = ChunkArrayGetCount(array);
+        if (count) elm = ChunkArrayElementToPtr(array, 0, &size);
+        for (i = 0; i < count; i++) {
+            if (elm->HFD_formNumber == head && elm->HFD_itemType != HTML_FORM_HEADER && elm->HFD_itemType != HTML_FORM_OPTION && elm->HFD_name == nameT) {
+                /* found it */
+                ret = i;
+                break;
+            }
+            elm++;
+        }
+        MemUnlock(OptrToHandle(array));
+    }
+    return ret;
+}
+
+#pragma codeseg
+#pragma option -dc
+
+@endif  /* JAVASCRIPT_SUPPORT */
