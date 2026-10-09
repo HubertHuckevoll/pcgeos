@@ -224,6 +224,8 @@ typedef struct {
     #define HTML_IDF_SUBMIT     0x0004  /*  - image is graphical submit btn */
     #define HTML_IDF_RESOLVING  0x0008  /*  - image has been requested */
     #define HTML_IDF_INLINE_SVG 0x0010  /*  - source is a page-owned file */
+    #define HTML_IDF_PICTURE_FALLBACK 0x0020 /* svgFile is an image URL */
+    #define HTML_IDF_PICTURE_FALLBACK_USED 0x0040 /* runtime: tried/disabled */
     #define HTML_IDF_SIZE_DIRTY 0x4000  /*  - size has changed recently */
     #define HTML_IDF_BROKEN     0x8000  /*  - image could not be resolved */
   XYSize size;                          /* target size, or 0 if not spec'd */
@@ -231,8 +233,11 @@ typedef struct {
   word formElementIndex;                /* array member index of associated
                                            form element if IDF_SUBMIT is set */
   NameToken imageURL;                   /* name token of image URL */
-  NameToken svgFile;                    /* absolute filename in local pool;
-                                           owned until FreeHTMLTransferItem */
+  NameToken svgFile;                    /* local pool auxiliary source:
+                                           INLINE_SVG: backing-file path;
+                                           PICTURE_FALLBACK: fallback URL.
+                                           Flags are mutually exclusive;
+                                           owned by the transfer item. */
   NameToken imageALT;                   /* alternative text of image (only if
                                            image has var graphic placeholder) */
   NameToken usemap;                     /* URL of associated map */

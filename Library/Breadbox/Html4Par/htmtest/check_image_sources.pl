@@ -164,7 +164,8 @@ static VisTextGraphic graphic;
 #define C_SUBSTITUTE 1
 #define VTES_NOWRAP 1
 #define FID_DTC_URW_MONO 1
-#define HTML_IDF_INLINE_SVG 1
+#define HTML_IDF_INLINE_SVG 16
+#define HTML_IDF_PICTURE_FALLBACK 32
 #define HTML_FI_INLINE_SVG 1
 static struct { struct { word HTBHO_fileInfo; } HTBH_other; } hheader, *htbh = &hheader;
 #define HTML_IDF_SUBMIT 2
@@ -249,6 +250,8 @@ static void releaseImage(void)
     if(captured.imageURL) NamePoolReleaseToken(NamePool, captured.imageURL);
     if(captured.imageALT) NamePoolReleaseToken(NamePool, captured.imageALT);
     if(captured.usemap) NamePoolReleaseToken(NamePool, captured.usemap);
+    if(captured.svgFile && (captured.flags & HTML_IDF_PICTURE_FALLBACK))
+        NamePoolReleaseToken(NamePool, captured.svgFile);
     memset(&captured, 0, sizeof(captured));
 }
 static void checkLeaks(void)
@@ -275,6 +278,14 @@ static void image(Param *params, const char *expected)
     assert(G_imageCount == count + 1 && !tableDepth);
     assert(!strcmp(names[captured.imageURL], expected));
     assert(!imageSourceState.inPicture && !imageSourceState.pictureSource);
+    assert(!(captured.flags & HTML_IDF_INLINE_SVG));
+    if(captured.flags & HTML_IDF_PICTURE_FALLBACK) {
+        assert(captured.svgFile);
+        if(!GetParamValue(params, "SRCSET"))
+            assert(!strcmp(names[captured.svgFile], GetParamValue(params, "SRC")));
+    } else {
+        assert(!captured.svgFile);
+    }
     if(GetParamValue(params, "WIDTH")) {
         assert(captured.size.XYS_width == 40 && captured.size.XYS_height == 20);
         assert(captured.hspace == 2 && captured.vspace == 3);
@@ -396,7 +407,10 @@ static void unitChecks(void)
     assert(ParseImage(fallback, 0, FALSE, FALSE) != CA_NULL_ELEMENT);
     assert(imageSourceState.pictureSource == token); releaseImage();
     assert(ParseImage(fallback, CA_NULL_ELEMENT, TRUE, TRUE) != CA_NULL_ELEMENT);
-    assert(imageSourceState.pictureSource == token); releaseImage();
+    assert(imageSourceState.pictureSource == token);
+    assert((captured.flags & HTML_IDF_INLINE_SVG) &&
+           !(captured.flags & HTML_IDF_PICTURE_FALLBACK));
+    releaseImage();
     ClearPicture(); assert(!refs[token]); checkLeaks();
     imageSourceState.mimeSupported = 0;
     arg.paramArray = typed;
@@ -419,6 +433,17 @@ static void unitChecks(void)
     arg.paramArray = offered;
     Open_PICTURE(&arg); Open_SOURCE(&arg);
     image(noSrc, "changed"); checkLeaks();
+    Open_PICTURE(&arg); Open_SOURCE(&arg);
+    ParseImage(ownSet, CA_NULL_ELEMENT, TRUE, NAME_POOL_NONE);
+    assert(!strcmp(names[captured.imageURL], "changed"));
+    assert(captured.flags & HTML_IDF_PICTURE_FALLBACK);
+    assert(!strcmp(names[captured.svgFile], HTML_IMAGE_SELECT_SMALLEST ? "small" : "medium"));
+    releaseImage(); checkLeaks();
+    Open_PICTURE(&arg); Open_SOURCE(&arg);
+    ParseImage(invalidSet, CA_NULL_ELEMENT, TRUE, NAME_POOL_NONE);
+    assert(!strcmp(names[captured.imageURL], "changed"));
+    assert(!strcmp(names[captured.svgFile], "fallback"));
+    releaseImage(); checkLeaks();
     arg.paramArray = smallSet;
     Open_PICTURE(&arg); Open_SOURCE(&arg);
     arg.paramArray = later; Open_SOURCE(&arg);

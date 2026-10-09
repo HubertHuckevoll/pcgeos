@@ -826,7 +826,7 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
     src = GetParamValue(paramArray, "SRC");
     srcset = parseName ? GetParamValue(paramArray, "SRCSET") : (char *)0;
     selectedSrcLen = 0;
-    p = (!pictureSource && srcset && *srcset) ?
+    p = (srcset && *srcset) ?
         SelectSrcsetCandidate(srcset, src, imageSourceState.viewportWidth,
                               &selectedSrcLen) :
         (char *)0;
@@ -859,6 +859,12 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
 
       id.imageALT = NAME_POOL_NONE;     /* default: no alternative text */
       if (pictureSource) {
+          if(p && *p) {
+              id.svgFile = selectedSrcLen ?
+                  NamePoolTokenizeLenDOS(NamePool, p, selectedSrcLen, FALSE) :
+                  NamePoolTokenizeDOS(NamePool, p, FALSE);
+              id.flags |= HTML_IDF_PICTURE_FALLBACK;
+          }
           id.imageURL = pictureSource;
           pictureSource = NAME_POOL_NONE; /* image record owns reference */
       } else if (p && *p) {
