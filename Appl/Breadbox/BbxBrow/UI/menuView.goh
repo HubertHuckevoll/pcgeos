@@ -91,6 +91,11 @@
     GBI_identifier = HTML_NO_BACKGROUND;
 }
 
+/* This OR shares the checkbox between execution and analysis builds.
+ * JAVASCRIPT_SUPPORT provides execution; COMPILE_OPTION_AUTO_BROWSE alone
+ * provides collection/analysis. "Enable JavaScript" describes the former;
+ * "Analyze JavaScript" would describe an AutoBrowse-only build.
+ */
 @if defined(JAVASCRIPT_SUPPORT) || defined(COMPILE_OPTION_AUTO_BROWSE)
 @object GenBooleanClass enableJavaScript = {
     GI_visMoniker = 'J',"Enable JavaScript";
