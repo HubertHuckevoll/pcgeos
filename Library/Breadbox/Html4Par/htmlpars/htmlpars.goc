@@ -2425,6 +2425,7 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
     SpecialTagType spec;
     byte seenAttributes[HTML_ATTRIBUTE_SEEN_BYTES];
     word paramBytes;
+    const char *endTagP;
 
     if(!ignoreTags)
         PictureBeforeTag(tag, openTag);
@@ -2432,7 +2433,7 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
     /* Skip scripts before allocating their potentially huge attributes. */
 #if HTML_SCRIPT_SUPPORT
     if(openTag &&
-       !(HTMLext->HE_options & HTML_JAVASCRIPT) &&
+       (ignoreTags || !(HTMLext->HE_options & HTML_JAVASCRIPT)) &&
        !STRCMPISB(tag, "SCRIPT"))
 #else
     if(openTag && !STRCMPISB(tag, "SCRIPT"))
@@ -2464,9 +2465,13 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
     if(openTag && !ignoreTags && tagStyleEntry.spec==SPEC_SVG)
         return HandleInlineSVG(localHeap, tag, lc);
 
-    /* STYLE is raw text and must not let CSS markup affect tag parsing. */
-    if(openTag && !ignoreTags && tagStyleEntry.spec==SPEC_STYLE)
+    /* Text-only bodies must not change ignored-container nesting. */
+    if(openTag && (tagStyleEntry.spec==SPEC_STYLE ||
+       (ignoreTags && (tagStyleEntry.spec==SPEC_TITLE ||
+                       tagStyleEntry.spec==SPEC_TEXTAREA))))
     {
+      endTagP = tagStyleEntry.spec==SPEC_STYLE ? endStyle :
+                tagStyleEntry.spec==SPEC_TITLE ? "</TITLE" : "</TEXTAREA";
       ce=0;
       while(c!=EOF && (c!='>' || ce))
       {
@@ -2477,7 +2482,7 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
         c=HTMLgetc();
       }
 
-      c=SkipRawTextContent(endStyle, c);
+      c=SkipRawTextContent(endTagP, c);
       if(c=='>')
         c=HTMLgetc();
       return c;
@@ -2514,8 +2519,7 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
       }
     }
 
-    /* get tag arguments if any (but not while ignoring, e.g. in a script) */
-    if(!(currentFlags & TAG_IGNORE_TAGS))
+    /* Scan quoted arguments even while discarding ignored tag values. */
     {
       while( c!='/' && c!='>' && c!='<' && c!=EOF)
       {                                   /* while tag has more data in it... */
@@ -2636,10 +2640,6 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
 	if (overflowBuf) MemFree(overflowBuf);
       }
     }
-    else                                /* skip over parameter-like stuff */
-    {
-      while( c!='>' && c!='<' && c!=EOF) c=HTMLgetc();
-    }
 
     if(c=='/') {
       c=HTMLgetc();
@@ -2664,6 +2664,10 @@ int LOCAL HandleNamedTag(MemHandle localHeap, char *tag, Boolean closeTag,
         if ((tagStyleEntry.flags & TAG_IGNORE_TAGS) ||
             (tagStyleEntry.spec == SPEC_NOEMBED &&
                 EnclosingCount(SPEC_OBJECT, NULL))) {
+            if(ignoreTags==0xffff) {
+                G_abortParse = TRUE;
+                return EOF;
+            }
             ignoreTags++ ;
         }
 	paramArray = NullOptr;		/* params were consumed */
@@ -2896,7 +2900,7 @@ int _pascal ParseHTMLFileWithImageSources(ReadHTML_getc *p_gc, dword p_data,
          * Transfer parsed characters into HTML text object or process
          * them as contents of special elements.
          */
-        if(!(currentFlags & TAG_FLUSH_TEXT))
+        if(!ignoreTags && !(currentFlags & TAG_FLUSH_TEXT))
         {
           PictureText(buf);
           if(*buf || c=='\r')
@@ -2953,7 +2957,7 @@ int _pascal ParseHTMLFileWithImageSources(ReadHTML_getc *p_gc, dword p_data,
         break;
 
       case '\r':                        /* pre-formatted CR? */
-        if(!(currentFlags & TAG_FLUSH_TEXT))
+        if(!ignoreTags && !(currentFlags & TAG_FLUSH_TEXT))
         {
           EndLine("");                  /* simulate line break */
           c2 = ' ';                     /* multiple line breaks permitted */

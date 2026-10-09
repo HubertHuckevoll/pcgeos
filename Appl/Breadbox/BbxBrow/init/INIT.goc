@@ -924,6 +924,8 @@ void AdaptUItoSystemConfiguration(void)
     @send HTMLSettingsBoolGroup::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(form, 0);
 @endif
 
+    @call process::MSG_HMLVP_HTML_OPTIONS_CHANGED(form, 0, 0);
+
     UpdateToolbar(opt & HTMLV_ENABLE_TOOLBAR);
     UpdateStatusbar(opt & HTMLV_ENABLE_STATUSBAR);
     UpdateUrlbar(opt & HTMLV_ENABLE_URLBAR);

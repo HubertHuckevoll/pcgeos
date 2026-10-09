@@ -293,6 +293,10 @@ typedef struct {
   @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_HMLVP_CHANGE_ENCODING;
 @endif
   @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_HMLVP_DEFAULT_FONT_CHANGED;
+@if !defined(JAVASCRIPT_SUPPORT) && !defined(COMPILE_OPTION_AUTO_BROWSE)
+  /* Append in builds that did not previously declare this message. */
+  @message (GEN_BOOLEAN_GROUP_APPLY_MSG) MSG_HMLVP_HTML_OPTIONS_CHANGED;
+@endif
 @endc;
 
 

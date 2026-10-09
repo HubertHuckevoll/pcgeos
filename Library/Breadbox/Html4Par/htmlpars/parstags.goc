@@ -167,8 +167,11 @@ void GetCurrentStyles(void)
     tagStack = LMemDeref(tagStackO);
     for(p=0; p<tagStackPtr; p++,tagStack++)
     {
-      if((HTMLext->HE_options & HTML_READ_FAST) && (tagStack->spec != SPEC_A))
-        continue;                       /* fast: ignore everything but links */
+      if((HTMLext->HE_options & HTML_READ_FAST) && (tagStack->spec != SPEC_A)) {
+        /* Fast Mode skips formatting, but must still suppress content. */
+        currentFlags |= tagStack->flags & TAG_CUMULATIVE_FLAGS;
+        continue;
+      }
 
       parentCS = currentCS;
       ApplyCharacterDelta( &currentCS, &(tagStack->charDelta) );

@@ -134,9 +134,7 @@ Boolean G_allowFileDownloadStatus = FALSE;
 @extern method HTMLVProcessClass, MSG_HMLVP_REPORT_JS_ERROR;
 @endif
 @endif
-@if defined(JAVASCRIPT_SUPPORT) || defined(COMPILE_OPTION_AUTO_BROWSE)
 @extern method HTMLVProcessClass, MSG_HMLVP_HTML_OPTIONS_CHANGED;
-@endif
 @ifdef DO_DBCS
 @extern method HTMLVProcessClass, MSG_HMLVP_CHANGE_ENCODING;
 @endif
