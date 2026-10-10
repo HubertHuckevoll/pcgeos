@@ -646,6 +646,10 @@ static void swebp__transform_dcuv(const simplewebp_i16 *in, simplewebp_u8 *out)
 		swebp__transform_dc(in + 48, out + 132);
 }
 
+/* Host tests use the C reference filters below, including the simple filters.
+ * PC/GEOS builds use WebPFilterSimple/24/26 from webpfilter.asm; _pascal
+ * resolves these calls to WEBPFILTERSIMPLE/24/26. Host tests do not run ASM.
+ */
 #ifdef WEBP_HOST_TEST
 static simplewebp_i32 swebp__abs(simplewebp_i32 v)
 {
