@@ -96,43 +96,59 @@ int _pascal _export pngImportProcessChunks(FileHandle file, pngIHDRData* ihdrDat
     unsigned int bytesRead = 0;
     unsigned int headerSize = sizeof(pngIHDRData);
     unsigned int lineSize = 0;
+    unsigned long fileSize;
+    unsigned long chunkPos;
 
-	 /* make sure we start at the beginning, but after the PNG header */
-	FilePos(file, sizeof(PNG_SIGNATURE), FILE_POS_START);
+    *idatChunksHan = NullHandle;
+    *idatNumChunks = 0;
+    plteChunk->length = plteChunk->chunkPos = 0;
+    fileSize = FileSize(file);
 
-    while (FileRead(file, &chdr, sizeof(pngChunkHeader), FALSE))
+    /* Every caller, including format probing, must check the signature. */
+    FilePos(file, 0, FILE_POS_START);
+    if (!pngImportCheckHeader(file))
+        goto error;
+
+    while (FileRead(file, &chdr, sizeof(pngChunkHeader), FALSE) == sizeof(pngChunkHeader))
     {
         /* Swap endianness for chunk length and type */
         chdr.length = swapEndian(chdr.length);
         chdr.type = swapEndian(chdr.type);
+        chunkPos = FilePos(file, 0, FILE_POS_RELATIVE);
+        /* Include the CRC and avoid overflow when checking the chunk extent. */
+        if (chunkPos > fileSize || fileSize - chunkPos < 4 ||
+            chdr.length > fileSize - chunkPos - 4)
+            goto error;
+        /* IHDR allocates the IDAT array; nothing may precede it. */
+        if (*idatChunksHan == NullHandle && chdr.type != PNG_CHUNK_IHDR)
+            goto error;
 
         switch (chdr.type)
         {
             case PNG_CHUNK_IHDR:
             {
+                if (*idatChunksHan != NullHandle || chdr.length != headerSize)
+                    goto error;
                 /* read file */
                 bytesRead = FileRead(file, ihdrData, headerSize, FALSE);
                 if (bytesRead != headerSize)
-                    return 0;
+                    goto error;
 
                 /* we don't support interlacing (yet?) */
                 if (ihdrData->interlaceMethod != 0)
-                    return 0;
+                    goto error;
 
                 ihdrData->width = swapEndian(ihdrData->width);
                 ihdrData->height = swapEndian(ihdrData->height);
 
                 lineSize = pngCalcBytesPerRow(ihdrData->width, ihdrData->colorType, ihdrData->bitDepth);
                 if (lineSize > PNG_MAX_SCANLINE_SIZE)
-                    return 0;
+                    goto error;
 
                 /* now that we seem to have a valid IHDR, create the memory for an array of IDATChunks */
                 *idatChunksHan = MemAlloc(PNG_MAX_IDAT_CHUNKS * sizeof(pngIDATChunkEntry), HF_SWAPABLE | HF_SHARABLE, HAF_ZERO_INIT);
                 if (*idatChunksHan == NullHandle)
-                    return 0;
-
-                /* Move file pointer forward by the remaining part of the IHDR chunk */
-                FilePos(file, chdr.length - sizeof(pngIHDRData), FILE_POS_RELATIVE);
+                    goto error;
 
                 break;
             }
@@ -164,8 +180,7 @@ int _pascal _export pngImportProcessChunks(FileHandle file, pngIHDRData* ihdrDat
                 else
                 {
                     /* Handle error: too many IDAT chunks */
-                    if (*idatChunksHan != NullHandle) MemFree(*idatChunksHan);
-                    return 0;
+                    goto error;
                 }
 
                 /* Skip the IDAT chunk's data only, but not the CRC (CRC will be skipped outside the switch) */
@@ -175,7 +190,9 @@ int _pascal _export pngImportProcessChunks(FileHandle file, pngIHDRData* ihdrDat
 
             case PNG_CHUNK_IEND:
             {
-                /* Stop processing at IEND */
+                if (chdr.length != 0 || idatChunkIdx == 0)
+                    goto error;
+                /* The caller owns the IDAT array after a successful scan. */
                 return 1;
             }
 
@@ -191,7 +208,11 @@ int _pascal _export pngImportProcessChunks(FileHandle file, pngIHDRData* ihdrDat
         FilePos(file, 4, FILE_POS_RELATIVE);
     }
 
+error:
     if (*idatChunksHan != NullHandle) MemFree(*idatChunksHan);
+    *idatChunksHan = NullHandle;
+    *idatNumChunks = 0;
+    plteChunk->length = plteChunk->chunkPos = 0;
     return 0;
 }
 
