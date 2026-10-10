@@ -344,7 +344,7 @@ TransError MDWriteGraphicPNG(MDExportState *stateP,
         error = TE_FILE_OPEN;
         goto cleanup;
     }
-    fileH = FileCreate(nameP, FCF_NATIVE | FILE_CREATE_TRUNCATE |
+    fileH = FileCreate(nameP, FCF_NATIVE | FILE_CREATE_ONLY |
                        FILE_ACCESS_RW | FILE_DENY_RW, FILE_ATTR_NORMAL);
     if (fileH == NullHandle) {
         error = (ThreadGetError() == ERROR_INSUFFICIENT_MEMORY) ?

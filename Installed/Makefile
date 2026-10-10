@@ -312,7 +312,7 @@ ascii	: Installed/Library/Trans/Text/Ascii
 Installed/Library/Trans/Text/Ascii: 	ui text MAKELIB
 
 markdown	: Installed/Library/Trans/Text/Markdown
-Installed/Library/Trans/Text/Markdown: 	ui text html4par MAKELIB
+Installed/Library/Trans/Text/Markdown: 	ui text html4par pnglib MAKELIB
 
 msword	: Installed/Library/Trans/Text/MicrosoftWord
 Installed/Library/Trans/Text/MicrosoftWord: 	ui ansic impex msmfile MAKELIB

@@ -205,16 +205,30 @@ int MDReadChar(MDState *stateP)
                   ((c2 & 0x3f) << 6) | (c3 & 0x3f);
     } else if (value >= 0xf0 && value <= 0xf4) {
         c2 = MDRawRead(stateP);
-        c3 = MDRawRead(stateP);
-        c4 = MDRawRead(stateP);
-        if (c2 == -2 || c3 == -2 || c4 == -2) {
-            return -2;
+        if (c2 < 0) {
+            return (c2 == -2) ? -2 : '?';
         }
-        if (c2 >= 0 && (c2 & 0xc0) != 0x80) {
-            MDRawPush(stateP, (byte)c2);
-        } else if (c3 >= 0 && (c3 & 0xc0) != 0x80) {
+        if ((c2 & 0xc0) != 0x80 ||
+            (value == 0xf0 && c2 < 0x90) ||
+            (value == 0xf4 && c2 >= 0x90)) {
+            if ((c2 & 0xc0) != 0x80) {
+                MDRawPush(stateP, (byte)c2);
+            }
+            return '?';
+        }
+        c3 = MDRawRead(stateP);
+        if (c3 < 0) {
+            return (c3 == -2) ? -2 : '?';
+        }
+        if ((c3 & 0xc0) != 0x80) {
             MDRawPush(stateP, (byte)c3);
-        } else if (c4 >= 0 && (c4 & 0xc0) != 0x80) {
+            return '?';
+        }
+        c4 = MDRawRead(stateP);
+        if (c4 < 0) {
+            return (c4 == -2) ? -2 : '?';
+        }
+        if ((c4 & 0xc0) != 0x80) {
             MDRawPush(stateP, (byte)c4);
         }
         return '?';
@@ -222,7 +236,7 @@ int MDReadChar(MDState *stateP)
         return '?';
     }
     mapped = HTMLTranslateCharNum(unicode);
-    return mapped ? mapped : '?';
+    return (mapped > 0 && mapped < 256) ? mapped : '?';
 }
 
 TransError MDReadLine(MDState *stateP, word *lengthP)

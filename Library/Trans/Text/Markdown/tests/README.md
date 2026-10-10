@@ -1,3 +1,14 @@
+# Host regression check
+
+Run from the repository root:
+
+    perl Library/Trans/Text/Markdown/tests/check_blockers.pl
+
+The check compiles the actual character-reader and PNG-writer routines with
+host stubs using cc in C89 mode. It checks malformed UTF-8, special-entity
+mapping, existing-PNG preservation, write/close failure cleanup, and retry.
+It does not run PC/GEOS or exercise image decoding.
+
 # Manual fixtures
 
 Import sample.md and utf8.md through GeoWrite's Import dialog. Compare the
@@ -46,7 +57,9 @@ the displayed dimensions and appearance.
 Export to a non-current directory with a long, punctuation-heavy Markdown
 name. Verify every generated filename is uppercase ASCII DOS 8.3, every link
 matches the filename case exactly, relative links resolve beside the Markdown
-file, and exporting again replaces the same PNGs without changing the links.
+file, and exporting again reports an error without changing the existing
+PNGs. Also export document.md and documentary.md into the same directory;
+the second export must fail without overwriting DOCUME-1.PNG.
 Insert page-number and date fields and verify they remain
 `[image]` without consuming an image number.
 
