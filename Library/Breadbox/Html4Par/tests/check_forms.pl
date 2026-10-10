@@ -1,36 +1,46 @@
-#!/usr/bin/env python3
-"""Exercise the ported form logic with host stubs; does not launch GEOS."""
+#!/usr/bin/env perl
+# Exercise the ported form logic with host stubs; does not launch GEOS.
+use strict;
+use warnings;
+use FindBin;
+use File::Temp qw(tempdir);
 
-from pathlib import Path
-import re
-import subprocess
-import tempfile
+sub read_source {
+    open my $file, '<:raw', $_[0] or die "$!: $_[0]";
+    local $/;
+    my $text = <$file>;
+    $text =~ s/\r\n/\n/g;
+    return $text;
+}
+sub block {
+    my ($text, $marker) = @_;
+    my $start = index($text, $marker);
+    die "Cannot find $marker\n" if $start < 0;
+    my $brace = index($text, '{', $start);
+    die "Cannot find opening brace for $marker\n" if $brace < 0;
+    my $depth = 1;
+    my $end = $brace + 1;
+    while ($depth && $end < length($text)) {
+        my $c = substr($text, $end++, 1);
+        $depth += ($c eq '{') - ($c eq '}');
+    }
+    die "Unclosed $marker\n" if $depth;
+    return substr($text, $start, $end - $start);
+}
 
+my $root = "$FindBin::Bin/..";
+my $tags = read_source("$root/htmlpars/parstags.goc");
+my $opening = read_source("$root/htmlpars/opentags.goc");
+my $form = read_source("$root/htmlclas/htmlform.goc");
+my $header = read_source("$root/../../../CInclude/html4par.goh");
+my $flags = join("\n", $header =~ /(#define HTML_(?:SUBMIT_PRESSED|BUTTON_CONTENT)\s+0x[0-9a-fA-F]+)/g);
+$tags =~ /case SPEC_BUTTON:(.*?)case SPEC_TEXTAREA:/s or die "Cannot find BUTTON case\n";
+my $button = $1;
+$form =~ /\@extern method HTMLTextClass, MSG_HTML_TEXT_FORM_APPEND_ELEMENT.*?case HTML_FORM_SUBMIT:(.*?)case HTML_FORM_IMAGE:/s
+    or die "Cannot find SUBMIT case\n";
+my $submit = $1;
+my $harness = <<'C';
 
-root = Path(__file__).resolve().parents[1]
-tags = (root / "htmlpars/parstags.goc").read_text()
-opening = (root / "htmlpars/opentags.goc").read_text()
-form = (root / "htmlclas/htmlform.goc").read_text()
-header = (root.parents[2] / "CInclude/html4par.goh").read_text()
-
-
-def block(source, marker):
-    start = source.index(marker)
-    brace = source.index("{", start)
-    depth = 1
-    end = brace + 1
-    while depth:
-        depth += (source[end] == "{") - (source[end] == "}")
-        end += 1
-    return source[start:end]
-
-
-flags = "\n".join(re.findall(
-    r"#define HTML_(?:SUBMIT_PRESSED|BUTTON_CONTENT)\s+0x[0-9a-fA-F]+", header))
-button = tags.split("case SPEC_BUTTON:", 1)[1].split("case SPEC_TEXTAREA:", 1)[0]
-append = form.split("@extern method HTMLTextClass, MSG_HTML_TEXT_FORM_APPEND_ELEMENT", 1)[1]
-submit = append.split("case HTML_FORM_SUBMIT:", 1)[1].split("case HTML_FORM_IMAGE:", 1)[0]
-harness = r'''
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
@@ -130,26 +140,32 @@ static int FormElementGetSizeOfButton(char *bufP)
 {
     return (int)strlen(bufP);
 }
-''' + flags + "\n" + block(tags, "Boolean _pascal KeepFormControl(void)")
-harness += "\nstatic void closeButton(void) { word paramArray = 0; switch (0) { case 0:"
-harness += button + "} }\n"
-harness += "static void filterInput(word spec) { TagOpenArguments argValue, *arg = &argValue; arg->spec = spec;"
-harness += block(opening, "if((arg->spec == SPEC_INPUT") + "added++; }\n"
-for name, spec in (("discardTextarea", "SPEC_TEXTAREA"), ("discardOption", "SPEC_OPTION")):
-    source = tags.split("case " + spec + ":", 1)[1]
-    marker = "if(!KeepFormControl())" if spec == "SPEC_TEXTAREA" else "if(currentMenu==CA_NULL_ELEMENT)"
-    harness += "static void " + name + "(void) { switch (0) { case 0:"
-    harness += block(source, marker) + "} }\n"
-harness += "static void closeSelect(void) { switch (0) { case 0:"
-harness += tags.split("case SPEC_SELECT:", 1)[1].split("case SPEC_TABLE:", 1)[0] + "} }\n"
-for name, file in (("drawCaption", "htmlfdrw.goc"), ("sizeCaption", "htmlfsiz.goc")):
-    source = (root / "htmlclas" / file).read_text()
-    harness += "static int " + name + "(void) { HTMLformData *p_formData = &record; char buf[80]; int size = 0;"
-    if name == "drawCaption":
-        harness += "int gstate = 0;"
-    harness += "switch (0) { case 0:" + block(source, "if (p_formData->HFD_var.submit.flags & HTML_BUTTON_CONTENT)")
-    harness += "} return size; }\n"
-harness += r'''
+C
+$harness .= $flags . "\n" . block($tags, 'Boolean _pascal KeepFormControl(void)');
+$harness .= "\nstatic void closeButton(void) { word paramArray = 0; switch (0) { case 0:";
+$harness .= $button . "} }\n";
+$harness .= 'static void filterInput(word spec) { TagOpenArguments argValue, *arg = &argValue; arg->spec = spec;';
+$harness .= block($opening, 'if((arg->spec == SPEC_INPUT') . "added++; }\n";
+for my $spec (qw(SPEC_TEXTAREA SPEC_OPTION)) {
+    my $name = $spec eq 'SPEC_TEXTAREA' ? 'discardTextarea' : 'discardOption';
+    my $marker = $spec eq 'SPEC_TEXTAREA' ? 'if(!KeepFormControl())' : 'if(currentMenu==CA_NULL_ELEMENT)';
+    $tags =~ /case \Q$spec\E:(.*)/s or die "Cannot find $spec case\n";
+    $harness .= "static void $name(void) { switch (0) { case 0:";
+    $harness .= block($1, $marker) . "} }\n";
+}
+$harness .= 'static void closeSelect(void) { switch (0) { case 0:';
+$tags =~ /case SPEC_SELECT:(.*?)case SPEC_TABLE:/s or die "Cannot find SELECT case\n";
+$harness .= $1 . "} }\n";
+for my $name (qw(drawCaption sizeCaption)) {
+    my $file = $name eq 'drawCaption' ? 'htmlfdrw.goc' : 'htmlfsiz.goc';
+    my $source = read_source("$root/htmlclas/$file");
+    $harness .= "static int $name(void) { HTMLformData *p_formData = &record; char buf[80]; int size = 0;";
+    $harness .= 'int gstate = 0;' if $name eq 'drawCaption';
+    $harness .= 'switch (0) { case 0:' . block($source, 'if (p_formData->HFD_var.submit.flags & HTML_BUTTON_CONTENT)');
+    $harness .= "} return size; }\n";
+}
+$harness .= <<'C';
+
 static void checkSubmit(const char *expectedP, int pressed)
 {
     HTMLformData *p_formData = &record;
@@ -157,7 +173,10 @@ static void checkSubmit(const char *expectedP, int pressed)
     int addName = FALSE, addBuf = FALSE;
     if (pressed) record.HFD_var.submit.flags |= HTML_SUBMIT_PRESSED;
     switch (0) { case 0:
-''' + submit + r'''
+C
+$harness .= $submit;
+$harness .= <<'C';
+
     }
     assert(addName == pressed && addBuf == pressed);
     if (pressed) {
@@ -222,13 +241,15 @@ int main(void)
     assert(closed == 1 && currentMenu == CA_NULL_ELEMENT);
     return 0;
 }
-'''
+C
 
-with tempfile.TemporaryDirectory() as directory:
-    source = Path(directory) / "forms.c"
-    binary = Path(directory) / "forms"
-    source.write_text(harness)
-    subprocess.run(["cc", "-std=c89", "-Wall", "-Wextra", "-Werror",
-                    str(source), "-o", str(binary)], check=True)
-    subprocess.run([str(binary)], check=True)
-print("Form filtering and button checks passed")
+my $tmp = tempdir(CLEANUP => 1);
+open my $out, '>', "$tmp/forms.c" or die $!;
+print $out $harness or die $!;
+close $out or die $!;
+system('cc', '-std=c89', '-Wall', '-Wextra', '-Werror',
+       "$tmp/forms.c", '-o', "$tmp/forms") == 0
+    or die "Host compilation failed\n";
+system { "$tmp/forms" } "$tmp/forms";
+die "Form checks failed\n" if $? != 0;
+print "Form filtering and button checks passed\n";
