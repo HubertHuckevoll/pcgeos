@@ -1,4 +1,10 @@
 /*
+ * Complete local-page persistence: dialogs, VM serialization/restoration,
+ * local-page token ownership and update notification. URLDOC.goc owns the
+ * class and registers these methods under COMPILE_OPTION_LOCAL_PAGES.
+ */
+
+/*
  *                          ==CONFIDENTIAL INFORMATION==
  *
  * COPYRIGHT 1994-99 BREADBOX COMPUTER COMPANY -- ALL RIGHTS RESERVED  --
@@ -13,7 +19,7 @@
 /***********************************************************************
  *
  * PROJECT:       HTMLView
- * FILE:          Localpag.goc
+ * FILE:          URLDocumentLocalPage.goc
  *
  * AUTHOR:        Marcus Gr�ber
  *
@@ -30,6 +36,14 @@
 #include <Ansi/stdlib.h>
 
 @include "htmlview.goh"
+
+/* Retain the original resource and compiler string defaults after renaming. */
+#ifdef __BORLANDC__
+#pragma codeseg LOCALPAG_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("LOCALPAG_TEXT")
+#endif
 
 
 @ifdef COMPILE_OPTION_LOCAL_PAGES

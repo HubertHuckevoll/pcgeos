@@ -1,0 +1,301 @@
+/*
+ * Back/forward stacks, frame-state snapshots and recent-history updates.
+ * Snapshot allocation and token cleanup stay with their owning handlers.
+ * URLDOC.goc owns the class and the document open/close lifetime of the
+ * stack buffers, and registers these external methods.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <initfile.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+@include "htmlview.goh"
+
+/* Keep the original code resource and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg URLDOC_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLDOC_TEXT")
+#endif
+
+@extern object HTMLVApp;  /* Start/end operation macros. */
+@extern object CurrentURLText;
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_NOTIFY_FRAME_CHANGE_POST
+{
+    optr frameSet;
+    optr frame = pself->UDCI_topFrame;
+    WordFlags flags;
+
+    if(dir!=DIR_RELOAD && dir!=DIR_SOURCE && dir!=DIR_SAVE)
+    {                                   /* changed anything important? */
+        HWChecksumCheck() ;
+
+        /* create a second frame set for the LRU history stack */
+        // TBD: it would probably be better to use a refrence-count based
+        // scheme for frame sets.
+        MemLock(frameCacheBlock);
+
+        frameSet = ConstructOptr(frameCacheBlock,
+            ChunkArrayCreate(frameCacheBlock, sizeof(HTMLframeRec), 0, 0));
+
+        @call frame::MSG_URL_FRAME_COLLECT_FRAMES(frameSet, 0);
+
+        @call self::MSG_URL_DOCUMENT_INT_UPDATE_LRU(frameSet);
+        /* update list of recently used URLs */
+        MemUnlock(frameCacheBlock);
+
+        flags = @call self::MSG_URL_DOCUMENT_GET_STATE();
+        @send process::MSG_HMLVP_NOTIFY_NAVIGATION_CHANGE(flags);
+
+        HWChecksumCheck() ;
+    }
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_INT_ADD_BACK_URL
+{
+    word prevTail;
+    historyBufferData *historyBuffer;
+
+    HWChecksumCheck() ;
+
+    /* don't store if shouldn't */
+    if (!pself->UDCI_allowHistory)
+    return;
+
+    prevTail = pself->UDCI_historyTail;
+                                        /* store pointer to free entry */
+    if(++pself->UDCI_historyTail == HTML_HISTORY)
+        pself->UDCI_historyTail = 0;      /* advance tail, wrap if req'd */
+
+    if(pself->UDCI_historyTail == pself->UDCI_historyHead)
+    {                                   /* list full, must discard entry? */
+        historyBuffer = LMemDerefHandles(OptrToHandle(oself),
+                                         pself->UDCI_historyBuffer);
+
+        /* release frame description */
+        FreeArrayNameTokens(historyBuffer[pself->UDCI_historyTail].frameSet,
+            namePool, TOKEN_FIELDS_FRAME_REC);
+        LMemFree(historyBuffer[pself->UDCI_historyTail].frameSet);
+
+        pself = ObjDerefGen(oself);
+        if(++pself->UDCI_historyHead==HTML_HISTORY)
+            pself->UDCI_historyHead = 0;    /* advance head, wrap if req'd */
+    }
+
+    historyBuffer = LMemDerefHandles(OptrToHandle(oself),
+                                     pself->UDCI_historyBuffer);
+    historyBuffer[prevTail].frameSet = frameSet;
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_INT_ADD_FORWARD_URL
+{
+    historyBufferData *forwardBuffer;
+
+    HWChecksumCheck() ;
+
+    /* don't store if shouldn't */
+    if (!pself->UDCI_allowHistory)
+    return;
+
+    if(pself->UDCI_historyForward < HTML_HISTORY)
+    {                                   /* have URL and room in fwd buffer? */
+        forwardBuffer = LMemDerefHandles(OptrToHandle(oself),
+                                         pself->UDCI_forwardBuffer);
+        forwardBuffer[pself->UDCI_historyForward++].frameSet = frameSet;
+    }
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_INT_DROP_FORWARD
+{
+    word n;
+    historyBufferData *forwardBuffer;
+    ChunkHandle forwardChunk;
+
+    forwardChunk = pself->UDCI_forwardBuffer;
+    n = pself->UDCI_historyForward;
+    pself->UDCI_historyForward = 0;      /* no more entries in fwd buffer */
+
+    while(n>0)
+    {
+        HWChecksumCheck() ;
+        forwardBuffer = LMemDerefHandles(OptrToHandle(oself), forwardChunk);
+
+        /* release frame description */
+        FreeArrayNameTokens(forwardBuffer[--n].frameSet, namePool,
+            TOKEN_FIELDS_FRAME_REC);
+        LMemFree(forwardBuffer[n].frameSet);
+    }
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_INT_DROP_BACK
+{
+    word n1, n2;
+    historyBufferData *historyBuffer;
+    ChunkHandle historyChunk;
+
+    historyChunk = pself->UDCI_historyBuffer;
+    n1 = pself->UDCI_historyHead;
+    n2 = pself->UDCI_historyTail;
+    pself->UDCI_historyHead = pself->UDCI_historyTail = 0;
+                                        /* no more entries in history buffer */
+    while(n1 != n2)
+    {
+        HWChecksumCheck() ;
+        historyBuffer = LMemDerefHandles(OptrToHandle(oself), historyChunk);
+
+        /* release frame description */
+        FreeArrayNameTokens(historyBuffer[n1].frameSet, namePool,
+            TOKEN_FIELDS_FRAME_REC);
+        LMemFree(historyBuffer[n1].frameSet);
+
+        if(++n1 == HTML_HISTORY)          /* advance head, wrap if req'd */
+            n1 = 0;
+    }
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_INT_UPDATE_LRU
+{
+    NameToken tok;
+
+    /* don't store if shouldn't */
+    if (!pself->UDCI_allowHistory)
+        return;
+
+    tok = @call self::MSG_URL_DOCUMENT_GET_TITLE();
+    if(tok == NAME_POOL_NONE)
+        tok = @call self::MSG_URL_DOCUMENT_GET_URL();
+
+    if(tok != NAME_POOL_NONE)
+    {
+        HistoryUpdateLRU(frameSet, tok);
+        NamePoolReleaseToken(namePool, tok);
+    }
+}
+
+/*
+ *  Go forward, undoing the last "back" step.
+ */
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_FORWARD
+{
+    optr frameSet;
+    historyBufferData *forwardBuffer;
+
+    if(!pself->UDCI_historyForward)     /* can't go forward - do nothing */
+    {
+@ifdef DO_ERROR_CHECKING
+        @StartOperation();                /* perform dummy operation for Auto */
+        @EndOperation();
+@endif
+        return 0;
+    }
+
+    forwardBuffer = LMemDerefHandles(OptrToHandle(oself), 
+                                     pself->UDCI_forwardBuffer);
+    frameSet = LMemDup(forwardBuffer[--pself->UDCI_historyForward].frameSet);
+    /* get state from buffer */
+
+    HWChecksumCheck() ;
+    /* clear mod state so we'll update URL with current page */
+    @call CurrentURLText::MSG_VIS_TEXT_SET_NOT_USER_MODIFIED();
+    @call self::MSG_URL_DOCUMENT_LOAD_FRAME_SET(frameSet, DIR_FORWARD);
+    return 0;
+}
+
+/*
+ *  Go back to previous URL in history list and drop it from the list.
+ */
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_BACK
+{
+    optr frameSet;
+    historyBufferData *historyBuffer;
+
+    if(pself->UDCI_historyHead == pself->UDCI_historyTail)
+    {
+@ifdef DO_ERROR_CHECKING
+        @StartOperation();                /* perform dummy operation for Auto */
+        @EndOperation();
+@endif
+      return 0;                         /* can't go back - do nothing */
+    }
+
+    if(--(pself->UDCI_historyTail)==0xFFFF)
+        pself->UDCI_historyTail = HTML_HISTORY-1;
+    /* move back tail, wrap if req'd */
+    historyBuffer = LMemDerefHandles(OptrToHandle(oself),
+                                     pself->UDCI_historyBuffer);
+    frameSet = LMemDup(historyBuffer[pself->UDCI_historyTail].frameSet);
+    /* get state from buffer */
+
+    HWChecksumCheck() ;
+    /* clear mod state so we'll update URL with current page */
+    @call CurrentURLText::MSG_VIS_TEXT_SET_NOT_USER_MODIFIED();
+    @call self::MSG_URL_DOCUMENT_LOAD_FRAME_SET(frameSet, DIR_BACK);
+    return 0;
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_NOTIFY_FRAME_CHANGE_PRE
+{
+    NameToken oldURL;
+    optr frame = pself->UDCI_topFrame;
+    optr frameSet;
+    WordFlags flags;
+
+    if(dir==DIR_RELOAD || dir==DIR_SOURCE || dir==DIR_SAVE || dir==DIR_FRAME
+        || dir == DIR_FRAME_FORCE_RELOAD)
+    return;                           /* didn't really change anything... */
+
+    oldURL = @call self::MSG_URL_DOCUMENT_GET_URL();
+
+    HWChecksumCheck() ;
+    if(oldURL != NAME_POOL_NONE)
+    {
+        NamePoolReleaseToken(namePool, oldURL);
+
+        /* create frame set for back/forward stacks */
+        frameSet = ConstructOptr(OptrToHandle(oself),
+            ChunkArrayCreate(OptrToHandle(oself), sizeof(HTMLframeRec), 0, 0));
+
+        @call frame::MSG_URL_FRAME_COLLECT_FRAMES(frameSet, 0);
+
+        if(dir==DIR_BACK)                 /* going back? */
+            @call self::MSG_URL_DOCUMENT_INT_ADD_FORWARD_URL(frameSet);
+                                          /* add current URL to "forward" list */
+        else                              /* going forward: */
+        {
+            if(dir==DIR_ABSOLUTE || dir==DIR_GO || dir==DIR_ABSOLUTE_GO)
+                                            /* moving freely: forward useless */
+            @call self::MSG_URL_DOCUMENT_INT_DROP_FORWARD();
+            @call self::MSG_URL_DOCUMENT_INT_ADD_BACK_URL(frameSet);
+        }
+
+        /* create a second frame set for the LRU history stack */
+        // TBD: it would probably be better to use a refrence-count based
+        // scheme for frame sets.
+        MemLock(frameCacheBlock);
+        frameSet = ConstructOptr(frameCacheBlock,
+            ChunkArrayCreate(frameCacheBlock, sizeof(HTMLframeRec), 0, 0));
+
+        @call frame::MSG_URL_FRAME_COLLECT_FRAMES(frameSet, 0);
+
+        @call self::MSG_URL_DOCUMENT_INT_UPDATE_LRU(frameSet);
+                                        /* update list of recently used URLs */
+        MemUnlock(frameCacheBlock);
+
+        flags = @call self::MSG_URL_DOCUMENT_GET_STATE();
+        @send process::MSG_HMLVP_NOTIFY_NAVIGATION_CHANGE(flags);
+    }
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_ALLOW_HISTORY
+{
+    pself->UDCI_allowHistory = TRUE;
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_DISALLOW_HISTORY
+{
+    pself->UDCI_allowHistory = FALSE;
+}

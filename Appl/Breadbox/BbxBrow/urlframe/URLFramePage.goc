@@ -2,7 +2,7 @@
  * Received-page metadata, embedded audio, completion and frame-view geometry.
  * Cache locks and temporary array cleanup stay with the existing handlers.
  * URLFRAME.goc owns the class and registers these external methods.
- * FRFETCH2_TEXT remains isolated in FRFETCH.goc during parsing.
+ * FRFETCH2_TEXT remains isolated in URLFrameFetch.goc during parsing.
  */
 
 @include <stdapp.goh>
@@ -14,7 +14,7 @@
 @include "htmlview.goh"
 #include "javascr.h"
 
-/* Retain the callback compiler option from FRFETCH.goc. */
+/* Retain the callback compiler option from URLFrameFetch.goc. */
 #pragma option -WDE
 
 #include <cookies.h>

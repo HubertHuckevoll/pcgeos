@@ -50,10 +50,14 @@ XCCOMFLAGS += $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLTEXT_TEXT|) \
              $(.TARGET:T:R:MURLTextPrint:S|URLTextPrint|-nt=URLTEXT_TEXT|) \
              $(.TARGET:T:R:MURLTextScript:S|URLTextScript|-nt=URLTEXT_TEXT|) \
              $(.TARGET:T:R:MURLTextClipboard:S|URLTextClipboard|-nt=URLTEXT2_TEXT|) \
+             $(.TARGET:T:R:MURLFrameFetch:S|URLFrameFetch|-nt=FRFETCH_TEXT|) \
              $(.TARGET:T:R:MURLFrameTree:S|URLFrameTree|-nt=URLFRAME_TEXT|) \
              $(.TARGET:T:R:MURLFrameNavigation:S|URLFrameNavigation|-nt=URLFRAME_TEXT|) \
              $(.TARGET:T:R:MURLFrameScript:S|URLFrameScript|-nt=URLFRAME_TEXT|) \
-             $(.TARGET:T:R:MURLFramePage:S|URLFramePage|-nt=FRFETCH3_TEXT|)
+             $(.TARGET:T:R:MURLFramePage:S|URLFramePage|-nt=FRFETCH3_TEXT|) \
+             $(.TARGET:T:R:MURLDocumentHistory:S|URLDocumentHistory|-nt=URLDOC_TEXT|) \
+             $(.TARGET:T:R:MURLDocumentNavigation:S|URLDocumentNavigation|-nt=URLDOC_TEXT|) \
+             $(.TARGET:T:R:MURLDocumentLocalPage:S|URLDocumentLocalPage|-nt=LOCALPAG_TEXT|)
 #endif
 
 # -N:  Add stack probes to every routine (only for EC builds)

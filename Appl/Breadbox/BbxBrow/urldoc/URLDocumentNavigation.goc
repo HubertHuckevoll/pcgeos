@@ -1,0 +1,262 @@
+/*
+ * URL/frameset loading, reload/source/save, home and bookmark/favorite commands.
+ * Queued requests keep the existing name-token and frame-array ownership.
+ * URLDOC.goc owns the class and registers these external methods.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <initfile.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+@include "htmlview.goh"
+
+/* Keep the original code resource and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg URLDOC_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLDOC_TEXT")
+#endif
+
+@extern object HTMLVApp;  /* Abort macro. */
+@extern object CurrentURLText;
+@ifdef GLOBAL_INTERNET_BUILD
+@extern object HelpWindow;
+@extern object HelpFrame;
+@endif
+@ifdef JAVASCRIPT_SUPPORT
+@extern object WindowOpenWindow;
+@extern object WindowOpenFrame;
+@endif
+@ifdef COMPILE_OPTION_BOOKMARKS
+@include "bookmark.goh"
+@extern object BookmarkTriggerList ;
+@extern object BookmarksDynamicList ;
+@endif
+@ifdef COMPILE_OPTION_FAVORITES
+@include "favorite.goh"
+@endif
+
+/*
+   Note: the passed URL name token is freed by the message handler. This
+   allows it to be *sent* rather than just called.
+ */
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_LOAD_URL
+{
+    MemHandle urlB;
+    TCHAR *urlP;
+    optr frame = pself->UDCI_topFrame;
+    int urlLen;
+@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
+    extern Boolean G_allowFileDownloadStatus;
+@endif
+
+    if (!((@call application::MSG_GEN_APPLICATION_GET_STATE())&AS_QUITTING)) {
+        HWChecksumCheck() ;
+        @AbortOperation(FALSE, TRUE, 0);  /* stop current page load, first */
+        @call oself::MSG_URL_DOCUMENT_STOP(0) ;
+@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
+        /* allow file download progress dialog (from URL entry field, history,
+           favorites, external request, etc.) */
+        G_allowFileDownloadStatus = TRUE;
+@endif
+        /* show new URL in URL input field while loading */
+        urlLen = NamePoolStrLength(namePool, url)+1;
+        urlB = MemAlloc(urlLen*sizeof(TCHAR), HF_DYNAMIC, HAF_STANDARD);
+        if (urlB) {
+            urlP = MemLock(urlB);
+            NamePoolCopy(namePool, urlP, urlLen*sizeof(TCHAR), url, 0);
+            @call CurrentURLText::MSG_VIS_TEXT_REPLACE_ALL_PTR(urlP, 0);
+            MemFree(urlB);
+        }
+        @call frame::MSG_URL_FRAME_FETCH_URL(url, dir, NullHandle, NAME_POOL_NONE);
+
+        HWChecksumCheck() ;
+        NamePoolReleaseToken(namePool, url);
+        HWChecksumCheck() ;
+    }
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_LOAD_FRAME_SET
+{
+    optr frame = pself->UDCI_topFrame;
+
+    HWChecksumCheck() ;
+    @AbortOperation(FALSE, TRUE, 0);  /* stop current page load, first */
+    @call oself::MSG_URL_DOCUMENT_STOP(0) ;
+    /* load frame set into topmost frame */
+    ObjLockObjBlock(OptrToHandle(frameArray));
+    @call frame::MSG_URL_FRAME_FETCH_FRAMES(frameArray, dir);
+    LMemFree(frameArray);
+    MemUnlock(OptrToHandle(frameArray));
+    HWChecksumCheck() ;
+}
+
+/*
+ *  Attempt to reload current document
+ */
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_RELOAD
+{
+    HWChecksumCheck() ;
+    @AbortOperation(FALSE, TRUE, 0);  /* stop current page load, first */
+    @call oself::MSG_URL_DOCUMENT_STOP(0) ;
+    /* clear mod state so we'll update URL with current page */
+    @call CurrentURLText::MSG_VIS_TEXT_SET_NOT_USER_MODIFIED();
+    @call (pself->UDCI_topFrame)::MSG_URL_FRAME_RELOAD();
+@ifdef GLOBAL_INTERNET_BUILD
+    if (@call HelpWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
+        @call HelpFrame::MSG_URL_FRAME_RELOAD();
+    }
+@endif
+@ifdef JAVASCRIPT_SUPPORT
+    if (@call WindowOpenWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
+        @call WindowOpenFrame::MSG_URL_FRAME_RELOAD();
+    }
+@endif
+    HWChecksumCheck() ;
+}
+
+/*
+ *  Attempt to reload current document and view as Source
+ */
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_SOURCE
+{
+    HWChecksumCheck() ;
+    @call (pself->UDCI_topFrame)::MSG_URL_FRAME_SOURCE();
+    HWChecksumCheck() ;
+}
+
+/*
+ *  Attempt to reload current document and save to file
+ */
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_SAVE
+{
+    HWChecksumCheck() ;
+    @call (pself->UDCI_topFrame)::MSG_URL_FRAME_SAVE();
+    HWChecksumCheck() ;
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_MAKE_NEW_HOME
+{
+    NameToken url;
+    TCHAR buf[HTML_STATIC_BUF],*p;
+    WordFlags flags;
+
+    HWChecksumCheck() ;
+
+    url = @call self::MSG_URL_DOCUMENT_GET_URL();
+    if(url != NAME_POOL_NONE)      /* currently showing URL? */
+    {
+        NamePoolCopy(namePool, buf, sizeof(buf), url, &p);
+                                        /* save as new home page */
+        NavigateSetHome(p);               /* set home URL */
+        NamePoolDestroyIfDynamic(p);      /* release dynamic buffer, if any */
+        NamePoolReleaseToken(namePool, url);
+
+        HWChecksumCheck() ;
+
+        flags = @call self::MSG_URL_DOCUMENT_GET_STATE();
+        @send process::MSG_HMLVP_NOTIFY_NAVIGATION_CHANGE(flags);
+
+        HWChecksumCheck() ;
+    }
+}
+
+@ifdef COMPILE_OPTION_BOOKMARKS
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_ADD_BOOKMARK
+{
+    NameToken url,title;
+    TCHAR urlString[HTML_STATIC_BUF], *uP ;
+    TCHAR titleString[HTML_STATIC_BUF], *tP ;
+
+    HWChecksumCheck() ;
+    url = @call self::MSG_URL_DOCUMENT_GET_URL();
+    title = @call self::MSG_URL_DOCUMENT_GET_TITLE();
+
+    if (url != NAME_POOL_NONE)
+    {
+        /* Get the URL and title for the bookmark */
+        NamePoolCopy(namePool, urlString, sizeof(urlString), url, &uP);
+        NamePoolCopy(namePool, titleString, sizeof(titleString),
+            title?title:url, &tP);
+
+        /* Add a new bookmark */
+        BookmarkAppend(tP, uP) ;
+
+        NamePoolDestroyIfDynamic(tP);
+        NamePoolDestroyIfDynamic(uP);
+
+        /* Rebuild the menu */
+        BookmarksBuildUIList(@BookmarkTriggerList) ;
+
+        /* Note that another item has been added to the list */
+        @call BookmarksDynamicList::MSG_GEN_DYNAMIC_LIST_ADD_ITEMS(GDLP_LAST, 1) ;
+
+        NamePoolReleaseToken(namePool, url) ;
+    }
+
+    if (title != NAME_POOL_NONE)
+        NamePoolReleaseToken(namePool, title) ;
+
+    HWChecksumCheck() ;
+}
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_GO_TO_BOOKMARK
+{
+    TCHAR *p_title ;
+    TCHAR *p_location ;
+    NameToken url ;
+
+    /* Get the bookmark we are going to go to */
+    p_title = BookmarkLock(bookmarkNum, &p_location) ;
+    if (p_title)  {
+        url = NamePoolTokenize(namePool, p_location, TRUE);
+        BookmarkUnlock(p_title) ;
+
+        HWChecksumCheck() ;
+        /* Put in a request to go to that url location */
+        @send ,forceQueue oself::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_GO) ;
+    }
+}
+
+@endif
+
+@ifdef COMPILE_OPTION_FAVORITES
+
+@extern method URLDocumentClass, MSG_URL_DOCUMENT_GO_TO_FAVORITE
+{
+    NameToken url ;
+    T_lockedFavorite *p_favorite = NULL ;
+    word i ;
+    dword pos ;
+    dword count ;
+
+    /* Get the favorite we are going to go to */
+    if (!useAll && FavoriteCountTopTen())  {
+        p_favorite = FavoriteLockTopEntry(favoriteNum) ;
+    } else  {
+        /* Find the nth non-folder */
+        count = FavoritesGetCount() ;
+        for (i=0, pos=0; pos<count; pos++)
+            if (!FavoriteIsFolder(pos))
+                if (i++ >= favoriteNum)
+                    break ;
+
+        /* Lock what we found */
+        if (pos < count)
+            p_favorite = FavoriteLock(pos) ;
+    }
+    if (p_favorite)  {
+        url = NamePoolTokenize(namePool, p_favorite->p_location, TRUE);
+        FavoriteUnlock(p_favorite) ;
+
+        HWChecksumCheck() ;
+        /* Put in a request to go to that url location */
+        @send ,forceQueue oself::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_GO) ;
+    }
+}
+
+@endif

@@ -13,7 +13,7 @@
 /***********************************************************************
  *
  * PROJECT:       HTMLView
- * FILE:          FrFetch.goc
+ * FILE:          URLFrameFetch.goc
  *
  * AUTHOR:        Marcus Gr�ber
  *
@@ -56,6 +56,14 @@
 
 @include "htmlview.goh"
 #include "javascr.h"
+
+/* Retain the original default resource and compiler string options. */
+#ifdef __BORLANDC__
+#pragma codeseg FRFETCH_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("FRFETCH_TEXT")
+#endif
 
 
 

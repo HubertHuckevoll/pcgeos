@@ -1,7 +1,7 @@
 /*
  * Frame script contexts, event handlers and script timer ownership.
  * Timer records and helpers stay with their callers; parser callbacks and
- * document.write parsing remain in FRFETCH.goc.
+ * document.write parsing remain in URLFrameFetch.goc.
  * URLFRAME.goc owns the class and registers these external methods.
  */
 

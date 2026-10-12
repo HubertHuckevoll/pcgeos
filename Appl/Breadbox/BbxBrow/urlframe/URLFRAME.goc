@@ -31,7 +31,7 @@
  *   URLFrameNavigation.goc - Link targets, URL completion, fetch initiation,
  *                            reload/save/source requests and refresh timers.
  *   URLFrameScript.goc     - Script contexts, events, timers and private state.
- *   FRFETCH.goc            - Fetch/cache requests, external files, parsing
+ *   URLFrameFetch.goc      - Fetch/cache requests, external files, parsing
  *                            callbacks, errors and fetch acknowledgements.
  *   URLFramePage.goc       - Received-page metadata, presentation, embedded
  *                            audio, completion and frame-view geometry.
@@ -97,7 +97,7 @@ extern void UserAbortEnd(void);
 
 @classdecl URLFrameClass;
 
-/* Fetch/parser methods are in FRFETCH.goc; page/audio handlers in URLFramePage.goc. */
+/* Fetch/parser methods are in URLFrameFetch.goc; page/audio handlers in URLFramePage.goc. */
 @extern method URLFrameClass, MSG_URL_FRAME_REQUEST_URL;
 @extern method URLFrameClass, MSG_URL_FRAME_URL_FETCHED;
 #if EMBED_SUPPORT
