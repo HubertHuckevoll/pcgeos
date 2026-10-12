@@ -1,0 +1,1070 @@
+/*
+ * Received-page metadata, embedded audio, completion and frame-view geometry.
+ * Cache locks and temporary array cleanup stay with the existing handlers.
+ * URLFRAME.goc owns the class and registers these external methods.
+ * FRFETCH2_TEXT remains isolated in FRFETCH.goc during parsing.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <initfile.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+@include "htmlview.goh"
+#include "javascr.h"
+
+/* Retain the callback compiler option from FRFETCH.goc. */
+#pragma option -WDE
+
+#include <cookies.h>
+#if EMBED_SUPPORT
+@include <wav.goh>
+#endif
+@extern object HTMLVApp;  /* Expanded status and progress macros. */
+@extern object SettingsBoolGroup;
+@extern object HTMLSettingsBoolGroup;
+
+/* Keep both embedded-audio handlers together to share their string pool.
+ * This completion handler retains its original resource and string defaults.
+ */
+#ifdef __BORLANDC__
+#pragma codeseg FRFETCH_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("FRFETCH_TEXT")
+#endif
+
+#if EMBED_SUPPORT
+/*
+ * This is a temporary measure, we should use the ImpDoc driver to
+ * handle the embedded file.
+ */
+@extern method URLFrameClass, MSG_URL_FRAME_EMBED_FETCHED
+{
+    URLFetchResult *p_result;
+    URLFetchResult result;
+    FileHandle embedFile;
+    optr htmlMsg = NullOptr;
+    TCHAR *wName, wChar = C_NULL;
+    optr document = pself->UFI_document;
+
+    /* Copy result data */
+    p_result = MemLock(urlFetchMem);
+    result = *p_result;
+    MemFree(urlFetchMem);
+
+    /* handle result */
+    if (URLRequestGetRet(result.retType) == URL_RET_MESSAGE) {
+        htmlMsg = result.htmlMsg;
+    } else if (URLRequestGetRet(result.retType) == URL_RET_FILE) {
+        if ( *result.curHTML &&
+                ( ( !(*result.mimeType) &&
+                    ( (strlen(result.curHTML) > 4) &&
+                    !LocalCmpStringsNoCase(
+                        result.curHTML+strlen(result.curHTML)-4,
+                        _TEXT(".wav"), 4) ) ) ||
+                !strcmpi(result.mimeType, _TEXT("audio/wav")) ||
+                !strcmpi(result.mimeType, _TEXT("audio/x-wav")) ) ) {
+            embedFile = FileOpen(result.curHTML, FILE_ACCESS_R|FILE_DENY_NONE);
+            if (embedFile) {
+                FileClose(embedFile, TRUE);
+                /* split path and filename */
+                wName = strrchr(result.curHTML, '/');
+                if (!wName) {
+                    wName = strrchr(result.curHTML, '\\');
+                }
+                if (wName) {
+                    wChar = *wName;
+                    *wName = C_NULL;
+                    /* trailing slash for path is okay */
+                    WavPlayFile(0, result.curHTML, wName+1);
+                    *wName = wChar;  /* restore for FileDelete */
+                } else {
+                    WavPlayFile(0, &wChar, result.curHTML);
+                }
+            }
+        }
+        /* delete file, if requested */
+        if ((result.retType & URB_RF_NOCACHE) &&
+            !(result.retType & URB_RF_FILE_REDIR)
+@ifdef CACHE_ALL
+            && !G_cacheAll
+@endif
+            ) {
+            FileDelete(result.curHTML);
+        }
+    }
+    /* delete message, if any */
+    if (htmlMsg && (OptrToChunk(htmlMsg) == 0)) {
+        MemFree(OptrToHandle(htmlMsg));
+    }
+    /* release URL token */
+    if (result.url != NAME_POOL_NONE) {
+        NamePoolReleaseToken(namePool, result.url);
+    }
+    /* finish item */
+    @call document::MSG_URL_DOCUMENT_DEC_PENDING();
+}
+#endif
+
+/***************************************************************************
+ *              Handling of received Hypertext Transfer Items
+ ***************************************************************************/
+
+#ifdef __BORLANDC__
+#pragma codeseg FRFETCH3_TEXT
+#pragma option -dc-
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("FRFETCH3_TEXT")
+#endif
+
+/* returns TRUE if page contains an instant redirect */
+Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
+{
+    word i, j, n, size;
+    HTMLmetaData *md;
+    TCHAR contentBuf[HTML_MIN_BUF], *p, *q, refreshBuf[HTML_MIN_BUF], *r;
+    word secs;
+    NameToken url;
+@ifdef COMPILE_OPTION_AUTO_BROWSE
+    extern dword IBM;
+@endif
+    Boolean redirect = FALSE;
+
+    n = ChunkArrayGetCount(metaArray);
+    for(i=0; i<n; i++)
+    {
+        md = ChunkArrayElementToPtr(metaArray, i, &size);
+        if( (md->HMD_flags & HTML_META_FLAGS_HTTP_EQUIV) &&
+            md->HMD_name && md->HMD_content &&
+            NamePoolTestEqualI(namePool, md->HMD_name, _TEXT("refresh")) )
+        {                                 /* http-equiv="refresh" */
+        /* get content into buffer */
+        NamePoolCopy(namePool, contentBuf, sizeof(contentBuf), md->HMD_content, &p);
+
+        secs = atoi(p);                 /* start of string: refresh interval */
+        url = NAME_POOL_NONE;    /* default: no URL, reload current */
+
+        /* parse "url=..." component */
+        q = GetNthFromList(p, 1, FALSE, &size);
+        if(size>3 && LocalCmpStringsNoCase(q, _TEXT("url"), 3)==0)
+        {                               /* also specified URL? */
+            for(j=3; j<size && (q[j]==' ' || q[j]=='\t' || q[j]=='=' || q[j]=='\''); j++)
+            ;                           /* skip over "=" and whitespaces */
+            if(j<size) {
+                (q+j)[size-j-((q[j-1]=='\'')?1:0)] = '\0';  /* ensure null-terminated refresh URL, and nuke ending quote */
+                /* get current URL */
+                NamePoolCopy(namePool, refreshBuf, sizeof(refreshBuf), curURL, &r);
+                /* max possible length is this */
+                if (NamePoolResizeDynamic(&r, (strlen(r)+strlen(q+j)+URL_MAX_TYPE)*sizeof(TCHAR)))
+                /* get absolute refresh URL */
+                ToolsResolveRelativeURL(r, q+j);
+                url = NamePoolTokenize(namePool, r, FALSE);
+                NamePoolDestroyIfDynamic(r);
+            }
+        }
+
+        /* establish refresh operation */
+@ifdef COMPILE_OPTION_AUTO_BROWSE
+        if(IBM==0)
+@endif
+            if (url)  /* don't refresh if no URL */
+            @call frame::MSG_URL_FRAME_SET_REFRESH(url, secs);
+        if(url)
+            NamePoolReleaseToken(namePool, url);
+
+        NamePoolDestroyIfDynamic(p);    /* release buffer for argument */
+        /* always recheck any page with a refresh from the network, in
+            case other no-cache mechanisms weren't used */
+@ifdef CACHE_ALL
+        if (!G_cacheAll) {
+@endif
+#ifdef CACHE_VALIDATION
+        /* expire source-cached item, if any */
+        (void)SrcCacheExpireURL(curURL);
+#else
+        /* nuke source-cached item, if any */
+        (void)SrcCacheFreeURL(curURL);
+        /* mark as not object-cachable */
+        (void)ObjCacheForceNocache(OCT_TEXTOBJ, curURL);
+#endif
+@ifdef CACHE_ALL
+        }
+@endif
+        /* if this is a redirector page, don't put in history */
+        if (secs == 0) {
+            optr docObj = @call frame::MSG_URL_FRAME_GET_DOCUMENT_OBJ();
+            if (docObj &&
+                (@call docObj::MSG_URL_DOCUMENT_GET_TOP_FRAME() == frame)) {
+                @call docObj::MSG_URL_DOCUMENT_DISALLOW_HISTORY();
+            }
+            redirect = TRUE;
+        }
+        } else if ( (md->HMD_flags & HTML_META_FLAGS_HTTP_EQUIV) &&
+                    md->HMD_name && md->HMD_content &&
+                    NamePoolTestEqualI(namePool, md->HMD_name, _TEXT("Pragma")) &&
+                    NamePoolTestEqualI(namePool, md->HMD_content, _TEXT("no-cache"))
+@ifdef CACHE_ALL
+                    && !G_cacheAll
+@endif
+                ) {
+        /* nuke source-cached item, if any */
+        (void)SrcCacheFreeURL(curURL);
+        /* mark as not object-cachable */
+        (void)ObjCacheForceNocache(OCT_TEXTOBJ, curURL);
+        } else if ( (md->HMD_flags & HTML_META_FLAGS_HTTP_EQUIV) &&
+                    md->HMD_name && md->HMD_content &&
+                    NamePoolTestEqualI(namePool, md->HMD_name, _TEXT("Set-Cookie")))
+        {
+            TCHAR hostBuf[URL_MAX_SERVER];
+            TCHAR pathBuf[HTML_MIN_BUF], *pathBufP;
+@ifdef DO_DBCS
+            DosCodePage cp = G_codePage;
+            word len, status, backup;
+@endif
+
+            /* handle setting cookie */
+            NamePoolCopy(namePool, contentBuf, sizeof(contentBuf), md->HMD_content, &p);
+            NamePoolCopy(namePool, refreshBuf, sizeof(refreshBuf), curURL, &r);
+            /* path buffer big enough for whole URL */
+            NamePoolInitializeDynamic(pathBuf, sizeof(pathBuf), r, &pathBufP);
+            ToolsParseURL(r, 0, hostBuf, pathBufP);
+@ifdef DO_DBCS
+            /* DBCS TBD: convert META Set-Cookie from Unicode to DOS */
+            len = strlen(p)+1;  /* include null */
+            LocalGeosToDos(p, p, &len, DEFCHAR, &cp, 0, &status, &backup);
+@endif
+            CookieParse(pathBufP, hostBuf, p);
+            NamePoolDestroyIfDynamic(pathBufP);
+            NamePoolDestroyIfDynamic(r);
+            NamePoolDestroyIfDynamic(p);
+        }
+    }
+    return redirect;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_GOT_URL
+{
+    HypertextTransferBlockHeader *htbh;
+    HypertextArrayBlockHeader *habh;
+    MemHandle hypertextHeaderMem, hypertextArrayMem;
+    optr frameArray = NullOptr,
+            metaArray = NullOptr;
+    optr document = pself->UFI_document;
+    NameToken title, base, target;
+#if EMBED_SUPPORT
+    NameToken embed;
+#endif
+    VMFileHandle vmf;
+    VMChain item;
+#if JAVASCRIPT_SUPPORT
+    VMChain script = 0;
+    optr text;
+#endif
+    Boolean redirect = FALSE;
+@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
+    extern Boolean G_allowFileDownloadStatus;
+@endif
+@ifdef JAVASCRIPT_SUPPORT
+@ifdef COMPILE_OPTION_AUTO_BROWSE
+    jseMemInfoStruct memInfo;
+@endif
+@endif
+    optr parent;
+
+    HWChecksumCheck() ;
+
+@ifdef JAVASCRIPT_SUPPORT
+    /* reset for new page */
+    pself->UFI_noURL = FALSE;
+@endif
+
+@ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
+    /* re-enable input */
+    @call application::MSG_HMLVA_ACCEPT_INPUT();
+@endif
+
+@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
+        /* we finished loading a HTML page, so we aren't doing
+        a file download */
+        G_allowFileDownloadStatus = FALSE;
+@endif
+
+        /* stop refresh since we've got new stuff */
+        @call self::MSG_URL_FRAME_CLEAR_REFRESH();
+
+    /*
+     * Update history etc. before dropping old URL
+     */
+    @send self::MSG_URL_FRAME_NOTIFY_FRAME_CHANGE_PRE(dir);
+    if (document &&
+        ((@call document::MSG_URL_DOCUMENT_GET_TOP_FRAME()) == oself)) {
+        @call document::MSG_URL_DOCUMENT_ALLOW_HISTORY();
+    }
+
+    if(oct != OCT_NULL)
+    {
+        ObjCacheLockItem(oct, &vmf, &item, NULL, 0);
+
+        htbh = VMLock(vmf, VMCHAIN_GET_VM_BLOCK(item), &hypertextHeaderMem);
+
+        /*
+       * Get title and base URI frame item's name pool, and attach them to
+       * the current frame object, together with the page's URL.
+       */
+        title = NamePoolTokenizeFromVM(namePool, vmf,
+        htbh->HTBH_other.HTBHO_namePoolToUse,
+        htbh->HTBH_other.HTBHO_documentTitle, TRUE);
+        base = NamePoolTokenizeFromVM(namePool, vmf,
+        htbh->HTBH_other.HTBHO_namePoolToUse,
+        htbh->HTBH_other.HTBHO_baseURI, TRUE);
+        target = NamePoolTokenizeFromVM(namePool, vmf,
+        htbh->HTBH_other.HTBHO_namePoolToUse,
+        htbh->HTBH_other.HTBHO_baseTarget, TRUE);
+
+#if JAVASCRIPT_SUPPORT
+        script = htbh->HTBH_scriptCode;
+#endif
+
+        @call self::MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET(url, title, base, target, referer);
+
+        if(title != NAME_POOL_NONE)
+            NamePoolReleaseToken(namePool, title);
+        if(base != NAME_POOL_NONE)
+            NamePoolReleaseToken(namePool, base);
+        if(target != NAME_POOL_NONE)
+            NamePoolReleaseToken(namePool, target);
+
+#if EMBED_SUPPORT
+        embed = NamePoolTokenizeFromVM(namePool, vmf,
+                                        htbh->HTBH_other.HTBHO_namePoolToUse,
+                                        htbh->HTBH_other.HTBHO_embed, TRUE);
+        @call self::MSG_URL_FRAME_SET_EMBED(embed);
+        if (embed != NAME_POOL_NONE)
+            NamePoolReleaseToken(namePool, embed);
+#endif
+
+@ifdef COMPILE_OPTION_LOCAL_PAGES
+        /* Notify document that it's no longer corresponding to a local page.
+            We simply assume that any change in a frame set invalidates the
+            correspondence to the local page without checking if we happened
+            to get in line with a new one. */
+
+        if(dir != DIR_RELOAD && dir != DIR_SAVE && dir != DIR_FRAME &&
+            dir != DIR_FRAME_FORCE_RELOAD)
+        @call document::MSG_URL_DOCUMENT_SET_LOCAL_PAGE(NAME_POOL_NONE);
+@endif
+
+        /*
+       * Check out frames and metadata
+       */
+        if( !(@call SettingsBoolGroup::
+            MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTMLV_NOFRAME) )
+        {                                 /* Try to evaluate frames? */
+
+#if JAVASCRIPT_SUPPORT
+        pself = ObjDeref(oself, 0);
+        if (pself->UFI_framesetCode != NAME_POOL_NONE) {
+            NamePoolReleaseToken(namePool, pself->UFI_framesetCode);
+            pself->UFI_framesetCode = NAME_POOL_NONE;
+        }
+#endif
+
+        if(htbh->HTBH_arrayBlock)       /* Yes: any additional data? */
+        {
+            habh = VMLockChainifiedLMemBlock(vmf,
+            VMCHAIN_GET_VM_BLOCK(htbh->HTBH_arrayBlock), &hypertextArrayMem);
+
+            if(habh->HABH_frameArray)
+            {
+            /* create copy of frame set description with tokens refering to
+                the in-memory name pool */
+            frameArray = CopyArrayWithTokens(
+                hypertextArrayMem, habh->HABH_frameArray,
+                vmf, htbh->HTBH_other.HTBHO_namePoolToUse, namePool,
+                TOKEN_FIELDS_FRAME_REC);
+            }
+
+            if(habh->HABH_metaArray)
+            {
+            /* create copy of frame set description with tokens refering to
+                the in-memory name pool */
+            metaArray = CopyArrayWithTokens(
+                hypertextArrayMem, habh->HABH_metaArray,
+                vmf, htbh->HTBH_other.HTBHO_namePoolToUse, namePool,
+                TOKEN_FIELDS_META_DATA);
+            }
+
+#ifdef JAVASCRIPT_SUPPORT
+            /* get frameset (onload) code */
+            if (habh->HABH_eventArray) {
+                word ei, ecnt;
+                HTMLeventData *edata;
+                ecnt = ChunkArrayGetCountHandles(hypertextArrayMem,
+                                                habh->HABH_eventArray);
+                for (ei = 0; ei < ecnt; ei++) {
+                    edata = ChunkArrayElementToPtrHandles(hypertextArrayMem,
+                                                        habh->HABH_eventArray,
+                                                        ei, NULL);
+                    if (edata->HED_type == HTML_EVENT_OBJECT_FRAMESET &&
+                        edata->HED_evt == HTML_EVENT_LOAD) {
+                        pself = ObjDeref(oself, 0);
+                        pself->UFI_framesetCode =
+                            NamePoolTokenizeFromVM(namePool,
+                                                    vmf,
+                                                    htbh->HTBH_other.HTBHO_namePoolToUse,
+                                                    edata->HED_code,
+                                                    TRUE);
+                        break;
+                    }
+                }
+            }
+#endif
+
+            VMUnlockChainifiedLMemBlock(hypertextArrayMem);
+        }
+        }
+
+        VMUnlock(hypertextHeaderMem);
+    }
+
+    if(metaArray)
+    {
+        MemLock(OptrToHandle(metaArray));
+
+        /* see if anything useful can be found in meta data */
+        redirect = EvaluateMetaData(oself, metaArray, url);
+
+        /* release temporary frame description */
+        FreeArrayNameTokens(metaArray, namePool, TOKEN_FIELDS_META_DATA);
+        MemFree(OptrToHandle(metaArray));
+    }
+
+    if(redirect)                        // if meta redirect, don't bother with page
+        ;
+    else if(frameArray)
+    {
+        MemLock(OptrToHandle(frameArray));
+
+@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
+        @SendUpdateProgress(PI_NUM_FRAMES, ChunkArrayGetCount(frameArray));
+@endif
+
+@ifdef JAVASCRIPT_SUPPORT
+@ifndef HANDLE_SCRIPTS_DURING_PARSING
+        /* for HANDLE_SCRIPTS_DURING_PARSING, we destroy before parsing, in
+            URL_FETCHED */
+        @call self::MSG_URL_FRAME_DESTROY_SCRIPT_CONTEXT(TRUE);
+@endif
+@endif
+
+        /* clear/deactivate all the frames getting overwritten by this frameset */
+        @send @frameChildren::MSG_URL_FRAME_DELETE_ALL(TRUE);
+
+        /* set up frames and cause URLs to be requested */
+        @call self::MSG_URL_FRAME_ESTABLISH_FRAMES(frameArray, 0, dir);
+
+        /* release temporary frame description */
+        FreeArrayNameTokens(frameArray, namePool, TOKEN_FIELDS_FRAME_REC);
+        MemFree(OptrToHandle(frameArray));
+    }
+    else
+    {
+        /* no frame set? Display as plain page on current level */
+        @call self::MSG_URL_FRAME_GOT_PAGE_NOFRAME(oct, anchor, flags, FALSE);
+    }
+
+    /*
+     * Update controllers etc.
+     */
+    @call self::MSG_URL_FRAME_NOTIFY_FRAME_CHANGE_POST(dir);
+
+@ifdef JAVASCRIPT_SUPPORT
+    if(@call HTMLSettingsBoolGroup::
+        MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTML_JAVASCRIPT) {
+        if(script) {
+                            /* Interpret script if we have any */
+        pself = ObjDeref(oself, 0);
+        /* clear window only, so DOM cruft created during parsing pass will
+            not confuse us */
+        @call oself::MSG_URL_FRAME_DESTROY_SCRIPT_CONTEXT(FALSE);
+        pself->UFI_canWindowOpen = FALSE;  /* not allowed here */
+        @call self::MSG_URL_FRAME_INTERPRET_SCRIPT_HA(vmf,
+        VMCHAIN_GET_VM_BLOCK(script), 0);
+@ifdef HANDLE_SCRIPTS_DURING_PARSING
+        /* free document.write scripts as they were already processed
+            on the parsing pass */
+        if (pself->UFI_scriptSrc.block) {
+            VMFreeVMChain(pself->UFI_scriptSrc.file, VMCHAIN_MAKE_FROM_VM_BLOCK(pself->UFI_scriptSrc.block));
+            pself->UFI_scriptSrc.block = 0;
+        }
+@endif
+        } else if (frameArray) {
+            /* if JS turned on, create if frames to allow cross-frame
+            scripting */
+            @call oself::MSG_URL_FRAME_CREATE_SCRIPT_CONTEXT();
+        }
+    }
+    /* get text object now, as it may have only been created very recently */
+    text = @call self::MSG_URL_FRAME_FIND_TEXT_OBJECT();
+    /* Do the onLoad script for the body */
+    @call text::MSG_HTML_TEXT_FIRE_EVENT(HTML_EVENT_LOAD,
+        HTML_EVENT_OBJECT_BODY, 0);
+@ifdef COMPILE_OPTION_AUTO_BROWSE
+    if (IBM) {
+        char buf[100];
+        jseMemInfo(&memInfo);
+@ifdef DO_DBCS
+        strcpysbcs(buf, "fixed (mapped): ");
+        UtilHex32ToAscii(buf+strlen(buf), memInfo.mappedSize, UHTAF_NULL_TERMINATE|UHTAF_SBCS_STRING);
+        strcatsbcs(buf, "; fixed (non-mapped): ");
+        UtilHex32ToAscii(buf+strlen(buf), memInfo.nonMappedSize, UHTAF_NULL_TERMINATE|UHTAF_SBCS_STRING);
+        strcatsbcs(buf, "; movable: ");
+        UtilHex32ToAscii(buf+strlen(buf), memInfo.handleMemSize, UHTAF_NULL_TERMINATE|UHTAF_SBCS_STRING);
+        strcatsbcs(buf, "\r\n");
+@else
+        strcpy(buf, "fixed (mapped): ");
+        UtilHex32ToAscii(buf+strlen(buf), memInfo.mappedSize, UHTAF_NULL_TERMINATE);
+        strcat(buf, "; fixed (non-mapped): ");
+        UtilHex32ToAscii(buf+strlen(buf), memInfo.nonMappedSize, UHTAF_NULL_TERMINATE);
+        strcat(buf, "; movable: ");
+        UtilHex32ToAscii(buf+strlen(buf), memInfo.handleMemSize, UHTAF_NULL_TERMINATE);
+        strcat(buf, "\r\n");
+@endif
+        ABLog(buf);
+    }
+@endif
+@endif
+
+    /* if we're a leaf, notify parent that we're done loading */
+    parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+    @send, forceQueue parent::MSG_URL_FRAME_LOADING_FINISHED();
+
+    /* Balance INC in MSG_URL_FRAME_REQUEST_URL: */
+    @send document::MSG_URL_DOCUMENT_DEC_PENDING();
+
+    /* We may still have needed the item for the script */
+    if(oct != OCT_NULL)
+        ObjCacheUnlockItem(oct);          /* We're done with the item */
+
+    HWChecksumCheck() ;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_LOADING_FINISHED
+{
+    optr text;
+
+    if (pself->UFI_frameLoadCount) {
+        if ((--pself->UFI_frameLoadCount) == 0) {
+@ifdef JAVASCRIPT_SUPPORT
+            if (pself->UFI_frameFlags & HTML_FRF_FRAMESET &&
+                pself->UFI_framesetCode != NAME_POOL_NONE) {
+                @call self::MSG_URL_FRAME_HANDLE_EVENT(HTML_EVENT_LOAD, HTML_EVENT_OBJECT_FRAMESET, 0, pself->UFI_framesetCode);
+            }
+@endif
+        }
+    }
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_GOT_PAGE_NOFRAME
+{
+    optr child,
+            text = pself->UFI_text;
+    WordFlags frameFlags = pself->UFI_frameFlags;
+    word children, i;
+#if EMBED_SUPPORT
+    TCHAR embedBuf[HTML_MIN_BUF], *embedBufP;
+    NameToken embedURL;
+    optr document = pself->UFI_document;
+#endif
+
+    HWChecksumCheck() ;
+    @call self::MSG_URL_FRAME_ACTIVATE(dummy);
+
+    if(frameFlags & HTML_FRF_FRAMESET)  /* convert frameset node back to text */
+    {
+        @call self::MSG_URL_FRAME_SET_FLAGS_SIZE_NAME(
+            HTML_FRF_SCROLLING | (frameFlags & HTML_FRF_FORCE_SCROLL),
+            HTML_LEN_VARIABLE, NAME_POOL_NONE);
+        frameFlags = HTML_FRF_SCROLLING | (frameFlags & HTML_FRF_FORCE_SCROLL);
+    }
+
+#if EMBED_SUPPORT
+    pself = ObjDeref(oself, 0);
+    if (pself->UFI_embed != NAME_POOL_NONE) {
+        /* get absolute URL */
+                                        /* force dyanmic for COMPLETE_URL */
+                NamePoolCopy(namePool, embedBuf, sizeof(embedBuf), pself->UFI_embed, &embedBufP);
+                if (*embedBufP && (strlen(embedBufP) > 4) &&
+                    (LocalCmpStringsNoCase(embedBufP+strlen(embedBufP)-4,_TEXT(".wav"),4)==0)) {
+                    @call self::MSG_URL_FRAME_COMPLETE_URL(&embedBufP);
+                    embedURL = NamePoolTokenize(namePool, embedBufP, TRUE);
+                    @send document::MSG_URL_DOCUMENT_INC_PENDING();
+                    URLFetchRequest(embedURL,          /* URL token */
+                                    (flags & GUF_RELOAD) ?
+                                    ULM_ALWAYS : ULM_CACHE,  /* caching */
+                                    NullHandle,        /* post data */
+                                    NAME_POOL_NONE,    /* referer */
+                                    oself,             /* return obj, msg */
+                                    MSG_URL_FRAME_EMBED_FETCHED,
+                                    0                  /* extra data */
+#if PROGRESS_DISPLAY
+                                    ,0                 /* load progress */
+#endif
+                                    );
+                }
+                NamePoolDestroyIfDynamic(embedBufP);
+    }
+#endif
+
+    /*
+     * If we're a leaf node in the frame tree (i.e. we have an associated
+     * text object), we can take the task of displaying the page. Otherwise,
+     * insert dummy levels until a leaf node is reached.
+     */
+    if(text)
+    {
+        LOG(LogPrintfLine(">T");)
+
+        if(oct != OCT_NULL)               /* passed a new page? load it */
+        {
+        @call self::MSG_URL_FRAME_FLIP_PAGE(oct, flags & GUF_RELOAD);
+        }
+
+        /* look for name in current document, or go to top of document if
+            none is specified (this is mostly important for the case that
+            no item has been passed...) */
+
+        @call text::MSG_HTML_TEXT_GOTO_ANCHOR(namePool, anchor);
+
+        @CallStatusUpdate(_TEXT(""), HTML_STATUS_TYPE_URL_HIGHLIGHT);
+
+        LOG(LogPrintfLine("<T");)
+    }
+    else                                /* insert dummy node */
+    {
+        children = @call self::MSG_URL_FRAME_COUNT_CHILDREN();
+        if (!children) {
+            @call self::MSG_URL_FRAME_CREATE_CHILD();
+            children = 1;
+        }
+        for(i=0; i<children; i++)         /* (de)activate children */
+        {
+        HWChecksumCheck() ;
+        child = @call self::MSG_URL_FRAME_FIND_CHILD(i);
+        if(i==0)
+        {
+            /* make first show the requested URL */
+            @call child::MSG_URL_FRAME_SET_FLAGS_SIZE_NAME(frameFlags,
+            HTML_LEN_VARIABLE, NAME_POOL_NONE);
+                                        /* update sizing of visible object */
+            @call child::MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET(NAME_POOL_NONE,
+            NAME_POOL_NONE, NAME_POOL_NONE, NAME_POOL_NONE, NAME_POOL_NONE);
+                                        /* not associated with any URL */
+            @call child::MSG_URL_FRAME_GOT_PAGE_NOFRAME(
+            oct, anchor, flags, TRUE);
+        }
+        else
+            @call child::MSG_URL_FRAME_DELETE_ALL(TRUE);
+        }
+        /* if child is not activate (empty), deactivate ourselves, unless
+            we are top (don't have parent) */
+        if (children) {
+            child = @call self::MSG_URL_FRAME_FIND_CHILD(0);
+            if (!((@call child::MSG_URL_FRAME_GET_STATE()) & FS_ACTIVE) &&
+                (@call oself::MSG_URL_FRAME_FIND_PARENT())) {
+                @call self::MSG_URL_FRAME_DELETE_ALL(TRUE);
+            }
+        }
+    }
+
+    HWChecksumCheck() ;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS
+{
+    word parentSize, combinedSize, sizeRet, sizeVal;
+    optr parent, child;
+    optr uiObject = pself->UFI_interaction;
+    word children, i, variableSiblings, combinedVariable, maxvar, maxpix;
+    optr maxvarOptr,maxpixOptr;
+    SizeAsDWord documentSize;
+    HTMLmultiLength childSize, size = pself->UFI_size;
+    WordFlags flags = pself->UFI_frameFlags, parentFlags, childFlags;
+    WordFlags state = pself->UFI_frameState;
+    WWFixedAsDWord scale;
+
+    HWChecksumCheck() ;
+    parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+    if(parent)                          /* not top level object? */
+    {
+        if(state & FS_DUMMY)              /* propagate geometry hints to dummys */
+        {
+        return @call parent::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(
+            getWidth, allowVariable);
+        }
+
+        parentSize = @call parent::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(
+        getWidth, FALSE);
+        parentFlags = @call parent::MSG_URL_FRAME_GET_FRAME_FLAGS();
+        if (parentSize == 0xffff) parentSize = 0;
+
+        if(( (flags & HTML_FRF_SIZE_WIDTH) && !getWidth) ||
+            (!(flags & HTML_FRF_SIZE_WIDTH) &&  getWidth))
+        {                                 /* requested dimension unspecified? */
+        size = HTML_LEN_VARIABLE;
+        }
+        if ( (!getWidth && (parentFlags & HTML_FRF_COLS)) ||
+            (getWidth && !(parentFlags & HTML_FRF_COLS)) )
+        {       /* getting size opposite parent orientation, use parent size */
+        if (allowVariable)
+            sizeRet = 0xffff;
+        else
+            sizeRet = parentSize;
+        }
+        else
+        {
+        variableSiblings = 0;           /* get size based on siblings */
+        combinedVariable = 0;
+        combinedSize = 0;
+        maxvar = maxpix = 0;            /* maximum proportion */
+        maxvarOptr = NullOptr;          /* optr of sibling holding maximum */
+        maxpixOptr = NullOptr;
+
+        children = @call parent::MSG_URL_FRAME_COUNT_CHILDREN();
+        for(i=0; i<children; i++)       /* total up spec'd size of siblings */
+        {
+            child = @call parent::MSG_URL_FRAME_FIND_CHILD(i);
+            if( (@call child::MSG_URL_FRAME_GET_STATE()) & FS_ACTIVE )
+            {                             /* only process active frames */
+            childSize = @call child::MSG_URL_FRAME_GET_SIZE();
+            childFlags = @call child::MSG_URL_FRAME_GET_FRAME_FLAGS();
+
+            if ((!getWidth && (childFlags & HTML_FRF_SIZE_WIDTH)) ||
+                (getWidth && !(childFlags & HTML_FRF_SIZE_WIDTH))) {
+                childSize = HTML_LEN_VARIABLE;
+            }
+            sizeVal = HTML_LEN_GET_VALUE(childSize);
+            switch(HTML_LEN_GET_UNIT(childSize))
+            {
+                case HTML_LEN_VARIABLE:
+                sizeVal = 1;            /* treat "*" same as "*1" */
+                case HTML_LEN_PROPORTION:
+                variableSiblings++;
+                combinedVariable += sizeVal;
+                                        /* count variable sized siblings */
+                if(sizeVal >= maxvar)   /* find maximum proportional value */
+                {
+                    maxvar = sizeVal;
+                    maxvarOptr = child;
+                }
+                break;
+
+                case HTML_LEN_PERCENT:
+                sizeVal = (word)(((dword)parentSize) * sizeVal / 100);
+
+                default:
+                combinedSize += sizeVal;
+                if(sizeVal >= maxpix)   /* find maximum pixel value */
+                {
+                    maxpix = sizeVal;
+                    maxpixOptr = child;
+                }
+                break;
+            }
+            }
+        }
+
+        /* The handling of widths not totalling up to the parent width depends
+            on whether there are any variable sized siblings around or not. */
+        if(combinedVariable)
+        {
+            if(combinedSize + variableSiblings * MIN_FRAME_WIDTH > parentSize)
+            {
+            scale = GrSDivWWFixed(
+                MakeWWFixed(parentSize),
+                MakeWWFixed(combinedSize + variableSiblings * MIN_FRAME_WIDTH));
+                                        /* make room for minimum frame size */
+            maxvar = 0;                 /* don't make proportionals flexible */
+            }
+            else
+            {
+            scale = MakeWWFixed(1);     /* enough room to grow */
+            if((dword)(parentSize - combinedSize) * maxvar / combinedVariable > maxpix)
+                maxpixOptr = maxvarOptr;  /* is largest frame proportional? */
+            }
+        }
+        else                            /* all sizes are fixed */
+        {
+            scale = GrSDivWWFixed(
+            MakeWWFixed(parentSize),
+            MakeWWFixed(combinedSize)); /* match parent size exactly */
+        }
+
+        sizeRet = HTML_LEN_GET_VALUE(size);
+        switch(HTML_LEN_GET_UNIT(size))
+        {
+            case HTML_LEN_VARIABLE:
+            sizeRet = 1;                /* treat "*" same as "*1" */
+            case HTML_LEN_PROPORTION:
+            if(combinedSize > parentSize)
+                sizeRet = MIN_FRAME_WIDTH;
+            else
+            {
+                sizeRet = (dword)(parentSize - combinedSize) * sizeRet / combinedVariable;
+                if((sword)sizeRet < MIN_FRAME_WIDTH)
+                sizeRet = MIN_FRAME_WIDTH;
+            }                           /* ensure minimum frame width */
+            break;
+
+            case HTML_LEN_PERCENT:
+            sizeRet = (word)(((dword)parentSize) * sizeRet / 100);
+            break;
+        }
+        sizeRet = IntegerOf(GrMulWWFixed(MakeWWFixed(sizeRet), scale));
+
+        /*
+            A 0xffff value (eventually indicating a variable sized frame in that
+            dimension) is returned if the current frame is the one with the
+            largest width/height among its peers, in which case we allow its
+            size to float in order to accomodate for window size changes.
+         */
+        if(allowVariable && maxpixOptr == oself)
+            sizeRet = 0xffff;
+        }
+    }
+    else                                /* top object: return direct size */
+    {
+        if(allowVariable)
+        {
+        sizeRet = 0xffff;               /* make UI object expand freely */
+        }
+        else
+        {
+        documentSize = @call uiObject::MSG_VIS_GET_SIZE();
+        if(getWidth)
+            sizeRet = DWORD_WIDTH(documentSize);
+        else
+            sizeRet = DWORD_HEIGHT(documentSize);
+        }
+    }
+    HWChecksumCheck() ;
+
+    return sizeRet;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_UPDATE_FRAME_UI
+{
+    WordFlags flags = pself->UFI_frameFlags;
+    optr uiObject = pself->UFI_interaction,
+            text = pself->UFI_text;
+    word width, height, fixedWidth, fixedHeight;
+    Boolean flagsChange = (pself->UFI_geoFlags != flags);
+
+    HWChecksumCheck() ;
+    if(uiObject)
+    {                                   /* have to relay change to UI object? */
+        if(!(pself->UFI_frameState & FS_ACTIVE))
+        {                                 /* Deactivate associated UI object */
+        @send uiObject::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+        }
+        else
+        {
+        height =
+            @call self::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(FALSE, TRUE);
+        if(!height)
+        {
+            @send uiObject::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+            goto done;
+        }
+        else if(height != 0xffff)
+            fixedHeight = (SST_PIXELS | height);
+        else
+            fixedHeight = 0;
+
+        width =
+            @call self::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(TRUE, TRUE);
+        if(!width)
+        {
+            @send uiObject::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+            goto done;
+        }
+        else if(width != 0xffff)
+            fixedWidth = (SST_PIXELS | width);
+        else
+            fixedWidth = 0;
+
+        /* See if any change to the geometry occurred */
+        pself = ObjDeref(oself, 0);
+        if(fixedHeight != pself->UFI_geoSize.XYS_height ||
+            fixedWidth != pself->UFI_geoSize.XYS_width ||
+            flagsChange)
+        {
+            pself->UFI_geoSize.XYS_height = fixedHeight;
+            pself->UFI_geoSize.XYS_width = fixedWidth;
+            pself->UFI_geoFlags = flags;
+
+            @send uiObject::MSG_GEN_SET_FIXED_SIZE(VUM_DELAYED_VIA_APP_QUEUE,
+            0, fixedHeight, fixedWidth);
+
+            if(flags & HTML_FRF_COLS)
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_HORIZONTALLY, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_VERTICALLY, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+            else
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_VERTICALLY, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_HORIZONTALLY, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+
+            if(fixedHeight)
+            {
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_EXPAND_HEIGHT_TO_FIT_PARENT, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+            else
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_EXPAND_HEIGHT_TO_FIT_PARENT, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+
+            if(fixedWidth)
+            {
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_EXPAND_WIDTH_TO_FIT_PARENT, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+            else
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_EXPAND_WIDTH_TO_FIT_PARENT, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+        }
+
+        if(text && flagsChange)      /* level has associated view? */
+        {                            /* update view-specific flags */
+            VisUpdateModeAsWord vum = {VUM_DELAYED_VIA_APP_QUEUE,0};
+            DimensionAttrsToSetClear dimAttrH, dimAttrV;
+            Boolean viewChange = FALSE;
+            GenViewAttrs viewAttrs;
+            DimensionAttrs dimAttrs;
+            Boolean hasShow, hasRemove, needShow, needRemove;
+            byte dummy;
+
+            /* border */
+            viewAttrs = @call uiObject::MSG_GEN_VIEW_GET_ATTRS();
+            if (flags & HTML_FRF_NOBORDER) {
+                if (!(viewAttrs & GVA_NO_WIN_FRAME)) {
+                    @send uiObject::MSG_GEN_VIEW_SET_ATTRS(GVA_NO_WIN_FRAME, 0,
+                                                            vum);
+                }
+            } else {
+                if (viewAttrs & GVA_NO_WIN_FRAME) {
+                    @send uiObject::MSG_GEN_VIEW_SET_ATTRS(0, GVA_NO_WIN_FRAME,
+                                                            vum);
+                }
+            }
+
+            /* scrolling */
+            dimAttrs = @call uiObject::MSG_GEN_VIEW_GET_DIMENSION_ATTRS();
+            dimAttrH.DATSC_attrsToSet = dimAttrV.DATSC_attrsToSet =
+            (flags & HTML_FRF_SCROLLING)?GVDA_SCROLLABLE:0;
+            dimAttrH.DATSC_attrsToClear = dimAttrV.DATSC_attrsToClear =
+            (flags & HTML_FRF_SCROLLING)?0:GVDA_SCROLLABLE;
+            hasShow = (@call uiObject::MSG_META_GET_VAR_DATA(
+                HINT_VIEW_SHOW_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, &dummy)) == 0;
+            hasRemove = (@call uiObject::MSG_META_GET_VAR_DATA(
+                HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, &dummy)) == 0;
+            if (flags & HTML_FRF_SCROLLING) {
+                /* SCROLLING = YES or SCROLLING = AUTO */
+                if (!(dimAttrs.DA_horizAttrs & GVDA_SCROLLABLE) ||
+                    !(dimAttrs.DA_verAttrs & GVDA_SCROLLABLE)) {
+                    @send uiObject::MSG_GEN_VIEW_SET_DIMENSION_ATTRS(
+                        dimAttrH, dimAttrV, vum);
+                }
+                if (flags & HTML_FRF_FORCE_SCROLL) {
+                    /* SCROLLING = YES */
+                    needShow = TRUE;
+                    needRemove = FALSE;
+                } else {
+                    /* SCROLLING = AUTO */
+                    needShow = FALSE;
+                    needRemove = TRUE;
+                }
+            } else {
+                /* SCROLLING = NO */
+                if (dimAttrs.DA_horizAttrs & GVDA_SCROLLABLE ||
+                    dimAttrs.DA_verAttrs & GVDA_SCROLLABLE) {
+                    @send uiObject::MSG_GEN_VIEW_SET_DIMENSION_ATTRS(
+                        dimAttrH, dimAttrV, vum);
+                }
+                needShow = TRUE;  /* needed to remove scrollers */
+                needRemove = FALSE;
+            }
+            /* finish scrolling changes */
+            if (needShow) {
+                if (!hasShow) {
+                    @send uiObject::MSG_META_ADD_VAR_DATA(HINT_VIEW_SHOW_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, 0);
+                    viewChange = TRUE;
+                }
+            } else {
+                if (hasShow) {
+                    @send uiObject::MSG_META_DELETE_VAR_DATA(HINT_VIEW_SHOW_SCROLLERS_WHEN_NOT_SCROLLABLE);
+                    viewChange = TRUE;
+                }
+            }
+            if (needRemove) {
+                if (!hasRemove) {
+                    @send uiObject::MSG_META_ADD_VAR_DATA(HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, 0);
+                    viewChange = TRUE;
+                }
+            } else {
+                if (hasRemove) {
+                    @send uiObject::MSG_META_DELETE_VAR_DATA(HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE);
+                    viewChange = TRUE;
+                }
+            }
+            if (viewChange) {
+                @send uiObject::MSG_GEN_SET_NOT_USABLE(
+                    VUM_DELAYED_VIA_APP_QUEUE);
+            }
+        }
+
+        if(text)
+        {
+            optr parent = @call text::MSG_VIS_FIND_PARENT();
+            optr pFocus = 0;
+            if (parent) {
+                @call parent::MSG_META_GET_FOCUS_EXCL(&pFocus);
+                if (!pFocus) {
+                    @send text::MSG_META_GRAB_TARGET_EXCL();
+                    @send text::MSG_META_GRAB_FOCUS_EXCL();
+                }
+            }
+        }
+
+        @send uiObject::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+
+        if (text) {  /* only if we are a focusable uiObject */
+            /*
+            @send uiObject::MSG_META_GRAB_TARGET_EXCL();
+            @send uiObject::MSG_META_GRAB_FOCUS_EXCL();
+            We can update the focus optr up through the recursive levels
+            since our frame UI tree will only have focusable objects
+            at leafs, and only one leaf will be focused after our
+            frame tree traversal (unlike the text focusing above which
+            needs to happen at each node) */
+            *focusP = uiObject;
+        }
+        }
+    }
+done:
+    @send @frameChildren::MSG_URL_FRAME_UPDATE_FRAME_UI(focusP);
+    HWChecksumCheck() ;
+}

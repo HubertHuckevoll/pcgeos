@@ -6,29 +6,33 @@
 GEODE           = bbxbrow
 ASMTOOLS        = asmtoolsManager.asm
 HTMLVIEW        = AWATCHER.goc GLBANIM.goc OpenClos.goc StatText.goc\
-                  UIOften.goc scrapbk.goc HTMLVIEW.goc ImportG.goc\
-                  LoadURL.goc UIAction.goc UIRare.goc
+                  UIOften.goc scrapbk.goc LoadURL.goc UIAction.goc\
+                  HTMLVIEW.goc ImportG.goc UIRare.goc
 INIT            = INIT.goc
 NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc BOOKMARK.goc FAVORITE.goc\
                   NAVCACHE.goc NAVIGATE.goc
 URLDOC          = LOCALPAG.goc URLDOC.goc
 URLDOCCT        = URLDOCCT.goc
 URLFETCH        = URLFETCH.goc
-URLFRAME        = FRFETCH.goc URLFRAME.goc
-URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
-                  URLTextClipboard.goc URLTEXT.goc URLTextImages.goc\
-                  URLTextImageProgress.goc URLTextLinks.goc\
-                  URLTextPrint.goc URLTextScript.goc
+URLFRAME        = FRFETCH.goc URLFRAME.goc URLFrameTree.goc\
+                  URLFrameNavigation.goc URLFrameScript.goc\
+                  URLFramePage.goc
+URLTEXT         = MemStream.c MemStream.h URLTextInternal.h URLTEXT.goc\
+                  URLTextClipboard.goc URLTextImageProgress.goc\
+                  URLTextImages.goc URLTextLinks.goc URLTextPrint.goc\
+                  URLTextScript.goc
 UI_TO_RDFS      =
 OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
-                  UIOften.obj scrapbk.obj HTMLVIEW.obj ImportG.obj\
-                  LoadURL.obj UIAction.obj UIRare.obj INIT.obj BOOKCLAS.obj\
+                  UIOften.obj scrapbk.obj LoadURL.obj UIAction.obj\
+                  HTMLVIEW.obj ImportG.obj UIRare.obj INIT.obj BOOKCLAS.obj\
                   FAVORCLS.obj BOOKMARK.obj FAVORITE.obj NAVCACHE.obj\
                   NAVIGATE.obj LOCALPAG.obj URLDOC.obj URLDOCCT.obj\
-                  URLFETCH.obj FRFETCH.obj URLFRAME.obj MemStream.obj\
-                  URLTextClipboard.obj URLTEXT.obj URLTextImages.obj\
-                  URLTextImageProgress.obj URLTextLinks.obj\
-                  URLTextPrint.obj URLTextScript.obj
+                  URLFETCH.obj FRFETCH.obj URLFRAME.obj URLFrameTree.obj\
+                  URLFrameNavigation.obj URLFrameScript.obj\
+                  URLFramePage.obj MemStream.obj URLTEXT.obj\
+                  URLTextClipboard.obj URLTextImageProgress.obj\
+                  URLTextImages.obj URLTextLinks.obj URLTextPrint.obj\
+                  URLTextScript.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\

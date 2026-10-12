@@ -1,0 +1,753 @@
+/*
+ * Frame script contexts, event handlers and script timer ownership.
+ * Timer records and helpers stay with their callers; parser callbacks and
+ * document.write parsing remain in FRFETCH.goc.
+ * URLFRAME.goc owns the class and registers these external methods.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <initfile.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+@include "htmlview.goh"
+#include "javascr.h"
+
+/* Keep the original code resource and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg URLFRAME_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLFRAME_TEXT")
+#endif
+
+@extern object HTMLVApp;  /* Expanded status-update macros. */
+@extern object HTMLSettingsBoolGroup;
+extern Boolean UserAbortCheck(void);
+extern void UserAbortEnd(void);
+@ifdef JAVASCRIPT_SUPPORT
+extern jseVariable globalObject;
+@endif
+
+/* The legacy Borland FRAME_JS_TEXT switch below has no Watcom equivalent. */
+@ifdef JAVASCRIPT_SUPPORT
+/***************************************************************************
+ *              JS-related methods of URL Frame Class
+ ***************************************************************************/
+
+#pragma codeseg FRAME_JS_TEXT
+/* String constants would still go into the original codeseg... */
+#pragma option -dc-
+
+@extern method URLFrameClass, MSG_URL_FRAME_CAN_WINDOW_OPEN
+{
+    return (pself->UFI_canWindowOpen);
+}
+
+@extern chunk MsgScriptStatusError;
+@ifndef JS_ERROR_DIALOG
+extern MemHandle jsErrorString;
+@endif
+
+void SetJSError(optr frame, Boolean state)
+{
+    optr doc = @call frame::MSG_URL_FRAME_GET_DOCUMENT_OBJ();
+
+    /* always update status bar (even if using dialog error) */
+    MemLock(OptrToHandle(@MsgScriptStatusError));
+    @CallStatusUpdate(state ? LMemDeref(@MsgScriptStatusError) : _TEXT(""),
+                        HTML_STATUS_TYPE_JAVASCRIPT_ERROR);
+    MemUnlock(OptrToHandle(@MsgScriptStatusError));
+@ifndef JS_ERROR_DIALOG
+    /* clear error string */
+    if (!state && jsErrorString) {
+        MemFree(jsErrorString);
+        jsErrorString = 0;
+    }
+@endif
+
+    if (doc) {
+        @call doc::MSG_URL_DOCUMENT_SET_JS_ERROR(state);
+    }
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_SET_JS_ERROR
+{
+    SetJSError(oself, TRUE);
+}
+
+Boolean GetJSError(optr frame)
+{
+    Boolean ret = FALSE;
+
+    optr doc = @call frame::MSG_URL_FRAME_GET_DOCUMENT_OBJ();
+
+    if (doc) {
+        ret = @call doc::MSG_URL_DOCUMENT_GET_JS_ERROR();
+    }
+    return ret;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_CREATE_SCRIPT_CONTEXT
+{
+    /* Back up over dummy levels, if any */
+    if(pself->UFI_frameState & FS_DUMMY)
+    {
+        optr parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+        @call parent::MSG_URL_FRAME_CREATE_SCRIPT_CONTEXT();
+        return;
+    }
+
+    /* notify document, the keeper for the haveJS flag */
+    @call (pself->UFI_document)::MSG_URL_DOCUMENT_SET_JS();
+
+    /* Don't initialize global script context twice */
+    if(!jsecontext)
+        InitBrowserJS();
+
+    /* Don't initialize window-specific context twice */
+    if(!pself->UFI_hasScriptContext)
+    {
+        pself->UFI_hasScriptContext = TRUE;
+        SetJSError(oself, FALSE);  /* clear error */
+        jseEnter();
+        browserInitWindow(jsecontext, (struct BrowserWindow *)oself);
+#ifdef EXTRA_GC
+        /* collect garbage from initialization */
+        jseGarbageCollect(jsecontext, JSE_GARBAGE_COLLECT);
+#endif
+        jseLeave();
+    }
+}
+
+void GetEventName(char *evtname, NameToken code, optr frame)
+{
+@ifdef DO_DBCS
+    sprintfsbcs(evtname, "_event_%04x_%d", OptrToHandle(frame), code);
+@else
+    sprintf(evtname, "_event_%04x_%d", OptrToHandle(frame), code);
+@endif
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_DESTROY_SCRIPT_CONTEXT
+{
+    optr document = NullOptr;
+    ChunkHandle evtArray = pself->UFI_eventsList;
+    MemHandle mem = OptrToHandle(oself);
+    ChunkHandle *evtP;
+    word i, count, size;
+    char evtname[50];
+
+    /* Back up over dummy levels, if any */
+    if(pself->UFI_frameState & FS_DUMMY)
+    {
+        optr parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+        @call parent::MSG_URL_FRAME_DESTROY_SCRIPT_CONTEXT(fullDestroy);
+        return;
+    }
+
+    @call oself::MSG_URL_FRAME_KILL_ALL_TIMEOUTS() ;
+
+    /* Don't destroy uninitialized script context */
+    if(pself->UFI_hasScriptContext)
+    {
+        pself->UFI_hasScriptContext = FALSE;
+        if (jsecontext) {
+            jseEnter();
+
+            /* remove events from global object for this frame */
+            if (evtArray) {
+                count = ChunkArrayGetCountHandles(mem, evtArray);
+                for (i = 0; i < count; i++) {
+                    evtP = ChunkArrayElementToPtrHandles(mem, evtArray, i, &size);
+                    GetEventName(evtname, *evtP, oself);
+                    jseDeleteMember(jsecontext, globalObject, evtname);
+                }
+                LMemFreeHandles(mem, evtArray);
+                pself->UFI_eventsList = NullHandle;
+            }
+
+            browserTermWindow(jsecontext, (struct BrowserWindow *)oself);
+#ifdef EXTRA_GC
+            jseGarbageCollect(jsecontext, JSE_GARBAGE_COLLECT);
+#endif
+            jseLeave();
+        }
+    }
+    /* additionally, if we are top frame, exit a bit more aggressively to
+        clear up memory as much as possible between pages */
+    if (fullDestroy && jsecontext) {
+        document = @call oself::MSG_URL_FRAME_GET_DOCUMENT_OBJ();
+        if (document && (oself == @call document::MSG_URL_DOCUMENT_GET_TOP_FRAME())) {
+            /* clear flag all the way down the tree */
+            @call oself::MSG_URL_FRAME_CLEAR_SCRIPT_CONTEXT_STATE();
+            ExitBrowserJS();
+            jsecontext = NULL;
+        }
+    }
+    SetJSError(oself, FALSE);  /* clear error */
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_INTERPRET_SCRIPT_SOURCE
+{
+    jseVariable ret;
+    optr text;
+    char ref[9];
+
+    /* bail if error */
+    if (GetJSError(oself)) return FALSE;
+
+    /* Back up over dummy levels, if any */
+    if(pself->UFI_frameState & FS_DUMMY)
+    {
+        optr parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+        return @call parent::MSG_URL_FRAME_INTERPRET_SCRIPT_SOURCE(bss);
+    }
+
+    /* Make sure that the scripting context for this window is initialized */
+    @call self::MSG_URL_FRAME_CREATE_SCRIPT_CONTEXT();
+    /* Make sure initialized for all frames (for cross frame scripting) */
+    @call (pself->UFI_document)::MSG_URL_DOCUMENT_ENSURE_SCRIPT_CONTEXT();
+
+    /* Wrap reference into something that looks like a filename... */
+@ifdef DO_DBCS
+    sprintfsbcs(ref,"%08lx",(dword)bss);
+@else
+    sprintf(ref,"%08lx",(dword)bss);
+@endif
+
+    jseEnter();
+    ret = browserInterpret(jsecontext, (struct BrowserWindow *)oself, ref);
+    if(ret)
+        jseDestroyVariable(jsecontext, ret);
+
+    /* after running, clean up memory as much as possible */
+#ifdef EXTRA_GC
+    if (pself->UFI_hasScriptContext)
+        jseGarbageCollect(jsecontext, JSE_GARBAGE_COLLECT);
+#endif
+    jseLeave();
+
+    /* if any layout changes (because of image changes), update */
+    text = @call self::MSG_URL_FRAME_FIND_TEXT_OBJECT();
+    if (text) {
+        /* this is very fast if there are no layout changes */
+        @send, forceQueue text::MSG_HTML_TEXT_CALCULATE_LAYOUT();
+    }
+
+    return TRUE;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_INTERPRET_SCRIPT_TOKEN
+{
+    BrowserScriptSource bss;
+
+    bss.BSS_isToken = TRUE;             // code is in NameToken
+    bss.BSS_data.token.code = tok;      // reference to huge array
+    bss.BSS_offset = offset;            // position to start at
+
+    /* Pass script through interpreter */
+    return @call self::MSG_URL_FRAME_INTERPRET_SCRIPT_SOURCE(&bss);
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_INTERPRET_SCRIPT_HA
+{
+    BrowserScriptSource bss;
+
+    bss.BSS_isToken = FALSE;            // code is in huge array
+    bss.BSS_data.array.vmf = vmf;       // reference to huge array
+    bss.BSS_data.array.vmb = vmb;
+    bss.BSS_offset = offset;            // position to start at
+
+    /* Pass script through interpreter */
+    return @call self::MSG_URL_FRAME_INTERPRET_SCRIPT_SOURCE(&bss);
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_HANDLE_EVENT
+{
+    TCHAR buf[256], *p;
+    char evtname[50];
+    jseVariable thisvar = NULL, func;
+    jseVariable retVar = NULL;
+    Boolean ret = TRUE;
+    jseStack stack;
+    optr text = @call self::MSG_URL_FRAME_FIND_TEXT_OBJECT();
+    optr textPool = @call text::MSG_HTML_TEXT_GET_NAME_POOL();
+    NameToken textPoolCode;
+
+    /* bail if error */
+    if (GetJSError(oself)) return FALSE;
+
+    /* let's get all the way down here before we abort */
+    if (!(@call HTMLSettingsBoolGroup::
+    MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTML_JAVASCRIPT))
+        return TRUE;  /* execute event (i.e. submit) */
+
+    /* Back up over dummy levels, if any */
+    if(pself->UFI_frameState & FS_DUMMY)
+    {
+        optr parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+        return @call parent::MSG_URL_FRAME_HANDLE_EVENT(evt, type, obj, code);
+    }
+
+    /* allow window.open for events where users click */
+    if (evt == HTML_EVENT_CHANGE || evt == HTML_EVENT_SUBMIT ||
+        evt == HTML_EVENT_SELECT || evt == HTML_EVENT_CLICK)
+        pself->UFI_canWindowOpen = TRUE;
+    /* Make sure that the scripting context for this window is initialized */
+    @call self::MSG_URL_FRAME_CREATE_SCRIPT_CONTEXT();
+    /* Make sure initialized for all frames (for cross frame scripting) */
+    @call (pself->UFI_document)::MSG_URL_DOCUMENT_ENSURE_SCRIPT_CONTEXT();
+
+    /* clear previous abort, if any */
+    if (UserAbortCheck()) UserAbortEnd();
+
+    /* clear JS error message (since we allow events to run again after
+        event-generated error), note that this occurs after the initial
+        error check above, so it only clears the error message, not the
+        error state itself */
+    SetJSError(oself, FALSE);
+
+    jseEnter();
+    switch(type)
+    {
+        case HTML_EVENT_OBJECT_BODY:
+        case HTML_EVENT_OBJECT_FRAMESET:
+            thisvar = JSWindowObject(jsecontext, oself);
+            break;
+
+        case HTML_EVENT_OBJECT_IMAGE:
+            thisvar = JSImageObject(jsecontext, oself, obj);
+            break;
+
+        case HTML_EVENT_OBJECT_FORM:
+            thisvar = JSFormObject(jsecontext, text, obj);
+            break;
+
+        case HTML_EVENT_OBJECT_ELEMENT:
+            thisvar = JSElementObject(jsecontext, text, obj);
+            break;
+
+        case HTML_EVENT_OBJECT_LINK:
+        case HTML_EVENT_OBJECT_AREA:
+            thisvar = JSLinkObject(jsecontext, oself, obj);
+            break;
+    }
+
+    /* code is in local name pool, want text object pool's version */
+    textPoolCode = NamePoolTokenizeFromPool(textPool, namePool, code, FALSE);
+    GetEventName(evtname, textPoolCode, oself);
+    NamePoolReleaseToken(textPool, textPoolCode);
+    func = jseGetMemberEx(jsecontext, globalObject, evtname, jseCreateVar);
+
+    /* interpret event if it wasn't already - will be reused in the future */
+    if( func==NULL )
+    {
+        ChunkHandle array;
+        MemHandle mem = OptrToHandle(oself);
+@ifdef DO_DBCS
+        DosCodePage cp = G_codePage;
+        word len, status, backup;
+@endif
+
+        NamePoolCopy(namePool, buf, sizeof(buf), code, &p);
+@ifdef DO_DBCS
+        /* DBCS TBD: convert JS code to SBCS */
+        len = strlen(p)+1;  /* include null */
+        LocalGeosToDos(p, p, &len, DEFCHAR, &cp, 0, &status, &backup);
+@endif
+        func = browserEventHandler(jsecontext, (struct BrowserWindow *)oself,
+            evtname, p, globalObject);
+        NamePoolDestroyIfDynamic(p);
+        /* add to our list of event handlers */
+        pself = ObjDeref(oself, 0);
+        array = pself->UFI_eventsList;
+        if (!array) {
+            array = ChunkArrayCreate(mem, sizeof(ChunkHandle), 0, 0);
+            pself = ObjDeref(oself, 0);
+            pself->UFI_eventsList = array;
+        }
+        /* textPoolCode value still valid here */
+        *((ChunkHandle *)(ChunkArrayAppendHandles(mem, array, sizeof(ChunkHandle)))) = textPoolCode;
+    }
+
+    if( func!=NULL )
+    {
+        stack = jseCreateStack(jsecontext);
+        browserCallFunction(jsecontext,func,stack,&retVar,thisvar,(struct BrowserWindow *)oself);
+        if (retVar)
+        {
+            /* The convention used for interpreting script return values is that
+                every non-boolean return value (including "0" and "undefined") is
+                treated as being "true". Only "false" is "false". It's true. */
+            if( jseGetType(jsecontext, retVar) == jseTypeBoolean )
+                ret = jseGetBoolean(jsecontext, retVar);
+            else
+                ret = TRUE;
+        }
+        jseDestroyStack(jsecontext,stack);
+    }
+
+    if(func)
+        jseDestroyVariable(jsecontext, func);
+    if(thisvar)
+        jseDestroyVariable(jsecontext, thisvar);
+
+#ifdef EXTRA_GC
+    /* after running, clean up memory as much as possible */
+    jseGarbageCollect(jsecontext, JSE_GARBAGE_COLLECT);
+#endif
+
+    jseLeave();
+
+    /* if any layout changes (because of image changes), update */
+    text = @call self::MSG_URL_FRAME_FIND_TEXT_OBJECT();
+    if (text) {
+        /* this is very fast if there are no layout changes */
+        @send, forceQueue text::MSG_HTML_TEXT_CALCULATE_LAYOUT();
+    }
+
+    /* if there are new pending document.writes from event, flush them */
+    @call self::MSG_URL_FRAME_FLUSH_SCRIPT_SRC();
+
+    /* if user-click event, clear any error to allow user to try again,
+        since event-generated error may not affect other events */
+    if (evt == HTML_EVENT_CHANGE || evt == HTML_EVENT_SUBMIT ||
+        evt == HTML_EVENT_SELECT || evt == HTML_EVENT_CLICK) {
+        /* only clear error flag, leave most recent error message active */
+        optr doc = @call oself::MSG_URL_FRAME_GET_DOCUMENT_OBJ();
+        if (doc) {
+            @call doc::MSG_URL_DOCUMENT_SET_JS_ERROR(FALSE);
+        }
+    }
+
+    return ret;
+}
+
+/*-------------------------------------------------------------------------
+ | FrameTimer Code:
+ *------------------------------------------------------------------------*/
+typedef struct {
+    word ST_uniqueID ;
+
+    NameToken ST_codeToRun ;
+    dword ST_interval ;			/* millisecs */
+    Boolean ST_isIntervalTimer ;
+
+    TimerHandle ST_timer ;
+    word ST_timerID ;
+} ScriptTimer ;
+
+typedef struct {
+    ChunkArrayHeader STH_meta ;
+    word STH_lastUnique ;
+} ScriptTimersHeader ;
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_START_TIMER
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    Create a timeout timer and tell when to have it occur
+ |
+ | Inputs:
+ |    dword millisecs             -- When to fire off
+ |    NameToken codeToRun         -- Javascript to execute when fired
+ |    Boolean isIntervalTimer     -- FALSE for one shot, TRUE for multiple
+ |
+ | Outputs:
+ |    FrameTimerID                -- Unique identifier to the timer
+ |                                   returns FRAME_TIMER_ID_BAD if failed.
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/15/00  Created
+ |    LES  10/20/00  Renamed and restructured for interval timers
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_START_TIMER
+{
+    ChunkHandle timeout = FRAME_TIMER_ID_BAD ;
+    ScriptTimer *p_timer ;
+    ScriptTimersHeader *p_header ;
+    MemHandle mem = OptrToHandle(oself) ;
+    ChunkHandle array ;
+
+    if (codeToRun != NAME_POOL_NONE)  {
+        /* If we don't have a list yet, we'll need to create it */
+        if (!pself->UFI_timeoutList)  {
+            array = ChunkArrayCreate(mem, sizeof(ScriptTimer), sizeof(ScriptTimersHeader), 0) ;
+            pself = ObjDeref(oself, 0) ;
+            pself->UFI_timeoutList = array ;
+            p_header = LMemDerefHandles(mem, array) ;
+            p_header->STH_lastUnique = 1 ;
+        }
+
+        /* Create another timer spot */
+        p_timer = ChunkArrayAppendHandles(mem, pself->UFI_timeoutList, 1) ;
+        if (p_timer)  {
+            /* Allocation my invalidate pself */
+            pself = ObjDeref(oself, 0);
+
+            /* Look at the header for the next timer id */
+            p_header = LMemDerefHandles(mem, pself->UFI_timeoutList) ;
+
+            /* Use the id and move to the next one */
+            timeout = p_timer->ST_uniqueID = p_header->STH_lastUnique++ ;
+            if (!p_header->STH_lastUnique)
+                p_header->STH_lastUnique++ ;
+
+            /* Timer triggers what code? when? repeat? */
+            p_timer->ST_codeToRun = codeToRun ;
+            p_timer->ST_interval = millisecs ;
+            p_timer->ST_isIntervalTimer = isIntervalTimer ;
+
+            /* Start the timer */
+            p_timer->ST_timer =
+                TimerStart(
+                    TIMER_EVENT_ONE_SHOT,
+                    oself,
+                    (millisecs*6L)/100L,  /* Convert from 1000 ticks per second to 60 ticks per second */
+                    MSG_URL_FRAME_TIMER_EXPIRED,
+                    0,
+                    &p_timer->ST_timerID) ;
+        }
+    }
+
+    return timeout ;
+}
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_STOP_TIMER
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    Destroy a previously created timeout using the handle returned
+ |    from MSG_URL_FRAME_START_TIMER (a chunk handle to the individual
+ |    TimeoutCode struct).
+ |
+ | Inputs:
+ |    FrameTimerID uniqueTimerID  -- Handle to ScriptTimer struct
+ |                                   in with this frame's ObjBlock
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/15/00  Created
+ |    LES  10/20/00  Renamed and restructured for interval timers
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_STOP_TIMER
+{
+    optr array ;
+    word i, n ;
+    ScriptTimer *p_timer ;
+    word size ;
+
+    /* Find the timer's structure */
+    if (pself->UFI_timeoutList)  {
+        array = ConstructOptr(OptrToHandle(oself), pself->UFI_timeoutList) ;
+        n = ChunkArrayGetCount(array) ;
+        for (i=0; i<n; i++)  {
+            p_timer = ChunkArrayElementToPtr(array, i, &size) ;
+            if (p_timer->ST_uniqueID == uniqueTimerID)  {
+                /* stop the timer (if not already gone) */
+                if (p_timer->ST_timer)  {
+                    TimerStop(
+                            p_timer->ST_timer,
+                            p_timer->ST_timerID) ;
+                    p_timer->ST_timer = NullHandle ;
+                }
+
+                /* Release associated code */
+                if (p_timer->ST_codeToRun)  {
+                    NamePoolReleaseToken(namePool, p_timer->ST_codeToRun) ;
+                    p_timer->ST_codeToRun = NULL ;
+                }
+
+                /* Destroy this timer */
+                ChunkArrayDelete(array, p_timer) ;
+                break ;
+            }
+        }
+    }
+}
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_TIMER_EXPIRED
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    This method is called when one of the timers on this frame has
+ |    expired.  This routine looks through the current list of timers,
+ |    fires off the associated javascript code, and then destroys
+ |    the timeout or fires out another interval.
+ |
+ | Inputs:
+ |    word timerID                -- Unique ID for this timer
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/15/00  Created
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_TIMER_EXPIRED
+{
+    optr array ;
+    word i, n ;
+    ScriptTimer *p_timer ;
+    word size ;
+
+    /* Find the timer's structure */
+    if (pself->UFI_timeoutList)  {
+        array = ConstructOptr(OptrToHandle(oself), pself->UFI_timeoutList) ;
+        n = ChunkArrayGetCount(array) ;
+        for (i=0; i<n; i++)  {
+            p_timer = ChunkArrayElementToPtr(array, i, &size) ;
+            if (p_timer->ST_timerID == timerID)  {
+                /* Mark the timer as dead */
+                p_timer->ST_timer = NullHandle ;
+
+                /* Execute the script */
+                @call oself::MSG_URL_FRAME_INTERPRET_SCRIPT_TOKEN(p_timer->ST_codeToRun, 0);
+
+                /* Deref again in case something changed in the frame */
+                p_timer = ChunkArrayElementToPtr(array, i, &size) ;
+                if (p_timer->ST_isIntervalTimer)  {
+                    /* Start the timer (again) */
+                    p_timer->ST_timer =
+                        TimerStart(
+                                TIMER_EVENT_ONE_SHOT,
+                                oself,
+                                (p_timer->ST_interval*6L)/100L,  /* Convert from 1000 ticks per second to 60 ticks per second */
+                                MSG_URL_FRAME_TIMER_EXPIRED,
+                                0,
+                                &p_timer->ST_timerID) ;
+                } else {
+                    /* Kill this timer for good */
+                    /* Release associated code */
+                    if (p_timer->ST_codeToRun)  {
+                            NamePoolReleaseToken(namePool, p_timer->ST_codeToRun) ;
+                            p_timer->ST_codeToRun = NULL ;
+                    }
+
+                    /* Destroy this timer */
+                    ChunkArrayDelete(array, p_timer) ;
+                }
+                break ;
+            }
+        }
+    }
+}
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_KILL_ALL_TIMEOUTS
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    Go through all the timeouts in the link list at UFI_timeoutList
+ |    and destroy them.
+ |    Call this method to ensure all memory is also freed by the timers.
+ |
+ |    NOTE:  This method does not recursively call the heirarchy of the
+ |    Frame tree
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/16/00  Created
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_KILL_ALL_TIMEOUTS
+{
+    optr array ;
+    ScriptTimer *p_timer ;
+    word size ;
+    word i, n ;
+
+    /* Keep pulling them off the front until they are all gone */
+    if (pself->UFI_timeoutList)  {
+        array = ConstructOptr(
+            OptrToHandle(oself),
+            pself->UFI_timeoutList) ;
+        n = ChunkArrayGetCount(array) ;
+        for (i=0; i<n; i++)  {
+            p_timer = ChunkArrayElementToPtr(array, 0, &size) ;
+
+            /* stop the timer (if not already gone) */
+            if (p_timer->ST_timer)  {
+                TimerStop(
+                        p_timer->ST_timer,
+                        p_timer->ST_timerID) ;
+                p_timer->ST_timer = NullHandle ;
+            }
+
+            /* Release associated code */
+            if (p_timer->ST_codeToRun)  {
+                NamePoolReleaseToken(namePool, p_timer->ST_codeToRun) ;
+                p_timer->ST_codeToRun = NULL ;
+            }
+
+            /* Destroy this timer */
+            ChunkArrayDelete(array, p_timer) ;
+        }
+
+        /* Destroy the list totally.  This ensures we don't */
+        /* have any leaky blocks if others always call here before */
+        /* freeing the URLFrame object. */
+        LMemFree(array) ;
+        pself->UFI_timeoutList = NullHandle ;
+    }
+}
+
+@endif
+
+@ifdef JAVASCRIPT_SUPPORT
+
+@extern method URLFrameClass, MSG_URL_FRAME_SET_NO_URL
+{
+    pself->UFI_noURL = TRUE;
+}
+
+/*
+ *  Clear frame hasScriptContext flag.
+ */
+@extern method URLFrameClass, MSG_URL_FRAME_CLEAR_SCRIPT_CONTEXT_STATE
+{
+    if(pself->UFI_frameState & FS_ACTIVE)
+    {                                   /* only process active branches */
+        pself->UFI_hasScriptContext = FALSE;
+        @send @frameChildren::MSG_URL_FRAME_CLEAR_SCRIPT_CONTEXT_STATE();
+    }
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_ENSURE_SCRIPT_CONTEXT
+{
+    if(pself->UFI_frameState & FS_ACTIVE)
+    {                                   /* only process active branches */
+        if (pself->UFI_hasScriptContext == FALSE) {
+            @call oself::MSG_URL_FRAME_CREATE_SCRIPT_CONTEXT();
+        }
+        @send @frameChildren::MSG_URL_FRAME_ENSURE_SCRIPT_CONTEXT();
+    }
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_GET_FRAME_LEVEL
+{
+    return (pself->UFI_frameLevel);
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_GET_OPENER
+{
+    return (pself->UFI_opener);
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_SET_OPENER
+{
+    pself->UFI_opener = opener;
+}
+
+@endif

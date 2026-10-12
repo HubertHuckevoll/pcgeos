@@ -1,0 +1,675 @@
+/*
+ * Frame/view tree creation, frameset restoration and history collection.
+ * The frame instances retain their object links, attributes and name tokens.
+ * URLFRAME.goc owns the class and registers these external methods.
+ */
+
+@include <stdapp.goh>
+#include <geoMisc.h>
+#include <initfile.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+@include "htmlview.goh"
+#include "javascr.h"
+
+/* Keep the original code resource and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg URLFRAME_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLFRAME_TEXT")
+#endif
+
+@extern object HTMLVApp;
+@extern object HTMLDocumentGroup;
+@extern object URLText;
+@extern object URLContent;
+@extern object ViewGroupTemplate;
+@extern object ViewTemplate;
+@extern object FrameTemplate;
+@ifdef COMPILE_OPTION_PAGE_SIZE_CONTROL
+@extern object PageSizeControl;
+@endif
+@ifdef POST_DATA_CACHE
+extern MemHandle PostDataCacheFind(NameToken url);
+@endif
+
+/* Only these attributes come from the newly loaded frameset. */
+#define FRF_FLAGS_FROM_CHILD (HTML_FRF_FRAMESET | HTML_FRF_COLS)
+
+@extern method URLFrameClass, MSG_URL_FRAME_CREATE_CHILD
+{
+    MemHandle textBlock, frameBlock, viewBlock;
+    optr textObj, frameObj, viewObj;
+    optr interactionObj, contObj, docObj;
+    MemHandle uiThread;
+
+    /* create text */
+    textBlock = ObjDuplicateResource(OptrToHandle(@URLText), 0, 0);
+    textObj = ConstructOptr(textBlock, OptrToChunk(@URLText));
+    /* create frame */
+    frameBlock = ObjDuplicateResource(OptrToHandle(@FrameTemplate), 0, 0);
+    frameObj = ConstructOptr(frameBlock, OptrToChunk(@FrameTemplate));
+    /* point frame to document object */
+    @call HTMLDocumentGroup::MSG_META_GET_MODEL_EXCL(&docObj);
+    @send frameObj::MSG_URL_FRAME_SET_DOCUMENT_OBJ(docObj);
+    /* hook text object to frame and vice versa */
+    @send frameObj::MSG_URL_FRAME_SET_TEXT_OBJ(textObj);
+    @send textObj::MSG_URL_TEXT_SET_FRAME_OBJ(frameObj);
+    /* Tell HTML Text object about the file to store its data in. */
+@ifdef GLOBAL_INTERNET_BUILD
+    @send textObj::MSG_HTML_TEXT_INIT_STORAGE(textObjFile);
+@else
+    @send textObj::MSG_HTML_TEXT_INIT_STORAGE(cacheFile);
+@endif
+    @send textObj::MSG_VIS_NOTIFY_GEOMETRY_VALID();
+@ifdef COMPILE_OPTION_PAGE_SIZE_CONTROL
+    @send textObj::MSG_HTML_TEXT_SET_PAGE_SIZE_CONTROLLER(@PageSizeControl) ;
+@endif
+    /* attach new frame as child */
+    ObjCompAddChild(oself, frameObj,
+                    CCO_LAST,
+                    0,
+                    word_offsetof(URLFrameInstance, UFI_comp),
+                    word_offsetof(URLFrameInstance, UFI_link));
+    /* create associated view */
+    uiThread = MemGetInfo(OptrToHandle(@HTMLVApp), MGIT_EXEC_THREAD);
+    viewBlock = ObjDuplicateResource(OptrToHandle(@ViewTemplate), 0, uiThread);
+    viewObj = ConstructOptr(viewBlock, OptrToChunk(@ViewTemplate));
+    /* attach to our associated interaction obj */
+    interactionObj = @call oself::MSG_URL_FRAME_GET_INTERACTION_OBJ();
+    @call interactionObj::MSG_GEN_ADD_CHILD(viewObj, CCO_LAST);
+    /* hook view, content, and frame together */
+    contObj = ConstructOptr(OptrToHandle(textObj), OptrToChunk(@URLContent));
+    @call viewObj::MSG_GEN_VIEW_SET_CONTENT(contObj);
+    @call frameObj::MSG_URL_FRAME_SET_INTERACTION_OBJ(viewObj);
+    @call textObj::MSG_HTML_TEXT_SET_VIEW_OBJ(viewObj);
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_CREATE_VIEW_GROUP
+{
+    optr viewObj, textObj, parentObj;
+    word parentPos;
+    MemHandle groupBlock;
+    optr groupObj;
+    MemHandle uiThread;
+
+    textObj = @call self::MSG_URL_FRAME_GET_TEXT_OBJ();
+    /* all done if already a group */
+    if (textObj) {
+        viewObj = @call self::MSG_URL_FRAME_GET_INTERACTION_OBJ();
+        /* unhook content object from view */
+        @call viewObj::MSG_GEN_VIEW_SET_CONTENT(NullOptr);
+        /* detach text object from the page it is showing */
+        @call self::MSG_URL_FRAME_FLIP_PAGE(OCT_NULL, FALSE);
+        /* unhook text object from frame */
+        @call self::MSG_URL_FRAME_SET_TEXT_OBJ(NullOptr);
+        /* free text object block */
+        @send, forceQueue textObj::MSG_URL_TEXT_SELF_DESTRUCT();
+        /* destroy current view */
+        parentObj = @call viewObj::MSG_GEN_FIND_PARENT();
+        parentPos = @call parentObj::MSG_GEN_FIND_CHILD(viewObj);
+        @send, forceQueue viewObj::MSG_GEN_DESTROY_AND_FREE_BLOCK();
+        /* create new one */
+        uiThread = MemGetInfo(OptrToHandle(@HTMLVApp), MGIT_EXEC_THREAD);
+        groupBlock = ObjDuplicateResource(OptrToHandle(@ViewGroupTemplate), 0,
+                        uiThread);
+        groupObj = ConstructOptr(groupBlock, OptrToChunk(@ViewGroupTemplate));
+        /* set as interaction object */
+        @call parentObj::MSG_GEN_ADD_CHILD(groupObj, parentPos);
+        @call groupObj::MSG_GEN_SET_USABLE(VUM_NOW);
+        @call oself::MSG_URL_FRAME_SET_INTERACTION_OBJ(groupObj);
+    }
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_DETACH_VIEW_CONTENT_TREE
+{
+    optr interactionObj;
+
+    interactionObj = @call self::MSG_URL_FRAME_GET_INTERACTION_OBJ();
+    if (interactionObj) {
+        if (@call self::MSG_URL_FRAME_GET_TEXT_OBJ()) {
+            /* has text, interaction object is view */
+            @call interactionObj::MSG_GEN_VIEW_SET_CONTENT(NullOptr);
+        } else {
+            /* has no text, interaction object is interaction */
+            @send @frameChildren::MSG_URL_FRAME_DETACH_VIEW_CONTENT_TREE();
+        }
+    }
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_DESTRUCT_TEXT_TREE
+{
+    optr textObj;
+
+@ifdef JAVASCRIPT_SUPPORT
+    /* get rid of these things */
+    @call self::MSG_URL_FRAME_KILL_ALL_TIMEOUTS();
+@endif
+
+    textObj = @call self::MSG_URL_FRAME_GET_TEXT_OBJ();
+    if (textObj) {
+
+        @call self::MSG_URL_FRAME_FLIP_PAGE(OCT_NULL, FALSE);
+        @call textObj::MSG_URL_TEXT_SELF_DESTRUCT();
+    }
+    @send @frameChildren::MSG_URL_FRAME_DESTRUCT_TEXT_TREE();
+}
+
+/*
+ * Restore a frame set used for storing back/forth, history state.
+ * This basically acts the same as if a document containing the appropriate
+ * frame definitions had just been received by MSG_URL_FRAME_GOT_URL.
+ * One difference is that the top frame's URL, title and base URI are
+ * taken from the saved frame state rather than the (nonexistent)
+ * hypertext transfer item.
+ */
+@extern method URLFrameClass, MSG_URL_FRAME_FETCH_FRAMES
+{
+    HTMLframeRec *frec;
+    word size;
+@ifdef COMPILE_OPTION_LOCAL_PAGES
+    optr document = pself->UFI_document;
+@endif
+
+    HWChecksumCheck() ;
+
+    /*
+     * Update history etc. before dropping old URL
+     */
+    @send self::MSG_URL_FRAME_NOTIFY_FRAME_CHANGE_PRE(dir);
+
+    frec = ChunkArrayElementToPtr(frameSet, 0, &size);
+
+    if(frec->HF_flags & HTML_FRF_FRAMESET)
+        @call self::MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET(
+            frec->HF_url, frec->HF_title, frec->HF_base, frec->HF_target,
+            frec->HF_referrer);
+    @call self::MSG_URL_FRAME_SET_REFRESH(frec->HF_refreshURL, frec->HF_refreshTime) ;
+
+@ifdef COMPILE_OPTION_LOCAL_PAGES
+    /* Notify document that it's no longer corresponding to a local page.
+        We simply assume that any change in a frame set invalidates the
+        correspondence to the local page without checking if we happened
+        to get in line with a new one. */
+
+    if(dir != DIR_RELOAD && dir != DIR_SAVE && dir != DIR_FRAME &&
+    dir != DIR_FRAME_FORCE_RELOAD)
+        @call document::MSG_URL_DOCUMENT_SET_LOCAL_PAGE(NAME_POOL_NONE);
+@endif
+
+    @call self::MSG_URL_FRAME_ESTABLISH_FRAMES(frameSet, 0, dir);
+
+    /*
+     * Update controllers etc.
+     */
+    @call self::MSG_URL_FRAME_NOTIFY_FRAME_CHANGE_POST(dir);
+
+    HWChecksumCheck() ;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_ESTABLISH_FRAMES
+{
+    HTMLframeRec *frec;
+    word curLevel, level, size, children, i, count;
+    optr child;
+@ifdef POST_DATA_CACHE
+        MemHandle cachedPostData;
+@endif
+        /* use our URL as the referer for subframes */
+    NameToken referer = pself->UFI_currentURL;
+
+    HWChecksumCheck() ;
+    @call self::MSG_URL_FRAME_ACTIVATE(FALSE);
+
+    frec = ChunkArrayElementToPtr(frameArray, framePtr, &size);
+
+    curLevel = frec->HF_level;
+
+    /*
+     * Adopt frame attributes. The top node in the frame tree inherits most
+     * attributes from the frame it is loaded it rather than using those
+     * specified for it.
+     */
+    if(framePtr)
+    {
+        @call self::MSG_URL_FRAME_SET_FLAGS_SIZE_NAME(
+            frec->HF_flags, frec->HF_size, frec->HF_name);
+    }
+    else
+    {
+        pself = ObjDeref(oself, 0);
+        pself->UFI_frameFlags &= ~(FRF_FLAGS_FROM_CHILD);
+        pself->UFI_frameFlags |= (frec->HF_flags & FRF_FLAGS_FROM_CHILD);
+    }
+
+    /* store frame level (within this HTML file) */
+@ifdef JAVASCRIPT_SUPPORT
+    pself->UFI_frameLevel = frec->HF_level;
+@endif
+
+    /* Copy over any margin widths (mainly to hold the data so it is passed elsewhere */
+    /* because we'll no longer have access to frec later). */
+    pself->UFI_marginWidth = frec->HF_marginWidth ;
+    pself->UFI_marginHeight = frec->HF_marginHeight ;
+
+    if(frec->HF_flags & HTML_FRF_FRAMESET)
+    {
+        i = 0;                            /* assign first child */
+        children = @call self::MSG_URL_FRAME_COUNT_CHILDREN();
+        if (!children) {
+            @call self::MSG_URL_FRAME_CREATE_VIEW_GROUP();
+        }
+
+        framePtr++;                       /* skip frame set header */
+        level = 999;
+        count = ChunkArrayGetCount(frameArray);
+
+        while(level >= curLevel+1 && framePtr < count)
+        {
+            HWChecksumCheck() ;
+            frec = ChunkArrayElementToPtr(frameArray, framePtr, &size);
+            level = frec->HF_level;
+            if(level == curLevel+1)         /* data for frame at current level? */
+            {
+                child = @call self::MSG_URL_FRAME_FIND_CHILD(i++);
+                if (!child) {
+                    @call self::MSG_URL_FRAME_CREATE_CHILD();
+                    child = @call self::MSG_URL_FRAME_FIND_CHILD(i-1);
+                    children++;
+                }
+                if(child)
+                {
+                    /* set correct referer for child frame, as we'll need it for
+                    fetch */
+                    if(frec->HF_referrer)
+                        NamePoolReleaseToken(namePool, frec->HF_referrer);
+                    frec->HF_referrer = referer;
+                    if(frec->HF_referrer)
+                        NamePoolUseToken(namePool, frec->HF_referrer);
+                    if(frec->HF_flags & HTML_FRF_FRAMESET)
+                        @call child::MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET(
+                        frec->HF_url, frec->HF_title, frec->HF_base, frec->HF_target,
+                        frec->HF_referrer);
+
+                    @call child::MSG_URL_FRAME_SET_REFRESH(frec->HF_refreshURL, frec->HF_refreshTime) ;
+                    @call child::MSG_URL_FRAME_ESTABLISH_FRAMES(frameArray, framePtr, dir);
+                }
+            }
+            framePtr++;                     /* check next entry */
+        }
+
+        /* set expected number of frames */
+        pself->UFI_frameLoadCount = i;
+
+        while(i<children)                 /* deactivate all other children */
+        {
+            HWChecksumCheck() ;
+            child = @call self::MSG_URL_FRAME_FIND_CHILD(i++);
+            @call child::MSG_URL_FRAME_DELETE_ALL(TRUE);
+        }
+    }
+    else                                /* level specifying a URL frame */
+    {
+@ifdef POST_DATA_CACHE
+        cachedPostData = PostDataCacheFind(frec->HF_url);
+        if (dir == DIR_RELOAD || dir == DIR_FRAME_FORCE_RELOAD || dir == DIR_CROSS_FRAME_LOAD)
+            @call self::MSG_URL_FRAME_FETCH_URL(frec->HF_url, DIR_FRAME_FORCE_RELOAD, cachedPostData, frec->HF_referrer);
+        else
+            @call self::MSG_URL_FRAME_FETCH_URL(frec->HF_url, DIR_FRAME, cachedPostData, frec->HF_referrer);
+                                        /* start loading URL into frame */
+@else
+        if (dir == DIR_RELOAD || dir == DIR_FRAME_FORCE_RELOAD || dir == DIR_CROSS_FRAME_LOAD)
+            @call self::MSG_URL_FRAME_FETCH_URL(frec->HF_url, DIR_FRAME_FORCE_RELOAD, 0, frec->HF_referrer);
+        else
+            @call self::MSG_URL_FRAME_FETCH_URL(frec->HF_url, DIR_FRAME, 0, frec->HF_referrer);
+                                        /* start loading URL into frame */
+@endif
+    }
+}
+
+@ifdef COMPILE_OPTION_LOCAL_PAGES
+@extern method URLFrameClass, MSG_URL_FRAME_FETCH_FRAMES_WITH_ITEMS
+{
+    HTMLframeRecWithItem *frec;
+    word size;
+    optr document = pself->UFI_document;
+
+    HWChecksumCheck() ;
+
+@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
+    @SendUpdateProgress(PI_NUM_FRAMES, ChunkArrayGetCount(frameSet));
+@endif
+
+    /*
+     * Update history etc. before dropping old URL
+     */
+    @send self::MSG_URL_FRAME_NOTIFY_FRAME_CHANGE_PRE(dir);
+
+    frec = ChunkArrayElementToPtr(frameSet, 0, &size);
+
+    if(frec->HFRWI_rec.HF_flags & HTML_FRF_FRAMESET)
+        @call self::MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET(
+            frec->HFRWI_rec.HF_url, frec->HFRWI_rec.HF_title,
+            frec->HFRWI_rec.HF_base, frec->HFRWI_rec.HF_target,
+            frec->HFRWI_rec.HF_referrer);
+
+    @call document::MSG_URL_DOCUMENT_SET_LOCAL_PAGE(localPage);
+
+    @call self::MSG_URL_FRAME_ESTABLISH_FRAMES_WITH_ITEMS(frameSet, (word) 0, vmf);
+
+    /*
+     * Update controllers etc.
+     */
+    @call self::MSG_URL_FRAME_NOTIFY_FRAME_CHANGE_POST(dir);
+
+    HWChecksumCheck() ;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_ESTABLISH_FRAMES_WITH_ITEMS
+{
+    HTMLframeRecWithItem *frec;
+    word curLevel, level, size, children, i, count;
+    optr child;
+
+    HWChecksumCheck() ;
+    @call self::MSG_URL_FRAME_ACTIVATE(FALSE);
+
+    frec = ChunkArrayElementToPtr(frameArray, framePtr, &size);
+
+    curLevel = frec->HFRWI_rec.HF_level;
+
+    /*
+     * Adopt frame attributes. The top node in the frame tree inherits most
+     * attributes from the frame it is loaded it rather than using those
+     * specified for it.
+     */
+    if(framePtr != 0)
+    {
+        @call self::MSG_URL_FRAME_SET_FLAGS_SIZE_NAME(
+            frec->HFRWI_rec.HF_flags, frec->HFRWI_rec.HF_size, frec->HFRWI_rec.HF_name);
+    }
+    else
+    {
+        pself = ObjDeref(oself, 0);
+        pself->UFI_frameFlags &= ~(FRF_FLAGS_FROM_CHILD);
+        pself->UFI_frameFlags |= (frec->HFRWI_rec.HF_flags & FRF_FLAGS_FROM_CHILD);
+    }
+
+    /* Restore URL, Title and Base URL to the current frame */
+    @call self::MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET(
+        frec->HFRWI_rec.HF_url, frec->HFRWI_rec.HF_title,
+        frec->HFRWI_rec.HF_base, frec->HFRWI_rec.HF_target,
+        frec->HFRWI_rec.HF_referrer);
+
+    if(frec->HFRWI_rec.HF_flags & HTML_FRF_FRAMESET)
+    {
+        i = 0;                            /* assign first child */
+        children = @call self::MSG_URL_FRAME_COUNT_CHILDREN();
+
+        framePtr++;                       /* skip frame set header */
+        level = 999;
+        count = ChunkArrayGetCount(frameArray);
+
+        while(level >= curLevel+1 && framePtr < count)
+        {
+            HWChecksumCheck() ;
+            frec = ChunkArrayElementToPtr(frameArray, framePtr, &size);
+            level = frec->HFRWI_rec.HF_level;
+            if(level == curLevel+1)         /* data for frame at current level? */
+            {
+                child = @call self::MSG_URL_FRAME_FIND_CHILD(i++);
+                if (!child) {
+                    @call self::MSG_URL_FRAME_CREATE_CHILD();
+                    child = @call self::MSG_URL_FRAME_FIND_CHILD(i-1);
+                    children++;
+                }
+                if(child)
+                    @call child::MSG_URL_FRAME_ESTABLISH_FRAMES_WITH_ITEMS(
+                    frameArray, framePtr, vmf);
+            }
+            framePtr++;                     /* check next entry */
+        }
+
+        while(i<children)                 /* deactivate all other children */
+        {
+            HWChecksumCheck() ;
+            child = @call self::MSG_URL_FRAME_FIND_CHILD(i++);
+            @call child::MSG_URL_FRAME_DELETE_ALL(TRUE);
+        }
+    }
+    else
+    {                                /* level specifying a URL frame */
+
+        @call self::MSG_URL_FRAME_GOT_PAGE_NOFRAME(
+            VMCHAIN_GET_VM_BLOCK(frec->HFRWI_item),
+            NAME_POOL_NONE,
+            GUF_RELOAD, /* GUF_CACHABLE = not defined? */
+            FALSE);
+    }
+}
+@endif
+
+@extern method URLFrameClass, MSG_URL_FRAME_COLLECT_FRAMES
+{
+    HTMLframeRec *frec;
+    word children, i;
+    optr child, text;
+    TCHAR buf[POSITION_ANCHOR_SIZE];
+
+    if((pself->UFI_frameState & (FS_ACTIVE | FS_DUMMY)) == FS_ACTIVE)
+    {
+        frec = ChunkArrayAppend(frameArray, sizeof(HTMLframeRec));
+
+        pself = ObjDeref(oself,0);
+        frec->HF_flags = pself->UFI_frameFlags;
+        frec->HF_size = pself->UFI_size;
+        frec->HF_level = level;
+
+        frec->HF_base = pself->UFI_baseURI;
+        if(frec->HF_base != NAME_POOL_NONE)
+            NamePoolUseToken(namePool, frec->HF_base);
+
+        frec->HF_target = pself->UFI_baseTarget;
+        if(frec->HF_target != NAME_POOL_NONE)
+            NamePoolUseToken(namePool, frec->HF_target);
+
+        frec->HF_name = pself->UFI_windowName;
+        if(frec->HF_name != NAME_POOL_NONE)
+            NamePoolUseToken(namePool, frec->HF_name);
+
+        frec->HF_url = pself->UFI_currentURL;
+        if(frec->HF_url != NAME_POOL_NONE)
+            NamePoolUseToken(namePool, frec->HF_url);
+
+        /* we could have set HF_referrer in ESTABLISH_FRAMES */
+        if(frec->HF_referrer)
+            NamePoolReleaseToken(namePool, frec->HF_referrer);
+        frec->HF_referrer = pself->UFI_referrer;
+        if(frec->HF_referrer != NAME_POOL_NONE)
+            NamePoolUseToken(namePool, frec->HF_referrer);
+
+        /* If there is a text object, also keep track of its scroll position */
+        if(pself->UFI_currentURL && !(pself->UFI_frameFlags & HTML_FRF_FRAMESET))
+        {
+            text = @call self::MSG_URL_FRAME_FIND_TEXT_OBJECT();
+
+            /* Do this by creating an artifical anchor representing the text
+            position in the upper-left corner */
+            @call text::MSG_HTML_TEXT_CREATE_POSITION_ANCHOR(buf);
+            frec->HF_url = NamePoolConcatStr(namePool, frec->HF_url, buf);
+        }
+
+        frec->HF_title = pself->UFI_documentTitle;
+        if(frec->HF_title != NAME_POOL_NONE)
+            NamePoolUseToken(namePool, frec->HF_title);
+
+        /* Copy over the refresh data */
+        frec->HF_refreshTime = pself->UFI_refreshTime ;
+        frec->HF_refreshURL = pself->UFI_refreshURL ;
+        if (frec->HF_refreshURL)
+            NamePoolUseToken(namePool, frec->HF_refreshURL) ;
+
+        children = @call self::MSG_URL_FRAME_COUNT_CHILDREN();
+        for(i=0; i<children; i++)         /* collect child frames */
+        {
+            child = @call self::MSG_URL_FRAME_FIND_CHILD(i);
+            @call child::MSG_URL_FRAME_COLLECT_FRAMES(frameArray, level+1);
+        }
+    }
+}
+
+@ifdef COMPILE_OPTION_LOCAL_PAGES
+@extern method URLFrameClass, MSG_URL_FRAME_COLLECT_FRAMES_WITH_ITEMS
+{
+    HTMLframeRecWithItem *frec;
+    word children, i;
+    optr child, text;
+
+    if((pself->UFI_frameState & (FS_ACTIVE | FS_DUMMY)) == FS_ACTIVE)
+    {
+        frec = ChunkArrayAppend(frameArray, sizeof(HTMLframeRecWithItem));
+
+        pself = ObjDeref(oself,0);
+        frec->HFRWI_rec.HF_flags = pself->UFI_frameFlags;
+        frec->HFRWI_rec.HF_size = pself->UFI_size;
+        frec->HFRWI_rec.HF_level = level;
+
+        /* Copy fields which are stored as name tokens. */
+        frec->HFRWI_rec.HF_base = NamePoolTokenizeFromPool(pool, namePool,
+            pself->UFI_baseURI, FALSE);
+        frec->HFRWI_rec.HF_target = NamePoolTokenizeFromPool(pool, namePool,
+            pself->UFI_baseTarget, FALSE);
+        frec->HFRWI_rec.HF_name = NamePoolTokenizeFromPool(pool, namePool,
+            pself->UFI_windowName, FALSE);
+        frec->HFRWI_rec.HF_url = NamePoolTokenizeFromPool(pool, namePool,
+            pself->UFI_currentURL, FALSE);
+        frec->HFRWI_rec.HF_referrer = NamePoolTokenizeFromPool(pool, namePool,
+            pself->UFI_referrer, FALSE);
+        frec->HFRWI_rec.HF_title = NamePoolTokenizeFromPool(pool, namePool,
+            pself->UFI_documentTitle, FALSE);
+
+        text = @call self::MSG_URL_FRAME_FIND_TEXT_OBJECT();
+                                            /* go down through dummy levels */
+
+        if(text)                          /* serialize text object, if any */
+            frec->HFRWI_item = @call text::MSG_HTML_TEXT_STORE_CONTENTS(vmf, pool);
+        else
+            frec->HFRWI_item = 0;
+
+        children = @call self::MSG_URL_FRAME_COUNT_CHILDREN();
+        for(i=0; i<children; i++)         /* collect child frames */
+        {
+            child = @call self::MSG_URL_FRAME_FIND_CHILD(i);
+            @call child::MSG_URL_FRAME_COLLECT_FRAMES_WITH_ITEMS(frameArray,
+            level+1, vmf, pool);
+        }
+    }
+}
+@endif
+
+@extern method URLFrameClass, MSG_URL_FRAME_GET_SIZE
+{
+    return pself->UFI_size;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_GET_FRAME_FLAGS
+{
+    return pself->UFI_frameFlags;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_SET_FLAGS_SIZE_NAME
+{
+    pself->UFI_frameFlags = flags;
+    pself->UFI_size = size;
+    @call self::MSG_URL_FRAME_SET_NAME(name);
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_SET_NAME
+{
+    if(pself->UFI_windowName != NAME_POOL_NONE)
+    {
+        NamePoolReleaseToken(namePool, pself->UFI_windowName);
+        pself = ObjDeref(oself,0);
+    }
+    pself->UFI_windowName = name;
+    if(name != NAME_POOL_NONE)
+        NamePoolUseToken(namePool, name);
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_FIND_PARENT
+{
+    return ObjLinkFindParent(oself,
+        0,
+        word_offsetof(URLFrameInstance, UFI_link));
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_FIND_CHILD
+{
+    return ObjCompFindChildByNumber(oself, child,
+        0,
+        word_offsetof(URLFrameInstance, UFI_comp),
+        word_offsetof(URLFrameInstance, UFI_link));
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_COUNT_CHILDREN
+{
+    word children;
+
+    children = 0;
+    while(@call self::MSG_URL_FRAME_FIND_CHILD(children))
+        children++;
+
+    return children;
+}
+
+/*
+    Back up through dummy levels until the frame holding the URL information
+    is found. Should eventually become obsolete through elimination of
+    dummy levels.
+ */
+
+@extern method URLFrameClass, MSG_URL_FRAME_FIND_REAL_FRAME
+{
+    optr parent, ret;
+
+    if(!(pself->UFI_frameState & FS_DUMMY))
+        ret = oself;
+    else
+    {
+        parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+        if(parent)
+            ret = @call parent::MSG_URL_FRAME_FIND_REAL_FRAME();
+        else
+            ret = NullOptr;
+    }
+    return ret;
+}
+
+/*
+    Go down the dummy level tree to find our text object. Also an artifact
+    of dummy levels...
+ */
+@extern method URLFrameClass, MSG_URL_FRAME_FIND_TEXT_OBJECT
+{
+    word children,i;
+    optr child, obj;
+    WordFlags state;
+
+    if(pself->UFI_text)                 /* has text object? return it */
+        return pself->UFI_text;
+
+    obj = NullOptr;
+    children = @call self::MSG_URL_FRAME_COUNT_CHILDREN();
+    for(i=0; i<children && !obj; i++)   /* scan child frames */
+    {
+        /* Only query active dummy levels if they know a text object... */
+        child = @call self::MSG_URL_FRAME_FIND_CHILD(i);
+        state = @call child::MSG_URL_FRAME_GET_STATE();
+        if( (state & (FS_ACTIVE | FS_DUMMY)) == (FS_ACTIVE | FS_DUMMY) ||
+        !(state & FS_DUMMY) )
+            obj = @call child::MSG_URL_FRAME_FIND_TEXT_OBJECT();
+    }
+    return obj;
+}
