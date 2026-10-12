@@ -1,0 +1,343 @@
+/*
+ * MIME identification, native text import and unknown-content handling.
+ * NAVIGATE.goc owns the HTMLResource chunks, history, URL utilities and
+ * home-page commands. This file shares its original NAVIGATE_TEXT resource.
+ *
+ * The driver cache is shared with LoadURL.goc's graphic importer. Both
+ * importers select the driver and add a reference under MimeDriverSemaphore,
+ * then release the semaphore before invoking it and remove the reference
+ * afterwards. INIT.goc initializes the associations and semaphore;
+ * ImportG.goc releases the cached driver when an import thread exits;
+ * DeInitNavigation leaves the semaphore alive for that cleanup.
+ * Keep these existing plain C interfaces and compiler string defaults.
+ */
+
+@include <stdapp.goh>
+#include <library.h>
+#include <resource.h>
+#include <Ansi/string.h>
+#include <geoMisc.h>
+@include "htmlview.goh"
+@include <sem.h>
+
+#ifdef __BORLANDC__
+#pragma codeseg NAVIGATE_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("NAVIGATE_TEXT")
+#endif
+
+@extern object HTMLVApp;  /* Expanded progress macros. */
+@extern object DownloadDlg;
+@extern object DownloadFileSel;
+@extern object DownloadNameText;
+
+@extern chunk MsgFileExists;
+@extern chunk MsgCannotSave;
+@extern chunk MsgSavedFile;
+@extern chunk MsgMimeAlias;
+@ifdef COMPILE_OPTION_EARTH_LINK_SUBSCRIBE
+@extern chunk MsgRegistered;
+@endif
+@ifdef DIALOG_ERROR
+extern Boolean G_dialogNotice;
+@endif
+
+/***************************************************************************
+ *      Handling of MIME types / graphics
+ ***************************************************************************/
+
+SemaphoreHandle MimeDriverSemaphore = NullHandle;
+TCHAR lastMimeName[FILE_LONGNAME_BUFFER_SIZE];
+GeodeHandle lastMimeDriver = NullHandle;
+
+void IdentifyMimeType(TCHAR *name, TCHAR *mimeType)
+{
+    TCHAR *p, curExt[4];
+
+    *mimeType = 0;                      /* default: not found anything */
+
+    p = ToolsFindExtension(name);       /* find last dot indicating extension */
+    if(p)                               /* found one */
+    {
+      xstrncpy(curExt,p,4);             /* copy up to three characters */
+      strupr(curExt);                   /* extension should be upper case */
+
+      NameAssocFindAssociation(assocExtType, curExt, mimeType,
+        MIME_MAXBUF*sizeof(TCHAR), TRUE, NULL);       /* find mime type for extension */
+    }
+}
+
+void SuggestMimeExtension(TCHAR *mimeType,TCHAR *ext)
+{
+    *ext = 0;                           /* default: not found anything */
+
+    NameAssocFindAssociation(assocExtType, mimeType, ext, 4*sizeof(TCHAR), FALSE, NULL);
+                                        /* find extension for mime type */
+}
+
+void LoadNewMimeDriver(TCHAR *driver)
+{
+    GeodeLoadError err;
+
+    if(lastMimeDriver)                  /* release old driver */
+      GeodeFreeLibrary(lastMimeDriver);
+
+    xstrncpy(lastMimeName, driver, sizeof(lastMimeName)/sizeof(TCHAR));
+                                        /* remember driver type */
+
+    FileSetCurrentPath(SP_IMPORT_EXPORT_DRIVERS, _TEXT("."));
+    err = -1;                           /* this is not an error code */
+    lastMimeDriver = GeodeUseLibrary(
+        driver,
+        MIME_DRV_PROTOMAJOR,
+        MIME_DRV_PROTOMINOR, &err);     /* load import library */
+
+    /* Check for result of GeodeLoad - checking the contents of err is
+       necessary because at least some versions of Geos will not return
+       NullHandle if GeodeLoad fails. */
+
+    if(err != -1)
+      lastMimeDriver = NullHandle;
+}
+
+optr SaveUnknownFile(TCHAR *file, NameToken url)
+{
+    Boolean      repeatRequest, doSave;
+    FileLongName saveFile;
+    PathName     savePath;
+    DiskHandle   hDisk;
+    FileHandle   hFile;
+    TCHAR         *filename, *ext, *defaultExtension;
+    TCHAR         urlbuf[HTML_STATIC_BUF], *urlp;
+    optr         ret;
+    word         i;
+
+@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
+    /* done loading */
+    @SendUpdateProgress(PI_DONE, 0);
+@endif
+
+    /* Determine where the file name and extension are in the whole thing */
+    defaultExtension = ToolsFindExtension(file);
+
+    NamePoolCopy(namePool, urlbuf, sizeof(urlbuf), url, &urlp);
+
+    /* Find the filename from the end. */
+    for (i=strlen(urlp)-1; i != ((word)-1); i--)
+    {
+      if (urlp[i] == '\\' || urlp[i] == '/')
+        break;
+    }
+    filename = urlp + (i + 1);
+
+    /* Change the filename in the dialog box. */
+    @call DownloadNameText::
+      MSG_VIS_TEXT_REPLACE_ALL_PTR(filename, strlen(filename));
+
+    NamePoolDestroyIfDynamic(urlp);
+
+    do {
+      /* Assume that the user will not want to be asked for a */
+      /* download location and file over and over */
+      repeatRequest = doSave = FALSE ;
+
+      /* Ask where to store this file. */
+      if(UserDoDialog(@DownloadDlg) != IC_OK)
+        break;
+
+      /* get disk handle. */
+      hDisk = @call DownloadFileSel::MSG_GEN_PATH_GET_DISK_HANDLE();
+
+      /* get path name. */
+      @call DownloadFileSel::MSG_GEN_PATH_GET(savePath, PATH_BUFFER_SIZE);
+
+      /* get file name. */
+      @call DownloadNameText::MSG_VIS_TEXT_GET_ALL_PTR(saveFile);
+
+
+      if(*saveFile)                     /* re-ask if no file name entered. */
+      {
+        // add default extension or truncate extension if necessary
+        ext = strchr(saveFile, '.');
+        if(ext)                         /* extension specified? */
+        {
+#ifndef GLOBAL_INTERNET_BUILD  /* allow DOS longnames */
+          if(strlen(ext)>4)             /* yes: truncate oversized extensions */
+            ext[4] = 0;
+#endif
+        }
+        else                            /* no: add default extension, if any */
+        {
+          if(defaultExtension && *defaultExtension &&
+            strlen(saveFile)+strlen(defaultExtension)+2<sizeof(saveFile))
+              strcat(strcat(saveFile, _TEXT(".")), defaultExtension);
+        }
+
+        /* Does the file exist? */
+        FilePushDir();
+        FileSetCurrentPath(hDisk, (TCHAR *) savePath);
+        hFile = FileOpen((TCHAR *) saveFile, FILE_ATTR_NORMAL | FILE_DENY_NONE);
+        if (hFile)
+        {
+          if(UserStandardDialogOptr(0, 0, 0, 0, @MsgFileExists,
+               (CDT_QUESTION << CDBF_DIALOG_TYPE_OFFSET) |
+                 (GIT_AFFIRMATION << CDBF_INTERACTION_TYPE_OFFSET))
+             != IC_YES)
+          {
+            /* User does not want to overwrite */
+            /* Go back to asking the filename name and location */
+            repeatRequest = TRUE ;
+          }
+          else
+            doSave = TRUE;
+
+          /* In all cases, close the opened file. */
+          FileClose(hFile, FALSE) ;
+        }
+        else
+          doSave = TRUE;
+
+        if(doSave)                      /* file should be saved */
+        {
+          if(FileCopy(file, saveFile, 0, 0))
+          {                             /* attempt to move/copy */
+            UserStandardDialogOptr(0, 0, 0, 0, @MsgCannotSave,
+              (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
+                (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+
+            repeatRequest = TRUE;       /* failed: notify user, redo */
+          }
+        }
+
+        FilePopDir();
+      }
+      else
+        repeatRequest = TRUE;           /* no filename specified: repeat */
+    } while (repeatRequest == TRUE) ;
+
+    if(doSave) {
+      ret = ToolsFormatMessage(@MsgSavedFile, saveFile);
+@ifdef DIALOG_ERROR
+      G_dialogNotice = TRUE;
+@endif
+    } else
+      ret = NullOptr;                   /* display nothing, stay on page */
+
+    return ret;
+}
+
+dword ImportTextByNative(NameToken url, TCHAR *mtype, TCHAR *file, TCHAR *driver,
+  VMFileHandle vmf, TextAdditionalData *tad, dword *usedMem)
+{
+    dword ret;
+    void *ImportText;
+    GeodeHandle drv;
+    TCHAR urlbuf[HTML_STATIC_BUF], *p;
+
+    ThreadPSem(MimeDriverSemaphore);    /* permission to load/release drivers */
+
+    if(lastMimeDriver==NullHandle || strcmp(driver, lastMimeName))
+    {                                   /* load mime driver if not loaded */
+      LoadNewMimeDriver(driver);        /* load driver for this mime type */
+
+      if(!lastMimeDriver)               /* still no driver loaded */
+      {
+        ThreadVSem(MimeDriverSemaphore);/* finished with drivers  */
+        /* error loading driver, just do nothing (no message returned) */
+        tad->TAD_type = TAD_TYPE_NOP;
+        return 0;                       /* nothing imported */
+      }
+    }
+
+    drv = lastMimeDriver;               /* handle to driver we just loaded */
+    GeodeAddReference(drv);             /* we're using this driver now... */
+
+    ThreadVSem(MimeDriverSemaphore);    /* finished with drivers  */
+
+    ImportText = ProcGetLibraryEntry(drv, MIME_ENTRY_TEXT);
+                                        /* get entry point in library */
+    LOG(LogPrintfLine(">I");)
+
+    NamePoolCopy(namePool, urlbuf, sizeof(urlbuf), url, &p);
+
+    ret = ((pcfm_MimeDrvText *)ProcCallFixedOrMovable_pascal)
+      (p, mtype, file, vmf, tad, G_allocWatcher, usedMem, ImportText);
+                                        /* call library to handle URL */
+
+    NamePoolDestroyIfDynamic(p);
+
+    LOG(LogPrintfLine("<I");)
+
+    GeodeRemoveReference(drv);          /* we're using this driver now... */
+
+    return ret;                         /* pass back return data */
+}
+
+optr AliasUnknownFile(NameToken url)
+{
+    TCHAR urlbuf[HTML_STATIC_BUF], *urlp;
+    optr ret;
+
+    /* create HTML text to embed image reference */
+    NamePoolCopy(namePool, urlbuf, sizeof(urlbuf), url, &urlp);
+    ret = ToolsFormatMessage(@MsgMimeAlias, urlp);
+    NamePoolDestroyIfDynamic(urlp);
+
+    return ret;
+}
+
+optr HandleUnknownType(TCHAR *file, NameToken url, TCHAR *mimeType,
+  VMFileHandle vmf, VMBlockHandle *item, dword *memUsed)
+{
+    PathName driver;
+    optr htmlMsg;
+    dword ret;
+    TextAdditionalData tad;
+
+@ifdef COMPILE_OPTION_EARTH_LINK_SUBSCRIBE
+    if (strcmpi(mimeType, _TEXT("application/x-brother-1-setup")) == 0)  {
+        /* Make sure the old registration file is gone */
+        FileDelete(_TEXT("F:\\GEOWORKS\\DOCUMENT\\reg.txt")) ;
+
+        /* Copy over the real file */
+        FileCopy(file, _TEXT("F:\\GEOWORKS\\DOCUMENT\\REG.TXT"), 0, 0) ;
+
+        ret = ToolsFormatMessage(@MsgRegistered, NULL);
+        return ret ;
+    }
+@endif
+    if(!NameAssocFindAssociation(assocTypeDriver,
+         mimeType, driver, sizeof(driver), TRUE, NULL))
+    {                                   /* see if any driver handles this */
+      htmlMsg = SaveUnknownFile(file, url);
+    }
+    else
+    {
+      ret = ImportTextByNative(url, mimeType, file, driver, vmf, &tad, memUsed);
+
+      switch(tad.TAD_type)
+      {
+        case TAD_TYPE_NOP:              /* do nothing: return nothing... */
+          htmlMsg = 0;
+          *item = 0;
+          break;
+
+        case TAD_TYPE_HTML_OPTR:        /* HTML message in buffer */
+          htmlMsg = (optr)ret;          /* return optr to buffer */
+          *item = 0;
+          break;
+
+        case TAD_TYPE_ITEM:             /* Transfer item */
+          htmlMsg = 0;
+          *item = (VMBlockHandle)ret;
+          break;
+
+        case TAD_TYPE_REQUEST_IMG:      /* Redirect to IMG tag */
+          htmlMsg = AliasUnknownFile(url);
+          break;
+      }
+    }
+
+    return htmlMsg;
+}

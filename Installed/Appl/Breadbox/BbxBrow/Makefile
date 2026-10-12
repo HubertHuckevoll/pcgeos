@@ -10,7 +10,7 @@ HTMLVIEW        = AWATCHER.goc GLBANIM.goc OpenClos.goc StatText.goc\
                   HTMLVIEW.goc ImportG.goc UIRare.goc
 INIT            = INIT.goc
 NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc BOOKMARK.goc FAVORITE.goc\
-                  NAVCACHE.goc NAVIGATE.goc
+                  NAVCACHE.goc NAVIGATE.goc NavigationMime.goc
 URLDOC          = URLDOC.goc URLDocumentHistory.goc\
                   URLDocumentNavigation.goc URLDocumentLocalPage.goc
 URLDOCCT        = URLDOCCT.goc
@@ -27,12 +27,13 @@ OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
                   UIOften.obj scrapbk.obj LoadURL.obj UIAction.obj\
                   HTMLVIEW.obj ImportG.obj UIRare.obj INIT.obj BOOKCLAS.obj\
                   FAVORCLS.obj BOOKMARK.obj FAVORITE.obj NAVCACHE.obj\
-                  NAVIGATE.obj URLDOC.obj URLDocumentHistory.obj\
-                  URLDocumentNavigation.obj URLDocumentLocalPage.obj\
-                  URLDOCCT.obj URLFETCH.obj URLFrameFetch.obj URLFRAME.obj\
-                  URLFrameTree.obj URLFrameNavigation.obj\
-                  URLFrameScript.obj URLFramePage.obj MemStream.obj\
-                  URLTEXT.obj URLTextClipboard.obj URLTextImageProgress.obj\
+                  NAVIGATE.obj NavigationMime.obj URLDOC.obj\
+                  URLDocumentHistory.obj URLDocumentNavigation.obj\
+                  URLDocumentLocalPage.obj URLDOCCT.obj URLFETCH.obj\
+                  URLFrameFetch.obj URLFRAME.obj URLFrameTree.obj\
+                  URLFrameNavigation.obj URLFrameScript.obj\
+                  URLFramePage.obj MemStream.obj URLTEXT.obj\
+                  URLTextClipboard.obj URLTextImageProgress.obj\
                   URLTextImages.obj URLTextLinks.obj URLTextPrint.obj\
                   URLTextScript.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\

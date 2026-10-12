@@ -43,7 +43,8 @@ XCCOMFLAGS = -zu $(COMPILE_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
 
 # Match compiler defaults to the source pragmas; avoid unused filename segments.
 #if !empty(CCOM:M*wcc*)
-XCCOMFLAGS += $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLTEXT_TEXT|) \
+XCCOMFLAGS += $(.TARGET:T:R:MNavigationMime:S|NavigationMime|-nt=NAVIGATE_TEXT|) \
+             $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLTEXT_TEXT|) \
              $(.TARGET:T:R:MURLTextImages:S|URLTextImages|-nt=URLTEXT_TEXT|) \
              $(.TARGET:T:R:MURLTextImageProgress:S|URLTextImageProgress|-nt=URLTEXT_TEXT|) \
              $(.TARGET:T:R:MURLTextLinks:S|URLTextLinks|-nt=URLTEXT_TEXT|) \
