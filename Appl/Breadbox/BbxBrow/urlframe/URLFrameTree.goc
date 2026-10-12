@@ -15,10 +15,10 @@
 
 /* Keep the original code resource and compiler string defaults. */
 #ifdef __BORLANDC__
-#pragma codeseg URLFRAME_TEXT
+#pragma codeseg URLFrame_TEXT
 #endif
 #ifdef __WATCOMC__
-#pragma code_seg("URLFRAME_TEXT")
+#pragma code_seg("URLFrame_TEXT")
 #endif
 
 @extern object HTMLVApp;

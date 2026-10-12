@@ -15,8 +15,9 @@ URLDOC          = URLDOC.goc URLDocumentHistory.goc\
                   URLDocumentNavigation.goc URLDocumentLocalPage.goc
 URLDOCCT        = URLDOCCT.goc
 URLFETCH        = URLFETCH.goc
-URLFRAME        = URLFRAME.goc URLFrameTree.goc URLFrameNavigation.goc\
-                  URLFrameScript.goc URLFramePage.goc URLFrameFetch.goc
+URLFRAME        = URLFrameTree.goc URLFrameNavigation.goc\
+                  URLFrameScript.goc URLFramePage.goc URLFrameFetch.goc\
+                  URLFrame.goc
 URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
                   URLTextClipboard.goc URLTextImageProgress.goc\
                   URLTextImages.goc URLTextLinks.goc URLTextPrint.goc\
@@ -29,9 +30,9 @@ OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
                   NAVIGATE.obj NavigationMime.obj URLDOC.obj\
                   URLDocumentHistory.obj URLDocumentNavigation.obj\
                   URLDocumentLocalPage.obj URLDOCCT.obj URLFETCH.obj\
-                  URLFRAME.obj URLFrameTree.obj URLFrameNavigation.obj\
+                  URLFrameTree.obj URLFrameNavigation.obj\
                   URLFrameScript.obj URLFramePage.obj URLFrameFetch.obj\
-                  MemStream.obj URLTextClipboard.obj\
+                  URLFrame.obj MemStream.obj URLTextClipboard.obj\
                   URLTextImageProgress.obj URLTextImages.obj\
                   URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
                   URLText.obj
