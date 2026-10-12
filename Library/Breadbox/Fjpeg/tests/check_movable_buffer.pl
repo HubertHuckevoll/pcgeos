@@ -7,7 +7,7 @@ use File::Temp qw(tempdir);
 
 sub function {
     my ($file, $name) = @_;
-    open my $in, '<:raw', "$FindBin::Bin/code/$file" or die $!;
+    open my $in, '<:raw', "$FindBin::Bin/../code/$file" or die $!;
     local $/;
     my $source = <$in>;
     $source =~ /^\w[^\n]*\b\Q$name\E\s*\([^;{]*\)\s*\{/m or die "Missing $name\n";

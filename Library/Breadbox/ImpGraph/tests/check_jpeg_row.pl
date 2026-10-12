@@ -5,7 +5,7 @@ use warnings;
 use FindBin;
 use File::Temp qw(tempdir);
 
-open my $in, '<:raw', "$FindBin::Bin/IMPBMP/impjpeg.goc" or die $!;
+open my $in, '<:raw', "$FindBin::Bin/../IMPBMP/impjpeg.goc" or die $!;
 my $source = do { local $/; <$in> };
 sub part {
     my ($start, $end) = @_;

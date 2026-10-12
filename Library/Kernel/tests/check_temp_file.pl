@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use FindBin;
 
-open my $file, '<:raw', "$FindBin::Bin/fileOpenClose.asm" or die $!;
+open my $file, '<:raw', "$FindBin::Bin/../File/fileOpenClose.asm" or die $!;
 local $/;
 my $source = <$file>;
 $source =~ /FileCreateTempFile\s+proc\s+far(.*?)FileCreateTempFile\s+endp/s
