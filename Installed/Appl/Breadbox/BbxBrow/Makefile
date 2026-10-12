@@ -17,10 +17,10 @@ URLDOCCT        = URLDOCCT.goc
 URLFETCH        = URLFETCH.goc
 URLFRAME        = URLFRAME.goc URLFrameTree.goc URLFrameNavigation.goc\
                   URLFrameScript.goc URLFramePage.goc URLFrameFetch.goc
-URLTEXT         = MemStream.c MemStream.h URLTextInternal.h URLTEXT.goc\
+URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
                   URLTextClipboard.goc URLTextImageProgress.goc\
                   URLTextImages.goc URLTextLinks.goc URLTextPrint.goc\
-                  URLTextScript.goc
+                  URLTextScript.goc URLText.goc
 UI_TO_RDFS      =
 OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
                   UIOften.obj scrapbk.obj LoadURL.obj UIAction.obj\
@@ -31,9 +31,10 @@ OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
                   URLDocumentLocalPage.obj URLDOCCT.obj URLFETCH.obj\
                   URLFRAME.obj URLFrameTree.obj URLFrameNavigation.obj\
                   URLFrameScript.obj URLFramePage.obj URLFrameFetch.obj\
-                  MemStream.obj URLTEXT.obj URLTextClipboard.obj\
+                  MemStream.obj URLTextClipboard.obj\
                   URLTextImageProgress.obj URLTextImages.obj\
-                  URLTextLinks.obj URLTextPrint.obj URLTextScript.obj
+                  URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
+                  URLText.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\

@@ -13,11 +13,11 @@
 
 /* Keep the implementation in the original browser code resource. */
 #ifdef __BORLANDC__
-#pragma codeseg URLTEXT_TEXT
+#pragma codeseg URLText_TEXT
 #pragma option -dc-
 #endif
 #ifdef __WATCOMC__
-#pragma code_seg("URLTEXT_TEXT")
+#pragma code_seg("URLText_TEXT")
 #endif
 
 #if PROGRESS_DISPLAY && defined(USE_MEM_STREAM)
