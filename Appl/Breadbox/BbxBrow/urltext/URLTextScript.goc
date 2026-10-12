@@ -4,7 +4,7 @@
  * Retain the independent JavaScript and AutoBrowse build guards.
  * Script-driven image requests stay with their near helper in Images.
  *
- * URLTEXT.goc owns URLTextClass and registers these external methods.
+ * URLText.goc owns URLTextClass and registers these external methods.
  */
 
 @include <stdapp.goh>

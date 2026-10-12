@@ -5,7 +5,7 @@
  * Keep its near calling convention by keeping every caller in this file.
  * Fetch acknowledgement and native image replacement retain ownership.
  *
- * URLTEXT.goc owns URLTextClass and registers these external methods.
+ * URLText.goc owns URLTextClass and registers these external methods.
  */
 
 @include <stdapp.goh>

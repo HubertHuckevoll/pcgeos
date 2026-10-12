@@ -5,7 +5,7 @@
  * coordinate the busy cursor. Visited-link marking uses the source cache
  * and preserves overridden link colors.
  *
- * URLTEXT.goc owns the class declaration and dispatch table. This file
+ * URLText.goc owns the class declaration and dispatch table. This file
  * implements external methods in the same URLText_TEXT code resource.
  */
 

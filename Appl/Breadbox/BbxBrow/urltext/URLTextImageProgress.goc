@@ -5,7 +5,7 @@
  * MemStream.c implements the existing byte-buffer operations privately.
  * Existing queues, semaphores, callbacks and ownership remain unchanged.
  *
- * URLTEXT.goc owns URLTextClass and registers these external methods.
+ * URLText.goc owns URLTextClass and registers these external methods.
  */
 
 @include <stdapp.goh>

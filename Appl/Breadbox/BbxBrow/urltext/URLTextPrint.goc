@@ -5,7 +5,7 @@
  * the spooler job name and draw page numbers, the title and URL around the
  * printed page. DrawText is the existing width-limited ornament helper.
  *
- * URLTEXT.goc owns the class declaration and dispatch table. Keep these
+ * URLText.goc owns the class declaration and dispatch table. Keep these
  * external methods and their helper in the original URLText_TEXT resource.
  */
 
