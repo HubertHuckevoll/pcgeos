@@ -21,10 +21,10 @@
 @include <sem.h>
 
 #ifdef __BORLANDC__
-#pragma codeseg NAVIGATE_TEXT
+#pragma codeseg Navigation_TEXT
 #endif
 #ifdef __WATCOMC__
-#pragma code_seg("NAVIGATE_TEXT")
+#pragma code_seg("Navigation_TEXT")
 #endif
 
 @extern object HTMLVApp;  /* Expanded progress macros. */

@@ -10,7 +10,7 @@ HTMLVIEW        = AWATCHER.goc GLBANIM.goc OpenClos.goc StatText.goc\
                   HTMLVIEW.goc ImportG.goc UIRare.goc
 INIT            = INIT.goc
 NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc BOOKMARK.goc FAVORITE.goc\
-                  NAVCACHE.goc NAVIGATE.goc NavigationMime.goc
+                  NAVCACHE.goc NavigationMime.goc Navigation.goc
 URLDOC          = URLDOC.goc URLDocumentHistory.goc\
                   URLDocumentNavigation.goc URLDocumentLocalPage.goc
 URLDOCCT        = URLDOCCT.goc
@@ -27,7 +27,7 @@ OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
                   UIOften.obj scrapbk.obj LoadURL.obj UIAction.obj\
                   HTMLVIEW.obj ImportG.obj UIRare.obj INIT.obj BOOKCLAS.obj\
                   FAVORCLS.obj BOOKMARK.obj FAVORITE.obj NAVCACHE.obj\
-                  NAVIGATE.obj NavigationMime.obj URLDOC.obj\
+                  NavigationMime.obj Navigation.obj URLDOC.obj\
                   URLDocumentHistory.obj URLDocumentNavigation.obj\
                   URLDocumentLocalPage.obj URLDOCCT.obj URLFETCH.obj\
                   URLFrameTree.obj URLFrameNavigation.obj\

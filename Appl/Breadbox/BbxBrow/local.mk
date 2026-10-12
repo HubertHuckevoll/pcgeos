@@ -43,18 +43,18 @@ XCCOMFLAGS = -zu $(COMPILE_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
 
 # Match compiler defaults to the source pragmas; avoid unused filename segments.
 #if !empty(CCOM:M*wcc*)
-XCCOMFLAGS += $(.TARGET:T:R:MNavigationMime:S|NavigationMime|-nt=NAVIGATE_TEXT|) \
-             $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLTEXT_TEXT|) \
-             $(.TARGET:T:R:MURLTextImages:S|URLTextImages|-nt=URLTEXT_TEXT|) \
-             $(.TARGET:T:R:MURLTextImageProgress:S|URLTextImageProgress|-nt=URLTEXT_TEXT|) \
-             $(.TARGET:T:R:MURLTextLinks:S|URLTextLinks|-nt=URLTEXT_TEXT|) \
-             $(.TARGET:T:R:MURLTextPrint:S|URLTextPrint|-nt=URLTEXT_TEXT|) \
-             $(.TARGET:T:R:MURLTextScript:S|URLTextScript|-nt=URLTEXT_TEXT|) \
+XCCOMFLAGS += $(.TARGET:T:R:MNavigationMime:S|NavigationMime|-nt=Navigation_TEXT|) \
+             $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLText_TEXT|) \
+             $(.TARGET:T:R:MURLTextImages:S|URLTextImages|-nt=URLText_TEXT|) \
+             $(.TARGET:T:R:MURLTextImageProgress:S|URLTextImageProgress|-nt=URLText_TEXT|) \
+             $(.TARGET:T:R:MURLTextLinks:S|URLTextLinks|-nt=URLText_TEXT|) \
+             $(.TARGET:T:R:MURLTextPrint:S|URLTextPrint|-nt=URLText_TEXT|) \
+             $(.TARGET:T:R:MURLTextScript:S|URLTextScript|-nt=URLText_TEXT|) \
              $(.TARGET:T:R:MURLTextClipboard:S|URLTextClipboard|-nt=URLTEXT2_TEXT|) \
              $(.TARGET:T:R:MURLFrameFetch:S|URLFrameFetch|-nt=FRFETCH_TEXT|) \
-             $(.TARGET:T:R:MURLFrameTree:S|URLFrameTree|-nt=URLFRAME_TEXT|) \
-             $(.TARGET:T:R:MURLFrameNavigation:S|URLFrameNavigation|-nt=URLFRAME_TEXT|) \
-             $(.TARGET:T:R:MURLFrameScript:S|URLFrameScript|-nt=URLFRAME_TEXT|) \
+             $(.TARGET:T:R:MURLFrameTree:S|URLFrameTree|-nt=URLFrame_TEXT|) \
+             $(.TARGET:T:R:MURLFrameNavigation:S|URLFrameNavigation|-nt=URLFrame_TEXT|) \
+             $(.TARGET:T:R:MURLFrameScript:S|URLFrameScript|-nt=URLFrame_TEXT|) \
              $(.TARGET:T:R:MURLFramePage:S|URLFramePage|-nt=FRFETCH3_TEXT|) \
              $(.TARGET:T:R:MURLDocumentHistory:S|URLDocumentHistory|-nt=URLDOC_TEXT|) \
              $(.TARGET:T:R:MURLDocumentNavigation:S|URLDocumentNavigation|-nt=URLDOC_TEXT|) \
