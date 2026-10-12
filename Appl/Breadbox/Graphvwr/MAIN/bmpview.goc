@@ -2175,6 +2175,7 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
   GStateHandle gstate;
   GStateHandle gstring;
   byte *pal;
+  word lastElement;
 
   gstate=GrCreateState(pself->BVWindow);
   GrBeginUpdate(gstate);
@@ -2191,7 +2192,7 @@ PasteCommon(ClipboardItemFlags transferFlags, optr oself, word bvattrs)
 		  GrSaveState(gstate);
 		  GrApplyTranslationDWord(gstate, -(sdword)pself->BVOriginX,
 								 -(sdword)pself->BVOriginY);
-		  GrDrawGString(gstate, gstring, 0, 0, 0, (word *)0);
+		  GrDrawGString(gstate, gstring, 0, 0, 0, &lastElement);
 		  GrRestoreState(gstate);
 		  GrDestroyGString(gstring, 0, GSKT_LEAVE_DATA);
 		}
