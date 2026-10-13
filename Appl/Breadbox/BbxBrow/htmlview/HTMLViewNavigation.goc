@@ -796,3 +796,85 @@ void UpdateTitleAndURL(NameToken title, NameToken url)
     }
 }
 
+
+/* Shared recent-history storage; retain the original code resource. */
+#ifdef __BORLANDC__
+#pragma codeseg Navigation_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("Navigation_TEXT")
+#endif
+
+void HistoryUpdateLRU(optr frameSet, NameToken name)
+{
+    word i;
+
+    NamePoolUseToken(namePool, name);   /* token will still be referenced after
+                                           returning from this routine */
+
+    for(i=0; i<HTML_LRUSIZE; i++)       /* check if name already in list */
+      if( LRUBuffer[i].name==name )
+        break;
+
+    if( i>=HTML_LRUSIZE )               /* not found in list? */
+      i = HTML_LRUSIZE-1;               /* last one must fall */
+
+    if( LRUBuffer[i].frameSet )
+    {                                   /* discard entry to be overwritten */
+      FreeArrayNameTokens(LRUBuffer[i].frameSet, namePool,
+        TOKEN_FIELDS_FRAME_REC);
+      LMemFree(LRUBuffer[i].frameSet);
+      NamePoolReleaseToken(namePool, LRUBuffer[i].name);
+                                        /* free memory of doomed entry */
+    }
+
+    for(; i>0; i--)                     /* shift URLs to make room */
+      LRUBuffer[i] = LRUBuffer[i-1];
+
+    LRUBuffer[0].frameSet = frameSet;
+    LRUBuffer[0].name = name;           /* store new URL at top of list */
+}
+
+word HistoryGetEntryNum(void)
+{
+    word i,n=0;
+
+    for(i=0; i<HTML_LRUSIZE; i++)       /* count used entries */
+      if( LRUBuffer[i].frameSet != NAME_POOL_NONE )
+        n++;
+    return n;                           /* return number of entries */
+}
+
+NameToken HistoryGetEntryName(word item)
+{
+    NamePoolUseToken(namePool, LRUBuffer[item].name);
+    return LRUBuffer[item].name;
+}
+
+optr HistoryGetEntryFrames(word item)
+{
+    return LRUBuffer[item].frameSet;
+}
+
+/* Empty all the history items:  LES 10/28/99 */
+void HistoryClear(void)
+{
+    word i ;
+    MemHandle mem ;
+
+    for (i=0; i<HTML_LRUSIZE; i++)  {
+        if(LRUBuffer[i].frameSet)
+        {                                   /* discard entry to be overwritten */
+          FreeArrayNameTokens(LRUBuffer[i].frameSet, namePool,
+            TOKEN_FIELDS_FRAME_REC);
+          mem = OptrToHandle(LRUBuffer[i].frameSet) ;
+          ObjLockObjBlock(mem) ;
+          LMemFree(LRUBuffer[i].frameSet);
+          NamePoolReleaseToken(namePool, LRUBuffer[i].name);
+          LRUBuffer[i].frameSet = NullHandle ;
+          LRUBuffer[i].name = NAME_POOL_NONE ;
+          MemUnlock(mem) ;
+        }
+    }
+}
+

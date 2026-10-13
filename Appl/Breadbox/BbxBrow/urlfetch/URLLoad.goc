@@ -34,6 +34,7 @@
  **************************************************************************/
 
 @include <stdapp.goh>
+@include <socket.goh>
 #include <library.h>
 #include <resource.h>
 
@@ -79,7 +80,9 @@ extern TCHAR lastURLType[URL_MAX_TYPE];
 extern TCHAR lastMimeName[FILE_LONGNAME_BUFFER_SIZE];
 
 Boolean LoadNewDriver(TCHAR *type) ;
+@ifdef EMAIL_ACCT_CMD
 void HandleEmailAcctCmd(TCHAR *emailCmd) ;
+@endif
 void RedirectURL(NameToken *url, TCHAR **urlP, NameToken *anchor) ;
 word LoadFILEURL(TCHAR *url, TCHAR *tempname, TCHAR *mime, dword *ret) ;
 Boolean CheckNoISP(void) ;

@@ -22,16 +22,6 @@
 
 @include "urlfetch.goh"
 
-@ifdef EMAIL_ACCT_CMD
-@include <mailhub.goh>
-
-typedef struct {
-    GeodeHandle geode;
-    TCHAR acctname[MAIL_NAME_MAX];
-    TCHAR password[MAIL_NAME_MAX];
-} PendingEmailDeleteAcctData;
-@endif
-
 @include <Objects/Text/tCtrlC.goh>
 
 #define LOCAL _near _pascal     /* only used within that module */

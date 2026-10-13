@@ -581,36 +581,3 @@ MemHandle lazarusURL = 0;
     stackSize = INTERFACE_THREAD_DEF_STACK_SIZE + 2000;
     return @callsuper() ;
 }
-
-
-@ifdef EMAIL_ACCT_CMD
-
-/* if we don't get the exit notification before we exit, we'll just dump
-   this on exit */
-extern MemHandle G_pendingEmailDelete;
-extern void EmailAccountError(MailAccountError mae);
-
-@extern method HTMLVProcessClass, MSG_NOTIFY_APP_EXITED
-{
-    PendingEmailDeleteAcctData *deleteData;
-    MailAccountError mae;
-
-    if (G_pendingEmailDelete) {
-        deleteData = MemLock(G_pendingEmailDelete);
-        if (appExited == deleteData->geode) {
-            mae = MailDeleteAccountWithPassword(deleteData->acctname,
-                                                deleteData->password);
-            if (mae != MAE_NO_ERROR) {
-                EmailAccountError(mae);
-            }
-            MemFree(G_pendingEmailDelete);
-            G_pendingEmailDelete = 0;
-            GCNListRemove(ConstructOptr(GeodeGetProcessHandle(), 0),
-                            MANUFACTURER_ID_GEOWORKS, GCNSLT_APPLICATION);
-        } else {
-            MemUnlock(G_pendingEmailDelete);
-        }
-    }
-}
-
-@endif

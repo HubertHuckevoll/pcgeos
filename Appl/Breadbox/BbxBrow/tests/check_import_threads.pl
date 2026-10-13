@@ -6,7 +6,7 @@ use warnings;
 use FindBin;
 use File::Temp qw(tempdir);
 
-open my $source, '<:raw', "$FindBin::Bin/../htmlview/GraphicImport.goc" or die $!;
+open my $source, '<:raw', "$FindBin::Bin/../mime/GraphicImport.goc" or die $!;
 local $/;
 my $code = <$source>;
 

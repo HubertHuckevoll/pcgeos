@@ -78,6 +78,169 @@
 
 @include "Art/toolicon.goh"
 
+@start  HTMLResource, data;
+@ifdef GLOBAL_INTERNET_BUILD
+  @visMoniker Untitled = "WebMagick";
+@else
+  @visMoniker Untitled = "untitled";
+@endif
+
+  @chunk TCHAR MsgNoEdit[] = _TEXT("No text editor has been defined. \1");
+  @chunk TCHAR MsgBadEdit[] = _TEXT("Invalid file name for text editor. \1");
+  @chunk TCHAR MsgEditInfo[] = _TEXT("From the HTML menu, choose Define Editor "
+                              "to specify a program.");
+  @chunk TCHAR MsgBadFile[] = _TEXT("URL could not be opened for editing.");
+
+@ifdef GLOBAL_INTERNET_BUILD
+  @chunk TCHAR MsgLoading[] = _TEXT("Formatting Page.");
+  @chunk TCHAR MsgLoadCache[] = _TEXT("Loading Page (from Cache).");
+  @chunk TCHAR MsgCaching[] = _TEXT("Storing Page to Cache.");
+@else
+  @chunk TCHAR MsgLoading[] = _TEXT("Formatting Document.");
+  @chunk TCHAR MsgLoadCache[] = _TEXT("Loading Document (from Cache).");
+  @chunk TCHAR MsgCaching[] = _TEXT("Storing Document to Cache.");
+@endif
+  @chunk TCHAR MsgLoadImg[] = _TEXT("Loading Image.");
+
+  @chunk TCHAR MsgNoViewer[] = _TEXT(
+    "<! error1.htm>"
+    "<H1>Unknown resource type</H1>"
+    "There is no driver registered for this URL's resource type.");
+  @chunk TCHAR MsgViewerError[] = _TEXT(
+    "<! error2.htm>"
+    "<H1>Error loading URL driver</H1>"
+    "The driver for this resource type could not be loaded.");
+  @chunk TCHAR MsgLoadError[] = _TEXT(
+    "<! error3.htm>"
+    "<H1>Error Loading File</H1>"
+    "The specificied URL could not be loaded. Please check if the "
+    "file is available and located in the correct directory.");
+  @chunk TCHAR MsgAborted[] = _TEXT(
+    "<! error4.htm>"
+    "<H1>Aborted</H1>"
+    "Loading of the specified URL was aborted.");
+  @chunk TCHAR MsgAuthorize[] = _TEXT(
+    "<! error5.htm>"
+    "<H1>Authroization required</H1>"
+    "Please specify the correct username and/or password for the URL by "
+    "including them as <CODE>username:password\x40hostname</CODE>. For example:"
+    "<PRE>  http://myname:secret\x40www.protected.dom/document.htm</PRE>");
+
+  @chunk TCHAR MsgFileExists[] = _TEXT("File exists! Did you wish to overwrite?");
+  @chunk TCHAR MsgCannotSave[] = _TEXT("File could not be saved to destination.");
+@ifdef COMPILE_OPTION_LOCAL_PAGES
+  @chunk TCHAR MsgLocalPageLimit[] = _TEXT(
+    "A maximum of 15 pages can be stored at the same time. Please delete "
+    "an existing page before saving a new one.");
+@endif
+
+  @chunk TCHAR MsgSavedFile[] = _TEXT(
+    "<! error6.htm><! %s>"
+    "<H1>File successfully saved</H1>"
+    "The file has been saved under the name <CODE>%s</CODE> "
+    "to the location you specified.");
+  @chunk TCHAR MsgMimeAlias[] = _TEXT(
+    "<TITLE>Image Viewer</TITLE><IMG SRC=\"%s\">");
+
+  @chunk TCHAR MsgSubdir[] = _TEXT(
+    "<TITLE>%s</TITLE><H1>Directory Listing</H1>"
+    "<UL><LI><A href=\"..\">up</A></UL>");
+@ifdef COMPILE_OPTION_EARTH_LINK_SUBSCRIBE
+  @chunk TCHAR MsgRegistered[] = _TEXT(
+    "<H1>Registration complete</H1>"
+    "Earthlink subscription information has been transferred.  "
+    "Please reset the machine for the changes to be completed.") ;
+@endif
+  @chunk TCHAR MsgBlank[] = _TEXT("");
+@ifdef GLOBAL_INTERNET_BUILD
+  @chunk TCHAR StatusLineLoading[] = _TEXT("Loading page.") ;
+  @chunk TCHAR StatusLineDone[] = _TEXT("Page done.") ;
+@else
+  @chunk TCHAR StatusLineLoading[] = _TEXT("Loading document.") ;
+  @chunk TCHAR StatusLineDone[] = _TEXT("Document done.") ;
+@endif
+/* we should never really see this as it is only returned for inline items */
+  @chunk TCHAR MsgConnectionError[] = _TEXT(
+    "<H1>Check connection</H1>"
+    "Could not establish a connection. "
+    "Check Internet settings and phone line.");
+
+  /*
+   * Definitions for the confirmation dialog for "Reset Browser Memory".
+   */
+  @chunk TCHAR MsgClearCache[] = _TEXT("This will remove all the pages and images "
+                                       "currently stored in the memory cache, "
+                                       "freeing up disk space for new pages and "
+                                       "graphics and for other computer documents.") ;
+  @visMoniker ClearCacheReset = "Empty Cache";
+  @visMoniker ClearCacheDont = "Don't Empty Cache";
+@ifdef COMPILE_OPTION_PARENTAL_CONTROL
+  @chunk TCHAR MsgPCBlocked[] = _TEXT(
+    "<! error18.htm><! %s>"
+    "<H1>KidGuard: Access denied</H1>"
+    "KidGuard does not allow access to <CODE>%s</CODE>. ");
+@endif
+@ifdef CHECK_ISP
+  @chunk TCHAR MsgNoISP[] = _TEXT(
+@if defined(PRODUCT_NDO2000)
+    "<! error19.htm>"
+    "<H1>Could not establish a connection.</H1>"
+    "<PRE>"
+    "Please check Internet settings and hardware. \r"
+    "Make sure your dial-up configuration is correct. \r"
+    "Make sure your phone line or network cable "
+    "is plugged in and working.\r\r"
+         "Open Dial-up & Configure.\r"
+    "- Ensure an ISP is entered using Add New ISP from the ISPs menu.\r"
+    "- A default ISP is not selected. Select the ISP you want as\r the "
+    "default ISP and click \'Set as the default ISP\' check box.\r"
+    "</PRE>");
+@else
+    "<! error19.htm>"
+    "<H1>Check Internet settings</H1>"
+    "<PRE>"
+    "There is a problem with the Internet dial-up configuration.\r"
+    "Open Dial-up & Configure.\r"
+    "- Ensure an ISP is entered using Add New ISP from the ISPs menu.\r"
+    "- A default ISP is not selected. Select the ISP you want as the "
+    "default ISP and click \'Set as the default ISP\' check box."
+    "</PRE>");
+@endif
+@endif
+@ifdef EMAIL_ACCT_CMD
+  @chunk TCHAR EmailAcctErr[] = _TEXT(
+    "There was an error with the email account.  Please write "
+    "down the email account name and password and contact customer "
+    "service.\r\rError code: \1");
+@endif
+@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
+  /* should all be in same resource */
+  @chunk TCHAR DownloadProgressFilenameTemplate[] = _TEXT("Downloading \"%s\"");
+  @chunk TCHAR DownloadProgressPercentageTemplate[] = _TEXT("%d%% of %ldK downloaded");
+  @chunk TCHAR DownloadProgressPercentageDecimalTemplate[] = _TEXT("%d.%d%% of %ldK downloaded");
+  @chunk TCHAR DownloadProgressNoPercentageTemplate[] = _TEXT("%ldK downloaded");
+  @chunk TCHAR DownloadProgressTimePastTemplate[] = _TEXT("%d:%02d:%02d");
+  @chunk TCHAR DownloadProgressTimeLeftTemplate[] = _TEXT("%d:%02d:%02d");
+  @chunk TCHAR DownloadProgressNoTimeLeftTemplate[] = _TEXT("-");
+  @chunk TCHAR DownloadProgressFilenameTemplateUpload[] = _TEXT("Uploading \"%s\"");
+  @chunk TCHAR DownloadProgressPercentageTemplateUpload[] = _TEXT("%d%% of %ldK uploaded");
+  @chunk TCHAR DownloadProgressPercentageDecimalTemplateUpload[] = _TEXT("%d.%d%% of %ldK uploaded");
+  @chunk TCHAR DownloadProgressNoPercentageTemplateUpload[] = _TEXT("%ldK uploaded");
+@endif
+@ifdef JAVASCRIPT_SUPPORT
+  @chunk TCHAR MsgScriptError[] = _TEXT("Script error:\r\r\1");
+@ifdef DO_DBCS
+  @chunk TCHAR MsgScriptStatusError[] = _TEXT("Page done...");  /* ellipsis */
+@else
+  @chunk TCHAR MsgScriptStatusError[] = _TEXT("Page done\311");  /* ellipsis */
+@endif
+  @chunk TCHAR MsgRunawayScript[] = _TEXT("A script on this page is running slowly. Do you want to stop the script?");
+@endif
+@ifdef COMPILE_OPTION_ENABLE_NUMCONN_OPTION
+  @chunk TCHAR MsgChangeRequiresRestart[] = _TEXT("This change will only take affect after restarting the browser.");
+@endif
+@end    HTMLResource;
+
 
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
 Boolean G_pcBypassed = FALSE;
@@ -166,6 +329,7 @@ Boolean G_allowFileDownloadStatus = FALSE;
 @extern method HTMLVProcessClass, MSG_META_DETACH ;
 @extern method HTMLVProcessClass, MSG_PROCESS_CREATE_UI_THREAD ;
 @extern method HTMLVProcessClass, MSG_HMLVP_OPEN_URL ;
+/* PortalEmail.goc completes deferred account deletion. */
 @ifdef EMAIL_ACCT_CMD
 @extern method HTMLVProcessClass, MSG_NOTIFY_APP_EXITED ;
 @endif

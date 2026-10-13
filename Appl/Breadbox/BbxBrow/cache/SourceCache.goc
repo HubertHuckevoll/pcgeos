@@ -1114,3 +1114,19 @@ Boolean SrcCacheExpireURL(NameToken url)
     return res;
 }
 #endif
+
+void RenameCacheFile(TCHAR *tempname, dword id, TCHAR *curExt)
+{
+     PathName curPath;
+     TCHAR tempname2[13];
+
+     strcpy(curPath, tempname);
+                                        /* store temp name used */
+     CreateTempName(id, curExt, tempname);
+                                        /* final name with path */
+     FileDelete(tempname);              /* Delete old file, if any */
+     sprintf(tempname2, _TEXT("%08lx.%s"), id, curExt);
+                                        /* final cache file name w/o path */
+     FileRename(curPath, tempname2);    /* Rename temporary name to final */
+}
+

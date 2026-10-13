@@ -375,9 +375,9 @@ shown in the menu bar
 @define UPDATE_ON_UI_THREAD
 /* status line and progress indicator update on UI thread */
 
-@define EMAIL_ACCT_CMD
-/* handle email account management commands from portal
-   this needs to be enabled for now, otherwise building fails...(meyerk 12/2024)*/
+/* EMAIL_ACCT_CMD enables legacy portal email-account commands.
+ * Disabled by default.
+ */
 
 // @define TV_BW_OPTION
 /* add View menu option for switching to B/W (only with TV) */

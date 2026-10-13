@@ -65,6 +65,7 @@
 
 
 @extern object CurrentURLText ;
+@extern object homePageName;
 @extern object HTMLSettingsBoolGroup ;
 @extern object ignoreNoScript;
 @extern object SimpleURLToolbar ;
@@ -685,4 +686,66 @@ void UpdateParentalControls(Boolean enabled)
 @endif
 
     HWChecksumCheck() ;
+}
+
+/* Shared home-page access; retain the original code resource. */
+#ifdef __BORLANDC__
+#pragma codeseg Navigation_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("Navigation_TEXT")
+#endif
+
+/***************************************************************************
+ *              Home page management
+ ***************************************************************************/
+
+/*
+ *  Get home URL.
+ */
+Boolean NavigateGetHome(MemHandle *buf)
+{
+    MemHandle mh;
+    TCHAR *bufP;
+    Boolean ret = FALSE;
+#ifdef SECURE_INI_URLS
+    TCHAR iniHome[] = SECURE_INI_HOME;
+    word secureFlag = 0;
+#endif
+
+    mh = @call homePageName::MSG_VIS_TEXT_GET_ALL_BLOCK(0);
+    bufP = MemLock(mh);
+    ret = (*bufP != 0);
+    MemUnlock(mh);
+#ifdef SECURE_INI_URLS
+    InitFileReadInteger(HTMLVIEW_CATEGORY, SECURE_INI_KEY, &secureFlag);
+    if (secureFlag != SECURE_INI_FLAG) {
+        if (MemReAlloc(mh, strlen(iniHome)+1, HAF_STANDARD)) {
+            bufP = MemLock(mh);
+            strcpy(bufP, iniHome);
+            MemUnlock(mh);
+            ret = TRUE;
+        } else {
+            ret = FALSE;
+        }
+    }
+#endif
+    if (!ret && mh) {
+        /* clean-up on error */
+        MemFree(mh);
+        mh = 0;
+    }
+    *buf = mh;
+    return ret;
+}
+
+/*
+ *  Set new home URL.
+ */
+void NavigateSetHome(TCHAR *p)
+{
+    @call homePageName::MSG_VIS_TEXT_REPLACE_ALL_PTR(p, 0);
+#ifdef SECURE_INI_URLS
+    InitFileWriteInteger(HTMLVIEW_CATEGORY, SECURE_INI_KEY, SECURE_INI_FLAG);
+#endif
 }

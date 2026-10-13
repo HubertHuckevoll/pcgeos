@@ -48,8 +48,9 @@ library	   idialc
 # Only needed for EMBED_SUPPORT
 library	   wav
 
-# Only needed for EMAIL_ACCT_CMD
+ifdef EMAIL_ACCT_CMD
 library    mailhub
+endif
 
 # For OpenConnection
 library    socket

@@ -1,0 +1,407 @@
+/* URL-driver lifetime, FILE loading, redirects and connection checks.
+ * Fetch scheduling remains in URLFETCH.goc; source files belong to the cache.
+ * Keep the original Navigation_TEXT resource and plain C interfaces.
+ */
+#ifdef __BORLANDC__
+#pragma codeseg Navigation_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("Navigation_TEXT")
+#endif
+
+@include <stdapp.goh>
+@include <socket.goh>
+#include <sockmisc.h>
+#include <library.h>
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <geoMisc.h>
+#include <initfile.h>
+@include "htmlview.goh"
+#include <htmlfstr.h>
+
+@extern object SettingsBoolGroup;
+@extern chunk MsgSubdir;
+void IdentifyMimeType(TCHAR *name, TCHAR *mimeType);
+
+void URLDecode(TCHAR *p)
+{
+    TCHAR *q;
+
+    q = p;
+    while (*p) {
+        if (*p == '%') {
+            int c;
+            p++;
+            if (*p >= '0' && *p <= '9') {
+                c = (*p-'0') * 16;
+            } else if (*p >= 'A' && *p <= 'F') {
+                c = ((*p-'A')+10) * 16;
+            } else if (*p >= 'a' && *p <= 'f') {
+                c = ((*p-'a')+10) * 16;
+            }
+            p++;
+            if (*p >= '0' && *p <= '9') {
+                c += *p-'0';
+            } else if (*p >= 'A' && *p <= 'F') {
+                c += (*p-'A')+10;
+            } else if (*p >= 'a' && *p <= 'f') {
+                c += (*p-'a')+10;
+            }
+            p++;
+            *q++ = (char)c;
+        } else if (*p == '+') {
+            *q++ = ' ';
+            p++;
+        } else {
+            *q++ = *p++;
+        }
+    }
+    *q = C_NULL;
+}
+
+/***************************************************************************
+ *      Loading and resolution of URLs in child threads
+ ***************************************************************************/
+
+TCHAR lastURLType[URL_MAX_TYPE];
+GeodeHandle lastURLDriver = NullHandle;
+TCHAR lastURLDriverName[FILE_LONGNAME_LENGTH+1];
+GeodeHandle httpDrv = NullHandle;
+
+/*
+ * Load HTTP driver to keep cookies alive across URL driver changes
+ */
+void InitURLDrivers()
+{
+    PathName driver;
+    GeodeLoadError err = -1;
+
+    if (NameAssocFindAssociation(assocSchemeDriver,
+                                 _TEXT("HTTP"), driver, sizeof(driver), TRUE, NULL)) {
+        FileSetCurrentPath(URL_DRV_SP, URL_DRV_DIR);
+        httpDrv = GeodeUseLibrary(driver,
+                                  URL_DRV_PROTOMAJOR,
+                                  URL_DRV_PROTOMINOR, &err);
+        if (err != -1) {
+            httpDrv = NullHandle;
+        }
+    }
+}
+
+void DeInitURLDrivers()
+{
+    if (httpDrv) {
+        GeodeFreeLibrary(httpDrv);
+        httpDrv = NullHandle;
+    }
+}
+
+Boolean LoadNewDriver(TCHAR *type)
+{
+    PathName driver;      /* only required temporarily */
+    GeodeLoadError err;
+
+    if(!NameAssocFindAssociation(assocSchemeDriver,
+         type, driver, sizeof(driver), TRUE, NULL))
+    {                                   /* attempt to get driver name */
+      return FALSE;                     /* no drive defined */
+    }
+
+#ifdef DO_DBCS_XXX
+    /* DBCS HACK: limit driver name length */
+    if (strrchr(driver, '\\')) {
+        *(strrchr(driver, '\\')+1+FILE_LONGNAME_LENGTH) = C_NULL;
+    } else {
+        driver[FILE_LONGNAME_LENGTH] = C_NULL;
+    }
+#endif
+
+    strcpy(lastURLType, type);          /* remember URL type */
+
+    if(strcmp(lastURLDriverName, driver) == 0)
+        return TRUE;                    /* driver already loaded */
+    xstrncpy(lastURLDriverName, driver, sizeof(lastURLDriverName)/sizeof(TCHAR));
+
+    if(lastURLDriver) {                   /* release old driver */
+      FlushURLData();
+      GeodeFreeLibrary(lastURLDriver);
+    }
+
+    FileSetCurrentPath(URL_DRV_SP, URL_DRV_DIR);
+    err = -1;                           /* this is not an error code */
+    lastURLDriver = GeodeUseLibrary(
+        driver,
+        URL_DRV_PROTOMAJOR,
+        URL_DRV_PROTOMINOR, &err);      /* load URL driver library */
+
+      /* Check for result of GeodeLoad - checking the contents of err is
+         necessary because at least some versions of Geos will not return
+         NullHandle if GeodeLoad fails. */
+
+    if(err != -1) {
+      lastURLDriver = NullHandle;
+      *lastURLDriverName = C_NULL;
+    }
+
+    return TRUE;                        /* attempted to load driver */
+}
+
+word LoadFILEURL(TCHAR *url, TCHAR *tempname, TCHAR *mime, dword *ret)
+{
+    TCHAR curPathBuf[HTML_STATIC_BUF], *curPath, ext[4];
+    TCHAR *p;
+    word i;
+    FileAttrs fa;
+    word type;
+    Boolean trailingSlash;
+
+                                        /* max size is url */
+    if (!NamePoolInitializeDynamic(curPathBuf, sizeof(curPathBuf), url, &curPath))
+        return URLRequestMakeRet(URL_RET_NO_MEMORY) | URB_RF_NOCACHE;
+    ToolsParseURL(url, NULL, NULL, curPath);
+
+    xstrncpy(tempname, curPath+((*curPath=='/')?1:0), PATH_BUFFER_SIZE/sizeof(TCHAR));
+                                        /* store current filename */
+    NamePoolDestroyIfDynamic(curPath);
+
+    /* convert URL filename back from unencoded format */
+    URLDecode(tempname);
+
+    for(i=0; tempname[i]; i++)          /* normalize slashes */
+      if(tempname[i] == '/')
+        tempname[i] = '\\';
+      else if(tempname[i] == '|')       /* some use this for drive letters */
+        tempname[i] = ':';
+
+    /* remove trailing slash, if any */
+    if(i && tempname[i-1] == '\\')
+    {
+      tempname[i-1] = 0;
+      trailingSlash = TRUE;
+    }
+    else
+      trailingSlash = FALSE;
+
+    if(@call SettingsBoolGroup::
+      MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & HTMLV_TRUNC_NAMES)
+    {                                   /* name truncation enabled */
+      /* truncate extension to 3 characters */
+      p = ToolsFindExtension(tempname); /* identify extension */
+      if(p)                             /* preserve extension, if present */
+        xstrncpy(ext, p, sizeof(ext)/sizeof(TCHAR));
+      else
+        *ext = 0;
+
+      /* truncate filename to 8 characters */
+      p = strrchr(tempname, '\\');      /* find last element */
+      if(p)                             /* go to start of first element */
+        p++;
+      else
+        p = tempname;
+
+      for(i=0; i<8 && p[i] && p[i]!='.'; i++)
+        ;
+
+      p[i] = '.';                       /* truncate name after max. 8 chars */
+      strcpy(p+i+1, ext);               /* add extension */
+    }
+
+    fa = FileGetAttributes(tempname);
+
+    if(0 == ThreadGetError() && (fa & FA_SUBDIR))
+    {
+      if(trailingSlash)
+      {
+        *ret = ToolsFormatMessage(@MsgSubdir, tempname);
+        type = URLRequestMakeRet(URL_RET_MESSAGE);
+                                        /* generated HTML message */
+      }
+      else
+      {
+        strcat(tempname, "\\");         /* append slash and retry */
+        ToolsMakeURL(_TEXT("FILE"), NULL, tempname, url);
+        /* convert URL filename back from unencoded format */
+        URLDecode(tempname);
+        type = URLRequestMakeRet(URL_RET_URL_REDIR);
+                                        /* URL entered by user was modified */
+      }
+    }
+    else
+    {
+      IdentifyMimeType(tempname, mime); /* guess mime type from extension */
+      type = URLRequestMakeRet(URL_RET_FILE) | URB_RF_FILE_REDIR;
+                                        /* not passing back a message */
+    }
+
+    return type;
+}
+
+/*
+ * Redirection: properly redirect name token in *url to new URL specified
+ * in urlP (may be relative).
+ */
+/* urlP must be pointer to dynamic NamePool buffer */
+void RedirectURL(NameToken *url, TCHAR **urlP, NameToken *anchor)
+{
+     TCHAR purl[HTML_STATIC_BUF], *prevURL;
+     NameToken oldURL;
+
+EC_ERROR_IF(!NamePoolIsDynamic(*urlP), -1);
+
+     /* remove any anchor, if any, and return it */
+     /* (can re-use prevURL at this time) */
+     prevURL = strrchr(*urlP, '\x23');
+     if (prevURL) {
+         /* tokenize anchor (skipping delimiter) */
+         if (anchor && *(prevURL+1)) {
+             *anchor = NamePoolTokenize(namePool, prevURL+1, TRUE);
+         }
+         /* remove anchor from URL */
+         *prevURL = C_NULL;
+     }
+
+     NamePoolCopy(namePool, purl, sizeof(purl), *url, &prevURL);
+     /* max possible length is sum of prevURL and *urlP + URL_MAX_TYPE */
+     if (NamePoolResizeDynamic(urlP, (strlen(prevURL)+strlen(*urlP)+URL_MAX_TYPE)*sizeof(TCHAR)))
+         ToolsMakeURLAbsolute(prevURL, *urlP, *urlP);
+     NamePoolDestroyIfDynamic(prevURL); /* now release buffer, if any */
+
+     /* make sure that *url now refers to the ultimate relocation target */
+     oldURL = *url;
+     *url = NamePoolTokenize(namePool, *urlP, TRUE);
+#if PROGRESS_DISPLAY
+     /* match usage/release in LoadURLToFile */
+     NamePoolUseToken(namePool, *url);
+#endif
+     NamePoolReleaseToken(namePool, oldURL);
+}
+
+#ifdef UNSUPPORTED_EXTS
+Boolean UnSupportedExt(TCHAR *urlP)
+{
+    Boolean res = FALSE;
+    TCHAR *ext, *unExts, *unExtsEnd;
+    word extLen;
+
+    /* point at extension */
+    ext = strrchr(urlP, C_PERIOD);
+    if (ext > strrchr(urlP, '/')) {
+        ext++;  /* skip period to extension */
+        extLen = strlen(ext);
+    } else {
+        /* last C_PERIOD, not in final component, no extension */
+        ext = NULL;
+    }
+    /* check if in list of unsupported extensions */
+    if (unSupportedExts) {
+        unExts = MemLock(unSupportedExts);
+        if (unExts) {
+            /* XXX: this doesn't support no-extension as unsupported
+               extension */
+            if (ext && extLen) {
+                unExtsEnd = strchr(unExts, C_NULL);
+                while (unExts && *unExts) {
+                    if ((LocalCmpStringsNoCase(ext, unExts, extLen) == 0) &&
+                        /* terminated by next entry */
+                        ((unExts[extLen] == C_SPACE) ||
+                         /* terminated by end of list */
+                         (unExts + extLen == unExtsEnd))) {
+                        res = TRUE;
+                        break;
+                    }
+                    /* get next unsupported extension */
+                    unExts = strchr(unExts, C_SPACE);
+                    if (unExts) unExts++;  /* skip space, if any */
+                }
+            }
+            MemUnlock(unSupportedExts);
+        }
+    }
+    return res;
+}
+#endif
+
+@ifdef CHECK_ISP
+/* ensure access point is available, instead of using AccessPoint
+   library, we'll go straight to .ini file */
+Boolean CheckNoISP(void)
+{
+    word activeAP;
+    Boolean apError = TRUE;
+    TCHAR apCat[33];
+    word datasize=0;
+
+    if (!InitFileReadStringBuffer("tcpip", "driver",
+				  apCat, sizeof(apCat), &datasize)) {
+
+#ifdef ERROR_CHECK
+	if(strcmp(apCat, "EC Host TCP/IP Driver") == 0) {
+	    return FALSE;
+	}
+else
+	if(strcmp(apCat, "Host TCP/IP Driver") == 0) {
+	    return FALSE;
+	}
+#endif
+    }
+
+    if (!InitFileReadInteger("accpnt", "active1", &activeAP)) {
+        if (activeAP) {
+@ifdef DO_DBCS
+            sprintfsbcs((char *)apCat, "accesspoint%04x", activeAP);
+@else
+            sprintf(apCat, "accesspoint%04x", activeAP);
+@endif
+            if (!InitFileReadStringBuffer(apCat, "phone",
+                                          apCat, sizeof(apCat), &datasize)) {
+                apError = FALSE;
+            }
+        }
+    }
+    return apError;
+}
+
+Boolean CheckConnected(void)
+{
+    struct Caveat {
+        /* Used to force the order of the following two items */
+        SocketAddress sa;
+        TcpAccPntResolvedAddress xa; /* Must follow SocketAddress */
+    };
+    struct Caveat ca;
+    word casize = sizeof(TcpAccPntResolvedAddress);
+    MediumAndUnit mau;
+    TCHAR tcpDomain[] = _TEXT("TCPIP");
+    Boolean notConnected;
+
+    ca.sa.SA_port.SP_port = 80;
+    ca.sa.SA_port.SP_manuf = MANUFACTURER_ID_SOCKET_16BIT_PORT;
+    ca.sa.SA_domainSize = sizeof(tcpDomain)-1*sizeof(TCHAR);
+    ca.sa.SA_domain = tcpDomain;
+    ca.sa.SA_addressSize = sizeof(TcpAccPntResolvedAddress);
+    ca.xa.TAPRA_linkSize = 3;
+    ca.xa.TAPRA_linkType = LT_ID;
+    ca.xa.TAPRA_accPntID = 1;
+    if (SocketGetAddressMedium(&ca.sa, &mau)) {
+        notConnected = TRUE;
+    } else {
+        notConnected = SocketCheckMediumConnection(tcpDomain,
+                                              (byte*)&(ca.xa),
+                                              (int*)&casize,
+                                              &mau);
+    }
+    return(!notConnected) ;
+}
+@endif
+
+void FlushURLData(void)
+{
+    void *FlushURL;
+
+    if (lastURLDriver) {
+        FlushURL = ProcGetLibraryEntry(lastURLDriver, URL_ENTRY_FLUSH);
+        ((pcfm_URLDrvFlush *)ProcCallFixedOrMovable_pascal)(FlushURL);
+    }
+}
+

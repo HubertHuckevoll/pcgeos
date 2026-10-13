@@ -6,17 +6,15 @@
 GEODE           = bbxbrow
 ASMTOOLS        = asmtoolsManager.asm
 HTMLVIEW        = HTMLViewNavigation.goc HTMLViewOptions.goc\
-                  HTMLViewOperation.goc HTMLViewStatus.goc URLLoad.goc\
-                  GraphicImport.goc AutoBrowse.goc Scrapbook.goc\
-                  HTMLView.goc AllocWatcher.goc GlobeAnimation.goc\
-                  StatusText.goc HTMLViewLifecycle.goc
+                  HTMLViewOperation.goc HTMLViewStatus.goc AutoBrowse.goc\
+                  Scrapbook.goc HTMLView.goc AllocWatcher.goc\
+                  GlobeAnimation.goc StatusText.goc HTMLViewLifecycle.goc\
+                  PortalEmail.goc
 INIT            = INIT.goc
-NAVIGATE        = CacheInternal.h NavigationMime.goc Navigation.goc\
-                  SourceCache.goc ObjectCache.goc
 URLDOC          = URLDOC.goc URLDocumentHistory.goc\
                   URLDocumentNavigation.goc URLDocumentLocalPage.goc
 URLDOCCT        = URLDOCCT.goc
-URLFETCH        = URLFETCH.goc
+URLFETCH        = URLFETCH.goc URLSupport.goc URLLoad.goc
 URLFRAME        = URLFrameTree.goc URLFrameNavigation.goc\
                   URLFrameScript.goc URLFramePage.goc URLFrameFetch.goc\
                   URLFrame.goc
@@ -27,33 +25,36 @@ URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
 FAVORITES       = FavoritesDialog.goc FavoritesCreate.goc\
                   FavoritesStore.goc
 BOOKMARKS       = BookmarksDialog.goc BookmarksStore.goc
+CACHE           = CacheInternal.h SourceCache.goc ObjectCache.goc
+MIME            = ContentHandling.goc GraphicImport.goc
 UI_TO_RDFS      =
 OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
-                  HTMLViewOperation.obj HTMLViewStatus.obj URLLoad.obj\
-                  GraphicImport.obj AutoBrowse.obj Scrapbook.obj\
-                  HTMLView.obj AllocWatcher.obj GlobeAnimation.obj\
-                  StatusText.obj HTMLViewLifecycle.obj INIT.obj\
-                  NavigationMime.obj Navigation.obj SourceCache.obj\
-                  ObjectCache.obj URLDOC.obj URLDocumentHistory.obj\
-                  URLDocumentNavigation.obj URLDocumentLocalPage.obj\
-                  URLDOCCT.obj URLFETCH.obj URLFrameTree.obj\
+                  HTMLViewOperation.obj HTMLViewStatus.obj AutoBrowse.obj\
+                  Scrapbook.obj HTMLView.obj AllocWatcher.obj\
+                  GlobeAnimation.obj StatusText.obj HTMLViewLifecycle.obj\
+                  PortalEmail.obj INIT.obj URLDOC.obj\
+                  URLDocumentHistory.obj URLDocumentNavigation.obj\
+                  URLDocumentLocalPage.obj URLDOCCT.obj URLFETCH.obj\
+                  URLSupport.obj URLLoad.obj URLFrameTree.obj\
                   URLFrameNavigation.obj URLFrameScript.obj\
                   URLFramePage.obj URLFrameFetch.obj URLFrame.obj\
                   MemStream.obj URLTextClipboard.obj\
                   URLTextImageProgress.obj URLTextImages.obj\
                   URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
                   URLText.obj FavoritesDialog.obj FavoritesCreate.obj\
-                  FavoritesStore.obj BookmarksDialog.obj BookmarksStore.obj
+                  FavoritesStore.obj BookmarksDialog.obj BookmarksStore.obj\
+                  SourceCache.obj ObjectCache.obj ContentHandling.obj\
+                  GraphicImport.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\
                   options.goh prodbbx.goh urlfetch.goh
 MODULES         = ASMTOOLS
-CMODULES        = htmlview init navigate urldoc urldocct urlfetch urlframe\
-                  urltext favorites bookmarks
-SRCS            = $(ASMTOOLS) $(HTMLVIEW) $(INIT) $(NAVIGATE) $(URLDOC)\
-                  $(URLDOCCT) $(URLFETCH) $(URLFRAME) $(URLTEXT)\
-                  $(FAVORITES) $(BOOKMARKS) $(COMMON)
+CMODULES        = htmlview init urldoc urldocct urlfetch urlframe urltext\
+                  favorites bookmarks cache mime
+SRCS            = $(ASMTOOLS) $(HTMLVIEW) $(INIT) $(URLDOC) $(URLDOCCT)\
+                  $(URLFETCH) $(URLFRAME) $(URLTEXT) $(FAVORITES)\
+                  $(BOOKMARKS) $(CACHE) $(MIME) $(COMMON)
 LOBJS           =
 
 PRODUCTS        = AB DBCS ABDBCS 

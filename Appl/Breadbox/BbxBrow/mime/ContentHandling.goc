@@ -1,15 +1,8 @@
-/*
- * MIME identification, native text import and unknown-content handling.
- * NAVIGATE.goc owns the HTMLResource chunks, history, URL utilities and
- * home-page commands. This file shares its original NAVIGATE_TEXT resource.
- *
- * The driver cache is shared with LoadURL.goc's graphic importer. Both
- * importers select the driver and add a reference under MimeDriverSemaphore,
- * then release the semaphore before invoking it and remove the reference
- * afterwards. INIT.goc initializes the associations and semaphore;
- * ImportG.goc releases the cached driver when an import thread exits;
- * DeInitNavigation leaves the semaphore alive for that cleanup.
- * Keep these existing plain C interfaces and compiler string defaults.
+/* MIME identification, native text import and unknown-content handling.
+ * The shared import-driver cache also serves GraphicImport.goc.
+ * Both importers retain a driver reference before releasing the semaphore;
+ * INIT.goc initializes it and import-worker shutdown releases the driver.
+ * Keep Navigation_TEXT and the existing plain C interfaces.
  */
 
 @include <stdapp.goh>

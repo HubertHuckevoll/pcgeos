@@ -33,7 +33,7 @@ $source .= read_source("$FindBin::Bin/../urltext/$_") for
     qw(URLTextInternal.h URLTextImages.goc URLTextImageProgress.goc);
 my $header = read_source("$root/CInclude/html4par.goh");
 my $class = read_source("$root/Library/Breadbox/Html4Par/htmlclas/htmlclas.goc");
-my $import = read_source("$FindBin::Bin/../htmlview/GraphicImport.goc");
+my $import = read_source("$FindBin::Bin/../mime/GraphicImport.goc");
 $header =~ /(typedef struct \{\s*\/\*\*\* Fields filled in by parser:.*?} HTMLimageData;)/s
     or die "Cannot find image record\n";
 my $image_type = $1;

@@ -1,0 +1,251 @@
+/* Portal account commands received through the GPCemail HTTP header.
+ * MailHub declarations and pending deletion state belong to this feature.
+ * The guarded error chunk remains in HTMLView.goc's shared HTMLResource.
+ */
+@include <stdapp.goh>
+@include "htmlview.goh"
+
+@ifdef EMAIL_ACCT_CMD
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <initfile.h>
+@include <mailhub.goh>
+
+typedef struct {
+    GeodeHandle geode;
+    TCHAR acctname[MAIL_NAME_MAX];
+    TCHAR password[MAIL_NAME_MAX];
+} PendingEmailDeleteAcctData;
+
+@extern chunk EmailAcctErr;
+void URLDecode(TCHAR *p);
+
+#ifdef __BORLANDC__
+#pragma codeseg Navigation_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("Navigation_TEXT")
+#endif
+
+void IsolateArg(TCHAR *p)
+{
+    TCHAR *q = p;
+
+    if (p) {
+        while (*p && *p!= '&') p++;
+        *p = 0;
+    }
+    URLDecode(q);
+}
+
+void EmailChangeAccount(TCHAR *acctname, Boolean notify)
+{
+    /* set default account in .ini file */
+    InitFileWriteString("mail", "defacct", acctname);
+    if (notify) {
+        /* notify email app */
+        MailSendNotification(MDBCT_ACCOUNT_SELECTED, acctname);
+    }
+}
+
+Boolean EmailClearDefault(TCHAR *acctname)
+{
+    char defAcct[MAIL_NAME_MAX];
+    word defSize;
+    Boolean deleteDefault = FALSE;
+
+    /* delete default if it matches */
+    if (!InitFileReadStringBuffer("mail", "defacct", defAcct, MAIL_NAME_MAX,
+                                  &defSize)) {
+        if (strcmp(defAcct, acctname) == 0) {
+            InitFileDeleteEntry("mail", "defacct");
+            deleteDefault = TRUE;
+        }
+    }
+    return deleteDefault;
+}
+
+static MemHandle G_pendingEmailDelete = 0;
+
+MailAccountError EmailDeleteAccountWithPassword(TCHAR *acctname, TCHAR *password)
+{
+    GeodeHandle gpcmail;
+    optr gpcmailAppObj;
+    MailAccountError mae = MAE_NO_ERROR;
+    PendingEmailDeleteAcctData *deleteData;
+    Boolean deleted = FALSE;
+
+    /* if deleting default, clear it and quit email before deleting acct */
+    /* clear default */
+    EmailClearDefault(acctname);
+    /* shutdown email before actual account deletion */
+    gpcmail = GeodeFind("email   ", GEODE_NAME_SIZE, GA_PROCESS|GA_APPLICATION, 0);
+    if (gpcmail) {
+        gpcmailAppObj = GeodeGetAppObject(gpcmail);
+        if (gpcmailAppObj) {
+            /* ignore previous one, if any */
+            if (G_pendingEmailDelete) {
+                MemFree(G_pendingEmailDelete);
+            }
+            G_pendingEmailDelete = MemAlloc(
+                sizeof(PendingEmailDeleteAcctData),
+                HF_DYNAMIC, HAF_STANDARD);
+            if (G_pendingEmailDelete) {
+                deleteData = MemLock(G_pendingEmailDelete);
+                deleteData->geode = gpcmail;
+                strcpy(deleteData->acctname, acctname);
+                strcpy(deleteData->password, password);
+                GCNListAdd(ConstructOptr(GeodeGetProcessHandle(), 0),
+                           MANUFACTURER_ID_GEOWORKS, GCNSLT_APPLICATION);
+                /* no params needed for MSG_META_QUIT to app obj */
+                @send, forceQueue gpcmailAppObj::MSG_META_QUIT();
+                deleted = TRUE;
+            } else {
+                mae = MAE_MEMORY_ERROR;
+            }
+        }
+    }
+    if ((mae == MAE_NO_ERROR) && !deleted) {
+        /* delete acct now */
+        mae = MailDeleteAccountWithPassword(acctname, password);
+    }
+    return mae;
+}
+
+void EmailAccountError(MailAccountError mae)
+{
+    TCHAR errCodeString[5];
+
+    sprintf(errCodeString, _TEXT("%d"), mae);
+    MemLock(OptrToHandle(@EmailAcctErr));
+    /* report error */
+    @call application::MSG_GEN_APPLICATION_DO_STANDARD_DIALOG(
+        0, 0,  /* ack msg, optr */
+        0,  /* help context */
+        0,  /* custom triggers */
+        0, errCodeString,  /* args */
+        LMemDeref(@EmailAcctErr),  /* string */
+        (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
+        (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+    MemUnlock(OptrToHandle(@EmailAcctErr));
+}
+
+/*
+ * passed string can be modified
+ */
+void HandleEmailAcctCmd(TCHAR *emailCmd)
+{
+    TCHAR *args, *name, *pw, *new, *smtp, *pop, *realname;
+    TCHAR acctname[20], *aP, *nP;
+    MailAccountError mae = MAE_NO_ERROR;
+
+    /* find args */
+    args = strchr(emailCmd, '?');
+    if (args) {
+        /* point to args */
+        args++;
+    } else {
+        /* no args, do nothing */
+        return;
+    }
+    name = strstr(args, _TEXT("name="));
+    if (name) {
+        name += 5;
+        /* generate acctname for email app/library */
+        acctname[0] = 0;
+        aP = acctname; nP = name;
+        while (*nP && *nP != '@' && *nP != '&') *aP++ = *nP++; *aP = 0;
+        URLDecode(acctname);
+    }
+    pw = strstr(args, _TEXT("pw="));
+    if (pw) pw += 3;
+    new = strstr(args, _TEXT("new="));
+    if (new) new += 4;
+    smtp = strstr(args, _TEXT("smtp="));
+    if (smtp) smtp += 5;
+    pop = strstr(args, _TEXT("pop="));
+    if (pop) pop += 4;
+    realname = strstr(args, _TEXT("realname="));
+    if (realname) realname += 9;
+    /* parse command */
+    if (strncmp(emailCmd, _TEXT("change?"), 7) == 0) {
+        /* parse arguments: name= & pw= */
+        IsolateArg(pw);
+        if (*acctname && pw && *pw) {
+            mae = MailVerifyAccountPassword(acctname, pw);
+            if (mae == MAE_NO_ERROR) {
+                EmailChangeAccount(acctname, TRUE);
+            }
+        }
+    } else if (strncmp(emailCmd, _TEXT("add?"), 4) == 0) {
+        /* parse arguments: name= & pw= & smtp= & pop= &realname= */
+        IsolateArg(name); IsolateArg(pw); IsolateArg(smtp); IsolateArg(pop); IsolateArg(realname);
+        /* realname is optional */
+        if (name && *name && pw && *pw && smtp && *smtp && pop && *pop && *acctname) {
+            mae = MailAddAccount(acctname, acctname, pw, name,
+                                 realname, smtp, pop,
+                                 MAIL_DEFAULT_APP_OPTIONS|MAO_PORTAL_ACCOUNT);
+            if (mae == MAE_NO_ERROR) {
+                /* portal says: add implies change (MailAddAccout already
+                   sends notification, so we don't need to do it again) */
+                EmailChangeAccount(acctname, FALSE);
+            }
+        }
+    } else if (strncmp(emailCmd, _TEXT("remove?"), 7) == 0) {
+        /* parse arguments: name= & pw= */
+        IsolateArg(pw);
+        if (*acctname && pw && *pw) {
+            /* handle account deletion */
+            mae = EmailDeleteAccountWithPassword(acctname, pw);
+        }
+    } else if (strncmp(emailCmd, _TEXT("changepw?"), 9) == 0) {
+        /* parse arguments: name= & pw= & new= */
+        IsolateArg(pw); IsolateArg(new);
+        if (*acctname && pw && *pw && new && *new) {
+            mae = MailChangeAccountPassword(acctname, pw, new);
+        }
+    } else if (strncmp(emailCmd, _TEXT("changeinfo?"), 11) == 0) {
+        /* parse arguments: name= & pw= & new= & smtp= & pop= & realname= */
+        IsolateArg(pw); IsolateArg(new); IsolateArg(smtp); IsolateArg(pop); IsolateArg(realname);
+        /* only name and pw and one of the others is required */
+        if (*acctname && pw && *pw && ((new && *new) || (smtp && *smtp) || (pop && *pop) || (realname && *realname))) {
+            mae = MailChangeAccountInfo(acctname, pw, new, smtp, pop, realname);
+        }
+    }
+    if (mae != MAE_NO_ERROR) {
+        EmailAccountError(mae);
+    }
+}
+
+
+#ifdef __BORLANDC__
+#pragma codeseg OpenClos_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("OpenClos_TEXT")
+#endif
+
+@extern method HTMLVProcessClass, MSG_NOTIFY_APP_EXITED
+{
+    PendingEmailDeleteAcctData *deleteData;
+    MailAccountError mae;
+
+    if (G_pendingEmailDelete) {
+        deleteData = MemLock(G_pendingEmailDelete);
+        if (appExited == deleteData->geode) {
+            mae = MailDeleteAccountWithPassword(deleteData->acctname,
+                                                deleteData->password);
+            if (mae != MAE_NO_ERROR) {
+                EmailAccountError(mae);
+            }
+            MemFree(G_pendingEmailDelete);
+            G_pendingEmailDelete = 0;
+            GCNListRemove(ConstructOptr(GeodeGetProcessHandle(), 0),
+                            MANUFACTURER_ID_GEOWORKS, GCNSLT_APPLICATION);
+        } else {
+            MemUnlock(G_pendingEmailDelete);
+        }
+    }
+}
+
+@endif
