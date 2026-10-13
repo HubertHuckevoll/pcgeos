@@ -12,9 +12,7 @@ HTMLVIEW        = HTMLViewNavigation.goc HTMLViewOptions.goc\
                   StatusText.goc HTMLViewLifecycle.goc
 INIT            = INIT.goc
 NAVIGATE        = CacheInternal.h NavigationMime.goc Navigation.goc\
-                  BookmarksDialog.goc BookmarksStore.goc FavoritesStore.goc\
-                  FavoritesDialog.goc FavoritesCreate.goc SourceCache.goc\
-                  ObjectCache.goc
+                  SourceCache.goc ObjectCache.goc
 URLDOC          = URLDOC.goc URLDocumentHistory.goc\
                   URLDocumentNavigation.goc URLDocumentLocalPage.goc
 URLDOCCT        = URLDOCCT.goc
@@ -26,16 +24,17 @@ URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
                   URLTextClipboard.goc URLTextImageProgress.goc\
                   URLTextImages.goc URLTextLinks.goc URLTextPrint.goc\
                   URLTextScript.goc URLText.goc
+FAVORITES       = FavoritesDialog.goc FavoritesCreate.goc\
+                  FavoritesStore.goc
+BOOKMARKS       = BookmarksDialog.goc BookmarksStore.goc
 UI_TO_RDFS      =
 OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   HTMLViewOperation.obj HTMLViewStatus.obj URLLoad.obj\
                   GraphicImport.obj AutoBrowse.obj Scrapbook.obj\
                   HTMLView.obj AllocWatcher.obj GlobeAnimation.obj\
                   StatusText.obj HTMLViewLifecycle.obj INIT.obj\
-                  NavigationMime.obj Navigation.obj BookmarksDialog.obj\
-                  BookmarksStore.obj FavoritesStore.obj FavoritesDialog.obj\
-                  FavoritesCreate.obj SourceCache.obj ObjectCache.obj\
-                  URLDOC.obj URLDocumentHistory.obj\
+                  NavigationMime.obj Navigation.obj SourceCache.obj\
+                  ObjectCache.obj URLDOC.obj URLDocumentHistory.obj\
                   URLDocumentNavigation.obj URLDocumentLocalPage.obj\
                   URLDOCCT.obj URLFETCH.obj URLFrameTree.obj\
                   URLFrameNavigation.obj URLFrameScript.obj\
@@ -43,16 +42,18 @@ OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   MemStream.obj URLTextClipboard.obj\
                   URLTextImageProgress.obj URLTextImages.obj\
                   URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
-                  URLText.obj
+                  URLText.obj FavoritesDialog.obj FavoritesCreate.obj\
+                  FavoritesStore.obj BookmarksDialog.obj BookmarksStore.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\
                   options.goh prodbbx.goh urlfetch.goh
 MODULES         = ASMTOOLS
 CMODULES        = htmlview init navigate urldoc urldocct urlfetch urlframe\
-                  urltext
+                  urltext favorites bookmarks
 SRCS            = $(ASMTOOLS) $(HTMLVIEW) $(INIT) $(NAVIGATE) $(URLDOC)\
-                  $(URLDOCCT) $(URLFETCH) $(URLFRAME) $(URLTEXT) $(COMMON)
+                  $(URLDOCCT) $(URLFETCH) $(URLFRAME) $(URLTEXT)\
+                  $(FAVORITES) $(BOOKMARKS) $(COMMON)
 LOBJS           =
 
 PRODUCTS        = AB DBCS ABDBCS 
