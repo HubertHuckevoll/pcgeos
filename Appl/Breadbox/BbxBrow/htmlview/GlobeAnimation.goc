@@ -1,4 +1,17 @@
 /*
+ * Globe animation class, artwork and per-object timer lifecycle.
+ */
+
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg GLBANIM_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("GLBANIM_TEXT")
+#endif
+
+/*
  *                          ==CONFIDENTIAL INFORMATION==
  *
  * COPYRIGHT 1994-99 BREADBOX COMPUTER COMPANY -- ALL RIGHTS RESERVED  --

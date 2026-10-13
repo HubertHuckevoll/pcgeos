@@ -1,4 +1,18 @@
 /*
+ * Priority-ordered status messages and the compact status display.
+ * StatusText instances own their message heaps; FastStatus owns display state.
+ */
+
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg StatText_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("StatText_TEXT")
+#endif
+
+/*
  *                          ==CONFIDENTIAL INFORMATION==
  *
  * COPYRIGHT 1994-99 BREADBOX COMPUTER COMPANY -- ALL RIGHTS RESERVED  --
@@ -11,7 +25,7 @@
  *
 */
 /***************************************************************************
- *  FILE:  STATTEXT.GOC
+ *  FILE:  StatusText.goc
  ***************************************************************************/
 
 /*-------------------------------------------------------------------------
@@ -35,7 +49,7 @@ typedef struct {
  *=========================================================================*/
 
 
-    @classdecl StatusTextClass ;
+@classdecl StatusTextClass ;
 
 
 /*-------------------------------------------------------------------------
@@ -119,7 +133,7 @@ typedef struct {
     StatusTextID current ;
 
     if(pself->STI_messageBlock == NULL)
-      return STATUS_TEXT_ID_BAD;
+        return STATUS_TEXT_ID_BAD;
 
     HWChecksumCheck() ;
     len = 1+strlen(p_message) ;
@@ -128,9 +142,9 @@ typedef struct {
     messageBlock = pself->STI_messageBlock ;
     MemLock(messageBlock) ;
     newItem = LMemAlloc(
-                  pself->STI_messageBlock,
-                  len*sizeof(TCHAR) +
-                  sizeof(StatusTextMessage));
+                    pself->STI_messageBlock,
+                    len*sizeof(TCHAR) +
+                    sizeof(StatusTextMessage));
 
     /* Fill the structure */
     p_newMessage = LMemDerefHandles(messageBlock, newItem) ;
@@ -198,8 +212,8 @@ typedef struct {
     HWChecksumCheck() ;
     MemLock(OptrToHandle(o_message)) ;
     id = @call oself::MSG_STATUS_TEXT_CREATE_MESSAGE(
-              LMemDeref(o_message),
-              priority) ;
+                LMemDeref(o_message),
+                priority) ;
     MemUnlock(OptrToHandle(o_message)) ;
 
     return id ;
@@ -293,8 +307,8 @@ typedef struct {
     HWChecksumCheck() ;
     MemLock(OptrToHandle(o_message)) ;
     didChange = @call oself::MSG_STATUS_TEXT_CHANGE_MESSAGE(
-              textID,
-              LMemDeref(o_message)) ;
+                textID,
+                LMemDeref(o_message)) ;
     MemUnlock(OptrToHandle(o_message)) ;
 
     return didChange ;
@@ -400,7 +414,7 @@ typedef struct {
                 MemLock(block = pself->STI_messageBlock) ;
                 p_msg = LMemDerefHandles(block, pself->STI_currentMessage) ;
                 @call (pself->STI_textLink)::MSG_FAST_STATUS_SET_TEXT(
-                  p_msg->STM_string);
+                    p_msg->STM_string);
                 MemUnlock(block) ;
             } else {
                 @call (pself->STI_textLink)::MSG_FAST_STATUS_SET_TEXT(NULL);
@@ -451,7 +465,7 @@ typedef struct {
  *=========================================================================*/
 
 
-    @classdecl FastStatusClass ;
+@classdecl FastStatusClass ;
 
 
 @method FastStatusClass, MSG_VIS_RECALC_SIZE
@@ -459,14 +473,14 @@ typedef struct {
     word retHeight, retWidth;
 
     if(height & RSA_CHOOSE_OWN_SIZE)
-      retHeight = 10;
+        retHeight = 10;
     else
-      retHeight = height & RSA_SUGGESTED_SIZE;
+        retHeight = height & RSA_SUGGESTED_SIZE;
 
     if(width & RSA_CHOOSE_OWN_SIZE)
-      retWidth = 10;
+        retWidth = 10;
     else
-      retWidth = width & RSA_SUGGESTED_SIZE;
+        retWidth = width & RSA_SUGGESTED_SIZE;
 
     return MAKE_SIZE_DWORD(retWidth, retHeight);
 }
@@ -475,7 +489,7 @@ typedef struct {
 {
     if (pself->FSI_destination && (inputState & BI_DOUBLE_PRESS))
     {
-      @send, forceQueue (pself->FSI_destination)::
+        @send, forceQueue (pself->FSI_destination)::
         {MSG_META_NULL}(pself->FSI_dblClickMsg)();
     }
     @callsuper();
@@ -486,8 +500,8 @@ typedef struct {
     /* Update percentage and redraw if there really was a change */
     if(perct != pself->FSI_perct)
     {
-      pself->FSI_perct = perct;         // store percentage
-      @send self::MSG_VIS_REDRAW_ENTIRE_OBJECT();
+        pself->FSI_perct = perct;         // store percentage
+        @send self::MSG_VIS_REDRAW_ENTIRE_OBJECT();
     }
 }
 
@@ -499,20 +513,20 @@ typedef struct {
     if( (pself->FSI_text && !text) || (!pself->FSI_text && text) || (text &&
         strcmp(text, LMemDerefHandles(OptrToHandle(oself), pself->FSI_text))) )
     {
-      if(pself->FSI_text)               // release old text chunk, if any
+        if(pself->FSI_text)               // release old text chunk, if any
         LMemFreeHandles(OptrToHandle(oself), pself->FSI_text);
 
-      if(text)                          // next text provided?
-      {                                 // yes: store it in new chunk
+        if(text)                          // next text provided?
+        {                                 // yes: store it in new chunk
         ch = LMemAlloc(OptrToHandle(oself), (strlen(text)+1)*sizeof(TCHAR));
         strcpy(LMemDerefHandles(OptrToHandle(oself), ch), text);
         pself = ObjDerefGen(oself);
-      }
-      else
+        }
+        else
         ch = 0;                         // no text
 
-      pself->FSI_text = ch;             // update text chunk
-      @send self::MSG_VIS_REDRAW_ENTIRE_OBJECT();
+        pself->FSI_text = ch;             // update text chunk
+        @send self::MSG_VIS_REDRAW_ENTIRE_OBJECT();
     }
 }
 
@@ -528,25 +542,25 @@ typedef struct {
 
     if(pself->FSI_boxed)
     {
-      b = 1;				// Inset by one pixel (for border)
+        b = 1;				// Inset by one pixel (for border)
 
-      /* draw "lowered" one-pixel border */
-      GrSetLineColor(gstate, CF_INDEX, C_DARK_GREY, 0, 0);
-      GrDrawVLine(gstate, vself->VI_bounds.R_left, vself->VI_bounds.R_top,
-	vself->VI_bounds.R_bottom-1);
-      GrDrawHLine(gstate, vself->VI_bounds.R_left, vself->VI_bounds.R_top,
-	vself->VI_bounds.R_right-1);
+        /* draw "lowered" one-pixel border */
+        GrSetLineColor(gstate, CF_INDEX, C_DARK_GREY, 0, 0);
+        GrDrawVLine(gstate, vself->VI_bounds.R_left, vself->VI_bounds.R_top,
+        vself->VI_bounds.R_bottom-1);
+        GrDrawHLine(gstate, vself->VI_bounds.R_left, vself->VI_bounds.R_top,
+        vself->VI_bounds.R_right-1);
 
-      GrSetLineColor(gstate, CF_INDEX, C_WHITE, 0, 0);
-      GrDrawVLine(gstate, vself->VI_bounds.R_right-1, vself->VI_bounds.R_top,
-	vself->VI_bounds.R_bottom-1);
-      GrDrawHLine(gstate, vself->VI_bounds.R_left, vself->VI_bounds.R_bottom-1,
-	vself->VI_bounds.R_right-1);
+        GrSetLineColor(gstate, CF_INDEX, C_WHITE, 0, 0);
+        GrDrawVLine(gstate, vself->VI_bounds.R_right-1, vself->VI_bounds.R_top,
+        vself->VI_bounds.R_bottom-1);
+        GrDrawHLine(gstate, vself->VI_bounds.R_left, vself->VI_bounds.R_bottom-1,
+        vself->VI_bounds.R_right-1);
     }
 
     /* width of progress bar */
     width = (word) ((vself->VI_bounds.R_right-1 - vself->VI_bounds.R_left - 2*b)
-      * pself->FSI_perct / 100);
+        * pself->FSI_perct / 100);
 
     if(width)                           // Draw progress bar, if any
     {
@@ -568,14 +582,14 @@ typedef struct {
     @call application::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME(&ds);
     GrSetAreaColor(gstate, CF_INDEX, ds.DS_lightColor, 0, 0);
     GrFillRect(gstate, vself->VI_bounds.R_left+b+width, vself->VI_bounds.R_top+b,
-      vself->VI_bounds.R_right-1-b, vself->VI_bounds.R_bottom-1-b);
+        vself->VI_bounds.R_right-1-b, vself->VI_bounds.R_bottom-1-b);
 
     if(pself->FSI_text)                 // Draw text, if any (from top)
     {
-      GrSetClipRect(gstate, PCT_INTERSECTION,
-	vself->VI_bounds.R_left+b, vself->VI_bounds.R_top+b,
-	vself->VI_bounds.R_right-1-b, vself->VI_bounds.R_bottom-1-b);
-      GrDrawText(gstate,
+        GrSetClipRect(gstate, PCT_INTERSECTION,
+        vself->VI_bounds.R_left+b, vself->VI_bounds.R_top+b,
+        vself->VI_bounds.R_right-1-b, vself->VI_bounds.R_bottom-1-b);
+        GrDrawText(gstate,
         vself->VI_bounds.R_left+b, vself->VI_bounds.R_top+b-1,
         LMemDerefHandles(OptrToHandle(oself), pself->FSI_text), 0);
     }
@@ -584,5 +598,5 @@ typedef struct {
 }
 
 /***************************************************************************
- *  END OF FILE:  STATTEXT.GOC
+ *  END OF FILE:  StatusText.goc
  ***************************************************************************/

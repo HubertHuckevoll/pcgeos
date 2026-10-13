@@ -1,0 +1,146 @@
+/*
+ * Clipboard-to-Scrapbook IACP exchange and selection notification.
+ * The title buffer and staged copy/launch/paste protocol stay together;
+ * automatic browsing has its own source while sharing scrapbk_TEXT.
+ */
+
+@include <stdapp.goh>
+@include <Objects/Text/tCtrlC.goh>
+
+#include <initfile.h>
+#include <fileEnum.h>
+#include <sysstats.h>
+#include <sem.h>
+
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+#include <geoMisc.h>
+
+@include "htmlview.goh"
+@ifdef COMPILE_OPTION_BOOKMARKS
+@include "bookmark.goh"
+@endif
+@ifdef COMPILE_OPTION_FAVORITES
+@include "favorite.goh"
+@endif
+@include "urlfetch.goh"
+@include "importg.goh"
+@include "stattext.goh"
+
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg scrapbk_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("scrapbk_TEXT")
+#endif
+
+
+@ifdef COPY_TO_SCRAPBOOK
+/* current page title */
+TCHAR G_curTitle[80];
+@extern object CopyToScrapbookTrigger ;
+@endif
+
+@ifdef COPY_TO_SCRAPBOOK
+
+@extern method HTMLVProcessClass, MSG_HMLVP_COPY_TO_SCRAPBOOK
+{
+    MemHandle alb, fileInfo;
+    FileInfo *fileInfoP;
+    static IACPConnection iacp;
+    GeodeToken scrapBookToken = {{"Scrp"},0};
+    word numServers;
+    EventHandle ev, completion;
+    ClipboardQueryArgs clipInfo;
+    ClipboardItemHeader *cih;
+    MemHandle cihMem;
+
+    switch (func) {
+    case CTS_COPY:
+        iacp = 0;
+        /* do a copy */
+        ev = @record URLTextClass::MSG_META_CLIPBOARD_COPY();
+        @call application::MSG_META_SEND_CLASSED_EVENT(ev, TO_TARGET);
+        @send, forceQueue process::MSG_HMLVP_COPY_TO_SCRAPBOOK(CTS_LAUNCH);
+        break;
+    case CTS_LAUNCH:
+        /* launch scrapbook and paste */
+        alb = IACPCreateDefaultLaunchBlock(MSG_GEN_PROCESS_OPEN_ENGINE);
+        if (alb) {
+            iacp = IACPConnect(&scrapBookToken,
+                                IACPCF_FIRST_ONLY |
+                                IACPSM_NOT_USER_INTERACTIBLE,
+                                alb,
+                                NullOptr,
+                                &numServers);
+            if (iacp) {
+                /* send dummy message to trigger next step */
+                ev = @record MetaClass::MSG_META_DUMMY();
+                completion = @record oself::MSG_HMLVP_COPY_TO_SCRAPBOOK(
+                    CTS_PASTE);
+                (void)IACPSendMessage(iacp, ev, TO_PROCESS,
+                                        completion, IACPS_CLIENT);
+            }
+        }
+        break;
+    case CTS_PASTE:
+        /* stuff page name into clipboard item, if any */
+        ClipboardQueryItem(TIF_NORMAL, &clipInfo);
+        if (clipInfo.CQA_header) {
+            cih = VMLock(ClipboardGetClipboardFile(), clipInfo.CQA_header, &cihMem);
+            strncpy(cih->CIH_name, G_curTitle, CLIPBOARD_ITEM_NAME_LENGTH);
+            cih->CIH_name[CLIPBOARD_ITEM_NAME_LENGTH] = C_NULL;
+            VMDirty(cihMem);
+            VMUnlock(cihMem);
+            ClipboardDoneWithItem(clipInfo.CQA_header);
+        }
+        if (iacp) {
+            fileInfo = MemAlloc(sizeof(FileInfo), HF_DYNAMIC, HAF_NO_ERR);
+            fileInfoP = MemLock(fileInfo);
+            strcpy(fileInfoP->name, _TEXT("Browser Scrapbook"));
+            fileInfoP->diskHandle = SP_DOCUMENT;
+@ifdef PRODUCT_NDO2000
+            fileInfoP->path[0] = NULL;
+@else
+            strcpy(fileInfoP->path, _TEXT("Clip Art"));
+@endif
+            MemUnlock(fileInfo);
+            ev = @record GenProcessClass::MSG_SCRAPBOOK_PASTE_APPEND_TO_FILE(
+                fileInfo);
+            (void)IACPSendMessage(iacp, ev, TO_PROCESS, 0, IACPS_CLIENT);
+            /* all done */
+            IACPShutdown(iacp, NullOptr);
+            iacp = 0;
+        }
+        break;
+    }
+}
+
+@endif
+
+@ifdef COPY_TO_SCRAPBOOK
+
+@extern method HTMLVApplicationClass, MSG_META_NOTIFY_WITH_DATA_BLOCK
+{
+    NotifySelectStateChange *nssc;
+
+    if (notificationType == GWNT_SELECT_STATE_CHANGE &&
+        manufID == MANUFACTURER_ID_GEOWORKS &&
+        data) {
+        nssc = MemLock(data);
+        if (nssc) {
+            if (nssc->NSSC_clipboardableSelection) {
+                @call CopyToScrapbookTrigger::MSG_GEN_SET_ENABLED(VUM_NOW);
+            } else {
+                @call CopyToScrapbookTrigger::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+            }
+            MemUnlock(data);
+        }
+    }
+    @callsuper();
+}
+
+@endif

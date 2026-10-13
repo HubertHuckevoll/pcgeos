@@ -28,12 +28,12 @@ sub goc_to_c {
     return $code;
 }
 my $root = "$FindBin::Bin/../../../..";
-my $source = read_source("$FindBin::Bin/../urltext/URLTEXT.goc");
+my $source = read_source("$FindBin::Bin/../urltext/URLText.goc");
 $source .= read_source("$FindBin::Bin/../urltext/$_") for
     qw(URLTextInternal.h URLTextImages.goc URLTextImageProgress.goc);
 my $header = read_source("$root/CInclude/html4par.goh");
 my $class = read_source("$root/Library/Breadbox/Html4Par/htmlclas/htmlclas.goc");
-my $import = read_source("$FindBin::Bin/../htmlview/ImportG.goc");
+my $import = read_source("$FindBin::Bin/../htmlview/GraphicImport.goc");
 $header =~ /(typedef struct \{\s*\/\*\*\* Fields filled in by parser:.*?} HTMLimageData;)/s
     or die "Cannot find image record\n";
 my $image_type = $1;

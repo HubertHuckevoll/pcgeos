@@ -5,9 +5,11 @@
 #
 GEODE           = bbxbrow
 ASMTOOLS        = asmtoolsManager.asm
-HTMLVIEW        = AWATCHER.goc GLBANIM.goc OpenClos.goc StatText.goc\
-                  UIOften.goc scrapbk.goc LoadURL.goc UIAction.goc\
-                  HTMLVIEW.goc ImportG.goc UIRare.goc
+HTMLVIEW        = HTMLViewNavigation.goc HTMLViewOptions.goc\
+                  HTMLViewOperation.goc HTMLViewStatus.goc URLLoad.goc\
+                  GraphicImport.goc AutoBrowse.goc Scrapbook.goc\
+                  HTMLView.goc AllocWatcher.goc GlobeAnimation.goc\
+                  StatusText.goc HTMLViewLifecycle.goc
 INIT            = INIT.goc
 NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc BOOKMARK.goc FAVORITE.goc\
                   NAVCACHE.goc NavigationMime.goc Navigation.goc
@@ -23,11 +25,13 @@ URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
                   URLTextImages.goc URLTextLinks.goc URLTextPrint.goc\
                   URLTextScript.goc URLText.goc
 UI_TO_RDFS      =
-OBJS            = AWATCHER.obj GLBANIM.obj OpenClos.obj StatText.obj\
-                  UIOften.obj scrapbk.obj LoadURL.obj UIAction.obj\
-                  HTMLVIEW.obj ImportG.obj UIRare.obj INIT.obj BOOKCLAS.obj\
-                  FAVORCLS.obj BOOKMARK.obj FAVORITE.obj NAVCACHE.obj\
-                  NavigationMime.obj Navigation.obj URLDOC.obj\
+OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
+                  HTMLViewOperation.obj HTMLViewStatus.obj URLLoad.obj\
+                  GraphicImport.obj AutoBrowse.obj Scrapbook.obj\
+                  HTMLView.obj AllocWatcher.obj GlobeAnimation.obj\
+                  StatusText.obj HTMLViewLifecycle.obj INIT.obj\
+                  BOOKCLAS.obj FAVORCLS.obj BOOKMARK.obj FAVORITE.obj\
+                  NAVCACHE.obj NavigationMime.obj Navigation.obj URLDOC.obj\
                   URLDocumentHistory.obj URLDocumentNavigation.obj\
                   URLDocumentLocalPage.obj URLDOCCT.obj URLFETCH.obj\
                   URLFrameTree.obj URLFrameNavigation.obj\

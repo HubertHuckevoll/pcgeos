@@ -1,4 +1,11 @@
 /*
+ * Rendering preferences, parental-control UI and view/search controls.
+ * Preference changes route existing document events; the process and
+ * application classes remain owned by HTMLView.goc. The control classes
+ * and their registrations remain together here.
+ */
+
+/*
  *                          ==CONFIDENTIAL INFORMATION==
  *
  * COPYRIGHT 1994-2000 BREADBOX COMPUTER COMPANY -- ALL RIGHTS RESERVED  --
@@ -56,88 +63,56 @@
 @extern object PCRoot ;
 @endif
 
-@ifdef COMPILE_OPTION_AUTO_BROWSE
-@extern object AutoBrowseOptions ;
-@endif
 
 @extern object CurrentURLText ;
 @extern object HTMLSettingsBoolGroup ;
 @extern object ignoreNoScript;
 @extern object SimpleURLToolbar ;
 @extern object StatusBar ;
-@extern object HTMLVApp ;
-@extern object MsgBlank;
 @extern object HTMLVPrimary ;
 @extern object SimpleToolbarZoomIn ;
 @extern object SimpleToolbarZoomOut ;
 @extern object SimpleToolbarZoomHundred ;
 
-@extern object MainWrapper ;
-@extern object HTMLDisplayGroup ;
-@extern object HtmlVTopBar ;
 @extern object SimpleToolbar ;
-@extern object SimpleToolbarStop ;
-@extern object SimpleToolbarReload ;
 
-@extern object ProgressIndicatorBox ;
 
 @ifdef COMPILE_OPTION_ENABLE_NUMCONN_OPTION
 @extern chunk MsgChangeRequiresRestart;
 @endif
 
-/* UI Related Browser stuff that is rarely hit */
-void UpdateTitleAndURL(NameToken title, NameToken url)
-{
-    TCHAR buf[HTML_STATIC_BUF],*p;
 
-    if(title != NAME_POOL_NONE) {
-@ifdef COPY_TO_SCRAPBOOK
-        NamePoolCopy(namePool, G_curTitle, sizeof(G_curTitle), title, NULL);
-@endif
-        NamePoolReleaseToken(namePool, title);
-    }
-
-    if(url != NAME_POOL_NONE &&
-       /* don't wipe out user entry */
-       (@call CurrentURLText::MSG_VIS_TEXT_GET_USER_MODIFIED_STATE() == FALSE))
-    {
-        NamePoolCopy(namePool, buf, sizeof(buf), url, &p);
-                                        /* get current URL */
-        @call CurrentURLText::MSG_VIS_TEXT_REPLACE_ALL_PTR(p, 0);
-                                        /* update current URL */
-        NamePoolDestroyIfDynamic(p);      /* release buffer, if any */
-        NamePoolReleaseToken(namePool, url);
-    }
-}
-
-@extern method HTMLVProcessClass, MSG_HMLVP_NOTIFY_TOP_CHANGE
-{
-    UpdateTitleAndURL(title,url);
-}
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg UIRare_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("UIRare_TEXT")
+#endif
 
 @extern method HTMLVProcessClass, MSG_HMLVP_GET_EXTRA
 {
     Boolean noRed;
 
     ext->HE_pointSize =
-      @call CurrentURLText::MSG_URL_ENTRY_GET_POINT_SIZE();
+        @call CurrentURLText::MSG_URL_ENTRY_GET_POINT_SIZE();
     ext->HE_plainFont =
-      @call CurrentURLText::MSG_URL_ENTRY_GET_FONT_ID();
+        @call CurrentURLText::MSG_URL_ENTRY_GET_FONT_ID();
     ext->HE_exampleFont = FONT_DEFAULT_EXAMPLE;
 
     ext->HE_namePool = namePool;        /* use common name pool */
 
     ext->HE_options = @call HTMLSettingsBoolGroup::
-      MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
+        MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS();
                                         /* get HTML import settings */
 #if !JAVASCRIPT_SUPPORT && !COMPILE_OPTION_AUTO_BROWSE
     ext->HE_options &= ~HTML_JAVASCRIPT;
 #endif
 
     /*
-     * In "introductory" (TV) mode, force up font sizes which would go below
-     * the default size.
-     */
+        * In "introductory" (TV) mode, force up font sizes which would go below
+        * the default size.
+        */
     if(UserGetDefaultUILevel()==UIIL_INTRODUCTORY)
     {
         noRed = FALSE;                    /* default: allow reduced sizes */
@@ -189,8 +164,8 @@ void UpdateTitleAndURL(NameToken title, NameToken url)
     FontID currentFont;
 
     if(selection != FID_DTC_URW_ROMAN &&
-       selection != FID_DTC_URW_SANS &&
-       selection != FID_DTC_URW_MONO)
+        selection != FID_DTC_URW_SANS &&
+        selection != FID_DTC_URW_MONO)
         return;
 
     currentFont = @call CurrentURLText::MSG_URL_ENTRY_GET_FONT_ID();
@@ -202,7 +177,7 @@ void UpdateTitleAndURL(NameToken title, NameToken url)
 
     if(UserGetDefaultUILevel()==UIIL_INTRODUCTORY)
         InitFileWriteInteger(HTMLVIEW_CATEGORY, "introDefaultFont",
-                             selection);
+                                selection);
     else
         InitFileWriteInteger(HTMLVIEW_CATEGORY, "defaultFont", selection);
 
@@ -315,8 +290,8 @@ void PCIndicateStatus()
 @extern method HTMLVProcessClass, MSG_HMLVP_PC_TURN_OFF
 {
     if (@call PCRoot::MSG_PC_CHECK_PASSWORD_DB(PC_WWW) == IC_OK) {
-    G_pcBypassed = TRUE;
-    PCIndicateOff();
+        G_pcBypassed = TRUE;
+        PCIndicateOff();
     }
 }
 
@@ -329,12 +304,12 @@ void PCIndicateStatus()
     IACPConnection pcIACP;
 
     /* if one-time bypass active, just turn off bypass to restore
-       previous PC on state */
+        previous PC on state */
     if (G_pcBypassed) {
         G_pcBypassed = FALSE;
         PCIndicateOn();
         /* parental control turned on, clear object cache in
-           case cached sites are now disallowed */
+            case cached sites are now disallowed */
         ObjCacheClear();
         return;
     }
@@ -347,9 +322,9 @@ void PCIndicateStatus()
             strcpy(albP->ALB_dataFile, _TEXT("KidGuard Module"));
             MemUnlock(alb);
             pcIACP = IACPConnect(&pcToken,
-                                 (IACPCF_FIRST_ONLY |
-                                  IACPSM_USER_INTERACTIBLE),
-                                 alb, NullOptr, &numServers);
+                                    (IACPCF_FIRST_ONLY |
+                                    IACPSM_USER_INTERACTIBLE),
+                                    alb, NullOptr, &numServers);
             if (pcIACP) {
                 IACPShutdown(pcIACP, NullOptr);
             }
@@ -442,205 +417,6 @@ extern MemHandle jsErrorString;
 @endif
 }
 
-@extern method HTMLVApplicationClass, MSG_GEN_APPLICATION_IGNORE_INPUT
-{
-    word numFreeHandles ;
-
-    numFreeHandles = SysGetInfo(0x800e) ;
-
-    if (numFreeHandles < 100)
-        @callsuper() ;
-    else
-        pself->HVAI_ignoreCount++ ;
-}
-
-@extern method HTMLVApplicationClass, MSG_GEN_APPLICATION_ACCEPT_INPUT
-{
-    if (pself->HVAI_ignoreCount)  {
-        pself->HVAI_ignoreCount-- ;
-    } else {
-        @callsuper() ;
-    }
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_START_OPERATION
-{
-@ifndef COMPILE_OPTION_TURN_OFF_LOGO
-    Boolean isGlobeOff = FALSE ;
-@endif
-    @extern object StatusLineLoading;
-
-    HWChecksumCheck() ;
-
-    if( (++pself->HVAI_operationLevel) == 1 )
-    {                                   /* starting a new operation */
-        LOG(LogPrintfLine("-Begin loading page");)
-
-        HWChecksumCheck() ;
-        UpdateStop(TRUE);
-
-@ifndef COMPILE_OPTION_TURN_OFF_LOGO
-        /* Read init file for globe setting.  */
-        /* Not OFF is default if not found. */
-        InitFileReadBoolean(HTMLVIEW_CATEGORY, "globeOff", &isGlobeOff) ;
-        if (!isGlobeOff)
-            @send SpinningLogo::MSG_GLBANIM_AUTO_RUN(TRUE);
-@endif
-        @SendStatusUpdateOptr(
-            @StatusLineLoading, HTML_STATUS_TYPE_LOADING);
-        HWChecksumCheck() ;
-
-        if (!isBusyOff)
-            @send HTMLVApp::MSG_HMLVA_MARK_BUSY();
-
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
-        @SendUpdateProgress(PI_START, 0);
-@endif
-        /* clear error state when operation is started */
-        @call self::MSG_HMLVA_CLEAR_CONNECTION_ERROR();
-    }
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_ABORT_OPERATION
-{
-    EventHandle event;
-    HWChecksumCheck() ;
-
-@ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
-     @call application::MSG_HMLVA_ACCEPT_INPUT();
-@endif
-
-    /* stop process thread */
-    UserAbortStart();
-
-    ParseAbort() ;
-
-    if(pself->HVAI_operationLevel)      /* only if inside operation */
-    {
-        /* Have the fetch engine stop fetching */
-        URLFetchEngineAbortAll(ignoreStopMsg) ;
-        /* Stop import thread */
-        ImportThreadAbortAll() ;
-        /* clear error state when operation is finished, so next operation
-            will start anew */
-        @call self::MSG_HMLVA_CLEAR_CONNECTION_ERROR();
-    }
-
-    if (!dontSendDocumentStopMessage)  {
-        event = @record URLDocumentClass::MSG_URL_DOCUMENT_STOP(frame) ;
-        @call oself::MSG_META_SEND_CLASSED_EVENT(event, TO_APP_MODEL);
-    }
-    HWChecksumCheck() ;
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_END_OPERATION
-{
-    EC_ERROR_IF(!pself->HVAI_operationLevel, -1);
-                                        /* may not call END_OPERATION without
-                                           corresponding START_OPERATION. */
-    if( (pself->HVAI_operationLevel--)==1 )
-    {                                   /* finally ending an operation */
-@ifdef COMPILE_OPTION_AUTO_BROWSE
-        if (didAutoTest)  {
-            ABLog("done\r\n");
-            if (@call AutoBrowseOptions::MSG_GEN_BOOLEAN_GROUP_GET_SELECTED_BOOLEANS() & AB_OPTION_DELAY) {
-                (void)TimerStart(TIMER_EVENT_ONE_SHOT,
-                                ConstructOptr(GeodeGetProcessHandle(), 0),
-                                AB_BROWSE_DELAY,
-                                MSG_HMLVP_DO_AUTO_BROWSE,
-                                0, &abTimerID);
-            } else {
-                @send,forceQueue process::MSG_HMLVP_DO_AUTO_BROWSE();
-            }
-        }
-@endif
-        HWChecksumCheck() ;
-        UpdateStop(FALSE);
-@ifndef COMPILE_OPTION_TURN_OFF_LOGO
-        @send SpinningLogo::MSG_GLBANIM_AUTO_RUN(FALSE);
-@endif
-        @SendStatusUpdateOptr(@MsgBlank, HTML_STATUS_TYPE_FORMATTING);
-        @SendStatusUpdateOptr(@MsgBlank, HTML_STATUS_TYPE_LOADING);
-        /* clear URL link status until user moves mouse */
-        @SendStatusUpdateOptr(@MsgBlank, HTML_STATUS_TYPE_URL_HIGHLIGHT);
-
-        if (!isBusyOff)
-            @send HTMLVApp::MSG_HMLVA_MARK_NOT_BUSY();
-
-        LOG(LogPrintfLine("-End loading page");)
-
-        pself = ObjDerefGen(oself);
-        if(pself->HVAI_doomed)            /* pending close? Do it now... */
-        {
-            @call self::MSG_GEN_APPLICATION_ACCEPT_INPUT();
-            @send self::MSG_META_QUIT();
-        }
-        if(pself->HVAI_detaching)         /* pending detach? Do it now... */
-        {
-            @call self::MSG_GEN_APPLICATION_ACCEPT_INPUT();
-            @send process::
-              MSG_META_DETACH(pself->HVAI_callerID, pself->HVAI_caller);
-        }
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
-        @SendUpdateProgress(PI_DONE, 0);
-@endif
-@ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
-        @call application::MSG_HMLVA_ACCEPT_INPUT();
-@endif
-        /* clear error state when operation is finished */
-        @call self::MSG_HMLVA_CLEAR_CONNECTION_ERROR();
-#ifdef HEAP_LEAK_CHECKING
-        HLFUpdate() ;
-        HLFReport(1) ;
-#endif
-    }
-    HWChecksumCheck() ;
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_REQUEST_DETACH
-{
-    if(pself->HVAI_operationLevel)      /* still active loading a page? */
-    {
-        pself->HVAI_detaching = TRUE;     /* defer detaching */
-        pself->HVAI_callerID = callerID;
-        pself->HVAI_caller = caller;
-        @AbortOperation(FALSE, FALSE, 0);
-        @call self::MSG_GEN_APPLICATION_IGNORE_INPUT();
-        @call self::MSG_GEN_APPLICATION_MARK_BUSY();
-                                        /* abort operation, prevent new one */
-        return FALSE;                     /* we cannot detach safely yet */
-    }
-
-    return TRUE;                        /* yes, we may detach now */
-}
-
-@ifdef COMPILE_OPTION_PARENTAL_CONTROL
-
-/*
- * hack to clear busy cursor when parental control startup dialog is up
- */
-@extern method HTMLVApplicationClass, MSG_META_IMPLIED_WIN_CHANGE
-{
-    EventHandle evt;
-
-    @callsuper();
-    /* if modal parental control dialog is up, clear busy cursor */
-    if (G_startupPassword &&
-        inputObj &&
-        ObjTestIfObjBlockRunByCurThread(OptrToHandle(inputObj)) &&
-        @call inputObj::MSG_META_IS_OBJECT_IN_CLASS(&GenInteractionClass) &&
-        (@call inputObj::MSG_GEN_INTERACTION_GET_ATTRS() & GIA_MODAL)) {
-            WinGeodeSetPtrImage(GeodeGetProcessHandle(), 0);
-            evt = @record GenClass::MSG_GEN_SYSTEM_SET_PTR_IMAGE(0, PIL_SYSTEM);
-            @call self::MSG_GEN_CALL_SYSTEM(evt);
-        }
-}
-
-@endif
-
-/**************************************************************************
- *              View Control class
- **************************************************************************/
 
 @classdecl WMViewControlClass;
 
@@ -739,9 +515,174 @@ extern MemHandle jsErrorString;
     InitFileWriteInteger(HTMLVIEW_CATEGORY, "numConn", selectedBooleans + 1);
 
     UserStandardDialogOptr(0, 0, 0, 0, @MsgChangeRequiresRestart,
-                           ((CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
+                            ((CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
                             (GIT_NOTIFICATION <<
-                             CDBF_INTERACTION_TYPE_OFFSET)));
+                                CDBF_INTERACTION_TYPE_OFFSET)));
 }
 
 @endif
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg UIOften_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("UIOften_TEXT")
+#endif
+
+
+/* Respond to parental-control changes without changing cache ownership. */
+@ifdef COMPILE_OPTION_PARENTAL_CONTROL
+@extern method HTMLVProcessClass, MSG_META_NOTIFY
+{
+    AccessFlags oldAccess;
+
+    if (manufID == MANUFACTURER_ID_GEOWORKS &&
+        notificationType == GWNT_PARENTAL_CONTROL_CHANGE) {
+        PCIndicateStatus();
+        oldAccess = G_pcAccess;
+        G_pcAccess = ParentalControlGetAccessInfo();
+        if ((G_pcAccess & (AF_WWWBROWSING | AF_WWWLIMITED)) &&
+            !(oldAccess & (AF_WWWBROWSING | AF_WWWLIMITED))){
+            /* parental control turned on, clear object cache in
+                case cached sites are now disallowed */
+            ObjCacheClear();
+        }
+    }
+    if (manufID == MANUFACTURER_ID_GEOWORKS &&
+        notificationType == GWNT_PARENTAL_CONTROL_WEBSITE_LIST_CHANGE &&
+        (data == PCWLCT_DELETE || data == PCWLCT_MODIFY)) {
+        /* clear object cache in case cached sites are now disallowed */
+        ObjCacheClear();
+    }
+    /* let superclass clean up */
+    @callsuper();
+}
+@endif
+
+
+@ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
+@extern object SimpleToolbarGoto ;
+@extern object SimpleToolbarPrint ;
+@ifdef COMPILE_OPTION_NAVIGATION_MENU
+@extern object NavigateMenu ;
+@endif
+@endif
+
+
+@ifdef COMPILE_OPTION_LITTLE_BUTTON_TOOLBAR
+@extern object MainToolbar;
+@endif
+
+@ifdef COMPILE_OPTION_BIG_BUTTON_TOOLBAR
+@extern object IconBar;
+@endif
+
+
+@ifdef COMPILE_OPTION_PARENTAL_CONTROL
+@extern @object ParentalControlStatus;
+@extern @object PCMenu;
+@extern @object PCSiteAlreadyAddedDlg;
+@extern @object PCSiteNotInListDlg;
+@endif
+
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg UIAction_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("UIAction_TEXT")
+#endif
+
+void LOCAL UsableOrNot(optr obj, word enable)
+{
+    if(enable)
+        @send obj::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+    else
+        @send obj::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+}
+
+void UpdateToolbar(Boolean enabled)
+{
+@ifdef COMPILE_OPTION_LITTLE_BUTTON_TOOLBAR
+    UsableOrNot(@MainToolbar,          enabled);
+@endif
+@ifdef COMPILE_OPTION_BIG_BUTTON_TOOLBAR
+    UsableOrNot(@IconBar,              enabled);
+@endif
+@ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
+    UsableOrNot(@SimpleToolbar, enabled);
+@ifdef COMPILE_OPTION_NAVIGATION_MENU
+    UsableOrNot(@NavigateMenu, !enabled);
+@endif
+@endif
+}
+
+void UpdateStatusbar(Boolean enabled)
+{
+    UsableOrNot(@StatusBar, enabled);
+}
+
+void UpdateUrlbar(Boolean enabled)
+{
+    UsableOrNot(@SimpleURLToolbar, enabled);
+    UsableOrNot(@SimpleToolbarGoto, !enabled);
+}
+
+@ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
+void UpdatePrintButtonInSimpleToolbar(Boolean enabled)
+{
+    UsableOrNot(@SimpleToolbarPrint, enabled);
+}
+@endif
+
+@ifndef COMPILE_OPTION_TURN_OFF_LOGO
+void UpdateGlobeInSimpleButtonToolbar(Boolean enabled)
+{
+    UsableOrNot(@SpinningLogo, enabled);
+}
+@endif
+
+@ifdef COMPILE_OPTION_PARENTAL_CONTROL
+void UpdateParentalControls(Boolean enabled)
+{
+    UsableOrNot(@ParentalControlStatus, enabled);
+    UsableOrNot(@PCMenu, enabled);
+    UsableOrNot(@PCToggleOffDlg, enabled);
+    UsableOrNot(@PCToggleOnDlg, enabled);
+    UsableOrNot(@PCSiteAlreadyAddedDlg, enabled);
+    UsableOrNot(@PCSiteNotInListDlg, enabled);
+}
+@endif
+
+@extern method HTMLVProcessClass, MSG_HMLVP_OPTIONS_CHANGED
+{
+    HWChecksumCheck() ;
+
+    if(modifiedBooleans & HTMLV_ENABLE_TOOLBAR)
+        UpdateToolbar(selectedBooleans & HTMLV_ENABLE_TOOLBAR);
+
+    if(modifiedBooleans & HTMLV_ENABLE_STATUSBAR)
+        UpdateStatusbar(selectedBooleans & HTMLV_ENABLE_STATUSBAR);
+
+    if(modifiedBooleans & HTMLV_ENABLE_URLBAR)
+        UpdateUrlbar(selectedBooleans & HTMLV_ENABLE_URLBAR);
+
+@ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
+    if(modifiedBooleans & HTMLV_ENABLE_TOOLBAR_PRINT)
+        UpdatePrintButtonInSimpleToolbar(selectedBooleans & HTMLV_ENABLE_TOOLBAR_PRINT);
+@endif
+
+@ifndef COMPILE_OPTION_TURN_OFF_LOGO
+    if(modifiedBooleans & HTMLV_SHOW_GLOBE)
+        UpdateGlobeInSimpleButtonToolbar(selectedBooleans & HTMLV_SHOW_GLOBE);
+@endif
+
+@ifdef COMPILE_OPTION_PARENTAL_CONTROL
+    if(modifiedBooleans & HTMLV_ENABLE_PARENTAL_CONTROL)
+        UpdateParentalControls(selectedBooleans & HTMLV_ENABLE_PARENTAL_CONTROL);
+@endif
+
+    HWChecksumCheck() ;
+}

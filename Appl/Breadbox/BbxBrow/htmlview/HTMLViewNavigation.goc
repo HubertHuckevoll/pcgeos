@@ -1,4 +1,11 @@
 /*
+ * Navigation commands, toolbar state, history and editor/cache commands.
+ * Tokens, events and copied frame sets retain their existing owners.
+ * HTMLView.goc registers the process handlers; resource switches below
+ * preserve the original UIAction, UIRare and HTMLVIEW swapping boundaries.
+ */
+
+/*
  *                          ==CONFIDENTIAL INFORMATION==
  *
  * COPYRIGHT 1994-2000 BREADBOX COMPUTER COMPANY -- ALL RIGHTS RESERVED  --
@@ -38,25 +45,14 @@
 @include "importg.goh"
 @include "stattext.goh"
 
-@ifdef COMPILE_OPTION_AUTO_BROWSE
-@extern object AutoBrowseOptions ;
-@endif
 
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* TRUE if we are using the progress indicator to show download status */
 extern Boolean G_progressStatus;
-@extern object ProgressIndicator ;
 @endif
 
 
 @extern object CurrentURLText ;
-@extern object HTMLSettingsBoolGroup ;
-@extern object SimpleURLToolbar ;
-@extern object StatusBar ;
-@extern object HTMLVApp ;
-@extern object MsgBlank;
-@extern object HTMLVPrimary ;
-@extern object LinkStatus;
 @extern object NavigateBack ;
 @extern object NavigateBackBut ;
 @extern object NavigateBackBut2 ;
@@ -84,27 +80,18 @@ extern Boolean G_progressStatus;
 @endif
 
 @ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
-@extern object SimpleToolbarGoto ;
 @extern object SimpleToolbarBack ;
 @extern object SimpleToolbarNext ;
 @extern object SimpleToolbarReload ;
 @extern object SimpleToolbarHome ;
 @extern object SimpleToolbarStop ;
-@extern object SimpleToolbar ;
-@extern object SimpleToolbarPrint ;
 @extern object GotoEntry ;
-@ifdef COMPILE_OPTION_NAVIGATION_MENU
-@extern object NavigateMenu ;
-@endif
 @endif
 
 @ifdef COMPILE_OPTION_LOCAL_PAGES
 @extern object LocalSaveTrigger;
 @endif
 
-@ifdef COMPILE_OPTION_LITTLE_BUTTON_TOOLBAR
-@extern object MainToolbar;
-@endif
 
 @ifdef COMPILE_OPTION_BIG_BUTTON_TOOLBAR
 @extern object IconBarBack;
@@ -113,34 +100,22 @@ extern Boolean G_progressStatus;
 @extern object IconBarPrint;
 @extern object IconBarHome;
 @extern object IconBarHistory;
-@extern object IconBar;
 @extern object IconBarStop;
 @endif
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
-@extern @object DownloadProgressDialog;
-@endif
-
-@ifdef JAVASCRIPT_SUPPORT
-@extern @object WindowOpenWindow;
-@endif
-
-@ifndef COMPILE_OPTION_TURN_OFF_LOGO
-@extern @object SpinningLogo;
-@endif
-
-@ifdef COMPILE_OPTION_PARENTAL_CONTROL
-@extern @object ParentalControlStatus;
-@extern @object PCMenu;
-@extern @object PCToggleOffDlg;
-@extern @object PCToggleOnDlg;
-@extern @object PCSiteAlreadyAddedDlg;
-@extern @object PCSiteNotInListDlg;
-@endif
 
 @extern object CustomFileSel;
 @extern object CFSOpen;
 @extern object CustomFileSelDBox;
+
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg UIAction_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("UIAction_TEXT")
+#endif
 
 void LOCAL EnabledOrNot(optr obj, word enable)
 {
@@ -148,14 +123,6 @@ void LOCAL EnabledOrNot(optr obj, word enable)
         @send obj::MSG_GEN_SET_ENABLED(VUM_DELAYED_VIA_APP_QUEUE);
     else
         @send obj::MSG_GEN_SET_NOT_ENABLED(VUM_DELAYED_VIA_APP_QUEUE);
-}
-
-void LOCAL UsableOrNot(optr obj, word enable)
-{
-    if(enable)
-        @send obj::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
-    else
-        @send obj::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
 }
 
 void UpdateNavigation(WordFlags flags)
@@ -206,10 +173,10 @@ void UpdateNavigation(WordFlags flags)
 @endif
 
 /*
- * Navigate Menu - use with COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
- * to enable / disable the navigate menu when showing/hiding the
- * navigation toolbar
- */
+    * Navigate Menu - use with COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
+    * to enable / disable the navigate menu when showing/hiding the
+    * navigation toolbar
+    */
 @ifdef COMPILE_OPTION_NAVIGATION_MENU
     EnabledOrNot(@NavigateBack,         (flags & HTML_HIST_BACK));
     EnabledOrNot(@NavigateForward,      (flags & HTML_HIST_FORWARD));
@@ -236,59 +203,6 @@ void UpdateNavigation(WordFlags flags)
         @send HistoryList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(0, FALSE);
     }
 }
-
-void UpdateToolbar(Boolean enabled)
-{
-@ifdef COMPILE_OPTION_LITTLE_BUTTON_TOOLBAR
-    UsableOrNot(@MainToolbar,          enabled);
-@endif
-@ifdef COMPILE_OPTION_BIG_BUTTON_TOOLBAR
-    UsableOrNot(@IconBar,              enabled);
-@endif
-@ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
-    UsableOrNot(@SimpleToolbar, enabled);
-@ifdef COMPILE_OPTION_NAVIGATION_MENU
-    UsableOrNot(@NavigateMenu, !enabled);
-@endif
-@endif
-}
-
-void UpdateStatusbar(Boolean enabled)
-{
-    UsableOrNot(@StatusBar, enabled);
-}
-
-void UpdateUrlbar(Boolean enabled)
-{
-    UsableOrNot(@SimpleURLToolbar, enabled);
-    UsableOrNot(@SimpleToolbarGoto, !enabled);
-}
-
-@ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
-void UpdatePrintButtonInSimpleToolbar(Boolean enabled)
-{
-    UsableOrNot(@SimpleToolbarPrint, enabled);
-}
-@endif
-
-@ifndef COMPILE_OPTION_TURN_OFF_LOGO
-void UpdateGlobeInSimpleButtonToolbar(Boolean enabled)
-{
-    UsableOrNot(@SpinningLogo, enabled);
-}
-@endif
-
-@ifdef COMPILE_OPTION_PARENTAL_CONTROL
-void UpdateParentalControls(Boolean enabled)
-{
-    UsableOrNot(@ParentalControlStatus, enabled);
-    UsableOrNot(@PCMenu, enabled);
-    UsableOrNot(@PCToggleOffDlg, enabled);
-    UsableOrNot(@PCToggleOnDlg, enabled);
-    UsableOrNot(@PCSiteAlreadyAddedDlg, enabled);
-    UsableOrNot(@PCSiteNotInListDlg, enabled);
-}
-@endif
 
 @extern method HTMLVProcessClass, MSG_HMLVP_NOTIFY_NAVIGATION_CHANGE
 {
@@ -362,12 +276,12 @@ Boolean HandleJumpword(TCHAR *url)
  ***********************************************************************/
 @extern method HTMLVProcessClass, MSG_CUSTOM_OPEN_HTML_DOC
 {
- char			*relativePath, *standardPath, *endOfFullPath;
- word			bufSize = (2*PATH_LENGTH) + FILE_LONGNAME_BUFFER_SIZE;
- MemHandle		mh;
- ChunkHandle	chRelative, chStandard;
- DiskHandle		dhStandard;
- dword			relativePathInfo;
+    char			*relativePath, *standardPath, *endOfFullPath;
+    word			bufSize = (2*PATH_LENGTH) + FILE_LONGNAME_BUFFER_SIZE;
+    MemHandle		mh;
+    ChunkHandle	chRelative, chStandard;
+    DiskHandle		dhStandard;
+    dword			relativePathInfo;
 
     // enter the file stuff
     @call CurrentURLText::MSG_VIS_TEXT_REPLACE_ALL_PTR("FILE:///", 8);
@@ -424,7 +338,7 @@ Boolean HandleJumpword(TCHAR *url)
     url = NamePoolTokenize(namePool, urlP, TRUE);
     MemFree(urlH);
     evt = @record
-      URLDocumentClass::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_GO);
+        URLDocumentClass::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_GO);
     HWChecksumCheck() ;
     @send application::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
                                         /* load new URL */
@@ -448,7 +362,7 @@ Boolean HandleJumpword(TCHAR *url)
         url = NamePoolTokenize(namePool, homeP, TRUE);
         MemFree(homeH);
         evt = @record
-          URLDocumentClass::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_GO);
+            URLDocumentClass::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_GO);
         @send application::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
                                                 /* load home URL if defined */
     }
@@ -506,7 +420,7 @@ Boolean HandleJumpword(TCHAR *url)
 #endif
 
     if (!(InitFileReadStringBlock(HTMLVIEW_CATEGORY, "jumpURL",
-				  &jumpBlk, 0, &jumpSize)) && jumpBlk) {
+                                    &jumpBlk, 0, &jumpSize)) && jumpBlk) {
 #ifdef SECURE_INI_URLS
         InitFileReadInteger(HTMLVIEW_CATEGORY, SECURE_INI_KEY, &secureFlag);
         if (secureFlag != SECURE_INI_FLAG) {
@@ -562,7 +476,7 @@ Boolean HandleJumpword(TCHAR *url)
                                 sizeof(TCHAR);
                         if (jumpBlockSize <= 0xfff0L &&
                             MemReAlloc(jumpBlk, (word)jumpBlockSize,
-                                       HAF_NO_ERR)) {
+                                        HAF_NO_ERR)) {
                             jumpURL = MemLock(jumpBlk);
                             jumpArgsP = MemLock(jumpArgs);
                             jumpArgP = FormStringDerefData(jumpArgs);
@@ -639,124 +553,6 @@ Boolean HandleJumpword(TCHAR *url)
 }
 @endif
 
-@ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
-@extern method HTMLVApplicationClass, MSG_HMLVA_IGNORE_INPUT
-{
-    pself->HVAI_ignoreInput = TRUE;
-}
-@extern method HTMLVApplicationClass, MSG_HMLVA_ACCEPT_INPUT
-{
-    pself->HVAI_ignoreInput = FALSE;
-}
-@extern method HTMLVApplicationClass, MSG_HMLVA_IGNORING_INPUT
-{
-    extern Boolean G_ignoreInput;
-
-    return (G_ignoreInput && pself->HVAI_ignoreInput);
-}
-@endif
-
-void MarkBusy(HTMLVApplicationInstance *p, optr app)
-{
-@ifdef JAVASCRIPT_SUPPORT
-    if (@call WindowOpenWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
-        @call app::MSG_GEN_APPLICATION_MARK_APP_COMPLETELY_BUSY();
-        p->HVAI_busy |= BF_COMPLETELY;
-    } else {
-        @call app::MSG_GEN_APPLICATION_MARK_BUSY();
-    }
-@else
-    @call app::MSG_GEN_APPLICATION_MARK_BUSY();
-@endif
-}
-
-void MarkNotBusy(HTMLVApplicationInstance *p, optr app)
-{
-@ifdef JAVASCRIPT_SUPPORT
-    if (p->HVAI_busy & BF_COMPLETELY) {
-        @call app::MSG_GEN_APPLICATION_MARK_APP_NOT_COMPLETELY_BUSY();
-        p->HVAI_busy &= ~BF_COMPLETELY;
-    } else {
-        @call app::MSG_GEN_APPLICATION_MARK_NOT_BUSY();
-    }
-@else
-    @call app::MSG_GEN_APPLICATION_MARK_NOT_BUSY();
-@endif
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_MARK_BUSY
-{
-    if (!(pself->HVAI_busy & BF_BUSY)) {
-        if (!(pself->HVAI_busy & BF_OVERRIDE)) {
-            MarkBusy(pself, oself);
-        }
-        pself->HVAI_busy |= BF_BUSY;
-    } else {
-        if (pself->HVAI_busy & BF_OVERRIDE) {
-            MarkBusy(pself, oself);
-        }
-    }
-    pself->HVAI_busy &= ~BF_OVERRIDE;
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_MARK_NOT_BUSY
-{
-    if (pself->HVAI_busy & BF_BUSY) {
-        if (!(pself->HVAI_busy & BF_OVERRIDE)) {
-            MarkNotBusy(pself, oself);
-        }
-        pself->HVAI_busy &= ~BF_BUSY;
-    }
-    pself->HVAI_busy &= ~BF_OVERRIDE;
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_OVERRIDE_BUSY
-{
-    if ((pself->HVAI_busy & BF_BUSY) && !(pself->HVAI_busy & BF_OVERRIDE)) {
-        MarkNotBusy(pself, oself);
-        pself->HVAI_busy |= BF_OVERRIDE;
-    }
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_RESTORE_BUSY
-{
-    if ((pself->HVAI_busy & BF_BUSY) && (pself->HVAI_busy & BF_OVERRIDE)) {
-        MarkBusy(pself, oself);
-        pself->HVAI_busy &= ~BF_OVERRIDE;
-    }
-}
-
-void UserAbortStart(void)
-{
-    extern Boolean G_stopped ;
-    G_stopped = TRUE;
-}
-
-void UserAbortEnd(void)
-{
-    extern Boolean G_stopped ;
-    G_stopped = FALSE;
-}
-
-@extern method HTMLVApplicationClass, MSG_HMLVA_STOP_TRIGGER
-{
-@ifdef COMPILE_OPTION_AUTO_BROWSE
-    IBM = 0;                          /* signal termination to auto browser */
-@endif
-    /* clear mod state so we'll update URL with current page */
-    @call CurrentURLText::MSG_VIS_TEXT_SET_NOT_USER_MODIFIED();
-
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
-    /* ensure download progress dialog is closed */
-    @send DownloadProgressDialog::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
-@endif
-
-    /* disable Stop trigger for feedback */
-    UpdateStop(FALSE);
-
-    @AbortOperation(FALSE, TRUE, 0);             /* finish current layout */
-}
-
 void UpdateStop(Boolean enabled)
 {
     EnabledOrNot(@NavigateStop,      enabled);
@@ -772,34 +568,231 @@ void UpdateStop(Boolean enabled)
 @endif
 }
 
-@extern method HTMLVProcessClass, MSG_HMLVP_OPTIONS_CHANGED
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg UIRare_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("UIRare_TEXT")
+#endif
+
+void UpdateTitleAndURL(NameToken title, NameToken url)
 {
+    TCHAR buf[HTML_STATIC_BUF],*p;
+
+    if(title != NAME_POOL_NONE) {
+@ifdef COPY_TO_SCRAPBOOK
+        NamePoolCopy(namePool, G_curTitle, sizeof(G_curTitle), title, NULL);
+@endif
+        NamePoolReleaseToken(namePool, title);
+    }
+
+    if(url != NAME_POOL_NONE &&
+        /* don't wipe out user entry */
+        (@call CurrentURLText::MSG_VIS_TEXT_GET_USER_MODIFIED_STATE() == FALSE))
+    {
+        NamePoolCopy(namePool, buf, sizeof(buf), url, &p);
+                                        /* get current URL */
+        @call CurrentURLText::MSG_VIS_TEXT_REPLACE_ALL_PTR(p, 0);
+                                        /* update current URL */
+        NamePoolDestroyIfDynamic(p);      /* release buffer, if any */
+        NamePoolReleaseToken(namePool, url);
+    }
+}
+
+@extern method HTMLVProcessClass, MSG_HMLVP_NOTIFY_TOP_CHANGE
+{
+    UpdateTitleAndURL(title,url);
+}
+
+
+@extern object HistoryEmpty;
+@extern chunk MsgNoEdit;
+@extern chunk MsgBadEdit;
+@extern chunk MsgBadFile;
+@extern chunk MsgEditInfo;
+@extern chunk MsgClearCache;
+@extern object textEditorName;
+@extern visMoniker ClearCacheReset;
+@extern visMoniker ClearCacheDont;
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg HTMLVIEW_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("HTMLVIEW_TEXT")
+#endif
+
+#define HISTORY_MAXLEN 35               /* maximum length of history entry */
+
+@extern method HTMLVProcessClass, MSG_HMLVP_HISTORY_QUERY
+{
+    TCHAR buf[HTML_STATIC_BUF],*p;
+    NameToken name;
+
+    if(item==0 && HistoryGetEntryNum()==0)
+    {                                   /* special text for empty list */
+        @call list::
+            MSG_GEN_DYNAMIC_LIST_REPLACE_ITEM_MONIKER_OPTR(item, @HistoryEmpty);
+    }
+    else
+    {
+        name = HistoryGetEntryName(item); /* request item name to buffer */
+        NamePoolCopy(namePool, buf, sizeof(buf), name, &p);
+        NamePoolReleaseToken(namePool, name);
+        if(strlen(p)>HISTORY_MAXLEN)      /* item name too long? */
+        {
+            p[HISTORY_MAXLEN-3] = 0;        /* terminate name */
+            strcat(p,_TEXT("..."));                /* show that it has been truncated */
+        }
+        @call list::MSG_GEN_DYNAMIC_LIST_REPLACE_ITEM_TEXT(item, p);
+                                            /* set list entry */
+        NamePoolDestroyIfDynamic(p);
+    }
+}
+
+@extern method HTMLVProcessClass, MSG_HMLVP_HISTORY_SELECT
+{
+    optr frameSet;
+    EventHandle evt;
+
     HWChecksumCheck() ;
 
-    if(modifiedBooleans & HTMLV_ENABLE_TOOLBAR)
-      UpdateToolbar(selectedBooleans & HTMLV_ENABLE_TOOLBAR);
+    /* request framset of entry */
+    frameSet = HistoryGetEntryFrames(selection);
 
-    if(modifiedBooleans & HTMLV_ENABLE_STATUSBAR)
-      UpdateStatusbar(selectedBooleans & HTMLV_ENABLE_STATUSBAR);
+    /* Make a copy of it to attach to the message. This is not really a good
+        idea because a) the copy could be leaked if the message is not handled
+        and b) there is no intrinsic guarantee that the block in which the
+        frameset chunk lives survives until the message is handled.
+        Of course, this is not likely to cause any problems here. */
 
-    if(modifiedBooleans & HTMLV_ENABLE_URLBAR)
-      UpdateUrlbar(selectedBooleans & HTMLV_ENABLE_URLBAR);
-
-@ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
-    if(modifiedBooleans & HTMLV_ENABLE_TOOLBAR_PRINT)
-      UpdatePrintButtonInSimpleToolbar(selectedBooleans & HTMLV_ENABLE_TOOLBAR_PRINT);
-@endif
-
-@ifndef COMPILE_OPTION_TURN_OFF_LOGO
-    if(modifiedBooleans & HTMLV_SHOW_GLOBE)
-      UpdateGlobeInSimpleButtonToolbar(selectedBooleans & HTMLV_SHOW_GLOBE);
-@endif
-
-@ifdef COMPILE_OPTION_PARENTAL_CONTROL
-    if(modifiedBooleans & HTMLV_ENABLE_PARENTAL_CONTROL)
-      UpdateParentalControls(selectedBooleans & HTMLV_ENABLE_PARENTAL_CONTROL);
-@endif
+    MemLock(OptrToHandle(frameSet));
+    frameSet = LMemDup(frameSet);
+    MemUnlock(OptrToHandle(frameSet));
 
     HWChecksumCheck() ;
+    evt = @record
+        URLDocumentClass::MSG_URL_DOCUMENT_LOAD_FRAME_SET(frameSet, DIR_GO);
+    HWChecksumCheck() ;
+    @send application::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
+                                        /* load requested URL */
+}
+
+@ifdef COMPILE_OPTION_HTML_EDITOR
+@extern method HTMLVProcessClass, MSG_HMLVP_EDIT_TRIGGER
+{
+    MemHandle albHandle, bufH;
+    AppLaunchBlock *alb;
+    GeodeHandle app;
+    GeodeLoadError err;
+    TCHAR *bufP, *pathPtr, *filePtr, mime[MIME_MAXBUF];
+    PathName editor, tempname;
+    DiskHandle dh;
+    dword ret;
+    NameToken url;
+    word type;
+
+    if( @call textEditorName::MSG_VIS_TEXT_GET_ALL_PTR(editor)==0 )
+    {                                   /* get current editor name */
+        UserStandardDialogOptr(           /* notify user */
+        0, 0, 0, @MsgEditInfo, @MsgNoEdit,
+        (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
+        (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+        return;                           /* don't try to launch it */
+    }
+
+    bufH = @call CurrentURLText::MSG_VIS_TEXT_GET_ALL_BLOCK(0);
+    bufP = MemLock(bufH);
+    url = NamePoolTokenize(namePool, bufP, TRUE);
+    MemUnlock(bufH);
+    tempname[0] = 0;
+#if PROGRESS_DISPLAY
+    type = LoadURLToFile(&url, tempname, mime, ULM_CACHE, &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL, NULL);
+#else
+    type = LoadURLToFile(&url, tempname, mime, ULM_CACHE, &ret, NullHandle, NAME_POOL_NONE, NULL, 0xFFFF, NULL);
+#endif
+    NamePoolReleaseToken(namePool, url);
+
+    if(type==URL_RET_MESSAGE)           /* returned some kind of message */
+    {
+        /* Discard block if it contains nothing but this message. */
+        if( OptrToChunk(ret)==0 )
+            MemFree(OptrToHandle(ret));
+        UserStandardDialogOptr(           /* notify user */
+            0, 0, 0, 0, @MsgBadFile,
+            (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
+            (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+        MemFree(bufH);
+        return;
+    }
+
+    bufP = tempname;/*MemLock(bufH);*/
+    filePtr = strrchr(bufP,'\\');        /* separate filename from path */
+    if(!filePtr)
+        filePtr = bufP;
+    else
+        *(filePtr++) = 0;
+
+    pathPtr = bufP;
+    dh = ToolsParseDiskOrStandardPath(&pathPtr);
+
+    albHandle = MemAlloc(sizeof(*alb), HF_DYNAMIC, HAF_NO_ERR);
+
+    alb = MemLock(albHandle);
+    memset(alb,0,sizeof(*alb));
+    alb->ALB_appMode = MSG_GEN_PROCESS_OPEN_APPLICATION;
+    alb->ALB_launchFlags = 0;
+    alb->ALB_diskHandle = dh;
+    strcpy(alb->ALB_path,pathPtr);
+    strcpy(alb->ALB_dataFile,filePtr);
+    MemUnlock(albHandle);
+
+    MemFree(bufH);
+
+    err = -1;                           /* this is not an error code */
+    app = UserLoadApplication(
+        0, 0,
+        albHandle,
+        editor, SP_APPLICATION,
+        &err);
+
+    if(app==NullHandle || err!=-1)      /* see LoadURLByDriver() */
+    {
+        UserStandardDialogOptr(           /* notify user */
+        0, 0, 0, @MsgEditInfo, @MsgBadEdit,
+        (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
+        (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+    }
+}
+@endif
+
+@extern method HTMLVProcessClass, MSG_HMLVP_CLEAR_CACHE
+{
+    const StandardDialog2ResponseTriggerTable responseTable = {
+        2,
+        {@ClearCacheReset, IC_YES},
+        {@ClearCacheDont, IC_NO}
+    };
+
+    if(UserStandardDialogOptr(           /* notify user */
+        _TEXT("ResetMemory"), &responseTable, 0, 0, @MsgClearCache,
+        (CDT_WARNING << CDBF_DIALOG_TYPE_OFFSET) |
+        (GIT_MULTIPLE_RESPONSE << CDBF_INTERACTION_TYPE_OFFSET)) == IC_YES)
+    {
+        HWChecksumCheck() ;
+
+        /* Do all the work to actually clear out the cache */
+        @call application::MSG_GEN_APPLICATION_MARK_BUSY();
+        SrcCacheClear() ;
+        ObjCacheClear() ;
+        @call application::MSG_GEN_APPLICATION_MARK_NOT_BUSY();
+        HWChecksumCheck() ;
+@ifdef COMPILE_OPTION_SHOW_ALLOC_WATCHER_READ_OUT
+        @call oself::MSG_HMLVP_UPDATE_ALLOC_WATCHER_READ_OUT() ;
+@endif
+    }
 }
 

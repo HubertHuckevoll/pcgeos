@@ -1,5 +1,18 @@
+/*
+ * Allocation-budget accounting; watcher blocks remain owned by callers.
+ */
+
+
+/* Preserve the original swapping boundary and compiler string defaults. */
+#ifdef __BORLANDC__
+#pragma codeseg AWATCHER_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("AWATCHER_TEXT")
+#endif
+
 /***************************************************************************
- *  FILE:  AWATCHER.GOC
+ *  FILE:  AllocWatcher.goc
  ***************************************************************************/
 
 /*-------------------------------------------------------------------------
@@ -59,9 +72,9 @@ AllocWatcherHandle AllocWatcherCreate(dword startingAmount)
     AllocationWatcher *p_watch ;
 
     mem = MemAlloc(
-              sizeof(AllocationWatcher),
-              HF_SHARABLE | HF_SWAPABLE,
-              0) ;
+                sizeof(AllocationWatcher),
+                HF_SHARABLE | HF_SWAPABLE,
+                0) ;
 
     if (mem)  {
         p_watch = MemLock(mem) ;
@@ -199,6 +212,6 @@ dword AllocWatcherGetRemaining(AllocWatcherHandle watch)
 }
 
 /***************************************************************************
- *  END OF FILE:  AWATCHER.GOC
+ *  END OF FILE:  AllocWatcher.goc
  ***************************************************************************/
 

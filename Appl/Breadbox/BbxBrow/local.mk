@@ -43,7 +43,20 @@ XCCOMFLAGS = -zu $(COMPILE_OPTIONS:S|JAVASCRIPT_SUPPORT|JAVASCRIPT_SUPPORT=1|g)
 
 # Match compiler defaults to the source pragmas; avoid unused filename segments.
 #if !empty(CCOM:M*wcc*)
-XCCOMFLAGS += $(.TARGET:T:R:MNavigationMime:S|NavigationMime|-nt=Navigation_TEXT|) \
+XCCOMFLAGS += $(.TARGET:T:R:MHTMLView:S|HTMLView|-nt=HTMLVIEW_TEXT|) \
+             $(.TARGET:T:R:MHTMLViewNavigation:S|HTMLViewNavigation|-nt=UIAction_TEXT|) \
+             $(.TARGET:T:R:MHTMLViewOptions:S|HTMLViewOptions|-nt=UIRare_TEXT|) \
+             $(.TARGET:T:R:MHTMLViewOperation:S|HTMLViewOperation|-nt=UIRare_TEXT|) \
+             $(.TARGET:T:R:MHTMLViewStatus:S|HTMLViewStatus|-nt=UIOften_TEXT|) \
+             $(.TARGET:T:R:MHTMLViewLifecycle:S|HTMLViewLifecycle|-nt=OpenClos_TEXT|) \
+             $(.TARGET:T:R:MAutoBrowse:S|AutoBrowse|-nt=scrapbk_TEXT|) \
+             $(.TARGET:T:R:MScrapbook:S|Scrapbook|-nt=scrapbk_TEXT|) \
+             $(.TARGET:T:R:MURLLoad:S|URLLoad|-nt=LoadURL_TEXT|) \
+             $(.TARGET:T:R:MGraphicImport:S|GraphicImport|-nt=ImportG_TEXT|) \
+             $(.TARGET:T:R:MStatusText:S|StatusText|-nt=StatText_TEXT|) \
+             $(.TARGET:T:R:MGlobeAnimation:S|GlobeAnimation|-nt=GLBANIM_TEXT|) \
+             $(.TARGET:T:R:MAllocWatcher:S|AllocWatcher|-nt=AWATCHER_TEXT|) \
+             $(.TARGET:T:R:MNavigationMime:S|NavigationMime|-nt=Navigation_TEXT|) \
              $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLText_TEXT|) \
              $(.TARGET:T:R:MURLTextImages:S|URLTextImages|-nt=URLText_TEXT|) \
              $(.TARGET:T:R:MURLTextImageProgress:S|URLTextImageProgress|-nt=URLText_TEXT|) \

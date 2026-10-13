@@ -35,7 +35,7 @@ $view =~ s/\@call self::MSG_META_UNSUSPEND\(\)/CheckEarlyWidth(oself, viewWidth)
 $view =~ s/\@call oself::MSG_HTML_TEXT_CALCULATE_LAYOUT\(\)/CheckEarlyWidth(oself, viewWidth)/;
 $view =~ s/\@call viewObj::MSG_GEN_VIEW_GET_WINDOW\(\)/0/;
 
-my $toggle = read_source("$FindBin::Bin/../htmlview/UIRare.goc");
+my $toggle = read_source("$FindBin::Bin/../htmlview/HTMLViewOptions.goc");
 $toggle =~ /^(\@extern method HTMLVProcessClass, MSG_HMLVP_FIT_TO_WINDOW_CHANGED\n\{.*?^})/ms
     or die "Cannot find toggle handler\n";
 $toggle = $1;
