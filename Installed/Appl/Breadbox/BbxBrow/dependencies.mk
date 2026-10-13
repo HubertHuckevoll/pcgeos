@@ -276,7 +276,7 @@ HTMLView.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Art/green.goh Art/red.goh Art/yellow.goh \
                 UI/toolbarUrl.goh UI/toolbarSimple.goh \
                 UI/dialogKidguard.goh Art/red2.goh Art/green2.goh \
-                Art/toolicon.goh icons/icons.goh Art/GI001_8.goh \
+                Art/toolicon.goh Art_Icons/icons.goh Art/GI001_8.goh \
                 Art/GI002_8.goh Art/GI003_8.goh Art/GI004_8.goh \
                 Art/GI005_8.goh Art/A111_8.goh Art/A113_8.goh \
                 Art/A114_8.goh Art/GI009_8.goh Art/GI010_8.goh \
@@ -341,14 +341,14 @@ GlobeAnimation.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gGadgetC.goh Objects/gToolCC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
                 Objects/helpCC.goh options.goh product.goh glbanim.goh \
-                globeart/globe1.goh globeart/globe2.goh \
-                globeart/globe3.goh globeart/globe4.goh \
-                globeart/globe5.goh globeart/globe6.goh \
-                globeart/globe7.goh globeart/globe8.goh \
-                globeart/globe9.goh globeart/globe10.goh \
-                globeart/globe11.goh globeart/globe12.goh \
-                globeart/globe13.goh globeart/globe14.goh \
-                globeart/globe15.goh
+                Art_Globe/globe1.goh Art_Globe/globe2.goh \
+                Art_Globe/globe3.goh Art_Globe/globe4.goh \
+                Art_Globe/globe5.goh Art_Globe/globe6.goh \
+                Art_Globe/globe7.goh Art_Globe/globe8.goh \
+                Art_Globe/globe9.goh Art_Globe/globe10.goh \
+                Art_Globe/globe11.goh Art_Globe/globe12.goh \
+                Art_Globe/globe13.goh Art_Globe/globe14.goh \
+                Art_Globe/globe15.goh
 GlobeAnimation.obj \
 GlobeAnimation.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \

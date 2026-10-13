@@ -34,63 +34,63 @@
 @classdecl GlobeAnimClass;
 
 @start GlobeResource1, data ;
-@include "globeart/globe1.goh"
+@include "Art_Globe/globe1.goh"
 @end GlobeResource1 ;
 
 @start GlobeResource2, data ;
-@include "globeart/globe2.goh"
+@include "Art_Globe/globe2.goh"
 @end GlobeResource2 ;
 
 @start GlobeResource3, data ;
-@include "globeart/globe3.goh"
+@include "Art_Globe/globe3.goh"
 @end GlobeResource3 ;
 
 @start GlobeResource4, data ;
-@include "globeart/globe4.goh"
+@include "Art_Globe/globe4.goh"
 @end GlobeResource4 ;
 
 @start GlobeResource5, data ;
-@include "globeart/globe5.goh"
+@include "Art_Globe/globe5.goh"
 @end GlobeResource5 ;
 
 @start GlobeResource6, data ;
-@include "globeart/globe6.goh"
+@include "Art_Globe/globe6.goh"
 @end GlobeResource6 ;
 
 @start GlobeResource7, data ;
-@include "globeart/globe7.goh"
+@include "Art_Globe/globe7.goh"
 @end GlobeResource7 ;
 
 @start GlobeResource8, data ;
-@include "globeart/globe8.goh"
+@include "Art_Globe/globe8.goh"
 @end GlobeResource8 ;
 
 @start GlobeResource9, data ;
-@include "globeart/globe9.goh"
+@include "Art_Globe/globe9.goh"
 @end GlobeResource9 ;
 
 @start GlobeResource10, data ;
-@include "globeart/globe10.goh"
+@include "Art_Globe/globe10.goh"
 @end GlobeResource10 ;
 
 @start GlobeResource11, data ;
-@include "globeart/globe11.goh"
+@include "Art_Globe/globe11.goh"
 @end GlobeResource11 ;
 
 @start GlobeResource12, data ;
-@include "globeart/globe12.goh"
+@include "Art_Globe/globe12.goh"
 @end GlobeResource12 ;
 
 @start GlobeResource13, data ;
-@include "globeart/globe13.goh"
+@include "Art_Globe/globe13.goh"
 @end GlobeResource13 ;
 
 @start GlobeResource14, data ;
-@include "globeart/globe14.goh"
+@include "Art_Globe/globe14.goh"
 @end GlobeResource14 ;
 
 @start GlobeResource15, data ;
-@include "globeart/globe15.goh"
+@include "Art_Globe/globe15.goh"
 @end GlobeResource15 ;
 
 @method GlobeAnimClass, MSG_GLBANIM_DATA_RECEIVED

@@ -297,7 +297,7 @@
 /*
  * load other icons
  */
-@include "icons/icons.goh"
+@include "Art_Icons/icons.goh"
 
 /*
 * Interface - bringing it all together

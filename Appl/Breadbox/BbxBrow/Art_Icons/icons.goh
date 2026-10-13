@@ -28,45 +28,45 @@
 
 @ifdef COMPILE_OPTION_256_COLOR_ICONS
 @start TopIcons1Resource ;
-@include "icons/forward.goh"
-@include "icons/home.goh"
+@include "Art_Icons/forward.goh"
+@include "Art_Icons/home.goh"
 @end TopIcons1Resource ;
 
 @start TopIcons2Resource ;
-@include "icons/open.goh"
-@include "icons/back.goh"
+@include "Art_Icons/open.goh"
+@include "Art_Icons/back.goh"
 @end TopIcons2Resource ;
 
 @start TopIcons3Resource ;
-@include "icons/stop.goh"
-@include "icons/reload.goh"
+@include "Art_Icons/stop.goh"
+@include "Art_Icons/reload.goh"
 @end TopIcons3Resource ;
 
 @start TopIcons4Resource ;
-@include "icons/history.goh"
-@include "icons/print.goh"
+@include "Art_Icons/history.goh"
+@include "Art_Icons/print.goh"
 @end TopIcons4Resource ;
 @endif
 
 
 @ifdef COMPILE_OPTION_16_COLOR_ICONS
 @start TopIcons1Resource ;
-@include "icons/forwar16.goh"
-@include "icons/home16.goh"
+@include "Art_Icons/forwar16.goh"
+@include "Art_Icons/home16.goh"
 @end TopIcons1Resource ;
 
 @start TopIcons2Resource ;
-@include "icons/open16.goh"
-@include "icons/back16.goh"
+@include "Art_Icons/open16.goh"
+@include "Art_Icons/back16.goh"
 @end TopIcons2Resource ;
 
 @start TopIcons3Resource ;
-@include "icons/stop16.goh"
-@include "icons/reload16.goh"
+@include "Art_Icons/stop16.goh"
+@include "Art_Icons/reload16.goh"
 @end TopIcons3Resource ;
 
 @start TopIcons4Resource ;
-@include "icons/histor16.goh"
-@include "icons/print16.goh"
+@include "Art_Icons/histor16.goh"
+@include "Art_Icons/print16.goh"
 @end TopIcons4Resource ;
 @endif
