@@ -11,13 +11,24 @@
  *
 */
 /***************************************************************************
- *  FILE:  BOOKCLAS.GOC
+ *  FILE:  BookmarksDialog.goc
  ***************************************************************************/
 
 /*-------------------------------------------------------------------------
  | Project:  WebMagick (HTML Browser)
  |           Copyright (c) 1997 Breadbox Computer Company
  *-----------------------------------------------------------------------*/
+
+/*
+ * Bookmark dialog commands, list selection and menu coordination.
+ * Keep the original code resource independent of this source filename.
+ */
+#ifdef __BORLANDC__
+#pragma codeseg BOOKCLAS_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("BOOKCLAS_TEXT")
+#endif
 
 @include <stdapp.goh>
 @include "options.goh"
@@ -42,7 +53,7 @@ void BDSelectItem(optr dialog, word item) ;
  *=========================================================================*/
 
 
-    @classdecl BookmarksDialogClass ;
+@classdecl BookmarksDialogClass ;
 
 
 /*-------------------------------------------------------------------------
@@ -202,9 +213,9 @@ void BDSelectItem(optr dialog, word item) ;
             if (UserDoDialog(@BookmarkEditDialog) == IC_OK)  {
                 /* If the user clicked OK, then change the text. */
                 memTitle = @call BookmarkEditDialogNameText::
-                                     MSG_VIS_TEXT_GET_ALL_BLOCK(NullHandle) ;
+                MSG_VIS_TEXT_GET_ALL_BLOCK(NullHandle) ;
                 memURL = @call BookmarkEditDialogURLText::
-                                   MSG_VIS_TEXT_GET_ALL_BLOCK(NullHandle) ;
+                MSG_VIS_TEXT_GET_ALL_BLOCK(NullHandle) ;
                 p_title = MemLock(memTitle) ;
                 p_url = MemLock(memURL) ;
 
@@ -324,8 +335,8 @@ void BDSelectItem(optr dialog, word item) ;
 optr BDLocateListFromDialog(optr dialog)
 {
     return ConstructOptr(
-               OptrToHandle(dialog),
-               OptrToChunk(@BookmarksDynamicList)) ;
+        OptrToHandle(dialog),
+        OptrToChunk(@BookmarksDynamicList)) ;
 }
 
 /*-------------------------------------------------------------------------

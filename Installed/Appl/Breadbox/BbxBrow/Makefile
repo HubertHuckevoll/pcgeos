@@ -11,8 +11,10 @@ HTMLVIEW        = HTMLViewNavigation.goc HTMLViewOptions.goc\
                   HTMLView.goc AllocWatcher.goc GlobeAnimation.goc\
                   StatusText.goc HTMLViewLifecycle.goc
 INIT            = INIT.goc
-NAVIGATE        = BOOKCLAS.goc FAVORCLS.goc BOOKMARK.goc FAVORITE.goc\
-                  NAVCACHE.goc NavigationMime.goc Navigation.goc
+NAVIGATE        = CacheInternal.h NavigationMime.goc Navigation.goc\
+                  BookmarksDialog.goc BookmarksStore.goc FavoritesStore.goc\
+                  FavoritesDialog.goc FavoritesCreate.goc SourceCache.goc\
+                  ObjectCache.goc
 URLDOC          = URLDOC.goc URLDocumentHistory.goc\
                   URLDocumentNavigation.goc URLDocumentLocalPage.goc
 URLDOCCT        = URLDOCCT.goc
@@ -30,13 +32,15 @@ OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   GraphicImport.obj AutoBrowse.obj Scrapbook.obj\
                   HTMLView.obj AllocWatcher.obj GlobeAnimation.obj\
                   StatusText.obj HTMLViewLifecycle.obj INIT.obj\
-                  BOOKCLAS.obj FAVORCLS.obj BOOKMARK.obj FAVORITE.obj\
-                  NAVCACHE.obj NavigationMime.obj Navigation.obj URLDOC.obj\
-                  URLDocumentHistory.obj URLDocumentNavigation.obj\
-                  URLDocumentLocalPage.obj URLDOCCT.obj URLFETCH.obj\
-                  URLFrameTree.obj URLFrameNavigation.obj\
-                  URLFrameScript.obj URLFramePage.obj URLFrameFetch.obj\
-                  URLFrame.obj MemStream.obj URLTextClipboard.obj\
+                  NavigationMime.obj Navigation.obj BookmarksDialog.obj\
+                  BookmarksStore.obj FavoritesStore.obj FavoritesDialog.obj\
+                  FavoritesCreate.obj SourceCache.obj ObjectCache.obj\
+                  URLDOC.obj URLDocumentHistory.obj\
+                  URLDocumentNavigation.obj URLDocumentLocalPage.obj\
+                  URLDOCCT.obj URLFETCH.obj URLFrameTree.obj\
+                  URLFrameNavigation.obj URLFrameScript.obj\
+                  URLFramePage.obj URLFrameFetch.obj URLFrame.obj\
+                  MemStream.obj URLTextClipboard.obj\
                   URLTextImageProgress.obj URLTextImages.obj\
                   URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
                   URLText.obj

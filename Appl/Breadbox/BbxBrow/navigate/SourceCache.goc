@@ -1,0 +1,1116 @@
+/*
+ *                          ==CONFIDENTIAL INFORMATION==
+ *
+ * COPYRIGHT 1994-99 BREADBOX COMPUTER COMPANY -- ALL RIGHTS RESERVED  --
+ * THE FOLLOWING CONFIDENTIAL INFORMATION IS BEING DISCLOSED TO YOU UNDER
+ * A NON-DISCLOSURE AGREEMENT AND MAY NOT BE DISCLOSED OR FORWARDED BY THE
+ * RECIPIENT TO ANY OTHER PERSON OR ENTITY NOT COVERED BY THE SAME
+ * NON-DISCLOSURE AGREEMENT COVERING THE RECIPIENT. USE OF THE FOLLOWING
+ * CONFIDENTIAL INFORMATION IS RESTRICTED TO THE TERMS OF THE NON-DISCLOSURE
+ * AGREEMENT.
+ *
+ */
+/***********************************************************************
+ *
+ * PROJECT:       HTMLView
+ * FILE:          SourceCache.goc
+ *
+ * AUTHOR:        Marcus Groeber
+ *
+ ***********************************************************************/
+
+/**************************************************************************
+ *		Include files
+ **************************************************************************/
+
+/*
+ * Source-file cache state, persistence, recency and expiration.
+ * Owns shared cache URL policy and LOCAL utilities used by ObjectCache.goc.
+ * Keep the original code resource independent of this source filename.
+ */
+#ifdef __BORLANDC__
+#pragma codeseg NAVCACHE_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("NAVCACHE_TEXT")
+#endif
+
+@include <stdapp.goh>
+#include <library.h>
+#include <resource.h>
+
+#include <Ansi/string.h>
+#include <Ansi/stdio.h>
+#include <Ansi/stdlib.h>
+#include <geoMisc.h>                    /* various unix-like goodies */
+#include <initfile.h>
+
+@include "htmlview.goh"
+#include <htmlfstr.h>
+@include "urlfetch.goh"
+@include <dialogt.goh>
+@include "glbanim.goh"
+@include <sem.h>
+#include <sysstats.h>
+
+@extern object CacheCleanupDialog;
+
+#include "CacheInternal.h"
+
+
+/***************************************************************************
+ *              Global variables related to the cache system
+ ***************************************************************************/
+
+/*
+ * Source level cache
+ */
+optr srcCachePool;
+VMFileHandle srcCacheFile;      // Index file of source cache
+VMBlockHandle srcCacheBlock;
+dword srcFileNum;
+dword srcCacheSize;
+optr srcCacheArray;             /* chunk array with cached source names */
+SemaphoreHandle srcCacheSem = NullHandle ;
+
+/*
+ * Alternate source level cache
+ */
+#ifdef ALT_SRC_CACHE
+dword altSrcCacheSize;
+
+MemHandle altSrcCacheHosts = NullHandle;
+MemHandle altSrcCacheExts = NullHandle;
+#endif
+
+#ifdef CACHE_VALIDATION
+Boolean weakCacheExpiration = FALSE;
+#endif
+
+#ifdef UNSUPPORTED_EXTS
+MemHandle unSupportedExts = NullHandle;
+#endif
+
+@ifdef CACHE_ALL
+Boolean G_cacheAll = FALSE;
+@endif
+
+@if defined(COMPILE_OPTION_ENABLE_SETTINGS) || defined(COMPILE_OPTION_ENABLE_MISCELLANEOUS)
+    @extern object srcCacheLimit;
+@else
+    word srcCacheLimitIni = DEFAULT_SOURCE_CACHE_LIMIT;
+#ifdef ALT_SRC_CACHE
+    word altSrcCacheLimitIni = DEFAULT_SOURCE_CACHE_LIMIT;
+#endif
+@endif
+
+/*
+ * Limit the source-cache array index to its configured byte ceiling.
+ */
+#define SRC_CACHE_COUNT_LIMIT \
+  (COMPILE_OPTION_CACHE_ENTRY_SIZE_LIMIT/sizeof(srcCacheData))
+
+
+/***************************************************************************
+ *              Common cache utilities
+ ***************************************************************************/
+
+#ifdef ALT_SRC_CACHE
+/**************************************************************************
+ *              UseAltCache
+ **************************************************************************
+ *
+ * Description:
+ *     Decide if the passed URL should go into the alternative cache.
+ *
+ *     It is okay to parse the URL here again, as it ain't too slow
+ *     and keeps the API a bit cleaner, but mainly I don't have to
+ *     deal with conflicting @ifdefs for COMPILE_OPTION_PARENTAL_CONTROL
+ *     and ALT_SRC_CACHE in LoadURLToFile
+ *
+ * Inputs:
+ *     char *urlP                 -- URL to put into cache
+ *
+ * Outputs:
+ *     dword                      -- ID to use in cache
+ *
+ **************************************************************************/
+Boolean LOCAL UseAltCache(TCHAR *urlP)
+{
+    MemHandle hostBlk;
+    TCHAR *host;
+    TCHAR *ext = NULL;
+    int hostLen, extLen = 0;
+    TCHAR *altHosts, *altExts;
+    TCHAR *altHostsEnd, *altExtsEnd;
+    Boolean res = FALSE;
+
+    /* allocate server name buffer */
+    hostBlk = MemAlloc(URL_MAX_SERVER+1, HF_DYNAMIC, 0);
+    if (!hostBlk) return res;
+    host = MemLock(hostBlk);  /* might be NULL */
+    if (!host) {
+        MemFree(hostBlk);
+        return res;
+    }
+    /* parse out host */
+    ToolsParseURL(urlP, NULL, host, NULL);
+    hostLen = strlen(host);
+    /* point at extension */
+    ext = strrchr(urlP, C_PERIOD);
+    if (ext > strrchr(urlP, '/')) {
+        ext++;  /* skip period to extension */
+        extLen = strlen(ext);
+    } else {
+        /* last C_PERIOD, not in final component, no extension */
+        ext = NULL;
+    }
+    /* check hosts */
+    if (altSrcCacheHosts && hostLen) {
+        altHosts = MemLock(altSrcCacheHosts);
+        if (altHosts) {
+            altHostsEnd = strchr(altHosts, C_NULL);
+            while (altHosts && *altHosts) {
+                if ((LocalCmpStringsNoCase(host, altHosts, hostLen) == 0) &&
+                    /* terminted by next entry */
+                    ((altHosts[hostLen] == C_SPACE) ||
+                    /* terminated by end of list */
+                    (altHosts + hostLen == altHostsEnd))) {
+                    res = TRUE;
+                    break;
+                }
+                altHosts = strchr(altHosts, C_SPACE);
+                if (altHosts) altHosts++;  /* skip space, if any */
+            }
+            MemUnlock(altSrcCacheHosts);
+        }
+        /* if alt host, check extensions */
+        if (res && altSrcCacheExts) {
+            altExts = MemLock(altSrcCacheExts);
+            if (altExts) {
+                /* got altSrcCacheExts block, now must match extension */
+                res = FALSE;
+                if (ext && extLen) {
+                    /* if URL has extension, we must match it (if URL has
+                       no extension, it goes to the main cache) */
+                    altExtsEnd = strchr(altExts, C_NULL);
+                    while (altExts && *altExts) {
+                        if ((LocalCmpStringsNoCase(ext, altExts,
+                            extLen) == 0) &&
+                            /* terminted by next entry */
+                            ((altExts[extLen] == C_SPACE) ||
+                            /* terminated by end of list */
+                            (altExts + extLen == altExtsEnd))) {
+                            res = TRUE;
+                            break;
+                        }
+                        altExts = strchr(altExts, C_SPACE);
+                        if (altExts) altExts++;  /* skip space, if any */
+                    }
+                }
+                MemUnlock(altSrcCacheExts);
+            } else {
+                /* couldn't lock extensions, use main cache (this could
+                   lead to non-fatal cache inconsistencies later) */
+                res = FALSE;
+            }
+        }
+    }
+    MemFree(hostBlk);
+    return res;
+}
+#endif
+
+/**************************************************************************
+ *              CacheGetLocalToken
+ **************************************************************************
+ *
+ * Description:
+ *     Convert a global name token to a token for the same string in the
+ *     cache's own name pool (if already present).
+ *
+ * Inputs:
+ *     optr cachePool           -- name pool to convert into
+ *     NameToken url            -- token of string to convert
+ *
+ * Outputs:
+ *     NameToken                -- token in cache pool, or NAME_POOL_NONE
+ *                                 if not yet in local cache
+ *
+ **************************************************************************/
+NameToken LOCAL CacheGetLocalToken(optr cachePool, NameToken url)
+{
+    TCHAR urlbuf[HTML_STATIC_BUF], *urlP;
+    NameToken ret;
+
+    NamePoolCopy(namePool, urlbuf, sizeof(urlbuf), url, &urlP);
+    ret = NamePoolFind(cachePool, urlP);
+    NamePoolDestroyIfDynamic(urlP);
+
+    return ret;
+}
+
+#ifdef CACHE_VALIDATION
+/*
+  Julian Day Number formula is this:
+
+   if m < 3 then
+     m = m + 12
+     y = y - 1
+   endif
+   jd = d + (153*m - 457)/5 + 365*y + y/4 - y/100 + y/400 + 1721118.5
+
+  Since we'll be computing days since 1/1/1980, we can eliminate the
+  1721118.5 element.
+*/
+
+/* our number represents seconds since 1/1/1980 of target date/time */
+#define N_1_1_1980 (1+(153*13-457)/5+365L*1979L+1979/4-1979/100+1979/400)
+
+dword DateTimeToNumber(TimerDateAndTime *tdat)
+{
+    dword retVal;
+    word year = tdat->TDAT_year;
+    word month = tdat->TDAT_month;
+
+    /* wrap non-leap months to end of previous year */
+    if (month < 3) {
+        month += 12;
+        year--;
+    }
+    /* compute relative Julian Day Number */
+    retVal = tdat->TDAT_day +
+        (153*month - 457) / 5 +
+        365L*(dword)year + year/4 - year/100 + year/400 - N_1_1_1980;
+
+    retVal *= 24L*60L*60L;  /* seconds in each day */
+    retVal += tdat->TDAT_hours*60*60 +
+        tdat->TDAT_minutes*60 +
+        tdat->TDAT_seconds;
+    return retVal;
+}
+
+void NumberToDateTime(dword number, TimerDateAndTime *tdat)
+{
+    dword rjd = number / (24L*60L*60L),  /* extract relative JDN */
+        timeSecs = number % (24L*60L*60L),  /* extract time */
+        z, h, a, b, year, c, month;
+
+    z = rjd + N_1_1_1980;  /* z = INT(JD - 1721118.5) */
+    h = 100L*z - 25;
+    a = h/3652425L;
+    b = a - a/4;
+    year = (100L*b+h)/36525L;
+    c = b + z - 365L*year - year/4;
+    month = (5*c + 456)/153;
+    tdat->TDAT_day = c - (153*month - 457)/5;
+    if (month > 12) {
+        year++;
+        month -= 12;
+    }
+    tdat->TDAT_month = month;
+    tdat->TDAT_year = year;
+
+    tdat->TDAT_seconds = timeSecs % 60;
+    tdat->TDAT_minutes = (timeSecs/60) % 60;
+    tdat->TDAT_hours = ((timeSecs/60) / 60) % 24;
+}
+#endif
+
+/***************************************************************************
+ *              Source cache management
+ ***************************************************************************/
+
+/**************************************************************************
+ *              CreateEmptyCache
+ **************************************************************************
+ *
+ * Description:
+ *     Initialize directory structure of source cache system
+ *
+ **************************************************************************/
+void LOCAL CreateEmptyCache(void)
+{
+#ifdef NUM_CACHE_DIRS
+    word i;
+    TCHAR cacheDir[10];
+#endif
+
+#ifdef NUM_CACHE_DIRS
+    FileSetCurrentPath(HTML_CACHE_SP, HTML_CACHE_DIR);
+    for (i = 0; i < NUM_CACHE_DIRS; i++) {
+        sprintf(cacheDir, _TEXT("%d"), i);
+        FileCreateDir(cacheDir);
+ #ifdef ALT_SRC_CACHE
+        sprintf(cacheDir, _TEXT("ALT%d"), i);
+        FileCreateDir(cacheDir);
+ #endif
+    }
+#endif
+}
+
+/**************************************************************************
+ *              CleanupCache
+ **************************************************************************
+ *
+ * Description:
+ *     Cleanup cache directories after a crash.
+ *
+ **************************************************************************/
+void LOCAL CleanupCache(void)
+{
+    FileEnumParams findCacheFEP =
+    {FILE_ENUM_ALL_FILE_TYPES,
+            (void *)FESRT_NAME,
+            FILE_LONGNAME_BUFFER_SIZE,
+            0,
+            FE_BUFSIZE_UNLIMITED,
+            0,
+            NULL,
+            NULL,0,0,
+            0};
+    struct {
+        FileLongName CF_name;
+    } *cachedFile;
+    MemHandle mh;
+    int found;
+    word notHandled;
+    srcCacheData *cacheData;
+    dword id;
+    TCHAR c, *idP;
+#ifdef NUM_CACHE_DIRS
+    int i;
+    TCHAR cacheDir[10];
+
+ #ifdef ALT_SRC_CACHE
+    for (i = 0; i < NUM_CACHE_DIRS*2; i++ ) {
+ #else
+    for (i = 0; i < NUM_CACHE_DIRS; i++ ) {
+ #endif
+#endif
+        FileSetCurrentPath(HTML_CACHE_SP, HTML_CACHE_DIR);
+#ifdef NUM_CACHE_DIRS
+ #ifdef ALT_SRC_CACHE
+        if (i&1) {
+            sprintf(cacheDir, _TEXT("ALT%d"), i/2);
+        } else {
+            sprintf(cacheDir, _TEXT("%d"), i/2);
+        }
+ #else
+        sprintf(cacheDir, _TEXT("%d"), i);
+ #endif
+        FileSetCurrentPath(0, cacheDir);
+#endif
+        found = FileEnum(&findCacheFEP, &mh, &notHandled);
+        if (found) {
+            for (cachedFile = MemLock(mh); found; found--, cachedFile++ ) {
+                id = 0;
+                idP = cachedFile;
+                while( (c=toupper(*(idP++)))!=0 && isxdigit(c) ) {
+                    id<<=4;
+                    if(isdigit(c)) id |= (c-'0');
+                    else id |= (c-'A'+10);
+                }
+                if (SrcCacheFindEntryByID(id, &cacheData) == CA_NULL_ELEMENT) {
+                    FileDelete((char*)cachedFile);
+                }
+            }
+            MemFree(mh);
+        }
+#ifdef NUM_CACHE_DIRS
+    }
+#endif
+}
+
+/**************************************************************************
+ *              LoadSrcCacheArray
+ **************************************************************************
+ *
+ * Description:
+ *     Read contents of source cache from file, leaving it intact there.
+ *
+ * Inputs:
+ *     VMFileHandle vmf           -- File handle in which arrays reside
+ *     CacheFileMapBlock *cfmb    -- Map block of existing cache file
+ *
+ **************************************************************************/
+void LOCAL LoadSrcCacheArray(VMFileHandle vmf, CacheFileMapBlock *cfmb)
+{
+    word i,n;
+    srcCacheData *scd;
+    word size;
+    MemHandle mh;
+
+    srcCacheBlock = OptrToHandle(cfmb->CFMB_cache);
+
+    /* Adopt contents of source cache */
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+    VMPreserveBlocksHandle(srcCacheFile, srcCacheBlock);
+    srcCacheArray = ConstructOptr(mh, OptrToChunk(cfmb->CFMB_cache));
+
+    n = ChunkArrayGetCount(srcCacheArray);
+    for(i=0; i<n; i++)
+    {
+        scd = ChunkArrayElementToPtr(srcCacheArray, i, &size);
+
+        /* Total up file size */
+#ifdef ALT_SRC_CACHE
+        if (scd->id & CACHE_ALT_FLAG) {
+            altSrcCacheSize += scd->size;
+        } else {
+            srcCacheSize += scd->size;
+        }
+#else
+        srcCacheSize += scd->size;
+#endif
+
+        /* Identify maximum file number */
+        if((scd->id & ~CACHE_ALT_FLAG) >= srcFileNum)
+            srcFileNum = (scd->id & ~CACHE_ALT_FLAG) + 1;
+    }
+    VMUnlock(mh) ;
+
+    // Get cache's name pool from file
+    srcCachePool = NamePoolVMLoad(vmf, cfmb->CFMB_namePool);
+}
+
+/**************************************************************************
+ *              AttachToSrcCache
+ **************************************************************************
+ *
+ * Description:
+ *     Open existing cache file (if it has been created by ourselves and
+ *     if it has been properly closed) or create a new one, and load or
+ *     initialize all the variables belonging to the cache.
+ *
+ **************************************************************************/
+void AttachToSrcCache(void)
+{
+    VMBlockHandle map;
+    CacheFileMapBlock *cfmb;
+    MemHandle mhMap, mhSrcCache;
+    Boolean loaded;
+    ProtocolNumber protocol;
+    FileLongName cacheFileName;
+
+    /* Load settings from INI files */
+@if !defined(COMPILE_OPTION_ENABLE_SETTINGS) && !defined(COMPILE_OPTION_ENABLE_MISCELLANEOUS)
+    InitFileReadInteger(HTMLVIEW_CATEGORY, "srcCacheLimit",
+        &srcCacheLimitIni);
+#ifdef ALT_SRC_CACHE
+    altSrcCacheLimitIni = srcCacheLimitIni;
+    InitFileReadInteger(HTMLVIEW_CATEGORY, "altSrcCacheLimit",
+        &altSrcCacheLimitIni);
+#endif
+@endif
+
+    /* Create semaphore to keep multiple accesses to the caches in order */
+    srcCacheSem = ThreadAllocSem(1);
+
+    srcCacheSize = 0;                   /* source cache is empty so far */
+#ifdef ALT_SRC_CACHE
+    altSrcCacheSize = 0;
+#endif
+    srcFileNum = 0;                     /* initialize cache tokens */
+
+    sprintf(cacheFileName, HTML_CACHE_NAME, 999);
+    srcCacheFile = VMOpen(cacheFileName, VMAF_FORCE_READ_WRITE, VMO_OPEN, 0);
+
+    loaded = FALSE;
+    if(srcCacheFile)                    // is the file present?
+    {
+        map = VMGetMapBlock(srcCacheFile);// yes: get entry into data structure
+        if(map)                           // already has been persisted
+        /* do map check just for VM validation */
+        {
+            FileGetHandleExtAttributes(srcCacheFile, FEA_PROTOCOL,
+                &protocol, sizeof(protocol));
+            if(ThreadGetError() == 0 &&
+                /* no handling of compatible changes, yet */
+                protocol.PN_major == SRC_CACHE_MAJOR_VERSION &&
+                protocol.PN_minor == SRC_CACHE_MINOR_VERSION)
+            {                               // file was created by us?
+                cfmb = VMLock(srcCacheFile, map, &mhMap);
+                LoadSrcCacheArray(srcCacheFile, cfmb);
+                // yes: load cache arrays into memory
+                loaded = TRUE;                // we accept this cache file
+                VMUnlock(mhMap);                // release map block
+            }
+        }
+    }
+
+    if(!loaded)                         // Not yet found an acceptable cache?
+    {
+        if(srcCacheFile)                  // close the existing file: no good
+            VMClose(srcCacheFile, FALSE);
+
+        srcCacheFile = VMOpen(cacheFileName, VMAF_FORCE_READ_WRITE,
+            VMO_CREATE_TRUNCATE, 0);
+        VMSetAttributes(srcCacheFile, VMA_SYNC_UPDATE, 0) ;
+
+        /* set protocol number (ignore error?) */
+        protocol.PN_major = SRC_CACHE_MAJOR_VERSION;
+        protocol.PN_minor = SRC_CACHE_MINOR_VERSION;
+        FileSetHandleExtAttributes(srcCacheFile, FEA_PROTOCOL,
+            &protocol, sizeof(protocol));
+
+        /* Allocate a new map block */
+        map = VMAlloc(srcCacheFile, sizeof(CacheFileMapBlock), 0);
+        cfmb = VMLock(srcCacheFile, map, &mhMap);
+        // access map block
+
+        GeodeGetInfo(GeodeGetProcessHandle(), GGIT_GEODE_RELEASE,
+            &(cfmb->CFMB_release));         // get our own version number
+
+        /* create new name pool for empty cache */
+        srcCachePool = NamePoolCreate(srcCacheFile);
+        cfmb->CFMB_namePool = NamePoolVMSave(srcCachePool, srcCacheFile);
+        srcCachePool = NamePoolVMLoad(srcCacheFile, cfmb->CFMB_namePool);
+
+        /* create a new cache array in VM file */
+        srcCacheBlock = VMAllocLMem(srcCacheFile, LMEM_TYPE_GENERAL, 0);
+        VMLock(srcCacheFile, srcCacheBlock, &mhSrcCache);
+        VMPreserveBlocksHandle(srcCacheFile, srcCacheBlock);
+        srcCacheArray = ConstructOptr(mhSrcCache,
+            ChunkArrayCreate(mhSrcCache, sizeof(srcCacheData), 0, 0));
+        VMUnlock(mhSrcCache) ;
+
+        /* store reference to cache array block */
+        cfmb->CFMB_cache = ConstructOptr(srcCacheBlock,
+            OptrToChunk(srcCacheArray));
+
+        VMUnlock(mhMap);                   // everything is set
+
+        VMSetMapBlock(srcCacheFile, map); // set map block of index file
+
+        VMUpdate(srcCacheFile);           // put it onto the disk
+
+        /* create new or cleanup existing cache */
+        @call CacheCleanupDialog::MSG_GEN_INTERACTION_INITIATE();
+        CreateEmptyCache();
+        CleanupCache();
+        @call CacheCleanupDialog::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
+    }
+}
+
+/**************************************************************************
+ *              SrcCacheCommit
+ **************************************************************************
+ *
+ * Description:
+ *     Save source cache directory to file.
+ *
+ **************************************************************************/
+void SrcCacheCommit(void)
+{
+    VMUpdate(srcCacheFile);             // put it onto the disk
+}
+
+/**************************************************************************
+ *              SrcCacheGenerateID
+ **************************************************************************
+ *
+ * Description:
+ *     Generate a unique ID under which to store the file in the cache
+ *     based on the passed URL (for deciding between "alt" and regular
+ *     cache).
+ *
+ * Inputs:
+ *     char *urlP                 -- URL to put into cache
+ *
+ * Outputs:
+ *     dword                      -- ID to use in cache
+ *
+ **************************************************************************/
+dword SrcCacheGenerateID(TCHAR *urlP)
+{
+    dword id;
+
+    SrcCacheGrab() ;
+    id = ++srcFileNum;                  // generate new ID
+    SrcCacheRelease() ;
+
+#ifdef ALT_SRC_CACHE
+    if ( UseAltCache(urlP) )            // flag ID if going to alt cache
+        id |= CACHE_ALT_FLAG;
+#else
+    #pragma argsused
+#endif
+
+    return id;
+}
+
+/**************************************************************************
+ *              CreateTempName
+ **************************************************************************
+ *
+ * Description:
+ *     Generate the file name in the cache for the passed ID.
+ *
+ * Inputs:
+ *     dword id                   -- ID to use in cache
+ *     TCHAR *ext                  -- extension (max. 3 chars) for type
+ *
+ * Outputs:
+ *     TCHAR *buf                  -- Full path for file is returned here
+ *
+ **************************************************************************/
+void CreateTempName(dword id,TCHAR *ext,TCHAR *buf)
+{
+    TCHAR *q = buf;
+#ifdef NUM_CACHE_DIRS
+    TCHAR base[FILE_LONGNAME_BUFFER_SIZE/sizeof(TCHAR)+13+10];
+#else
+    TCHAR base[FILE_LONGNAME_BUFFER_SIZE/sizeof(TCHAR)+13];
+#endif
+
+#ifdef NUM_CACHE_DIRS
+ #ifdef ALT_SRC_CACHE
+    sprintf(base,HTML_CACHE_FILE,
+        (id & CACHE_ALT_FLAG) ? _TEXT("ALT") : _TEXT(""),
+        ((id & ~CACHE_ALT_FLAG)%NUM_CACHE_DIRS), id, ext);
+ #else
+    sprintf(base,HTML_CACHE_FILE,
+        (id%NUM_CACHE_DIRS), id, ext);
+ #endif
+#else
+    sprintf(base,HTML_CACHE_FILE,id,ext);
+#endif
+    FileConstructFullPath(&q, PATH_BUFFER_SIZE, HTML_CACHE_SP, base, TRUE);
+}
+
+dword LOCAL GetFileSizeByName(TCHAR *buf)
+{
+    FileHandle fh;
+    dword ret = 0;
+
+    fh = FileOpen(buf, FILE_ACCESS_R | FILE_DENY_NONE);
+    if(fh)
+    {
+        ret = FileSize(fh);
+        FileClose(fh, TRUE);
+    }
+    return ret;
+}
+
+Boolean LOCAL SrcCacheRemoveEntry(TCHAR *buf, srcCacheData *data)
+{
+    word error ;
+    Boolean isProblem = FALSE ;
+
+#ifdef ALT_SRC_CACHE
+    if (data->id & CACHE_ALT_FLAG) {
+        altSrcCacheSize -= data->size;
+    } else {
+        srcCacheSize -= data->size;
+    }
+#else
+    srcCacheSize -= data->size;         /* get size of file to be deleted */
+#endif
+
+    CreateTempName(data->id, data->ext, buf);
+
+    /* The file may be in use (downloading) when we try to delete it */
+    /* Make sure we know. */
+    error = FileDelete(buf);            /* remove file itself */
+
+    /* Only remove from the listing if the delete was successful */
+    if ((error == 0) || (error == ERROR_FILE_NOT_FOUND))  {
+        NamePoolReleaseToken(srcCachePool, data->url);
+        NamePoolReleaseToken(srcCachePool, data->mimeType);
+        /* release strings */
+        ChunkArrayDelete(srcCacheArray, data);
+                                        /* remove entry from cache */
+    } else {
+        isProblem = TRUE ;
+    }
+
+    /* Report if we found an error */
+    return isProblem ;
+}
+
+word SrcCacheRemoveEntryByID(dword id)
+{
+    word i,len;
+    srcCacheData *data;
+    MemHandle mh;
+
+    SrcCacheGrab() ;
+
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+
+    for(i=ChunkArrayGetCount(srcCacheArray)-1; (int)i>=0; i--)
+    {
+        data = ChunkArrayElementToPtr(srcCacheArray,i,&len);
+        if(data->id == id) {
+#ifdef ALT_SRC_CACHE
+            if (data->id & CACHE_ALT_FLAG) {
+                altSrcCacheSize -= data->size;
+            } else {
+                srcCacheSize -= data->size;
+            }
+#else
+            srcCacheSize -= data->size;   /* get size of file to be deleted */
+#endif
+            NamePoolReleaseToken(srcCachePool, data->url);
+            NamePoolReleaseToken(srcCachePool, data->mimeType);
+            ChunkArrayDelete(srcCacheArray, data);
+            break;
+        }
+    }
+
+    VMUnlock(mh) ;
+
+    SrcCacheRelease() ;
+
+    if((int)i<0)                        /* found nothing? page not in cache */
+        return CA_NULL_ELEMENT;
+
+    return i;
+}
+
+void LOCAL EnforceSrcCacheSizeLimits(TCHAR *buf, dword addSize, dword id)
+{
+    sdword limit;
+    word len;
+    word i;
+#ifdef ALT_SRC_CACHE
+    sdword *cacheSize = (id & CACHE_ALT_FLAG)? &altSrcCacheSize:&srcCacheSize;
+#else
+    sdword *cacheSize = &srcCacheSize;
+#endif
+    srcCacheData *data;
+    Boolean success;
+
+@if defined(COMPILE_OPTION_ENABLE_SETTINGS) || defined(COMPILE_OPTION_ENABLE_MISCELLANEOUS)
+    limit = 1024L * (@call srcCacheLimit::MSG_GEN_VALUE_GET_INTEGER_VALUE());
+@else
+#ifdef ALT_SRC_CACHE
+    limit = 1024L * ((id & CACHE_ALT_FLAG)? altSrcCacheLimitIni:srcCacheLimitIni);
+#else
+    limit = srcCacheLimitIni;
+#endif
+@endif
+
+    while( (sdword)(*cacheSize + addSize) >= limit ||
+        ChunkArrayGetCount(srcCacheArray) >= SRC_CACHE_COUNT_LIMIT )
+    {
+        success = FALSE;                  // Nothing deleted yet
+        for(i=0; i<ChunkArrayGetCount(srcCacheArray); i++)
+        {
+            data = ChunkArrayElementToPtr(srcCacheArray, i, &len);
+#ifdef ALT_SRC_CACHE
+            /* Ignore items in the "other" cache, unless we're limited by
+               the cache item count. In that case, everything has to go. */
+            if( ChunkArrayGetCount(srcCacheArray) < SRC_CACHE_COUNT_LIMIT &&
+                (id & CACHE_ALT_FLAG) != (data->id & CACHE_ALT_FLAG) )
+                continue;
+#endif
+            /* Keep on trying if there was an error */
+            if (SrcCacheRemoveEntry(buf, data)==FALSE)
+            {
+                success = TRUE;               // We removed something
+                break ;
+            }
+        }
+        if(!success)                      // Didn't find anything: stop it
+            break;
+    }
+}
+
+word SrcCacheFindEntry(NameToken url, srcCacheData **data)
+{
+    word i,len;
+    NameToken localURL;
+
+    localURL = CacheGetLocalToken(srcCachePool, url);
+    // convert token into cache pool token
+    if(localURL==NAME_POOL_NONE)        // string completely unknown?
+        return CA_NULL_ELEMENT;           // short cut: we know we won't find it
+
+    for(i=ChunkArrayGetCount(srcCacheArray)-1; (int)i>=0; i--)
+    {
+        *data = ChunkArrayElementToPtr(srcCacheArray,i,&len);
+        if((*data)->url==localURL)        /* abort if entry for URL found */
+            break;
+    }
+    if((int)i<0)                        /* found nothing? page not in cache */
+        return CA_NULL_ELEMENT;
+
+    return i;
+}
+
+word SrcCacheFindEntryByID(dword id, srcCacheData **data)
+{
+    word i,len;
+    MemHandle mh;
+
+    SrcCacheGrab() ;
+
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+
+    for(i=ChunkArrayGetCount(srcCacheArray)-1; (int)i>=0; i--)
+    {
+        *data = ChunkArrayElementToPtr(srcCacheArray,i,&len);
+        if((*data)->id==id)             /* abort if entry for ID found */
+            break;
+    }
+
+    VMUnlock(mh) ;
+
+    SrcCacheRelease() ;
+
+    if((int)i<0)                        /* found nothing? page not in cache */
+        return CA_NULL_ELEMENT;
+
+    return i;
+}
+
+#ifdef CACHE_VALIDATION
+/**************************************************************************
+ *              SrcCacheIsExpired
+ **************************************************************************
+ *
+ * Description:
+ *     Embodies the rules used for checking cache expiration.
+ *
+ * Inputs:
+ *     dword expiration           -- date number when item expires
+ *
+ * Outputs:
+ *     Boolean                    -- TRUE if expired, FALSE if not
+ *     Boolean *tryModified       -- if expired, TRUE if freshness should
+ *                                   be tested by making a request
+ *
+ **************************************************************************/
+Boolean LOCAL SrcCacheIsExpired(dword expiration, Boolean *tryModified)
+{
+    TimerDateAndTime nowTDAT;
+    dword nowSecs;
+    Boolean expired = FALSE;
+    sdword maxAge;
+
+    *tryModified = FALSE;
+
+    /* Expired if cache copy is older than allowed (since our connection is
+       slow, we allow .ini flag to do this check only if a max age was
+       explicitly specified with Date: and Expires: or
+       Cache-Control: max-age=) */
+    if(expiration)
+    {
+        TimerGetDateAndTime(&nowTDAT);  /* now in local time */
+        nowSecs = DateTimeToNumber(&nowTDAT);
+        maxAge = expiration - nowSecs;
+        if(maxAge < 0)
+            expired = TRUE;
+    }
+    else if(!weakCacheExpiration)     // weak expiration: no expiration
+        *tryModified = TRUE;            // specified will make us never request
+
+@ifdef CACHE_ALL
+    /* ignore expiration if G_cacheAll */
+    if(G_cacheAll) expired = FALSE;
+@endif
+
+    return expired;
+}
+#endif
+
+Boolean SrcCacheFindURL(NameToken url, dword *id, TCHAR *ext, TCHAR *mimeType CACHE_VAL_FIND_PROTO)
+{
+    word elm;
+    srcCacheData *data, entry;
+    Boolean ret;
+    MemHandle mh;
+
+    SrcCacheGrab() ;
+
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+    elm = SrcCacheFindEntry(url, &data);/* find entry in cache */
+    if(elm != CA_NULL_ELEMENT)
+    {
+        /* make sure element goes to the end of the array (=LRU mechanism) */
+        entry = *data;                    /* copy element data */
+        ChunkArrayDelete(srcCacheArray, data);
+        /* remove at old position */
+        data = ChunkArrayAppend(srcCacheArray, 0);
+        /* re-append at the end */
+        *data = entry;                    /* initialize element again */
+
+        *id = entry.id;                   /* return associated data */
+
+        strcpy(ext, entry.ext);
+        NamePoolCopy(srcCachePool, mimeType, MIME_MAXBUF, entry.mimeType, NULL);
+        /* get mime type */
+
+#ifdef CACHE_VALIDATION
+        *lastModDate = entry.lastModDate;
+        ret = !SrcCacheIsExpired(entry.expiration, tryModified);
+#else
+        ret = TRUE;
+#endif
+    }
+    else
+        ret = FALSE;
+    VMUnlock(mh) ;
+
+    SrcCacheRelease() ;
+
+    return ret;
+}
+
+void SrcCacheAddURL(dword id, TCHAR *ext, TCHAR *mimeType, NameToken url,
+                    dword size CACHE_VAL_ADD_PROTO)
+{
+    srcCacheData *data;
+    PathName buf;
+    dword newSize;
+#ifdef CACHE_VALIDATION
+    dword expiration, now, lifeLeft;
+    TimerDateAndTime nowTDAT;
+#endif
+    MemHandle mh;
+
+    SrcCacheGrab() ;
+
+    CreateTempName(id, ext, buf);
+    if (!size) {
+        newSize = GetFileSizeByName(buf);   /* get size of new file */
+    } else {
+        newSize = size;
+    }
+
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+    EnforceSrcCacheSizeLimits(buf, newSize, id);
+    /* (buf only used for temp storage) */
+
+#ifdef ALT_SRC_CACHE
+    if (id & CACHE_ALT_FLAG) {
+        altSrcCacheSize += newSize;
+    } else {
+        srcCacheSize += newSize;
+    }
+#else
+    srcCacheSize += newSize;            /* add size of new file to cache */
+#endif
+
+    data = ChunkArrayAppend(srcCacheArray,0);
+    data->url = NamePoolTokenizeFromPool(srcCachePool, namePool, url, TRUE);;
+    data->size = newSize;
+    data->id = id;
+    xstrncpy( data->ext, ext, 8 );
+    data->mimeType = NamePoolTokenize(srcCachePool, mimeType, TRUE);
+
+#ifdef CACHE_VALIDATION
+    TimerGetDateAndTime(&nowTDAT);        /* current local time */
+    expiration = DateTimeToNumber(&nowTDAT);
+
+    if(maxAge)
+    {
+        /*
+         * Rebase expiration date from current system ticks to
+         * absolute local time since 01/01/80.
+         */
+
+        /* compute expiration date (in local time) */
+        now = TimerGetCount()/60;           /* now, in relative seconds */
+        /* get remaining life, in seconds */
+        if (cacheTime + maxAge > now) {
+            lifeLeft = cacheTime + maxAge - now;
+        } else {
+            lifeLeft = 0;
+        }
+        /* compute local expiration time */
+        expiration += lifeLeft;
+    }
+    else
+    {
+#ifdef DEFAULT_MAX_AGE
+        /*
+         * No explicit expiration time specified: still make it some day...
+         */
+        if(weakCacheExpiration)           // Will otherwise be verified anyway
+            expiration += DEFAULT_MAX_AGE;
+        else
+#endif
+            expiration = 0;
+    }
+
+    data->expiration = expiration;
+    data->lastModDate = *lastModDate;
+#endif
+
+    VMUnlock(mh) ;
+
+    SrcCacheRelease() ;
+}
+
+void SrcCacheClear(void)
+{
+    word i, n, len ;
+    PathName buf;
+    MemHandle mh;
+
+    SrcCacheGrab() ;
+
+    FilePushDir() ;
+    FileSetCurrentPath(HTML_CACHE_SP, HTML_CACHE_DIR);
+
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+    n = ChunkArrayGetCount(srcCacheArray) ;
+
+    /* Go backwards so as entries are cleared (or not cleared), */
+    /* the index is still good */
+    for (i=n; i>0; i--)
+    {
+        /* Try deleting each entry */
+        /* This clears both the regular and the "alt" cache (if any) */
+        SrcCacheRemoveEntry(
+            buf,
+            ChunkArrayElementToPtr(srcCacheArray, i-1, &len)) ;
+    }
+    VMUnlock(mh) ;
+    FilePopDir() ;
+
+    SrcCacheRelease() ;
+
+    /* Make sure changes make it to the disk right away */
+    SrcCacheCommit();
+}
+
+Boolean SrcCacheFreeURL(NameToken url)
+{
+    srcCacheData *src;
+    PathName pathBuf;
+    Boolean res;
+    MemHandle mh;
+
+    SrcCacheGrab();
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+    res = (SrcCacheFindEntry(url, &src) != CA_NULL_ELEMENT);
+    if (res) {
+        res = (SrcCacheRemoveEntry(pathBuf, src) == FALSE);
+    }
+    VMUnlock(mh) ;
+    SrcCacheRelease();
+    return res;
+}
+
+#ifdef CACHE_VALIDATION
+Boolean SrcCacheExpireURL(NameToken url)
+{
+    srcCacheData *src;
+    Boolean res;
+    MemHandle mh;
+
+    SrcCacheGrab();
+    VMLock(srcCacheFile, srcCacheBlock, &mh);
+    res = (SrcCacheFindEntry(url, &src) != CA_NULL_ELEMENT);
+    if (res) {
+        src->expiration = 1;             // Set to earliest possible expiration
+    }
+    VMUnlock(mh) ;
+    SrcCacheRelease();
+    return res;
+}
+#endif

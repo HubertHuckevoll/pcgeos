@@ -13,7 +13,7 @@
 /***********************************************************************
  *
  * PROJECT:       HTMLView
- * FILE:          FAVORITE.GOC
+ * FILE:          FavoritesStore.goc
  * DESCRIPTION:   Module for handling the favorite database and UI.
  *
  * AUTHOR:        Lysle E. Shields III
@@ -29,6 +29,18 @@
 /**************************************************************************
  *      Include files
  **************************************************************************/
+
+/*
+ * Favorites VM/IBMS storage, tree/index ownership and menu rendering.
+ * Keep the private tree state with its traversal and locking callers.
+ * Keep the original code resource independent of this source filename.
+ */
+#ifdef __BORLANDC__
+#pragma codeseg FAVORITE_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("FAVORITE_TEXT")
+#endif
 
 @include <stdapp.goh>
 @include <Ansi/string.h>
@@ -88,8 +100,8 @@ Boolean G_foldersInFolders = FALSE ;
 
 static byte LF_fields[] = {
     GET_FIELD_LF(p_title),
-    GET_FIELD_LF(p_location),
-    GET_FIELD_LF(p_notes)
+        GET_FIELD_LF(p_location),
+        GET_FIELD_LF(p_notes)
 } ;
 
 
@@ -121,8 +133,8 @@ typedef struct {
 
 static byte FLI_fields[] = {
     GET_FIELD_FLI(FLI_memTitle),
-    GET_FIELD_FLI(FLI_memLocation),
-    GET_FIELD_FLI(FLI_memNotes)
+        GET_FIELD_FLI(FLI_memLocation),
+        GET_FIELD_FLI(FLI_memNotes)
 } ;
 
 typedef struct {
@@ -240,7 +252,7 @@ void FavoritesBuildUIList(optr parent)
                     icon = @GPCFavoriteGroupIconMoniker ;
                 } else {
                     if (IBTreeEntryGetFlags(G_favoritesIBMS, entry) &
-                                   FAVORITE_FLAG_IS_TOP)  {
+                        FAVORITE_FLAG_IS_TOP)  {
                         icon = @GPCTopFavoriteIconMoniker ;
                     } else {
                         icon = @GPCFavoriteIconMoniker ;
@@ -249,19 +261,19 @@ void FavoritesBuildUIList(optr parent)
 
                 /* Change the moniker on the favorite entry */
                 iconPic = FavoriteCreateIcon(
-                              p_favorite,
-                              icon,
-                              0,
-                              &width,
-                              &height,
-                              &gstate) ;
+                    p_favorite,
+                    icon,
+                    0,
+                    &width,
+                    &height,
+                    &gstate) ;
                 FavoriteUnlock(p_favorite) ;
 
                 @call child::MSG_GEN_REPLACE_VIS_MONIKER(
-                          VUM_DELAYED_VIA_UI_QUEUE,
-                          height, width,
-                          0, VMDT_GSTRING, VMST_OPTR,
-                          iconPic) ;
+                    VUM_DELAYED_VIA_UI_QUEUE,
+                    height, width,
+                    0, VMDT_GSTRING, VMST_OPTR,
+                    iconPic) ;
                 FavoriteDestroyIcon(gstate, iconPic) ;
                 @call child::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_UI_QUEUE) ;
             } else {
@@ -303,15 +315,15 @@ Boolean FavoritesOpen(void)
         VMOpen(FAVORITES_NAME, VMAF_FORCE_READ_WRITE, VMO_CREATE, 0) ;
     if (!G_favoritesFile)
     {
-	/* If the file is corrupt, delete it and try again. */
-	word error = ThreadGetError();
-	if (error == VM_OPEN_INVALID_VM_FILE
-	  || error == VM_FILE_FORMAT_MISMATCH)
-	{
-	    FileDelete(FAVORITES_NAME);
+        /* If the file is corrupt, delete it and try again. */
+        word error = ThreadGetError();
+        if (error == VM_OPEN_INVALID_VM_FILE
+            || error == VM_FILE_FORMAT_MISMATCH)
+        {
+            FileDelete(FAVORITES_NAME);
             G_favoritesFile =
                 VMOpen(FAVORITES_NAME, VMAF_FORCE_READ_WRITE, VMO_CREATE, 0) ;
-	}
+        }
     }
     if (G_favoritesFile)  {
         /* Make sure we only have a version that got saved */
@@ -366,7 +378,7 @@ Boolean FavoritesOpen(void)
         /* Create a temporary vm file for the index */
         FileDelete(FAV_TEMP_LIST) ;
         G_favIndexFile =
-        VMOpen(FAV_TEMP_LIST, VMAF_FORCE_READ_WRITE, VMO_CREATE_TRUNCATE, 0) ;
+            VMOpen(FAV_TEMP_LIST, VMAF_FORCE_READ_WRITE, VMO_CREATE_TRUNCATE, 0) ;
         if (G_favIndexFile)  {
             G_favIndexArray = HugeArrayCreate(G_favIndexFile, 0, 0) ;
         } else {
@@ -494,16 +506,16 @@ T_lockedFavorite *FavoriteLockTopEntry(word index)
     if (index < FavoriteCountTopTen())  {
         /* Get the entry at that location */
         item = IBDLLGetItem(
-                   G_favoritesIBMS,
-                   G_favoritesTopTen,
-                   index) ;
+            G_favoritesIBMS,
+            G_favoritesTopTen,
+            index) ;
         if (item)  {
             entry = IBDLLItemGetData(G_favoritesIBMS, item) ;
             if (entry)  {
                 /* Lock the entry, but we don't know the depth */
                 p_favorite = IFavoriteLockByEntry(
-                                 entry,
-                                 FAVORITE_DEPTH_UNKNOWN) ;
+                    entry,
+                    FAVORITE_DEPTH_UNKNOWN) ;
             }
         }
     }
@@ -536,8 +548,8 @@ void FavoriteUnlock(T_lockedFavorite *p_favorite)
 
     /* Find the start of the internal structure */
     p_fav = (T_favoriteLockedInternal *)
-                (((char *)p_favorite)-
-                    (offsetof(T_favoriteLockedInternal, FLI_favorite))) ;
+    (((char *)p_favorite)-
+        (offsetof(T_favoriteLockedInternal, FLI_favorite))) ;
 
     /* We only do certain actions if things have been dirtied */
     if (p_fav->FLI_isDirty)  {
@@ -562,8 +574,8 @@ void FavoriteUnlock(T_lockedFavorite *p_favorite)
         /* Copy back the data */
         if (p_fav->FLI_memTitle)  {
             header.FH_title = IBMSAlloc(
-                        G_favoritesList,
-                        (1+strlen(p_favorite->p_title))*sizeof(TCHAR)) ;
+                G_favoritesList,
+                (1+strlen(p_favorite->p_title))*sizeof(TCHAR)) ;
             p_data = IBMSLock(G_favoritesList, header.FH_title) ;
             strcpy(p_data, p_favorite->p_title) ;
             IBMSDirty(p_data) ;
@@ -572,8 +584,8 @@ void FavoriteUnlock(T_lockedFavorite *p_favorite)
 
         if (p_fav->FLI_memLocation)  {
             header.FH_location = IBMSAlloc(
-                        G_favoritesList,
-                        (1+strlen(p_favorite->p_location))*sizeof(TCHAR)) ;
+                G_favoritesList,
+                (1+strlen(p_favorite->p_location))*sizeof(TCHAR)) ;
             p_data = IBMSLock(G_favoritesList, header.FH_location) ;
             strcpy(p_data, p_favorite->p_location) ;
             IBMSDirty(p_data) ;
@@ -582,8 +594,8 @@ void FavoriteUnlock(T_lockedFavorite *p_favorite)
 
         if (p_fav->FLI_memNotes)  {
             header.FH_notes = IBMSAlloc(
-                        G_favoritesList,
-                        (1+strlen(p_favorite->p_notes))*sizeof(TCHAR)) ;
+                G_favoritesList,
+                (1+strlen(p_favorite->p_notes))*sizeof(TCHAR)) ;
             p_data = IBMSLock(G_favoritesList, header.FH_notes) ;
             strcpy(p_data, p_favorite->p_notes) ;
             IBMSDirty(p_data) ;
@@ -695,11 +707,11 @@ dword FavoriteAppend(void)
 
         /* Add the entry to the end of the root folder of the tree */
         entry = IBTreeFolderInsertData(
-                    G_favoritesIBMS,
-                    G_favoritesTree,
-                    IBTREE_APPEND,
-                    newEntry,
-                    0) ;
+            G_favoritesIBMS,
+            G_favoritesTree,
+            IBTREE_APPEND,
+            newEntry,
+            0) ;
 
         /* Add the entry to the index list */
         if (entry)  {
@@ -760,8 +772,8 @@ void FavoriteDirty(T_lockedFavorite *p_favorite)
 
     /* Find the start of the internal structure */
     p_fav = (T_favoriteLockedInternal *)
-                (((byte *)p_favorite)-
-                    (offsetof(T_favoriteLockedInternal, FLI_favorite))) ;
+    (((byte *)p_favorite)-
+        (offsetof(T_favoriteLockedInternal, FLI_favorite))) ;
 
     /* Just mark it as dirty until it is unlocked */
     p_fav->FLI_isDirty = TRUE ;
@@ -795,8 +807,8 @@ void FavoriteResizeLockedField(
 
     /* Find the start of the internal structure */
     p_fav = (T_favoriteLockedInternal *)
-                (((byte *)p_favorite)-
-                    (offsetof(T_favoriteLockedInternal, FLI_favorite))) ;
+    (((byte *)p_favorite)-
+        (offsetof(T_favoriteLockedInternal, FLI_favorite))) ;
 
     FLI_offset = FLI_fields[field] ;
     LF_offset = LF_fields[field] ;
@@ -875,12 +887,12 @@ dword FavoriteAppendFolder(TCHAR *p_name)
         newFolder = IBTreeFolderCreate(G_favoritesIBMS) ;
 /*        IBTreeEntrySetData(G_favoritesIBMS, newFolder, newEntry) ; */
         newItem = IBTreeFolderInsertFolder(
-                        G_favoritesIBMS,
-                        G_favoritesTree,
-                        IBTREE_APPEND,
-                        newFolder,
-                        newEntry,
-                        0) ;
+            G_favoritesIBMS,
+            G_favoritesTree,
+            IBTREE_APPEND,
+            newFolder,
+            newEntry,
+            0) ;
         IBTreeEntrySetFlags(G_favoritesIBMS, newItem, FAVORITE_FLAG_IS_OPEN) ;
 
         /* Add the entry to the index list */
@@ -1064,9 +1076,9 @@ void FavoriteRemoveFromTopTen(dword pos)
     entry = ILocateEntryByPos(pos, NULL, NULL) ;
     if (entry)  {
         item = IBDLLGetItem(
-                   G_favoritesIBMS,
-                   G_favoritesTopTen,
-                   IBDLL_LOCATION_FIRST) ;
+            G_favoritesIBMS,
+            G_favoritesTopTen,
+            IBDLL_LOCATION_FIRST) ;
         while (item)  {
             data = IBDLLItemGetData(G_favoritesIBMS, item) ;
             if (data == entry)  {
@@ -1112,7 +1124,7 @@ Boolean FavoriteIsFolder(dword pos)
     if (entry)  {
         /* Does it have a folder node attached to it? */
         if (IBTreeEntryGetFolder(G_favoritesIBMS, entry))
-           isFolder = TRUE ;
+            isFolder = TRUE ;
     }
 
     return isFolder ;
@@ -1196,8 +1208,8 @@ Boolean FavoriteIsTopTen(dword pos)
     if (entry)  {
         /* Is it declared to be a top? */
         if (IBTreeEntryGetFlags(G_favoritesIBMS, entry) &
-                FAVORITE_FLAG_IS_TOP)
-           isTopTen = TRUE ;
+            FAVORITE_FLAG_IS_TOP)
+            isTopTen = TRUE ;
     }
 
     return isTopTen ;
@@ -1254,11 +1266,11 @@ dword FavoritePushUp(dword pos)
 
         /* Move the whole entry (and get a new entry identifier) */
         selfEntry = IBTreeEntryMoveTo(
-                        G_favoritesIBMS,
-                        selfFolder,
-                        selfEntry,
-                        aboveFolder,
-                        aboveEntry) ;
+            G_favoritesIBMS,
+            selfFolder,
+            selfEntry,
+            aboveFolder,
+            aboveEntry) ;
 
         /* Fix up the index by inserting the new items */
         subFolder = IBTreeEntryGetFolder(G_favoritesIBMS, selfEntry) ;
@@ -1309,12 +1321,12 @@ dword FavoritePushDown(dword pos)
                     /* position down */
                     oneMorePast = FavoriteFindNextDown(nextDown, &newMoreDepth) ;
                     if ((newMoreDepth == newDepth) &&
-                            (oneMorePast != FAVORITE_BAD))  {
+                        (oneMorePast != FAVORITE_BAD))  {
                         /* Found something */
                         beforeThisEntry = ILocateEntryByPos(
-                                              oneMorePast,
-                                              &inThisFolder,
-                                              &newDepth) ;
+                            oneMorePast,
+                            &inThisFolder,
+                            &newDepth) ;
                         nextDown = pos+(oneMorePast-nextDown) ;
                     } else {
                         /* Need to append */
@@ -1326,21 +1338,21 @@ dword FavoritePushDown(dword pos)
                     /* Deep or same level */
                     /* Put item at beginning of folder */
                     inThisFolder = IBTreeEntryGetFolder(
-                                       G_favoritesIBMS,
-                                       nextEntry) ;
+                        G_favoritesIBMS,
+                        nextEntry) ;
                     beforeThisEntry = IBTreeFolderGetEntry(
-                                          G_favoritesIBMS,
-                                          inThisFolder,
-                                          IBTREE_LOCATION_FIRST) ;
+                        G_favoritesIBMS,
+                        inThisFolder,
+                        IBTREE_LOCATION_FIRST) ;
                     newDepth++ ;
                     nextDown = pos+1 ;
                 }
             } else {
                 /* Otherwise, Just go up a level */
                 inThisFolder = IBTreeFolderGetParent(
-                                   G_favoritesIBMS,
-                                   folder,
-                                   &nextEntry) ;
+                    G_favoritesIBMS,
+                    folder,
+                    &nextEntry) ;
                 beforeThisEntry = IBTREE_APPEND ;
                 newDepth = depth-1 ;
                 nextDown = pos ;
@@ -1350,9 +1362,9 @@ dword FavoritePushDown(dword pos)
             ILocateEntryByPos(nextDown, &inThisFolder, &newDepth) ;
             if (newDepth >= depth)  {
                 beforeThisEntry = ILocateEntryByPos(
-                                      oneMorePast,
-                                      &oneMorePastFolder,
-                                      NULL) ;
+                    oneMorePast,
+                    &oneMorePastFolder,
+                    NULL) ;
                 /* If the item past is not in the same folder, just append */
                 if (oneMorePastFolder != inThisFolder)
                     beforeThisEntry = IBTREE_APPEND ;
@@ -1361,9 +1373,9 @@ dword FavoritePushDown(dword pos)
             } else {
                 /* Otherwise, Just go up a level */
                 inThisFolder = IBTreeFolderGetParent(
-                                   G_favoritesIBMS,
-                                   folder,
-                                   &nextEntry) ;
+                    G_favoritesIBMS,
+                    folder,
+                    &nextEntry) ;
                 beforeThisEntry = IBTREE_APPEND ;
                 newDepth = depth-1 ;
                 nextDown = pos ;
@@ -1376,9 +1388,9 @@ dword FavoritePushDown(dword pos)
         if (depth)  {
             /* Yes, we need to go up one level and append at the end */
             inThisFolder = IBTreeFolderGetParent(
-                               G_favoritesIBMS,
-                               folder,
-                               &nextEntry) ;
+                G_favoritesIBMS,
+                folder,
+                &nextEntry) ;
             beforeThisEntry = IBTREE_APPEND ;
             newDepth = depth-1 ;
             nextDown = pos ;
@@ -1591,7 +1603,7 @@ Boolean IDeleteEntry(dword pos)
         /* in the folder */
         IBTreeEntryDelete(G_favoritesIBMS, folder, entry) ;
         HugeArrayDelete(G_favIndexFile, G_favIndexArray, 1, pos) ;
-	deleted = TRUE;
+        deleted = TRUE;
     }
     return deleted;
 }
@@ -1674,9 +1686,9 @@ dword IInsertTreeEntries(dword pos, IBTreeFolder folder, byte depth)
     IBTreeUserFlags flags ;
 
     entry = IBTreeFolderGetEntry(
-                G_favoritesIBMS,
-                folder,
-                IBTREE_LOCATION_FIRST) ;
+        G_favoritesIBMS,
+        folder,
+        IBTREE_LOCATION_FIRST) ;
     while (entry)  {
         /* Add this entry */
         IInsertIndexEntry(pos++, folder, entry, depth) ;
@@ -1824,19 +1836,19 @@ optr FavoriteCreateIcon(
     gstate = GrCreateState(0);
     maxLen = strlen(p_favorite->p_title);
     if (maxLen > sizeof(favoriteName)-4) {
-	maxLen = sizeof(favoriteName)-4;
+        maxLen = sizeof(favoriteName)-4;
     }
     for (i = maxLen; i; i--) {
-	/* 400 should be greater than or equal to 400 in favorui.goh's
-	   FavoritesOrganizeRegion */
-	if (GrTextWidth(gstate, p_favorite->p_title, i) < 400)
-	    break;
+        /* 400 should be greater than or equal to 400 in favorui.goh's
+           FavoritesOrganizeRegion */
+        if (GrTextWidth(gstate, p_favorite->p_title, i) < 400)
+            break;
     }
     strncpy(favoriteName, p_favorite->p_title, i) ;
     if (i < strlen(p_favorite->p_title)) {
-	strcpy(favoriteName+i, _TEXT("...")) ;
+        strcpy(favoriteName+i, _TEXT("...")) ;
     } else {
-	favoriteName[i] = C_NULL;
+        favoriteName[i] = C_NULL;
     }
     GrDestroyState(gstate);
 
@@ -1931,9 +1943,9 @@ T_lockedFavorite *IFavoriteLockByEntry(IBTreeEntry entry, word depth)
         p_header = IBMSLock(G_favoritesList, entryId) ;
         if (p_header)  {
             mem = MemAlloc(
-                      sizeof(T_favoriteLockedInternal),
-                      HF_DYNAMIC|HF_SHARABLE,
-                      HAF_ZERO_INIT) ;
+                sizeof(T_favoriteLockedInternal),
+                HF_DYNAMIC|HF_SHARABLE,
+                HAF_ZERO_INIT) ;
             if (mem)  {
                 /* Create a temporary block to hold all our data */
                 p_fav = MemLock(mem) ;

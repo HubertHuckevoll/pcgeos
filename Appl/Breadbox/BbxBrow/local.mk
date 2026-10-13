@@ -57,6 +57,13 @@ XCCOMFLAGS += $(.TARGET:T:R:MHTMLView:S|HTMLView|-nt=HTMLVIEW_TEXT|) \
              $(.TARGET:T:R:MGlobeAnimation:S|GlobeAnimation|-nt=GLBANIM_TEXT|) \
              $(.TARGET:T:R:MAllocWatcher:S|AllocWatcher|-nt=AWATCHER_TEXT|) \
              $(.TARGET:T:R:MNavigationMime:S|NavigationMime|-nt=Navigation_TEXT|) \
+             $(.TARGET:T:R:MBookmarksDialog:S|BookmarksDialog|-nt=BOOKCLAS_TEXT|) \
+             $(.TARGET:T:R:MBookmarksStore:S|BookmarksStore|-nt=BOOKMARK_TEXT|) \
+             $(.TARGET:T:R:MFavoritesDialog:S|FavoritesDialog|-nt=FAVORCLS_TEXT|) \
+             $(.TARGET:T:R:MFavoritesCreate:S|FavoritesCreate|-nt=FAVORCLS_TEXT|) \
+             $(.TARGET:T:R:MFavoritesStore:S|FavoritesStore|-nt=FAVORITE_TEXT|) \
+             $(.TARGET:T:R:MSourceCache:S|SourceCache|-nt=NAVCACHE_TEXT|) \
+             $(.TARGET:T:R:MObjectCache:S|ObjectCache|-nt=NAVCACHE_TEXT|) \
              $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLText_TEXT|) \
              $(.TARGET:T:R:MURLTextImages:S|URLTextImages|-nt=URLText_TEXT|) \
              $(.TARGET:T:R:MURLTextImageProgress:S|URLTextImageProgress|-nt=URLText_TEXT|) \

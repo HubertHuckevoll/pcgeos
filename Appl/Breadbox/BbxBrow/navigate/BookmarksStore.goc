@@ -13,7 +13,7 @@
 /***********************************************************************
  *
  * PROJECT:       HTMLView
- * FILE:          BOOKMARK.GOC
+ * FILE:          BookmarksStore.goc
  * DESCRIPTION:   Module for handling the bookmark database and UI.
  *
  * AUTHOR:        Lysle E. Shields III
@@ -28,6 +28,17 @@
 /**************************************************************************
  *		Include files
  **************************************************************************/
+
+/*
+ * Bookmark VM storage, entry locking and menu population.
+ * Keep the original code resource independent of this source filename.
+ */
+#ifdef __BORLANDC__
+#pragma codeseg BOOKMARK_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("BOOKMARK_TEXT")
+#endif
 
 @include <stdapp.goh>
 @include <Ansi/string.h>
@@ -404,24 +415,24 @@ MemHandle BookmarkGet(dword pos)
     /* Lock in the bookmark */
     p_title = BookmarkLock(pos, NULL) ;
     if (p_title)  {
-       /* Find the header to the locked bookmark */
-       p_header = (T_bookmarkHeader *)p_title ;
-       p_header-- ;
+        /* Find the header to the locked bookmark */
+        p_header = (T_bookmarkHeader *)p_title ;
+        p_header-- ;
 
-       /* Determine the size of the bookmark data */
-       size = sizeof(*p_header) +
-              p_header->sizeBookmark +
-              p_header->sizeLocation ;
+        /* Determine the size of the bookmark data */
+        size = sizeof(*p_header) +
+            p_header->sizeBookmark +
+            p_header->sizeLocation ;
 
-       /* Allocate a memory block */
-       mem = MemAlloc(size, HF_DYNAMIC | HF_SHARABLE, 0) ;
-       if (mem)  {
-           /* Copy over the data */
-           p_data = MemLock(mem) ;
-           memcpy(p_data, p_header, size) ;
-           MemUnlock(mem) ;
-       }
-       BookmarkUnlock(p_title) ;
+        /* Allocate a memory block */
+        mem = MemAlloc(size, HF_DYNAMIC | HF_SHARABLE, 0) ;
+        if (mem)  {
+            /* Copy over the data */
+            p_data = MemLock(mem) ;
+            memcpy(p_data, p_header, size) ;
+            MemUnlock(mem) ;
+        }
+        BookmarkUnlock(p_title) ;
     }
 
     return mem;
@@ -452,8 +463,8 @@ void BookmarkPut(dword pos, MemHandle mem)
 
         /* Determine the size of the bookmark data */
         size = sizeof(*p_header) +
-              p_header->sizeBookmark +
-              p_header->sizeLocation ;
+            p_header->sizeBookmark +
+            p_header->sizeLocation ;
 
         /* Change the data in the array */
         BookmarkChange(
@@ -552,8 +563,8 @@ void BookmarksBuildUIList(optr parent)
 
                     /* Change the moniker on the bookmark entry */
                     @call child::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(
-                              bookmarkName,
-                              VUM_NOW) ;
+                        bookmarkName,
+                        VUM_NOW) ;
 
                     /* Make sure the child is visible */
                     @call child::MSG_GEN_SET_USABLE(VUM_NOW) ;

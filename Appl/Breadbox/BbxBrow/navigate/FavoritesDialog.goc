@@ -11,13 +11,25 @@
  *
 */
 /***************************************************************************
- *  FILE:  FAVORCLS.GOC
+ *  FILE:  FavoritesDialog.goc
  ***************************************************************************/
 
 /*-------------------------------------------------------------------------
  | Project:  WebMagick (HTML Browser)
  |           Copyright (c) 1997 Breadbox Computer Company
  *-----------------------------------------------------------------------*/
+
+/*
+ * Favorites class registration, list organization and UI coordination.
+ * Creation handlers are registered here and implemented in FavoritesCreate.goc.
+ * Keep the original code resource independent of this source filename.
+ */
+#ifdef __BORLANDC__
+#pragma codeseg FAVORCLS_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("FAVORCLS_TEXT")
+#endif
 
 @include <stdapp.goh>
 @include <Ansi/string.h>
@@ -40,18 +52,11 @@ void FDRedrawListItem(optr dialog, word item) ;
 void FDSelectItem(optr dialog, word item) ;
 
 @extern object FavoriteCreateClose ;
-@extern object FavoriteCreateDialog ;
 @extern object FavoriteCreateFavoriteTrigger ;
 @extern object FavoriteCreateGroupClose ;
-@extern object FavoriteCreateGroupDialog ;
 @extern object FavoriteCreateGroupInside ;
-@extern object FavoriteCreateGroupName ;
-@extern object FavoriteCreateGroupNotes ;
 @extern object FavoriteCreateGroupTrigger ;
 @extern object FavoriteCreateInside ;
-@extern object FavoriteCreateName ;
-@extern object FavoriteCreateNotes ;
-@extern object FavoriteCreatePage ;
 @extern object FavoriteCreateTrigger ;
 @extern object FavoriteEditDialog ;
 @extern object FavoriteEditDialogCancel ;
@@ -109,7 +114,7 @@ extern Boolean G_foldersInFolders ;
  *=========================================================================*/
 
 
-    @classdecl FavoritesDialogClass ;
+@classdecl FavoritesDialogClass ;
 
 
 /*-------------------------------------------------------------------------
@@ -217,22 +222,22 @@ extern Boolean G_foldersInFolders ;
     word item = FDGetListItemSelected(pself->FCDI_list) ;
 
     if (item != GIGS_NONE) {
-	MemLock(OptrToHandle(@DeleteFavoritesItemString));
-	/* since this happens in UI thread, we don't want to use UserDoDialog */
-	@call application::MSG_GEN_APPLICATION_DO_STANDARD_DIALOG(
-	    MSG_FAVORITES_DIALOG_DELETE_LOW,
-	    oself,
-	    0,
-	    0,
-	    0,
-	    0,
-	    (FavoriteIsFolder(item) ?
-	     LMemDeref(@DeleteFavoritesGroupString) :
-	     LMemDeref(@DeleteFavoritesItemString)),
-	    (CDT_QUESTION << CDBF_DIALOG_TYPE_OFFSET) |
-	    (GIT_AFFIRMATION << CDBF_INTERACTION_TYPE_OFFSET) |
-	    CDBF_DESTRUCTIVE_ACTION);
-	MemUnlock(OptrToHandle(@DeleteFavoritesItemString));
+        MemLock(OptrToHandle(@DeleteFavoritesItemString));
+        /* since this happens in UI thread, we don't want to use UserDoDialog */
+        @call application::MSG_GEN_APPLICATION_DO_STANDARD_DIALOG(
+            MSG_FAVORITES_DIALOG_DELETE_LOW,
+            oself,
+            0,
+            0,
+            0,
+            0,
+            (FavoriteIsFolder(item) ?
+            LMemDeref(@DeleteFavoritesGroupString) :
+            LMemDeref(@DeleteFavoritesItemString)),
+            (CDT_QUESTION << CDBF_DIALOG_TYPE_OFFSET) |
+            (GIT_AFFIRMATION << CDBF_INTERACTION_TYPE_OFFSET) |
+            CDBF_DESTRUCTIVE_ACTION);
+        MemUnlock(OptrToHandle(@DeleteFavoritesItemString));
     }
 }
 
@@ -242,16 +247,16 @@ extern Boolean G_foldersInFolders ;
     optr list ;
 
     if (response == IC_YES) {
-	/* Determine what item is selected */
-	item = FDGetListItemSelected(pself->FCDI_list) ;
-	if (item != GIGS_NONE)  {
-	    /* If valid, delete that item */
-	    list = FDLocateListFromDialog(oself) ;
-	    @call list::MSG_GEN_DYNAMIC_LIST_REMOVE_ITEMS(item, 1) ;
-	    (void)FavoriteDelete(item) ;
-	    FDRebuildTriggerList(item) ;
-	    FDSelectItem(oself, item) ;
-	}
+        /* Determine what item is selected */
+        item = FDGetListItemSelected(pself->FCDI_list) ;
+        if (item != GIGS_NONE)  {
+            /* If valid, delete that item */
+            list = FDLocateListFromDialog(oself) ;
+            @call list::MSG_GEN_DYNAMIC_LIST_REMOVE_ITEMS(item, 1) ;
+            (void)FavoriteDelete(item) ;
+            FDRebuildTriggerList(item) ;
+            FDSelectItem(oself, item) ;
+        }
     }
 }
 
@@ -533,7 +538,7 @@ extern Boolean G_foldersInFolders ;
             @FAV_DISABLE(FavoritesDialogUp) ;
 
         if ((FavoriteFindNextDown(selection, &depth) != FAVORITE_BAD) ||
-                ((depth != 0)&&(G_foldersInFolders)))  {
+            ((depth != 0)&&(G_foldersInFolders)))  {
             @FAV_ENABLE(FavoritesDialogDown) ;
         } else  {
             @FAV_DISABLE(FavoritesDialogDown) ;
@@ -550,13 +555,13 @@ extern Boolean G_foldersInFolders ;
         if (FavoriteIsTopTen(selection))  {
             /* Change the text to 'Remove from Top Ten' */
             @call FavoritesDialogAddToTop::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(
-                      _TEXT("Remove from Top Ten"),
-                      VUM_DELAYED_VIA_UI_QUEUE) ;
+                _TEXT("Remove from Top Ten"),
+                VUM_DELAYED_VIA_UI_QUEUE) ;
             @FAV_ENABLE(FavoritesDialogAddToTop) ;
         } else {
             @call FavoritesDialogAddToTop::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(
-                      _TEXT("Add to Top Ten"),
-                      VUM_DELAYED_VIA_UI_QUEUE) ;
+                _TEXT("Add to Top Ten"),
+                VUM_DELAYED_VIA_UI_QUEUE) ;
             /* Only enable 'add' if not full */
             if ((numTop >= NUM_FAVORITES_IN_TRIGGER_LIST)||(isFolder))  {
                 @FAV_DISABLE(FavoritesDialogAddToTop) ;
@@ -724,23 +729,23 @@ void FDRedrawListItem(optr dialog, word item)
     if (p_favorite)  {
         /* Change the moniker on the favorite entry */
         iconPic = FavoriteCreateIcon(
-                      p_favorite,
-                      icon,
-                      p_favorite->depth * FAVORITE_INSET_STEP,
-                      &width,
-                      &height,
-                      &gstate) ;
+            p_favorite,
+            icon,
+            p_favorite->depth * FAVORITE_INSET_STEP,
+            &width,
+            &height,
+            &gstate) ;
         FavoriteUnlock(p_favorite) ;
 
         @call list::MSG_GEN_DYNAMIC_LIST_REPLACE_ITEM_MONIKER(
-                  item,
-                  0,
-                  height,
-                  width,
-                  0,
-                  VMDT_GSTRING,
-                  VMST_OPTR,
-                  iconPic) ;
+            item,
+            0,
+            height,
+            width,
+            0,
+            VMDT_GSTRING,
+            VMST_OPTR,
+            iconPic) ;
 
         FavoriteDestroyIcon(gstate, iconPic) ;
     }
@@ -778,79 +783,17 @@ void FDSelectItem(optr dialog, word item)
  *=========================================================================*/
 
 
-    @classdecl FavoriteCreateDialogClass ;
+@classdecl FavoriteCreateDialogClass ;
 
 
-@method FavoriteCreateDialogClass, MSG_FAVORITE_CREATE_DIALOG_CREATE
-{
-    TCHAR *titleString ;
-    TCHAR *urlString ;
-    TCHAR *notesString ;
-    MemHandle titleMem ;
-    MemHandle urlMem ;
-    MemHandle notesMem ;
-    dword newPos = 0xFFFF ;
-    T_lockedFavorite *p_favorite ;
-
-    titleMem = @call FavoriteCreateName::MSG_VIS_TEXT_GET_ALL_BLOCK(0) ;
-    if (titleMem)  {
-        titleString = MemLock(titleMem) ;
-
-        notesMem = @call FavoriteCreateNotes::MSG_VIS_TEXT_GET_ALL_BLOCK(0) ;
-        urlMem = @call FavoriteCreatePage::MSG_VIS_TEXT_GET_ALL_BLOCK(0) ;
-        if (urlMem && notesMem)  {
-            urlString = MemLock(urlMem) ;
-            notesString = MemLock(notesMem) ;
-
-            /* Add a new bookmark */
-            newPos = FavoriteAppend() ;
-            if (newPos != FAVORITE_BAD)  {
-                p_favorite = FavoriteLock(newPos) ;
-                FavoriteResizeLockedField(
-                    p_favorite,
-                    FAVORITE_LOCKED_FIELD_TITLE,
-                    (1+strlen(titleString))*sizeof(TCHAR)) ;
-                strcpy(p_favorite->p_title, titleString) ;
-
-                FavoriteResizeLockedField(
-                    p_favorite,
-                    FAVORITE_LOCKED_FIELD_LOCATION,
-                    (1+strlen(urlString))*sizeof(TCHAR)) ;
-                strcpy(p_favorite->p_location, urlString) ;
-
-                FavoriteResizeLockedField(
-                    p_favorite,
-                    FAVORITE_LOCKED_FIELD_NOTES,
-                    (1+strlen(notesString))*sizeof(TCHAR)) ;
-                strcpy(p_favorite->p_notes, notesString) ;
-
-                FavoriteUnlock(p_favorite) ;
-            }
-
-            MemUnlock(notesMem) ;
-            MemFree(notesMem) ;
-
-            MemUnlock(urlMem) ;
-            MemFree(urlMem) ;
-        }
-
-        MemUnlock(titleMem) ;
-        MemFree(titleMem) ;
-        FavoritesUpdate() ;
-    }
-    if (newPos != 0xFFFF)  {
-        FDRebuildTriggerList(0) ;
-        FDRedrawListItem(@FavoritesDialogList, newPos) ;
-        FDSelectItem(@FavoritesDialogList, newPos) ;
-    }
-}
+@extern method FavoriteCreateDialogClass, MSG_FAVORITE_CREATE_DIALOG_CREATE;
 
 /*=========================================================================*
  *  METHODS FOR CLASS:  FavoriteCreateGroupDialogClass
  *=========================================================================*/
 
 
-    @classdecl FavoriteCreateGroupDialogClass ;
+@classdecl FavoriteCreateGroupDialogClass ;
 
 
 /*-------------------------------------------------------------------------
@@ -867,56 +810,14 @@ void FDSelectItem(optr dialog, word item)
  |    LES  01/18/99  Create
  |
  *-----------------------------------------------------------------------*/
-@method FavoriteCreateGroupDialogClass, MSG_FAVORITE_CREATE_GROUP_DIALOG_CREATE
-{
-    TCHAR *titleString ;
-    TCHAR *notesString ;
-    MemHandle titleMem ;
-    MemHandle notesMem ;
-    dword newPos = 0xFFFF ;
-    T_lockedFavorite *p_favorite ;
-
-    titleMem = @call FavoriteCreateGroupName::MSG_VIS_TEXT_GET_ALL_BLOCK(0) ;
-    if (titleMem)  {
-        titleString = MemLock(titleMem) ;
-
-        notesMem = @call FavoriteCreateGroupNotes::MSG_VIS_TEXT_GET_ALL_BLOCK(0) ;
-        if (notesMem)  {
-            notesString = MemLock(notesMem) ;
-
-            /* Add a new bookmark */
-            newPos = FavoriteAppendFolder(titleString) ;
-            if (newPos != FAVORITE_BAD)  {
-                p_favorite = FavoriteLock(newPos) ;
-                FavoriteResizeLockedField(
-                    p_favorite,
-                    FAVORITE_LOCKED_FIELD_NOTES,
-                    (1+strlen(notesString))*sizeof(TCHAR)) ;
-                strcpy(p_favorite->p_notes, notesString) ;
-
-                FavoriteUnlock(p_favorite) ;
-            }
-
-            MemUnlock(notesMem) ;
-            MemFree(notesMem) ;
-        }
-
-        MemUnlock(titleMem) ;
-        MemFree(titleMem) ;
-    }
-    if (newPos != 0xFFFF)  {
-        FDRebuildTriggerList(0) ;
-        FDRedrawListItem(@FavoritesDialogList, newPos) ;
-        FDSelectItem(@FavoritesDialogList, newPos) ;
-    }
-}
+@extern method FavoriteCreateGroupDialogClass, MSG_FAVORITE_CREATE_GROUP_DIALOG_CREATE;
 
 /*=========================================================================*
  *  METHODS FOR CLASS:  FavoriteManagerClass
  *=========================================================================*/
 
 
-    @classdecl FavoriteManagerClass ;
+@classdecl FavoriteManagerClass ;
 
 
 /*-------------------------------------------------------------------------
@@ -933,45 +834,7 @@ void FDSelectItem(optr dialog, word item)
  |    LES     10/18/99  Patched up a leak of name pool tokens.
  |
  *-----------------------------------------------------------------------*/
-@method FavoriteManagerClass, MSG_FAVORITE_MANAGER_INITIATE_CREATE_DIALOG
-{
-    NameToken url,title;
-    TCHAR buffer[HTML_STATIC_BUF], *p ;
-    optr doc ;
-
-    if (!(@call HTMLDocumentGroup::MSG_META_GET_MODEL_EXCL(&doc))) doc = 0 ;
-
-    /* Start with a blank dialog */
-    @call FavoriteCreateName::MSG_VIS_TEXT_DELETE_ALL() ;
-    @call FavoriteCreatePage::MSG_VIS_TEXT_DELETE_ALL() ;
-    @call FavoriteCreateNotes::MSG_VIS_TEXT_DELETE_ALL() ;
-
-    if (doc)  {
-        url = @call doc::MSG_URL_DOCUMENT_GET_URL();
-        title = @call doc::MSG_URL_DOCUMENT_GET_TITLE();
-
-        if (url != NAME_POOL_NONE)
-        {
-            /* Get the URL and title for the favorite */
-            NamePoolCopy(namePool, buffer, sizeof(buffer), url, &p);
-            @call FavoriteCreatePage::MSG_VIS_TEXT_REPLACE_ALL_PTR(p, 0) ;
-	    NamePoolDestroyIfDynamic(p);
-
-            NamePoolCopy(namePool, buffer, sizeof(buffer),
-              title?title:url, &p);
-            @call FavoriteCreateName::MSG_VIS_TEXT_REPLACE_ALL_PTR(p, 0) ;
-	    NamePoolDestroyIfDynamic(p);
-        }
-
-        /* Now release the tokens */
-        if (url != NAME_POOL_NONE)
-            NamePoolReleaseToken(namePool, url) ;
-        if (title != NAME_POOL_NONE)
-            NamePoolReleaseToken(namePool, title) ;
-    }
-
-    @call FavoriteCreateDialog::MSG_GEN_INTERACTION_INITIATE();
-}
+@extern method FavoriteManagerClass, MSG_FAVORITE_MANAGER_INITIATE_CREATE_DIALOG;
 
 /*-------------------------------------------------------------------------
  | Method:  FavoriteManagerClass::MSG_FAVORITE_MANAGER_INITIATE_CREATE_GROUP_DIALOG
@@ -987,36 +850,10 @@ void FDSelectItem(optr dialog, word item)
  |    LES     10/18/99  Patched up a leak of name pool tokens.
  |
  *-----------------------------------------------------------------------*/
-@method FavoriteManagerClass, MSG_FAVORITE_MANAGER_INITIATE_CREATE_GROUP_DIALOG
-{
-    NameToken title;
-    TCHAR buffer[HTML_STATIC_BUF], *p ;
-    optr doc ;
-
-    if (!(@call HTMLDocumentGroup::MSG_META_GET_MODEL_EXCL(&doc))) doc = 0 ;
-
-    /* Start with a blank dialog */
-    @call FavoriteCreateGroupName::MSG_VIS_TEXT_DELETE_ALL() ;
-    @call FavoriteCreateGroupNotes::MSG_VIS_TEXT_DELETE_ALL() ;
-
-    if (doc)  {
-        title = @call doc::MSG_URL_DOCUMENT_GET_TITLE();
-
-        if (title != NAME_POOL_NONE)
-        {
-            /* Get the title for the favorite group */
-            NamePoolCopy(namePool, buffer, sizeof(buffer), title, &p);
-            @call FavoriteCreateGroupName::MSG_VIS_TEXT_REPLACE_ALL_PTR(p, 0) ;
-	    NamePoolDestroyIfDynamic(p);
-            NamePoolReleaseToken(namePool, title) ;
-        }
-    }
-
-    @call FavoriteCreateGroupDialog::MSG_GEN_INTERACTION_INITIATE();
-}
+@extern method FavoriteManagerClass, MSG_FAVORITE_MANAGER_INITIATE_CREATE_GROUP_DIALOG;
 
 @endif  /* COMPILE_OPTION_FAVORITES */
 
 /***************************************************************************
- *  END OF FILE:  FAVORCLS.GOC
+ *  END OF FILE:  FavoritesDialog.goc
  ***************************************************************************/
