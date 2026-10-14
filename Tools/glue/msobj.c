@@ -2269,6 +2269,14 @@ MSObj_PerformRelocations(const char	*file,	    /* Name of object file */
 	    }
 
 	    /*
+	     * Mapping externals above records protocol requirements. Synthetic
+	     * library segments have no output bytes or runtime relocations.
+	     */
+	    if (sd->combine == SEG_LIBRARY) {
+		goto error;
+	    }
+
+	    /*
 	     * Make sure the frame and the target are related somehow. Go on
 	     * to the next fixup if they're not.
 	     */

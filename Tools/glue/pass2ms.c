@@ -729,6 +729,10 @@ Pass2MS_Finish(const char *file, int happy, int pass)
 	 * for 32-bit segments...)
 	 */
 	sd = MSObj_GetSegment(&bp);
+	/* Library segments have no output data to backpatch. */
+	if (sd->combine == SEG_LIBRARY) {
+	    continue;
+	}
 	loctype = *bp++;
 
 	assert((loctype == BPS_BYTE) || (loctype == BPS_WORD));
@@ -1224,7 +1228,10 @@ Pass2MS_ProcessObject(const char *file,
 		 * thing out to the output file.
 		 */
 		size = reclen - (bp - msobjBuf);
-		Out_Block(sd->nextOff + startOff, bp, size);
+		/* Keep protocol fixups above, but discard synthetic stub data. */
+		if (sd->combine != SEG_LIBRARY) {
+		    Out_Block(sd->nextOff + startOff, bp, size);
+		}
 
 		break;
 	    }
@@ -1255,6 +1262,10 @@ Pass2MS_ProcessObject(const char *file,
 		 * Figure the number of bytes in the block and shove the whole
 		 * thing out to the output file.
 		 */
+		/* Protocol fixups are processed even when data are discarded. */
+		if (sd->combine == SEG_LIBRARY) {
+		    break;
+		}
 		bufPtr = bp;
 		size = MSObj_CalcIDataSize(&bufPtr);
 

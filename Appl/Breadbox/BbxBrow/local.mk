@@ -20,38 +20,8 @@ COMPILE_OPTIONS += -DGLOBAL_INTERNET_BUILD
 #COMPILE_OPTIONS += -DCOMPILE_OPTION_PROFILING_ON
 #COMPILE_OPTIONS += -DEMAIL_ACCT_CMD
 
-# An empty AutoBrowse module still contributes discarded protocol stubs.
-# Check before adding per-target options; AB products must retain the module.
-#if empty(COMPILE_OPTIONS:M-DCOMPILE_OPTION_AUTO_BROWSE*) && empty(PRODUCTS:MAB*)
-OBJS := $(OBJS:NAutoBrowse.obj)
-EOBJS := $(EOBJS:NAutoBrowse.eobj)
-GOBJS := $(GOBJS:NAutoBrowse.gobj)
-#endif
-
 COMPILE_OPTIONS += $(.TARGET:X\\[AB\\]/*:S|AB| -DCOMPILE_OPTION_AUTO_BROWSE |g)
 COMPILE_OPTIONS += $(.TARGET:X\\[ABDBCS\\]/*:S|ABDBCS| -DCOMPILE_OPTION_AUTO_BROWSE |g)
-
-# Exclude disabled feature modules, which still emit GOC protocol stubs.
-# ATTENTION: current Glue emits discarded stubs after their pass-1 size.
-# Twice their combined size must stay below dgroup's file offset. The
-# check_startup_tpd.pl test detects startup-data spill; a linker that
-# discards stub data removes this ceiling.
-#if empty(COMPILE_OPTIONS:M-DEMAIL_ACCT_CMD*)
-OBJS := $(OBJS:NPortalEmail.obj)
-EOBJS := $(EOBJS:NPortalEmail.eobj)
-GOBJS := $(GOBJS:NPortalEmail.gobj)
-#endif
-#if empty(COMPILE_OPTIONS:M-DCOMPILE_OPTION_BOOKMARKS*)
-OBJS := $(OBJS:NBookmarksDialog.obj:NBookmarksStore.obj)
-EOBJS := $(EOBJS:NBookmarksDialog.eobj:NBookmarksStore.eobj)
-GOBJS := $(GOBJS:NBookmarksDialog.gobj:NBookmarksStore.gobj)
-#endif
-
-#if empty(COMPILE_OPTIONS:M-DJAVASCRIPT_SUPPORT*)
-OBJS := $(OBJS:NURLFrameTimers.obj)
-EOBJS := $(EOBJS:NURLFrameTimers.eobj)
-GOBJS := $(GOBJS:NURLFrameTimers.gobj)
-#endif
 
 # Glue file-local lookup needs Images to establish the shared URLTEXT_TEXT segment.
 OBJS := URLTextImages.obj $(OBJS:NURLTextImages.obj)
