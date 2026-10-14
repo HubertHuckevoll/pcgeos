@@ -17,11 +17,11 @@ URLDOCCT        = URLDOCCT.goc
 URLFETCH        = URLFETCH.goc URLSupport.goc URLLoad.goc
 URLFRAME        = URLFrameTree.goc URLFrameNavigation.goc\
                   URLFrameScript.goc URLFramePage.goc URLFrameFetch.goc\
-                  URLFrame.goc
+                  URLFrame.goc URLFrameGeometry.goc URLFrameTimers.goc
 URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
                   URLTextClipboard.goc URLTextImageProgress.goc\
-                  URLTextImages.goc URLTextLinks.goc URLTextPrint.goc\
-                  URLTextScript.goc URLText.goc
+                  URLTextLinks.goc URLTextPrint.goc URLTextScript.goc\
+                  URLText.goc URLTextImages.goc
 FAVORITES       = FavoritesDialog.goc FavoritesCreate.goc\
                   FavoritesStore.goc
 BOOKMARKS       = BookmarksDialog.goc BookmarksStore.goc
@@ -38,13 +38,13 @@ OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   URLSupport.obj URLLoad.obj URLFrameTree.obj\
                   URLFrameNavigation.obj URLFrameScript.obj\
                   URLFramePage.obj URLFrameFetch.obj URLFrame.obj\
-                  MemStream.obj URLTextClipboard.obj\
-                  URLTextImageProgress.obj URLTextImages.obj\
+                  URLFrameGeometry.obj URLFrameTimers.obj MemStream.obj\
+                  URLTextClipboard.obj URLTextImageProgress.obj\
                   URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
-                  URLText.obj FavoritesDialog.obj FavoritesCreate.obj\
-                  FavoritesStore.obj BookmarksDialog.obj BookmarksStore.obj\
-                  SourceCache.obj ObjectCache.obj ContentHandling.obj\
-                  GraphicImport.obj
+                  URLText.obj URLTextImages.obj FavoritesDialog.obj\
+                  FavoritesCreate.obj FavoritesStore.obj\
+                  BookmarksDialog.obj BookmarksStore.obj SourceCache.obj\
+                  ObjectCache.obj ContentHandling.obj GraphicImport.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\

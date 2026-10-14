@@ -1,0 +1,300 @@
+/*
+ * Script timeout and interval timer records, scheduling and cleanup.
+ * URLFrame.goc owns the class and registers these external methods.
+ */
+
+@include <stdapp.goh>
+@include "htmlview.goh"
+#include "javascr.h"
+
+/* Watcom retains URLFrame_TEXT; Borland switches only for JavaScript. */
+#ifdef __BORLANDC__
+#pragma codeseg URLFrame_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLFrame_TEXT")
+#endif
+
+@ifdef JAVASCRIPT_SUPPORT
+#pragma codeseg FRAME_JS_TEXT
+#pragma option -dc-
+
+/*-------------------------------------------------------------------------
+ | FrameTimer Code:
+ *------------------------------------------------------------------------*/
+typedef struct {
+    word ST_uniqueID ;
+
+    NameToken ST_codeToRun ;
+    dword ST_interval ;			/* millisecs */
+    Boolean ST_isIntervalTimer ;
+
+    TimerHandle ST_timer ;
+    word ST_timerID ;
+} ScriptTimer ;
+
+typedef struct {
+    ChunkArrayHeader STH_meta ;
+    word STH_lastUnique ;
+} ScriptTimersHeader ;
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_START_TIMER
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    Create a timeout timer and tell when to have it occur
+ |
+ | Inputs:
+ |    dword millisecs             -- When to fire off
+ |    NameToken codeToRun         -- Javascript to execute when fired
+ |    Boolean isIntervalTimer     -- FALSE for one shot, TRUE for multiple
+ |
+ | Outputs:
+ |    FrameTimerID                -- Unique identifier to the timer
+ |                                   returns FRAME_TIMER_ID_BAD if failed.
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/15/00  Created
+ |    LES  10/20/00  Renamed and restructured for interval timers
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_START_TIMER
+{
+    ChunkHandle timeout = FRAME_TIMER_ID_BAD ;
+    ScriptTimer *p_timer ;
+    ScriptTimersHeader *p_header ;
+    MemHandle mem = OptrToHandle(oself) ;
+    ChunkHandle array ;
+
+    if (codeToRun != NAME_POOL_NONE)  {
+        /* If we don't have a list yet, we'll need to create it */
+        if (!pself->UFI_timeoutList)  {
+            array = ChunkArrayCreate(mem, sizeof(ScriptTimer), sizeof(ScriptTimersHeader), 0) ;
+            pself = ObjDeref(oself, 0) ;
+            pself->UFI_timeoutList = array ;
+            p_header = LMemDerefHandles(mem, array) ;
+            p_header->STH_lastUnique = 1 ;
+        }
+
+        /* Create another timer spot */
+        p_timer = ChunkArrayAppendHandles(mem, pself->UFI_timeoutList, 1) ;
+        if (p_timer)  {
+            /* Allocation my invalidate pself */
+            pself = ObjDeref(oself, 0);
+
+            /* Look at the header for the next timer id */
+            p_header = LMemDerefHandles(mem, pself->UFI_timeoutList) ;
+
+            /* Use the id and move to the next one */
+            timeout = p_timer->ST_uniqueID = p_header->STH_lastUnique++ ;
+            if (!p_header->STH_lastUnique)
+                p_header->STH_lastUnique++ ;
+
+            /* Timer triggers what code? when? repeat? */
+            p_timer->ST_codeToRun = codeToRun ;
+            p_timer->ST_interval = millisecs ;
+            p_timer->ST_isIntervalTimer = isIntervalTimer ;
+
+            /* Start the timer */
+            p_timer->ST_timer =
+                TimerStart(
+                    TIMER_EVENT_ONE_SHOT,
+                    oself,
+                    (millisecs*6L)/100L,  /* Convert from 1000 ticks per second to 60 ticks per second */
+                    MSG_URL_FRAME_TIMER_EXPIRED,
+                    0,
+                    &p_timer->ST_timerID) ;
+        }
+    }
+
+    return timeout ;
+}
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_STOP_TIMER
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    Destroy a previously created timeout using the handle returned
+ |    from MSG_URL_FRAME_START_TIMER (a chunk handle to the individual
+ |    TimeoutCode struct).
+ |
+ | Inputs:
+ |    FrameTimerID uniqueTimerID  -- Handle to ScriptTimer struct
+ |                                   in with this frame's ObjBlock
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/15/00  Created
+ |    LES  10/20/00  Renamed and restructured for interval timers
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_STOP_TIMER
+{
+    optr array ;
+    word i, n ;
+    ScriptTimer *p_timer ;
+    word size ;
+
+    /* Find the timer's structure */
+    if (pself->UFI_timeoutList)  {
+        array = ConstructOptr(OptrToHandle(oself), pself->UFI_timeoutList) ;
+        n = ChunkArrayGetCount(array) ;
+        for (i=0; i<n; i++)  {
+            p_timer = ChunkArrayElementToPtr(array, i, &size) ;
+            if (p_timer->ST_uniqueID == uniqueTimerID)  {
+                /* stop the timer (if not already gone) */
+                if (p_timer->ST_timer)  {
+                    TimerStop(
+                            p_timer->ST_timer,
+                            p_timer->ST_timerID) ;
+                    p_timer->ST_timer = NullHandle ;
+                }
+
+                /* Release associated code */
+                if (p_timer->ST_codeToRun)  {
+                    NamePoolReleaseToken(namePool, p_timer->ST_codeToRun) ;
+                    p_timer->ST_codeToRun = NULL ;
+                }
+
+                /* Destroy this timer */
+                ChunkArrayDelete(array, p_timer) ;
+                break ;
+            }
+        }
+    }
+}
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_TIMER_EXPIRED
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    This method is called when one of the timers on this frame has
+ |    expired.  This routine looks through the current list of timers,
+ |    fires off the associated javascript code, and then destroys
+ |    the timeout or fires out another interval.
+ |
+ | Inputs:
+ |    word timerID                -- Unique ID for this timer
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/15/00  Created
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_TIMER_EXPIRED
+{
+    optr array ;
+    word i, n ;
+    ScriptTimer *p_timer ;
+    word size ;
+
+    /* Find the timer's structure */
+    if (pself->UFI_timeoutList)  {
+        array = ConstructOptr(OptrToHandle(oself), pself->UFI_timeoutList) ;
+        n = ChunkArrayGetCount(array) ;
+        for (i=0; i<n; i++)  {
+            p_timer = ChunkArrayElementToPtr(array, i, &size) ;
+            if (p_timer->ST_timerID == timerID)  {
+                /* Mark the timer as dead */
+                p_timer->ST_timer = NullHandle ;
+
+                /* Execute the script */
+                @call oself::MSG_URL_FRAME_INTERPRET_SCRIPT_TOKEN(p_timer->ST_codeToRun, 0);
+
+                /* Deref again in case something changed in the frame */
+                p_timer = ChunkArrayElementToPtr(array, i, &size) ;
+                if (p_timer->ST_isIntervalTimer)  {
+                    /* Start the timer (again) */
+                    p_timer->ST_timer =
+                        TimerStart(
+                                TIMER_EVENT_ONE_SHOT,
+                                oself,
+                                (p_timer->ST_interval*6L)/100L,  /* Convert from 1000 ticks per second to 60 ticks per second */
+                                MSG_URL_FRAME_TIMER_EXPIRED,
+                                0,
+                                &p_timer->ST_timerID) ;
+                } else {
+                    /* Kill this timer for good */
+                    /* Release associated code */
+                    if (p_timer->ST_codeToRun)  {
+                            NamePoolReleaseToken(namePool, p_timer->ST_codeToRun) ;
+                            p_timer->ST_codeToRun = NULL ;
+                    }
+
+                    /* Destroy this timer */
+                    ChunkArrayDelete(array, p_timer) ;
+                }
+                break ;
+            }
+        }
+    }
+}
+
+/*-------------------------------------------------------------------------
+ | Method:  URLFrameClass::MSG_URL_FRAME_KILL_ALL_TIMEOUTS
+ *-------------------------------------------------------------------------
+ |
+ | Description:
+ |    Go through all the timeouts in the link list at UFI_timeoutList
+ |    and destroy them.
+ |    Call this method to ensure all memory is also freed by the timers.
+ |
+ |    NOTE:  This method does not recursively call the heirarchy of the
+ |    Frame tree
+ |
+ | Revision History:
+ |    Who  Date:     Comments:
+ |    ---  --------  ---------
+ |    LES  09/16/00  Created
+ |
+ *-----------------------------------------------------------------------*/
+@extern method URLFrameClass, MSG_URL_FRAME_KILL_ALL_TIMEOUTS
+{
+    optr array ;
+    ScriptTimer *p_timer ;
+    word size ;
+    word i, n ;
+
+    /* Keep pulling them off the front until they are all gone */
+    if (pself->UFI_timeoutList)  {
+        array = ConstructOptr(
+            OptrToHandle(oself),
+            pself->UFI_timeoutList) ;
+        n = ChunkArrayGetCount(array) ;
+        for (i=0; i<n; i++)  {
+            p_timer = ChunkArrayElementToPtr(array, 0, &size) ;
+
+            /* stop the timer (if not already gone) */
+            if (p_timer->ST_timer)  {
+                TimerStop(
+                        p_timer->ST_timer,
+                        p_timer->ST_timerID) ;
+                p_timer->ST_timer = NullHandle ;
+            }
+
+            /* Release associated code */
+            if (p_timer->ST_codeToRun)  {
+                NamePoolReleaseToken(namePool, p_timer->ST_codeToRun) ;
+                p_timer->ST_codeToRun = NULL ;
+            }
+
+            /* Destroy this timer */
+            ChunkArrayDelete(array, p_timer) ;
+        }
+
+        /* Destroy the list totally.  This ensures we don't */
+        /* have any leaky blocks if others always call here before */
+        /* freeing the URLFrame object. */
+        LMemFree(array) ;
+        pself->UFI_timeoutList = NullHandle ;
+    }
+}
+
+@endif

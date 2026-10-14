@@ -1,0 +1,405 @@
+/*
+ * Frame dimensions and UI geometry, scrolling, visibility and focus.
+ * URLFrame.goc owns the class and registers these external methods.
+ */
+
+@include <stdapp.goh>
+@include "htmlview.goh"
+#include "javascr.h"
+
+#pragma option -WDE
+
+/* Retain the original resource and compiler string options. */
+#ifdef __BORLANDC__
+#pragma codeseg FRFETCH3_TEXT
+#pragma option -dc-
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("FRFETCH3_TEXT")
+#endif
+
+@extern method URLFrameClass, MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS
+{
+    word parentSize, combinedSize, sizeRet, sizeVal;
+    optr parent, child;
+    optr uiObject = pself->UFI_interaction;
+    word children, i, variableSiblings, combinedVariable, maxvar, maxpix;
+    optr maxvarOptr,maxpixOptr;
+    SizeAsDWord documentSize;
+    HTMLmultiLength childSize, size = pself->UFI_size;
+    WordFlags flags = pself->UFI_frameFlags, parentFlags, childFlags;
+    WordFlags state = pself->UFI_frameState;
+    WWFixedAsDWord scale;
+
+    HWChecksumCheck() ;
+    parent = @call self::MSG_URL_FRAME_FIND_PARENT();
+    if(parent)                          /* not top level object? */
+    {
+        if(state & FS_DUMMY)              /* propagate geometry hints to dummys */
+        {
+        return @call parent::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(
+            getWidth, allowVariable);
+        }
+
+        parentSize = @call parent::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(
+        getWidth, FALSE);
+        parentFlags = @call parent::MSG_URL_FRAME_GET_FRAME_FLAGS();
+        if (parentSize == 0xffff) parentSize = 0;
+
+        if(( (flags & HTML_FRF_SIZE_WIDTH) && !getWidth) ||
+            (!(flags & HTML_FRF_SIZE_WIDTH) &&  getWidth))
+        {                                 /* requested dimension unspecified? */
+        size = HTML_LEN_VARIABLE;
+        }
+        if ( (!getWidth && (parentFlags & HTML_FRF_COLS)) ||
+            (getWidth && !(parentFlags & HTML_FRF_COLS)) )
+        {       /* getting size opposite parent orientation, use parent size */
+        if (allowVariable)
+            sizeRet = 0xffff;
+        else
+            sizeRet = parentSize;
+        }
+        else
+        {
+        variableSiblings = 0;           /* get size based on siblings */
+        combinedVariable = 0;
+        combinedSize = 0;
+        maxvar = maxpix = 0;            /* maximum proportion */
+        maxvarOptr = NullOptr;          /* optr of sibling holding maximum */
+        maxpixOptr = NullOptr;
+
+        children = @call parent::MSG_URL_FRAME_COUNT_CHILDREN();
+        for(i=0; i<children; i++)       /* total up spec'd size of siblings */
+        {
+            child = @call parent::MSG_URL_FRAME_FIND_CHILD(i);
+            if( (@call child::MSG_URL_FRAME_GET_STATE()) & FS_ACTIVE )
+            {                             /* only process active frames */
+            childSize = @call child::MSG_URL_FRAME_GET_SIZE();
+            childFlags = @call child::MSG_URL_FRAME_GET_FRAME_FLAGS();
+
+            if ((!getWidth && (childFlags & HTML_FRF_SIZE_WIDTH)) ||
+                (getWidth && !(childFlags & HTML_FRF_SIZE_WIDTH))) {
+                childSize = HTML_LEN_VARIABLE;
+            }
+            sizeVal = HTML_LEN_GET_VALUE(childSize);
+            switch(HTML_LEN_GET_UNIT(childSize))
+            {
+                case HTML_LEN_VARIABLE:
+                sizeVal = 1;            /* treat "*" same as "*1" */
+                case HTML_LEN_PROPORTION:
+                variableSiblings++;
+                combinedVariable += sizeVal;
+                                        /* count variable sized siblings */
+                if(sizeVal >= maxvar)   /* find maximum proportional value */
+                {
+                    maxvar = sizeVal;
+                    maxvarOptr = child;
+                }
+                break;
+
+                case HTML_LEN_PERCENT:
+                sizeVal = (word)(((dword)parentSize) * sizeVal / 100);
+
+                default:
+                combinedSize += sizeVal;
+                if(sizeVal >= maxpix)   /* find maximum pixel value */
+                {
+                    maxpix = sizeVal;
+                    maxpixOptr = child;
+                }
+                break;
+            }
+            }
+        }
+
+        /* The handling of widths not totalling up to the parent width depends
+            on whether there are any variable sized siblings around or not. */
+        if(combinedVariable)
+        {
+            if(combinedSize + variableSiblings * MIN_FRAME_WIDTH > parentSize)
+            {
+            scale = GrSDivWWFixed(
+                MakeWWFixed(parentSize),
+                MakeWWFixed(combinedSize + variableSiblings * MIN_FRAME_WIDTH));
+                                        /* make room for minimum frame size */
+            maxvar = 0;                 /* don't make proportionals flexible */
+            }
+            else
+            {
+            scale = MakeWWFixed(1);     /* enough room to grow */
+            if((dword)(parentSize - combinedSize) * maxvar / combinedVariable > maxpix)
+                maxpixOptr = maxvarOptr;  /* is largest frame proportional? */
+            }
+        }
+        else                            /* all sizes are fixed */
+        {
+            scale = GrSDivWWFixed(
+            MakeWWFixed(parentSize),
+            MakeWWFixed(combinedSize)); /* match parent size exactly */
+        }
+
+        sizeRet = HTML_LEN_GET_VALUE(size);
+        switch(HTML_LEN_GET_UNIT(size))
+        {
+            case HTML_LEN_VARIABLE:
+            sizeRet = 1;                /* treat "*" same as "*1" */
+            case HTML_LEN_PROPORTION:
+            if(combinedSize > parentSize)
+                sizeRet = MIN_FRAME_WIDTH;
+            else
+            {
+                sizeRet = (dword)(parentSize - combinedSize) * sizeRet / combinedVariable;
+                if((sword)sizeRet < MIN_FRAME_WIDTH)
+                sizeRet = MIN_FRAME_WIDTH;
+            }                           /* ensure minimum frame width */
+            break;
+
+            case HTML_LEN_PERCENT:
+            sizeRet = (word)(((dword)parentSize) * sizeRet / 100);
+            break;
+        }
+        sizeRet = IntegerOf(GrMulWWFixed(MakeWWFixed(sizeRet), scale));
+
+        /*
+            A 0xffff value (eventually indicating a variable sized frame in that
+            dimension) is returned if the current frame is the one with the
+            largest width/height among its peers, in which case we allow its
+            size to float in order to accomodate for window size changes.
+         */
+        if(allowVariable && maxpixOptr == oself)
+            sizeRet = 0xffff;
+        }
+    }
+    else                                /* top object: return direct size */
+    {
+        if(allowVariable)
+        {
+        sizeRet = 0xffff;               /* make UI object expand freely */
+        }
+        else
+        {
+        documentSize = @call uiObject::MSG_VIS_GET_SIZE();
+        if(getWidth)
+            sizeRet = DWORD_WIDTH(documentSize);
+        else
+            sizeRet = DWORD_HEIGHT(documentSize);
+        }
+    }
+    HWChecksumCheck() ;
+
+    return sizeRet;
+}
+
+@extern method URLFrameClass, MSG_URL_FRAME_UPDATE_FRAME_UI
+{
+    WordFlags flags = pself->UFI_frameFlags;
+    optr uiObject = pself->UFI_interaction,
+            text = pself->UFI_text;
+    word width, height, fixedWidth, fixedHeight;
+    Boolean flagsChange = (pself->UFI_geoFlags != flags);
+
+    HWChecksumCheck() ;
+    if(uiObject)
+    {                                   /* have to relay change to UI object? */
+        if(!(pself->UFI_frameState & FS_ACTIVE))
+        {                                 /* Deactivate associated UI object */
+        @send uiObject::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+        }
+        else
+        {
+        height =
+            @call self::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(FALSE, TRUE);
+        if(!height)
+        {
+            @send uiObject::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+            goto done;
+        }
+        else if(height != 0xffff)
+            fixedHeight = (SST_PIXELS | height);
+        else
+            fixedHeight = 0;
+
+        width =
+            @call self::MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS(TRUE, TRUE);
+        if(!width)
+        {
+            @send uiObject::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+            goto done;
+        }
+        else if(width != 0xffff)
+            fixedWidth = (SST_PIXELS | width);
+        else
+            fixedWidth = 0;
+
+        /* See if any change to the geometry occurred */
+        pself = ObjDeref(oself, 0);
+        if(fixedHeight != pself->UFI_geoSize.XYS_height ||
+            fixedWidth != pself->UFI_geoSize.XYS_width ||
+            flagsChange)
+        {
+            pself->UFI_geoSize.XYS_height = fixedHeight;
+            pself->UFI_geoSize.XYS_width = fixedWidth;
+            pself->UFI_geoFlags = flags;
+
+            @send uiObject::MSG_GEN_SET_FIXED_SIZE(VUM_DELAYED_VIA_APP_QUEUE,
+            0, fixedHeight, fixedWidth);
+
+            if(flags & HTML_FRF_COLS)
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_HORIZONTALLY, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_VERTICALLY, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+            else
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_VERTICALLY, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_ORIENT_CHILDREN_HORIZONTALLY, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+
+            if(fixedHeight)
+            {
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_EXPAND_HEIGHT_TO_FIT_PARENT, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+            else
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_EXPAND_HEIGHT_TO_FIT_PARENT, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+
+            if(fixedWidth)
+            {
+            @send uiObject::MSG_GEN_REMOVE_GEOMETRY_HINT(
+                HINT_EXPAND_WIDTH_TO_FIT_PARENT, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+            else
+            {
+            @send uiObject::MSG_GEN_ADD_GEOMETRY_HINT(
+                HINT_EXPAND_WIDTH_TO_FIT_PARENT, 0, VUM_DELAYED_VIA_APP_QUEUE);
+            }
+        }
+
+        if(text && flagsChange)      /* level has associated view? */
+        {                            /* update view-specific flags */
+            VisUpdateModeAsWord vum = {VUM_DELAYED_VIA_APP_QUEUE,0};
+            DimensionAttrsToSetClear dimAttrH, dimAttrV;
+            Boolean viewChange = FALSE;
+            GenViewAttrs viewAttrs;
+            DimensionAttrs dimAttrs;
+            Boolean hasShow, hasRemove, needShow, needRemove;
+            byte dummy;
+
+            /* border */
+            viewAttrs = @call uiObject::MSG_GEN_VIEW_GET_ATTRS();
+            if (flags & HTML_FRF_NOBORDER) {
+                if (!(viewAttrs & GVA_NO_WIN_FRAME)) {
+                    @send uiObject::MSG_GEN_VIEW_SET_ATTRS(GVA_NO_WIN_FRAME, 0,
+                                                            vum);
+                }
+            } else {
+                if (viewAttrs & GVA_NO_WIN_FRAME) {
+                    @send uiObject::MSG_GEN_VIEW_SET_ATTRS(0, GVA_NO_WIN_FRAME,
+                                                            vum);
+                }
+            }
+
+            /* scrolling */
+            dimAttrs = @call uiObject::MSG_GEN_VIEW_GET_DIMENSION_ATTRS();
+            dimAttrH.DATSC_attrsToSet = dimAttrV.DATSC_attrsToSet =
+            (flags & HTML_FRF_SCROLLING)?GVDA_SCROLLABLE:0;
+            dimAttrH.DATSC_attrsToClear = dimAttrV.DATSC_attrsToClear =
+            (flags & HTML_FRF_SCROLLING)?0:GVDA_SCROLLABLE;
+            hasShow = (@call uiObject::MSG_META_GET_VAR_DATA(
+                HINT_VIEW_SHOW_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, &dummy)) == 0;
+            hasRemove = (@call uiObject::MSG_META_GET_VAR_DATA(
+                HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, &dummy)) == 0;
+            if (flags & HTML_FRF_SCROLLING) {
+                /* SCROLLING = YES or SCROLLING = AUTO */
+                if (!(dimAttrs.DA_horizAttrs & GVDA_SCROLLABLE) ||
+                    !(dimAttrs.DA_verAttrs & GVDA_SCROLLABLE)) {
+                    @send uiObject::MSG_GEN_VIEW_SET_DIMENSION_ATTRS(
+                        dimAttrH, dimAttrV, vum);
+                }
+                if (flags & HTML_FRF_FORCE_SCROLL) {
+                    /* SCROLLING = YES */
+                    needShow = TRUE;
+                    needRemove = FALSE;
+                } else {
+                    /* SCROLLING = AUTO */
+                    needShow = FALSE;
+                    needRemove = TRUE;
+                }
+            } else {
+                /* SCROLLING = NO */
+                if (dimAttrs.DA_horizAttrs & GVDA_SCROLLABLE ||
+                    dimAttrs.DA_verAttrs & GVDA_SCROLLABLE) {
+                    @send uiObject::MSG_GEN_VIEW_SET_DIMENSION_ATTRS(
+                        dimAttrH, dimAttrV, vum);
+                }
+                needShow = TRUE;  /* needed to remove scrollers */
+                needRemove = FALSE;
+            }
+            /* finish scrolling changes */
+            if (needShow) {
+                if (!hasShow) {
+                    @send uiObject::MSG_META_ADD_VAR_DATA(HINT_VIEW_SHOW_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, 0);
+                    viewChange = TRUE;
+                }
+            } else {
+                if (hasShow) {
+                    @send uiObject::MSG_META_DELETE_VAR_DATA(HINT_VIEW_SHOW_SCROLLERS_WHEN_NOT_SCROLLABLE);
+                    viewChange = TRUE;
+                }
+            }
+            if (needRemove) {
+                if (!hasRemove) {
+                    @send uiObject::MSG_META_ADD_VAR_DATA(HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE, 0, 0);
+                    viewChange = TRUE;
+                }
+            } else {
+                if (hasRemove) {
+                    @send uiObject::MSG_META_DELETE_VAR_DATA(HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE);
+                    viewChange = TRUE;
+                }
+            }
+            if (viewChange) {
+                @send uiObject::MSG_GEN_SET_NOT_USABLE(
+                    VUM_DELAYED_VIA_APP_QUEUE);
+            }
+        }
+
+        if(text)
+        {
+            optr parent = @call text::MSG_VIS_FIND_PARENT();
+            optr pFocus = 0;
+            if (parent) {
+                @call parent::MSG_META_GET_FOCUS_EXCL(&pFocus);
+                if (!pFocus) {
+                    @send text::MSG_META_GRAB_TARGET_EXCL();
+                    @send text::MSG_META_GRAB_FOCUS_EXCL();
+                }
+            }
+        }
+
+        @send uiObject::MSG_GEN_SET_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
+
+        if (text) {  /* only if we are a focusable uiObject */
+            /*
+            @send uiObject::MSG_META_GRAB_TARGET_EXCL();
+            @send uiObject::MSG_META_GRAB_FOCUS_EXCL();
+            We can update the focus optr up through the recursive levels
+            since our frame UI tree will only have focusable objects
+            at leafs, and only one leaf will be focused after our
+            frame tree traversal (unlike the text focusing above which
+            needs to happen at each node) */
+            *focusP = uiObject;
+        }
+        }
+    }
+done:
+    @send @frameChildren::MSG_URL_FRAME_UPDATE_FRAME_UI(focusP);
+    HWChecksumCheck() ;
+}

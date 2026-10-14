@@ -30,11 +30,13 @@
  *                            collection, frame attributes and traversal.
  *   URLFrameNavigation.goc - Link targets, URL completion, fetch initiation,
  *                            reload/save/source requests and refresh timers.
- *   URLFrameScript.goc     - Script contexts, events, timers and private state.
+ *   URLFrameScript.goc     - Script contexts, events and private state.
+ *   URLFrameTimers.goc     - Script timeout and interval timer management.
  *   URLFrameFetch.goc      - Fetch/cache requests, external files, parsing
  *                            callbacks, errors and fetch acknowledgements.
  *   URLFramePage.goc       - Received-page metadata, presentation, embedded
- *                            audio, completion and frame-view geometry.
+ *                            audio and completion.
+ *   URLFrameGeometry.goc   - Frame dimensions and UI geometry/focus updates.
  *
  * Source boundaries do not create code resources. Tree/navigation and Watcom
  * script methods share URLFRAME_TEXT. Preserve the legacy Borland script
@@ -106,6 +108,7 @@ extern void UserAbortEnd(void);
 @extern method URLFrameClass, MSG_URL_FRAME_GOT_URL;
 @extern method URLFrameClass, MSG_URL_FRAME_LOADING_FINISHED;
 @extern method URLFrameClass, MSG_URL_FRAME_GOT_PAGE_NOFRAME;
+/* Implemented in URLFrameGeometry.goc. */
 @extern method URLFrameClass, MSG_URL_FRAME_GET_COMPUTED_DIMENSION_PIXELS;
 @extern method URLFrameClass, MSG_URL_FRAME_UPDATE_FRAME_UI;
 @ifdef JAVASCRIPT_SUPPORT
@@ -761,6 +764,7 @@ void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *pcFlags,
 @extern method URLFrameClass, MSG_URL_FRAME_INTERPRET_SCRIPT_TOKEN;
 @extern method URLFrameClass, MSG_URL_FRAME_INTERPRET_SCRIPT_HA;
 @extern method URLFrameClass, MSG_URL_FRAME_HANDLE_EVENT;
+/* Implemented in URLFrameTimers.goc. */
 @extern method URLFrameClass, MSG_URL_FRAME_START_TIMER;
 @extern method URLFrameClass, MSG_URL_FRAME_STOP_TIMER;
 @extern method URLFrameClass, MSG_URL_FRAME_TIMER_EXPIRED;

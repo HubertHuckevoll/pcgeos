@@ -32,11 +32,13 @@
  * FRFETCH2_TEXT because its code stays on the call stack throughout parsing.
  *
  * URLFramePage.goc handles received-page metadata, presentation, completion
- * and frame-view geometry in FRFETCH3_TEXT. Its embedded-audio completion
- * handler retains FRFETCH_TEXT and shares its string pool with the requester.
+ * in FRFETCH3_TEXT; URLFrameGeometry.goc handles frame-view geometry there.
+ * Its embedded-audio completion handler retains FRFETCH_TEXT and shares its
+ * string pool with the requester.
  * URLFrameNavigation.goc prepares URLs and initiates requests; URLFrameTree.goc
  * builds/restores frame trees; URLFrameScript.goc owns script contexts/events
- * and timers. Their external methods are also registered in URLFRAME.goc.
+ * and URLFrameTimers.goc owns script timers. Their external methods are also
+ * registered in URLFRAME.goc.
  */
 
 /* we need this for the callbacks... */

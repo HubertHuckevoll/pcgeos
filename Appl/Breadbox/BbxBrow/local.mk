@@ -39,6 +39,12 @@ EOBJS := $(EOBJS:NBookmarksDialog.eobj:NBookmarksStore.eobj)
 GOBJS := $(GOBJS:NBookmarksDialog.gobj:NBookmarksStore.gobj)
 #endif
 
+#if empty(COMPILE_OPTIONS:M-DJAVASCRIPT_SUPPORT*)
+OBJS := $(OBJS:NURLFrameTimers.obj)
+EOBJS := $(EOBJS:NURLFrameTimers.eobj)
+GOBJS := $(GOBJS:NURLFrameTimers.gobj)
+#endif
+
 # Glue file-local lookup needs Images to establish the shared URLTEXT_TEXT segment.
 OBJS := URLTextImages.obj $(OBJS:NURLTextImages.obj)
 EOBJS := URLTextImages.eobj $(EOBJS:NURLTextImages.eobj)
@@ -94,7 +100,9 @@ XCCOMFLAGS += $(.TARGET:T:R:MHTMLView:S|HTMLView|-nt=HTMLVIEW_TEXT|) \
              $(.TARGET:T:R:MURLFrameTree:S|URLFrameTree|-nt=URLFrame_TEXT|) \
              $(.TARGET:T:R:MURLFrameNavigation:S|URLFrameNavigation|-nt=URLFrame_TEXT|) \
              $(.TARGET:T:R:MURLFrameScript:S|URLFrameScript|-nt=URLFrame_TEXT|) \
+             $(.TARGET:T:R:MURLFrameTimers:S|URLFrameTimers|-nt=URLFrame_TEXT|) \
              $(.TARGET:T:R:MURLFramePage:S|URLFramePage|-nt=FRFETCH3_TEXT|) \
+             $(.TARGET:T:R:MURLFrameGeometry:S|URLFrameGeometry|-nt=FRFETCH3_TEXT|) \
              $(.TARGET:T:R:MURLDocumentHistory:S|URLDocumentHistory|-nt=URLDOC_TEXT|) \
              $(.TARGET:T:R:MURLDocumentNavigation:S|URLDocumentNavigation|-nt=URLDOC_TEXT|) \
              $(.TARGET:T:R:MURLDocumentLocalPage:S|URLDocumentLocalPage|-nt=LOCALPAG_TEXT|)
