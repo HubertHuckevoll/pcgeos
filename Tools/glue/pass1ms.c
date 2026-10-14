@@ -1552,7 +1552,9 @@ Pass1MS_ProcessObject(const char  *file,
     byte    	    rectype;
     int	    	    done = FALSE;
 	int	recno = 0;
+    const char *savedObjectFile = symObjectFile;
 
+    symObjectFile = file;
     MSObj_Init(f);
     CV_Init(file, f);
 		CV32_Init(file, f);
@@ -1712,10 +1714,8 @@ Pass1MS_ProcessObject(const char  *file,
 		gd = MSObj_GetGroup(&bp);
 		sd = MSObj_GetSegment(&bp);
 
-		/*
-		 * All symbols we enter here are global.
-		 */
-		template.flags = OSYM_GLOBAL;
+		/* Local-public definitions retain object-file scope. */
+		template.flags = (rectype == MO_PUBDEF) ? OSYM_GLOBAL : 0;
 
 		if (sd == NULL) {
 		    /*
@@ -2283,4 +2283,5 @@ Pass1MS_ProcessObject(const char  *file,
 file_done:
 
     (*msobjFinish)(file, done, 1);
+    symObjectFile = savedObjectFile;
 }

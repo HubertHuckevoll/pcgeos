@@ -23,11 +23,6 @@ COMPILE_OPTIONS += -DGLOBAL_INTERNET_BUILD
 COMPILE_OPTIONS += $(.TARGET:X\\[AB\\]/*:S|AB| -DCOMPILE_OPTION_AUTO_BROWSE |g)
 COMPILE_OPTIONS += $(.TARGET:X\\[ABDBCS\\]/*:S|ABDBCS| -DCOMPILE_OPTION_AUTO_BROWSE |g)
 
-# Glue file-local lookup needs Images to establish the shared URLTEXT_TEXT segment.
-OBJS := URLTextImages.obj $(OBJS:NURLTextImages.obj)
-EOBJS := URLTextImages.eobj $(EOBJS:NURLTextImages.eobj)
-GOBJS := URLTextImages.gobj $(GOBJS:NURLTextImages.gobj)
-
 #include <$(SYSMAKEFILE)>
 
 XGOCFLAGS += $(COMPILE_OPTIONS)

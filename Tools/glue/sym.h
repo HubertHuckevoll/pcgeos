@@ -27,6 +27,9 @@
 #define	OSYM_UNKNOWN	0   /* ObjSym type to use if the type of symbol is
 			     * unknown when the object file is read in */
 
+/* Current OMF object while its local definitions are entered. */
+extern const char *symObjectFile;
+
 extern VMBlockHandle	    Sym_Create(VMHandle file);
 extern void 	    	    Sym_Close(VMHandle file, VMBlockHandle table);
 extern void                 Sym_Destroy (VMHandle file, VMBlockHandle table);

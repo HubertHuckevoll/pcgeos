@@ -50,8 +50,13 @@ static char *rcsid =
 #include    "sym.h"
 #include    "objfmt.h"
 #include    <stddef.h>
+#include    <hash.h>
 
 extern Boolean oldSymfileFormat;
+
+/* OMF locals need object ownership even when their code segments are merged. */
+const char *symObjectFile;
+static Hash_Table fileLocalSyms;
 
 /*
  * List of undefined symbols. Perhaps it should be a hash table?
@@ -611,6 +616,29 @@ Sym_Enter(VMHandle  	file,    	/* Output file */
     ObjHashBlock    *hb;    	    /* Locked version of same */
     ObjHashEntry    *he;    	    /* Entry at which duplicate was found */
     int	    	    obj_syms_per;   /* used to support both symfile formats */
+    VMID localVMID;
+    ObjSym *localP, *previousP;
+    ID key[2];
+    Hash_Entry *entryP;
+
+    if (symObjectFile != NULL && file == symbols && id != NullID) {
+	VMInfo(file, symBlock, (word *)NULL, (MemHandle *)NULL, &localVMID);
+	if (localVMID == OID_SYM_BLOCK) {
+	    localP = (ObjSym *)((genptr)VMLock(file, symBlock,
+					(MemHandle *)NULL) + symOff);
+	    if (!(localP->flags & (OSYM_GLOBAL | OSYM_UNDEF))) {
+		if (fileLocalSyms.bucketPtr == NULL) {
+		    Hash_InitTable(&fileLocalSyms, 0, Hash_Size(sizeof(key)), 0);
+		}
+		key[0] = ST_EnterNoLen(symbols, strings, (char *)symObjectFile);
+		key[1] = id;
+		entryP = Hash_CreateEntry(&fileLocalSyms, (Address)key,
+					(Boolean *)NULL);
+		Hash_SetValue(entryP, MAKE_VMP(symBlock, symOff));
+	    }
+	    VMUnlock(file, symBlock);
+	}
+    }
 
     if (!SymLookup(file, table, id, &bucket, &block, &hb, &he)) {
 	VMID	    vmid;
@@ -725,12 +753,23 @@ Sym_Enter(VMHandle  	file,    	/* Output file */
 	 */
 	VMDirty(file, block);
     } else {
-	/*
-	 * Multiple definitions of local symbols in different segments
-	 * are iffy, but we allow them. When they start congregating
-	 * in the same segment, though, we get upset.
-	 */
-	//Notify(NOTIFY_ERROR, "%i multiply defined in a single segment", id);
+	VMInfo(file, symBlock, (word *)NULL, (MemHandle *)NULL, &localVMID);
+	if (localVMID == OID_SYM_BLOCK) {
+	    localP = (ObjSym *)((genptr)VMLock(file, symBlock,
+					(MemHandle *)NULL) + symOff);
+	    previousP = (ObjSym *)((genptr)VMLock(file, he->block,
+					      (MemHandle *)NULL) + he->offset);
+	    /* Keep globals visible when a same-named local was entered first. */
+	    if ((localP->flags & OSYM_GLOBAL) && !(previousP->flags & OSYM_GLOBAL)) {
+		VMUnlock(file, he->block);
+		he->block = symBlock;
+		he->offset = symOff;
+		VMDirty(file, block);
+	    } else {
+		VMUnlock(file, he->block);
+	    }
+	    VMUnlock(file, symBlock);
+	}
     }
     /*
      * table and block were left locked by SymLookup
@@ -758,9 +797,8 @@ Sym_Enter(VMHandle  	file,    	/* Output file */
  ***********************************************************************/
 
 int
-Sym_FindWithSegmentAndFile(VMHandle   	    file,	   /* File in which to
+Sym_FindWithSegment(VMHandle   	    file,	   /* File in which to
 						    * search */
-		    const char*     fileName,      /* Acceptable filename, may be null */
 		    ID 	    	    id, 	   /* Name of symbol to find */
 		    VMBlockHandle   *symBlockPtr,   /* Place to store handle of
 					            * block holding the symbol
@@ -806,15 +844,10 @@ Sym_FindWithSegmentAndFile(VMHandle   	    file,	   /* File in which to
 	    VMUnlock(file, sd->syms);
 	    VMUnlock(file, he->block);
 
-	    if (isglobal || (!globalOnly && fileName == NULL)) {
+	    if (isglobal || !globalOnly) {
 		break;
-	    } else if (fileName != NULL && !globalOnly) {
-		if (strncmp(fileName, sd->file, strlen(fileName)) == 0) {
-			break;
-		}
-	    } else {
-		VMUnlock(file, block);
 	    }
+	    VMUnlock(file, block);
 	} else {
 	    if (block) {
 		VMUnlock(file, block);
@@ -826,8 +859,7 @@ Sym_FindWithSegmentAndFile(VMHandle   	    file,	   /* File in which to
     if (sd != NULL) {
 	/*
 	 * If sd is non-null, we broke out of the loop when we found a
-	 * global symbol of the proper name, or a local symbol in the
-	 * right file
+	 * global symbol of the proper name, or an acceptable local symbol.
 	 */
 	retval = 1;
     } else {
@@ -852,16 +884,6 @@ Sym_FindWithSegmentAndFile(VMHandle   	    file,	   /* File in which to
     return(retval);
 }
 
-int
-Sym_FindWithSegment(VMHandle file,
-		    ID id,
-		    VMBlockHandle *symBlockPtr,
-		    word *symOffPtr,
-		    int globalOnly,
-		    SegDesc **sdPtr)
-{
-    return Sym_FindWithSegmentAndFile(file, 0,id, symBlockPtr, symOffPtr, globalOnly,sdPtr);
-}
 
 /***********************************************************************
  *				Sym_FindWithFile
@@ -883,7 +905,7 @@ Sym_FindWithSegment(VMHandle file,
 
 int
 Sym_FindWithFile(VMHandle   	file,	    	/* File in which to search */
-		const char*     fileName,       /* Filename the segment came from */
+		const char*     fileName,       /* Object whose locals are acceptable */
 		 VMBlockHandle	table,	    	/* Table in which to look. If NULL,
 						 * searches through the tables of all
 						 * known segments */
@@ -895,9 +917,25 @@ Sym_FindWithFile(VMHandle   	file,	    	/* File in which to search */
 		 int	    	globalOnly) 	/* TRUE if only a global symbol is
 						 * acceptable */
 {
-	// Junk variable
-	SegDesc	    *sd;    	/* Junk variable */
-	return Sym_FindWithSegmentAndFile(file, fileName, id, symBlockPtr, symOffPtr, globalOnly, &sd);
+    ID key[2];
+    Hash_Entry *entry;
+    VMPtr sym;
+
+    if (!globalOnly && file == symbols && fileName != NULL &&
+	fileLocalSyms.bucketPtr != NULL) {
+	key[0] = ST_LookupNoLen(symbols, strings, fileName);
+	key[1] = id;
+	entry = Hash_FindEntry(&fileLocalSyms, (Address)key);
+	if (entry != NULL) {
+	    sym = (VMPtr)Hash_GetValue(entry);
+	    *symBlockPtr = VMP_BLOCK(sym);
+	    *symOffPtr = VMP_OFFSET(sym);
+	    return(1);
+	}
+    }
+    /* A local external may bind to a global, never another object's local. */
+    return Sym_Find(file, table, id, symBlockPtr, symOffPtr,
+		    globalOnly || fileName != NULL);
 }
 
 /***********************************************************************
