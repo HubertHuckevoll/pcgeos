@@ -588,6 +588,7 @@ extern TCHAR vmCacheDir[];
 extern VMFileHandle textObjFile;
 #endif
 
+void _pascal InitCacheLifetime(void);
 void AddCacheFileReference(void);
 void RemoveCacheFileReference(void);
 

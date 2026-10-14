@@ -32,7 +32,6 @@
 #include <Ansi/ctype.h>
 
 @include "htmlview.goh"
-#include "javascr.h"
 
 @extern object srcCacheOpt;
 @extern object objCacheOpt;
@@ -71,9 +70,6 @@ extern void PostDataCacheInit(void);
  *              Global variables and initialization
  ***************************************************************************/
 
-/* Name management */
-optr namePool;
-
 /* global blocks containing caches and associations */
 MemHandle localCacheBlock;
 MemHandle frameCacheBlock;
@@ -94,9 +90,6 @@ LRUBufferData LRUBuffer[HTML_LRUSIZE];
 @ifdef COMPILE_OPTION_LOCAL_PAGES
 optr localPageArray;            /* chunk array with NameTokens of local pages */
 @endif
-
-/* Allocation watcher for the whole application */
-AllocWatcherHandle G_allocWatcher = NullWatcher ;
 
 /*
  * Turn on/off progress display of graphics when loading/importing
@@ -124,14 +117,6 @@ extern TCHAR lastURLDriverName[];
 
 /* busy cursor */
 Boolean isBusyOff = FALSE;
-
-word cacheFileRefCount;
-
-#ifdef GLOBAL_INTERNET_BUILD
-/* holds cache directory */
-word vmCacheSP = HTML_VMCACHE_SP;
-TCHAR vmCacheDir[20];  /* no need for full path buffer */
-#endif
 
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
 Boolean G_fetchWhileImport = FALSE;
@@ -356,121 +341,6 @@ void LoadURLDrivers(void)
 @endif
 
 /**************************************************************************
- *              AddCacheFileReference
- **************************************************************************
- *
- * Description:
- *     Notify the cache system that one more client (typically, a text
- *     object) is using it. The cache is created when the first client
- *     attaches.
- *
- **************************************************************************/
-void AddCacheFileReference(void)
-{
-    if(cacheFileRefCount++ == 0)        /* one more "client" uses the file */
-    {                                   /* first client creates new file */
-#ifdef GLOBAL_INTERNET_BUILD
-      FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#else
-      FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
-
-      AttachToObjCache();               // load cache state from VM file
-
-#ifdef GLOBAL_INTERNET_BUILD
-      /* create separate file for text object storage, share cache file ref
-         count */
-      textObjFile = VMOpen(TEXT_OBJ_FILE_NAME, VMAF_FORCE_READ_WRITE,
-                           VMO_CREATE_TRUNCATE, 1);
-      /* Set the required object attributes for storing objects in a VM file.
-         But, we MUST not set VMA_OBJECT_RELOC since relocation fails on the
-         URLContent object for some odd reason, and there's currently no
-         need for it to work. - DH 9/7/99 */
-      VMSetAttributes(textObjFile, (VMA_OBJECT_ATTRS) & ~VMA_OBJECT_RELOC, 0);
-
-      namePool = NamePoolCreate(textObjFile);
-                                        // create global name pool
-#else
-      namePool = NamePoolCreate(cacheFiles[0]);
-                                        // create global name pool
-#endif
-
-#ifdef GLOBAL_INTERNET_BUILD
-      FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
-      AttachToSrcCache();               // load cache state from VM file
-
-#if JAVASCRIPT_SUPPORT
-      /* Start and initialize JavaScript environment */
-      jsecontext = NULL;
-#endif
-    }
-}
-
-/**************************************************************************
- *              RemoveCacheFileReference
- **************************************************************************
- *
- * Description:
- *     Notify the cache system that one client (typically, a text object)
- *     has detached. If the last client releases the cache, its data
- *     structures can be destroyed.
- *
- **************************************************************************/
-void RemoveCacheFileReference(void)
-{
-    word i;
-
-    if(--cacheFileRefCount == 0)        /* count down clients, no more: close */
-    {
-#if JAVASCRIPT_SUPPORT
-      /* Shut down JavaScript environment */
-      if(jsecontext)
-        ExitBrowserJS();
-#endif
-
-      DetachFromObjCache();             /* save cache state to disk */
-      SrcCacheCommit();                 /* update cache state one last time */
-
-      MemFree(objCacheBlock);
-      srcCacheArray = objCacheArray = NullOptr;
-                                        /* arrays are no longer available */
-
-#ifdef ALT_SRC_CACHE
-      if (altSrcCacheHosts) MemFree(altSrcCacheHosts);
-      if (altSrcCacheExts) MemFree(altSrcCacheExts);
-      altSrcCacheHosts = NullHandle;
-      altSrcCacheExts = NullHandle;
-#endif
-
-      /* There is some more stuff we only want to do if the last text object
-         as well as the navigation system have detached from the cache.
-         We assume that the Name Pool is no longer needed by anyone, as are
-         the allocation watch object and the semaphores controlling access
-         to the cache. This way, we do not depend on the order in which
-         the actual destruction messages are occuring. */
-
-      NamePoolFree(namePool);           /* release name pool */
-      namePool = NullOptr;
-
-      for(i=0; i<NUM_CACHE_FILES; i++)  /* close cache file */
-        VMClose(cacheFiles[i], FILE_NO_ERRORS);
-      VMClose(srcCacheFile, FILE_NO_ERRORS);
-#ifdef GLOBAL_INTERNET_BUILD
-      VMClose(textObjFile, FILE_NO_ERRORS);
-      FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#endif
-
-      AllocWatcherDestroy(G_allocWatcher) ;
-      G_allocWatcher = NullWatcher ;
-
-      /* Remove the old semaphores */
-      ThreadFreeSem(srcCacheSem);
-      ThreadFreeSem(objCacheSem);
-    }
-}
-
-/**************************************************************************
  *              CleanupImpDoc
  **************************************************************************
  *
@@ -614,40 +484,11 @@ void InitNavigation(void)
 {
     word i, fontID, pointSize;
     WWFixed wwf;
-    dword availMem ;
-    word Kavail ;
-#if defined(ALT_SRC_CACHE) || defined(GLOBAL_INTERNET_BUILD)
+#if defined(ALT_SRC_CACHE) || defined(UNSUPPORTED_EXTS)
     word dataSize;
 #endif
 
-    HWChecksumCheck() ;
-
-    /* Assume we have plenty of room for the allocation watcher */
-    /* But use the limit in the .INI file (if any) */
-    availMem = 0x400000 ;  /* 4 megs unless told otherwise */
-    if (!InitFileReadInteger(HTMLVIEW_CATEGORY, "memlimit", &Kavail))  {
-        /* Use that limit */
-        availMem = ((dword)Kavail) * 1000L ;
-    }
-    G_allocWatcher = AllocWatcherCreate(availMem) ;
-
-#ifdef GLOBAL_INTERNET_BUILD
-    /* setup VM cache directory */
-    InitFileReadInteger(HTMLVIEW_CATEGORY, "vmCacheSP", &vmCacheSP);
-    if (InitFileReadStringBuffer(HTMLVIEW_CATEGORY, "vmCacheDir",
-                                 vmCacheDir, sizeof(vmCacheDir), &dataSize)) {
-        /* not found in .ini, use default */
-        xstrncpy(vmCacheDir, HTML_VMCACHE_DIR, sizeof(vmCacheDir)/sizeof(TCHAR));
-    }
-#endif
-
-    HWChecksumCheck() ;
-    FileSetCurrentPath(HTML_CACHE_SP, _TEXT("."));
-    FileCreateDir(HTML_CACHE_DIR);      /* create source cache directory */
-    cacheFileRefCount = 0;              /* No users of cache file yet */
-    HWChecksumCheck() ;
-    AddCacheFileReference();            /* first user - create cache file */
-    HWChecksumCheck() ;
+    InitCacheLifetime();
 
 @ifdef GLOBAL_INTERNET_BUILD
     /* set up help window */

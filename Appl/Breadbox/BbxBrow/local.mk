@@ -20,6 +20,14 @@ COMPILE_OPTIONS += -DGLOBAL_INTERNET_BUILD
 #COMPILE_OPTIONS += -DCOMPILE_OPTION_PROFILING_ON
 #COMPILE_OPTIONS += -DEMAIL_ACCT_CMD
 
+# An empty AutoBrowse module still contributes discarded protocol stubs.
+# Check before adding per-target options; AB products must retain the module.
+#if empty(COMPILE_OPTIONS:M-DCOMPILE_OPTION_AUTO_BROWSE*) && empty(PRODUCTS:MAB*)
+OBJS := $(OBJS:NAutoBrowse.obj)
+EOBJS := $(EOBJS:NAutoBrowse.eobj)
+GOBJS := $(GOBJS:NAutoBrowse.gobj)
+#endif
+
 COMPILE_OPTIONS += $(.TARGET:X\\[AB\\]/*:S|AB| -DCOMPILE_OPTION_AUTO_BROWSE |g)
 COMPILE_OPTIONS += $(.TARGET:X\\[ABDBCS\\]/*:S|ABDBCS| -DCOMPILE_OPTION_AUTO_BROWSE |g)
 
@@ -87,6 +95,7 @@ XCCOMFLAGS += $(.TARGET:T:R:MHTMLView:S|HTMLView|-nt=HTMLVIEW_TEXT|) \
              $(.TARGET:T:R:MFavoritesDialog:S|FavoritesDialog|-nt=FAVORCLS_TEXT|) \
              $(.TARGET:T:R:MFavoritesCreate:S|FavoritesCreate|-nt=FAVORCLS_TEXT|) \
              $(.TARGET:T:R:MFavoritesStore:S|FavoritesStore|-nt=FAVORITE_TEXT|) \
+             $(.TARGET:T:R:MCacheLifetime:S|CacheLifetime|-nt=INIT_TEXT|) \
              $(.TARGET:T:R:MSourceCache:S|SourceCache|-nt=NAVCACHE_TEXT|) \
              $(.TARGET:T:R:MObjectCache:S|ObjectCache|-nt=NAVCACHE_TEXT|) \
              $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLText_TEXT|) \
