@@ -46,7 +46,7 @@ my $loader = $1;
 $class =~ /^(void LOCAL IMarkAllImagesUnresolved\(.*?^})/ms
     or die "Cannot find attachment reset\n";
 my $reset = $1;
-$import =~ /else \{\s*(#if PROGRESS_DISPLAY\s*if\(request.importProgressData.IPD_cacheItem.*?MSG_URL_TEXT_INTERNAL_GRAPHIC_FAILED\(\s*request.name, request.imageGeneration\);)\s*}/s
+$import =~ /else \{\s*(if\(request.importProgressData.IPD_cacheItem.*?MSG_URL_TEXT_INTERNAL_GRAPHIC_FAILED\(\s*request.name, request.imageGeneration\);)\s*}/s
     or die "Cannot find final import failure cleanup\n";
 my $failure = $1;
 my $harness = <<'C';
@@ -256,29 +256,21 @@ static word LoadGraphicProgressCallback(void) { return 0; }
 static void MSG_URL_TEXT_GRAPHIC_FETCHED(MemHandle);
 static void URLFetchRequest(NameToken url, word mode, MemHandle post, NameToken referer,
     optr obj, void (*msg)(MemHandle), optr extra
-#if PROGRESS_DISPLAY
     , LoadProgressData *progressP
-#endif
     )
 {
     (void)post; (void)referer; (void)obj; (void)msg;
-#if PROGRESS_DISPLAY
     (void)progressP;
-#endif
     assert(!arrayLocks && pending && fetched < LIMIT);
     fetches[fetched].extra = extra; fetches[fetched].url = url; fetches[fetched++].mode = mode;
 }
 static Boolean ImportThreadRequestImportGraphic(optr obj, NameToken name, TCHAR *mime,
     TCHAR *file, Boolean temporary, ObjCacheToken owner
-#if PROGRESS_DISPLAY
     , LoadProgressData *progressP
-#endif
     )
 {
     (void)obj; (void)mime; (void)file; (void)owner;
-#if PROGRESS_DISPLAY
     (void)progressP;
-#endif
     assert(!arrayLocks && pending && imported < LIMIT);
     if(failQueue) return FALSE;
     imports[imported].name = name; imports[imported].imageGeneration = text.UTI_imageGeneration;
@@ -304,9 +296,9 @@ for my $entry (
     ['MSG_URL_TEXT_STOP', 'void']) {
     $harness .= goc_to_c(method($source, @$entry));
 }
-$harness .= "#if PROGRESS_DISPLAY\n" . goc_to_c(method($source,
+$harness .= goc_to_c(method($source,
     'MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS', 'MemHandle importProgressData'));
-$harness .= goc_to_c(method($source, 'MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS', 'LoadProgressData *loadProgressDataP')) . "#endif\n";
+$harness .= goc_to_c(method($source, 'MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS', 'LoadProgressData *loadProgressDataP'));
 $harness .= "static void final_failure(unsigned i)\n{\n";
 $harness .= "    struct { NameToken name; dword imageGeneration; ImportProgressData importProgressData; } request;\n";
 $harness .= "    request.name = imports[i].name; request.imageGeneration = imports[i].imageGeneration;\n    request.importProgressData = imports[i].importProgressData;\n";
@@ -381,9 +373,7 @@ static void check(void)
     NameToken t, primary;
     ObjCacheToken oct;
     unsigned old;
-#if PROGRESS_DISPLAY
     LoadProgressData stream;
-#endif
     assert(sizeof(word) == 2 && sizeof(dword) == 4);
     init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);
     assert(fetched == 1 && pending == 1); load_success(0);
@@ -450,7 +440,6 @@ static void check(void)
     init(); add_image("svg", "http://site/inline.svg"); images[0].flags = HTML_IDF_INLINE_SVG;
     MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE); assert(!fetched && imported == 1); import_done(0, FALSE, FALSE);
     assert(!deleted && !(images[0].flags & HTML_IDF_PICTURE_FALLBACK_USED)); cleanup();
-#if PROGRESS_DISPLAY
     init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE); fetch_done(0, URL_RET_FILE);
     progressData.IPD_cacheItem = OCT_NULL; progressData.IPD_nameT = imports[0].name;
     MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(PROGRESS);
@@ -468,18 +457,15 @@ static void check(void)
     memset(&stream, 0, sizeof(stream)); stream.LPD_request = fetches[0].extra; stream.LPD_nameT = fetches[0].url;
     reload(); MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS(&stream); assert(!imported && extras[0].progressCanceled);
     fetch_done(0, URL_RET_PROGRESS); assert(!pending && fetched == 1); cleanup();
-#endif
     puts("Picture fallback: retry, cache, locks, generations and ownership passed.");
 }
 int main(void) { check(); return 0; }
 C
 my $tmp = tempdir(CLEANUP => 1);
-for my $progress (0, 1) {
-    open my $file, '>', "$tmp/check.c" or die $!;
-    print $file "#define PROGRESS_DISPLAY $progress\n", $harness;
-    close $file or die $!;
-    system('cc', '-std=c89', '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
-           '-Wno-unused-variable', '-Wno-unused-but-set-variable',
-           "$tmp/check.c", '-o', "$tmp/check") == 0 or die "Host compilation failed\n";
-    system("$tmp/check") == 0 or die "Picture fallback checks failed\n";
-}
+open my $file, '>', "$tmp/check.c" or die $!;
+print $file $harness;
+close $file or die $!;
+system('cc', '-std=c89', '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
+       '-Wno-unused-variable', '-Wno-unused-but-set-variable',
+       "$tmp/check.c", '-o', "$tmp/check") == 0 or die "Host compilation failed\n";
+system("$tmp/check") == 0 or die "Picture fallback checks failed\n";

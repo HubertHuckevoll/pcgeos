@@ -20,7 +20,7 @@
 #pragma code_seg("URLText_TEXT")
 #endif
 
-#if PROGRESS_DISPLAY && defined(USE_MEM_STREAM)
+#if defined(USE_MEM_STREAM)
 
 #define MEM_STREAM_BLOCK_SIZE 8192
 #define MEM_STREAM_INIT_BLKS 200  /* supports up to 1.6M files w/o growth */

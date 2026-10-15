@@ -23,18 +23,11 @@ WebPMapResult(WebPResult result)
     }
 }
 
-#if PROGRESS_DISPLAY
 ImpBmpStatus _pascal
 ImpWebP(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
         AllocWatcherHandle watcher, dword *usedMem, ImpBmpParams *params,
         Boolean *isCompacted, VMBlockHandle *bitmap,
         ImportProgressData *importProgressDataP, MimeStatus *mimeStatus)
-#else
-ImpBmpStatus _pascal
-ImpWebP(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
-        AllocWatcherHandle watcher, dword *usedMem, ImpBmpParams *params,
-        Boolean *isCompacted, VMBlockHandle *bitmap, MimeStatus *mimeStatus)
-#endif
 {
     FileHandle source;
     WebPImportHandle decoder;
@@ -107,12 +100,10 @@ cleanup:
     }
 
     if (status == IBS_NO_ERROR) {
-#if PROGRESS_DISPLAY
         /* No partial publication; replace every line in the final update. */
         if (importProgressDataP != (void *)0) {
             importProgressDataP->IPD_callback = (void *)0;
         }
-#endif
         *bitmap = localBitmap;
         params->IBP_bitmap = localBitmap;
         *usedMem = requiredMemory;

@@ -52,12 +52,6 @@ void InitGlobals(void)
     /* Ini will override */
     InitFileReadBoolean("impgraph", "useSysPalForGIF", &useSysPal);
 
-    #if !PROGRESS_DISPLAY
-      /* I don't want to write the data stream support in the assembly
-         ImpGIFProcessFile routine, so we don't support no-animations for
-         progress display */
-      InitFileReadBoolean("impgraph", "allowAnimations", &allowAnimations) ;
-    #endif
   }
 }
 
@@ -66,20 +60,12 @@ void InitGlobals(void)
  *  GIF import - main routine                                                *
  *****************************************************************************/
 
-#if PROGRESS_DISPLAY
 ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           ImpBmpParams *params, Boolean *isAnimation, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, VMFileHandle destFile,
           ImportProgressData *importProgressDataP,
 		  Boolean locAllowAnimations)
-#else
-ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
-          MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
-          ImpBmpParams *params, Boolean *isAnimation, Boolean *isCompacted,
-          VMBlockHandle *bmVMBlock,
-		  Boolean locAllowAnimations)
-#endif
 {
     ImpBmpStatus status;
     MemHandle mem ;
@@ -89,13 +75,11 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
   params->IBP_bitmap = NullHandle ;
   params->IBP_dest = vmf;
   params->IBP_status = 0;              /* no status object */
-#if PROGRESS_DISPLAY
   /* destination file for animated GIFs, they are written directly
      to destination file, not copied there later */
   params->IBP_animDest = destFile;
   /* point to import progress data */
   params->IBP_importProgressDataP = importProgressDataP;
-#endif
 
   if (!locAllowAnimations)  {
       params->IBP_source = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
@@ -139,9 +123,7 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
       /* If we don't even have a first frame, then delete the whole thing */
       if (!*isAnimation)  {
           /* Only dump if we are not progressive */
-#if PROGRESS_DISPLAY
           if ((!importProgressDataP) || (!importProgressDataP->IPD_callback))  {
-#endif
               VMFreeVMChain(params->IBP_dest, VMCHAIN_MAKE_FROM_VM_BLOCK(params->IBP_bitmap)) ;
 
               /* Destroy the bitmap, but return the used memory count */
@@ -149,9 +131,7 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
               *usedMem = 0 ;
               params->IBP_width = params->IBP_height = 1 ;
               params->IBP_bitmap = NullHandle ;
-#if PROGRESS_DISPLAY
           }
-#endif
       } else {
           /* We have at least one frame of this graphic.  Convert it to a single */
           /* frame image */
@@ -209,19 +189,11 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
  *  JPEG import - main routine                                               *
  *****************************************************************************/
 
-#if PROGRESS_DISPLAY
 ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
           MimeStatus *mimeStatus)
-#else
-ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
-          MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
-          Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
-          VMBlockHandle *bmVMBlock,
-          MimeStatus *mimeStatus)
-#endif
 {
     ImpBmpStatus status;
 #if SCANLINE_COMPRESS
@@ -248,9 +220,7 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 	        scanlineCompress,
 #endif
             &iad->IAD_completeGraphic
-#if PROGRESS_DISPLAY
 	        , importProgressDataP
-#endif
             , mimeStatus
            );
 
@@ -264,9 +234,7 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 	            scanlineCompress,
 #endif
                 &iad->IAD_completeGraphic
-#if PROGRESS_DISPLAY
 	            , importProgressDataP
-#endif
                 , mimeStatus
            );
 @ifdef PRODUCT_FJPEG
@@ -290,27 +258,17 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
  ImpPNG
  *******************************************************************/
 
-#if PROGRESS_DISPLAY
 ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
           MimeStatus *mimeStatus)
-#else
-ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
-          MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
-          Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
-          VMBlockHandle *bmVMBlock,
-          MimeStatus *mimeStatus)
-#endif
 {
     ImpBmpStatus status = IBS_NO_ERROR;
 
     *bmVMBlock = PngImport(file, vmf, &(iad->IAD_size), resolution, watcher, usedMem,
     &iad->IAD_completeGraphic
-#if PROGRESS_DISPLAY
 	, importProgressDataP
-#endif
     , mimeStatus
     );
 
@@ -342,19 +300,11 @@ ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
  *  SVG import - main routine                                                *
  *****************************************************************************/
 
-#if PROGRESS_DISPLAY
 ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
           MimeStatus *mimeStatus)
-#else
-ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
-          MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
-          Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
-          VMBlockHandle *bmVMBlock,
-          MimeStatus *mimeStatus)
-#endif
 {
     FileHandle srcFile;
     VMChain gstringChain;
@@ -366,9 +316,7 @@ ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *
     (void)resolution;
     (void)watcher;
     (void)doCompress;
-#if PROGRESS_DISPLAY
     (void)importProgressDataP;
-#endif
 
     params->IBP_bitmap = NullHandle;
     params->IBP_dest = vmf;
@@ -434,7 +382,6 @@ ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *
  * Otherwise (i.e. if no progress update ever got out), we'll just
  * discard the bitmap ourselves since nobody else knows about it.
  */
-#if PROGRESS_DISPLAY
 void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle bitmap)
 {
     Boolean dofree;
@@ -455,7 +402,6 @@ void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle 
 	  VMFreeVMChain(vmFile, VMCHAIN_MAKE_FROM_VM_BLOCK(bitmap));
     }
 }
-#endif
 
 /*
  *  Import file whose name is specified in *file, assume it has the MIME
@@ -472,9 +418,7 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
     VMBlockHandle dataVMBlock,bmVMBlock = NullHandle;
     Boolean isAnimation = FALSE ;
     Boolean isCompacted = FALSE ;
-#if PROGRESS_DISPLAY
     VMFileHandle destFile = vmf;
-#endif
 
     InitGlobals();                      /* Handled cached INI entries */
 
@@ -494,7 +438,6 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 	}
 
     params.IBP_mimeStatus = mimeStatus ;
-#if PROGRESS_DISPLAY
     /* use local work file, if available */
     if (importProgressDataP && importProgressDataP->IPD_callback) {
 	/* must use actual dest file */
@@ -512,15 +455,9 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
           importProgressDataP->IPD_iad.IAD_origin.P_y = 0;
         importProgressDataP->IPD_iad.IAD_completeGraphic = FALSE;
     }
-#endif  /* PROGRESS_DISPLAY */
 
-#if PROGRESS_DISPLAY
   #define IMP_DESTFILE_PARAM , destFile
   #define IMP_PROGRESS_PARAM , importProgressDataP
-#else
-  #define IMP_DESTFILE_PARAM
-  #define IMP_PROGRESS_PARAM
-#endif
 
 #define IMP_GIF_PARAMS file, vmf, iad, resolution, watcher, usedMem, \
           &params, &isAnimation, &isCompacted, &bmVMBlock \
@@ -598,11 +535,7 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 	      bmCompacted = GrCompactBitmap(vmf, bmVMBlock, vmf);
 	      if(bmCompacted)
 	      {
-#if PROGRESS_DISPLAY
 		  FreeViaProgress(importProgressDataP, vmf, bmVMBlock);
-#else
-		  VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmVMBlock));
-#endif
 		  bmVMBlock = bmCompacted;
 	      }
 	  }
@@ -667,9 +600,7 @@ VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
             watcher,
             usedMem,
             mimeStatus,
-#ifdef PROGRESS_DISPLAY
 			importProgressDataP,
-#endif
 			0		// no specific flags here
 	);
 }

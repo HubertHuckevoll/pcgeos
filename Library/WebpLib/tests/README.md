@@ -40,11 +40,3 @@ for file opening, watcher accounting, and progress data. It checks full-image
 completion, unchanged callbacks for raster fallback, watcher refusal, Stop
 before and after a row, decode errors, and cleanup. Decoder allocation failures
 are injected at every allocation, and partial imports are discarded.
-
-To check the importer without progress support too:
-
-```sh
-cc -std=c89 -Wall -Wextra -Werror -DPROGRESS_DISPLAY=0 -I Library/WebpLib \
-    -o /tmp/webpdecode_no_progress Library/WebpLib/tests/webpdecode_test.c
-/tmp/webpdecode_no_progress Library/WebpLib/tests/images/16x16.webp /tmp/webpdecode.rgb
-```

@@ -34,9 +34,7 @@ global ImpGIFProcessFile:far
 global IMPGIFPROCESSFILE:far
 global ImpGIFGetInfo:far
 global IMPGIFGETINFO:far
-if PROGRESS_DISPLAY
 global IMPGIFGETPROGRESSINFO:far
-endif
 global IMPPACKBITS:far
 
 ImpGIFCode segment
@@ -3709,7 +3707,6 @@ IMPGIFGETINFO endp
 
 ;----------------------------------------------------------------------------
 
-if PROGRESS_DISPLAY
 
 IMPGIFGETPROGRESSINFO proc far impgifhandle:word, infoBlock:fptr
         uses ax, bx, es, di, ds
@@ -3736,7 +3733,6 @@ IMPGIFGETPROGRESSINFO proc far impgifhandle:word, infoBlock:fptr
         ret
 IMPGIFGETPROGRESSINFO endp
 
-endif
 
 
 ;----------------------------------------------------------------------------

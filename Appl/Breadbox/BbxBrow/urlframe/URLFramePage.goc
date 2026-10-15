@@ -610,9 +610,7 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
                                     oself,             /* return obj, msg */
                                     MSG_URL_FRAME_EMBED_FETCHED,
                                     0                  /* extra data */
-#if PROGRESS_DISPLAY
                                     ,0                 /* load progress */
-#endif
                                     );
                 }
                 NamePoolDestroyIfDynamic(embedBufP);

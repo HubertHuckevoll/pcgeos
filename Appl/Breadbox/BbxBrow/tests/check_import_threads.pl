@@ -19,24 +19,21 @@ sub extract {
 my $start = extract($code, qr/^(Boolean ImportThreadEngineStart\(.*?^})/ms);
 my $count = extract($start, qr/(word numImportThreads[^;]*;)/);
 $start = extract($start, qr/(if \(!G_importThreadStarted\).*?)(?=        \/\* First create)/s);
-$start =~ s/#endif\s*\z// or die "Missing creation guard\n";
-$start .= "CreateImporter(i);\n}\n#endif\nG_importThreadStarted = TRUE;\n}\n";
+$start .= "CreateImporter(i);\n}\nG_importThreadStarted = TRUE;\n}\n";
 
 my $stop = extract($code, qr/^(void ImportThreadEngineStop\(.*?^})/ms);
-$stop = extract($stop, qr/(if \(G_importThreadStarted\).*?)(?=#else\n\s*\@send)/s);
+$stop = extract($stop, qr/(if \(G_importThreadStarted\).*?)(?=^})/ms);
 $stop =~ s/\@send\s*,insertAtFront\s*,forceQueue\s*\(G_importThreadObj\[i\]\)::MSG_IMPORT_THREAD_ENGINE_KILL\(\)/KillImporter(G_importThreadObj[i])/s
     or die "Missing shutdown message\n";
-$stop .= "#endif\nG_importThreadStarted = FALSE;\n}\n";
 
 my $abort = extract($code, qr/^(void ImportThreadAbortAll\(.*?^})/ms);
-$abort = extract($abort, qr/(if \(G_importThreadStarted\).*?)(?=#else)/s);
+$abort = extract($abort, qr/(if \(G_importThreadStarted\).*?)(?=^})/ms);
 $abort =~ s/\@send\s*,forceQueue\s*,insertAtFront G_importThreadObj\[i\]::MSG_IMPORT_THREAD_ENGINE_START_ABORT\(\)/QueueAbort(G_importThreadObj[i], 1)/
     or die "Missing front abort event\n";
 $abort =~ s/\@send\s*,forceQueue G_importThreadObj\[i\]::MSG_IMPORT_THREAD_ENGINE_END_ABORT\(\)/QueueAbort(G_importThreadObj[i], 0)/
     or die "Missing back abort event\n";
-$abort .= "#endif\n}\n";
 
-my $route = extract($code, qr/(int importThread;.*?)(?=\n#endif)/s);
+my $route = extract($code, qr/(int importThread;.*?)(?=    \/\* All we need)/s);
 for my $field (qw(importProgressData.IPD_vmFile
                   importProgressData.IPD_loadProgressDataP mimeStatus)) {
     $route .= extract($code, qr/(p_request->\Q$field\E\s*=.*?;)/s) . "\n";
@@ -46,7 +43,7 @@ $route =~ s/\@send ,forceQueue G_importThreadObj\[importThread\]::\s*MSG_IMPORT_
 
 my $handler = extract($code, qr/^\@method ImportThreadEngineClass, MSG_IMPORT_THREAD_ENGINE_IMPORT_GRAPHIC\n\{(.*?)^}/ms);
 my $condition = extract($handler, qr/(if\(pself->numAborts == 0\))/);
-my $cleanup = extract($handler, qr/(    else\s*\@send \(request.textObj\)::\s*MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS\(request.name\);\s*#if PROGRESS_DISPLAY.*)\z/s);
+my $cleanup = extract($handler, qr/(    else\s*\@send \(request.textObj\)::\s*MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS\(request.name\);.*)\z/s);
 $cleanup =~ s/\@send \(request.textObj\)::\s*MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS\(request.name\)/Cancel(request.textObj, request.name)/;
 $cleanup =~ s/\@send \(request.textObj\)::MSG_URL_TEXT_DEC_PENDING\(\)/DecPending(request.textObj)/;
 my $begin = extract($code, qr/\@method ImportThreadEngineClass, MSG_IMPORT_THREAD_ENGINE_START_ABORT\s*\{.*?(pself->numAborts\+\+\s*;)/s);
@@ -68,7 +65,6 @@ print $test <<'C';
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#define PROGRESS_DISPLAY 1
 #define ALLOW_FETCH_WHILE_IMPORTING
 #define IMPORT_PROGRESS_DATA_QUEUE_SIZE 20
 #define HTMLVIEW_CATEGORY "HTMLView"

@@ -22,12 +22,8 @@
  ***********************************************************************/
 
 /* protocol version of compatible MIME image drivers */
-#if PROGRESS_DISPLAY
 /* upped for new API */
 #define MIME_DRV_PROTOMAJOR 4
-#else
-#define MIME_DRV_PROTOMAJOR 3
-#endif
 #define MIME_DRV_PROTOMINOR 0
 
 /* token for auto-recognition of Mime drivers */
@@ -94,7 +90,6 @@ typedef struct {
     MimeStatusFlags MS_mimeFlags ;
 } MimeStatus ;
 
-#if PROGRESS_DISPLAY
 
 /* import thread wait time fro load thread */
 #define PROGRESS_INI_CAT "progressDisplay"
@@ -140,19 +135,6 @@ typedef void _pascal pcfm_ImportProgressCallback(_ImportProgressParams_, void *p
             MimeStatus *mimeStatus, \
 	    _ImportProgressParams_
 
-#else  /* PROGRESS_DISPLAY */
-
-#define _MimeGraphicParams_   \
-            TCHAR *mimeType, \
-            TCHAR *file, \
-            VMFileHandle vmf, \
-            ImageAdditionalData *iad, \
-            MimeRes resolution, \
-            AllocWatcherHandle watcher, \
-            dword *usedMem, \
-            MimeSatus *mimeStatus
-
-#endif  /* PROGRESS_DISPLAY */
 
 #define MIME_LIMIT_NONE       0xFF000001
 
@@ -350,16 +332,10 @@ typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_,dword ex
  ***********************************************************************/
 
 /* protocol version of compatible URL drivers */
-#if PROGRESS_DISPLAY
 /* new API */
 /*#define URL_DRV_PROTOMAJOR 6*/
 /* for referer support */
 #define URL_DRV_PROTOMAJOR 7
-#else
-/*#define URL_DRV_PROTOMAJOR 5*/
-/* for referer support */
-#define URL_DRV_PROTOMAJOR 6
-#endif
 #define URL_DRV_PROTOMINOR 0
 
 /* standard location for URL drivers */
@@ -467,10 +443,8 @@ typedef struct {
      not be freed. */
   optr                  URB_message;
 
-#if PROGRESS_DISPLAY
   /* loading progress data */
   LoadProgressData      *URB_loadProgressDataP;
-#endif
 
   /* referer URL */
   ChunkHandle           URB_referer;
@@ -508,10 +482,8 @@ typedef word _pascal pcfm_URLDrvMain(_URLMainParams_, void *pf);
 #define URL_RET_FILE            1   /* mimeType valid, see URB_file */
 #define URL_RET_MESSAGE         2   /* HTML message, see URB_message */
 #define URL_RET_URL_REDIR       3   /* url changed, see URB_url */
-#if PROGRESS_DISPLAY
 #define URL_RET_PROGRESS	4   /* load progress finished */
 #define URL_RET_PROGRESS_ABORT  5   /* load progress aborted */
-#endif
 
 /* Return codes indicating specific failure conditions */
 #define URL_RET_FIRST_FAILURE   100

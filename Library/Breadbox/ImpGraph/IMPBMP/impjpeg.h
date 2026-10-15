@@ -18,9 +18,7 @@ JpegImport(TCHAR *file,
            Boolean scanlineCompress, 
 #endif
            Boolean *p_completeGraphic
-#if PROGRESS_DISPLAY
            , _ImportProgressParams_
-#endif  
            , MimeStatus *mimeStatus
            );
 
@@ -35,9 +33,7 @@ FJpegImport(TCHAR *file,
            Boolean scanlineCompress, 
 #endif
            Boolean *p_completeGraphic
-#if PROGRESS_DISPLAY
            , _ImportProgressParams_
-#endif  
            , MimeStatus *mimeStatus
            );
 

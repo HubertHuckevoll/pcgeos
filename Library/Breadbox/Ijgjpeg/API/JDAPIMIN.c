@@ -394,7 +394,6 @@ jpeg_finish_decompress (j_decompress_ptr cinfo)
        cinfo->global_state == DSTATE_RAW_OK) && ! cinfo->buffered_image) {
     /* Terminate final pass of non-buffered mode */
     if (cinfo->output_scanline < cinfo->output_height)
-#if PROGRESS_DISPLAY
       if (cinfo->src->eoi) {
         TRACEMS(cinfo, 1, JERR_TOO_LITTLE_DATA);
         jpeg_abort((j_common_ptr) cinfo);
@@ -402,9 +401,6 @@ jpeg_finish_decompress (j_decompress_ptr cinfo)
       } else {
         ERREXIT(cinfo, JERR_TOO_LITTLE_DATA);
       }
-#else
-      ERREXIT(cinfo, JERR_TOO_LITTLE_DATA);
-#endif
     MCALL1(finish_output_pass, cinfo->master, cinfo);
     cinfo->global_state = DSTATE_STOPPING;
   } else if (cinfo->global_state == DSTATE_BUFIMAGE) {

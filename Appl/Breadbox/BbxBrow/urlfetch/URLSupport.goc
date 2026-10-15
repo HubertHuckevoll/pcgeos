@@ -270,10 +270,8 @@ EC_ERROR_IF(!NamePoolIsDynamic(*urlP), -1);
      /* make sure that *url now refers to the ultimate relocation target */
      oldURL = *url;
      *url = NamePoolTokenize(namePool, *urlP, TRUE);
-#if PROGRESS_DISPLAY
      /* match usage/release in LoadURLToFile */
      NamePoolUseToken(namePool, *url);
-#endif
      NamePoolReleaseToken(namePool, oldURL);
 }
 

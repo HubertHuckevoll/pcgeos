@@ -94,7 +94,6 @@ optr localPageArray;            /* chunk array with NameTokens of local pages */
 /*
  * Turn on/off progress display of graphics when loading/importing
  */
-#if PROGRESS_DISPLAY
 Boolean progressDisplay = TRUE;
 
 /* time interval for sending load progress notification from fetch thread
@@ -102,7 +101,6 @@ Boolean progressDisplay = TRUE;
 word progressLoadWait = PROGRESS_DEFAULT_WAIT;
 /* minimum graphic height to use load progress display */
 word progressMinHeight = PROGRESS_DEFAULT_HEIGHT;
-#endif
 
 /*
  * Semaphore guarding exclusive access to driver name cache by LoadURLByDriver()
@@ -619,7 +617,6 @@ void InitNavigation(void)
     /* busy cursor */
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "busyOff", &isBusyOff);
 
-#if PROGRESS_DISPLAY
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "progressDisplay", &progressDisplay);
     /* get wait before sending load progress notification */
     InitFileReadInteger(PROGRESS_INI_CAT, PROGRESS_INI_WAIT_KEY,
@@ -627,7 +624,6 @@ void InitNavigation(void)
     /* get minimum graphic height to use progress display */
     InitFileReadInteger(PROGRESS_INI_CAT, PROGRESS_INI_HEIGHT_KEY,
                         &progressMinHeight);
-#endif
 @ifdef COPY_TO_SCRAPBOOK
      @call application::MSG_META_GCN_LIST_ADD(@HTMLVApp, GAGCNLT_APP_TARGET_NOTIFY_SELECT_STATE_CHANGE, MANUFACTURER_ID_GEOWORKS);
 @endif

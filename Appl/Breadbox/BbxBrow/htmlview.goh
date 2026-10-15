@@ -374,14 +374,9 @@ optr SaveUnknownFile(TCHAR *file, NameToken url);
 optr HandleUnknownType(TCHAR *file, NameToken url, TCHAR *mimeType,
   VMFileHandle vmf, VMBlockHandle *item, dword *memUsed);
 
-#if PROGRESS_DISPLAY
 VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
   VMFileHandle vmf, ImageAdditionalData *size, dword *memUsed, MimeStatus *mimeStatus,
   _ImportProgressParams_);
-#else
-VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
-  VMFileHandle vmf, ImageAdditionalData *size, dword *memUsed, MimeStatus *mimeStatus);
-#endif
 
 
 /***************************************************************************
@@ -440,11 +435,9 @@ extern optr assocSchemeDriver;
 
 extern AllocWatcherHandle G_allocWatcher ;
 
-#if PROGRESS_DISPLAY
 extern Boolean progressDisplay;
 extern word progressLoadWait;
 extern word progressMinHeight;
-#endif
 
 typedef struct {
   optr frameSet;                /* handle of array describing frame set */
@@ -637,17 +630,10 @@ extern Boolean G_cacheAll;
  *              URL handling
  ***************************************************************************/
 
-#if PROGRESS_DISPLAY
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
                    word loadMode, dword *ret, HTMLFormDataHandle postData,
 		   NameToken referer, NameToken *anchor,
                    dword token, void **abortRoutine, _LoadProgressParams_);
-#else
-word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
-                   word loadMode, dword *ret, HTMLFormDataHandle postData,
-		   NameToken referer, NameToken *anchor,
-                   dword token, void **abortRoutine);
-#endif
 #define ULM_NEVER  0
 #define ULM_CACHE  1
 #define ULM_ALWAYS 2
@@ -1158,11 +1144,9 @@ Boolean CompleteURLBuffer(NameToken base, TCHAR **buf);
   @message dword MSG_URL_TEXT_GET_MEMORY_AVAILABLE() ;
 
   @message void MSG_URL_TEXT_SELF_DESTRUCT();
-@ifdef PROGRESS_DISPLAY
   @message void MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(MemHandle importProgressData);
   @message void MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS(LoadProgressData *loadProgressDataP);
   @message void MSG_URL_TEXT_FREE_PROGRESS_BITMAP(VMFileHandle vmFile, VMBlockHandle bitmap, NameToken imageToken);
-@endif
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
   @message void MSG_URL_TEXT_PC_ADD_EMBEDDED_SITES(ParentalControlFlags *pcFlags);
   @message void MSG_URL_TEXT_PC_REMOVE_EMBEDDED_SITES(ParentalControlFlags *pcFlags);

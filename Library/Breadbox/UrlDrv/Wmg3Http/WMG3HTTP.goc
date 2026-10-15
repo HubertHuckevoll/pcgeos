@@ -84,9 +84,7 @@ TCHAR osVerStr[20] = _TEXT("");
 TCHAR langStr[10] = _TEXT("");
 TCHAR countryStr[10] = _TEXT("");
 
-#if PROGRESS_DISPLAY
 word progressMinCL = PROGRESS_DEFAULT_CL;
-#endif
 
 #ifdef PERSISTANT_CONNECTIONS
 /* use HTTP 1.0 persistant connections, far fewer servers support this */
@@ -929,12 +927,10 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 					 case new item doesn't have last-mod-
 					 date */
 #endif
-#if PROGRESS_DISPLAY
     /* initialize mime type, we'll use this to determine whether we
        start an import */
     if (p_conn->loadProgressDataP)
         *p_conn->loadProgressDataP->LPD_mimeType = 0;
-#endif
     contentlength = CL_UNKNOWN;
     if (sock_getline(conn, &p_conn) <= 0) {
         if (p_conn->aborted) {        /* abort signal? */
@@ -1053,7 +1049,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
             /* ignore content type for "Not Modified" (WebOne proxy) */
 	    if (*responseCode != 304) {
               ChunkStrcpySBCS(p_conn->heap, &(p_conn->mimeTypeChunk), s);
-#if PROGRESS_DISPLAY
               /* get mime type from HTTP header */
               if (p_conn->loadProgressDataP)
 @ifdef DO_DBCS
@@ -1061,7 +1056,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 @else
                   xstrncpy(p_conn->loadProgressDataP->LPD_mimeType, s, sizeof(p_conn->loadProgressDataP->LPD_mimeType));
 @endif
-#endif
 	    }
         } else if (LocalCmpStringsNoCaseSBCS(p, strn("Location:")) == 0) {
             if (*responseCode == 301 || *responseCode == 302) {
@@ -1442,7 +1436,6 @@ void HandleErrorFunc(T_HTTPConnection *p_conn, Boolean *retry)
 }
 #endif
 
-#if PROGRESS_DISPLAY
 /* Stop clears the shared callback under LPD_sem. Release the semaphore
    before invoking the snapshot: the callback also acquires LPD_sem. */
 static void * _pascal LoadProgressCallbackSnapshot(LoadProgressData *loadProgressDataP)
@@ -1459,7 +1452,6 @@ static void * _pascal LoadProgressCallbackSnapshot(LoadProgressData *loadProgres
 
     return callbackP;
 }
-#endif
 
 /* we'll try twice with SSL2/SSL3/TLS1, then twice with SSL2 */
 #define NUM_SSL_ALL_RETRIES 2
@@ -1506,9 +1498,7 @@ word HTTPGet(HTTPConnectionHandle conn)
 #ifdef GET_RANGE
     Boolean deleteFile = FALSE;
 #endif
-#if PROGRESS_DISPLAY
     void *loadProgressCallbackP;
-#endif
     MemHandle pathB = 0;
     int urlLen;
 
@@ -2382,7 +2372,6 @@ word HTTPGet(HTTPConnectionHandle conn)
 #endif
         p_conn = ConnectionLock(conn) ;
 
-#if PROGRESS_DISPLAY
         /* disable loading progress if small file */
         if (contentlength < progressMinCL) {
             if (p_conn->loadProgressDataP) {
@@ -2391,7 +2380,6 @@ word HTTPGet(HTTPConnectionHandle conn)
                 ThreadVSem(p_conn->loadProgressDataP->LPD_sem);
             }
         }
-#endif
 
 	length = 0L;  /* set here in case of header error when
 		         re-using socket */
@@ -2475,7 +2463,6 @@ word HTTPGet(HTTPConnectionHandle conn)
 			    }
 			}
 
-#if PROGRESS_DISPLAY
                 /* notify of loading progress (only first time through) */
                 if ((length == 0) && p_conn->loadProgressDataP) {
                     loadProgressCallbackP = LoadProgressCallbackSnapshot(
@@ -2486,7 +2473,6 @@ word HTTPGet(HTTPConnectionHandle conn)
                             loadProgressCallbackP);
                     }
                 }
-#endif
 
                         if (FileWrite(output, p_conn->buffer, i, FALSE) != i) {
                             /* report error if write fails */
@@ -2496,7 +2482,6 @@ word HTTPGet(HTTPConnectionHandle conn)
                         }
                         length += i;
 
-#if PROGRESS_DISPLAY
                         /* update loading progress data stream */
                         loadProgressCallbackP = LoadProgressCallbackSnapshot(
                             p_conn->loadProgressDataP);
@@ -2507,7 +2492,6 @@ word HTTPGet(HTTPConnectionHandle conn)
                                 p_conn->buffer, i,
                                 loadProgressCallbackP);
                         }
-#endif
                     }
 
 #ifdef RECV_SPEED
@@ -2585,7 +2569,6 @@ word HTTPGet(HTTPConnectionHandle conn)
 
                 FileClose(output, FALSE);
 
-#if PROGRESS_DISPLAY
                 /* finish loading progress data stream */
                 loadProgressCallbackP = LoadProgressCallbackSnapshot(
                     p_conn->loadProgressDataP);
@@ -2609,14 +2592,9 @@ word HTTPGet(HTTPConnectionHandle conn)
 			rcode = URLRequestMakeRet(URL_RET_MESSAGE) | URB_RF_NOCACHE;
 		    }
                 }
-#endif
 
-#if PROGRESS_DISPLAY
                 if (URLRequestGetRet(rcode) != URL_RET_FILE &&
                     URLRequestGetRet(rcode) != URL_RET_PROGRESS)
-#else
-                if (URLRequestGetRet(rcode) != URL_RET_FILE)
-#endif
 		    /* this will clean up URL_RET_URL_REDIR files also */
                 {
 #ifdef GET_RANGE
@@ -2871,10 +2849,8 @@ word _pascal _export URLDrvMain(_URLMainParams_)
     req->URB_date = URL_TIME_UNKNOWN;   /* dates unknown yet */
     req->URB_expireDate = URL_TIME_UNKNOWN;
 
-#if PROGRESS_DISPLAY
     /* set up loading progress data */
     p_conn->loadProgressDataP = req->URB_loadProgressDataP;
-#endif
 
     ConnectionUnlock(conn) ;
     MemUnlock(request);
@@ -2887,14 +2863,9 @@ word _pascal _export URLDrvMain(_URLMainParams_)
     /* Interpret the return values */
     p_conn = ConnectionLock(conn) ;
     p_conn->socketState = STATE_UNCONNECTED; /* free again */
-#if PROGRESS_DISPLAY
     if ((p_conn->aborted) && (p_conn->abortState ==
         URL_ABORT_STATE_IGNORE_USER_INTERRUPT_MESSAGE) &&
         URLRequestGetRet(rcode) != URL_RET_PROGRESS_ABORT)
-#else
-    if ((p_conn->aborted) && (p_conn->abortState ==
-        URL_ABORT_STATE_IGNORE_USER_INTERRUPT_MESSAGE))
-#endif
     {
         /* Return a blank message */
 	p_conn->msg = NullOptr;  /* copied to req->URB_message below */
@@ -3073,10 +3044,8 @@ void Initialize(void)
 				 countryStr, sizeof(countryStr), &size)) {
 	strcpy(countryStr, _TEXT("US"));
     }
-#if PROGRESS_DISPLAY
     /* get minimum content length for progress display */
     InitFileReadInteger(PROGRESS_INI_CAT, PROGRESS_INI_CL_KEY, &progressMinCL);
-#endif
 #ifdef PERSISTANT_CONNECTIONS
     /* get persistant connections flag */
     InitFileReadBoolean("http", "persistantConnections", &persistantConnections);

@@ -39,10 +39,8 @@
 #include <resource.h>
 #include <Ansi/stdio.h>
 
-#if PROGRESS_DISPLAY
 #define MIME_MAXBUF 32          /* shouldn't really have to be here... */
 #include <htmlprog.h>
-#endif
 
 
 #define UPSAMPLE_MERGING_SUPPORTED
@@ -292,10 +290,8 @@ struct fjpeg_decompress_struct {
     JOCTET * buffer;
     Boolean start_of_file;
 
-#if PROGRESS_DISPLAY
 	/* pointer to load progress data */
 	LoadProgressData *loadProgressDataP;
-#endif
   } src;
 
   struct {
@@ -615,11 +611,9 @@ JSAMPARRAY _pascal fjpeg_smallocarr (j_decompress_ptr cinfo, size_t size, int el
 void _pascal fjpeg_smfree (j_decompress_ptr cinfo, void far * far * ptr);
 
 
-#if PROGRESS_DISPLAY
 /* set pointer to load progress data */
 void _pascal fjpeg_init_loadProgress(j_decompress_ptr cinfo,
 					 LoadProgressData * loadProgressDataP);
-#endif
 
 #define jpeg_create_decompress(cinfo)	fjpeg_create_decompress(cinfo)
 #define jpeg_stdio_src(cinfo,infile)	fjpeg_stdio_src(cinfo,infile)

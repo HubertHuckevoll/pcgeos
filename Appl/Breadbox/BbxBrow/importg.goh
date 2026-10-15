@@ -11,12 +11,9 @@
 Boolean ImportThreadEngineStart(void) ;
 void ImportThreadEngineStop(void) ;
 void ImportThreadAbortAll(void) ;
-#if PROGRESS_DISPLAY
 void ImportRemoveProgressDataFromQueue(MemHandle progressData);
-#endif
 
 /* NOTE:  The following thread does not block! */
-#if PROGRESS_DISPLAY
 
 Boolean ImportThreadRequestImportGraphic(
             optr textObj,
@@ -26,15 +23,3 @@ Boolean ImportThreadRequestImportGraphic(
             Boolean temporary,
             ObjCacheToken pageOwner,
 	    _LoadProgressParams_) ;
-
-#else
-
-Boolean ImportThreadRequestImportGraphic(
-            optr textObj,
-            NameToken name,
-            TCHAR *mimeType,
-            TCHAR *curHTML,
-            Boolean temporary,
-            ObjCacheToken pageOwner) ;
-
-#endif

@@ -204,10 +204,8 @@ struct jpeg_input_controller {
   boolean has_multiple_scans;	/* True if file has multiple scans */
   boolean eoi_reached;		/* True when EOI has been consumed */
 
-#if PROGRESS_DISPLAY
   /* pointer to load progress data */
   LoadProgressData *loadProgressDataP;
-#endif
 };
 
 /* Main buffer control (downsampled-data buffer) */

@@ -176,10 +176,8 @@ static Boolean isJpeg(FileHandle file)
 
 extern word set_error_handler(word *context);
 
-#if PROGRESS_DISPLAY
 /* number of scanlines per import progress update */
 #define SLICE_HEIGHT 10
-#endif
 
 /* Don't allow registers to be used in the local variables in JpegImport */
 /* so that if an error occurs from set_error_handler then we return and */
@@ -197,9 +195,7 @@ JpegImport(TCHAR *file,
            Boolean scanlineCompress,
 #endif
            Boolean *p_completeGraphic
-#if PROGRESS_DISPLAY
            , _ImportProgressParams_
-#endif
            , MimeStatus *mimeStatus
            )
 {
@@ -239,7 +235,6 @@ EC(dword cbSize = 0;)
   Boolean gotTempAlloc = FALSE ;
   Boolean headerErr = FALSE;
   word errorHandlerContext;
-#if PROGRESS_DISPLAY
   _LoadProgressParams_;
   Boolean status = FALSE;
   Boolean onErrorDontKeepPartial = TRUE ;
@@ -250,10 +245,8 @@ EC(dword cbSize = 0;)
   } else {
       loadProgressDataP = NULL;
   }
-#endif
 
   *usedMem = 0 ;
-#if PROGRESS_DISPLAY
   /* we don't need file if we've got a data stream to read from */
   if (loadProgressDataP && loadProgressDataP->LPD_dataStream) {
       filehan = 0;
@@ -265,18 +258,8 @@ EC(dword cbSize = 0;)
         return(0);
       }
   }
-#else
-  filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
-
-  if(filehan == 0) {
-
-    free(cinfo);
-    return(0);
-  }
-#endif
 
   /* Make sure it is a jpeg or else don't load it */
-#if PROGRESS_DISPLAY
   if (loadProgressDataP) {
       /* isJpeg routine is inlined here */
       T_jpegHeader header;
@@ -311,16 +294,8 @@ EC(dword cbSize = 0;)
       free(cinfo);
       return 0;
   }
-#else
-  if (!isJpeg(filehan)) {
-      free(cinfo);
-      return 0 ;
-  }
-#endif
 
-#if PROGRESS_DISPLAY
   if (!loadProgressDataP) {
-#endif
   infile = fdopen(filehan, "r");
   if(infile == 0)
   {
@@ -328,11 +303,9 @@ EC(dword cbSize = 0;)
         free(cinfo);
         return(0);
   }
-#if PROGRESS_DISPLAY
   } else {
       infile = 0;
   }
-#endif
 
 #if LZG_COMPRESS
   InitFileReadBoolean("impgraph", "lzgCompress", &lzgCompress);
@@ -424,10 +397,8 @@ EC(dword cbSize = 0;)
 
   jpeg_stdio_src(cinfo, infile);
 
-#if PROGRESS_DISPLAY
   /* point to loading progress data, if any */
   jpeg_init_loadProgress(cinfo, loadProgressDataP);
-#endif
 
   /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -782,7 +753,6 @@ EC(dword cbSize = 0;)
 	HugeArrayUnlock(lineptr);
 #endif
 
-#if PROGRESS_DISPLAY
 	/* send out progress if desired number of scanlines have been seen */
 	if (importProgressDataP && importProgressDataP->IPD_callback &&
 	    (((cinfo->output_scanline % SLICE_HEIGHT) == 0) ||
@@ -822,11 +792,6 @@ EC(dword cbSize = 0;)
         break ;
     }
 
-#else /* !PROGRESS_DISPLAY */
-    /* Stop here if we are aborting */
-    if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
-        break ;
-#endif
     }
     else {
         MemUnlock(rowH);

@@ -3,7 +3,7 @@
 
 /*
   no SCANLINE_COMPRESS support and no inline reduction of colors
-  as in the JPEG converters. Also, no temp loading for PROGRESS_DISPLAY.
+  as in the JPEG converters. Also, no temporary file for progressive imports.
 */
 
 VMBlockHandle PngImport(
@@ -14,9 +14,7 @@ VMBlockHandle PngImport(
     AllocWatcherHandle watcher,
     dword *usedMem,
     Boolean *p_completeGraphic
-#if PROGRESS_DISPLAY
     , _ImportProgressParams_
-#endif
     , MimeStatus *mimeStatus
 )
 {
@@ -34,7 +32,6 @@ VMBlockHandle PngImport(
     dword requiredMemory = 0;
     Boolean gotAlloc = FALSE ;
 
-#if PROGRESS_DISPLAY
 /* number of scanlines per import progress update */
 #define SLICE_HEIGHT 10
 //    Boolean status = FALSE;
@@ -46,7 +43,6 @@ VMBlockHandle PngImport(
     } else {
         loadProgressDataP = NULL;
     }
-#endif
 
     *usedMem = 0;
     *p_completeGraphic = FALSE ;
@@ -99,7 +95,6 @@ VMBlockHandle PngImport(
                             // prepare the next zlib decoding work
                             pngImportIDATProcessingLockHandles(&state);
 
-#if PROGRESS_DISPLAY
                             /* send out progress if desired number of scanlines have been seen */
                             if (importProgressDataP && importProgressDataP->IPD_callback &&
                                 (((state.lineNo % SLICE_HEIGHT) == 0) || (state.lineNo == ihdrData.height)))
@@ -135,14 +130,6 @@ VMBlockHandle PngImport(
                                 }
                                 break;
                             }
-#else /* !PROGRESS_DISPLAY */
-                            /* Stop here if we are aborting */
-                            if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
-                            {
-                                errorFlag = TRUE;
-                                break;
-                            }
-#endif
                         }
 
                         // Clean up resources
@@ -156,7 +143,6 @@ VMBlockHandle PngImport(
     }
 
 
-#if PROGRESS_DISPLAY
     /* Free the existing data if we have any */
     if (errorFlag)
     {
@@ -166,7 +152,6 @@ VMBlockHandle PngImport(
             bmVMBlock = 0;
         }
     }
-#endif
 
     if ((bmVMBlock == 0) && (gotAlloc))
     {

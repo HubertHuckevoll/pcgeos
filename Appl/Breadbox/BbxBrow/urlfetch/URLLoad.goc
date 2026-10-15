@@ -204,7 +204,6 @@ void _pascal _export LoadURLCallback(_URLCallbackParams_)
         mh, HTML_STATUS_TYPE_DOWNLOADING);
 }
 
-#if PROGRESS_DISPLAY
 /* for last minute abort, must match T_fetchEngineChild in URLFETCH.GOH */
 typedef struct {
     ThreadHandle child ;
@@ -222,7 +221,6 @@ typedef struct {
     LoadProgressData loadProgressData;  /* loading progress data */
 } T_fetchEngineChild ;
 extern T_fetchEngineChild G_fetchChildren[];
-#endif
 
 /* url must be pointer to dynamic NamePool buffer */
 word LoadURLByDriver(TCHAR *type, TCHAR **url, TCHAR *tmpname, TCHAR *mimeType,
@@ -291,7 +289,7 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
 
     LOG(LogPrintfLine(">%ld",token);)
 
-#if PROGRESS_DISPLAY && 0
+#if 0
     /*
         * last minute abort check
         */
@@ -338,10 +336,8 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
     req->URB_url = urlChunk;
     req->URB_file = fileChunk;
     req->URB_progress = callback;
-#if PROGRESS_DISPLAY
     /* point to loading progress data */
     req->URB_loadProgressDataP = loadProgressDataP;
-#endif
     req->URB_referer = refererChunk;
 #ifdef CACHE_VALIDATION
     /* last mod date determines if we make conditional or unconditional
@@ -492,10 +488,8 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
     CompressedDateTime lastModDate;
 #endif
 
-#if PROGRESS_DISPLAY
     /* mark in use, as import thread could finish before us */
     NamePoolUseToken(namePool, *url);
-#endif
 
     /* init return anchor */
     if (anchor)
@@ -671,12 +665,8 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
             postData = NullHandle ;
 #endif
 
-#if PROGRESS_DISPLAY
             if(URLRequestGetRet(type)==URL_RET_FILE ||
                 URLRequestGetRet(type)==URL_RET_PROGRESS)
-#else
-            if(URLRequestGetRet(type)==URL_RET_FILE)
-#endif
             {
             /* still don't know mime type? */
             if(!*mime||!strcmpi(mime, _TEXT("*/*"))||!strcmpi(mime, _TEXT("text/plain"))) {
@@ -767,10 +757,8 @@ endLoop:;
 
     NamePoolDestroyIfDynamic(urlP);     /* now release buffer, if any */
 
-#if PROGRESS_DISPLAY
     /* finished */
     NamePoolReleaseToken(namePool, *url);
-#endif
 
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
         /* free server name buffer */

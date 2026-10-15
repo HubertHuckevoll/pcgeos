@@ -103,14 +103,12 @@ typedef struct {
     RGBValue IGI_globalPalette[256] ;
 } ImpGIFInfo ;
 
-#if PROGRESS_DISPLAY
 typedef struct {
     word IGPI_fieldWidth;
     word IGPI_fieldHeight;
     word IGPI_bitmap;
     word IGPI_yPos;
 } ImpGIFProgressInfo;
-#endif
 
 #define GIF_ANIMATION_FORMAT (BMF_8BIT | \
                               BMT_HUGE | \
@@ -138,11 +136,9 @@ void _pascal ImpGIFGetInfo(
                  GIFHandle impgifhandle,
                  ImpGIFInfo *p_info) ;
 
-#if PROGRESS_DISPLAY
 void _pascal ImpGIFGetProgressInfo(
                  GIFHandle impgifhandle,
                  ImpGIFProgressInfo *p_info) ;
-#endif
 
 GIFHandle _pascal ImpGIFCreate(
                       VMFileHandle vm,

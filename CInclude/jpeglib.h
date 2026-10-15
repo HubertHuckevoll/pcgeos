@@ -17,10 +17,8 @@
 #include <geos.h>
 #include <resource.h>
 
-#if PROGRESS_DISPLAY
 #define MIME_MAXBUF 32          /* shouldn't really have to be here... */
 #include <htmlprog.h>
-#endif
 
 /*
  * First we include the configuration files that record how this
@@ -742,9 +740,7 @@ struct jpeg_source_mgr {
   MPTR(skip_input_data);
   MPTR(resync_to_restart);
   MPTR(term_source);
-#if PROGRESS_DISPLAY
   boolean eoi;
-#endif
 };
 
 
@@ -903,9 +899,7 @@ typedef MPTR(jpeg_marker_parser_method);
 #define jpeg_abort		jAbort
 #define jpeg_destroy		jDestroy
 #define jpeg_resync_to_restart	jResyncRestart
-#if PROGRESS_DISPLAY
 #define jpeg_init_loadProgress  jInitLoadProg
-#endif
 #endif /* NEED_SHORT_EXTERNAL_NAMES */
 
 
@@ -1056,11 +1050,9 @@ EXTERN(void) jpeg_destroy JPP((j_common_ptr cinfo));
 EXTERN(boolean) jpeg_resync_to_restart JPP((j_decompress_ptr cinfo,
 					    int desired));
 
-#if PROGRESS_DISPLAY
 /* set pointer to load progress data */
 EXTERN(void) jpeg_init_loadProgress JPP((j_decompress_ptr cinfo,
 					 LoadProgressData * loadProgressDataP));
-#endif
 
 EXTERN(void) jpeg_set_error_handler_context JPP((j_common_ptr cinfo,
 						 word errorHandlerContext));

@@ -18,8 +18,6 @@ sub function {
     }
     die "Unclosed $name\n" if $depth;
     my $body = substr($source, $start, $end - $start);
-    # ImpSVG has two signatures selected by PROGRESS_DISPLAY.
-    $body = "\n#if PROGRESS_DISPLAY\n$body" if $name eq 'ImpSVG';
     return $body;
 }
 
@@ -244,9 +242,7 @@ int main(void)
     VMFreeVMChain(2, chain);
     reset(); mime.MS_mimeFlags = 0; mimeWriterP = &mime; cancelAfter = 1;
     assert(ImpSVG("test.svg", 2, &iad, 0, 0, &used, FALSE, &params, &compacted, &bitmap,
-#if PROGRESS_DISPLAY
                   (void*)0,
-#endif
                   &mime) == IBS_IMPORT_STOPPED);
     assert(!bitmap && !params.IBP_bitmap && !iad.IAD_completeGraphic && !used);
     assert(closed == 1 && scans == 2 && rendered == 1);
@@ -256,9 +252,7 @@ int main(void)
 }
 C
 close $out or die $!;
-for my $progress (0, 1) {
-    system('cc', '-std=c89', '-Wall', '-Wextra', '-Werror',
-           "-DPROGRESS_DISPLAY=$progress", "$dir/check.c", '-o', "$dir/check") == 0
-        or die "Compile failed\n";
-    system("$dir/check") == 0 or die "Cancellation check failed\n";
-}
+system('cc', '-std=c89', '-Wall', '-Wextra', '-Werror',
+       "$dir/check.c", '-o', "$dir/check") == 0
+    or die "Compile failed\n";
+system("$dir/check") == 0 or die "Cancellation check failed\n";

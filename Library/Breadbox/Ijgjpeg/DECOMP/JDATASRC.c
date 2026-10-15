@@ -20,10 +20,8 @@
 #include "jpeglib.h"
 #include "jerror.h"
 
-#if PROGRESS_DISPLAY
 #include <geos.h>
 #include <resource.h>
-#endif
 
 
 /* Expanded data source object for stdio input */
@@ -38,11 +36,7 @@ typedef struct {
 
 typedef my_source_mgr * my_src_ptr;
 
-#if PROGRESS_DISPLAY
 #define INPUT_BUF_SIZE  512	/* small enough to update progress regularly */
-#else
-#define INPUT_BUF_SIZE  4096	/* choose an efficiently fread'able size */
-#endif
 
 
 /*
@@ -101,7 +95,6 @@ fill_input_buffer (j_decompress_ptr cinfo)
 {
   my_src_ptr src = (my_src_ptr) cinfo->src;
   size_t nbytes;
-#if PROGRESS_DISPLAY
   if (cinfo->inputctl->loadProgressDataP) {
       /* get data */
       nbytes = ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
@@ -112,37 +105,24 @@ fill_input_buffer (j_decompress_ptr cinfo)
       nbytes = JFREAD(src->infile, src->buffer, INPUT_BUF_SIZE);
   }
   src->pub.eoi = FALSE;
-#else
-  nbytes = JFREAD(src->infile, src->buffer, INPUT_BUF_SIZE);
-#endif
 
   if (nbytes <= 0) {
 EC( if (src->start_of_file)     /* Treat empty input file as fatal error */
       ERREXIT(cinfo, JERR_INPUT_EMPTY); )
-#if PROGRESS_DISPLAY
     TRACEMS(cinfo, 1, JWRN_JPEG_EOF);
-#else
-    WARNMS(cinfo, JWRN_JPEG_EOF);
-#endif
     /* Insert a fake EOI marker */
     src->buffer[0] = (JOCTET) 0xFF;
     src->buffer[1] = (JOCTET) JPEG_EOI;
     nbytes = 2;
-#if PROGRESS_DISPLAY
     src->pub.eoi = TRUE;
-#endif
   }
 
   src->pub.next_input_byte = src->buffer;
   src->pub.bytes_in_buffer = nbytes;
   src->start_of_file = FALSE;
 
-#if PROGRESS_DISPLAY
   /* the JPEG_EOI marker is ignored by Huffman decoding */
   if (src->pub.eoi) return FALSE; else return TRUE;
-#else
-  return TRUE;
-#endif
 }
 
 

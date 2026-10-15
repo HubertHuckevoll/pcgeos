@@ -1844,10 +1844,8 @@ void master_selection (j_decompress_ptr cinfo)
 
 }
 
-#if PROGRESS_DISPLAY
 void _pascal fjpeg_init_loadProgress(j_decompress_ptr cinfo,
 		       LoadProgressData *loadProgressDataP)
 {
     cinfo->src.loadProgressDataP = loadProgressDataP;
 }
-#endif

@@ -41,9 +41,7 @@
 @include "importg.goh"
 #include "URLTextInternal.h"
 
-#if PROGRESS_DISPLAY
 #include <sem.h>
-#endif
 
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
 @include <parentc.goh>
@@ -89,9 +87,7 @@
 @endif
 @endif
 
-@ifdef PROGRESS_DISPLAY
 @extern method URLTextClass, MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS;
-@endif
 
 @extern method URLTextClass, MSG_URL_TEXT_PROCESS_GRAPHICS;
 
@@ -173,9 +169,7 @@
 @extern method URLTextClass, MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS;
 @extern method URLTextClass, MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS;
 
-@ifdef PROGRESS_DISPLAY
 @extern method URLTextClass, MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS;
-@endif
 
 @extern method URLTextClass, MSG_PRINT_GET_DOC_NAME;
 

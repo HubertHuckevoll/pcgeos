@@ -16,9 +16,7 @@
 @include "htmlview.goh"
 @include "importg.goh"
 #include "URLTextInternal.h"
-#if PROGRESS_DISPLAY
 #include <sem.h>
-#endif
 
 /* Source organization does not change code-resource placement. */
 #ifdef __BORLANDC__
@@ -32,7 +30,6 @@
 /* Preserve the original callback compiler option. */
 #pragma option -WDE
 
-@ifdef PROGRESS_DISPLAY
 #ifdef ALLOW_FETCH_WHILE_IMPORTING
 extern Boolean G_importActive[];
 extern Boolean G_fetchWhileImport;
@@ -82,9 +79,7 @@ extern Boolean G_fetchWhileImport;
         }
     }
 }
-@endif
 
-@ifdef PROGRESS_DISPLAY
 
 extern void _pascal WakeUp(word *queueP);
 extern void _pascal Block(word *queueP, Boolean *flag,
@@ -351,9 +346,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
     }
     return returnVal;
 }
-@endif
 
-@ifdef PROGRESS_DISPLAY
 /*
  * handle import progress: invalidate newly imported portion of graphic,
  * update layout if needed
@@ -384,5 +377,4 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
         MemFree(importProgressData);
     }
 }
-@endif
 

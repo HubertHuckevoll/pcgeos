@@ -13,9 +13,7 @@
 @include <Ansi/string.h>
 @include <ec.h>
 
-#if PROGRESS_DISPLAY
 extern void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle bitmap);
-#endif
 
 typedef struct {
 #ifdef DO_DBCS
@@ -34,12 +32,10 @@ typedef struct {
     ImpGIFStatus status ;
     AllocWatcherHandle watcher ;
     Boolean useSysPal ;
-#if PROGRESS_DISPLAY
     _ImportProgressParams_;  /* import progress data */
 #define LPDP p_work->importProgressDataP->IPD_loadProgressDataP
     ImpGIFProgressInfo progressInfo;
     word frameNum;
-#endif
     MimeStatus *mimeStatus ;
 } GIFAnimWorkStruct ;
 
@@ -379,7 +375,6 @@ Boolean IGIFAnimStart(GIFAnimWorkStruct *p_work)
     Boolean didStart = FALSE ;
 
     p_work->numFrames = 0 ;
-#if PROGRESS_DISPLAY
     /* if we have load progress data stream, don't need to open file */
     if (p_work->importProgressDataP &&
 	p_work->importProgressDataP->IPD_callback &&
@@ -391,11 +386,6 @@ Boolean IGIFAnimStart(GIFAnimWorkStruct *p_work)
                           p_work->picFilename,
                           FILE_DENY_NONE|FILE_ACCESS_R) ;
     }
-#else
-    p_work->picFile = FileOpen(
-                          p_work->picFilename,
-                          FILE_DENY_NONE|FILE_ACCESS_R) ;
-#endif
     if (p_work->picFile)  {
         p_work->GIFState = ImpGIFCreate(
                                p_work->vmFile,
@@ -459,11 +449,9 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 {
     Boolean grabbedFrame = FALSE ;
     word sizeRead = 0 ;
-#if PROGRESS_DISPLAY
     /* last line of previous slice of import progress notification */
     word previousLine = 65535;
     Boolean firstPass = TRUE;  /* first pass of interlaced GIFs */
-#endif
 
     /* Make sure that we don't return a positive status if we start over. */
     p_work->info.IGI_bitmap = NullHandle ;
@@ -475,7 +463,6 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
                              p_work->buffer,
                              sizeRead,
                              p_work->lastBlock) ;
-#if PROGRESS_DISPLAY
 #define SLICE_HEIGHT 10
 	/* send out whatever progress bitmap we have (only for first frame) */
 	if (p_work->status != IG_STATUS_ERROR_NOT_GIF &&
@@ -540,11 +527,9 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 		}
 	    }
 	}
-#endif
         switch (p_work->status)  {
             case IG_STATUS_NEED_DATA:
             case IG_STATUS_OK:
-#if PROGRESS_DISPLAY
 		if (p_work->importProgressDataP &&
 		    p_work->importProgressDataP->IPD_callback &&
 		    LPDP) {
@@ -562,18 +547,10 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
                                sizeof(p_work->buffer),
                                FALSE) ;
 		}
-#else
-                sizeRead = FileRead(
-                               p_work->picFile,
-                               p_work->buffer,
-                               sizeof(p_work->buffer),
-                               FALSE) ;
-#endif
                 if (sizeRead < sizeof(p_work->buffer))
                     p_work->lastBlock = TRUE ;
                 break ;
             case IG_STATUS_GIF_DONE:
-#if PROGRESS_DISPLAY
 		/* clean up data stream (sizeRead will be
 		   sizeof(p_work->buffer) or less) if small frame was
 		   read so that next frame will work */
@@ -585,12 +562,10 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 			0, sizeRead,
 			LPDP->LPD_callback);
 		}
-#endif
                 /* Get information about this frame */
                 p_work->numFrames++ ;
                 grabbedFrame = TRUE ;
                 break ;
-#if PROGRESS_DISPLAY
 	    case IG_STATUS_END_DATA:
 		/* allow partial bitmap */
 		if (p_work->importProgressDataP &&
@@ -599,7 +574,6 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 		}
 		p_work->keepGoing = FALSE;
 		break;
-#endif
             default:
                 p_work->keepGoing = FALSE ;
                 break ;
@@ -617,11 +591,7 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
         p_work->info.IGI_bitmap = NULL ;
     }
 
-#if PROGRESS_DISPLAY
     return(grabbedFrame && p_work->info.IGI_bitmap);
-#else
-    return grabbedFrame ;
-#endif
 }
 
 /*-------------------------------------------------------------------------
@@ -1332,11 +1302,9 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
     p_work->watcher = watcher ;
     p_work->useSysPal = useSysPal ;
     p_work->mimeStatus = params->IBP_mimeStatus ;
-#if PROGRESS_DISPLAY
     /* point to import progress data */
     p_work->importProgressDataP = params->IBP_importProgressDataP;
     p_work->frameNum = numFrames;
-#endif
     if (p_work->vmFile)  {
         strncpy(p_work->picFilename, filename, (sizeof(p_work->picFilename)/sizeof(TCHAR))-1) ;
         if (IGIFAnimStart(p_work))  {
@@ -1440,7 +1408,6 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
                     loopCount = p_work->info.IGI_loopCount ;
 
                     /* Copy over the image, but be sure to compress it */
-#if PROGRESS_DISPLAY
 		    if (numFrames) {
 			/* frame #1+, so it goes into IBP_animDest */
 			animation[numFrames++] =
@@ -1466,27 +1433,14 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
 				workBitmap,
 				p_work->vmFile)) ;
 		    }
-#else
-                    animation[numFrames++] =
-                        VMCHAIN_MAKE_FROM_VM_BLOCK(ImpGraphCompactBitmap(
-                            p_work->vmFile,
-                            workBitmap,
-                            p_work->vmFile)) ;
-#endif
                 }
 
                 /* Get rid of the old bitmap now that we have a composite */
-#if PROGRESS_DISPLAY
 		/* may be used by progress display */
 		FreeViaProgress(p_work->importProgressDataP,
 				p_work->vmFile, p_work->info.IGI_bitmap) ;
 		/* update frame number for next time */
 		p_work->frameNum = numFrames;
-#else
-                VMFreeVMChain(
-                    p_work->vmFile,
-                    VMCHAIN_MAKE_FROM_VM_BLOCK(p_work->info.IGI_bitmap)) ;
-#endif
 
                 switch (p_work->info.IGI_removeMethod) {
                     case GDM_OVERWRITE_BACKGROUND_WITH_BACKGROUND_COLOR:
@@ -1528,7 +1482,6 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
             if (p_work->status == IG_STATUS_ABORTED)  {
                 *p_isComplete = FALSE ;
                 status = IBS_IMPORT_STOPPED ;
-#if PROGRESS_DISPLAY
                 /* If we even got part of an image, let's keep that for now */
                 /* This won't be kept forever, though */
                 if ((numFrames == 0) && 
@@ -1543,7 +1496,6 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
 			            p_work->vmFile)) ;
                     *p_isComplete = FALSE ;
                 }
-#endif
             } else if ((p_work->status == IG_STATUS_END_DATA) || 
                     (p_work->status == IG_STATUS_NO_GRAPHIC)) {
                 *p_isComplete = FALSE ;
@@ -1590,11 +1542,7 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
 
                     /* Get th format information abased on the first */
                     /* frame of the animation.  All frames are the same */
-#if PROGRESS_DISPLAY
                     p_dir = VMLock(params->IBP_animDest, (animation[0]>>16), &mem) ;
-#else
-                    p_dir = VMLock(p_work->vmFile, (animation[0]>>16), &mem) ;
-#endif
                     p_bitmap = (Bitmap *)&p_dir[1] ;
                     params->IBP_width = p_bitmap->B_width ;
                     params->IBP_height = p_bitmap->B_height ;
@@ -1613,15 +1561,9 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
                         numFrames * sizeof(VMChain) ;
 
                     /* create and fill in the header */
-#if PROGRESS_DISPLAY
                     params->IBP_bitmap =
                         VMAlloc(params->IBP_animDest, sizeHeaderWithChains, 0) ;
                     p_header = VMLock(params->IBP_animDest, params->IBP_bitmap, &mem) ;
-#else
-                    params->IBP_bitmap =
-                        VMAlloc(p_work->vmFile, sizeHeaderWithChains, 0) ;
-                    p_header = VMLock(p_work->vmFile, params->IBP_bitmap, &mem) ;
-#endif
                     p_header->AH_tree.VMCT_meta.VMC_next = VM_CHAIN_TREE ;
                     p_header->AH_tree.VMCT_offset = sizeHeader ;
                     p_header->AH_tree.VMCT_count = numFrames ;

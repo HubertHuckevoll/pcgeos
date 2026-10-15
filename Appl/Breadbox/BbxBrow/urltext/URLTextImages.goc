@@ -147,11 +147,9 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
     ObjCacheToken oct;
     optr request ;
     URLTextRequestGraphic *p_request ;
-#if PROGRESS_DISPLAY
     /* get vfptr to callback routine */
     static proc_LoadProgressCallback *loadProgressCallback = LoadGraphicProgressCallback;
     LoadProgressData loadProgressData;
-#endif
     Boolean ret = FALSE;
     TCHAR svgName[1], *svgNameP;
     optr frame;
@@ -210,9 +208,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
             NamePoolCopy(namePool, svgName, sizeof(svgName), nameT, &svgNameP);
             queued = owner && ImportThreadRequestImportGraphic(oself, nameT,
                 _TEXT("image/svg+xml"), svgNameP, FALSE, owner
-#if PROGRESS_DISPLAY
                 , NULL
-#endif
                 );
             NamePoolDestroyIfDynamic(svgNameP);
             if(!queued) {
@@ -236,12 +232,9 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
         /* Token is released when request is finished */
 
         p_request->objCache = objCache ;
-#if PROGRESS_DISPLAY
         p_request->progressCanceled = FALSE;
-#endif
         URLFetchExtraMemoryUnlock(request) ;
 
-#if PROGRESS_DISPLAY
         /* set up loading progress data and make fetch request */
         loadProgressData.LPD_callback = loadProgressCallback;
         loadProgressData.LPD_textObj = oself;
@@ -262,16 +255,6 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
             (!progressDisplay || (p->pos >= HTML_IMAGE_POS_RESERVED) ||
                 (p->size.XYS_height && (p->size.XYS_height < progressMinHeight)) ?
                 NULL : &loadProgressData)) ;
-#else
-        URLFetchRequest(
-            nameT,
-            forceLoad? ULM_ALWAYS:ULM_CACHE,
-            NullHandle,
-            referer,
-            oself,
-            MSG_URL_TEXT_GRAPHIC_FETCHED,
-            request) ;
-#endif
         ret = TRUE;
     }
     else
@@ -425,15 +408,10 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
     ret = URLRequestGetRet(result.retType);
 
     /* A fetch acknowledgement can arrive after the import abort barrier. */
-#if PROGRESS_DISPLAY
     if(request.progressCanceled ||
        ((G_stopped || pself->UTI_doomed ||
          request.imageGeneration != pself->UTI_imageGeneration) &&
         ret != URL_RET_PROGRESS && ret != URL_RET_PROGRESS_ABORT))
-#else
-    if(G_stopped || pself->UTI_doomed ||
-       request.imageGeneration != pself->UTI_imageGeneration)
-#endif
     {
         if(ret == URL_RET_MESSAGE && OptrToHandle(result.htmlMsg) &&
             OptrToChunk(result.htmlMsg) == 0)
@@ -478,7 +456,6 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
         if(URLRequestGetRet(result.retType) == URL_RET_FILE)
         {                                   /* loaded image successfully */
             /* Put in a request to import the image */
-#if PROGRESS_DISPLAY
             /* URL_RET_FILE is returned for non-loading progress graphics, just
                import without loading progress */
             importQueued = ImportThreadRequestImportGraphic(
@@ -502,26 +479,6 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
         } else if (URLRequestGetRet(result.retType) == URL_RET_PROGRESS ||
             URLRequestGetRet(result.retType) == URL_RET_PROGRESS_ABORT) {
             /* nothing to do here */
-#else
-            importQueued = ImportThreadRequestImportGraphic(
-                oself,
-                request.nameT,
-                result.mimeType,
-                result.curHTML,
-                ((result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
-                    && !G_cacheAll
-@endif
-                    ), OCT_NULL) ;
-            if(!importQueued)
-            {
-                if(temporary)
-                    FileDelete(result.curHTML);
-                @call oself::MSG_URL_TEXT_INTERNAL_GRAPHIC_FAILED(
-                    request.nameT, request.imageGeneration);
-                @call oself::MSG_URL_TEXT_DEC_PENDING();
-            }
-#endif
         } else {
             /* Does not appear to have come in correctly.  Release it */
             /* If a message make sure we free the message block. We should */
@@ -1051,9 +1008,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
             ((URLTextInstance *)ObjDerefVis(oself))->UTI_imageGeneration;
         p_request->nameT = fullURL;
         p_request->objCache = objCache;
-#if PROGRESS_DISPLAY
         p_request->progressCanceled = FALSE;
-#endif
         URLFetchExtraMemoryUnlock(request);
         URLFetchRequest(
             fullURL,

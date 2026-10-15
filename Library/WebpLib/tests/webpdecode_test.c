@@ -9,9 +9,6 @@
 #include "../webpapi.c"
 
 /* Exercise the actual MIME importer with host file/watcher/progress stubs. */
-#ifndef PROGRESS_DISPLAY
-#define PROGRESS_DISPLAY 1
-#endif
 #define FILE_ACCESS_R 0
 #define FILE_DENY_W 0
 #define MIME_STATUS_ABORT 1
@@ -114,9 +111,7 @@ TestFinalImport(TestFile *sourceP)
         }
         status = ImpWebP((TCHAR *)0, (void *)0, &iad, 0, &usedMem,
                           &params, &compacted, &bitmapH,
-#if PROGRESS_DISPLAY
                           &progress,
-#endif
                           &hostMimeStatus);
         assert(hostMemoryBlocks == 0 && hostCloseCount == 1);
         if (test == 0) {
@@ -125,7 +120,7 @@ TestFinalImport(TestFile *sourceP)
             assert(bitmapH == params.IBP_bitmap);
             assert(bitmapH->nextLine == iad.IAD_size.XYS_height);
             assert(progress.IPD_callback ==
-                   (PROGRESS_DISPLAY ? (void *)0 : &progress));
+                   (void *)0);
             assert(usedMem == (dword)iad.IAD_size.XYS_width *
                                iad.IAD_size.XYS_height * 3);
             assert(hostReserved == usedMem);

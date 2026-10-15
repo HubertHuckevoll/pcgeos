@@ -286,14 +286,12 @@ ImpGIFInfo struct
     IGI_globalPalette              RGBValue   256 dup (?)
 ImpGIFInfo ends
 
-if PROGRESS_DISPLAY
 ImpGIFProgressInfo struct
     IGPI_fieldWidth               word       ; Work area width
     IGPI_fieldHeight              word       ; Height of field to use
     IGPI_bitmap                   hptr.VMBlockHandle  ; Handle to frame bitmap
     IGPI_yPos			  word	      ; current Y position
 ImpGIFProgressInfo ends
-endif
 
 ImpGIFStatus etype word
 IG_STATUS_OK                 enum ImpGIFStatus ; Still working, but OK
@@ -316,10 +314,8 @@ ImpBmpParamsAsm struct
     IBP_height       word
     IBP_format       byte
     IBP_impForm      byte    31 dup (?)
-if PROGRESS_DISPLAY
     IBP_animDest     hptr.FileHandle    ; dest for animated GIFs
     IBP_importProgressDataP  fptr.byte  ; placeholder only
-endif
 	IBP_mimeStatus	 fptr.MimeStatus
 ImpBmpParamsAsm ends
 

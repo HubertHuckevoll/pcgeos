@@ -10,7 +10,6 @@
 /* turn on for LZG bitmap compression, requires new kernel library */
 #define LZG_COMPRESS -1
 
-#if PROGRESS_DISPLAY
 #define __FIXES_H  /* don't want this included by htmldrv.h */
 /* so we don't need to include graphics.h since we'll get warnings about
    some defines below */
@@ -31,7 +30,6 @@ typedef struct {
 } Rectangle;
 #endif
 #include <htmldrv.h>
-#endif
 
 typedef enum
 {
@@ -54,10 +52,8 @@ typedef struct
   word          IBP_height;
   BMType        IBP_format;
   char          IBP_impForm[31];
-#if PROGRESS_DISPLAY
   FileHandle    IBP_animDest;  /* destination for animated GIFs */
   ImportProgressData *IBP_importProgressDataP;
-#endif
   MimeStatus    *IBP_mimeStatus ;
 } ImpBmpParams;
 
