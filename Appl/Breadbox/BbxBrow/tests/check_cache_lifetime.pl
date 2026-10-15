@@ -19,7 +19,7 @@ $text =~ /MSG_HTML_TEXT_INIT_STORAGE\s*\{\s*AddCacheFileReference\(\);[^\n]*\n\s
     or die "Text storage must acquire before initialization\n";
 $text =~ /MSG_HTML_TEXT_DEINIT_STORAGE\s*\{\s*\@callsuper\(\);\s*RemoveCacheFileReference\(\);/s
     or die "Text storage must detach before releasing\n";
-my $doc = read_source('urldoc/URLDOC.goc');
+my $doc = read_source('urldoc/URLDocument.goc');
 $doc =~ /\@method URLDocumentClass, MSG_GEN_DOCUMENT_PHYSICAL_CLOSE\s*\{(.*?)^}/ms
     or die "Missing document close\n";
 index($1, 'MSG_URL_FRAME_DESTRUCT_TEXT_TREE') < index($1, 'RemoveCacheFileReference();')

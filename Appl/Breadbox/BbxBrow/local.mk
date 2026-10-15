@@ -59,7 +59,11 @@ XCCOMFLAGS += $(.TARGET:T:R:MHTMLView:S|HTMLView|-nt=HTMLVIEW_TEXT|) \
              $(.TARGET:T:R:MFavoritesDialog:S|FavoritesDialog|-nt=FAVORCLS_TEXT|) \
              $(.TARGET:T:R:MFavoritesCreate:S|FavoritesCreate|-nt=FAVORCLS_TEXT|) \
              $(.TARGET:T:R:MFavoritesStore:S|FavoritesStore|-nt=FAVORITE_TEXT|) \
-             $(.TARGET:T:R:MCacheLifetime:S|CacheLifetime|-nt=INIT_TEXT|) \
+             $(.TARGET:T:R:MInit:S|Init|-nt=Init_TEXT|) \
+             $(.TARGET:T:R:MURLDocument:S|URLDocument|-nt=URLDocument_TEXT|) \
+             $(.TARGET:T:R:MURLDocumentControl:S|URLDocumentControl|-nt=URLDocumentControl_TEXT|) \
+             $(.TARGET:T:R:MURLFetchEngine:S|URLFetchEngine|-nt=URLFetchEngine_TEXT|) \
+             $(.TARGET:T:R:MCacheLifetime:S|CacheLifetime|-nt=Init_TEXT|) \
              $(.TARGET:T:R:MSourceCache:S|SourceCache|-nt=NAVCACHE_TEXT|) \
              $(.TARGET:T:R:MObjectCache:S|ObjectCache|-nt=NAVCACHE_TEXT|) \
              $(.TARGET:T:R:MMemStream:S|MemStream|-nt=URLText_TEXT|) \
@@ -76,8 +80,8 @@ XCCOMFLAGS += $(.TARGET:T:R:MHTMLView:S|HTMLView|-nt=HTMLVIEW_TEXT|) \
              $(.TARGET:T:R:MURLFrameTimers:S|URLFrameTimers|-nt=URLFrame_TEXT|) \
              $(.TARGET:T:R:MURLFramePage:S|URLFramePage|-nt=FRFETCH3_TEXT|) \
              $(.TARGET:T:R:MURLFrameGeometry:S|URLFrameGeometry|-nt=FRFETCH3_TEXT|) \
-             $(.TARGET:T:R:MURLDocumentHistory:S|URLDocumentHistory|-nt=URLDOC_TEXT|) \
-             $(.TARGET:T:R:MURLDocumentNavigation:S|URLDocumentNavigation|-nt=URLDOC_TEXT|) \
+             $(.TARGET:T:R:MURLDocumentHistory:S|URLDocumentHistory|-nt=URLDocument_TEXT|) \
+             $(.TARGET:T:R:MURLDocumentNavigation:S|URLDocumentNavigation|-nt=URLDocument_TEXT|) \
              $(.TARGET:T:R:MURLDocumentLocalPage:S|URLDocumentLocalPage|-nt=LOCALPAG_TEXT|)
 #endif
 

@@ -1,7 +1,7 @@
 /*
  * URL/frameset loading, reload/source/save, home and bookmark/favorite commands.
  * Queued requests keep the existing name-token and frame-array ownership.
- * URLDOC.goc owns the class and registers these external methods.
+ * URLDocument.goc owns the class and registers these external methods.
  */
 
 @include <stdapp.goh>
@@ -14,10 +14,10 @@
 
 /* Keep the original code resource and compiler string defaults. */
 #ifdef __BORLANDC__
-#pragma codeseg URLDOC_TEXT
+#pragma codeseg URLDocument_TEXT
 #endif
 #ifdef __WATCOMC__
-#pragma code_seg("URLDOC_TEXT")
+#pragma code_seg("URLDocument_TEXT")
 #endif
 
 @extern object HTMLVApp;  /* Abort macro. */

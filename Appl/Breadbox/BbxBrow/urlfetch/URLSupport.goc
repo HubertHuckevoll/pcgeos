@@ -1,5 +1,5 @@
 /* URL-driver lifetime, FILE loading, redirects and connection checks.
- * Fetch scheduling remains in URLFETCH.goc; source files belong to the cache.
+ * Fetch scheduling remains in URLFetchEngine.goc; source files belong to the cache.
  * Keep the original Navigation_TEXT resource and plain C interfaces.
  */
 #ifdef __BORLANDC__

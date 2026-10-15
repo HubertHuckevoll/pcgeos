@@ -1,7 +1,7 @@
 /*
  * Back/forward stacks, frame-state snapshots and recent-history updates.
  * Snapshot allocation and token cleanup stay with their owning handlers.
- * URLDOC.goc owns the class and the document open/close lifetime of the
+ * URLDocument.goc owns the class and the document open/close lifetime of the
  * stack buffers, and registers these external methods.
  */
 
@@ -15,10 +15,10 @@
 
 /* Keep the original code resource and compiler string defaults. */
 #ifdef __BORLANDC__
-#pragma codeseg URLDOC_TEXT
+#pragma codeseg URLDocument_TEXT
 #endif
 #ifdef __WATCOMC__
-#pragma code_seg("URLDOC_TEXT")
+#pragma code_seg("URLDocument_TEXT")
 #endif
 
 @extern object HTMLVApp;  /* Start/end operation macros. */

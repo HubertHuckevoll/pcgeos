@@ -1,4 +1,9 @@
 /*
+ * URL document control and document-group handlers. The group creates a
+ * document before forwarding a URL load; startup suppresses the New/Open UI.
+ */
+
+/*
  *                          ==CONFIDENTIAL INFORMATION==
  *
  * COPYRIGHT 1994-99 BREADBOX COMPUTER COMPANY -- ALL RIGHTS RESERVED  --
@@ -9,19 +14,27 @@
  * CONFIDENTIAL INFORMATION IS RESTRICTED TO THE TERMS OF THE NON-DISCLOSURE
  * AGREEMENT.
  *
-*/
+ */
 /***********************************************************************
  *
  * PROJECT:       HTMLView
- * FILE:          URLDocCt.goc
+ * FILE:          URLDocumentControl.goc
  *
- * AUTHOR:        Marcus Gröber
+ * AUTHOR:        Marcus Groeber
  *
  ***********************************************************************/
 
 /**************************************************************************
- *		Include files
+ *      Include files
  **************************************************************************/
+
+/* Keep the code resource independent of the source filename. */
+#ifdef __BORLANDC__
+#pragma codeseg URLDocumentControl_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLDocumentControl_TEXT")
+#endif
 
 @include <stdapp.goh>
 #include <geoMisc.h>                    /* various unix-like goodies */
@@ -48,42 +61,32 @@
 
 @method URLDocumentControlClass, MSG_URL_DOC_CONTROL_CLOSE_AND_OPEN
 {
-    EventHandle evt ;
+    EventHandle evt;
 
-    evt = @record URLDocumentClass::MSG_GEN_DOCUMENT_CLOSE(NullHandle) ;
-    @call oself::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL); // orginally: //@call application::...
-    @send oself::MSG_GEN_DOCUMENT_CONTROL_INITIATE_OPEN_DOC() ;
+    evt = @record URLDocumentClass::MSG_GEN_DOCUMENT_CLOSE(NullHandle);
+    @call oself::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
+    @send oself::MSG_GEN_DOCUMENT_CONTROL_INITIATE_OPEN_DOC();
 }
 
 @ifdef COMPILE_OPTION_NO_NEW_OPEN_DIALOG
 @method URLDocumentControlClass, MSG_GEN_DOCUMENT_CONTROL_DISPLAY_DIALOG
 {
-    EventHandle evt ;
+    EventHandle evt;
     TempGenControlInstance tempData;
 
-    // make sure we dont't have a dialog when starting up, we want
-    // a webpage immediately.
+    /* Open a page immediately at startup without the New/Open dialog. */
     if ((@call oself::MSG_META_GET_VAR_DATA(TEMP_GEN_CONTROL_INSTANCE,
-                                            sizeof(tempData),
-                                            &tempData) == 0xffff) ||
-                                            !(tempData.TGCI_interactableFlags & GCIF_CONTROLLER))
-    {
-        // this closes the doc already in the process of being opened.
-        // However MSG_GEN_DOCUMENT_GROUP_NEW_DOC is called in
-        // MSG_META_SEND_CLASSED_EVENT, so we have a doc in the end...
-        // (see below)
-        // (meyerk 12/2024)
-        evt = @record URLDocumentClass::MSG_GEN_DOCUMENT_CLOSE(NullHandle) ;
+            sizeof(tempData), &tempData) == 0xffff) ||
+        !(tempData.TGCI_interactableFlags & GCIF_CONTROLLER)) {
+        /* Close the document being opened. The group handler below creates
+         * its replacement when forwarding MSG_URL_DOCUMENT_LOAD_URL.
+         * meyerk 12/2024 */
+        evt = @record URLDocumentClass::MSG_GEN_DOCUMENT_CLOSE(NullHandle);
         @call oself::MSG_META_SEND_CLASSED_EVENT(evt, TO_APP_MODEL);
 
-        // not calling @callsuper will prevent the New/Open dialog
+        /* Omitting @callsuper suppresses the New/Open dialog. */
         return;
     }
-//  else
-//  {
-//      // if the browser is not just starting up, we want the New/Open dialog
-//      @callsuper();
-//  }
 }
 @endif
 
@@ -94,13 +97,12 @@
 
 @method URLDocumentGroupClass, MSG_META_SEND_CLASSED_EVENT
 {
-
     ClassStruct *eventClass;
     DocumentCommonParams dcp;
 
-    if ((ObjGetMessageInfo(event, (dword*)&eventClass)==MSG_URL_DOCUMENT_LOAD_URL) && (eventClass == &URLDocumentClass))
-    {
-        // ensure we have a document
+    if ((ObjGetMessageInfo(event, (dword *)&eventClass) ==
+         MSG_URL_DOCUMENT_LOAD_URL) && (eventClass == &URLDocumentClass)) {
+        /* Ensure a document exists before forwarding the URL load. */
         if (@call oself::MSG_GEN_FIND_CHILD_AT_POSITION(0) == NullOptr) {
             dcp.DCP_flags = 0;
             dcp.DCP_diskHandle = 0;

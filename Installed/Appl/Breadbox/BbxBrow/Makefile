@@ -10,11 +10,11 @@ HTMLVIEW        = HTMLViewNavigation.goc HTMLViewOptions.goc\
                   Scrapbook.goc HTMLView.goc AllocWatcher.goc\
                   GlobeAnimation.goc HTMLViewLifecycle.goc PortalEmail.goc\
                   StatusText.goc
-INIT            = INIT.goc
-URLDOC          = URLDOC.goc URLDocumentHistory.goc\
-                  URLDocumentNavigation.goc URLDocumentLocalPage.goc
-URLDOCCT        = URLDOCCT.goc
-URLFETCH        = URLFETCH.goc URLSupport.goc URLLoad.goc
+INIT            = Init.goc
+URLDOC          = URLDocumentHistory.goc URLDocumentNavigation.goc\
+                  URLDocumentLocalPage.goc URLDocument.goc
+URLDOCCT        = URLDocumentControl.goc
+URLFETCH        = URLSupport.goc URLLoad.goc URLFetchEngine.goc
 URLFRAME        = URLFrameTree.goc URLFrameNavigation.goc\
                   URLFrameScript.goc URLFramePage.goc URLFrameFetch.goc\
                   URLFrame.goc URLFrameGeometry.goc URLFrameTimers.goc
@@ -33,19 +33,20 @@ OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   HTMLViewOperation.obj HTMLViewStatus.obj AutoBrowse.obj\
                   Scrapbook.obj HTMLView.obj AllocWatcher.obj\
                   GlobeAnimation.obj HTMLViewLifecycle.obj PortalEmail.obj\
-                  StatusText.obj INIT.obj URLDOC.obj URLDocumentHistory.obj\
+                  StatusText.obj Init.obj URLDocumentHistory.obj\
                   URLDocumentNavigation.obj URLDocumentLocalPage.obj\
-                  URLDOCCT.obj URLFETCH.obj URLSupport.obj URLLoad.obj\
-                  URLFrameTree.obj URLFrameNavigation.obj\
-                  URLFrameScript.obj URLFramePage.obj URLFrameFetch.obj\
-                  URLFrame.obj URLFrameGeometry.obj URLFrameTimers.obj\
-                  MemStream.obj URLTextClipboard.obj\
-                  URLTextImageProgress.obj URLTextLinks.obj\
-                  URLTextPrint.obj URLTextScript.obj URLText.obj\
-                  URLTextImages.obj FavoritesDialog.obj FavoritesCreate.obj\
-                  FavoritesStore.obj BookmarksDialog.obj BookmarksStore.obj\
-                  SourceCache.obj ObjectCache.obj CacheLifetime.obj\
-                  ContentHandling.obj GraphicImport.obj
+                  URLDocument.obj URLDocumentControl.obj URLSupport.obj\
+                  URLLoad.obj URLFetchEngine.obj URLFrameTree.obj\
+                  URLFrameNavigation.obj URLFrameScript.obj\
+                  URLFramePage.obj URLFrameFetch.obj URLFrame.obj\
+                  URLFrameGeometry.obj URLFrameTimers.obj MemStream.obj\
+                  URLTextClipboard.obj URLTextImageProgress.obj\
+                  URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
+                  URLText.obj URLTextImages.obj FavoritesDialog.obj\
+                  FavoritesCreate.obj FavoritesStore.obj\
+                  BookmarksDialog.obj BookmarksStore.obj SourceCache.obj\
+                  ObjectCache.obj CacheLifetime.obj ContentHandling.obj\
+                  GraphicImport.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\

@@ -1,6 +1,6 @@
 /*
  * Complete local-page persistence: dialogs, VM serialization/restoration,
- * local-page token ownership and update notification. URLDOC.goc owns the
+ * local-page token ownership and update notification. URLDocument.goc owns the
  * class and registers these methods under COMPILE_OPTION_LOCAL_PAGES.
  */
 

@@ -8,7 +8,7 @@
 @object URLDocumentControlClass DocumentControl = {
 
     GDCI_selectorType   = GFST_NON_GEOS_FILES;
-    GDCI_documentGroup  = @HTMLDocumentGroup; // see URLDOC.goc
+    GDCI_documentGroup  = @HTMLDocumentGroup; // see URLDocument.goc
     GDCI_noNameText     = "Webpage";
     GDCI_dialogNewText  = "\rNew browser window.";
     GDCI_dialogOpenText = "\rLoad a saved webpage from disk.";

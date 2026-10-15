@@ -55,7 +55,7 @@ endif
 # For OpenConnection
 library    socket
 
-resource   URLFETCH_TEXT        code fixed
+resource   URLFetchEngine_TEXT  code fixed
 
 resource   AppResource          ui-object
 resource   Interface            ui-object

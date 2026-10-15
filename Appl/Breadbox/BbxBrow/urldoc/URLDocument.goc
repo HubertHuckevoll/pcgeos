@@ -4,7 +4,7 @@
  * URLDocumentHistory.goc owns history snapshots and navigation stacks;
  * URLDocumentNavigation.goc owns URL/frameset and navigation commands.
  * URLDocumentLocalPage.goc owns local-page persistence. External registrations remain
- * here in their original order; the command split shares URLDOC_TEXT.
+ * here in their original order; the command split shares URLDocument_TEXT.
  * History stack buffers are allocated/freed in the unchanged open/close
  * handlers so their ordering with the document/cache lifetime stays intact.
  */
@@ -20,19 +20,27 @@
  * CONFIDENTIAL INFORMATION IS RESTRICTED TO THE TERMS OF THE NON-DISCLOSURE
  * AGREEMENT.
  *
-*/
+ */
 /***********************************************************************
  *
  * PROJECT:       HTMLView
- * FILE:          URLDoc.goc
+ * FILE:          URLDocument.goc
  *
- * AUTHOR:        Marcus Gröber
+ * AUTHOR:        Marcus Groeber
  *
  ***********************************************************************/
 
 /**************************************************************************
  *      Include files
  **************************************************************************/
+
+/* Keep the code resource independent of the source filename. */
+#ifdef __BORLANDC__
+#pragma codeseg URLDocument_TEXT
+#endif
+#ifdef __WATCOMC__
+#pragma code_seg("URLDocument_TEXT")
+#endif
 
 @include <stdapp.goh>
 #include <geoMisc.h>                    /* various unix-like goodies */
@@ -74,43 +82,42 @@ extern Boolean G_pcBypassed;
 
 
 @start    DocGroupResource;
-    @object URLDocumentGroupClass HTMLDocumentGroup = {
-        GDGI_attrs = GDGA_NATIVE
-                        | GDGA_APPLICATION_THREAD;
-        GDGI_documentControl = @DocumentControl;
-        GDGI_genDocument = @HTMLDocument;
-        GDGI_genDisplay = @HTMLDisplay;
-        GDGI_genDisplayGroup = @HTMLDisplayGroup;
+@object URLDocumentGroupClass HTMLDocumentGroup = {
+    GDGI_attrs = GDGA_NATIVE | GDGA_APPLICATION_THREAD;
+    GDGI_documentControl = @DocumentControl;
+    GDGI_genDocument = @HTMLDocument;
+    GDGI_genDisplay = @HTMLDisplay;
+    GDGI_genDisplayGroup = @HTMLDisplayGroup;
 @ifdef DO_DBCS
-     GDGI_untitledName = "browser page";
+    GDGI_untitledName = "browser page";
 @else
-     GDGI_untitledName = "WebMagick";
+    GDGI_untitledName = "WebMagick";
 @endif
-        ATTR_GEN_DOCUMENT_GROUP_DOCUMENT_HANDLES = {
-            0
-        };
-    }
+    ATTR_GEN_DOCUMENT_GROUP_DOCUMENT_HANDLES = {
+        0
+    };
+}
 @end      DocGroupResource;
 
 
 @start  UIResource, notDetachable;
 
-    @object GenDisplayClass HTMLDisplay = {
-        GI_states = @default & ~GS_USABLE;
-        GI_visMoniker = "WebMagick";
-        GI_comp = @UITop;
-        ATTR_GEN_DISPLAY_NOT_MINIMIZABLE;
-        HINT_DEFAULT_TARGET;
-        HINT_DEFAULT_FOCUS;
-    }
+@object GenDisplayClass HTMLDisplay = {
+    GI_states = @default & ~GS_USABLE;
+    GI_visMoniker = "WebMagick";
+    GI_comp = @UITop;
+    ATTR_GEN_DISPLAY_NOT_MINIMIZABLE;
+    HINT_DEFAULT_TARGET;
+    HINT_DEFAULT_FOCUS;
+}
 
-  @object GenInteractionClass UITop = {
-        GI_attrs = @default | GA_TARGETABLE;
-        HINT_EXPAND_WIDTH_TO_FIT_PARENT;
-        HINT_EXPAND_HEIGHT_TO_FIT_PARENT;
-        HINT_ORIENT_CHILDREN_VERTICALLY;
-        HINT_MINIMIZE_CHILD_SPACING;
-  }
+@object GenInteractionClass UITop = {
+    GI_attrs = @default | GA_TARGETABLE;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+    HINT_EXPAND_HEIGHT_TO_FIT_PARENT;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_MINIMIZE_CHILD_SPACING;
+}
 
 @end    UIResource;
 
@@ -135,8 +142,8 @@ extern Boolean G_pcBypassed;
     GVI_vertAttrs = @default | GVDA_SCROLLABLE;  /* default is AUTO */
     GVI_horizAttrs = @default | GVDA_SCROLLABLE;  /* default is AUTO */
     GVI_attrs = @default | GVA_CONTROLLED | GVA_DRAG_SCROLLING \
-                         | GVA_WINDOW_COORDINATE_MOUSE_EVENTS \
-                         | GVA_DONT_SEND_KBD_RELEASES | GVA_FOCUSABLE;
+        | GVA_WINDOW_COORDINATE_MOUSE_EVENTS \
+        | GVA_DONT_SEND_KBD_RELEASES | GVA_FOCUSABLE;
     ATTR_GEN_VIEW_DOES_NOT_ACCEPT_TEXT_INPUT;
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
     HINT_EXPAND_HEIGHT_TO_FIT_PARENT;
@@ -150,40 +157,40 @@ extern Boolean G_pcBypassed;
 
 @start  FrameResource, notDetachable;
 
-    @object URLDocumentClass HTMLDocument = {
-        GI_states = @default & ~GS_USABLE;
-        UDCI_topFrame = @FrameTop;
-    }
+@object URLDocumentClass HTMLDocument = {
+    GI_states = @default & ~GS_USABLE;
+    UDCI_topFrame = @FrameTop;
+}
 
-    @object URLFrameClass FrameTop = {
-        UFI_document = @HTMLDocument;
-    }
+@object URLFrameClass FrameTop = {
+    UFI_document = @HTMLDocument;
+}
 
 @end    FrameResource;
 
 @start FrameTemplateResource, notDetachable;
 
-    @object URLFrameClass FrameTemplate = {
-        UFI_document = @HTMLDocument;
-    }
+@object URLFrameClass FrameTemplate = {
+    UFI_document = @HTMLDocument;
+}
 
 @end FrameTemplateResource;
 
 
 @start  TextResource, notDetachable;
 
-    @object VisContentClass URLContent = {
-        VCNI_attrs = @default | VCNA_LARGE_DOCUMENT_MODEL
-                    | VCNA_WINDOW_COORDINATE_MOUSE_EVENTS
-                    | VCNA_SAME_WIDTH_AS_VIEW;
-        VCI_comp = @URLText;
-    }
+@object VisContentClass URLContent = {
+    VCNI_attrs = @default | VCNA_LARGE_DOCUMENT_MODEL
+        | VCNA_WINDOW_COORDINATE_MOUSE_EVENTS
+        | VCNA_SAME_WIDTH_AS_VIEW;
+    VCI_comp = @URLText;
+}
 
-    @object URLTextClass URLText = {
-        ATTR_VIS_TEXT_WRAP_AFTER_OVERFLOW_WITH_MAXIMUM = 780 ;
-        ATTR_VIS_TEXT_DONT_DRAW_BREAKS;
-        ATTR_VIS_TEXT_ALLOW_CROSS_SECTION_COPY ;
-    }
+@object URLTextClass URLText = {
+    ATTR_VIS_TEXT_WRAP_AFTER_OVERFLOW_WITH_MAXIMUM = 780;
+    ATTR_VIS_TEXT_DONT_DRAW_BREAKS;
+    ATTR_VIS_TEXT_ALLOW_CROSS_SECTION_COPY;
+}
 
 @end    TextResource;
 
@@ -220,45 +227,45 @@ extern Boolean G_pcBypassed;
     ChunkHandle historyChunk, forwardChunk;
     MemHandle docBlock = OptrToHandle(oself);
 
-    HWChecksumCheck() ;
-    historyChunk = LMemAlloc( docBlock,
-        sizeof(historyBufferData) * HTML_HISTORY);
-    forwardChunk = LMemAlloc( docBlock,
-        sizeof(historyBufferData) * HTML_HISTORY);
-                                        /* Allocate arrays for forward/back */
+    HWChecksumCheck();
+    historyChunk = LMemAlloc(docBlock,
+                             sizeof(historyBufferData) * HTML_HISTORY);
+    forwardChunk = LMemAlloc(docBlock,
+                             sizeof(historyBufferData) * HTML_HISTORY);
+    /* Allocate arrays for forward/back */
     pself = ObjDerefGen(oself);
     pself->UDCI_historyBuffer = historyChunk;
     pself->UDCI_forwardBuffer = forwardChunk;
 
     pself->UDCI_topFrame = ConstructOptr(docBlock, OptrToChunk(@FrameTop));
 
-    /* This Add.. matches the followup Remove.. in PHYSICAL_CLOSE. */
+    /* Retain shared cache storage until PHYSICAL_CLOSE destroys the text. */
     AddCacheFileReference();
 
     strcpy(name, params->DCP_path);     /* join file and path name */
-    if(*name && name[strlen(name)-1]!='\\')
+    if (*name && name[strlen(name) - 1] != '\\')
         strcat(name, _TEXT("\\"));
     strcat(name, params->DCP_name);
 
     p = fullname;                       /* make double indirection clean */
     FileConstructFullPath(&p, PATH_BUFFER_SIZE,
-        params->DCP_diskHandle, name,TRUE);
+                          params->DCP_diskHandle, name, TRUE);
 
-    HWChecksumCheck() ;
-    if(message==MSG_GEN_DOCUMENT_PHYSICAL_OPEN)
-    {
+    HWChecksumCheck();
+    if (message == MSG_GEN_DOCUMENT_PHYSICAL_OPEN) {
         char *fullnameP = fullname;
         MemHandle urlHan = NullHandle;
         /* handle .URL files */
-        if (LocalCmpStringsNoCase((fullname+strlen(fullname)-4), _TEXT(".URL"), 4) == 0) {
+        if (LocalCmpStringsNoCase((fullname + strlen(fullname) - 4), _TEXT(".URL"), 4) == 0) {
             FileHandle urlFile;
             TCHAR *fp;
             int fsize;
-            urlFile = FileOpen(fullname, FILE_DENY_W|FILE_ACCESS_R);
+            urlFile = FileOpen(fullname, FILE_DENY_W | FILE_ACCESS_R);
             if (urlFile) {
                 fsize = FileSize(urlFile);
-                if (fsize > HTML_MAX_BUF) fsize = HTML_MAX_BUF;
-                urlHan = MemAlloc(fsize+1, HF_DYNAMIC, HAF_STANDARD);
+                if (fsize > HTML_MAX_BUF)
+                    fsize = HTML_MAX_BUF;
+                urlHan = MemAlloc(fsize + 1, HF_DYNAMIC, HAF_STANDARD);
                 if (urlHan) {
                     fp = MemLock(urlHan);
                     fp[fsize] = 0;
@@ -270,18 +277,21 @@ extern Boolean G_pcBypassed;
                             */
                             fp = strchr(fp, '=');
                             if (fp) {
-                                fullnameP = fp+1;
+                                fullnameP = fp + 1;
                                 fp = fullnameP;
-                                while (*fp > 32) fp++;
+                                while (*fp > 32)
+                                    fp++;
                                 *fp = 0;  /* null-terminate */
                             }
                         } else {
                             /* Netscape mailer(?) format: <cr>
                                                         <sp><url>
                             */
-                            while (*fp <= 32) fp++;
+                            while (*fp <= 32)
+                                fp++;
                             fullnameP = fp;
-                            while (*fp > 32) fp++;
+                            while (*fp > 32)
+                                fp++;
                             *fp = 0;  /* null-terminate */
                         }
                     }
@@ -290,34 +300,32 @@ extern Boolean G_pcBypassed;
             }
         }
         url = NamePoolTokenize(namePool, fullnameP, TRUE);
-        if (urlHan) MemFree(urlHan);
-        HWChecksumCheck() ;
-        @send,forceQueue self::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_ABSOLUTE);
-    }
-    else
-    {
+        if (urlHan)
+            MemFree(urlHan);
+        HWChecksumCheck();
+        @send, forceQueue self::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_ABSOLUTE);
+    } else {
         MemHandle homeH = 0;
         TCHAR *homeP;
         extern MemHandle lazarusURL;
 
-        HWChecksumCheck() ;
-        if(lazarusURL) {
+        HWChecksumCheck();
+        if (lazarusURL) {
             homeH = lazarusURL;
             lazarusURL = 0;
         }
-        if(homeH || (NavigateGetHome(&homeH) && !(@call HTMLVApp::MSG_HMLVA_GET_LAUNCH_URL())))
-        {
+        if (homeH || (NavigateGetHome(&homeH) && !(@call HTMLVApp::MSG_HMLVA_GET_LAUNCH_URL()))) {
             homeP = MemLock(homeH);
             url = NamePoolTokenize(namePool, homeP, TRUE);
             MemFree(homeH);
-            HWChecksumCheck() ;
-            @send,forceQueue self::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_ABSOLUTE);
+            HWChecksumCheck();
+            @send, forceQueue self::MSG_URL_DOCUMENT_LOAD_URL(url, DIR_ABSOLUTE);
             /* load home URL if defined */
         }
     }
 
     *fileOrError = textObjFile;
-    HWChecksumCheck() ;
+    HWChecksumCheck();
     return FALSE;
 }
 
@@ -346,9 +354,9 @@ extern Boolean G_pcBypassed;
     @call WindowOpenFrame::MSG_URL_FRAME_DETACH_VIEW_CONTENT_TREE();
 @endif
 
-    HWChecksumCheck() ;
+    HWChecksumCheck();
     @callsuper();
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 }
 
 @method URLDocumentClass, MSG_GEN_DOCUMENT_PHYSICAL_CLOSE
@@ -373,16 +381,9 @@ extern Boolean G_pcBypassed;
     @call WindowOpenFrame::MSG_URL_FRAME_DESTRUCT_TEXT_TREE();
 @endif
 
-    /* There is a poor assumption made in the app shutdown sequence that
-       is broken when a system detach is performed.  The normal sequence
-       is that this message is called long before the final
-       RemoveCacheFileReference call made (indirectly) by
-       MSG_GEN_PROCESS_CLOSE_APPLICATION.  The system detach causes the
-       CLOSE_APPLICATION to happen BEFORE this message is handled, so
-       the final URLText object which calls Remove.. ends up closing its
-       own VM file on itself, causing nasty death.  To prevent nasty death,
-       RemoveCacheFileReference is called here, after the text objects have
-       self-destructed. - DH 9/7/99 */
+    /* System detach can close navigation before the document. Keep this
+     * reference until all text objects are destroyed, so their VM file
+     * remains open during teardown. - DH 9/7/99 */
 
     RemoveCacheFileReference();
 }
@@ -404,10 +405,9 @@ extern Boolean G_pcBypassed;
     url = @call self::MSG_URL_DOCUMENT_GET_URL();
 
     /* get current home page */
-    if(url != NAME_POOL_NONE && NavigateGetHome(&homeH))
-    {
+    if (url != NAME_POOL_NONE && NavigateGetHome(&homeH)) {
         homeP = MemLock(homeH);
-        if(FALSE == NamePoolTestEqual(namePool, url, homeP))
+        if (FALSE == NamePoolTestEqual(namePool, url, homeP))
             flags |= HTML_HIST_HOME;        /* home enabled if not already there */
         MemFree(homeH);
     }
@@ -415,16 +415,16 @@ extern Boolean G_pcBypassed;
     unresolved = @call self::MSG_URL_DOCUMENT_TEST_UNRESOLVED_IMAGES();
 
     pself = ObjDerefGen(oself);
-    flags |= ( (pself->UDCI_historyHead != pself->UDCI_historyTail) ?
-               HTML_HIST_BACK: 0)
-           | ( (pself->UDCI_historyForward) ?
-               HTML_HIST_FORWARD: 0)
-           | ( (url != NAME_POOL_NONE) ?
-               HTML_HIST_CURRENT: 0)
-           | ( unresolved ?
-               HTML_HIST_LOAD_GR: 0);
+    flags |= ((pself->UDCI_historyHead != pself->UDCI_historyTail) ?
+              HTML_HIST_BACK : 0)
+             | ((pself->UDCI_historyForward) ?
+                HTML_HIST_FORWARD : 0)
+             | ((url != NAME_POOL_NONE) ?
+                HTML_HIST_CURRENT : 0)
+             | (unresolved ?
+                HTML_HIST_LOAD_GR : 0);
 
-    if(url != NAME_POOL_NONE)
+    if (url != NAME_POOL_NONE)
         NamePoolReleaseToken(namePool, url);
 
     return flags;
@@ -443,29 +443,25 @@ extern Boolean G_pcBypassed;
 @else
     win = @HTMLVPrimary;
 @endif
-    if(win)
-    {
+    if (win) {
         tok = title;                      /* window name based on title or URL */
-        if(tok == NAME_POOL_NONE)
+        if (tok == NAME_POOL_NONE)
             tok = url;
 
-        if(tok)                           /* got title or URL */
-        {
+        if (tok) {                        /* got title or URL */
             NamePoolCopy(namePool, buf, sizeof(buf), tok, NULL);
             @call win::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(buf,
-                VUM_DELAYED_VIA_APP_QUEUE);
-        }
-        else                              /* nothing that could serve as title */
-        {
+                    VUM_DELAYED_VIA_APP_QUEUE);
+        } else {                          /* nothing that could serve as title */
             @call win::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(@Untitled,
-                VUM_DELAYED_VIA_APP_QUEUE);
+                    VUM_DELAYED_VIA_APP_QUEUE);
         }
     }
 
     /* notify application about the change */
-    if(url != NAME_POOL_NONE)
+    if (url != NAME_POOL_NONE)
         NamePoolUseToken(namePool, url);
-    if(title != NAME_POOL_NONE)
+    if (title != NAME_POOL_NONE)
         NamePoolUseToken(namePool, title);
 
     @send process::MSG_HMLVP_NOTIFY_TOP_CHANGE(url, title);
@@ -476,11 +472,9 @@ extern Boolean G_pcBypassed;
     NameToken url, title;
     WordFlags flags;
 
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 
-    /*  it took me two weeks to find out why the multi-document 
-        mode was acting up when enabled. 
-        the reason was this missing @callsuper.*/
+    /* The superclass must update model state for multiple documents. */
     @callsuper();
 
     url = @call self::MSG_URL_DOCUMENT_GET_URL();
@@ -494,7 +488,7 @@ extern Boolean G_pcBypassed;
     @call self::MSG_URL_DOCUMENT_REQUEST_LOCAL_PAGE_NOTIFY();
 @endif
 
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 }
 
 @extern method URLDocumentClass, MSG_URL_DOCUMENT_INT_ADD_BACK_URL;
@@ -520,42 +514,35 @@ extern Boolean G_pcBypassed;
 /*
  *  Update visual representation of current frame tree
  *
- *  jfh 3/13/03 - pulled the ifndef DRAG_COPY stuff since it was
- *	               keeping pages from printing, and it didn't hurt
- *                the drag & drop capability
+ *  Focus/target updates are also needed for printing when drag-copy is on.
+ *  jfh 3/13/03
  */
 @method URLDocumentClass, MSG_URL_DOCUMENT_UPDATE_FRAME_UI
 {
     optr focusOptr = NullOptr;
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_UPDATE_FRAME_UI(&focusOptr);
-/*@ifndef COMPILE_OPTION_DRAG_COPY_WEB_PAGES  */
     if (focusOptr) {
         @send focusOptr::MSG_META_GRAB_FOCUS_EXCL();
         @send focusOptr::MSG_META_GRAB_TARGET_EXCL();
     }
-/*@endif */
 @ifdef JAVASCRIPT_SUPPORT
     /* update window.open frames, we do this even if not open since we
        could have just closed it and replaced the frames with about:blank,
        though the focus grabbing is only if the window is open */
     @call WindowOpenFrame::MSG_URL_FRAME_UPDATE_FRAME_UI(&focusOptr);
-/*@ifndef COMPILE_OPTION_DRAG_COPY_WEB_PAGES  */
     if (@call WindowOpenWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
         if (focusOptr) {
             @send focusOptr::MSG_META_GRAB_FOCUS_EXCL();
             @send focusOptr::MSG_META_GRAB_TARGET_EXCL();
         }
     }
-/*@endif */
 @endif
     if (@call HelpWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
         @call HelpFrame::MSG_URL_FRAME_UPDATE_FRAME_UI(&focusOptr);
-/*@ifndef COMPILE_OPTION_DRAG_COPY_WEB_PAGES */
         if (focusOptr) {
             @send focusOptr::MSG_META_GRAB_FOCUS_EXCL();
             @send focusOptr::MSG_META_GRAB_TARGET_EXCL();
         }
-/*@endif */
     }
 }
 
@@ -570,14 +557,14 @@ extern Boolean G_pcBypassed;
  */
 @method URLDocumentClass, MSG_URL_DOCUMENT_LOAD_GRAPHICS
 {
-    HWChecksumCheck() ;
+    HWChecksumCheck();
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_LOAD_GRAPHICS();
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 }
 
 @method URLDocumentClass, MSG_URL_DOCUMENT_GET_TOP_FRAME
 {
-    HWChecksumCheck() ;
+    HWChecksumCheck();
     return pself->UDCI_topFrame;
 }
 
@@ -605,17 +592,17 @@ extern Boolean G_pcBypassed;
 {
     /* have the top frame recalculate itself and all its */
     /* children */
-    HWChecksumCheck() ;
-    @call (pself->UDCI_topFrame)::MSG_URL_FRAME_RECALCULATE() ;
-    HWChecksumCheck() ;
+    HWChecksumCheck();
+    @call (pself->UDCI_topFrame)::MSG_URL_FRAME_RECALCULATE();
+    HWChecksumCheck();
 }
 
 @method URLDocumentClass, MSG_URL_DOCUMENT_STOP
 {
     if (frame) {
-        @call frame::MSG_URL_FRAME_STOP() ;
+        @call frame::MSG_URL_FRAME_STOP();
     } else {
-        @call (pself->UDCI_topFrame)::MSG_URL_FRAME_STOP() ;
+        @call (pself->UDCI_topFrame)::MSG_URL_FRAME_STOP();
     }
 }
 
@@ -625,9 +612,9 @@ extern Boolean G_pcBypassed;
 
     /* have the top frame check for unresolved images in itself and all its */
     /* children */
-    HWChecksumCheck() ;
-    ret = @call (pself->UDCI_topFrame)::MSG_URL_FRAME_TEST_UNRESOLVED_IMAGES() ;
-    HWChecksumCheck() ;
+    HWChecksumCheck();
+    ret = @call (pself->UDCI_topFrame)::MSG_URL_FRAME_TEST_UNRESOLVED_IMAGES();
+    HWChecksumCheck();
 
     return ret;
 }
@@ -637,9 +624,9 @@ extern Boolean G_pcBypassed;
     NameToken ret;
 
     /* get "document URL", defined as the URL loaded in the top frame */
-    HWChecksumCheck() ;
-    ret = @call (pself->UDCI_topFrame)::MSG_URL_FRAME_GET_URL() ;
-    HWChecksumCheck() ;
+    HWChecksumCheck();
+    ret = @call (pself->UDCI_topFrame)::MSG_URL_FRAME_GET_URL();
+    HWChecksumCheck();
 
     return ret;
 }
@@ -649,9 +636,9 @@ extern Boolean G_pcBypassed;
     NameToken ret;
 
     /* get "document title", defined as that of the page in the top frame */
-    HWChecksumCheck() ;
-    ret = @call (pself->UDCI_topFrame)::MSG_URL_FRAME_GET_TITLE() ;
-    HWChecksumCheck() ;
+    HWChecksumCheck();
+    ret = @call (pself->UDCI_topFrame)::MSG_URL_FRAME_GET_TITLE();
+    HWChecksumCheck();
 
     return ret;
 }
@@ -659,21 +646,20 @@ extern Boolean G_pcBypassed;
 @method URLDocumentClass, MSG_URL_DOCUMENT_INC_PENDING
 {
     if (pself->UDCI_numPendingFrames++ == 0)
-        @StartOperation() ;
-    EC_ERROR_IF(pself->UDCI_numPendingFrames >= MAX_NUM_REQUESTS, -1) ;
+        @StartOperation();
+    EC_ERROR_IF(pself->UDCI_numPendingFrames >= MAX_NUM_REQUESTS, -1);
 }
 
 @method URLDocumentClass, MSG_URL_DOCUMENT_DEC_PENDING
 {
-    pself->UDCI_numPendingFrames-- ;
-    EC_ERROR_IF(pself->UDCI_numPendingFrames >= MAX_NUM_REQUESTS, -1) ;
+    pself->UDCI_numPendingFrames--;
+    EC_ERROR_IF(pself->UDCI_numPendingFrames >= MAX_NUM_REQUESTS, -1);
 
-    if (pself->UDCI_numPendingFrames == 0)
-    {
+    if (pself->UDCI_numPendingFrames == 0) {
         /* Inform the frame that we are done. */
         @send self::MSG_URL_DOCUMENT_NOTIFY_DOCUMENT_COMPLETE();
 
-        @EndOperation() ;
+        @EndOperation();
     }
 }
 
@@ -684,52 +670,51 @@ extern Boolean G_pcBypassed;
     FileLongName saveFile;
 @endif
 
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 
 @ifdef JAVASCRIPT_SUPPORT
-     /* ensure script context for all frames, if anyone has JS */
-     if (pself->UDCI_haveJS) {
+    /* ensure script context for all frames, if anyone has JS */
+    if (pself->UDCI_haveJS) {
         @call (pself->UDCI_topFrame)::MSG_URL_FRAME_ENSURE_SCRIPT_CONTEXT();
-     }
-     pself->UDCI_haveJS = FALSE;  /* clear for next time */
+    }
+    pself->UDCI_haveJS = FALSE;  /* clear for next time */
 @endif
 
     flags = @call self::MSG_URL_DOCUMENT_GET_STATE();
     @send process::MSG_HMLVP_NOTIFY_NAVIGATION_CHANGE(flags);
 
 @ifdef COMPILE_OPTION_SECURE_STATUS
-     /* update secure status at end of operation */
-     @send (pself->UDCI_topFrame)::MSG_URL_FRAME_UPDATE_SECURE_ICON(
+    /* update secure status at end of operation */
+    @send(pself->UDCI_topFrame)::MSG_URL_FRAME_UPDATE_SECURE_ICON(
         NAME_POOL_NONE);
 @endif
 
 @ifdef COMPILE_OPTION_LOCAL_PAGES
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 
     /* Pending update of local page? Save it now as everything has come in. */
     pself = ObjDerefGen(oself);
-    if(pself->UDCI_localPage && pself->UDCI_updatingLocal)
-    {
-      /* Done updating - save to file. */
-      pself->UDCI_updatingLocal = FALSE;
+    if (pself->UDCI_localPage && pself->UDCI_updatingLocal) {
+        /* Done updating - save to file. */
+        pself->UDCI_updatingLocal = FALSE;
 
-      NamePoolCopy(namePool, saveFile, sizeof(saveFile), pself->UDCI_localPage,
-        NULL);
-      @call self::MSG_URL_DOCUMENT_STORE_TO_FILENAME(saveFile);
+        NamePoolCopy(namePool, saveFile, sizeof(saveFile), pself->UDCI_localPage,
+                     NULL);
+        @call self::MSG_URL_DOCUMENT_STORE_TO_FILENAME(saveFile);
     }
 @endif
 
     /* flush any URL driver data */
     FlushURLData();
 
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 
     /* Commit source cache */
     SrcCacheCommit();
 
     UserAbortEnd();
 
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 }
 
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
@@ -742,7 +727,7 @@ extern Boolean G_pcBypassed;
     access = ParentalControlGetAccessInfo();
     /* if full access, no password; if not bypassed, require password */
     if (((access & AF_WWWBROWSING) || (access & AF_WWWLIMITED)) &&
-    !G_pcBypassed) {
+            !G_pcBypassed) {
         pcFlags |= PCF_REQUIRE_PASSWORD;
     }
     /* forward to top frame */
@@ -763,7 +748,7 @@ extern Boolean G_pcBypassed;
     access = ParentalControlGetAccessInfo();
     /* if full access, no password; if not bypassed, require password */
     if (((access & AF_WWWBROWSING) || (access & AF_WWWLIMITED)) &&
-    !G_pcBypassed) {
+            !G_pcBypassed) {
         pcFlags |= PCF_REQUIRE_PASSWORD;
     }
     /* forward to top frame */
@@ -786,8 +771,7 @@ extern Boolean G_pcBypassed;
 
     url = @call self::MSG_URL_DOCUMENT_GET_URL();
 
-    if(url != NAME_POOL_NONE)           // Do we have a page loaded?
-    {
+    if (url != NAME_POOL_NONE) {        // Do we have a page loaded?
         NamePoolReleaseToken(namePool, url);
 
         /* forward this message to the targeted frame */
@@ -805,8 +789,7 @@ extern Boolean G_pcBypassed;
 
     url = @call self::MSG_URL_DOCUMENT_GET_URL();
 
-    if(url != NAME_POOL_NONE)           // Do we have a page loaded?
-    {
+    if (url != NAME_POOL_NONE) {        // Do we have a page loaded?
         NamePoolReleaseToken(namePool, url);
 
         /* forward this message to the targeted frame */
@@ -822,12 +805,10 @@ extern Boolean G_pcBypassed;
     NameToken url;
     optr display;
 
-    if(pcs==PCS_PRINT_BOX_VISIBLE)      // Updating print box when it comes up?
-    {
+    if (pcs == PCS_PRINT_BOX_VISIBLE) { // Updating print box when it comes up?
         url = @call self::MSG_URL_DOCUMENT_GET_URL();
 
-        if(url != NAME_POOL_NONE)         // Do we have a page loaded?
-        {
+        if (url != NAME_POOL_NONE) {      // Do we have a page loaded?
             NamePoolReleaseToken(namePool, url);
 
             /* forward this message to the targeted frame */
@@ -846,7 +827,7 @@ extern Boolean G_pcBypassed;
 
 @method URLDocumentClass, MSG_URL_DOCUMENT_GET_JS_ERROR
 {
-    return(pself->UDCI_jsError);
+    return (pself->UDCI_jsError);
 }
 
 @endif
@@ -856,9 +837,9 @@ extern Boolean G_pcBypassed;
  */
 @method URLDocumentClass, MSG_URL_DOCUMENT_CLEAR_OBJ_CACHE
 {
-    HWChecksumCheck() ;
+    HWChecksumCheck();
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_CLEAR_OBJ_CACHE();
-    HWChecksumCheck() ;
+    HWChecksumCheck();
 }
 
 @ifdef JAVASCRIPT_SUPPORT

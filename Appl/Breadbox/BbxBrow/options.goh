@@ -96,14 +96,14 @@ Older builds are:
    turn off for single document mode */
 
 @define COMPILE_OPTION_FILE_OPEN_MENU
-/* Keep new/open/close on in the file menu, see URLDOCCT */
+/* Keep new/open/close on in the file menu, see URLDocumentControl.goc */
 
 @define COMPILE_OPTION_START_WITH_NEW
 /* Always starts the browser with a new document. */
 
 @define COMPILE_OPTION_NO_NEW_OPEN_DIALOG
 /* ... this why we have this flag
-   see URLDOCCT */
+   see URLDocumentControl.goc */
 
 @define COMPILE_OPTION_PAGE_SIZE_CONTROL
 /* have a PageSetup Control */

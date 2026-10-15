@@ -49,7 +49,7 @@ $cleanup =~ s/\@send \(request.textObj\)::MSG_URL_TEXT_DEC_PENDING\(\)/DecPendin
 my $begin = extract($code, qr/\@method ImportThreadEngineClass, MSG_IMPORT_THREAD_ENGINE_START_ABORT\s*\{.*?(pself->numAborts\+\+\s*;)/s);
 my $end = extract($code, qr/\@method ImportThreadEngineClass, MSG_IMPORT_THREAD_ENGINE_END_ABORT\s*\{.*?(pself->numAborts--\s*;)/s);
 my $globals = extract($code, qr/(static int G_numImportThreads;\nstatic int G_nextImportThread;)/);
-open my $fetchSource, '<:raw', "$FindBin::Bin/../urlfetch/URLFETCH.goc" or die $!;
+open my $fetchSource, '<:raw', "$FindBin::Bin/../urlfetch/URLFetchEngine.goc" or die $!;
 my $fetchCode = <$fetchSource>;
 my $fetchCount = extract($fetchCode, qr/(word numChildren = DEFAULT_FETCH_ENGINE_CHILDREN;)/);
 $fetchCount .= extract($fetchCode, qr/(InitFileReadInteger\(HTMLVIEW_CATEGORY, "numConn".*?numChildren = DEFAULT_FETCH_ENGINE_CHILDREN\s*;)/s);

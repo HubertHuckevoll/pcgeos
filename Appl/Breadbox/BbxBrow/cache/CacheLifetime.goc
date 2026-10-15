@@ -23,10 +23,10 @@
  * Keep the original code resource independent of this source filename.
  */
 #ifdef __BORLANDC__
-#pragma codeseg INIT_TEXT
+#pragma codeseg Init_TEXT
 #endif
 #ifdef __WATCOMC__
-#pragma code_seg("INIT_TEXT")
+#pragma code_seg("Init_TEXT")
 #endif
 
 @include <stdapp.goh>
