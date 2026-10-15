@@ -3,7 +3,7 @@
 # PROJECT:      HTMLPars
 # FILE:         htmlpars.gp
 #
-# AUTHOR:       Marcus Gr�ber
+# AUTHOR:       Marcus Gröber
 #
 ##############################################################################
 

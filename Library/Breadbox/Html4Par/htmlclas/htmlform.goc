@@ -13,7 +13,7 @@
  * PROJECT:       HTMLView
  * FILE:          HTMLForm.goc
  *
- * AUTHOR:        Marcus Gr�ber
+ * AUTHOR:        Marcus Gröber
  *
  * NOTES:         Less frequently used form routines (reset / submit)
  ***********************************************************************/

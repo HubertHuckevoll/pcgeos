@@ -3,7 +3,7 @@
  * PROJECT:       HTML3Par
  * FILE:          htmlsty.goh
  *
- * AUTHOR:    Marcus Gr�ber
+ * AUTHOR:    Marcus Gröber
  *
  * NOTES:         Default style sheet and parsing table for HTML.
  *                Also includes ISO Latin character set and color table.

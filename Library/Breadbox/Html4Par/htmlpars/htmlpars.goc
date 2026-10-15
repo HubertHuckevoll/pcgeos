@@ -3,7 +3,7 @@
  * PROJECT:       HTMLPars
  * FILE:          htmlpars.goc
  *
- * AUTHOR:        Marcus Gr�ber
+ * AUTHOR:        Marcus Gröber
  *
  * NOTE:          To compile properly, this file requires the INCLUDE
  *                files from the OmniGo SDK or later, because the

@@ -13,7 +13,7 @@
  * PROJECT:       HTMLView
  * FILE:          HTMLFDrw.goc  (Form Draw routines)
  *
- * AUTHOR:        Marcus Gr�ber
+ * AUTHOR:        Marcus Gröber
  *                Lysle Shields
  *
  * NOTES:         Routines to handle drawing form elements.  Split out

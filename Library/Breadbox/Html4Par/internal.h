@@ -3,7 +3,7 @@
  * PROJECT:       HTML3Par
  * FILE:          internal.h
  *
- * AUTHOR:    Marcus Gr�ber
+ * AUTHOR:    Marcus Gröber
  *
  * NOTES:         This file contains internal declarations used only for
  *                communications between various modules within the library.

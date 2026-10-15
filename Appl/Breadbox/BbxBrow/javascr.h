@@ -6,7 +6,7 @@
  * DESCRIPTION:   Main include file for all modules using
  *                JavaScript functions
  *
- * AUTHOR:	  Marcus Groeber
+ * AUTHOR:	  Marcus Gröber
  *
  ***********************************************************************/
 
