@@ -28,8 +28,9 @@ sub definition {
     return record($type, pack('C2', 0, $seg) . counted($name) . pack('vC', $offset, 0));
 }
 sub object {
-    my ($suffix, $tag, $scope, $reference) = @_;
+    my ($suffix, $tag, $scope, $reference, $types) = @_;
     my $data = record(0x80, counted($suffix));
+    $data .= record(0x88, pack('C2', 0x80, 0xa1)) if defined $types;
     $data .= record(0x96, join('', map { counted($_) } qw(_DATA DATA SHARED_TEXT CODE DGROUP)));
     $data .= record(0x98, pack('CvCCC', 0x48, 2, 1, 2, 0));
     $data .= record(0x98, pack('CvCCC', 0x48, 16, 3, 4, 0));
@@ -38,13 +39,21 @@ sub object {
     $data .= definition($scope ? 0xb6 : 0x90, 2, 'Helper', 0) if $scope != 2;
     $data .= definition(0xb6, 1, 'LocalData', 0);
     # Local externals refer to this object's locals, with global fallback.
-    $data .= record($reference ? 0xb4 : 0x8c, counted('Helper') . "\0");
-    $data .= record(0xb4, counted('LocalData') . "\0");
+    $data .= record($reference ? 0xb4 : 0x8c, counted('Helper') . "\0") unless defined $types;
+    $data .= record(0xb4, counted('LocalData') . "\0") unless defined $types;
     $data .= record(0xa0, pack('Cv', 1, 0) . pack('v', $tag));
     my $code = pack('CvC', 0xb8, $tag, 0xc3) . "\xe8\0\0\xc3\xb8\0\0\xc3" . "\x90" x 4;
     $data .= record(0xa0, pack('Cv', 2, 0) . $code);
     # PC-relative word at 5 targets Helper; segment-relative word at 9 targets LocalData.
-    $data .= record(0x9c, pack('C8', 0x84, 5, 0x56, 1, 0xc4, 9, 0x56, 2));
+    $data .= record(0x9c, pack('C8', 0x84, 5, 0x56, 1, 0xc4, 9, 0x56, 2)) unless defined $types;
+    if (defined $types) {
+        $data .= record(0x96, join('', map { counted($_) }
+            qw($$TYPES DEBTYP $$SYMBOLS DEBSYM)));
+        $data .= record(0x99, pack('CVCCC', 0x21, length($types), 6, 7, 0));
+        $data .= record(0x99, pack('CVCCC', 0x21, 4, 8, 9, 0));
+        $data .= record(0xa1, pack('CV', 3, 0) . $types) if length($types);
+        $data .= record(0xa1, pack('CV', 4, 0) . pack('V', 1));
+    }
     return $data . record(0x8a, "\0");
 }
 sub link_objects {
@@ -131,4 +140,30 @@ for my $reverse (0, 1) {
             or die "cviews: static call bound to the wrong object\n";
     }
 }
-print "Glue local symbols: both orders, duplicate names, data and global fallback passed\n";
+# Missing type data and signature-only streams contain no records to scan.
+write_file('a.obj', object('A', 0x1111, 1, 1, ''));
+link_objects('notypes', 1, 'a.obj');
+write_file('a.obj', object('A', 0x1111, 1, 1, pack('V', 1)));
+link_objects('emptytypes', 1, 'a.obj');
+# Unreferenced types must be scanned after the signature, at record boundaries.
+my $enum = pack('v4', 1, 0x11, 0x1001, 0) . counted('UnusedEnum');
+my $fields = pack('v3', 0x0403, 0, 7) . counted('UNUSED_ENUM_VALUE');
+my $types = pack('V', 1) . pack('v2', 2 + length($enum), 0x0007) . $enum .
+    pack('v2', 2 + length($fields), 0x0204) . $fields;
+write_file('a.obj', object('A', 0x1111, 1, 1, $types));
+link_objects('unusedtypes', 1, 'a.obj');
+open my $symfile, '<:raw', 'unusedtypes.sym' or die $!;
+my $symbols = do { local $/; <$symfile> };
+index($symbols, 'enum UnusedEnum') >= 0 && index($symbols, 'UNUSED_ENUM_VALUE') >= 0
+    or die "Unreferenced CodeView types were not entered\n";
+# Reject incomplete headers and records before reading their payloads.
+for my $case (
+    ['shortcv', "\1\0\0"],
+    ['wrongcv', pack('V', 2)],
+    ['tailcv', pack('Vv', 1, 2)],
+    ['zerocv', pack('Vv2', 1, 0, 7)],
+    ['overcv', pack('Vv2', 1, 12, 7)]) {
+    write_file('a.obj', object('A', 0x1111, 1, 1, $case->[1]));
+    link_objects($case->[0], 0, 'a.obj');
+}
+print "Glue locals and empty, unreferenced and truncated CodeView types passed\n";

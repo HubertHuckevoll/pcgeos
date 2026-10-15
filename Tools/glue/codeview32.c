@@ -2510,16 +2510,33 @@ CV32ProcessUnprocessedTypeRecords(const char *file)
 {
     byte    	*bp;
     byte    	*end;
-    word    	len;
+    word            len, leaf;
+    dword           signature;
+
+    if (typeSize < sizeof(signature)) {
+        if (typeSize != 0)
+            Notify(NOTIFY_ERROR, "%s: truncated type segment", file);
+        return;
+    }
 
     bp = typeSeg;
     end = typeSeg + typeSize;
 
-    while (bp < end) {
-    	word leaf;
+    /* The four-byte CodeView signature is not a type record. */
+    MSObj_GetDWord(signature, bp);
+    if (signature != 1) {
+        Notify(NOTIFY_ERROR, "%s: unsupported type segment signature", file);
+        return;
+    }
+
+    while (end - bp >= 4) {
 	len = bp[0] | (bp[1] << 8);
 
 	bp += 2;
+        if (len < 2 || len > end - bp) {
+            Notify(NOTIFY_ERROR, "%s: invalid type record length", file);
+            return;
+        }
 	MSObj_GetWord(leaf, bp);
 	bp -= 2;
 
@@ -2538,6 +2555,8 @@ CV32ProcessUnprocessedTypeRecords(const char *file)
 		break;
 	}
     }
+    if (bp != end)
+        Notify(NOTIFY_ERROR, "%s: truncated type record", file);
 }
 
 /***********************************************************************
