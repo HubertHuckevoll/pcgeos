@@ -122,7 +122,6 @@
  *  Only overload START_MOVE_COPY in non-NewDeal versions,
  *  as it eliminates the drag copy web page feature.
 */
-@ifdef GLOBAL_INTERNET_BUILD
 /* Display an image's ALT text and consume the move/copy event. */
 @extern method URLTextClass, MSG_META_LARGE_START_MOVE_COPY
 {
@@ -157,7 +156,6 @@
     /* processed, no need to call superclass handling */
     retVal->flags = MRF_PROCESSED;
 }
-@endif
 @endif
 
 /*

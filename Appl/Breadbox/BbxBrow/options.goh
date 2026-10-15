@@ -29,26 +29,17 @@
 /* These contain "product specific" flags and while basically deprecated in
    in the FreeGEOS project, these flags are still needed for now... */
 
-#ifndef GLOBAL_INTERNET_BUILD
-#define GLOBAL_INTERNET_BUILD
-#endif
 /*
-The GLOBAL_INTERNET_BUILD flag is now the global
-default for all major products including:
-<default>, GPC1999, and NDO2000
-... and FreeGEOS (meyerk 12/2024)
-For older builds, undef it explictly.
-
 Older builds are:
+
 #define YAGO_2_BUILD
 @define YAGO_2_BUILD
+
 #define WEBMAGIC_FOR_GEOS_3
 @define WEBMAGIC_FOR_GEOS_3
+
 #define WEBMAGIC_FOR_GEOS_2
 @define WEBMAGIC_FOR_GEOS_2
-
-FIXME: for FreeGEOS, we should remove the GLOBAL_INTERNET_BUILD
-at some point and make the behaviour behind it the default.
 */
 
 /*
@@ -71,10 +62,8 @@ at some point and make the behaviour behind it the default.
 #define NUM_VMCACHE_FILES 5
 /* define this to limit number of cache files per directory */
 
-//@ifdef GLOBAL_INTERNET_BUILD
 ///#define ALT_SRC_CACHE
 //@define ALT_SRC_CACHE
-//@endif
 //#define SRCCACHEARRAY srcCacheArray
 //#define SRCCACHESIZE srcCacheSize
 /* use alternate source cache for certain hosts

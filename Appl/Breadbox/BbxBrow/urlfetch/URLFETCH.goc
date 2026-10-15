@@ -259,11 +259,7 @@ Boolean URLFetchEngineStart(void)
 	    /* allocate load progress semaphore, freed on exit? */
 	    G_fetchProgressSem[i] = ThreadAllocSem(1);
 	    /* create VM file */
-#ifdef GLOBAL_INTERNET_BUILD
 	    FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#else
-	    FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
 	    sprintf(workFileName, WORK_FILENAME, i);
 	    G_fetchProgressVMFile[i] = VMOpen(workFileName, VMAF_FORCE_READ_WRITE, VMO_CREATE_TRUNCATE, 1);
 	    if (G_fetchProgressVMFile[i]) {
@@ -581,11 +577,7 @@ void URLFetchExtraMemoryUnlock(optr em)
             G_fetchProgressVMFile[i] = NullHandle;
             G_fetchProgressDataStream[i] = NullHandle;
 	    sprintf(workFileName, WORK_FILENAME, i);
-#ifdef GLOBAL_INTERNET_BUILD
 	    FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#else
-	    FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
 	}
 
         /* Each child ends its own thread */

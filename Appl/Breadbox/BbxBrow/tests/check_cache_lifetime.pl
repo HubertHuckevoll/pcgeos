@@ -57,9 +57,7 @@ typedef int optr;
 typedef int AllocWatcherHandle;
 typedef char TCHAR;
 static int cacheFiles[NUM_CACHE_FILES] = {10, 11}, srcCacheFile = 12;
-#ifdef GLOBAL_INTERNET_BUILD
 static int textObjFile;
-#endif
 static int objCacheBlock = 20, objCacheArray, srcCacheArray;
 static int srcCacheSem = 40, objCacheSem = 41;
 static int altSrcCacheHosts, altSrcCacheExts;
@@ -135,7 +133,7 @@ static void VMSetAttributes(int file, int attrs, int clear)
 }
 static int NamePoolCreate(int file)
 {
-    assert(file == (GLOBAL_BUILD ? 13 : 10) && live[file]);
+    assert(file == 13 && live[file]);
     record("pool "); return acquire(31);
 }
 static void AttachToSrcCache(void)
@@ -199,16 +197,11 @@ int main(void)
             for (mask = 0; mask < (ALT_BUILD ? 4 : 1); mask++) {
                 assert(!namePool && !G_allocWatcher);
                 events[0] = 0; clients = 1;
-#ifdef GLOBAL_INTERNET_BUILD
                 vmCacheSP = HTML_VMCACHE_SP;
-#endif
                 jsecontext = (void *)1;
                 InitCacheLifetime();
-                strcpy(expected, "check watcher check path mkdir check path objects ");
-                if (GLOBAL_BUILD) strcat(expected, "open attributes ");
-                strcat(expected, "pool ");
-                if (GLOBAL_BUILD) strcat(expected, "path ");
-                strcat(expected, "sources check ");
+                strcpy(expected, "check watcher check path mkdir check path objects "
+                                 "open attributes pool path sources check ");
                 assert(strcmp(events, expected) == 0);
                 if (JS_BUILD) assert(!jsecontext);
                 events[0] = 0;
@@ -227,8 +220,7 @@ int main(void)
                 strcat(expected, "persist-objects persist-source block ");
                 if (mask & 1) strcat(expected, "hosts ");
                 if (mask & 2) strcat(expected, "exts ");
-                strcat(expected, "free-pool close close close ");
-                if (GLOBAL_BUILD) strcat(expected, "close path ");
+                strcat(expected, "free-pool close close close close path ");
                 strcat(expected, "free-watcher free-sem free-sem ");
                 assert(strcmp(events, expected) == 0);
                 assert(!namePool && !G_allocWatcher && !srcCacheArray && !objCacheArray);
@@ -241,18 +233,15 @@ int main(void)
 }
 C
 close $test or die $!;
-for my $global (0, 1) {
-    for my $alt (0, 1) {
-        for my $js (0, 1) {
-            my @flags = ("-DGLOBAL_BUILD=$global", "-DALT_BUILD=$alt",
-                         "-DJS_BUILD=$js", "-DJAVASCRIPT_SUPPORT=$js");
-            push @flags, '-DGLOBAL_INTERNET_BUILD' if $global;
-            push @flags, '-DALT_SRC_CACHE' if $alt;
-            system('cc', '-std=gnu89', '-Wall', '-Wextra', '-Werror',
-                   '-Wno-unused-function', @flags, "$tmp/check.c", '-o', "$tmp/check") == 0
-                or die "Host compilation failed\n";
-            system("$tmp/check") == 0 or die "Cache lifetime check failed\n";
-        }
+for my $alt (0, 1) {
+    for my $js (0, 1) {
+        my @flags = ("-DALT_BUILD=$alt", "-DJS_BUILD=$js",
+                     "-DJAVASCRIPT_SUPPORT=$js");
+        push @flags, '-DALT_SRC_CACHE' if $alt;
+        system('cc', '-std=gnu89', '-Wall', '-Wextra', '-Werror',
+               '-Wno-unused-function', @flags, "$tmp/check.c", '-o', "$tmp/check") == 0
+            or die "Host compilation failed\n";
+        system("$tmp/check") == 0 or die "Cache lifetime check failed\n";
     }
 }
-print "Cache lifetime: all 8 feature combinations passed\n";
+print "Cache lifetime: all 4 feature combinations passed\n";

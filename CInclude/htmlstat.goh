@@ -1,12 +1,8 @@
 @include <stattext.goh>
 
 /* Setup commonly used priorities based on the action involved */
-#ifdef GLOBAL_INTERNET_BUILD
 /* only shows when not loading */
 #define HTML_STATUS_URL_HIGHLIGHT STATUS_TEXT_PRIORITY_LOW+3
-#else
-#define HTML_STATUS_URL_HIGHLIGHT STATUS_TEXT_PRIORITY_HIGH
-#endif
 #define HTML_STATUS_RECEIVING     STATUS_TEXT_PRIORITY_MIDDLE
 #define HTML_STATUS_IMPORTING     STATUS_TEXT_PRIORITY_MIDDLE-1
 #define HTML_STATUS_FORMATTING    STATUS_TEXT_PRIORITY_MIDDLE-2

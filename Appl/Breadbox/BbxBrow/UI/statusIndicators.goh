@@ -138,15 +138,9 @@
 @include "Art/green.goh"
 @include "Art/red.goh"
 @include "Art/yellow.goh"
-@ifdef GLOBAL_INTERNET_BUILD
 @chunk TCHAR PCStatusLightOnHelp[] = _TEXT("KidGuard is On");
 @chunk TCHAR PCStatusLightOffHelp[] = _TEXT("KidGuard is Off");
 @chunk TCHAR PCStatusLightLimitedHelp[] = _TEXT("KidGuard is On (Limited Access)");
-@else
-@chunk TCHAR PCStatusLightOnHelp[] = _TEXT("Parental Control is On");
-@chunk TCHAR PCStatusLightOffHelp[] = _TEXT("Parental Control is Off");
-@chunk TCHAR PCStatusLightLimitedHelp[] = _TEXT("Parental Control is On (Limited Access)");
-@endif
 @object GenTriggerClass PCStatusLight = {
     GI_visMoniker = @PCStatusLightOffMoniker;
     GTI_actionMsg = MSG_HMLVP_PC_TOGGLE;

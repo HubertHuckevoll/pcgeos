@@ -5,11 +5,7 @@
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
 @object GenInteractionClass PCMenu = {
 
-@ifdef GLOBAL_INTERNET_BUILD
     GI_visMoniker = 'K', "KidGuard";
-@else
-    GI_visMoniker = 'P', "Parental Control";
-@endif
     GI_comp = @PCAddSite, @PCRemoveSite, @PCToggle;
     GII_visibility = GIV_POPUP;
 }
@@ -26,13 +22,8 @@
     GTI_destination = process;
 }
 
-@ifdef GLOBAL_INTERNET_BUILD
     @visMoniker PCToggleOn = 'T', "Turn KidGuard On";
     @visMoniker PCToggleOff = 'T', "Turn KidGuard Off";
-@else
-    @visMoniker PCToggleOn = 'T', "Turn Parental Control On";
-    @visMoniker PCToggleOff = 'T', "Turn Parental Control Off";
-@endif
 
 @object GenTriggerClass PCToggle = {
     GI_visMoniker = PCToggleOn;

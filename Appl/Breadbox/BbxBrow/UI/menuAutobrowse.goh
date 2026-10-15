@@ -3,14 +3,12 @@
  */
 
 @ifdef COMPILE_OPTION_AUTO_BROWSE
-@ifdef GLOBAL_INTERNET_BUILD
 @object GenInteractionClass AutoBrowseMenu = {
     GI_comp = @AutoBrowseTrigger,@AutoBrowseBulkTestTrigger, @BulkTestWithIndexTrigger,
     @AutoBrowseOptions;
     GI_visMoniker = "AutoBrowse";
     GII_visibility = GIV_POPUP;
 }
-@endif
 
 @object GenTriggerClass AutoBrowseTrigger = {
     GI_visMoniker = "Auto Browsing Test";

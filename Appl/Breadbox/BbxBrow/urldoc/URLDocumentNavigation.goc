@@ -22,10 +22,8 @@
 
 @extern object HTMLVApp;  /* Abort macro. */
 @extern object CurrentURLText;
-@ifdef GLOBAL_INTERNET_BUILD
 @extern object HelpWindow;
 @extern object HelpFrame;
-@endif
 @ifdef JAVASCRIPT_SUPPORT
 @extern object WindowOpenWindow;
 @extern object WindowOpenFrame;
@@ -105,11 +103,9 @@
     /* clear mod state so we'll update URL with current page */
     @call CurrentURLText::MSG_VIS_TEXT_SET_NOT_USER_MODIFIED();
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_RELOAD();
-@ifdef GLOBAL_INTERNET_BUILD
     if (@call HelpWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
         @call HelpFrame::MSG_URL_FRAME_RELOAD();
     }
-@endif
 @ifdef JAVASCRIPT_SUPPORT
     if (@call WindowOpenWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
         @call WindowOpenFrame::MSG_URL_FRAME_RELOAD();

@@ -879,14 +879,12 @@ VMBlockHandle HandleHTMLError(optr htmlMsg, HTMLextra *ext,
 {
     VMBlockHandle item;
     int ret ;
-@ifdef GLOBAL_INTERNET_BUILD
     TCHAR errorFile[PATH_LENGTH_ZT];
     TCHAR *msgP, *fnameP;
     TCHAR *errorFileP = &errorFile;
     FileHandle errorFH;
     TCHAR *argP = NULL;
     dword argSize = 0;
-@endif
 @ifdef DIALOG_ERROR
     Boolean reportedErr = FALSE;
 @endif
@@ -907,7 +905,6 @@ VMBlockHandle HandleHTMLError(optr htmlMsg, HTMLextra *ext,
 @endif
 
     /* if we have special error message, use it */
-@ifdef GLOBAL_INTERNET_BUILD
     ret = 1;
     msgP = MemLock(OptrToHandle(htmlMsg));
     if (OptrToChunk(htmlMsg)) {
@@ -1034,14 +1031,6 @@ VMBlockHandle HandleHTMLError(optr htmlMsg, HTMLextra *ext,
     G_codePage = ext->HE_codePage;
 @endif
     }
-@else
-    ret = ParseFrameHTML(HFTT_SOURCE_OPTR, (dword)htmlMsg,
-        ext, &item, G_allocWatcher, usedMem);
-@ifdef DO_DBCS
-    /* store parsed code page */
-    G_codePage = ext->HE_codePage;
-@endif
-@endif
     if(ret)
         item = NullHandle;
 

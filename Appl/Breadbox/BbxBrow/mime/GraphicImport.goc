@@ -207,11 +207,7 @@ Boolean ImportThreadEngineStart(void)
                                 dup,
                                 OptrToChunk(@ImportThreadTemplate)) ;
                 G_importThreadMemory[i] = dup ;
-#ifdef GLOBAL_INTERNET_BUILD
                 FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#else
-                FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
                 sprintf(workFileName, IMPORT_WORK_FILENAME, i);
                 G_importWorkFile[i] = VMOpen(workFileName, VMAF_FORCE_READ_WRITE, VMO_CREATE_TRUNCATE, 1);
                 if (G_importWorkFile[i])
@@ -271,11 +267,7 @@ void ImportThreadEngineStop(void)
             if (G_importWorkFile[i]) {
                 VMClose(G_importWorkFile[i], FILE_NO_ERRORS);
                 sprintf(workFileName, IMPORT_WORK_FILENAME, i);
-#ifdef GLOBAL_INTERNET_BUILD
                 FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#else
-                FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
                 G_importWorkFile[i] = 0;
             }
         }

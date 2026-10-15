@@ -7,9 +7,6 @@
     GII_visibility = GIV_SUB_GROUP;
     ATTR_GEN_CONTROL_PROHIBIT_UI =
     GECF_UNDO|GECF_DELETE
-@ifndef GLOBAL_INTERNET_BUILD
-    |GECF_CUT|GECF_PASTE
-@endif
 @ifndef COMPILE_OPTION_SELECT_ALL
     |GECF_SELECT_ALL
 @endif
@@ -36,23 +33,15 @@
 }
 @endif
 
-@ifdef GLOBAL_INTERNET_BUILD
 @object WMSearchReplaceControlClass SearchReplaceControl = {
-@else
-@object SearchReplaceControlClass SearchReplaceControl = {
-@endif
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_visMoniker = 'F', "Find Text On This Page";
     GI_kbdAccelerator = control 'F';
     GII_visibility = GIV_DIALOG;
     GCI_output = (TO_APP_TARGET);
     ATTR_SEARCH_CONTROL_INTERACT_ONLY_WITH_TARGETED_TEXT_OBJECTS;
-@ifdef GLOBAL_INTERNET_BUILD
     /* allow URLEntryClass to forward to URLTextClass */
     ATTR_GEN_DESTINATION_CLASS = { (ClassStruct*)&VisTextClass };
-@else
-    ATTR_GEN_DESTINATION_CLASS = { (ClassStruct*)&URLTextClass };
-@endif
     ATTR_GEN_CONTROL_PROHIBIT_UI =
     SRCF_REPLACE_CURRENT | SRCF_REPLACE_ALL_IN_SELECTION | SRCF_REPLACE_ALL |
     SRCF_FIND_PREV;

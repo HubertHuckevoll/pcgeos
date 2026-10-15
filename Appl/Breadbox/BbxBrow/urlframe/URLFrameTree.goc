@@ -58,11 +58,7 @@ extern MemHandle PostDataCacheFind(NameToken url);
     @send frameObj::MSG_URL_FRAME_SET_TEXT_OBJ(textObj);
     @send textObj::MSG_URL_TEXT_SET_FRAME_OBJ(frameObj);
     /* Tell HTML Text object about the file to store its data in. */
-@ifdef GLOBAL_INTERNET_BUILD
     @send textObj::MSG_HTML_TEXT_INIT_STORAGE(textObjFile);
-@else
-    @send textObj::MSG_HTML_TEXT_INIT_STORAGE(cacheFile);
-@endif
     @send textObj::MSG_VIS_NOTIFY_GEOMETRY_VALID();
 @ifdef COMPILE_OPTION_PAGE_SIZE_CONTROL
     @send textObj::MSG_HTML_TEXT_SET_PAGE_SIZE_CONTROLLER(@PageSizeControl) ;

@@ -71,9 +71,7 @@
 #endif
 #endif
 
-#ifdef GLOBAL_INTERNET_BUILD
 #define TEXT_OBJ_FILE_NAME      _TEXT("TEXTOBJF.000")
-#endif
 
 #define GR_CACHE_ITEM_SIZE_LIMIT 20  /* in K */
 
@@ -573,13 +571,9 @@ extern VMFileHandle cacheFiles[], srcCacheFile;
 /* size limit for VM header of each file, enforced in
    IMPORT_THREAD_ENGINE_IMPORT_GRAPHIC */
 #define CACHE_FILE_HEADER_SIZE_LIMIT 65535
-#ifdef GLOBAL_INTERNET_BUILD
 extern word vmCacheSP;
 extern TCHAR vmCacheDir[];
-#endif
-#ifdef GLOBAL_INTERNET_BUILD
 extern VMFileHandle textObjFile;
-#endif
 
 void _pascal InitCacheLifetime(void);
 void AddCacheFileReference(void);
@@ -1242,9 +1236,7 @@ void UpdateStop(Boolean enabled);
 void UserAbortStart(void) ;
 void UserAbortEnd(void) ;
 
-@ifdef GLOBAL_INTERNET_BUILD
 #define SEARCH_URL_TEMPLATE "searchURL%d"
-@endif
 
 void extern _pascal OpenConnection(SemaphoreHandle quitSem);
 

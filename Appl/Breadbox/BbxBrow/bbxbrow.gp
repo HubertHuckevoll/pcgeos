@@ -105,10 +105,8 @@ resource   TopIcons3Resource    ui-object
 resource   TopIcons4Resource    lmem read-only shared
 resource   ToolMonikerResource   ui-object
 
-ifdef GLOBAL_INTERNET_BUILD
 resource   HelpUIResource       ui-object
 resource   HelpFrameResource  object
-endif
 
 export     URLDocumentControlClass
 export     URLDocumentClass

@@ -39,11 +39,7 @@
     GTXI_attrs = @default | GTA_SINGLE_LINE_TEXT;
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
     HINT_PLACE_MONIKER_TO_LEFT;
-@ifdef GLOBAL_INTERNET_BUILD
     GTXI_maxLength = FILE_LONGNAME_LENGTH;
     /* DOS longnames are also supported */
     ATTR_GEN_TEXT_LEGAL_FILENAMES;
-@else
-    ATTR_GEN_TEXT_LEGAL_DOS_FILENAMES;
-@endif
 }

@@ -64,10 +64,8 @@
 extern Boolean G_pcBypassed;
 @endif
 
-@ifdef GLOBAL_INTERNET_BUILD
 @extern object HelpWindow;
 @extern object HelpFrame;
-@endif
 
 @ifdef JAVASCRIPT_SUPPORT
 @extern object WindowOpenWindow;
@@ -83,14 +81,10 @@ extern Boolean G_pcBypassed;
         GDGI_genDocument = @HTMLDocument;
         GDGI_genDisplay = @HTMLDisplay;
         GDGI_genDisplayGroup = @HTMLDisplayGroup;
-@ifdef GLOBAL_INTERNET_BUILD
 @ifdef DO_DBCS
      GDGI_untitledName = "browser page";
 @else
      GDGI_untitledName = "WebMagick";
-@endif
-@else
-     GDGI_untitledName = "untitled";
 @endif
         ATTR_GEN_DOCUMENT_GROUP_DOCUMENT_HANDLES = {
             0
@@ -103,11 +97,7 @@ extern Boolean G_pcBypassed;
 
     @object GenDisplayClass HTMLDisplay = {
         GI_states = @default & ~GS_USABLE;
-@ifdef GLOBAL_INTERNET_BUILD
         GI_visMoniker = "WebMagick";
-@else
-        GI_visMoniker = "untitled";
-@endif
         GI_comp = @UITop;
         ATTR_GEN_DISPLAY_NOT_MINIMIZABLE;
         HINT_DEFAULT_TARGET;
@@ -152,9 +142,7 @@ extern Boolean G_pcBypassed;
     HINT_EXPAND_HEIGHT_TO_FIT_PARENT;
     HINT_MINIMIZE_CHILD_SPACING;
     HINT_VIEW_REMOVE_SCROLLERS_WHEN_NOT_SCROLLABLE;  /* default is AUTO */
-@ifdef GLOBAL_INTERNET_BUILD
     ATTR_GEN_VIEW_NOTIFY_EVEN_IF_NOT_TARGETED;
-@endif
 }
 
 @end ViewTemplateResource;
@@ -328,11 +316,7 @@ extern Boolean G_pcBypassed;
         }
     }
 
-#ifdef GLOBAL_INTERNET_BUILD
     *fileOrError = textObjFile;
-#else
-    *fileOrError = cacheFile;
-#endif
     HWChecksumCheck() ;
     return FALSE;
 }
@@ -355,10 +339,8 @@ extern Boolean G_pcBypassed;
 @method URLDocumentClass, MSG_GEN_DOCUMENT_DETACH_UI_FROM_DOCUMENT
 {
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_DETACH_VIEW_CONTENT_TREE();
-@ifdef GLOBAL_INTERNET_BUILD
     /* Tell help window to clean up. */
     @call HelpFrame::MSG_URL_FRAME_DETACH_VIEW_CONTENT_TREE();
-@endif
 @ifdef JAVASCRIPT_SUPPORT
     /* Tell window.open window to clean up. */
     @call WindowOpenFrame::MSG_URL_FRAME_DETACH_VIEW_CONTENT_TREE();
@@ -380,17 +362,13 @@ extern Boolean G_pcBypassed;
     /* release memory for history arrays */
 
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_DELETE_ALL(TRUE);
-@ifdef GLOBAL_INTERNET_BUILD
     @call HelpFrame::MSG_URL_FRAME_DELETE_ALL(TRUE);
-@endif
 @ifdef JAVASCRIPT_SUPPORT
     @call WindowOpenFrame::MSG_URL_FRAME_DELETE_ALL(TRUE);
 @endif
 
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_DESTRUCT_TEXT_TREE();
-@ifdef GLOBAL_INTERNET_BUILD
     @call HelpFrame::MSG_URL_FRAME_DESTRUCT_TEXT_TREE();
-@endif
 @ifdef JAVASCRIPT_SUPPORT
     @call WindowOpenFrame::MSG_URL_FRAME_DESTRUCT_TEXT_TREE();
 @endif
@@ -570,7 +548,6 @@ extern Boolean G_pcBypassed;
     }
 /*@endif */
 @endif
-@ifdef GLOBAL_INTERNET_BUILD
     if (@call HelpWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
         @call HelpFrame::MSG_URL_FRAME_UPDATE_FRAME_UI(&focusOptr);
 /*@ifndef COMPILE_OPTION_DRAG_COPY_WEB_PAGES */
@@ -580,7 +557,6 @@ extern Boolean G_pcBypassed;
         }
 /*@endif */
     }
-@endif
 }
 
 @extern method URLDocumentClass, MSG_URL_DOCUMENT_RELOAD;
@@ -901,11 +877,9 @@ extern Boolean G_pcBypassed;
 @method URLDocumentClass, MSG_URL_DOCUMENT_ENSURE_SCRIPT_CONTEXT
 {
     @call (pself->UDCI_topFrame)::MSG_URL_FRAME_ENSURE_SCRIPT_CONTEXT();
-@ifdef GLOBAL_INTERNET_BUILD
     if (@call HelpWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
         @call HelpFrame::MSG_URL_FRAME_ENSURE_SCRIPT_CONTEXT();
     }
-@endif
 @ifdef JAVASCRIPT_SUPPORT
     if (@call WindowOpenWindow::MSG_VIS_GET_ATTRS() & VA_VISIBLE) {
         @call WindowOpenFrame::MSG_URL_FRAME_ENSURE_SCRIPT_CONTEXT();

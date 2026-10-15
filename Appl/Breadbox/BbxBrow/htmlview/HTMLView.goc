@@ -79,11 +79,7 @@
 @include "Art/toolicon.goh"
 
 @start  HTMLResource, data;
-@ifdef GLOBAL_INTERNET_BUILD
   @visMoniker Untitled = "WebMagick";
-@else
-  @visMoniker Untitled = "untitled";
-@endif
 
   @chunk TCHAR MsgNoEdit[] = _TEXT("No text editor has been defined. \1");
   @chunk TCHAR MsgBadEdit[] = _TEXT("Invalid file name for text editor. \1");
@@ -91,15 +87,9 @@
                               "to specify a program.");
   @chunk TCHAR MsgBadFile[] = _TEXT("URL could not be opened for editing.");
 
-@ifdef GLOBAL_INTERNET_BUILD
   @chunk TCHAR MsgLoading[] = _TEXT("Formatting Page.");
   @chunk TCHAR MsgLoadCache[] = _TEXT("Loading Page (from Cache).");
   @chunk TCHAR MsgCaching[] = _TEXT("Storing Page to Cache.");
-@else
-  @chunk TCHAR MsgLoading[] = _TEXT("Formatting Document.");
-  @chunk TCHAR MsgLoadCache[] = _TEXT("Loading Document (from Cache).");
-  @chunk TCHAR MsgCaching[] = _TEXT("Storing Document to Cache.");
-@endif
   @chunk TCHAR MsgLoadImg[] = _TEXT("Loading Image.");
 
   @chunk TCHAR MsgNoViewer[] = _TEXT(
@@ -152,13 +142,8 @@
     "Please reset the machine for the changes to be completed.") ;
 @endif
   @chunk TCHAR MsgBlank[] = _TEXT("");
-@ifdef GLOBAL_INTERNET_BUILD
   @chunk TCHAR StatusLineLoading[] = _TEXT("Loading page.") ;
   @chunk TCHAR StatusLineDone[] = _TEXT("Page done.") ;
-@else
-  @chunk TCHAR StatusLineLoading[] = _TEXT("Loading document.") ;
-  @chunk TCHAR StatusLineDone[] = _TEXT("Document done.") ;
-@endif
 /* we should never really see this as it is only returned for inline items */
   @chunk TCHAR MsgConnectionError[] = _TEXT(
     "<H1>Check connection</H1>"
@@ -707,7 +692,6 @@ void RestoreTVBW(void)
     return pself->UEI_plainFont;
 }
 
-@ifdef GLOBAL_INTERNET_BUILD
 /*
  * forward search request to HTML area
  */
@@ -726,7 +710,6 @@ void RestoreTVBW(void)
         @send SearchReplaceControl::MSG_SRC_FIND_FROM_TOP();
     }
 }
-@endif
 
 /* convenient way to ensure start of URL is shown */
 @method URLEntryClass, MSG_VIS_TEXT_REPLACE_ALL_PTR

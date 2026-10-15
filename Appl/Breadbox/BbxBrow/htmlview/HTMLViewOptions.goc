@@ -496,7 +496,6 @@ extern MemHandle jsErrorString;
  *              Search & Replace Control class
  **************************************************************************/
 
-@ifdef GLOBAL_INTERNET_BUILD
 @classdecl WMSearchReplaceControlClass;
 /*
  * never disable search control (i.e. when URL entry has target)
@@ -507,7 +506,6 @@ extern MemHandle jsErrorString;
         @callsuper();
     }
 }
-@endif
 
 @ifdef COMPILE_OPTION_ENABLE_NUMCONN_OPTION
 

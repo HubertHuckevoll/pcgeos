@@ -45,20 +45,16 @@ AllocWatcherHandle G_allocWatcher = NullWatcher ;
 
 static word cacheFileRefCount;
 
-#ifdef GLOBAL_INTERNET_BUILD
 /* holds cache directory */
 word vmCacheSP = HTML_VMCACHE_SP;
 TCHAR vmCacheDir[20];  /* no need for full path buffer */
-#endif
 
 /* Prepare shared storage and acquire the navigation system's reference. */
 void _pascal InitCacheLifetime(void)
 {
     dword availMem ;
     word Kavail ;
-#ifdef GLOBAL_INTERNET_BUILD
     word dataSize;
-#endif
 
     HWChecksumCheck() ;
 
@@ -71,7 +67,6 @@ void _pascal InitCacheLifetime(void)
     }
     G_allocWatcher = AllocWatcherCreate(availMem) ;
 
-#ifdef GLOBAL_INTERNET_BUILD
     /* setup VM cache directory */
     InitFileReadInteger(HTMLVIEW_CATEGORY, "vmCacheSP", &vmCacheSP);
     if (InitFileReadStringBuffer(HTMLVIEW_CATEGORY, "vmCacheDir",
@@ -79,7 +74,6 @@ void _pascal InitCacheLifetime(void)
         /* not found in .ini, use default */
         xstrncpy(vmCacheDir, HTML_VMCACHE_DIR, sizeof(vmCacheDir)/sizeof(TCHAR));
     }
-#endif
 
     HWChecksumCheck() ;
     FileSetCurrentPath(HTML_CACHE_SP, _TEXT("."));
@@ -104,15 +98,10 @@ void AddCacheFileReference(void)
 {
     if(cacheFileRefCount++ == 0)        /* one more "client" uses the file */
     {                                   /* first client creates new file */
-#ifdef GLOBAL_INTERNET_BUILD
       FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#else
-      FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
 
       AttachToObjCache();               // load cache state from VM file
 
-#ifdef GLOBAL_INTERNET_BUILD
       /* create separate file for text object storage, share cache file ref
          count */
       textObjFile = VMOpen(TEXT_OBJ_FILE_NAME, VMAF_FORCE_READ_WRITE,
@@ -125,14 +114,8 @@ void AddCacheFileReference(void)
 
       namePool = NamePoolCreate(textObjFile);
                                         // create global name pool
-#else
-      namePool = NamePoolCreate(cacheFiles[0]);
-                                        // create global name pool
-#endif
 
-#ifdef GLOBAL_INTERNET_BUILD
       FileSetCurrentPath(HTML_VMCACHE_SP, HTML_VMCACHE_DIR);
-#endif
       AttachToSrcCache();               // load cache state from VM file
 
 #if JAVASCRIPT_SUPPORT
@@ -191,10 +174,8 @@ void RemoveCacheFileReference(void)
       for(i=0; i<NUM_CACHE_FILES; i++)  /* close cache file */
         VMClose(cacheFiles[i], FILE_NO_ERRORS);
       VMClose(srcCacheFile, FILE_NO_ERRORS);
-#ifdef GLOBAL_INTERNET_BUILD
       VMClose(textObjFile, FILE_NO_ERRORS);
       FileSetCurrentPath(vmCacheSP, vmCacheDir);
-#endif
 
       AllocWatcherDestroy(G_allocWatcher) ;
       G_allocWatcher = NullWatcher ;

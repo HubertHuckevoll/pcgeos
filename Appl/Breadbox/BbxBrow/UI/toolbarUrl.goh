@@ -2,11 +2,9 @@
 * the URL entry bar itself
 */
 @object URLEntryClass CurrentURLText = {
-@ifdef GLOBAL_INTERNET_BUILD
     GI_attrs = @default | GA_TARGETABLE;
 // allow URL entry to forward search request to HTML area
 // ATTR_GEN_TEXT_DO_NOT_INTERACT_WITH_SEARCH_CONTROL;
-@endif
     GTXI_maxLength = HTML_MAX_BUF-1;
     GTXI_attrs = @default | GTA_SINGLE_LINE_TEXT | GTA_TAIL_ORIENTED;
     GTXI_applyMsg = MSG_HMLVP_URL_CHANGED;

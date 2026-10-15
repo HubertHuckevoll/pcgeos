@@ -23,10 +23,8 @@
 
 @extern object HTMLVApp;  /* Status, progress and abort macros. */
 @extern object CurrentURLText;
-@ifdef GLOBAL_INTERNET_BUILD
 @extern object HelpWindow;
 @extern object HelpFrame;
-@endif
 @ifdef JAVASCRIPT_SUPPORT
 @extern object WindowOpenWindow;
 @extern object WindowOpenFrame;
@@ -91,14 +89,12 @@ extern Boolean CheckConnected(void);
     {                                   /* link to top */
         try = top;                        /* only try top frame */
     }
-@ifdef GLOBAL_INTERNET_BUILD
     else if(NamePoolTestEqualI(namePool, target, _TEXT("_help")))
     {
         try = @HelpFrame;
         /* attach help frame to our document for now */
         @call try::MSG_URL_FRAME_SET_DOCUMENT_OBJ(doc);
     }
-@endif
     else
     {                                   /* any other links: check from top */
         try = @call top::MSG_URL_FRAME_FIND_TARGET_BY_TITLE(target);
@@ -172,9 +168,7 @@ extern Boolean CheckConnected(void);
         /* clear mod state so we'll update URL with current page */
         @call CurrentURLText::MSG_VIS_TEXT_SET_NOT_USER_MODIFIED();
         @call try::MSG_URL_FRAME_FETCH_URL(absURL, dirMode, postData, referer);
-@ifdef GLOBAL_INTERNET_BUILD
         if (try == @HelpFrame) @call HelpWindow::MSG_GEN_INTERACTION_INITIATE();
-@endif
         NamePoolReleaseToken(namePool, referer);
         NamePoolReleaseToken(namePool, absURL);
     }

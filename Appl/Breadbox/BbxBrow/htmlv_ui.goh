@@ -25,11 +25,7 @@
                          @Moniker2,@Moniker3,@Moniker4}
     ATTR_GEN_INIT_FILE_CATEGORY = HTMLVIEW_CATEGORY;
     ATTR_GEN_INIT_FILE_PROPAGATE_TO_CHILDREN;
-@ifdef GLOBAL_INTERNET_BUILD
     ATTR_GEN_HELP_FILE = "internet";
-@else
-    ATTR_GEN_HELP_FILE = "WebMagick Help File";
-@endif
     /* ATTR_GEN_APPLICATION_SAVE_OPTIONS_TRIGGER = @SaveOptionsButton; */
     ATTR_GEN_APPLICATION_PRINT_CONTROL = @PrintControl;
 
@@ -247,7 +243,6 @@
 /*
  * Help UI resources
  */
-@ifdef GLOBAL_INTERNET_BUILD
 @start HelpUIResource;
     @visMoniker HelpWindowMoniker = "Help";
     @object GenInteractionClass HelpWindow = {
@@ -270,7 +265,6 @@
 @start HelpFrameResource;
     @object URLFrameClass HelpFrame = {}
 @end HelpFrameResource;
-@endif
 
 /*
  * Parental control stuff
@@ -360,9 +354,7 @@
              ,@PCMenu
 @endif
 @ifdef COMPILE_OPTION_AUTO_BROWSE
-@ifdef GLOBAL_INTERNET_BUILD
              ,@AutoBrowseMenu
-@endif
 @endif
 @if defined(JAVASCRIPT_SUPPORT) && defined(DO_ERROR_CHECKING)
               ,@JSMenu
@@ -371,14 +363,12 @@
 @ifdef COMPILE_OPTION_LOCAL_PAGES
              ,@LocalSaveDlg
 @endif
-@ifdef GLOBAL_INTERNET_BUILD
 @ifdef COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR
 @ifdef COMPILE_OPTION_JUMP_FEATURE
              ,@JumpDialog
 @endif
              ,@HelpWindow
              ,@GotoDialog
-@endif
 @endif
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
              ,@PCToggleOffDlg
@@ -447,11 +437,6 @@
     GI_comp = @NavigateHome,@NavigateBack,@NavigateForward,@NavigateStop
 @ifndef COMPILE_OPTION_HISTORY_ON_MENU_BAR
               , @HistoryMenu
-@endif
-@ifdef COMPILE_OPTION_AUTO_BROWSE
-@ifndef GLOBAL_INTERNET_BUILD
-              ,@AutoBrowseTrigger, @AutoBrowseBulkTestTrigger, @BulkTestWithIndexTrigger
-@endif
 @endif
               ;
 }

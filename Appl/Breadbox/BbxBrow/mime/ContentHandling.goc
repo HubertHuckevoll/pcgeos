@@ -153,14 +153,7 @@ optr SaveUnknownFile(TCHAR *file, NameToken url)
       {
         // add default extension or truncate extension if necessary
         ext = strchr(saveFile, '.');
-        if(ext)                         /* extension specified? */
-        {
-#ifndef GLOBAL_INTERNET_BUILD  /* allow DOS longnames */
-          if(strlen(ext)>4)             /* yes: truncate oversized extensions */
-            ext[4] = 0;
-#endif
-        }
-        else                            /* no: add default extension, if any */
+        if(!ext)                        /* add default extension, if any */
         {
           if(defaultExtension && *defaultExtension &&
             strlen(saveFile)+strlen(defaultExtension)+2<sizeof(saveFile))

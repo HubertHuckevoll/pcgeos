@@ -69,8 +69,6 @@ print $test <<'C';
 #define IMPORT_PROGRESS_DATA_QUEUE_SIZE 20
 #define HTMLVIEW_CATEGORY "HTMLView"
 #define IMPORT_WORK_FILENAME "IMPORTWK.%03d"
-#define HTML_VMCACHE_SP 0
-#define HTML_VMCACHE_DIR ""
 #define FILE_NO_ERRORS 0
 #define MIME_STATUS_ABORT 1
 #define NullHandle 0
@@ -94,6 +92,8 @@ typedef struct { int type; Request *requestP; } Event;
 typedef struct { int numAborts; } Engine;
 typedef unsigned short word;
 static int G_importThreadStarted, G_fetchWhileImport;
+static word vmCacheSP = 2;
+static char vmCacheDir[] = "CUSTOM";
 static int G_importThreadObj[3], G_importThreadMemory[3], G_importWorkFile[3];
 static int G_importActive[2], G_importProgressDataQueue[20];
 static int G_importProgressDataQueueSem;
@@ -119,7 +119,10 @@ static void ThreadVSem(int sem)
     if (sem == 1) { assert(progressLocked); progressLocked = 0; }
     else { assert(sem >= 10 && sem < 12); released[sem-10]++; }
 }
-static void FileSetCurrentPath(int sp, const char *pathP) { (void)sp; (void)pathP; }
+static void FileSetCurrentPath(int sp, const char *pathP)
+{
+    assert(sp == vmCacheSP && strcmp(pathP, vmCacheDir) == 0);
+}
 static void VMClose(int file, int flags) { (void)flags; assert(file >= 10 && file < 13); closed[file-10]++; }
 static void FileDelete(const char *pathP) { assert(pathP[0] >= '0' && pathP[0] <= '5'); deleted[pathP[0]-'0']++; }
 static void ObjCacheUnlockItem(int owner) { assert(owner >= 1 && owner <= 6); unlocked[owner-1]++; }

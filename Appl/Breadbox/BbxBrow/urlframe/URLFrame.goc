@@ -64,11 +64,9 @@
 
 @extern object HTMLVApp;        // for @AbortOperation()
 
-@ifdef GLOBAL_INTERNET_BUILD
 @extern object HelpWindow;
 @extern object HelpFrame;
 @extern chunk HelpWindowMoniker;
-@endif
 
 @ifdef JAVASCRIPT_SUPPORT
 @extern object WindowOpenWindow;
@@ -259,9 +257,7 @@ extern void UserAbortEnd(void);
 
 @method URLFrameClass, MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET
 {
-@ifdef GLOBAL_INTERNET_BUILD
     TCHAR buf[80];
-@endif
     optr document = pself->UFI_document;
 
     HWChecksumCheck() ;
@@ -318,7 +314,6 @@ extern void UserAbortEnd(void);
         @call document::MSG_URL_DOCUMENT_NOTIFY_TOP_CHANGE(url, title);
                                             /* inform document about top change */
     }
-@ifdef GLOBAL_INTERNET_BUILD
     if (oself == @HelpFrame) {
         if (title) {
             NamePoolCopy(namePool, buf, sizeof(buf), title, NULL);
@@ -327,7 +322,6 @@ extern void UserAbortEnd(void);
             @call HelpWindow::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(@HelpWindowMoniker, VUM_DELAYED_VIA_APP_QUEUE);
         }
     }
-@endif
 @ifdef JAVASCRIPT_SUPPORT
     if (oself == @WindowOpenFrame) {
         if (title) {

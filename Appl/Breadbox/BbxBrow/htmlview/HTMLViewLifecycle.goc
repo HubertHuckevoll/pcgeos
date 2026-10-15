@@ -151,14 +151,6 @@ GeodeHandle G_Html4Par;
         InitFileReadBoolean(HTMLVIEW_CATEGORY, "ignoreInput", &G_ignoreInput);
 @endif
 
-@ifndef GLOBAL_INTERNET_BUILD  /* always use Doc only -- brianc 10/21/99 */
-@ifndef PRODUCT_NDO2000
-    if(UserGetDefaultUILevel()!=UIIL_INTRODUCTORY)
-    {
-    @call DownloadFileSel::MSG_META_DELETE_VAR_DATA(ATTR_GEN_FILE_SELECTOR_VIRTUAL_ROOT);
-    }
-@endif
-@else
     /* limit CUI to Document, Archive and Floppy; AUI is anywhere under Doc */
     if (UserGetDefaultUILevel() == UIIL_INTRODUCTORY) {
         FileSelectorFileCriteria fsfc;
@@ -171,7 +163,6 @@ GeodeHandle G_Html4Par;
             fsa & ~(FSA_ALLOW_CHANGE_DIRS | FSA_HAS_CLOSE_DIR_BUTTON |
                     FSA_HAS_OPEN_DIR_BUTTON | FSA_HAS_CHANGE_DIRECTORY_LIST));
     }
-@endif
 
 @ifdef REMOVE_RELOAD_ON_TV_CUI
     /* before calling super */

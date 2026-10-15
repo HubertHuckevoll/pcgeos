@@ -61,9 +61,7 @@
 optr objCachePool;
 VMFileHandle cacheFiles[NUM_CACHE_FILES];
 MemHandle objCacheBlock;
-#ifdef GLOBAL_INTERNET_BUILD
 VMFileHandle textObjFile;
-#endif
 
 ObjCacheToken objFileNum;
 #ifdef DEFAULT_OBJECT_CACHE_LIMIT
@@ -216,11 +214,7 @@ void AttachToObjCache(void)
         /* Open i-th file for cache */
         sprintf(cacheFileName, HTML_CACHE_NAME, i);
         cacheFiles[i] = VMOpen(cacheFileName, VMAF_FORCE_READ_WRITE, VMO_OPEN,
-#ifdef GLOBAL_INTERNET_BUILD
             1
-#else
-            0
-#endif
             );
         if(!cacheFiles[i]) break;         // file is missing: abort
         /* check file protocol */
@@ -271,11 +265,7 @@ void AttachToObjCache(void)
             sprintf(cacheFileName, HTML_CACHE_NAME, i);
             cacheFiles[i] = VMOpen(cacheFileName, VMAF_FORCE_READ_WRITE,
                 VMO_CREATE_TRUNCATE,
-#ifdef GLOBAL_INTERNET_BUILD
                 1
-#else
-                0
-#endif
                 );
             /* set protocol number (ignore error?) */
             protocol.PN_major = OBJ_CACHE_MAJOR_VERSION;
@@ -294,13 +284,9 @@ void AttachToObjCache(void)
         objCachePool = NamePoolCreate(cacheFiles[0]);
     }
 
-#ifndef GLOBAL_INTERNET_BUILD
-    VMSetAttributes(cacheFiles[0], VMA_SYNC_UPDATE, 0) ;
-#else
     /* don't need SYNC_UPDATE since cache file is per-session only, so if
        version on disk is not consistent, it doesn't matter (saves handles
        as VM blocks can be flushed to disk) */
-#endif
 }
 
 Boolean LOCAL ObjCacheRemoveEntry(objCacheData *obj)

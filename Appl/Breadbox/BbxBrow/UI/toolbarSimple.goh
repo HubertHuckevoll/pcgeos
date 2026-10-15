@@ -201,6 +201,4 @@
 @visMoniker ReloadMoniker = "Reload" ;
 @visMoniker StopMoniker = "Stop" ;
 @visMoniker PrintMoniker = "Print" ;
-@ifdef GLOBAL_INTERNET_BUILD
     @visMoniker JumpMoniker = "Jump" ;
-@endif

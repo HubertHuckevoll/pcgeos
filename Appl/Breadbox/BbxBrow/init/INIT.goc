@@ -41,10 +41,8 @@
 @extern object DefaultFontList;
 @extern object DocumentControl ;
 
-@ifdef GLOBAL_INTERNET_BUILD
 @extern object HelpFrame;
 @extern object HelpTop;
-@endif
 
 @ifdef COPY_TO_SCRAPBOOK
 @extern object HTMLVApp;
@@ -377,7 +375,7 @@ void CleanupImpDoc(void)
     }
 }
 
-#ifdef GLOBAL_INTERNET_BUILD_and_0  /* not needed for portal registration */
+#if 0  /* not needed for portal registration */
 /*
  * this is kinda ugly, we add a cookie directly to the cookie file
  */
@@ -488,10 +486,8 @@ void InitNavigation(void)
 
     InitCacheLifetime();
 
-@ifdef GLOBAL_INTERNET_BUILD
     /* set up help window */
     @send HelpFrame::MSG_URL_FRAME_SET_INTERACTION_OBJ(@HelpTop);
-@endif
 
     for(i=0; i<HTML_LRUSIZE; i++)       /* initialize buffer for recent URLs */
     {
@@ -627,7 +623,7 @@ void InitNavigation(void)
 @ifdef COPY_TO_SCRAPBOOK
      @call application::MSG_META_GCN_LIST_ADD(@HTMLVApp, GAGCNLT_APP_TARGET_NOTIFY_SELECT_STATE_CHANGE, MANUFACTURER_ID_GEOWORKS);
 @endif
-#ifdef GLOBAL_INTERNET_BUILD_and_0  /* not needed for portal registration */
+#if 0  /* not needed for portal registration */
      /* set up initial portal cookie, if needed */
      SetPortalCookie();
 #endif
@@ -810,12 +806,8 @@ void EnsureINISettings(AppAttachFlags attachFlags)
     HWChecksumCheck() ;
 
     /* Compare the .INI version number with what we think we have */
-    /* If it has changed, we do a complete rewrite of the .INI area */
+    /* Keep existing settings when updating the .INI version. */
     if (version != HTML_VIEW_INI_VERSION_NUMBER)  {
-        /* Just delete the whole category -- a vast change has occured */
-#ifndef GLOBAL_INTERNET_BUILD  /* never delete stuff */
-        InitFileDeleteCategory(cat) ;
-#endif
         InitFileWriteInteger(cat, "version", HTML_VIEW_INI_VERSION_NUMBER) ;
 #ifdef YAGO_2_BUILD
         InitFileDeleteEntry(fileManager, filenameTokens) ;
