@@ -22,12 +22,12 @@ URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
                   URLTextClipboard.goc URLTextImageProgress.goc\
                   URLTextLinks.goc URLTextPrint.goc URLTextScript.goc\
                   URLText.goc URLTextImages.goc
-FAVORITES       = FavoritesDialog.goc FavoritesCreate.goc\
-                  FavoritesStore.goc
-BOOKMARKS       = BookmarksDialog.goc BookmarksStore.goc
 CACHE           = CacheInternal.h SourceCache.goc ObjectCache.goc\
                   CacheLifetime.goc
 MIME            = ContentHandling.goc GraphicImport.goc
+COLLECTIONS     = BookmarksDialog.goc BookmarksStore.goc\
+                  FavoritesDialog.goc FavoritesCreate.goc\
+                  FavoritesStore.goc
 UI_TO_RDFS      =
 OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   HTMLViewOperation.obj HTMLViewStatus.obj AutoBrowse.obj\
@@ -42,21 +42,21 @@ OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   URLFrameGeometry.obj URLFrameTimers.obj MemStream.obj\
                   URLTextClipboard.obj URLTextImageProgress.obj\
                   URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
-                  URLText.obj URLTextImages.obj FavoritesDialog.obj\
-                  FavoritesCreate.obj FavoritesStore.obj\
-                  BookmarksDialog.obj BookmarksStore.obj SourceCache.obj\
+                  URLText.obj URLTextImages.obj SourceCache.obj\
                   ObjectCache.obj CacheLifetime.obj ContentHandling.obj\
-                  GraphicImport.obj
+                  GraphicImport.obj BookmarksDialog.obj BookmarksStore.obj\
+                  FavoritesDialog.obj FavoritesCreate.obj\
+                  FavoritesStore.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
                   stattext.goh htmlv_ui.goh htmlview.goh importg.goh\
                   options.goh prodbbx.goh urlfetch.goh
 MODULES         = ASMTOOLS
 CMODULES        = htmlview init urldoc urldocct urlfetch urlframe urltext\
-                  favorites bookmarks cache mime
+                  cache mime collections
 SRCS            = $(ASMTOOLS) $(HTMLVIEW) $(INIT) $(URLDOC) $(URLDOCCT)\
-                  $(URLFETCH) $(URLFRAME) $(URLTEXT) $(FAVORITES)\
-                  $(BOOKMARKS) $(CACHE) $(MIME) $(COMMON)
+                  $(URLFETCH) $(URLFRAME) $(URLTEXT) $(CACHE) $(MIME)\
+                  $(COLLECTIONS) $(COMMON)
 LOBJS           =
 
 PRODUCTS        = AB DBCS ABDBCS 
