@@ -132,9 +132,7 @@ extern TCHAR lastURLDriverName[];
 /* busy cursor */
 Boolean isBusyOff = FALSE;
 
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
 Boolean G_fetchWhileImport = FALSE;
-#endif
 
 #ifdef DO_DBCS
 DosCodePage G_codePage = CODE_PAGE_MULTILINGUAL;
@@ -644,9 +642,7 @@ void InitNavigation(void)
     /* read cache all flag */
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "cacheAll", &G_cacheAll);
 @endif
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "fetchWhileImport", &G_fetchWhileImport);
-#endif
 }
 
 /* Compatibility hook; InitCacheLifetime now initializes cache storage. */

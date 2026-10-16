@@ -68,9 +68,7 @@
 extern word G_cacheFileHeaderSizeLimit;
 #endif
 
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
 extern Boolean G_fetchWhileImport;
-#endif
 
 /**************************************************************************
  *	    Types and structures
@@ -126,10 +124,8 @@ static MemHandle G_importProgressDataQueue[IMPORT_PROGRESS_DATA_QUEUE_SIZE];
 /* semaphore to access queue */
 static SemaphoreHandle G_importProgressDataQueueSem = 0;
 
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
 /* Each fetch worker may have one outstanding streamed import. */
 Boolean G_importActive[MAX_FETCH_ENGINE_CHILDREN];
-#endif
 
 
 /**************************************************************************
@@ -179,12 +175,10 @@ Boolean ImportThreadEngineStart(void)
         G_numImportThreads = numImportThreads;
         G_nextImportThread = 0;
 
-    #ifdef ALLOW_FETCH_WHILE_IMPORTING
         /* init import state */
         for (i = 0; i < MAX_FETCH_ENGINE_CHILDREN; i++) {
             G_importActive[i] = FALSE;
         }
-    #endif
         /* allocate progress data queue semaphore */
         G_importProgressDataQueueSem = ThreadAllocSem(1);
         for (i = 0; i < IMPORT_PROGRESS_DATA_QUEUE_SIZE; i++) {
@@ -738,12 +732,10 @@ void ImportThreadAbortAll(void)
     /* Release the fetch side after importing or discarding the request. */
     if(request.importProgressData.IPD_loadProgressDataP)
     {
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
         if(G_fetchWhileImport)
             G_importActive[request.importProgressData.
                 IPD_loadProgressDataP->LPD_loadThread] = FALSE;
         else
-#endif
             ThreadVSem(request.importProgressData.
                 IPD_loadProgressDataP->LPD_importSync);
     }

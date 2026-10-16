@@ -372,12 +372,6 @@ shown in the menu bar
 // @define REMOVE_RELOAD_ON_TV_CUI
 /* as alternative, remove Reload */
 
-#define ALLOW_FETCH_WHILE_IMPORTING
-/* during progressive display, instead of blocking fetch thread until
-   associated import thread finishes importing, allow fetch thread to
-   continue with next fetch, but not using progressive display (so
-   importing will be queued for non-progressive import thread) */
-
 // #define SECURE_INI_URLS
 /* when defined, simple modification of the homepage and goto URLs in
    the .ini file is not possible*/

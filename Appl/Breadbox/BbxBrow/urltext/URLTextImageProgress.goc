@@ -30,10 +30,8 @@
 /* Preserve the original callback compiler option. */
 #pragma option -WDE
 
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
 extern Boolean G_importActive[];
 extern Boolean G_fetchWhileImport;
-#endif
 
 /*
  * handle loading progress: start import thread
@@ -69,11 +67,9 @@ extern Boolean G_fetchWhileImport;
             ThreadPSem(loadProgressDataP->LPD_sem);
             loadProgressDataP->LPD_callback = 0;
             ThreadVSem(loadProgressDataP->LPD_sem);
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
             if(G_fetchWhileImport)
                 G_importActive[loadProgressDataP->LPD_loadThread] = FALSE;
             else
-#endif
                 ThreadVSem(loadProgressDataP->LPD_importSync);
             /* Fetch acknowledgement owns the name token and pending count. */
         }
@@ -85,13 +81,6 @@ extern void _pascal WakeUp(word *queueP);
 extern void _pascal Block(word *queueP, Boolean *flag,
     dword *bytesAvailP, dword *preReadOffsetP,
     word needed);
-
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
-/* if import thread is actively importing */
-extern Boolean G_importActive[];
-
-extern Boolean G_fetchWhileImport;
-#endif
 
 #include "MemStream.h"
 
@@ -122,13 +111,11 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
             if ((strcmp(loadProgressDataP->LPD_mimeType, _TEXT("image/jpeg")) == 0) ||
                 (strcmp(loadProgressDataP->LPD_mimeType, _TEXT("image/gif")) == 0)) {
                 G_stream[lt] = MemStreamInit(G_stream[lt]);
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
                 if (G_fetchWhileImport) {
                     /* stop subsequent requests on the associated fetch thread from
                        using progressive display, as this import thread is busy */
                     G_importActive[loadProgressDataP->LPD_loadThread] = TRUE;
                 } else  /* encloses ThreadPSem only */
-#endif
                     /* starting import for load progress, prevent fetch thread
                        from handling new fetch requests until import finishes
                        (VSem in ImportThreadEngine's IMPORT_GRAPHIC handler) */

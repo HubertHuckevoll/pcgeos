@@ -65,7 +65,6 @@ print $test <<'C';
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#define ALLOW_FETCH_WHILE_IMPORTING
 #define IMPORT_PROGRESS_DATA_QUEUE_SIZE 20
 #define HTMLVIEW_CATEGORY "HTMLView"
 #define IMPORT_WORK_FILENAME "IMPORTWK.%03d"

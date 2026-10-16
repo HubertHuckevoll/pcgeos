@@ -85,7 +85,6 @@ typedef struct {
     LoadProgressData loadProgressData;  /* loading progress data */
 } T_fetchEngineChild;
 
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
 /* holds copy of load progress data of associated fetch thread, so it can
    continue subsequent fetches while we are still importing */
 static LoadProgressData G_importLoadProgressData[MAX_FETCH_ENGINE_CHILDREN];
@@ -93,7 +92,6 @@ static LoadProgressData G_importLoadProgressData[MAX_FETCH_ENGINE_CHILDREN];
 extern Boolean G_importActive[];
 
 extern Boolean G_fetchWhileImport;
-#endif
 
 #ifdef __WATCOMC__
 
@@ -729,14 +727,12 @@ void URLFetchExtraMemoryUnlock(optr em)
                 sizeof(LoadProgressData));
             URLFetchExtraMemoryUnlock(loadProgressData);
             URLFetchExtraMemoryFree(loadProgressData);
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
             /* cancel progressive loading if we are still importing the
                previous one for this fetch thread;
                cancel by clearing LPD_callback */
             if (G_fetchWhileImport && G_importActive[childNum]) {
                 p_child->loadProgressData.LPD_callback = 0;
             }
-#endif
         } else {
             memset(&(p_child->loadProgressData), 0, sizeof(LoadProgressData));
         }
@@ -928,7 +924,6 @@ word far URLFetchChildThread(word childNum)
                 p_child->loadProgressData.LPD_dataFile = G_fetchProgressVMFile[childNum];
                 p_child->loadProgressData.LPD_dataStream = G_fetchProgressDataStream[childNum];
                 lpd = &(p_child->loadProgressData);
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
                 if (G_fetchWhileImport) {
                     /* copy load progress data to safe place */
                     if (p_child->loadProgressData.LPD_callback) {
@@ -938,7 +933,6 @@ word far URLFetchChildThread(word childNum)
                         lpd = &(G_importLoadProgressData[childNum]);
                     }
                 } else  /* encloses ThreadAllocSem only */
-#endif
                     /* allocate semaphore to synchronize import thread, if any */
                     p_child->loadProgressData.LPD_importSync = ThreadAllocSem(1);
                 urlResult.retType = LoadURLToFile(
@@ -953,16 +947,12 @@ word far URLFetchChildThread(word childNum)
                                         childNum,
                                         &(p_child->abortRoutine),
                                         lpd);
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
                 if (!G_fetchWhileImport) {
-#endif
                     /* if import was started, we'll block from handling further
                        fetch requests until it finishes */
                     ThreadPSem(p_child->loadProgressData.LPD_importSync);
                     ThreadFreeSem(p_child->loadProgressData.LPD_importSync);
-#ifdef ALLOW_FETCH_WHILE_IMPORTING
                 }
-#endif
             }
 
             /* Now that the URL is loaded, create a structure to inform */

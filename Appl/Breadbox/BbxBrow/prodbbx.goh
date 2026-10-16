@@ -247,12 +247,6 @@
    multiple URLs that only differ by post data */
 @define POST_DATA_CACHE
 
-/* during progressive display, instead of blocking fetch thread until
-   associated import thread finishes importing, allow fetch thread to
-   continue with next fetch, but not using progressive display (so
-   importing will be queued for non-progressive import thread) */
-#define ALLOW_FETCH_WHILE_IMPORTING
-
 /* set to not allow simple modification of the home and goto URLs in
    the .ini file */
 @ifndef DO_ERROR_CHECKING
