@@ -1,6 +1,11 @@
 /*
- * URL document control and document-group handlers. The group creates a
- * document before forwarding a URL load; startup suppresses the New/Open UI.
+ * Adapt GEOS document control/group behavior to opening web pages.
+ *
+ * URLDocumentControlClass configures the HTML file selector and close/open
+ * commands. In builds that skip the startup New/Open prompt, it suppresses
+ * that dialog. URLDocumentGroupClass intercepts a URL-load event and creates
+ * an untitled document if none exists, then forwards the event. This lets
+ * launch URLs and window commands share the normal document loading path.
  */
 
 /*
@@ -28,7 +33,6 @@
  *      Include files
  **************************************************************************/
 
-/* Keep the code resource independent of the source filename. */
 #ifdef __BORLANDC__
 #pragma codeseg URLDocumentControl_TEXT
 #endif

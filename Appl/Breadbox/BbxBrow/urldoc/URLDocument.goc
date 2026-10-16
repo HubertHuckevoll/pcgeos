@@ -1,12 +1,13 @@
 /*
- * URLDocumentClass owner, object/view/frame templates, document lifecycle,
- * UI attachment, pending/completion coordination and integration handlers.
- * URLDocumentHistory.goc owns history snapshots and navigation stacks;
- * URLDocumentNavigation.goc owns URL/frameset and navigation commands.
- * URLDocumentLocalPage.goc owns local-page persistence. External registrations remain
- * here in their original order; the command split shares URLDocument_TEXT.
- * History stack buffers are allocated/freed in the unchanged open/close
- * handlers so their ordering with the document/cache lifetime stays intact.
+ * Represent one browser document and the frame tree shown in its display.
+ *
+ * URLDocumentClass connects the GEOS document lifecycle to the top URLFrame,
+ * view and URLText templates. It tracks pending work for the whole document,
+ * updates application navigation state and routes print and page commands.
+ * It holds a shared-cache reference until frame/text teardown is complete.
+ * URLDocumentHistory.goc manages Back/Forward; URLDocumentNavigation.goc
+ * loads URLs or saved frame trees; URLDocumentLocalPage.goc handles the optional
+ * local-page format. Their methods are registered here.
  */
 
 /*
@@ -34,7 +35,6 @@
  *      Include files
  **************************************************************************/
 
-/* Keep the code resource independent of the source filename. */
 #ifdef __BORLANDC__
 #pragma codeseg URLDocument_TEXT
 #endif

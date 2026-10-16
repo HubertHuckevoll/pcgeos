@@ -1,6 +1,11 @@
-/**
-* Navigate Menu
-*/
+/*
+ * Home, Back, Forward and Stop commands for browser navigation.
+ *
+ * Home goes to the process handler in HTMLViewNavigation.goc; Back/Forward
+ * target the current document's history stacks. Stop goes to HTMLVApp so
+ * HTMLViewOperation.goc can coordinate cancellation across the workers.
+ * Navigation notifications enable or disable these controls.
+ */
 @object GenTriggerClass NavigateHome = {
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_visMoniker = 'H', "Home" ;

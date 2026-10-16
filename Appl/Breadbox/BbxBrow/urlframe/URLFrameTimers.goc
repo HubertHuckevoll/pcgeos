@@ -1,6 +1,11 @@
 /*
- * Script timeout and interval timer records, scheduling and cleanup.
- * URLFrame.goc owns the class and registers these external methods.
+ * Implement JavaScript timeouts and repeating intervals for a frame.
+ *
+ * Each timer record in the frame's object block retains a script name token
+ * and GEOS timer handle. Expiration runs the code through URLFrameScript.goc,
+ * then removes a one-shot timer or schedules the interval again. Stop and
+ * frame teardown cancel timers and release their tokens. Timer IDs identify
+ * records independently of movable object-block pointers.
  */
 
 @include <stdapp.goh>

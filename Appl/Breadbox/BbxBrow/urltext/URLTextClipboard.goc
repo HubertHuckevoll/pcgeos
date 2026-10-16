@@ -34,10 +34,13 @@
 
 
 /*
- * URLTextClass clipboard conversion and transfer handling.
+ * Make a page selection usable outside the HTML viewer.
  *
- * Keep the existing graphic conversion and character-run fixups together.
- * Renaming this source must not rename its original code resource.
+ * The normal clipboard copy is supplemented with browser-specific conversions:
+ * HTML variable graphics become GString chains, associated VM data is copied
+ * and character runs are adjusted for the transfer item. A separate command
+ * copies a selected image. URLText.goc registers these methods; Scrapbook.goc
+ * uses the selection-copy path when sending content to Scrapbook.
  */
 #ifdef __BORLANDC__
 #pragma codeseg URLTEXT2_TEXT

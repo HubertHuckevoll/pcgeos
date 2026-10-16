@@ -1,7 +1,12 @@
 /*
- * Complete local-page persistence: dialogs, VM serialization/restoration,
- * local-page token ownership and update notification. URLDocument.goc owns the
- * class and registers these methods under COMPILE_OPTION_LOCAL_PAGES.
+ * Handle the optional saved-local-page format for offline browsing.
+ *
+ * The document handlers choose a name, store frame records and page items in
+ * a VM file, restore them through URLFrameTree.goc and notify the window when
+ * the local-page identity changes. This path is compiled only with
+ * COMPILE_OPTION_LOCAL_PAGES. Its page-content storage depends on
+ * Html4Par's MSG_HTML_TEXT_STORE_CONTENTS, which currently returns zero;
+ * the retained serialization code therefore cannot save complete page content.
  */
 
 /*
@@ -37,7 +42,6 @@
 
 @include "htmlview.goh"
 
-/* Retain the original resource and compiler string defaults after renaming. */
 #ifdef __BORLANDC__
 #pragma codeseg LOCALPAG_TEXT
 #endif

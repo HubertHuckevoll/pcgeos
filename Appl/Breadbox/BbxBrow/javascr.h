@@ -1,3 +1,13 @@
+/*
+ * Bridge from browser frames and page elements to the JavaScript library.
+ *
+ * When JavaScript is enabled, this header exposes window/image/form/link
+ * object accessors, the shared interpreter context and script-source records
+ * for name-token or VM HugeArray code. URLFrameScript.goc manages frame
+ * contexts; URLFrameFetch.goc supplies scripts during parsing. Internal
+ * property strings here must agree with the JS library's object protocol.
+ */
+
 /***********************************************************************
  *
  * PROJECT:	  HTMLView

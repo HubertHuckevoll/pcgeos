@@ -1,5 +1,10 @@
 /*
- *              File Menu
+ * File operations and document/print controls for the browser window.
+ *
+ * DocumentControl connects the custom URL document classes to GEOS document
+ * management. The custom HTML file selector uses HTMLViewNavigation.goc;
+ * print/page-size controls target the page content. Clear Cache goes to the
+ * process and Exit to HTMLVApp. htmlv_ui.goh places these objects in the UI.
  */
 
 /*

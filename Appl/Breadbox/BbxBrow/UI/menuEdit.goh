@@ -1,6 +1,11 @@
 /*
-*              Edit Menu
-*/
+ * Editing and find controls for the currently targeted page content.
+ *
+ * GEOS EditControl and the browser's search-control subclass supply normal
+ * selection/copy/find UI, with unavailable editing features suppressed.
+ * The optional Scrapbook trigger starts the copy/launch/paste exchange in
+ * htmlview/Scrapbook.goc.
+ */
 
 @object GenEditControlClass EditControl = {
     GI_attrs = @default | GA_KBD_SEARCH_PATH;

@@ -1,6 +1,11 @@
-/* Portal account commands received through the GPCemail HTTP header.
- * MailHub declarations and pending deletion state belong to this feature.
- * The guarded error chunk remains in HTMLView.goc's shared HTMLResource.
+/*
+ * Apply optional portal email-account commands received while loading a URL.
+ *
+ * When EMAIL_ACCT_CMD is enabled, URLLoad.goc passes the GPCemail HTTP header
+ * here. The command parser uses MailHub to create, change or delete accounts.
+ * Deletion can wait for the email application to exit; the process notification
+ * handler completes that pending deletion. This integration is separate from
+ * mailto URL handling. HTMLView.goc holds its shared error text.
  */
 @include <stdapp.goh>
 @include "htmlview.goh"

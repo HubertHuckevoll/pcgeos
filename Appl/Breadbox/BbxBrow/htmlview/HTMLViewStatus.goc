@@ -1,8 +1,12 @@
 /*
- * Status-message routing, page progress and file-transfer presentation.
- * This file owns the status IDs, progress dialog and download-display
- * bookkeeping. URLLoad.goc retains driver callbacks and fetch ownership.
- * UI-thread/process-thread handler alternatives retain their guards.
+ * Turn loading and link notifications into visible browser status.
+ *
+ * Messages from fetch callbacks, page formatting and pointer movement update
+ * the priority-based LinkStatus object implemented in StatusText.goc. This
+ * module keeps the status IDs, combines page progress and presents transfer
+ * bytes/timing in the download/upload dialog. It routes updates through the
+ * application or process thread according to the build options; URLLoad.goc
+ * supplies the URL-driver notifications.
  */
 
 /*
@@ -67,7 +71,6 @@ extern void UpdateDownloadProgressDialogTimes(void);
 @extern object MsgBlank;
 @extern object LinkStatus;
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg UIOften_TEXT
 #endif

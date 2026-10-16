@@ -1,10 +1,15 @@
 /*
- * Application startup, launch/IACP requests and UI-thread creation.
- * HTMLView.goc owns class registration and final shutdown coordination.
+ * Bring the browser from launch into a usable window and route launch URLs.
+ *
+ * Process startup initializes shared browsing services through Init.goc,
+ * configures the UI and arranges the initial document. Application handlers
+ * accept URLs supplied at launch or through IACP, the GEOS inter-application
+ * protocol, and forward them into normal navigation. Detach requests consult
+ * HTMLViewOperation.goc so loading can finish or abort before shutdown;
+ * HTMLView.goc performs the final close cleanup.
  */
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg OpenClos_TEXT
 #endif

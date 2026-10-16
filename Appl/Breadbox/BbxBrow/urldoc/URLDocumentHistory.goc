@@ -1,8 +1,12 @@
 /*
- * Back/forward stacks, frame-state snapshots and recent-history updates.
- * Snapshot allocation and token cleanup stay with their owning handlers.
- * URLDocument.goc owns the class and the document open/close lifetime of the
- * stack buffers, and registers these external methods.
+ * Remember where this document has been, including its nested frames.
+ *
+ * Before navigation, collect a frame-tree snapshot and put it on the document's
+ * Back/Forward stacks; replay duplicates the saved snapshot for the loader in
+ * URLDocumentNavigation.goc to consume. Separate snapshots go to the shared
+ * recent-history list in HTMLViewNavigation.goc. Dropping an entry releases
+ * its URL/name tokens as well as its array. URLDocument.goc allocates and
+ * frees the stack buffers with the document.
  */
 
 @include <stdapp.goh>
@@ -13,7 +17,6 @@
 #include <Ansi/stdlib.h>
 @include "htmlview.goh"
 
-/* Keep the original code resource and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg URLDocument_TEXT
 #endif

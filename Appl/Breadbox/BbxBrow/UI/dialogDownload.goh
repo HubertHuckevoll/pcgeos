@@ -1,5 +1,10 @@
 /*
- * The download Dialog
+ * Choose where to save content that the browser cannot display.
+ *
+ * These are the file selector, name field and Save/Cancel controls inside the
+ * download dialog assembled by htmlv_ui.goh. ContentHandling.goc opens it
+ * through SaveUnknownFile and copies the fetched source to the chosen path.
+ * The transfer-progress dialog is defined separately in HTMLViewStatus.goc.
  */
 
 @object GenFileSelectorClass DownloadFileSel = {

@@ -1,12 +1,16 @@
 /*
- * Application UI/resources, process and application class registration.
- * Shutdown coordination, shared integration state, local-page UI and the
- * URL entry class remain here. External registrations preserve dispatch
- * order; subsystem sources retain the original swapping boundaries.
+ * Assemble WebMagick, the web browser in PC/GEOS Ensemble.
+ *
+ * This is the application entry module: it registers HTMLVProcessClass and
+ * HTMLVApplicationClass, includes the UI object tree from htmlv_ui.goh and
+ * holds shared text/error resources. The other HTMLView*.goc files implement
+ * startup, commands, options, loading control and status updates for those
+ * classes. Documents, frames and URLText handle individual pages below them.
+ * Final shutdown, saved-local-page list commands and the URL entry text
+ * class are implemented here.
  */
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg HTMLVIEW_TEXT
 #endif

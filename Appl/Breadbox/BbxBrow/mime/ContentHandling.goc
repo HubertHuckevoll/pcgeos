@@ -1,8 +1,12 @@
-/* MIME identification, native text import and unknown-content handling.
- * The shared import-driver cache also serves GraphicImport.goc.
- * Both importers retain a driver reference before releasing the semaphore;
- * INIT.goc initializes it and import-worker shutdown releases the driver.
- * Keep Navigation_TEXT and the existing plain C interfaces.
+/*
+ * Choose what to do with fetched content that is not ordinary HTML.
+ *
+ * Extension/MIME associations from Init.goc identify files and select native
+ * import drivers. URLFrameFetch.goc calls HandleUnknownType to import text,
+ * wrap a standalone image in HTML, or ask the user to save a download.
+ * The MIME-driver cache is shared with GraphicImport.goc: callers retain a
+ * driver reference under MimeDriverSemaphore before invoking it outside the
+ * semaphore. Import-worker shutdown releases the cached driver.
  */
 
 @include <stdapp.goh>

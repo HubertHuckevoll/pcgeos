@@ -1,6 +1,11 @@
 /*
-* the URL entry bar itself
-*/
+ * URL-entry field and the containers used by the toolbar layouts.
+ *
+ * CurrentURLText uses URLEntryClass and sends entered addresses to the process
+ * handler in HTMLViewNavigation.goc; navigation also updates this field to
+ * show the current page. mainWrapper.goh selects the ordinary or simple URL
+ * bar alongside the chosen navigation toolbar.
+ */
 @object URLEntryClass CurrentURLText = {
     GI_attrs = @default | GA_TARGETABLE;
 // allow URL entry to forward search request to HTML area

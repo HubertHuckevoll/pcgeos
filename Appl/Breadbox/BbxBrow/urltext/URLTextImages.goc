@@ -1,11 +1,13 @@
 /*
- * URLTextClass image requests, geometry, replacement and visibility.
+ * Resolve a displayed page's images and replace placeholders with graphics.
  *
- * Ordinary and script-driven requests share ProcessSingleGraphic.
- * Keep its near calling convention by keeping every caller in this file.
- * Fetch acknowledgement and native image replacement retain ownership.
- *
- * URLText.goc owns URLTextClass and registers these external methods.
+ * Walk the HTML image array, complete image URLs through the owning frame,
+ * reuse decoded objects from ObjectCache.goc or fetch missing sources and
+ * submit them to GraphicImport.goc. Completion updates matching image entries,
+ * cache locks and pending counts; generation checks keep old requests from
+ * changing a replacement page. Geometry, broken-image hiding and script-driven
+ * image changes use the same loading/replacement path. Progressive stream
+ * callbacks live in URLTextImageProgress.goc.
  */
 
 @include <stdapp.goh>
@@ -20,7 +22,6 @@
 @extern object SettingsBoolGroup;
 @extern object NavigateFitToWindow;
 
-/* Source organization does not change code-resource placement. */
 #ifdef __BORLANDC__
 #pragma codeseg URLText_TEXT
 #pragma option -dc-

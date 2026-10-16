@@ -1,8 +1,12 @@
 /*
- * Received-page metadata, embedded audio, presentation and completion.
- * Cache locks and temporary array cleanup stay with the existing handlers.
- * URLFRAME.goc owns the class and registers these external methods.
- * FRFETCH2_TEXT remains isolated in URLFrameFetch.goc during parsing.
+ * Install a parsed page or frameset after a frame request succeeds.
+ *
+ * URLFrameFetch.goc supplies the cached transfer item. These handlers read
+ * its title, base URL, target and metadata, establish child frames or attach
+ * the page through URLFrame.goc, and move to the requested anchor. They also
+ * handle refresh directives and embedded audio. Completion runs load events
+ * and updates pending work in the parent/document; URLFrameGeometry.goc
+ * handles the resulting view sizes and focus.
  */
 
 @include <stdapp.goh>

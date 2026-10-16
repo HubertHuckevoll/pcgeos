@@ -1,12 +1,11 @@
 /*
- * URLTextClass print job naming and page ornaments.
+ * Add browser-specific naming and headers/footers to printed pages.
  *
- * The owning frame supplies the title and URL. The print methods provide
- * the spooler job name and draw page numbers, the title and URL around the
- * printed page. DrawText is the existing width-limited ornament helper.
- *
- * URLText.goc owns the class declaration and dispatch table. Keep these
- * external methods and their helper in the original URLText_TEXT resource.
+ * The owning frame supplies the title and URL for the spooler job name and
+ * page ornaments; Html4Par prints the page body. Ornament drawing uses paper
+ * coordinates before the body is scaled or clipped, so labels and page
+ * numbers stay aligned to the margins. URLDocument routes print requests
+ * to the target text object, and URLText.goc registers these methods.
  */
 
 @include <stdapp.goh>
@@ -15,7 +14,6 @@
 #include <Ansi/stdio.h>
 @include "htmlview.goh"
 
-/* Source split only: preserve the original code resource. */
 #ifdef __BORLANDC__
 #pragma codeseg URLText_TEXT
 #pragma option -dc-

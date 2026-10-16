@@ -14,7 +14,7 @@
  *
  * PROJECT:       HTMLView
  * FILE:          FavoritesStore.goc
- * DESCRIPTION:   Module for handling the favorite database and UI.
+ * DESCRIPTION:   Persistent Favorites tree, index and menu entries.
  *
  * AUTHOR:        Lysle E. Shields III
  *
@@ -31,9 +31,13 @@
  **************************************************************************/
 
 /*
- * Favorites VM/IBMS storage, tree/index ownership and menu rendering.
- * Keep the private tree state with its traversal and locking callers.
- * Keep the original code resource independent of this source filename.
+ * Persist the browser's saved pages, folders and top-ten shortcuts.
+ *
+ * IBMS stores titles, URLs and notes in a VM file; an IBTree records folder
+ * membership and a separate list records top-ten entries. A positional index
+ * lets FavoritesDialog.goc address the visible tree as a flat list with depth
+ * values. The favorite.goh API manages locking, edits and folder traversal;
+ * this file also builds menu labels and organizer icons from those records.
  */
 #ifdef __BORLANDC__
 #pragma codeseg FAVORITE_TEXT

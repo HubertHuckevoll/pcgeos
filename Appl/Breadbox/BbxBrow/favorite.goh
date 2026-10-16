@@ -1,3 +1,13 @@
+/*
+ * Storage and presentation API for saved pages organized into folders.
+ *
+ * FavoritesStore.goc implements the persistent tree, its visible positional
+ * index and top-ten shortcuts. Dialog code uses these functions to traverse,
+ * edit and reorder entries and build their labels/icons. FavoriteLock exposes
+ * title, location, notes and depth until FavoriteUnlock; changed fields must
+ * be marked dirty or resized through this API.
+ */
+
 /*-------------------------------------------------------------------------
  | Project:  WebMagick
  | Module:   Favorite Database access routines

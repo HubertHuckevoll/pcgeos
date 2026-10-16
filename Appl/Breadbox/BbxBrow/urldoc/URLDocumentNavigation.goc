@@ -1,7 +1,11 @@
 /*
- * URL/frameset loading, reload/source/save, home and bookmark/favorite commands.
- * Queued requests keep the existing name-token and frame-array ownership.
- * URLDocument.goc owns the class and registers these external methods.
+ * Load a destination into a browser document's top frame.
+ *
+ * These document commands accept an entered URL, a history frame-tree snapshot,
+ * or a bookmark/favorite and hand the load to URLFrame. Reload, view-source,
+ * save-source and make-home commands use the same current frame information.
+ * The load handlers consume the supplied URL token or frame-array chunk,
+ * allowing requests to be queued. URLDocument.goc registers these methods.
  */
 
 @include <stdapp.goh>
@@ -12,7 +16,6 @@
 #include <Ansi/stdlib.h>
 @include "htmlview.goh"
 
-/* Keep the original code resource and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg URLDocument_TEXT
 #endif

@@ -1,7 +1,11 @@
 /*
- * Link targets, URL completion, fetch initiation and refresh requests.
- * Queued requests keep the existing name-token and post-data ownership.
- * URLFRAME.goc owns the class and registers these external methods.
+ * Resolve a link in its source frame and load it in the chosen target.
+ *
+ * URLText forwards link activation here. The frame completes relative URLs
+ * against its base, finds named or special targets such as _parent and _top,
+ * and starts a request through URLFrameFetch.goc. Reload, source and save
+ * requests use that path too. HTML refresh directives use a separate refresh
+ * timer here; JavaScript timeouts/intervals live in URLFrameTimers.goc.
  */
 
 @include <stdapp.goh>
@@ -13,7 +17,6 @@
 @include "htmlview.goh"
 #include "javascr.h"
 
-/* Keep the original code resource and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg URLFrame_TEXT
 #endif

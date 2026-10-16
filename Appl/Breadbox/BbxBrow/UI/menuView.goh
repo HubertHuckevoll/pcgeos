@@ -1,6 +1,11 @@
 /*
-*              View Menu
-*/
+ * Page viewing and rendering controls.
+ *
+ * The browser's view controller handles zoom and scrolling; process handlers
+ * in HTMLViewOptions.goc apply font, encoding, graphics, fit-to-window and
+ * HTML-rendering preferences. Reload, recalculate and load-graphics-now
+ * commands target the current document. htmlv_ui.goh includes these objects.
+ */
 
 @object WMViewControlClass ViewControl = {
     GI_attrs = @default | GA_KBD_SEARCH_PATH;

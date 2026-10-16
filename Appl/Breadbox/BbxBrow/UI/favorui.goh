@@ -3,9 +3,14 @@
  |           Copyright (c) 1998 Breadbox Computer Company
  *-----------------------------------------------------------------------*/
 
-/***************************************************************************
- *		Favorite Menu Objects
- ***************************************************************************/
+/*
+ * UI objects for Favorites shortcuts, folders and organization.
+ *
+ * The top-ten menu opens entries through the current document. Organizer and
+ * creation dialogs use the classes in favorcls.goh, implemented by
+ * FavoritesDialog.goc and FavoritesCreate.goc with FavoritesStore.goc storage.
+ * HTMLView.goc includes these resources when Favorites is enabled.
+ */
 
 @include "favorcls.goh"
 

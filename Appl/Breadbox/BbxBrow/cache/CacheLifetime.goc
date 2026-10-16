@@ -19,8 +19,14 @@
  *
  ***********************************************************************/
 
-/* Shared cache clients own the VM files, name pool and final cleanup.
- * Keep the original code resource independent of this source filename.
+/*
+ * Keep shared browsing storage alive until its last client detaches.
+ *
+ * Navigation, documents and URLText storage acquire references here. The first
+ * reference opens the source/object caches and creates the per-session text
+ * VM file and global URL name pool. The last release saves the caches before
+ * freeing the pool and closing the files. InitNavigation in Init.goc also
+ * uses this module to create the browser's allocation-budget watcher.
  */
 #ifdef __BORLANDC__
 #pragma codeseg Init_TEXT

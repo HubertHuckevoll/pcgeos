@@ -20,9 +20,13 @@
  *-----------------------------------------------------------------------*/
 
 /*
- * Favorites class registration, list organization and UI coordination.
- * Creation handlers are registered here and implemented in FavoritesCreate.goc.
- * Keep the original code resource independent of this source filename.
+ * Let the user browse and organize the saved Favorites tree.
+ *
+ * The dialogs show folders and pages, open a selected page, edit or delete
+ * entries, change their order and choose the top-ten menu shortcuts.
+ * FavoritesStore.goc supplies storage and tree operations; UI/favorui.goh
+ * supplies the objects. The class registrations here also connect the page
+ * and folder creation dialogs to handlers in FavoritesCreate.goc.
  */
 #ifdef __BORLANDC__
 #pragma codeseg FAVORCLS_TEXT

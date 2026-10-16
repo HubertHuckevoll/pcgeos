@@ -1,8 +1,12 @@
 /*
- * Loading-operation coordination, abort, input and busy-cursor state.
- * Fetch/import engines keep their worker state and cleanup responsibility.
- * These handlers preserve deferred quit/detach and existing queueing;
- * HTMLView.goc owns their class declarations and dispatch registrations.
+ * Coordinate a loading operation across the browser and its workers.
+ *
+ * Start/end handlers update Stop, the globe, progress and busy/input state.
+ * Abort stops parsing, fetching and importing and tells the affected frames
+ * to stop. Quit and detach can be deferred until pending work completes,
+ * so worker callbacks do not outlive the objects they use. The fetch/import
+ * engines manage their own queues and release individual request resources.
+ * HTMLView.goc registers these application handlers.
  */
 
 /*
@@ -62,7 +66,6 @@
 @extern object MsgBlank;
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg UIRare_TEXT
 #endif

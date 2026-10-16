@@ -14,7 +14,7 @@
  *
  * PROJECT:       HTMLView
  * FILE:          BookmarksStore.goc
- * DESCRIPTION:   Module for handling the bookmark database and UI.
+ * DESCRIPTION:   Persistent flat bookmark list and menu population.
  *
  * AUTHOR:        Lysle E. Shields III
  *
@@ -30,8 +30,12 @@
  **************************************************************************/
 
 /*
- * Bookmark VM storage, entry locking and menu population.
- * Keep the original code resource independent of this source filename.
+ * Store the optional flat bookmark list between browser sessions.
+ *
+ * Each entry in a VM HugeArray contains a title and a URL. The bookmark.goh
+ * API locks entries for readers and supports append, edit, delete and swap
+ * operations for BookmarksDialog.goc. This file also fills the fixed set of
+ * bookmark menu triggers from the stored entries.
  */
 #ifdef __BORLANDC__
 #pragma codeseg BOOKMARK_TEXT

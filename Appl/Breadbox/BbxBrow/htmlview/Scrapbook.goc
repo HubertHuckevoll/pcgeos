@@ -1,7 +1,11 @@
 /*
- * Clipboard-to-Scrapbook IACP exchange and selection notification.
- * The title buffer and staged copy/launch/paste protocol stay together;
- * automatic browsing has its own source while sharing scrapbk_TEXT.
+ * Copy the browser's current selection into the Scrapbook application.
+ *
+ * The process handler stages copy, Scrapbook launch and paste through IACP,
+ * the GEOS inter-application protocol. The application selection notification
+ * adds the page title to the clipboard item between those steps. The saved
+ * title and staged exchange live here; AutoBrowse.goc implements the separate
+ * automated browsing feature.
  */
 
 @include <stdapp.goh>
@@ -29,7 +33,6 @@
 @include "stattext.goh"
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg scrapbk_TEXT
 #endif

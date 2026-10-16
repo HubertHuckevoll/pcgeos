@@ -1,3 +1,12 @@
+/*
+ * GlobeAnimClass interface for the browser's activity indicator.
+ *
+ * GlobeAnimation.goc draws the artwork and manages each object's timer.
+ * Callers can report transferred bytes to advance the globe after a threshold,
+ * or request automatic animation for a whole loading operation.
+ * The optional SpinningLogo UI object is assembled by htmlv_ui.goh.
+ */
+
 @ifndef __GLBANIM_GOH
 @define __GLBANIM_GOC
 

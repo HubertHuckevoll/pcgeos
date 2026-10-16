@@ -3,9 +3,14 @@
  |           Copyright (c) 1998 Breadbox Computer Company
  *-----------------------------------------------------------------------*/
 
-/***************************************************************************
- *              Local Menu Objects
- ***************************************************************************/
+/*
+ * Controls for the optional saved-local-page collection.
+ *
+ * Save/Update commands go to URLDocumentLocalPage.goc; the process handlers
+ * in HTMLView.goc populate the saved-page list and handle opening/deletion.
+ * These objects provide the naming dialog, local-page selector and delete
+ * dialog used when COMPILE_OPTION_LOCAL_PAGES is enabled.
+ */
 
 /*=========================================================================*/
 

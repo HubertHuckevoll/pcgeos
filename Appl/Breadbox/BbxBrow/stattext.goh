@@ -1,11 +1,21 @@
+/*
+ * Status-message selection and compact display classes.
+ *
+ * StatusTextClass keeps overlapping messages by priority and returns IDs for
+ * later changes/removal. FastStatusClass draws the selected text or progress
+ * and can send a double-click action. StatusText.goc implements both classes;
+ * HTMLViewStatus.goc supplies messages and UI/statusIndicators.goh creates
+ * the browser's status objects.
+ */
+
 /*-------------------------------------------------------------------------
- | Module:   TestStatusClass
+ | Module:   StatusTextClass and FastStatusClass
  |           Copyright (c) 1998 Breadbox Computer Company
  *-----------------------------------------------------------------------*/
 
 
 /***************************************************************************
- *		TextStatusClasse
+ *		Status message and display classes
  ***************************************************************************/
 
 typedef word StatusTextPriority ;

@@ -1,7 +1,13 @@
+# Linker definition for WebMagick, the PC/GEOS Ensemble web browser.
+# Names the application/process classes, imported libraries and exported
+# object classes, and assigns UI/data/code resource attributes. In particular,
+# URLFetchEngine_TEXT is fixed because worker thread entry code lives there.
+# local.mk passes build-option defines used by the conditional declarations.
+#
 ##############################################################################
 #
-# PROJECT:      gpcbrow
-# FILE:         WebMagi2.gp
+# PROJECT:      BbxBrow
+# FILE:         bbxbrow.gp
 #
 # AUTHOR:       Marcus Gröber and Lysle Shields
 #

@@ -1,5 +1,9 @@
 /*
- * History menu
+ * Dynamic menu of recently visited pages or framesets.
+ *
+ * HTMLViewNavigation.goc supplies item labels and restores the selected
+ * frame-tree snapshot. This list is shared recent history; each document's
+ * Back/Forward stacks are managed separately by URLDocumentHistory.goc.
  */
 
 @object GenInteractionClass HistoryMenu = {

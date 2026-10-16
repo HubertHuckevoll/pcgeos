@@ -1,6 +1,12 @@
-/* URL-driver lifetime, FILE loading, redirects and connection checks.
- * Fetch scheduling remains in URLFetchEngine.goc; source files belong to the cache.
- * Keep the original Navigation_TEXT resource and plain C interfaces.
+/*
+ * Supply URL-scheme services used by URLLoad.goc and browser commands.
+ *
+ * The scheme association table selects a URL driver, whose cached reference
+ * is loaded/released here. Local FILE URLs are decoded into DOS paths and
+ * identified by MIME type; redirect helpers update URL and anchor tokens.
+ * Connectivity checks and connection/data flushing also live here.
+ * URLFetchEngine.goc schedules requests, while URLLoad.goc combines these
+ * services with source-cache lookup and driver callbacks.
  */
 #ifdef __BORLANDC__
 #pragma codeseg Navigation_TEXT

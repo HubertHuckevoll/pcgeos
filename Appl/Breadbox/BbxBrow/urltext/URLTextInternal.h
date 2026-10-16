@@ -1,4 +1,13 @@
-/* Existing declarations shared by URLText source subsystems. */
+/*
+ * Private link between URLText image requests and progressive callbacks.
+ *
+ * URLTextRequestGraphic is stored as fetch extra data. It identifies the
+ * image and URL token, records cache policy and the page generation, and
+ * marks a canceled stream handoff so acknowledgement cleans up exactly once.
+ * URLTextImages.goc and URLTextImageProgress.goc share it. The remaining
+ * prototypes connect image MIME fallback and optional AutoBrowse diagnostics.
+ * Include after htmlview.goh and importg.goh.
+ */
 #ifndef _URLTEXT_INTERNAL_H_
 #define _URLTEXT_INTERNAL_H_
 

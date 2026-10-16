@@ -1,7 +1,11 @@
 /*
- * Conditional automatic browsing, bulk-test state and logging.
- * The process handlers retain their timer/event scheduling and own the
- * automation state. Scrapbook.goc handles the separate clipboard protocol.
+ * Drive repeated page loads for optional browser stress tests.
+ *
+ * The process handlers select URLs from saved pages or bulk-test inputs,
+ * queue loads through the document group and write diagnostic logs. Page
+ * completion in HTMLViewOperation.goc schedules the next step, optionally
+ * after a delay. COMPILE_OPTION_AUTO_BROWSE enables this automation;
+ * URLTextScript.goc supplies the optional JavaScript analysis in its logs.
  */
 
 @include <stdapp.goh>
@@ -39,7 +43,6 @@ word abTimerID;
 @extern object HTMLDisplayGroup ;
 @endif
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg scrapbk_TEXT
 #endif

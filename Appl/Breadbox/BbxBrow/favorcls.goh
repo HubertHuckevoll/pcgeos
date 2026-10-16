@@ -1,3 +1,12 @@
+/*
+ * Messages and dialog state for the hierarchical Favorites UI.
+ *
+ * UI/favorui.goh instantiates the organizer, page/folder creation dialogs and
+ * FavoriteManager. FavoritesDialog.goc registers these classes and implements
+ * organization; FavoritesCreate.goc prepares and commits new entries.
+ * Persistent records are accessed through the separate favorite.goh API.
+ */
+
 /*-------------------------------------------------------------------------
  | Project:  Global Internet (a version of WebMagick)
  |           Copyright (c) 1998 Breadbox Computer Company

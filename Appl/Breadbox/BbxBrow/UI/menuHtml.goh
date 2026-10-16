@@ -1,6 +1,10 @@
-/**
-  * HTML Menu
-  */
+/*
+ * Commands to inspect, save or edit the current page's HTML source.
+ *
+ * Display/Save Source target URLDocument and follow its frame load path.
+ * The optional editor command and executable setting use process handlers in
+ * HTMLViewNavigation.goc. These objects are included by htmlv_ui.goh.
+ */
 @ifdef COMPILE_OPTION_HTML_MENU
 @object GenInteractionClass SaveViewHTMLGroup = {
     GI_comp = @SaveAsTrigger, @ViewSourceTrigger;

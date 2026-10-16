@@ -1,8 +1,12 @@
 /*
- * Navigation commands, toolbar state, history and editor/cache commands.
- * Tokens, events and copied frame sets retain their existing owners.
- * HTMLView.goc registers the process handlers; resource switches below
- * preserve the original UIAction, UIRare and HTMLVIEW swapping boundaries.
+ * Translate browser-window commands into document navigation.
+ *
+ * URL entry, Home, Go, Jump and Search produce loads for the document group;
+ * page notifications update the window title, URL field and navigation buttons.
+ * The recent-history menu stores frame-tree snapshots supplied by
+ * URLDocumentHistory.goc, allowing an entire frameset to be revisited.
+ * Per-document Back/Forward stacks live there instead. Editor launch and
+ * clear-cache commands are also handled here.
  */
 
 /*
@@ -109,7 +113,6 @@ extern Boolean G_progressStatus;
 @extern object CustomFileSelDBox;
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg UIAction_TEXT
 #endif

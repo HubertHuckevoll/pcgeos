@@ -1,9 +1,14 @@
 /*
- * Allocation-budget accounting; watcher blocks remain owned by callers.
+ * Limit the memory budget available to browser content.
+ *
+ * A watcher holds a maximum and a running total, rather than allocating the
+ * content itself. Image import reserves bytes here before retaining decoded
+ * graphics; URLText returns its charged bytes when a page is detached.
+ * CacheLifetime.goc creates the application watcher, and HTMLViewStatus.goc
+ * can display the remaining budget. Each watcher is a caller-owned block.
  */
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg AWATCHER_TEXT
 #endif

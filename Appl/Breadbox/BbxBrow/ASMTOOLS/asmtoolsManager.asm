@@ -1,3 +1,14 @@
+	;
+	; Low-level services used by the browser's C/GOC modules.
+	;
+	; BLOCK/WAKEUP support the progressive-image stream in URLTextImageProgress:
+	; BLOCK checks completion and byte availability atomically before sleeping
+	; on a GEOS thread queue, so a producer wakeup cannot be missed.
+	; SETVIDBW controls the optional monochrome video mode. OPENCONNECTION starts
+	; a short-lived thread to open the TCPIP medium and signal its caller.
+	; EC builds also supply the compiler's stack-allocation check entry point.
+	;
+
                 include stdapp.def
 		include product.def
 		include Internal/semInt.def

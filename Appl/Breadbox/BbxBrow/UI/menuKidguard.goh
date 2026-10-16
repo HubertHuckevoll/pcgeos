@@ -1,6 +1,10 @@
-/**
-* Parental Control / Kidguard Menu
-*/
+/*
+ * KidGuard commands for the current site and protection state.
+ *
+ * Add/Remove Site and the on/off toggle send process messages handled in
+ * HTMLViewOptions.goc, which works with the document/frame and parental-control
+ * objects. dialogKidguard.goh defines the related confirmation/feedback UI.
+ */
 
 @ifdef COMPILE_OPTION_PARENTAL_CONTROL
 @object GenInteractionClass PCMenu = {

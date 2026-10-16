@@ -1,13 +1,22 @@
+/*
+ * Historical browser configuration from before options.goh was consolidated.
+ *
+ * This older option set selects prodndo.goh or prodgpc.goh, then adds common
+ * cache, rendering and worker settings. The current browser includes
+ * options.goh instead; consult this file when comparing or restoring the
+ * old product configurations.
+ */
+
 /***********************************************************************
  *
  * PROJECT:       HTMLView
- * FILE:          options.goh
+ * FILE:          prodbbx.goh
  *
  * AUTHOR:        Marcus Gröber and Lysle Shields
  *
  ***********************************************************************/
 
-/* This contains all the compile time options. */
+/* Common options for the historical product configurations below. */
 #include <product.h>
 @include <product.goh>
 

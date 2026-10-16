@@ -1,7 +1,12 @@
 /*
- * URL fetch-engine scheduling, child threads, cancellation and progress state.
- * Children call URLLoad.goc and return results to the acknowledgement object.
- * Keep this code in the fixed URLFetchEngine_TEXT resource for thread entry.
+ * Fetch URLs asynchronously for frames, images and parser external files.
+ *
+ * URLFetchRequest queues work on an engine object, which assigns it to an
+ * available child thread. Children call URLLoad.goc and send URLFetchResult
+ * blocks to the requested acknowledgement object/message. This module owns
+ * worker startup/shutdown, abort coordination and per-child streaming state
+ * used to overlap image download and import. URLFetchEngine_TEXT is fixed
+ * because it contains thread entry code.
  */
 
 /*

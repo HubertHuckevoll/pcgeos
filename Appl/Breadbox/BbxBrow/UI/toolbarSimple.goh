@@ -1,6 +1,11 @@
-/**
-  * "Simple Toolbar", reworked for the FreeGEOS project
-  */
+/*
+ * Simple browser toolbar with navigation, zoom, print and status groups.
+ *
+ * Navigation buttons target the current document or application. Go/Jump
+ * open URL-entry dialogs whose process handlers live in HTMLViewNavigation.goc;
+ * zoom/status groups come from statusIndicators.goh. mainWrapper.goh selects
+ * this layout with COMPILE_OPTION_SIMPLE_BUTTON_TOOLBAR.
+ */
 
 @object GenInteractionClass SimpleToolbar = {
     GI_comp =

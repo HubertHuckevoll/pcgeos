@@ -1,9 +1,14 @@
 /*
- * Globe animation class, artwork and per-object timer lifecycle.
+ * Draw the spinning globe that indicates browser activity.
+ *
+ * GlobeAnimClass selects one of the bitmap frames in Art_Globe. It can
+ * advance after a byte-count threshold or run on its own timer; operation
+ * start/end in HTMLViewOperation.goc switches automatic animation on/off.
+ * Each object keeps its animation state and stops its timer when closed.
+ * COMPILE_OPTION_TURN_OFF_LOGO omits the gadget and its artwork.
  */
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg GLBANIM_TEXT
 #endif

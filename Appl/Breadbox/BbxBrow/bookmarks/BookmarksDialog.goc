@@ -20,8 +20,12 @@
  *-----------------------------------------------------------------------*/
 
 /*
- * Bookmark dialog commands, list selection and menu coordination.
- * Keep the original code resource independent of this source filename.
+ * Manage the optional flat list of saved page titles and URLs.
+ *
+ * BookmarksDialogClass fills the organizer list, opens the selected bookmark
+ * and handles editing, deletion and reordering. Changes go through the storage
+ * API in bookmark.goh, implemented by BookmarksStore.goc, then refresh the
+ * shortcut menu defined with the dialogs in UI/bookui.goh.
  */
 #ifdef __BORLANDC__
 #pragma codeseg BOOKCLAS_TEXT

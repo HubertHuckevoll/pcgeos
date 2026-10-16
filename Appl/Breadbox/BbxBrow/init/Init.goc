@@ -1,7 +1,12 @@
 /*
- * Browser initialization, driver associations, UI adaptation and INI defaults.
- * Navigation acquires shared cache storage before creating its associations;
- * shutdown releases history before its cache reference and association blocks.
+ * Prepare the shared services and defaults needed before browsing starts.
+ *
+ * InitNavigation builds URL-scheme and MIME/extension associations, initializes
+ * driver/cache services and creates history/local-page bookkeeping. Startup
+ * in HTMLViewLifecycle.goc also uses this module to supply missing INI defaults
+ * and adapt controls to the system. DeInitNavigation releases history before
+ * its cache reference and tears down the association blocks. CacheLifetime.goc
+ * keeps shared VM storage alive for any documents or text objects still using it.
  */
 
 /*
@@ -25,7 +30,6 @@
  *
  ***********************************************************************/
 
-/* Keep the code resource independent of the source filename. */
 #ifdef __BORLANDC__
 #pragma codeseg Init_TEXT
 #endif

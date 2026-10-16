@@ -1,5 +1,10 @@
 /*
- * The status indicators, to be used in the status bar or elsewhere
+ * Reusable browser status, progress and indicator objects.
+ *
+ * LinkStatus selects text by priority; FastStatus gadgets draw it and page
+ * progress using updates from HTMLViewStatus.goc. Other objects expose zoom,
+ * memory-budget, secure-connection and KidGuard state. mainWrapper.goh and
+ * toolbarSimple.goh place the relevant groups in the window.
  */
 
 /*

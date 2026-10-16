@@ -20,9 +20,13 @@
  *-----------------------------------------------------------------------*/
 
 /*
- * Favorite and group creation, including document defaults and temporary fields.
- * Class ownership and list coordination remain in FavoritesDialog.goc.
- * Keep the original code resource independent of this source filename.
+ * Add saved pages and folders to the hierarchical Favorites collection.
+ *
+ * FavoriteManagerClass prepares the creation dialogs, using the current
+ * document's title and URL as page defaults. The dialog handlers copy the
+ * entered title, URL and notes into FavoritesStore.goc, save the changes and
+ * refresh the organizer and shortcut menu through FavoritesDialog.goc.
+ * That file registers the classes declared in favorcls.goh.
  */
 #ifdef __BORLANDC__
 #pragma codeseg FAVORCLS_TEXT

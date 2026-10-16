@@ -24,9 +24,14 @@
  **************************************************************************/
 
 /*
- * Source-file cache state, persistence, recency and expiration.
- * Owns shared cache URL policy and LOCAL utilities used by ObjectCache.goc.
- * Keep the original code resource independent of this source filename.
+ * Reuse downloaded source files for later URL loads.
+ *
+ * The cache maps URLs to disk files and MIME information, with recency,
+ * size limits and optional expiration/validation data. URLLoad.goc checks it
+ * before calling a URL driver and adds successful downloads afterward.
+ * Source-cache lookups also supply visited-link information to URLTextLinks.
+ * This file saves/restores the index and provides URL-token/cache-policy
+ * helpers shared with ObjectCache.goc in NAVCACHE_TEXT.
  */
 #ifdef __BORLANDC__
 #pragma codeseg NAVCACHE_TEXT

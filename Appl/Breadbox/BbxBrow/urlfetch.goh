@@ -1,7 +1,17 @@
+/*
+ * Asynchronous source-fetch API used by frames, images and parser callbacks.
+ *
+ * URLFetchEngine.goc queues requests, URLLoad.goc obtains the source, and the
+ * chosen acknowledgement message receives a memory block containing
+ * URLFetchResult. The receiver owns that result block and frees it with
+ * URLFetchAckComplete. Extra-memory helpers retain caller-specific request
+ * state across the worker round trip. MIME decoding is a later import step.
+ */
+
 /***********************************************************************
  *
  * PROJECT:	  HTMLView
- * FILE:      HTMLFetch.goh
+ * FILE:      urlfetch.goh
  *
  * AUTHOR:	  Lysle Shields
  *

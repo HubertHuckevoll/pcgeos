@@ -1,5 +1,10 @@
 /*
- *              Options Menu
+ * Browser preferences for window layout, caching and connection settings.
+ *
+ * INI-backed controls hold toolbar/status visibility, cache limits, home URL
+ * and other options. HTMLViewOptions.goc applies their process messages and
+ * saves settings through HTMLVApp. The new-home command targets the current
+ * document; shared font/tool controls connect to the normal GEOS controllers.
  */
 
 @object GenBooleanGroupClass SettingsBoolGroup = {

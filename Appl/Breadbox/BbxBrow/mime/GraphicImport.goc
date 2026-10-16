@@ -1,12 +1,15 @@
 /*
- * Graphic import workers, request/progress ownership and MIME dispatch.
- * Queue synchronization, cache references and request cleanup stay with
- * the import engine. Native-driver calls retain LoadURL_TEXT separately
- * from the worker code in ImportG_TEXT.
+ * Decode page images on worker threads while the browser stays responsive.
+ *
+ * URLTextImages.goc submits downloaded files; URLTextImageProgress.goc submits
+ * streams that can be decoded during download. Requests rotate among import
+ * workers, which call native MIME drivers and report progress or replacement
+ * images to URLText. Each completion, including cancellation, releases request
+ * resources and the fetch/import synchronization barrier. Page-cache references
+ * keep source data alive even if the displayed page is detached.
  */
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg ImportG_TEXT
 #endif

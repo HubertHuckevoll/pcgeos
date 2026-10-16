@@ -20,10 +20,15 @@
  ***********************************************************************/
 
 /*
- * URLTextClass owner, page lifetime, formatting and memory accounting.
+ * Display a parsed HTML page inside one browser frame.
  *
- * The single class declaration and all method registrations remain here.
- * Other files implement coherent concerns in the existing code resources.
+ * URLTextClass extends Html4Par's HTMLTextClass with browser behavior; the
+ * base class supplies text/layout storage and drawing. The owning URLFrame
+ * attaches a cached page and receives pending/completion notifications.
+ * This module registers the class and keeps it alive while formatting or
+ * image requests are pending. Page detachment releases image-cache locks,
+ * resolved URL tokens and charged image memory. Image loading, links,
+ * clipboard, printing and scripts are implemented in the other URLText files.
  */
 
 /**************************************************************************

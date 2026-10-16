@@ -1,6 +1,11 @@
 /*
- * Frame dimensions and UI geometry, scrolling, visibility and focus.
- * URLFrame.goc owns the class and registers these external methods.
+ * Translate HTML frameset sizes and frame attributes into GEOS view geometry.
+ *
+ * Compute each active frame's pixel dimensions from fixed, percentage or
+ * relative sizes and the space shared with its siblings. Apply those sizes,
+ * borders and scrollbar policies to its view or frameset group, then restore
+ * visibility and focus through the tree. URLFrameTree.goc builds the objects;
+ * URLDocument requests these updates after the frame structure changes.
  */
 
 @include <stdapp.goh>
@@ -9,7 +14,6 @@
 
 #pragma option -WDE
 
-/* Retain the original resource and compiler string options. */
 #ifdef __BORLANDC__
 #pragma codeseg FRFETCH3_TEXT
 #pragma option -dc-

@@ -20,25 +20,18 @@
  ***********************************************************************/
 
 /*
- * URLFrameClass fetch/parser entrypoint. URLFRAME.goc owns the class and
- * registers these external methods; htmlview.goh declares the interface.
- * This file handles URL requests and post-data caching, owns pending external
- * files and fetch acknowledgements, and supplies parsing/error helpers plus
- * script callbacks and document.write parsing. Cleanup and token references
- * stay with the existing handlers. LOCAL helpers remain with their callers
- * to preserve their _near _pascal calling convention.
+ * Turn a frame's URL request into a parsed page for display.
  *
- * Fetch/parser helpers use FRFETCH_TEXT. MSG_URL_FRAME_URL_FETCHED alone uses
- * FRFETCH2_TEXT because its code stays on the call stack throughout parsing.
+ * Try ObjectCache.goc for an already parsed page; otherwise submit a fetch
+ * to URLFetchEngine.goc. On acknowledgement, parse HTML/plain text through
+ * Html4Par or delegate other MIME types to ContentHandling.goc, then cache
+ * the result and pass it to URLFramePage.goc. Parser callbacks obtain external
+ * files and run scripts; document.write output is parsed here as well.
+ * This module also owns POST-data caching and fetch-result cleanup.
  *
- * URLFramePage.goc handles received-page metadata, presentation, completion
- * in FRFETCH3_TEXT; URLFrameGeometry.goc handles frame-view geometry there.
- * Its embedded-audio completion handler retains FRFETCH_TEXT and shares its
- * string pool with the requester.
- * URLFrameNavigation.goc prepares URLs and initiates requests; URLFrameTree.goc
- * builds/restores frame trees; URLFrameScript.goc owns script contexts/events
- * and URLFrameTimers.goc owns script timers. Their external methods are also
- * registered in URLFRAME.goc.
+ * The main acknowledgement handler uses FRFETCH2_TEXT so its suspended stack
+ * frame does not pin the parser helpers in FRFETCH_TEXT during parsing.
+ * URLFrame.goc registers these methods; htmlview.goh declares their interface.
  */
 
 /* we need this for the callbacks... */
@@ -59,7 +52,6 @@
 @include "htmlview.goh"
 #include "javascr.h"
 
-/* Retain the original default resource and compiler string options. */
 #ifdef __BORLANDC__
 #pragma codeseg FRFETCH_TEXT
 #endif

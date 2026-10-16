@@ -1,6 +1,10 @@
-/* Private cache persistence layout and existing cross-source near helpers.
- * Both implementations must remain in NAVCACHE_TEXT for LOCAL calls.
- * Include after htmlview.goh; public cache declarations remain there.
+/*
+ * Private declarations shared by SourceCache.goc and ObjectCache.goc.
+ *
+ * CacheFileMapBlock describes the saved cache index and its name pool.
+ * The URL-token and cache-policy helpers are near calls shared within
+ * NAVCACHE_TEXT, so both implementations must use that code resource.
+ * Include after htmlview.goh, which declares the public cache API.
  */
 #ifndef BBXBROW_CACHE_INTERNAL_H
 #define BBXBROW_CACHE_INTERNAL_H

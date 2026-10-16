@@ -1,16 +1,18 @@
+/*
+ * Historical NewDeal browser feature selection, included by prodbbx.goh.
+ *
+ * These options select its document commands, toolbar, rendering and cache
+ * features. The current build uses consolidated options.goh. GOC and C
+ * defines have different preprocessing behavior, which is why the older
+ * configuration kept product-specific GOC commands in separate files.
+ */
+
 /***********************************************************************
  *
  * PROJECT:       HTMLView
  * FILE:          prodNDO.goh
  *
  * AUTHOR:        Martin Turon
- *
- * DESCRIPTION:   Since the goc tool is fairly stupid
- *                and will create constants for any @define,
- *                even when enclosed in @ifdef ... @endif
- *                (or even commented out //@define!!!)
- *                this file defines product specific features
- *                separately.  Included by OPTIONS.GOH. 
  *
  ***********************************************************************/
 

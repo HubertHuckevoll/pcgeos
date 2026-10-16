@@ -1,11 +1,13 @@
 /*
- * URLTextClass progressive image handoff and stream buffering.
+ * Connect an image download to a decoder before the file is complete.
  *
- * Keep fetch callbacks, stream handles and UI progress handoffs together.
- * MemStream.c implements the existing byte-buffer operations privately.
- * Existing queues, semaphores, callbacks and ownership remain unchanged.
- *
- * URLText.goc owns URLTextClass and registers these external methods.
+ * LoadGraphicProgressCallback implements the fetch driver's stream protocol:
+ * writes buffer incoming bytes, reads/peeks feed the importer, and waiting
+ * readers wake when data or completion arrives. The URLText notification
+ * hands the stream to GraphicImport.goc. Per-fetch-child buffers use
+ * MemStream.c, with a VM HugeArray alternative. Semaphores coordinate the
+ * two workers; a canceled handoff leaves request cleanup to the fetch
+ * acknowledgement in URLTextImages.goc.
  */
 
 @include <stdapp.goh>
@@ -18,7 +20,6 @@
 #include "URLTextInternal.h"
 #include <sem.h>
 
-/* Source organization does not change code-resource placement. */
 #ifdef __BORLANDC__
 #pragma codeseg URLText_TEXT
 #pragma option -dc-

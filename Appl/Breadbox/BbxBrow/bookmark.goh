@@ -1,3 +1,12 @@
+/*
+ * Storage API for the optional flat list of saved page titles and URLs.
+ *
+ * BookmarksStore.goc implements these operations on a VM HugeArray;
+ * BookmarksDialog.goc edits it and URLDocumentNavigation.goc opens entries.
+ * BookmarkLock returns pointers valid until BookmarkUnlock. Menu construction
+ * also lives behind this API so shortcuts reflect the same stored list.
+ */
+
 /*-------------------------------------------------------------------------
  | Project:  WebMagick
  | Module:   Bookmark Database access routines

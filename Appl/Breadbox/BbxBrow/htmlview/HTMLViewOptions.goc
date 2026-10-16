@@ -1,8 +1,12 @@
 /*
- * Rendering preferences, parental-control UI and view/search controls.
- * Preference changes route existing document events; the process and
- * application classes remain owned by HTMLView.goc. The control classes
- * and their registrations remain together here.
+ * Apply browser preferences to the window and displayed pages.
+ *
+ * These process/application handlers build parser options, change graphics,
+ * fonts, encoding and fit-to-window behavior, manage KidGuard controls and
+ * save settings. They update toolbar visibility or send document events when
+ * a page must reload or reformat. This file also implements the browser's
+ * view/search control subclasses and reads/writes the configured home URL.
+ * HTMLView.goc registers the process and application methods.
  */
 
 /*
@@ -83,7 +87,6 @@
 @endif
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg UIRare_TEXT
 #endif

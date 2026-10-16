@@ -1,5 +1,10 @@
-/**
- * Big Icon toolbar
+/*
+ * Large-icon toolbar with a text label below each navigation button.
+ *
+ * Buttons reuse the browser's process, document, application and print-control
+ * commands; a dynamic list uses the shared recent-history handlers in
+ * HTMLViewNavigation.goc. mainWrapper.goh selects this layout with
+ * COMPILE_OPTION_BIG_BUTTON_TOOLBAR and places the URL bar below it.
  */
 @object GenInteractionClass IconBar = {
     GI_comp =

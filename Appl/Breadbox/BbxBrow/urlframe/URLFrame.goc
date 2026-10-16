@@ -20,27 +20,19 @@
  ***********************************************************************/
 
 /*
- * URLFrameClass entrypoint and sole class owner. The class/interface is in
- * htmlview.goh; external methods are registered here in their original order.
- * This core coordinates frame state, content cleanup, cache-page attachment,
- * document notifications, graphics loading and security integration.
+ * Represent a location in a document's frame tree.
  *
- * The remaining responsibilities are organized by concern:
- *   URLFrameTree.goc       - Frame/view creation, frameset restoration and
- *                            collection, frame attributes and traversal.
- *   URLFrameNavigation.goc - Link targets, URL completion, fetch initiation,
- *                            reload/save/source requests and refresh timers.
- *   URLFrameScript.goc     - Script contexts, events and private state.
- *   URLFrameTimers.goc     - Script timeout and interval timer management.
- *   URLFrameFetch.goc      - Fetch/cache requests, external files, parsing
- *                            callbacks, errors and fetch acknowledgements.
- *   URLFramePage.goc       - Received-page metadata, presentation, embedded
- *                            audio and completion.
- *   URLFrameGeometry.goc   - Frame dimensions and UI geometry/focus updates.
+ * A URLFrame holds the current URL, title, targets and load state. A page
+ * frame connects a URLText object to a view; a frameset node organizes child
+ * frames. URLDocument owns the top frame and receives its change/completion
+ * notifications. This file registers URLFrameClass and implements core state,
+ * pending counts, stop/cleanup and attachment of cached pages to URLText.
  *
- * Source boundaries do not create code resources. Tree/navigation and Watcom
- * script methods share URLFRAME_TEXT. Preserve the legacy Borland script
- * switch below: it also affects this core's later CLEAR_OBJ_CACHE handler.
+ * The other frame modules follow the load path: Navigation resolves links
+ * and starts loads; Fetch retrieves/parses content; Page applies metadata
+ * and chooses a page or frameset; Tree creates/restores the object tree;
+ * Geometry sizes its views. Script and Timers supply per-frame JavaScript
+ * contexts, events and timeouts. The interface is declared in htmlview.goh.
  */
 
 /**************************************************************************

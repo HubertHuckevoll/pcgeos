@@ -1,5 +1,9 @@
 /*
- * Auto Browse Menu
+ * Controls for optional automated browsing and bulk-load tests.
+ *
+ * Triggers start the process handlers in htmlview/AutoBrowse.goc. The option
+ * group controls delay, cache clearing and script diagnostic logging between
+ * loads. These objects are present only with COMPILE_OPTION_AUTO_BROWSE.
  */
 
 @ifdef COMPILE_OPTION_AUTO_BROWSE

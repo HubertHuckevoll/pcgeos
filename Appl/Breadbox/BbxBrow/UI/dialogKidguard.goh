@@ -1,6 +1,10 @@
 /*
- * Parental Control aka Kidguard related
- * dialog stuff
+ * KidGuard confirmation and site-list feedback dialogs.
+ *
+ * The on/off buttons send commands to the parental-control handlers in
+ * HTMLViewOptions.goc. The other dialogs explain that a site is already
+ * allowed or absent from the list. htmlv_ui.goh includes these objects for
+ * builds with COMPILE_OPTION_PARENTAL_CONTROL.
  */
 
 @object GenInteractionClass PCToggleOffDlg = {

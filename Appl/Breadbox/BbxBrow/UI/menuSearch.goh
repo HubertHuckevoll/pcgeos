@@ -1,5 +1,9 @@
-/**
- * Search Menu - remove completely?
+/*
+ * Shortcuts to configured web search services.
+ *
+ * Each trigger sends its numbered search choice to HTMLViewNavigation.goc,
+ * which reads the corresponding searchURL setting and loads it. These are
+ * web destinations; finding text within the page uses the Edit menu controls.
  */
 
 @object GenTriggerClass Search1 = {

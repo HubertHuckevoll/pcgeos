@@ -1,3 +1,14 @@
+/*
+ * Shared browser object model and interfaces.
+ *
+ * HTMLVProcess/Application manage the window and commands; URLDocument owns a
+ * browsing document and its history; URLFrame represents each page or frameset;
+ * URLText adds browser behavior to Html4Par's HTMLText. This header declares
+ * their messages, instance data and common cache/navigation services, letting
+ * the implementation files communicate through the same types and contracts.
+ * Build-time choices come from options.goh; UI objects come from htmlv_ui.goh.
+ */
+
 /***********************************************************************
  *
  * PROJECT:	  HTMLView

@@ -1,6 +1,10 @@
 /*
- * main UI wrapper, from top to bottom:
- * top bar, display group, status bar
+ * Lay out the browser window around its document display.
+ *
+ * MainWrapper stacks the top bar, HTMLDisplayGroup and status bar. Build
+ * options select the simple, small or large toolbar and its URL bar; the
+ * globe can sit alongside them. htmlv_ui.goh includes this layout after
+ * including the toolbar and status objects it references.
  */
  @object GenInteractionClass MainWrapper = {
     GI_attrs = @default | GA_TARGETABLE;

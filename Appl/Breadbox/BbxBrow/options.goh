@@ -1,3 +1,13 @@
+/*
+ * Active build-time configuration for the PC/GEOS Ensemble browser.
+ *
+ * This file selects platform features, optional UI/behavior, cache limits,
+ * worker defaults and callback parameter macros used across the browser.
+ * It is included by htmlview.goh and UI sources; local.mk supplies additional
+ * compiler defines and build variants. The older prodbbx/prodndo/prodgpc files
+ * retain historical configurations and are not included by this active setup.
+ */
+
 /***********************************************************************
  *
  * PROJECT:       HTMLView
@@ -5,18 +15,6 @@
  *
  * AUTHOR:        Marcus Gröber and Lysle Shields
  *                reworked by meyerk 12/2024 for FreeGEOS project
- *
- * NOTES:         This file used to include product specific options
- *                from prodndo.goh and prodgpc.goh. This resulted in
- *                a lot of duplication and confusion. I have now
- *                moved all options to this file and tried to document
- *                them as best as I could. There are still some
- *                unclear remnants.
- *
- *                If you really need to compile a version of the browser
- *                for an older platform, you could start by renaming
- *                prodbbx.goh to options.goh and work yourself through
- *                the options in the file. Good Luck. (meyerk 12/2024)
  ***********************************************************************/
 
 /*

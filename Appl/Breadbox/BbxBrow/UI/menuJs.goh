@@ -1,5 +1,9 @@
 /*
- * JS Menu
+ * Developer menu for inspecting the current page's JavaScript.
+ *
+ * The Analyze trigger invokes MSG_HMLVP_ANALYZE_JS in HTMLView.goc.
+ * It is compiled only when JavaScript and DO_ERROR_CHECKING are enabled;
+ * normal script event dispatch lives in the frame/text modules.
  */
 @if defined(JAVASCRIPT_SUPPORT) && defined(DO_ERROR_CHECKING)
 

@@ -1,3 +1,13 @@
+/*
+ * Define the compact, configurable browser toolbox.
+ *
+ * MainToolbar combines generated document/print/edit/search/view tool groups
+ * with browser navigation buttons and a dynamic recent-history list.
+ * Commands go to the existing controls, current document or application;
+ * HTMLViewNavigation.goc fills history and updates navigation state.
+ * mainWrapper.goh selects this layout with COMPILE_OPTION_LITTLE_BUTTON_TOOLBAR.
+ */
+
 @object GenInteractionClass MainToolbar = {
     GI_states = @default ;
     GII_visibility = GIV_POPOUT;

@@ -1,10 +1,14 @@
 /*
- * Priority-ordered status messages and the compact status display.
- * StatusText instances own their message heaps; FastStatus owns display state.
+ * Keep the most relevant browser status visible while messages overlap.
+ *
+ * StatusTextClass stores messages in a private LMem list ordered by priority.
+ * Callers retain IDs to change or remove their messages; removing the current
+ * one exposes the next message. HTMLViewStatus.goc uses this for loading,
+ * link and script status. FastStatusClass is the compact gadget that draws
+ * the selected text and progress and can dispatch a double-click action.
  */
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg StatText_TEXT
 #endif
@@ -29,7 +33,7 @@
  ***************************************************************************/
 
 /*-------------------------------------------------------------------------
- | Module:   TestStatusClass
+ | Module:   StatusTextClass and FastStatusClass
  |           Copyright (c) 1998 Breadbox Computer Company
  *-----------------------------------------------------------------------*/
 

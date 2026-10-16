@@ -1,10 +1,12 @@
 /*
- * URLTextClass script events, name lookup and AutoBrowse diagnostics.
+ * Expose rendered page elements to scripts and report script diagnostics.
  *
- * Retain the independent JavaScript and AutoBrowse build guards.
- * Script-driven image requests stay with their near helper in Images.
- *
- * URLText.goc owns URLTextClass and registers these external methods.
+ * With JavaScript enabled, URLText forwards HTML events to URLFrameScript.goc
+ * and locates named links, images, forms and controls for browser objects.
+ * Script-driven image loading is implemented in URLTextImages.goc.
+ * Independently, AutoBrowse builds can scan parsed script data and log usage
+ * of unsupported features. URLText.goc registers the methods and calls the
+ * analysis when attaching a page.
  */
 
 @include <stdapp.goh>
@@ -14,7 +16,6 @@
 #include <Ansi/stdlib.h>
 @include "htmlview.goh"
 
-/* Source organization does not change code-resource placement. */
 #ifdef __BORLANDC__
 #pragma codeseg URLText_TEXT
 #pragma option -dc-

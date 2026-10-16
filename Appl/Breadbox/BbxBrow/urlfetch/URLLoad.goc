@@ -1,8 +1,12 @@
 /*
- * URL driver callback, file fetch and cache/redirect coordination.
- * Driver references, URL tokens and returned files retain their existing
- * owners. Status presentation lives in HTMLViewStatus.goc; native graphic
- * dispatch lives with the import engine in GraphicImport.goc.
+ * Obtain a URL's source file, using the disk cache or a scheme driver.
+ *
+ * Fetch children call LoadURLToFile with a URL token and load/cache policy.
+ * It checks SourceCache.goc, handles local FILE URLs, follows redirects and
+ * calls the driver selected through URLSupport.goc. Results describe the file,
+ * MIME type, error or streamed image handoff. LoadURLCallback relays driver
+ * status and transfer progress to HTMLViewStatus.goc. Frames parse the result;
+ * import workers decode images, optionally while download is still running.
  */
 
 /*
@@ -93,7 +97,6 @@ void RenameCacheFile(TCHAR *tempname, dword id, TCHAR *curExt) ;
 void LoadNewMimeDriver(TCHAR *driver) ;
 
 
-/* Preserve the original swapping boundary and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg LoadURL_TEXT
 #endif

@@ -3,9 +3,14 @@
  |           Copyright (c) 1998 Breadbox Computer Company
  *-----------------------------------------------------------------------*/
 
-/***************************************************************************
- *		Bookmark Menu Objects
- ***************************************************************************/
+/*
+ * UI objects for the optional flat-bookmark menu and organizer.
+ *
+ * Ten shortcut triggers open stored entries through the current document.
+ * The dynamic organizer list and edit dialog send commands to
+ * BookmarksDialogClass in BookmarksDialog.goc, backed by BookmarksStore.goc.
+ * HTMLView.goc includes this resource when bookmarks are enabled.
+ */
 
 @include "bookclas.goh"
 

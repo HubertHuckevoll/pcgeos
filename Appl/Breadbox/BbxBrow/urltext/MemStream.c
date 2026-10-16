@@ -1,8 +1,14 @@
 /*
- * Private byte-buffer implementation for URLText image loading progress.
+ * Buffer downloaded image bytes until the graphic importer consumes them.
  *
- * The caller retains stream handles and synchronization. Preserve the
- * existing block layout, allocation behavior and absolute tail ceiling.
+ * URLTextImageProgress.goc keeps one stream per fetch child and coordinates
+ * producer/consumer access. A header handle indexes lazily allocated 8 KB
+ * blocks; deleting consumed bytes frees blocks, and reads leave data in place.
+ * Initialization resets the offsets for the next image.
+ *
+ * ATTENTION: The fixed 200-slot table limits total appended data per reset
+ * to less than 1600 KB, even after consumption. Larger streams need a growing
+ * table or rebased offsets.
  */
 
 #include <product.h>
@@ -11,7 +17,6 @@
 #include <ec.h>
 #include <Ansi/string.h>
 
-/* Keep the implementation in the original browser code resource. */
 #ifdef __BORLANDC__
 #pragma codeseg URLText_TEXT
 #pragma option -dc-

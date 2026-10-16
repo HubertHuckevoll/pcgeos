@@ -1,7 +1,12 @@
 /*
- * Frame/view tree creation, frameset restoration and history collection.
- * The frame instances retain their object links, attributes and name tokens.
- * URLFRAME.goc owns the class and registers these external methods.
+ * Build and inspect the object tree behind HTML framesets.
+ *
+ * A page frame pairs a URLFrame, URLText and view; a frameset replaces the
+ * page view with a group of child frames. These methods duplicate the templates
+ * from URLDocument.goc, connect the objects and detach/destroy them safely.
+ * They also restore HTMLframeRec arrays from parsing or history and collect
+ * new snapshots with URLs, names and scroll positions. Navigation uses the
+ * tree lookup methods to locate parents, children and real page frames.
  */
 
 @include <stdapp.goh>
@@ -13,7 +18,6 @@
 @include "htmlview.goh"
 #include "javascr.h"
 
-/* Keep the original code resource and compiler string defaults. */
 #ifdef __BORLANDC__
 #pragma codeseg URLFrame_TEXT
 #endif

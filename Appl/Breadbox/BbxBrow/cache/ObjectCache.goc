@@ -24,9 +24,14 @@
  **************************************************************************/
 
 /*
- * Parsed-object cache state, VM chains, reference counts and eviction.
- * Preserve cache-item ownership and cleanup under the object-cache semaphore.
- * Keep the original code resource independent of this source filename.
+ * Reuse decoded images and parsed pages without fetching or parsing again.
+ *
+ * Entries map a URL and object type to a VM chain, identified by an
+ * ObjCacheToken. Frames lock parsed pages while attached to URLText; image
+ * loading locks decoded graphics while displayed. Locked entries cannot be
+ * evicted, and unlocking a no-cache entry frees it immediately. Cache files
+ * can survive restart, but parsed text pages are removed at normal shutdown.
+ * SourceCache.goc stores downloaded files before parsing or decoding.
  */
 #ifdef __BORLANDC__
 #pragma codeseg NAVCACHE_TEXT

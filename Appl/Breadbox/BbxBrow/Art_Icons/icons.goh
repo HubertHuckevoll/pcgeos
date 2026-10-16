@@ -1,3 +1,12 @@
+/*
+ * Select and package the browser's toolbar artwork.
+ *
+ * Included by htmlv_ui.goh, this file chooses the GPC, 256-color or 16-color
+ * monikers according to build options and places them in TopIcons resources.
+ * The individual Art/ and Art_Icons/ files contain the graphic data used by
+ * toolbar buttons; this file connects those assets to the UI build.
+ */
+
 @ifdef COMPILE_OPTION_GPC_ICONS
 @start TopIcons1Resource ;
 @include "Art/GI001_8.goh"

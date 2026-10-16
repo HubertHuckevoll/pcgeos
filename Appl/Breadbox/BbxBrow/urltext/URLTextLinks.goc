@@ -1,12 +1,12 @@
 /*
- * URLTextClass link interaction and visited-link presentation.
+ * Connect rendered hyperlinks and forms to browser navigation.
  *
- * Hotspot and pointer methods forward interaction to the owning frame and
- * coordinate the busy cursor. Visited-link marking uses the source cache
- * and preserves overridden link colors.
- *
- * URLText.goc owns the class declaration and dispatch table. This file
- * implements external methods in the same URLText_TEXT code resource.
+ * Hotspot selection copies URL/target tokens into the browser name pool and
+ * passes them, with form data, to the owning URLFrame for resolution and
+ * loading. Pointer handlers update link status and busy-cursor behavior.
+ * When a page is attached, visited-link marking resolves its anchors and
+ * checks SourceCache.goc while respecting page-specified link colors.
+ * URLText.goc registers these methods.
  */
 
 @include <stdapp.goh>
@@ -16,7 +16,6 @@
 
 @extern object HTMLVApp;
 
-/* Source split only: keep these methods in the original code resource. */
 #ifdef __BORLANDC__
 #pragma codeseg URLText_TEXT
 #pragma option -dc-

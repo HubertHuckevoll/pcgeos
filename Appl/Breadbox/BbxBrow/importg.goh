@@ -1,7 +1,17 @@
+/*
+ * Asynchronous image-decoding API implemented by mime/GraphicImport.goc.
+ *
+ * URLText submits a fetched file or loading-progress stream, together with
+ * the destination text object and optional source-page cache owner. Workers
+ * report progress/replacement back to URLText and release request resources.
+ * The engine calls here start, abort and stop those workers; image fetching
+ * uses the separate urlfetch.goh interface.
+ */
+
 /***********************************************************************
  *
  * PROJECT:	  HTMLView
- * FILE:      HTMLFetch.goh
+ * FILE:      importg.goh
  *
  * AUTHOR:	  Lysle Shields
  *

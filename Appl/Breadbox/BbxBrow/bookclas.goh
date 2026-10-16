@@ -1,3 +1,12 @@
+/*
+ * Messages for the optional flat-bookmark organizer dialog.
+ *
+ * UI/bookui.goh instantiates BookmarksDialogClass. BookmarksDialog.goc handles
+ * its list queries, navigation, edits and ordering through the storage API
+ * in bookmark.goh. This class declaration is the link between those UI objects
+ * and their handlers.
+ */
+
 /*-------------------------------------------------------------------------
  | Project:  WebMagick
  |           Copyright (c) 1998 Breadbox Computer Company
