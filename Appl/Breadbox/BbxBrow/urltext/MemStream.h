@@ -11,9 +11,6 @@
 
 #include <geos.h>
 
-/* Select memory buffering instead of the VM HugeArray stream. */
-#define USE_MEM_STREAM
-
 MemHandle MemStreamInit(MemHandle stream);
 void MemStreamDelete(MemHandle stream, word bufSize, Boolean emptyLast);
 word MemStreamRead(MemHandle stream, void *buffer, word bufSize, word offset);
