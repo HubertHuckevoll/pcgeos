@@ -67,9 +67,6 @@ DESCRIPTION:
      #define _DOS_LONG_NAME_SUPPORT	-1
 #endif
 
-     /* browser flags */
-     #define EMBED_SUPPORT      -1
-
 /*=========================================================================
  *	Product Macros
  *=========================================================================*/

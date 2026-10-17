@@ -826,9 +826,7 @@ typedef struct {
   @instance NameToken UFI_documentTitle = NAME_POOL_NONE;
   @instance NameToken UFI_baseURI = NAME_POOL_NONE;
   @instance NameToken UFI_baseTarget = NAME_POOL_NONE;
-#if EMBED_SUPPORT
   @instance NameToken UFI_embed = NAME_POOL_NONE;
-#endif
   @instance NameToken UFI_referrer = NAME_POOL_NONE;
 
   /* token of name pool entry for current window's name */
@@ -914,9 +912,7 @@ typedef struct {
   @message void MSG_URL_FRAME_SET_URL_TITLE_BASE_TARGET(
        NameToken url, NameToken title, NameToken base, NameToken target,
        NameToken referer);
-#if EMBED_SUPPORT
   @message void MSG_URL_FRAME_SET_EMBED(NameToken embed);
-#endif
   @message void MSG_URL_FRAME_SET_FLAGS_SIZE_NAME(WordFlags flags,
        HTMLmultiLength size, NameToken name);
   @message void MSG_URL_FRAME_SET_NAME(NameToken name);
@@ -968,9 +964,7 @@ typedef struct {
   @message void MSG_URL_FRAME_RELEASE_EXT_FILES();
 
   @message (URL_FETCH_ACK) MSG_URL_FRAME_URL_FETCHED ;
-#if EMBED_SUPPORT
   @message (URL_FETCH_ACK) MSG_URL_FRAME_EMBED_FETCHED;
-#endif
   @message (URL_FETCH_ACK) MSG_URL_FRAME_EXT_FILE_FETCHED;
 
   @message void MSG_URL_FRAME_SET_REFRESH(NameToken url, word secs);

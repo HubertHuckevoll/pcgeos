@@ -270,12 +270,10 @@
     SPEC_NONE,
     TAG_IS_CHAR_STYLE,
         },
-#if EMBED_SUPPORT
   {"EMBED",     OptrToChunk(@vcdNone), OptrToChunk(@vpdNone),
         SPEC_EMBED,
         TAG_NO_FORMATTING|TAG_FLUSH_TEXT,
         },
-#endif
 
   /*** FIELDSET: to be implemented ***/
 

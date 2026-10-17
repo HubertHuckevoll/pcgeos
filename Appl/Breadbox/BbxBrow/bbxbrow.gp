@@ -51,7 +51,7 @@ library	   parentc
 # Only needed for COMPILE_OPTION_IDIAL_CONTROL
 library	   idialc
 
-# Only needed for EMBED_SUPPORT
+# Embedded WAV playback
 library	   wav
 
 ifdef EMAIL_ACCT_CMD

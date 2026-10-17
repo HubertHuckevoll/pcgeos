@@ -148,9 +148,7 @@ VMBlockHandle InitTransferItem(void)
     htbh->HTBH_other.HTBHO_fileInfo = 0;
     htbh->HTBH_other.HTBHO_documentTitle = NAME_POOL_NONE;
     htbh->HTBH_other.HTBHO_baseURI = NAME_POOL_NONE;
-#if EMBED_SUPPORT
     htbh->HTBH_other.HTBHO_embed = NAME_POOL_NONE;
-#endif
 
     htbh->HTBH_transferItem = VMCHAIN_MAKE_FROM_VM_BLOCK(textHead);
     htbh->HTBH_arrayBlock = VMCHAIN_MAKE_FROM_VM_BLOCK(arrayBlock);

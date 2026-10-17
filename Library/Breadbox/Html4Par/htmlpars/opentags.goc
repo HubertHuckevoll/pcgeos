@@ -1267,7 +1267,6 @@ void _pascal Open_BODY(TagOpenArguments *arg)
     ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_BODY, 0);
 }
 
-#if EMBED_SUPPORT
 void _pascal Open_EMBED(TagOpenArguments *arg)
 {
     char *p;
@@ -1279,7 +1278,6 @@ void _pascal Open_EMBED(TagOpenArguments *arg)
 	htbh->HTBH_other.HTBHO_embed = NamePoolTokenizeDOS(NamePool, p, FALSE);
     }
 }
-#endif
 
 /**************************************************************************
  *              Font mappings
@@ -2084,9 +2082,7 @@ OpenHandlerEntry OpenHandlers[] =
   {SPEC_DTDD,           Open_DTDD},
   {SPEC_BLOCKQUOTE,     Open_BLOCKQUOTE_MENU},
   {SPEC_MENU,           Open_BLOCKQUOTE_MENU},
-#if EMBED_SUPPORT
   {SPEC_EMBED,          Open_EMBED},
-#endif
   {SPEC_NOSCRIPT,       Open_NOSCRIPT},
   {SPEC_STYLE,          Open_STYLE},
 

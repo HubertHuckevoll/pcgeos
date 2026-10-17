@@ -92,9 +92,7 @@ extern void UserAbortEnd(void);
 /* Fetch/parser methods are in URLFrameFetch.goc; page/audio handlers in URLFramePage.goc. */
 @extern method URLFrameClass, MSG_URL_FRAME_REQUEST_URL;
 @extern method URLFrameClass, MSG_URL_FRAME_URL_FETCHED;
-#if EMBED_SUPPORT
 @extern method URLFrameClass, MSG_URL_FRAME_EMBED_FETCHED;
-#endif
 @extern method URLFrameClass, MSG_URL_FRAME_GOT_URL;
 @extern method URLFrameClass, MSG_URL_FRAME_LOADING_FINISHED;
 @extern method URLFrameClass, MSG_URL_FRAME_GOT_PAGE_NOFRAME;
@@ -326,7 +324,6 @@ extern void UserAbortEnd(void);
     HWChecksumCheck() ;
 }
 
-#if EMBED_SUPPORT
 @method URLFrameClass, MSG_URL_FRAME_SET_EMBED
 {
     if (pself->UFI_embed != NAME_POOL_NONE) {
@@ -338,7 +335,6 @@ extern void UserAbortEnd(void);
         NamePoolUseToken(namePool, embed);
     }
 }
-#endif
 
 @method URLFrameClass, MSG_URL_FRAME_GET_CACHE_TOKEN
 {

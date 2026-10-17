@@ -22,9 +22,7 @@
 #pragma option -WDE
 
 #include <cookies.h>
-#if EMBED_SUPPORT
 @include <wav.goh>
-#endif
 @extern object HTMLVApp;  /* Expanded status and progress macros. */
 @extern object SettingsBoolGroup;
 @extern object HTMLSettingsBoolGroup;
@@ -39,7 +37,6 @@
 #pragma code_seg("FRFETCH_TEXT")
 #endif
 
-#if EMBED_SUPPORT
 /*
  * This is a temporary measure, we should use the ImpDoc driver to
  * handle the embedded file.
@@ -108,7 +105,6 @@
     /* finish item */
     @call document::MSG_URL_DOCUMENT_DEC_PENDING();
 }
-#endif
 
 /***************************************************************************
  *              Handling of received Hypertext Transfer Items
@@ -243,9 +239,7 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
             metaArray = NullOptr;
     optr document = pself->UFI_document;
     NameToken title, base, target;
-#if EMBED_SUPPORT
     NameToken embed;
-#endif
     VMFileHandle vmf;
     VMChain item;
 #if JAVASCRIPT_SUPPORT
@@ -326,14 +320,12 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
         if(target != NAME_POOL_NONE)
             NamePoolReleaseToken(namePool, target);
 
-#if EMBED_SUPPORT
         embed = NamePoolTokenizeFromVM(namePool, vmf,
                                         htbh->HTBH_other.HTBHO_namePoolToUse,
                                         htbh->HTBH_other.HTBHO_embed, TRUE);
         @call self::MSG_URL_FRAME_SET_EMBED(embed);
         if (embed != NAME_POOL_NONE)
             NamePoolReleaseToken(namePool, embed);
-#endif
 
 @ifdef COMPILE_OPTION_LOCAL_PAGES
         /* Notify document that it's no longer corresponding to a local page.
@@ -563,11 +555,9 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
             text = pself->UFI_text;
     WordFlags frameFlags = pself->UFI_frameFlags;
     word children, i;
-#if EMBED_SUPPORT
     TCHAR embedBuf[HTML_MIN_BUF], *embedBufP;
     NameToken embedURL;
     optr document = pself->UFI_document;
-#endif
 
     HWChecksumCheck() ;
     @call self::MSG_URL_FRAME_ACTIVATE(dummy);
@@ -580,7 +570,6 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
         frameFlags = HTML_FRF_SCROLLING | (frameFlags & HTML_FRF_FORCE_SCROLL);
     }
 
-#if EMBED_SUPPORT
     pself = ObjDeref(oself, 0);
     if (pself->UFI_embed != NAME_POOL_NONE) {
         /* get absolute URL */
@@ -604,7 +593,6 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
                 }
                 NamePoolDestroyIfDynamic(embedBufP);
     }
-#endif
 
     /*
      * If we're a leaf node in the frame tree (i.e. we have an associated

@@ -147,9 +147,7 @@ typedef struct {
     NameToken   HTBHO_baseTarget;       /* <BASE target=...> */
     ColorQuad   HTBHO_backColor;
     VMChain     HTBHO_namePoolToUse;    /* name pool to use with this item */
-#if EMBED_SUPPORT
     NameToken   HTBHO_embed;            /* single embedded object */
-#endif
     word        HTBHO_topMargin ;       /* Margin to inset from the top */
     word        HTBHO_leftMargin ;      /* Margin to inset from the left */
     word        HTBHO_formattedWidth ;  /* Size last formatted, 0 for none */
