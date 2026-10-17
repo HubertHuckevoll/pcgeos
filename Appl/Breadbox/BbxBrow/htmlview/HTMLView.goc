@@ -478,8 +478,8 @@ void RestoreTVBW(void)
 @extern method HTMLVApplicationClass, MSG_HMLVA_PROGRESS_TIMER ;
 @extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_PROGRESS_INDICATOR ;
 @extern method HTMLVApplicationClass, MSG_HMLVA_STATUS_GET_PTR ;
-@extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_DOWNLOAD_PROGRESS_DIALOG;
 @endif
+@extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_DOWNLOAD_PROGRESS_DIALOG;
 
 /* Methods in htmlview/HTMLViewLifecycle.goc */
 @extern method HTMLVApplicationClass, MSG_HMLVA_GET_LAUNCH_URL ;
@@ -636,14 +636,6 @@ void RestoreTVBW(void)
     }
 }
 @endif
-
-/***************************************************************************
- *             Application class
- ***************************************************************************/
-@ifndef UPDATE_ON_UI_THREAD
-@classdecl HTMLVApplicationClass;
-@endif
-
 
 /***************************************************************************
  *              URL entry field class

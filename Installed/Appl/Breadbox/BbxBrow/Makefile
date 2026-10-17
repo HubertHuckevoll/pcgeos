@@ -19,11 +19,11 @@ URLFRAME        = URLFrameTree.goc URLFrameNavigation.goc\
                   URLFrameScript.goc URLFramePage.goc URLFrameFetch.goc\
                   URLFrame.goc URLFrameGeometry.goc URLFrameTimers.goc
 URLTEXT         = MemStream.c MemStream.h URLTextInternal.h\
-                  URLTextClipboard.goc URLTextImageProgress.goc\
-                  URLTextLinks.goc URLTextPrint.goc URLTextScript.goc\
-                  URLText.goc URLTextImages.goc
-CACHE           = CacheInternal.h SourceCache.goc ObjectCache.goc\
-                  CacheLifetime.goc
+                  URLTextClipboard.goc URLTextLinks.goc URLTextPrint.goc\
+                  URLTextScript.goc URLText.goc URLTextImageProgress.goc\
+                  URLTextImages.goc
+CACHE           = CacheInternal.h SourceCache.goc CacheLifetime.goc\
+                  ObjectCache.goc
 MIME            = ContentHandling.goc GraphicImport.goc
 COLLECTIONS     = BookmarksDialog.goc BookmarksStore.goc\
                   FavoritesDialog.goc FavoritesCreate.goc\
@@ -40,17 +40,17 @@ OBJS            = HTMLViewNavigation.obj HTMLViewOptions.obj\
                   URLFrameNavigation.obj URLFrameScript.obj\
                   URLFramePage.obj URLFrameFetch.obj URLFrame.obj\
                   URLFrameGeometry.obj URLFrameTimers.obj MemStream.obj\
-                  URLTextClipboard.obj URLTextImageProgress.obj\
-                  URLTextLinks.obj URLTextPrint.obj URLTextScript.obj\
-                  URLText.obj URLTextImages.obj SourceCache.obj\
-                  ObjectCache.obj CacheLifetime.obj ContentHandling.obj\
-                  GraphicImport.obj BookmarksDialog.obj BookmarksStore.obj\
+                  URLTextClipboard.obj URLTextLinks.obj URLTextPrint.obj\
+                  URLTextScript.obj URLText.obj URLTextImageProgress.obj\
+                  URLTextImages.obj SourceCache.obj CacheLifetime.obj\
+                  ObjectCache.obj ContentHandling.obj GraphicImport.obj\
+                  BookmarksDialog.obj BookmarksStore.obj\
                   FavoritesDialog.obj FavoritesCreate.obj\
                   FavoritesStore.obj
 COMMON          = bookclas.goh bookmark.goh favorcls.goh favorite.goh\
                   glbanim.goh javascr.h prodgpc.goh prodndo.goh\
-                  stattext.goh htmlv_ui.goh htmlview.goh importg.goh\
-                  options.goh prodbbx.goh urlfetch.goh
+                  stattext.goh htmlv_ui.goh urlfetch.goh htmlview.goh\
+                  importg.goh options.goh prodbbx.goh
 MODULES         = ASMTOOLS
 CMODULES        = htmlview init urldoc urldocct urlfetch urlframe urltext\
                   cache mime collections
