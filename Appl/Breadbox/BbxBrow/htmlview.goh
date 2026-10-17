@@ -607,9 +607,7 @@ void ObjCacheUnlockItem(ObjCacheToken oct) ;
 void ObjCacheForceNocache(ByteEnum type, NameToken url);
 void ObjCacheForceCachable(ObjCacheToken oct);
 
-@ifdef CACHE_ALL
 extern Boolean G_cacheAll;
-@endif
 
 /***************************************************************************
  *              URL handling

@@ -400,9 +400,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
     EC( NamePoolIsTokenValid(namePool, request.nameT, TRUE) ; )
 
     temporary = (result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
     && !G_cacheAll
-@endif
     ;
     ret = URLRequestGetRet(result.retType);
 
@@ -461,9 +459,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
                 result.mimeType,
                 result.curHTML,
                 ((result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
                     && !G_cacheAll
-@endif
                     ), OCT_NULL, NULL) ;
             if(!importQueued)
             {
@@ -1057,9 +1053,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
     URLFetchExtraMemoryFree(result.extraData);
 
     temporary = (result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
     && !G_cacheAll
-@endif
     ;
 
     /* import */
@@ -1079,9 +1073,7 @@ extern void PCAddRemoveHostFromURL(TCHAR *url, ParentalControlFlags *, Boolean a
             result.mimeType,
             result.curHTML,
             ((result.retType & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
                 && !G_cacheAll
-@endif
                 ), OCT_NULL, NULL) ;
         if(!importQueued)
         {

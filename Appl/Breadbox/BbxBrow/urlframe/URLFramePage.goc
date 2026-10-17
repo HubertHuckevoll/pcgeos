@@ -92,9 +92,7 @@
         /* delete file, if requested */
         if ((result.retType & URB_RF_NOCACHE) &&
             !(result.retType & URB_RF_FILE_REDIR)
-@ifdef CACHE_ALL
             && !G_cacheAll
-@endif
             ) {
             FileDelete(result.curHTML);
         }
@@ -182,14 +180,10 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
         NamePoolDestroyIfDynamic(p);    /* release buffer for argument */
         /* always recheck any page with a refresh from the network, in
             case other no-cache mechanisms weren't used */
-@ifdef CACHE_ALL
         if (!G_cacheAll) {
-@endif
-        /* expire source-cached item, if any */
-        (void)SrcCacheExpireURL(curURL);
-@ifdef CACHE_ALL
+            /* expire source-cached item, if any */
+            (void)SrcCacheExpireURL(curURL);
         }
-@endif
         /* if this is a redirector page, don't put in history */
         if (secs == 0) {
             optr docObj = @call frame::MSG_URL_FRAME_GET_DOCUMENT_OBJ();
@@ -203,9 +197,7 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
                     md->HMD_name && md->HMD_content &&
                     NamePoolTestEqualI(namePool, md->HMD_name, _TEXT("Pragma")) &&
                     NamePoolTestEqualI(namePool, md->HMD_content, _TEXT("no-cache"))
-@ifdef CACHE_ALL
                     && !G_cacheAll
-@endif
                 ) {
         /* nuke source-cached item, if any */
         (void)SrcCacheFreeURL(curURL);

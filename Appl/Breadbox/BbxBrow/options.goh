@@ -67,11 +67,6 @@ Older builds are:
 /* use alternate source cache for certain hosts
    - Investigate if still needed (meyerk 12/2024) */
 
-@define CACHE_ALL
-/* set to allow specifying "cacheAll" mode in .ini, so that everything
-   will be cached, even those pages specifying no-cache; for creating
-   local copy of demo pages */
-
 @define POST_DATA_CACHE
 /* in lieu of a correct implementation for association the original post
    data with each frame (by storing a reference in the HTMLframeRec), we

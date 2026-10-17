@@ -220,11 +220,6 @@
    current page, only for AUI */
 @define DIALOG_ERROR
 
-/* set to allow specifying "cacheAll" mode in .ini, so that everything
-   will be cached, even those pages specifying no-cache; for creating
-   local copy of demo pages */
-@define CACHE_ALL
-
 /* set to move secure and KidGuard indicators to title bar in CUI TV */
 /* turn off: causes flashing of whole primary */
 /*@define TITLE_BAR_STATUS*/

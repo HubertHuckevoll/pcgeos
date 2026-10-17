@@ -127,7 +127,7 @@ static struct { optr extra; NameToken url; word mode; } fetches[LIMIT];
 static struct { NameToken name; dword imageGeneration; ImportProgressData importProgressData;
     Boolean temporary; } imports[LIMIT];
 static unsigned fetched, imported, pending, completed, events, freedProgress, deleted;
-static Boolean G_stopped, caching, failQueue;
+static Boolean G_stopped, G_cacheAll, caching, failQueue;
 static Boolean G_fetchWhileImport, G_importActive[2];
 static Boolean progressDisplay = TRUE;
 static word progressMinHeight;
@@ -312,7 +312,7 @@ static void init(void)
     memset(unsupported, 0, sizeof(unsupported)); memset(nextName, 0, sizeof(nextName));
     text.HTI_imageArray = ARRAY; text.HTI_namePool = 2; text.UTI_frame = 4;
     text.UTI_imageGeneration = 1; count = fetched = imported = pending = completed = events = 0;
-    freedProgress = deleted = 0; G_stopped = failQueue = FALSE; caching = TRUE;
+    freedProgress = deleted = 0; G_stopped = G_cacheAll = failQueue = FALSE; caching = TRUE;
 }
 static void add_image(const char *primary, const char *fallback)
 {
@@ -372,7 +372,7 @@ static void check(void)
 {
     NameToken t, primary;
     ObjCacheToken oct;
-    unsigned old;
+    unsigned old, cacheAll;
     LoadProgressData stream;
     assert(sizeof(word) == 2 && sizeof(dword) == 4);
     init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);
@@ -384,6 +384,18 @@ static void check(void)
     assert(fetched == 2 && pending == 1 && !completed && images[0].imageURL == primary);
     assert(!strcmp(names[0][images[0].HID_resolvedURL], "http://site/fallback.jpg"));
     load_success(1); assert(completed == 1 && (images[0].flags & HTML_IDF_PICTURE_FALLBACK_USED)); cleanup();
+
+    /* cacheAll retains no-cache downloads; ordinary mode treats them as temporary. */
+    for(cacheAll = 0; cacheAll <= 1; cacheAll++) {
+        init(); G_cacheAll = cacheAll; add_image("primary.webp", NULL);
+        MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE); fetch_done(0, URL_RET_FILE | URB_RF_NOCACHE);
+        assert(imported == 1 && imports[0].temporary == !cacheAll);
+        import_done(0, TRUE, FALSE); cleanup();
+
+        init(); G_cacheAll = cacheAll; failQueue = TRUE; add_image("primary.webp", NULL);
+        MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE); fetch_done(0, URL_RET_FILE | URB_RF_NOCACHE);
+        assert(!imported && !pending && deleted == !cacheAll); cleanup();
+    }
 
     /* A not-modified response reuses the decoded object without another import. */
     init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);

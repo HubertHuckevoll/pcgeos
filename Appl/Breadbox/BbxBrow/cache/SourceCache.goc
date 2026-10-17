@@ -94,9 +94,7 @@ Boolean weakCacheExpiration = FALSE;
 MemHandle unSupportedExts = NullHandle;
 #endif
 
-@ifdef CACHE_ALL
 Boolean G_cacheAll = FALSE;
-@endif
 
 @if defined(COMPILE_OPTION_ENABLE_SETTINGS) || defined(COMPILE_OPTION_ENABLE_MISCELLANEOUS)
     @extern object srcCacheLimit;
@@ -907,10 +905,8 @@ Boolean LOCAL SrcCacheIsExpired(dword expiration, Boolean *tryModified)
     else if(!weakCacheExpiration)     // weak expiration: no expiration
         *tryModified = TRUE;            // specified will make us never request
 
-@ifdef CACHE_ALL
     /* ignore expiration if G_cacheAll */
     if(G_cacheAll) expired = FALSE;
-@endif
 
     return expired;
 }

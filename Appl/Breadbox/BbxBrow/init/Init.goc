@@ -636,10 +636,11 @@ void InitNavigation(void)
     /* set up initial portal cookie, if needed */
     SetPortalCookie();
 #endif
-@ifdef CACHE_ALL
-    /* read cache all flag */
+    /* The "cacheAll" INI option (FALSE by default) retains local copies of
+     * demo pages, including pages specifying no-cache. It overrides cache
+     * expiration and selected no-cache checks, but may still revalidate or
+     * access the network. */
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "cacheAll", &G_cacheAll);
-@endif
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "fetchWhileImport", &G_fetchWhileImport);
 }
 

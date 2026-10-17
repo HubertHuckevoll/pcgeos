@@ -535,13 +535,8 @@ MemHandle lazarusURL = 0;
                         if (isFile || !noISP)
                                 @call CurrentURLText::MSG_VIS_TEXT_REPLACE_ALL_PTR(urlBuf, 0);
                         /* if not FILE and have ISP, open connection right away */
-@ifdef CACHE_ALL
                         if (!isFile && !noISP && !G_cacheAll)
                                 OpenConnection(NullHandle);
-@else
-                        if (!isFile && !noISP)
-                                OpenConnection(NullHandle);
-@endif
                         }
                 }  /* end of AS_ATTATCHING if */
 

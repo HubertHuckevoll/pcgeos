@@ -720,9 +720,7 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
             }
             /* after all that, if we we're told to not cache, remove it */
             if ((type & URB_RF_NOCACHE)
-@ifdef CACHE_ALL
                 && !G_cacheAll
-@endif
                 ) {
                 (void)SrcCacheRemoveEntryByID(id);
             }

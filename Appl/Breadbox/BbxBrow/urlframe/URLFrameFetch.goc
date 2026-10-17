@@ -468,9 +468,7 @@ VMBlockHandle LOCAL ReadFileIntoHA(VMFileHandle vmf, TCHAR *name)
         /* TBD: replace by proper cache locking/unlocking */
         if ((result.retType & URB_RF_NOCACHE) &&
             !(result.retType & URB_RF_FILE_REDIR)
-@ifdef CACHE_ALL
             && !G_cacheAll
-@endif
             ) {
             FileDelete(result.curHTML);
         }
@@ -1527,9 +1525,7 @@ Boolean LOCAL testScriptCode(VMFileHandle file, VMBlockHandle code, dword offset
 
         pself = ObjDeref(oself, 0);
         if((retType & URB_RF_NOCACHE) && !(retType & URB_RF_FILE_REDIR)
-@ifdef CACHE_ALL
             && !G_cacheAll
-@endif
             && (pself->UFI_pendingURLs == NullOptr ||
                 pself->UFI_pendingDone >= ChunkArrayGetCount(pself->UFI_pendingURLs))
             )
@@ -1590,9 +1586,7 @@ Boolean LOCAL testScriptCode(VMFileHandle file, VMBlockHandle code, dword offset
             !errorPage &&
 @endif
             (((retType & URB_RF_NOCACHE)==0)
-@ifdef CACHE_ALL
             || G_cacheAll
-@endif
             ) &&
             request.objCache &&
             request.dir != DIR_SOURCE;
