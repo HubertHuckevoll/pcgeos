@@ -110,10 +110,8 @@ optr SaveUnknownFile(TCHAR *file, NameToken url)
     optr         ret;
     word         i;
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
     /* done loading */
     @SendUpdateProgress(PI_DONE, 0);
-@endif
 
     /* Determine where the file name and extension are in the whole thing */
     defaultExtension = ToolsFindExtension(file);

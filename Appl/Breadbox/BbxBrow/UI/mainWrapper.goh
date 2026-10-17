@@ -76,9 +76,7 @@
  */
 @object GenInteractionClass StatusBar = {
     GI_comp =   @LinkTextBox
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
                 ,@ProgressIndicatorBox
-@endif
                 ;
 
     HINT_FULL_JUSTIFY_CHILDREN_HORIZONTALLY;

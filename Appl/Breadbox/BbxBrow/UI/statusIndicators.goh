@@ -36,7 +36,6 @@
 /*
  * The simple, yet fantastic progress bar
  */
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 @object GenInteractionClass ProgressIndicatorBox = {
     GI_states = @default & ~GS_ENABLED;
     GI_comp = @ProgressIndicator;
@@ -54,7 +53,6 @@
     HINT_EXPAND_HEIGHT_TO_FIT_PARENT;
 }
 
-@endif
 
 /*
  * Zoom indicators / toolbar items for simple toolbar

@@ -124,9 +124,7 @@
         if (!isBusyOff)
             @send HTMLVApp::MSG_HMLVA_MARK_BUSY();
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
         @SendUpdateProgress(PI_START, 0);
-@endif
         /* clear error state when operation is started */
         @call self::MSG_HMLVA_CLEAR_CONNECTION_ERROR();
     }
@@ -212,9 +210,7 @@
             @send process::
                 MSG_META_DETACH(pself->HVAI_callerID, pself->HVAI_caller);
         }
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
         @SendUpdateProgress(PI_DONE, 0);
-@endif
 @ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
         @call application::MSG_HMLVA_ACCEPT_INPUT();
 @endif
@@ -270,10 +266,8 @@
 @endif
 
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* TRUE if we are using the progress indicator to show download status */
 extern Boolean G_progressStatus;
-@endif
 
 
 @extern @object DownloadProgressDialog;

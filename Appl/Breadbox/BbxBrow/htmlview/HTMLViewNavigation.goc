@@ -50,10 +50,8 @@
 @include "stattext.goh"
 
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* TRUE if we are using the progress indicator to show download status */
 extern Boolean G_progressStatus;
-@endif
 
 
 @extern object CurrentURLText ;

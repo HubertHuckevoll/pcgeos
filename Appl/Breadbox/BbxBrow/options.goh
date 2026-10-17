@@ -136,9 +136,6 @@ Older builds are:
 // @define COMPILE_OPTION_TURN_OFF_LOGO
 /* UNCOMMENT this compile option to turn OFF the spinning globe logo */
 
-@define COMPILE_OPTION_PROGRESS_INDICATOR
-/* the new progress bar ("Ladebalken"), we want this instead of the globe in FreeGEOS */
-
 @define COMPILE_OPTION_IDIAL_CONTROL
 /* Turn on to use Internet Dialup Control */
 
@@ -400,8 +397,8 @@ Dead flags
       therefore permananently active in the original simple toolbar (meyerk 12/2024)
    - uses new, shorter progress indicator in place of spinning globe
       => not quite true for BBX, both were active. but this has now cleaned
-      up to be only dependent on the compile flags for the globe (COMPILE_OPTION_TURN_OFF_LOGO)
-      and the compile flag for the progress indicator (COMPILE_OPTION_PROGRESS_INDICATOR).
+      up so that only the globe is optional (COMPILE_OPTION_TURN_OFF_LOGO).
+      The progress indicator is always included.
       (meyerk 12/2024)
    - puts View/View Background Images and View/Load Graphics Now into
      same category

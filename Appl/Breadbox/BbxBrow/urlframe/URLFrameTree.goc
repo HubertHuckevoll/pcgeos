@@ -338,9 +338,7 @@ extern MemHandle PostDataCacheFind(NameToken url);
 
     HWChecksumCheck() ;
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
     @SendUpdateProgress(PI_NUM_FRAMES, ChunkArrayGetCount(frameSet));
-@endif
 
     /*
      * Update history etc. before dropping old URL

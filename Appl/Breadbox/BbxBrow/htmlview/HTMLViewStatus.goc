@@ -54,7 +54,6 @@
 @endif
 
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* TRUE if we are using the progress indicator to show download status */
 extern Boolean G_progressStatus;
 @extern object ProgressIndicator ;
@@ -62,7 +61,6 @@ extern Boolean G_fileDownload;
 extern Boolean G_fileUpload;
 extern Boolean G_allowFileDownloadStatus;
 extern void UpdateDownloadProgressDialogTimes(void);
-@endif
 
 
 @extern object HTMLVApp ;
@@ -254,9 +252,7 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
         HTML_STATUS_JAVASCRIPT_ERROR    /* HTML_STATUS_TYPE_JAVASCRIPT_ERROR */
     } ;
     static Boolean isStatusLineOff = 2 ;
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
     TCHAR *p;
-@endif
 
     if (isStatusLineOff == 2)  {
         isStatusLineOff = FALSE ;
@@ -294,7 +290,6 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
                         text) ;
         }
     }
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
         if (G_progressStatus && (type == HTML_STATUS_TYPE_DOWNLOADING)) {
             p = strstr(text, _TEXT("%"));
             if (p > text+3) {
@@ -302,7 +297,6 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
                 @SendUpdateProgress(PI_SET_VALUE, atoi(p+1));
             }
         }
-@endif
     HWChecksumCheck() ;
 }
 
@@ -344,7 +338,6 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
     }
 }
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 
 #define PI_START_VALUE 1
 #define PI_TIMER_VALUE 20
@@ -543,7 +536,6 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
     MemFree(updateTxt);
 }
 
-@endif  /* COMPILE_OPTION_PROGRESS_INDICATOR */
 @extern chunk DownloadProgressFilenameTemplate;
 @extern chunk DownloadProgressPercentageTemplate;
 @extern chunk DownloadProgressPercentageDecimalTemplate;

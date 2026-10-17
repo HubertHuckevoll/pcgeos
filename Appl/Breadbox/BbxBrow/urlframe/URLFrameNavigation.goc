@@ -45,10 +45,8 @@ extern Boolean CheckConnected(void);
     NameToken referer;
     word dirMode = DIR_ABSOLUTE;
     NameToken baseTarget = pself->UFI_baseTarget;
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
     extern Boolean G_progressStatus;
     extern Boolean G_allowFileDownloadStatus;
-@endif
 
     HWChecksumCheck() ;
 
@@ -157,10 +155,8 @@ extern Boolean CheckConnected(void);
         absURL = NamePoolTokenize(namePool, p, TRUE);
         /* build referer data, can re-use 'name' buffer now (marked in-use) */
         referer = @call realSelf::MSG_URL_FRAME_GET_URL();
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
         G_progressStatus = TRUE;
         G_allowFileDownloadStatus = TRUE;
-@endif
 @ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
         @call application::MSG_HMLVA_IGNORE_INPUT();
 @endif

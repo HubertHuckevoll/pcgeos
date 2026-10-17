@@ -123,9 +123,7 @@
     pself->UTI_numPendingRequests++;
     ObjIncInUseCount(OptrToHandle(oself));
     EC_ERROR_IF(pself->UTI_numPendingRequests >= MAX_NUM_REQUESTS, -1) ;
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
     @SendUpdateProgress(PI_NEW_ITEM, 0);
-@endif
 
     /* Relay operation status to frame */
     @call (pself->UTI_frame)::MSG_URL_FRAME_INC_PENDING();
@@ -139,9 +137,7 @@
     pself->UTI_numPendingRequests-- ;
     ObjDecInUseCount(OptrToHandle(oself));
     EC_ERROR_IF(pself->UTI_numPendingRequests >= MAX_NUM_REQUESTS, -1) ;
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
     @SendUpdateProgress(PI_DONE_ITEM, 0);
-@endif
     if (pself->UTI_numPendingRequests == 0)  {
         if(pself->UTI_doomed)           /* we have only been waiting for this */
         {
@@ -319,7 +315,6 @@
     @call oself::MSG_HTML_TEXT_LAYOUT_STOP() ;
 }
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* Report native cell-formatting progress. */
 @method URLTextClass, MSG_HTML_TEXT_FORMATTING_STATUS
 /* (word numCells, word numFormatted) ; */
@@ -329,7 +324,6 @@
         percent = (((dword)numFormatted) * 100L) / numCells ;
     @SendUpdateProgress(PI_FORMATTING, percent);
 }
-@endif
 
 /* Use browser MIME identification, with native fallback for unknown types. */
 @method URLTextClass, MSG_HTML_TEXT_IDENTIFY_MIME_TYPE

@@ -20,6 +20,7 @@ sub method {
 sub goc_to_c {
     my ($code) = @_;
     $code =~ s/\@(?:call|send(?:\s*,forceQueue)?)\s+[^:;]+::\s*(MSG_\w+)\(/$1(/g;
+    $code =~ s/\@SendUpdateProgress\b/SendUpdateProgress/g;
     $code =~ s/\@ifdef (\w+)/#ifdef $1/g;
     $code =~ s/\@else/#else/g;
     $code =~ s/\@endif/#endif/g;
@@ -86,6 +87,7 @@ typedef struct { word WWF_frac, WWF_int; } WWFixed;
 #define URL_RET_ABORTED 5
 #define URLRequestGetRet(v) ((v) & 255)
 #define EC(x)
+#define SendUpdateProgress(state, data) ((void)0)
 #define _TEXT(s) s
 #define OptrToHandle(v) (v)
 #define OptrToChunk(v) 0

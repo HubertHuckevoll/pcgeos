@@ -425,9 +425,7 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
     {
         MemLock(OptrToHandle(frameArray));
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
         @SendUpdateProgress(PI_NUM_FRAMES, ChunkArrayGetCount(frameArray));
-@endif
 
 @ifdef JAVASCRIPT_SUPPORT
 @ifndef HANDLE_SCRIPTS_DURING_PARSING

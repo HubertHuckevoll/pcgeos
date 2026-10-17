@@ -244,7 +244,6 @@ typedef struct {
 
 @endif
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 
 /* progress indicator states */
 #define PI_START 0
@@ -263,7 +262,6 @@ typedef struct {
 @define SendUpdateProgress(state, data) @send process::MSG_HMLVP_UPDATE_PROGRESS_INDICATOR(state, data)
 @endif
 
-@endif
 
 @ifdef TV_BW_OPTION
   @message (GEN_BOOLEAN_GROUP_APPLY_MSG) MSG_HMLVP_TV_BW_CHANGED;

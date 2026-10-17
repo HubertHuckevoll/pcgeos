@@ -66,11 +66,9 @@
 @endif
 
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* TRUE if we are using the progress indicator to show download status */
 extern Boolean G_progressStatus;
 @extern object DownloadProgressDialog;
-@endif
 
 
 @extern object CurrentURLText ;

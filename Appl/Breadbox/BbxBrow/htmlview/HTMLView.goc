@@ -238,14 +238,12 @@ Boolean G_startupPassword = FALSE;  /* hack for busy cursor override */
 /* user requested stop */
 Boolean G_stopped = FALSE;
 
-@ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* TRUE if we are using the progress indicator to show download status */
 Boolean G_progressStatus = FALSE;
 /* TRUE if we are downloading a file, show progress dialog */
 Boolean G_fileDownload = FALSE;
 Boolean G_fileUpload = FALSE;
 Boolean G_allowFileDownloadStatus = FALSE;
-@endif
 
 
 /**************************************************************************

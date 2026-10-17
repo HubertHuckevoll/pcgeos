@@ -153,7 +153,6 @@
 @define COMPILE_OPTION_TOGGLE_STATUS_BAR
 
 //@define COMPILE_OPTION_TURN_OFF_LOGO
-@define COMPILE_OPTION_PROGRESS_INDICATOR
 @endif
 
 /* Turn on to use .ini based list of Mime drivers and URL drivers for
