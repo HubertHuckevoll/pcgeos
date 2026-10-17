@@ -86,10 +86,8 @@
 
 #define GR_CACHE_ITEM_SIZE_LIMIT 20  /* in K */
 
-#ifdef CACHE_VALIDATION
-/* If defined: default expiration time for pages not specifying any */
+/* Default expiration time for pages not specifying any. */
 #define DEFAULT_MAX_AGE (1*86400)    /* in seconds */
-#endif
 
 #ifdef COMPILE_OPTION_LOCAL_PAGES
 /* Directory for storing local pages. This directory is created
@@ -461,22 +459,6 @@ typedef struct {
  *              Caching (Source and Object)
  ***************************************************************************/
 
-#ifdef CACHE_VALIDATION
-#define CACHE_VAL_LOAD_ARG ,&cacheTime, &maxAge, &lastModDate
-#define CACHE_VAL_LOAD_PROTO ,dword *cacheTime ,dword *maxAge, CompressedDateTime *lastModDate
-#define CACHE_VAL_ADD_ARG ,cacheTime, maxAge, &lastModDate
-#define CACHE_VAL_ADD_PROTO ,dword cacheTime, dword maxAge, CompressedDateTime *lastModDate
-#define CACHE_VAL_FIND_ARG ,&tryModified, &lastModDate
-#define CACHE_VAL_FIND_PROTO ,Boolean *tryModified ,CompressedDateTime *lastModDate
-#else
-#define CACHE_VAL_LOAD_ARG
-#define CACHE_VAL_LOAD_PROTO
-#define CACHE_VAL_ADD_ARG
-#define CACHE_VAL_ADD_PROTO
-#define CACHE_VAL_FIND_ARG
-#define CACHE_VAL_FIND_PROTO
-#endif
-
 /* Flag to set in source/object cache ID when item is to be stored in
    the "alternative" cache */
 #define CACHE_ALT_FLAG      0x80000000
@@ -489,7 +471,6 @@ typedef struct {
   dword id;
 
   TCHAR ext[8];
-#ifdef CACHE_VALIDATION
   dword expiration;             /* expiry date in seconds, from Date: and
 				   Expires: HTTP headers; if both exist
 				   and cache-hit comes before max-age,
@@ -498,7 +479,6 @@ typedef struct {
   CompressedDateTime lastModDate;  /* Last-Modified: HTTP header; if specified,
 				      use conditional HTTP request for cache
 				      validation; else unconditional request */
-#endif
 } srcCacheData;                 /* data structure describing cached names */
 
 /* this should be changed when the source cache format changes, it is
@@ -604,13 +584,13 @@ void CreateTempName(dword id,TCHAR *ext,TCHAR *buf);
 word SrcCacheRemoveEntryByID(dword id);
 word SrcCacheFindEntry(NameToken url, srcCacheData **data);
 word SrcCacheFindEntryByID(dword id, srcCacheData **data);
-Boolean SrcCacheFindURL(NameToken url, dword *id, TCHAR *ext, TCHAR *mimeType CACHE_VAL_FIND_PROTO);
-void SrcCacheAddURL(dword id, TCHAR *ext, TCHAR *mimeType, NameToken url, dword size CACHE_VAL_ADD_PROTO);
+Boolean SrcCacheFindURL(NameToken url, dword *id, TCHAR *ext, TCHAR *mimeType,
+    Boolean *tryModified, CompressedDateTime *lastModDate);
+void SrcCacheAddURL(dword id, TCHAR *ext, TCHAR *mimeType, NameToken url,
+    dword size, dword cacheTime, dword maxAge, CompressedDateTime *lastModDate);
 void SrcCacheClear(void) ;
 Boolean SrcCacheFreeURL(NameToken url);
-#ifdef CACHE_VALIDATION
 Boolean SrcCacheExpireURL(NameToken url);
-#endif
 
 void AttachToObjCache(void);
 void DetachFromObjCache(void);
@@ -648,9 +628,7 @@ void FlushURLData(void);
 
 void EnsureINISettings(AppAttachFlags attachFlags) ;
 
-#ifdef CACHE_VALIDATION
 extern Boolean weakCacheExpiration;
-#endif
 
 #ifdef UNSUPPORTED_EXTS
 extern MemHandle unSupportedExts;

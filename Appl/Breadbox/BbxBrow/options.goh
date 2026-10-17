@@ -79,10 +79,6 @@ Older builds are:
    scheme matches the history list behavior of only keeping one copy of
    multiple URLs that only differ by post data */
 
-#define CACHE_VALIDATION
-/* cache validation mechanism */
-
-
 /*
  * Document Management.
  ********************************************************************

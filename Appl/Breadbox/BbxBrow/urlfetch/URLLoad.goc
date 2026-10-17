@@ -228,7 +228,8 @@ extern T_fetchEngineChild G_fetchChildren[];
 /* url must be pointer to dynamic NamePool buffer */
 word LoadURLByDriver(TCHAR *type, TCHAR **url, TCHAR *tmpname, TCHAR *mimeType,
   dword *ret, HTMLFormDataHandle postData, NameToken referer, dword token,
-  void **abortRoutine, LoadProgressData *loadProgressDataP CACHE_VAL_LOAD_PROTO)
+  void **abortRoutine, LoadProgressData *loadProgressDataP,
+  dword *cacheTime, dword *maxAge, CompressedDateTime *lastModDate)
 {
     void *ProcessURL;
     word rtype;
@@ -342,11 +343,9 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
     /* point to loading progress data */
     req->URB_loadProgressDataP = loadProgressDataP;
     req->URB_referer = refererChunk;
-#ifdef CACHE_VALIDATION
     /* last mod date determines if we make conditional or unconditional
         request */
     req->URB_lastModDate = *lastModDate;
-#endif
     MemUnlock(reqBlock);
 
 @ifdef COMPILE_OPTION_AUTO_BROWSE
@@ -396,17 +395,11 @@ EC_ERROR_IF(!NamePoolIsDynamic(*url), -1);
                     MIME_MAXBUF);
         }
     }
-#ifndef CACHE_VALIDATION  /* leave passed mimeType, if none returned */
-    else
-        *mimeType = 0;
-#endif
 
     *ret = req->URB_message;
-#ifdef CACHE_VALIDATION
     *cacheTime = req->URB_cacheTime;
     *maxAge = req->URB_maxAge;
     *lastModDate = req->URB_lastModDate;
-#endif
 
     /* if connection error, flag it so we don't try again and again for
         current page (error cleared when page finishes) */
@@ -484,12 +477,10 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
     TCHAR *p;
     dword id;
     Boolean cached,srcCache;
-#ifdef CACHE_VALIDATION
     dword cacheTime;
     dword maxAge;
     Boolean tryModified;
     CompressedDateTime lastModDate;
-#endif
 
     /* mark in use, as import thread could finish before us */
     NamePoolUseToken(namePool, *url);
@@ -631,15 +622,14 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
         /*
             * Attempt to find URL in cache
             */
-#ifdef CACHE_VALIDATION
         /* in case not cache, make unconditional request */
         lastModDate.CDT_year = 0;
         /* in case not cache, no mime-type yet */
         *mime = 0;
-#endif
         if(srcCache)                    /* source caching enabled? */
         {
-            cached = SrcCacheFindURL(*url, &id, curExt, mime CACHE_VAL_FIND_ARG);
+            cached = SrcCacheFindURL(*url, &id, curExt, mime,
+                &tryModified, &lastModDate);
                                         /* check for ID in cache */
             if(cached)                    /* create name based on cache name */
             CreateTempName(id, curExt, tempname);
@@ -651,9 +641,7 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
             * URL not cached: have to load it (if we're allowed to)
             */
         if( (!cached ||
-#ifdef CACHE_VALIDATION
                 tryModified ||
-#endif
                 loadMode==ULM_ALWAYS) && loadMode!=ULM_NEVER )
         {
             if(!cached)                   /* create new temp file or reuse old */
@@ -661,7 +649,8 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
 
             type = LoadURLByDriver(curType, &urlP, tempname, mime, ret, postData,
                                     referer,
-            token, abortRoutine, loadProgressDataP CACHE_VAL_LOAD_ARG);
+            token, abortRoutine, loadProgressDataP,
+            &cacheTime, &maxAge, &lastModDate);
 
             /* Past this point, the postData handle is invalidated */
 #if SINGLE_POST  /* preserve post data for redirect, freed in LoadURLToFile */
@@ -725,7 +714,8 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
 
                 RenameCacheFile(tempname, id, curExt);
                                         /* rename file to final extension */
-                SrcCacheAddURL(id, curExt, mime, *url, 0 CACHE_VAL_ADD_ARG);
+                SrcCacheAddURL(id, curExt, mime, *url, 0,
+                    cacheTime, maxAge, &lastModDate);
                                         /* store URL/file association */
             }
             /* after all that, if we we're told to not cache, remove it */

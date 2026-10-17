@@ -207,9 +207,6 @@
 /* simple check to ensure ISP access point is set */
 @define CHECK_ISP
 
-/* cache validation mechanism */
-#define CACHE_VALIDATION
-
 /* status line and progress indicator update on UI thread */
 @define UPDATE_ON_UI_THREAD
 

@@ -88,9 +88,7 @@ MemHandle altSrcCacheHosts = NullHandle;
 MemHandle altSrcCacheExts = NullHandle;
 #endif
 
-#ifdef CACHE_VALIDATION
 Boolean weakCacheExpiration = FALSE;
-#endif
 
 #ifdef UNSUPPORTED_EXTS
 MemHandle unSupportedExts = NullHandle;
@@ -255,7 +253,6 @@ NameToken LOCAL CacheGetLocalToken(optr cachePool, NameToken url)
     return ret;
 }
 
-#ifdef CACHE_VALIDATION
 /*
   Julian Day Number formula is this:
 
@@ -320,7 +317,6 @@ void NumberToDateTime(dword number, TimerDateAndTime *tdat)
     tdat->TDAT_minutes = (timeSecs/60) % 60;
     tdat->TDAT_hours = ((timeSecs/60) / 60) % 24;
 }
-#endif
 
 /***************************************************************************
  *              Source cache management
@@ -871,7 +867,6 @@ word SrcCacheFindEntryByID(dword id, srcCacheData **data)
     return i;
 }
 
-#ifdef CACHE_VALIDATION
 /**************************************************************************
  *              SrcCacheIsExpired
  **************************************************************************
@@ -919,9 +914,9 @@ Boolean LOCAL SrcCacheIsExpired(dword expiration, Boolean *tryModified)
 
     return expired;
 }
-#endif
 
-Boolean SrcCacheFindURL(NameToken url, dword *id, TCHAR *ext, TCHAR *mimeType CACHE_VAL_FIND_PROTO)
+Boolean SrcCacheFindURL(NameToken url, dword *id, TCHAR *ext, TCHAR *mimeType,
+    Boolean *tryModified, CompressedDateTime *lastModDate)
 {
     word elm;
     srcCacheData *data, entry;
@@ -948,12 +943,8 @@ Boolean SrcCacheFindURL(NameToken url, dword *id, TCHAR *ext, TCHAR *mimeType CA
         NamePoolCopy(srcCachePool, mimeType, MIME_MAXBUF, entry.mimeType, NULL);
         /* get mime type */
 
-#ifdef CACHE_VALIDATION
         *lastModDate = entry.lastModDate;
         ret = !SrcCacheIsExpired(entry.expiration, tryModified);
-#else
-        ret = TRUE;
-#endif
     }
     else
         ret = FALSE;
@@ -965,15 +956,13 @@ Boolean SrcCacheFindURL(NameToken url, dword *id, TCHAR *ext, TCHAR *mimeType CA
 }
 
 void SrcCacheAddURL(dword id, TCHAR *ext, TCHAR *mimeType, NameToken url,
-                    dword size CACHE_VAL_ADD_PROTO)
+    dword size, dword cacheTime, dword maxAge, CompressedDateTime *lastModDate)
 {
     srcCacheData *data;
     PathName buf;
     dword newSize;
-#ifdef CACHE_VALIDATION
     dword expiration, now, lifeLeft;
     TimerDateAndTime nowTDAT;
-#endif
     MemHandle mh;
 
     SrcCacheGrab() ;
@@ -1006,7 +995,6 @@ void SrcCacheAddURL(dword id, TCHAR *ext, TCHAR *mimeType, NameToken url,
     xstrncpy( data->ext, ext, 8 );
     data->mimeType = NamePoolTokenize(srcCachePool, mimeType, TRUE);
 
-#ifdef CACHE_VALIDATION
     TimerGetDateAndTime(&nowTDAT);        /* current local time */
     expiration = DateTimeToNumber(&nowTDAT);
 
@@ -1043,7 +1031,6 @@ void SrcCacheAddURL(dword id, TCHAR *ext, TCHAR *mimeType, NameToken url,
 
     data->expiration = expiration;
     data->lastModDate = *lastModDate;
-#endif
 
     VMUnlock(mh) ;
 
@@ -1101,7 +1088,6 @@ Boolean SrcCacheFreeURL(NameToken url)
     return res;
 }
 
-#ifdef CACHE_VALIDATION
 Boolean SrcCacheExpireURL(NameToken url)
 {
     srcCacheData *src;
@@ -1118,7 +1104,6 @@ Boolean SrcCacheExpireURL(NameToken url)
     SrcCacheRelease();
     return res;
 }
-#endif
 
 void RenameCacheFile(TCHAR *tempname, dword id, TCHAR *curExt)
 {

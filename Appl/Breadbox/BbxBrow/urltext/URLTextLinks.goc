@@ -176,10 +176,8 @@
     dword id;
     VisTextCharAttrDiffs diffs;
     VisTextCharAttr attrs;
-#ifdef CACHE_VALIDATION
     Boolean tryModified;
     CompressedDateTime lastModDate;
-#endif
 
     if(!linkArray)                      // avoid indenting all this stuff...
         return;
@@ -205,7 +203,7 @@
             NamePoolDestroyIfDynamic(nP);
 
             /* Check if page is in the cache? */
-            if(SrcCacheFindURL(url, &id, curExt, mime CACHE_VAL_FIND_ARG))
+            if(SrcCacheFindURL(url, &id, curExt, mime, &tryModified, &lastModDate))
             {
                 @call self::MSG_VIS_TEXT_GET_CHAR_ATTR(0, &diffs, &attrs,
                     p->pos+p->len, p->pos);

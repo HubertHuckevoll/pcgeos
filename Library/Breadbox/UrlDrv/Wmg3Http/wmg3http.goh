@@ -37,9 +37,6 @@
 /* local compile options */
 #define PERSISTANT_CONNECTIONS
 
-#define CACHE_VALIDATION  /* use with CACHE_VALIDATION in GPCBrow,
-			     requires COOKIE_ENABLE */
-
 #define EMAIL_ACCT_CMD  /* handle email account manipulation from portal */
 
 /*#define SOCKET_CLOSE_THREAD*/  /* SocketClose thread to improve throughput */

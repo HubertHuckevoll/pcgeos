@@ -590,12 +590,10 @@ ObjCacheToken ObjCacheFindURL(ByteEnum type, NameToken url, Boolean doLock,
                               Boolean checkExp)
 {
     objCacheData *obj, entry;
-#ifdef CACHE_VALIDATION
     srcCacheData *data;
     Boolean tryModified;
     dword expiration;
     MemHandle mh;
-#endif
     word elm;
     ObjCacheToken ret;
 
@@ -605,7 +603,6 @@ ObjCacheToken ObjCacheFindURL(ByteEnum type, NameToken url, Boolean doLock,
     elm = ObjCacheFindEntry(type, url, &obj);
     if(elm!=CA_NULL_ELEMENT)
     {
-#ifdef CACHE_VALIDATION
         if(checkExp)                      // Only if we're allowed to expire
         {
             /*
@@ -631,7 +628,6 @@ ObjCacheToken ObjCacheFindURL(ByteEnum type, NameToken url, Boolean doLock,
                 goto expired;
             }
         }
-#endif
 
         /* make sure element goes to the end of the array (=LRU mechanism) */
         entry = *obj;                     /* copy element data */

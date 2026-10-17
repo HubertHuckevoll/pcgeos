@@ -185,15 +185,8 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
 @ifdef CACHE_ALL
         if (!G_cacheAll) {
 @endif
-#ifdef CACHE_VALIDATION
         /* expire source-cached item, if any */
         (void)SrcCacheExpireURL(curURL);
-#else
-        /* nuke source-cached item, if any */
-        (void)SrcCacheFreeURL(curURL);
-        /* mark as not object-cachable */
-        (void)ObjCacheForceNocache(OCT_TEXTOBJ, curURL);
-#endif
 @ifdef CACHE_ALL
         }
 @endif

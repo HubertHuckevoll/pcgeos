@@ -823,7 +823,6 @@ Boolean HeaderlessHTML(T_HTTPConnection *p_conn)
     return retval;
 }
 	
-#ifdef CACHE_VALIDATION
 /*
   Julian Day Number formula is this:
 
@@ -862,7 +861,6 @@ dword DateTimeToNumber(TimerDateAndTime *tdat)
 	tdat->TDAT_seconds;
     return retVal;
 }
-#endif
 
 #define CL_UNKNOWN 0x7fffffffL          /* largest int, in case no CL header */
 
@@ -894,10 +892,8 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 #ifdef COOKIE_ENABLE
     TimerDateAndTime httpExpires;
 #endif
-#ifdef CACHE_VALIDATION
     TimerDateAndTime httpDate;
     Boolean   dummyDST;
-#endif
 
     *responseCode = 0;  /* in case of error */
 
@@ -916,7 +912,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 #ifdef GET_RANGE
     p_conn->allowResume = FALSE;
 #endif
-#ifdef CACHE_VALIDATION
     TimerGetDateAndTime(&httpDate);  /* in case no Date: field */
     LocalNormalizeDateTime(&httpDate, &httpDate,
 			   LocalGetTimezone(&dummyDST));  /* -> GMT */
@@ -926,7 +921,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 					 last-mod-date, so can clear this in
 					 case new item doesn't have last-mod-
 					 date */
-#endif
     /* initialize mime type, we'll use this to determine whether we
        start an import */
     if (p_conn->loadProgressDataP)
@@ -1070,11 +1064,9 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 	/* handle "no-cache" among all "Cache-control" options, this only
 	   detects case-sensitive "no-cache", but that should be fine */
 	else if (LocalCmpStringsNoCaseSBCS(p, strn("Cache-control:")) == 0) {
-#ifdef CACHE_VALIDATION
 	    char *q = strstrsbcs(s, "max-age=");
 	    if (q)
 		p_conn->maxAge = atoisbcs(q+8);
-#endif
 	    if (strstrsbcs(s, "no-cache")) {
 		noCache = TRUE;
 	    }
@@ -1141,7 +1133,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 	    p_conn->chunkSize = 0;  /* ready for first chunk */
 	}
 #endif
-#ifdef CACHE_VALIDATION
 	else if (LocalCmpStringsNoCaseSBCS(p, strn("Date:")) == 0) {
 	    CookieParseTime(s, &httpDate);  /* bad parse gives year=0 */
 	}
@@ -1157,7 +1148,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 		p_conn->lastModDate.CDT_seconds = lastModTDAT.TDAT_seconds;
 	    }
 	}
-#endif
 #ifdef EMAIL_ACCT_CMD
 	else if (LocalCmpStringsNoCaseSBCS(p, strn("GPCemail")) == 0) {
 	    ChunkStrcpySBCS(p_conn->heap, &(p_conn->emailCmd), s);
@@ -1214,7 +1204,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 #endif
 #endif
 
-#ifdef CACHE_VALIDATION
     /* compute maxAge from Expires: and Date:, if both set */
     if (!p_conn->maxAge &&  /* Cache-control: max-age overrides this */
 	(httpExpires.TDAT_year >= 1980) && (httpDate.TDAT_year >= 1980) &&
@@ -1222,7 +1211,6 @@ long header(HTTPConnectionHandle conn, long *clret, word *responseCode)
 	p_conn->maxAge = DateTimeToNumber(&httpExpires) -
 	    DateTimeToNumber(&httpDate);
     }
-#endif
 
     if (p_conn->aborted) {             /* abort signal? */
         ConnectionUnlock(conn) ;
@@ -1490,10 +1478,8 @@ word HTTPGet(HTTPConnectionHandle conn)
 #ifdef PERSISTANT_CONNECTIONS
     Boolean newSocket = TRUE;
 #endif
-#ifdef CACHE_VALIDATION
     Boolean conditionalRequest = FALSE;
     Boolean notModified = FALSE;
-#endif
     word responseCode;
 #ifdef GET_RANGE
     Boolean deleteFile = FALSE;
@@ -2134,7 +2120,6 @@ word HTTPGet(HTTPConnectionHandle conn)
 	}
 #endif
 
-#ifdef CACHE_VALIDATION
 	/* make conditional request, if we have last mod date and GET */
 	if (p_conn->lastModDate.CDT_year &&
 	    (!p_conn->postData || bPostIsGet)) {
@@ -2165,7 +2150,6 @@ word HTTPGet(HTTPConnectionHandle conn)
 	    }
 	    conditionalRequest = TRUE;
 	}
-#endif
 
         /* Send a password if there is one */
         if (*p_conn->userpwd) {
@@ -2367,9 +2351,7 @@ word HTTPGet(HTTPConnectionHandle conn)
 	while (responseCode == 100) {
 	    rcode = header(conn, &contentlength, &responseCode);
 	}
-#ifdef CACHE_VALIDATION
 	notModified = (responseCode == 304);
-#endif
         p_conn = ConnectionLock(conn) ;
 
         /* disable loading progress if small file */
@@ -2384,7 +2366,6 @@ word HTTPGet(HTTPConnectionHandle conn)
 	length = 0L;  /* set here in case of header error when
 		         re-using socket */
 
-#ifdef CACHE_VALIDATION
 	/* if not-modified, don't read body, just return URL_RET_FILE
 	   with cached item */
 	if ((URLRequestGetRet(rcode) == URL_RET_FILE &&
@@ -2392,9 +2373,6 @@ word HTTPGet(HTTPConnectionHandle conn)
 	    /* or redirection with valid content */
 	    (URLRequestGetRet(rcode) == URL_RET_URL_REDIR &&
 	     contentlength != CL_UNKNOWN)) {
-#else
-        if (URLRequestGetRet(rcode) == URL_RET_FILE) {
-#endif
             /*
                we wait until the last moment to open the output file
                if any specified so that we won't overwrite the file
@@ -2740,14 +2718,12 @@ error_retry: ;
 #endif
     } while (retry == TRUE) ;
 
-#ifdef CACHE_VALIDATION
     /* if not-modified, just return URL_RET_FILE, and set special flag. */
     if (URLRequestGetRet(rcode) == URL_RET_FILE && 
         conditionalRequest && notModified)
     {
       rcode |= URB_RF_UNTOUCHED;
     }
-#endif
 
     error_exit:
     if (doClose) {
@@ -2837,9 +2813,7 @@ word _pascal _export URLDrvMain(_URLMainParams_)
     p_conn->fileChunk = req->URB_file ;
     p_conn->urlChunk = req->URB_url ;
     p_conn->refererChunk = req->URB_referer;
-#ifdef CACHE_VALIDATION
     p_conn->lastModDate = req->URB_lastModDate;
-#endif
 #ifdef EMAIL_ACCT_CMD
     p_conn->emailCmd = 0;
 #endif
@@ -2882,12 +2856,10 @@ word _pascal _export URLDrvMain(_URLMainParams_)
     req->URB_mimeType = p_conn->mimeTypeChunk ;
     req->URB_url = p_conn->urlChunk ;
     req->URB_message = p_conn->msg ;
-#ifdef CACHE_VALIDATION
     /* using current system time is accurate enough for timestamp */
     req->URB_cacheTime = TimerGetCount()/60;  /* convert ticks to seconds */
     req->URB_maxAge = p_conn->maxAge;
     req->URB_lastModDate = p_conn->lastModDate;
-#endif
 #ifdef EMAIL_ACCT_CMD
     req->URB_extraData = p_conn->emailCmd;
 #else

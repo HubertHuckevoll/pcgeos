@@ -25,8 +25,6 @@ NameToken LOCAL CacheGetLocalToken(optr cachePool, NameToken url);
 #ifdef ALT_SRC_CACHE
 Boolean LOCAL UseAltCache(TCHAR *urlP);
 #endif
-#ifdef CACHE_VALIDATION
 Boolean LOCAL SrcCacheIsExpired(dword expiration, Boolean *tryModified);
-#endif
 
 #endif

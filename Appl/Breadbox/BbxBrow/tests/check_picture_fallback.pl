@@ -78,6 +78,7 @@ typedef struct { word WWF_frac, WWF_int; } WWFixed;
 #define ULM_CACHE 0
 #define ULM_ALWAYS 1
 #define URB_RF_NOCACHE 0x100
+#define URB_RF_UNTOUCHED 0x0400
 #define URL_RET_FILE 1
 #define URL_RET_PROGRESS 2
 #define URL_RET_PROGRESS_ABORT 3
@@ -100,7 +101,7 @@ typedef struct { optr HTI_imageArray, HTI_namePool, UTI_frame;
 typedef struct { Boolean IAD_completeGraphic; } ImageAdditionalData;
 typedef struct { NameToken url; TCHAR mimeType[MIME_MAXBUF], curHTML[128];
     word retType; optr htmlMsg, extraData; } URLFetchResult;
-typedef struct { word LPD_importSync, LPD_sem; void *LPD_callback;
+typedef struct { word LPD_importSync, LPD_sem, LPD_loadThread; void *LPD_callback;
     optr LPD_textObj, LPD_request; NameToken LPD_nameT;
     char LPD_mimeType[MIME_MAXBUF]; } LoadProgressData;
 typedef word proc_LoadProgressCallback(void);
@@ -127,6 +128,7 @@ static struct { NameToken name; dword imageGeneration; ImportProgressData import
     Boolean temporary; } imports[LIMIT];
 static unsigned fetched, imported, pending, completed, events, freedProgress, deleted;
 static Boolean G_stopped, caching, failQueue;
+static Boolean G_fetchWhileImport, G_importActive[2];
 static Boolean progressDisplay = TRUE;
 static word progressMinHeight;
 static unsigned pool_index(optr pool) { assert(pool == 1 || pool == 2); return pool-1; }
@@ -382,6 +384,12 @@ static void check(void)
     assert(fetched == 2 && pending == 1 && !completed && images[0].imageURL == primary);
     assert(!strcmp(names[0][images[0].HID_resolvedURL], "http://site/fallback.jpg"));
     load_success(1); assert(completed == 1 && (images[0].flags & HTML_IDF_PICTURE_FALLBACK_USED)); cleanup();
+
+    /* A not-modified response reuses the decoded object without another import. */
+    init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);
+    oct = new_cache(fetches[0].url, TRUE, TRUE);
+    fetch_done(0, URL_RET_FILE | URB_RF_UNTOUCHED);
+    assert(!imported && !pending && images[0].HID_cacheToken == oct); cleanup();
 
     init(); add_image("primary.webp", "./primary.webp"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);
     fetch_done(0, 99); assert(fetched == 1 && !pending && (images[0].flags & HTML_IDF_BROKEN)); cleanup();

@@ -65,10 +65,8 @@ typedef struct {
     sdword chunkSize;
     dword connTimeOut;
 #endif
-#ifdef CACHE_VALIDATION
     dword maxAge;
     CompressedDateTime lastModDate;
-#endif
 #ifdef EMAIL_ACCT_CMD
     ChunkHandle emailCmd;
 #endif

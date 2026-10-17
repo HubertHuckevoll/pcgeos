@@ -36,7 +36,6 @@
 @define COMPILE_OPTION_DRAG_COPY_WEB_PAGES
 
 /* These definitions are required by the cache mechanism. */ 
-#define CACHE_VALIDATION
 #define DEFAULT_OBJECT_CACHE_LIMIT 4096
 
 @define COMPILE_OPTION_ENABLE_NUMCONN_OPTION

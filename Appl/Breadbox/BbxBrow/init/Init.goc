@@ -529,10 +529,8 @@ void InitNavigation(void)
     }
 #endif
 
-#ifdef CACHE_VALIDATION
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "weakCacheExpiration",
                         &weakCacheExpiration);
-#endif
 
 #ifdef UNSUPPORTED_EXTS
     /* read unsupported extensions, freed on exit */

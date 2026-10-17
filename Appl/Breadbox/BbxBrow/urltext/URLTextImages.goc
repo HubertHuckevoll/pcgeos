@@ -379,9 +379,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
     Boolean temporary;
     word ret;
     extern Boolean G_stopped;
-#ifdef CACHE_VALIDATION
     ObjCacheToken oct ;
-#endif
 
     /* Copy over the result data so we don't have to deal with */
     /* memory deref problems. */
@@ -430,7 +428,6 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
         return;
     }
 
-#ifdef CACHE_VALIDATION
     /* If the item has not been modified on the server, we can still
        try to get it from the object cache rather than importing it
        once again. */
@@ -453,7 +450,6 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
         @call oself::MSG_URL_TEXT_DEC_PENDING() ;
     }
     else
-#endif
         if(URLRequestGetRet(result.retType) == URL_RET_FILE)
         {                                   /* loaded image successfully */
             /* Put in a request to import the image */
