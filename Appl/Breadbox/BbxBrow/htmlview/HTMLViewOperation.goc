@@ -94,11 +94,19 @@
     }
 }
 
+@ifndef COMPILE_OPTION_TURN_OFF_LOGO
+@extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_GLOBE
+{
+    Boolean autorun;
+
+    autorun = pself->HVAI_operationLevel &&
+        @call SpinningLogo::MSG_GEN_GET_USABLE();
+    @send SpinningLogo::MSG_GLBANIM_AUTO_RUN(autorun);
+}
+@endif
+
 @extern method HTMLVApplicationClass, MSG_HMLVA_START_OPERATION
 {
-@ifndef COMPILE_OPTION_TURN_OFF_LOGO
-    Boolean isGlobeOff = FALSE ;
-@endif
     @extern object StatusLineLoading;
 
     HWChecksumCheck() ;
@@ -111,11 +119,7 @@
         UpdateStop(TRUE);
 
 @ifndef COMPILE_OPTION_TURN_OFF_LOGO
-        /* Read init file for globe setting.  */
-        /* Not OFF is default if not found. */
-        InitFileReadBoolean(HTMLVIEW_CATEGORY, "globeOff", &isGlobeOff) ;
-        if (!isGlobeOff)
-            @send SpinningLogo::MSG_GLBANIM_AUTO_RUN(TRUE);
+        @send self::MSG_HMLVA_UPDATE_GLOBE();
 @endif
         @SendStatusUpdateOptr(
             @StatusLineLoading, HTML_STATUS_TYPE_LOADING);

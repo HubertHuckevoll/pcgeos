@@ -366,6 +366,9 @@ typedef struct {
   @message void MSG_HMLVA_MARK_NOT_BUSY();
   @message void MSG_HMLVA_OVERRIDE_BUSY();
   @message void MSG_HMLVA_RESTORE_BUSY();
+@ifndef COMPILE_OPTION_TURN_OFF_LOGO
+  @message void MSG_HMLVA_UPDATE_GLOBE();
+@endif
 @endc;
 
 

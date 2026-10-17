@@ -643,6 +643,7 @@ void UpdatePrintButtonInSimpleToolbar(Boolean enabled)
 void UpdateGlobeInSimpleButtonToolbar(Boolean enabled)
 {
     UsableOrNot(@SpinningLogo, enabled);
+    @send application::MSG_HMLVA_UPDATE_GLOBE();
 }
 @endif
 

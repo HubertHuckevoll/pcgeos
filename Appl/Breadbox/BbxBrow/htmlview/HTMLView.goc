@@ -459,6 +459,9 @@ void RestoreTVBW(void)
 @extern method HTMLVApplicationClass, MSG_GEN_APPLICATION_IGNORE_INPUT ;
 @extern method HTMLVApplicationClass, MSG_GEN_APPLICATION_ACCEPT_INPUT ;
 @extern method HTMLVApplicationClass, MSG_HMLVA_START_OPERATION ;
+@ifndef COMPILE_OPTION_TURN_OFF_LOGO
+@extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_GLOBE;
+@endif
 @extern method HTMLVApplicationClass, MSG_HMLVA_ABORT_OPERATION ;
 @extern method HTMLVApplicationClass, MSG_HMLVA_END_OPERATION ;
 @extern method HTMLVApplicationClass, MSG_HMLVA_REQUEST_DETACH ;
