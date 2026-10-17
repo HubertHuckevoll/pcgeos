@@ -31,6 +31,34 @@ typedef struct {
 #endif
 #include <htmldrv.h>
 
+/* Private mutable decoder state; never supplied by an API caller. */
+#define IMPORT_PUBLICATIONS_PER_BLOCK 32
+typedef struct {
+    VMFileHandle fileH;
+    VMBlockHandle imageH;
+} ImportPublication;
+typedef struct {
+    MemHandle nextH;
+    word count;
+    ImportPublication images[IMPORT_PUBLICATIONS_PER_BLOCK];
+} ImportPublications;
+typedef struct {
+    const ImageInput *IPD_inputP;
+    const ImageImportUpdates *updatesP;
+    Boolean keepPartial;
+    Boolean recognized;
+    Boolean streamStarted;
+    MemHandle publicationsH;
+    ImageAdditionalData IPD_iad;
+    VMBlockHandle IPD_bitmap;
+    VMFileHandle IPD_vmFile;
+    word IPD_firstLine, IPD_lastLine;
+} ImportState;
+#define _ImportStateParams_ ImportState *importProgressDataP
+void _pascal ImportPublish(_ImportStateParams_);
+void _pascal FreeViaProgress(_ImportStateParams_, VMFileHandle fileH,
+    VMBlockHandle imageH);
+
 typedef enum
 {
   IBF_AUTO,
@@ -53,7 +81,7 @@ typedef struct
   BMType        IBP_format;
   char          IBP_impForm[31];
   FileHandle    IBP_animDest;  /* destination for animated GIFs */
-  ImportProgressData *IBP_importProgressDataP;
+  ImportState *IBP_importProgressDataP;
   MimeStatus    *IBP_mimeStatus ;
 } ImpBmpParams;
 

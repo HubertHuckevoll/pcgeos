@@ -11,3 +11,6 @@ XCCOMFLAGS = -zu
 # sure why, but trying -zc is not working properly
 
 #XLINKFLAGS = -N \(C\)98\20Breadbox\20Computer\20Company
+
+# ImageInput replaces the browser loading-progress contract.
+_PROTO = 7.0

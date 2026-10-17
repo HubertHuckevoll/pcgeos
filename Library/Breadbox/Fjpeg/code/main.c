@@ -733,7 +733,7 @@ void _pascal fjpeg_stdio_src (j_decompress_ptr cinfo, FILE * infile)
   cinfo->src.infile = infile;
   cinfo->src.bytes_in_buffer = 0; /* forces fill_input_buffer on first read */
   cinfo->src.next_input_byte = NULL; /* until buffer loaded */
-  cinfo->src.loadProgressDataP = 0;
+  cinfo->src.inputP = 0;
 }
 
 

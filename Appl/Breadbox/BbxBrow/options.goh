@@ -326,13 +326,6 @@ shown in the menu bar
 /* to simplify conditional code */
 #define LOAD_PROGRESS_DATAP_ARG ,loadProgressDataP
 #define LOAD_PROGRESS_PARAMS_PROTO ,_LoadProgressParams_
-#define IMPORT_PROGRESS_PARAMS_PROTO ,_ImportProgressParams_
-#define IMPORT_PROGRESS_DATAP_ARG ,importProgressDataP
-
-#define COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
-/* turn on to make sure that local graphics are also imported with
-   progressive display. This is mostly for progressive debugging...
-   ...and also for progressive importing/showing of PNG (meyerk 03/2025) */
 
 #define MAX_NUM_REQUESTS 250
 /* EC num request checking */

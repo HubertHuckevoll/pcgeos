@@ -19,7 +19,7 @@ typedef struct { word XYS_width, XYS_height; } XYSize;
 typedef struct { XYSize IAD_size; Boolean IAD_completeGraphic; }
     ImageAdditionalData;
 typedef struct { VMBlockHandle IBP_bitmap; } ImpBmpParams;
-typedef struct { void *IPD_callback; } ImportProgressData;
+typedef struct { const void *IPD_inputP; } ImportState;
 typedef struct { word MS_mimeFlags; } MimeStatus;
 typedef enum {
     IBS_NO_ERROR, IBS_UNKNOWN_FORMAT, IBS_SYS_ERROR, IBS_WRONG_FILE,
@@ -86,7 +86,7 @@ TestFinalImport(TestFile *sourceP)
 {
     ImageAdditionalData iad;
     ImpBmpParams params;
-    ImportProgressData progress;
+    ImportState progress;
     Boolean compacted;
     VMBlockHandle bitmapH;
     dword usedMem;
@@ -97,7 +97,7 @@ TestFinalImport(TestFile *sourceP)
     for (test = 0; test < 7; test++) {
         memset(&iad, 0, sizeof(iad));
         memset(&params, 0, sizeof(params));
-        progress.IPD_callback = &progress;
+        progress.IPD_inputP = (void*)0;
         hostCloseCount = 0;
         hostReserveAllowed = test != 1;
         hostMimeStatus.MS_mimeFlags = test == 2 ? MIME_STATUS_ABORT : 0;
@@ -119,8 +119,7 @@ TestFinalImport(TestFile *sourceP)
             assert(iad.IAD_completeGraphic && compacted);
             assert(bitmapH == params.IBP_bitmap);
             assert(bitmapH->nextLine == iad.IAD_size.XYS_height);
-            assert(progress.IPD_callback ==
-                   (void *)0);
+            assert(progress.IPD_inputP == (void*)0);
             assert(usedMem == (dword)iad.IAD_size.XYS_width *
                                iad.IAD_size.XYS_height * 3);
             assert(hostReserved == usedMem);
@@ -132,7 +131,7 @@ TestFinalImport(TestFile *sourceP)
                               test == 6 ? IBS_UNKNOWN_FORMAT : IBS_WRONG_FILE));
             assert(bitmapH == NullHandle && params.IBP_bitmap == NullHandle);
             assert(!iad.IAD_completeGraphic && usedMem == 0);
-            assert(progress.IPD_callback == &progress);
+            assert(progress.IPD_inputP == (void*)0);
         }
         assert(hostReserved == 0);
         if (test == 5) {

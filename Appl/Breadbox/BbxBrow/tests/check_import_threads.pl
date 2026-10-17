@@ -34,8 +34,7 @@ $abort =~ s/\@send\s*,forceQueue G_importThreadObj\[i\]::MSG_IMPORT_THREAD_ENGIN
     or die "Missing back abort event\n";
 
 my $route = extract($code, qr/(int importThread;.*?)(?=    \/\* All we need)/s);
-for my $field (qw(importProgressData.IPD_vmFile
-                  importProgressData.IPD_loadProgressDataP mimeStatus)) {
+for my $field (qw(loadProgressDataP mimeStatus)) {
     $route .= extract($code, qr/(p_request->\Q$field\E\s*=.*?;)/s) . "\n";
 }
 $route .= extract($code, qr/(\@send ,forceQueue G_importThreadObj\[importThread\]::\s*MSG_IMPORT_THREAD_ENGINE_IMPORT_GRAPHIC\(mem\)\s*;)/s);
@@ -76,13 +75,10 @@ print $test <<'C';
 typedef int Boolean;
 typedef char FileLongName[40];
 typedef struct { int MS_mimeFlags; } MimeStatus;
-typedef struct { int LPD_loadThread, LPD_importSync; } LoadProgressData;
+typedef struct { int LPD_loadThread, LPD_importSync, LPD_dataStream;
+    void *LPD_callback; } LoadProgressData;
 typedef struct {
-    int IPD_vmFile;
-    LoadProgressData *IPD_loadProgressDataP;
-} ImportProgressData;
-typedef struct {
-    ImportProgressData importProgressData;
+    LoadProgressData *loadProgressDataP;
     MimeStatus *mimeStatus;
     int textObj, name, temporary, pageOwner;
     char curHTML[2];
@@ -159,7 +155,7 @@ print $test "static int FetchCount(void)\n{ $fetchCount\n    return numChildren;
 print $test "static void Start(void)\n{ int i; $count\n$start}\n";
 print $test "static void Stop(void)\n{ int i; FileLongName workFileName;\n$stop}\n";
 print $test "static void Abort(void)\n{ int i;\n$abort}\n";
-print $test "static void Route(Request *p_request, LoadProgressData *loadProgressDataP)\n{ Request *mem = p_request;\n$route\n}\n";
+print $test "static int Route(Request *p_request, LoadProgressData *loadProgressDataP)\n{ Request *mem = p_request;\n$route\nreturn TRUE;\n}\n";
 print $test "static void Handle(Engine *pself, Request request)\n{\n$condition\n decoded[request.textObj-1]++;\n$cleanup}\n";
 print $test "static void Begin(Engine *pself) { $begin }\n";
 print $test "static void End(Engine *pself) { $end }\n";
@@ -183,6 +179,7 @@ static void Check(int option, int children, int fetch, int aborting)
     memset(released, 0, sizeof(released));
     memset(G_importMimeStatus, 0, sizeof(G_importMimeStatus));
     memset(request, 0, sizeof(request));
+    memset(stream, 0, sizeof(stream));
     G_importActive[0] = G_importActive[1] = 1;
     Start();
     assert(G_numImportThreads == count);
@@ -197,14 +194,15 @@ static void Check(int option, int children, int fetch, int aborting)
         request[i].curHTML[0] = (char)('0'+i);
         pending[i] = 1;
         if (i && i <= children) {
+            stream[i-1].LPD_callback = stream;
+            stream[i-1].LPD_dataStream = 1;
             stream[i-1].LPD_loadThread = i-1;
             stream[i-1].LPD_importSync = 9+i;
             G_importActive[i-1] = fetch;
         }
-        Route(request+i, i && i <= children ? stream+i-1 : (void*)0);
-        assert(request[i].importProgressData.IPD_loadProgressDataP ==
+        assert(Route(request+i, i && i <= children ? stream+i-1 : (void*)0));
+        assert(request[i].loadProgressDataP ==
                (i && i <= children ? stream+i-1 : (void*)0));
-        assert(request[i].importProgressData.IPD_vmFile == 10+i%count);
         assert(request[i].mimeStatus == G_importMimeStatus+i%count);
         assert(!progressLocked);
     }

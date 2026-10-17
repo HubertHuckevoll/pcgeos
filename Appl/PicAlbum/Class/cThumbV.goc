@@ -760,6 +760,9 @@ extern VMFileHandle G_tempVMFile;
 	GeodeLoadError gle;
 	FileLongName *listPtr, fname;
 	VMBlockHandle vmb;
+    ImageImportSource source;
+    ImageImportOptions options;
+    ImageImportResult result;
 
 	/* load the ImpGraph library if not already loaded */
 	FilePushDir();
@@ -785,7 +788,6 @@ extern VMFileHandle G_tempVMFile;
 		if(entry) {
 
 			ImageAdditionalData iad;
-			dword usedMem;
 			MimeStatus mimeStatus = {0};
 			dword availMem;
 			AllocWatcherHandle allocWatcher;
@@ -806,20 +808,18 @@ extern VMFileHandle G_tempVMFile;
 
 			availMem = 0x8000000 ;  /* 4 megs unless told otherwise */
 			allocWatcher = AllocWatcherCreate(availMem) ;
-			vmb = ((pcfm_MimeDrvGraphicEx*) ProcCallFixedOrMovable_pascal)(
-
-				"",		//char *mimeType, \
-				fname,		//char *file, \
-				vmf,				//VMFileHandle vmf, \
-				&iad,				//ImageAdditionalData *iad, \
-				MIME_RES_UNKNOWN,	//MimeRes resolution, \
-				allocWatcher,		//AllocWatcherHandle watcher, \
-				&usedMem,			//dword *usedMem, \
-				&mimeStatus,		//MimeStatus *mimeStatus, \
-				0,					//_ImportProgressParams_
-				MIME_GREX_NO_ANIMATIONS|MIME_GREX_NO_SCANLINE_COMPRESS,
-				entry
-			);
+            source.type = IIS_FILE;
+                source.data.filenameP = fname;
+                memset(&options, 0, sizeof(options));
+                options.mimeTypeP = _TEXT("");
+                options.resolution = MIME_RES_UNKNOWN;
+                options.watcherH = allocWatcher;
+                options.cancelP = &mimeStatus;
+                options.flags = MIME_GREX_NO_ANIMATIONS | MIME_GREX_NO_SCANLINE_COMPRESS;
+                ((pcfm_MimeDrvGraphicEx *)ProcCallFixedOrMovable_pascal)(
+                    &source, vmf, &options, (void*)0, &result, entry);
+                vmb = result.bitmap;
+                iad = result.info;
 			FilePopDir();
 			AllocWatcherDestroy(allocWatcher);
 

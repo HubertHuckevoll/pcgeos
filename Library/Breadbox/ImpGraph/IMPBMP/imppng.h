@@ -13,7 +13,7 @@ PngImport(
     AllocWatcherHandle watcher,
     dword *usedMem,
     Boolean *p_completeGraphic
-    , _ImportProgressParams_
+    , _ImportStateParams_
     , MimeStatus *mimeStatus
 );
 

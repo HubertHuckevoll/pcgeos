@@ -17,6 +17,19 @@
  *
  ***********************************************************************/
 
+/* Private queued snapshot; no decoder or request pointers escape. */
+typedef struct {
+    optr textObj;
+    NameToken name;
+    ObjCacheToken cacheItem;
+    VMFileHandle vmFile;
+    VMBlockHandle bitmap;
+    word firstLine, lastLine;
+} ImportGraphicProgress;
+
+word _pascal _export ImportGraphicInputCallback(void *clientDataP,
+    ImageInputOperation operation, void *bufferP, word size);
+
 /* Routines: */
 Boolean ImportThreadEngineStart(void) ;
 void ImportThreadEngineStop(void) ;

@@ -46,7 +46,7 @@ my $loader = $1;
 $class =~ /^(void LOCAL IMarkAllImagesUnresolved\(.*?^})/ms
     or die "Cannot find attachment reset\n";
 my $reset = $1;
-$import =~ /else \{\s*(if\(request.importProgressData.IPD_cacheItem.*?MSG_URL_TEXT_INTERNAL_GRAPHIC_FAILED\(\s*request.name, request.imageGeneration\);)\s*}/s
+$import =~ /else \{\s*(\@send \(request.textObj\)::MSG_URL_TEXT_INTERNAL_GRAPHIC_FAILED\(\s*request.name, request.imageGeneration\);)\s*}/s
     or die "Cannot find final import failure cleanup\n";
 my $failure = $1;
 my $harness = <<'C';
@@ -100,13 +100,13 @@ typedef struct { optr HTI_imageArray, HTI_namePool, UTI_frame;
 typedef struct { Boolean IAD_completeGraphic; } ImageAdditionalData;
 typedef struct { NameToken url; TCHAR mimeType[MIME_MAXBUF], curHTML[128];
     word retType; optr htmlMsg, extraData; } URLFetchResult;
-typedef struct { word LPD_importSync, LPD_sem; void *LPD_callback;
+typedef struct { word LPD_importSync, LPD_sem, LPD_loadThread; void *LPD_callback;
     optr LPD_textObj, LPD_request; NameToken LPD_nameT;
     char LPD_mimeType[MIME_MAXBUF]; } LoadProgressData;
 typedef word proc_LoadProgressCallback(void);
-typedef struct { NameToken IPD_nameT; dword IPD_cacheItem;
-    word IPD_firstLine, IPD_lastLine; } ImportProgressData;
-#define _ImportProgressParams_ ImportProgressData *importProgressDataP
+typedef struct { NameToken name; ObjCacheToken cacheItem;
+    VMFileHandle vmFile; VMBlockHandle bitmap;
+    word firstLine, lastLine; } ImportGraphicProgress;
 #define _LoadProgressParams_ LoadProgressData *loadProgressDataP
 #define ObjDerefVis(obj) (&text)
 #define ARRAY 1
@@ -120,16 +120,17 @@ static HTMLimageData images[4];
 static word count, arrayLocks, extraLocks[LIMIT], resultLocks[LIMIT], progressLocks;
 static URLTextRequestGraphic extras[LIMIT];
 static URLFetchResult results[LIMIT];
-static ImportProgressData progressData;
+static ImportGraphicProgress progressData;
 static char names[2][LIMIT][128];
 static unsigned refs[2][LIMIT], nextName[2], unsupported[LIMIT];
 static struct { NameToken url; unsigned refs; Boolean cached, complete; } caches[LIMIT];
 static struct { optr extra; NameToken url; word mode; } fetches[LIMIT];
-static struct { NameToken name; dword imageGeneration; ImportProgressData importProgressData;
+static struct { NameToken name; dword imageGeneration; ObjCacheToken cacheItem;
     Boolean temporary; } imports[LIMIT];
 static unsigned fetched, imported, pending, completed, events, freedProgress, deleted;
 static Boolean G_stopped, caching, failQueue;
-static Boolean progressDisplay = TRUE;
+static Boolean progressLoading = TRUE;
+static Boolean G_fetchWhileImport, G_importActive[2];
 static word progressMinHeight;
 static unsigned pool_index(optr pool) { assert(pool == 1 || pool == 2); return pool-1; }
 static NameToken NamePoolTokenize(optr pool, const char *s, Boolean required)
@@ -300,8 +301,9 @@ $harness .= goc_to_c(method($source,
     'MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS', 'MemHandle importProgressData'));
 $harness .= goc_to_c(method($source, 'MSG_URL_TEXT_LOAD_GRAPHIC_PROGRESS', 'LoadProgressData *loadProgressDataP'));
 $harness .= "static void final_failure(unsigned i)\n{\n";
-$harness .= "    struct { NameToken name; dword imageGeneration; ImportProgressData importProgressData; } request;\n";
-$harness .= "    request.name = imports[i].name; request.imageGeneration = imports[i].imageGeneration;\n    request.importProgressData = imports[i].importProgressData;\n";
+$harness .= "    struct { NameToken name; dword imageGeneration; ObjCacheToken cacheItem; } request;\n";
+$harness .= "    request.name = imports[i].name; request.imageGeneration = imports[i].imageGeneration;\n    request.cacheItem = imports[i].cacheItem;\n";
+$harness .= "    if(request.cacheItem) ObjCacheUnlockItem(request.cacheItem);\n";
 $harness .= goc_to_c($failure) . "\n}\n";
 $harness .= <<'C';
 static void init(void)
@@ -332,8 +334,8 @@ static void import_done(unsigned i, Boolean success, Boolean cancel)
     ObjCacheToken oct;
     assert(i < imported);
     if(cancel) {
-        if(imports[i].importProgressData.IPD_cacheItem)
-            ObjCacheUnlockItem(imports[i].importProgressData.IPD_cacheItem);
+        if(imports[i].cacheItem)
+            ObjCacheUnlockItem(imports[i].cacheItem);
         MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(imports[i].name);
     } else if(success) {
         oct = new_cache(imports[i].name, TRUE, FALSE);
@@ -441,16 +443,16 @@ static void check(void)
     MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE); assert(!fetched && imported == 1); import_done(0, FALSE, FALSE);
     assert(!deleted && !(images[0].flags & HTML_IDF_PICTURE_FALLBACK_USED)); cleanup();
     init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE); fetch_done(0, URL_RET_FILE);
-    progressData.IPD_cacheItem = OCT_NULL; progressData.IPD_nameT = imports[0].name;
+    progressData.cacheItem = OCT_NULL; progressData.name = imports[0].name;
     MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(PROGRESS);
     assert(fetched == 1 && !(images[0].flags & HTML_IDF_PICTURE_FALLBACK_USED));
-    oct = new_cache(imports[0].name, FALSE, FALSE); imports[0].importProgressData.IPD_cacheItem = oct;
-    caches[oct].refs++; progressData.IPD_cacheItem = oct; progressData.IPD_nameT = imports[0].name;
+    oct = new_cache(imports[0].name, FALSE, FALSE); imports[0].cacheItem = oct;
+    caches[oct].refs++; progressData.cacheItem = oct; progressData.name = imports[0].name;
     MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(PROGRESS); assert(fetched == 1 && images[0].HID_cacheToken == oct);
     import_done(0, FALSE, FALSE); assert(!caches[oct].refs && fetched == 2 && pending == 1); load_success(1); cleanup();
     init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE); fetch_done(0, URL_RET_FILE);
-    oct = new_cache(imports[0].name, FALSE, FALSE); imports[0].importProgressData.IPD_cacheItem = oct;
-    caches[oct].refs++; progressData.IPD_cacheItem = oct; progressData.IPD_nameT = imports[0].name;
+    oct = new_cache(imports[0].name, FALSE, FALSE); imports[0].cacheItem = oct;
+    caches[oct].refs++; progressData.cacheItem = oct; progressData.name = imports[0].name;
     reload(); text.HTI_imageArray = 0; MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(PROGRESS);
     assert(freedProgress == 1 && caches[oct].refs == 1); import_done(0, FALSE, FALSE); cleanup();
     init(); add_image("primary.webp", "fallback.jpg"); MSG_URL_TEXT_PROCESS_GRAPHICS(FALSE);

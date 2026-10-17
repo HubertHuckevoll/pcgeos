@@ -64,7 +64,7 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           ImpBmpParams *params, Boolean *isAnimation, Boolean *isCompacted,
           VMBlockHandle *bmVMBlock, VMFileHandle destFile,
-          ImportProgressData *importProgressDataP,
+          ImportState *importProgressDataP,
 		  Boolean locAllowAnimations)
 {
     ImpBmpStatus status;
@@ -82,6 +82,10 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
   params->IBP_importProgressDataP = importProgressDataP;
 
   if (!locAllowAnimations)  {
+      /* ATTENTION: This path is file-only. Use the animation-capable
+       * importer for streaming, including single-frame GIFs. */
+      if (importProgressDataP && importProgressDataP->IPD_inputP)
+          return IBS_WRONG_FILE;
       params->IBP_source = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
 
       if(!params->IBP_source)              /* error opening file: abort */
@@ -123,8 +127,8 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
       /* If we don't even have a first frame, then delete the whole thing */
       if (!*isAnimation)  {
           /* Only dump if we are not progressive */
-          if ((!importProgressDataP) || (!importProgressDataP->IPD_callback))  {
-              VMFreeVMChain(params->IBP_dest, VMCHAIN_MAKE_FROM_VM_BLOCK(params->IBP_bitmap)) ;
+          if (!importProgressDataP->keepPartial)  {
+              FreeViaProgress(importProgressDataP, params->IBP_dest, params->IBP_bitmap);
 
               /* Destroy the bitmap, but return the used memory count */
               AllocWatcherFree(watcher, *usedMem) ;
@@ -172,9 +176,8 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
   iad->IAD_size.XYS_width = params->IBP_width;
   iad->IAD_size.XYS_height = params->IBP_height;
 
-  /* handle JPEGs disguised as GIFs (with .gif extension) */
-  if (status == IBS_UNKNOWN_FORMAT) {
-  }
+  if (params->IBP_mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
+      status = IBS_IMPORT_STOPPED;
 
   if ((status == IBS_NO_ERROR) || (status == IBS_IMPORT_STOPPED))
     *bmVMBlock = params->IBP_bitmap;
@@ -192,7 +195,7 @@ ImpBmpStatus ImpGIF(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
-          VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
+          VMBlockHandle *bmVMBlock, ImportState *importProgressDataP,
           MimeStatus *mimeStatus)
 {
     ImpBmpStatus status;
@@ -225,7 +228,9 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
            );
 
     /* if fast import failed, try using IJGJPEG library */
-    if(!(*bmVMBlock))
+    /* Probe rejection can replay retained input; consumed stream data cannot. */
+    if (!*bmVMBlock && !importProgressDataP->streamStarted &&
+        !(mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT))
     {
 @endif
         *bmVMBlock =
@@ -249,7 +254,9 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
       params->IBP_bitmap = *bmVMBlock;
     }
     else
-      status = IBS_UNKNOWN_FORMAT;
+      status = (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) ?
+          IBS_IMPORT_STOPPED : (importProgressDataP->recognized ?
+          IBS_WRONG_FILE : IBS_UNKNOWN_FORMAT);
 
     return status;
 }
@@ -261,10 +268,13 @@ ImpBmpStatus ImpJPG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
-          VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
+          VMBlockHandle *bmVMBlock, ImportState *importProgressDataP,
           MimeStatus *mimeStatus)
 {
     ImpBmpStatus status = IBS_NO_ERROR;
+
+    if (importProgressDataP->IPD_inputP)
+        return IBS_UNKNOWN_FORMAT;
 
     *bmVMBlock = PngImport(file, vmf, &(iad->IAD_size), resolution, watcher, usedMem,
     &iad->IAD_completeGraphic
@@ -289,7 +299,8 @@ ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
     }
     else
     {
-      status = IBS_UNKNOWN_FORMAT;
+      status = (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) ?
+          IBS_IMPORT_STOPPED : IBS_UNKNOWN_FORMAT;
       params->IBP_bitmap = NullHandle;
     }
 
@@ -303,7 +314,7 @@ ImpBmpStatus ImpPNG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
 ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
           MimeRes resolution, AllocWatcherHandle watcher, dword *usedMem,
           Boolean doCompress, ImpBmpParams *params, Boolean *isCompacted,
-          VMBlockHandle *bmVMBlock, ImportProgressData *importProgressDataP,
+          VMBlockHandle *bmVMBlock, ImportState *importProgressDataP,
           MimeStatus *mimeStatus)
 {
     FileHandle srcFile;
@@ -325,6 +336,9 @@ ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *
     *isCompacted = FALSE;
     iad->IAD_completeGraphic = FALSE;
     *usedMem = 0;
+
+    if (importProgressDataP->IPD_inputP)
+        return IBS_UNKNOWN_FORMAT;
 
     srcFile = FileOpen(file, FILE_ACCESS_R | FILE_DENY_W);
     if (!srcFile)
@@ -376,30 +390,87 @@ ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *
  *  Common code for GIF and JPEG formats                                     *
  *****************************************************************************/
 
-/*
- * Find out if we have already sent the bitmap to the text object
- * previously or not. If so, the text object should handle the freeing.
- * Otherwise (i.e. if no progress update ever got out), we'll just
- * discard the bitmap ourselves since nobody else knows about it.
- */
-void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle bitmap)
+/* Publication records outlive every decoder/fallback and compaction. */
+static Boolean _pascal ImportWasPublished(ImportState *stateP,
+    VMFileHandle fileH, VMBlockHandle imageH)
 {
-    Boolean dofree;
+    MemHandle blockH, nextH;
+    ImportPublications *blockP;
+    word i;
 
-    if (bitmap) {
-	dofree = TRUE;
+    for (blockH = stateP->publicationsH; blockH; blockH = nextH) {
+        blockP = MemLock(blockH);
+        for (i = 0; i < blockP->count; i++) {
+            if (blockP->images[i].fileH == fileH &&
+                blockP->images[i].imageH == imageH) {
+                MemUnlock(blockH);
+                return TRUE;
+            }
+        }
+        nextH = blockP->nextH;
+        MemUnlock(blockH);
+    }
+    return FALSE;
+}
 
-	if (importProgressDataP && importProgressDataP->IPD_callback)
-	{
-	    VMFileHandle oldFile = importProgressDataP->IPD_vmFile;
-	    VMBlockHandle oldBitmap = importProgressDataP->IPD_bitmap;
+void _pascal ImportPublish(_ImportStateParams_)
+{
+    ImportState *stateP = importProgressDataP;
+    ImportPublications *blockP;
+    MemHandle blockH;
+    ImageImportUpdate update;
 
-	    if(oldFile == vmFile && oldBitmap == bitmap)
-		dofree = FALSE;
-	}
+    if (!stateP->updatesP || !stateP->IPD_vmFile || !stateP->IPD_bitmap ||
+        !stateP->IPD_iad.IAD_size.XYS_width ||
+        !stateP->IPD_iad.IAD_size.XYS_height ||
+        stateP->IPD_firstLine > stateP->IPD_lastLine ||
+        stateP->IPD_lastLine >= stateP->IPD_iad.IAD_size.XYS_height)
+        return;
+    if (!ImportWasPublished(stateP, stateP->IPD_vmFile, stateP->IPD_bitmap)) {
+        blockH = stateP->publicationsH;
+        blockP = blockH ? MemLock(blockH) : (void*)0;
+        if (!blockP || blockP->count == IMPORT_PUBLICATIONS_PER_BLOCK) {
+            if (blockP)
+                MemUnlock(blockH);
+            blockH = MemAlloc(sizeof(ImportPublications), HF_DYNAMIC,
+                HAF_ZERO_INIT);
+            /* No ownership transfer if we cannot remember it. */
+            if (!blockH)
+                return;
+            blockP = MemLock(blockH);
+            blockP->nextH = stateP->publicationsH;
+            stateP->publicationsH = blockH;
+        }
+        blockP->images[blockP->count].fileH = stateP->IPD_vmFile;
+        blockP->images[blockP->count++].imageH = stateP->IPD_bitmap;
+        MemUnlock(blockH);
+    }
+    update.vmFile = stateP->IPD_vmFile;
+    update.bitmap = stateP->IPD_bitmap;
+    update.info = stateP->IPD_iad;
+    update.firstLine = stateP->IPD_firstLine;
+    update.lastLine = stateP->IPD_lastLine;
+    ((pcfm_ImageImportUpdate *)ProcCallFixedOrMovable_pascal)(
+        stateP->updatesP->clientDataP, &update, stateP->updatesP->callback);
+}
 
-	if(dofree)
-	  VMFreeVMChain(vmFile, VMCHAIN_MAKE_FROM_VM_BLOCK(bitmap));
+void _pascal FreeViaProgress(_ImportStateParams_, VMFileHandle fileH,
+    VMBlockHandle imageH)
+{
+    if (imageH && !ImportWasPublished(importProgressDataP, fileH, imageH))
+        VMFreeVMChain(fileH, VMCHAIN_MAKE_FROM_VM_BLOCK(imageH));
+}
+
+static void _pascal ImportForgetPublications(ImportState *stateP)
+{
+    MemHandle blockH;
+    ImportPublications *blockP;
+
+    while ((blockH = stateP->publicationsH) != 0) {
+        blockP = MemLock(blockH);
+        stateP->publicationsH = blockP->nextH;
+        MemUnlock(blockH);
+        MemFree(blockH);
     }
 }
 
@@ -409,7 +480,7 @@ void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle 
  *  in the file specified by vmf. The size of the objects bounding box is
  *  passed back in *size.
  */
-VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFlags)
+ImageImportStatus _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_)
 {
 	Boolean locAllowAnimations;
 	Boolean locCompress;
@@ -418,7 +489,66 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
     VMBlockHandle dataVMBlock,bmVMBlock = NullHandle;
     Boolean isAnimation = FALSE ;
     Boolean isCompacted = FALSE ;
-    VMFileHandle destFile = vmf;
+    ImportState state;
+    ImportState *importProgressDataP = &state;
+    MimeStatus noCancel = {0};
+    MimeStatus *mimeStatus;
+    VMFileHandle vmf = destinationH, destFile = destinationH;
+    TCHAR *file, *mimeType;
+    MimeRes resolution;
+    AllocWatcherHandle watcher;
+    Boolean ownWatcher;
+    ImageAdditionalData *iad;
+    dword *usedMem;
+    dword extFlags;
+    ImageImportStatus outcome;
+
+    if (!resultP)
+        return IMAGE_IMPORT_INVALID;
+    memset(resultP, 0, sizeof(*resultP));
+    if (!sourceP || !destinationH || !optionsP || !optionsP->mimeTypeP ||
+        (updatesP && !updatesP->callback) ||
+        (optionsP->flags & ~(MIME_GREX_NO_ANIMATIONS |
+                            MIME_GREX_NO_SCANLINE_COMPRESS)))
+        return IMAGE_IMPORT_INVALID;
+    memset(&state, 0, sizeof(state));
+    memset(&params, 0, sizeof(params));
+    if (sourceP->type == IIS_FILE) {
+        if (!sourceP->data.filenameP || !*sourceP->data.filenameP)
+            return IMAGE_IMPORT_INVALID;
+        file = (TCHAR *)sourceP->data.filenameP;
+    } else if (sourceP->type == IIS_STREAM) {
+        if (!sourceP->data.inputP || !sourceP->data.inputP->callback)
+            return IMAGE_IMPORT_INVALID;
+        state.IPD_inputP = sourceP->data.inputP;
+        file = (TCHAR *)_TEXT("");
+        if (!strcmp(optionsP->mimeTypeP, _TEXT("image/png")) ||
+            !strcmp(optionsP->mimeTypeP, _TEXT("image/webp")) ||
+            !strcmp(optionsP->mimeTypeP, _TEXT("image/svg+xml")) ||
+            ((optionsP->flags & MIME_GREX_NO_ANIMATIONS) &&
+             !strcmp(optionsP->mimeTypeP, _TEXT("image/gif"))))
+            return IMAGE_IMPORT_UNSUPPORTED;
+    } else {
+        return IMAGE_IMPORT_INVALID;
+    }
+    mimeType = (TCHAR *)optionsP->mimeTypeP;
+    resolution = optionsP->resolution;
+    extFlags = optionsP->flags;
+    watcher = optionsP->watcherH;
+    ownWatcher = !watcher;
+    if (ownWatcher) {
+        watcher = AllocWatcherCreate(0xffffffffUL);
+        if (!watcher)
+            return IMAGE_IMPORT_FAILURE;
+    }
+    mimeStatus = optionsP->cancelP ? optionsP->cancelP : &noCancel;
+    state.updatesP = updatesP;
+    state.keepPartial = optionsP->keepPartial;
+    state.IPD_vmFile = vmf;
+    state.IPD_iad.IAD_type = IAD_TYPE_BITMAP;
+    iad = &resultP->info;
+    usedMem = &resultP->usedMem;
+    status = IBS_UNKNOWN_FORMAT;
 
     InitGlobals();                      /* Handled cached INI entries */
 
@@ -438,24 +568,11 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 	}
 
     params.IBP_mimeStatus = mimeStatus ;
-    /* use local work file, if available */
-    if (importProgressDataP && importProgressDataP->IPD_callback) {
-	/* must use actual dest file */
-	importProgressDataP->IPD_vmFile = vmf;
-	if (importProgressDataP->IPD_vmFile) {
-	    vmf = importProgressDataP->IPD_vmFile;
-	} else {
-	    /* make sure progress handler knows we're using this file */
-	    importProgressDataP->IPD_vmFile = vmf;
-	}
-
-        /* initialize complete structure for standard case: */
-        importProgressDataP->IPD_iad.IAD_type = IAD_TYPE_BITMAP;
-        importProgressDataP->IPD_iad.IAD_origin.P_x =
-          importProgressDataP->IPD_iad.IAD_origin.P_y = 0;
-        importProgressDataP->IPD_iad.IAD_completeGraphic = FALSE;
+    if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) {
+        if (ownWatcher)
+            AllocWatcherDestroy(watcher);
+        return IMAGE_IMPORT_CANCELED;
     }
-
   #define IMP_DESTFILE_PARAM , destFile
   #define IMP_PROGRESS_PARAM , importProgressDataP
 
@@ -476,7 +593,7 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
 
 
 
-    if (strcmp(mimeType, _TEXT("image/gif")) == 0)
+    if (!*mimeType || strcmp(mimeType, _TEXT("image/gif")) == 0)
     {
         status = ImpGIF(IMP_GIF_PARAMS);
         if (status == IBS_UNKNOWN_FORMAT)
@@ -549,7 +666,24 @@ VMBlockHandle _pascal _export MimeDrvGraphicEx(_MimeGraphicParams_, dword extFla
     else
       dataVMBlock = 0;                  /* import did not succeed */
 
-    return dataVMBlock;
+    if (dataVMBlock && !iad->IAD_completeGraphic && !state.keepPartial) {
+        FreeViaProgress(&state, vmf, dataVMBlock);
+        AllocWatcherFree(watcher, *usedMem);
+        dataVMBlock = 0;
+    }
+    if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
+        outcome = IMAGE_IMPORT_CANCELED;
+    else if (dataVMBlock)
+        outcome = iad->IAD_completeGraphic ? IMAGE_IMPORT_SUCCESS : IMAGE_IMPORT_PARTIAL;
+    else
+        outcome = IMAGE_IMPORT_FAILURE;
+    resultP->bitmap = dataVMBlock;
+    if (!dataVMBlock)
+        memset(resultP, 0, sizeof(*resultP));
+    ImportForgetPublications(&state);
+    if (ownWatcher)
+        AllocWatcherDestroy(watcher);
+    return outcome;
 }
 
 char * _pascal _export MimeDrvInfo(_MimeInfoParams_)
@@ -589,20 +723,7 @@ char * _pascal _export MimeDrvText(_MimeTextParams_)
    return 0;                            /* anything... */
 }
 
-VMBlockHandle _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
+ImageImportStatus _pascal _export MimeDrvGraphic(_MimeGraphicParams_)
 {
-	return MimeDrvGraphicEx(
-            mimeType,
-            file,
-            vmf,
-            iad,
-            resolution,
-            watcher,
-            usedMem,
-            mimeStatus,
-			importProgressDataP,
-			0		// no specific flags here
-	);
+    return MimeDrvGraphicEx(sourceP, destinationH, optionsP, updatesP, resultP);
 }
-
-

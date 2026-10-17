@@ -3720,9 +3720,10 @@ IMPGIFGETPROGRESSINFO proc far impgifhandle:word, infoBlock:fptr
         ; Do the Get Info
         mov ax, [IGS_vmBlock]
         mov es:[di+IGPI_bitmap], ax
-        mov ax, [IGS_width]
+	; Progress describes the live frame bitmap, not the logical screen.
+		mov	ax, [IGS_localImage.GLID_width]
         mov es:[di+IGPI_fieldWidth], ax
-        mov ax, [IGS_height]
+		mov	ax, [IGS_localImage.GLID_height]
         mov es:[di+IGPI_fieldHeight], ax
 	mov ax, [IGS_yPos]
 	mov es:[di+IGPI_yPos], ax

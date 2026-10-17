@@ -195,7 +195,7 @@ JpegImport(TCHAR *file,
            Boolean scanlineCompress,
 #endif
            Boolean *p_completeGraphic
-           , _ImportProgressParams_
+           , _ImportStateParams_
            , MimeStatus *mimeStatus
            )
 {
@@ -235,20 +235,20 @@ EC(dword cbSize = 0;)
   Boolean gotTempAlloc = FALSE ;
   Boolean headerErr = FALSE;
   word errorHandlerContext;
-  _LoadProgressParams_;
+  const ImageInput *inputP;
   Boolean status = FALSE;
-  Boolean onErrorDontKeepPartial = TRUE ;
 
-  /* point to load progress data, if any */
-  if (importProgressDataP && importProgressDataP->IPD_callback) {
-      loadProgressDataP = importProgressDataP->IPD_loadProgressDataP;
-  } else {
-      loadProgressDataP = NULL;
+  /* Streaming input and decoded-output progress are independent. */
+  inputP = importProgressDataP ? importProgressDataP->IPD_inputP : (void*)0;
+  if (inputP && !inputP->callback) {
+      *usedMem = 0;
+      free(cinfo);
+      return 0;
   }
 
   *usedMem = 0 ;
   /* we don't need file if we've got a data stream to read from */
-  if (loadProgressDataP && loadProgressDataP->LPD_dataStream) {
+  if (inputP) {
       filehan = 0;
   } else {
       filehan = FileOpen(file, FILE_ACCESS_R|FILE_DENY_W);
@@ -260,19 +260,19 @@ EC(dword cbSize = 0;)
   }
 
   /* Make sure it is a jpeg or else don't load it */
-  if (loadProgressDataP) {
+  if (inputP) {
       /* isJpeg routine is inlined here */
       T_jpegHeader header;
       word rSize;
 
       /* reset stream state (in case of failed GIF) and get data */
-      ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
-	  loadProgressDataP, LPCT_RESET_STREAM_STATE, 0, 0,
-	  loadProgressDataP->LPD_callback);
-      rSize = ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
-	  loadProgressDataP, LPCT_PEEK,
+      ((pcfm_ImageInputCallback *)ProcCallFixedOrMovable_pascal)(
+	  inputP->clientDataP, IIO_RESET, 0, 0,
+	  inputP->callback);
+      rSize = ((pcfm_ImageInputCallback *)ProcCallFixedOrMovable_pascal)(
+	  inputP->clientDataP, IIO_PEEK,
 	  &header, sizeof(header),
-	  loadProgressDataP->LPD_callback);
+	  inputP->callback);
 #ifdef JFIF_ONLY
       if (rSize == sizeof(header) &&
 	  (header.soi == 0xD8FF) &&
@@ -295,7 +295,9 @@ EC(dword cbSize = 0;)
       return 0;
   }
 
-  if (!loadProgressDataP) {
+  importProgressDataP->recognized = TRUE;
+
+  if (!inputP) {
   infile = fdopen(filehan, "r");
   if(infile == 0)
   {
@@ -352,6 +354,7 @@ EC(dword cbSize = 0;)
       jpeg_set_error_handler_context( (
       		struct jpeg_common_struct*)cinfo,  errorHandlerContext);
   } else {
+      *p_completeGraphic = FALSE;
       /* All the registers here need to be NOT register optimized */
       jpeg_set_error_handler_context((struct jpeg_common_struct*) cinfo, 0);
       jpeg_destroy_decompress(cinfo);
@@ -364,11 +367,8 @@ EC(dword cbSize = 0;)
 	  AllocWatcherFree(watcher, requiredTempMemory) ;
 
       /* Free the existing data if we have any */
-      dataVMBlock = bmblock ;
-      if ((dataVMBlock) && (onErrorDontKeepPartial))  {
-        VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(dataVMBlock));
-        dataVMBlock = 0;
-      }
+      FreeViaProgress(importProgressDataP, vmf, bmblock);
+      dataVMBlock = 0;
 
       /* More clean up */
       if (rowH) {
@@ -397,8 +397,8 @@ EC(dword cbSize = 0;)
 
   jpeg_stdio_src(cinfo, infile);
 
-  /* point to loading progress data, if any */
-  jpeg_init_loadProgress(cinfo, loadProgressDataP);
+  /* Set optional image input. */
+  jpeg_init_loadProgress(cinfo, (ImageInput *)inputP);
 
   /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -615,7 +615,7 @@ EC(dword cbSize = 0;)
 	      offsetof(EditableBitmap, EB_bm)));
       /* free degenerate huge bitmap */
       HugeArrayUnlockDir(srcHeader);
-      VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmblock));
+      FreeViaProgress(importProgressDataP, vmf, bmblock);
       bmblock = cbmblock;
       destHeader->EB_bm.CB_simple.B_width = cinfo->output_width;
       destHeader->EB_bm.CB_simple.B_height = 0;  /* no scanlines yet */
@@ -754,7 +754,7 @@ EC(dword cbSize = 0;)
 #endif
 
 	/* send out progress if desired number of scanlines have been seen */
-	if (importProgressDataP && importProgressDataP->IPD_callback &&
+	if (importProgressDataP && importProgressDataP->updatesP &&
 	    (((cinfo->output_scanline % SLICE_HEIGHT) == 0) ||
                  (cinfo->output_scanline == cinfo->output_height))) {
 	    importProgressDataP->IPD_bitmap = bmblock;
@@ -762,10 +762,10 @@ EC(dword cbSize = 0;)
 	    importProgressDataP->IPD_iad.IAD_size.XYS_height = cinfo->output_height;
 	    /* this invalidates too much for the last partial slice, but
 	       it doesn't matter */
-	    importProgressDataP->IPD_firstLine = cinfo->output_scanline-SLICE_HEIGHT;
+	    importProgressDataP->IPD_firstLine = cinfo->output_scanline > SLICE_HEIGHT ?
+                cinfo->output_scanline-SLICE_HEIGHT : 0;
 	    importProgressDataP->IPD_lastLine = cinfo->output_scanline-1;
-	    ((pcfm_ImportProgressCallback *)ProcCallFixedOrMovable_pascal)
-                (importProgressDataP, importProgressDataP->IPD_callback);
+	    ImportPublish(importProgressDataP);
 	}
 	/* this stop one line too late for abort imports, but we don't want
 	   to stop full imports prematurely */
@@ -780,12 +780,11 @@ EC(dword cbSize = 0;)
 
     /* Stop here if we are aborting and we're NOT progressive */
     if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)  {
-        if ((loadProgressDataP) && (importProgressDataP->IPD_bitmap != NullHandle))  {
+        if (importProgressDataP->keepPartial)  {
             flag = FALSE ;
 
             /* But keep the partial image we have (we don't need a big red X) */
             /* We aren't complete either */
-            onErrorDontKeepPartial = FALSE ;
         } else {
             flag = TRUE ;
         }
@@ -820,8 +819,16 @@ EC(dword cbSize = 0;)
   }
 #endif
 
+  if (!cinfo->output_scanline)
+      flag = TRUE;
+
   /* Step 7: Finish decompression */
-  (void) jpeg_finish_decompress(cinfo);
+  /* Cancellation and truncated output must not finish an incomplete decode. */
+  if (!flag && *p_completeGraphic &&
+      !(mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT))
+      (void) jpeg_finish_decompress(cinfo);
+  else
+      jpeg_abort((struct jpeg_common_struct *)cinfo);
   /* We can ignore the return value since suspension is not possible
    * with the stdio data source.
    */
@@ -841,7 +848,7 @@ EC(dword cbSize = 0;)
         dataVMBlock = bmblock;
   else                        /* import failed: release bitmap right now */
   {
-        VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmblock));
+        FreeViaProgress(importProgressDataP, vmf, bmblock);
         dataVMBlock = 0;
   }
 

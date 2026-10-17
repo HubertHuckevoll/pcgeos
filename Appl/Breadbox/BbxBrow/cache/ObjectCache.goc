@@ -729,18 +729,19 @@ void ObjCacheForceNocache(ByteEnum type, NameToken url)
 }
 
 /**************************************************************************
- *              ObjCacheForceCachable
+ *              ObjCacheFinishImage
  **************************************************************************
  *
  * Description:
- *     Set a given cache item to remain in the cache when it is unlocked.
+ *     Store final image metadata and optionally keep the image cached.
  *     The item must still be locked when the call is made.
  *
  * Inputs:
- *     ObjCacheToken oct          -- Item to change cachable state of
+ *     The final bitmap can be the already-published bitmap.
  *
  **************************************************************************/
-void ObjCacheForceCachable(ObjCacheToken oct)
+void ObjCacheFinishImage(ObjCacheToken oct, const ImageAdditionalData *infoP,
+    Boolean cachable)
 {
     objCacheData *obj;
 EC( word elm; )
@@ -753,7 +754,9 @@ EC( word elm; )
     EC_ERROR_IF(elm==CA_NULL_ELEMENT, -1 /* Accessing non-existant element */);
     EC_ERROR_IF(obj->lockCount==0, -1    /* OBJ CACHE:  NOT LOCKED! */);
 
-    obj->OCD_flags &= ~OCDF_NOCACHE;     // Item may be cached
+    obj->auxdata.graph = *infoP;
+    if (cachable)
+        obj->OCD_flags &= ~OCDF_NOCACHE;
 
     MemUnlock(OptrToHandle(objCacheArray));
 

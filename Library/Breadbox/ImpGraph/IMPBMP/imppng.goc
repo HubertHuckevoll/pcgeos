@@ -14,7 +14,7 @@ VMBlockHandle PngImport(
     AllocWatcherHandle watcher,
     dword *usedMem,
     Boolean *p_completeGraphic
-    , _ImportProgressParams_
+    , _ImportStateParams_
     , MimeStatus *mimeStatus
 )
 {
@@ -31,19 +31,13 @@ VMBlockHandle PngImport(
     VMBlockHandle bmVMBlock = NullHandle;
     dword requiredMemory = 0;
     Boolean gotAlloc = FALSE ;
+    int scanStatus = 0;
 
 /* number of scanlines per import progress update */
 #define SLICE_HEIGHT 10
 //    Boolean status = FALSE;
-    _LoadProgressParams_;
-    Boolean onErrorDontKeepPartial = TRUE ;
-    // point to load progress data, if any
-    if (importProgressDataP && importProgressDataP->IPD_callback) {
-        loadProgressDataP = importProgressDataP->IPD_loadProgressDataP;
-    } else {
-        loadProgressDataP = NULL;
-    }
 
+    (void)resolution;
     *usedMem = 0;
     *p_completeGraphic = FALSE ;
 
@@ -81,8 +75,12 @@ VMBlockHandle PngImport(
                         pngImportInitIDATProcessingState(&state, filehan, idatChunksHan, idatNumChunks, ihdrData);
 
                         // Process each scanline
-                        while (pngImportGetNextIDATScanline(&state) == 1)
+                        while ((scanStatus = pngImportGetNextIDATScanline(&state)) == 1)
                         {
+                            if (state.lineNo > ihdrData.height) {
+                                scanStatus = -1;
+                                break;
+                            }
                             // when not zlib decoding, give the system a little room to breathe
                             pngImportIDATProcessingUnlockHandles(&state);
 
@@ -96,7 +94,7 @@ VMBlockHandle PngImport(
                             pngImportIDATProcessingLockHandles(&state);
 
                             /* send out progress if desired number of scanlines have been seen */
-                            if (importProgressDataP && importProgressDataP->IPD_callback &&
+                            if (importProgressDataP && importProgressDataP->updatesP &&
                                 (((state.lineNo % SLICE_HEIGHT) == 0) || (state.lineNo == ihdrData.height)))
                             {
                                 importProgressDataP->IPD_bitmap = bmVMBlock;
@@ -104,10 +102,10 @@ VMBlockHandle PngImport(
                                 importProgressDataP->IPD_iad.IAD_size.XYS_height = ihdrData.height;
                                 /* this invalidates too much for the last partial slice, but
                                 it doesn't matter */
-                                importProgressDataP->IPD_firstLine = state.lineNo-1-SLICE_HEIGHT;
-                                importProgressDataP->IPD_lastLine = state.lineNo-1-1;
-                                ((pcfm_ImportProgressCallback *)ProcCallFixedOrMovable_pascal)
-                                        (importProgressDataP, importProgressDataP->IPD_callback);
+                                importProgressDataP->IPD_firstLine = state.lineNo > SLICE_HEIGHT ?
+                                    state.lineNo-SLICE_HEIGHT : 0;
+                                importProgressDataP->IPD_lastLine = state.lineNo-1;
+                                ImportPublish(importProgressDataP);
                             }
 
                             /* mark the graphic as completed, if so */
@@ -117,12 +115,11 @@ VMBlockHandle PngImport(
                             /* Stop here if we are aborting and we're NOT progressive (???) */
                             if (mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT)
                             {
-                                if ((loadProgressDataP) && (importProgressDataP->IPD_bitmap != NullHandle))
+                                if (importProgressDataP->keepPartial)
                                 {
                                     errorFlag = FALSE ; // FIXME
                                     /* But keep the partial image we have (we don't need a big red X) */
                                     /* We aren't complete either */
-                                    onErrorDontKeepPartial = FALSE ;
                                 }
                                 else
                                 {
@@ -132,6 +129,10 @@ VMBlockHandle PngImport(
                             }
                         }
 
+                        if (scanStatus < 0 || !state.lineNo) {
+                            errorFlag = TRUE;
+                            *p_completeGraphic = FALSE;
+                        }
                         // Clean up resources
                         pngImportCleanupIDATProcessingState(&state);
                     }
@@ -146,11 +147,8 @@ VMBlockHandle PngImport(
     /* Free the existing data if we have any */
     if (errorFlag)
     {
-        if (onErrorDontKeepPartial)
-        {
-            VMFreeVMChain(vmf, VMCHAIN_MAKE_FROM_VM_BLOCK(bmVMBlock));
-            bmVMBlock = 0;
-        }
+        FreeViaProgress(importProgressDataP, vmf, bmVMBlock);
+        bmVMBlock = 0;
     }
 
     if ((bmVMBlock == 0) && (gotAlloc))

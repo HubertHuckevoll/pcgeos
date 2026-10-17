@@ -39,8 +39,7 @@
 #include <resource.h>
 #include <Ansi/stdio.h>
 
-#define MIME_MAXBUF 32          /* shouldn't really have to be here... */
-#include <htmlprog.h>
+#include <impinput.h>
 
 
 #define UPSAMPLE_MERGING_SUPPORTED
@@ -290,8 +289,8 @@ struct fjpeg_decompress_struct {
     JOCTET * buffer;
     Boolean start_of_file;
 
-	/* pointer to load progress data */
-	LoadProgressData *loadProgressDataP;
+	/* pointer to optional image input */
+	ImageInput *inputP;
   } src;
 
   struct {
@@ -611,9 +610,9 @@ JSAMPARRAY _pascal fjpeg_smallocarr (j_decompress_ptr cinfo, size_t size, int el
 void _pascal fjpeg_smfree (j_decompress_ptr cinfo, void far * far * ptr);
 
 
-/* set pointer to load progress data */
+/* set pointer to optional image input */
 void _pascal fjpeg_init_loadProgress(j_decompress_ptr cinfo,
-					 LoadProgressData * loadProgressDataP);
+					 ImageInput * inputP);
 
 #define jpeg_create_decompress(cinfo)	fjpeg_create_decompress(cinfo)
 #define jpeg_stdio_src(cinfo,infile)	fjpeg_stdio_src(cinfo,infile)
@@ -625,8 +624,8 @@ void _pascal fjpeg_init_loadProgress(j_decompress_ptr cinfo,
 #define smallocarr(cinfo,size,elements) \
 										fjpeg_smallocarr(cinfo,size,elements)
 #define smfree(cinfo,ptr)				fjpeg_smfree(cinfo,ptr)
-#define jpeg_init_loadProgress(cinfo,loadProgressDataP) \
-										fjpeg_init_loadProgress(cinfo,loadProgressDataP)
+#define jpeg_init_loadProgress(cinfo,inputP) \
+										fjpeg_init_loadProgress(cinfo,inputP)
 
 
 /* Additional entry points for buffered-image mode. ??? */

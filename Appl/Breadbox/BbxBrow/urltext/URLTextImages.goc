@@ -253,7 +253,7 @@ Boolean LOCAL ProcessSingleGraphic(HTMLimageData *p, optr oself,
         /* no loading progress if not desired, or if background bitmap
            or if image is fairly short (allow unsized ones to try
            loading progress, will be rejected by http module if small) */
-            (!progressDisplay || (p->pos >= HTML_IMAGE_POS_RESERVED) ||
+            (!progressLoading || (p->pos >= HTML_IMAGE_POS_RESERVED) ||
                 (p->size.XYS_height && (p->size.XYS_height < progressMinHeight)) ?
                 NULL : &loadProgressData)) ;
         ret = TRUE;

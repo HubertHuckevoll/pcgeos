@@ -83,7 +83,10 @@ typedef struct {
     Boolean temporary;
     ObjCacheToken pageOwner;            /* source survives page detachment */
     Boolean objCache;
-    ImportProgressData importProgressData;
+    ImageImportUpdates updates;
+    MemHandle publicationsH;
+    LoadProgressData *loadProgressDataP;
+    ImageInput input;
     Boolean *p_stop ;
     MimeStatus *mimeStatus ;
 } T_importGraphicRequest;
@@ -230,7 +233,6 @@ Boolean ImportThreadEngineStart(void)
 
     return status ;
 }
-typedef void _pascal _export proc_ImportProgressCallback(_ImportProgressParams_);
 
 /*-------------------------------------------------------------------------
  | Routine:  ImportThreadEngineStop
@@ -312,72 +314,118 @@ void ImportRemoveProgressDataFromQueue(MemHandle progressData)
     ThreadVSem(G_importProgressDataQueueSem);
 }
 
-ObjCacheToken LOCAL ImportLockCacheToken(ImportProgressData *ipd)
+/* Retain all publications until return, independently of queued UI work.
+ * Blocks grow without an image-count ceiling; cache insertion also uses the
+ * GEOS no-error allocation policy. Notification allocation may still fail.
+ */
+#define IMPORT_TOKENS_PER_BLOCK 32
+typedef struct {
+    MemHandle nextH;
+    word count;
+    ObjCacheToken tokens[IMPORT_TOKENS_PER_BLOCK];
+} ImportTokens;
+
+ObjCacheToken LOCAL ImportLockCacheToken(T_importGraphicRequest *requestP,
+    const ImageImportUpdate *updateP)
 {
     ObjCacheToken oct;
     VMFileHandle vmf;
     VMChain vmc;
+    MemHandle blockH, nextH;
+    ImportTokens *blockP;
+    word i;
 
-    oct = (ObjCacheToken)ipd->IPD_cacheItem;
-    if (oct != OCT_NULL)
-        ObjCacheLockItem(oct, &vmf, &vmc, NULL, 0);
-
-    if (oct == OCT_NULL ||
-        VMCHAIN_GET_VM_BLOCK(vmc) != ipd->IPD_bitmap ||
-        vmf != ipd->IPD_vmFile)
-    {
-        if (oct != OCT_NULL)
-        {
-        ObjCacheUnlockItem(oct);
-        ObjCacheUnlockItem(oct);
+    for (blockH = requestP->publicationsH; blockH; blockH = nextH) {
+        blockP = MemLock(blockH);
+        for (i = 0; i < blockP->count; i++) {
+            oct = blockP->tokens[i];
+            ObjCacheLockItem(oct, &vmf, &vmc, NULL, 0);
+            if (vmf == updateP->vmFile &&
+                VMCHAIN_GET_VM_BLOCK(vmc) == updateP->bitmap) {
+                MemUnlock(blockH);
+                return oct;
+            }
+            ObjCacheUnlockItem(oct);
         }
-
-        oct = ObjCacheAddURL(
-        ipd->IPD_vmFile, VMCHAIN_MAKE_FROM_VM_BLOCK(ipd->IPD_bitmap),
-        OCT_GSTRING, &(ipd->IPD_iad), sizeof(ImageAdditionalData),
-        ipd->IPD_nameT, TRUE, TRUE);
-
-        ipd->IPD_cacheItem = (dword)oct;
-
-        ObjCacheLockItem(oct, NULL, NULL, NULL, 0);
+        nextH = blockP->nextH;
+        MemUnlock(blockH);
     }
-
+    blockH = requestP->publicationsH;
+    blockP = blockH ? MemLock(blockH) : (void*)0;
+    if (!blockP || blockP->count == IMPORT_TOKENS_PER_BLOCK) {
+        if (blockP)
+            MemUnlock(blockH);
+        blockH = MemAlloc(sizeof(ImportTokens), HF_DYNAMIC,
+            HAF_NO_ERR | HAF_ZERO_INIT);
+        blockP = MemLock(blockH);
+        blockP->nextH = requestP->publicationsH;
+        requestP->publicationsH = blockH;
+    }
+    oct = ObjCacheAddURL(updateP->vmFile,
+        VMCHAIN_MAKE_FROM_VM_BLOCK(updateP->bitmap), OCT_GSTRING,
+        (void *)&updateP->info, sizeof(ImageAdditionalData),
+        requestP->name, TRUE, TRUE);
+    blockP->tokens[blockP->count++] = oct;
+    MemUnlock(blockH);
+    ObjCacheLockItem(oct, NULL, NULL, NULL, 0);
     return oct;
+}
+
+void LOCAL ImportReleasePublications(T_importGraphicRequest *requestP)
+{
+    MemHandle blockH;
+    ImportTokens *blockP;
+    word i;
+
+    while ((blockH = requestP->publicationsH) != 0) {
+        blockP = MemLock(blockH);
+        for (i = 0; i < blockP->count; i++)
+            ObjCacheUnlockItem(blockP->tokens[i]);
+        requestP->publicationsH = blockP->nextH;
+        MemUnlock(blockH);
+        MemFree(blockH);
+    }
 }
 
 /*
  * import progress callback routine, notify destination text object
  */
-void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
+void _pascal _export ImportGraphicProgressCallback(void *clientDataP,
+    const ImageImportUpdate *updateP)
 {
     MemHandle importProgressData;
-    ImportProgressData *newDataP, *pendingDataP;
+    ImportGraphicProgress *newDataP, *pendingDataP;
+    T_importGraphicRequest *requestP;
     int i;
     Boolean updated = FALSE;
     ObjCacheToken oct;
 
-    if (importProgressDataP) {
+    if (clientDataP) {
+        requestP = clientDataP;
+        /* Publication transfers even if no notification can be allocated. */
+        oct = ImportLockCacheToken(requestP, updateP);
         /* if import progress is already pending for this graphic, update it */
         ThreadPSem(G_importProgressDataQueueSem);
         for (i = 0; i < IMPORT_PROGRESS_DATA_QUEUE_SIZE; i++) {
             if (G_importProgressDataQueue[i]) {
                 pendingDataP = MemLock(G_importProgressDataQueue[i]);
                 if (pendingDataP) {
-                    if ((pendingDataP->IPD_nameT ==
-                        importProgressDataP->IPD_nameT) &&
-                        (pendingDataP->IPD_bitmap ==
-                        importProgressDataP->IPD_bitmap) &&
-                        (pendingDataP->IPD_vmFile ==
-                        importProgressDataP->IPD_vmFile)) {
-                        if (importProgressDataP->IPD_firstLine <
-                            pendingDataP->IPD_firstLine) {
-                            pendingDataP->IPD_firstLine =
-                                importProgressDataP->IPD_firstLine;
+                    if ((pendingDataP->textObj == requestP->textObj) &&
+                        (pendingDataP->name ==
+                        requestP->name) &&
+                        (pendingDataP->bitmap ==
+                        updateP->bitmap) &&
+                        (pendingDataP->vmFile ==
+                        updateP->vmFile)) {
+                        if (updateP->firstLine <
+                            pendingDataP->firstLine) {
+                            pendingDataP->firstLine =
+                                updateP->firstLine;
                         }
-                        if (importProgressDataP->IPD_lastLine >
-                            pendingDataP->IPD_lastLine) {
-                            pendingDataP->IPD_lastLine =
-                                importProgressDataP->IPD_lastLine;
+                        if (updateP->lastLine >
+                            pendingDataP->lastLine) {
+                            pendingDataP->lastLine =
+                                updateP->lastLine;
                         }
                         updated = TRUE;
                         /* I guess we keep searching, just in case */
@@ -389,18 +437,24 @@ void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
         ThreadVSem(G_importProgressDataQueueSem);
 
         /* if updated pending progress, don't need to send another */
-        if (updated) return;
-
-        /* create/reference a token for this entry */
-        oct = ImportLockCacheToken(importProgressDataP);
+        if (updated) {
+            ObjCacheUnlockItem(oct);
+            return;
+        }
 
         /* copy notification data then send to text obj asynchronously */
-        importProgressData = MemAlloc(sizeof(ImportProgressData),
-                                        HF_DYNAMIC, HAF_STANDARD);
+        importProgressData = MemAlloc(sizeof(ImportGraphicProgress),
+                                        HF_DYNAMIC, HAF_ZERO_INIT);
         if (importProgressData) {
             newDataP = MemLock(importProgressData);
             if (newDataP) {
-                memcpy(newDataP, importProgressDataP, sizeof(*newDataP));
+                newDataP->textObj = requestP->textObj;
+                newDataP->name = requestP->name;
+                newDataP->cacheItem = oct;
+                newDataP->vmFile = updateP->vmFile;
+                newDataP->bitmap = updateP->bitmap;
+                newDataP->firstLine = updateP->firstLine;
+                newDataP->lastLine = updateP->lastLine;
                 MemUnlock(importProgressData);
 
                 /* store new progress data in queue */
@@ -413,7 +467,7 @@ void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
                 }
                 ThreadVSem(G_importProgressDataQueueSem);
 
-                @send, forceQueue importProgressDataP->IPD_textObj::
+                @send, forceQueue requestP->textObj::
                     MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS(importProgressData);
             } else {
                 /* couldn't lock, memory error, dump this progress */
@@ -439,8 +493,13 @@ Boolean ImportThreadRequestImportGraphic(
     Boolean didRequest = FALSE ;
     @extern object SettingsBoolGroup ;
     /* creates vfptr to callback routine */
-    static proc_ImportProgressCallback *importProgressCallback = ImportGraphicProgressCallback;
+    static proc_ImageImportUpdate *importProgressCallback = ImportGraphicProgressCallback;
+    static proc_ImageInputCallback *inputCallback = ImportGraphicInputCallback;
     int importThread;
+
+    if (loadProgressDataP && (!loadProgressDataP->LPD_callback ||
+        !loadProgressDataP->LPD_dataStream))
+        return FALSE;
 
     /* Reuse the progress queue lock to protect round-robin assignment. */
     ThreadPSem(G_importProgressDataQueueSem);
@@ -477,21 +536,14 @@ EC(         NamePoolIsTokenValid(namePool, name, TRUE) ; )
                 HTMLV_OBJECT_CACHE) && !pageOwner;
 
             /* set up import progress data */
-            p_request->importProgressData.IPD_vmFile = G_importWorkFile[importThread];
-            p_request->importProgressData.IPD_loadProgressDataP = loadProgressDataP;
-            p_request->importProgressData.IPD_textObj = textObj;
-            p_request->importProgressData.IPD_nameT = name;
-        p_request->mimeStatus = G_importMimeStatus + importThread ;
-            p_request->importProgressData.IPD_cacheItem = OCT_NULL;
-            /* point to callback routine, unless .ini setting turned
-                progressDisplay off */
-            p_request->importProgressData.IPD_callback =
-                (progressDisplay
-#ifndef COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
-                    /* no import progress if no loading progress */
-                    && loadProgressDataP
-#endif
-                ) ? importProgressCallback : NULL;
+            p_request->loadProgressDataP = loadProgressDataP;
+            if (loadProgressDataP) {
+                p_request->input.callback = inputCallback;
+                p_request->input.clientDataP = loadProgressDataP;
+            }
+            p_request->mimeStatus = G_importMimeStatus + importThread;
+            p_request->updates.callback =
+                progressDisplay ? importProgressCallback : (void*)0;
 
             MemUnlock(mem) ;
 
@@ -602,7 +654,10 @@ void ImportThreadAbortAll(void)
     @extern object MsgBlank ;
     dword usedMem ;
     ObjCacheToken oct;
-    word firstLine;
+    ImageImportSource source;
+    ImageImportOptions options;
+    ImageImportResult result;
+    ImageImportUpdate update;
     Boolean canceled;
 #ifdef CACHE_FILE_HEADER_SIZE_LIMIT
     VMHeaderInfoStruct vmInfo;
@@ -614,6 +669,8 @@ void ImportThreadAbortAll(void)
     memcpy(&request, p_request, sizeof(request)) ;
     MemUnlock(mem) ;
     MemFree(mem) ;
+    /* Bind the synchronous context after copying the queued request. */
+    request.updates.clientDataP = &request;
     canceled = FALSE;
 
     if(pself->numAborts == 0)           /* don't start import if stopping */
@@ -647,79 +704,51 @@ void ImportThreadAbortAll(void)
             objFileNum++;  /* skip to next file */
         } else
 #endif
-        vmb = ToolsImportGraphicByDriver(request.curHTML, request.mimeType,
-        vmf, &iad, &usedMem, request.mimeStatus, &(request.importProgressData));
-
+        {
+            source.type = request.loadProgressDataP ? IIS_STREAM : IIS_FILE;
+            if (source.type == IIS_STREAM)
+                source.data.inputP = &request.input;
+            else
+                source.data.filenameP = request.curHTML;
+            memset(&options, 0, sizeof(options));
+            options.mimeTypeP = request.mimeType;
+            options.resolution = MIME_RES_DISPLAY_DEFAULT;
+            options.watcherH = G_allocWatcher;
+            options.cancelP = request.mimeStatus;
+            options.keepPartial = TRUE;
+            ToolsImportGraphicByDriver(&source, vmf, &options,
+                request.updates.callback ? &request.updates : (void*)0, &result);
+            vmb = result.bitmap;
+            iad = result.info;
+            usedMem = result.usedMem;
+        }
         canceled = (request.mimeStatus->MS_mimeFlags & MIME_STATUS_ABORT) != 0;
-
-        /* If we actually found the data, replace */
-        /* all the similar images. */
-        if (vmb)  {
-            /* Note how much more memory has been used */
-            /* (so we can free it later) */
-@ifdef 0
-            @send (request.textObj)::MSG_URL_TEXT_INCREASE_USED_MEMORY(usedMem) ;
-@else
-            /* graphics are stored in disk-based VM cache files, so we don't
-                really need to hold their memory */
+        if (vmb) {
             AllocWatcherFree(G_allocWatcher, usedMem);
-@endif
-
-            if(canceled && !iad.IAD_completeGraphic)
-            {
-                request.importProgressData.IPD_vmFile = vmf;
-                request.importProgressData.IPD_bitmap = vmb;
-                request.importProgressData.IPD_iad = iad;
-                oct = ImportLockCacheToken(&(request.importProgressData));
-                /* Cancel carries no cache token: release both references. */
-                ObjCacheUnlockItem(oct);
+            update.vmFile = vmf;
+            update.bitmap = vmb;
+            update.info = iad;
+            oct = ImportLockCacheToken(&request, &update);
+            if (canceled && !iad.IAD_completeGraphic) {
                 ObjCacheUnlockItem(oct);
                 @send (request.textObj)::
-                MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
+                    MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
+            } else {
+                ObjCacheFinishImage(oct, &iad,
+                    request.objCache && iad.IAD_completeGraphic);
+                /* Always redraw the final image, including file-only formats
+                 * and a distinct compacted bitmap or animation. */
+                @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
+                    oct, request.name, 0, iad.IAD_size.XYS_height-1);
             }
-            else
-            {
-            /* simulate final progress update with real graphic */
-            request.importProgressData.IPD_vmFile = vmf;
-            request.importProgressData.IPD_bitmap = vmb;
-            request.importProgressData.IPD_iad = iad;
-
-            /* Create a cache token for this update */
-            oct = ImportLockCacheToken(&(request.importProgressData));
-
-            /* Only add permanently if we actually got the whole graphic */
-            if(request.objCache && iad.IAD_completeGraphic)
-            ObjCacheForceCachable(oct);
-
-            /* Release the reference to the current cache token that is "owned"
-                by the importProgressData structure of the request. There is still
-                one more reference left on the counter that will be released
-                by MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS. */
-            ObjCacheUnlockItem(oct);
-
-            firstLine = request.importProgressData.IPD_callback?
-                iad.IAD_size.XYS_height-1:0;
-
-            /* Replace the images. Cache and Name token are replaced by receiver */
-            @send (request.textObj)::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
-            oct, request.name, firstLine, iad.IAD_size.XYS_height-1);
-            }
-        }
-        else if(canceled)
-        {
-            if(request.importProgressData.IPD_cacheItem != OCT_NULL)
-                ObjCacheUnlockItem((ObjCacheToken)
-                request.importProgressData.IPD_cacheItem);
+        } else if (canceled) {
             @send (request.textObj)::
-            MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
-        }
-        else {
-            if(request.importProgressData.IPD_cacheItem != OCT_NULL)
-                ObjCacheUnlockItem((ObjCacheToken)
-                request.importProgressData.IPD_cacheItem);
+                MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
+        } else {
             @send (request.textObj)::MSG_URL_TEXT_INTERNAL_GRAPHIC_FAILED(
-            request.name, request.imageGeneration);
+                request.name, request.imageGeneration);
         }
+        ImportReleasePublications(&request);
 
         /* Done with this graphic */
         @SendStatusUpdateOptr(
@@ -730,14 +759,12 @@ void ImportThreadAbortAll(void)
         MSG_URL_TEXT_INTERNAL_CANCEL_LIKE_GRAPHICS(request.name);
 
     /* Release the fetch side after importing or discarding the request. */
-    if(request.importProgressData.IPD_loadProgressDataP)
+    if(request.loadProgressDataP)
     {
         if(G_fetchWhileImport)
-            G_importActive[request.importProgressData.
-                IPD_loadProgressDataP->LPD_loadThread] = FALSE;
+            G_importActive[request.loadProgressDataP->LPD_loadThread] = FALSE;
         else
-            ThreadVSem(request.importProgressData.
-                IPD_loadProgressDataP->LPD_importSync);
+            ThreadVSem(request.loadProgressDataP->LPD_importSync);
     }
 
     if(request.temporary)               /* destroy file if requested */
@@ -811,61 +838,39 @@ void LoadNewMimeDriver(TCHAR *driver);
 #pragma code_seg("LoadURL_TEXT")
 #endif
 
-VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
-  VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus IMPORT_PROGRESS_PARAMS_PROTO)
+ImageImportStatus ImportGraphicByNative(TCHAR *driver, _MimeGraphicParams_)
 {
-    VMBlockHandle dataVMBlock;
-    void *ImportGraphic;
+    ImageImportStatus status;
+    void *entryP;
     GeodeHandle drv;
 
-    ThreadPSem(MimeDriverSemaphore);    /* permission to load/release drivers */
-
-    if(lastMimeDriver==NullHandle || strcmp(driver, lastMimeName))
-    {                                   /* load mime driver if not loaded */
-        LoadNewMimeDriver(driver);        /* load driver for this mime type */
-
-        if(!lastMimeDriver)               /* still no driver loaded */
-        {
-        ThreadVSem(MimeDriverSemaphore);/* finished with drivers  */
-        return 0;                       /* nothing imported */
+    memset(resultP, 0, sizeof(*resultP));
+    ThreadPSem(MimeDriverSemaphore);
+    if (lastMimeDriver == NullHandle || strcmp(driver, lastMimeName)) {
+        LoadNewMimeDriver(driver);
+        if (!lastMimeDriver) {
+            ThreadVSem(MimeDriverSemaphore);
+            return IMAGE_IMPORT_FAILURE;
         }
     }
-
-    drv = lastMimeDriver;               /* handle to driver we just loaded */
-    GeodeAddReference(drv);             /* we're using this driver now... */
-
-    ThreadVSem(MimeDriverSemaphore);    /* finished with drivers  */
-
-    ImportGraphic = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC);
-                                        /* get entry point in library */
-    LOG(LogPrintfLine(">I");)
-
-    /* call library to handle URL */
-    dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
-        (mtype, file, vmf, iad, MIME_RES_DISPLAY_DEFAULT, G_allocWatcher,
-        usedMem, mimeStatus IMPORT_PROGRESS_DATAP_ARG, ImportGraphic);
-
-    LOG(LogPrintfLine("<I");)
-
-    GeodeRemoveReference(drv);          /* we're using this driver now... */
-
-    return dataVMBlock;                 /* pass back handle of block */
+    drv = lastMimeDriver;
+    GeodeAddReference(drv);
+    ThreadVSem(MimeDriverSemaphore);
+    entryP = ProcGetLibraryEntry(drv, MIME_ENTRY_GRAPHIC);
+    status = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)(
+        sourceP, destinationH, optionsP, updatesP, resultP, entryP);
+    GeodeRemoveReference(drv);
+    return status;
 }
 
-VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
-  TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus IMPORT_PROGRESS_PARAMS_PROTO)
+ImageImportStatus ToolsImportGraphicByDriver(_MimeGraphicParams_)
 {
     FileLongName driver;
 
-    if(mimeType)                        /* no MIME type passed: can't import */
-    {
-        /* Handle "WebMagick native" style drivers */
-        if(NameAssocFindAssociation(assocTypeDriver,
-            mimeType, driver, sizeof(driver), TRUE, NULL))
-        {
-        return ImportGraphicByNative(mimeType, file, driver, vmf, iad, usedMem, mimeStatus IMPORT_PROGRESS_DATAP_ARG);
-        }
-    }
-
-    return 0;                           /* didn't find a matching driver */
+    memset(resultP, 0, sizeof(*resultP));
+    if (NameAssocFindAssociation(assocTypeDriver, optionsP->mimeTypeP,
+            driver, sizeof(driver), TRUE, NULL))
+        return ImportGraphicByNative(driver, sourceP, destinationH,
+            optionsP, updatesP, resultP);
+    return IMAGE_IMPORT_UNSUPPORTED;
 }

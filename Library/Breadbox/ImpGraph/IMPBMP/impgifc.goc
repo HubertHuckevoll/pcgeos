@@ -13,7 +13,7 @@
 @include <Ansi/string.h>
 @include <ec.h>
 
-extern void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle bitmap);
+
 
 typedef struct {
 #ifdef DO_DBCS
@@ -32,8 +32,8 @@ typedef struct {
     ImpGIFStatus status ;
     AllocWatcherHandle watcher ;
     Boolean useSysPal ;
-    _ImportProgressParams_;  /* import progress data */
-#define LPDP p_work->importProgressDataP->IPD_loadProgressDataP
+    _ImportStateParams_;  /* import progress data */
+#define INPUT_P p_work->importProgressDataP->IPD_inputP
     ImpGIFProgressInfo progressInfo;
     word frameNum;
     MimeStatus *mimeStatus ;
@@ -376,10 +376,9 @@ Boolean IGIFAnimStart(GIFAnimWorkStruct *p_work)
 
     p_work->numFrames = 0 ;
     /* if we have load progress data stream, don't need to open file */
-    if (p_work->importProgressDataP &&
-	p_work->importProgressDataP->IPD_callback &&
-	LPDP &&
-	LPDP->LPD_dataStream) {
+    if (p_work->importProgressDataP && INPUT_P) {
+        if (!INPUT_P->callback)
+            return FALSE;
 	p_work->picFile = 0xffff;
     } else {
 	p_work->picFile = FileOpen(
@@ -453,6 +452,9 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
     word previousLine = 65535;
     Boolean firstPass = TRUE;  /* first pass of interlaced GIFs */
 
+    if (!p_work->keepGoing)
+        return FALSE;
+
     /* Make sure that we don't return a positive status if we start over. */
     p_work->info.IGI_bitmap = NullHandle ;
     
@@ -467,7 +469,7 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 	/* send out whatever progress bitmap we have (only for first frame) */
 	if (p_work->status != IG_STATUS_ERROR_NOT_GIF &&
 	    p_work->importProgressDataP &&
-	    p_work->importProgressDataP->IPD_callback &&
+	    p_work->importProgressDataP->updatesP &&
 	    (p_work->frameNum == 0)) {
 	    ImpGIFGetProgressInfo(p_work->GIFState, &(p_work->progressInfo));
 	    if (p_work->progressInfo.IGPI_fieldWidth &&
@@ -487,8 +489,8 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 		    p_work->importProgressDataP->IPD_firstLine =
 			previousLine+1;
 		    p_work->importProgressDataP->IPD_lastLine =
-			p_work->progressInfo.IGPI_fieldHeight;
-		    ((pcfm_ImportProgressCallback *)ProcCallFixedOrMovable_pascal)(p_work->importProgressDataP, p_work->importProgressDataP->IPD_callback);
+			p_work->progressInfo.IGPI_fieldHeight-1;
+		    ImportPublish(p_work->importProgressDataP);
 		    previousLine = 65535;
 		}
 		/* invalidate current slice, if any */
@@ -502,24 +504,22 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 			(p_work->status == IG_STATUS_GIF_DONE)) {
 			/* use full last line */
 			p_work->importProgressDataP->IPD_lastLine =
-			    p_work->progressInfo.IGPI_fieldHeight;
+			    p_work->progressInfo.IGPI_fieldHeight-1;
 		    } else {
 			/* don't use partial current line */
 			p_work->importProgressDataP->IPD_lastLine =
 			    p_work->progressInfo.IGPI_yPos-1;
 		    }
-		    if (p_work->importProgressDataP->IPD_lastLine &&
+		    if (p_work->importProgressDataP->IPD_firstLine <=
+                        p_work->importProgressDataP->IPD_lastLine &&
 			/* big enough slice... */
 			((p_work->importProgressDataP->IPD_lastLine >=
 			  p_work->importProgressDataP->IPD_firstLine +
 			  SLICE_HEIGHT) ||
 			 /* ...or last slice */
 			 (p_work->importProgressDataP->IPD_lastLine ==
-			  p_work->progressInfo.IGPI_fieldHeight))) {
-			((pcfm_ImportProgressCallback *)
-			 ProcCallFixedOrMovable_pascal)
-			    (p_work->importProgressDataP,
-			     p_work->importProgressDataP->IPD_callback);
+			  p_work->progressInfo.IGPI_fieldHeight-1))) {
+			ImportPublish(p_work->importProgressDataP);
 			previousLine =
 			    p_work->importProgressDataP->IPD_lastLine;
 			firstPass = FALSE;
@@ -530,16 +530,14 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
         switch (p_work->status)  {
             case IG_STATUS_NEED_DATA:
             case IG_STATUS_OK:
-		if (p_work->importProgressDataP &&
-		    p_work->importProgressDataP->IPD_callback &&
-		    LPDP) {
+		if (p_work->importProgressDataP && INPUT_P) {
 		    /* read data stream, first data is automatically
 		       peek'ed so that if we get NOT_GIF error we can
 		       try to import stream as JPEG later */
-		    sizeRead = ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
-			LPDP, LPCT_READ,
+		    sizeRead = ((pcfm_ImageInputCallback *)ProcCallFixedOrMovable_pascal)(
+			INPUT_P->clientDataP, IIO_READ,
 			p_work->buffer, sizeof(p_work->buffer),
-			LPDP->LPD_callback);
+			INPUT_P->callback);
 		} else {
 		    sizeRead = FileRead(
                                p_work->picFile,
@@ -554,22 +552,21 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
 		/* clean up data stream (sizeRead will be
 		   sizeof(p_work->buffer) or less) if small frame was
 		   read so that next frame will work */
-		if (p_work->importProgressDataP &&
-		    p_work->importProgressDataP->IPD_callback &&
-		    LPDP && LPDP->LPD_dataStream) {
-		    ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
-			LPDP, LPCT_FLUSH_FIRST,
+		if (p_work->importProgressDataP && INPUT_P) {
+		    ((pcfm_ImageInputCallback *)ProcCallFixedOrMovable_pascal)(
+			INPUT_P->clientDataP, IIO_FLUSH_FIRST,
 			0, sizeRead,
-			LPDP->LPD_callback);
+			INPUT_P->callback);
 		}
                 /* Get information about this frame */
                 p_work->numFrames++ ;
                 grabbedFrame = TRUE ;
                 break ;
+	    case IG_STATUS_ABORTED:
 	    case IG_STATUS_END_DATA:
 		/* allow partial bitmap */
 		if (p_work->importProgressDataP &&
-		    p_work->importProgressDataP->IPD_callback) {
+		    p_work->importProgressDataP->keepPartial) {
 		    grabbedFrame = TRUE;
 		}
 		p_work->keepGoing = FALSE;
@@ -588,7 +585,12 @@ Boolean IGIFAnimGrabFrame(GIFAnimWorkStruct *p_work)
         /* Always get the state of the currently grabbed frame */
         ImpGIFGetInfo(p_work->GIFState, &p_work->info) ;
     } else {
-        p_work->info.IGI_bitmap = NULL ;
+        ImpGIFGetInfo(p_work->GIFState, &p_work->info);
+        FreeViaProgress(p_work->importProgressDataP, p_work->vmFile,
+            p_work->info.IGI_bitmap);
+        if (p_work->info.IGI_bitmap)
+            AllocWatcherFree(p_work->watcher, p_work->info.IGI_memoryUsed);
+        p_work->info.IGI_bitmap = NullHandle;
     }
 
     return(grabbedFrame && p_work->info.IGI_bitmap);
@@ -1289,7 +1291,7 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
 
     *usedMem = 0 ;
     ECCheckStack() ;
-    workHandle = MemAlloc(sizeof(*p_work), HF_DYNAMIC, 0) ;
+    workHandle = MemAlloc(sizeof(*p_work), HF_DYNAMIC, HAF_ZERO_INIT) ;
     if (!workHandle)  {
         params->IBP_width = 1 ;
         params->IBP_height = 1 ;
@@ -1323,9 +1325,13 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
                         workBitmapWidth = p_work->info.IGI_bitmapWidth;
                         workBitmapHeight = p_work->info.IGI_bitmapHeight;
                     }
-                    if (workBitmapWidth == 0 || workBitmapHeight == 0)
-                        /* Zero dimensions still? ABORT! */
+                    if (workBitmapWidth == 0 || workBitmapHeight == 0) {
+                        FreeViaProgress(p_work->importProgressDataP,
+                            p_work->vmFile, p_work->info.IGI_bitmap);
+                        AllocWatcherFree(watcher, p_work->info.IGI_memoryUsed);
+                        *usedMem -= p_work->info.IGI_memoryUsed;
                         break;
+                    }
 		    /* if no offset, use bitmap if smaller than field
 		       (should combine with above checks) */
 		    if ((!p_work->info.IGI_bitmapX &&
@@ -1482,25 +1488,8 @@ ImpBmpStatus _pascal ImpGIFProcessAnimationFile(
             if (p_work->status == IG_STATUS_ABORTED)  {
                 *p_isComplete = FALSE ;
                 status = IBS_IMPORT_STOPPED ;
-                /* If we even got part of an image, let's keep that for now */
-                /* This won't be kept forever, though */
-                if ((numFrames == 0) && 
-                        (p_work->importProgressDataP) && 
-                        (p_work->importProgressDataP->IPD_callback) && 
-                        (p_work->progressInfo.IGPI_bitmap))  {
-		            /* else frame #0, it goes into usual place */
-		            animation[numFrames++] =
-			        VMCHAIN_MAKE_FROM_VM_BLOCK(ImpGraphCompactBitmap(
-			            p_work->vmFile,
-			            p_work->progressInfo.IGPI_bitmap,
-			            p_work->vmFile)) ;
-                    *p_isComplete = FALSE ;
-                }
-            } else if ((p_work->status == IG_STATUS_END_DATA) || 
-                    (p_work->status == IG_STATUS_NO_GRAPHIC)) {
-                *p_isComplete = FALSE ;
             } else {
-                *p_isComplete = TRUE ;
+                *p_isComplete = (p_work->status == IG_STATUS_FOUND_END_OF_GIF);
             }
 
             /* while end */

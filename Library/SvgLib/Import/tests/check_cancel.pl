@@ -36,7 +36,8 @@ typedef char TCHAR;
 typedef sword Boolean;
 typedef int TransError, ImpBmpStatus, SvgScanResult;
 typedef struct { sdword RD_left, RD_top, RD_right, RD_bottom; } RectDWord;
-typedef struct { char unused; } SvgImportContext, SvgMatrix, ImportProgressData;
+typedef struct { char unused; } SvgImportContext, SvgMatrix;
+typedef struct { const void *IPD_inputP; } ImportState;
 typedef struct { word XYS_width, XYS_height; } XYSize;
 typedef struct { sword P_x, P_y; } Point;
 typedef struct { Boolean IAD_completeGraphic; XYSize IAD_size;
@@ -217,6 +218,7 @@ int main(void)
     Boolean compacted;
     dword used;
     MimeStatus mime;
+    ImportState state = {0};
     for (mode = 0; mode < 6; mode++) {
         reset(); cancel = mode == 5 ? -1 :
                           (mode == 0 || mode == 1 ? TRUE : FALSE); chain = 99;
@@ -242,7 +244,7 @@ int main(void)
     VMFreeVMChain(2, chain);
     reset(); mime.MS_mimeFlags = 0; mimeWriterP = &mime; cancelAfter = 1;
     assert(ImpSVG("test.svg", 2, &iad, 0, 0, &used, FALSE, &params, &compacted, &bitmap,
-                  (void*)0,
+                  &state,
                   &mime) == IBS_IMPORT_STOPPED);
     assert(!bitmap && !params.IBP_bitmap && !iad.IAD_completeGraphic && !used);
     assert(closed == 1 && scans == 2 && rendered == 1);

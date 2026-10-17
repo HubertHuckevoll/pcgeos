@@ -64,7 +64,7 @@ HTMLViewNavigation.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 HTMLViewOptions.obj \
 HTMLViewOptions.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -100,7 +100,7 @@ HTMLViewOptions.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 HTMLViewOperation.obj \
 HTMLViewOperation.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -136,7 +136,7 @@ HTMLViewOperation.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 HTMLViewStatus.obj \
 HTMLViewStatus.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -172,7 +172,7 @@ HTMLViewStatus.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 AutoBrowse.obj \
 AutoBrowse.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -207,7 +207,7 @@ AutoBrowse.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 Scrapbook.obj \
 Scrapbook.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -242,7 +242,7 @@ Scrapbook.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 HTMLView.obj \
 HTMLView.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -293,7 +293,7 @@ HTMLView.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h javascr.h
+                math.h htmlprog.h impinput.h hwlib.h javascr.h
 AllocWatcher.obj \
 AllocWatcher.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -393,7 +393,7 @@ HTMLViewLifecycle.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h sysstats.h \
                 sem.h Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 PortalEmail.obj \
 PortalEmail.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -426,7 +426,8 @@ PortalEmail.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h
 StatusText.obj \
 StatusText.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -459,7 +460,8 @@ StatusText.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h
 Init.obj \
 Init.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -494,7 +496,7 @@ Init.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h library.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h
+                htmlprog.h impinput.h hwlib.h
 URLDocumentHistory.obj \
 URLDocumentHistory.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -529,7 +531,7 @@ URLDocumentHistory.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h
+                htmlprog.h impinput.h hwlib.h
 URLDocumentNavigation.obj \
 URLDocumentNavigation.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -565,7 +567,7 @@ URLDocumentNavigation.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h
+                htmlprog.h impinput.h hwlib.h
 URLDocumentLocalPage.obj \
 URLDocumentLocalPage.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -599,7 +601,8 @@ URLDocumentLocalPage.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h
 URLDocument.obj \
 URLDocument.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -634,7 +637,7 @@ URLDocument.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h
+                htmlprog.h impinput.h hwlib.h
 URLDocumentControl.obj \
 URLDocumentControl.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -669,7 +672,7 @@ URLDocumentControl.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h
+                htmlprog.h impinput.h hwlib.h
 URLSupport.obj \
 URLSupport.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -704,7 +707,7 @@ URLSupport.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h medium.h sockmisc.h \
                 library.h Ansi/string.h Ansi/stdio.h geoMisc.h initfile.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 URLLoad.obj \
 URLLoad.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -740,7 +743,7 @@ URLLoad.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h medium.h library.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h geoMisc.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h initfile.h
+                math.h htmlprog.h impinput.h hwlib.h initfile.h
 URLFetchEngine.obj \
 URLFetchEngine.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -775,7 +778,7 @@ URLFetchEngine.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h library.h \
                 Ansi/stdio.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 URLFrameTree.obj \
 URLFrameTree.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -810,7 +813,7 @@ URLFrameTree.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h javascr.h
+                htmlprog.h impinput.h hwlib.h javascr.h
 URLFrameNavigation.obj \
 URLFrameNavigation.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -845,7 +848,7 @@ URLFrameNavigation.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h javascr.h
+                htmlprog.h impinput.h hwlib.h javascr.h
 URLFrameScript.obj \
 URLFrameScript.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -880,7 +883,7 @@ URLFrameScript.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h javascr.h
+                htmlprog.h impinput.h hwlib.h javascr.h
 URLFramePage.obj \
 URLFramePage.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -915,7 +918,7 @@ URLFramePage.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h javascr.h cookies.h
+                htmlprog.h impinput.h hwlib.h javascr.h cookies.h
 URLFrameFetch.obj \
 URLFrameFetch.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -950,7 +953,7 @@ URLFrameFetch.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h javascr.h
+                htmlprog.h impinput.h hwlib.h javascr.h
 URLFrame.obj \
 URLFrame.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -985,7 +988,7 @@ URLFrame.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h initfile.h \
                 Ansi/string.h Ansi/stdio.h Ansi/stdlib.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h javascr.h
+                htmlprog.h impinput.h hwlib.h javascr.h
 URLFrameGeometry.obj \
 URLFrameGeometry.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1018,8 +1021,8 @@ URLFrameGeometry.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
-                javascr.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h javascr.h
 URLFrameTimers.obj \
 URLFrameTimers.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1052,8 +1055,8 @@ URLFrameTimers.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
-                javascr.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h javascr.h
 URLTextClipboard.obj \
 URLTextClipboard.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1087,7 +1090,8 @@ URLTextClipboard.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h
 URLTextImageProgress.obj \
 URLTextImageProgress.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1122,8 +1126,9 @@ URLTextImageProgress.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
-                urltext/URLTextInternal.h sem.h urltext/MemStream.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h urltext/URLTextInternal.h sem.h \
+                urltext/MemStream.h
 URLTextLinks.obj \
 URLTextLinks.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1157,7 +1162,7 @@ URLTextLinks.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h
+                math.h htmlprog.h impinput.h hwlib.h
 URLTextPrint.obj \
 URLTextPrint.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1191,7 +1196,7 @@ URLTextPrint.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 Ansi/stdio.h product.h htmlfstr.h awatcher.h htmlopt.h \
-                htmldrv.h math.h htmlprog.h hwlib.h
+                htmldrv.h math.h htmlprog.h impinput.h hwlib.h
 URLTextScript.obj \
 URLTextScript.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1225,7 +1230,8 @@ URLTextScript.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h
 URLText.obj \
 URLText.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1260,8 +1266,8 @@ URLText.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
-                urltext/URLTextInternal.h sem.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h urltext/URLTextInternal.h sem.h
 URLTextImages.obj \
 URLTextImages.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1296,8 +1302,8 @@ URLTextImages.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h geoMisc.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h \
-                urltext/URLTextInternal.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h urltext/URLTextInternal.h
 SourceCache.obj \
 SourceCache.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1333,7 +1339,8 @@ SourceCache.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h library.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h geoMisc.h initfile.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h sysstats.h cache/CacheInternal.h
+                htmlprog.h impinput.h hwlib.h sysstats.h \
+                cache/CacheInternal.h
 ObjectCache.obj \
 ObjectCache.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1369,7 +1376,8 @@ ObjectCache.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 parallDr.h hugearr.h fileEnum.h library.h Ansi/string.h \
                 Ansi/stdio.h Ansi/stdlib.h geoMisc.h initfile.h product.h \
                 htmlfstr.h awatcher.h htmlopt.h htmldrv.h math.h \
-                htmlprog.h hwlib.h sysstats.h cache/CacheInternal.h
+                htmlprog.h impinput.h hwlib.h sysstats.h \
+                cache/CacheInternal.h
 CacheLifetime.obj \
 CacheLifetime.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1403,7 +1411,7 @@ CacheLifetime.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h Ansi/string.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h javascr.h
+                math.h htmlprog.h impinput.h hwlib.h javascr.h
 ContentHandling.obj \
 ContentHandling.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1437,7 +1445,7 @@ ContentHandling.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h library.h Ansi/string.h \
                 geoMisc.h product.h htmlfstr.h awatcher.h htmlopt.h \
-                htmldrv.h math.h htmlprog.h hwlib.h
+                htmldrv.h math.h htmlprog.h impinput.h hwlib.h
 GraphicImport.obj \
 GraphicImport.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1472,7 +1480,7 @@ GraphicImport.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h library.h initfile.h \
                 product.h htmlfstr.h awatcher.h htmlopt.h htmldrv.h \
-                math.h htmlprog.h hwlib.h Ansi/stdio.h sem.h
+                math.h htmlprog.h impinput.h hwlib.h Ansi/stdio.h sem.h
 BookmarksDialog.obj \
 BookmarksDialog.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1562,7 +1570,8 @@ FavoritesDialog.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h
 FavoritesCreate.obj \
 FavoritesCreate.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -1596,7 +1605,8 @@ FavoritesCreate.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h product.h htmlfstr.h \
-                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h hwlib.h
+                awatcher.h htmlopt.h htmldrv.h math.h htmlprog.h \
+                impinput.h hwlib.h
 FavoritesStore.obj \
 FavoritesStore.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \

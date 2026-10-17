@@ -27,7 +27,7 @@ ImpBmpStatus _pascal
 ImpWebP(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
         AllocWatcherHandle watcher, dword *usedMem, ImpBmpParams *params,
         Boolean *isCompacted, VMBlockHandle *bitmap,
-        ImportProgressData *importProgressDataP, MimeStatus *mimeStatus)
+        ImportState *importProgressDataP, MimeStatus *mimeStatus)
 {
     FileHandle source;
     WebPImportHandle decoder;
@@ -50,6 +50,9 @@ ImpWebP(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *iad,
     *isCompacted = FALSE;
     iad->IAD_completeGraphic = FALSE;
     params->IBP_bitmap = NullHandle;
+
+    if (importProgressDataP->IPD_inputP)
+        return IBS_UNKNOWN_FORMAT;
 
     source = FileOpen(file, FILE_ACCESS_R | FILE_DENY_W);
     if (source == NullHandle) {
@@ -100,10 +103,6 @@ cleanup:
     }
 
     if (status == IBS_NO_ERROR) {
-        /* No partial publication; replace every line in the final update. */
-        if (importProgressDataP != (void *)0) {
-            importProgressDataP->IPD_callback = (void *)0;
-        }
         *bitmap = localBitmap;
         params->IBP_bitmap = localBitmap;
         *usedMem = requiredMemory;

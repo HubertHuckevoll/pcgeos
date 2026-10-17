@@ -17,8 +17,7 @@
 #include <geos.h>
 #include <resource.h>
 
-#define MIME_MAXBUF 32          /* shouldn't really have to be here... */
-#include <htmlprog.h>
+#include <impinput.h>
 
 /*
  * First we include the configuration files that record how this
@@ -1050,9 +1049,9 @@ EXTERN(void) jpeg_destroy JPP((j_common_ptr cinfo));
 EXTERN(boolean) jpeg_resync_to_restart JPP((j_decompress_ptr cinfo,
 					    int desired));
 
-/* set pointer to load progress data */
+/* set pointer to optional image input */
 EXTERN(void) jpeg_init_loadProgress JPP((j_decompress_ptr cinfo,
-					 LoadProgressData * loadProgressDataP));
+					 ImageInput * inputP));
 
 EXTERN(void) jpeg_set_error_handler_context JPP((j_common_ptr cinfo,
 						 word errorHandlerContext));

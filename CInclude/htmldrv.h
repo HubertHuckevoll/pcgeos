@@ -23,7 +23,7 @@
 
 /* protocol version of compatible MIME image drivers */
 /* upped for new API */
-#define MIME_DRV_PROTOMAJOR 4
+#define MIME_DRV_PROTOMAJOR 6
 #define MIME_DRV_PROTOMINOR 0
 
 /* token for auto-recognition of Mime drivers */
@@ -63,31 +63,13 @@ typedef struct {
 } ImageAdditionalData;
 
 
-/*
- * MIME Graphic Entry Parameters explained:
- *
- * Inputs:
- *     char *mimeType             -- Mime type declared
- *     char *file                 -- Filename of image file
- *     VMFileHandle vmf           -- File handle to working cache
- *     MimeRes resolution         -- Expected color resolution of mime
- *     AllocWatcherHandle watcher -- Handle for watching avail memory.
- *     _ImportProgressParams_     -- data for importing progress update
- *     _LoadProgressParams_       -- data for loading progress update
- * Outputs:
- *     dword usedMem              -- Amount of memory actually used
- *     ImageAdditionalData *iad   -- Additional data (see above)
- *     VMBlockHandle              -- Handle to newly created mime data
- *                                   or NullHandle if not created.
- */
-
 #define MIME_MAXBUF 32
 
 /* Nice generic structure containing the state of the Mime import activity */
 typedef word MimeStatusFlags;
 #define MIME_STATUS_ABORT 0x8000
 typedef struct {
-    MimeStatusFlags MS_mimeFlags ;
+    volatile MimeStatusFlags MS_mimeFlags ;
 } MimeStatus ;
 
 
@@ -100,41 +82,77 @@ typedef struct {
 #define PROGRESS_INI_HEIGHT_KEY "height"
 #define PROGRESS_DEFAULT_HEIGHT 30
 
-#include <htmlprog.h>
+#include <impinput.h>
 
-/* import progress data */
+/* Required source, destination, options and result; updates are optional.
+ * Descriptors, callbacks and contexts are borrowed until the call returns.
+ * A stream has no filename fallback. See impinput.h for supported operations.
+ */
+typedef enum { IIS_FILE, IIS_STREAM } ImageImportSourceType;
 typedef struct {
-    LoadProgressData *IPD_loadProgressDataP;  /* load progress data */
-    void _pascal *IPD_callback;         /* import progress callback routine */
-    optr IPD_textObj;                   /* text obj to receive graphic */
-    ImageAdditionalData IPD_iad;        /* graphic info */
-    word IPD_nameT;			/* NameToken for graphic */
-    VMBlockHandle IPD_bitmap;           /* bitmap being imported */
-    VMFileHandle IPD_vmFile;            /* file containing bitmap */
-    /* the following are changed by the import thread, so cannot be used
-       from other threads */
-    word IPD_firstLine, IPD_lastLine;   /* current scanline range */
+    ImageImportSourceType type;
+    union {
+        const TCHAR *filenameP;
+        const ImageInput *inputP;
+    } data;
+} ImageImportSource;
 
-    /* administration of the cache item holding the current chain */
-    dword IPD_cacheItem;                /* currently occupied cache item */
-} ImportProgressData;
+typedef struct {
+    const TCHAR *mimeTypeP;             /* empty string probes raster formats */
+    MimeRes resolution;                /* DISPLAY_DEFAULT uses display/INI */
+    dword flags;                       /* MIME_GREX_*; zero uses defaults */
+    AllocWatcherHandle watcherH;        /* zero disables accounting */
+    MimeStatus *cancelP;                /* optional live MIME_STATUS_ABORT */
+    Boolean keepPartial;               /* return usable incomplete images */
+} ImageImportOptions;
 
-#define _ImportProgressParams_ ImportProgressData *importProgressDataP
+/* Live image, not a snapshot. Rows are inclusive: 0 <= first <= last < height.
+ * The description is borrowed only during the synchronous importing-thread
+ * callback. Copy values and protect the image before queuing any work.
+ */
+typedef struct {
+    VMFileHandle vmFile;
+    VMBlockHandle bitmap;
+    ImageAdditionalData info;
+    word firstLine, lastLine;
+} ImageImportUpdate;
 
-typedef void _pascal _export proc_ImportProgressCallback(_ImportProgressParams_);
-typedef void _pascal pcfm_ImportProgressCallback(_ImportProgressParams_, void *pf);
+typedef void _pascal _export proc_ImageImportUpdate(void *clientDataP,
+    const ImageImportUpdate *updateP);
+typedef void _pascal pcfm_ImageImportUpdate(void *clientDataP,
+    const ImageImportUpdate *updateP, void *pf);
+typedef struct {
+    proc_ImageImportUpdate *callback;
+    void *clientDataP;
+} ImageImportUpdates;
 
-#define _MimeGraphicParams_   \
-            TCHAR *mimeType, \
-            TCHAR *file, \
-            VMFileHandle vmf, \
-            ImageAdditionalData *iad, \
-            MimeRes resolution, \
-            AllocWatcherHandle watcher, \
-            dword *usedMem, \
-            MimeStatus *mimeStatus, \
-	    _ImportProgressParams_
+/* Each distinct (vmFile, bitmap) becomes caller-owned on its first callback.
+ * Keep EVERY publication alive until return, even on failure/cancellation or
+ * failed UI notification allocation. ImpGraph never frees published images.
+ * A distinct final image transfers on return; an identical final image does
+ * not transfer twice. Keep the VM file open until all image users finish.
+ */
+typedef struct {
+    VMBlockHandle bitmap;
+    ImageAdditionalData info;
+    dword usedMem;
+} ImageImportResult;
 
+typedef enum {
+    IMAGE_IMPORT_SUCCESS,               /* non-null complete result */
+    IMAGE_IMPORT_PARTIAL,               /* non-null incomplete result */
+    IMAGE_IMPORT_CANCELED,              /* complete, partial (keepPartial), or null result */
+    IMAGE_IMPORT_FAILURE,              /* null result; publications survive */
+    IMAGE_IMPORT_INVALID,              /* invalid required descriptor */
+    IMAGE_IMPORT_UNSUPPORTED            /* unsupported source/format */
+} ImageImportStatus;
+
+#define _MimeGraphicParams_ \
+    const ImageImportSource *sourceP, \
+    VMFileHandle destinationH, \
+    const ImageImportOptions *optionsP, \
+    const ImageImportUpdates *updatesP, \
+    ImageImportResult *resultP
 
 #define MIME_LIMIT_NONE       0xFF000001
 
@@ -208,8 +226,8 @@ typedef struct {
 } EditableBitmap;
 
 
-typedef VMBlockHandle _pascal _export entry_MimeDrvGraphic(_MimeGraphicParams_);
-typedef VMBlockHandle _pascal pcfm_MimeDrvGraphic(_MimeGraphicParams_,void *pf);
+typedef ImageImportStatus _pascal _export entry_MimeDrvGraphic(_MimeGraphicParams_);
+typedef ImageImportStatus _pascal pcfm_MimeDrvGraphic(_MimeGraphicParams_,void *pf);
 
 
 /*** Entry: Get driver info ***************************************************/
@@ -305,13 +323,13 @@ typedef dword _pascal pcfm_MimeDrvText(_MimeTextParams_,void *pf);
 /*** Entry: Import as graphic extended ********************************/
 
 #define MIME_ENTRY_GRAPHIC_EX 3	
-			// protocol 4.2
+			/* protocol 6: same five arguments as slot 0; flags in options */
 
 #define MIME_GREX_NO_ANIMATIONS				0x00000001
 #define MIME_GREX_NO_SCANLINE_COMPRESS		0x00000002
 
-typedef VMBlockHandle _pascal _export entry_MimeDrvGraphicEx(_MimeGraphicParams_, dword extFlags);
-typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_,dword extFlags,void *pf);
+typedef ImageImportStatus _pascal _export entry_MimeDrvGraphicEx(_MimeGraphicParams_);
+typedef ImageImportStatus _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_, void *pf);
 
 
 
@@ -346,6 +364,8 @@ typedef VMBlockHandle _pascal pcfm_MimeDrvGraphicEx(_MimeGraphicParams_,dword ex
 #define URL_DRV_TOKEN "URLD"
 #define URL_DRV_MFID  16431
 
+
+#include <htmlprog.h>
 
 /*** Entry: Retrieve URL to file **********************************************/
 

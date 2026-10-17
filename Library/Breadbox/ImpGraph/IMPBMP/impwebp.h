@@ -8,7 +8,7 @@ ImpBmpStatus _pascal ImpWebP(TCHAR *file, VMFileHandle vmf,
                      ImageAdditionalData *iad, AllocWatcherHandle watcher,
                      dword *usedMem, ImpBmpParams *params,
                      Boolean *isCompacted, VMBlockHandle *bitmap,
-                     ImportProgressData *importProgressDataP,
+                     ImportState *importProgressDataP,
                      MimeStatus *mimeStatus);
 
 #endif

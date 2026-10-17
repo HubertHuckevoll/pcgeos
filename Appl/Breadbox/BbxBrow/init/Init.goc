@@ -111,6 +111,7 @@ optr localPageArray;            /* chunk array with NameTokens of local pages */
  * Turn on/off progress display of graphics when loading/importing
  */
 Boolean progressDisplay = TRUE;
+Boolean progressLoading = TRUE;
 
 /* time interval for sending load progress notification from fetch thread
    to import thread */
@@ -624,6 +625,7 @@ void InitNavigation(void)
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "busyOff", &isBusyOff);
 
     InitFileReadBoolean(HTMLVIEW_CATEGORY, "progressDisplay", &progressDisplay);
+    InitFileReadBoolean(HTMLVIEW_CATEGORY, "progressLoading", &progressLoading);
     /* get wait before sending load progress notification */
     InitFileReadInteger(PROGRESS_INI_CAT, PROGRESS_INI_WAIT_KEY,
                         &progressLoadWait);

@@ -20,7 +20,7 @@ CCOMFLAGS += -I../ijgjpeg/include
 # Tell what *_PROTO_{MAJOR,MINOR} constants to use for the driver protocol
 #
 # PROTOCONST      = MIME_DRV
-_PROTO = 4.1
+_PROTO = 6.0
 
 # for special FJPEGDBCS version
 ASMFLAGS        += $(.TARGET:MFJPEGDBCS*:S/$(.TARGET)/-DPRODUCT_FJPEG -DHARDWARE_TYPE=PC/)

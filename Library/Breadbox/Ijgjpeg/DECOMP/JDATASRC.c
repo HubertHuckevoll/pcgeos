@@ -95,12 +95,14 @@ fill_input_buffer (j_decompress_ptr cinfo)
 {
   my_src_ptr src = (my_src_ptr) cinfo->src;
   size_t nbytes;
-  if (cinfo->inputctl->loadProgressDataP) {
+  if (cinfo->inputctl->inputP) {
+      if (!cinfo->inputctl->inputP->callback)
+          ERREXIT(cinfo, JERR_FILE_READ);
       /* get data */
-      nbytes = ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
-	  cinfo->inputctl->loadProgressDataP, LPCT_READ,
+      nbytes = ((pcfm_ImageInputCallback *)ProcCallFixedOrMovable_pascal)(
+	  cinfo->inputctl->inputP->clientDataP, IIO_READ,
 	  src->buffer, INPUT_BUF_SIZE,
-	  cinfo->inputctl->loadProgressDataP->LPD_callback);
+	  cinfo->inputctl->inputP->callback);
   } else {
       nbytes = JFREAD(src->infile, src->buffer, INPUT_BUF_SIZE);
   }

@@ -378,12 +378,12 @@ jinit_input_controller (j_decompress_ptr cinfo)
   inputctl->pub.has_multiple_scans = FALSE; /* "unknown" would be better */
   inputctl->pub.eoi_reached = FALSE;
   inputctl->inheaders = TRUE;
-  inputctl->pub.loadProgressDataP = 0;
+  inputctl->pub.inputP = 0;
 }
 
 GLOBAL(void)
 jpeg_init_loadProgress(j_decompress_ptr cinfo,
-		       LoadProgressData *loadProgressDataP)
+		       ImageInput *inputP)
 {
-    cinfo->inputctl->loadProgressDataP = loadProgressDataP;
+    cinfo->inputctl->inputP = inputP;
 }

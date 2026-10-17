@@ -199,12 +199,16 @@ Boolean fill_input_buffer_a (j_decompress_ptr cinfo)
 {
   size_t nbytes;
 
-  if (cinfo->src.loadProgressDataP) {
+  if (cinfo->src.inputP) {
+      if (!cinfo->src.inputP->callback) {
+          set_error(cinfo, JERR_FILE_READ);
+          return FALSE;
+      }
       /* get data */
-      nbytes = ((pcfm_LoadProgressCallback *)ProcCallFixedOrMovable_pascal)(
-	  cinfo->src.loadProgressDataP, cinfo->global_state == DSTATE_INHEADER ? LPCT_PRE_READ : LPCT_READ,
+      nbytes = ((pcfm_ImageInputCallback *)ProcCallFixedOrMovable_pascal)(
+	  cinfo->src.inputP->clientDataP, cinfo->global_state == DSTATE_INHEADER ? IIO_PRE_READ : IIO_READ,
 	  cinfo->src.buffer, INPUT_BUF_SIZE,
-	  cinfo->src.loadProgressDataP->LPD_callback);
+	  cinfo->src.inputP->callback);
 
   } else {
 

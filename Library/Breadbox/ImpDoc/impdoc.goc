@@ -176,9 +176,12 @@ void BuildAssocList(void)
 
 
 #pragma argsused
-VMBlockHandle _pascal _export MimeDrvNothing(_MimeGraphicParams_)
+ImageImportStatus _pascal _export MimeDrvNothing(_MimeGraphicParams_)
 {
-    return 0;
+    if (!resultP)
+        return IMAGE_IMPORT_INVALID;
+    memset(resultP, 0, sizeof(*resultP));
+    return IMAGE_IMPORT_UNSUPPORTED;
 }
 
 /*

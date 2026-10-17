@@ -383,9 +383,7 @@ optr SaveUnknownFile(TCHAR *file, NameToken url);
 optr HandleUnknownType(TCHAR *file, NameToken url, TCHAR *mimeType,
   VMFileHandle vmf, VMBlockHandle *item, dword *memUsed);
 
-VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
-  VMFileHandle vmf, ImageAdditionalData *size, dword *memUsed, MimeStatus *mimeStatus,
-  _ImportProgressParams_);
+ImageImportStatus ToolsImportGraphicByDriver(_MimeGraphicParams_);
 
 
 /***************************************************************************
@@ -445,6 +443,7 @@ extern optr assocSchemeDriver;
 extern AllocWatcherHandle G_allocWatcher ;
 
 extern Boolean progressDisplay;
+extern Boolean progressLoading;
 extern word progressLoadWait;
 extern word progressMinHeight;
 
@@ -625,7 +624,8 @@ Boolean ObjCacheLockItem(ObjCacheToken oct, VMFileHandle *vmf, VMChain *vmc,
                          void *auxdata, word size);
 void ObjCacheUnlockItem(ObjCacheToken oct) ;
 void ObjCacheForceNocache(ByteEnum type, NameToken url);
-void ObjCacheForceCachable(ObjCacheToken oct);
+void ObjCacheFinishImage(ObjCacheToken oct, const ImageAdditionalData *infoP,
+    Boolean cachable);
 
 @ifdef CACHE_ALL
 extern Boolean G_cacheAll;

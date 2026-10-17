@@ -257,7 +257,9 @@ char fileKey[] = "add";
     VMBlockHandle dataVMBlock;
     VMFileHandle vmf;
     ImageAdditionalData iad;
-    dword usedMem;
+    ImageImportSource source;
+    ImageImportOptions options;
+    ImageImportResult result;
     char *file = NULL;
     int len;
     MemHandle mh;
@@ -283,9 +285,16 @@ char fileKey[] = "add";
 	     */
 	    FilePushDir();
 	    FileSetStandardPath(SP_TOP);
-	    dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
-		(mimeType, file, vmf, &iad, MIME_RES_DISPLAY_DEFAULT, NULL, 
-		 &usedMem, NULL, ImportGraphic);          
+        source.type = IIS_FILE;
+        source.data.filenameP = file;
+        memset(&options, 0, sizeof(options));
+        options.mimeTypeP = mimeType;
+        options.resolution = MIME_RES_DISPLAY_DEFAULT;
+        ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)(
+            &source, vmf, &options, (void*)0, &result, ImportGraphic);
+        dataVMBlock = result.bitmap;
+        iad = result.info;
+        MemUnlock(mh);
 	    MemFree(mh);
 
 	    if (dataVMBlock) {

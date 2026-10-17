@@ -188,12 +188,6 @@
 /* to simplify conditional code */
 #define LOAD_PROGRESS_DATAP_ARG ,loadProgressDataP
 #define LOAD_PROGRESS_PARAMS_PROTO ,_LoadProgressParams_
-#define IMPORT_PROGRESS_PARAMS_PROTO ,_ImportProgressParams_
-#define IMPORT_PROGRESS_DATAP_ARG ,importProgressDataP
-
-/* turn on to make sure that local graphics are also imported with
-   progressive display. This is mostly for progressive debugging... */
-// #define COMPILE_OPTION_IMPORT_PROGRESS_LOCAL
 
 /* EC num request checking */
 #define MAX_NUM_REQUESTS 250

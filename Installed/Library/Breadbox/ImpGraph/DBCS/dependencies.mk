@@ -86,7 +86,7 @@ DBCS/impgifc.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h IMPBMP/ibcommon.h \
                 product.h htmldrv.h math.h htmlfstr.h awatcher.h \
-                htmlprog.h
+                htmlprog.h impinput.h
 DBCS/impjpeg.obj \
 DBCS/impjpeg.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -115,9 +115,9 @@ DBCS/impjpeg.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/stdio.h jpeglib.h \
-                product.h htmlprog.h jconfig.h jmorecfg.h Ansi/string.h \
+                product.h impinput.h jconfig.h jmorecfg.h Ansi/string.h \
                 Ansi/stdlib.h IMPBMP/ibcommon.h htmldrv.h math.h \
-                htmlfstr.h awatcher.h initfile.h
+                htmlfstr.h awatcher.h htmlprog.h initfile.h
 DBCS/imppng.obj \
 DBCS/imppng.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -147,8 +147,8 @@ DBCS/imppng.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h IMPBMP/imppng.h \
                 IMPBMP/ibcommon.h product.h htmldrv.h math.h htmlfstr.h \
-                awatcher.h htmlprog.h pnglib.h Ansi/stdio.h Ansi/stdlib.h \
-                Ansi/string.h zlib.h zconf.h
+                awatcher.h htmlprog.h impinput.h pnglib.h Ansi/stdio.h \
+                Ansi/stdlib.h Ansi/string.h zlib.h zconf.h
 DBCS/impwebp.obj \
 DBCS/impwebp.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -178,7 +178,7 @@ DBCS/impwebp.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h IMPBMP/impwebp.h \
                 IMPBMP/ibcommon.h product.h htmldrv.h math.h htmlfstr.h \
-                awatcher.h htmlprog.h webplib.h
+                awatcher.h htmlprog.h impinput.h webplib.h
 DBCS/awatcher.obj \
 DBCS/awatcher.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -236,9 +236,9 @@ DBCS/impgraph.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h initfile.h htmldrv.h \
                 product.h math.h htmlfstr.h awatcher.h htmlprog.h \
-                IMPBMP/impgif.h IMPBMP/ibcommon.h IMPBMP/impjpeg.h \
-                IMPBMP/imppng.h pnglib.h Ansi/stdio.h Ansi/stdlib.h \
-                Ansi/string.h zlib.h zconf.h IMPBMP/impwebp.h webplib.h \
-                svgLib.h xlatLib.h ieCommon.h
+                impinput.h IMPBMP/impgif.h IMPBMP/ibcommon.h \
+                IMPBMP/impjpeg.h IMPBMP/imppng.h pnglib.h Ansi/stdio.h \
+                Ansi/stdlib.h Ansi/string.h zlib.h zconf.h \
+                IMPBMP/impwebp.h webplib.h svgLib.h xlatLib.h ieCommon.h
 
 DBCS/impgraphEC.geo DBCS/impgraph.geo : geos.ldf ansic.ldf fjpeg.ldf ijgjpeg.ldf ijgjpeg.ldf pnglib.ldf webplib.ldf svglib.ldf 

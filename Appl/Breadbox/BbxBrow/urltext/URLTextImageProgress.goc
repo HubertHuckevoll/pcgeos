@@ -242,29 +242,50 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
 }
 
 /*
+ * Decoder-side pull adapter, called on the importing thread. BbxBrow owns the
+ * download buffer; LoadGraphicProgressCallback synchronizes reads and waits
+ * for bytes as needed. The decoder sees only ImageInput operations. Decoded
+ * display updates use the separate ImportGraphicProgressCallback.
+ */
+word _pascal _export ImportGraphicInputCallback(void *clientDataP,
+    ImageInputOperation operation, void *bufferP, word size)
+{
+    LoadProgressCallbackType callbackType;
+
+    switch (operation) {
+    case IIO_READ: callbackType = LPCT_READ; break;
+    case IIO_PEEK: callbackType = LPCT_PEEK; break;
+    case IIO_PRE_READ: callbackType = LPCT_PRE_READ; break;
+    case IIO_FLUSH_FIRST: callbackType = LPCT_FLUSH_FIRST; break;
+    case IIO_RESET: callbackType = LPCT_RESET_STREAM_STATE; break;
+    default: return 0;
+    }
+    return LoadGraphicProgressCallback(clientDataP, callbackType, bufferP, size);
+}
+
+/*
  * handle import progress: invalidate newly imported portion of graphic,
  * update layout if needed
  */
 @extern method URLTextClass, MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS
 {
-    _ImportProgressParams_;
+    ImportGraphicProgress *progressP;
 
     if (importProgressData) {
         ImportRemoveProgressDataFromQueue(importProgressData);
-        importProgressDataP = MemLock(importProgressData);
-        if (importProgressDataP) {
+        progressP = MemLock(importProgressData);
+        if (progressP) {
             if(pself->HTI_imageArray &&
-               importProgressDataP->IPD_cacheItem != OCT_NULL) {
+               progressP->cacheItem != OCT_NULL) {
                 /* Give REPLACE_LIKE_GRAPHICS a reference to discard. */
-                NamePoolUseToken(namePool, importProgressDataP->IPD_nameT);
+                NamePoolUseToken(namePool, progressP->name);
                 @call self::MSG_URL_TEXT_INTERNAL_REPLACE_LIKE_GRAPHICS(
-                    (ObjCacheToken)importProgressDataP->IPD_cacheItem,
-                    importProgressDataP->IPD_nameT,
-                    importProgressDataP->IPD_firstLine,
-                    importProgressDataP->IPD_lastLine);
-            } else if(importProgressDataP->IPD_cacheItem != OCT_NULL) {
-                ObjCacheUnlockItem((ObjCacheToken)
-                    importProgressDataP->IPD_cacheItem);
+                    progressP->cacheItem,
+                    progressP->name,
+                    progressP->firstLine,
+                    progressP->lastLine);
+            } else if(progressP->cacheItem != OCT_NULL) {
+                ObjCacheUnlockItem(progressP->cacheItem);
             }
             MemUnlock(importProgressData);
         }
