@@ -812,7 +812,7 @@ void LoadNewMimeDriver(TCHAR *driver);
 #endif
 
 VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
-  VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus IMPORT_PROGRESS_PARAMS_PROTO)
+  VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus, _ImportProgressParams_)
 {
     VMBlockHandle dataVMBlock;
     void *ImportGraphic;
@@ -843,7 +843,7 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
     /* call library to handle URL */
     dataVMBlock = ((pcfm_MimeDrvGraphic *)ProcCallFixedOrMovable_pascal)
         (mtype, file, vmf, iad, MIME_RES_DISPLAY_DEFAULT, G_allocWatcher,
-        usedMem, mimeStatus IMPORT_PROGRESS_DATAP_ARG, ImportGraphic);
+        usedMem, mimeStatus, importProgressDataP, ImportGraphic);
 
     LOG(LogPrintfLine("<I");)
 
@@ -853,7 +853,7 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
 }
 
 VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
-  TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus IMPORT_PROGRESS_PARAMS_PROTO)
+  TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus, _ImportProgressParams_)
 {
     FileLongName driver;
 
@@ -863,7 +863,7 @@ VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
         if(NameAssocFindAssociation(assocTypeDriver,
             mimeType, driver, sizeof(driver), TRUE, NULL))
         {
-        return ImportGraphicByNative(mimeType, file, driver, vmf, iad, usedMem, mimeStatus IMPORT_PROGRESS_DATAP_ARG);
+        return ImportGraphicByNative(mimeType, file, driver, vmf, iad, usedMem, mimeStatus, importProgressDataP);
         }
     }
 

@@ -228,7 +228,7 @@ extern T_fetchEngineChild G_fetchChildren[];
 /* url must be pointer to dynamic NamePool buffer */
 word LoadURLByDriver(TCHAR *type, TCHAR **url, TCHAR *tmpname, TCHAR *mimeType,
   dword *ret, HTMLFormDataHandle postData, NameToken referer, dword token,
-  void **abortRoutine LOAD_PROGRESS_PARAMS_PROTO CACHE_VAL_LOAD_PROTO)
+  void **abortRoutine, _LoadProgressParams_ CACHE_VAL_LOAD_PROTO)
 {
     void *ProcessURL;
     word rtype;
@@ -470,7 +470,7 @@ abort:
  */
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
   word loadMode, dword *ret, HTMLFormDataHandle postData, NameToken referer, NameToken *anchor, dword token,
-  void **abortRoutine LOAD_PROGRESS_PARAMS_PROTO)
+  void **abortRoutine, _LoadProgressParams_)
 {
     TCHAR curType[URL_MAX_TYPE], curExt[4];
     TCHAR urlbuf[HTML_STATIC_BUF], *urlP;
@@ -661,7 +661,7 @@ word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
 
             type = LoadURLByDriver(curType, &urlP, tempname, mime, ret, postData,
                                     referer,
-            token, abortRoutine LOAD_PROGRESS_DATAP_ARG CACHE_VAL_LOAD_ARG);
+            token, abortRoutine, loadProgressDataP CACHE_VAL_LOAD_ARG);
 
             /* Past this point, the postData handle is invalidated */
 #if SINGLE_POST  /* preserve post data for redirect, freed in LoadURLToFile */
