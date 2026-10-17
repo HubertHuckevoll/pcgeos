@@ -67,13 +67,13 @@ typedef struct {
  * MIME Graphic Entry Parameters explained:
  *
  * Inputs:
- *     char *mimeType             -- Mime type declared
- *     char *file                 -- Filename of image file
- *     VMFileHandle vmf           -- File handle to working cache
- *     MimeRes resolution         -- Expected color resolution of mime
- *     AllocWatcherHandle watcher -- Handle for watching avail memory.
- *     _ImportProgressParams_     -- data for importing progress update
- *     _LoadProgressParams_       -- data for loading progress update
+ *     char *mimeType                           -- Mime type declared
+ *     char *file                               -- Filename of image file
+ *     VMFileHandle vmf                         -- File handle to working cache
+ *     MimeRes resolution                       -- Expected color resolution of mime
+ *     AllocWatcherHandle watcher               -- Handle for watching avail memory.
+ *     ImportProgressData *importProgressDataP  -- data for importing progress update
+ *     LoadProgressData *loadProgressDataP      -- data for loading progress update
  * Outputs:
  *     dword usedMem              -- Amount of memory actually used
  *     ImageAdditionalData *iad   -- Additional data (see above)
@@ -119,10 +119,8 @@ typedef struct {
     dword IPD_cacheItem;                /* currently occupied cache item */
 } ImportProgressData;
 
-#define _ImportProgressParams_ ImportProgressData *importProgressDataP
-
-typedef void _pascal _export proc_ImportProgressCallback(_ImportProgressParams_);
-typedef void _pascal pcfm_ImportProgressCallback(_ImportProgressParams_, void *pf);
+typedef void _pascal _export proc_ImportProgressCallback(ImportProgressData *importProgressDataP);
+typedef void _pascal pcfm_ImportProgressCallback(ImportProgressData *importProgressDataP, void *pf);
 
 #define _MimeGraphicParams_   \
             TCHAR *mimeType, \
@@ -133,7 +131,7 @@ typedef void _pascal pcfm_ImportProgressCallback(_ImportProgressParams_, void *p
             AllocWatcherHandle watcher, \
             dword *usedMem, \
             MimeStatus *mimeStatus, \
-	    _ImportProgressParams_
+            ImportProgressData *importProgressDataP
 
 
 #define MIME_LIMIT_NONE       0xFF000001
@@ -304,7 +302,7 @@ typedef dword _pascal pcfm_MimeDrvText(_MimeTextParams_,void *pf);
 
 /*** Entry: Import as graphic extended ********************************/
 
-#define MIME_ENTRY_GRAPHIC_EX 3	
+#define MIME_ENTRY_GRAPHIC_EX 3
 			// protocol 4.2
 
 #define MIME_GREX_NO_ANIMATIONS				0x00000001

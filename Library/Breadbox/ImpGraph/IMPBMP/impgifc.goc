@@ -13,7 +13,7 @@
 @include <Ansi/string.h>
 @include <ec.h>
 
-extern void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle bitmap);
+extern void FreeViaProgress(ImportProgressData *importProgressDataP, VMFileHandle vmFile, VMBlockHandle bitmap);
 
 typedef struct {
 #ifdef DO_DBCS
@@ -32,7 +32,7 @@ typedef struct {
     ImpGIFStatus status ;
     AllocWatcherHandle watcher ;
     Boolean useSysPal ;
-    _ImportProgressParams_;  /* import progress data */
+    ImportProgressData *importProgressDataP;  /* import progress data */
 #define LPDP p_work->importProgressDataP->IPD_loadProgressDataP
     ImpGIFProgressInfo progressInfo;
     word frameNum;

@@ -21,7 +21,7 @@ typedef struct {
 
 void AssumeGraphic(TCHAR *mimeType);
 
-word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
+word _pascal _export LoadGraphicProgressCallback(LoadProgressData *loadProgressDataP,
     LoadProgressCallbackType callbackType, void *buffer, word bufSize);
 
 #ifdef COMPILE_OPTION_AUTO_BROWSE

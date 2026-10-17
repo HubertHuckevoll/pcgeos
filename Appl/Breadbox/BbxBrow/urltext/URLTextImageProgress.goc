@@ -90,7 +90,7 @@ MemHandle G_stream[2] = {0, 0};
 /*
  * loading progress callback routine: notify text object
  */
-word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
+word _pascal _export LoadGraphicProgressCallback(LoadProgressData *loadProgressDataP,
     LoadProgressCallbackType callbackType,
     void *buffer,
     word bufSize)
@@ -247,7 +247,7 @@ word _pascal _export LoadGraphicProgressCallback(_LoadProgressParams_,
  */
 @extern method URLTextClass, MSG_URL_TEXT_IMPORT_GRAPHIC_PROGRESS
 {
-    _ImportProgressParams_;
+    ImportProgressData *importProgressDataP;
 
     if (importProgressData) {
         ImportRemoveProgressDataFromQueue(importProgressData);

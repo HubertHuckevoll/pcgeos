@@ -228,7 +228,7 @@ extern T_fetchEngineChild G_fetchChildren[];
 /* url must be pointer to dynamic NamePool buffer */
 word LoadURLByDriver(TCHAR *type, TCHAR **url, TCHAR *tmpname, TCHAR *mimeType,
   dword *ret, HTMLFormDataHandle postData, NameToken referer, dword token,
-  void **abortRoutine, _LoadProgressParams_ CACHE_VAL_LOAD_PROTO)
+  void **abortRoutine, LoadProgressData *loadProgressDataP CACHE_VAL_LOAD_PROTO)
 {
     void *ProcessURL;
     word rtype;
@@ -470,7 +470,7 @@ abort:
  */
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
   word loadMode, dword *ret, HTMLFormDataHandle postData, NameToken referer, NameToken *anchor, dword token,
-  void **abortRoutine, _LoadProgressParams_)
+  void **abortRoutine, LoadProgressData *loadProgressDataP)
 {
     TCHAR curType[URL_MAX_TYPE], curExt[4];
     TCHAR urlbuf[HTML_STATIC_BUF], *urlP;

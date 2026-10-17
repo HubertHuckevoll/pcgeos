@@ -62,13 +62,11 @@ typedef struct {
     optr LPD_request;           /* opaque client request state */
 } LoadProgressData;
 
-#define _LoadProgressParams_ LoadProgressData *loadProgressDataP
-
-typedef word _pascal _export proc_LoadProgressCallback(_LoadProgressParams_,
+typedef word _pascal _export proc_LoadProgressCallback(LoadProgressData *loadProgressDataP,
 				       LoadProgressCallbackType callbackType,
 				       void *buffer,
 				       word bufSize);
-typedef word _pascal pcfm_LoadProgressCallback(_LoadProgressParams_,
+typedef word _pascal pcfm_LoadProgressCallback(LoadProgressData *loadProgressDataP,
 				       LoadProgressCallbackType callbackType,
 				       void *buffer,
 				       word bufSize,

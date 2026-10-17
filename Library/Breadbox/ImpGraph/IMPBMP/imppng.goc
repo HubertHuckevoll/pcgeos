@@ -13,9 +13,9 @@ VMBlockHandle PngImport(
     MimeRes resolution,
     AllocWatcherHandle watcher,
     dword *usedMem,
-    Boolean *p_completeGraphic
-    , _ImportProgressParams_
-    , MimeStatus *mimeStatus
+    Boolean *p_completeGraphic,
+    ImportProgressData *importProgressDataP,
+    MimeStatus *mimeStatus
 )
 {
     // new for PNG
@@ -35,7 +35,7 @@ VMBlockHandle PngImport(
 /* number of scanlines per import progress update */
 #define SLICE_HEIGHT 10
 //    Boolean status = FALSE;
-    _LoadProgressParams_;
+    LoadProgressData *loadProgressDataP;
     Boolean onErrorDontKeepPartial = TRUE ;
     // point to load progress data, if any
     if (importProgressDataP && importProgressDataP->IPD_callback) {

@@ -365,7 +365,8 @@ void URLFetchRequest(
     NameToken referer,
     optr ackObject,
     Message ackMessage,
-    dword extraData, _LoadProgressParams_)
+    dword extraData,
+    LoadProgressData *loadProgressDataP)
 {
     dword loadProgressData = 0;
 

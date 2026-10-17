@@ -382,7 +382,7 @@ ImpBmpStatus _pascal ImpSVG(TCHAR *file, VMFileHandle vmf, ImageAdditionalData *
  * Otherwise (i.e. if no progress update ever got out), we'll just
  * discard the bitmap ourselves since nobody else knows about it.
  */
-void FreeViaProgress(_ImportProgressParams_, VMFileHandle vmFile, VMBlockHandle bitmap)
+void FreeViaProgress(ImportProgressData *importProgressDataP, VMFileHandle vmFile, VMBlockHandle bitmap)
 {
     Boolean dofree;
 

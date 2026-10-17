@@ -816,7 +816,7 @@ extern VMFileHandle G_tempVMFile;
 				allocWatcher,		//AllocWatcherHandle watcher, \
 				&usedMem,			//dword *usedMem, \
 				&mimeStatus,		//MimeStatus *mimeStatus, \
-				0,					//_ImportProgressParams_
+				0,					//ImportProgressData *importProgressDataP
 				MIME_GREX_NO_ANIMATIONS|MIME_GREX_NO_SCANLINE_COMPRESS,
 				entry
 			);

@@ -12,9 +12,9 @@ PngImport(
     MimeRes resolution,
     AllocWatcherHandle watcher,
     dword *usedMem,
-    Boolean *p_completeGraphic
-    , _ImportProgressParams_
-    , MimeStatus *mimeStatus
+    Boolean *p_completeGraphic,
+    ImportProgressData *importProgressDataP,
+    MimeStatus *mimeStatus
 );
 
 #endif

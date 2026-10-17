@@ -194,9 +194,9 @@ JpegImport(TCHAR *file,
 #if SCANLINE_COMPRESS
            Boolean scanlineCompress,
 #endif
-           Boolean *p_completeGraphic
-           , _ImportProgressParams_
-           , MimeStatus *mimeStatus
+           Boolean *p_completeGraphic,
+           ImportProgressData *importProgressDataP,
+           MimeStatus *mimeStatus
            )
 {
   /* This struct contains the JPEG decompression parameters and pointers to
@@ -235,7 +235,7 @@ EC(dword cbSize = 0;)
   Boolean gotTempAlloc = FALSE ;
   Boolean headerErr = FALSE;
   word errorHandlerContext;
-  _LoadProgressParams_;
+  LoadProgressData *loadProgressDataP;
   Boolean status = FALSE;
   Boolean onErrorDontKeepPartial = TRUE ;
 

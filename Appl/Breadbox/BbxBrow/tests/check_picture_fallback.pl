@@ -106,8 +106,6 @@ typedef struct { word LPD_importSync, LPD_sem; void *LPD_callback;
 typedef word proc_LoadProgressCallback(void);
 typedef struct { NameToken IPD_nameT; dword IPD_cacheItem;
     word IPD_firstLine, IPD_lastLine; } ImportProgressData;
-#define _ImportProgressParams_ ImportProgressData *importProgressDataP
-#define _LoadProgressParams_ LoadProgressData *loadProgressDataP
 #define ObjDerefVis(obj) (&text)
 #define ARRAY 1
 #define EXTRA 100

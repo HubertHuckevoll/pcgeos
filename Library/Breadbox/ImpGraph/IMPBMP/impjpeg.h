@@ -13,13 +13,13 @@ JpegImport(TCHAR *file,
            XYSize *picsize,
            MimeRes resolution,
            AllocWatcherHandle watcher,
-           dword *usedMem, 
+           dword *usedMem,
 #if SCANLINE_COMPRESS
-           Boolean scanlineCompress, 
+           Boolean scanlineCompress,
 #endif
-           Boolean *p_completeGraphic
-           , _ImportProgressParams_
-           , MimeStatus *mimeStatus
+           Boolean *p_completeGraphic,
+           ImportProgressData *importProgressDataP,
+           MimeStatus *mimeStatus
            );
 
 VMBlockHandle
@@ -28,13 +28,13 @@ FJpegImport(TCHAR *file,
            XYSize *picsize,
            MimeRes resolution,
            AllocWatcherHandle watcher,
-           dword *usedMem, 
+           dword *usedMem,
 #if SCANLINE_COMPRESS
-           Boolean scanlineCompress, 
+           Boolean scanlineCompress,
 #endif
-           Boolean *p_completeGraphic
-           , _ImportProgressParams_
-           , MimeStatus *mimeStatus
+           Boolean *p_completeGraphic,
+           ImportProgressData *importProgressDataP,
+           MimeStatus *mimeStatus
            );
 
 #endif

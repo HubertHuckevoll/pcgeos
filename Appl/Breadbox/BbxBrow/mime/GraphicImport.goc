@@ -230,7 +230,7 @@ Boolean ImportThreadEngineStart(void)
 
     return status ;
 }
-typedef void _pascal _export proc_ImportProgressCallback(_ImportProgressParams_);
+typedef void _pascal _export proc_ImportProgressCallback(ImportProgressData *importProgressDataP);
 
 /*-------------------------------------------------------------------------
  | Routine:  ImportThreadEngineStop
@@ -348,7 +348,7 @@ ObjCacheToken LOCAL ImportLockCacheToken(ImportProgressData *ipd)
 /*
  * import progress callback routine, notify destination text object
  */
-void _pascal _export ImportGraphicProgressCallback(_ImportProgressParams_)
+void _pascal _export ImportGraphicProgressCallback(ImportProgressData *importProgressDataP)
 {
     MemHandle importProgressData;
     ImportProgressData *newDataP, *pendingDataP;
@@ -432,7 +432,7 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *curHTML,
             Boolean temporary,
             ObjCacheToken pageOwner,
-        _LoadProgressParams_)
+            LoadProgressData *loadProgressDataP)
 {
     T_importGraphicRequest *p_request ;
     MemHandle mem ;
@@ -812,7 +812,7 @@ void LoadNewMimeDriver(TCHAR *driver);
 #endif
 
 VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
-  VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus, _ImportProgressParams_)
+  VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus, ImportProgressData *importProgressDataP)
 {
     VMBlockHandle dataVMBlock;
     void *ImportGraphic;
@@ -853,7 +853,7 @@ VMBlockHandle ImportGraphicByNative(TCHAR *mtype, TCHAR *file, TCHAR *driver,
 }
 
 VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file,
-  TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus, _ImportProgressParams_)
+  TCHAR *mimeType, VMFileHandle vmf, ImageAdditionalData *iad, dword *usedMem, MimeStatus *mimeStatus, ImportProgressData *importProgressDataP)
 {
     FileLongName driver;
 

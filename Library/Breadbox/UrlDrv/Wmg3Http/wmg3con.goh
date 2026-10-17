@@ -56,7 +56,7 @@ typedef struct {
 #ifdef RECV_SPEED
     long startTime ;
 #endif
-    _LoadProgressParams_;
+    LoadProgressData *loadProgressDataP;
     ChunkHandle refererChunk;
 #ifdef PERSISTANT_CONNECTIONS
     Boolean allowSocketCache;

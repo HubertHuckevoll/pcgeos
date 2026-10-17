@@ -385,7 +385,7 @@ optr HandleUnknownType(TCHAR *file, NameToken url, TCHAR *mimeType,
 
 VMBlockHandle ToolsImportGraphicByDriver(TCHAR *file, TCHAR *mimeType,
   VMFileHandle vmf, ImageAdditionalData *size, dword *memUsed, MimeStatus *mimeStatus,
-  _ImportProgressParams_);
+  ImportProgressData *importProgressDataP);
 
 
 /***************************************************************************
@@ -638,7 +638,7 @@ extern Boolean G_cacheAll;
 word LoadURLToFile(NameToken *url, TCHAR *tempname, TCHAR *mime,
                    word loadMode, dword *ret, HTMLFormDataHandle postData,
 		   NameToken referer, NameToken *anchor,
-                   dword token, void **abortRoutine, _LoadProgressParams_);
+                   dword token, void **abortRoutine, LoadProgressData *loadProgressDataP);
 #define ULM_NEVER  0
 #define ULM_CACHE  1
 #define ULM_ALWAYS 2

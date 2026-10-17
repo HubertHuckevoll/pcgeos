@@ -32,4 +32,4 @@ Boolean ImportThreadRequestImportGraphic(
             TCHAR *curHTML,
             Boolean temporary,
             ObjCacheToken pageOwner,
-	    _LoadProgressParams_) ;
+	    LoadProgressData *loadProgressDataP) ;

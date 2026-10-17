@@ -26,10 +26,11 @@ void URLFetchRequest(
          NameToken url,
          word loadMode,
          HTMLFormDataHandle postData,
-	 NameToken referer,
+         NameToken referer,
          optr ackObject,
          Message ackMessage,
-         dword extraData, _LoadProgressParams_) ;
+         dword extraData,
+         LoadProgressData *loadProgressDataP);
 void URLFetchEngineAbortAll(Boolean ignoreAbortMsg) ;
 optr URLFetchExtraMemoryAlloc(word size) ;
 void URLFetchExtraMemoryFree(optr extraMem) ;
