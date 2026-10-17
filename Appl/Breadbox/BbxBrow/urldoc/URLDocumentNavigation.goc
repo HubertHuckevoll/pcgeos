@@ -50,19 +50,15 @@
     TCHAR *urlP;
     optr frame = pself->UDCI_topFrame;
     int urlLen;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
     extern Boolean G_allowFileDownloadStatus;
-@endif
 
     if (!((@call application::MSG_GEN_APPLICATION_GET_STATE())&AS_QUITTING)) {
         HWChecksumCheck() ;
         @AbortOperation(FALSE, TRUE, 0);  /* stop current page load, first */
         @call oself::MSG_URL_DOCUMENT_STOP(0) ;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
         /* allow file download progress dialog (from URL entry field, history,
            favorites, external request, etc.) */
         G_allowFileDownloadStatus = TRUE;
-@endif
         /* show new URL in URL input field while loading */
         urlLen = NamePoolStrLength(namePool, url)+1;
         urlB = MemAlloc(urlLen*sizeof(TCHAR), HF_DYNAMIC, HAF_STANDARD);

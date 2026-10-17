@@ -276,9 +276,7 @@ extern Boolean G_progressStatus;
 @endif
 
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 @extern @object DownloadProgressDialog;
-@endif
 
 @ifdef JAVASCRIPT_SUPPORT
 @extern @object WindowOpenWindow;
@@ -400,10 +398,8 @@ void UserAbortEnd(void)
     /* clear mod state so we'll update URL with current page */
     @call CurrentURLText::MSG_VIS_TEXT_SET_NOT_USER_MODIFIED();
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
     /* ensure download progress dialog is closed */
     @send DownloadProgressDialog::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
-@endif
 
     /* disable Stop trigger for feedback */
     UpdateStop(FALSE);

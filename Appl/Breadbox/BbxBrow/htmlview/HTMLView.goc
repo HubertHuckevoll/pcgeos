@@ -202,7 +202,6 @@
     "down the email account name and password and contact customer "
     "service.\r\rError code: \1");
 @endif
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
   /* should all be in same resource */
   @chunk TCHAR DownloadProgressFilenameTemplate[] = _TEXT("Downloading \"%s\"");
   @chunk TCHAR DownloadProgressPercentageTemplate[] = _TEXT("%d%% of %ldK downloaded");
@@ -215,7 +214,6 @@
   @chunk TCHAR DownloadProgressPercentageTemplateUpload[] = _TEXT("%d%% of %ldK uploaded");
   @chunk TCHAR DownloadProgressPercentageDecimalTemplateUpload[] = _TEXT("%d.%d%% of %ldK uploaded");
   @chunk TCHAR DownloadProgressNoPercentageTemplateUpload[] = _TEXT("%ldK uploaded");
-@endif
 @ifdef JAVASCRIPT_SUPPORT
   @chunk TCHAR MsgScriptError[] = _TEXT("Script error:\r\r\1");
 @ifdef DO_DBCS
@@ -244,11 +242,9 @@ Boolean G_stopped = FALSE;
 /* TRUE if we are using the progress indicator to show download status */
 Boolean G_progressStatus = FALSE;
 /* TRUE if we are downloading a file, show progress dialog */
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 Boolean G_fileDownload = FALSE;
 Boolean G_fileUpload = FALSE;
 Boolean G_allowFileDownloadStatus = FALSE;
-@endif
 @endif
 
 
@@ -484,9 +480,7 @@ void RestoreTVBW(void)
 @extern method HTMLVApplicationClass, MSG_HMLVA_PROGRESS_TIMER ;
 @extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_PROGRESS_INDICATOR ;
 @extern method HTMLVApplicationClass, MSG_HMLVA_STATUS_GET_PTR ;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 @extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_DOWNLOAD_PROGRESS_DIALOG;
-@endif
 @endif
 
 /* Methods in htmlview/HTMLViewLifecycle.goc */

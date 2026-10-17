@@ -139,9 +139,6 @@ Older builds are:
 @define COMPILE_OPTION_PROGRESS_INDICATOR
 /* the new progress bar ("Ladebalken"), we want this instead of the globe in FreeGEOS */
 
-@define COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
-/* requires COMPILE_OPTION_PROGRESS_INDICATOR */
-
 @define COMPILE_OPTION_IDIAL_CONTROL
 /* Turn on to use Internet Dialup Control */
 

@@ -69,9 +69,7 @@
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
 /* TRUE if we are using the progress indicator to show download status */
 extern Boolean G_progressStatus;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 @extern object DownloadProgressDialog;
-@endif
 @endif
 
 
@@ -144,13 +142,11 @@ GeodeHandle G_Html4Par;
         optr encodingItem[] = {@Encoding0, @Encoding1, @Encoding2, @Encoding3, @Encoding4, @Encoding5};
 @endif
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
         /* build UI */
         if ((@call application::MSG_GEN_FIND_CHILD(@DownloadProgressDialog)) == 0xffff) {
             @call application::MSG_GEN_ADD_CHILD(@DownloadProgressDialog, CCO_LAST);
             @call DownloadProgressDialog::MSG_GEN_SET_USABLE(VUM_NOW);
         }
-@endif
 
 @ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
         InitFileReadBoolean(HTMLVIEW_CATEGORY, "ignoreInput", &G_ignoreInput);

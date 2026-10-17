@@ -146,7 +146,7 @@ resource   ViewTemplateResource         ui-object
 resource   FrameTemplateResource        object
 
 resource   CacheCleanupDialogResource   ui-object
-# only needed for COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
+# File-transfer progress dialog
 resource   DownloadProgressDialogResource ui-object
 
 

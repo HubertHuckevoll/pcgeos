@@ -247,9 +247,7 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
     optr text;
 #endif
     Boolean redirect = FALSE;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
     extern Boolean G_allowFileDownloadStatus;
-@endif
 @ifdef JAVASCRIPT_SUPPORT
 @ifdef COMPILE_OPTION_AUTO_BROWSE
     jseMemInfoStruct memInfo;
@@ -269,11 +267,9 @@ Boolean EvaluateMetaData(optr frame, optr metaArray, NameToken curURL)
     @call application::MSG_HMLVA_ACCEPT_INPUT();
 @endif
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
         /* we finished loading a HTML page, so we aren't doing
         a file download */
         G_allowFileDownloadStatus = FALSE;
-@endif
 
         /* stop refresh since we've got new stuff */
         @call self::MSG_URL_FRAME_CLEAR_REFRESH();

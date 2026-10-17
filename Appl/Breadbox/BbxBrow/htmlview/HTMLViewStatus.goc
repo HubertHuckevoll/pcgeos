@@ -58,12 +58,10 @@
 /* TRUE if we are using the progress indicator to show download status */
 extern Boolean G_progressStatus;
 @extern object ProgressIndicator ;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 extern Boolean G_fileDownload;
 extern Boolean G_fileUpload;
 extern Boolean G_allowFileDownloadStatus;
 extern void UpdateDownloadProgressDialogTimes(void);
-@endif
 @endif
 
 
@@ -93,7 +91,6 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
  *      Local UI objects
  **************************************************************************/
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 
 @start DownloadProgressDialogResource;
 
@@ -180,7 +177,6 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
 
 @end DownloadProgressDialogResource;
 
-@endif
 
 
 @ifdef COMPILE_OPTION_SHOW_ALLOC_WATCHER_READ_OUT
@@ -416,9 +412,7 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
                         PI_ALMOST_DONE_VALUE : PI_TIMER_VALUE)) {
             progressValue++;
         }
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
         UpdateDownloadProgressDialogTimes();
-@endif
         break;
     case PI_NUM_FRAMES:
         pageProgressGotFrames = TRUE;
@@ -464,14 +458,12 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
         if (progressValue > PI_ALMOST_DONE_VALUE)
             progressValue = PI_ALMOST_DONE_VALUE;
         G_progressStatus = FALSE;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 // don't need this for finished item as it causes problems when there are
 // still pending items when the download is started; PI_DONE should close
 // the dialog when everything is finished
 //	G_fileDownload = FALSE;
 //      G_allowFileDownloadStatus = FALSE;
 //	@send DownloadProgressDialog::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
-@endif
         break;
     case PI_DONE:
         if (progressTimer) {
@@ -482,11 +474,9 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
         pageProgressGotFrames = FALSE;
         progressValue = PI_DONE_VALUE;
         G_progressStatus = FALSE;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
         G_fileDownload = FALSE;
         G_allowFileDownloadStatus= FALSE;
         @send DownloadProgressDialog::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
-@endif
         break;
     case PI_SET_VALUE:
         /* spread among formatting and non-formatting so we can use
@@ -495,14 +485,12 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
         percentFormatted = data;
         if (data >= 99) {
             G_progressStatus = FALSE;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
             G_fileDownload = FALSE;
             G_allowFileDownloadStatus = FALSE;
             @send DownloadProgressDialog::MSG_GEN_GUP_INTERACTION_COMMAND(IC_DISMISS);
             /* Restart the indicator if we've just finished a file upload. */
             if (G_fileUpload)
                 progressValue = percentFormatted = 0;
-@endif
         }
         break;
     case PI_FORMATTING:
@@ -542,7 +530,6 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
 @endif
 }
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 @extern method HTMLVApplicationClass, MSG_HMLVA_UPDATE_DOWNLOAD_PROGRESS_DIALOG
 {
     if (!UserAbortCheck()) {
@@ -555,10 +542,8 @@ StatusTextID G_statusIds[HTML_STATUS_TYPE_UNKNOWN] = {
     }
     MemFree(updateTxt);
 }
-@endif
 
 @endif  /* COMPILE_OPTION_PROGRESS_INDICATOR */
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 @extern chunk DownloadProgressFilenameTemplate;
 @extern chunk DownloadProgressPercentageTemplate;
 @extern chunk DownloadProgressPercentageDecimalTemplate;
@@ -574,7 +559,6 @@ extern Boolean G_progressStatus;
 extern Boolean G_fileDownload;
 extern Boolean G_fileUpload;
 extern Boolean G_allowFileDownloadStatus;
-@endif
 
 
 /* Preserve the original swapping boundary and compiler string defaults. */
@@ -585,7 +569,6 @@ extern Boolean G_allowFileDownloadStatus;
 #pragma code_seg("LoadURL_TEXT")
 #endif
 
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
 
 static dword G_downloadTotal = 0;
 static dword G_downloadProgress = 0;
@@ -814,4 +797,3 @@ void UpdateDownloadProgressFilename(TCHAR *url)
     G_downloadTimersStartTime = 0;
     G_prevSecsLeft = 0;
 }
-@endif  /* COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG */

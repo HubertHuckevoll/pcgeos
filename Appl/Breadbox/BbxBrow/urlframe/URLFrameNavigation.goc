@@ -47,9 +47,7 @@ extern Boolean CheckConnected(void);
     NameToken baseTarget = pself->UFI_baseTarget;
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
     extern Boolean G_progressStatus;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
     extern Boolean G_allowFileDownloadStatus;
-@endif
 @endif
 
     HWChecksumCheck() ;
@@ -161,9 +159,7 @@ extern Boolean CheckConnected(void);
         referer = @call realSelf::MSG_URL_FRAME_GET_URL();
 @ifdef COMPILE_OPTION_PROGRESS_INDICATOR
         G_progressStatus = TRUE;
-@ifdef COMPILE_OPTION_DOWNLOAD_PROGRESS_DIALOG
         G_allowFileDownloadStatus = TRUE;
-@endif
 @endif
 @ifdef COMPILE_OPTION_IGNORE_INPUT_DURING_LOADING
         @call application::MSG_HMLVA_IGNORE_INPUT();
