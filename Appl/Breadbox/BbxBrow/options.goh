@@ -52,7 +52,6 @@ Older builds are:
 #define COMPILE_OPTION_SOURCE_CACHE_LIMIT       16384
 @define COMPILE_OPTION_SOURCE_CACHE_MIN_LIMIT   0
 #define COMPILE_OPTION_SOURCE_CACHE_MIN_LIMIT   0
-@define COMPILE_OPTION_FORMATTING_CACHE_ON
 
 #define COMPILE_OPTION_CACHE_ENTRY_SIZE_LIMIT  8192
 
@@ -242,20 +241,12 @@ shown in the menu bar
    allows multiple threads for fetching - disabled for RM GEOS
    but the numConn option is still available in GEOS.INI */
 
-@ifdef COMPILE_OPTION_FORMATTING_CACHE_ON
 #define DEFAULT_VARIOUS_SETTINGS ( \
                HTMLV_SOURCE_CACHE | \
                HTMLV_OBJECT_CACHE | \
                HTMLV_ENABLE_TOOLBAR | \
                HTMLV_ENABLE_STATUSBAR | \
                HTMLV_ENABLE_URLBAR)
-@else
-#define DEFAULT_VARIOUS_SETTINGS ( \
-               HTMLV_SOURCE_CACHE | \
-               HTMLV_ENABLE_TOOLBAR | \
-               HTMLV_ENABLE_STATUSBAR | \
-               HTMLV_ENABLE_URLBAR)
-@endif
 
 #ifdef JAVASCRIPT_SUPPORT
 #define DEFAULT_HTML_OPTIONS ( \

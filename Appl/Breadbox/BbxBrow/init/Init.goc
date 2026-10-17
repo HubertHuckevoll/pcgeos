@@ -707,9 +707,7 @@ void AdaptUItoSystemConfiguration(void)
 
 @ifdef COMPILE_OPTION_ENABLE_SETTINGS
     @send srcCacheOpt::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
-@ifdef COMPILE_OPTION_FORMATTING_CACHE_ON
     @send objCacheOpt::MSG_GEN_SET_NOT_USABLE(VUM_DELAYED_VIA_APP_QUEUE);
-@endif
 @endif
 
     @call application::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME(&ds);

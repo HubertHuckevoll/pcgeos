@@ -473,7 +473,6 @@ void LOCAL EnforceObjCacheSizeLimits(void)
     Boolean success;
 
 #ifdef DEFAULT_OBJECT_CACHE_LIMIT
-@ifdef COMPILE_OPTION_FORMATTING_CACHE_ON
 @if defined(COMPILE_OPTION_ENABLE_SETTINGS) || defined(COMPILE_OPTION_ENABLE_MISCELLANEOUS)
     limit = 1024L * (@call objCacheLimit::MSG_GEN_VALUE_GET_INTEGER_VALUE());
 @else
@@ -482,9 +481,6 @@ void LOCAL EnforceObjCacheSizeLimits(void)
 #else
     limit = objCacheLimitIni;
 #endif
-@endif
-@else
-    limit = 0;
 @endif
 #endif
 

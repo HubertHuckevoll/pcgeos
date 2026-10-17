@@ -29,9 +29,7 @@
                 ,@printButtonOpt
 @endif
                 ,@srcCacheOpt /* disabled dynamically... why? */
-@ifdef COMPILE_OPTION_FORMATTING_CACHE_ON
                 ,@objCacheOpt
-@endif
 @ifdef COMPILE_OPTION_ALLOW_FRAME_SUPPORT_TOGGLE
                 ,@noFrameOpt
 @endif
@@ -77,12 +75,10 @@
     GI_visMoniker = 'S',"Source File Cache";
     GBI_identifier = HTMLV_SOURCE_CACHE;
 }
-@ifdef COMPILE_OPTION_FORMATTING_CACHE_ON
 @object GenBooleanClass objCacheOpt = {
     GI_visMoniker = 'F',"Formatting Cache";
     GBI_identifier = HTMLV_OBJECT_CACHE;
 }
-@endif
 @ifdef COMPILE_OPTION_ALLOW_FRAME_SUPPORT_TOGGLE
 @object GenBooleanClass noFrameOpt = {
     GI_visMoniker = 'r',"Act as No-Frame Browser";
@@ -109,9 +105,7 @@
     GI_comp = @homePageName,
 @ifdef COMPILE_OPTION_ENABLE_MISCELLANEOUS
               @srcCacheLimit,
-@ifdef COMPILE_OPTION_FORMATTING_CACHE_ON
               @objCacheLimit,
-@endif
 @endif
               @proxySite,
               @newHomeTrigger;
@@ -133,7 +127,6 @@
     ATTR_GEN_INIT_FILE_KEY = "srcCacheLimit";
     HINT_VALUE_DIGITAL_DISPLAY;
 }
-@ifdef COMPILE_OPTION_FORMATTING_CACHE_ON
 @object GenValueClass objCacheLimit = {
     GI_visMoniker = 'F',"Formatting Cache Size (KB):";
     GVLI_value = MakeWWFixed(DEFAULT_OBJECT_CACHE_LIMIT);
@@ -142,7 +135,6 @@
     ATTR_GEN_INIT_FILE_KEY = "objCacheLimit";
     HINT_VALUE_DIGITAL_DISPLAY;
 }
-@endif
 @endif
 
 @object GenTextClass proxySite = {
