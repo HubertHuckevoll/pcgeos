@@ -1242,4 +1242,11 @@ if _HAS_LEGOS_LOOKS
     OLWI_legosLook		byte
 endif
 
+if _ISUI2000
+MSG_OL_WIN_SET_TOOLBOX_HOVER message
+	; Pass: ^lcx:dx = toolbar button under the pointer, or null to clear.
+    OLWI_toolboxHover optr
+    OLWI_toolboxHoverSeen byte
+endif
+
 OLWinClass	endc

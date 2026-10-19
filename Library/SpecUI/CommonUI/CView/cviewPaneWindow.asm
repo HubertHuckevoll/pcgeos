@@ -2275,7 +2275,14 @@ if	_ISUI
 	dec	cx
 	dec	dx
 
+if _ISUI2000
+	;
+	; Use a dark-grey inner shadow for the sunken client edge.
+	;
+		mov	bp, C_GRAY_27 or (C_LIGHT_GRAY shl 8)
+else
 	mov	bp, C_BLACK or (C_LIGHT_GRAY shl 8)
+endif
 	call	OpenCheckIfBW
 	jnc	20$
 	mov	bp, C_BLACK or (C_BLACK shl 8)

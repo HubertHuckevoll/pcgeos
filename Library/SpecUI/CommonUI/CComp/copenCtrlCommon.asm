@@ -1223,7 +1223,17 @@ if _MOTIF or _ISUI
 	jc	10$
 	dec	ax				;adjust ax for first line
 10$:
+if _ISUI2000
+		call	SetEtchedShadowColor
+		pushf				;remember whether ink was black
+endif
 	call	GrDrawVLine
+if _ISUI2000
+		popf
+		jc	firstLineDone
+		call	SetBlack		;restore the etching/clearing sentinel
+firstLineDone:
+endif
 	call	OpenCheckIfBW
 	jc	exit				;B/W, done
 	inc	ax
@@ -1288,7 +1298,17 @@ if _MOTIF or _ISUI
 	jc	10$
 	dec	bx
 10$:
+if _ISUI2000
+		call	SetEtchedShadowColor
+		pushf				;remember whether ink was black
+endif
 	call	GrDrawHLine
+if _ISUI2000
+		popf
+		jc	firstLineDone
+		call	SetBlack		;restore the etching/clearing sentinel
+firstLineDone:
+endif
 	call	OpenCheckIfBW
 	jc	exit				;B/W, done
 	inc	bx
@@ -1307,6 +1327,24 @@ endif
 DrawEtchedHLine	endp
 
 if (_MOTIF or _ISUI)
+
+if _ISUI2000
+	;
+	; Replace black etching ink with the scheme shadow for one stroke.
+	; Return carry clear if changed; preserve B/W and non-black erase ink.
+	;
+SetEtchedShadowColor proc near
+	uses ax
+	.enter
+		call	OpenCheckIfBW
+		jc	done
+		call	GetDarkColor
+		call	SetColorIfNotClearing
+done:
+	.leave
+		ret
+SetEtchedShadowColor endp
+endif
 
 SetWhiteIfNotClearing	proc	near	uses	ax
 	.enter

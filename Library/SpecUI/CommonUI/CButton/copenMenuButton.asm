@@ -863,6 +863,12 @@ REVISION HISTORY:
 
 OLMenuButtonHandleEvent	method	OLMenuButtonClass, \
 				MSG_META_END_SELECT, MSG_META_PTR 
+if _ISUI2000
+		cmp	ax, MSG_META_PTR
+		jne	notHoverEvent
+		call	OLButtonTrackToolboxHover
+notHoverEvent:
+endif
 	;
 	; Have popup buttons ignore MSG_META_PTR's if they don't have the
 	; mouse grab.  We don't want to be able to wander over popup list

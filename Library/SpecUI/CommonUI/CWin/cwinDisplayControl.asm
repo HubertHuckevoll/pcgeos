@@ -915,6 +915,20 @@ else
 OLDisplayGroupDraw	method dynamic	OLDisplayGroupClass, MSG_VIS_DRAW
 	mov	di, bp				;di = GState
 	mov	ax, C_BLACK			;force C_BLACK for now
+if _ISUI2000
+	;
+	; A full-size document already has its own client edge. Blend the
+	; display-group border into the UI face instead of adding a black rim.
+	;
+		call	OpenCheckIfBW
+		jc	setGroupColor
+		mov	bx, ds:[si]
+		add	bx, ds:[bx].Vis_offset
+		test	ds:[bx].OLDGI_states, mask OLDGS_MAXIMIZED
+		jz	setGroupColor
+		call	GetLightColor
+setGroupColor:
+endif
 	call	GrSetAreaColor
 
 	;draw a rectangle the size of the port window.  Will actually turn

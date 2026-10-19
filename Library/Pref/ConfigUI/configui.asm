@@ -262,6 +262,13 @@ spuiBuf		local	FileLongName
 		segmov	ds, cs
 		mov	si, offset ISUIGeode		;check DOS filename
 		call	LocalCmpStringsNoCase
+		je	isuiNameFound
+		mov	si, offset ISUI2000Geode
+		call	LocalCmpStringsNoCase
+		je	isuiNameFound
+		mov	si, offset ISUI2000Name
+		call	LocalCmpStringsNoCase
+isuiNameFound:
 		pop	ds
 yesISUI:
 		.leave
@@ -314,6 +321,9 @@ taskbarEnabledDisableList	lptr \
 
 EC < LocalDefNLString ISUIGeode <"isuiec.geo", 0>
 NEC < LocalDefNLString ISUIGeode <"isui.geo", 0>
+EC < LocalDefNLString ISUI2000Geode <"EC ISUI 2000", 0> >
+NEC < LocalDefNLString ISUI2000Geode <"isui2000.geo", 0> >
+LocalDefNLString ISUI2000Name <"ISUI 2000", 0>
 optionsCatString		char	"motif options",0
 taskBarEnabledKeyString		char	"taskBarEnabled",0
 
@@ -1050,7 +1060,15 @@ uicombos UICombo <
 	offset BerkeleyStr,
 	TRUE,
 	TRUE
+>,<
+	offset ISUI2000Geode,
+	offset ISDeskStr,
+	offset EsquireStr,
+	TRUE,
+	TRUE
 >
+
+CheckHack <length uicombos eq ConfigUICombo>
 
 defaultLauncherKey 	char "defaultLauncher", 0
 uiFeaturesCat 		char "uiFeatures", 0
@@ -1698,7 +1716,9 @@ ISUISelected	proc	near
 		mov	ax, MSG_GEN_ITEM_GROUP_GET_SELECTION
 		call	ObjCallInstanceNoLock
 		cmp	ax, CUIC_ISUI
-
+		je	isuiSelected
+		cmp	ax, CUIC_ISUI2000
+isuiSelected:
 		.leave
 		ret
 ISUISelected	endp

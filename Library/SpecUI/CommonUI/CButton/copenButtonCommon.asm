@@ -393,6 +393,9 @@ REVISION HISTORY:
 
 
 OLButtonPtr	method	OLButtonClass, MSG_META_PTR
+if _ISUI2000
+		call	OLButtonTrackToolboxHover
+endif
 	;if not in a menu and we do not yet have the mouse grab, it means that
 	;the mouse is simply dragging across this control. IGNORE this event.
 
@@ -430,6 +433,102 @@ returnProcessed:
 	mov	ax, mask MRF_PROCESSED or mask MRF_CLEAR_POINTER_IMAGE
 	ret
 OLButtonPtr	endp
+
+if _ISUI2000
+	;
+	; Flat chrome is limited to colour toolbar controls. Popup list fields
+	; keep their recessed frame.
+	; Return carry set for a toolbar control; preserve all registers.
+	;
+OLButtonIsFlatToolbox proc far
+	uses di
+	.enter
+		call	OpenCheckIfBW
+		jc	notToolbox
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+		test	ds:[di].OLBI_moreAttrs, mask OLBMA_IN_TOOLBOX
+		jz	notToolbox
+		test	ds:[di].OLBI_specState, mask OLBSS_IN_MENU or \
+			mask OLBSS_IN_MENU_BAR or mask OLBSS_SYS_ICON or \
+			mask OLBSS_MENU_DOWN_MARK
+		jnz	notToolbox
+		test	ds:[di].OLBI_fixedAttrs, mask OLBFA_IN_REPLY_BAR
+		jnz	notToolbox
+		stc
+		jmp	done
+notToolbox:
+		clc
+done:
+	.leave
+		ret
+OLButtonIsFlatToolbox endp
+
+	;
+	; Report the hovered control without taking the mouse or keyboard grab.
+	; Preserve the pointer event, including its coordinates and function bits.
+	;
+OLButtonTrackToolboxHover proc far
+	uses ax, cx, dx, di
+	.enter
+		call	OLButtonIsFlatToolbox
+		jnc	done
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+		test	ds:[di].VI_attrs, mask VA_FULLY_ENABLED
+		jz	clearHover
+		call	VisTestPointInBounds
+		jnc	clearHover
+		mov	cx, ds:[LMBH_handle]
+		mov	dx, si
+		jmp	report
+clearHover:
+		clr	cx, dx
+report:
+		call	OLButtonReportToolboxHover
+done:
+	.leave
+		ret
+OLButtonTrackToolboxHover endp
+
+	;
+	; Pass ^lcx:dx to the containing window. No process-wide hover state.
+	;
+OLButtonReportToolboxHover proc near
+	uses ax, bx, cx, dx, bp, si, di
+	.enter
+		push	cx, dx
+		mov	cx, segment OLWinClass
+		mov	dx, offset OLWinClass
+		mov	ax, MSG_VIS_VUP_FIND_OBJECT_OF_CLASS
+		call	ObjCallInstanceNoLock
+		movdw	bxsi, cxdx
+		pop	cx, dx
+		jnc	done
+		mov	ax, MSG_OL_WIN_SET_TOOLBOX_HOVER
+		mov	di, mask MF_CALL or mask MF_FIXUP_DS
+		call	ObjMessage
+done:
+	.leave
+		ret
+OLButtonReportToolboxHover endp
+
+	;
+	; Invalidate only on hover transitions. Normal drawing retains focus,
+	; disabled-icon rendering, and the selected state of toolbox items.
+	;
+OLButtonSetToolboxHover method dynamic OLButtonClass, \
+				MSG_OL_BUTTON_SET_TOOLBOX_HOVER
+		cmp	ds:[di].OLBI_toolboxHover, cl
+		je	done
+		mov	ds:[di].OLBI_toolboxHover, cl
+		mov	cl, mask VOF_IMAGE_INVALID
+		mov	dl, VUM_DELAYED_VIA_UI_QUEUE
+		call	VisMarkInvalid
+done:
+		ret
+OLButtonSetToolboxHover endm
+endif
 
 
 COMMENT @----------------------------------------------------------------------
@@ -1763,8 +1862,21 @@ REVISION HISTORY:
 	brianc	3/19/99   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-if BUBBLE_HELP
+if BUBBLE_HELP or _ISUI2000
 OLButtonVisClose	method dynamic OLButtonClass, MSG_VIS_CLOSE
+if _ISUI2000
+	;
+	; Remove the window's reference before this control can be unbuilt.
+	;
+		tst	ds:[di].OLBI_toolboxHover
+		jz	noToolboxHover
+		push	cx, dx
+		clr	cx, dx
+		call	OLButtonReportToolboxHover
+		pop	cx, dx
+noToolboxHover:
+endif
+if BUBBLE_HELP
 	push	ax
 	mov	ax, TEMP_OL_BUTTON_BUBBLE_HELP
 	call	ObjVarFindData
@@ -1772,13 +1884,14 @@ OLButtonVisClose	method dynamic OLButtonClass, MSG_VIS_CLOSE
 	jnc	done
 	call	OLButtonDestroyBubbleHelp
 done:
+endif
 	; Ensure that we don't still have the mouse grabbed from either
 	; START_SELECT or START_MOVE_COPY. -dhunter 2/23/2000
 	call	VisReleaseMouse
 	mov	di, offset OLButtonClass
 	GOTO	ObjCallSuperNoLock
 OLButtonVisClose	endm
-endif	; BUBBLE_HELP
+endif	; BUBBLE_HELP or _ISUI2000
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

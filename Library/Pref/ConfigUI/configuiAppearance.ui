@@ -63,6 +63,7 @@ UIList = PrefItemGroup vardataReloc {
     destination = ConfigUIRoot;
     children =
 	UILISUI,
+	UILISUI2000,
 	UILMotif,
 	UILMotifRedux;
 
@@ -75,7 +76,7 @@ UIList = PrefItemGroup vardataReloc {
 	HINT_ITEM_GROUP_SCROLLABLE,
 	HINT_FIXED_SIZE {
 	    SpecWidth <SST_AVG_CHAR_WIDTHS, 24>
-	    SpecHeight <SST_LINES_OF_TEXT, 3>
+	    SpecHeight <SST_LINES_OF_TEXT, 4>
 	    word 3
 	},
 	ATTR_GEN_INIT_FILE_CATEGORY {char "ui", 0},
@@ -89,6 +90,11 @@ UIList = PrefItemGroup vardataReloc {
 UILISUI = GenItem {
     moniker = "Industry Standard";
     identifier = CUIC_ISUI;
+}
+
+UILISUI2000 = GenItem {
+    moniker = "ISUI 2000";
+    identifier = CUIC_ISUI2000;
 }
 
 UILMotif = GenItem {

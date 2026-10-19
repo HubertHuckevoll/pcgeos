@@ -158,6 +158,21 @@ OLItemPtr	method OLItemClass, MSG_META_PTR
 	call	OLItemTestIfInteractable
 	jnc	returnAX		;exit if not interactable
 
+if _ISUI2000
+	;
+	; Item groups deliver pointer events directly to their items.
+	;
+		call	IC_DerefVisDI
+		test	ds:[di].OLII_state, mask OLIS_DRAW_AS_TOOLBOX
+		jz	notToolboxHover
+if ALLOW_TAB_ITEMS
+		test	ds:[di].OLII_extraRecord, mask OLIER_TAB_STYLE
+		jnz	notToolboxHover
+endif
+		call	OLButtonTrackToolboxHover
+notToolboxHover:
+endif
+
 	;if the mouse button is not pressed, can ignore this event
 
 OLS <	test	bp, (mask UIFA_SELECT or mask UIFA_FEATURES) shl 8	>

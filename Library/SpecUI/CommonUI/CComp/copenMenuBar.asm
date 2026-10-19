@@ -817,7 +817,17 @@ endif
 	xchg	ax, bp
 	call	VisGetBounds			;get normal bounds
 	popf								  
+if _ISUI2000
+	;
+	; Flatten color menu bars, keeping the monochrome frame.
+	;
+		je	drawBW
+		call	GrFillRect
+		ret
+drawBW:
+else
 	jne	10$				;skip if color...         
+endif
 
 	;In B/W, do some despicable things above, left, and right of the menu
 	;  bar to make things overlap properly.

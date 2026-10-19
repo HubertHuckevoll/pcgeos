@@ -138,10 +138,16 @@ _WIZARDBA	= FALSE
 
 ;------------------------------------------------------
 
+ifdef ISUI2000
+_ISUI2000	= TRUE
+else
+_ISUI2000	= FALSE
+endif
+
 ifdef ISUI
 _ISUI		= TRUE
 else
-_ISUI		= FALSE
+_ISUI		= _ISUI2000
 endif
 
 ;------------------------------------------------------

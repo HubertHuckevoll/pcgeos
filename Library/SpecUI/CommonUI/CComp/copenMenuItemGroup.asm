@@ -1082,7 +1082,10 @@ CUAS <11$:					;else halve our inset   >
 	mov	dx, bx
 						;pass di = gstate
 
-if _MOTIF or _ISUI
+if _ISUI2000
+		clc
+		call	DrawISUIMenuSeparator
+elif _MOTIF or _ISUI
 	clc
 	call	DrawEtchedHLine			;draw thin line (in copenCtrl)
 else
@@ -1112,7 +1115,10 @@ CUAS <21$:					;else halve our inset   >
 
 	mov	bx, dx
 						;pass di = gstate
-if _MOTIF or _ISUI
+if _ISUI2000
+		stc				;fit both rows above the bottom
+		call	DrawISUIMenuSeparator
+elif _MOTIF or _ISUI
 	stc					;move up if etched
 	call	DrawEtchedHLine			;draw thin line (in copenCtrl)
 else
@@ -1123,6 +1129,43 @@ DBWMIG_30:
 	pop	ds, si
 	ret
 DrawBWMenuItemGroup	endp
+
+if _ISUI2000
+	;
+	; Draw a shadow/highlight separator, retaining the one-row B/W line.
+	; Carry set moves the colour pair up to fit at a group's bottom edge.
+	;
+DrawISUIMenuSeparator proc near
+	uses ax, bx
+	.enter
+		pushf
+		call	OpenCheckIfBW
+		jc	monochrome
+		popf
+		jnc	havePosition
+		dec	bx
+havePosition:
+		push	ax
+		call	GetDarkColor
+		call	GrSetLineColor
+		pop	ax
+		call	GrDrawHLine
+		inc	bx
+		push	ax
+		mov	ax, C_WHITE
+		call	GrSetLineColor
+		pop	ax
+		call	GrDrawHLine
+		call	SetBlack
+		jmp	done
+monochrome:
+		popf
+		call	GrDrawHLine
+done:
+	.leave
+		ret
+DrawISUIMenuSeparator endp
+endif
 
 ;OPT: since this is used for both color and BW, move to CommonFunctional
 ;- brianc 4/30/92

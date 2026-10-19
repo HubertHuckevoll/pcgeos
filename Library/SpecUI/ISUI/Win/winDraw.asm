@@ -571,6 +571,28 @@ OpenWinDrawWindowBorder	proc	near
 	call	OpenWinCheckIfBordered
 	jnc	done
 
+if _ISUI2000
+	;
+	; Menus use a shallow raised edge with a grey outer shadow. The packed
+	; four-bit ColorScheme cannot represent the extended grey-ramp index.
+	;
+		cmp	ah, DC_GRAY_1
+		je	windowFrame
+		test	ds:[bp].OLWI_fixedAttr, mask OWFA_IS_MENU
+		jz	windowFrame
+		call	OpenWinGetBounds
+		mov	bp, (C_GRAY_27 shl 8) or C_LIGHT_GRAY
+		call	OpenDrawRect
+		inc	ax
+		inc	bx
+		dec	cx
+		dec	dx
+		mov	bp, (C_DARK_GRAY shl 8) or C_WHITE
+		call	OpenDrawRect
+		jmp	resetLineColor
+
+windowFrame:
+endif
 	; Determine the color scheme to use
 
 	mov	bx, ax
@@ -592,6 +614,9 @@ OpenWinDrawWindowBorder	proc	near
 	pop	bp			;restore inner border color
 	call	WinDrawBoxFrame		;draw inner border
 
+if _ISUI2000
+resetLineColor:
+endif
 	mov	ax, C_BLACK
 	call	GrSetLineColor
 done:

@@ -1934,6 +1934,17 @@ if	_ISUI	;--------------------------------------------------------------
 
 DummyWord2	word	DummyWord2
 
+if _ISUI2000
+NormalCBR	ColorButtonRegions <
+			CBRborderOuterLT, CBRborderOuterRB,
+			CBRborderInnerLT, CBRborderInnerRB,
+			CBRinterior,
+			(C_WHITE shl 8) or C_GRAY_27,
+			(C_GRAY_27 shl 8) or C_WHITE,
+			(C_LIGHT_GRAY shl 8) or C_DARK_GRAY,
+			(C_DARK_GRAY shl 8) or C_LIGHT_GRAY
+		>
+else
 NormalCBR	ColorButtonRegions <
 			CBRborderOuterLT, CBRborderOuterRB, 
 			CBRborderInnerLT, CBRborderInnerRB,
@@ -1943,7 +1954,19 @@ NormalCBR	ColorButtonRegions <
 			(C_WHITE shl 8) or C_DARK_GRAY,
 			(C_DARK_GRAY shl 8) or C_WHITE
 		>
+endif
 
+if _ISUI2000
+DefaultCBR	ColorButtonRegions <
+			CBRdefBorderOuterLT, CBRdefBorderOuterRB,
+			CBRdefBorderInnerLT, CBRdefBorderInnerRB,
+			CBRdefInterior,
+			(C_WHITE shl 8) or C_GRAY_27,
+			(C_DARK_GRAY shl 8) or C_DARK_GRAY,
+			(C_LIGHT_GRAY shl 8) or C_DARK_GRAY,
+			(C_LIGHT_GRAY shl 8) or C_LIGHT_GRAY
+		>
+else
 DefaultCBR	ColorButtonRegions <
 			CBRdefBorderOuterLT, CBRdefBorderOuterRB,
 			CBRdefBorderInnerLT, CBRdefBorderInnerRB,
@@ -1953,6 +1976,7 @@ DefaultCBR	ColorButtonRegions <
 			(C_WHITE shl 8) or C_DARK_GRAY,
 			(C_LIGHT_GRAY shl 8) or C_LIGHT_GRAY
 		>
+endif
 
 MenuCBR		ColorButtonRegions <
 			CBRnullRegion, CBRnullRegion,

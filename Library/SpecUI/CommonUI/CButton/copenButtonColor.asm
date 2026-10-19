@@ -294,6 +294,17 @@ SBOX <selectionBox:							>
 
 else ; ========================================================================
 
+if _ISUI2000
+		call	OLButtonIsFlatToolbox
+		jnc	regularButtonFrame
+		push	ax
+		mov	al, bl
+		call	OLButtonDrawToolboxFrame
+		pop	ax
+		jmp	afterButtonInterior
+regularButtonFrame:
+endif
+
 ;--------------------------------------------------------------
 					;pass cx,dx = size of button
 
@@ -307,6 +318,9 @@ else ; ========================================================================
 afterBorderDrawn2:
 	call	DrawColorButtonInterior	;draw interior of button if depressed
 					;or if background is garbage
+if _ISUI2000
+afterButtonInterior:
+endif
 
 endif ; DRAW_STYLES ===========================================================
 
@@ -564,6 +578,77 @@ endif		;--------------------------------------------------------------
 	call	OLButtonDrawMoniker
 	ret
 DrawColorButton	endp
+
+if _ISUI2000
+	;
+	; Draw a flat toolbar face with one-pixel hot/pressed edges.
+	; Pass al = low OLButtonSpecState byte and *ds:si, di = GState.
+	; Keep the original bounds, pen position, and all caller registers.
+	;
+OLButtonDrawToolboxFrame proc far
+	uses ax, bx, cx, dx, bp
+	.enter
+		mov	bp, ax
+		call	GrGetCurPos
+		push	ax, bx
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		call	GrSetLineMask
+		clr	ax
+		call	OpenGetBackgroundColor
+		clr	ah
+		call	GrSetAreaColor
+		call	VisGetBounds
+		call	GrFillRect
+		test	bp, mask OLBSS_SELECTED
+		jz	checkFrame
+		test	bp, mask OLBSS_DEPRESSED
+		jnz	checkFrame
+	;
+	; A checked tool remains recognizable after the pointer leaves it.
+	;
+		push	ax
+		mov	ax, C_WHITE
+		call	GrSetAreaColor
+		mov	al, SDM_50
+		call	GrSetAreaMask
+		pop	ax
+		call	GrFillRect
+		push	ax
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		pop	ax
+checkFrame:
+		test	bp, mask OLBSS_SELECTED
+		jnz	drawFrame
+		call	VisCheckIfFullyEnabled
+		jnc	done
+		test	bp, mask OLBSS_DEPRESSED
+		jnz	drawFrame
+		push	ax, bx
+		mov	bx, ds:[si]
+		add	bx, ds:[bx].Vis_offset
+		tst	ds:[bx].OLBI_toolboxHover
+		pop	ax, bx
+		jz	done
+drawFrame:
+		push	ax
+		call	GetDarkColor
+		mov	ah, C_WHITE
+		test	bp, mask OLBSS_SELECTED or mask OLBSS_DEPRESSED
+		jnz	haveColors
+		xchg	al, ah
+haveColors:
+		mov	bp, ax
+		pop	ax
+		call	OpenDrawRect
+done:
+		pop	ax, bx
+		call	GrMoveTo
+	.leave
+		ret
+OLButtonDrawToolboxFrame endp
+endif
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

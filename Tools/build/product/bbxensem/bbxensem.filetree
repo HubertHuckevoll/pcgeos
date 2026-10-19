@@ -391,6 +391,7 @@ DIR (ensemble) {
 		} ELSE {
 			Library/SpecUI/Motif/motif{ec}.geo GFS LOCALPC
 			Library/SpecUI/ISUI/isui{ec}.geo GFS LOCALPC
+			Library/SpecUI/ISUI2000/isui2000{ec}.geo GFS LOCALPC
 		}
 
 #		Library/pcmcia/pcmcia{ec}.geo GFS LOCALPC

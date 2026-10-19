@@ -567,6 +567,10 @@ global	CF_DerefVisSpecDI:near
 global	CF_DerefGenDI:near
 global	CF_ObjCallInstanceNoLock:near
 global	OLButtonDrawNOWIfNewState:far
+if _ISUI2000
+global OLButtonTrackToolboxHover:far
+global OLButtonIsFlatToolbox:far
+endif
 ;global	CF_SendToTarget:near
 global	OpenClearToggleMenuNavPending:far
 global	SendMsgSetModifiedAndApplyIfNeeded:far
@@ -600,6 +604,9 @@ GadgetCommon	segment resource
 GadgetCommon	ends
 
 DrawColor	segment resource
+if _ISUI2000
+global OLButtonDrawToolboxFrame:far
+endif
 global	OpenGetBackgroundColor:near
 if ITEM_USES_BACKGROUND_COLOR
 global	OpenGetExtraBackgroundColor:near

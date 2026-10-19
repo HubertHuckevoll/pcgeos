@@ -816,24 +816,91 @@ ItemDrawColorTool	proc	near
 	push	ax, bx, cx, dx, bp
 TABS <	call	CheckIfTabStyleItem			>
 TABS <	LONG	jc	finishUp			>
+if _ISUI2000
+		call	OLButtonIsFlatToolbox
+		jnc	regularToolFrame
+		mov	al, bh
+		call	OLButtonDrawToolboxFrame
+		jmp	finishUp
+regularToolFrame:
+	;
+	; Dialog palettes use one bevel. Keep the taskbar's two-level shell
+	; edge, and leave menu and monochrome drawing unchanged.
+	;
+		call	OpenCheckIfBW
+		jc	haveFrameStyle
+		push	di
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+		test	ds:[di].OLBI_specState, mask OLBSS_IN_MENU or \
+			mask OLBSS_IN_MENU_BAR
+		pop	di
+		jnz	keepDoubleBorder
+if TOOL_AREA_IS_TASK_BAR
+		push	bx, si, di, es
+		call	GenSwapLockParent
+		jnc	noPaletteParent
+		mov	di, segment TaskBarListClass
+		mov	es, di
+		mov	di, offset TaskBarListClass
+		call	ObjIsObjectInClass
+		call	ObjSwapUnlock		;preserves the class-test carry
+		jmp	paletteParentChecked
+noPaletteParent:
+		stc				;retain old drawing until attached
+paletteParentChecked:
+		pop	bx, si, di, es
+else
+		clc
+endif
+		jmp	haveFrameStyle
+keepDoubleBorder:
+		stc
+haveFrameStyle:
+		pushf				;carry set for the second bevel
+endif
 	test	bh, mask OLBSS_SELECTED
 	jz	notSelected		;skip if item is OFF...
 
 selected:
 
-	;draw background in dark (selected) color
-
+	;
+	; Draw the selected background.
+	;
 	mov	al, -1
 	call	FillRectWithBGColors
+if _ISUI2000
+		push	ax
+		mov	ax, C_WHITE
+		call	GrSetAreaColor
+		mov	al, SDM_50
+		call	GrSetAreaMask
+		pop	ax
+		call	GrFillRect
+		push	ax
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		pop	ax
 
+	mov	bp, (C_WHITE shl 8) or C_GRAY_27
+else
 	mov	bp, (C_WHITE shl 8) or C_BLACK
+endif
 	call	OpenDrawRect
+if _ISUI2000
+		popf
+		jnc	finishUp
+endif
 
 	inc	ax
 	inc	bx
 	dec	cx
 	dec	dx
+if _ISUI2000
+	mov	bp, (C_LIGHT_GRAY shl 8) or C_DARK_GRAY
+else
 	mov	bp, (C_WHITE shl 8) or C_DARK_GRAY
+endif
 	call	OpenDrawRect
 	jmp	short finishUp
 
@@ -841,14 +908,26 @@ notSelected:
 	clr	ax
 	call	FillRectWithBGColors
 
+if _ISUI2000
+	mov	bp, (C_GRAY_27 shl 8) or C_WHITE
+else
 	mov	bp, (C_BLACK shl 8) or (C_WHITE)
+endif
 	call	OpenDrawRect
+if _ISUI2000
+		popf
+		jnc	finishUp
+endif
 
 	inc	ax
 	inc	bx
 	dec	cx
 	dec	dx
+if _ISUI2000
+	mov	bp, (C_DARK_GRAY shl 8) or C_LIGHT_GRAY
+else
 	mov	bp, (C_DARK_GRAY shl 8) or (C_WHITE)
+endif
 	call	OpenDrawRect
 	
 finishUp:

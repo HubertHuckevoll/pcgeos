@@ -744,7 +744,11 @@ endif		;END of MOTIF specific code -----------------------------------
 	jz	notResizePending
 	mov	di, ds:[di].VCI_window
 	tst	di
+if _ISUI2000
+	LONG	jz	OWP_QuitProcessed
+else
 	jz	OWP_QuitProcessed
+endif
 	push	es
 	segmov	es, dgroup, ax			; es = dgroup
 	mov	ax, es:[olScreenStart.P_x]	; ax, bx = start position
@@ -864,7 +868,24 @@ OLS <	call	WinCommon_DerefVisSpec_DI				   >
 OLS <	test	ds:[di].OLWI_specState, mask OLWSS_GRABBED		   >
 OLS <	jz	OWP_QuitProcessed	; if not grabbed, eat event here.  >
 					; Else
+if _ISUI2000
+		call	WinCommon_DerefVisSpec_DI
+		mov	ds:[di].OLWI_toolboxHoverSeen, 0
+endif
 	call	VisCallChildUnderPoint	; pass on to object under location
+if _ISUI2000
+	;
+	; A non-toolbar child (or empty space) ends the previous hover.
+	;
+		push	ax, cx, dx, bp
+		call	WinCommon_DerefVisSpec_DI
+		tst	ds:[di].OLWI_toolboxHoverSeen
+		jnz	hoverSeen
+		clr	cx, dx
+		call	OpenWinSetToolboxHover
+hoverSeen:
+		pop	ax, cx, dx, bp
+endif
 	ret
 
 OWP_QuitProcessed:
@@ -873,6 +894,43 @@ OWP_QuitProcessed:
 	ret
 
 OpenWinPtr	endp
+
+if _ISUI2000
+	;
+	; Store the new owner before notifying either control. The old control
+	; is cleared even when the pointer moves straight to another toolbar.
+	; Pass ^lcx:dx, or null; preserve the caller's registers.
+	;
+method OpenWinSetToolboxHover, OLWinClass, MSG_OL_WIN_SET_TOOLBOX_HOVER
+OpenWinSetToolboxHover proc far
+	class OLWinClass
+	uses ax, bx, cx, dx, bp, si, di
+	.enter
+		mov	ds:[di].OLWI_toolboxHoverSeen, 1
+		cmpdw	ds:[di].OLWI_toolboxHover, cxdx
+		je	done
+		push	cx, dx
+		movdw	bxsi, ds:[di].OLWI_toolboxHover
+		movdw	ds:[di].OLWI_toolboxHover, cxdx
+		tst	bx
+		jz	setNewHover
+		clr	cx
+		mov	ax, MSG_OL_BUTTON_SET_TOOLBOX_HOVER
+		mov	di, mask MF_CALL or mask MF_FIXUP_DS
+		call	ObjMessage
+setNewHover:
+		pop	bx, si
+		tst	bx
+		jz	done
+		mov	cl, 1
+		mov	ax, MSG_OL_BUTTON_SET_TOOLBOX_HOVER
+		mov	di, mask MF_CALL or mask MF_FIXUP_DS
+		call	ObjMessage
+done:
+	.leave
+		ret
+OpenWinSetToolboxHover endp
+endif
 
 
 
@@ -2661,6 +2719,17 @@ REVISION HISTORY:
 
 
 OpenWinRawUnivLeave	method dynamic	OLWinClass, MSG_META_RAW_UNIV_LEAVE
+if _ISUI2000
+	;
+	; Also clear hover when another window covers the pointer.
+	;
+		push	cx, dx
+		clr	cx, dx
+		call	OpenWinSetToolboxHover
+		pop	cx, dx
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+endif
 
 					;mark NOT in universe
 	andnf	ds:[di].OLWI_specState, not mask OLWSS_PTR_IN_RAW_UNIV

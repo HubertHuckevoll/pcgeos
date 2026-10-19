@@ -468,5 +468,11 @@ if DRAW_STYLES
     OLBI_drawStyle	DrawStyle		; draw style
 endif
 
+if _ISUI2000
+MSG_OL_BUTTON_SET_TOOLBOX_HOVER message
+	; Pass: cl = nonzero while the pointer is over this toolbar button.
+    OLBI_toolboxHover byte
+endif
+
 OLButtonClass	endc
 

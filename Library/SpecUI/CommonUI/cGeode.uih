@@ -59,10 +59,16 @@
 
 /*------------------------------------------------------*/
 
+#ifdef ISUI2000
+#define _ISUI2000 -1
+#else
+#define _ISUI2000 0
+#endif
+
 #ifdef ISUI
 #define _ISUI -1
 #else
-#define _ISUI 0
+#define _ISUI _ISUI2000
 #endif
 
 /*------------------------------------------------------*/
