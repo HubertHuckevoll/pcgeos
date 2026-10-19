@@ -769,6 +769,14 @@ locs	local	GradientLocals
 	mov	al, ds:[moCS_inactiveTitleBar]
 haveColor:
 	mov	dh, ds:[moCS_titleBar2]
+if _ISUI2000
+	;
+	; Inactive captions fade to grey rather than the active blue endpoint.
+	;
+		jnz	drawTitleGradient
+		mov	dh, C_LIGHT_GRAY
+drawTitleGradient:
+endif
 	call	DrawGradient
 
 	.leave
@@ -845,7 +853,11 @@ EC <	call	GenCheckGenAssumption	;Make sure gen data exists 	>
 	mov	ds, ax
 	mov	al, ds:[moCS_titleBarText]
 	jnz	10$
+if _ISUI2000
+		mov	al, C_GRAY_80
+else
 	mov	al, C_LIGHT_GREY
+endif
 10$:	clr	ah
 	call	GrSetTextColor
 	pop	ds

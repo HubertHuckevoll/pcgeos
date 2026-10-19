@@ -23,6 +23,14 @@ my $groupDraw = $1;
 
 $groupDraw =~ s/GOTO\s+GrFillRect/call GrFillRect\nret/;
 $asm .= "\nDisplayGroupFrame proc near\n$groupDraw\nDisplayGroupFrame endp\n";
+my $mainCode = source('CMain/cmainCode.asm');
+$mainCode =~ /(\tmov\tal, ds:\[moCS_dsDarkColor\]\n.*?)(?=\t\.leave)/s
+    or die "missing display-scheme packing\n";
+$asm .= "\nPackDisplayScheme proc near\n$1\nret\nPackDisplayScheme endp\n";
+my $titleCode = source('../ISUI/Win/winDraw.asm');
+$titleCode =~ /^DrawGradientTitle\s+proc.*?(\tmov\tal, ds:\[moCS_activeTitleBar\].*?\tcall\tDrawGradient)/ms
+    or die "missing title gradient endpoints\n";
+$asm .= "\nTitleGradientEndpoints proc near\n$1\nret\nTitleGradientEndpoints endp\n";
 my %constant = (TRUE => -1, C_BLACK => 0, C_LIGHT_GRAY => 7, C_DARK_GRAY => 8, C_GRAY_27 => 20, DC_GRAY_1 => 1, C_WHITE => 15, SDM_100 => 0, SDM_50 => 6,
     'mask VA_FULLY_ENABLED' => 0x80, 'mask MF_CALL' => 1,
     'mask MF_FIXUP_DS' => 2, 'mask VOF_IMAGE_INVALID' => 4,
@@ -30,6 +38,18 @@ my %constant = (TRUE => -1, C_BLACK => 0, C_LIGHT_GRAY => 7, C_DARK_GRAY => 8, C
     MSG_OL_WIN_SET_TOOLBOX_HOVER => 124, MSG_VIS_VUP_FIND_OBJECT_OF_CLASS => 125,
     'segment OLWinClass' => 20, 'offset OLWinClass' => 30,
     'segment TaskBarListClass' => 21, 'offset TaskBarListClass' => 31);
+# Read the palette indices from the native definitions.
+open my $colors, '<', "$FindBin::Bin/../../../../Include/color.def" or die $!;
+my $index = 0;
+while (<$colors>) {
+    if (/^(C_\w+)\s+enum Color(?:,\s*(0x[0-9a-f]+))?/i) {
+        $index = hex($2) if defined $2;
+        $constant{$1} = $index++;
+    }
+}
+$constant{C_LIGHT_GREY} = $constant{C_LIGHT_GRAY};
+$constant{C_DARK_GREY} = $constant{C_DARK_GRAY};
+$constant{MAX_CF_INDEX} = $constant{C_WHITE};
 for my $record (qw(OLButtonSpecState OLButtonMoreAttrs OLButtonFixedAttrs OLWinFixedAttr OLDisplayGroupStates)) {
     my $file = $record eq 'OLDisplayGroupStates' ? 'olDisplayGroupClass.def' :
                $record eq 'OLWinFixedAttr' ? 'olWinClass.def' : 'olButtonClass.def';
@@ -46,11 +66,12 @@ for my $record (qw(OLButtonSpecState OLButtonMoreAttrs OLButtonFixedAttrs OLWinF
     }
 }
 my $isui2000 = 1;
-my (%reg, %mem, @frame, @rect, @line, @fill, @invalid, $zero, $carry, $mask, @pen, $bw, $lineColor, $bordered, $areaColor, $faceColor, $parentIsTaskbar, $hasParent, $parentLocked);
+my (%reg, %mem, @gradient, @frame, @rect, @line, @fill, @invalid, $zero, $carry, $mask, @pen, $bw, $lineColor, $bordered, $areaColor, $faceColor, $parentIsTaskbar, $hasParent, $parentLocked);
 $hasParent = 1; $parentIsTaskbar = 1; $parentLocked = 0;
 sub value {
     my ($x) = @_;
     $x =~ s/^\s+|\s+$//g;
+    $x =~ s/^\{word\}\s+//;
     return $reg{$x} // 0 if $x =~ /^(?:[abcd]x|[sd]i|bp|[de]s)$/;
     return ($reg{$1 . 'x'} >> ($2 eq 'h' ? 8 : 0)) & 255 if $x =~ /^([abcd])([hl])$/;
     return value($1) * 65536 + value($2) if $x =~ /^(bx|cx)(si|dx)$/;
@@ -66,6 +87,7 @@ sub value {
 }
 sub assign {
     my ($x, $v) = @_;
+    $x =~ s/^\{word\}\s+//;
     if ($x =~ /^([abcd])([hl])$/) {
         my ($r, $shift) = ($1 . 'x', $2 eq 'h' ? 8 : 0);
         $reg{$r} = (($reg{$r} // 0) & ~(255 << $shift)) | (($v & 255) << $shift);
@@ -101,12 +123,13 @@ sub run {
     }
     for (my $i = 0; $i < @code; $i++) {
         my $line = $code[$i];
-        if ($line =~ /^(mov(?:dw)?|add|cmp(?:dw)?|test|xchg)\s+(.+?),\s*(.+)$/) {
+        if ($line =~ /^(mov(?:dw)?|add|or|shl|cmp(?:dw)?|test|xchg)\s+(.+?),\s*(.+)$/) {
             my ($op, $a, $b) = ($1, $2, $3);
             my $v = value($b);
             if ($op =~ /^mov/) { assign($a, $v); }
             elsif ($op eq 'add') { assign($a, value($a) + $v); $zero = !value($a); $carry = 0; }
             elsif ($op =~ /^cmp/) { $zero = value($a) == $v; $carry = value($a) < $v; }
+            elsif ($op eq 'or' || $op eq 'shl') { assign($a, $op eq 'or' ? value($a) | $v : value($a) << $v); $zero = !value($a); $carry = 0; }
             elsif ($op eq 'test') { $zero = !(value($a) & $v); $carry = 0; }
             else { my $old = value($a); assign($a, $v); assign($b, $old); }
         } elsif ($line =~ /^(inc|dec)\s+(.+)$/) {
@@ -119,15 +142,16 @@ sub run {
             my ($op, @r) = ($1, split /,\s*/, $2);
             if ($op eq 'push') { push @stack, [map { value($_) } @r]; }
             else { my $v = pop @stack or die "stack underflow\n"; assign($r[$_], $v->[$_]) for 0 .. $#r; }
-        } elsif ($line =~ /^(jz|je|jnz|jnc|jc|jmp)\s+([\w\$]+)$/) {
+        } elsif ($line =~ /^(jz|je|jnz|jnc|jc|jbe|jmp)\s+([\w\$]+)$/) {
             my ($op, $target) = ($1, $2);
             $i = $label{$target} - 1 if $op eq 'jmp' ||
-                ($op =~ /^j[ze]$/ ? $zero : $op eq 'jnz' ? !$zero : $op eq 'jc' ? $carry : !$carry);
+                ($op =~ /^j[ze]$/ ? $zero : $op eq 'jnz' ? !$zero : $op eq 'jc' ? $carry : $op eq 'jbe' ? $carry || $zero : !$carry);
         } elsif ($line eq 'stc' || $line eq 'clc') { $carry = $line eq 'stc';
         } elsif ($line eq 'ret') { last;
         } elsif ($line =~ /^call\s+(\w+)$/) {
             my $call = $1;
-            if ($call eq 'OpenCheckIfBW') { $carry = $bw; }
+            if ($call eq 'DrawGradient') { push @gradient, [value('al'), value('dh')]; }
+            elsif ($call eq 'OpenCheckIfBW') { $carry = $bw; }
             elsif ($call eq 'OpenGetBackgroundColor') { $reg{ax} = 0x0707; }
             elsif ($call eq 'GrGetCurPos') { @reg{qw(ax bx)} = @pen; }
             elsif ($call eq 'GrMoveTo') { @pen = @reg{qw(ax bx)}; }
@@ -365,6 +389,59 @@ for my $variant (0, 1) {
                 die "display-group draw contract changed\n" unless @fill == 1 && !@frame && $reg{di} == 50;
             }
         }
+    }
+}
+# Defaults, four-bit compatibility and active/inactive gradient endpoints.
+my $variables = source('CMain/cmainVariable.def');
+$variables =~ /^if _ISUI\s*;.*?^(CUA_ColorSchemeVars.*?)(?=^endif\s*;ISUI)/ms
+    or die "missing ISUI colour tables\n";
+my $tables = $1;
+my $prefs = source('../../Pref/ConfigUI/configui.asm');
+$prefs =~ /^defaultISUI2000Colors Color \\\n(.*?)(?=^CheckHack)/ms
+    or die "missing ISUI 2000 preset\n";
+my @preset = $1 =~ /^\s*(C_\w+)/gm;
+for my $variant (0, 1) {
+    $isui2000 = $variant;
+    my ($active, @rows) = (1);
+    for (split /\n/, $tables) {
+        if (/^if _ISUI2000/) { $active = $variant; next; }
+        if (/^else/) { $active = !$variant; next; }
+        if (/^endif/) { $active = 1; next; }
+        push @rows, $_ if $active;
+    }
+    my $expanded = join "\n", @rows;
+    my %defaults = $expanded =~ /^(moCS_\w+)\s+byte\s+(\w+)/gm;
+    my @fields = qw(moCS_activeTitleBar moCS_titleBar2 moCS_dsDarkColor moCS_dsLightColor moCS_selBkgdColor);
+    my @want = $variant ? (48, 177, 8, 28, 48) : (1, 1, 8, 7, 1);
+    die "wrong compiled colour defaults\n" unless join(' ', map { value($defaults{$_}) } @fields) eq "@want";
+    if ($variant) {
+        die "preset differs from library defaults\n" unless join(' ', map { value($_) } @preset[0,1,2,3,6]) eq "@want";
+        $expanded =~ /CUA_ColorSchemeVars(.*?)CUA_EndColorSchemeVars/s or die "missing colour fields\n";
+        my $fieldCount = () = $1 =~ /^moCS_\w+\s+(?:byte|ColorSchemeFlags)\b/gm;
+        $expanded =~ /CUA_MonochromeColorTable(.*)/s or die "missing monochrome table\n";
+        my $mono = $1;
+        my $monoCount = () = $mono =~ /^\s*byte\b/gm;
+        die "monochrome table does not cover the gradient\n" unless $monoCount == $fieldCount;
+        $mono =~ /byte\s+C_BLACK\s*$/s or die "wrong monochrome gradient endpoint\n";
+    }
+    for my $light (0 .. 15, 16, 28, 255) {
+        for my $dark (0 .. 15, 16, 24, 255) {
+            next if !$variant && ($light > 15 || $dark > 15);
+            %reg = (ax => 0x7000);
+            %mem = ('ds:[moCS_dsLightColor]' => $light, 'ds:[moCS_dsDarkColor]' => $dark);
+            run('PackDisplayScheme');
+            my $want = 0x7000 | (($light > 15 ? 7 : $light) << 4) | ($dark > 15 ? 8 : $dark);
+            die "packed scheme corrupt\n" unless $mem{'ds:[specDisplayScheme.DS_colorScheme]'} == $want;
+            die "full palette indices lost\n" unless $mem{'ds:[specDisplayScheme.DS_lightColor]'} == $light &&
+                $mem{'ds:[specDisplayScheme.DS_darkColor]'} == $dark;
+        }
+    }
+    for my $focused (0, 1) {
+        %reg = (); @gradient = (); $zero = !$focused;
+        %mem = ('ds:[moCS_activeTitleBar]' => 48, 'ds:[moCS_inactiveTitleBar]' => 8, 'ds:[moCS_titleBar2]' => 177);
+        run('TitleGradientEndpoints');
+        my @want = ($focused ? 48 : 8, !$focused && $variant ? 7 : 177);
+        die "wrong caption gradient\n" unless @gradient == 1 && "@{$gradient[0]}" eq "@want";
     }
 }
 print "ISUI / ISUI 2000 chrome paint and hover checks passed\n";

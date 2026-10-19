@@ -339,28 +339,52 @@ if _ISUI	;--------------------------------------------------------------
 CUA_ColorSchemeVars	label	byte
 moCS_flags		ColorSchemeFlags	;no color, assume not CGA
 moCS_displayType	byte	0		;not yet known
+if _ISUI2000
+moCS_dsLightColor	byte	C_GRAY_80	;that value to be passed as the
+else
 moCS_dsLightColor	byte	C_LIGHT_GREY	;that value to be passed as the
+endif
 						;DisplayScheme "Light" color
 moCS_dsDarkColor	byte	C_DARK_GREY	;that value to be passed as the
 						;DisplayScheme "Dark" color
 
+if _ISUI2000
+moCS_screenBG		byte	C_R1_G2_B3	;field color (C_LIGHT_BLUE)
+else
 moCS_screenBG		byte	C_LIGHT_GREY	;field color (C_LIGHT_BLUE)
+endif
 
 ; moCS_appWorkspace does not appear to be used anywhere.  (JS 7/9/92)
 moCS_appWorkspace	byte	C_DARK_GREY	;behind views in windows
 						;(should be medium blue)
 moCS_windowBG		byte	C_WHITE		;view color
 moCS_windowText		byte	C_BLACK		;text inside a view
+if _ISUI2000
+moCS_menuBar		byte	C_GRAY_80	;menu bar
+else
 moCS_menuBar		byte	C_LIGHT_GREY	;menu bar
+endif
 moCS_menuText		byte	C_BLACK		;text in menus, menu bar
+if _ISUI2000
+moCS_activeTitleBar	byte	C_R0_G1_B2		;left and right side
+else
 moCS_activeTitleBar	byte	C_BLUE		;left and right side
+endif
 						;of title bar, when active
 moCS_inactiveTitleBar	byte	C_DARK_GREY	;left and right side of title
 						;bar, when inactive
 moCS_titleBarText	byte	C_WHITE		;text in title bar,
 						;BG for icons!
+if _ISUI2000
+moCS_activeBorder	byte	C_GRAY_80	;resize border, when active
+else
 moCS_activeBorder	byte	C_YELLOW	;resize border, when active
+endif
+if _ISUI2000
+moCS_inactiveBorder	byte	C_GRAY_80	;resize border, when inactive
+else
 moCS_inactiveBorder	byte	C_LIGHT_GREY	;resize border, when inactive
+endif
 
 moCS_windowFrame	byte	MO_ETCH_COLOR	;thin line around field,
 						;resize borders, window,
@@ -375,11 +399,19 @@ moCS_scrollBars		byte	C_DARK_GREY	;inside of scroll bar -
 
 ;Eric added these:
 
+if _ISUI2000
+moCS_menuSelection	byte	C_R0_G1_B2	;for current selection in menu
+else
 moCS_menuSelection	byte	C_LIGHT_GREY	;for current selection in menu
+endif
 moCS_iconFG		byte	C_BLACK		;foreground for icons
 						;(appear black on white BG)
 
+if _ISUI2000
+moCS_selBkgdColor	byte	C_R0_G1_B2		;color used for background of
+else
 moCS_selBkgdColor	byte	C_BLUE		;color used for background of
+endif
 						;  selected gadgets (moCS_
 						;  darkColor no longer used)
 
@@ -387,7 +419,11 @@ moCS_selBkgdColor	byte	C_BLUE		;color used for background of
 moCS_textColor		byte	C_BLACK		;color used for drawing text
 moCS_lightEdgeColor	byte	C_WHITE		;color used for L/T edges
 moCS_darkEdgeColor	byte	C_DARK_GREY	;color used for R/B edges
+if _ISUI2000
+moCS_titleBar2		byte	C_R3_G4_B5		;second color for gradient
+else
 moCS_titleBar2		byte	C_BLUE		;second color for gradient
+endif
 
 CUA_EndColorSchemeVars	label	byte
 moCS_numVars		byte	CUA_EndColorSchemeVars-CUA_ColorSchemeVars
@@ -470,6 +506,9 @@ CUA_MonochromeColorTable	label	byte
 			byte	C_BLACK		;color used for R/B edges
 
 ;moCS_titleBar2		byte	C_BLUE		;second color for gradient
+if _ISUI2000
+			byte	C_BLACK
+endif
 
 endif	;ISUI ----------------------------------------------------------------
 

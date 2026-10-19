@@ -689,6 +689,7 @@ SYNOPSIS:	Update the sample to reflect the SPUI
 CALLED BY:	PrefMgr
 
 PASS:		cx - current selection (PrefUICombo)
+		dl - GenItemGroupStateFlags
 RETURN:		none
 DESTROYED:	none
 
@@ -698,6 +699,40 @@ PrefUICDialogSPUIChanged	method	dynamic	ConfigUIDialogClass,
 						MSG_CUID_SPUI_CHANGED
 		.enter
 
+	;
+	; Only a user change selects the combo's palette. Loading/resetting
+	; options or clicking the current UI must retain custom colours.
+	;
+		test	dl, mask GIGSF_MODIFIED
+		jz	redrawSample
+		test	dl, mask GIGSF_INDETERMINATE
+		jnz	redrawSample
+		cmp	cx, ConfigUICombo
+		jae	redrawSample
+		mov	ax, size UICombo
+		mul	cx
+		mov	di, ax
+		mov	cx, cs:uicombos[di].UIC_colorScheme
+		call	UserGetDisplayType
+		and	ah, mask DT_DISP_CLASS
+		cmp	ah, DC_GRAY_1 shl (offset DT_DISP_CLASS)
+		jbe	redrawSample		;colour controls are hidden in B/W
+		cmp	ah, DC_COLOR_4 shl (offset DT_DISP_CLASS)
+		ja	selectScheme
+		mov	cx, cs:uicombos[di].UIC_colorScheme16
+selectScheme:
+		mov	si, offset SchemesList
+		clr	dx
+		mov	ax, MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION
+		call	ObjCallInstanceNoLock
+		mov	cx, TRUE
+		mov	ax, MSG_GEN_ITEM_GROUP_SET_MODIFIED_STATE
+		call	ObjCallInstanceNoLock
+		mov	cx, TRUE
+		mov	ax, MSG_GEN_ITEM_GROUP_SEND_STATUS_MSG
+		call	ObjCallInstanceNoLock
+
+redrawSample:
 	;
 	; redraw the sample
 	;
@@ -748,7 +783,8 @@ defaultColorLists nptr \
 	defCuppaJoeColors,
 	defGreyAndRedColors,
 	defGreyAndGreenColors,
-	defMeadowsColors
+	defMeadowsColors,
+	defaultISUI2000Colors
 
 CheckHack <length defaultColorLists eq ConfigUIDefaultColorScheme>
 
@@ -760,6 +796,19 @@ defaultISUIColors	Color \
 	C_WHITE,			;file folder
 	C_LIGHT_GRAY,			;help BG color
 	C_BLUE				;selection
+
+	; Closest standard GEOS palette entries to the Windows 2000 colours.
+	; Active title (10,36,106), gradient (166,202,240), face (212,208,200).
+defaultISUI2000Colors Color \
+	C_R0_G1_B2,			;title bar
+	C_R3_G4_B5,			;title bar gradient
+	C_DARK_GRAY,			;dark color
+	C_GRAY_80,			;light color
+	C_WHITE,			;file folder
+	C_R5_G5_B4,			;help BG color
+	C_R0_G1_B2			;selection
+
+CheckHack <length defaultISUI2000Colors eq ConfigUIColor>
 
 defaultCyanColors	Color \
 	C_BLACK,			;title bar
@@ -1040,6 +1089,8 @@ UICombo	struct
 	UIC_font	FontID
 	UIC_hasTaskbar	word
 	UIC_disBGRender word
+	UIC_colorScheme	word
+	UIC_colorScheme16 word
 UICombo ends
 
 uicombos UICombo <
@@ -1047,25 +1098,33 @@ uicombos UICombo <
 	offset GeoManagerStr,
 	offset BerkeleyStr,
 	FALSE,
-	FALSE
+	FALSE,
+	PUIDCS_DEFAULT,
+	PUIDCS_DEFAULT
 >,<
 	offset ISUIStr,
 	offset ISDeskStr,
 	offset EsquireStr,
 	TRUE,
-	TRUE
+	TRUE,
+	PUIDCS_NEWUI,
+	PUIDCS_NEWUI
 >,<
 	offset MotifStr,
 	offset ISDeskStr,
 	offset BerkeleyStr,
 	TRUE,
-	TRUE
+	TRUE,
+	PUIDCS_MEADOWS,
+	PUIDCS_DEFAULT
 >,<
 	offset ISUI2000Geode,
 	offset ISDeskStr,
 	offset EsquireStr,
 	TRUE,
-	TRUE
+	TRUE,
+	PUIDCS_ISUI2000,
+	PUIDCS_NEWUI
 >
 
 CheckHack <length uicombos eq ConfigUICombo>

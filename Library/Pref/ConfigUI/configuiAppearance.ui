@@ -449,5 +449,6 @@ chunk SLDI17 = "Cuppa Joe";
 chunk SLDI18 = "Grey & Red";
 chunk SLDI19 = "Grey & Green";
 chunk SLDI20 = "Meadows";
+chunk SLDI21 = "ISUI 2000 Default";
 
 end SchemeStrings;

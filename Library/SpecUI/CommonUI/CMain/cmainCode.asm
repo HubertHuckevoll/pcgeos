@@ -1292,9 +1292,28 @@ notNarrow:
 	mov	ds:[specDisplayScheme.DS_darkColor], al
 	mov	al, ds:[moCS_dsLightColor]	;construct from light & dark
 	mov	ds:[specDisplayScheme.DS_lightColor], al
+if _ISUI2000
+	;
+	; ATTENTION: Packed schemes hold only 16 colours. Extended colours
+	; use grey frame fallbacks; DS_lightColor/DS_darkColor retain all 256.
+	;
+		cmp	al, MAX_CF_INDEX
+		jbe	havePackedLightColor
+		mov	al, C_LIGHT_GRAY
+havePackedLightColor:
+endif
 	mov	cl, 4
 	shl	al, cl
+if _ISUI2000
+		mov	cl, ds:[moCS_dsDarkColor]
+		cmp	cl, MAX_CF_INDEX
+		jbe	havePackedDarkColor
+		mov	cl, C_DARK_GRAY
+havePackedDarkColor:
+		or	al, cl
+else
 	or	al, ds:[moCS_dsDarkColor]
+endif
 	mov	{word} ds:[specDisplayScheme.DS_colorScheme], ax
 	.leave
 	ret

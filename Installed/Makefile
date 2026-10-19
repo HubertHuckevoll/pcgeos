@@ -86,7 +86,7 @@ Installed/Tools/swat/Stub/WinCom:	MAKESTUB
 #
 # Libraries
 #
-minimalLibrary	: kernel swap sound net ui isui motif spool text mailbox \
+minimalLibrary	: kernel swap sound net ui isui isui2000 motif spool text mailbox \
 		  genpc ansic cdaudio cell chart color compress config hash impex \
 		  borlandc watcomc math pen resolver spline ssmeta styles \
 		  wav game cards spreadsheet parse spell convert \
@@ -219,6 +219,9 @@ Installed/Library/User	:	kernel sound compress net wav MAKELIB
 
 isui	: Installed/Library/SpecUI/ISUI
 Installed/Library/SpecUI/ISUI	:	kernel text MAKELIB
+
+isui2000	: Installed/Library/SpecUI/ISUI2000
+Installed/Library/SpecUI/ISUI2000	:	kernel text MAKELIB
 
 motif	: Installed/Library/SpecUI/Motif
 Installed/Library/SpecUI/Motif:	kernel text MAKELIB
