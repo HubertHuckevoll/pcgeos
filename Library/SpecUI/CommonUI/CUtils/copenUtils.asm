@@ -2592,6 +2592,28 @@ OpenDrawRect	proc	far		uses	ax, bx, si, bp
 	ret
 OpenDrawRect	endp
 
+if _ISUI2000
+	;
+	; Draw solid classic control edges, including when disabled. Unlike
+	; OpenDrawRect, this does not dereference an object or dither its border.
+	; Pass AX/BX/CX/DX = exclusive bounds, BP = RB/LT colours, DI = GState.
+	;
+OpenDrawRectSolid proc far
+	uses	ax, bx, si, bp
+	.enter
+		push	ax
+		mov	al, SDM_100
+		call	GrSetLineMask
+		mov	ax, bp
+		clr	ah
+		call	GrSetLineColor
+		pop	ax
+		call	DrawFrame
+	.leave
+	ret
+OpenDrawRectSolid endp
+endif
+
 endif
 
 

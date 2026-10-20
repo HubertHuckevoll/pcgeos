@@ -303,6 +303,13 @@ if _ISUI2000
 		pop	ax
 		jmp	afterButtonInterior
 regularButtonFrame:
+		test	bx, mask OLBSS_MENU_DOWN_MARK
+		jz	legacyButtonFrame
+		test	bx, mask OLBSS_IN_MENU or mask OLBSS_IN_MENU_BAR or mask OLBSS_SYS_ICON
+		jnz	legacyButtonFrame
+		call	OLButtonDrawISUI2000DropDown
+		jmp	afterButtonInterior
+legacyButtonFrame:
 endif
 
 ;--------------------------------------------------------------
@@ -542,7 +549,22 @@ if _ISUI	;--------------------------------------------------------------
 	mov	di, ds:[si]
 	add	di, ds:[di].Vis_offset	;ds:di = specificInstance
 	test	ds:[di].OLBI_specState, mask OLBSS_SYS_ICON
+if _ISUI2000
+		jz	notCaptionMoniker
+	; The compact caption bitmaps already include their horizontal padding.
+	; Keep the wider system-menu button on its original inset.
+		mov	dx, ds:[di].VI_bounds.R_right
+		sub	dx, ds:[di].VI_bounds.R_left
+		cmp	dx, CUAS_CAPTION_ICON_WIDTH-1
+		mov	dx, 2
+		jne	50$
+		clr	dx
+		or	al, J_CENTER shl offset DMF_X_JUST
+		jmp	50$
+notCaptionMoniker:
+else
 	jnz	50$
+endif
 
 	mov	dl, MO_BUTTON_INSET_X		;If not system icon, use margin
 
@@ -2184,6 +2206,16 @@ if not NO_MENU_MARKS
 
 DrawColorButtonMenuMark	proc	near
 	class	OLButtonClass
+
+if _ISUI2000
+		test	bx, mask OLBSS_MENU_DOWN_MARK
+		jz	legacyMenuMark
+		test	bx, mask OLBSS_IN_MENU or mask OLBSS_IN_MENU_BAR or mask OLBSS_SYS_ICON
+		jnz	legacyMenuMark
+		call	OLButtonDrawISUI2000DropDownMark
+		ret
+legacyMenuMark:
+endif
 	
 	test	bx, mask OLBSS_MENU_DOWN_MARK or mask OLBSS_MENU_RIGHT_MARK 
 	LONG	jz	done			;skip if no menu mark...
@@ -2343,6 +2375,171 @@ REVISION HISTORY:
 	Eric	2/90		initial version
 
 ------------------------------------------------------------------------------@
+
+if _ISUI2000
+	;
+	; Draw the inset field and its raised/pressed arrow within the existing
+	; popup-list bounds. Preserve the moniker origin and all caller registers.
+	;
+OLButtonDrawISUI2000DropDown proc near
+	uses	ax, bx, cx, dx, si
+	state	local	word
+	.enter
+		mov	state, bx
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		call	GrSetLineMask
+		call	OpenButtonCheckIfFullyEnabled
+		jnc	disabledField
+		mov	ax, C_WHITE
+		test	state, mask OLBSS_DEPRESSED
+		jz	fieldColorSet
+		push	ds
+		mov	ax, segment moCS_selBkgdColor
+		mov	ds, ax
+		clr	ax
+		mov	al, ds:[moCS_selBkgdColor]
+		pop	ds
+		jmp	fieldColorSet
+disabledField:
+		call	GetLightColor
+fieldColorSet:
+		call	GrSetAreaColor
+		call	GrGetCurPos
+		push	ax, bx		; OpenDrawRectSolid moves the graphics pen
+		add	cx, ax
+		add	dx, bx
+		dec	cx
+		dec	dx
+		call	GrFillRect
+		inc	cx
+		inc	dx
+		push	bp
+		mov	bp, (C_WHITE shl 8) or C_DARK_GRAY
+		call	OpenDrawRectSolid
+		inc	ax
+		inc	bx
+		dec	cx
+		dec	dx
+		mov	bp, (C_LIGHT_GRAY shl 8) or C_GRAY_27
+		call	OpenDrawRectSolid
+		pop	bp
+	;
+	; The arrow retains its reserved OL_DOWN_MARK_WIDTH and two-pixel inset.
+	;
+		mov	ax, cx
+		sub	ax, OL_DOWN_MARK_WIDTH
+		inc	bx
+		dec	dx
+		push	ax
+		call	GetLightColor
+		call	GrSetAreaColor
+		pop	ax
+		dec	cx
+		dec	dx
+		call	GrFillRect
+		inc	cx
+		inc	dx
+		call	OpenButtonCheckIfFullyEnabled
+		jnc	raisedDropArrow
+		test	state, mask OLBSS_DEPRESSED
+		jz	raisedDropArrow
+		push	bp
+		mov	bp, (C_WHITE shl 8) or C_DARK_GRAY
+		jmp	dropFrameSet
+raisedDropArrow:
+		push	bp
+		mov	bp, (C_GRAY_27 shl 8) or C_LIGHT_GRAY
+dropFrameSet:
+		call	OpenDrawRectSolid
+		inc	ax
+		inc	bx
+		dec	cx
+		dec	dx
+		cmp	bp, (C_WHITE shl 8) or C_DARK_GRAY
+		mov	bp, (C_DARK_GRAY shl 8) or C_WHITE
+		jne	dropInnerSet
+		mov	bp, (C_LIGHT_GRAY shl 8) or C_GRAY_27
+dropInnerSet:
+		call	OpenDrawRectSolid
+		pop	bp
+		pop	ax, bx
+		call	GrMoveTo
+	.leave
+	ret
+OLButtonDrawISUI2000DropDown endp
+
+	;
+	; Draw the existing dropdown triangle, shifting only its ink when pressed.
+	; Disabled arrows use a solid grey/white emboss; restore the moniker mask.
+	;
+OLButtonDrawISUI2000DropDownMark proc near
+	uses	ax, bx, cx, dx, si, ds
+	state	local	word
+	oldMask	local	word
+	.enter
+		mov	state, bx
+		mov	al, GMT_ENUM
+		call	GrGetAreaMask
+		clr	ah
+		mov	oldMask, ax
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		call	GrGetCurPos
+		add	ax, cx
+		sub	ax, OL_DOWN_MARK_WIDTH + BUTTON_INSET_X
+		sub	dx, OL_MARK_HEIGHT
+		shr	dx, 1
+		add	bx, dx
+		call	OpenButtonCheckIfFullyEnabled
+		jnc	disabledDropMark
+		test	state, mask OLBSS_DEPRESSED
+		jz	drawDropMark
+		inc	ax
+		inc	bx
+		jmp	drawDropMark
+disabledDropMark:
+		push	ax, bx
+		inc	ax
+		inc	bx
+		call	fillDropHighlight
+		pop	ax, bx
+		push	ax
+		mov	ax, C_DARK_GRAY
+		jmp	dropInkSet
+drawDropMark:
+		push	ax
+		mov	ax, C_BLACK
+dropInkSet:
+		call	GrSetAreaColor
+		pop	ax
+		call	fillDropBitmap
+		mov	ax, oldMask
+		call	GrSetAreaMask
+	.leave
+	ret
+fillDropHighlight:
+		push	ax
+		mov	ax, C_WHITE
+		call	GrSetAreaColor
+		pop	ax
+fillDropBitmap:
+FXIP <		push	ax, bx >
+FXIP <		mov	bx, handle DrawColorRegions >
+FXIP <		call	MemLock >
+FXIP <		mov	ds, ax >
+FXIP <		pop	ax, bx >
+NOFXIP<		segmov	ds, cs >
+		mov	si, offset MenuDownMarkDarkBitmap
+		clr	dx
+		call	GrFillBitmap
+FXIP <		push	bx >
+FXIP <		mov	bx, handle DrawColorRegions >
+FXIP <		call	MemUnlock >
+FXIP <		pop	bx >
+		ret
+OLButtonDrawISUI2000DropDownMark endp
+endif
 
 OLButtonSetDrawColors	proc	near
 	push	ax

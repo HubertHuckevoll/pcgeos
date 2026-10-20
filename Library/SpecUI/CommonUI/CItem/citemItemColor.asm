@@ -733,7 +733,7 @@ ItemDrawColorISUIRadioButton	proc	near
 	test	ds:[bp].OLBI_specState, mask OLBSS_IN_MENU
 	pop	bp
 	jz	notBordered
-	call	ItemDrawISUICheck	;radio buttons in menus are check marks
+	call	ItemDrawISUICheck	; draw the menu selection mark
 	jmp	done
 
 notBordered:
@@ -2337,7 +2337,11 @@ setColor:
 	popf
 	jz	done
 
+if _ISUI2000
+		mov	ax, C_BLACK		; match menu checks and radio bullets
+else
 	call	GetDarkColor
+endif
 	call	GrSetAreaColor
 
 	mov	si, offset itemCheckBoxCheck

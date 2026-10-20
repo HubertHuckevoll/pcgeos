@@ -824,6 +824,9 @@ AppCommon	ends
 
 Utils	segment	resource
 global	OpenDrawRect:far
+if _ISUI2000
+global	OpenDrawRectSolid:far
+endif
 global	OpenDrawAndFillRect:far
 global	OpenFillRectAndDrawLine:far
 global	OpenSetInsetRectColors:far

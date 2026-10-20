@@ -84,10 +84,18 @@ MenuDownMarkBitmap	label	word
 	byte	BMF_MONO			;bitmap type
 	byte	00000000b, 00000000b
 	byte	00000000b, 00000000b
+if _ISUI2000
+	; Match the colour dropdown triangle without changing its reserved width.
+	byte	00000000b, 11111110b
+	byte	00000000b, 01111100b
+	byte	00000000b, 00111000b
+	byte	00000000b, 00010000b
+else
 	byte	00000000b, 01111111b
 	byte	00000000b, 00111110b
 	byte	00000000b, 00011100b
 	byte	00000000b, 00001000b
+endif
 	byte	00000000b, 00000000b
 	byte	00000000b, 00000000b
 else		;--------------------------------------------------------------

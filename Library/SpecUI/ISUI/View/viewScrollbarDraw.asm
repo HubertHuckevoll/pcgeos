@@ -221,6 +221,15 @@ DrawSpinGadget	proc	near
 
 	call	OpenCheckIfBW
 	jc	setupDraw
+if _ISUI2000
+	;
+	; Each half now paints its own frame; clear the original surround too.
+	;
+		call	GetLightColor
+		call	GrSetAreaColor
+		call	OpenGetLineBounds
+		call	GrFillRect
+else
 	
 	mov	ax, darkColor		;set color to draw line separating
 	call	GrSetLineColor		; up/down buttons
@@ -240,6 +249,7 @@ DrawSpinGadget	proc	near
 	inc	cx			;cx back to normal
 	call	OpenDrawRect		;draw a border around the spin gadget
 	pop	bp
+endif
 
 setupDraw:
 	call	SetupDrawParams
@@ -406,9 +416,32 @@ normalWidth:
 draw:
 	pop	bp
 
+if _ISUI2000
+		push	bp
+		mov	bp, ds:[si]
+		add	bp, ds:[bp].Vis_offset
+		test	ds:[bp].OLSBI_attrs, mask OLSA_SLIDER
+		pop	bp
+		jnz	legacyOutline
+		call	OpenCheckIfBW
+		jc	legacyOutline
+		push	bp
+		push	ax
+		call	GetLightColor
+		mov	ah, al
+		mov	bp, ax		; flat surround at the old frame bounds
+		pop	ax
+		call	OpenDrawRectSolid
+		pop	bp
+		jmp	outlineDone
+legacyOutline:
+endif
 	call	OpenDrawRect			;draw the inset rect
 						;  (clears inside, which is a
 						;   problem)
+if _ISUI2000
+outlineDone:
+endif
 	.leave
 	ret
 DrawOutline	endp
@@ -698,6 +731,9 @@ skipThumb:
 	jmp	short done			;else skip it
 
 setEdgeColor:
+if _ISUI2000
+		mov	selected?, 0ffh
+endif
 	push	ltColor
 	push	rbColor
 	push	ax
@@ -772,6 +808,36 @@ DrawPageUpDownArea	proc	near
 	param3		local	word
 	
 	.enter	inherit
+if _ISUI2000
+		push	ax
+		mov	selected?, 0ffh
+		test	attrs, mask OLSA_ENABLED
+		jz	pageStateDone
+		mov	al, es:[di].OLSBI_state
+		and	al, mask OLSS_DOWN_FLAGS
+		cmp	al, OLSS_PAGE_UP
+		jne	checkPageDown
+		cmp	si, offset vsbPageUp
+		je	pageSelected
+		cmp	si, offset hsbPageUp
+		je	pageSelected
+		cmp	si, offset cgahPageUp
+		jne	pageStateDone
+		jmp	pageSelected
+checkPageDown:
+		cmp	al, OLSS_PAGE_DOWN
+		jne	pageStateDone
+		cmp	si, offset vsbPageDn
+		je	pageSelected
+		cmp	si, offset hsbPageDn
+		je	pageSelected
+		cmp	si, offset cgahPageDn
+		jne	pageStateDone
+pageSelected:
+		mov	selected?, 0
+pageStateDone:
+		pop	ax
+endif
 	push	di
 	mov	di, gstate
 	call	DrawSBPart			; draw part of the scrollbar
@@ -1034,17 +1100,19 @@ SetBlackColor	endp
 ; Note:	These routines were originally static graphics strings, and were 
 ;	converted when GrPlayString went away.  
 
+	; Keep the 12-pixel legacy bitmap canvases. The frame and hit width use
+	; MO_SCROLLBAR_WIDTH; centering below also preserves classic ISUI values.
 	; vertical scrollbar code
 vertScrollbar	label	word
 	nptr	offset HVUpDownArrow	; left, top, right, then bottom
 	word	1, 2, 1, MO_ARROW_HEIGHT
-	word	1, 1, MO_ARROW_WIDTH-1, 1
-	word	MO_ARROW_WIDTH, 2, MO_ARROW_WIDTH, MO_ARROW_HEIGHT
-	word	2, MO_ARROW_HEIGHT+1, MO_ARROW_WIDTH, MO_ARROW_HEIGHT+1
-	word	1, 1, offset VUpInside
-	word	1, 1, offset VUpOutside
-	word	1, 1, offset VUpDepressedInside
-	word	1, 1, offset VUpDepressedOutside	
+	word	1, 1, MO_SCROLLBAR_WIDTH-3, 1
+	word	MO_SCROLLBAR_WIDTH-2, 2, MO_SCROLLBAR_WIDTH-2, MO_ARROW_HEIGHT
+	word	2, MO_ARROW_HEIGHT+1, MO_SCROLLBAR_WIDTH-2, MO_ARROW_HEIGHT+1
+	word	MO_ARROW_BITMAP_INSET, 1, offset VUpInside
+	word	MO_ARROW_BITMAP_INSET, 1, offset VUpOutside
+	word	MO_ARROW_BITMAP_INSET, 1, offset VUpDepressedInside
+	word	MO_ARROW_BITMAP_INSET, 1, offset VUpDepressedOutside
 
 vsbThumb	label	word
 	nptr	offset HVThumb
@@ -1066,27 +1134,27 @@ vsbDnArrow	label	word
 	nptr	offset HVUpDownArrow
 	word	1, PARAM_3-MO_ARROW_HEIGHT, 1, PARAM_3-2
 	word	1, PARAM_3-MO_ARROW_HEIGHT-1, \
-		MO_ARROW_WIDTH-1, PARAM_3-MO_ARROW_HEIGHT-1
-	word	MO_ARROW_WIDTH, PARAM_3-MO_ARROW_HEIGHT, \
-		MO_ARROW_WIDTH, PARAM_3-2
-	word	2, PARAM_3-1, MO_ARROW_WIDTH, PARAM_3-1
-	word	1, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownInside
-	word	1, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownOutside
-	word	1, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownDepressedInside
-	word	1, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownDepressedOutside
+		MO_SCROLLBAR_WIDTH-3, PARAM_3-MO_ARROW_HEIGHT-1
+	word	MO_SCROLLBAR_WIDTH-2, PARAM_3-MO_ARROW_HEIGHT, \
+		MO_SCROLLBAR_WIDTH-2, PARAM_3-2
+	word	2, PARAM_3-1, MO_SCROLLBAR_WIDTH-2, PARAM_3-1
+	word	MO_ARROW_BITMAP_INSET, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownInside
+	word	MO_ARROW_BITMAP_INSET, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownOutside
+	word	MO_ARROW_BITMAP_INSET, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownDepressedInside
+	word	MO_ARROW_BITMAP_INSET, PARAM_3-MO_ARROW_HEIGHT-1, offset VDownDepressedOutside
 
 
 	; Horizontal scrollbars, on all but CGA
 horizScrollbar	label	word
 	nptr	offset HVUpDownArrow
-	word	1, 2, 1, MO_ARROW_WIDTH-1
+	word	1, 2, 1, MO_SCROLLBAR_WIDTH-3
 	word	1, 1, MO_ARROW_HEIGHT, 1
-	word	MO_ARROW_HEIGHT+1, 2, MO_ARROW_HEIGHT+1, MO_ARROW_WIDTH-1
-	word	1, MO_ARROW_WIDTH, MO_ARROW_HEIGHT+1, MO_ARROW_WIDTH
-	word	1, 1, offset HUpInside
-	word	1, 1, offset HUpOutside
-	word	1, 1, offset HUpDepressedInside
-	word	1, 1, offset HUpDepressedOutside
+	word	MO_ARROW_HEIGHT+1, 2, MO_ARROW_HEIGHT+1, MO_SCROLLBAR_WIDTH-3
+	word	1, MO_SCROLLBAR_WIDTH-2, MO_ARROW_HEIGHT+1, MO_SCROLLBAR_WIDTH-2
+	word	1, MO_ARROW_BITMAP_INSET, offset HUpInside
+	word	1, MO_ARROW_BITMAP_INSET, offset HUpOutside
+	word	1, MO_ARROW_BITMAP_INSET, offset HUpDepressedInside
+	word	1, MO_ARROW_BITMAP_INSET, offset HUpDepressedOutside
 
 hsbThumb	label	word
 	nptr	offset HVThumb
@@ -1096,25 +1164,31 @@ hsbThumb	label	word
 	word	PARAM_2+1,MO_SCROLLBAR_WIDTH-1-1,PARAM_3,MO_SCROLLBAR_WIDTH-1-1
 	word	PARAM_2+1, MO_SCROLLBAR_WIDTH-1-1, PARAM_3, 2
 
+if _ISUI2000
+hsbPageUp label word
+endif
 	nptr	offset HVPageUpDn
 	word	MO_ARROW_HEIGHT+2, MO_SCROLLBAR_WIDTH-1, PARAM_2, 1
 
+if _ISUI2000
+hsbPageDn label word
+endif
 	nptr	offset HVPageUpDn
 	word	PARAM_2+1, MO_SCROLLBAR_WIDTH-1, PARAM_3-MO_ARROW_HEIGHT-1, 1
 
 	nptr	offset HVUpDownArrow
 	word	PARAM_3-MO_ARROW_HEIGHT-1, 2, \
-		PARAM_3-MO_ARROW_HEIGHT-1, MO_ARROW_WIDTH-1
+		PARAM_3-MO_ARROW_HEIGHT-1, MO_SCROLLBAR_WIDTH-3
 	word	PARAM_3-MO_ARROW_HEIGHT-1, 1, \
 		PARAM_3-2, 1
 	word	PARAM_3-1, 2, \
-		PARAM_3-1, MO_ARROW_WIDTH-1
-	word	PARAM_3-MO_ARROW_HEIGHT-1, MO_ARROW_WIDTH, \
-		PARAM_3-1, MO_ARROW_WIDTH
-	word	PARAM_3-MO_ARROW_HEIGHT-1, 1, offset HDownInside
-	word	PARAM_3-MO_ARROW_HEIGHT-1, 1, offset HDownOutside
-	word	PARAM_3-MO_ARROW_HEIGHT-1, 1, offset HDownDepressedInside
-	word	PARAM_3-MO_ARROW_HEIGHT-1, 1, offset HDownDepressedOutside
+		PARAM_3-1, MO_SCROLLBAR_WIDTH-3
+	word	PARAM_3-MO_ARROW_HEIGHT-1, MO_SCROLLBAR_WIDTH-2, \
+		PARAM_3-1, MO_SCROLLBAR_WIDTH-2
+	word	PARAM_3-MO_ARROW_HEIGHT-1, MO_ARROW_BITMAP_INSET, offset HDownInside
+	word	PARAM_3-MO_ARROW_HEIGHT-1, MO_ARROW_BITMAP_INSET, offset HDownOutside
+	word	PARAM_3-MO_ARROW_HEIGHT-1, MO_ARROW_BITMAP_INSET, offset HDownDepressedInside
+	word	PARAM_3-MO_ARROW_HEIGHT-1, MO_ARROW_BITMAP_INSET, offset HDownDepressedOutside
 
 
 	; Horizontal scrollbars on CGA
@@ -1139,9 +1213,15 @@ cgahThumb	label	word
 		PARAM_3, CGA_HORIZ_SCROLLBAR_WIDTH-1-1
 	word	PARAM_2+1, CGA_HORIZ_SCROLLBAR_WIDTH-1-1, PARAM_3, 2
 
+if _ISUI2000
+cgahPageUp label word
+endif
 	nptr	HVPageUpDn
 	word	MO_ARROW_HEIGHT+2, CGA_HORIZ_SCROLLBAR_WIDTH-1, PARAM_2, 1
 
+if _ISUI2000
+cgahPageDn label word
+endif
 	nptr	HVPageUpDn
 	word  PARAM_2+1,CGA_HORIZ_SCROLLBAR_WIDTH-1,PARAM_3-MO_ARROW_HEIGHT-1,1
 
@@ -1737,6 +1817,81 @@ CGAHDownDepressedOutside	label	byte
 	byte	01111000b, 00110000b
 	byte	01111000b, 11110000b
 		
+if _ISUI2000
+	;
+	; Compact ink in the retained 14-pixel button: 4-pixel side gaps and
+	; 5/6-pixel vertical gaps. Pressing shifts only the glyph by one pixel.
+	;
+ISUI2000ArrowUp label word
+	word	5, 6, offset ISUI2000ArrowUpBM
+	word	6, 7, offset ISUI2000ArrowUpBM
+ISUI2000ArrowDown label word
+	word	5, PARAM_3-MO_ARROW_HEIGHT+4, offset ISUI2000ArrowDownBM
+	word	6, PARAM_3-MO_ARROW_HEIGHT+5, offset ISUI2000ArrowDownBM
+ISUI2000ArrowLeft label word
+	word	6, 5, offset ISUI2000ArrowLeftBM
+	word	7, 6, offset ISUI2000ArrowLeftBM
+ISUI2000ArrowRight label word
+	word	PARAM_3-MO_ARROW_HEIGHT+4, 5, offset ISUI2000ArrowRightBM
+	word	PARAM_3-MO_ARROW_HEIGHT+5, 6, offset ISUI2000ArrowRightBM
+ISUI2000ArrowUpBM label byte
+	Bitmap <6, 3, BMC_UNCOMPACTED, BMF_MONO>
+	byte	00110000b
+	byte	01111000b
+	byte	11111100b
+
+ISUI2000ArrowDownBM label byte
+	Bitmap <6, 3, BMC_UNCOMPACTED, BMF_MONO>
+	byte	11111100b
+	byte	01111000b
+	byte	00110000b
+
+ISUI2000ArrowLeftBM label byte
+	Bitmap <3, 6, BMC_UNCOMPACTED, BMF_MONO>
+	byte	00100000b
+	byte	01100000b
+	byte	11100000b
+	byte	11100000b
+	byte	01100000b
+	byte	00100000b
+
+ISUI2000ArrowRightBM label byte
+	Bitmap <3, 6, BMC_UNCOMPACTED, BMF_MONO>
+	byte	10000000b
+	byte	11000000b
+	byte	11100000b
+	byte	11100000b
+	byte	11000000b
+	byte	10000000b
+
+ISUI2000SpinUp label word
+	word	1, 1, offset ISUI2000SpinUpBM
+	word	2, 2, offset ISUI2000SpinUpBM
+ISUI2000SpinDown label word
+	word	1, PARAM_3-NUI_SPIN_ARROW_HEIGHT-1, offset ISUI2000SpinDownBM
+	word	2, PARAM_3-NUI_SPIN_ARROW_HEIGHT, offset ISUI2000SpinDownBM
+ISUI2000SpinUpBM label byte
+	Bitmap <10, 8, BMC_UNCOMPACTED, BMF_MONO>
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00000010b, 00000000b
+	byte	00000111b, 00000000b
+	byte	00001111b, 10000000b
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+ISUI2000SpinDownBM label byte
+	Bitmap <10, 8, BMC_UNCOMPACTED, BMF_MONO>
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00001111b, 10000000b
+	byte	00000111b, 00000000b
+	byte	00000010b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+endif
+
 spinUpInside	label	byte
 	Bitmap <10,8,BMC_UNCOMPACTED,BMF_MONO>
 	byte	00000000b, 00000000b
@@ -1940,6 +2095,75 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
+if _ISUI2000
+	;
+	; Paint arrow/thumb bounds from their existing four edge records.
+	; DS:SI is a drawing table, not an object. Use solid native frame strokes.
+	;
+DrawISUI2000SBFrame proc near
+	ltColor		local	word		;need to match these up with
+	rbColor		local	word		;  above routines so we can
+	fillColor	local	word		;  call SetScrollbarColors,
+	fillSelColor	local	word		;  and DrawThumb.
+	darkColor	local	word
+	gstate		local	hptr.GState
+	scrPtr		local	word
+	scrLen		local	word
+	selected?	local	byte
+	attrs		local	OLScrollbarAttrs	;save state here
+	posX		local	word
+	posY		local	word
+	param2		local	word
+	param3		local	word
+	.enter	inherit
+		mov	ax, ds:[si+8]	; second record: left and top
+		mov	bx, ds:[si+10]
+		mov	cx, ds:[si+16]	; third record: right
+		mov	dx, ds:[si+26]	; fourth record: bottom
+		call	ApplySBParams
+		push	ax
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		pop	ax
+		call	SetFillColor
+		call	GrFillRect
+		cmp	ltColor, C_LIGHT_GRAY
+		jne	activeSBFrame
+		cmp	rbColor, C_LIGHT_GRAY	; old full-range thumb sentinel
+		je	sbFrameDone
+activeSBFrame:
+		inc	cx		; native frame bounds are exclusive
+		inc	dx
+		test	attrs, mask OLSA_ENABLED
+		jz	raisedFrame
+		tst	selected?
+		jnz	raisedFrame
+		push	bp
+		mov	bp, (C_WHITE shl 8) or C_DARK_GRAY
+		jmp	frameReady
+raisedFrame:
+		push	bp
+		mov	bp, (C_GRAY_27 shl 8) or C_LIGHT_GRAY
+frameReady:
+		call	OpenDrawRectSolid
+		inc	ax
+		inc	bx
+		dec	cx
+		dec	dx
+		cmp	bp, (C_WHITE shl 8) or C_DARK_GRAY
+		mov	bp, (C_DARK_GRAY shl 8) or C_WHITE
+		jne	innerRaised
+		mov	bp, (C_LIGHT_GRAY shl 8) or C_GRAY_27
+innerRaised:
+		call	OpenDrawRectSolid
+		pop	bp
+sbFrameDone:
+		add	si, 32
+	.leave
+	ret
+DrawISUI2000SBFrame endp
+endif
+
 HVUpDownArrow	proc	near
 	ltColor		local	word		;need to match these up with
 	rbColor		local	word		;  above routines so we can
@@ -1956,6 +2180,75 @@ HVUpDownArrow	proc	near
 	param2		local	word
 	param3		local	word
 	.enter	inherit
+
+if _ISUI2000
+		call	OpenCheckIfBW
+		LONG	jc	legacyArrow
+		call	DrawISUI2000SBFrame
+		push	si		; retain the next part's table offset
+		test	attrs, mask OLSA_TWISTED
+		jz	ordinaryArrow
+		cmp	si, offset spinGadget+34
+		mov	si, offset ISUI2000SpinUp
+		je	compactDirectionSet
+		mov	si, offset ISUI2000SpinDown
+compactDirectionSet:
+		test	attrs, mask OLSA_ENABLED
+		jz	arrowGlyph
+		tst	selected?
+		jnz	arrowGlyph
+		add	si, 6		; pressed glyph descriptor
+		jmp	arrowGlyph
+ordinaryArrow:
+	;
+	; Select compact colour glyphs; CGA keeps its existing smaller canvas.
+	;
+		mov	ax, ds:[si+4]
+		mov	dx, offset ISUI2000ArrowUp
+		cmp	ax, offset VUpInside
+		je	compactArrow
+		mov	dx, offset ISUI2000ArrowDown
+		cmp	ax, offset VDownInside
+		je	compactArrow
+		mov	dx, offset ISUI2000ArrowLeft
+		cmp	ax, offset HUpInside
+		je	compactArrow
+		mov	dx, offset ISUI2000ArrowRight
+		cmp	ax, offset HDownInside
+		je	compactArrow
+		jmp	legacyArrowGlyph
+compactArrow:
+		mov	si, dx
+		jmp	compactDirectionSet
+legacyArrowGlyph:
+		test	attrs, mask OLSA_ENABLED
+		jz	arrowGlyph
+		tst	selected?
+		jnz	arrowGlyph
+		add	si, 12		; existing pressed-arrow record
+arrowGlyph:
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		call	SetBlackColor
+		test	attrs, mask OLSA_ENABLED
+		jnz	fillArrow
+		inc	posX		; embossed disabled glyph, no dotted frame
+		inc	posY
+		push	si
+		call	SetWhiteColor
+		call	FillSBBitmap
+		pop	si
+		dec	posX
+		dec	posY
+		mov	ax, C_DARK_GRAY
+		call	GrSetAreaColor
+fillArrow:
+		call	FillSBBitmap
+		pop	si
+		add	si, 24
+		jmp	done
+legacyArrow:
+endif
 
 	call	SetLTColor		; set color for left/top
 	call	DrawSBLine
@@ -2014,6 +2307,15 @@ REVISION HISTORY:
 
 HVThumb	proc	near
 
+if _ISUI2000
+		call	OpenCheckIfBW
+		jc	legacyThumb
+		call	DrawISUI2000SBFrame
+		add	si, 8		; the frame already filled the old interior
+		ret
+legacyThumb:
+endif
+
 	call	SetLTColor			;set left/top
 	call	DrawSBLine
 	call	DrawSBLine
@@ -2054,23 +2356,67 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 HVPageUpDn	proc	near
+if _ISUI2000
+	ltColor		local	word		;need to match these up with
+	rbColor		local	word		;  above routines so we can
+	fillColor	local	word		;  call SetScrollbarColors,
+	fillSelColor	local	word		;  and DrawThumb.
+	darkColor	local	word
+	gstate		local	hptr.GState
+	scrPtr		local	word
+	scrLen		local	word
+	selected?	local	byte
+	attrs		local	OLScrollbarAttrs	;save state here
+	posX		local	word
+	posY		local	word
+	param2		local	word
+	param3		local	word
+	.enter	inherit
+endif
 	push	si			;we need to push and pop si because
 					; we are drawing the same thing twice
 
 	mov	al, SDM_50 or mask SDM_INVERSE
 	call	GrSetAreaMask
+if _ISUI2000
+		call	OpenCheckIfBW
+		jc	lightTrack
+		tst	selected?
+		jnz	lightTrack
+		call	SetDarkColor
+		jmp	trackBaseSet
+lightTrack:
+endif
 	call	SetFillColor		;Once using light color
+if _ISUI2000
+trackBaseSet:
+endif
 	call	FillSBRect
 
 	pop	si
 
 	mov	al, SDM_50
 	call	GrSetAreaMask
+if _ISUI2000
+		call	OpenCheckIfBW
+		jc	whiteTrack
+		tst	selected?
+		jnz	whiteTrack
+		call	SetBlackColor
+		jmp	trackPatternSet
+whiteTrack:
+endif
 	call	SetWhiteColor		;And again using white
+if _ISUI2000
+trackPatternSet:
+endif
 	call	FillSBRect
 
 	mov	al, SDM_100		;reset draw mask
 	call	GrSetAreaMask
+if _ISUI2000
+	.leave
+endif
 	ret
 HVPageUpDn	endp
 

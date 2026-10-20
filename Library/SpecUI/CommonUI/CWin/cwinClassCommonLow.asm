@@ -5343,14 +5343,14 @@ endif
 	call	WinCommon_DerefVisSpec_DI
 	test	ds:[di].OLWI_attrs, mask OWA_MINIMIZABLE
 	jz	afterMinimizable
-	add	bp, CUAS_WIN_ICON_WIDTH-1
+	add	bp, CUAS_CAPTION_ICON_WIDTH-1
 afterMinimizable:
 	test	ds:[di].OLWI_specState, mask OLWSS_MAXIMIZED
 	jnz	maximized
 	test	ds:[di].OLWI_attrs, mask OWA_MAXIMIZABLE
 	jz	afterMaxRestore
 haveMaxOrRestoreIcon:
-	add	bp, CUAS_WIN_ICON_WIDTH-1
+	add	bp, CUAS_CAPTION_ICON_WIDTH-1
 	jmp	short afterMaxRestore
 maximized:
 	test	ds:[di].OLWI_fixedAttr, mask OWFA_RESTORABLE

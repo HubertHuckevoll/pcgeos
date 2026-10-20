@@ -2980,6 +2980,24 @@ drawFrame:
 	inc 	dx				;
 	pop	di				;restore gstate
 
+if _ISUI2000
+		call	OpenCheckIfBW
+		jc	legacySpinFrame
+		push	bp
+		inc	cx		; convert the existing inclusive frame bounds
+		inc	dx
+		mov	bp, (C_WHITE shl 8) or C_DARK_GRAY
+		call	OpenDrawRectSolid
+		inc	ax
+		inc	bx
+		dec	cx
+		dec	dx
+		mov	bp, (C_LIGHT_GRAY shl 8) or C_GRAY_27
+		call	OpenDrawRectSolid
+		pop	bp
+		jmp	exit
+legacySpinFrame:
+endif
 	call	GrDrawVLine			; draws left line
 	call	GrDrawHLine			; draws top line
 	

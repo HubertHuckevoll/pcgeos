@@ -17,7 +17,8 @@ my $asm = source('CButton/copenButtonCommon.asm') .
           source('CComp/copenMenuItemGroup.asm') . source('../ISUI/Win/winDraw.asm') .
           source('CItem/citemItemColor.asm') . source('CComp/copenCtrlCommon.asm') .
           source('CButton/copenButtonClass.asm') . source('CGadget/copenTextBuild.asm') .
-          source('CGadget/copenGlyphDisplay.asm') . source('../../User/Vis/visSpecUtils.asm') . source('../../User/UI/uiExpress.asm');
+          source('CGadget/copenGlyphDisplay.asm') . source('../../User/Vis/visSpecUtils.asm') . source('../../User/UI/uiExpress.asm') .
+          source('CItem/citemItemCommon.asm') . source('../ISUI/View/viewScrollbarDraw.asm');
 my $spin = source('CGadget/copenSpinGadget.asm');
 $spin =~ /if _ISUI2000\n(\t;\n\t; Match single-line text.*?)(?=^endif)/ms
     or die "missing spin field geometry\n";
@@ -64,8 +65,9 @@ $constant{MAX_CF_INDEX} = $constant{C_WHITE};
 @constant{qw(ATTR_OL_BUTTON_IN_TITLE_BAR HINT_FIXED_SIZE HINT_MAXIMUM_SIZE HINT_TEXT_DO_NOT_MAKE_LARGER_ON_PEN_SYSTEMS HINT_NO_BORDERS_ON_MONIKERS HINT_EXPRESS_MENU)} = (1001, 1002, 1003, 1004, 1005, 1006);
 @constant{'mask VMT_GSTRING', 'mask VMT_MONIKER_LIST', 'mask VTF_IS_GEN', 'mask GTA_SINGLE_LINE_TEXT',
     'mask SSS_DATA', 'mask TDSS_IN_FRAME', 'mask OLSGA_SLIDER', 'mask OLSGS_DRAW_FRAME', 'J_CENTER shl offset DMF_X_JUST'} = (64, 128, 128, 1, 1023, 1, 1, 1, 1);
-for my $record (qw(OLButtonSpecState OLButtonMoreAttrs OLButtonFixedAttrs OLWinFixedAttr OLDisplayGroupStates)) {
+for my $record (qw(OLButtonSpecState OLButtonMoreAttrs OLButtonFixedAttrs OLWinFixedAttr OLDisplayGroupStates OLItemState)) {
     my $file = $record eq 'OLDisplayGroupStates' ? 'olDisplayGroupClass.def' :
+               $record eq 'OLItemState' ? 'olItemClass.def' :
                $record eq 'OLWinFixedAttr' ? 'olWinClass.def' : 'olButtonClass.def';
     open my $f, '<', "$FindBin::Bin/../../../../Include/Internal/SpecUI/$file" or die $!;
     local $/;
@@ -84,6 +86,8 @@ for my $flag (qw(EXPAND_WIDTH_TO_FIT_PARENT EXPAND_HEIGHT_TO_FIT_PARENT CAN_CLIP
 }
 my ($cga, $hasTitle, $penLarge, $penNoLarge, $fixedHeight, $maxHeight, $noBorders, $express, $fontWidth, $fontHeight, $gstates) = (0, 0, 0, 0, undef, undef, 0, 0, 6, 13, 0);
 my $isui2000 = 1;
+my $isui = 1;
+my ($popupHint, $popupHasBackground, $textColors, $textColor);
 my ($loadedUI, @searched);
 @constant{qw(dgroup cs), 'mask GA_LIBRARY', 'mask GA_PROCESS or mask GA_DRIVER or mask GA_APPLICATION'} = (1, 2, 1, 14);
 for my $name (qw(isuiName isui2000Name)) {
@@ -92,6 +96,16 @@ for my $name (qw(isuiName isui2000Name)) {
     $constant{$constant{"offset $name"}} = $1;
 }
 my (%reg, %mem, @gradient, @frame, @rect, @line, @fill, @invalid, $zero, $carry, $signedLess, $negative, $mask, @pen, $bw, $lineColor, $bordered, $areaColor, $faceColor, $parentIsTaskbar, $hasParent, $parentLocked);
+my @bitmap;
+$constant{HINT_GADGET_TEXT_COLOR} = 1007;
+$constant{HINT_GADGET_BACKGROUND_COLORS} = 1008;
+my (@solidFrame, @bitmapPos, @sbFill, @sbPart, @paintFill);
+@constant{qw(GMT_ENUM OL_DOWN_MARK_WIDTH OL_MARK_HEIGHT BUTTON_INSET_X), 'segment moCS_selBkgdColor'} = (0, 16, 8, 6, 1);
+$constant{'mask SDM_INVERSE'} = 128;
+@constant{'mask OLSA_ENABLED', 'mask OLSA_TWISTED', 'mask OLSS_DOWN_FLAGS', qw(OLSS_PAGE_UP OLSS_PAGE_DOWN)} = (2, 4, 7, 2, 6);
+@constant{map { "offset $_" } qw(vsbPageUp vsbPageDn hsbPageUp hsbPageDn cgahPageUp cgahPageDn spinGadget ISUI2000SpinUp ISUI2000SpinDown MenuDownMarkDarkBitmap)} = (1000, 1100, 1200, 1300, 1400, 1500, 2000, 4000, 4012, 8000);
+@constant{map { "offset $_" } qw(ISUI2000ArrowUp ISUI2000ArrowDown ISUI2000ArrowLeft ISUI2000ArrowRight VUpInside VDownInside HUpInside HDownInside)} = (10000, 10012, 10024, 10036, 11001, 11002, 11003, 11004);
+@constant{map { "offset $_" } qw(itemCheck itemMenuBullet itemCheckBoxBorder itemCheckBoxCheck)} = (7001, 7002, 7003, 7004);
 $hasParent = 1; $parentIsTaskbar = 1; $parentLocked = 0;
 sub value {
     my ($x) = @_;
@@ -109,8 +123,11 @@ sub value {
     return value($1) * 16 + value($2) if $x =~ /^ColorScheme <([^,]+),\s*(.+)>$/;
     if ($x =~ / or /) { my $v = 0; $v |= value($_) for split / or /, $x; return $v; }
     return value($1) if $x =~ /^\((.+)\)$/;
-    $x =~ s/\[(si|di|bx|bp)\]/'[' . value($1) . ']'/ge;
-    return $mem{$x} // 0 if $x =~ /^(?:ds:|desiredSize\.)/;
+    return value($1) + value($2) if $x =~ /^(.+) \+ (.+)$/;
+    return value('offset spinGadget') + 34 if $x eq 'offset spinGadget+34';
+    return $mem{$x} // 0 if $x =~ /^(?:state|oldMask|attrs|selected\?|posX|posY|gstate|ltColor|rbColor|fillColor|darkColor)$/;
+    $x =~ s{\[(si|di|bx|bp)(?:\+(\d+))?\]}{'[' . (value($1) + ($2 // 0)) . ']'}ge;
+    return $mem{$x} // 0 if $x =~ /^(?:[de]s:|desiredSize\.)/;
     die "unknown operand: $x\n";
 }
 sub assign {
@@ -120,7 +137,9 @@ sub assign {
         my ($r, $shift) = ($1 . 'x', $2 eq 'h' ? 8 : 0);
         $reg{$r} = (($reg{$r} // 0) & ~(255 << $shift)) | (($v & 255) << $shift);
     } elsif ($x =~ /^(bx|cx)(si|dx)$/) { assign($1, $v >> 16); assign($2, $v & 65535);
-    } elsif ($x =~ /^ds:/) {
+    } elsif ($x =~ /^(?:state|oldMask|attrs|selected\?|posX|posY|gstate|ltColor|rbColor|fillColor|darkColor)$/) {
+        $mem{$x} = $v;
+    } elsif ($x =~ /^[de]s:/) {
         $x =~ s/\[(si|di|bx|bp)\]/'[' . value($1) . ']'/ge;
         $mem{$x} = $v;
     } else { $reg{$x} = $v; }
@@ -131,30 +150,36 @@ sub run {
     my ($declaration, $body) = ($1, $2);
     $body =~ s/\\\n\s*/ /g;
     my $prologue = "$declaration\n$body";
+    $prologue =~ s/;[^\n]*//g;
     my @uses = $prologue =~ /(?:^|\s)uses\s+([^;\n]+)/m ? split(/,\s*/, $1) : ();
     my @saved = map { value($_) } @uses;
-    my (@code, %label, @stack, @conditions);
+    my (@code, %label, @stack, @conditions, @returns);
     my $active = 1;
     for (split /\n/, $body) {
         s/;.*//; s/^\s+|\s+$//g;
-        s/^(?:TABS|CUAS)\s*<(.*?)>/$1/;
-        next if /^(?:OLS|EC)\s*</; s/\b(?:LONG|short)\s+//g;
+        s/^(?:TABS|CUAS|NOFXIP)\s*<(.*?)>/$1/;
+        next if /^(?:OLS|EC|FXIP)\s*</; s/\b(?:LONG|short)\s+//g;
         s/^\s+|\s+$//g;
         if (/^if\s+(.+)$/) {
-            my %enabled = (_ISUI => 1, _ISUI2000 => $isui2000, '_MOTIF or _ISUI' => 1, TOOL_AREA_IS_TASK_BAR => 1, '(not _DUI)' => 1,
+            my %enabled = (_ISUI => $isui, _ISUI2000 => $isui2000, '_MOTIF or _ISUI' => 1, TOOL_AREA_IS_TASK_BAR => 1, '(not _DUI)' => 1,
+                USE_COLOR_FOR_DISABLED_GADGETS => 0, DRAW_STYLES => 0,
                 '((FRAME_TEXT_MARGIN - CGA_FRAME_TEXT_MARGIN) eq 1)' => 1);
             die "unknown condition $1\n" unless exists $enabled{$1};
-            push @conditions, [$active, $enabled{$1}]; $active &&= $enabled{$1}; next;
-        } elsif (/^else\b/) { $active = $conditions[-1][0] && !$conditions[-1][1]; next;
+            push @conditions, [$active, $enabled{$1}, $enabled{$1}]; $active &&= $enabled{$1}; next;
+        } elsif (/^elif _ISUI$/) {
+            my $chosen = !$conditions[-1][2] && $isui;
+            $conditions[-1][1] = $chosen; $conditions[-1][2] ||= $chosen;
+            $active = $conditions[-1][0] && $chosen; next;
+        } elsif (/^else\b/) { $active = $conditions[-1][0] && !$conditions[-1][2]; $conditions[-1][2] = 1; next;
         } elsif (/^endif\b/) { $active = (pop @conditions)->[0]; next; }
         next unless $active;
-        next if /^(?:$|uses\b|class\b|\.|MSG_)/ || /^\w+\s+local\b/;
+        next if /^(?:$|uses\b|class\b|\.|MSG_)/ || /^[\w?]+\s+local\b/;
         if (/^([\w\$]+):$/) { $label{$1} = scalar @code; } else { push @code, $_; }
     }
     for (my $i = 0; $i < @code; $i++) {
         my $line = $code[$i];
         $line =~ s/^(segmov\s+\w+,\s*\w+),\s*\w+$/$1/;
-        if ($line =~ /^(mov(?:dw)?|segmov|add|or(?:nf)?|shl|shr|sub|cmp(?:dw)?|test|xchg)\s+(.+?),\s*(.+)$/) {
+        if ($line =~ /^(mov(?:dw)?|segmov|add|and|or(?:nf)?|shl|shr|sub|cmp(?:dw)?|test|xchg)\s+(.+?),\s*(.+)$/) {
             my ($op, $a, $b) = ($1, $2, $3);
             my $v = value($b);
             if ($op =~ /^mov/ || $op eq 'segmov') { assign($a, $v); }
@@ -163,8 +188,8 @@ sub run {
                 my ($left, $right) = (value($a), $v);
                 $left -= 65536 if $left & 32768; $right -= 65536 if $right & 32768;
                 $signedLess = $left < $right; }
-            elsif ($op =~ /^or/ || $op eq 'shl' || $op eq 'shr' || $op eq 'sub') {
-                assign($a, $op =~ /^or/ ? value($a) | $v : $op eq 'shl' ? value($a) << $v : $op eq 'shr' ? value($a) >> $v : value($a) - $v);
+            elsif ($op =~ /^or/ || $op eq 'and' || $op eq 'shl' || $op eq 'shr' || $op eq 'sub') {
+                assign($a, $op =~ /^or/ ? value($a) | $v : $op eq 'and' ? value($a) & $v : $op eq 'shl' ? value($a) << $v : $op eq 'shr' ? value($a) >> $v : value($a) - $v);
                 $zero = !value($a); $carry = 0; }
             elsif ($op eq 'test') { $zero = !(value($a) & $v); $carry = 0; }
             else { my $old = value($a); assign($a, $v); assign($b, $old); }
@@ -186,9 +211,10 @@ sub run {
                 ($op =~ /^j[ze]$/ ? $zero : $op =~ /^jn[ze]$/ ? !$zero : $op eq 'jc' ? $carry : $op eq 'jbe' ? $carry || $zero : $op eq 'ja' ? !$carry && !$zero :
                  $op eq 'jb' ? $carry : $op eq 'jle' ? $signedLess || $zero : $op eq 'js' ? $negative : !$carry);
         } elsif ($line eq 'stc' || $line eq 'clc') { $carry = $line eq 'stc';
-        } elsif ($line eq 'ret') { last;
+        } elsif ($line eq 'ret') { if (@returns) { $i = pop @returns; } else { last; }
         } elsif ($line =~ /^call\s+(\w+)$/) {
             my $call = $1;
+            if (exists $label{$call}) { push @returns, $i; $i = $label{$call} - 1; next; }
             if ($call eq 'DrawGradient') { push @gradient, [value('al'), value('dh')]; }
             elsif ($call eq 'GeodeFind') {
                 die "wrong Express geode search\n" unless $reg{ax} == 8 && $reg{cx} == 1 && $reg{dx} == 14 && $reg{es} == 2;
@@ -196,12 +222,16 @@ sub run {
                 $carry = $constant{$reg{di}} eq $loadedUI; $reg{bx} = $carry ? 99 : 0;
             }
             elsif ($call eq 'OpenCheckIfCGA') { $carry = $cga; }
+            elsif ($call eq 'OpenMinimizeIfCGA') { $carry = $cga; }
             elsif ($call eq 'SysGetPenMode') { $reg{ax} = $penLarge; }
             elsif ($call eq 'CheckIfLargeHeight') { $carry = $penLarge; }
             elsif ($call eq 'ObjVarFindData') {
                 my $hint = $reg{ax};
+                die "popup colour lookup used the wrong object\n" if
+                    ($hint == 1008 && $reg{si} != 1) || ($hint == 1007 && $reg{si} != 2);
                 $carry = $hint == 1001 ? $hasTitle : $hint == 1002 ? defined $fixedHeight :
-                    $hint == 1003 ? defined $maxHeight : $hint == 1004 ? $penNoLarge : $hint == 1005 ? $noBorders : $hint == 1006 ? $express : die "unexpected hint\n";
+                    $hint == 1003 ? defined $maxHeight : $hint == 1004 ? $penNoLarge : $hint == 1005 ? $noBorders : $hint == 1006 ? $express :
+                    $hint == 1007 ? defined $popupHint : $hint == 1008 ? $popupHasBackground : die "unexpected hint\n";
                 $reg{bx} = 9;
                 $mem{'ds:[9].CSHA_height'} = ($hint == 1002 ? $fixedHeight : $maxHeight) // 0;
             }
@@ -216,9 +246,19 @@ sub run {
             elsif ($call eq 'GrGetCurPos') { @reg{qw(ax bx)} = @pen; }
             elsif ($call eq 'GrMoveTo') { @pen = @reg{qw(ax bx)}; }
             elsif ($call eq 'GrSetAreaMask') { $mask = value('al'); }
-            elsif ($call eq 'GrFillRect') { push @fill, $mask; }
+            elsif ($call eq 'GrFillRect') { push @fill, $mask; push @paintFill, [$areaColor, @reg{qw(ax bx cx dx)}]; }
             elsif ($call eq 'GrSetAreaColor') { $areaColor = value('al'); }
-            elsif ($call =~ /^GrSet(?:LineMask|TextColor)$/) { }
+            elsif ($call eq 'GetCheckboxBounds') { @reg{qw(ax bx cx dx)} = (12, 26, 24, 37); $zero = 0; $carry = 1; }
+            elsif ($call =~ /^Gr(?:Fill|Draw)Bitmap(?:AtCP)?$/) { push @bitmap, [$reg{si}, $areaColor, $mask]; push @bitmapPos, [@reg{qw(ax bx)}]; }
+            elsif ($call eq 'GrGetAreaMask') { $reg{ax} = $mask; }
+            elsif ($call eq 'OpenButtonCheckIfFullyEnabled') { $carry = !!$mem{'ds:[1].VI_attrs'}; }
+            elsif ($call eq 'OpenDrawRectSolid') { push @solidFrame, [$reg{bp}, @reg{qw(ax bx cx dx)}]; @pen = (33, 43); }
+            elsif ($call eq 'ApplySBParams') { } # fixtures contain literal table coordinates
+            elsif ($call eq 'FillSBBitmap') { push @bitmap, [$reg{si}, $areaColor, $mask]; push @bitmapPos, [@mem{qw(posX posY)}]; $reg{si} += 6; }
+            elsif ($call eq 'FillSBRect') { push @sbFill, [$reg{si}, $areaColor, $mask]; $reg{si} += 8; }
+            elsif ($call eq 'DrawSBPart') { push @sbPart, $mem{'selected?'}; }
+            elsif ($call =~ /^GrSet(?:LineMask|TextMask)$/) { }
+            elsif ($call eq 'GrSetTextColor') { $textColor = value('al'); }
             elsif ($call eq 'GrSetLineColor') { $lineColor = value('al'); }
             elsif ($call eq 'GrDrawHLine') { push @line, [$reg{ax}, $reg{bx}, $reg{cx}, $lineColor]; @pen = @reg{qw(cx bx)}; $carry = 1; $zero = 0; }
             elsif ($call eq 'GrDrawVLine') { push @line, [$reg{ax}, $reg{bx}, $reg{dx}, $lineColor]; @pen = @reg{qw(ax dx)}; $carry = 1; $zero = 0; }
@@ -242,7 +282,7 @@ sub run {
             }
             elsif ($call eq 'SetBlack') { $lineColor = 0; }
             elsif ($call eq 'CheckIfTabStyleItem') { $carry = 0; }
-            elsif ($call eq 'OpenGetTextColor') { $carry = 0; }
+            elsif ($call eq 'OpenGetTextColor') { $carry = defined $textColors; $reg{ax} = $textColors->[0] | ($textColors->[1] << 8) if $carry; }
             elsif ($call eq 'OpenWinCheckIfBordered') { $carry = $bordered; }
             elsif ($call eq 'OpenWinGetBounds') { @reg{qw(ax bx cx dx)} = (0, 0, 100, 80); }
             elsif ($call eq 'FillRectWithBGColors') { $mask = 0; push @fill, 0; @reg{qw(ax bx cx dx)} = (10, 20, 34, 44); }
@@ -631,3 +671,310 @@ for my $ui ('isui    ', 'isui2000', 'motif   ', 'motifr  ', 'isui2001', '') {
     }
 }
 print "Express menu UI-family checks passed\n";
+
+# Execute the shared menu renderer with the bounds call destroying DH, as on
+# GEOS. Check both glyph types, inverse menu highlights and disabled masks.
+for my $variant (0, 1) {
+    $isui2000 = $variant;
+    for my $checkbox (0, 1) {
+        for my $selected (0, 1) {
+            for my $depressed (0, 1) {
+                for my $drawMask (0, 6) {
+                    %reg = (ax => 11, bx => ($selected * $constant{'mask OLBSS_SELECTED'} |
+                        $depressed * $constant{'mask OLBSS_DEPRESSED'}) << 8,
+                        cx => 33, dx => $checkbox * $constant{'mask OLIS_IS_CHECKBOX'} << 8,
+                        si => 55, di => 66, bp => 77, ds => 88);
+                    my %before = %reg;
+                    @bitmap = (); $mask = $drawMask;
+                    run('ItemDrawISUICheck');
+                    my $want = $variant && !$checkbox ? 7002 : 7001;
+                    die "wrong menu glyph/state/colour/mask\n" unless @bitmap == $selected &&
+                        (!$selected || join(',', @{$bitmap[0]}) eq "$want," . ($depressed ? 15 : 0) . ",$drawMask");
+                    die "menu glyph damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+                }
+            }
+        }
+    }
+    for my $selected (0, 1) {
+        %reg = (bx => $selected * $constant{'mask OLBSS_SELECTED'} << 8, di => 66);
+        @bitmap = (); $mask = 6;
+        run('ItemDrawColorISUINonExclBox');
+        die "wrong checkbox glyph/state/colour/mask\n" unless @bitmap == 1 + $selected &&
+            (!$selected || join(',', @{$bitmap[1]}) eq '7004,' . ($variant ? 0 : 8) . ',6');
+    }
+}
+
+# Compare actual ink coordinates, allowing different padded bitmap dimensions.
+sub ink {
+    my ($file, $label, $variant, $height) = @_;
+    my $s = source($file);
+    $s =~ /^\Q$label\E\s+label[^\n]*\n(.*?)(?=\n\n)/ms or die "missing $label\n";
+    my $block = $1;
+    $block =~ s/^if _ISUI2000\n(.*?)^else\n(.*?)^endif[^\n]*(?:\n|$)/$variant ? $1 : $2/mseg;
+    my @rows;
+    for (split /\n/, $block) {
+        my @bytes = /([01]{8})b/g;
+        push @rows, join('', @bytes) if @bytes;
+    }
+    die "wrong $label height\n" unless @rows == $height;
+    my @ink;
+    for my $y (0 .. $#rows) {
+        for my $x (0 .. length($rows[$y]) - 1) {
+            push @ink, "$x,$y" if substr($rows[$y], $x, 1) eq '1';
+        }
+    }
+    return join(';', @ink);
+}
+my $tick = ink('CItem/citemItemColor.asm', 'itemCheckBoxCheck', 1, 10);
+die "checkbox and menu ticks differ\n" unless
+    ink('CItem/citemItemCommon.asm', 'itemCheck', 1, 12) eq $tick &&
+    ink('CItem/citemItemBW.asm', 'checkBM', 1, 12) eq $tick;
+die "menu and dialog radio bullets differ\n" unless
+    ink('CItem/citemItemCommon.asm', 'itemMenuBullet', 1, 9) eq
+    ink('CItem/citemItemColor.asm', 'itemRadioButtonBullet', 1, 9);
+die "classic ISUI tick changed\n" if ink('CItem/citemItemCommon.asm', 'itemCheck', 0, 12) eq $tick;
+
+# Select the ISUI branch before comparing its colour and monochrome arrows.
+my $arrows = source('CButton/copenData.asm');
+$arrows =~ s/^if _ISUI\b[^\n]*\n/MenuISUIBranch\n/mg;
+my @down = $arrows =~ /^MenuISUIBranch\n\n(MenuDownMark(?:Dark)?Bitmap.*?)(?=^else\t\t;-)/msg;
+die "missing ISUI dropdown tables\n" unless @down == 2;
+my @bits;
+for (@down) {
+    s/^if _ISUI2000\n(.*?)^else\n(.*?)^endif[^\n]*\n/$1/msg;
+    push @bits, join('', /([01]{8})b/g);
+}
+die "colour and monochrome dropdown triangles differ\n" unless $bits[0] eq $bits[1];
+print "ISUI 2000 selection glyph checks passed\n";
+
+# Paint states must leave the layout, origin and drawing-table consumption
+# unchanged. Exercise colour painting with a nonzero origin and stale mask.
+$isui2000 = 1; $bw = 0; $faceColor = 42;
+for my $enabled (0, 1) {
+    for my $pressed (0, 1) {
+        %mem = ('ds:[1].VI_attrs' => $enabled, 'ds:[moCS_selBkgdColor]' => 1);
+        %reg = (ax => 11, bx => $pressed * $constant{'mask OLBSS_DEPRESSED'},
+            cx => 80, dx => 24, si => 1, di => 66, bp => 77, ds => 1);
+        my %before = %reg;
+        @pen = (10, 20); @solidFrame = (); @paintFill = (); $mask = 6;
+        run('OLButtonDrawISUI2000DropDown');
+        my $edge = $enabled && $pressed ? 15 * 256 + 8 : 20 * 256 + 7;
+        die "wrong dropdown state/frame bounds\n" unless @solidFrame == 4 &&
+            join(',', @{$solidFrame[0]}) eq '3848,10,20,90,44' &&
+            join(',', @{$solidFrame[2]}) eq "$edge,73,22,89,42" &&
+            $paintFill[0][0] == ($enabled ? ($pressed ? 1 : 15) : 42);
+        die "dropdown paint changed geometry/registers/origin\n" if
+            join(',', @pen) ne '10,20' || grep { $reg{$_} != $before{$_} } keys %before;
+        @bitmap = (); @bitmapPos = (); $mask = 6;
+        run('OLButtonDrawISUI2000DropDownMark');
+        die "wrong dropdown glyph state or disabled emboss\n" unless @bitmap == ($enabled ? 1 : 2) &&
+            $bitmap[-1][1] == ($enabled ? 0 : 8) && $mask == 6 &&
+            join(',', @{$bitmapPos[-1]}) eq ($enabled && $pressed ? '69,29' : '68,28');
+        die "dropdown mark damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+
+        for my $case ([5000, 11001, 10000, 6], [5100, 11002, 10012, 6],
+                      [5200, 11003, 10024, 6], [5300, 11004, 10036, 6],
+                      [5400, 11201, 5432, 12], # unchanged CGA glyph path
+                      [2002, 0, 4000, 6], [3002, 0, 4012, 6]) {
+            my ($start, $sourceBitmap, $normal, $pressedStep) = @$case;
+            %mem = (attrs => ($enabled ? 2 : 0) | ($start < 5000 ? 4 : 0),
+                'selected?' => $pressed ? 0 : 255, fillColor => 42, ltColor => 15,
+                rbColor => 8, posX => 10, posY => 20);
+            @mem{map { 'ds:[' . ($start + $_) . ']' } (8, 10, 16, 26)} = (11, 21, 23, 34);
+            $mem{'ds:[' . ($start + 36) . ']'} = $sourceBitmap;
+            %reg = (si => $start, di => 66, bp => 77);
+            @solidFrame = (); @bitmap = (); @bitmapPos = (); $mask = 6;
+            run('HVUpDownArrow');
+            my $glyph = $normal + ($enabled && $pressed ? $pressedStep : 0);
+            die "wrong scrollbar/spinner arrow frame/table advance\n" unless
+                $reg{si} == $start + 56 && $reg{bp} == 77 && @solidFrame == 2 &&
+                $solidFrame[0][0] == $edge && $bitmap[-1][0] == $glyph &&
+                $bitmap[-1][1] == ($enabled ? 0 : 8) && @bitmap == ($enabled ? 1 : 2) &&
+                $mem{posX} == 10 && $mem{posY} == 20;
+        }
+    }
+}
+for my $state (0, 2, 6) {
+    for my $part (1000, 1100, 1200, 1300, 1400, 1500) {
+        %mem = (attrs => 2, gstate => 66, 'es:[1].OLSBI_state' => $state);
+        %reg = (ax => 11, si => $part, di => 1); @sbPart = ();
+        run('DrawPageUpDownArea');
+        my $selected = $state && (($state == 2) == ($part % 200 == 0));
+        die "wrong pressed page region\n" unless @sbPart == 1 && $sbPart[0] == ($selected ? 0 : 255);
+        @sbFill = (); $mem{fillColor} = 42; $mem{darkColor} = 8; $reg{si} = 6000;
+        run('HVPageUpDn');
+        die "wrong track pattern or table advance\n" unless $reg{si} == 6008 && @sbFill == 2 &&
+            $sbFill[0][1] == ($selected ? 8 : 42) && $sbFill[1][1] == ($selected ? 0 : 15) && $mask == 0;
+    }
+}
+for my $inert (0, 1) {
+    %mem = (attrs => 2, 'selected?' => 255, fillColor => 42, ltColor => $inert ? 7 : 15, rbColor => $inert ? 7 : 8);
+    @mem{qw(ds:[7008] ds:[7010] ds:[7016] ds:[7026])} = (11, 21, 23, 34);
+    %reg = (si => 7000, di => 66, bp => 77); @solidFrame = ();
+    run('HVThumb');
+    die "wrong thumb frame/table advance\n" unless $reg{si} == 7040 && @solidFrame == ($inert ? 0 : 2);
+}
+print "ISUI 2000 scrollbar, spinner and dropdown paint checks passed\n";
+
+# Compare the native geometry expressions and coordinate tables with the
+# supplied Windows 2000 reference: 16-pixel shaft, square inset end buttons.
+sub geometry_value {
+    my ($expr, $values) = @_;
+    $expr =~ s/\b([A-Z][A-Z_0-9]*)\b/exists $values->{$1} ? $values->{$1} : die "unknown geometry constant $1\n"/ge;
+    die "invalid geometry expression $expr\n" unless $expr =~ /^[0-9\s()+*\/-]+$/;
+    my $v = eval $expr;
+    die $@ if $@;
+    return $v;
+}
+my $scrollDraw = source('../ISUI/View/viewScrollbarDraw.asm');
+$scrollDraw =~ s/\\\n\s*/ /g;
+my $scrollSelect = source('CView/cviewScrollbarSelect.asm');
+$scrollSelect =~ /(\tmov\tbx, MO_ARROW_HEIGHT.*?^10\$:)/ms or die "missing scrollbar hit dimensions\n";
+$asm .= "\nScrollHitDimensions proc near\n$1\nret\nScrollHitDimensions endp\n";
+$constant{'mask OLSA_VERTICAL'} = 64;
+for my $variant (0, 1) {
+    my $constants = $shared;
+    $constants =~ s/^if _ISUI2000\n(\s+MO_SCROLLBAR_WIDTH[^\n]*\n)^else\n(.*?)^endif/$variant ? $1 : $2/mseg;
+    my %v = (PARAM_2 => 37, PARAM_3 => 300);
+    for my $name (qw(MO_ARROW_WIDTH CGA_HORIZ_ARROW_WIDTH MO_ARROW_HEIGHT MO_SCROLLBAR_WIDTH MO_ARROW_BITMAP_INSET CGA_HORIZ_SCROLLBAR_WIDTH MO_SCR_AREA_MARGIN MO_THUMB_HEIGHT NUI_SPIN_ARROW_HEIGHT)) {
+        $constants =~ /^\s*(?:ISU<\s*)?\Q$name\E\s*=\s*([^;>\n]+)/m or die "missing geometry $name\n";
+        $v{$name} = geometry_value($1, \%v);
+    }
+    die "wrong scrollbar width/arrow reservation\n" unless $v{MO_SCROLLBAR_WIDTH} == ($variant ? 16 : 14) && $v{MO_SCR_AREA_MARGIN} == 15;
+    $isui2000 = $variant;
+    @constant{qw(MO_ARROW_HEIGHT MO_SCROLLBAR_WIDTH-1 MO_ARROW_WIDTH+2 NUI_SPIN_ARROW_HEIGHT+2),
+        'MO_SCROLLBAR_WIDTH - CGA_HORIZ_SCROLLBAR_WIDTH'} =
+        ($v{MO_ARROW_HEIGHT}, $v{MO_SCROLLBAR_WIDTH}-1, $v{MO_ARROW_WIDTH}+2,
+         $v{NUI_SPIN_ARROW_HEIGHT}+2, $v{MO_SCROLLBAR_WIDTH}-$v{CGA_HORIZ_SCROLLBAR_WIDTH});
+    for my $kind (qw(vertical horizontal cga spinner)) {
+        $cga = $kind eq 'cga';
+        %reg = (di => 1);
+        %mem = ('ds:[1].OLSBI_attrs' => $kind eq 'spinner' ? 68 : $kind eq 'vertical' ? 64 : 0);
+        run('ScrollHitDimensions');
+        my $width = $kind eq 'spinner' ? 15 : $cga ? 10 : $v{MO_SCROLLBAR_WIDTH};
+        die "scrollbar paint/hit width mismatch\n" unless $reg{bp} + 1 == $width &&
+            $reg{bx} == ($kind eq 'spinner' ? 12 : 13);
+    }
+    for my $case (['vertScrollbar', 0, 14, $variant ? 14 : 12],
+                  ['vsbDnArrow', 0, 14, $variant ? 14 : 12],
+                  ['horizScrollbar', 0, $variant ? 14 : 12, 14],
+                  ['hsbPageDn', 1, $variant ? 14 : 12, 14],
+                  ['CGAHorizScrollbar', 0, 8, 14],
+                  ['spinGadget', 0, 10, 13], ['spinDnArrow', 0, 10, 13]) {
+        my ($label, $skip, $height, $width) = @$case;
+        $scrollDraw =~ /^\Q$label\E\s+label[^\n]*\n(.*)/ms or die "missing table $label\n";
+        my @records = $1 =~ /^\s*word\s+([^\n]+)/mg;
+        my @edge = map { [map { geometry_value($_, \%v) } split /,\s*/, $records[$_]] } $skip .. $skip + 3;
+        die "wrong $label proportions\n" unless $edge[2][0] - $edge[1][0] + 1 == $width &&
+            $edge[3][1] - $edge[1][1] + 1 == $height;
+        my @glyph = split /,\s*/, $records[$skip + 4];
+        if ($label =~ /^(vertScrollbar|vsbDnArrow|horizScrollbar|hsbPageDn)$/) {
+            my $cross = $label =~ /^(vertScrollbar|vsbDnArrow)$/ ? 0 : 1;
+            die "arrow bitmap not recentered\n" unless geometry_value($glyph[$cross], \%v) == ($variant ? 2 : 1);
+        }
+    }
+}
+my $scrollSize = source('CView/cviewScrollbar.asm');
+$scrollSize =~ /ISU\s*<\s*mov\s+cx, ([^;>\n]+);keep spinner width/ or die "missing spinner width\n";
+die "scrollbar change resized spinner\n" unless geometry_value($1, {MO_ARROW_WIDTH => 12}) == 15;
+print "ISUI / ISUI 2000 scrollbar proportions and spinner isolation checks passed\n";
+
+# Check actual ink dimensions and padding, not screenshot display scaling.
+for my $case (['Up', 6, 3, 1, 1], ['Down', 6, 3, 1, 286],
+              ['Left', 3, 6, 1, 1], ['Right', 3, 6, 286, 1]) {
+    my ($direction, $width, $height, $left, $top) = @$case;
+    my $label = 'ISUI2000Arrow' . $direction;
+    my @pixels = map { [split /,/] } split /;/, ink('../ISUI/View/viewScrollbarDraw.asm', $label . 'BM', 1, $height);
+    die "wrong compact arrow ink\n" unless @pixels == 12 &&
+        !grep { $_->[0] >= $width || $_->[1] >= $height } @pixels;
+    my @x = sort {$a <=> $b} map { $_->[0] } @pixels;
+    my @y = sort {$a <=> $b} map { $_->[1] } @pixels;
+    die "compact arrow bounding box changed\n" unless $x[0] == 0 && $x[-1] == $width-1 && $y[0] == 0 && $y[-1] == $height-1;
+    $scrollDraw =~ /^\Q$label\E\s+label[^\n]*\n\s*word\s+([^\n]+)\n\s*word\s+([^\n]+)/m or die "missing compact arrow positions\n";
+    my @normal = split /,\s*/, $1; my @pressed = split /,\s*/, $2;
+    my %v = (PARAM_3 => 300, MO_ARROW_HEIGHT => 13);
+    my ($px, $py) = map { geometry_value($_, \%v) } @normal[0,1];
+    my @padding = ($px-$left, $left+14-$px-$width, $py-$top, $top+14-$py-$height);
+    my $want = $width == 6 ? '4,4,5,6' : '5,6,4,4';
+    die "wrong compact arrow padding\n" unless join(',', @padding) eq $want;
+    die "pressed arrow moved its frame\n" unless geometry_value($pressed[0], \%v) == $px+1 && geometry_value($pressed[1], \%v) == $py+1;
+}
+print "ISUI 2000 compact arrow ink and padding checks passed\n";
+
+# Execute the popup builder's inline policy and the actual button text-colour
+# selection. Only the generated trigger's hint changes; the list keeps its ink.
+my $popupBuild = source('CItem/citemItemGroupClass.asm');
+$popupBuild =~ /(if _ISUI\n\t;\n\t; The copied tool colour.*?^endif)/ms or die "missing popup trigger colour policy\n";
+$asm .= "\nPopupTriggerTextColor proc near\n$1\nret\nPopupTriggerTextColor endp\n";
+my @profiles = (undef, [$constant{C_BLUE}, $constant{C_WHITE}],
+    [$constant{C_BLUE}, $constant{C_BLUE}, 'custom background']);
+for my $file (qw(uiFont.ui uiPointSize.ui)) {
+    my $ui = source('../../Text/UI/' . $file);
+    $ui =~ /HINT_GADGET_TEXT_COLOR\s*\{\s*byte\s+(C_\w+)\s*byte\s+(C_\w+)/s or die "missing $file text colours\n";
+    push @profiles, [$constant{$1}, $constant{$2}];
+}
+for my $variant (qw(motif isui isui2000)) {
+    $isui = $variant ne 'motif'; $isui2000 = $variant eq 'isui2000';
+    for my $profile (@profiles) {
+        $popupHint = $profile;
+        $popupHasBackground = defined $profile && @$profile > 2;
+        %reg = (si => 2, di => 1); %mem = ();
+        @mem{qw(ds:[9].TC_unselectedColor ds:[9].TC_selectedColor)} = @$profile[0,1] if defined $profile;
+        my $original = defined $profile ? join(',', @$profile) : '';
+        run('PopupTriggerTextColor');
+        unless (defined $profile) {
+            die "popup without colour hint was modified\n" if exists $mem{'ds:[9].TC_selectedColor'};
+            next;
+        }
+        die "popup colour lookup damaged object pointers\n" unless $reg{si} == 2 && $reg{di} == 1;
+        my $selected = $isui && !$popupHasBackground && $profile->[0] == $profile->[1] ? $constant{C_WHITE} : $profile->[1];
+        my @trigger = $isui ? @mem{qw(ds:[9].TC_unselectedColor ds:[9].TC_selectedColor)} : @$profile;
+        die "popup builder changed list or explicit selected colour\n" unless
+            join(',', @$profile) eq $original && $trigger[0] == $profile->[0] && $trigger[1] == $selected;
+        $textColors = \@trigger;
+        for my $pressed (0, 1) {
+            %reg = (ax => 22, bx => $constant{'mask OLBSS_MENU_DOWN_MARK'} |
+                $pressed * $constant{'mask OLBSS_DEPRESSED'}, si => 1, di => 66, cx => 80, dx => 24);
+            %mem = ('ds:[1]' => 1, 'ds:[1].Vis_offset' => 0, 'ds:[1].OLBI_genChunk' => 2, 'ds:[1].VI_attrs' => 1);
+            my %before = %reg;
+            run('OLButtonSetDrawColors');
+            die "wrong popup trigger text colour\n" unless $textColor == ($pressed ? $selected : $profile->[0]);
+            die "popup text painting damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+        }
+    }
+}
+print "ISUI / ISUI 2000 popup-trigger text contrast checks passed\n";
+
+# Caption slots include the one pixel removed by native colour placement.
+$shared =~ /if _ISUI2000\n(?:\t;[^\n]*\n)*CUAS_CAPTION_ICON_WIDTH = (\d+)/ or die "missing ISUI 2000 caption width\n";
+die "wrong caption width\n" unless $1-1 == 16;
+my $caption = source('CWin/cwinClassCUAS.asm');
+die "caption reservation/placement disagree\n" unless
+    $caption =~ /notSysMenuButton:\nif _ISUI2000\n\t\tmov\tax, CUAS_CAPTION_ICON_WIDTH/ &&
+    $caption =~ /sub\s+ds:\[di\].OLWI_titleBarBounds.R_right, CUAS_CAPTION_ICON_WIDTH\+1/;
+print "ISUI 2000 caption width checks passed\n";
+
+# Exercise the actual inset/justification branch, including wider system menus.
+my $buttonPaint = source('CButton/copenButtonColor.asm');
+$buttonPaint =~ /(\tmov\tdx, 2\t+;assume system icon.*?)(?=^50\$:)/ms
+    or die "missing caption moniker placement\n";
+$asm .= "\nCaptionMonikerPlacement proc near\n$1\n50\$:\nret\nCaptionMonikerPlacement endp\n";
+$constant{'CUAS_CAPTION_ICON_WIDTH-1'} = 16;
+$constant{MO_BUTTON_INSET_X} = 6;
+for my $variant (qw(isui isui2000)) {
+    $isui2000 = $variant eq 'isui2000';
+    for my $width (16, 20, 27) {
+        for my $sysIcon (0, 1) {
+            %reg = (ax => 0, si => 1);
+            %mem = ('ds:[1]' => 1, 'ds:[1].Vis_offset' => 0,
+                'ds:[1].OLBI_specState' => $sysIcon * $constant{'mask OLBSS_SYS_ICON'},
+                'ds:[1].VI_bounds.R_left' => 100, 'ds:[1].VI_bounds.R_right' => 100 + $width);
+            run('CaptionMonikerPlacement');
+            my $compact = $isui2000 && $sysIcon && $width == 16;
+            die "wrong caption moniker placement\n" unless
+                $reg{dx} == ($compact ? 0 : $sysIcon ? 2 : 6) &&
+                $reg{ax} == ($compact ? $constant{'J_CENTER shl offset DMF_X_JUST'} : 0);
+        }
+    }
+}
+print "ISUI / ISUI 2000 caption moniker placement checks passed\n";

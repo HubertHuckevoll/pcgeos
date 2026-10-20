@@ -562,7 +562,7 @@ MO    < mov	dx, ds:[di].OLSBI_arrowSize	 ;motif: height + 3	>
 MO    < add	dx, 4							>
 
 	; ISUI has up/down buttons arranged vertically.
-ISU  <	mov	cx, MO_SCROLLBAR_WIDTH+1	;set width		>
+ISU  <	mov	cx, MO_ARROW_WIDTH+3	;keep spinner width	>
 ISU  <	mov	dx, NUI_SPIN_ARROW_HEIGHT*2+3	;set height		>
 
 if _MOTIF

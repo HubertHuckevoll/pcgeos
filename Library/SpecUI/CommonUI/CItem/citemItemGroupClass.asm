@@ -884,6 +884,26 @@ endif
 	mov	cx, 2
 	mov	ax, HINT_GADGET_TEXT_COLOR
 	call	CopyHintIfSpecified
+if _ISUI
+	;
+	; The copied tool colour belongs to the closed trigger. Its open state
+	; uses the UI highlight; leave the list's own hint and distinct selected
+	; colours unchanged. Honour explicit background/text pairings too.
+	;
+		xchg	si, di		; inspect the original item group
+		mov	ax, HINT_GADGET_BACKGROUND_COLORS
+		call	ObjVarFindData
+		xchg	si, di		; restore the generated trigger (keeps carry)
+		jc	popupTextColorDone
+		mov	ax, HINT_GADGET_TEXT_COLOR
+		call	ObjVarFindData
+		jnc	popupTextColorDone
+		mov	al, ds:[bx].TC_unselectedColor
+		cmp	al, ds:[bx].TC_selectedColor
+		jne	popupTextColorDone
+		mov	ds:[bx].TC_selectedColor, C_WHITE
+popupTextColorDone:
+endif
 	mov	bp, si				;bp = obj to clear visMoniker of
 
 	xchg	si, di				;*ds:si <- item group, 

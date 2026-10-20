@@ -2533,6 +2533,18 @@ else
 CUAS_WIN_ICON_WIDTH	=	27	;Workspace and Application menu icons,
 endif
 
+;
+; Right-hand caption controls reserve a slot one pixel wider than their
+; colour button. Keep the left system-menu button on its existing width.
+;
+if _ISUI2000
+	; ATTENTION: standard UI levels only. Introductory Done buttons need
+	; natural-width title reservation before that layout can be supported.
+CUAS_CAPTION_ICON_WIDTH = 17
+else
+CUAS_CAPTION_ICON_WIDTH = CUAS_WIN_ICON_WIDTH
+endif
+
 if _ISUI
 CUAS_WIN_ICON_HEIGHT	=	14	;and Maximize, Minimize, etc. icons
 else
@@ -2568,7 +2580,12 @@ if (_MOTIF or _ISUI)	;----------------------------------------------
 						;changes in the code!
     CGA_HORIZ_ARROW_WIDTH		=	8
     MO_ARROW_HEIGHT			=	MO_ARROW_WIDTH+1
+if _ISUI2000
+    MO_SCROLLBAR_WIDTH		=	16	; Windows 2000 reference shaft width
+else
     MO_SCROLLBAR_WIDTH		=	MO_ARROW_WIDTH+2
+endif
+    MO_ARROW_BITMAP_INSET		=	(MO_SCROLLBAR_WIDTH-MO_ARROW_WIDTH)/2
     CGA_HORIZ_SCROLLBAR_WIDTH	=	CGA_HORIZ_ARROW_WIDTH+2
     MO_SCR_AREA_MARGIN		=	MO_ARROW_HEIGHT+2
     MO_THUMB_HEIGHT		=	MO_ARROW_WIDTH ;minimum thumb height

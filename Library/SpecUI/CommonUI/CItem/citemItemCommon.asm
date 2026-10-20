@@ -1836,8 +1836,8 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		ItemDrawISUICheck
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Draw a simple check to represent radio buttons and check boxes
-		in menus.
+SYNOPSIS:	Draw a menu selection mark. ISUI 2000 uses bullets for radio
+		items and checks for non-exclusive items.
 
 CALLED BY:	ItemDrawColorISUIRadioButton
 		ItemDrawColorCheckBox
@@ -1888,11 +1888,25 @@ setColor:
 	test	bh, mask OLBSS_SELECTED			; nothing to draw if
 	jz	done					;  not selected
 
+if _ISUI2000
+	;
+	; Choose the mark before GetCheckboxBounds overwrites DH (OLII_state).
+	;
+		mov	bp, offset itemMenuBullet
+		test	dh, mask OLIS_IS_CHECKBOX
+		jz	haveMark
+		mov	bp, offset itemCheck
+haveMark:
+endif
 	call	GetCheckboxBounds			; Get X & Y coord
 
 	segmov	ds, cs
 	
+if _ISUI2000
+		mov	si, bp
+else
 	mov	si, offset itemCheck
+endif
 	call	GrFillBitmap
 
 done:
@@ -1905,10 +1919,39 @@ ItemCommon		ends
 RegionResourceXIP	segment resource
 endif
 
+if _ISUI2000
+	; Match the six-pixel bullet in dialog radio buttons.
+itemMenuBullet	label	byte
+	Bitmap <9, 9, BMC_UNCOMPACTED, BMF_MONO>
+	db	00000000b, 00000000b
+	db	00000000b, 00000000b
+	db	00000000b, 00000000b
+	db	00000110b, 00000000b
+	db	00001111b, 00000000b
+	db	00011111b, 10000000b
+	db	00011111b, 10000000b
+	db	00001111b, 00000000b
+	db	00000110b, 00000000b
+endif
+
 itemCheck	label	word
 	word	CHECK_WIDTH
 	word	CHECK_HEIGHT
 	byte	0, BMF_MONO
+if _ISUI2000
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00000000b, 01000000b
+	byte	00000000b, 11000000b
+	byte	00010001b, 11000000b
+	byte	00011011b, 10000000b
+	byte	00011111b, 00000000b
+	byte	00001110b, 00000000b
+	byte	00000100b, 00000000b
+	byte	00000000b, 00000000b
+	byte	00000000b, 00000000b
+else
 	byte	00000000b, 00000000b
 	byte	00000000b, 00000000b
 	byte	00000000b, 00001000b
@@ -1921,6 +1964,7 @@ itemCheck	label	word
 	byte	00000010b, 00000000b
 	byte	00000000b, 00000000b
 	byte	00000000b, 00000000b
+endif
 
 if _FXIP			; bitmap must be in separate resource for xip
 RegionResourceXIP	ends

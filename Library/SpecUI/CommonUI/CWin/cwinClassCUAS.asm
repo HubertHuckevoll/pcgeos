@@ -1054,7 +1054,7 @@ makeRoomForIcon:
 	;
 	call	OpenCheckIfKeyboardOnly		; carry set if so
 	jc	20$				; not if keyboard only
-	sub	ds:[di].OLWI_titleBarBounds.R_right, CUAS_WIN_ICON_WIDTH-1
+	sub	ds:[di].OLWI_titleBarBounds.R_right, CUAS_CAPTION_ICON_WIDTH-1
 20$:
 						;make room for icon
 afterMaximizeTest:
@@ -1081,7 +1081,7 @@ endif
 	;
 	call	OpenCheckIfKeyboardOnly		; carry set if so
 	jc	30$				; not if keyboard only
-	sub	ds:[di].OLWI_titleBarBounds.R_right, CUAS_WIN_ICON_WIDTH-1
+	sub	ds:[di].OLWI_titleBarBounds.R_right, CUAS_CAPTION_ICON_WIDTH-1
 30$:
 						;make room for icon
 	or	bh, mask OLWSI_MINI		;allow MINI icon
@@ -1147,7 +1147,7 @@ adjustTitleForClose:
 	call	OpenCheckIfKeyboardOnly		; carry set if so
 	jc	40$
 
-	sub	ds:[di].OLWI_titleBarBounds.R_right, CUAS_WIN_ICON_WIDTH+1
+	sub	ds:[di].OLWI_titleBarBounds.R_right, CUAS_CAPTION_ICON_WIDTH+1
 40$:
 endif
 
@@ -1644,6 +1644,9 @@ if _ISUI
 						; more room for icon
 	jmp	afterAdjustment
 notSysMenuButton:
+if _ISUI2000
+		mov	ax, CUAS_CAPTION_ICON_WIDTH
+endif
 	call	OpenCheckIfBW			; that's all for BW
 	jc	10$
 	sub	dx, 4				; margins = 2 above / 2 below

@@ -1008,17 +1008,21 @@ DoScrollCriteria	proc	near
 	; holds the width.  Twisted scrollbars have these rotated.
 	;
 	mov	bx, MO_ARROW_HEIGHT		;assume a normal scrollbar
-	mov	bp, MO_ARROW_WIDTH+1
+	mov	bp, MO_SCROLLBAR_WIDTH-1
 	test	ds:[di].OLSBI_attrs, mask OLSA_VERTICAL ;see if horizontal
 	jnz	5$				;no, branch
 	call	OpenMinimizeIfCGA		;check if on CGA
 	jnc	5$				;no, branch
-	sub	bp, MO_ARROW_WIDTH - CGA_HORIZ_ARROW_WIDTH
+	sub	bp, MO_SCROLLBAR_WIDTH - CGA_HORIZ_SCROLLBAR_WIDTH
 5$:
 	test	ds:[di].OLSBI_attrs, mask OLSA_TWISTED
 	jz	10$				;not twisted, branch
 	mov	bx, NUI_SPIN_ARROW_HEIGHT+2
+if _ISUI2000
+		mov	bp, MO_ARROW_WIDTH+2	; spinner keeps its original hit width
+else
 	inc	bp				;SPIN_ARROW is 1 pixel wider
+endif
 	
 10$:
 	mov	al, OLSS_DRAG_AREA

@@ -1260,13 +1260,13 @@ afterSysMenuButton::
 	test	ds:[di].OLWI_attrs, mask OWA_MAXIMIZABLE
 	jz	10$
 
-	add	cx, CUAS_WIN_ICON_WIDTH		;add room for Maximize button
+	add	cx, CUAS_CAPTION_ICON_WIDTH		;add room for Maximize button
 
 10$:
 	test	ds:[di].OLWI_attrs, mask OWA_MINIMIZABLE
 	jz	noSysMenu
 
-	add	cx, CUAS_WIN_ICON_WIDTH		;add room for Minimize button
+	add	cx, CUAS_CAPTION_ICON_WIDTH		;add room for Minimize button
 
 noSysMenu:
 	;
