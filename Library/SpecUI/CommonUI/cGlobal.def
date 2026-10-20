@@ -568,6 +568,7 @@ global	CF_DerefGenDI:near
 global	CF_ObjCallInstanceNoLock:near
 global	OLButtonDrawNOWIfNewState:far
 if _ISUI2000
+global OLButtonIsISUI2000Command:far
 global OLButtonTrackToolboxHover:far
 global OLButtonIsFlatToolbox:far
 endif

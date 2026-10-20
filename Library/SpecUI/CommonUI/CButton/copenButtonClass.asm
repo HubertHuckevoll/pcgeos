@@ -622,6 +622,9 @@ CUAS <	push	bp			;save returned min height  >
 
 	xchgdw	cxdx, axbx		;cx, dx <- moniker imposed size
 					;ax, bx <- passed size
+if _ISUI2000
+		call	OLButtonApplyISUI2000Size
+endif
 	;
 	; New code to pass whether we're a system icon or not.  7/20/94 cbh
 	;
@@ -710,6 +713,61 @@ OLButtonApplySizeHints	proc	near
 	pop	si
 	ret
 OLButtonApplySizeHints endp
+
+if _ISUI2000
+	;
+	; Prefer 50x14 dialog units for text command buttons. Use native font
+	; conversion, then let OpenChooseNewGadgetSize and size hints decide the
+	; final size. CX/DX are natural size; preserve AX/BX parent suggestions.
+	;
+OLButtonApplyISUI2000Size proc near
+	uses ax, bx, bp, di
+	.enter
+		call	OLButtonIsISUI2000Command
+		jnc	done
+		call	OpenCheckIfCGA
+		jc	done
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+		mov	bx, ds:[di].OLBI_genChunk
+		tst	bx
+		jz	done
+		mov	bx, ds:[bx]
+		mov	di, bx
+		add	di, ds:[di].Vis_offset
+		test	ds:[di].VI_typeFlags, mask VTF_IS_GEN
+		jz	done
+		add	bx, ds:[bx].Gen_offset
+		mov	bx, ds:[bx].GI_visMoniker
+		tst	bx
+		jz	done
+		mov	bx, ds:[bx]
+		test	ds:[bx].VM_type, mask VMT_GSTRING or mask VMT_MONIKER_LIST
+		jnz	done			;keep graphic-only buttons compact
+		call	ViewCreateCalcGState
+		mov	ax, SpecWidth <SST_AVG_CHAR_WIDTHS, 25>
+		call	VisConvertSpecVisSize
+		inc	ax
+		shr	ax, 1			;ceil(12.5 average character widths)
+		cmp	cx, ax
+		jae	haveWidth
+		mov	cx, ax
+haveWidth:
+		mov	ax, SpecHeight <SST_LINES_OF_TEXT, 7>
+		call	VisConvertSpecVisSize
+		add	ax, 3
+		shr	ax, 1
+		shr	ax, 1			;ceil(1.75 lines of text)
+		cmp	dx, ax
+		jae	haveHeight
+		mov	dx, ax
+haveHeight:
+		call	GrDestroyState
+done:
+	.leave
+		ret
+OLButtonApplyISUI2000Size endp
+endif
 
 
 
@@ -1153,6 +1211,12 @@ endif
 	mov	ss:[bp].OMA_rightInset, dx		;and as right inset
 	mov	ss:[bp].OMA_bottomInset, bx		;and as bottom inset
 haveInsets::
+if _ISUI2000
+		call	OLButtonIsISUI2000Command
+		jnc	haveCommandJustification
+		or	ax, J_CENTER shl offset DMF_X_JUST
+haveCommandJustification:
+endif
 	mov	ss:[bp].OMA_drawMonikerFlags, ax	;save DrawMonikerFlags (low byt)
 
 	;determine which accessories to draw with the moniker

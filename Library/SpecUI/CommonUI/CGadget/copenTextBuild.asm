@@ -821,7 +821,37 @@ if (not _DUI)				; don't make larger on DUI
 endif ; (not _DUI)
 	mov	al, FRAME_TEXT_MARGIN		
 	call	OpenCheckIfCGA			;smaller in CGA 11/18/92 cbh
+if _ISUI2000
+		jc	compactTextMargin
+		test	ds:[di].GTXI_attrs, mask GTA_SINGLE_LINE_TEXT
+		jz	7$
+	;
+	; Keep legacy margins when the application constrains field height.
+	; Width-only hints still allow the normal single-line field margins.
+	;
+		push	ax, bx
+		mov	ax, HINT_FIXED_SIZE
+		call	ObjVarFindData
+		jnc	checkMaximumHeight
+		test	ds:[bx].CSHA_height, mask SSS_DATA
+		jnz	keepTextMargin
+checkMaximumHeight:
+		mov	ax, HINT_MAXIMUM_SIZE
+		call	ObjVarFindData
+		jnc	useFieldMargin
+		test	ds:[bx].CSHA_height, mask SSS_DATA
+		jnz	keepTextMargin
+useFieldMargin:
+		pop	ax, bx
+		mov	al, ISUI2000_FIELD_Y_INSET
+		jmp	7$
+keepTextMargin:
+		pop	ax, bx
+		jmp	7$
+compactTextMargin:
+else
 	jnc	7$
+endif
 
 if	((FRAME_TEXT_MARGIN - CGA_FRAME_TEXT_MARGIN) eq 1)
 	dec	al

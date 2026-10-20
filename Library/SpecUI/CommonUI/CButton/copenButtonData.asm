@@ -323,7 +323,11 @@ MOBWButtonRegionSet_replyButton		label	BWButtonRegionSetStruct
 	word	MOBWButton_replyInterior
 	byte	(J_CENTER shl offset DMF_X_JUST) \
 		or (J_CENTER shl offset DMF_Y_JUST)
+if _ISUI2000
+	byte	MO_BUTTON_INSET_X
+else
 	byte	MO_REPLY_BUTTON_INSET_X
+endif
 	byte	MO_BUTTON_INSET_Y
 	byte	MO_BUTTON_MIN_HEIGHT+MO_REPLY_BUTTON_INSET_Y
 	byte	MO_BUTTON_INSET_Y_CGA
@@ -334,8 +338,16 @@ MOBWButtonRegionSet_defReplyButton	label	BWButtonRegionSetStruct
 	word	MOBWButton_replyInterior
 	byte	(J_CENTER shl offset DMF_X_JUST) \
 		or (J_CENTER shl offset DMF_Y_JUST)
+if _ISUI2000
+	byte	MO_BUTTON_INSET_X
+else
 	byte	MO_REPLY_BUTTON_INSET_X
+endif
+if _ISUI2000
+	byte	MO_BUTTON_INSET_Y
+else
 	byte	MO_REPLY_BUTTON_INSET_Y
+endif
 	byte	MO_BUTTON_MIN_HEIGHT+MO_REPLY_BUTTON_INSET_Y
 	byte	MO_BUTTON_INSET_Y_CGA
 	byte	MO_BUTTON_INSET_X_NARROW

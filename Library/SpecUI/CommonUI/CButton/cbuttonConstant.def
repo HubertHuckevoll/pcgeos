@@ -76,6 +76,12 @@ if	_MOTIF
   MO_CGA_REPLY_BUTTON_INSET_X	= (MO_BUTTON_INSET_X/2) + 1
 
 elseif	_ISUI
+if _ISUI2000
+     MO_BUTTON_INSET_Y		= ISUI2000_FIELD_Y_INSET
+     MO_BUTTON_INSET_Y_CGA	= 2
+     MO_BUTTON_MIN_WIDTH	= 7
+     MO_BUTTON_MIN_HEIGHT	= 7
+else
   if	DOUBLE_BORDERED_GADGETS
      MO_BUTTON_INSET_Y		= 3	;distance from very top or bottom of 
      MO_BUTTON_INSET_Y_CGA	= 2	;y inset for CGA
@@ -90,12 +96,23 @@ elseif	_ISUI
   
 ;  MO_BUTTON_INSET_X		= 6	;distance from left or right edge of 
    					;  (in cConstant.def now)
+endif
+
+if _ISUI2000
+  MO_REPLY_BUTTON_INSET_X	= 1	;one-pixel default ring
+  MO_REPLY_BUTTON_INSET_Y	= 1
+else
   MO_REPLY_BUTTON_INSET_X	= MO_BUTTON_INSET_X			     
   MO_REPLY_BUTTON_INSET_Y	= MO_BUTTON_INSET_Y
+endif
   MO_REPLY_BUTTON_MIN_HEIGHT	= 10	;keeps regions from blowing up       
   MO_REPLY_BUTTON_MIN_WIDTH	= 10	;keeps regions from blowing up       
   
+if _ISUI2000
+  MO_CGA_REPLY_BUTTON_INSET_Y	= MO_REPLY_BUTTON_INSET_Y
+else
   MO_CGA_REPLY_BUTTON_INSET_Y	= (MO_BUTTON_INSET_Y/2) + 1
+endif
   MO_CGA_REPLY_BUTTON_INSET_X	= (MO_BUTTON_INSET_X/2) + 1
 
 else ;Non-motif, non-ISUI

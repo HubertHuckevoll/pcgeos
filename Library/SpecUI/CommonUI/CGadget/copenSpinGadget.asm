@@ -376,6 +376,23 @@ if SPINNER_GEN_VALUE
 	add	ax, SPINNER_TEXT_MARGIN*2
 notSpinner:
 endif
+if _ISUI2000
+	;
+	; Match single-line text/drop-down fields. The spin frame adds one
+	; pixel per side; native text positioning centers the remaining inset.
+	; Explicit desired heights and pen/CGA/slider sizing keep their paths.
+	;
+		test	ds:[di].OLSGI_attrs, mask OLSGA_SLIDER
+		jnz	haveFieldHeight
+		test	ds:[di].OLSGI_states, mask OLSGS_DRAW_FRAME
+		jz	haveFieldHeight
+		call	OpenCheckIfCGA
+		jc	haveFieldHeight
+		call	CheckIfLargeHeight
+		jc	haveFieldHeight
+		add	ax, 2 * (ISUI2000_FIELD_Y_INSET - 1)
+haveFieldHeight:
+endif
 	mov	ds:[di].OLSGI_desHeight, ax
 20$:
 	;

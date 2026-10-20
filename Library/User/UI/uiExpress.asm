@@ -1855,7 +1855,14 @@ CheckIfRunningISUI	proc	near
 	mov	cx, mask GA_LIBRARY
 	mov	dx, mask GA_PROCESS or mask GA_DRIVER or mask GA_APPLICATION
 	call	GeodeFind
-
+	jc	foundISUI
+	;
+	; Both specific UIs use the ISUI Express menu structure.
+	; GeodeFind preserves the search length and attribute masks.
+	;
+	mov	di, offset isui2000Name
+	call	GeodeFind
+foundISUI:
 	rcl	ds:[runningISUI], 1
 doCheck:
 	tst	ds:[runningISUI]			;z flag - clear if ISUI
@@ -2027,6 +2034,7 @@ taskBarEnabledString	char	"taskBarEnabled", 0
 uiFeaturesCatString	char	"uiFeatures", 0
 defaultLauncherString	char	"defaultLauncher", 0
 isuiName 		char 	"isui    ", 0
+isui2000Name		char	"isui2000", 0
 motifName 		char 	"motif   ", 0
 
 

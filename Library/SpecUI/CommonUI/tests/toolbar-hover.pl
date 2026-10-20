@@ -15,7 +15,13 @@ sub source {
 my $asm = source('CButton/copenButtonCommon.asm') .
           source('CButton/copenButtonColor.asm') . source('CWin/cwinPtr.asm') .
           source('CComp/copenMenuItemGroup.asm') . source('../ISUI/Win/winDraw.asm') .
-          source('CItem/citemItemColor.asm') . source('CComp/copenCtrlCommon.asm');
+          source('CItem/citemItemColor.asm') . source('CComp/copenCtrlCommon.asm') .
+          source('CButton/copenButtonClass.asm') . source('CGadget/copenTextBuild.asm') .
+          source('CGadget/copenGlyphDisplay.asm') . source('../../User/Vis/visSpecUtils.asm') . source('../../User/UI/uiExpress.asm');
+my $spin = source('CGadget/copenSpinGadget.asm');
+$spin =~ /if _ISUI2000\n(\t;\n\t; Match single-line text.*?)(?=^endif)/ms
+    or die "missing spin field geometry\n";
+$asm .= "\nSpinFieldHeight proc near\n$1\nret\nSpinFieldHeight endp\n";
 my $displayGroup = source('CWin/cwinDisplayControl.asm');
 $displayGroup =~ /^else\n\nOLDisplayGroupDraw[^\n]*\n(.*?)^OLDisplayGroupDraw\s+endp/ms
     or die "display-group paint path missing\n";
@@ -38,6 +44,9 @@ my %constant = (TRUE => -1, C_BLACK => 0, C_LIGHT_GRAY => 7, C_DARK_GRAY => 8, C
     MSG_OL_WIN_SET_TOOLBOX_HOVER => 124, MSG_VIS_VUP_FIND_OBJECT_OF_CLASS => 125,
     'segment OLWinClass' => 20, 'offset OLWinClass' => 30,
     'segment TaskBarListClass' => 21, 'offset TaskBarListClass' => 31);
+my $shared = source('cConstant.def');
+$shared =~ /^ISUI2000_FIELD_Y_INSET\s*=\s*(\d+)/m or die "missing field inset\n";
+my $fieldInset = $1;
 # Read the palette indices from the native definitions.
 open my $colors, '<', "$FindBin::Bin/../../../../Include/color.def" or die $!;
 my $index = 0;
@@ -50,6 +59,11 @@ while (<$colors>) {
 $constant{C_LIGHT_GREY} = $constant{C_LIGHT_GRAY};
 $constant{C_DARK_GREY} = $constant{C_DARK_GRAY};
 $constant{MAX_CF_INDEX} = $constant{C_WHITE};
+@constant{qw(FRAME_TEXT_MARGIN CGA_FRAME_TEXT_MARGIN PEN_FRAME_TEXT_MARGIN ISUI2000_FIELD_Y_INSET)} = (2, 1, 10, $fieldInset);
+@constant{'SpecWidth <SST_AVG_CHAR_WIDTHS, 25>', 'SpecHeight <SST_LINES_OF_TEXT, 7>'} = (1, 2);
+@constant{qw(ATTR_OL_BUTTON_IN_TITLE_BAR HINT_FIXED_SIZE HINT_MAXIMUM_SIZE HINT_TEXT_DO_NOT_MAKE_LARGER_ON_PEN_SYSTEMS HINT_NO_BORDERS_ON_MONIKERS HINT_EXPRESS_MENU)} = (1001, 1002, 1003, 1004, 1005, 1006);
+@constant{'mask VMT_GSTRING', 'mask VMT_MONIKER_LIST', 'mask VTF_IS_GEN', 'mask GTA_SINGLE_LINE_TEXT',
+    'mask SSS_DATA', 'mask TDSS_IN_FRAME', 'mask OLSGA_SLIDER', 'mask OLSGS_DRAW_FRAME', 'J_CENTER shl offset DMF_X_JUST'} = (64, 128, 128, 1, 1023, 1, 1, 1, 1);
 for my $record (qw(OLButtonSpecState OLButtonMoreAttrs OLButtonFixedAttrs OLWinFixedAttr OLDisplayGroupStates)) {
     my $file = $record eq 'OLDisplayGroupStates' ? 'olDisplayGroupClass.def' :
                $record eq 'OLWinFixedAttr' ? 'olWinClass.def' : 'olButtonClass.def';
@@ -65,8 +79,19 @@ for my $record (qw(OLButtonSpecState OLButtonMoreAttrs OLButtonFixedAttrs OLWinF
         $constant{"mask $bits[$i]"} = ((1 << $bits[$i + 1]) - 1) << $shift if $bits[$i] ne '';
     }
 }
+for my $flag (qw(EXPAND_WIDTH_TO_FIT_PARENT EXPAND_HEIGHT_TO_FIT_PARENT CAN_CLIP_MONIKER_WIDTH CAN_CLIP_MONIKER_HEIGHT IN_TOOLBOX)) {
+    $constant{"mask OLGDF_$flag"} = $constant{"mask OLBMA_$flag"};
+}
+my ($cga, $hasTitle, $penLarge, $penNoLarge, $fixedHeight, $maxHeight, $noBorders, $express, $fontWidth, $fontHeight, $gstates) = (0, 0, 0, 0, undef, undef, 0, 0, 6, 13, 0);
 my $isui2000 = 1;
-my (%reg, %mem, @gradient, @frame, @rect, @line, @fill, @invalid, $zero, $carry, $mask, @pen, $bw, $lineColor, $bordered, $areaColor, $faceColor, $parentIsTaskbar, $hasParent, $parentLocked);
+my ($loadedUI, @searched);
+@constant{qw(dgroup cs), 'mask GA_LIBRARY', 'mask GA_PROCESS or mask GA_DRIVER or mask GA_APPLICATION'} = (1, 2, 1, 14);
+for my $name (qw(isuiName isui2000Name)) {
+    $asm =~ /^$name\s+char\s+"([^"]+)"/m or die "missing $name\n";
+    $constant{"offset $name"} = $name eq 'isuiName' ? 2001 : 2002;
+    $constant{$constant{"offset $name"}} = $1;
+}
+my (%reg, %mem, @gradient, @frame, @rect, @line, @fill, @invalid, $zero, $carry, $signedLess, $negative, $mask, @pen, $bw, $lineColor, $bordered, $areaColor, $faceColor, $parentIsTaskbar, $hasParent, $parentLocked);
 $hasParent = 1; $parentIsTaskbar = 1; $parentLocked = 0;
 sub value {
     my ($x) = @_;
@@ -77,12 +102,15 @@ sub value {
     return value($1) * 65536 + value($2) if $x =~ /^(bx|cx)(si|dx)$/;
     return $constant{$x} if exists $constant{$x};
     return $x if $x =~ /^-?\d+$/;
+    return hex($1) if $x =~ /^(?:0x([0-9a-f]+))$/i;
+    return hex($1) if $x =~ /^([0-9a-f]+)h$/i;
+    return 2 * ($constant{ISUI2000_FIELD_Y_INSET} - 1) if $x eq '2 * (ISUI2000_FIELD_Y_INSET - 1)';
     return value($1) << $2 if $x =~ /^\((.+) shl (\d+)\)$/;
     return value($1) * 16 + value($2) if $x =~ /^ColorScheme <([^,]+),\s*(.+)>$/;
     if ($x =~ / or /) { my $v = 0; $v |= value($_) for split / or /, $x; return $v; }
     return value($1) if $x =~ /^\((.+)\)$/;
     $x =~ s/\[(si|di|bx|bp)\]/'[' . value($1) . ']'/ge;
-    return $mem{$x} // 0 if $x =~ /^ds:/;
+    return $mem{$x} // 0 if $x =~ /^(?:ds:|desiredSize\.)/;
     die "unknown operand: $x\n";
 }
 sub assign {
@@ -109,48 +137,80 @@ sub run {
     my $active = 1;
     for (split /\n/, $body) {
         s/;.*//; s/^\s+|\s+$//g;
-        s/^TABS\s*<(.*?)>/$1/; s/\b(?:LONG|short)\s+//g;
+        s/^(?:TABS|CUAS)\s*<(.*?)>/$1/;
+        next if /^(?:OLS|EC)\s*</; s/\b(?:LONG|short)\s+//g;
         s/^\s+|\s+$//g;
-        if (/^if (.+)$/) {
-            my %enabled = (_ISUI => 1, _ISUI2000 => $isui2000, '_MOTIF or _ISUI' => 1, TOOL_AREA_IS_TASK_BAR => 1);
+        if (/^if\s+(.+)$/) {
+            my %enabled = (_ISUI => 1, _ISUI2000 => $isui2000, '_MOTIF or _ISUI' => 1, TOOL_AREA_IS_TASK_BAR => 1, '(not _DUI)' => 1,
+                '((FRAME_TEXT_MARGIN - CGA_FRAME_TEXT_MARGIN) eq 1)' => 1);
             die "unknown condition $1\n" unless exists $enabled{$1};
             push @conditions, [$active, $enabled{$1}]; $active &&= $enabled{$1}; next;
         } elsif (/^else\b/) { $active = $conditions[-1][0] && !$conditions[-1][1]; next;
         } elsif (/^endif\b/) { $active = (pop @conditions)->[0]; next; }
         next unless $active;
-        next if /^(?:$|uses\b|class\b|\.|MSG_)/;
+        next if /^(?:$|uses\b|class\b|\.|MSG_)/ || /^\w+\s+local\b/;
         if (/^([\w\$]+):$/) { $label{$1} = scalar @code; } else { push @code, $_; }
     }
     for (my $i = 0; $i < @code; $i++) {
         my $line = $code[$i];
-        if ($line =~ /^(mov(?:dw)?|add|or|shl|cmp(?:dw)?|test|xchg)\s+(.+?),\s*(.+)$/) {
+        $line =~ s/^(segmov\s+\w+,\s*\w+),\s*\w+$/$1/;
+        if ($line =~ /^(mov(?:dw)?|segmov|add|or(?:nf)?|shl|shr|sub|cmp(?:dw)?|test|xchg)\s+(.+?),\s*(.+)$/) {
             my ($op, $a, $b) = ($1, $2, $3);
             my $v = value($b);
-            if ($op =~ /^mov/) { assign($a, $v); }
+            if ($op =~ /^mov/ || $op eq 'segmov') { assign($a, $v); }
             elsif ($op eq 'add') { assign($a, value($a) + $v); $zero = !value($a); $carry = 0; }
-            elsif ($op =~ /^cmp/) { $zero = value($a) == $v; $carry = value($a) < $v; }
-            elsif ($op eq 'or' || $op eq 'shl') { assign($a, $op eq 'or' ? value($a) | $v : value($a) << $v); $zero = !value($a); $carry = 0; }
+            elsif ($op =~ /^cmp/) { $zero = value($a) == $v; $carry = value($a) < $v;
+                my ($left, $right) = (value($a), $v);
+                $left -= 65536 if $left & 32768; $right -= 65536 if $right & 32768;
+                $signedLess = $left < $right; }
+            elsif ($op =~ /^or/ || $op eq 'shl' || $op eq 'shr' || $op eq 'sub') {
+                assign($a, $op =~ /^or/ ? value($a) | $v : $op eq 'shl' ? value($a) << $v : $op eq 'shr' ? value($a) >> $v : value($a) - $v);
+                $zero = !value($a); $carry = 0; }
             elsif ($op eq 'test') { $zero = !(value($a) & $v); $carry = 0; }
             else { my $old = value($a); assign($a, $v); assign($b, $old); }
+        } elsif ($line =~ /^rcl\s+(.+),\s*1$/) {
+            my $old = value($1); assign($1, (($old << 1) | $carry) & 255); $carry = !!($old & 128);
         } elsif ($line =~ /^(inc|dec)\s+(.+)$/) {
             my ($op, $a) = ($1, $2); assign($a, value($a) + ($op eq 'inc' ? 1 : -1)); $zero = !value($a);
         } elsif ($line eq 'pushf') { push @stack, [$zero, $carry];
         } elsif ($line eq 'popf') { ($zero, $carry) = @{pop @stack};
-        } elsif ($line =~ /^tst\s+(.+)$/) { $zero = !value($1); $carry = 0;
+        } elsif ($line =~ /^tst\s+(.+)$/) { $zero = !value($1); $carry = 0; $negative = !!(value($1) & 32768);
         } elsif ($line =~ /^clr\s+(.+)$/) { assign($_, 0) for split /,\s*/, $1; $zero = 1; $carry = 0;
         } elsif ($line =~ /^(push|pop)\s+(.+)$/) {
             my ($op, @r) = ($1, split /,\s*/, $2);
             if ($op eq 'push') { push @stack, [map { value($_) } @r]; }
             else { my $v = pop @stack or die "stack underflow\n"; assign($r[$_], $v->[$_]) for 0 .. $#r; }
-        } elsif ($line =~ /^(jz|je|jnz|jnc|jc|jbe|jmp)\s+([\w\$]+)$/) {
+        } elsif ($line =~ /^(jz|je|jnz|jne|jnc|jc|jbe|jae|ja|jb|jle|js|jmp)\s+([\w\$]+)$/) {
             my ($op, $target) = ($1, $2);
             $i = $label{$target} - 1 if $op eq 'jmp' ||
-                ($op =~ /^j[ze]$/ ? $zero : $op eq 'jnz' ? !$zero : $op eq 'jc' ? $carry : $op eq 'jbe' ? $carry || $zero : !$carry);
+                ($op =~ /^j[ze]$/ ? $zero : $op =~ /^jn[ze]$/ ? !$zero : $op eq 'jc' ? $carry : $op eq 'jbe' ? $carry || $zero : $op eq 'ja' ? !$carry && !$zero :
+                 $op eq 'jb' ? $carry : $op eq 'jle' ? $signedLess || $zero : $op eq 'js' ? $negative : !$carry);
         } elsif ($line eq 'stc' || $line eq 'clc') { $carry = $line eq 'stc';
         } elsif ($line eq 'ret') { last;
         } elsif ($line =~ /^call\s+(\w+)$/) {
             my $call = $1;
             if ($call eq 'DrawGradient') { push @gradient, [value('al'), value('dh')]; }
+            elsif ($call eq 'GeodeFind') {
+                die "wrong Express geode search\n" unless $reg{ax} == 8 && $reg{cx} == 1 && $reg{dx} == 14 && $reg{es} == 2;
+                push @searched, $constant{$reg{di}};
+                $carry = $constant{$reg{di}} eq $loadedUI; $reg{bx} = $carry ? 99 : 0;
+            }
+            elsif ($call eq 'OpenCheckIfCGA') { $carry = $cga; }
+            elsif ($call eq 'SysGetPenMode') { $reg{ax} = $penLarge; }
+            elsif ($call eq 'CheckIfLargeHeight') { $carry = $penLarge; }
+            elsif ($call eq 'ObjVarFindData') {
+                my $hint = $reg{ax};
+                $carry = $hint == 1001 ? $hasTitle : $hint == 1002 ? defined $fixedHeight :
+                    $hint == 1003 ? defined $maxHeight : $hint == 1004 ? $penNoLarge : $hint == 1005 ? $noBorders : $hint == 1006 ? $express : die "unexpected hint\n";
+                $reg{bx} = 9;
+                $mem{'ds:[9].CSHA_height'} = ($hint == 1002 ? $fixedHeight : $maxHeight) // 0;
+            }
+            elsif ($call eq 'ViewCreateCalcGState') { $gstates++; @reg{qw(di bp)} = (77, 77); }
+            elsif ($call eq 'VisConvertSpecVisSize') {
+                die "missing font GState\n" unless $gstates == 1 && $reg{di} == 77;
+                $reg{ax} = $reg{ax} == 1 ? 25 * $fontWidth : $reg{ax} == 2 ? 7 * $fontHeight : die "bad preferred size\n";
+            }
+            elsif ($call eq 'GrDestroyState') { die "wrong GState\n" unless $reg{di} == 77 && $gstates == 1; $gstates--; }
             elsif ($call eq 'OpenCheckIfBW') { $carry = $bw; }
             elsif ($call eq 'OpenGetBackgroundColor') { $reg{ax} = 0x0707; }
             elsif ($call eq 'GrGetCurPos') { @reg{qw(ax bx)} = @pen; }
@@ -445,3 +505,129 @@ for my $variant (0, 1) {
     }
 }
 print "ISUI / ISUI 2000 chrome paint and hover checks passed\n";
+
+# Use the actual preferred-size code, then GEOS's expand/clip and size-hint
+# routines. Suggested sizes must remain suggestions, including CHOOSE_OWN_SIZE.
+$isui2000 = 1;
+for my $kind (qw(text graphic list empty no_generic no_gen_chunk menu menu_bar popup submenu caption title toolbar unbordered borderless_pressed setting express)) {
+    for my $compact (0, 1) {
+        $cga = $compact; $hasTitle = $kind eq 'title'; $noBorders = $kind eq 'borderless_pressed'; $express = $kind eq 'express';
+        %reg = (ax => 32768, bx => 32768, cx => 24, dx => 17, si => 1, di => 1, bp => 991);
+        %mem = ('ds:[1]' => 1, 'ds:[2]' => 2, 'ds:[3]' => 3,
+            'ds:[1].OLBI_genChunk' => $kind eq 'no_gen_chunk' ? 0 : 2,
+            'ds:[2].VI_typeFlags' => $kind eq 'no_generic' ? 0 : $constant{'mask VTF_IS_GEN'},
+            'ds:[2].GI_visMoniker' => $kind eq 'empty' ? 0 : 3,
+            'ds:[3].VM_type' => $kind eq 'graphic' ? 64 : $kind eq 'list' ? 128 : 0,
+            'ds:[1].OLBI_moreAttrs' => $kind eq 'toolbar' ? $constant{'mask OLBMA_IN_TOOLBOX'} : 0,
+            'ds:[1].OLBI_specState' => $kind eq 'unbordered' ? 0 : $constant{'mask OLBSS_BORDERED'});
+        my %state = (menu => 'IN_MENU', menu_bar => 'IN_MENU_BAR', popup => 'MENU_DOWN_MARK', submenu => 'MENU_RIGHT_MARK', caption => 'SYS_ICON', setting => 'SETTING');
+        $mem{'ds:[1].OLBI_specState'} |= $constant{'mask OLBSS_'.$state{$kind}} if exists $state{$kind};
+        my %before = %reg;
+        run('OLButtonApplyISUI2000Size');
+        my $want = $kind eq 'text' && !$compact ? '75 23' : '24 17';
+        die "wrong $kind/$compact preferred size\n" unless "$reg{cx} $reg{dx}" eq $want;
+        die "size suggestions/registers damaged\n" if grep { $reg{$_} != $before{$_} } qw(ax bx bp si di);
+        die "geometry GState leak\n" if $gstates;
+    }
+}
+$cga = 0; $hasTitle = 0; $noBorders = 0; $express = 0;
+%mem = ('ds:[1]' => 1, 'ds:[2]' => 2, 'ds:[3]' => 3,
+    'ds:[1].OLBI_genChunk' => 2, 'ds:[2].VI_typeFlags' => 128,
+    'ds:[2].GI_visMoniker' => 3, 'ds:[1].OLBI_specState' => $constant{'mask OLBSS_BORDERED'});
+for my $metrics ([4,9,50,16], [6,13,75,23], [9,20,113,35], [14,32,175,56]) {
+    ($fontWidth, $fontHeight) = @$metrics;
+    for my $natural ([12,7], [200,80]) {
+        %reg = (cx => $natural->[0], dx => $natural->[1], si => 1, di => 1);
+        run('OLButtonApplyISUI2000Size');
+        die "font/long moniker not accommodated\n" unless $reg{cx} == ($natural->[0] > $metrics->[2] ? $natural->[0] : $metrics->[2]) &&
+            $reg{dx} == ($natural->[1] > $metrics->[3] ? $natural->[1] : $metrics->[3]);
+    }
+}
+($fontWidth, $fontHeight) = (6, 13);
+my $expand = $constant{'mask OLGDF_EXPAND_WIDTH_TO_FIT_PARENT'} | $constant{'mask OLGDF_EXPAND_HEIGHT_TO_FIT_PARENT'};
+my $clip = $constant{'mask OLGDF_CAN_CLIP_MONIKER_WIDTH'} | $constant{'mask OLGDF_CAN_CLIP_MONIKER_HEIGHT'};
+for my $parent ([180,40,0,75,23], [180,40,$expand,180,40], [50,18,$clip,50,18], [32768,32768,$expand,75,23], [32768,32768,$clip,75,23]) {
+    %reg = (ax => $parent->[0], bx => $parent->[1], cx => 24, dx => 17, si => 1, di => 1, bp => $parent->[2]);
+    run('OLButtonApplyISUI2000Size'); run('OpenChooseNewGadgetSize');
+    die "parent geometry decision ignored\n" unless $reg{cx} == $parent->[3] && $reg{dx} == $parent->[4];
+}
+for my $limits ([0,0,0,0,0,0,75,23], [40,17,40,17,40,17,40,17], [0,0,100,30,0,0,100,30], [0,0,0,0,60,20,60,20]) {
+    @mem{map { 'desiredSize.SSA_'.$_ } qw(fixedWidth fixedHeight minWidth minHeight maxWidth maxHeight)} = @$limits[0..5];
+    %reg = (cx => 75, dx => 23);
+    run('VisApplySizeArgsToWidth'); run('VisApplySizeArgsToHeight');
+    die "fixed/min/max geometry hint ignored\n" unless $reg{cx} == $limits->[6] && $reg{dx} == $limits->[7];
+}
+my $buttonClass = source('CButton/copenButtonClass.asm');
+$buttonClass =~ /OLButtonRerecalcSize\s+method(.*?)^OLButtonRerecalcSize\s+end[pm]/ms or die "missing button recalc\n";
+die "preferred size bypasses geometry/hints\n" unless $1 =~ /call\s+OLButtonApplySizeHints.*?call\s+OLButtonApplyISUI2000Size.*?call\s+OpenChooseNewGadgetSize.*?call\s+OLButtonApplySizeHints/s;
+# Single-line field margins preserve multi-line text, pen sizing and explicit
+# height constraints. Width-only fixed/max hints still get normal field inset.
+for my $variant (0, 1) {
+    $isui2000 = $variant;
+    for my $single (0, 1) {
+        for my $compact (0, 1) {
+            for my $pen (0, 1) {
+                for my $heights ([undef,undef], [0,undef], [17,undef], [6144,undef], [undef,0], [undef,17], [undef,6144]) {
+                    $cga = $compact; $penLarge = $pen; ($fixedHeight, $maxHeight) = @$heights;
+                    %reg = (si => 1); %mem = ('ds:[1]' => 1, 'ds:[1].GTXI_attrs' => $single);
+                    run('SetTextMargins');
+                    my $want = $pen && $single ? 10 : $compact ? 1 : $variant && $single && !(($fixedHeight // 0) & 1023) && !(($maxHeight // 0) & 1023) ? 4 : 2;
+                    die "single-line margin/hint regression\n" unless $mem{'ds:[1].VTI_tbMargin'} == $want;
+                    die "multi-line/width margin changed\n" unless $mem{'ds:[1].VTI_lrMargin'} == 2;
+                }
+            }
+        }
+    }
+}
+$isui2000 = 1; $fixedHeight = $maxHeight = undef; $penLarge = $cga = 0;
+for my $slider (0, 1) {
+    for my $frame (0, 1) {
+        for my $compact (0, 1) {
+            for my $pen (0, 1) {
+                $cga = $compact; $penLarge = $pen;
+                %reg = (ax => 13, cx => 90, dx => 91, di => 1, si => 1);
+                %mem = ('ds:[1].OLSGI_attrs' => $slider, 'ds:[1].OLSGI_states' => $frame);
+                run('SpinFieldHeight');
+                my $want = !$slider && $frame && !$compact && !$pen ? 19 : 13;
+                die "spin default/pen/slider sizing regression\n" unless $reg{ax} == $want && $reg{cx} == 90 && $reg{dx} == 91;
+            }
+        }
+    }
+}
+$penLarge = $cga = 0;
+
+# The default ring is separate from content padding. Default/non-default reply
+# buttons must retain the same geometry, including long or multi-line monikers.
+my $regions = source('CButton/copenButtonData.asm');
+$regions =~ /;ISUI reply bar button region structures(.*?);ISUI listbox button region structures/s or die "missing reply regions\n";
+my $reply = $1;
+$reply =~ s/^if _ISUI2000\n(.*?)^else\n.*?^endif\n/$1/msg;
+for my $name (qw(MOBWButtonRegionSet_replyButton MOBWButtonRegionSet_defReplyButton)) {
+    $reply =~ /^$name\s+label[^\n]*\n(.*?)(?=^MOBW|\z)/ms or die "missing $name\n";
+    my @insets = $1 =~ /^\s*byte\s+(\w+)\s*$/gm;
+    die "reply padding disagrees with drawing/default state\n" unless $insets[0] eq 'MO_BUTTON_INSET_X' && $insets[1] eq 'MO_BUTTON_INSET_Y';
+}
+
+for my $method (qw(SetupMonikerArgs OLButtonDrawMoniker)) {
+    $asm =~ /^$method\s+proc[^\n]*\n(.*?)^$method\s+endp/ms or die "missing $method\n";
+    die "drawing and moniker geometry disagree\n" unless $1 =~ /call\s+OLButtonIsISUI2000Command.*?or\s+a[lx], J_CENTER shl offset DMF_X_JUST/s;
+}
+print "ISUI 2000 geometry-manager checks passed\n";
+
+# The shared UI must recognize both ISUI permanent names, for EC and NC alike.
+for my $ui ('isui    ', 'isui2000', 'motif   ', 'motifr  ', 'isui2001', '') {
+    $loadedUI = $ui;
+    @searched = ();
+    %mem = ('ds:[runningISUI]' => 128);
+    %reg = (ax => 11, bx => 22, cx => 33, dx => 44, si => 55, di => 66, ds => 77, es => 88);
+    my %before = %reg;
+    my $found = $loadedUI eq 'isui    ' || $loadedUI eq 'isui2000' ? 1 : 0;
+    for (1 .. 2) {
+        run('CheckIfRunningISUI');
+        die "wrong Express UI family/cache\n" unless (!$zero) == $found && $mem{'ds:[runningISUI]'} == $found;
+        die "Express search damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+        my $want = $loadedUI eq 'isui    ' ? 'isui    ' : 'isui    |isui2000';
+        die "wrong Express lookup/cache sequence\n" unless join('|', @searched) eq $want;
+    }
+}
+print "Express menu UI-family checks passed\n";

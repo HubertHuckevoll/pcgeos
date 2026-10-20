@@ -2910,6 +2910,10 @@ endif
 BUTTON_INSET_X		=	6
 BUTTON_INSET_Y		=	2
 
+if _ISUI2000
+ISUI2000_FIELD_Y_INSET	=	4	;single-line field, including frame
+endif
+
 MO_BUTTON_INSET_X	=	6	; distance from left or right edge of
 
 MO_BUTTON_INSET_X_NARROW=	4

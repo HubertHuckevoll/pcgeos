@@ -436,6 +436,53 @@ OLButtonPtr	endp
 
 if _ISUI2000
 	;
+	; Bordered command buttons have their own sizing/centering defaults.
+	; Menus, toolbar controls, unbordered triggers and title controls are
+	; excluded from command preferences. Return carry set; preserve registers.
+	;
+OLButtonIsISUI2000Command proc far
+	uses ax, bx, si, di
+	.enter
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+		test	ds:[di].OLBI_specState, mask OLBSS_BORDERED
+		jz	notCommand
+		test	ds:[di].OLBI_specState, mask OLBSS_IN_MENU or \
+			mask OLBSS_IN_MENU_BAR or mask OLBSS_SYS_ICON or \
+			mask OLBSS_SETTING or \
+			mask OLBSS_MENU_DOWN_MARK or mask OLBSS_MENU_RIGHT_MARK
+		jnz	notCommand
+		test	ds:[di].OLBI_moreAttrs, mask OLBMA_IN_TOOLBOX
+		jnz	notCommand
+		mov	ax, ATTR_OL_BUTTON_IN_TITLE_BAR
+		call	ObjVarFindData
+		jc	notCommand
+	;
+	; An unbordered trigger may acquire a temporary border while pressed.
+	; Keep its geometry/justification stable throughout the interaction.
+	;
+		mov	si, ds:[di].OLBI_genChunk
+		tst	si
+		jz	notCommand
+		mov	ax, HINT_NO_BORDERS_ON_MONIKERS
+		call	ObjVarFindData
+		jc	notCommand
+	;
+	; Express deliberately omits the normal menu-arrow state.
+	;
+		mov	ax, HINT_EXPRESS_MENU
+		call	ObjVarFindData
+		jc	notCommand
+		stc
+		jmp	done
+notCommand:
+		clc
+done:
+	.leave
+		ret
+OLButtonIsISUI2000Command endp
+
+	;
 	; Flat chrome is limited to colour toolbar controls. Popup list fields
 	; keep their recessed frame.
 	; Return carry set for a toolbar control; preserve all registers.
@@ -3101,6 +3148,12 @@ OLButtonDrawMoniker	proc	far
 
 	;Draw moniker offset in X and centered in Y
 
+if _ISUI2000
+		call	OLButtonIsISUI2000Command
+		jnc	haveCommandJustification
+		or	al, J_CENTER shl offset DMF_X_JUST
+haveCommandJustification:
+endif
 	sub	sp, size OpenMonikerArgs	;make room for args
 	mov	bp, sp				;pass pointer in bp
 
