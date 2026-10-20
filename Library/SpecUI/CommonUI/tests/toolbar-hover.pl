@@ -163,7 +163,8 @@ sub run {
         if (/^if\s+(.+)$/) {
             my %enabled = (_ISUI => $isui, _ISUI2000 => $isui2000, '_MOTIF or _ISUI' => 1, TOOL_AREA_IS_TASK_BAR => 1, '(not _DUI)' => 1,
                 USE_COLOR_FOR_DISABLED_GADGETS => 0, DRAW_STYLES => 0,
-                '((FRAME_TEXT_MARGIN - CGA_FRAME_TEXT_MARGIN) eq 1)' => 1);
+                '((FRAME_TEXT_MARGIN - CGA_FRAME_TEXT_MARGIN) eq 1)' => 1,
+                '(_MOTIF or _ISUI) and ALLOW_TAB_ITEMS' => 1);
             die "unknown condition $1\n" unless exists $enabled{$1};
             push @conditions, [$active, $enabled{$1}, $enabled{$1}]; $active &&= $enabled{$1}; next;
         } elsif (/^elif _ISUI$/) {
@@ -978,3 +979,60 @@ for my $variant (qw(isui isui2000)) {
     }
 }
 print "ISUI / ISUI 2000 caption moniker placement checks passed\n";
+
+# Tab detection must preserve ordinary toolbox/taskbar moniker justification.
+my $itemPaint = source('CItem/citemItemColor.asm');
+$itemPaint =~ /^87\$:[^\n]*\n(.*?)(?=^checkInMenu:)/ms or die "missing toolbox moniker setup\n";
+my $itemInsets = $1;
+$itemInsets =~ s/^TAB_\w+ equ \d+\n//gm;
+$itemInsets =~ s/andnf/and/g;
+$asm .= "\nToolboxMonikerInsets proc near\n$itemInsets\ncheckInMenu:\nret\nToolboxMonikerInsets endp\n";
+@constant{qw(TOOLBOX_INSET_X TOOLBOX_INSET_Y TAB_INSET_Y TAB_UNSELECTED_Y_OFFSET OLITS_TAB_TOP),
+    'mask OLIER_TAB_STYLE', 'J_CENTER shl offset DMF_X_JUST', 'J_CENTER shl offset DMF_Y_JUST',
+    'J_LEFT shl offset DMF_X_JUST', 'J_LEFT shl offset DMF_Y_JUST'} = (2, 2, 4, 2, 1, 7, 2, 8, 0, 0);
+for my $variant (qw(motif isui isui2000)) {
+    $isui = $variant ne 'motif'; $isui2000 = $variant eq 'isui2000';
+    for my $extra (0, 16, 1, 4) { # plain, help flag, top tab, bottom tab
+        for my $selected (0, 1) {
+            %reg = (ax => ($constant{'mask OLIS_DRAW_AS_TOOLBOX'} << 8) | 8, si => 1);
+            %mem = ('ds:[1]' => 1, 'ds:[1].Vis_offset' => 0, 'ds:[1].OLII_extraRecord' => $extra,
+                'ds:[1].OLBI_specState' => $selected * $constant{'mask OLBSS_SELECTED'});
+            run('ToolboxMonikerInsets');
+            my $tab = $extra & 7;
+            my $inset = $tab ? ((4 + ($tab == 1 && !$selected ? 2 : 0)) << 8) : 0x0202;
+            die "$variant toolbox/taskbar moniker alignment changed\n" unless
+                value('al') == ($tab ? 2 : 8) && $reg{dx} == $inset;
+        }
+    }
+}
+print "ISUI / ISUI 2000 / Motif toolbox and taskbar moniker alignment checks passed\n";
+
+# Taskbar padding must exceed the frame and reserve space on both sides.
+$itemPaint = source('CItem/citemItemColor.asm');
+$itemPaint =~ /^90\$:\n(if TOOL_AREA_IS_TASK_BAR.*?^endif)\n/ms or die "missing taskbar padding\n";
+$asm .= "\nTaskbarMonikerPadding proc near\n$1\nret\nTaskbarMonikerPadding endp\n";
+for my $variant (qw(motif isui isui2000)) {
+    $isui = $variant ne 'motif'; $isui2000 = $variant eq 'isui2000';
+    for my $kind (qw(taskbar palette orphan ordinary)) {
+        $hasParent = $kind ne 'orphan'; $parentIsTaskbar = $kind eq 'taskbar';
+        my $oldInset = $isui ? 3 : 2;
+        %reg = (ax => 8 | ($kind eq 'ordinary' ? 0 : $constant{'mask OLIS_DRAW_AS_TOOLBOX'} << 8),
+            bx => 55, cx => 66, dx => 0x0200 | $oldInset, si => 1, di => 77, ds => 1, es => 41);
+        my %before = %reg;
+        run('TaskbarMonikerPadding');
+        die "$variant $kind horizontal padding wrong\n" unless
+            value('dl') == ($kind eq 'taskbar' ? 4 : $oldInset);
+        die "taskbar padding damaged drawing state\n" if
+            grep { $reg{$_} != $before{$_} } qw(ax bx cx si di ds es);
+        die "taskbar padding changed vertical inset or left parent locked\n" if value('dh') != 2 || $parentLocked;
+    }
+}
+# Native moniker arguments copy that inset to both sides before clipping.
+my $drawMoniker = source('CButton/copenButtonCommon.asm');
+my $clipMoniker = source('CUtils/copenMoniker.asm');
+die "taskbar side insets do not reach native clipping\n" unless
+    $drawMoniker =~ /mov\s+ss:\[bp\].OMA_leftInset, dx/ &&
+    $drawMoniker =~ /mov\s+ss:\[bp\].OMA_rightInset, dx/ &&
+    $clipMoniker =~ /sub\s+cx, ss:\[bp\].OMA_rightInset/ &&
+    $clipMoniker =~ /sub\s+cx, ss:\[bp\].OMA_leftInset/;
+print "ISUI / ISUI 2000 / Motif taskbar horizontal padding checks passed\n";

@@ -479,8 +479,8 @@ ISU <	mov	dx, CHECK_BOX_WIDTH					>
 if (_MOTIF or _ISUI) and ALLOW_TAB_ITEMS
 	mov	bp, ds:[si]
 	add	bp, ds:[bp].Vis_offset
-	mov	al, ds:[bp].OLII_extraRecord
-	test	al, mask OLIER_TAB_STYLE
+	; Preserve AL justification for ordinary toolbox items, including tasks.
+	test	ds:[bp].OLII_extraRecord, mask OLIER_TAB_STYLE
 	jz	checkInMenu
 TAB_INSET_Y equ 4
 TAB_UNSELECTED_Y_OFFSET equ 2
@@ -492,6 +492,7 @@ TAB_UNSELECTED_Y_OFFSET equ 2
 	;
 	test	ds:[bp].OLBI_specState, mask OLBSS_SELECTED
 	jnz	noTabAdjust
+	mov	al, ds:[bp].OLII_extraRecord
 	andnf	al, mask OLIER_TAB_STYLE
 	cmp	al, OLITS_TAB_TOP
 	jne	noTabAdjust
@@ -514,6 +515,26 @@ ISU <	jz	90$
 ISU <	add	dx, 0101h	;shift moniker down and to the right	>
 
 90$:
+if TOOL_AREA_IS_TASK_BAR
+	;
+	; Leave two pixels of face padding inside the taskbar's two-pixel frame.
+	;
+		test	ah, mask OLIS_DRAW_AS_TOOLBOX
+		jz	taskPaddingDone
+		push	bx, si, di, es
+		call	GenSwapLockParent
+		jnc	taskParentChecked
+		mov	di, segment TaskBarListClass
+		mov	es, di
+		mov	di, offset TaskBarListClass
+		call	ObjIsObjectInClass
+		call	ObjSwapUnlock		; preserves the class-test carry
+taskParentChecked:
+		pop	bx, si, di, es
+		jnc	taskPaddingDone
+		mov	dl, TOOLBOX_INSET_X + 2
+taskPaddingDone:
+endif
 	;
 	; pass al = DrawMonikerFlags, cx = OLMonikerAttrs
 	;
