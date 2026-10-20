@@ -2488,6 +2488,7 @@ OLButtonDrawISUI2000DropDownMark proc near
 		call	GrGetCurPos
 		add	ax, cx
 		sub	ax, OL_DOWN_MARK_WIDTH + BUTTON_INSET_X
+		inc	ax		; center the padded bitmap in the inset arrow frame
 		sub	dx, OL_MARK_HEIGHT
 		shr	dx, 1
 		add	bx, dx

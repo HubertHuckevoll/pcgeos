@@ -770,8 +770,19 @@ for my $enabled (0, 1) {
         run('OLButtonDrawISUI2000DropDownMark');
         die "wrong dropdown glyph state or disabled emboss\n" unless @bitmap == ($enabled ? 1 : 2) &&
             $bitmap[-1][1] == ($enabled ? 0 : 8) && $mask == 6 &&
-            join(',', @{$bitmapPos[-1]}) eq ($enabled && $pressed ? '69,29' : '68,28');
+            join(',', @{$bitmapPos[-1]}) eq ($enabled && $pressed ? '70,29' : '69,28');
         die "dropdown mark damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+
+        # Check visible ink against the arrow button, not the padded bitmap.
+        my @ink = grep { substr($bits[0], $_, 1) eq '1' } 0 .. length($bits[0])-1;
+        my @xs = sort { $a <=> $b } map { $_ % 16 } @ink;
+        my @ys = sort { $a <=> $b } map { int($_ / 16) } @ink;
+        my ($x, $y) = @{$bitmapPos[-1]};
+        $x--, $y-- if $enabled && $pressed; # intentional pressed displacement
+        my (undef, $left, $top, $right, $bottom) = @{$solidFrame[2]};
+        die "dropdown triangle ink is not centered in its frame\n" if
+            abs(($x + $xs[0] - $left) - ($right - 1 - $x - $xs[-1])) > 1 ||
+            abs(($y + $ys[0] - $top) - ($bottom - 1 - $y - $ys[-1])) > 1;
 
         for my $case ([5000, 11001, 10000, 6], [5100, 11002, 10012, 6],
                       [5200, 11003, 10024, 6], [5300, 11004, 10036, 6],
