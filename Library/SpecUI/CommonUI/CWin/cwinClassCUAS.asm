@@ -1147,7 +1147,14 @@ adjustTitleForClose:
 	call	OpenCheckIfKeyboardOnly		; carry set if so
 	jc	40$
 
+if _ISUI2000
+		call	OpenWinGetCloseButtonWidth
+		inc	ax			; include the two-pixel gap before Close
+		call	WinCommon_DerefVisSpec_DI
+		sub	ds:[di].OLWI_titleBarBounds.R_right, ax
+else
 	sub	ds:[di].OLWI_titleBarBounds.R_right, CUAS_CAPTION_ICON_WIDTH+1
+endif
 40$:
 endif
 
@@ -1939,6 +1946,35 @@ done:
 	pop	ax
 	ret
 CheckSysMenuButton	endp
+endif
+
+if _ISUI2000
+	;
+	; Return AX = close-button slot width, including its one-pixel overlap.
+	; Match EnableDisableAndPosSysIcon's natural-width introductory Done.
+	;
+OpenWinGetCloseButtonWidth proc far
+	class	OLWinClass
+	uses	bx, cx, dx, bp, si, di
+	.enter
+		call	UserGetDefaultUILevel
+		cmp	ax, UIIL_INTRODUCTORY
+		mov	ax, CUAS_CAPTION_ICON_WIDTH
+		jne	done
+		call	WinCommon_DerefVisSpec_DI
+		mov	bx, ds:[di].OLWI_sysMenu
+		mov	si, offset SMI_CloseIcon
+		mov	cx, mask RSA_CHOOSE_OWN_SIZE
+		mov	dx, cx
+		mov	ax, MSG_VIS_RECALC_SIZE
+		mov	di, mask MF_CALL or mask MF_FIXUP_DS
+		call	ObjMessage
+		mov	ax, cx
+		inc	ax			; match the native Done-button sizing
+done:
+	.leave
+		ret
+OpenWinGetCloseButtonWidth endp
 endif
 
 OpenWinGetSysMenuButtonWidth	proc	far

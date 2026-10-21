@@ -290,9 +290,9 @@ OLScreenNotify	method	dynamic	OLScreenClass, MSG_META_NOTIFY
 	; make sure we've got what we're looking for
 	;
 	cmp	cx, MANUFACTURER_ID_GEOWORKS
-	jne	callSuper
+	LONG	jne	callSuper
 	cmp	dx, GWNT_HOST_DISPLAY_SIZE_CHANGE
-	jne	callSuper
+	LONG	jne	callSuper
 
 	push 	si, ds, di
 	; set the video mode again

@@ -2538,8 +2538,7 @@ endif
 ; colour button. Keep the left system-menu button on its existing width.
 ;
 if _ISUI2000
-	; ATTENTION: standard UI levels only. Introductory Done buttons need
-	; natural-width title reservation before that layout can be supported.
+	; Introductory Done buttons use their natural width separately.
 CUAS_CAPTION_ICON_WIDTH = 17
 else
 CUAS_CAPTION_ICON_WIDTH = CUAS_WIN_ICON_WIDTH

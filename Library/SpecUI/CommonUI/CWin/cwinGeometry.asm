@@ -1262,7 +1262,15 @@ afterSysMenuButton::
 
 	test	ds:[di].OLWI_attrs, mask OWA_CLOSABLE
 	jz	9$
+if _ISUI2000
+		call	OpenWinGetCloseButtonWidth
+		inc	ax			; include the gap before Close
+		add	cx, ax
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+else
 	add	cx, CUAS_WIN_ICON_WIDTH		;add room for Close button
+endif
 
 9$:
 	test	ds:[di].OLWI_attrs, mask OWA_MAXIMIZABLE

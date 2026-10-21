@@ -85,6 +85,7 @@ for my $flag (qw(EXPAND_WIDTH_TO_FIT_PARENT EXPAND_HEIGHT_TO_FIT_PARENT CAN_CLIP
     $constant{"mask OLGDF_$flag"} = $constant{"mask OLBMA_$flag"};
 }
 my ($cga, $hasTitle, $penLarge, $penNoLarge, $fixedHeight, $maxHeight, $noBorders, $express, $fontWidth, $fontHeight, $gstates) = (0, 0, 0, 0, undef, undef, 0, 0, 6, 13, 0);
+my ($uiLevel, $doneWidth, $captionQueries) = (1, 30, 0);
 my $isui2000 = 1;
 my $isui = 1;
 my ($textColors, $textColor, $backgroundColors, $copyHintFixture, $hintCopied, $backgroundSelected, $bounds, $surface, $paintClip);
@@ -234,6 +235,8 @@ sub run {
             }
             elsif ($call eq 'OpenCheckIfCGA') { $carry = $cga; }
             elsif ($call eq 'OpenMinimizeIfCGA') { $carry = $cga; }
+            elsif ($call eq 'UserGetDefaultUILevel') { $reg{ax} = $uiLevel; }
+            elsif ($call eq 'WinCommon_DerefVisSpec_DI') { $reg{di} = $mem{'ds:[' . $reg{si} . ']'}; }
             elsif ($call eq 'SysGetPenMode') { $reg{ax} = $penLarge; }
             elsif ($call eq 'CheckIfLargeHeight') { $carry = $penLarge; }
             elsif ($call eq 'ObjVarFindData') {
@@ -343,6 +346,12 @@ sub run {
             } elsif ($call eq 'ObjCallInstanceNoLock') {
                 die "wrong window query\n" unless $reg{ax} == 125 && $reg{cx} == 20 && $reg{dx} == 30;
                 @reg{qw(ax bp cx dx)} = (0xdead, 0xbeef, 1, 900); $carry = 1;
+            } elsif ($call eq 'ObjMessage' && $reg{ax} == 2020) {
+                die "wrong Done size query\n" unless $reg{bx} == 77 && $reg{si} == 88 &&
+                    $reg{cx} == 32768 && $reg{dx} == 32768 && $reg{di} == 3;
+                $captionQueries++;
+                @reg{qw(ax cx dx bp)} = (0xdead, $doneWidth, 13, 0xbeef);
+                $mem{'ds:[1]'} = 2; # object offsets may move during the call
             } elsif ($call eq 'ObjMessage') {
                 local $reg{di} = $reg{si};
                 run($reg{ax} == 124 ? 'OpenWinSetToolboxHover' : 'OLButtonSetToolboxHover');
@@ -1102,6 +1111,52 @@ die "caption reservation/placement disagree\n" unless
     $caption =~ /notSysMenuButton:\nif _ISUI2000\n\t\tmov\tax, CUAS_CAPTION_ICON_WIDTH/ &&
     $caption =~ /sub\s+ds:\[di\].OLWI_titleBarBounds.R_right, CUAS_CAPTION_ICON_WIDTH\+1/;
 print "ISUI 2000 caption width checks passed\n";
+
+# Measure Done through the same native query used by caption sizing. Execute
+# the actual reservation and minimum-width call sites, including moved objects.
+$caption =~ /^(OpenWinGetCloseButtonWidth proc far.*?^OpenWinGetCloseButtonWidth endp)/ms
+    or die "missing close width calculation\n";
+$asm .= "\n$1\n";
+@constant{qw(UIIL_INTRODUCTORY CUAS_CAPTION_ICON_WIDTH CUAS_WIN_ICON_WIDTH),
+    'mask RSA_CHOOSE_OWN_SIZE', 'offset SMI_CloseIcon', 'MSG_VIS_RECALC_SIZE',
+    'CUAS_CAPTION_ICON_WIDTH+1'} = (0, 17, 21, 32768, 88, 2020, 18);
+$caption =~ /(if _ISUI2000\n\t\tcall\tOpenWinGetCloseButtonWidth.*?^endif)\n40\$:/ms
+    or die "missing close reservation\n";
+$asm .= "\nReserveClose proc near\n$1\nret\nReserveClose endp\n";
+my $winGeometry = source('CWin/cwinGeometry.asm');
+$winGeometry =~ /(if _ISUI2000\n\t\tcall\tOpenWinGetCloseButtonWidth.*?^endif)/ms
+    or die "missing close minimum width\n";
+$asm .= "\nCloseMinWidth proc near\n$1\nret\nCloseMinWidth endp\n";
+for my $variant (qw(isui isui2000)) {
+    $isui2000 = $variant eq 'isui2000';
+    $constant{'CUAS_CAPTION_ICON_WIDTH+1'} = $isui2000 ? 18 : 22;
+    for my $level (0 .. 3) {
+        $uiLevel = $level;
+        for my $width (16, 30, 80) {
+            $doneWidth = $width;
+            my $natural = $isui2000 && !$uiLevel;
+            my $width = $natural ? $doneWidth + 2 : $isui2000 ? 18 : 22;
+            for my $routine (qw(ReserveClose CloseMinWidth)) {
+                %reg = (ax => 11, bx => 22, cx => 100, dx => 44, bp => 55, si => 1, di => 1);
+                %mem = ('ds:[1]' => 1, 'ds:[1].OLWI_sysMenu' => 77,
+                    'ds:[1].OLWI_titleBarBounds.R_right' => 600,
+                    'ds:[2].OLWI_titleBarBounds.R_right' => 600);
+                $captionQueries = 0;
+                run($routine);
+                my $right = $mem{'ds:[' . $reg{di} . '].OLWI_titleBarBounds.R_right'};
+                die "wrong close bounds at $variant/$uiLevel/$doneWidth/$routine\n" unless
+                    $right == ($routine eq 'ReserveClose' ? 600 - $width : 600) &&
+                    $reg{cx} == ($routine eq 'CloseMinWidth' ? 100 + ($isui2000 ? $width : 21) : 100);
+                die "Done query clobbered caller registers\n" unless
+                    $reg{bx} == 22 && $reg{dx} == 44 && $reg{bp} == 55 && $reg{si} == 1;
+                die "unexpected Done measurement $variant/$uiLevel/$doneWidth/$routine: $captionQueries\n" unless $captionQueries == ($natural ? 1 : 0);
+            }
+        }
+    }
+}
+$uiLevel = 1; $isui2000 = 1;
+print "Introductory Done reservation and minimum window width checks passed\n";
+
 
 # Exercise the actual inset/justification branch, including wider system menus.
 my $buttonPaint = source('CButton/copenButtonColor.asm');
