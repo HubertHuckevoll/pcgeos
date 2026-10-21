@@ -885,24 +885,10 @@ endif
 	mov	ax, HINT_GADGET_TEXT_COLOR
 	call	CopyHintIfSpecified
 if _ISUI
-	;
-	; The copied tool colour belongs to the closed trigger. Its open state
-	; uses the UI highlight; leave the list's own hint and distinct selected
-	; colours unchanged. Honour explicit background/text pairings too.
-	;
-		xchg	si, di		; inspect the original item group
+	; Keep explicit foreground/background pairs on the generated trigger.
+		mov	cx, size BackgroundColors
 		mov	ax, HINT_GADGET_BACKGROUND_COLORS
-		call	ObjVarFindData
-		xchg	si, di		; restore the generated trigger (keeps carry)
-		jc	popupTextColorDone
-		mov	ax, HINT_GADGET_TEXT_COLOR
-		call	ObjVarFindData
-		jnc	popupTextColorDone
-		mov	al, ds:[bx].TC_unselectedColor
-		cmp	al, ds:[bx].TC_selectedColor
-		jne	popupTextColorDone
-		mov	ds:[bx].TC_selectedColor, C_WHITE
-popupTextColorDone:
+		call	CopyHintIfSpecified
 endif
 	mov	bp, si				;bp = obj to clear visMoniker of
 
@@ -944,22 +930,28 @@ MakePopupListIfNeeded	endp
 CopyHintIfSpecified	proc	near
 	;
 	; *ds:di -- source, *ds:si -- dest.  cx = bytes of extra data
-	; word of data to copy (either 2 or 0, currently)
+	; Copy zero, two (TextColors), or four (BackgroundColors) bytes.
 	;
 	
-	push	dx
+	push	dx, bp
 	xchg	si, di				;*ds:si <- item group
 	call	ObjVarFindData			;look for hint in item group 
 	xchg	si, di
 	jnc	exit				;not found, exit
 	jcxz	10$
 	mov	dx, {word} ds:[bx]
+	cmp	cx, size BackgroundColors
+	jne	10$
+	mov	bp, {word} ds:[bx+2]		; save before ObjVarAddData can move it
 10$:
 	call	ObjVarAddData			;else add hint to parent
 	jcxz	exit
 	mov	{word} ds:[bx], dx
+	cmp	cx, size BackgroundColors
+	jne	exit
+	mov	{word} ds:[bx+2], bp
 exit:
-	pop	dx
+	pop	dx, bp
 	ret
 CopyHintIfSpecified	endp
 

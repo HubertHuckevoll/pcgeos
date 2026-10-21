@@ -598,6 +598,48 @@ endif		;--------------------------------------------------------------
 					;pass al = DrawMonikerFlags,
 					;cx = OLMonikerAttrs
 	call	OLButtonDrawMoniker
+if _ISUI
+	;
+	; Invert the completed content, including colour bitmaps and GStrings.
+	; Repaint from the normal state each time, leaving the frame/arrow intact.
+	;
+		push	ax, bx, cx, dx, bp
+		mov	bp, ds:[si]
+		add	bp, ds:[bp].Vis_offset
+		mov	bx, ds:[bp].OLBI_specState
+		test	bx, mask OLBSS_MENU_DOWN_MARK
+		jz	dropSelectionDone
+		test	bx, mask OLBSS_IN_MENU_BAR or mask OLBSS_IN_MENU or mask OLBSS_SYS_ICON
+		jnz	dropSelectionDone
+		test	bx, mask OLBSS_DEPRESSED
+		jz	dropSelectionDone
+		call	OpenButtonCheckIfFullyEnabled
+		jnc	dropSelectionDone
+		call	VisGetBounds
+		add	ax, 2
+		add	bx, 2
+if _ISUI2000
+		sub	cx, OL_DOWN_MARK_WIDTH + 2
+else
+		sub	cx, OL_DOWN_MARK_WIDTH + 3
+endif
+		sub	dx, 3
+		cmp	cx, ax		; constrained fields may have no interior
+		jl	dropSelectionDone
+		cmp	dx, bx
+		jl	dropSelectionDone
+		call	GrSaveState		; also preserve custom area masks
+		push	ax
+		mov	al, SDM_100
+		call	GrSetAreaMask
+		mov	al, MM_INVERT
+		call	GrSetMixMode
+		pop	ax
+		call	GrFillRect
+		call	GrRestoreState
+dropSelectionDone:
+		pop	ax, bx, cx, dx, bp
+endif
 	ret
 DrawColorButton	endp
 
@@ -2057,6 +2099,14 @@ endif
 	jz	3$
 	dec	al
 3$:
+if _ISUI
+		test	bx, mask OLBSS_MENU_DOWN_MARK
+		jz	buttonBackgroundStateSet
+		test	bx, mask OLBSS_IN_MENU_BAR or mask OLBSS_IN_MENU or mask OLBSS_SYS_ICON
+		jnz	buttonBackgroundStateSet
+		clr	al			; invert the normal field only after drawing
+buttonBackgroundStateSet:
+endif
 	mov	si, ds:[si].OLBI_genChunk	;si = chunk handle of gen part
 	call	OpenGetBackgroundColor		;color in ax
 
@@ -2384,6 +2434,7 @@ if _ISUI2000
 OLButtonDrawISUI2000DropDown proc near
 	uses	ax, bx, cx, dx, si
 	state	local	word
+	background	local	word
 	.enter
 		mov	state, bx
 		mov	al, SDM_100
@@ -2391,19 +2442,26 @@ OLButtonDrawISUI2000DropDown proc near
 		call	GrSetLineMask
 		call	OpenButtonCheckIfFullyEnabled
 		jnc	disabledField
+		push	si
+		mov	si, ds:[si]
+		add	si, ds:[si].Vis_offset
+		mov	si, ds:[si].OLBI_genChunk
+		tst	si
+		jz	dropBackgroundChecked
+		mov	ax, 0ff00h		; always paint the normal background first
+		call	OpenGetBackgroundColor
+dropBackgroundChecked:
+		pop	si
+		jc	fieldColorSet		; explicit application background pair
 		mov	ax, C_WHITE
-		test	state, mask OLBSS_DEPRESSED
-		jz	fieldColorSet
-		push	ds
-		mov	ax, segment moCS_selBkgdColor
-		mov	ds, ax
-		clr	ax
-		mov	al, ds:[moCS_selBkgdColor]
-		pop	ds
-		jmp	fieldColorSet
+		jmp	solidFieldColorSet
 disabledField:
 		call	GetLightColor
+solidFieldColorSet:
+		mov	ah, al
 fieldColorSet:
+		mov	background, ax
+		clr	ah
 		call	GrSetAreaColor
 		call	GrGetCurPos
 		push	ax, bx		; OpenDrawRectSolid moves the graphics pen
@@ -2412,6 +2470,22 @@ fieldColorSet:
 		dec	cx
 		dec	dx
 		call	GrFillRect
+		push	ax
+		mov	ax, background
+		cmp	al, ah
+		je	dropBackgroundFilled
+		mov	al, ah
+		clr	ah
+		call	GrSetAreaColor
+		mov	al, SDM_50
+		call	GrSetAreaMask
+		pop	ax
+		call	GrFillRect
+		push	ax
+		mov	al, SDM_100
+		call	GrSetAreaMask
+dropBackgroundFilled:
+		pop	ax
 		inc	cx
 		inc	dx
 		push	bp
@@ -2471,18 +2545,14 @@ OLButtonDrawISUI2000DropDown endp
 
 	;
 	; Draw the existing dropdown triangle, shifting only its ink when pressed.
-	; Disabled arrows use a solid grey/white emboss; restore the moniker mask.
+	; Disabled arrows use a solid grey/white emboss; restore moniker ink/mask.
 	;
 OLButtonDrawISUI2000DropDownMark proc near
 	uses	ax, bx, cx, dx, si, ds
 	state	local	word
-	oldMask	local	word
 	.enter
 		mov	state, bx
-		mov	al, GMT_ENUM
-		call	GrGetAreaMask
-		clr	ah
-		mov	oldMask, ax
+		call	GrSaveState		; preserve the moniker's colour and full mask
 		mov	al, SDM_100
 		call	GrSetAreaMask
 		call	GrGetCurPos
@@ -2515,8 +2585,7 @@ dropInkSet:
 		call	GrSetAreaColor
 		pop	ax
 		call	fillDropBitmap
-		mov	ax, oldMask
-		call	GrSetAreaMask
+		call	GrRestoreState
 	.leave
 	ret
 fillDropHighlight:
@@ -2632,6 +2701,14 @@ endif ; DRAW_STYLES
 
 textColor:
 
+if _ISUI
+	; Dropdown contents are painted normally, then inverted as one image.
+		test	bx, mask OLBSS_MENU_DOWN_MARK
+		jz	useButtonTextState
+		test	bx, mask OLBSS_IN_MENU_BAR or mask OLBSS_IN_MENU or mask OLBSS_SYS_ICON
+		jz	useUnselected
+useButtonTextState:
+endif
 	test	bx, mask OLBSS_DEPRESSED	;is button pressed?
 	jz	useUnselected			;skip if not...
 	mov	al, ah				;use selected color

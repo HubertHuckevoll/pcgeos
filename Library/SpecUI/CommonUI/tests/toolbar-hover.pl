@@ -87,7 +87,13 @@ for my $flag (qw(EXPAND_WIDTH_TO_FIT_PARENT EXPAND_HEIGHT_TO_FIT_PARENT CAN_CLIP
 my ($cga, $hasTitle, $penLarge, $penNoLarge, $fixedHeight, $maxHeight, $noBorders, $express, $fontWidth, $fontHeight, $gstates) = (0, 0, 0, 0, undef, undef, 0, 0, 6, 13, 0);
 my $isui2000 = 1;
 my $isui = 1;
-my ($popupHint, $popupHasBackground, $textColors, $textColor);
+my ($textColors, $textColor, $backgroundColors, $copyHintFixture, $hintCopied, $backgroundSelected, $bounds, $surface, $paintClip);
+my $mixMode = 1;
+my @savedGraphics;
+my $raster = source('../../../Driver/Video/Dumb/VidMem/Clr8/clr8Output.asm');
+$raster =~ /NOTtable\s+label\s+byte\n(.*)/s or die "missing native colour inversion table\n";
+my @not = map { hex($_) } $1 =~ /0x([0-9a-f]{2})/gi;
+@not = @not[0 .. 255];
 my ($loadedUI, @searched);
 @constant{qw(dgroup cs), 'mask GA_LIBRARY', 'mask GA_PROCESS or mask GA_DRIVER or mask GA_APPLICATION'} = (1, 2, 1, 14);
 for my $name (qw(isuiName isui2000Name)) {
@@ -97,6 +103,8 @@ for my $name (qw(isuiName isui2000Name)) {
 }
 my (%reg, %mem, @gradient, @frame, @rect, @line, @fill, @invalid, $zero, $carry, $signedLess, $negative, $mask, @pen, $bw, $lineColor, $bordered, $areaColor, $faceColor, $parentIsTaskbar, $hasParent, $parentLocked);
 my @bitmap;
+@constant{qw(MM_COPY MM_INVERT MM_XOR)} = (1, 4, 5);
+$constant{'size BackgroundColors'} = 4;
 $constant{HINT_GADGET_TEXT_COLOR} = 1007;
 $constant{HINT_GADGET_BACKGROUND_COLORS} = 1008;
 my (@solidFrame, @bitmapPos, @sbFill, @sbPart, @paintFill);
@@ -125,7 +133,7 @@ sub value {
     return value($1) if $x =~ /^\((.+)\)$/;
     return value($1) + value($2) if $x =~ /^(.+) \+ (.+)$/;
     return value('offset spinGadget') + 34 if $x eq 'offset spinGadget+34';
-    return $mem{$x} // 0 if $x =~ /^(?:state|oldMask|attrs|selected\?|posX|posY|gstate|ltColor|rbColor|fillColor|darkColor)$/;
+    return $mem{$x} // 0 if $x =~ /^(?:state|oldMask|background|attrs|selected\?|posX|posY|gstate|ltColor|rbColor|fillColor|darkColor)$/;
     $x =~ s{\[(si|di|bx|bp)(?:\+(\d+))?\]}{'[' . (value($1) + ($2 // 0)) . ']'}ge;
     return $mem{$x} // 0 if $x =~ /^(?:[de]s:|desiredSize\.)/;
     die "unknown operand: $x\n";
@@ -137,10 +145,10 @@ sub assign {
         my ($r, $shift) = ($1 . 'x', $2 eq 'h' ? 8 : 0);
         $reg{$r} = (($reg{$r} // 0) & ~(255 << $shift)) | (($v & 255) << $shift);
     } elsif ($x =~ /^(bx|cx)(si|dx)$/) { assign($1, $v >> 16); assign($2, $v & 65535);
-    } elsif ($x =~ /^(?:state|oldMask|attrs|selected\?|posX|posY|gstate|ltColor|rbColor|fillColor|darkColor)$/) {
+    } elsif ($x =~ /^(?:state|oldMask|background|attrs|selected\?|posX|posY|gstate|ltColor|rbColor|fillColor|darkColor)$/) {
         $mem{$x} = $v;
     } elsif ($x =~ /^[de]s:/) {
-        $x =~ s/\[(si|di|bx|bp)\]/'[' . value($1) . ']'/ge;
+        $x =~ s/\[(si|di|bx|bp)(?:\+(\d+))?\]/'[' . (value($1) + ($2 \/\/ 0)) . ']'/ge;
         $mem{$x} = $v;
     } else { $reg{$x} = $v; }
 }
@@ -206,11 +214,13 @@ sub run {
             my ($op, @r) = ($1, split /,\s*/, $2);
             if ($op eq 'push') { push @stack, [map { value($_) } @r]; }
             else { my $v = pop @stack or die "stack underflow\n"; assign($r[$_], $v->[$_]) for 0 .. $#r; }
-        } elsif ($line =~ /^(jz|je|jnz|jne|jnc|jc|jbe|jae|ja|jb|jle|js|jmp)\s+([\w\$]+)$/) {
+        } elsif ($line =~ /^jcxz\s+([\w\$]+)$/) {
+            $i = $label{$1} - 1 if !$reg{cx};
+        } elsif ($line =~ /^(jz|je|jnz|jne|jnc|jc|jbe|jae|ja|jb|jl|jle|js|jmp)\s+([\w\$]+)$/) {
             my ($op, $target) = ($1, $2);
             $i = $label{$target} - 1 if $op eq 'jmp' ||
                 ($op =~ /^j[ze]$/ ? $zero : $op =~ /^jn[ze]$/ ? !$zero : $op eq 'jc' ? $carry : $op eq 'jbe' ? $carry || $zero : $op eq 'ja' ? !$carry && !$zero :
-                 $op eq 'jb' ? $carry : $op eq 'jle' ? $signedLess || $zero : $op eq 'js' ? $negative : !$carry);
+                 $op eq 'jb' ? $carry : $op eq 'jl' ? $signedLess : $op eq 'jle' ? $signedLess || $zero : $op eq 'js' ? $negative : !$carry);
         } elsif ($line eq 'stc' || $line eq 'clc') { $carry = $line eq 'stc';
         } elsif ($line eq 'ret') { if (@returns) { $i = pop @returns; } else { last; }
         } elsif ($line =~ /^call\s+(\w+)$/) {
@@ -228,13 +238,22 @@ sub run {
             elsif ($call eq 'CheckIfLargeHeight') { $carry = $penLarge; }
             elsif ($call eq 'ObjVarFindData') {
                 my $hint = $reg{ax};
-                die "popup colour lookup used the wrong object\n" if
-                    ($hint == 1008 && $reg{si} != 1) || ($hint == 1007 && $reg{si} != 2);
-                $carry = $hint == 1001 ? $hasTitle : $hint == 1002 ? defined $fixedHeight :
-                    $hint == 1003 ? defined $maxHeight : $hint == 1004 ? $penNoLarge : $hint == 1005 ? $noBorders : $hint == 1006 ? $express :
-                    $hint == 1007 ? defined $popupHint : $hint == 1008 ? $popupHasBackground : die "unexpected hint\n";
-                $reg{bx} = 9;
-                $mem{'ds:[9].CSHA_height'} = ($hint == 1002 ? $fixedHeight : $maxHeight) // 0;
+                if (defined $copyHintFixture) {
+                    die "hint copy used the wrong source object\n" unless $reg{si} == 2;
+                    $carry = $copyHintFixture->[0]; $reg{bx} = 9;
+                    @mem{qw(ds:[9] ds:[11])} = @$copyHintFixture[1,2];
+                } else {
+                    $carry = $hint == 1001 ? $hasTitle : $hint == 1002 ? defined $fixedHeight :
+                        $hint == 1003 ? defined $maxHeight : $hint == 1004 ? $penNoLarge : $hint == 1005 ? $noBorders : $hint == 1006 ? $express : die "unexpected hint\n";
+                    $reg{bx} = 9;
+                    $mem{'ds:[9].CSHA_height'} = ($hint == 1002 ? $fixedHeight : $maxHeight) // 0;
+                }
+            }
+            elsif ($call eq 'ObjVarAddData') {
+                die "hint copy used the wrong destination object\n" unless $reg{si} == 1;
+                $hintCopied = 1; $reg{bx} = 19;
+                @mem{qw(ds:[9] ds:[11])} = (0xdead, 0xbeef); # allocation moves the source
+                @mem{qw(ds:[19] ds:[21])} = (0, 0);
             }
             elsif ($call eq 'ViewCreateCalcGState') { $gstates++; @reg{qw(di bp)} = (77, 77); }
             elsif ($call eq 'VisConvertSpecVisSize') {
@@ -243,11 +262,34 @@ sub run {
             }
             elsif ($call eq 'GrDestroyState') { die "wrong GState\n" unless $reg{di} == 77 && $gstates == 1; $gstates--; }
             elsif ($call eq 'OpenCheckIfBW') { $carry = $bw; }
-            elsif ($call eq 'OpenGetBackgroundColor') { $reg{ax} = 0x0707; }
+            elsif ($call eq 'OpenGetBackgroundColor') {
+                $carry = defined $backgroundColors;
+                $backgroundSelected = !!value('al');
+                $reg{ax} = $carry ? $backgroundColors->[$backgroundSelected] : 0x0707;
+            }
             elsif ($call eq 'GrGetCurPos') { @reg{qw(ax bx)} = @pen; }
             elsif ($call eq 'GrMoveTo') { @pen = @reg{qw(ax bx)}; }
             elsif ($call eq 'GrSetAreaMask') { $mask = value('al'); }
-            elsif ($call eq 'GrFillRect') { push @fill, $mask; push @paintFill, [$areaColor, @reg{qw(ax bx cx dx)}]; }
+            elsif ($call eq 'GrSaveState') { push @savedGraphics, [$mixMode, $mask, $areaColor]; }
+            elsif ($call eq 'GrRestoreState') {
+                my $saved = pop @savedGraphics or die "unbalanced graphics state\n";
+                ($mixMode, $mask, $areaColor) = @$saved;
+            }
+            elsif ($call eq 'GrSetMixMode') { $mixMode = value('al'); }
+            elsif ($call eq 'GrFillRect') {
+                push @fill, $mask; push @paintFill, [$areaColor, @reg{qw(ax bx cx dx)}];
+                if (defined $surface) {
+                    die "inversion was dithered\n" if $mixMode == 4 && $mask != 0;
+                    for my $y ($reg{bx} .. $reg{dx}) {
+                        for my $x ($reg{ax} .. $reg{cx}) {
+                            next if defined $paintClip && ($x < $paintClip->[0] || $y < $paintClip->[1] || $x > $paintClip->[2] || $y > $paintClip->[3]);
+                            my $key = "$x,$y";
+                            die "inversion escaped the content rectangle\n" unless exists $surface->{$key};
+                            $surface->{$key} = $mixMode == 4 ? $not[$surface->{$key}] : $areaColor;
+                        }
+                    }
+                }
+            }
             elsif ($call eq 'GrSetAreaColor') { $areaColor = value('al'); }
             elsif ($call eq 'GetCheckboxBounds') { @reg{qw(ax bx cx dx)} = (12, 26, 24, 37); $zero = 0; $carry = 1; }
             elsif ($call =~ /^Gr(?:Fill|Draw)Bitmap(?:AtCP)?$/) { push @bitmap, [$reg{si}, $areaColor, $mask]; push @bitmapPos, [@reg{qw(ax bx)}]; }
@@ -290,7 +332,7 @@ sub run {
             elsif ($call eq 'WinDrawBoxFrame') {
                 push @frame, $reg{bp} >> 8 == 1 ? 0 : (($reg{bp} & 15) | (($reg{bp} & 240) << 4));
             }
-            elsif ($call eq 'VisGetBounds') { @reg{qw(ax bx cx dx)} = (10, 20, 34, 44); }
+            elsif ($call eq 'VisGetBounds') { @reg{qw(ax bx cx dx)} = defined $bounds ? @$bounds : (10, 20, 34, 44); }
             elsif ($call eq 'VisCheckIfFullyEnabled') { $carry = !!$mem{'ds:[1].VI_attrs'}; }
             elsif ($call eq 'GetDarkColor') { $reg{ax} = 8; }
             elsif ($call eq 'GetLightColor') { $reg{ax} = $faceColor; }
@@ -763,13 +805,13 @@ for my $enabled (0, 1) {
         die "wrong dropdown state/frame bounds\n" unless @solidFrame == 4 &&
             join(',', @{$solidFrame[0]}) eq '3848,10,20,90,44' &&
             join(',', @{$solidFrame[2]}) eq "$edge,73,22,89,42" &&
-            $paintFill[0][0] == ($enabled ? ($pressed ? 1 : 15) : 42);
+            $paintFill[0][0] == ($enabled ? 15 : 42);
         die "dropdown paint changed geometry/registers/origin\n" if
             join(',', @pen) ne '10,20' || grep { $reg{$_} != $before{$_} } keys %before;
-        @bitmap = (); @bitmapPos = (); $mask = 6;
+        @bitmap = (); @bitmapPos = (); $mask = 6; $areaColor = 11;
         run('OLButtonDrawISUI2000DropDownMark');
         die "wrong dropdown glyph state or disabled emboss\n" unless @bitmap == ($enabled ? 1 : 2) &&
-            $bitmap[-1][1] == ($enabled ? 0 : 8) && $mask == 6 &&
+            $bitmap[-1][1] == ($enabled ? 0 : 8) && $mask == 6 && $areaColor == 11 &&
             join(',', @{$bitmapPos[-1]}) eq ($enabled && $pressed ? '70,29' : '69,28');
         die "dropdown mark damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
 
@@ -913,11 +955,32 @@ for my $case (['Up', 6, 3, 1, 1], ['Down', 6, 3, 1, 286],
 }
 print "ISUI 2000 compact arrow ink and padding checks passed\n";
 
-# Execute the popup builder's inline policy and the actual button text-colour
-# selection. Only the generated trigger's hint changes; the list keeps its ink.
+# Execute the normal-content drawing and the actual post-moniker inversion.
+my $buttonColor = source('CButton/copenButtonColor.asm');
+$buttonColor =~ /call\s+OLButtonDrawMoniker\n(if _ISUI\n\t;\n\t; Invert the completed content.*?^endif\n\tret)/ms
+    or die "missing post-moniker dropdown inversion\n";
+$asm .= "\nInvertDropDownContent proc near\n$1\nInvertDropDownContent endp\n";
+$buttonColor =~ /DrawColorButtonInterior\s+proc.*?(\tclr\tax.*?call\s+OpenGetBackgroundColor[^\n]*)/s
+    or die "missing classic dropdown background state\n";
+$asm .= "\nClassicDropDownBackground proc near\n$1\nret\nClassicDropDownBackground endp\n";
 my $popupBuild = source('CItem/citemItemGroupClass.asm');
-$popupBuild =~ /(if _ISUI\n\t;\n\t; The copied tool colour.*?^endif)/ms or die "missing popup trigger colour policy\n";
-$asm .= "\nPopupTriggerTextColor proc near\n$1\nret\nPopupTriggerTextColor endp\n";
+$asm .= "\n$popupBuild";
+for my $size (0, 2, 4) {
+    for my $present (0, 1) {
+        $copyHintFixture = [$present, 0x0f07, 0x0803]; $hintCopied = 0;
+        %reg = (ax => 1008, bx => 3, cx => $size, dx => 44, bp => 55, si => 1, di => 2);
+        %mem = ();
+        run('CopyHintIfSpecified');
+        die "hint copy changed registers or copied an absent hint\n" unless
+            $reg{si} == 1 && $reg{di} == 2 && $reg{dx} == 44 && $reg{bp} == 55 && $hintCopied == $present;
+        die "hint copy lost normal or selected background colours\n" if $present &&
+            (($size >= 2 && $mem{'ds:[19]'} != 0x0f07) || ($size == 4 && $mem{'ds:[21]'} != 0x0803));
+    }
+}
+$copyHintFixture = undef;
+die "popup builder rewrites text hints or loses explicit backgrounds\n" unless
+    $popupBuild !~ /mov\s+ds:\[bx\].TC_selectedColor/ &&
+    $popupBuild =~ /mov\s+cx, size BackgroundColors\n\s*mov\s+ax, HINT_GADGET_BACKGROUND_COLORS\n\s*call\s+CopyHintIfSpecified/;
 my @profiles = (undef, [$constant{C_BLUE}, $constant{C_WHITE}],
     [$constant{C_BLUE}, $constant{C_BLUE}, 'custom background']);
 for my $file (qw(uiFont.ui uiPointSize.ui)) {
@@ -928,34 +991,108 @@ for my $file (qw(uiFont.ui uiPointSize.ui)) {
 for my $variant (qw(motif isui isui2000)) {
     $isui = $variant ne 'motif'; $isui2000 = $variant eq 'isui2000';
     for my $profile (@profiles) {
-        $popupHint = $profile;
-        $popupHasBackground = defined $profile && @$profile > 2;
-        %reg = (si => 2, di => 1); %mem = ();
-        @mem{qw(ds:[9].TC_unselectedColor ds:[9].TC_selectedColor)} = @$profile[0,1] if defined $profile;
-        my $original = defined $profile ? join(',', @$profile) : '';
-        run('PopupTriggerTextColor');
-        unless (defined $profile) {
-            die "popup without colour hint was modified\n" if exists $mem{'ds:[9].TC_selectedColor'};
-            next;
-        }
-        die "popup colour lookup damaged object pointers\n" unless $reg{si} == 2 && $reg{di} == 1;
-        my $selected = $isui && !$popupHasBackground && $profile->[0] == $profile->[1] ? $constant{C_WHITE} : $profile->[1];
-        my @trigger = $isui ? @mem{qw(ds:[9].TC_unselectedColor ds:[9].TC_selectedColor)} : @$profile;
-        die "popup builder changed list or explicit selected colour\n" unless
-            join(',', @$profile) eq $original && $trigger[0] == $profile->[0] && $trigger[1] == $selected;
-        $textColors = \@trigger;
+        $textColors = $profile;
+        $backgroundColors = defined $profile && @$profile > 2 ? [0x0f07, 0x0803] : undef;
         for my $pressed (0, 1) {
             %reg = (ax => 22, bx => $constant{'mask OLBSS_MENU_DOWN_MARK'} |
-                $pressed * $constant{'mask OLBSS_DEPRESSED'}, si => 1, di => 66, cx => 80, dx => 24);
-            %mem = ('ds:[1]' => 1, 'ds:[1].Vis_offset' => 0, 'ds:[1].OLBI_genChunk' => 2, 'ds:[1].VI_attrs' => 1);
+                $pressed * $constant{'mask OLBSS_DEPRESSED'}, si => 1, di => 66, cx => 80, dx => 24, ds => 1);
+            %mem = ('ds:[1]' => 1, 'ds:[1].Vis_offset' => 0, 'ds:[1].OLBI_genChunk' => 2,
+                'ds:[1].VI_attrs' => 1);
             my %before = %reg;
+            my $normal = defined $profile ? $profile->[0] : $constant{C_BLACK};
+            my $selected = defined $profile ? $profile->[1] : $constant{C_WHITE};
+            if ($isui2000) {
+                @pen = (10, 20); @paintFill = (); @solidFrame = (); $mask = 6;
+                run('OLButtonDrawISUI2000DropDown');
+                my $pair = defined $backgroundColors ? $backgroundColors->[0] : 0x0f0f;
+                die "dropdown changed normal background before inversion\n" unless $paintFill[0][0] == ($pair & 255);
+                if (defined $backgroundColors) {
+                    die "dropdown lost second background colour\n" unless
+                        $paintFill[1][0] == ($pair >> 8) &&
+                        join(',', @{$paintFill[0]}[1..4]) eq join(',', @{$paintFill[1]}[1..4]);
+                }
+                die "background painting damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+            }
             run('OLButtonSetDrawColors');
-            die "wrong popup trigger text colour\n" unless $textColor == ($pressed ? $selected : $profile->[0]);
+            my $expected = $pressed && !$isui ? $selected : $normal;
+            die "wrong popup moniker colour\n" unless $textColor == $expected && $areaColor == $expected;
             die "popup text painting damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+            if ($isui2000) {
+                @pen = (10, 20); $mask = 6;
+                run('OLButtonDrawISUI2000DropDownMark');
+                die "dropdown arrow changed moniker ink/mask\n" unless $areaColor == $expected && $mask == 6;
+            }
+            if ($isui) {
+                %reg = %before;
+                $mem{'ds:[1].OLBI_specState'} = $reg{bx};
+                run('ClassicDropDownBackground');
+                die "classic dropdown used selected background before inversion\n" if $backgroundSelected;
+            }
         }
     }
 }
-print "ISUI / ISUI 2000 popup-trigger text contrast checks passed\n";
+$backgroundColors = undef;
+for my $variant (qw(motif isui isui2000)) {
+    $isui = $variant ne 'motif'; $isui2000 = $variant eq 'isui2000';
+    for my $excluded (0, map { $constant{"mask $_"} } qw(OLBSS_IN_MENU OLBSS_IN_MENU_BAR OLBSS_SYS_ICON)) {
+        for my $enabled (0, 1) {
+            for my $pressed (0, 1) {
+                for my $small (0, 1, 2) {
+                    $bounds = [10, 20, $small == 1 ? 25 : 90, $small == 2 ? 23 : 44];
+                    my $right = $bounds->[2] - ($isui2000 ? 18 : 19);
+                    my $bottom = $bounds->[3] - 3;
+                    my %normal;
+                    for my $y (22 .. $bottom) {
+                        for my $x (12 .. $right) {
+                            # All palette indices, including fixed-colour artwork.
+                            $normal{"$x,$y"} = (($x-12) + ($y-22)*60) % 256;
+                        }
+                    }
+                    for my $partial (0, 1) {
+                        $paintClip = $partial ? [20, 24, 40, 35] : undef;
+                        for (1 .. 2) {
+                            # Every redraw starts from the completed normal content.
+                            $surface = {%normal};
+                            %reg = (ax => 11, bx => 22, cx => 33, dx => 44, bp => 55, si => 1, di => 66);
+                            %mem = ('ds:[1]' => 1, 'ds:[1].Vis_offset' => 0, 'ds:[1].VI_attrs' => $enabled,
+                                'ds:[1].OLBI_specState' => $constant{'mask OLBSS_MENU_DOWN_MARK'} |
+                                    ($pressed * $constant{'mask OLBSS_DEPRESSED'}) | $excluded);
+                            my %before = %reg;
+                            $mixMode = 5; $mask = 6; $areaColor = 11; @paintFill = ();
+                            run('InvertDropDownContent');
+                            my $invert = $isui && !$excluded && $enabled && $pressed && !$small;
+                            die "wrong inversion rectangle or scope\n" unless @paintFill == ($invert ? 1 : 0);
+                            if ($invert) {
+                                die "inversion touched frame or arrow\n" unless
+                                    join(',', @{$paintFill[0]}[1..4]) eq "12,22,$right,$bottom";
+                            }
+                            for my $key (keys %normal) {
+                                my ($x, $y) = split /,/, $key;
+                                my $inside = !$partial || ($x >= 20 && $x <= 40 && $y >= 24 && $y <= 35);
+                                my $want = $invert && $inside ? $not[$normal{$key}] : $normal{$key};
+                                die "wrong rendered colour inversion\n" unless $surface->{$key} == $want;
+                            }
+                            die "inversion damaged graphics state\n" unless $mixMode == 5 && $mask == 6 && $areaColor == 11 && !@savedGraphics;
+                            die "inversion damaged registers\n" if grep { $reg{$_} != $before{$_} } keys %before;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+$surface = $paintClip = $bounds = undef;
+# Saving the GState must retain arbitrary RGB ink and a custom 8x8 mask.
+$isui2000 = 1;
+my $customMask = [0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55];
+%reg = (ax => 11, bx => 22, cx => 80, dx => 24, bp => 55, si => 1, di => 66, ds => 1);
+%mem = ('ds:[1].VI_attrs' => 1);
+@pen = (10, 20); $mask = $customMask; $areaColor = 0x123456; $mixMode = 5;
+run('OLButtonDrawISUI2000DropDownMark');
+die "arrow damaged custom mask or RGB ink\n" unless
+    $mask == $customMask && $areaColor == 0x123456 && $mixMode == 5 && !@savedGraphics;
+$mask = 6;
+print "ISUI / ISUI 2000 rendered dropdown inversion and arrow ink checks passed\n";
 
 # Caption slots include the one pixel removed by native colour placement.
 $shared =~ /if _ISUI2000\n(?:\t;[^\n]*\n)*CUAS_CAPTION_ICON_WIDTH = (\d+)/ or die "missing ISUI 2000 caption width\n";
