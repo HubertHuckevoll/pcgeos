@@ -2145,7 +2145,10 @@ OLWinRotateDisplay	endm
 endif	; RECTANGULAR_ROTATION
 
 OLWinSpecSetAttrs	method	dynamic	OLWinClass, MSG_SPEC_SET_ATTRS
-	test	ax, mask SA_REALIZABLE
+	;
+	; AX is the message number; CL is the set mask, CH the clear mask.
+	;
+		test	cl, mask SA_REALIZABLE
 	jz	cont
 	call	VisCheckIfSpecBuilt
 	jnc	cont

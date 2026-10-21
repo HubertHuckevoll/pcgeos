@@ -440,6 +440,15 @@ washColorSet:
 setNormalColors:
 	call	OpenSetInsetRectColors		; setup typical colors in bp
 
+if _ISUI2000
+	;
+	; Use the text wash for the margins, keeping the normal bevel colors.
+	;
+		mov	ax, ds:[bx].VTI_washColor.low
+		mov	bx, ds:[bx].VTI_washColor.high
+		call	GrSetAreaColor
+endif
+
 drawFrame:
 
 if DRAW_STYLES	;--------------------------------------------------------------
