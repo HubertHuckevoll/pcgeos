@@ -27,6 +27,8 @@ Requires Python 3 and Pillow (only on the development host):
         /usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf \
         GeosUiSans.fnt
 
+A pre-generated 8-pt-only sample is committed as [GeosUiSans8.fnt](GeosUiSans8.fnt).
+
 Default: 8, 9, 10, 12, 14 pt; 96 dpi; MacRoman 0x20..0xff;
 one regular BSWF font with GEOS face name 'GEOS UI Sans'.
 The normal 8 pt UI face is 11 pixels at 96 dpi.
