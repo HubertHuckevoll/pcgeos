@@ -1218,6 +1218,7 @@ typedef word FontID;
 #define FID_WINDOWS 0x0a01
 #define FID_BISON 0x0a00
 #define FID_LED 0x0600
+#define FID_DEJAVUSC 0x022c
 #define FID_ESQUIRE 555
 #define FID_PMSYSTEM 0x0203
 #define FID_BERKELEY 0x0202

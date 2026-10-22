@@ -20,7 +20,7 @@ my $asm = read_file("$root/Library/Pref/ConfigUI/configui.asm");
 $asm =~ /uicombos UICombo <(.*?)>\s*CheckHack/s or die "missing combo table\n";
 my @combo = split />\s*,\s*</, $1;
 my @specific = qw(MotifStr ISUIStr MotifStr ISUI2000Geode);
-my @font = qw(BerkeleyStr EsquireStr BerkeleyStr EsquireStr);
+my @font = qw(BerkeleyStr EsquireStr BerkeleyStr DejaVuSCStr);
 die "wrong combo count\n" unless @combo == @ids;
 for my $i (0 .. $#combo) {
     my @offset = $combo[$i] =~ /offset (\w+)/g;
@@ -44,7 +44,7 @@ for my $combo (@combo) {
 }
 sub execute {
     my ($method, $ui, $flags, $display, $uiModified) = @_;
-    $asm =~ /^$method\s+method[^\n]*\n(.*?)^$method\s+endm/ms or die "missing $method\n";
+    $asm =~ /^$method\s+(?:method|proc)[^\n]*\n(.*?)^$method\s+(?:endm|endp)/ms or die "missing $method\n";
     my $body = $1;
     $body =~ s/^redrawSample:.*//ms if $method eq 'PrefUICDialogSPUIChanged';
     $body =~ s/^checkReset2:.*//ms if $method eq 'ConfigUIDialogApply';
@@ -83,11 +83,11 @@ sub execute {
             else { my $v = $get->($a) & $b; $zero = !$v; $carry = 0; $set->($a, $v) if $op eq 'and'; }
         } elsif ($line =~ /^mul\s+(\w+)$/) { $reg{ax} = $get->('ax') * $get->($1); $reg{dx} = 0;
         } elsif ($line =~ /^clr\s+(\w+)$/) { $set->($1, 0); $zero = 1; $carry = 0;
-        } elsif ($line =~ /^(jz|jnz|jae|ja|jbe|jc|jnc|jmp)\s+(\w+)$/) {
+        } elsif ($line =~ /^(je|jz|jnz|jae|ja|jbe|jc|jnc|jmp)\s+(\w+)$/) {
             my ($op, $label) = ($1, $2);
             die "unknown label $label\n" unless exists $label{$label};
             $pc = $label{$label} - 1 if $op eq 'jmp' ||
-                ($op eq 'jz' ? $zero : $op eq 'jnz' ? !$zero : $op eq 'jae' ? !$carry :
+                ($op eq 'jz' || $op eq 'je' ? $zero : $op eq 'jnz' ? !$zero : $op eq 'jae' ? !$carry :
                  $op eq 'ja' ? !$carry && !$zero : $op eq 'jbe' ? $carry || $zero : $op eq 'jc' ? $carry : !$carry);
         } elsif ($line eq 'call UserGetDisplayType') { $reg{ax} = ($display << 8) | 255;
         } elsif ($line eq 'call SetUIOptions') { $writes++;
@@ -108,9 +108,28 @@ sub execute {
             } else { die "unexpected target $target\n"; }
             @reg{qw(ax cx dx bp)} = (57005) x 4; # Native calls destroy these.
             $reg{ax} = $ui if $message eq 'MSG_GEN_ITEM_GROUP_GET_SELECTION';
+        } elsif ($line eq 'ret') { last;
         } else { die "unhandled instruction $line\n"; }
     }
-    return ($selected, $modified, $status, $writes, scalar @messages);
+    return ($selected, $modified, $status, $writes, scalar @messages, $reg{cx});
+}
+my $font = read_file("$root/FontData/DejaVuSC.fnt");
+die "wrong UI font name\n" unless substr($font, 13, 20) =~ /^DejaVuSC\0/ &&
+    $asm =~ /LocalDefNLString DejaVuSCStr <"DejaVuSC", 0>/;
+my $font_id = unpack('v', substr($font, 8, 2));
+die "wrong bitmap font ID\n" unless $font_id == 0x022c;
+for my $header ('Include/fontID.def', 'CInclude/fontID.h') {
+    die "font ID missing from $header\n" unless read_file("$root/$header") =~
+        /FID_DEJAVUSC\s+(?:enum FontID, )?0x022c/;
+}
+die "expected only the 10 pt strike\n" unless
+    unpack('v', substr($font, 35, 2)) - unpack('v', substr($font, 33, 2)) == 10 &&
+    unpack('v', substr($font, 43, 2)) == 10;
+@symbol{qw(FID_BERKELEY FID_ESQUIRE FID_DEJAVUSC)} = (0x0202, 555, $font_id);
+for my $ui (0 .. 4, 65535) {
+    my $actual = (execute('GetSPUIFont', $ui, 0, 112, 0))[5];
+    my $expected = $ui == 3 ? $font_id : $ui == 1 ? 555 : 0x0202;
+    die "wrong preview font for UI $ui\n" unless $actual == $expected;
 }
 my @full = @symbol{qw(PUIDCS_DEFAULT PUIDCS_NEWUI PUIDCS_MEADOWS PUIDCS_ISUI2000)};
 my @limited = @symbol{qw(PUIDCS_DEFAULT PUIDCS_NEWUI PUIDCS_DEFAULT PUIDCS_NEWUI)};
@@ -145,6 +164,9 @@ die "ISUI 2000 omitted from product build\n" unless $1 =~ /\bisui2000\b/;
 die "missing ISUI 2000 build target\n" unless $make =~ /^isui2000\s*:\s*Installed\/Library\/SpecUI\/ISUI2000\s*$/m;
 my $tree = read_file("$root/Tools/build/product/bbxensem/bbxensem.filetree");
 die "ISUI 2000 omitted from product file tree\n" unless $tree =~ m{Library/SpecUI/ISUI2000/isui2000\{ec\}\.geo};
+for my $file ('FontData/DejaVuSC.fnt', 'FontData/DejaVuSC.txt') {
+    die "missing packaged font or license: $file\n" unless $tree =~ /^\s*\Q$file\E GFS LOCALPC\r?$/m;
+}
 for my $name ('isui2000.geo', 'EC ISUI 2000') {
     die "missing configured library name $name\n" unless index($asm, '"' . $name . '"') >= 0;
 }

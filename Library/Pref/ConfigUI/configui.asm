@@ -1120,7 +1120,7 @@ uicombos UICombo <
 >,<
 	offset ISUI2000Geode,
 	offset ISDeskStr,
-	offset EsquireStr,
+	offset DejaVuSCStr,
 	TRUE,
 	TRUE,
 	PUIDCS_ISUI2000,
@@ -1150,6 +1150,7 @@ LocalDefNLString ISDeskStr <"ISDesk", 0>
 endif
 LocalDefNLString BerkeleyStr <"Berkeley", 0>
 LocalDefNLString EsquireStr <"Esquire", 0>
+LocalDefNLString DejaVuSCStr <"DejaVuSC", 0>
 
 SetUIOptions	proc	near
 		uses	ds, si, es
@@ -1783,11 +1784,21 @@ isuiSelected:
 ISUISelected	endp
 
 GetSPUIFont	proc	near
+		uses	ax, dx, bp, si
+		.enter
+
+		mov	si, offset UIList
+		mov	ax, MSG_GEN_ITEM_GROUP_GET_SELECTION
+		call	ObjCallInstanceNoLock
+		mov	cx, FID_DEJAVUSC
+		cmp	ax, CUIC_ISUI2000
+		je	gotFont
+		mov	cx, FID_ESQUIRE
+		cmp	ax, CUIC_ISUI
+		je	gotFont
 		mov	cx, FID_BERKELEY
-		call	ISUISelected
-		jnz	gotFont
-		mov	cx, 555
 gotFont:
+		.leave
 		ret
 GetSPUIFont	endp
 
