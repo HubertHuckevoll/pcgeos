@@ -9,13 +9,15 @@ edits are preserved in their existing worktree.
 
 Six family ASM files and 27 strike DEF files are grouped into one subdirectory
 per family under FontData: Berkeley, Bison, Esquire, LED, Universi and DejaVuSC.
-All six compiled FNTs are committed in Installed/FontData. Five superseded
-source-root bitmap binaries are removed; outline FNTs and TTFs stay unchanged.
+The six compiled FNTs are committed in matching Installed/FontData family
+subdirectories. Five superseded source-root bitmap binaries are removed;
+outline FNTs and TTFs stay unchanged.
 
-The handcrafted Installed/FontData/Makefile and direct Tools Makefile changes
-are the explicit user-authorized exception to the AGENTS.md generation rule.
-There is no mkmf dependency, dependencies.mk, extra rule file or permanent
-converter. Normal builds use pmake, ESP, Glue and native shell operations.
+The handcrafted aggregate and family Makefiles, shared font.mk rules and
+Tools Makefile changes are the explicit user-authorized exception to the
+AGENTS.md generation rule. There is no mkmf dependency, dependencies.mk or
+permanent converter. Normal builds use pmake, ESP, Glue and native shell
+operations.
 
 ## Sources and intentional changes
 
@@ -39,7 +41,9 @@ Preserve the original DejaVuSC 10-point raster, name, ID and licensing.
 ## Build and packaging contract
 
 From Installed/FontData, support the default/all target, individual FNT
-targets, clean and check. Keep every generated file in that directory.
+targets, clean and check. Each matching family directory has a Makefile
+for independent builds and cleaning. Keep generated files in those family
+directories and share common rules through font.mk.
 Assemble/link temporary files and replace complete outputs only on success.
 Track source, SDK and tool prerequisites; retain source/header dependencies
 on link targets because this pmake uses whole-second timestamps.
@@ -48,8 +52,8 @@ The Tools install target builds fonts after all host tool installation
 targets succeed. Real prerequisites establish ordering; checked command
 chaining propagates failures. Perl is confined to the explicit check target.
 
-Retain logical FontData filetree paths, resolved through Installed first.
-Package DejaVuSC and its DOS 8.3 license notice. Register FID_DEJAVUSC as
+Use matching FontData/family/font.fnt filetree paths, resolved through
+Installed first. Package DejaVuSC and its DOS 8.3 license notice. Register FID_DEJAVUSC as
 0x022c in both SDK headers without changing other IDs or UI defaults.
 
 ## Acceptance and exclusions

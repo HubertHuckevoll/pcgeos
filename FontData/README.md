@@ -2,8 +2,9 @@
 
 The authoritative ASM/DEF sources are grouped into Berkeley, Bison, Esquire,
 LED, Universi and DejaVuSC subdirectories (six SBCS families, 27 strikes).
-The compiled FNTs are committed under Installed/FontData. Regenerate and
-commit those outputs with source changes.
+The compiled FNTs are committed in matching Installed/FontData family
+subdirectories, such as Installed/FontData/Berkeley/Berkeley.fnt. Regenerate
+and commit those outputs with source changes.
 The four legacy outline FNTs and the TTF tree are independent of this build.
 
 ## Build and check
@@ -15,17 +16,25 @@ With ROOT_DIR and the usual SDK tool environment set:
     pmake Berkeley.fnt
     pmake check
 
-The same targets work from Installed\FontData on Windows. The default target
-builds all six families. pmake clean removes the committed FNTs and known
-intermediates; rebuild before committing. Running pmake install from Installed/Tools also
-builds the fonts, after every host tool has installed successfully.
+To build one font directly:
 
-The handcrafted Makefile is intentionally independent of mkmf and geode.mk.
-It accepts ASM, ASMFLAGS, LINK and LINKFLAGS overrides. Normal builds use only
-pmake, ESP, Glue (-Of) and native shell operations. Objects, symbol files,
-temporary files and final fonts stay in Installed/FontData. Each successful
-tool invocation publishes its temporary output by rename. A failed invocation
-preserves the previous complete object or font and returns failure.
+    cd "$ROOT_DIR/Installed/FontData/Berkeley"
+    pmake
+
+The same targets work on Windows. The parent Makefile builds all six families
+and retains individual targets such as Berkeley.fnt. Each family Makefile
+builds only its own font. pmake clean removes outputs and known intermediates
+for the current family, or all families when run from Installed/FontData;
+rebuild before committing. Running pmake install from Installed/Tools also
+builds all fonts after every host tool has installed successfully.
+
+The handcrafted family Makefiles include shared rules from font.mk and are
+independent of mkmf and geode.mk. They accept ASM, ASMFLAGS, LINK and LINKFLAGS
+overrides. Normal builds use only pmake, ESP, Glue (-Of) and native shell
+operations. Objects, symbol files, temporary files and final fonts stay in
+their Installed/FontData family directory. Each successful tool invocation
+publishes its temporary output by rename. A failed invocation preserves the
+previous complete object or font and returns failure through the parent build.
 
 Sources and SDK headers are prerequisites of both objects and fonts, avoiding
 missed links when this pmake's whole-second timestamps coincide. The explicit
@@ -35,6 +44,8 @@ The standalone check uses core Perl modules:
 
     perl FontData/tests/bitmap-fonts.pl [font-directory [reference-directory]]
 
+The font directory contains the six family subdirectories; the optional
+reference directory contains the original flat reference FNTs.
 With a reference directory, it requires exact baseline equality instead of
 final hashes and Berkeley Euro checks. Without one it verifies the committed
 hashes, all 27 strikes and the intended Berkeley changes. Intentional future
@@ -134,11 +145,17 @@ Passed on Linux with the existing Open Watcom SDK environment:
 - Actual FindInstalledFile/SendFile resolution and byte-identical packaging
   of six fonts and the license into a temporary destination.
 
-The product filetree retains logical FontData paths; Installed precedes the
-source root in the existing resolver. The old source-root bitmap FNTs were
+The product filetree uses matching FontData/family/font.fnt paths; Installed
+precedes the source root in the existing resolver. The old source-root bitmap FNTs were
 removed so they cannot conceal missing build outputs. Excluded outline/TTF
 files are unchanged. Existing edited files retain their line endings;
 imported mkuc files retain mixed historical LF/CRLF endings.
+
+After introducing the mirrored Installed family directories and individual
+Makefiles, independent clean builds, aggregate and parallel checks, unchanged
+rebuilds, family/shared-rule invalidation, missing-output recovery and failure
+propagation were rechecked. The tools font-install target and actual packaging
+helpers also passed with the nested paths. All six FNTs remain byte-identical.
 
 Native Windows execution and GEOS runtime loading were not tested. The Linux
 tools install cross-built the existing Windows host tools, which does not

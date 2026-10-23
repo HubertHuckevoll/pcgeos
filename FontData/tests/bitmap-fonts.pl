@@ -129,7 +129,7 @@ sub parse_font
 
 my $count = 0;
 for my $name (@fonts) {
-    my $data = read_file("$directory/$name.fnt");
+    my $data = read_file("$directory/$name/$name.fnt");
     my $strikes = parse_font($name, $data);
     $count += @$strikes;
     if (defined $reference) {
@@ -152,7 +152,7 @@ for my $name (@fonts) {
 die "wrong total strike count\n" unless $count == 27;
 
 # Exercise rejection before hashes, without creating malformed font files.
-my $good = read_file("$directory/Berkeley.fnt");
+my $good = read_file("$directory/Berkeley/Berkeley.fnt");
 my @bad = (substr($good, 0, 40));
 my $bad = $good;
 substr($bad, 47, 4) = pack('V', length($good));
