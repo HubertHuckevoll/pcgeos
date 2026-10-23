@@ -1,0 +1,5447 @@
+	; DejaVu Sans Condensed 2.37, 18 pt at 80 dpi; hinted monochrome.
+dejavusc_18Seg	segment
+dejavusc_18StartData label byte
+		word	dejavusc_18EndData-dejavusc_18StartData	; data size
+		word	0	; maker
+		WBFixed	<216,10>	; average width
+		WBFixed	<0,24>	; maximum width
+		WBFixed	<0,0>	; height adjustment
+		WBFixed	<0,24>	; height
+		WBFixed	<0,4>	; accent
+		WBFixed	<0,11>	; mean
+		WBFixed	<0,0>	; baseline adjustment
+		WBFixed	<0,19>	; baseline
+		WBFixed	<0,5>	; descent
+		WBFixed	<0,0>	; external leading
+		word	0	; kerning count
+		word	dejavusc_18KernPairs-dejavusc_18StartData	; kerning pair offset
+		word	dejavusc_18KernValues-dejavusc_18StartData	; kerning value offset
+		byte	32	; first character
+		byte	255	; last character
+		byte	63	; default character
+		WBFixed	<0,20>	; underline position
+		WBFixed	<0,1>	; underline thickness
+		WBFixed	<0,14>	; strike-through position
+		WBFixed	<0,0>	; above font box
+		WBFixed	<0,0>	; below font box
+		sword	-3	; minimum LSB
+		sword	0	; minimum TSB
+		sword	24	; maximum BSB
+		sword	23	; maximum RSB
+		word	24	; pixel height
+		byte	0x00	; font flags
+		word	666	; heap count
+
+	; Character table: glyph offset, advance, flags, usage.
+
+		word	dejavusc_18Char20-dejavusc_18StartData	; 0x20
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char21-dejavusc_18StartData	; 0x21
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char22-dejavusc_18StartData	; 0x22
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char23-dejavusc_18StartData	; 0x23
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char24-dejavusc_18StartData	; 0x24
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char25-dejavusc_18StartData	; 0x25
+		WBFixed	<0,17>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char26-dejavusc_18StartData	; 0x26
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char27-dejavusc_18StartData	; 0x27 C_SNG_QUOTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char28-dejavusc_18StartData	; 0x28
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char29-dejavusc_18StartData	; 0x29
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char2a-dejavusc_18StartData	; 0x2a
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char2b-dejavusc_18StartData	; 0x2b
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char2c-dejavusc_18StartData	; 0x2c
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char2d-dejavusc_18StartData	; 0x2d
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char2e-dejavusc_18StartData	; 0x2e
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char2f-dejavusc_18StartData	; 0x2f
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char30-dejavusc_18StartData	; 0x30
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char31-dejavusc_18StartData	; 0x31
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char32-dejavusc_18StartData	; 0x32
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char33-dejavusc_18StartData	; 0x33
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char34-dejavusc_18StartData	; 0x34
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char35-dejavusc_18StartData	; 0x35
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char36-dejavusc_18StartData	; 0x36
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char37-dejavusc_18StartData	; 0x37
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char38-dejavusc_18StartData	; 0x38
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char39-dejavusc_18StartData	; 0x39
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char3a-dejavusc_18StartData	; 0x3a
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char3b-dejavusc_18StartData	; 0x3b
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char3c-dejavusc_18StartData	; 0x3c
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char3d-dejavusc_18StartData	; 0x3d
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char3e-dejavusc_18StartData	; 0x3e
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char3f-dejavusc_18StartData	; 0x3f
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char40-dejavusc_18StartData	; 0x40
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char41-dejavusc_18StartData	; 0x41
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char42-dejavusc_18StartData	; 0x42
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char43-dejavusc_18StartData	; 0x43
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char44-dejavusc_18StartData	; 0x44
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char45-dejavusc_18StartData	; 0x45
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char46-dejavusc_18StartData	; 0x46
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char47-dejavusc_18StartData	; 0x47
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char48-dejavusc_18StartData	; 0x48
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char49-dejavusc_18StartData	; 0x49
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char4a-dejavusc_18StartData	; 0x4a
+		WBFixed	<0,5>	; advance
+		byte	0x40	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char4b-dejavusc_18StartData	; 0x4b
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char4c-dejavusc_18StartData	; 0x4c
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char4d-dejavusc_18StartData	; 0x4d
+		WBFixed	<0,16>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char4e-dejavusc_18StartData	; 0x4e
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char4f-dejavusc_18StartData	; 0x4f
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char50-dejavusc_18StartData	; 0x50
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char51-dejavusc_18StartData	; 0x51
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char52-dejavusc_18StartData	; 0x52
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char53-dejavusc_18StartData	; 0x53
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char54-dejavusc_18StartData	; 0x54
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char55-dejavusc_18StartData	; 0x55
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char56-dejavusc_18StartData	; 0x56
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char57-dejavusc_18StartData	; 0x57
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char58-dejavusc_18StartData	; 0x58
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char59-dejavusc_18StartData	; 0x59
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char5a-dejavusc_18StartData	; 0x5a
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char5b-dejavusc_18StartData	; 0x5b
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char5c-dejavusc_18StartData	; 0x5c C_BACKSLASH
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char5d-dejavusc_18StartData	; 0x5d
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char5e-dejavusc_18StartData	; 0x5e
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char5f-dejavusc_18StartData	; 0x5f
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char60-dejavusc_18StartData	; 0x60
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char61-dejavusc_18StartData	; 0x61
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char62-dejavusc_18StartData	; 0x62
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char63-dejavusc_18StartData	; 0x63
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char64-dejavusc_18StartData	; 0x64
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char65-dejavusc_18StartData	; 0x65
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char66-dejavusc_18StartData	; 0x66
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char67-dejavusc_18StartData	; 0x67
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char68-dejavusc_18StartData	; 0x68
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char69-dejavusc_18StartData	; 0x69
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char6a-dejavusc_18StartData	; 0x6a
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char6b-dejavusc_18StartData	; 0x6b
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char6c-dejavusc_18StartData	; 0x6c
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char6d-dejavusc_18StartData	; 0x6d
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char6e-dejavusc_18StartData	; 0x6e
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char6f-dejavusc_18StartData	; 0x6f
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char70-dejavusc_18StartData	; 0x70
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char71-dejavusc_18StartData	; 0x71
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char72-dejavusc_18StartData	; 0x72
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char73-dejavusc_18StartData	; 0x73
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char74-dejavusc_18StartData	; 0x74
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char75-dejavusc_18StartData	; 0x75
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char76-dejavusc_18StartData	; 0x76
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char77-dejavusc_18StartData	; 0x77
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char78-dejavusc_18StartData	; 0x78
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char79-dejavusc_18StartData	; 0x79
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char7a-dejavusc_18StartData	; 0x7a
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char7b-dejavusc_18StartData	; 0x7b
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char7c-dejavusc_18StartData	; 0x7c
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char7d-dejavusc_18StartData	; 0x7d
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char7e-dejavusc_18StartData	; 0x7e
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char7f-dejavusc_18StartData	; 0x7f C_DELETE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char80-dejavusc_18StartData	; 0x80 C_UA_DIERESIS
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char81-dejavusc_18StartData	; 0x81 C_UA_RING
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char82-dejavusc_18StartData	; 0x82 C_UC_CEDILLA
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char83-dejavusc_18StartData	; 0x83 C_UE_ACUTE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char84-dejavusc_18StartData	; 0x84 C_UN_TILDE
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char85-dejavusc_18StartData	; 0x85 C_UO_DIERESIS
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char86-dejavusc_18StartData	; 0x86 C_UU_DIERESIS
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char87-dejavusc_18StartData	; 0x87 C_LA_ACUTE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char88-dejavusc_18StartData	; 0x88 C_LA_GRAVE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char89-dejavusc_18StartData	; 0x89 C_LA_CIRCUMFLEX
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char8a-dejavusc_18StartData	; 0x8a C_LA_DIERESIS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char8b-dejavusc_18StartData	; 0x8b C_LA_TILDE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char8c-dejavusc_18StartData	; 0x8c C_LA_RING
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char8d-dejavusc_18StartData	; 0x8d C_LC_CEDILLA
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char8e-dejavusc_18StartData	; 0x8e C_LE_ACUTE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char8f-dejavusc_18StartData	; 0x8f C_LE_GRAVE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char90-dejavusc_18StartData	; 0x90 C_LE_CIRCUMFLEX
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char91-dejavusc_18StartData	; 0x91 C_LE_DIERESIS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char92-dejavusc_18StartData	; 0x92 C_LI_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char93-dejavusc_18StartData	; 0x93 C_LI_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char94-dejavusc_18StartData	; 0x94 C_LI_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char95-dejavusc_18StartData	; 0x95 C_LI_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char96-dejavusc_18StartData	; 0x96 C_LN_TILDE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char97-dejavusc_18StartData	; 0x97 C_LO_ACUTE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char98-dejavusc_18StartData	; 0x98 C_LO_GRAVE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char99-dejavusc_18StartData	; 0x99 C_LO_CIRCUMFLEX
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char9a-dejavusc_18StartData	; 0x9a C_LO_DIERESIS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char9b-dejavusc_18StartData	; 0x9b C_LO_TILDE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char9c-dejavusc_18StartData	; 0x9c C_LU_ACUTE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char9d-dejavusc_18StartData	; 0x9d C_LU_GRAVE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char9e-dejavusc_18StartData	; 0x9e C_LU_CIRCUMFLEX
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Char9f-dejavusc_18StartData	; 0x9f C_LU_DIERESIS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara0-dejavusc_18StartData	; 0xa0 C_DAGGER
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara1-dejavusc_18StartData	; 0xa1 C_DEGREE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara2-dejavusc_18StartData	; 0xa2 C_CENT
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara3-dejavusc_18StartData	; 0xa3 C_STERLING
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara4-dejavusc_18StartData	; 0xa4 C_SECTION
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara5-dejavusc_18StartData	; 0xa5 C_BULLET
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara6-dejavusc_18StartData	; 0xa6 C_PARAGRAPH
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara7-dejavusc_18StartData	; 0xa7 C_GERMANDBLS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara8-dejavusc_18StartData	; 0xa8 C_REGISTERED
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chara9-dejavusc_18StartData	; 0xa9 C_COPYRIGHT
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charaa-dejavusc_18StartData	; 0xaa C_TRADEMARK
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charab-dejavusc_18StartData	; 0xab C_ACUTE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charac-dejavusc_18StartData	; 0xac C_DIERESIS
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charad-dejavusc_18StartData	; 0xad C_NOTEQUAL
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charae-dejavusc_18StartData	; 0xae C_U_AE
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charaf-dejavusc_18StartData	; 0xaf C_UO_SLASH
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb0-dejavusc_18StartData	; 0xb0 C_INFINITY
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb1-dejavusc_18StartData	; 0xb1 C_PLUSMINUS
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb2-dejavusc_18StartData	; 0xb2 C_LESSEQUAL
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb3-dejavusc_18StartData	; 0xb3 C_GREATEREQUAL
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb4-dejavusc_18StartData	; 0xb4 C_YEN
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb5-dejavusc_18StartData	; 0xb5 C_L_MU
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb6-dejavusc_18StartData	; 0xb6 C_L_DELTA
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb7-dejavusc_18StartData	; 0xb7 C_U_SIGMA
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb8-dejavusc_18StartData	; 0xb8 C_U_PI
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charb9-dejavusc_18StartData	; 0xb9 C_L_PI
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charba-dejavusc_18StartData	; 0xba C_INTEGRAL
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charbb-dejavusc_18StartData	; 0xbb C_ORDFEMININE
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charbc-dejavusc_18StartData	; 0xbc C_ORDMASCULINE
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charbd-dejavusc_18StartData	; 0xbd C_U_OMEGA
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charbe-dejavusc_18StartData	; 0xbe C_L_AE
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charbf-dejavusc_18StartData	; 0xbf C_LO_SLASH
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc0-dejavusc_18StartData	; 0xc0 C_QUESTIONDOWN
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc1-dejavusc_18StartData	; 0xc1 C_EXCLAMDOWN
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc2-dejavusc_18StartData	; 0xc2 C_LOGICAL_NOT
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc3-dejavusc_18StartData	; 0xc3 C_ROOT
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc4-dejavusc_18StartData	; 0xc4 C_FLORIN
+		WBFixed	<0,6>	; advance
+		byte	0x40	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc5-dejavusc_18StartData	; 0xc5 C_APPROX_EQUAL
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc6-dejavusc_18StartData	; 0xc6 C_U_DELTA
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc7-dejavusc_18StartData	; 0xc7 C_GUILLEDBLLEFT
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc8-dejavusc_18StartData	; 0xc8 C_GUILLEDBLRIGHT
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charc9-dejavusc_18StartData	; 0xc9 C_ELLIPSIS
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charca-dejavusc_18StartData	; 0xca C_NONBRKSPACE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charcb-dejavusc_18StartData	; 0xcb C_UA_GRAVE
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charcc-dejavusc_18StartData	; 0xcc C_UA_TILDE
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charcd-dejavusc_18StartData	; 0xcd C_UO_TILDE
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charce-dejavusc_18StartData	; 0xce C_U_OE
+		WBFixed	<0,19>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charcf-dejavusc_18StartData	; 0xcf C_L_OE
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard0-dejavusc_18StartData	; 0xd0 C_ENDASH
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard1-dejavusc_18StartData	; 0xd1 C_EMDASH
+		WBFixed	<0,18>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard2-dejavusc_18StartData	; 0xd2 C_QUOTEDBLLEFT
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard3-dejavusc_18StartData	; 0xd3 C_QUOTEDBLRIGHT
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard4-dejavusc_18StartData	; 0xd4 C_QUOTESNGLEFT
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard5-dejavusc_18StartData	; 0xd5 C_QUOTESNGRIGHT
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard6-dejavusc_18StartData	; 0xd6 C_DIVISION
+		WBFixed	<0,15>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard7-dejavusc_18StartData	; 0xd7 C_DIAMONDBULLET
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard8-dejavusc_18StartData	; 0xd8 C_LY_DIERESIS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chard9-dejavusc_18StartData	; 0xd9 C_UY_DIERESIS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charda-dejavusc_18StartData	; 0xda C_FRACTION
+		WBFixed	<0,3>	; advance
+		byte	0x40	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chardb-dejavusc_18StartData	; 0xdb C_CURRENCY
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chardc-dejavusc_18StartData	; 0xdc C_GUILSNGLEFT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chardd-dejavusc_18StartData	; 0xdd C_GUILSNGRIGHT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charde-dejavusc_18StartData	; 0xde C_LY_ACUTE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chardf-dejavusc_18StartData	; 0xdf C_UY_ACUTE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare0-dejavusc_18StartData	; 0xe0 C_DBLDAGGER
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare1-dejavusc_18StartData	; 0xe1 C_CNTR_DOT
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare2-dejavusc_18StartData	; 0xe2 C_SNGQUOTELOW
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare3-dejavusc_18StartData	; 0xe3 C_DBLQUOTELOW
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare4-dejavusc_18StartData	; 0xe4 C_PERTHOUSAND
+		WBFixed	<0,24>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare5-dejavusc_18StartData	; 0xe5 C_UA_CIRCUMFLEX
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare6-dejavusc_18StartData	; 0xe6 C_UE_CIRCUMFLEX
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare7-dejavusc_18StartData	; 0xe7 C_UA_ACUTE
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare8-dejavusc_18StartData	; 0xe8 C_UE_DIERESIS
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chare9-dejavusc_18StartData	; 0xe9 C_UE_GRAVE
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charea-dejavusc_18StartData	; 0xea C_UI_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chareb-dejavusc_18StartData	; 0xeb C_UI_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charec-dejavusc_18StartData	; 0xec C_UI_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Chared-dejavusc_18StartData	; 0xed C_UI_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charee-dejavusc_18StartData	; 0xee C_UO_ACUTE
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charef-dejavusc_18StartData	; 0xef C_UO_CIRCUMFLEX
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	0	; 0xf0 C_LOGO
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf1-dejavusc_18StartData	; 0xf1 C_UO_GRAVE
+		WBFixed	<0,14>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf2-dejavusc_18StartData	; 0xf2 C_UU_ACUTE
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf3-dejavusc_18StartData	; 0xf3 C_UU_CIRCUMFLEX
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf4-dejavusc_18StartData	; 0xf4 C_UU_GRAVE
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf5-dejavusc_18StartData	; 0xf5 C_LI_DOTLESS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf6-dejavusc_18StartData	; 0xf6 C_CIRCUMFLEX
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf7-dejavusc_18StartData	; 0xf7 C_TILDE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf8-dejavusc_18StartData	; 0xf8 C_MACRON
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charf9-dejavusc_18StartData	; 0xf9 C_BREVE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charfa-dejavusc_18StartData	; 0xfa C_DOTACCENT
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charfb-dejavusc_18StartData	; 0xfb C_RING
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charfc-dejavusc_18StartData	; 0xfc C_CEDILLA
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charfd-dejavusc_18StartData	; 0xfd C_HUNGARUMLAUT
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charfe-dejavusc_18StartData	; 0xfe C_OGONEK
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	dejavusc_18Charff-dejavusc_18StartData	; 0xff C_CARON
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+dejavusc_18KernPairs label byte
+dejavusc_18KernValues label byte
+dejavusc_18Char20 label byte	; 0x20
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+dejavusc_18Char21 label byte	; 0x21
+		byte	2	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	3	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+
+dejavusc_18Char22 label byte	; 0x22
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+
+dejavusc_18Char23 label byte	; 0x23
+		byte	13	; bitmap width
+		byte	14	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0x06,0x60	; .....##..##..
+		byte	0x04,0x40	; .....#...#...
+		byte	0x04,0x40	; .....#...#...
+		byte	0x04,0x40	; .....#...#...
+		byte	0x7f,0xf8	; .############
+		byte	0x0c,0xc0	; ....##..##...
+		byte	0x08,0x80	; ....#...#....
+		byte	0x08,0x80	; ....#...#....
+		byte	0xff,0xf0	; ############.
+		byte	0xff,0xf0	; ############.
+		byte	0x11,0x00	; ...#...#.....
+		byte	0x11,0x00	; ...#...#.....
+		byte	0x11,0x00	; ...#...#.....
+		byte	0x33,0x00	; ..##..##.....
+
+dejavusc_18Char24 label byte	; 0x24
+		byte	9	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x3f,0x00	; ..######.
+		byte	0x7f,0x00	; .#######.
+		byte	0x48,0x00	; .#..#....
+		byte	0x48,0x00	; .#..#....
+		byte	0x48,0x00	; .#..#....
+		byte	0x78,0x00	; .####....
+		byte	0x3f,0x00	; ..######.
+		byte	0x0b,0x80	; ....#.###
+		byte	0x09,0x80	; ....#..##
+		byte	0x09,0x80	; ....#..##
+		byte	0x89,0x80	; #...#..##
+		byte	0xeb,0x00	; ###.#.##.
+		byte	0x7e,0x00	; .######..
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+
+dejavusc_18Char25 label byte	; 0x25
+		byte	15	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x30,0x10	; ..##.......#...
+		byte	0x48,0x30	; .#..#.....##...
+		byte	0xcc,0x20	; ##..##....#....
+		byte	0x84,0x60	; #....#...##....
+		byte	0x84,0x40	; #....#...#.....
+		byte	0xcc,0x80	; ##..##..#......
+		byte	0xcc,0x80	; ##..##..#......
+		byte	0x79,0x18	; .####..#...##..
+		byte	0x03,0x3c	; ......##..####.
+		byte	0x02,0x66	; ......#..##..##
+		byte	0x06,0x62	; .....##..##...#
+		byte	0x04,0x42	; .....#...#....#
+		byte	0x0c,0x62	; ....##...##...#
+		byte	0x08,0x66	; ....#....##..##
+		byte	0x18,0x3c	; ...##.....####.
+
+dejavusc_18Char26 label byte	; 0x26
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x1e,0x00	; ...####.....
+		byte	0x3f,0x00	; ..######....
+		byte	0x30,0x00	; ..##........
+		byte	0x20,0x00	; ..#.........
+		byte	0x20,0x00	; ..#.........
+		byte	0x30,0x00	; ..##........
+		byte	0x38,0x00	; ..###.......
+		byte	0x6c,0x30	; .##.##....##
+		byte	0x46,0x30	; .#...##...##
+		byte	0xc7,0x20	; ##...###..#.
+		byte	0xc3,0xe0	; ##....#####.
+		byte	0xc1,0xc0	; ##.....###..
+		byte	0x60,0xc0	; .##.....##..
+		byte	0x73,0xe0	; .###..#####.
+		byte	0x3f,0x30	; ..######..##
+
+dejavusc_18Char27 label byte	; 0x27 C_SNG_QUOTE
+		byte	1	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+dejavusc_18Char28 label byte	; 0x28
+		byte	4	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x20	; ..#.
+		byte	0x60	; .##.
+		byte	0x40	; .#..
+		byte	0xc0	; ##..
+		byte	0xc0	; ##..
+		byte	0xc0	; ##..
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xc0	; ##..
+		byte	0xc0	; ##..
+		byte	0x40	; .#..
+		byte	0x60	; .##.
+		byte	0x20	; ..#.
+		byte	0x30	; ..##
+
+dejavusc_18Char29 label byte	; 0x29
+		byte	3	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #..
+		byte	0xc0	; ##.
+		byte	0x40	; .#.
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x40	; .#.
+		byte	0xc0	; ##.
+		byte	0x80	; #..
+		byte	0x80	; #..
+
+dejavusc_18Char2a label byte	; 0x2a
+		byte	7	; bitmap width
+		byte	9	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x92	; #..#..#
+		byte	0x54	; .#.#.#.
+		byte	0x38	; ..###..
+		byte	0x7c	; .#####.
+		byte	0xd6	; ##.#.##
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+
+dejavusc_18Char2b label byte	; 0x2b
+		byte	11	; bitmap width
+		byte	13	; rows
+		sbyte	6	; y offset
+		sbyte	2	; x offset
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+
+dejavusc_18Char2c label byte	; 0x2c
+		byte	2	; bitmap width
+		byte	4	; rows
+		sbyte	17	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+
+dejavusc_18Char2d label byte	; 0x2d
+		byte	5	; bitmap width
+		byte	1	; rows
+		sbyte	13	; y offset
+		sbyte	1	; x offset
+		byte	0xf8	; #####
+
+dejavusc_18Char2e label byte	; 0x2e
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	17	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+
+dejavusc_18Char2f label byte	; 0x2f
+		byte	6	; bitmap width
+		byte	17	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x04	; .....#
+		byte	0x0c	; ....##
+		byte	0x08	; ....#.
+		byte	0x08	; ....#.
+		byte	0x18	; ...##.
+		byte	0x18	; ...##.
+		byte	0x10	; ...#..
+		byte	0x10	; ...#..
+		byte	0x30	; ..##..
+		byte	0x30	; ..##..
+		byte	0x20	; ..#...
+		byte	0x60	; .##...
+		byte	0x60	; .##...
+		byte	0x40	; .#....
+		byte	0x40	; .#....
+		byte	0xc0	; ##....
+		byte	0xc0	; ##....
+
+dejavusc_18Char30 label byte	; 0x30
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x1c,0x00	; ...###...
+		byte	0x3f,0x00	; ..######.
+		byte	0x63,0x00	; .##...##.
+		byte	0x61,0x80	; .##....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x41,0x80	; .#.....##
+		byte	0x61,0x80	; .##....##
+		byte	0x73,0x00	; .###..##.
+		byte	0x3e,0x00	; ..#####..
+
+dejavusc_18Char31 label byte	; 0x31
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x18	; ...##...
+		byte	0xf8	; #####...
+		byte	0xd8	; ##.##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0xff	; ########
+		byte	0xff	; ########
+
+dejavusc_18Char32 label byte	; 0x32
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x3c,0x00	; ..####...
+		byte	0xff,0x00	; ########.
+		byte	0xc3,0x00	; ##....##.
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x00	; .......#.
+		byte	0x03,0x00	; ......##.
+		byte	0x06,0x00	; .....##..
+		byte	0x06,0x00	; .....##..
+		byte	0x0c,0x00	; ....##...
+		byte	0x18,0x00	; ...##....
+		byte	0x30,0x00	; ..##.....
+		byte	0x60,0x00	; .##......
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+
+dejavusc_18Char33 label byte	; 0x33
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x3c,0x00	; ..####...
+		byte	0x7f,0x00	; .#######.
+		byte	0x03,0x00	; ......##.
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x00	; .......#.
+		byte	0x1f,0x00	; ...#####.
+		byte	0x1e,0x00	; ...####..
+		byte	0x03,0x00	; ......##.
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0xc7,0x00	; ##...###.
+		byte	0xfe,0x00	; #######..
+
+dejavusc_18Char34 label byte	; 0x34
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x07,0x00	; .....###.
+		byte	0x07,0x00	; .....###.
+		byte	0x0f,0x00	; ....####.
+		byte	0x0b,0x00	; ....#.##.
+		byte	0x13,0x00	; ...#..##.
+		byte	0x33,0x00	; ..##..##.
+		byte	0x23,0x00	; ..#...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x43,0x00	; .#....##.
+		byte	0xc3,0x00	; ##....##.
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+		byte	0x03,0x00	; ......##.
+		byte	0x03,0x00	; ......##.
+		byte	0x03,0x00	; ......##.
+
+dejavusc_18Char35 label byte	; 0x35
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0x7f,0x00	; .#######.
+		byte	0x60,0x00	; .##......
+		byte	0x60,0x00	; .##......
+		byte	0x60,0x00	; .##......
+		byte	0x78,0x00	; .####....
+		byte	0x7e,0x00	; .######..
+		byte	0x03,0x00	; ......##.
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x03,0x80	; ......###
+		byte	0xc7,0x00	; ##...###.
+		byte	0xfe,0x00	; #######..
+
+dejavusc_18Char36 label byte	; 0x36
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x00	; ....####.
+		byte	0x3f,0x00	; ..######.
+		byte	0x30,0x00	; ..##.....
+		byte	0x60,0x00	; .##......
+		byte	0x40,0x00	; .#.......
+		byte	0xcc,0x00	; ##..##...
+		byte	0xff,0x00	; ########.
+		byte	0xe1,0x80	; ###....##
+		byte	0xe1,0x80	; ###....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc0,0x80	; ##......#
+		byte	0x41,0x80	; .#.....##
+		byte	0x61,0x80	; .##....##
+		byte	0x33,0x00	; ..##..##.
+		byte	0x3f,0x00	; ..######.
+
+dejavusc_18Char37 label byte	; 0x37
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+		byte	0x01,0x00	; .......#.
+		byte	0x03,0x00	; ......##.
+		byte	0x03,0x00	; ......##.
+		byte	0x02,0x00	; ......#..
+		byte	0x06,0x00	; .....##..
+		byte	0x06,0x00	; .....##..
+		byte	0x04,0x00	; .....#...
+		byte	0x0c,0x00	; ....##...
+		byte	0x0c,0x00	; ....##...
+		byte	0x08,0x00	; ....#....
+		byte	0x18,0x00	; ...##....
+		byte	0x18,0x00	; ...##....
+		byte	0x30,0x00	; ..##.....
+
+dejavusc_18Char38 label byte	; 0x38
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x1e,0x00	; ...####..
+		byte	0x7f,0x00	; .#######.
+		byte	0x61,0x80	; .##....##
+		byte	0x41,0x80	; .#.....##
+		byte	0x41,0x80	; .#.....##
+		byte	0x61,0x80	; .##....##
+		byte	0x37,0x00	; ..##.###.
+		byte	0x3e,0x00	; ..#####..
+		byte	0x63,0x00	; .##...##.
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x73,0x80	; .###..###
+		byte	0x3f,0x00	; ..######.
+
+dejavusc_18Char39 label byte	; 0x39
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x1c,0x00	; ...###...
+		byte	0x7f,0x00	; .#######.
+		byte	0x63,0x00	; .##...##.
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x80	; .##...###
+		byte	0x77,0x80	; .###.####
+		byte	0x3d,0x80	; ..####.##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x03,0x00	; ......##.
+		byte	0x67,0x00	; .##..###.
+		byte	0x7c,0x00	; .#####...
+
+dejavusc_18Char3a label byte	; 0x3a
+		byte	2	; bitmap width
+		byte	10	; rows
+		sbyte	9	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+
+dejavusc_18Char3b label byte	; 0x3b
+		byte	2	; bitmap width
+		byte	12	; rows
+		sbyte	9	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+
+dejavusc_18Char3c label byte	; 0x3c
+		byte	11	; bitmap width
+		byte	10	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0x00,0xe0	; ........###
+		byte	0x03,0xc0	; ......####.
+		byte	0x1f,0x00	; ...#####...
+		byte	0x78,0x00	; .####......
+		byte	0xe0,0x00	; ###........
+		byte	0xf0,0x00	; ####.......
+		byte	0x3e,0x00	; ..#####....
+		byte	0x07,0x80	; .....####..
+		byte	0x01,0xe0	; .......####
+		byte	0x00,0x20	; ..........#
+
+dejavusc_18Char3d label byte	; 0x3d
+		byte	11	; bitmap width
+		byte	6	; rows
+		sbyte	10	; y offset
+		sbyte	2	; x offset
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0x00,0x00	; ...........
+		byte	0x00,0x00	; ...........
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+
+dejavusc_18Char3e label byte	; 0x3e
+		byte	11	; bitmap width
+		byte	10	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0xe0,0x00	; ###........
+		byte	0x78,0x00	; .####......
+		byte	0x1f,0x00	; ...#####...
+		byte	0x03,0xc0	; ......####.
+		byte	0x00,0xe0	; ........###
+		byte	0x01,0xe0	; .......####
+		byte	0x0f,0x80	; ....#####..
+		byte	0x3c,0x00	; ..####.....
+		byte	0xf0,0x00	; ####.......
+		byte	0x80,0x00	; #..........
+
+dejavusc_18Char3f label byte	; 0x3f
+		byte	7	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x38	; ..###..
+		byte	0xfe	; #######
+		byte	0x86	; #....##
+		byte	0x02	; ......#
+		byte	0x06	; .....##
+		byte	0x06	; .....##
+		byte	0x0c	; ....##.
+		byte	0x18	; ...##..
+		byte	0x10	; ...#...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x00	; .......
+		byte	0x00	; .......
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+
+dejavusc_18Char40 label byte	; 0x40
+		byte	16	; bitmap width
+		byte	17	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0x07,0xe0	; .....######.....
+		byte	0x0e,0x38	; ....###...###...
+		byte	0x30,0x0c	; ..##........##..
+		byte	0x20,0x06	; ..#..........##.
+		byte	0x61,0x82	; .##....##.....#.
+		byte	0x47,0xf2	; .#...#######..#.
+		byte	0xc4,0x33	; ##...#....##..##
+		byte	0xcc,0x33	; ##..##....##..##
+		byte	0x8c,0x33	; #...##....##..##
+		byte	0x8c,0x33	; #...##....##..##
+		byte	0xc4,0x32	; ##...#....##..#.
+		byte	0x46,0x74	; .#...##..###.#..
+		byte	0x43,0xf8	; .#....#######...
+		byte	0x60,0x00	; .##.............
+		byte	0x30,0x00	; ..##............
+		byte	0x18,0x18	; ...##......##...
+		byte	0x0f,0xf0	; ....########....
+
+dejavusc_18Char41 label byte	; 0x41
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x06,0x00	; .....##.....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x3f,0xe0	; ..#########.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x20	; .##.......#.
+		byte	0x40,0x30	; .#........##
+		byte	0xc0,0x30	; ##........##
+
+dejavusc_18Char42 label byte	; 0x42
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xf8,0x00	; #####....
+		byte	0xff,0x00	; ########.
+		byte	0xc3,0x00	; ##....##.
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc3,0x00	; ##....##.
+		byte	0xff,0x00	; ########.
+		byte	0xfe,0x00	; #######..
+		byte	0xc3,0x00	; ##....##.
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xff,0x00	; ########.
+		byte	0xfe,0x00	; #######..
+
+dejavusc_18Char43 label byte	; 0x43
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x80	; ....#####..
+		byte	0x3f,0xe0	; ..#########
+		byte	0x70,0x60	; .###.....##
+		byte	0x60,0x20	; .##.......#
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0x60,0x00	; .##........
+		byte	0x60,0x20	; .##.......#
+		byte	0x38,0xe0	; ..###...###
+		byte	0x1f,0xc0	; ...#######.
+
+dejavusc_18Char44 label byte	; 0x44
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xf8,0x00	; #####......
+		byte	0xff,0x00	; ########...
+		byte	0xc3,0x80	; ##....###..
+		byte	0xc0,0xc0	; ##......##.
+		byte	0xc0,0xc0	; ##......##.
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x40	; ##.......#.
+		byte	0xc0,0xc0	; ##......##.
+		byte	0xc1,0xc0	; ##.....###.
+		byte	0xff,0x80	; #########..
+		byte	0xfe,0x00	; #######....
+
+dejavusc_18Char45 label byte	; 0x45
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+
+dejavusc_18Char46 label byte	; 0x46
+		byte	7	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xfe	; #######
+		byte	0xfe	; #######
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xfe	; #######
+		byte	0xfe	; #######
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+
+dejavusc_18Char47 label byte	; 0x47
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x80	; ....#####..
+		byte	0x3f,0xe0	; ..#########
+		byte	0x70,0x20	; .###......#
+		byte	0x60,0x00	; .##........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc1,0xe0	; ##.....####
+		byte	0xc1,0xe0	; ##.....####
+		byte	0xc0,0x20	; ##........#
+		byte	0xc0,0x20	; ##........#
+		byte	0x60,0x20	; .##.......#
+		byte	0x60,0x20	; .##.......#
+		byte	0x38,0xe0	; ..###...###
+		byte	0x1f,0xc0	; ...#######.
+
+dejavusc_18Char48 label byte	; 0x48
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xff,0xc0	; ##########
+		byte	0xff,0xc0	; ##########
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0xc0	; ##......##
+
+dejavusc_18Char49 label byte	; 0x49
+		byte	2	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+
+dejavusc_18Char4a label byte	; 0x4a
+		byte	5	; bitmap width
+		byte	19	; rows
+		sbyte	4	; y offset
+		sbyte	-1	; x offset
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x18	; ...##
+		byte	0x10	; ...#.
+		byte	0x30	; ..##.
+		byte	0xf0	; ####.
+		byte	0xe0	; ###..
+
+dejavusc_18Char4b label byte	; 0x4b
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc1,0xc0	; ##.....###
+		byte	0xc3,0x80	; ##....###.
+		byte	0xc7,0x00	; ##...###..
+		byte	0xce,0x00	; ##..###...
+		byte	0xcc,0x00	; ##..##....
+		byte	0xd8,0x00	; ##.##.....
+		byte	0xf0,0x00	; ####......
+		byte	0xe0,0x00	; ###.......
+		byte	0xf0,0x00	; ####......
+		byte	0xd8,0x00	; ##.##.....
+		byte	0xcc,0x00	; ##..##....
+		byte	0xc6,0x00	; ##...##...
+		byte	0xc3,0x00	; ##....##..
+		byte	0xc3,0x80	; ##....###.
+		byte	0xc1,0xc0	; ##.....###
+
+dejavusc_18Char4c label byte	; 0x4c
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+
+dejavusc_18Char4d label byte	; 0x4d
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc0,0x70	; ##.......###
+		byte	0xe0,0x70	; ###......###
+		byte	0xa0,0xf0	; #.#.....####
+		byte	0xa0,0xf0	; #.#.....####
+		byte	0xb0,0xb0	; #.##....#.##
+		byte	0x91,0xb0	; #..#...##.##
+		byte	0x91,0xb0	; #..#...##.##
+		byte	0x99,0x30	; #..##..#..##
+		byte	0x8b,0x30	; #...#.##..##
+		byte	0x8b,0x30	; #...#.##..##
+		byte	0x8e,0x30	; #...###...##
+		byte	0x86,0x30	; #....##...##
+		byte	0x80,0x30	; #.........##
+		byte	0x80,0x30	; #.........##
+		byte	0x80,0x30	; #.........##
+
+dejavusc_18Char4e label byte	; 0x4e
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc0,0xc0	; ##......##
+		byte	0xe0,0xc0	; ###.....##
+		byte	0xe0,0xc0	; ###.....##
+		byte	0xb0,0xc0	; #.##....##
+		byte	0xb0,0xc0	; #.##....##
+		byte	0x98,0xc0	; #..##...##
+		byte	0x98,0xc0	; #..##...##
+		byte	0x8c,0xc0	; #...##..##
+		byte	0x8c,0xc0	; #...##..##
+		byte	0x84,0xc0	; #....#..##
+		byte	0x86,0xc0	; #....##.##
+		byte	0x82,0xc0	; #.....#.##
+		byte	0x83,0xc0	; #.....####
+		byte	0x81,0xc0	; #......###
+		byte	0x81,0xc0	; #......###
+
+dejavusc_18Char4f label byte	; 0x4f
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0x60,0x30	; .##.......##
+		byte	0x60,0x60	; .##......##.
+		byte	0x39,0xc0	; ..###..###..
+		byte	0x1f,0x80	; ...######...
+
+dejavusc_18Char50 label byte	; 0x50
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xf8	; #####...
+		byte	0xfe	; #######.
+		byte	0xc7	; ##...###
+		byte	0xc3	; ##....##
+		byte	0xc3	; ##....##
+		byte	0xc3	; ##....##
+		byte	0xc3	; ##....##
+		byte	0xcf	; ##..####
+		byte	0xfe	; #######.
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+
+dejavusc_18Char51 label byte	; 0x51
+		byte	12	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0x60,0x20	; .##.......#.
+		byte	0x60,0x60	; .##......##.
+		byte	0x39,0xc0	; ..###..###..
+		byte	0x1f,0x80	; ...######...
+		byte	0x01,0x80	; .......##...
+		byte	0x00,0xc0	; ........##..
+		byte	0x00,0x60	; .........##.
+
+dejavusc_18Char52 label byte	; 0x52
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xf8,0x00	; #####.....
+		byte	0xfe,0x00	; #######...
+		byte	0xc7,0x00	; ##...###..
+		byte	0xc3,0x00	; ##....##..
+		byte	0xc3,0x00	; ##....##..
+		byte	0xc3,0x00	; ##....##..
+		byte	0xc3,0x00	; ##....##..
+		byte	0xfe,0x00	; #######...
+		byte	0xfe,0x00	; #######...
+		byte	0xc6,0x00	; ##...##...
+		byte	0xc3,0x00	; ##....##..
+		byte	0xc1,0x00	; ##.....#..
+		byte	0xc1,0x80	; ##.....##.
+		byte	0xc1,0x80	; ##.....##.
+		byte	0xc0,0xc0	; ##......##
+
+dejavusc_18Char53 label byte	; 0x53
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x1e,0x00	; ...####..
+		byte	0x7f,0x80	; .########
+		byte	0x60,0x80	; .##.....#
+		byte	0xc0,0x00	; ##.......
+		byte	0xc0,0x00	; ##.......
+		byte	0xc0,0x00	; ##.......
+		byte	0x78,0x00	; .####....
+		byte	0x3f,0x00	; ..######.
+		byte	0x07,0x80	; .....####
+		byte	0x01,0x80	; .......##
+		byte	0x00,0x80	; ........#
+		byte	0x00,0x80	; ........#
+		byte	0x81,0x80	; #......##
+		byte	0xe3,0x80	; ###...###
+		byte	0x7f,0x00	; .#######.
+
+dejavusc_18Char54 label byte	; 0x54
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+
+dejavusc_18Char55 label byte	; 0x55
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0xc0,0x80	; ##......#.
+		byte	0xc1,0x80	; ##.....##.
+		byte	0x63,0x80	; .##...###.
+		byte	0x3f,0x00	; ..######..
+
+dejavusc_18Char56 label byte	; 0x56
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xc0,0x30	; ##........##
+		byte	0x40,0x30	; .#........##
+		byte	0x60,0x20	; .##.......#.
+		byte	0x60,0x60	; .##......##.
+		byte	0x20,0x60	; ..#......##.
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x18,0x80	; ...##...#...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x09,0x80	; ....#..##...
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x0f,0x00	; ....####....
+		byte	0x07,0x00	; .....###....
+		byte	0x06,0x00	; .....##.....
+
+dejavusc_18Char57 label byte	; 0x57
+		byte	16	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x81,0x83	; #......##.....##
+		byte	0xc1,0x83	; ##.....##.....##
+		byte	0xc3,0x83	; ##....###.....##
+		byte	0xc3,0xc3	; ##....####....##
+		byte	0x42,0xc6	; .#....#.##...##.
+		byte	0x62,0x46	; .##...#..#...##.
+		byte	0x62,0x46	; .##...#..#...##.
+		byte	0x66,0x46	; .##..##..#...##.
+		byte	0x66,0x64	; .##..##..##..#..
+		byte	0x24,0x6c	; ..#..#...##.##..
+		byte	0x34,0x2c	; ..##.#....#.##..
+		byte	0x3c,0x2c	; ..####....#.##..
+		byte	0x3c,0x38	; ..####....###...
+		byte	0x18,0x38	; ...##.....###...
+		byte	0x18,0x18	; ...##......##...
+
+dejavusc_18Char58 label byte	; 0x58
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0xc0,0x40	; ##.......#
+		byte	0x60,0xc0	; .##.....##
+		byte	0x61,0x80	; .##....##.
+		byte	0x31,0x80	; ..##...##.
+		byte	0x13,0x00	; ...#..##..
+		byte	0x1a,0x00	; ...##.#...
+		byte	0x0e,0x00	; ....###...
+		byte	0x0c,0x00	; ....##....
+		byte	0x1e,0x00	; ...####...
+		byte	0x1a,0x00	; ...##.#...
+		byte	0x33,0x00	; ..##..##..
+		byte	0x31,0x80	; ..##...##.
+		byte	0x61,0x80	; .##....##.
+		byte	0xc0,0xc0	; ##......##
+		byte	0xc0,0x40	; ##.......#
+
+dejavusc_18Char59 label byte	; 0x59
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xc0,0x60	; ##.......##
+		byte	0x60,0xc0	; .##.....##.
+		byte	0x60,0xc0	; .##.....##.
+		byte	0x31,0x80	; ..##...##..
+		byte	0x31,0x80	; ..##...##..
+		byte	0x1b,0x00	; ...##.##...
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+
+dejavusc_18Char5a label byte	; 0x5a
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0xc0	; ##########.
+		byte	0xff,0xc0	; ##########.
+		byte	0x00,0xc0	; ........##.
+		byte	0x01,0x80	; .......##..
+		byte	0x03,0x00	; ......##...
+		byte	0x03,0x00	; ......##...
+		byte	0x06,0x00	; .....##....
+		byte	0x0c,0x00	; ....##.....
+		byte	0x1c,0x00	; ...###.....
+		byte	0x18,0x00	; ...##......
+		byte	0x30,0x00	; ..##.......
+		byte	0x60,0x00	; .##........
+		byte	0x60,0x00	; .##........
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+
+dejavusc_18Char5b label byte	; 0x5b
+		byte	3	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xe0	; ###
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+
+dejavusc_18Char5c label byte	; 0x5c C_BACKSLASH
+		byte	6	; bitmap width
+		byte	17	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##....
+		byte	0xc0	; ##....
+		byte	0x40	; .#....
+		byte	0x40	; .#....
+		byte	0x60	; .##...
+		byte	0x60	; .##...
+		byte	0x20	; ..#...
+		byte	0x20	; ..#...
+		byte	0x30	; ..##..
+		byte	0x10	; ...#..
+		byte	0x10	; ...#..
+		byte	0x18	; ...##.
+		byte	0x18	; ...##.
+		byte	0x08	; ....#.
+		byte	0x08	; ....#.
+		byte	0x0c	; ....##
+		byte	0x0c	; ....##
+
+dejavusc_18Char5d label byte	; 0x5d
+		byte	3	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xe0	; ###
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+
+dejavusc_18Char5e label byte	; 0x5e
+		byte	11	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x04,0x00	; .....#.....
+		byte	0x0e,0x00	; ....###....
+		byte	0x1b,0x00	; ...##.##...
+		byte	0x31,0x80	; ..##...##..
+		byte	0x60,0xc0	; .##.....##.
+		byte	0xc0,0x60	; ##.......##
+
+dejavusc_18Char5f label byte	; 0x5f
+		byte	9	; bitmap width
+		byte	2	; rows
+		sbyte	22	; y offset
+		sbyte	0	; x offset
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+
+dejavusc_18Char60 label byte	; 0x60
+		byte	4	; bitmap width
+		byte	4	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##..
+		byte	0x40	; .#..
+		byte	0x60	; .##.
+		byte	0x30	; ..##
+
+dejavusc_18Char61 label byte	; 0x61
+		byte	8	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x7e	; .######.
+		byte	0x67	; .##..###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+		byte	0x3f	; ..######
+		byte	0x7f	; .#######
+		byte	0xc1	; ##.....#
+		byte	0xc1	; ##.....#
+		byte	0xc3	; ##....##
+		byte	0xe7	; ###..###
+		byte	0x7d	; .#####.#
+
+dejavusc_18Char62 label byte	; 0x62
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0xbc	; #.####..
+		byte	0xe6	; ###..##.
+		byte	0xc3	; ##....##
+		byte	0xc1	; ##.....#
+		byte	0x81	; #......#
+		byte	0x81	; #......#
+		byte	0x81	; #......#
+		byte	0x81	; #......#
+		byte	0xc3	; ##....##
+		byte	0xe6	; ###..##.
+		byte	0xbe	; #.#####.
+
+dejavusc_18Char63 label byte	; 0x63
+		byte	8	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x3f	; ..######
+		byte	0x73	; .###..##
+		byte	0x60	; .##.....
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0x40	; .#......
+		byte	0x71	; .###...#
+		byte	0x3f	; ..######
+
+dejavusc_18Char64 label byte	; 0x64
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x3d,0x80	; ..####.##
+		byte	0x67,0x80	; .##..####
+		byte	0x43,0x80	; .#....###
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x80	; .##...###
+		byte	0x3d,0x80	; ..####.##
+
+dejavusc_18Char65 label byte	; 0x65
+		byte	9	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x3e,0x00	; ..#####..
+		byte	0x73,0x00	; .###..##.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xff,0x80	; #########
+		byte	0xc0,0x00	; ##.......
+		byte	0xc0,0x00	; ##.......
+		byte	0x40,0x00	; .#.......
+		byte	0x71,0x80	; .###...##
+		byte	0x3f,0x80	; ..#######
+
+dejavusc_18Char66 label byte	; 0x66
+		byte	7	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x1e	; ...####
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0xfc	; ######.
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+		byte	0x30	; ..##...
+
+dejavusc_18Char67 label byte	; 0x67
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x3d,0x80	; ..####.##
+		byte	0x67,0x80	; .##..####
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x43,0x80	; .#....###
+		byte	0x7f,0x80	; .########
+		byte	0x3d,0x80	; ..####.##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x00	; .......#.
+		byte	0x67,0x00	; .##..###.
+		byte	0x7e,0x00	; .######..
+
+dejavusc_18Char68 label byte	; 0x68
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0xbe	; #.#####.
+		byte	0xe6	; ###..##.
+		byte	0xc3	; ##....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+
+dejavusc_18Char69 label byte	; 0x69
+		byte	1	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x00	; .
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+dejavusc_18Char6a label byte	; 0x6a
+		byte	3	; bitmap width
+		byte	19	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x00	; ...
+		byte	0x00	; ...
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x60	; .##
+		byte	0xc0	; ##.
+
+dejavusc_18Char6b label byte	; 0x6b
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x83	; #.....##
+		byte	0x86	; #....##.
+		byte	0x8c	; #...##..
+		byte	0x98	; #..##...
+		byte	0xb0	; #.##....
+		byte	0xe0	; ###.....
+		byte	0xb0	; #.##....
+		byte	0x98	; #..##...
+		byte	0x8c	; #...##..
+		byte	0x86	; #....##.
+		byte	0x83	; #.....##
+
+dejavusc_18Char6c label byte	; 0x6c
+		byte	1	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+dejavusc_18Char6d label byte	; 0x6d
+		byte	14	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0xbc,0x78	; #.####...####.
+		byte	0xe6,0x98	; ###..##.#..##.
+		byte	0xc3,0x0c	; ##....##....##
+		byte	0x83,0x0c	; #.....##....##
+		byte	0x83,0x0c	; #.....##....##
+		byte	0x83,0x0c	; #.....##....##
+		byte	0x83,0x0c	; #.....##....##
+		byte	0x83,0x0c	; #.....##....##
+		byte	0x83,0x0c	; #.....##....##
+		byte	0x83,0x0c	; #.....##....##
+		byte	0x83,0x0c	; #.....##....##
+
+dejavusc_18Char6e label byte	; 0x6e
+		byte	8	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0xbe	; #.#####.
+		byte	0xe6	; ###..##.
+		byte	0xc3	; ##....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+
+dejavusc_18Char6f label byte	; 0x6f
+		byte	9	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x3e,0x00	; ..#####..
+		byte	0x77,0x00	; .###.###.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x00	; .##...##.
+		byte	0x3e,0x00	; ..#####..
+
+dejavusc_18Char70 label byte	; 0x70
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0xbc	; #.####..
+		byte	0xe6	; ###..##.
+		byte	0xc3	; ##....##
+		byte	0xc1	; ##.....#
+		byte	0x81	; #......#
+		byte	0x81	; #......#
+		byte	0x81	; #......#
+		byte	0x81	; #......#
+		byte	0xc3	; ##....##
+		byte	0xe6	; ###..##.
+		byte	0xbe	; #.#####.
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+		byte	0x80	; #.......
+
+dejavusc_18Char71 label byte	; 0x71
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x3d,0x80	; ..####.##
+		byte	0x67,0x80	; .##..####
+		byte	0x43,0x80	; .#....###
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x80	; .##...###
+		byte	0x3d,0x80	; ..####.##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x80	; .......##
+
+dejavusc_18Char72 label byte	; 0x72
+		byte	5	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0xb8	; #.###
+		byte	0xe0	; ###..
+		byte	0xc0	; ##...
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+
+dejavusc_18Char73 label byte	; 0x73
+		byte	7	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x7e	; .######
+		byte	0xe2	; ###...#
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xe0	; ###....
+		byte	0x7c	; .#####.
+		byte	0x0e	; ....###
+		byte	0x02	; ......#
+		byte	0x02	; ......#
+		byte	0xc6	; ##...##
+		byte	0xfc	; ######.
+
+dejavusc_18Char74 label byte	; 0x74
+		byte	7	; bitmap width
+		byte	14	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0xfe	; #######
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+		byte	0x3e	; ..#####
+		byte	0x1e	; ...####
+
+dejavusc_18Char75 label byte	; 0x75
+		byte	8	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0xcf	; ##..####
+		byte	0x7b	; .####.##
+
+dejavusc_18Char76 label byte	; 0x76
+		byte	9	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x81,0x80	; #......##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x00	; ##.....#.
+		byte	0x43,0x00	; .#....##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x62,0x00	; .##...#..
+		byte	0x26,0x00	; ..#..##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x34,0x00	; ..##.#...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+
+dejavusc_18Char77 label byte	; 0x77
+		byte	13	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x86,0x18	; #....##....##
+		byte	0xc7,0x18	; ##...###...##
+		byte	0xc7,0x10	; ##...###...#.
+		byte	0x45,0x10	; .#...#.#...#.
+		byte	0x4d,0x30	; .#..##.#..##.
+		byte	0x6d,0xb0	; .##.##.##.##.
+		byte	0x69,0xa0	; .##.#..##.#..
+		byte	0x28,0xa0	; ..#.#...#.#..
+		byte	0x38,0xe0	; ..###...###..
+		byte	0x38,0xe0	; ..###...###..
+		byte	0x30,0xe0	; ..##....###..
+
+dejavusc_18Char78 label byte	; 0x78
+		byte	9	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x00	; .##...##.
+		byte	0x66,0x00	; .##..##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x1c,0x00	; ...###...
+		byte	0x18,0x00	; ...##....
+		byte	0x1c,0x00	; ...###...
+		byte	0x36,0x00	; ..##.##..
+		byte	0x66,0x00	; .##..##..
+		byte	0x43,0x00	; .#....##.
+		byte	0xc1,0x80	; ##.....##
+
+dejavusc_18Char79 label byte	; 0x79
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x81,0x80	; #......##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x00	; ##.....#.
+		byte	0x43,0x00	; .#....##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x26,0x00	; ..#..##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x34,0x00	; ..##.#...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x18,0x00	; ...##....
+		byte	0x18,0x00	; ...##....
+		byte	0x18,0x00	; ...##....
+		byte	0x30,0x00	; ..##.....
+		byte	0xf0,0x00	; ####.....
+
+dejavusc_18Char7a label byte	; 0x7a
+		byte	8	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0x06	; .....##.
+		byte	0x0c	; ....##..
+		byte	0x0c	; ....##..
+		byte	0x18	; ...##...
+		byte	0x30	; ..##....
+		byte	0x60	; .##.....
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+
+dejavusc_18Char7b label byte	; 0x7b
+		byte	7	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x0e	; ....###
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x10	; ...#...
+		byte	0xf0	; ####...
+		byte	0xf0	; ####...
+		byte	0x10	; ...#...
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x0e	; ....###
+
+dejavusc_18Char7c label byte	; 0x7c
+		byte	2	; bitmap width
+		byte	20	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+
+dejavusc_18Char7d label byte	; 0x7d
+		byte	7	; bitmap width
+		byte	18	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xf0	; ####...
+		byte	0x30	; ..##...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x0e	; ....###
+		byte	0x0e	; ....###
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x30	; ..##...
+		byte	0xf0	; ####...
+
+dejavusc_18Char7e label byte	; 0x7e
+		byte	11	; bitmap width
+		byte	3	; rows
+		sbyte	11	; y offset
+		sbyte	2	; x offset
+		byte	0x38,0x00	; ..###......
+		byte	0xfe,0x60	; #######..##
+		byte	0x87,0xc0	; #....#####.
+
+dejavusc_18Char7f label byte	; 0x7f C_DELETE
+		byte	9	; bitmap width
+		byte	18	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0x80	; #########
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0x80,0x80	; #.......#
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+
+dejavusc_18Char80 label byte	; 0x80 C_UA_DIERESIS
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x0d,0x80	; ....##.##...
+		byte	0x0d,0x80	; ....##.##...
+		byte	0x00,0x00	; ............
+		byte	0x00,0x00	; ............
+		byte	0x06,0x00	; .....##.....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x3f,0xe0	; ..#########.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x20	; .##.......#.
+		byte	0x40,0x30	; .#........##
+		byte	0xc0,0x30	; ##........##
+
+dejavusc_18Char81 label byte	; 0x81 C_UA_RING
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x02,0x00	; ......#.....
+		byte	0x0f,0x00	; ....####....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x09,0x80	; ....#..##...
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x3f,0xe0	; ..#########.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x20	; .##.......#.
+		byte	0x40,0x30	; .#........##
+		byte	0xc0,0x30	; ##........##
+
+dejavusc_18Char82 label byte	; 0x82 C_UC_CEDILLA
+		byte	11	; bitmap width
+		byte	19	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x80	; ....#####..
+		byte	0x3f,0xe0	; ..#########
+		byte	0x70,0x60	; .###.....##
+		byte	0x60,0x20	; .##.......#
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0xc0,0x00	; ##.........
+		byte	0x60,0x00	; .##........
+		byte	0x60,0x20	; .##.......#
+		byte	0x38,0xe0	; ..###...###
+		byte	0x1f,0xc0	; ...#######.
+		byte	0x01,0x00	; .......#...
+		byte	0x01,0x00	; .......#...
+		byte	0x01,0x00	; .......#...
+		byte	0x07,0x00	; .....###...
+
+dejavusc_18Char83 label byte	; 0x83 C_UE_ACUTE
+		byte	8	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x08	; ....#...
+		byte	0x18	; ...##...
+		byte	0x30	; ..##....
+		byte	0x00	; ........
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+
+dejavusc_18Char84 label byte	; 0x84 C_UN_TILDE
+		byte	10	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x32,0x00	; ..##..#...
+		byte	0x2e,0x00	; ..#.###...
+		byte	0x00,0x00	; ..........
+		byte	0x00,0x00	; ..........
+		byte	0xc0,0xc0	; ##......##
+		byte	0xe0,0xc0	; ###.....##
+		byte	0xe0,0xc0	; ###.....##
+		byte	0xb0,0xc0	; #.##....##
+		byte	0xb0,0xc0	; #.##....##
+		byte	0x98,0xc0	; #..##...##
+		byte	0x98,0xc0	; #..##...##
+		byte	0x8c,0xc0	; #...##..##
+		byte	0x8c,0xc0	; #...##..##
+		byte	0x84,0xc0	; #....#..##
+		byte	0x86,0xc0	; #....##.##
+		byte	0x82,0xc0	; #.....#.##
+		byte	0x83,0xc0	; #.....####
+		byte	0x81,0xc0	; #......###
+		byte	0x81,0xc0	; #......###
+
+dejavusc_18Char85 label byte	; 0x85 C_UO_DIERESIS
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x0d,0x80	; ....##.##...
+		byte	0x0d,0x80	; ....##.##...
+		byte	0x00,0x00	; ............
+		byte	0x00,0x00	; ............
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0x60,0x30	; .##.......##
+		byte	0x60,0x60	; .##......##.
+		byte	0x39,0xc0	; ..###..###..
+		byte	0x1f,0x80	; ...######...
+
+dejavusc_18Char86 label byte	; 0x86 C_UU_DIERESIS
+		byte	10	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x36,0x00	; ..##.##...
+		byte	0x36,0x00	; ..##.##...
+		byte	0x00,0x00	; ..........
+		byte	0x00,0x00	; ..........
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0xc0,0x80	; ##......#.
+		byte	0xc1,0x80	; ##.....##.
+		byte	0x63,0x80	; .##...###.
+		byte	0x3f,0x00	; ..######..
+
+dejavusc_18Char87 label byte	; 0x87 C_LA_ACUTE
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x06	; .....##.
+		byte	0x04	; .....#..
+		byte	0x0c	; ....##..
+		byte	0x18	; ...##...
+		byte	0x00	; ........
+		byte	0x7e	; .######.
+		byte	0x67	; .##..###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+		byte	0x3f	; ..######
+		byte	0x7f	; .#######
+		byte	0xc1	; ##.....#
+		byte	0xc1	; ##.....#
+		byte	0xc3	; ##....##
+		byte	0xe7	; ###..###
+		byte	0x7d	; .#####.#
+
+dejavusc_18Char88 label byte	; 0x88 C_LA_GRAVE
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x30	; ..##....
+		byte	0x10	; ...#....
+		byte	0x18	; ...##...
+		byte	0x0c	; ....##..
+		byte	0x00	; ........
+		byte	0x7e	; .######.
+		byte	0x67	; .##..###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+		byte	0x3f	; ..######
+		byte	0x7f	; .#######
+		byte	0xc1	; ##.....#
+		byte	0xc1	; ##.....#
+		byte	0xc3	; ##....##
+		byte	0xe7	; ###..###
+		byte	0x7d	; .#####.#
+
+dejavusc_18Char89 label byte	; 0x89 C_LA_CIRCUMFLEX
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x08	; ....#...
+		byte	0x14	; ...#.#..
+		byte	0x36	; ..##.##.
+		byte	0x22	; ..#...#.
+		byte	0x00	; ........
+		byte	0x7e	; .######.
+		byte	0x67	; .##..###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+		byte	0x3f	; ..######
+		byte	0x7f	; .#######
+		byte	0xc1	; ##.....#
+		byte	0xc1	; ##.....#
+		byte	0xc3	; ##....##
+		byte	0xe7	; ###..###
+		byte	0x7d	; .#####.#
+
+dejavusc_18Char8a label byte	; 0x8a C_LA_DIERESIS
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x36	; ..##.##.
+		byte	0x36	; ..##.##.
+		byte	0x00	; ........
+		byte	0x00	; ........
+		byte	0x7e	; .######.
+		byte	0x67	; .##..###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+		byte	0x3f	; ..######
+		byte	0x7f	; .#######
+		byte	0xc1	; ##.....#
+		byte	0xc1	; ##.....#
+		byte	0xc3	; ##....##
+		byte	0xe7	; ###..###
+		byte	0x7d	; .#####.#
+
+dejavusc_18Char8b label byte	; 0x8b C_LA_TILDE
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x12	; ...#..#.
+		byte	0x3a	; ..###.#.
+		byte	0x2e	; ..#.###.
+		byte	0x00	; ........
+		byte	0x00	; ........
+		byte	0x7e	; .######.
+		byte	0x67	; .##..###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+		byte	0x3f	; ..######
+		byte	0x7f	; .#######
+		byte	0xc1	; ##.....#
+		byte	0xc1	; ##.....#
+		byte	0xc3	; ##....##
+		byte	0xe7	; ###..###
+		byte	0x7d	; .#####.#
+
+dejavusc_18Char8c label byte	; 0x8c C_LA_RING
+		byte	8	; bitmap width
+		byte	18	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x08	; ....#...
+		byte	0x1c	; ...###..
+		byte	0x22	; ..#...#.
+		byte	0x22	; ..#...#.
+		byte	0x36	; ..##.##.
+		byte	0x1c	; ...###..
+		byte	0x00	; ........
+		byte	0x7e	; .######.
+		byte	0x67	; .##..###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+		byte	0x3f	; ..######
+		byte	0x7f	; .#######
+		byte	0xc1	; ##.....#
+		byte	0xc1	; ##.....#
+		byte	0xc3	; ##....##
+		byte	0xe7	; ###..###
+		byte	0x7d	; .#####.#
+
+dejavusc_18Char8d label byte	; 0x8d C_LC_CEDILLA
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x3f	; ..######
+		byte	0x73	; .###..##
+		byte	0x60	; .##.....
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0x40	; .#......
+		byte	0x71	; .###...#
+		byte	0x3f	; ..######
+		byte	0x04	; .....#..
+		byte	0x04	; .....#..
+		byte	0x04	; .....#..
+		byte	0x1c	; ...###..
+
+dejavusc_18Char8e label byte	; 0x8e C_LE_ACUTE
+		byte	9	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x06,0x00	; .....##..
+		byte	0x04,0x00	; .....#...
+		byte	0x0c,0x00	; ....##...
+		byte	0x18,0x00	; ...##....
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x73,0x00	; .###..##.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xff,0x80	; #########
+		byte	0xc0,0x00	; ##.......
+		byte	0xc0,0x00	; ##.......
+		byte	0x40,0x00	; .#.......
+		byte	0x71,0x80	; .###...##
+		byte	0x3f,0x80	; ..#######
+
+dejavusc_18Char8f label byte	; 0x8f C_LE_GRAVE
+		byte	9	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x30,0x00	; ..##.....
+		byte	0x10,0x00	; ...#.....
+		byte	0x18,0x00	; ...##....
+		byte	0x0c,0x00	; ....##...
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x73,0x00	; .###..##.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xff,0x80	; #########
+		byte	0xc0,0x00	; ##.......
+		byte	0xc0,0x00	; ##.......
+		byte	0x40,0x00	; .#.......
+		byte	0x71,0x80	; .###...##
+		byte	0x3f,0x80	; ..#######
+
+dejavusc_18Char90 label byte	; 0x90 C_LE_CIRCUMFLEX
+		byte	9	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x08,0x00	; ....#....
+		byte	0x14,0x00	; ...#.#...
+		byte	0x36,0x00	; ..##.##..
+		byte	0x22,0x00	; ..#...#..
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x73,0x00	; .###..##.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xff,0x80	; #########
+		byte	0xc0,0x00	; ##.......
+		byte	0xc0,0x00	; ##.......
+		byte	0x40,0x00	; .#.......
+		byte	0x71,0x80	; .###...##
+		byte	0x3f,0x80	; ..#######
+
+dejavusc_18Char91 label byte	; 0x91 C_LE_DIERESIS
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x36,0x00	; ..##.##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x00,0x00	; .........
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x73,0x00	; .###..##.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xff,0x80	; #########
+		byte	0xc0,0x00	; ##.......
+		byte	0xc0,0x00	; ##.......
+		byte	0x40,0x00	; .#.......
+		byte	0x71,0x80	; .###...##
+		byte	0x3f,0x80	; ..#######
+
+dejavusc_18Char92 label byte	; 0x92 C_LI_ACUTE
+		byte	4	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x30	; ..##
+		byte	0x20	; ..#.
+		byte	0x60	; .##.
+		byte	0xc0	; ##..
+		byte	0x00	; ....
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+
+dejavusc_18Char93 label byte	; 0x93 C_LI_GRAVE
+		byte	4	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##..
+		byte	0x40	; .#..
+		byte	0x60	; .##.
+		byte	0x30	; ..##
+		byte	0x00	; ....
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+
+dejavusc_18Char94 label byte	; 0x94 C_LI_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0xd8	; ##.##
+		byte	0x88	; #...#
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+dejavusc_18Char95 label byte	; 0x95 C_LI_DIERESIS
+		byte	5	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xd8	; ##.##
+		byte	0xd8	; ##.##
+		byte	0x00	; .....
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+dejavusc_18Char96 label byte	; 0x96 C_LN_TILDE
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x24	; ..#..#..
+		byte	0x74	; .###.#..
+		byte	0x5c	; .#.###..
+		byte	0x00	; ........
+		byte	0x00	; ........
+		byte	0xbe	; #.#####.
+		byte	0xe6	; ###..##.
+		byte	0xc3	; ##....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+
+dejavusc_18Char97 label byte	; 0x97 C_LO_ACUTE
+		byte	9	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x06,0x00	; .....##..
+		byte	0x04,0x00	; .....#...
+		byte	0x0c,0x00	; ....##...
+		byte	0x18,0x00	; ...##....
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x77,0x00	; .###.###.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x00	; .##...##.
+		byte	0x3e,0x00	; ..#####..
+
+dejavusc_18Char98 label byte	; 0x98 C_LO_GRAVE
+		byte	9	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x30,0x00	; ..##.....
+		byte	0x10,0x00	; ...#.....
+		byte	0x18,0x00	; ...##....
+		byte	0x0c,0x00	; ....##...
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x77,0x00	; .###.###.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x00	; .##...##.
+		byte	0x3e,0x00	; ..#####..
+
+dejavusc_18Char99 label byte	; 0x99 C_LO_CIRCUMFLEX
+		byte	9	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x08,0x00	; ....#....
+		byte	0x14,0x00	; ...#.#...
+		byte	0x36,0x00	; ..##.##..
+		byte	0x22,0x00	; ..#...#..
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x77,0x00	; .###.###.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x00	; .##...##.
+		byte	0x3e,0x00	; ..#####..
+
+dejavusc_18Char9a label byte	; 0x9a C_LO_DIERESIS
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x36,0x00	; ..##.##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x00,0x00	; .........
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x77,0x00	; .###.###.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x00	; .##...##.
+		byte	0x3e,0x00	; ..#####..
+
+dejavusc_18Char9b label byte	; 0x9b C_LO_TILDE
+		byte	9	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x12,0x00	; ...#..#..
+		byte	0x3a,0x00	; ..###.#..
+		byte	0x2e,0x00	; ..#.###..
+		byte	0x00,0x00	; .........
+		byte	0x00,0x00	; .........
+		byte	0x3e,0x00	; ..#####..
+		byte	0x77,0x00	; .###.###.
+		byte	0x41,0x80	; .#.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x80	; ##.....##
+		byte	0x63,0x00	; .##...##.
+		byte	0x3e,0x00	; ..#####..
+
+dejavusc_18Char9c label byte	; 0x9c C_LU_ACUTE
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x0c	; ....##..
+		byte	0x08	; ....#...
+		byte	0x18	; ...##...
+		byte	0x30	; ..##....
+		byte	0x00	; ........
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0xcf	; ##..####
+		byte	0x7b	; .####.##
+
+dejavusc_18Char9d label byte	; 0x9d C_LU_GRAVE
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x60	; .##.....
+		byte	0x20	; ..#.....
+		byte	0x30	; ..##....
+		byte	0x18	; ...##...
+		byte	0x00	; ........
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0xcf	; ##..####
+		byte	0x7b	; .####.##
+
+dejavusc_18Char9e label byte	; 0x9e C_LU_CIRCUMFLEX
+		byte	8	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x10	; ...#....
+		byte	0x28	; ..#.#...
+		byte	0x6c	; .##.##..
+		byte	0x44	; .#...#..
+		byte	0x00	; ........
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0xcf	; ##..####
+		byte	0x7b	; .####.##
+
+dejavusc_18Char9f label byte	; 0x9f C_LU_DIERESIS
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x6c	; .##.##..
+		byte	0x6c	; .##.##..
+		byte	0x00	; ........
+		byte	0x00	; ........
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0x83	; #.....##
+		byte	0xcf	; ##..####
+		byte	0x7b	; .####.##
+
+dejavusc_18Chara0 label byte	; 0xa0 C_DAGGER
+		byte	9	; bitmap width
+		byte	17	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0xff,0x80	; #########
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+
+dejavusc_18Chara1 label byte	; 0xa1 C_DEGREE
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x70	; .###.
+		byte	0xd8	; ##.##
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+dejavusc_18Chara2 label byte	; 0xa2 C_CENT
+		byte	7	; bitmap width
+		byte	17	; rows
+		sbyte	5	; y offset
+		sbyte	2	; x offset
+		byte	0x08	; ....#..
+		byte	0x08	; ....#..
+		byte	0x08	; ....#..
+		byte	0x3e	; ..#####
+		byte	0x6a	; .##.#.#
+		byte	0xc8	; ##..#..
+		byte	0xc8	; ##..#..
+		byte	0x88	; #...#..
+		byte	0x88	; #...#..
+		byte	0x88	; #...#..
+		byte	0x88	; #...#..
+		byte	0xc8	; ##..#..
+		byte	0x6a	; .##.#.#
+		byte	0x3e	; ..#####
+		byte	0x08	; ....#..
+		byte	0x08	; ....#..
+		byte	0x08	; ....#..
+
+dejavusc_18Chara3 label byte	; 0xa3 C_STERLING
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x00	; ....####.
+		byte	0x1f,0x80	; ...######
+		byte	0x10,0x00	; ...#.....
+		byte	0x30,0x00	; ..##.....
+		byte	0x30,0x00	; ..##.....
+		byte	0x30,0x00	; ..##.....
+		byte	0x30,0x00	; ..##.....
+		byte	0xfe,0x00	; #######..
+		byte	0xfe,0x00	; #######..
+		byte	0x30,0x00	; ..##.....
+		byte	0x30,0x00	; ..##.....
+		byte	0x30,0x00	; ..##.....
+		byte	0x30,0x00	; ..##.....
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+
+dejavusc_18Chara4 label byte	; 0xa4 C_SECTION
+		byte	7	; bitmap width
+		byte	17	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x3c	; ..####.
+		byte	0x7c	; .#####.
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0x60	; .##....
+		byte	0x78	; .####..
+		byte	0xdc	; ##.###.
+		byte	0x86	; #....##
+		byte	0x82	; #.....#
+		byte	0xc2	; ##....#
+		byte	0x76	; .###.##
+		byte	0x1c	; ...###.
+		byte	0x0c	; ....##.
+		byte	0x06	; .....##
+		byte	0x06	; .....##
+		byte	0x7c	; .#####.
+		byte	0x78	; .####..
+
+dejavusc_18Chara5 label byte	; 0xa5 C_BULLET
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	9	; y offset
+		sbyte	3	; x offset
+		byte	0xf0	; ####.
+		byte	0xf8	; #####
+		byte	0xf8	; #####
+		byte	0xf8	; #####
+		byte	0xf0	; ####.
+
+dejavusc_18Chara6 label byte	; 0xa6 C_PARAGRAPH
+		byte	9	; bitmap width
+		byte	17	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x80	; ....#####
+		byte	0x3f,0x80	; ..#######
+		byte	0x7d,0x80	; .#####.##
+		byte	0xfd,0x80	; ######.##
+		byte	0xfd,0x80	; ######.##
+		byte	0xfd,0x80	; ######.##
+		byte	0x7d,0x80	; .#####.##
+		byte	0x7d,0x80	; .#####.##
+		byte	0x1d,0x80	; ...###.##
+		byte	0x0d,0x80	; ....##.##
+		byte	0x0d,0x80	; ....##.##
+		byte	0x0d,0x80	; ....##.##
+		byte	0x0d,0x80	; ....##.##
+		byte	0x0d,0x80	; ....##.##
+		byte	0x0d,0x80	; ....##.##
+		byte	0x0d,0x80	; ....##.##
+		byte	0x0d,0x80	; ....##.##
+
+dejavusc_18Chara7 label byte	; 0xa7 C_GERMANDBLS
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x7c,0x00	; .#####...
+		byte	0xe6,0x00	; ###..##..
+		byte	0xc2,0x00	; ##....#..
+		byte	0x86,0x00	; #....##..
+		byte	0x8c,0x00	; #...##...
+		byte	0x98,0x00	; #..##....
+		byte	0x98,0x00	; #..##....
+		byte	0x98,0x00	; #..##....
+		byte	0x8c,0x00	; #...##...
+		byte	0x87,0x00	; #....###.
+		byte	0x83,0x00	; #.....##.
+		byte	0x81,0x80	; #......##
+		byte	0x81,0x00	; #......#.
+		byte	0xa3,0x00	; #.#...##.
+		byte	0xbe,0x00	; #.#####..
+
+dejavusc_18Chara8 label byte	; 0xa8 C_REGISTERED
+		byte	14	; bitmap width
+		byte	14	; rows
+		sbyte	5	; y offset
+		sbyte	2	; x offset
+		byte	0x0f,0xc0	; ....######....
+		byte	0x10,0x20	; ...#......#...
+		byte	0x20,0x10	; ..#........#..
+		byte	0x4f,0xc8	; .#..######..#.
+		byte	0x4c,0xc8	; .#..##..##..#.
+		byte	0x8c,0xc8	; #...##..##..#.
+		byte	0x8f,0x84	; #...#####....#
+		byte	0x8d,0x88	; #...##.##...#.
+		byte	0x4c,0x88	; .#..##..#...#.
+		byte	0x4c,0xc8	; .#..##..##..#.
+		byte	0x6c,0x48	; .##.##...#..#.
+		byte	0x20,0x10	; ..#........#..
+		byte	0x18,0x60	; ...##....##...
+		byte	0x07,0x80	; .....####.....
+
+dejavusc_18Chara9 label byte	; 0xa9 C_COPYRIGHT
+		byte	14	; bitmap width
+		byte	14	; rows
+		sbyte	5	; y offset
+		sbyte	2	; x offset
+		byte	0x0f,0xc0	; ....######....
+		byte	0x10,0x20	; ...#......#...
+		byte	0x23,0x10	; ..#...##...#..
+		byte	0x4f,0xc8	; .#..######..#.
+		byte	0x48,0x08	; .#..#.......#.
+		byte	0x98,0x08	; #..##.......#.
+		byte	0x98,0x04	; #..##........#
+		byte	0x98,0x08	; #..##.......#.
+		byte	0x58,0x08	; .#.##.......#.
+		byte	0x4c,0x48	; .#..##...#..#.
+		byte	0x67,0xc8	; .##..#####..#.
+		byte	0x20,0x10	; ..#........#..
+		byte	0x18,0x60	; ...##....##...
+		byte	0x07,0x80	; .....####.....
+
+dejavusc_18Charaa label byte	; 0xaa C_TRADEMARK
+		byte	11	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	3	; x offset
+		byte	0xf6,0x20	; ####.##...#
+		byte	0x46,0x60	; .#...##..##
+		byte	0x45,0xa0	; .#...#.##.#
+		byte	0x45,0xa0	; .#...#.##.#
+		byte	0x44,0x20	; .#...#....#
+		byte	0x44,0x20	; .#...#....#
+
+dejavusc_18Charab label byte	; 0xab C_ACUTE
+		byte	4	; bitmap width
+		byte	4	; rows
+		sbyte	3	; y offset
+		sbyte	3	; x offset
+		byte	0x30	; ..##
+		byte	0x20	; ..#.
+		byte	0x60	; .##.
+		byte	0xc0	; ##..
+
+dejavusc_18Charac label byte	; 0xac C_DIERESIS
+		byte	5	; bitmap width
+		byte	2	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xd8	; ##.##
+		byte	0xd8	; ##.##
+
+dejavusc_18Charad label byte	; 0xad C_NOTEQUAL
+		byte	11	; bitmap width
+		byte	11	; rows
+		sbyte	7	; y offset
+		sbyte	2	; x offset
+		byte	0x00,0xc0	; ........##.
+		byte	0x00,0xc0	; ........##.
+		byte	0x01,0x80	; .......##..
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0x06,0x00	; .....##....
+		byte	0x0c,0x00	; ....##.....
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0x30,0x00	; ..##.......
+		byte	0x60,0x00	; .##........
+
+dejavusc_18Charae label byte	; 0xae C_U_AE
+		byte	16	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x03,0xff	; ......##########
+		byte	0x07,0xff	; .....###########
+		byte	0x06,0xc0	; .....##.##......
+		byte	0x0c,0xc0	; ....##..##......
+		byte	0x0c,0xc0	; ....##..##......
+		byte	0x08,0xc0	; ....#...##......
+		byte	0x18,0xff	; ...##...########
+		byte	0x18,0xff	; ...##...########
+		byte	0x10,0xc0	; ...#....##......
+		byte	0x30,0xc0	; ..##....##......
+		byte	0x3f,0xc0	; ..########......
+		byte	0x60,0xc0	; .##.....##......
+		byte	0x60,0xc0	; .##.....##......
+		byte	0x40,0xff	; .#......########
+		byte	0xc0,0xff	; ##......########
+
+dejavusc_18Charaf label byte	; 0xaf C_UO_SLASH
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x10	; ....####...#
+		byte	0x3f,0xf0	; ..##########
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0xb0	; ##......#.##
+		byte	0xc1,0xb0	; ##.....##.##
+		byte	0xc3,0x30	; ##....##..##
+		byte	0xc6,0x30	; ##...##...##
+		byte	0xc4,0x30	; ##...#....##
+		byte	0xcc,0x30	; ##..##....##
+		byte	0xd8,0x30	; ##.##.....##
+		byte	0x70,0x30	; .###......##
+		byte	0x60,0x60	; .##......##.
+		byte	0x79,0xc0	; .####..###..
+		byte	0xdf,0x80	; ##.######...
+
+dejavusc_18Charb0 label byte	; 0xb0 C_INFINITY
+		byte	11	; bitmap width
+		byte	8	; rows
+		sbyte	9	; y offset
+		sbyte	2	; x offset
+		byte	0x31,0x80	; ..##...##..
+		byte	0x7b,0xc0	; .####.####.
+		byte	0x8a,0x20	; #...#.#...#
+		byte	0x84,0x20	; #....#....#
+		byte	0x84,0x20	; #....#....#
+		byte	0x8a,0x20	; #...#.#...#
+		byte	0x7b,0xc0	; .####.####.
+		byte	0x31,0x80	; ..##...##..
+
+dejavusc_18Charb1 label byte	; 0xb1 C_PLUSMINUS
+		byte	11	; bitmap width
+		byte	13	; rows
+		sbyte	6	; y offset
+		sbyte	2	; x offset
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x00,0x00	; ...........
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+
+dejavusc_18Charb2 label byte	; 0xb2 C_LESSEQUAL
+		byte	11	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0x00,0xe0	; ........###
+		byte	0x0f,0xc0	; ....######.
+		byte	0x7e,0x00	; .######....
+		byte	0xf0,0x00	; ####.......
+		byte	0xf8,0x00	; #####......
+		byte	0x1f,0x00	; ...#####...
+		byte	0x03,0xe0	; ......#####
+		byte	0x00,0x60	; .........##
+		byte	0x00,0x00	; ...........
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+
+dejavusc_18Charb3 label byte	; 0xb3 C_GREATEREQUAL
+		byte	11	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0xe0,0x00	; ###........
+		byte	0x7e,0x00	; .######....
+		byte	0x0f,0xc0	; ....######.
+		byte	0x01,0xe0	; .......####
+		byte	0x03,0xe0	; ......#####
+		byte	0x1f,0x00	; ...#####...
+		byte	0xf8,0x00	; #####......
+		byte	0xc0,0x00	; ##.........
+		byte	0x00,0x00	; ...........
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+
+dejavusc_18Charb4 label byte	; 0xb4 C_YEN
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x80,0xc0	; #.......##
+		byte	0xc0,0x80	; ##......#.
+		byte	0x41,0x80	; .#.....##.
+		byte	0x61,0x00	; .##....#..
+		byte	0x23,0x00	; ..#...##..
+		byte	0x32,0x00	; ..##..#...
+		byte	0xf7,0x80	; ####.####.
+		byte	0x1c,0x00	; ...###....
+		byte	0x0c,0x00	; ....##....
+		byte	0xff,0x80	; #########.
+		byte	0xff,0x80	; #########.
+		byte	0x0c,0x00	; ....##....
+		byte	0x0c,0x00	; ....##....
+		byte	0x0c,0x00	; ....##....
+		byte	0x0c,0x00	; ....##....
+
+dejavusc_18Charb5 label byte	; 0xb5 C_L_MU
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0x83,0x00	; #.....##.
+		byte	0xc7,0x00	; ##...###.
+		byte	0xbf,0x80	; #.#######
+		byte	0x80,0x00	; #........
+		byte	0x80,0x00	; #........
+		byte	0x80,0x00	; #........
+		byte	0x80,0x00	; #........
+
+dejavusc_18Charb6 label byte	; 0xb6 C_L_DELTA
+		byte	7	; bitmap width
+		byte	13	; rows
+		sbyte	6	; y offset
+		sbyte	1	; x offset
+		byte	0x3c	; ..####.
+		byte	0x0e	; ....###
+		byte	0x06	; .....##
+		byte	0x02	; ......#
+		byte	0x02	; ......#
+		byte	0x7a	; .####.#
+		byte	0x4e	; .#..###
+		byte	0xc6	; ##...##
+		byte	0x86	; #....##
+		byte	0x86	; #....##
+		byte	0x84	; #....#.
+		byte	0xcc	; ##..##.
+		byte	0x78	; .####..
+
+dejavusc_18Charb7 label byte	; 0xb7 C_U_SIGMA
+		byte	12	; bitmap width
+		byte	18	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0xff,0xf0	; ############
+		byte	0x7f,0xf0	; .###########
+		byte	0x70,0x00	; .###........
+		byte	0x38,0x00	; ..###.......
+		byte	0x1c,0x00	; ...###......
+		byte	0x0c,0x00	; ....##......
+		byte	0x06,0x00	; .....##.....
+		byte	0x03,0x00	; ......##....
+		byte	0x01,0x80	; .......##...
+		byte	0x03,0x00	; ......##....
+		byte	0x06,0x00	; .....##.....
+		byte	0x0e,0x00	; ....###.....
+		byte	0x1c,0x00	; ...###......
+		byte	0x18,0x00	; ...##.......
+		byte	0x30,0x00	; ..##........
+		byte	0x60,0x00	; .##.........
+		byte	0xff,0xf0	; ############
+		byte	0xff,0xf0	; ############
+
+dejavusc_18Charb8 label byte	; 0xb8 C_U_PI
+		byte	11	; bitmap width
+		byte	18	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+		byte	0xc0,0x60	; ##.......##
+
+dejavusc_18Charb9 label byte	; 0xb9 C_L_PI
+		byte	9	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x63,0x80	; .##...###
+
+dejavusc_18Charba label byte	; 0xba C_INTEGRAL
+		byte	7	; bitmap width
+		byte	19	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0e	; ....###
+		byte	0x1a	; ...##.#
+		byte	0x1a	; ...##.#
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0x10	; ...#...
+		byte	0xf0	; ####...
+		byte	0x60	; .##....
+
+dejavusc_18Charbb label byte	; 0xbb C_ORDFEMININE
+		byte	6	; bitmap width
+		byte	10	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x78	; .####.
+		byte	0x4c	; .#..##
+		byte	0x04	; .....#
+		byte	0x7c	; .#####
+		byte	0xc4	; ##...#
+		byte	0x84	; #....#
+		byte	0xcc	; ##..##
+		byte	0x74	; .###.#
+		byte	0x00	; ......
+		byte	0xfc	; ######
+
+dejavusc_18Charbc label byte	; 0xbc C_ORDMASCULINE
+		byte	7	; bitmap width
+		byte	10	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x38	; ..###..
+		byte	0x4c	; .#..##.
+		byte	0xc4	; ##...#.
+		byte	0x86	; #....##
+		byte	0x86	; #....##
+		byte	0x84	; #....#.
+		byte	0xc4	; ##...#.
+		byte	0x78	; .####..
+		byte	0x00	; .......
+		byte	0xfc	; ######.
+
+dejavusc_18Charbd label byte	; 0xbd C_U_OMEGA
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x60	; ##.......##.
+		byte	0x60,0x60	; .##......##.
+		byte	0x30,0xc0	; ..##....##..
+		byte	0xf9,0xf0	; #####..#####
+		byte	0xf9,0xf0	; #####..#####
+
+dejavusc_18Charbe label byte	; 0xbe C_L_AE
+		byte	16	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x7e,0x7c	; .######..#####..
+		byte	0x67,0xce	; .##..#####..###.
+		byte	0x03,0x82	; ......###.....#.
+		byte	0x01,0x83	; .......##.....##
+		byte	0x3f,0x03	; ..######......##
+		byte	0x7f,0xff	; .###############
+		byte	0xc1,0x00	; ##.....#........
+		byte	0xc1,0x80	; ##.....##.......
+		byte	0xc3,0x80	; ##....###.......
+		byte	0xe6,0xc2	; ###..##.##....#.
+		byte	0x7c,0x7e	; .#####...######.
+
+dejavusc_18Charbf label byte	; 0xbf C_LO_SLASH
+		byte	9	; bitmap width
+		byte	13	; rows
+		sbyte	7	; y offset
+		sbyte	1	; x offset
+		byte	0x00,0x80	; ........#
+		byte	0x3e,0x80	; ..#####.#
+		byte	0x77,0x00	; .###.###.
+		byte	0x43,0x00	; .#....##.
+		byte	0xc7,0x80	; ##...####
+		byte	0xc5,0x80	; ##...#.##
+		byte	0xc9,0x80	; ##..#..##
+		byte	0xd1,0x80	; ##.#...##
+		byte	0xf1,0x80	; ####...##
+		byte	0xe1,0x80	; ###....##
+		byte	0x63,0x00	; .##...##.
+		byte	0xfe,0x00	; #######..
+		byte	0x80,0x00	; #........
+
+dejavusc_18Charc0 label byte	; 0xc0 C_QUESTIONDOWN
+		byte	7	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x00	; .......
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x18	; ...##..
+		byte	0x30	; ..##...
+		byte	0x60	; .##....
+		byte	0xc0	; ##.....
+		byte	0xc0	; ##.....
+		byte	0xc2	; ##....#
+		byte	0x7e	; .######
+		byte	0x3c	; ..####.
+
+dejavusc_18Charc1 label byte	; 0xc1 C_EXCLAMDOWN
+		byte	2	; bitmap width
+		byte	15	; rows
+		sbyte	8	; y offset
+		sbyte	3	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+
+dejavusc_18Charc2 label byte	; 0xc2 C_LOGICAL_NOT
+		byte	11	; bitmap width
+		byte	5	; rows
+		sbyte	11	; y offset
+		sbyte	2	; x offset
+		byte	0xff,0xe0	; ###########
+		byte	0x00,0x20	; ..........#
+		byte	0x00,0x20	; ..........#
+		byte	0x00,0x20	; ..........#
+		byte	0x00,0x20	; ..........#
+
+dejavusc_18Charc3 label byte	; 0xc3 C_ROOT
+		byte	10	; bitmap width
+		byte	16	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x00,0x40	; .........#
+		byte	0x00,0x80	; ........#.
+		byte	0x00,0x80	; ........#.
+		byte	0x00,0x80	; ........#.
+		byte	0x01,0x00	; .......#..
+		byte	0x01,0x00	; .......#..
+		byte	0x01,0x00	; .......#..
+		byte	0xc2,0x00	; ##....#...
+		byte	0x62,0x00	; .##...#...
+		byte	0x62,0x00	; .##...#...
+		byte	0x24,0x00	; ..#..#....
+		byte	0x34,0x00	; ..##.#....
+		byte	0x34,0x00	; ..##.#....
+		byte	0x18,0x00	; ...##.....
+		byte	0x18,0x00	; ...##.....
+		byte	0x18,0x00	; ...##.....
+
+dejavusc_18Charc4 label byte	; 0xc4 C_FLORIN
+		byte	8	; bitmap width
+		byte	19	; rows
+		sbyte	4	; y offset
+		sbyte	-1	; x offset
+		byte	0x0f	; ....####
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x7e	; .######.
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x18	; ...##...
+		byte	0x30	; ..##....
+		byte	0xf0	; ####....
+
+dejavusc_18Charc5 label byte	; 0xc5 C_APPROX_EQUAL
+		byte	11	; bitmap width
+		byte	7	; rows
+		sbyte	9	; y offset
+		sbyte	2	; x offset
+		byte	0x30,0x00	; ..##.......
+		byte	0xfe,0x60	; #######..##
+		byte	0x87,0xc0	; #....#####.
+		byte	0x00,0x00	; ...........
+		byte	0x38,0x20	; ..###.....#
+		byte	0xff,0xe0	; ###########
+		byte	0x83,0xc0	; #.....####.
+
+dejavusc_18Charc6 label byte	; 0xc6 C_U_DELTA
+		byte	12	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x06,0x00	; .....##.....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x20,0x60	; ..#......##.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x60	; .##......##.
+		byte	0x7f,0xf0	; .###########
+		byte	0xff,0xf0	; ############
+
+dejavusc_18Charc7 label byte	; 0xc7 C_GUILLEDBLLEFT
+		byte	8	; bitmap width
+		byte	9	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0x09	; ....#..#
+		byte	0x1b	; ...##.##
+		byte	0x36	; ..##.##.
+		byte	0x6c	; .##.##..
+		byte	0xcc	; ##..##..
+		byte	0x66	; .##..##.
+		byte	0x33	; ..##..##
+		byte	0x19	; ...##..#
+		byte	0x08	; ....#...
+
+dejavusc_18Charc8 label byte	; 0xc8 C_GUILLEDBLRIGHT
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	9	; y offset
+		sbyte	2	; x offset
+		byte	0x90	; #..#....
+		byte	0xc8	; ##..#...
+		byte	0x64	; .##..#..
+		byte	0x32	; ..##..#.
+		byte	0x33	; ..##..##
+		byte	0x66	; .##..##.
+		byte	0xcc	; ##..##..
+		byte	0x88	; #...#...
+
+dejavusc_18Charc9 label byte	; 0xc9 C_ELLIPSIS
+		byte	14	; bitmap width
+		byte	2	; rows
+		sbyte	17	; y offset
+		sbyte	2	; x offset
+		byte	0xc3,0x0c	; ##....##....##
+		byte	0xc3,0x0c	; ##....##....##
+
+dejavusc_18Charca label byte	; 0xca C_NONBRKSPACE
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+dejavusc_18Charcb label byte	; 0xcb C_UA_GRAVE
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x04,0x00	; .....#......
+		byte	0x06,0x00	; .....##.....
+		byte	0x03,0x00	; ......##....
+		byte	0x00,0x00	; ............
+		byte	0x06,0x00	; .....##.....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x3f,0xe0	; ..#########.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x20	; .##.......#.
+		byte	0x40,0x30	; .#........##
+		byte	0xc0,0x30	; ##........##
+
+dejavusc_18Charcc label byte	; 0xcc C_UA_TILDE
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x0c,0x80	; ....##..#...
+		byte	0x0b,0x80	; ....#.###...
+		byte	0x00,0x00	; ............
+		byte	0x00,0x00	; ............
+		byte	0x06,0x00	; .....##.....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x3f,0xe0	; ..#########.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x20	; .##.......#.
+		byte	0x40,0x30	; .#........##
+		byte	0xc0,0x30	; ##........##
+
+dejavusc_18Charcd label byte	; 0xcd C_UO_TILDE
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x0c,0x80	; ....##..#...
+		byte	0x0b,0x80	; ....#.###...
+		byte	0x00,0x00	; ............
+		byte	0x00,0x00	; ............
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0x60,0x30	; .##.......##
+		byte	0x60,0x60	; .##......##.
+		byte	0x39,0xc0	; ..###..###..
+		byte	0x1f,0x80	; ...######...
+
+dejavusc_18Charce label byte	; 0xce C_U_OE
+		byte	17	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x03,0xff,0x80	; ......###########
+		byte	0x1f,0xff,0x80	; ...##############
+		byte	0x38,0x40,0x00	; ..###....#.......
+		byte	0x60,0x40,0x00	; .##......#.......
+		byte	0x60,0x40,0x00	; .##......#.......
+		byte	0xc0,0x40,0x00	; ##.......#.......
+		byte	0xc0,0x7f,0x80	; ##.......########
+		byte	0xc0,0x7f,0x80	; ##.......########
+		byte	0xc0,0x40,0x00	; ##.......#.......
+		byte	0xc0,0x40,0x00	; ##.......#.......
+		byte	0xc0,0x40,0x00	; ##.......#.......
+		byte	0x60,0x40,0x00	; .##......#.......
+		byte	0x70,0x40,0x00	; .###.....#.......
+		byte	0x3f,0xff,0x80	; ..###############
+		byte	0x0f,0xff,0x80	; ....#############
+
+dejavusc_18Charcf label byte	; 0xcf C_L_OE
+		byte	16	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	1	; x offset
+		byte	0x3e,0x3e	; ..#####...#####.
+		byte	0x77,0x67	; .###.###.##..###
+		byte	0x41,0xc3	; .#.....###....##
+		byte	0xc1,0x81	; ##.....##......#
+		byte	0xc1,0x81	; ##.....##......#
+		byte	0xc1,0xff	; ##.....#########
+		byte	0xc1,0x80	; ##.....##.......
+		byte	0xc1,0x80	; ##.....##.......
+		byte	0xc1,0xc0	; ##.....###......
+		byte	0x63,0xe3	; .##...#####...##
+		byte	0x3e,0x3f	; ..#####...######
+
+dejavusc_18Chard0 label byte	; 0xd0 C_ENDASH
+		byte	7	; bitmap width
+		byte	1	; rows
+		sbyte	13	; y offset
+		sbyte	1	; x offset
+		byte	0xfe	; #######
+
+dejavusc_18Chard1 label byte	; 0xd1 C_EMDASH
+		byte	16	; bitmap width
+		byte	1	; rows
+		sbyte	13	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0xff	; ################
+
+dejavusc_18Chard2 label byte	; 0xd2 C_QUOTEDBLLEFT
+		byte	6	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x44	; .#...#
+		byte	0xc8	; ##..#.
+		byte	0xc8	; ##..#.
+		byte	0x98	; #..##.
+		byte	0x98	; #..##.
+
+dejavusc_18Chard3 label byte	; 0xd3 C_QUOTEDBLRIGHT
+		byte	6	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xcc	; ##..##
+		byte	0xcc	; ##..##
+		byte	0xcc	; ##..##
+		byte	0x88	; #...#.
+		byte	0x98	; #..##.
+
+dejavusc_18Chard4 label byte	; 0xd4 C_QUOTESNGLEFT
+		byte	2	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0x40	; .#
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+
+dejavusc_18Chard5 label byte	; 0xd5 C_QUOTESNGRIGHT
+		byte	2	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+
+dejavusc_18Chard6 label byte	; 0xd6 C_DIVISION
+		byte	11	; bitmap width
+		byte	10	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x00,0x00	; ...........
+		byte	0x00,0x00	; ...........
+		byte	0xff,0xe0	; ###########
+		byte	0xff,0xe0	; ###########
+		byte	0x00,0x00	; ...........
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+
+dejavusc_18Chard7 label byte	; 0xd7 C_DIAMONDBULLET
+		byte	14	; bitmap width
+		byte	14	; rows
+		sbyte	7	; y offset
+		sbyte	0	; x offset
+		byte	0x03,0x00	; ......##......
+		byte	0x07,0x80	; .....####.....
+		byte	0x0f,0xc0	; ....######....
+		byte	0x1f,0xe0	; ...########...
+		byte	0x3f,0xf0	; ..##########..
+		byte	0x7f,0xf8	; .############.
+		byte	0xff,0xfc	; ##############
+		byte	0x7f,0xf8	; .############.
+		byte	0x3f,0xf0	; ..##########..
+		byte	0x3f,0xe0	; ..#########...
+		byte	0x1f,0xc0	; ...#######....
+		byte	0x0f,0xc0	; ....######....
+		byte	0x07,0x80	; .....####.....
+		byte	0x03,0x00	; ......##......
+
+dejavusc_18Chard8 label byte	; 0xd8 C_LY_DIERESIS
+		byte	9	; bitmap width
+		byte	19	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x36,0x00	; ..##.##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x00,0x00	; .........
+		byte	0x00,0x00	; .........
+		byte	0x81,0x80	; #......##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x00	; ##.....#.
+		byte	0x43,0x00	; .#....##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x26,0x00	; ..#..##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x34,0x00	; ..##.#...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x18,0x00	; ...##....
+		byte	0x18,0x00	; ...##....
+		byte	0x18,0x00	; ...##....
+		byte	0x30,0x00	; ..##.....
+		byte	0xf0,0x00	; ####.....
+
+dejavusc_18Chard9 label byte	; 0xd9 C_UY_DIERESIS
+		byte	11	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x1b,0x00	; ...##.##...
+		byte	0x1b,0x00	; ...##.##...
+		byte	0x00,0x00	; ...........
+		byte	0x00,0x00	; ...........
+		byte	0xc0,0x60	; ##.......##
+		byte	0x60,0xc0	; .##.....##.
+		byte	0x60,0xc0	; .##.....##.
+		byte	0x31,0x80	; ..##...##..
+		byte	0x31,0x80	; ..##...##..
+		byte	0x1b,0x00	; ...##.##...
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+
+dejavusc_18Charda label byte	; 0xda C_FRACTION
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	-3	; x offset
+		byte	0x00,0x80	; ........#
+		byte	0x01,0x80	; .......##
+		byte	0x01,0x00	; .......#.
+		byte	0x02,0x00	; ......#..
+		byte	0x02,0x00	; ......#..
+		byte	0x04,0x00	; .....#...
+		byte	0x0c,0x00	; ....##...
+		byte	0x08,0x00	; ....#....
+		byte	0x18,0x00	; ...##....
+		byte	0x10,0x00	; ...#.....
+		byte	0x30,0x00	; ..##.....
+		byte	0x20,0x00	; ..#......
+		byte	0x60,0x00	; .##......
+		byte	0x40,0x00	; .#.......
+		byte	0xc0,0x00	; ##.......
+
+dejavusc_18Chardb label byte	; 0xdb C_CURRENCY
+		byte	10	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x07,0x80	; .....####.
+		byte	0x0f,0xc0	; ....######
+		byte	0x18,0x40	; ...##....#
+		byte	0x30,0x00	; ..##......
+		byte	0x30,0x00	; ..##......
+		byte	0xff,0x80	; #########.
+		byte	0xff,0x00	; ########..
+		byte	0x20,0x00	; ..#.......
+		byte	0x20,0x00	; ..#.......
+		byte	0xfe,0x00	; #######...
+		byte	0x30,0x00	; ..##......
+		byte	0x30,0x00	; ..##......
+		byte	0x18,0x40	; ...##....#
+		byte	0x1c,0xc0	; ...###..##
+		byte	0x0f,0x80	; ....#####.
+
+dejavusc_18Chardc label byte	; 0xdc C_GUILSNGLEFT
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0x08	; ....#
+		byte	0x18	; ...##
+		byte	0x30	; ..##.
+		byte	0x60	; .##..
+		byte	0xc0	; ##...
+		byte	0x60	; .##..
+		byte	0x30	; ..##.
+		byte	0x18	; ...##
+		byte	0x08	; ....#
+
+dejavusc_18Chardd label byte	; 0xdd C_GUILSNGRIGHT
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	9	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #...
+		byte	0xc0	; ##..
+		byte	0x60	; .##.
+		byte	0x30	; ..##
+		byte	0x30	; ..##
+		byte	0x60	; .##.
+		byte	0xc0	; ##..
+		byte	0x80	; #...
+
+dejavusc_18Charde label byte	; 0xde C_LY_ACUTE
+		byte	9	; bitmap width
+		byte	20	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x06,0x00	; .....##..
+		byte	0x04,0x00	; .....#...
+		byte	0x0c,0x00	; ....##...
+		byte	0x18,0x00	; ...##....
+		byte	0x00,0x00	; .........
+		byte	0x81,0x80	; #......##
+		byte	0xc1,0x80	; ##.....##
+		byte	0xc1,0x00	; ##.....#.
+		byte	0x43,0x00	; .#....##.
+		byte	0x63,0x00	; .##...##.
+		byte	0x26,0x00	; ..#..##..
+		byte	0x36,0x00	; ..##.##..
+		byte	0x34,0x00	; ..##.#...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x18,0x00	; ...##....
+		byte	0x18,0x00	; ...##....
+		byte	0x18,0x00	; ...##....
+		byte	0x30,0x00	; ..##.....
+		byte	0xf0,0x00	; ####.....
+
+dejavusc_18Chardf label byte	; 0xdf C_UY_ACUTE
+		byte	11	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x02,0x00	; ......#....
+		byte	0x06,0x00	; .....##....
+		byte	0x0c,0x00	; ....##.....
+		byte	0x00,0x00	; ...........
+		byte	0xc0,0x60	; ##.......##
+		byte	0x60,0xc0	; .##.....##.
+		byte	0x60,0xc0	; .##.....##.
+		byte	0x31,0x80	; ..##...##..
+		byte	0x31,0x80	; ..##...##..
+		byte	0x1b,0x00	; ...##.##...
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+		byte	0x04,0x00	; .....#.....
+
+dejavusc_18Chare0 label byte	; 0xe0 C_DBLDAGGER
+		byte	9	; bitmap width
+		byte	17	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0xff,0x80	; #########
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0xff,0x80	; #########
+		byte	0xff,0x80	; #########
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+		byte	0x08,0x00	; ....#....
+
+dejavusc_18Chare1 label byte	; 0xe1 C_CNTR_DOT
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	11	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+
+dejavusc_18Chare2 label byte	; 0xe2 C_SNGQUOTELOW
+		byte	2	; bitmap width
+		byte	4	; rows
+		sbyte	17	; y offset
+		sbyte	2	; x offset
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0xc0	; ##
+		byte	0x80	; #.
+
+dejavusc_18Chare3 label byte	; 0xe3 C_DBLQUOTELOW
+		byte	6	; bitmap width
+		byte	4	; rows
+		sbyte	17	; y offset
+		sbyte	2	; x offset
+		byte	0xcc	; ##..##
+		byte	0xcc	; ##..##
+		byte	0xc8	; ##..#.
+		byte	0x98	; #..##.
+
+dejavusc_18Chare4 label byte	; 0xe4 C_PERTHOUSAND
+		byte	22	; bitmap width
+		byte	15	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x30,0x10,0x00	; ..##.......#..........
+		byte	0x48,0x30,0x00	; .#..#.....##..........
+		byte	0xcc,0x20,0x00	; ##..##....#...........
+		byte	0x84,0x60,0x00	; #....#...##...........
+		byte	0x84,0x40,0x00	; #....#...#............
+		byte	0xcc,0x80,0x00	; ##..##..#.............
+		byte	0xcc,0x80,0x00	; ##..##..#.............
+		byte	0x79,0x18,0x30	; .####..#...##.....##..
+		byte	0x03,0x3c,0x78	; ......##..####...####.
+		byte	0x02,0x66,0xcc	; ......#..##..##.##..##
+		byte	0x06,0x62,0xc4	; .....##..##...#.##...#
+		byte	0x04,0x42,0xc4	; .....#...#....#.##...#
+		byte	0x0c,0x62,0xc4	; ....##...##...#.##...#
+		byte	0x08,0x66,0xcc	; ....#....##..##.##..##
+		byte	0x18,0x3c,0x78	; ...##.....####...####.
+
+dejavusc_18Chare5 label byte	; 0xe5 C_UA_CIRCUMFLEX
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x07,0x00	; .....###....
+		byte	0x05,0x00	; .....#.#....
+		byte	0x08,0x80	; ....#...#...
+		byte	0x00,0x00	; ............
+		byte	0x06,0x00	; .....##.....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x3f,0xe0	; ..#########.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x20	; .##.......#.
+		byte	0x40,0x30	; .#........##
+		byte	0xc0,0x30	; ##........##
+
+dejavusc_18Chare6 label byte	; 0xe6 C_UE_CIRCUMFLEX
+		byte	8	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x38	; ..###...
+		byte	0x28	; ..#.#...
+		byte	0x44	; .#...#..
+		byte	0x00	; ........
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+
+dejavusc_18Chare7 label byte	; 0xe7 C_UA_ACUTE
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x01,0x00	; .......#....
+		byte	0x03,0x00	; ......##....
+		byte	0x06,0x00	; .....##.....
+		byte	0x00,0x00	; ............
+		byte	0x06,0x00	; .....##.....
+		byte	0x07,0x00	; .....###....
+		byte	0x0f,0x00	; ....####....
+		byte	0x0d,0x00	; ....##.#....
+		byte	0x09,0x80	; ....#..##...
+		byte	0x19,0x80	; ...##..##...
+		byte	0x18,0x80	; ...##...#...
+		byte	0x10,0xc0	; ...#....##..
+		byte	0x30,0xc0	; ..##....##..
+		byte	0x30,0x40	; ..##.....#..
+		byte	0x3f,0xe0	; ..#########.
+		byte	0x60,0x60	; .##......##.
+		byte	0x60,0x20	; .##.......#.
+		byte	0x40,0x30	; .#........##
+		byte	0xc0,0x30	; ##........##
+
+dejavusc_18Chare8 label byte	; 0xe8 C_UE_DIERESIS
+		byte	8	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x6c	; .##.##..
+		byte	0x6c	; .##.##..
+		byte	0x00	; ........
+		byte	0x00	; ........
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+
+dejavusc_18Chare9 label byte	; 0xe9 C_UE_GRAVE
+		byte	8	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x20	; ..#.....
+		byte	0x30	; ..##....
+		byte	0x18	; ...##...
+		byte	0x00	; ........
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xc0	; ##......
+		byte	0xff	; ########
+		byte	0xff	; ########
+
+dejavusc_18Charea label byte	; 0xea C_UI_ACUTE
+		byte	3	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#
+		byte	0x60	; .##
+		byte	0xc0	; ##.
+		byte	0x00	; ...
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+
+dejavusc_18Chareb label byte	; 0xeb C_UI_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0x00	; .....
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+
+dejavusc_18Charec label byte	; 0xec C_UI_DIERESIS
+		byte	5	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0xd8	; ##.##
+		byte	0xd8	; ##.##
+		byte	0x00	; .....
+		byte	0x00	; .....
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+		byte	0x30	; ..##.
+
+dejavusc_18Chared label byte	; 0xed C_UI_GRAVE
+		byte	3	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #..
+		byte	0xc0	; ##.
+		byte	0x60	; .##
+		byte	0x00	; ...
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+		byte	0x60	; .##
+
+dejavusc_18Charee label byte	; 0xee C_UO_ACUTE
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x01,0x00	; .......#....
+		byte	0x03,0x00	; ......##....
+		byte	0x06,0x00	; .....##.....
+		byte	0x00,0x00	; ............
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0x60,0x30	; .##.......##
+		byte	0x60,0x60	; .##......##.
+		byte	0x39,0xc0	; ..###..###..
+		byte	0x1f,0x80	; ...######...
+
+dejavusc_18Charef label byte	; 0xef C_UO_CIRCUMFLEX
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x07,0x00	; .....###....
+		byte	0x05,0x00	; .....#.#....
+		byte	0x08,0x80	; ....#...#...
+		byte	0x00,0x00	; ............
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0x60,0x30	; .##.......##
+		byte	0x60,0x60	; .##......##.
+		byte	0x39,0xc0	; ..###..###..
+		byte	0x1f,0x80	; ...######...
+
+dejavusc_18Charf1 label byte	; 0xf1 C_UO_GRAVE
+		byte	12	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x04,0x00	; .....#......
+		byte	0x06,0x00	; .....##.....
+		byte	0x03,0x00	; ......##....
+		byte	0x00,0x00	; ............
+		byte	0x0f,0x00	; ....####....
+		byte	0x3f,0xc0	; ..########..
+		byte	0x70,0xe0	; .###....###.
+		byte	0x60,0x60	; .##......##.
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0xc0,0x30	; ##........##
+		byte	0x60,0x30	; .##.......##
+		byte	0x60,0x60	; .##......##.
+		byte	0x39,0xc0	; ..###..###..
+		byte	0x1f,0x80	; ...######...
+
+dejavusc_18Charf2 label byte	; 0xf2 C_UU_ACUTE
+		byte	10	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x04,0x00	; .....#....
+		byte	0x0c,0x00	; ....##....
+		byte	0x18,0x00	; ...##.....
+		byte	0x00,0x00	; ..........
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0xc0,0x80	; ##......#.
+		byte	0xc1,0x80	; ##.....##.
+		byte	0x63,0x80	; .##...###.
+		byte	0x3f,0x00	; ..######..
+
+dejavusc_18Charf3 label byte	; 0xf3 C_UU_CIRCUMFLEX
+		byte	10	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x1c,0x00	; ...###....
+		byte	0x14,0x00	; ...#.#....
+		byte	0x22,0x00	; ..#...#...
+		byte	0x00,0x00	; ..........
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0xc0,0x80	; ##......#.
+		byte	0xc1,0x80	; ##.....##.
+		byte	0x63,0x80	; .##...###.
+		byte	0x3f,0x00	; ..######..
+
+dejavusc_18Charf4 label byte	; 0xf4 C_UU_GRAVE
+		byte	10	; bitmap width
+		byte	19	; rows
+		sbyte	0	; y offset
+		sbyte	2	; x offset
+		byte	0x10,0x00	; ...#......
+		byte	0x18,0x00	; ...##.....
+		byte	0x0c,0x00	; ....##....
+		byte	0x00,0x00	; ..........
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0x80,0xc0	; #.......##
+		byte	0xc0,0x80	; ##......#.
+		byte	0xc1,0x80	; ##.....##.
+		byte	0x63,0x80	; .##...###.
+		byte	0x3f,0x00	; ..######..
+
+dejavusc_18Charf5 label byte	; 0xf5 C_LI_DOTLESS
+		byte	1	; bitmap width
+		byte	11	; rows
+		sbyte	8	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+dejavusc_18Charf6 label byte	; 0xf6 C_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	4	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0xd8	; ##.##
+		byte	0x88	; #...#
+
+dejavusc_18Charf7 label byte	; 0xf7 C_TILDE
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x48	; .#..#
+		byte	0xe8	; ###.#
+		byte	0xb8	; #.###
+
+dejavusc_18Charf8 label byte	; 0xf8 C_MACRON
+		byte	5	; bitmap width
+		byte	2	; rows
+		sbyte	4	; y offset
+		sbyte	2	; x offset
+		byte	0xf8	; #####
+		byte	0xf8	; #####
+
+dejavusc_18Charf9 label byte	; 0xf9 C_BREVE
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+dejavusc_18Charfa label byte	; 0xfa C_DOTACCENT
+		byte	1	; bitmap width
+		byte	2	; rows
+		sbyte	4	; y offset
+		sbyte	4	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+
+dejavusc_18Charfb label byte	; 0xfb C_RING
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	1	; y offset
+		sbyte	2	; x offset
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xd8	; ##.##
+		byte	0x70	; .###.
+
+dejavusc_18Charfc label byte	; 0xfc C_CEDILLA
+		byte	3	; bitmap width
+		byte	4	; rows
+		sbyte	19	; y offset
+		sbyte	3	; x offset
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0xe0	; ###
+
+dejavusc_18Charfd label byte	; 0xfd C_HUNGARUMLAUT
+		byte	6	; bitmap width
+		byte	4	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x2c	; ..#.##
+		byte	0x48	; .#..#.
+		byte	0x58	; .#.##.
+		byte	0x90	; #..#..
+
+dejavusc_18Charfe label byte	; 0xfe C_OGONEK
+		byte	3	; bitmap width
+		byte	4	; rows
+		sbyte	19	; y offset
+		sbyte	3	; x offset
+		byte	0xc0	; ##.
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x60	; .##
+
+dejavusc_18Charff label byte	; 0xff C_CARON
+		byte	5	; bitmap width
+		byte	4	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+
+dejavusc_18EndData label byte
+dejavusc_18Seg	ends

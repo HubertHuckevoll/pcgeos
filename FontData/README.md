@@ -1,7 +1,7 @@
 # Font sources and assets
 
 The authoritative ASM/DEF sources are grouped into Berkeley, Bison, Esquire,
-LED, Universi and DejaVuSC subdirectories (six SBCS families, 27 strikes).
+LED, Universi and DejaVuSC subdirectories (six SBCS families, 31 strikes).
 The compiled FNTs are committed in matching Installed/FontData family
 subdirectories, such as Installed/FontData/Berkeley/Berkeley.fnt. Regenerate
 and commit those outputs with source changes.
@@ -71,22 +71,23 @@ The standalone check uses core Perl modules:
     perl FontData/tests/bitmap-fonts.pl [font-directory [reference-directory]]
 
 The font directory contains the six generated bitmap family subdirectories;
-the optional reference directory contains the original flat reference FNTs.
+the optional reference directory contains matching flat reference FNTs.
 With a reference directory, it requires exact baseline equality instead of
 final hashes and Berkeley Euro checks. Without one it verifies the committed
-hashes, all 27 strikes and the intended Berkeley changes. Intentional future
+hashes, all 31 strikes, the original DejaVuSC 10 pt strike and the intended
+Berkeley changes. Intentional future
 font edits require reviewed updates to the regression hashes and compiled FNTs.
 
 ## Inventory and preserved quirks
 
-Directory and physical strike order are preserved:
+Directory and physical strike order:
 
 - Berkeley, 0x0202: regular 9, 10, 12, 14, 18.
 - Bison, 0x0a00: regular 9, 12, 14, then 13 (only character 42).
 - Esquire, 0x022b: regular 10, 12, 14, 18, 9; bold 12, 10, 14, 18, 9.
 - LED, 0x0600: regular 18, character range 32..94, default 48.
 - Universi, 0x0201: regular 10, 12, 14, 18, 24, 9; internal name University.
-- DejaVuSC, 0x022c: regular 10, preserving the existing raster and metrics.
+- DejaVuSC, 0x022c: regular 9, 10, 12, 14, 18; the original 10 pt strike is unchanged.
 
 Esquire's header-size field includes the eight-byte BSWF prefix. Its 36
 CTF_NO_DATA entries per strike retain nonzero offsets to empty CharData
@@ -117,7 +118,7 @@ mkuc changes only part of its curve. Every other glyph and font-wide metric
 matches master. Euro data changes also change necessary sizes/offsets.
 
 The other five families were reconstructed from their existing binaries;
-no glyphs were rerasterized. Esquire and DejaVuSC already contain Euros.
+none of their original glyphs were rerasterized. Esquire and DejaVuSC already contain Euros.
 Temporary converters and the original experimental tools are not build
 inputs and are not part of this branch. Additional archive families, DBCS
 variants and outline conversion are outside this change.
@@ -143,7 +144,7 @@ Reference SHA-256 values:
 - Tools/mkuc/berkeley_14.def: da419145b6425f221de5647227e6f20d6e376be8cc7200466347051c07aad116
 - Tools/mkuc/berkeley_18.def: 06b45341c16c62e0b3ffaf2e94119cbe90c5fc764e944ba9992caff868218848
 
-## Validation report (2026-10-23)
+## Initial reconstruction validation (2026-10-23)
 
 All six reconstructed baselines assembled byte-identically before applying
 the intentional Berkeley changes. Final Bison, Esquire, LED, Universi and
@@ -203,3 +204,29 @@ Native Windows execution and GEOS runtime loading were not tested. The Linux
 tools install cross-built the existing Windows host tools, which does not
 establish native Windows test coverage. No PC/GEOS instance was launched,
 and no full product image was built for this font-only validation.
+
+## Additional DejaVuSC sizes
+
+DejaVuSC now matches Berkeley and Esquire's regular sizes: 9, 10, 12, 14
+and 18 pt. The original ISUI2000 10 pt strike is byte-identical, including
+its metrics, advances and glyphs. The other four strikes were generated
+from DejaVu Sans Condensed 2.37 using the original generator at revision
+3943247357cdfdf8aadf0da968f486e9656974c6, Tools/fntpatch/make_DejaVuSC.py.
+The generator lives on the fntpatch branch, as documented by
+ISUI2000:FontData/README-DejaVuSC.md; no tool branches were merged.
+
+The source TTF comes from the upstream dejavu-fonts-ttf-2.37 release:
+https://github.com/dejavu-fonts/dejavu-fonts/releases/tag/version_2_37
+Pillow 12.3.0 with FreeType 2.14.3 reproduces the original rasterizer.
+From a checkout containing that generator, regenerate the reference with:
+
+    python3 Tools/fntpatch/make_DejaVuSC.py /path/to/DejaVuSansCondensed.ttf \
+        /tmp/DejaVuSC.fnt --sizes 9,10,12,14,18 --dpi 80
+    python3 Tools/fntpatch/check_DejaVuSC.py /tmp/DejaVuSC.fnt
+
+The editable sources remain dejavusc.asm and one DEF per size. Normal
+builds require only ESP/Glue. The resulting 26609-byte FNT must match the
+reference generated above; SHA-256:
+c4d2118f39492cddf76616513fbe3d4fec5788e8e2961bd52cec93fb3f2d0f27.
+The Perl check covers all 31 strikes and explicitly protects the original
+DejaVuSC 10 pt strike in addition to checking the new complete font hash.

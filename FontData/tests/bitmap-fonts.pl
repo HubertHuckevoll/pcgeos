@@ -15,7 +15,7 @@ my %inventory = (
     Esquire => [0x022b, 'Esquire', [10, 12, 14, 18, 9, 12, 10, 14, 18, 9]],
     LED => [0x0600, 'LED', [18]],
     Universi => [0x0201, 'University', [10, 12, 14, 18, 24, 9]],
-    DejaVuSC => [0x022c, 'DejaVuSC', [10]],
+    DejaVuSC => [0x022c, 'DejaVuSC', [9, 10, 12, 14, 18]],
 );
 my %hash = (
     Berkeley => '85591ad95ca0bc48232a61a1731e3d8d81fd7548912efdf0693975041df26b10',
@@ -23,7 +23,7 @@ my %hash = (
     Esquire => 'bd00580f4b089aa3646f667f3f5294e47b70b47d29b431157e19e8760cc75b5f',
     LED => '7af1561fbd88bc8c98935c2b5348853ac586809355fd3daf49e0626e96bbf0ca',
     Universi => '862bf7ef3946863e1743ea147edaa666d5515cac7b2e663308d74a755913408c',
-    DejaVuSC => '799ec5dacdea01187b6da41198baaf2bf02c0420aaaffe8445e40be88717394e',
+    DejaVuSC => 'c4d2118f39492cddf76616513fbe3d4fec5788e8e2961bd52cec93fb3f2d0f27',
 );
 # All Berkeley metrics (except data size) and all non-Euro glyph definitions
 # from master, excluding only relocated glyph offsets. Includes the 14 pt ?down.
@@ -78,6 +78,11 @@ sub parse_font
             $offset + $size <= length($data);
         $previous_end = $offset + $size;
         my $s = substr($data, $offset, $size);
+        # Preserve the original ISUI2000 10 pt strike, including all metrics.
+        if ($name eq 'DejaVuSC' && $point == 10) {
+            die "DejaVuSC 10: original strike changed\n" unless sha256_hex($s) eq
+                '05fe2293b0ebc01dd341e9e06d9dae64212d21aa63c2162d545a296c4bedbe43';
+        }
         die "$name: strike header\n" unless u16($s, 0) == $size && u16($s, 2) == 0 &&
             u16($s, 34) == 0 && u16($s, 36) <= $size && u16($s, 38) <= $size &&
             !(ord(substr($s, 68, 1)) & 0x18);
@@ -149,7 +154,7 @@ for my $name (@fonts) {
     }
     print "$name: ", scalar(@$strikes), " strikes, ", sha256_hex($data), "\n";
 }
-die "wrong total strike count\n" unless $count == 27;
+die "wrong total strike count\n" unless $count == 31;
 
 # Exercise rejection before hashes, without creating malformed font files.
 my $good = read_file("$directory/Berkeley/Berkeley.fnt");
@@ -169,4 +174,4 @@ for my $data (@bad) {
     eval { parse_font('Berkeley', $data); };
     die "malformed font accepted\n" unless $@;
 }
-print "Six fonts, 27 strikes, exact comparisons and malformed-input checks passed.\n";
+print "Six fonts, 31 strikes, exact comparisons and malformed-input checks passed.\n";
