@@ -1,11 +1,36 @@
-# Bitmap font sources
+# Font sources and assets
 
 The authoritative ASM/DEF sources are grouped into Berkeley, Bison, Esquire,
 LED, Universi and DejaVuSC subdirectories (six SBCS families, 27 strikes).
 The compiled FNTs are committed in matching Installed/FontData family
 subdirectories, such as Installed/FontData/Berkeley/Berkeley.fnt. Regenerate
 and commit those outputs with source changes.
-The four legacy outline FNTs and the TTF tree are independent of this build.
+Editable TrueType projects live in FontData/Ttf/CooperBlack and
+FontData/Ttf/StandardSymbolPS, alongside source documentation. FontData/Ttf
+also retains the authoritative license notices and font_overview.md.
+
+## Prebuilt fonts and cleanup
+
+The 43 ready-to-use TTFs are committed in Installed/FontData/Ttf, with their
+existing filenames and flat layout. The four legacy Nimbus outline fonts are
+committed in Installed/FontData/Mono, Roman, Sans and SymbolPS, each containing
+its correspondingly named FNT. These binaries are prebuilt assets; their
+contents, font IDs and runtime behavior are unchanged.
+
+All 47 prebuilt binaries must survive clean. This includes cooper.ttf and
+symbolps.ttf: editable SFD projects exist, but reliable export recipes have
+not been established. These directories have no compilation Makefiles and
+are outside the six-family bitmap build/clean list. No FontForge or export
+step is required by normal builds.
+
+Per-family and aggregate pmake clean remove only generated bitmap outputs
+and their intermediates. The standalone Linux/Windows clean scripts also
+exclude FNT, TTF and SFD files. Preserve prebuilt assets and source projects
+when adding future cleanup rules.
+
+Packaging selects the same 34 TTFs; the remaining nine TTFs and four Nimbus
+fonts stay unselected. TTF filetree paths resolve through Installed first;
+license notices still resolve from FontData/Ttf in the source tree.
 
 ## Build and check
 
@@ -24,9 +49,10 @@ To build one font directly:
 The same targets work on Windows. The parent Makefile builds all six families
 and retains individual targets such as Berkeley.fnt. Each family Makefile
 builds only its own font. pmake clean removes outputs and known intermediates
-for the current family, or all families when run from Installed/FontData;
-rebuild before committing. Running pmake install from Installed/Tools also
-builds all fonts after every host tool has installed successfully.
+for the current bitmap family, or all six bitmap families when run from
+Installed/FontData; rebuild before committing. Running pmake install from
+Installed/Tools also builds all fonts after every host tool has installed
+successfully.
 
 The handcrafted family Makefiles include shared rules from font.mk and are
 independent of mkmf and geode.mk. They accept ASM, ASMFLAGS, LINK and LINKFLAGS
@@ -44,8 +70,8 @@ The standalone check uses core Perl modules:
 
     perl FontData/tests/bitmap-fonts.pl [font-directory [reference-directory]]
 
-The font directory contains the six family subdirectories; the optional
-reference directory contains the original flat reference FNTs.
+The font directory contains the six generated bitmap family subdirectories;
+the optional reference directory contains the original flat reference FNTs.
 With a reference directory, it requires exact baseline equality instead of
 final hashes and Berkeley Euro checks. Without one it verifies the committed
 hashes, all 27 strikes and the intended Berkeley changes. Intentional future
@@ -146,16 +172,32 @@ Passed on Linux with the existing Open Watcom SDK environment:
   of six fonts and the license into a temporary destination.
 
 The product filetree uses matching FontData/family/font.fnt paths; Installed
-precedes the source root in the existing resolver. The old source-root bitmap FNTs were
-removed so they cannot conceal missing build outputs. Excluded outline/TTF
-files are unchanged. Existing edited files retain their line endings;
-imported mkuc files retain mixed historical LF/CRLF endings.
+precedes the source root in the existing resolver. The old source-root bitmap
+FNTs were removed so they cannot conceal missing build outputs. The separate
+prebuilt outline/TTF relocation preserves their contents exactly. Existing
+edited files retain their line endings; imported mkuc files retain mixed
+historical LF/CRLF endings.
 
 After introducing the mirrored Installed family directories and individual
 Makefiles, independent clean builds, aggregate and parallel checks, unchanged
 rebuilds, family/shared-rule invalidation, missing-output recovery and failure
 propagation were rechecked. The tools font-install target and actual packaging
 helpers also passed with the nested paths. All six FNTs remain byte-identical.
+
+The prebuilt relocation was checked separately:
+
+- All 43 TTFs, four Nimbus FNTs and four relocated source-project files retain
+  their original SHA-256 hashes. No TTF/FNT binaries remain under FontData.
+- Actual packaging helpers resolve all 47 prebuilt binaries from Installed.
+  The same 34 TTFs and four notices package byte-identically; nine TTFs and
+  four Nimbus fonts remain unselected.
+- All prebuilt assets, both SFD/info projects, license notices and the overview
+  survive cleaning from each bitmap family and from the aggregate directory.
+- Aggregate/parallel rebuilds pass the 27-strike regression check. All six
+  generated bitmap FNTs also retain their previous hashes.
+- The standalone Linux clean dry-run and Windows cleanup-pattern inspection
+  exclude every relocated font and source-project file. No cleanup scripts
+  or build targets were changed for the prebuilt assets.
 
 Native Windows execution and GEOS runtime loading were not tested. The Linux
 tools install cross-built the existing Windows host tools, which does not

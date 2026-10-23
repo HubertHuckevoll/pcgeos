@@ -1,4 +1,4 @@
-# Canonical bitmap font sources: implementation and acceptance
+# Font sources and prebuilt assets: implementation and acceptance
 
 ## Fixed decisions
 
@@ -11,13 +11,31 @@ Six family ASM files and 27 strike DEF files are grouped into one subdirectory
 per family under FontData: Berkeley, Bison, Esquire, LED, Universi and DejaVuSC.
 The six compiled FNTs are committed in matching Installed/FontData family
 subdirectories. Five superseded source-root bitmap binaries are removed;
-outline FNTs and TTFs stay unchanged.
+outline FNTs and TTFs retain their contents in prebuilt asset directories.
 
 The handcrafted aggregate and family Makefiles, shared font.mk rules and
 Tools Makefile changes are the explicit user-authorized exception to the
 AGENTS.md generation rule. There is no mkmf dependency, dependencies.mk or
 permanent converter. Normal builds use pmake, ESP, Glue and native shell
 operations.
+
+## Prebuilt font placement
+
+Keep all 43 TTF binaries committed under Installed/FontData/Ttf, with existing
+filenames and a flat binary layout. Keep Mono.fnt, Roman.fnt, Sans.fnt and
+SymbolPS.fnt in corresponding family directories under Installed/FontData.
+Treat these 47 files as prebuilt assets, including TTFs with editable projects.
+
+Keep the CooperBlack and StandardSymbolPS SFD/info projects directly under
+FontData/Ttf, with no additional source directory. License notices, provenance
+and font_overview.md remain in FontData/Ttf. Preserve every relocated file's
+bytes and the current 34 selected TTFs, nine unselected TTFs and four disabled
+Nimbus entries. Update disabled Nimbus paths without enabling them.
+
+Add no compilation Makefiles or export dependencies for prebuilt assets.
+Keep them outside the generated bitmap build/clean lists; sources, notices,
+documentation and all prebuilt binaries must survive cleaning. Source
+reconstruction, archive imports and reproducible TTF exports are separate work.
 
 ## Sources and intentional changes
 
@@ -73,7 +91,9 @@ resolution and copied bytes without starting GEOS.
 Preserve existing line endings, including imported mixed endings. Review the
 diff ignoring end-of-line whitespace. Exclude temporary converters/logs,
 experimental tooling, additional font families, DBCS, outline conversion,
-font-driver changes and unrelated UI/configuration work.
+font-driver changes and unrelated UI/configuration work. Validate prebuilt
+relocations with before/after hashes, unchanged packaging selection and copied
+bytes, plus preservation through aggregate and per-family bitmap cleaning.
 
 The FontData README contains the executed validation report and final hashes.
 Native Windows execution and runtime font loading remain explicitly unverified;
