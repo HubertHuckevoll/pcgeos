@@ -1,0 +1,56 @@
+; SBCS bitmap strike. Offsets and unused records preserve the reference.
+bison_13Seg	segment
+bison_13StartData label byte
+		word	bison_13EndData-bison_13StartData	; data size
+		word	0	; maker
+		WBFixed	<0,7>	; average width
+		WBFixed	<0,7>	; maximum width
+		WBFixed	<0,0>	; height adjustment
+		WBFixed	<0,17>	; height
+		WBFixed	<0,4>	; accent
+		WBFixed	<0,7>	; mean
+		WBFixed	<0,0>	; baseline adjustment
+		WBFixed	<0,14>	; baseline
+		WBFixed	<0,3>	; descent
+		WBFixed	<0,1>	; external leading
+		word	0	; kerning count
+		word	bison_13KernPairs-bison_13StartData	; kerning pair offset
+		word	bison_13KernValues-bison_13StartData	; kerning value offset
+		byte	42	; first character
+		byte	42	; last character
+		byte	42	; default character
+		WBFixed	<0,15>	; underline position
+		WBFixed	<0,1>	; underline thickness
+		WBFixed	<204,9>	; strike-through position
+		WBFixed	<0,0>	; above font box
+		WBFixed	<0,0>	; below font box
+		sword	-1	; minimum LSB
+		sword	0	; minimum TSB
+		sword	17	; maximum BSB
+		sword	7	; maximum RSB
+		word	17	; pixel height
+		byte	0x00	; font flags
+		word	666	; heap count
+
+	; Character table: glyph offset, advance, flags, usage.
+
+		word	bison_13Char2a-bison_13StartData	; 0x2a  (*)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+bison_13KernPairs label byte
+bison_13KernValues label byte
+bison_13Char2a label byte	; 0x2a
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0xa8	; #.#.#
+		byte	0x70	; .###.
+		byte	0x70	; .###.
+		byte	0xa8	; #.#.#
+		byte	0x20	; ..#..
+
+bison_13EndData label byte
+bison_13Seg	ends

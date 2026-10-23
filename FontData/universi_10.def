@@ -1,0 +1,4049 @@
+; SBCS bitmap strike. Offsets and unused records preserve the reference.
+universi_10Seg	segment
+universi_10StartData label byte
+		word	universi_10EndData-universi_10StartData	; data size
+		word	0	; maker
+		WBFixed	<219,4>	; average width
+		WBFixed	<0,13>	; maximum width
+		WBFixed	<0,0>	; height adjustment
+		WBFixed	<0,12>	; height
+		WBFixed	<0,2>	; accent
+		WBFixed	<0,6>	; mean
+		WBFixed	<0,0>	; baseline adjustment
+		WBFixed	<0,10>	; baseline
+		WBFixed	<0,2>	; descent
+		WBFixed	<0,1>	; external leading
+		word	0	; kerning count
+		word	universi_10KernPairs-universi_10StartData	; kerning pair offset
+		word	universi_10KernValues-universi_10StartData	; kerning value offset
+		byte	32	; first character
+		byte	255	; last character
+		byte	46	; default character
+		WBFixed	<0,11>	; underline position
+		WBFixed	<0,1>	; underline thickness
+		WBFixed	<102,6>	; strike-through position
+		WBFixed	<0,0>	; above font box
+		WBFixed	<0,0>	; below font box
+		sword	0	; minimum LSB
+		sword	0	; minimum TSB
+		sword	12	; maximum BSB
+		sword	13	; maximum RSB
+		word	12	; pixel height
+		byte	0x00	; font flags
+		word	666	; heap count
+
+	; Character table: glyph offset, advance, flags, usage.
+
+		word	universi_10Char20-universi_10StartData	; 0x20  ( )
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char21-universi_10StartData	; 0x21  (!)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char22-universi_10StartData	; 0x22  (")
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char23-universi_10StartData	; 0x23  (#)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char24-universi_10StartData	; 0x24  ($)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char25-universi_10StartData	; 0x25  (%)
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char26-universi_10StartData	; 0x26  (&)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char27-universi_10StartData	; 0x27 C_SNG_QUOTE (')
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char28-universi_10StartData	; 0x28  (()
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char29-universi_10StartData	; 0x29  ())
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char2a-universi_10StartData	; 0x2a  (*)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char2b-universi_10StartData	; 0x2b  (+)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char2c-universi_10StartData	; 0x2c  (,)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char2d-universi_10StartData	; 0x2d  (-)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char2e-universi_10StartData	; 0x2e  (.)
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char2f-universi_10StartData	; 0x2f  (/)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char30-universi_10StartData	; 0x30  (0)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char31-universi_10StartData	; 0x31  (1)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char32-universi_10StartData	; 0x32  (2)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char33-universi_10StartData	; 0x33  (3)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char34-universi_10StartData	; 0x34  (4)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char35-universi_10StartData	; 0x35  (5)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char36-universi_10StartData	; 0x36  (6)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char37-universi_10StartData	; 0x37  (7)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char38-universi_10StartData	; 0x38  (8)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char39-universi_10StartData	; 0x39  (9)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char3a-universi_10StartData	; 0x3a  (:)
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char3b-universi_10StartData	; 0x3b  (;)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char3c-universi_10StartData	; 0x3c  (<)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char3d-universi_10StartData	; 0x3d  (=)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char3e-universi_10StartData	; 0x3e  (>)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char3f-universi_10StartData	; 0x3f  (?)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char40-universi_10StartData	; 0x40  (@)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char41-universi_10StartData	; 0x41  (A)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char42-universi_10StartData	; 0x42  (B)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char43-universi_10StartData	; 0x43  (C)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char44-universi_10StartData	; 0x44  (D)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char45-universi_10StartData	; 0x45  (E)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char46-universi_10StartData	; 0x46  (F)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char47-universi_10StartData	; 0x47  (G)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char48-universi_10StartData	; 0x48  (H)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char49-universi_10StartData	; 0x49  (I)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char4a-universi_10StartData	; 0x4a  (J)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char4b-universi_10StartData	; 0x4b  (K)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char4c-universi_10StartData	; 0x4c  (L)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char4d-universi_10StartData	; 0x4d  (M)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char4e-universi_10StartData	; 0x4e  (N)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char4f-universi_10StartData	; 0x4f  (O)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char50-universi_10StartData	; 0x50  (P)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char51-universi_10StartData	; 0x51  (Q)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char52-universi_10StartData	; 0x52  (R)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char53-universi_10StartData	; 0x53  (S)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char54-universi_10StartData	; 0x54  (T)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char55-universi_10StartData	; 0x55  (U)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char56-universi_10StartData	; 0x56  (V)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char57-universi_10StartData	; 0x57  (W)
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char58-universi_10StartData	; 0x58  (X)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char59-universi_10StartData	; 0x59  (Y)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char5a-universi_10StartData	; 0x5a  (Z)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char5b-universi_10StartData	; 0x5b  ([)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char5c-universi_10StartData	; 0x5c C_BACKSLASH (\)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char5d-universi_10StartData	; 0x5d  (])
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char5e-universi_10StartData	; 0x5e  (^)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char5f-universi_10StartData	; 0x5f  (_)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char60-universi_10StartData	; 0x60  (`)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char61-universi_10StartData	; 0x61  (a)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char62-universi_10StartData	; 0x62  (b)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char63-universi_10StartData	; 0x63  (c)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char64-universi_10StartData	; 0x64  (d)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char65-universi_10StartData	; 0x65  (e)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char66-universi_10StartData	; 0x66  (f)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char67-universi_10StartData	; 0x67  (g)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char68-universi_10StartData	; 0x68  (h)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char69-universi_10StartData	; 0x69  (i)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char6a-universi_10StartData	; 0x6a  (j)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char6b-universi_10StartData	; 0x6b  (k)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char6c-universi_10StartData	; 0x6c  (l)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char6d-universi_10StartData	; 0x6d  (m)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char6e-universi_10StartData	; 0x6e  (n)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char6f-universi_10StartData	; 0x6f  (o)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char70-universi_10StartData	; 0x70  (p)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char71-universi_10StartData	; 0x71  (q)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char72-universi_10StartData	; 0x72  (r)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char73-universi_10StartData	; 0x73  (s)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char74-universi_10StartData	; 0x74  (t)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char75-universi_10StartData	; 0x75  (u)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char76-universi_10StartData	; 0x76  (v)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char77-universi_10StartData	; 0x77  (w)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char78-universi_10StartData	; 0x78  (x)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char79-universi_10StartData	; 0x79  (y)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char7a-universi_10StartData	; 0x7a  (z)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char7b-universi_10StartData	; 0x7b  ({)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char7c-universi_10StartData	; 0x7c  (|)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char7d-universi_10StartData	; 0x7d  (})
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char7e-universi_10StartData	; 0x7e  (~)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	0	; 0x7f C_DELETE
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	universi_10Char80-universi_10StartData	; 0x80 C_UA_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char81-universi_10StartData	; 0x81 C_UA_RING
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char82-universi_10StartData	; 0x82 C_UC_CEDILLA
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char83-universi_10StartData	; 0x83 C_UE_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char84-universi_10StartData	; 0x84 C_UN_TILDE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char85-universi_10StartData	; 0x85 C_UO_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char86-universi_10StartData	; 0x86 C_UU_DIERESIS
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char87-universi_10StartData	; 0x87 C_LA_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char88-universi_10StartData	; 0x88 C_LA_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char89-universi_10StartData	; 0x89 C_LA_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char8a-universi_10StartData	; 0x8a C_LA_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char8b-universi_10StartData	; 0x8b C_LA_TILDE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char8c-universi_10StartData	; 0x8c C_LA_RING
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char8d-universi_10StartData	; 0x8d C_LC_CEDILLA
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char8e-universi_10StartData	; 0x8e C_LE_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char8f-universi_10StartData	; 0x8f C_LE_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char90-universi_10StartData	; 0x90 C_LE_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char91-universi_10StartData	; 0x91 C_LE_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char92-universi_10StartData	; 0x92 C_LI_ACUTE
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char93-universi_10StartData	; 0x93 C_LI_GRAVE
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char94-universi_10StartData	; 0x94 C_LI_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char95-universi_10StartData	; 0x95 C_LI_DIERESIS
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char96-universi_10StartData	; 0x96 C_LN_TILDE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char97-universi_10StartData	; 0x97 C_LO_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char98-universi_10StartData	; 0x98 C_LO_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char99-universi_10StartData	; 0x99 C_LO_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char9a-universi_10StartData	; 0x9a C_LO_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char9b-universi_10StartData	; 0x9b C_LO_TILDE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char9c-universi_10StartData	; 0x9c C_LU_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char9d-universi_10StartData	; 0x9d C_LU_GRAVE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char9e-universi_10StartData	; 0x9e C_LU_CIRCUMFLEX
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Char9f-universi_10StartData	; 0x9f C_LU_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara0-universi_10StartData	; 0xa0 C_DAGGER
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara1-universi_10StartData	; 0xa1 C_DEGREE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara2-universi_10StartData	; 0xa2 C_CENT
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara3-universi_10StartData	; 0xa3 C_STERLING
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara4-universi_10StartData	; 0xa4 C_SECTION
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara5-universi_10StartData	; 0xa5 C_BULLET
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara6-universi_10StartData	; 0xa6 C_PARAGRAPH
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara7-universi_10StartData	; 0xa7 C_GERMANDBLS
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara8-universi_10StartData	; 0xa8 C_REGISTERED
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chara9-universi_10StartData	; 0xa9 C_COPYRIGHT
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charaa-universi_10StartData	; 0xaa C_TRADEMARK
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charab-universi_10StartData	; 0xab C_ACUTE
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charac-universi_10StartData	; 0xac C_DIERESIS
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charad-universi_10StartData	; 0xad C_NOTEQUAL
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charae-universi_10StartData	; 0xae C_U_AE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charaf-universi_10StartData	; 0xaf C_UO_SLASH
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb0-universi_10StartData	; 0xb0 C_INFINITY
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb1-universi_10StartData	; 0xb1 C_PLUSMINUS
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb2-universi_10StartData	; 0xb2 C_LESSEQUAL
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb3-universi_10StartData	; 0xb3 C_GREATEREQUAL
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb4-universi_10StartData	; 0xb4 C_YEN
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb5-universi_10StartData	; 0xb5 C_L_MU
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb6-universi_10StartData	; 0xb6 C_L_DELTA
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb7-universi_10StartData	; 0xb7 C_U_SIGMA
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb8-universi_10StartData	; 0xb8 C_U_PI
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charb9-universi_10StartData	; 0xb9 C_L_PI
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charba-universi_10StartData	; 0xba C_INTEGRAL
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charbb-universi_10StartData	; 0xbb C_ORDFEMININE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charbc-universi_10StartData	; 0xbc C_ORDMASCULINE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charbd-universi_10StartData	; 0xbd C_U_OMEGA
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charbe-universi_10StartData	; 0xbe C_L_AE
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charbf-universi_10StartData	; 0xbf C_LO_SLASH
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc0-universi_10StartData	; 0xc0 C_QUESTIONDOWN
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc1-universi_10StartData	; 0xc1 C_EXCLAMDOWN
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc2-universi_10StartData	; 0xc2 C_LOGICAL_NOT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc3-universi_10StartData	; 0xc3 C_ROOT
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc4-universi_10StartData	; 0xc4 C_FLORIN
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc5-universi_10StartData	; 0xc5 C_APPROX_EQUAL
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc6-universi_10StartData	; 0xc6 C_U_DELTA
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc7-universi_10StartData	; 0xc7 C_GUILLEDBLLEFT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc8-universi_10StartData	; 0xc8 C_GUILLEDBLRIGHT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charc9-universi_10StartData	; 0xc9 C_ELLIPSIS
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charca-universi_10StartData	; 0xca C_NONBRKSPACE
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charcb-universi_10StartData	; 0xcb C_UA_GRAVE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charcc-universi_10StartData	; 0xcc C_UA_TILDE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charcd-universi_10StartData	; 0xcd C_UO_TILDE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charce-universi_10StartData	; 0xce C_U_OE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charcf-universi_10StartData	; 0xcf C_L_OE
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard0-universi_10StartData	; 0xd0 C_ENDASH
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard1-universi_10StartData	; 0xd1 C_EMDASH
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard2-universi_10StartData	; 0xd2 C_QUOTEDBLLEFT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard3-universi_10StartData	; 0xd3 C_QUOTEDBLRIGHT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard4-universi_10StartData	; 0xd4 C_QUOTESNGLEFT
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard5-universi_10StartData	; 0xd5 C_QUOTESNGRIGHT
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard6-universi_10StartData	; 0xd6 C_DIVISION
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard7-universi_10StartData	; 0xd7 C_DIAMONDBULLET
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard8-universi_10StartData	; 0xd8 C_LY_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chard9-universi_10StartData	; 0xd9 C_UY_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charda-universi_10StartData	; 0xda C_FRACTION
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chardb-universi_10StartData	; 0xdb C_CURRENCY
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chardc-universi_10StartData	; 0xdc C_GUILSNGLEFT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chardd-universi_10StartData	; 0xdd C_GUILSNGRIGHT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charde-universi_10StartData	; 0xde C_LY_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chardf-universi_10StartData	; 0xdf C_UY_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare0-universi_10StartData	; 0xe0 C_DBLDAGGER
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare1-universi_10StartData	; 0xe1 C_CNTR_DOT
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare2-universi_10StartData	; 0xe2 C_SNGQUOTELOW
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare3-universi_10StartData	; 0xe3 C_DBLQUOTELOW
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare4-universi_10StartData	; 0xe4 C_PERTHOUSAND
+		WBFixed	<0,13>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare5-universi_10StartData	; 0xe5 C_UA_CIRCUMFLEX
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare6-universi_10StartData	; 0xe6 C_UE_CIRCUMFLEX
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare7-universi_10StartData	; 0xe7 C_UA_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare8-universi_10StartData	; 0xe8 C_UE_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chare9-universi_10StartData	; 0xe9 C_UE_GRAVE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charea-universi_10StartData	; 0xea C_UI_ACUTE
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chareb-universi_10StartData	; 0xeb C_UI_CIRCUMFLEX
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charec-universi_10StartData	; 0xec C_UI_DIERESIS
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Chared-universi_10StartData	; 0xed C_UI_GRAVE
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charee-universi_10StartData	; 0xee C_UO_ACUTE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charef-universi_10StartData	; 0xef C_UO_CIRCUMFLEX
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	0	; 0xf0 C_LOGO
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	universi_10Charf1-universi_10StartData	; 0xf1 C_UO_GRAVE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf2-universi_10StartData	; 0xf2 C_UU_ACUTE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf3-universi_10StartData	; 0xf3 C_UU_CIRCUMFLEX
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf4-universi_10StartData	; 0xf4 C_UU_GRAVE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf5-universi_10StartData	; 0xf5 C_LI_DOTLESS
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf6-universi_10StartData	; 0xf6 C_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf7-universi_10StartData	; 0xf7 C_TILDE
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf8-universi_10StartData	; 0xf8 C_MACRON
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charf9-universi_10StartData	; 0xf9 C_BREVE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charfa-universi_10StartData	; 0xfa C_DOTACCENT
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charfb-universi_10StartData	; 0xfb C_RING
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charfc-universi_10StartData	; 0xfc C_CEDILLA
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charfd-universi_10StartData	; 0xfd C_HUNGARUMLAUT
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charfe-universi_10StartData	; 0xfe C_OGONEK
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	universi_10Charff-universi_10StartData	; 0xff C_CARON
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+universi_10KernPairs label byte
+universi_10KernValues label byte
+universi_10Char20 label byte	; 0x20
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+		byte	0x00	; preserved padding
+universi_10Char21 label byte	; 0x21
+		byte	1	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x80	; #
+
+universi_10Char22 label byte	; 0x22
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xa0	; #.#
+		byte	0xa0	; #.#
+
+universi_10Char23 label byte	; 0x23
+		byte	7	; bitmap width
+		byte	5	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x14	; ...#.#.
+		byte	0x7e	; .######
+		byte	0x28	; ..#.#..
+		byte	0xfc	; ######.
+		byte	0x50	; .#.#...
+
+universi_10Char24 label byte	; 0x24
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0xa8	; #.#.#
+		byte	0xa0	; #.#..
+		byte	0x60	; .##..
+		byte	0x30	; ..##.
+		byte	0x28	; ..#.#
+		byte	0xa8	; #.#.#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+
+universi_10Char25 label byte	; 0x25
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x7f	; .#######
+		byte	0x92	; #..#..#.
+		byte	0x94	; #..#.#..
+		byte	0x68	; .##.#...
+		byte	0x16	; ...#.##.
+		byte	0x29	; ..#.#..#
+		byte	0x49	; .#..#..#
+		byte	0x46	; .#...##.
+
+universi_10Char26 label byte	; 0x26
+		byte	7	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x30	; ..##...
+		byte	0x48	; .#..#..
+		byte	0x50	; .#.#...
+		byte	0x20	; ..#....
+		byte	0x54	; .#.#.#.
+		byte	0x88	; #...#..
+		byte	0x94	; #..#.#.
+		byte	0x62	; .##...#
+
+universi_10Char27 label byte	; 0x27 C_SNG_QUOTE
+		byte	1	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+
+universi_10Char28 label byte	; 0x28
+		byte	3	; bitmap width
+		byte	10	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+universi_10Char29 label byte	; 0x29
+		byte	3	; bitmap width
+		byte	10	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+universi_10Char2a label byte	; 0x2a
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+
+universi_10Char2b label byte	; 0x2b
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Char2c label byte	; 0x2c
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+universi_10Char2d label byte	; 0x2d
+		byte	4	; bitmap width
+		byte	1	; rows
+		sbyte	6	; y offset
+		sbyte	1	; x offset
+		byte	0xf0	; ####
+
+universi_10Char2e label byte	; 0x2e
+		byte	1	; bitmap width
+		byte	1	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #
+
+universi_10Char2f label byte	; 0x2f
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+universi_10Char30 label byte	; 0x30
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char31 label byte	; 0x31
+		byte	2	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	2	; x offset
+		byte	0x40	; .#
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+universi_10Char32 label byte	; 0x32
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+		byte	0x80	; #....
+		byte	0xf8	; #####
+
+universi_10Char33 label byte	; 0x33
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf8	; #####
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char34 label byte	; 0x34
+		byte	6	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x08	; ....#.
+		byte	0x18	; ...##.
+		byte	0x28	; ..#.#.
+		byte	0x48	; .#..#.
+		byte	0x88	; #...#.
+		byte	0xfc	; ######
+		byte	0x08	; ....#.
+		byte	0x08	; ....#.
+
+universi_10Char35 label byte	; 0x35
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf8	; #####
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0xf0	; ####.
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char36 label byte	; 0x36
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x30	; ..##.
+		byte	0x40	; .#...
+		byte	0x80	; #....
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char37 label byte	; 0x37
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf8	; #####
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Char38 label byte	; 0x38
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char39 label byte	; 0x39
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x78	; .####
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x60	; .##..
+
+universi_10Char3a label byte	; 0x3a
+		byte	1	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x00	; .
+		byte	0x00	; .
+		byte	0x80	; #
+
+universi_10Char3b label byte	; 0x3b
+		byte	2	; bitmap width
+		byte	7	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+universi_10Char3c label byte	; 0x3c
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+universi_10Char3d label byte	; 0x3d
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0xf8	; #####
+		byte	0x00	; .....
+		byte	0xf8	; #####
+
+universi_10Char3e label byte	; 0x3e
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+universi_10Char3f label byte	; 0x3f
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+
+universi_10Char40 label byte	; 0x40
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x38	; ..###..
+		byte	0x44	; .#...#.
+		byte	0xba	; #.###.#
+		byte	0xaa	; #.#.#.#
+		byte	0xbc	; #.####.
+		byte	0x40	; .#.....
+		byte	0x30	; ..##...
+
+universi_10Char41 label byte	; 0x41
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Char42 label byte	; 0x42
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+
+universi_10Char43 label byte	; 0x43
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char44 label byte	; 0x44
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xe0	; ###..
+		byte	0x90	; #..#.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x90	; #..#.
+		byte	0xe0	; ###..
+
+universi_10Char45 label byte	; 0x45
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+universi_10Char46 label byte	; 0x46
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+universi_10Char47 label byte	; 0x47
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x98	; #..##
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char48 label byte	; 0x48
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Char49 label byte	; 0x49
+		byte	1	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+universi_10Char4a label byte	; 0x4a
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char4b label byte	; 0x4b
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x88	; #...#
+		byte	0x90	; #..#.
+		byte	0xa0	; #.#..
+		byte	0xc0	; ##...
+		byte	0xc0	; ##...
+		byte	0xa0	; #.#..
+		byte	0x90	; #..#.
+		byte	0x88	; #...#
+
+universi_10Char4c label byte	; 0x4c
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+universi_10Char4d label byte	; 0x4d
+		byte	7	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x82	; #.....#
+		byte	0xc6	; ##...##
+		byte	0xaa	; #.#.#.#
+		byte	0x92	; #..#..#
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+
+universi_10Char4e label byte	; 0x4e
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x88	; #...#
+		byte	0xc8	; ##..#
+		byte	0xc8	; ##..#
+		byte	0xa8	; #.#.#
+		byte	0xa8	; #.#.#
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+		byte	0x88	; #...#
+
+universi_10Char4f label byte	; 0x4f
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char50 label byte	; 0x50
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+
+universi_10Char51 label byte	; 0x51
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xa8	; #.#.#
+		byte	0x70	; .###.
+		byte	0x08	; ....#
+
+universi_10Char52 label byte	; 0x52
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+		byte	0xa0	; #.#..
+		byte	0x90	; #..#.
+		byte	0x88	; #...#
+
+universi_10Char53 label byte	; 0x53
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x70	; .###.
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char54 label byte	; 0x54
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Char55 label byte	; 0x55
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char56 label byte	; 0x56
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Char57 label byte	; 0x57
+		byte	9	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80,0x80	; #.......#
+		byte	0x88,0x80	; #...#...#
+		byte	0x49,0x00	; .#..#..#.
+		byte	0x55,0x00	; .#.#.#.#.
+		byte	0x55,0x00	; .#.#.#.#.
+		byte	0x22,0x00	; ..#...#..
+		byte	0x22,0x00	; ..#...#..
+		byte	0x22,0x00	; ..#...#..
+
+universi_10Char58 label byte	; 0x58
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Char59 label byte	; 0x59
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Char5a label byte	; 0x5a
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+		byte	0x80	; #....
+		byte	0xf8	; #####
+
+universi_10Char5b label byte	; 0x5b
+		byte	2	; bitmap width
+		byte	10	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0xc0	; ##
+
+universi_10Char5c label byte	; 0x5c C_BACKSLASH
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+
+universi_10Char5d label byte	; 0x5d
+		byte	2	; bitmap width
+		byte	10	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0xc0	; ##
+
+universi_10Char5e label byte	; 0x5e
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+
+universi_10Char5f label byte	; 0x5f
+		byte	7	; bitmap width
+		byte	1	; rows
+		sbyte	9	; y offset
+		sbyte	0	; x offset
+		byte	0xfe	; #######
+
+universi_10Char60 label byte	; 0x60
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+
+universi_10Char61 label byte	; 0x61
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char62 label byte	; 0x62
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0xe0	; ###.
+
+universi_10Char63 label byte	; 0x63
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char64 label byte	; 0x64
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char65 label byte	; 0x65
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char66 label byte	; 0x66
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x30	; ..##
+		byte	0x40	; .#..
+		byte	0xe0	; ###.
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+
+universi_10Char67 label byte	; 0x67
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x60	; .##.
+
+universi_10Char68 label byte	; 0x68
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+
+universi_10Char69 label byte	; 0x69
+		byte	2	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x00	; ..
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+universi_10Char6a label byte	; 0x6a
+		byte	3	; bitmap width
+		byte	10	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x00	; ...
+		byte	0x60	; .##
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0xc0	; ##.
+
+universi_10Char6b label byte	; 0x6b
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0xa0	; #.#.
+		byte	0xc0	; ##..
+		byte	0xc0	; ##..
+		byte	0xa0	; #.#.
+		byte	0x90	; #..#
+
+universi_10Char6c label byte	; 0x6c
+		byte	2	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+universi_10Char6d label byte	; 0x6d
+		byte	7	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0xec	; ###.##.
+		byte	0x92	; #..#..#
+		byte	0x92	; #..#..#
+		byte	0x92	; #..#..#
+		byte	0x92	; #..#..#
+		byte	0x92	; #..#..#
+
+universi_10Char6e label byte	; 0x6e
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+
+universi_10Char6f label byte	; 0x6f
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char70 label byte	; 0x70
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+universi_10Char71 label byte	; 0x71
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+
+universi_10Char72 label byte	; 0x72
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0xb0	; #.##
+		byte	0xc0	; ##..
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+universi_10Char73 label byte	; 0x73
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+		byte	0x10	; ...#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char74 label byte	; 0x74
+		byte	3	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+universi_10Char75 label byte	; 0x75
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char76 label byte	; 0x76
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Char77 label byte	; 0x77
+		byte	7	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+		byte	0x54	; .#.#.#.
+		byte	0x54	; .#.#.#.
+		byte	0x28	; ..#.#..
+		byte	0x28	; ..#.#..
+
+universi_10Char78 label byte	; 0x78
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+
+universi_10Char79 label byte	; 0x79
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x60	; .##.
+
+universi_10Char7a label byte	; 0x7a
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+		byte	0x10	; ...#
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+universi_10Char7b label byte	; 0x7b
+		byte	3	; bitmap width
+		byte	11	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+universi_10Char7c label byte	; 0x7c
+		byte	1	; bitmap width
+		byte	11	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+universi_10Char7d label byte	; 0x7d
+		byte	3	; bitmap width
+		byte	11	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+universi_10Char7e label byte	; 0x7e
+		byte	6	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x64	; .##..#
+		byte	0x98	; #..##.
+
+universi_10Char80 label byte	; 0x80 C_UA_DIERESIS
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Char81 label byte	; 0x81 C_UA_RING
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Char82 label byte	; 0x82 C_UC_CEDILLA
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+
+universi_10Char83 label byte	; 0x83 C_UE_ACUTE
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+universi_10Char84 label byte	; 0x84 C_UN_TILDE
+		byte	6	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x64	; .##..#
+		byte	0x98	; #..##.
+		byte	0x44	; .#...#
+		byte	0x64	; .##..#
+		byte	0x64	; .##..#
+		byte	0x54	; .#.#.#
+		byte	0x54	; .#.#.#
+		byte	0x4c	; .#..##
+		byte	0x4c	; .#..##
+		byte	0x44	; .#...#
+
+universi_10Char85 label byte	; 0x85 C_UO_DIERESIS
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char86 label byte	; 0x86 C_UU_DIERESIS
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Char87 label byte	; 0x87 C_LA_ACUTE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char88 label byte	; 0x88 C_LA_GRAVE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char89 label byte	; 0x89 C_LA_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char8a label byte	; 0x8a C_LA_DIERESIS
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char8b label byte	; 0x8b C_LA_TILDE
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+		byte	0x00	; .....
+		byte	0x60	; .##..
+		byte	0x90	; #..#.
+		byte	0x70	; .###.
+		byte	0x90	; #..#.
+		byte	0x90	; #..#.
+		byte	0x70	; .###.
+
+universi_10Char8c label byte	; 0x8c C_LA_RING
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char8d label byte	; 0x8d C_LC_CEDILLA
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+
+universi_10Char8e label byte	; 0x8e C_LE_ACUTE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char8f label byte	; 0x8f C_LE_GRAVE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char90 label byte	; 0x90 C_LE_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char91 label byte	; 0x91 C_LE_DIERESIS
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char92 label byte	; 0x92 C_LI_ACUTE
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x00	; ...
+		byte	0xc0	; ##.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+universi_10Char93 label byte	; 0x93 C_LI_GRAVE
+		byte	2	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+		byte	0x00	; ..
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+universi_10Char94 label byte	; 0x94 C_LI_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+
+universi_10Char95 label byte	; 0x95 C_LI_DIERESIS
+		byte	3	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+		byte	0x00	; ...
+		byte	0xc0	; ##.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+universi_10Char96 label byte	; 0x96 C_LN_TILDE
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+		byte	0x00	; .....
+		byte	0x70	; .###.
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+
+universi_10Char97 label byte	; 0x97 C_LO_ACUTE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char98 label byte	; 0x98 C_LO_GRAVE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char99 label byte	; 0x99 C_LO_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char9a label byte	; 0x9a C_LO_DIERESIS
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Char9b label byte	; 0x9b C_LO_TILDE
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+		byte	0x00	; .....
+		byte	0x30	; ..##.
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+		byte	0x30	; ..##.
+
+universi_10Char9c label byte	; 0x9c C_LU_ACUTE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char9d label byte	; 0x9d C_LU_GRAVE
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char9e label byte	; 0x9e C_LU_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Char9f label byte	; 0x9f C_LU_DIERESIS
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+universi_10Chara0 label byte	; 0xa0 C_DAGGER
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+universi_10Chara1 label byte	; 0xa1 C_DEGREE
+		byte	4	; bitmap width
+		byte	4	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Chara2 label byte	; 0xa2 C_CENT
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0xa8	; #.#.#
+		byte	0xa0	; #.#..
+		byte	0xa0	; #.#..
+		byte	0xa8	; #.#.#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+
+universi_10Chara3 label byte	; 0xa3 C_STERLING
+		byte	6	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x30	; ..##..
+		byte	0x48	; .#..#.
+		byte	0x40	; .#....
+		byte	0xe0	; ###...
+		byte	0x40	; .#....
+		byte	0x40	; .#....
+		byte	0x44	; .#...#
+		byte	0xf8	; #####.
+
+universi_10Chara4 label byte	; 0xa4 C_SECTION
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Chara5 label byte	; 0xa5 C_BULLET
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0xf8	; #####
+		byte	0xf8	; #####
+		byte	0xf8	; #####
+		byte	0x70	; .###.
+
+universi_10Chara6 label byte	; 0xa6 C_PARAGRAPH
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x78	; .####
+		byte	0xa8	; #.#.#
+		byte	0xa8	; #.#.#
+		byte	0xa8	; #.#.#
+		byte	0x78	; .####
+		byte	0x28	; ..#.#
+		byte	0x28	; ..#.#
+		byte	0x28	; ..#.#
+
+universi_10Chara7 label byte	; 0xa7 C_GERMANDBLS
+		byte	6	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x38	; ..###.
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0x58	; .#.##.
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0xd8	; ##.##.
+
+universi_10Chara8 label byte	; 0xa8 C_REGISTERED
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x3c	; ..####..
+		byte	0x42	; .#....#.
+		byte	0xb9	; #.###..#
+		byte	0xa5	; #.#..#.#
+		byte	0xb9	; #.###..#
+		byte	0xa5	; #.#..#.#
+		byte	0x42	; .#....#.
+		byte	0x3c	; ..####..
+
+universi_10Chara9 label byte	; 0xa9 C_COPYRIGHT
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x3c	; ..####..
+		byte	0x42	; .#....#.
+		byte	0x99	; #..##..#
+		byte	0xa1	; #.#....#
+		byte	0xa1	; #.#....#
+		byte	0x99	; #..##..#
+		byte	0x42	; .#....#.
+		byte	0x3c	; ..####..
+
+universi_10Charaa label byte	; 0xaa C_TRADEMARK
+		byte	8	; bitmap width
+		byte	4	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xf1	; ####...#
+		byte	0x5b	; .#.##.##
+		byte	0x55	; .#.#.#.#
+		byte	0x51	; .#.#...#
+
+universi_10Charab label byte	; 0xab C_ACUTE
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+universi_10Charac label byte	; 0xac C_DIERESIS
+		byte	3	; bitmap width
+		byte	1	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+
+universi_10Charad label byte	; 0xad C_NOTEQUAL
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x10	; ...#.
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x40	; .#...
+
+universi_10Charae label byte	; 0xae C_U_AE
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x1f	; ...#####
+		byte	0x18	; ...##...
+		byte	0x28	; ..#.#...
+		byte	0x2e	; ..#.###.
+		byte	0x78	; .####...
+		byte	0x48	; .#..#...
+		byte	0x88	; #...#...
+		byte	0x8f	; #...####
+
+universi_10Charaf label byte	; 0xaf C_UO_SLASH
+		byte	7	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x3a	; ..###.#
+		byte	0x44	; .#...#.
+		byte	0x4c	; .#..##.
+		byte	0x54	; .#.#.#.
+		byte	0x54	; .#.#.#.
+		byte	0x64	; .##..#.
+		byte	0x44	; .#...#.
+		byte	0xb8	; #.###..
+
+universi_10Charb0 label byte	; 0xb0 C_INFINITY
+		byte	10	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x61,0x80	; .##....##.
+		byte	0x92,0x40	; #..#..#..#
+		byte	0x8c,0x40	; #...##...#
+		byte	0x92,0x40	; #..#..#..#
+		byte	0x61,0x80	; .##....##.
+
+universi_10Charb1 label byte	; 0xb1 C_PLUSMINUS
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+
+universi_10Charb2 label byte	; 0xb2 C_LESSEQUAL
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+		byte	0x20	; ..#..
+		byte	0x10	; ...#.
+		byte	0xf8	; #####
+
+universi_10Charb3 label byte	; 0xb3 C_GREATEREQUAL
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#...
+		byte	0x20	; ..#..
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+		byte	0xf8	; #####
+
+universi_10Charb4 label byte	; 0xb4 C_YEN
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Charb5 label byte	; 0xb5 C_L_MU
+		byte	6	; bitmap width
+		byte	7	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x74	; .###.#
+		byte	0x80	; #.....
+
+universi_10Charb6 label byte	; 0xb6 C_L_DELTA
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##..
+		byte	0x20	; ..#.
+		byte	0x30	; ..##
+		byte	0x50	; .#.#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Charb7 label byte	; 0xb7 C_U_SIGMA
+		byte	6	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####.
+		byte	0x44	; .#...#
+		byte	0x20	; ..#...
+		byte	0x10	; ...#..
+		byte	0x10	; ...#..
+		byte	0x20	; ..#...
+		byte	0x44	; .#...#
+		byte	0xf8	; #####.
+
+universi_10Charb8 label byte	; 0xb8 C_U_PI
+		byte	6	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xfc	; ######
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+
+universi_10Charb9 label byte	; 0xb9 C_L_PI
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x02	; ......#
+		byte	0x7c	; .#####.
+		byte	0xa4	; #.#..#.
+		byte	0x24	; ..#..#.
+		byte	0x24	; ..#..#.
+		byte	0x24	; ..#..#.
+		byte	0x48	; .#..#..
+
+universi_10Charba label byte	; 0xba C_INTEGRAL
+		byte	3	; bitmap width
+		byte	12	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+universi_10Charbb label byte	; 0xbb C_ORDFEMININE
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x00	; ....
+		byte	0xf0	; ####
+
+universi_10Charbc label byte	; 0xbc C_ORDMASCULINE
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+		byte	0x00	; ....
+		byte	0xf0	; ####
+
+universi_10Charbd label byte	; 0xbd C_U_OMEGA
+		byte	6	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x30	; ..##..
+		byte	0x48	; .#..#.
+		byte	0x84	; #....#
+		byte	0x84	; #....#
+		byte	0x84	; #....#
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0xcc	; ##..##
+
+universi_10Charbe label byte	; 0xbe C_L_AE
+		byte	7	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x6c	; .##.##.
+		byte	0x92	; #..#..#
+		byte	0x7e	; .######
+		byte	0x90	; #..#...
+		byte	0x92	; #..#..#
+		byte	0x6c	; .##.##.
+
+universi_10Charbf label byte	; 0xbf C_LO_SLASH
+		byte	6	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x34	; ..##.#
+		byte	0x48	; .#..#.
+		byte	0x58	; .#.##.
+		byte	0x68	; .##.#.
+		byte	0x48	; .#..#.
+		byte	0xb0	; #.##..
+
+universi_10Charc0 label byte	; 0xc0 C_QUESTIONDOWN
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Charc1 label byte	; 0xc1 C_EXCLAMDOWN
+		byte	1	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+universi_10Charc2 label byte	; 0xc2 C_LOGICAL_NOT
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	6	; y offset
+		sbyte	1	; x offset
+		byte	0xf8	; #####
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+
+universi_10Charc3 label byte	; 0xc3 C_ROOT
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x03	; ......##
+		byte	0x02	; ......#.
+		byte	0x04	; .....#..
+		byte	0x04	; .....#..
+		byte	0xc8	; ##..#...
+		byte	0x28	; ..#.#...
+		byte	0x10	; ...#....
+		byte	0x10	; ...#....
+
+universi_10Charc4 label byte	; 0xc4 C_FLORIN
+		byte	3	; bitmap width
+		byte	12	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+universi_10Charc5 label byte	; 0xc5 C_APPROX_EQUAL
+		byte	6	; bitmap width
+		byte	4	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x64	; .##..#
+		byte	0x98	; #..##.
+		byte	0x64	; .##..#
+		byte	0x98	; #..##.
+
+universi_10Charc6 label byte	; 0xc6 C_U_DELTA
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+
+universi_10Charc7 label byte	; 0xc7 C_GUILLEDBLLEFT
+		byte	6	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x24	; ..#..#
+		byte	0x48	; .#..#.
+		byte	0x90	; #..#..
+		byte	0x48	; .#..#.
+		byte	0x24	; ..#..#
+
+universi_10Charc8 label byte	; 0xc8 C_GUILLEDBLRIGHT
+		byte	6	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	1	; x offset
+		byte	0x90	; #..#..
+		byte	0x48	; .#..#.
+		byte	0x24	; ..#..#
+		byte	0x48	; .#..#.
+		byte	0x90	; #..#..
+
+universi_10Charc9 label byte	; 0xc9 C_ELLIPSIS
+		byte	7	; bitmap width
+		byte	1	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0x92	; #..#..#
+
+universi_10Charca label byte	; 0xca C_NONBRKSPACE
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+		byte	0x00	; preserved padding
+universi_10Charcb label byte	; 0xcb C_UA_GRAVE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Charcc label byte	; 0xcc C_UA_TILDE
+		byte	6	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x64	; .##..#
+		byte	0x98	; #..##.
+		byte	0x20	; ..#...
+		byte	0x20	; ..#...
+		byte	0x50	; .#.#..
+		byte	0x50	; .#.#..
+		byte	0x88	; #...#.
+		byte	0xf8	; #####.
+		byte	0x88	; #...#.
+		byte	0x88	; #...#.
+
+universi_10Charcd label byte	; 0xcd C_UO_TILDE
+		byte	6	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x64	; .##..#
+		byte	0x98	; #..##.
+		byte	0x38	; ..###.
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0x44	; .#...#
+		byte	0x38	; ..###.
+
+universi_10Charce label byte	; 0xce C_U_OE
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x77	; .###.###
+		byte	0x88	; #...#...
+		byte	0x88	; #...#...
+		byte	0x8e	; #...###.
+		byte	0x88	; #...#...
+		byte	0x88	; #...#...
+		byte	0x88	; #...#...
+		byte	0x77	; .###.###
+
+universi_10Charcf label byte	; 0xcf C_L_OE
+		byte	7	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x6c	; .##.##.
+		byte	0x92	; #..#..#
+		byte	0x9e	; #..####
+		byte	0x90	; #..#...
+		byte	0x92	; #..#..#
+		byte	0x6c	; .##.##.
+
+universi_10Chard0 label byte	; 0xd0 C_ENDASH
+		byte	5	; bitmap width
+		byte	1	; rows
+		sbyte	6	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+
+universi_10Chard1 label byte	; 0xd1 C_EMDASH
+		byte	8	; bitmap width
+		byte	1	; rows
+		sbyte	6	; y offset
+		sbyte	0	; x offset
+		byte	0xff	; ########
+
+universi_10Chard2 label byte	; 0xd2 C_QUOTEDBLLEFT
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x48	; .#..#
+		byte	0x90	; #..#.
+		byte	0xd8	; ##.##
+
+universi_10Chard3 label byte	; 0xd3 C_QUOTEDBLRIGHT
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xd8	; ##.##
+		byte	0x48	; .#..#
+		byte	0x90	; #..#.
+
+universi_10Chard4 label byte	; 0xd4 C_QUOTESNGLEFT
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+		byte	0xc0	; ##
+
+universi_10Chard5 label byte	; 0xd5 C_QUOTESNGRIGHT
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+universi_10Chard6 label byte	; 0xd6 C_DIVISION
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0xf8	; #####
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+
+universi_10Chard7 label byte	; 0xd7 C_DIAMONDBULLET
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x10	; ...#...
+		byte	0x28	; ..#.#..
+		byte	0x44	; .#...#.
+		byte	0x82	; #.....#
+		byte	0x44	; .#...#.
+		byte	0x28	; ..#.#..
+		byte	0x10	; ...#...
+
+universi_10Chard8 label byte	; 0xd8 C_LY_DIERESIS
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x60	; .##.
+
+universi_10Chard9 label byte	; 0xd9 C_UY_DIERESIS
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Charda label byte	; 0xda C_FRACTION
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x02	; ......#
+		byte	0x04	; .....#.
+		byte	0x08	; ....#..
+		byte	0x10	; ...#...
+		byte	0x20	; ..#....
+		byte	0x40	; .#.....
+		byte	0x80	; #......
+
+universi_10Chardb label byte	; 0xdb C_CURRENCY
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+
+universi_10Chardc label byte	; 0xdc C_GUILSNGLEFT
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	2	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+universi_10Chardd label byte	; 0xdd C_GUILSNGRIGHT
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	3	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+universi_10Charde label byte	; 0xde C_LY_ACUTE
+		byte	4	; bitmap width
+		byte	11	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x60	; .##.
+
+universi_10Chardf label byte	; 0xdf C_UY_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+universi_10Chare0 label byte	; 0xe0 C_DBLDAGGER
+		byte	3	; bitmap width
+		byte	6	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+universi_10Chare1 label byte	; 0xe1 C_CNTR_DOT
+		byte	1	; bitmap width
+		byte	1	; rows
+		sbyte	4	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #
+
+universi_10Chare2 label byte	; 0xe2 C_SNGQUOTELOW
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+universi_10Chare3 label byte	; 0xe3 C_DBLQUOTELOW
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0xd8	; ##.##
+		byte	0x48	; .#..#
+		byte	0x90	; #..#.
+
+universi_10Chare4 label byte	; 0xe4 C_PERTHOUSAND
+		byte	11	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######...
+		byte	0x92,0x00	; #..#..#....
+		byte	0x94,0x00	; #..#.#.....
+		byte	0x68,0x00	; .##.#......
+		byte	0x16,0xc0	; ...#.##.##.
+		byte	0x29,0x20	; ..#.#..#..#
+		byte	0x49,0x20	; .#..#..#..#
+		byte	0x46,0xc0	; .#...##.##.
+
+universi_10Chare5 label byte	; 0xe5 C_UA_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Chare6 label byte	; 0xe6 C_UE_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#..
+		byte	0xa0	; #.#.
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+universi_10Chare7 label byte	; 0xe7 C_UA_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+universi_10Chare8 label byte	; 0xe8 C_UE_DIERESIS
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0xa0	; #.#.
+		byte	0x00	; ....
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+universi_10Chare9 label byte	; 0xe9 C_UE_GRAVE
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+universi_10Charea label byte	; 0xea C_UI_ACUTE
+		byte	2	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+
+universi_10Chareb label byte	; 0xeb C_UI_CIRCUMFLEX
+		byte	3	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+universi_10Charec label byte	; 0xec C_UI_DIERESIS
+		byte	3	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+		byte	0x00	; ...
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+universi_10Chared label byte	; 0xed C_UI_GRAVE
+		byte	2	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+universi_10Charee label byte	; 0xee C_UO_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Charef label byte	; 0xef C_UO_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Charf1 label byte	; 0xf1 C_UO_GRAVE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#...
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Charf2 label byte	; 0xf2 C_UU_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Charf3 label byte	; 0xf3 C_UU_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Charf4 label byte	; 0xf4 C_UU_GRAVE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#...
+		byte	0x20	; ..#..
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+universi_10Charf5 label byte	; 0xf5 C_LI_DOTLESS
+		byte	2	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+universi_10Charf6 label byte	; 0xf6 C_CIRCUMFLEX
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+
+universi_10Charf7 label byte	; 0xf7 C_TILDE
+		byte	5	; bitmap width
+		byte	2	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+
+universi_10Charf8 label byte	; 0xf8 C_MACRON
+		byte	3	; bitmap width
+		byte	1	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xe0	; ###
+
+universi_10Charf9 label byte	; 0xf9 C_BREVE
+		byte	4	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+universi_10Charfa label byte	; 0xfa C_DOTACCENT
+		byte	1	; bitmap width
+		byte	1	; rows
+		sbyte	2	; y offset
+		sbyte	2	; x offset
+		byte	0x80	; #
+
+universi_10Charfb label byte	; 0xfb C_RING
+		byte	3	; bitmap width
+		byte	3	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+		byte	0x40	; .#.
+
+universi_10Charfc label byte	; 0xfc C_CEDILLA
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	10	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+universi_10Charfd label byte	; 0xfd C_HUNGARUMLAUT
+		byte	5	; bitmap width
+		byte	2	; rows
+		sbyte	1	; y offset
+		sbyte	1	; x offset
+		byte	0x48	; .#..#
+		byte	0x90	; #..#.
+
+universi_10Charfe label byte	; 0xfe C_OGONEK
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	10	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+
+universi_10Charff label byte	; 0xff C_CARON
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0xa0	; #.#
+		byte	0x40	; .#.
+
+universi_10EndData label byte
+universi_10Seg	ends

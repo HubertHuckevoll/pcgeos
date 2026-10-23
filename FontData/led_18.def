@@ -1,0 +1,1508 @@
+; SBCS bitmap strike. Offsets and unused records preserve the reference.
+led_18Seg	segment
+led_18StartData label byte
+		word	led_18EndData-led_18StartData	; data size
+		word	0	; maker
+		WBFixed	<0,12>	; average width
+		WBFixed	<0,12>	; maximum width
+		WBFixed	<0,0>	; height adjustment
+		WBFixed	<0,22>	; height
+		WBFixed	<0,3>	; accent
+		WBFixed	<0,9>	; mean
+		WBFixed	<0,0>	; baseline adjustment
+		WBFixed	<0,18>	; baseline
+		WBFixed	<0,4>	; descent
+		WBFixed	<0,1>	; external leading
+		word	0	; kerning count
+		word	led_18KernPairs-led_18StartData	; kerning pair offset
+		word	led_18KernValues-led_18StartData	; kerning value offset
+		byte	32	; first character
+		byte	94	; last character
+		byte	48	; default character
+		WBFixed	<0,20>	; underline position
+		WBFixed	<0,2>	; underline thickness
+		WBFixed	<153,12>	; strike-through position
+		WBFixed	<0,0>	; above font box
+		WBFixed	<0,0>	; below font box
+		sword	0	; minimum LSB
+		sword	0	; minimum TSB
+		sword	22	; maximum BSB
+		sword	12	; maximum RSB
+		word	22	; pixel height
+		byte	0x00	; font flags
+		word	666	; heap count
+
+	; Character table: glyph offset, advance, flags, usage.
+
+		word	led_18Char20-led_18StartData	; 0x20  ( )
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char21-led_18StartData	; 0x21  (!)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char22-led_18StartData	; 0x22  (")
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char23-led_18StartData	; 0x23  (#)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char24-led_18StartData	; 0x24  ($)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	0	; 0x25  (%)
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	0	; 0x26  (&)
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	led_18Char27-led_18StartData	; 0x27 C_SNG_QUOTE (')
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char28-led_18StartData	; 0x28  (()
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char29-led_18StartData	; 0x29  ())
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char2a-led_18StartData	; 0x2a  (*)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char2b-led_18StartData	; 0x2b  (+)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char2c-led_18StartData	; 0x2c  (,)
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char2d-led_18StartData	; 0x2d  (-)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char2e-led_18StartData	; 0x2e  (.)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char2f-led_18StartData	; 0x2f  (/)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char30-led_18StartData	; 0x30  (0)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char31-led_18StartData	; 0x31  (1)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char32-led_18StartData	; 0x32  (2)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char33-led_18StartData	; 0x33  (3)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char34-led_18StartData	; 0x34  (4)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char35-led_18StartData	; 0x35  (5)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char36-led_18StartData	; 0x36  (6)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char37-led_18StartData	; 0x37  (7)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char38-led_18StartData	; 0x38  (8)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char39-led_18StartData	; 0x39  (9)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char3a-led_18StartData	; 0x3a  (:)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char3b-led_18StartData	; 0x3b  (;)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char3c-led_18StartData	; 0x3c  (<)
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char3d-led_18StartData	; 0x3d  (=)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char3e-led_18StartData	; 0x3e  (>)
+		WBFixed	<0,11>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char3f-led_18StartData	; 0x3f  (?)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	0	; 0x40  (@)
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	led_18Char41-led_18StartData	; 0x41  (A)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char42-led_18StartData	; 0x42  (B)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char43-led_18StartData	; 0x43  (C)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char44-led_18StartData	; 0x44  (D)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char45-led_18StartData	; 0x45  (E)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char46-led_18StartData	; 0x46  (F)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char47-led_18StartData	; 0x47  (G)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char48-led_18StartData	; 0x48  (H)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char49-led_18StartData	; 0x49  (I)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char4a-led_18StartData	; 0x4a  (J)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char4b-led_18StartData	; 0x4b  (K)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char4c-led_18StartData	; 0x4c  (L)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char4d-led_18StartData	; 0x4d  (M)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char4e-led_18StartData	; 0x4e  (N)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char4f-led_18StartData	; 0x4f  (O)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char50-led_18StartData	; 0x50  (P)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char51-led_18StartData	; 0x51  (Q)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char52-led_18StartData	; 0x52  (R)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char53-led_18StartData	; 0x53  (S)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char54-led_18StartData	; 0x54  (T)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char55-led_18StartData	; 0x55  (U)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char56-led_18StartData	; 0x56  (V)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char57-led_18StartData	; 0x57  (W)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char58-led_18StartData	; 0x58  (X)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char59-led_18StartData	; 0x59  (Y)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char5a-led_18StartData	; 0x5a  (Z)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char5b-led_18StartData	; 0x5b  ([)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char5c-led_18StartData	; 0x5c C_BACKSLASH (\)
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char5d-led_18StartData	; 0x5d  (])
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	led_18Char5e-led_18StartData	; 0x5e  (^)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+led_18KernPairs label byte
+led_18KernValues label byte
+led_18Char20 label byte	; 0x20
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+		byte	0x00	; preserved padding
+led_18Char21 label byte	; 0x21
+		byte	3	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x00	; ...
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+
+led_18Char22 label byte	; 0x22
+		byte	8	; bitmap width
+		byte	5	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x42	; .#....#.
+		byte	0xe7	; ###..###
+		byte	0xe7	; ###..###
+		byte	0xe7	; ###..###
+		byte	0x42	; .#....#.
+
+led_18Char23 label byte	; 0x23
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x11,0x00	; ...#...#...
+		byte	0x3b,0x80	; ..###.###..
+		byte	0x3b,0x80	; ..###.###..
+		byte	0x11,0x00	; ...#...#...
+		byte	0x7b,0xc0	; .####.####.
+		byte	0xff,0xe0	; ###########
+		byte	0x7b,0xc0	; .####.####.
+		byte	0x11,0x00	; ...#...#...
+		byte	0x7b,0xc0	; .####.####.
+		byte	0xff,0xe0	; ###########
+		byte	0x7b,0xc0	; .####.####.
+		byte	0x11,0x00	; ...#...#...
+		byte	0x3b,0x80	; ..###.###..
+		byte	0x3b,0x80	; ..###.###..
+		byte	0x11,0x00	; ...#...#...
+
+led_18Char24 label byte	; 0x24
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x08,0x00	; ....#....
+		byte	0x7f,0x80	; .########
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe8,0x00	; ###.#....
+		byte	0xe8,0x00	; ###.#....
+		byte	0xdf,0x00	; ##.#####.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7d,0x80	; .#####.##
+		byte	0x0b,0x80	; ....#.###
+		byte	0x0b,0x80	; ....#.###
+		byte	0x3d,0x80	; ..####.##
+		byte	0x7e,0x80	; .######.#
+		byte	0xff,0x00	; ########.
+		byte	0x08,0x00	; ....#....
+
+led_18Char27 label byte	; 0x27 C_SNG_QUOTE
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+
+led_18Char28 label byte	; 0x28
+		byte	6	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x1c	; ...###
+		byte	0x38	; ..###.
+		byte	0x50	; .#.#..
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0xc0	; ##....
+		byte	0x80	; #.....
+		byte	0xc0	; ##....
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0x50	; .#.#..
+		byte	0x38	; ..###.
+		byte	0x1c	; ...###
+
+led_18Char29 label byte	; 0x29
+		byte	6	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xe0	; ###...
+		byte	0x70	; .###..
+		byte	0x28	; ..#.#.
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x0c	; ....##
+		byte	0x04	; .....#
+		byte	0x0c	; ....##
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x28	; ..#.#.
+		byte	0x70	; .###..
+		byte	0xe0	; ###...
+
+led_18Char2a label byte	; 0x2a
+		byte	11	; bitmap width
+		byte	13	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x04,0x00	; .....#.....
+		byte	0xee,0xe0	; ###.###.###
+		byte	0xee,0xe0	; ###.###.###
+		byte	0xf5,0xe0	; ####.#.####
+		byte	0x3f,0x80	; ..#######..
+		byte	0x75,0xc0	; .###.#.###.
+		byte	0xfb,0xe0	; #####.#####
+		byte	0x75,0xc0	; .###.#.###.
+		byte	0x3f,0x80	; ..#######..
+		byte	0xf5,0xe0	; ####.#.####
+		byte	0xee,0xe0	; ###.###.###
+		byte	0xee,0xe0	; ###.###.###
+		byte	0x04,0x00	; .....#.....
+
+led_18Char2b label byte	; 0x2b
+		byte	11	; bitmap width
+		byte	13	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x04,0x00	; .....#.....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x75,0xc0	; .###.#.###.
+		byte	0xfb,0xe0	; #####.#####
+		byte	0x75,0xc0	; .###.#.###.
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x04,0x00	; .....#.....
+
+led_18Char2c label byte	; 0x2c
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	15	; y offset
+		sbyte	1	; x offset
+		byte	0x70	; .###
+		byte	0x70	; .###
+		byte	0x70	; .###
+		byte	0xe0	; ###.
+		byte	0xc0	; ##..
+
+led_18Char2d label byte	; 0x2d
+		byte	6	; bitmap width
+		byte	3	; rows
+		sbyte	9	; y offset
+		sbyte	1	; x offset
+		byte	0x78	; .####.
+		byte	0xfc	; ######
+		byte	0x78	; .####.
+
+led_18Char2e label byte	; 0x2e
+		byte	3	; bitmap width
+		byte	3	; rows
+		sbyte	15	; y offset
+		sbyte	1	; x offset
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+
+led_18Char2f label byte	; 0x2f
+		byte	11	; bitmap width
+		byte	13	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x00,0x40	; .........#.
+		byte	0x00,0xe0	; ........###
+		byte	0x01,0xc0	; .......###.
+		byte	0x01,0xc0	; .......###.
+		byte	0x03,0x80	; ......###..
+		byte	0x03,0x00	; ......##...
+		byte	0x0a,0x00	; ....#.#....
+		byte	0x18,0x00	; ...##......
+		byte	0x38,0x00	; ..###......
+		byte	0x70,0x00	; .###.......
+		byte	0x70,0x00	; .###.......
+		byte	0xe0,0x00	; ###........
+		byte	0x40,0x00	; .#.........
+
+led_18Char30 label byte	; 0x30
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char31 label byte	; 0x31
+		byte	3	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	4	; x offset
+		byte	0x20	; ..#
+		byte	0x60	; .##
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x60	; .##
+		byte	0x20	; ..#
+		byte	0x60	; .##
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x60	; .##
+		byte	0x20	; ..#
+
+led_18Char32 label byte	; 0x32
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0x00	; ########.
+		byte	0x7e,0x80	; .######.#
+		byte	0x3d,0x80	; ..####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x7d,0x80	; .#####.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdf,0x00	; ##.#####.
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xde,0x00	; ##.####..
+		byte	0xbf,0x00	; #.######.
+		byte	0x7f,0x80	; .########
+
+led_18Char33 label byte	; 0x33
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0x00	; ########.
+		byte	0x7e,0x80	; .######.#
+		byte	0x3d,0x80	; ..####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x3d,0x80	; ..####.##
+		byte	0x7e,0x80	; .######.#
+		byte	0x3d,0x80	; ..####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x3d,0x80	; ..####.##
+		byte	0x7e,0x80	; .######.#
+		byte	0xff,0x00	; ########.
+
+led_18Char34 label byte	; 0x34
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7d,0x80	; .#####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x01,0x80	; .......##
+		byte	0x00,0x80	; ........#
+
+led_18Char35 label byte	; 0x35
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x80	; .########
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xdf,0x00	; ##.#####.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7d,0x80	; .#####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x3d,0x80	; ..####.##
+		byte	0x7e,0x80	; .######.#
+		byte	0xff,0x00	; ########.
+
+led_18Char36 label byte	; 0x36
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x80	; .########
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xdf,0x00	; ##.#####.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char37 label byte	; 0x37
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0x00	; ########.
+		byte	0x7e,0x80	; .######.#
+		byte	0x3d,0x80	; ..####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x01,0x80	; .......##
+		byte	0x00,0x80	; ........#
+		byte	0x01,0x80	; .......##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x01,0x80	; .......##
+		byte	0x00,0x80	; ........#
+
+led_18Char38 label byte	; 0x38
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char39 label byte	; 0x39
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7d,0x80	; .#####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x3d,0x80	; ..####.##
+		byte	0x7e,0x80	; .######.#
+		byte	0xff,0x00	; ########.
+
+led_18Char3a label byte	; 0x3a
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	6	; y offset
+		sbyte	1	; x offset
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x00	; ...
+		byte	0x00	; ...
+		byte	0x00	; ...
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+
+led_18Char3b label byte	; 0x3b
+		byte	4	; bitmap width
+		byte	11	; rows
+		sbyte	6	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x70	; .###
+		byte	0x70	; .###
+		byte	0x00	; ....
+		byte	0x00	; ....
+		byte	0x00	; ....
+		byte	0x70	; .###
+		byte	0x70	; .###
+		byte	0x70	; .###
+		byte	0xe0	; ###.
+		byte	0xc0	; ##..
+
+led_18Char3c label byte	; 0x3c
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x01	; .......#
+		byte	0x03	; ......##
+		byte	0x07	; .....###
+		byte	0x0f	; ....####
+		byte	0x1e	; ...####.
+		byte	0x3c	; ..####..
+		byte	0x58	; .#.##...
+		byte	0xe0	; ###.....
+		byte	0x58	; .#.##...
+		byte	0x3c	; ..####..
+		byte	0x1e	; ...####.
+		byte	0x0f	; ....####
+		byte	0x07	; .....###
+		byte	0x03	; ......##
+		byte	0x01	; .......#
+
+led_18Char3d label byte	; 0x3d
+		byte	6	; bitmap width
+		byte	7	; rows
+		sbyte	7	; y offset
+		sbyte	1	; x offset
+		byte	0x78	; .####.
+		byte	0xfc	; ######
+		byte	0x78	; .####.
+		byte	0x00	; ......
+		byte	0x78	; .####.
+		byte	0xfc	; ######
+		byte	0x78	; .####.
+
+led_18Char3e label byte	; 0x3e
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x80	; #.......
+		byte	0xc0	; ##......
+		byte	0xe0	; ###.....
+		byte	0xf0	; ####....
+		byte	0x78	; .####...
+		byte	0x3c	; ..####..
+		byte	0x1a	; ...##.#.
+		byte	0x07	; .....###
+		byte	0x1a	; ...##.#.
+		byte	0x3c	; ..####..
+		byte	0x78	; .####...
+		byte	0xf0	; ####....
+		byte	0xe0	; ###.....
+		byte	0xc0	; ##......
+		byte	0x80	; #.......
+
+led_18Char3f label byte	; 0x3f
+		byte	8	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	2	; x offset
+		byte	0x78	; .####...
+		byte	0xfc	; ######..
+		byte	0x7a	; .####.#.
+		byte	0x07	; .....###
+		byte	0x07	; .....###
+		byte	0x0e	; ....###.
+		byte	0x14	; ...#.#..
+		byte	0x38	; ..###...
+		byte	0x38	; ..###...
+		byte	0x10	; ...#....
+		byte	0x00	; ........
+		byte	0x10	; ...#....
+		byte	0x38	; ..###...
+		byte	0x38	; ..###...
+		byte	0x10	; ...#....
+
+led_18Char41 label byte	; 0x41
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+
+led_18Char42 label byte	; 0x42
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7c,0x00	; .#####...
+		byte	0xbe,0x00	; #.#####..
+		byte	0xdd,0x00	; ##.###.#.
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x00	; ##.###.#.
+		byte	0xbe,0x00	; #.#####..
+		byte	0x7c,0x00	; .#####...
+
+led_18Char43 label byte	; 0x43
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x80	; .########
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xc0,0x00	; ##.......
+		byte	0x80,0x00	; #........
+		byte	0xc0,0x00	; ##.......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xde,0x00	; ##.####..
+		byte	0xbf,0x00	; #.######.
+		byte	0x7f,0x80	; .########
+
+led_18Char44 label byte	; 0x44
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7c,0x00	; .#####...
+		byte	0xbe,0x00	; #.#####..
+		byte	0xdd,0x00	; ##.###.#.
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x00	; ##.###.#.
+		byte	0xbe,0x00	; #.#####..
+		byte	0x7c,0x00	; .#####...
+
+led_18Char45 label byte	; 0x45
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x80	; .########
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xde,0x00	; ##.####..
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xde,0x00	; ##.####..
+		byte	0xbf,0x00	; #.######.
+		byte	0x7f,0x80	; .########
+
+led_18Char46 label byte	; 0x46
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x80	; .########
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xde,0x00	; ##.####..
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xc0,0x00	; ##.......
+		byte	0x80,0x00	; #........
+
+led_18Char47 label byte	; 0x47
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x00	; #.#####..
+		byte	0xdc,0x00	; ##.###...
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xc7,0x00	; ##...###.
+		byte	0x8e,0x80	; #...###.#
+		byte	0xc5,0x80	; ##...#.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char48 label byte	; 0x48
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+
+led_18Char49 label byte	; 0x49
+		byte	3	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	4	; x offset
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+
+led_18Char4a label byte	; 0x4a
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x00,0x80	; ........#
+		byte	0x01,0x80	; .......##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x01,0x80	; .......##
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char4b label byte	; 0x4b
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x81,0x80	; #......##
+		byte	0xc3,0x80	; ##....###
+		byte	0xe7,0x80	; ###..####
+		byte	0xef,0x00	; ###.####.
+		byte	0xee,0x00	; ###.###..
+		byte	0xec,0x00	; ###.##...
+		byte	0xd8,0x00	; ##.##....
+		byte	0xb0,0x00	; #.##.....
+		byte	0xd8,0x00	; ##.##....
+		byte	0xec,0x00	; ###.##...
+		byte	0xee,0x00	; ###.###..
+		byte	0xef,0x00	; ###.####.
+		byte	0xe7,0x80	; ###..####
+		byte	0xc3,0x80	; ##....###
+		byte	0x81,0x80	; #......##
+
+led_18Char4c label byte	; 0x4c
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x80,0x00	; #........
+		byte	0xc0,0x00	; ##.......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xc0,0x00	; ##.......
+		byte	0x80,0x00	; #........
+		byte	0xc0,0x00	; ##.......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xde,0x00	; ##.####..
+		byte	0xbf,0x00	; #.######.
+		byte	0x7f,0x80	; .########
+
+led_18Char4d label byte	; 0x4d
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xeb,0x80	; ###.#.###
+		byte	0xeb,0x80	; ###.#.###
+		byte	0xeb,0x80	; ###.#.###
+		byte	0xc9,0x80	; ##..#..##
+		byte	0x88,0x80	; #...#...#
+		byte	0xc9,0x80	; ##..#..##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+
+led_18Char4e label byte	; 0x4e
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7c,0x00	; .#####...
+		byte	0xbe,0x00	; #.#####..
+		byte	0xdd,0x00	; ##.###.#.
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+
+led_18Char4f label byte	; 0x4f
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char50 label byte	; 0x50
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x00	; #.#####..
+		byte	0xdc,0x00	; ##.###...
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xc0,0x00	; ##.......
+		byte	0x80,0x00	; #........
+
+led_18Char51 label byte	; 0x51
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x00	; .#######...
+		byte	0xbe,0x80	; #.#####.#..
+		byte	0xdd,0x80	; ##.###.##..
+		byte	0xe3,0x80	; ###...###..
+		byte	0xe3,0x80	; ###...###..
+		byte	0xe3,0x80	; ###...###..
+		byte	0xc1,0x80	; ##.....##..
+		byte	0x80,0x80	; #.......#..
+		byte	0xc1,0x80	; ##.....##..
+		byte	0xe3,0x80	; ###...###..
+		byte	0xeb,0x80	; ###.#.###..
+		byte	0xe7,0x80	; ###..####..
+		byte	0xdd,0x80	; ##.###.##..
+		byte	0xbe,0xe0	; #.#####.###
+		byte	0x7f,0x60	; .#######.##
+
+led_18Char52 label byte	; 0x52
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7c,0x00	; .#####...
+		byte	0xbe,0x00	; #.#####..
+		byte	0xdd,0x00	; ##.###.#.
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x00	; ##.###.#.
+		byte	0xbe,0x00	; #.#####..
+		byte	0xdc,0x00	; ##.###...
+		byte	0xec,0x00	; ###.##...
+		byte	0xee,0x00	; ###.###..
+		byte	0xef,0x00	; ###.####.
+		byte	0xe7,0x80	; ###..####
+		byte	0xc3,0x80	; ##....###
+		byte	0x81,0x80	; #......##
+
+led_18Char53 label byte	; 0x53
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7f,0x80	; .########
+		byte	0xbf,0x00	; #.######.
+		byte	0xde,0x00	; ##.####..
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xdf,0x00	; ##.#####.
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7d,0x80	; .#####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x3d,0x80	; ..####.##
+		byte	0x7e,0x80	; .######.#
+		byte	0xff,0x00	; ########.
+
+led_18Char54 label byte	; 0x54
+		byte	11	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xff,0xe0	; ###########
+		byte	0x7b,0xc0	; .####.####.
+		byte	0x35,0x80	; ..##.#.##..
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x04,0x00	; .....#.....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x0e,0x00	; ....###....
+		byte	0x04,0x00	; .....#.....
+
+led_18Char55 label byte	; 0x55
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char56 label byte	; 0x56
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0x5d,0x00	; .#.###.#.
+		byte	0x3e,0x00	; ..#####..
+		byte	0x1c,0x00	; ...###...
+
+led_18Char57 label byte	; 0x57
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x80,0x80	; #.......#
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xe3,0x80	; ###...###
+		byte	0xc9,0x80	; ##..#..##
+		byte	0x88,0x80	; #...#...#
+		byte	0xc9,0x80	; ##..#..##
+		byte	0xeb,0x80	; ###.#.###
+		byte	0xeb,0x80	; ###.#.###
+		byte	0xeb,0x80	; ###.#.###
+		byte	0xdd,0x80	; ##.###.##
+		byte	0xbe,0x80	; #.#####.#
+		byte	0x7f,0x00	; .#######.
+
+led_18Char58 label byte	; 0x58
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xf7,0x80	; ####.####
+		byte	0x77,0x00	; .###.###.
+		byte	0x3e,0x00	; ..#####..
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x08,0x00	; ....#....
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x3e,0x00	; ..#####..
+		byte	0x77,0x00	; .###.###.
+		byte	0xf7,0x80	; ####.####
+		byte	0xe3,0x80	; ###...###
+		byte	0xc1,0x80	; ##.....##
+
+led_18Char59 label byte	; 0x59
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xc1,0x80	; ##.....##
+		byte	0xe3,0x80	; ###...###
+		byte	0xf7,0x80	; ####.####
+		byte	0x77,0x00	; .###.###.
+		byte	0x3e,0x00	; ..#####..
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x08,0x00	; ....#....
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x1c,0x00	; ...###...
+		byte	0x08,0x00	; ....#....
+
+led_18Char5a label byte	; 0x5a
+		byte	9	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xff,0x00	; ########.
+		byte	0x7e,0x80	; .######.#
+		byte	0x3d,0x80	; ..####.##
+		byte	0x03,0x80	; ......###
+		byte	0x03,0x80	; ......###
+		byte	0x07,0x00	; .....###.
+		byte	0x06,0x00	; .....##..
+		byte	0x14,0x00	; ...#.#...
+		byte	0x30,0x00	; ..##.....
+		byte	0x70,0x00	; .###.....
+		byte	0xe0,0x00	; ###......
+		byte	0xe0,0x00	; ###......
+		byte	0xde,0x00	; ##.####..
+		byte	0xbf,0x00	; #.######.
+		byte	0x7f,0x80	; .########
+
+led_18Char5b label byte	; 0x5b
+		byte	6	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x7c	; .#####
+		byte	0xb8	; #.###.
+		byte	0xd0	; ##.#..
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0xc0	; ##....
+		byte	0x80	; #.....
+		byte	0xc0	; ##....
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0xe0	; ###...
+		byte	0xd0	; ##.#..
+		byte	0xb8	; #.###.
+		byte	0x7c	; .#####
+
+led_18Char5c label byte	; 0x5c C_BACKSLASH
+		byte	11	; bitmap width
+		byte	13	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x40,0x00	; .#.........
+		byte	0xe0,0x00	; ###........
+		byte	0x70,0x00	; .###.......
+		byte	0x70,0x00	; .###.......
+		byte	0x38,0x00	; ..###......
+		byte	0x18,0x00	; ...##......
+		byte	0x0a,0x00	; ....#.#....
+		byte	0x03,0x00	; ......##...
+		byte	0x03,0x80	; ......###..
+		byte	0x01,0xc0	; .......###.
+		byte	0x01,0xc0	; .......###.
+		byte	0x00,0xe0	; ........###
+		byte	0x00,0x40	; .........#.
+
+led_18Char5d label byte	; 0x5d
+		byte	6	; bitmap width
+		byte	15	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0xf8	; #####.
+		byte	0x74	; .###.#
+		byte	0x2c	; ..#.##
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x0c	; ....##
+		byte	0x04	; .....#
+		byte	0x0c	; ....##
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x1c	; ...###
+		byte	0x2c	; ..#.##
+		byte	0x74	; .###.#
+		byte	0xf8	; #####.
+
+led_18Char5e label byte	; 0x5e
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	1	; x offset
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0xd8	; ##.##
+
+led_18EndData label byte
+led_18Seg	ends

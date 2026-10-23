@@ -1,0 +1,4287 @@
+; SBCS bitmap strike. Offsets and unused records preserve the reference.
+esquire_09Seg	segment
+esquire_09StartData label byte
+		word	esquire_09EndData-esquire_09StartData	; data size
+		word	0	; maker
+		WBFixed	<0,9>	; average width
+		WBFixed	<0,12>	; maximum width
+		WBFixed	<0,0>	; height adjustment
+		WBFixed	<0,12>	; height
+		WBFixed	<0,3>	; accent
+		WBFixed	<0,5>	; mean
+		WBFixed	<0,0>	; baseline adjustment
+		WBFixed	<0,10>	; baseline
+		WBFixed	<0,2>	; descent
+		WBFixed	<0,0>	; external leading
+		word	0	; kerning count
+		word	1863	; kerning pair offset
+		word	1863	; kerning value offset
+		byte	0	; first character
+		byte	255	; last character
+		byte	46	; default character
+		WBFixed	<0,11>	; underline position
+		WBFixed	<0,1>	; underline thickness
+		WBFixed	<0,7>	; strike-through position
+		WBFixed	<0,0>	; above font box
+		WBFixed	<0,0>	; below font box
+		sword	0	; minimum LSB
+		sword	0	; minimum TSB
+		sword	12	; maximum BSB
+		sword	12	; maximum RSB
+		word	12	; pixel height
+		byte	0x00	; font flags
+		word	666	; heap count
+
+	; Character table: glyph offset, advance, flags, usage.
+
+		word	esquire_09Char00-esquire_09StartData	; 0x00 C_NULL
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char01-esquire_09StartData	; 0x01 C_CTRL_A
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char02-esquire_09StartData	; 0x02 C_CTRL_B
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char03-esquire_09StartData	; 0x03 C_CTRL_C
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char04-esquire_09StartData	; 0x04 C_CTRL_D
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char05-esquire_09StartData	; 0x05 C_CTRL_E
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char06-esquire_09StartData	; 0x06 C_CTRL_F
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char07-esquire_09StartData	; 0x07 C_CTRL_G
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char08-esquire_09StartData	; 0x08 C_CTRL_H
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char09-esquire_09StartData	; 0x09 C_TAB
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char0a-esquire_09StartData	; 0x0a C_LINEFEED
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char0b-esquire_09StartData	; 0x0b C_CTRL_K
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char0c-esquire_09StartData	; 0x0c C_CTRL_L
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char0d-esquire_09StartData	; 0x0d C_ENTER
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char0e-esquire_09StartData	; 0x0e C_SHIFT_OUT
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char0f-esquire_09StartData	; 0x0f C_SHIFT_IN
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char10-esquire_09StartData	; 0x10 C_CTRL_P
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char11-esquire_09StartData	; 0x11 C_CTRL_Q
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char12-esquire_09StartData	; 0x12 C_CTRL_R
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char13-esquire_09StartData	; 0x13 C_CTRL_S
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char14-esquire_09StartData	; 0x14 C_CTRL_T
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char15-esquire_09StartData	; 0x15 C_CTRL_U
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char16-esquire_09StartData	; 0x16 C_CTRL_V
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char17-esquire_09StartData	; 0x17 C_CTRL_W
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char18-esquire_09StartData	; 0x18 C_CTRL_X
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char19-esquire_09StartData	; 0x19 C_NULL_WIDTH
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char1a-esquire_09StartData	; 0x1a C_GRAPHIC
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char1b-esquire_09StartData	; 0x1b C_THINSPACE
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char1c-esquire_09StartData	; 0x1c C_ENSPACE
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char1d-esquire_09StartData	; 0x1d C_EMSPACE
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char1e-esquire_09StartData	; 0x1e C_NONBRKHYPHEN
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char1f-esquire_09StartData	; 0x1f C_OPTHYPHEN
+		WBFixed	<0,1>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char20-esquire_09StartData	; 0x20  ( )
+		WBFixed	<0,3>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char21-esquire_09StartData	; 0x21  (!)
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char22-esquire_09StartData	; 0x22  (")
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char23-esquire_09StartData	; 0x23  (#)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char24-esquire_09StartData	; 0x24  ($)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char25-esquire_09StartData	; 0x25  (%)
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char26-esquire_09StartData	; 0x26  (&)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char27-esquire_09StartData	; 0x27 C_SNG_QUOTE (')
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char28-esquire_09StartData	; 0x28  (()
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char29-esquire_09StartData	; 0x29  ())
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char2a-esquire_09StartData	; 0x2a  (*)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char2b-esquire_09StartData	; 0x2b  (+)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char2c-esquire_09StartData	; 0x2c  (,)
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char2d-esquire_09StartData	; 0x2d  (-)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char2e-esquire_09StartData	; 0x2e  (.)
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char2f-esquire_09StartData	; 0x2f  (/)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char30-esquire_09StartData	; 0x30  (0)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char31-esquire_09StartData	; 0x31  (1)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char32-esquire_09StartData	; 0x32  (2)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char33-esquire_09StartData	; 0x33  (3)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char34-esquire_09StartData	; 0x34  (4)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char35-esquire_09StartData	; 0x35  (5)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char36-esquire_09StartData	; 0x36  (6)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char37-esquire_09StartData	; 0x37  (7)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char38-esquire_09StartData	; 0x38  (8)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char39-esquire_09StartData	; 0x39  (9)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char3a-esquire_09StartData	; 0x3a  (:)
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char3b-esquire_09StartData	; 0x3b  (;)
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char3c-esquire_09StartData	; 0x3c  (<)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char3d-esquire_09StartData	; 0x3d  (=)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char3e-esquire_09StartData	; 0x3e  (>)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char3f-esquire_09StartData	; 0x3f  (?)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char40-esquire_09StartData	; 0x40  (@)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char41-esquire_09StartData	; 0x41  (A)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char42-esquire_09StartData	; 0x42  (B)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char43-esquire_09StartData	; 0x43  (C)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char44-esquire_09StartData	; 0x44  (D)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char45-esquire_09StartData	; 0x45  (E)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char46-esquire_09StartData	; 0x46  (F)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char47-esquire_09StartData	; 0x47  (G)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char48-esquire_09StartData	; 0x48  (H)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char49-esquire_09StartData	; 0x49  (I)
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char4a-esquire_09StartData	; 0x4a  (J)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char4b-esquire_09StartData	; 0x4b  (K)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char4c-esquire_09StartData	; 0x4c  (L)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char4d-esquire_09StartData	; 0x4d  (M)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char4e-esquire_09StartData	; 0x4e  (N)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char4f-esquire_09StartData	; 0x4f  (O)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char50-esquire_09StartData	; 0x50  (P)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char51-esquire_09StartData	; 0x51  (Q)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char52-esquire_09StartData	; 0x52  (R)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char53-esquire_09StartData	; 0x53  (S)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char54-esquire_09StartData	; 0x54  (T)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char55-esquire_09StartData	; 0x55  (U)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char56-esquire_09StartData	; 0x56  (V)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char57-esquire_09StartData	; 0x57  (W)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char58-esquire_09StartData	; 0x58  (X)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char59-esquire_09StartData	; 0x59  (Y)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char5a-esquire_09StartData	; 0x5a  (Z)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char5b-esquire_09StartData	; 0x5b  ([)
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char5c-esquire_09StartData	; 0x5c C_BACKSLASH (\)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char5d-esquire_09StartData	; 0x5d  (])
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char5e-esquire_09StartData	; 0x5e  (^)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char5f-esquire_09StartData	; 0x5f  (_)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char60-esquire_09StartData	; 0x60  (`)
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char61-esquire_09StartData	; 0x61  (a)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char62-esquire_09StartData	; 0x62  (b)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char63-esquire_09StartData	; 0x63  (c)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char64-esquire_09StartData	; 0x64  (d)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char65-esquire_09StartData	; 0x65  (e)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char66-esquire_09StartData	; 0x66  (f)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char67-esquire_09StartData	; 0x67  (g)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char68-esquire_09StartData	; 0x68  (h)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char69-esquire_09StartData	; 0x69  (i)
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char6a-esquire_09StartData	; 0x6a  (j)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char6b-esquire_09StartData	; 0x6b  (k)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char6c-esquire_09StartData	; 0x6c  (l)
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char6d-esquire_09StartData	; 0x6d  (m)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char6e-esquire_09StartData	; 0x6e  (n)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char6f-esquire_09StartData	; 0x6f  (o)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char70-esquire_09StartData	; 0x70  (p)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char71-esquire_09StartData	; 0x71  (q)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char72-esquire_09StartData	; 0x72  (r)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char73-esquire_09StartData	; 0x73  (s)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char74-esquire_09StartData	; 0x74  (t)
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char75-esquire_09StartData	; 0x75  (u)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char76-esquire_09StartData	; 0x76  (v)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char77-esquire_09StartData	; 0x77  (w)
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char78-esquire_09StartData	; 0x78  (x)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char79-esquire_09StartData	; 0x79  (y)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char7a-esquire_09StartData	; 0x7a  (z)
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char7b-esquire_09StartData	; 0x7b  ({)
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char7c-esquire_09StartData	; 0x7c  (|)
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char7d-esquire_09StartData	; 0x7d  (})
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char7e-esquire_09StartData	; 0x7e  (~)
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char7f-esquire_09StartData	; 0x7f C_DELETE
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Char80-esquire_09StartData	; 0x80 C_UA_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char81-esquire_09StartData	; 0x81 C_UA_RING
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char82-esquire_09StartData	; 0x82 C_UC_CEDILLA
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char83-esquire_09StartData	; 0x83 C_UE_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char84-esquire_09StartData	; 0x84 C_UN_TILDE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char85-esquire_09StartData	; 0x85 C_UO_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char86-esquire_09StartData	; 0x86 C_UU_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char87-esquire_09StartData	; 0x87 C_LA_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char88-esquire_09StartData	; 0x88 C_LA_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char89-esquire_09StartData	; 0x89 C_LA_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char8a-esquire_09StartData	; 0x8a C_LA_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char8b-esquire_09StartData	; 0x8b C_LA_TILDE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char8c-esquire_09StartData	; 0x8c C_LA_RING
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char8d-esquire_09StartData	; 0x8d C_LC_CEDILLA
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char8e-esquire_09StartData	; 0x8e C_LE_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char8f-esquire_09StartData	; 0x8f C_LE_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char90-esquire_09StartData	; 0x90 C_LE_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char91-esquire_09StartData	; 0x91 C_LE_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char92-esquire_09StartData	; 0x92 C_LI_ACUTE
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char93-esquire_09StartData	; 0x93 C_LI_GRAVE
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char94-esquire_09StartData	; 0x94 C_LI_CIRCUMFLEX
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char95-esquire_09StartData	; 0x95 C_LI_DIERESIS
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char96-esquire_09StartData	; 0x96 C_LN_TILDE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char97-esquire_09StartData	; 0x97 C_LO_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char98-esquire_09StartData	; 0x98 C_LO_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char99-esquire_09StartData	; 0x99 C_LO_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char9a-esquire_09StartData	; 0x9a C_LO_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char9b-esquire_09StartData	; 0x9b C_LO_TILDE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char9c-esquire_09StartData	; 0x9c C_LU_ACUTE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char9d-esquire_09StartData	; 0x9d C_LU_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char9e-esquire_09StartData	; 0x9e C_LU_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Char9f-esquire_09StartData	; 0x9f C_LU_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara0-esquire_09StartData	; 0xa0 C_DAGGER
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara1-esquire_09StartData	; 0xa1 C_DEGREE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara2-esquire_09StartData	; 0xa2 C_CENT
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara3-esquire_09StartData	; 0xa3 C_STERLING
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara4-esquire_09StartData	; 0xa4 C_SECTION
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara5-esquire_09StartData	; 0xa5 C_BULLET
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara6-esquire_09StartData	; 0xa6 C_PARAGRAPH
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara7-esquire_09StartData	; 0xa7 C_GERMANDBLS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara8-esquire_09StartData	; 0xa8 C_REGISTERED
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chara9-esquire_09StartData	; 0xa9 C_COPYRIGHT
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charaa-esquire_09StartData	; 0xaa C_TRADEMARK
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charab-esquire_09StartData	; 0xab C_ACUTE
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charac-esquire_09StartData	; 0xac C_DIERESIS
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charad-esquire_09StartData	; 0xad C_NOTEQUAL
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charae-esquire_09StartData	; 0xae C_U_AE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charaf-esquire_09StartData	; 0xaf C_UO_SLASH
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb0-esquire_09StartData	; 0xb0 C_INFINITY
+		WBFixed	<0,10>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb1-esquire_09StartData	; 0xb1 C_PLUSMINUS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb2-esquire_09StartData	; 0xb2 C_LESSEQUAL
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb3-esquire_09StartData	; 0xb3 C_GREATEREQUAL
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb4-esquire_09StartData	; 0xb4 C_YEN
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb5-esquire_09StartData	; 0xb5 C_L_MU
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb6-esquire_09StartData	; 0xb6 C_L_DELTA
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb7-esquire_09StartData	; 0xb7 C_U_SIGMA
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb8-esquire_09StartData	; 0xb8 C_U_PI
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charb9-esquire_09StartData	; 0xb9 C_L_PI
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charba-esquire_09StartData	; 0xba C_INTEGRAL
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charbb-esquire_09StartData	; 0xbb C_ORDFEMININE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charbc-esquire_09StartData	; 0xbc C_ORDMASCULINE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charbd-esquire_09StartData	; 0xbd C_U_OMEGA
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charbe-esquire_09StartData	; 0xbe C_L_AE
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charbf-esquire_09StartData	; 0xbf C_LO_SLASH
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc0-esquire_09StartData	; 0xc0 C_QUESTIONDOWN
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc1-esquire_09StartData	; 0xc1 C_EXCLAMDOWN
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc2-esquire_09StartData	; 0xc2 C_LOGICAL_NOT
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc3-esquire_09StartData	; 0xc3 C_ROOT
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc4-esquire_09StartData	; 0xc4 C_FLORIN
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc5-esquire_09StartData	; 0xc5 C_APPROX_EQUAL
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc6-esquire_09StartData	; 0xc6 C_U_DELTA
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc7-esquire_09StartData	; 0xc7 C_GUILLEDBLLEFT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc8-esquire_09StartData	; 0xc8 C_GUILLEDBLRIGHT
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charc9-esquire_09StartData	; 0xc9 C_ELLIPSIS
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charca-esquire_09StartData	; 0xca C_NONBRKSPACE
+		WBFixed	<0,6>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Charcb-esquire_09StartData	; 0xcb C_UA_GRAVE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charcc-esquire_09StartData	; 0xcc C_UA_TILDE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charcd-esquire_09StartData	; 0xcd C_UO_TILDE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charce-esquire_09StartData	; 0xce C_U_OE
+		WBFixed	<0,9>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charcf-esquire_09StartData	; 0xcf C_L_OE
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard0-esquire_09StartData	; 0xd0 C_ENDASH
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard1-esquire_09StartData	; 0xd1 C_EMDASH
+		WBFixed	<0,7>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard2-esquire_09StartData	; 0xd2 C_QUOTEDBLLEFT
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard3-esquire_09StartData	; 0xd3 C_QUOTEDBLRIGHT
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard4-esquire_09StartData	; 0xd4 C_QUOTESNGLEFT
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard5-esquire_09StartData	; 0xd5 C_QUOTESNGRIGHT
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard6-esquire_09StartData	; 0xd6 C_DIVISION
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard7-esquire_09StartData	; 0xd7 C_DIAMONDBULLET
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard8-esquire_09StartData	; 0xd8 C_LY_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chard9-esquire_09StartData	; 0xd9 C_UY_DIERESIS
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charda-esquire_09StartData	; 0xda C_FRACTION
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chardb-esquire_09StartData	; 0xdb C_CURRENCY
+		WBFixed	<0,8>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chardc-esquire_09StartData	; 0xdc C_GUILSNGLEFT
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chardd-esquire_09StartData	; 0xdd C_GUILSNGRIGHT
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charde-esquire_09StartData	; 0xde C_LY_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chardf-esquire_09StartData	; 0xdf C_UY_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare0-esquire_09StartData	; 0xe0 C_DBLDAGGER
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare1-esquire_09StartData	; 0xe1 C_CNTR_DOT
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare2-esquire_09StartData	; 0xe2 C_SNGQUOTELOW
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare3-esquire_09StartData	; 0xe3 C_DBLQUOTELOW
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare4-esquire_09StartData	; 0xe4 C_PERTHOUSAND
+		WBFixed	<0,12>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare5-esquire_09StartData	; 0xe5 C_UA_CIRCUMFLEX
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare6-esquire_09StartData	; 0xe6 C_UE_CIRCUMFLEX
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare7-esquire_09StartData	; 0xe7 C_UA_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare8-esquire_09StartData	; 0xe8 C_UE_DIERESIS
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chare9-esquire_09StartData	; 0xe9 C_UE_GRAVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charea-esquire_09StartData	; 0xea C_UI_ACUTE
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chareb-esquire_09StartData	; 0xeb C_UI_CIRCUMFLEX
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charec-esquire_09StartData	; 0xec C_UI_DIERESIS
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Chared-esquire_09StartData	; 0xed C_UI_GRAVE
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charee-esquire_09StartData	; 0xee C_UO_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charef-esquire_09StartData	; 0xef C_UO_CIRCUMFLEX
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf0-esquire_09StartData	; 0xf0 C_LOGO
+		WBFixed	<0,0>	; advance
+		byte	0x08	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf1-esquire_09StartData	; 0xf1 C_UO_GRAVE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf2-esquire_09StartData	; 0xf2 C_UU_ACUTE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf3-esquire_09StartData	; 0xf3 C_UU_CIRCUMFLEX
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf4-esquire_09StartData	; 0xf4 C_UU_GRAVE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf5-esquire_09StartData	; 0xf5 C_LI_DOTLESS
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf6-esquire_09StartData	; 0xf6 C_CIRCUMFLEX
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf7-esquire_09StartData	; 0xf7 C_TILDE
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf8-esquire_09StartData	; 0xf8 C_MACRON
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charf9-esquire_09StartData	; 0xf9 C_BREVE
+		WBFixed	<0,5>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charfa-esquire_09StartData	; 0xfa C_DOTACCENT
+		WBFixed	<0,2>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charfb-esquire_09StartData	; 0xfb C_RING
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charfc-esquire_09StartData	; 0xfc C_CEDILLA
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charfd-esquire_09StartData	; 0xfd C_HUNGARUMLAUT
+		WBFixed	<0,6>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charfe-esquire_09StartData	; 0xfe C_OGONEK
+		WBFixed	<0,3>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+
+		word	esquire_09Charff-esquire_09StartData	; 0xff C_CARON
+		WBFixed	<0,4>	; advance
+		byte	0x00	; character flags
+		word	0	; usage
+esquire_09Char00 label byte	; 0x00 C_NULL
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char01 label byte	; 0x01 C_CTRL_A
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char02 label byte	; 0x02 C_CTRL_B
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char03 label byte	; 0x03 C_CTRL_C
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char04 label byte	; 0x04 C_CTRL_D
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char05 label byte	; 0x05 C_CTRL_E
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char06 label byte	; 0x06 C_CTRL_F
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char07 label byte	; 0x07 C_CTRL_G
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char08 label byte	; 0x08 C_CTRL_H
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char09 label byte	; 0x09 C_TAB
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char0a label byte	; 0x0a C_LINEFEED
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char0b label byte	; 0x0b C_CTRL_K
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char0c label byte	; 0x0c C_CTRL_L
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char0d label byte	; 0x0d C_ENTER
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char0e label byte	; 0x0e C_SHIFT_OUT
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char0f label byte	; 0x0f C_SHIFT_IN
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char10 label byte	; 0x10 C_CTRL_P
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char11 label byte	; 0x11 C_CTRL_Q
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char12 label byte	; 0x12 C_CTRL_R
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char13 label byte	; 0x13 C_CTRL_S
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char14 label byte	; 0x14 C_CTRL_T
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char15 label byte	; 0x15 C_CTRL_U
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char16 label byte	; 0x16 C_CTRL_V
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char17 label byte	; 0x17 C_CTRL_W
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char18 label byte	; 0x18 C_CTRL_X
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char19 label byte	; 0x19 C_NULL_WIDTH
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char1a label byte	; 0x1a C_GRAPHIC
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char1b label byte	; 0x1b C_THINSPACE
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char1c label byte	; 0x1c C_ENSPACE
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char1d label byte	; 0x1d C_EMSPACE
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char1e label byte	; 0x1e C_NONBRKHYPHEN
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char1f label byte	; 0x1f C_OPTHYPHEN
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char20 label byte	; 0x20
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char21 label byte	; 0x21
+		byte	1	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x80	; #
+
+esquire_09Char22 label byte	; 0x22
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+		byte	0xa0	; #.#
+
+esquire_09Char23 label byte	; 0x23
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x50	; .#.#.
+
+esquire_09Char24 label byte	; 0x24
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0xa8	; #.#.#
+		byte	0xa0	; #.#..
+		byte	0x70	; .###.
+		byte	0x28	; ..#.#
+		byte	0xa8	; #.#.#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+
+esquire_09Char25 label byte	; 0x25
+		byte	8	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x7f	; .#######
+		byte	0x92	; #..#..#.
+		byte	0x94	; #..#.#..
+		byte	0x6e	; .##.###.
+		byte	0x19	; ...##..#
+		byte	0x29	; ..#.#..#
+		byte	0x46	; .#...##.
+
+esquire_09Char26 label byte	; 0x26
+		byte	7	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x30	; ..##...
+		byte	0x48	; .#..#..
+		byte	0x50	; .#.#...
+		byte	0x20	; ..#....
+		byte	0x54	; .#.#.#.
+		byte	0x88	; #...#..
+		byte	0x94	; #..#.#.
+		byte	0x62	; .##...#
+
+esquire_09Char27 label byte	; 0x27 C_SNG_QUOTE
+		byte	1	; bitmap width
+		byte	2	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+
+esquire_09Char28 label byte	; 0x28
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+esquire_09Char29 label byte	; 0x29
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+esquire_09Char2a label byte	; 0x2a
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+
+esquire_09Char2b label byte	; 0x2b
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Char2c label byte	; 0x2c
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	9	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+esquire_09Char2d label byte	; 0x2d
+		byte	4	; bitmap width
+		byte	1	; rows
+		sbyte	6	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+
+esquire_09Char2e label byte	; 0x2e
+		byte	1	; bitmap width
+		byte	1	; rows
+		sbyte	9	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+
+esquire_09Char2f label byte	; 0x2f
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+esquire_09Char30 label byte	; 0x30
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char31 label byte	; 0x31
+		byte	2	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	1	; x offset
+		byte	0x40	; .#
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+esquire_09Char32 label byte	; 0x32
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+		byte	0xf8	; #####
+
+esquire_09Char33 label byte	; 0x33
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char34 label byte	; 0x34
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0x30	; ..##.
+		byte	0x50	; .#.#.
+		byte	0x90	; #..#.
+		byte	0xf8	; #####
+		byte	0x10	; ...#.
+		byte	0x10	; ...#.
+
+esquire_09Char35 label byte	; 0x35
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x80	; #....
+		byte	0xf0	; ####.
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char36 label byte	; 0x36
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x30	; ..##.
+		byte	0x40	; .#...
+		byte	0x80	; #....
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char37 label byte	; 0x37
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Char38 label byte	; 0x38
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char39 label byte	; 0x39
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x78	; .####
+		byte	0x08	; ....#
+		byte	0x10	; ...#.
+		byte	0x60	; .##..
+
+esquire_09Char3a label byte	; 0x3a
+		byte	1	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x00	; .
+		byte	0x00	; .
+		byte	0x80	; #
+
+esquire_09Char3b label byte	; 0x3b
+		byte	2	; bitmap width
+		byte	7	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x00	; ..
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+esquire_09Char3c label byte	; 0x3c
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+esquire_09Char3d label byte	; 0x3d
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x00	; .....
+		byte	0xf8	; #####
+
+esquire_09Char3e label byte	; 0x3e
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+esquire_09Char3f label byte	; 0x3f
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x10	; ...#
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x40	; .#..
+
+esquire_09Char40 label byte	; 0x40
+		byte	7	; bitmap width
+		byte	8	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x38	; ..###..
+		byte	0x44	; .#...#.
+		byte	0x9a	; #..##.#
+		byte	0xaa	; #.#.#.#
+		byte	0xaa	; #.#.#.#
+		byte	0x9c	; #..###.
+		byte	0x40	; .#.....
+		byte	0x38	; ..###..
+
+esquire_09Char41 label byte	; 0x41
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Char42 label byte	; 0x42
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+
+esquire_09Char43 label byte	; 0x43
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char44 label byte	; 0x44
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xe0	; ###..
+		byte	0x90	; #..#.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x90	; #..#.
+		byte	0xe0	; ###..
+
+esquire_09Char45 label byte	; 0x45
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Char46 label byte	; 0x46
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+esquire_09Char47 label byte	; 0x47
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x98	; #..##
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char48 label byte	; 0x48
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Char49 label byte	; 0x49
+		byte	1	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+esquire_09Char4a label byte	; 0x4a
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char4b label byte	; 0x4b
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x90	; #..#.
+		byte	0xa0	; #.#..
+		byte	0xc0	; ##...
+		byte	0xa0	; #.#..
+		byte	0x90	; #..#.
+		byte	0x88	; #...#
+
+esquire_09Char4c label byte	; 0x4c
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Char4d label byte	; 0x4d
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x82	; #.....#
+		byte	0xc6	; ##...##
+		byte	0xaa	; #.#.#.#
+		byte	0x92	; #..#..#
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+
+esquire_09Char4e label byte	; 0x4e
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xc8	; ##..#
+		byte	0xc8	; ##..#
+		byte	0xa8	; #.#.#
+		byte	0xa8	; #.#.#
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+		byte	0x88	; #...#
+
+esquire_09Char4f label byte	; 0x4f
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char50 label byte	; 0x50
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+
+esquire_09Char51 label byte	; 0x51
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xa8	; #.#.#
+		byte	0x70	; .###.
+		byte	0x10	; ...#.
+
+esquire_09Char52 label byte	; 0x52
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xf0	; ####.
+		byte	0xa0	; #.#..
+		byte	0x90	; #..#.
+		byte	0x88	; #...#
+
+esquire_09Char53 label byte	; 0x53
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x70	; .###.
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char54 label byte	; 0x54
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Char55 label byte	; 0x55
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char56 label byte	; 0x56
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Char57 label byte	; 0x57
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+		byte	0x54	; .#.#.#.
+		byte	0x54	; .#.#.#.
+		byte	0x28	; ..#.#..
+		byte	0x28	; ..#.#..
+		byte	0x28	; ..#.#..
+
+esquire_09Char58 label byte	; 0x58
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Char59 label byte	; 0x59
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Char5a label byte	; 0x5a
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+		byte	0x10	; ...#
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Char5b label byte	; 0x5b
+		byte	2	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0xc0	; ##
+
+esquire_09Char5c label byte	; 0x5c C_BACKSLASH
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x40	; .#..
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x20	; ..#.
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+
+esquire_09Char5d label byte	; 0x5d
+		byte	2	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0xc0	; ##
+
+esquire_09Char5e label byte	; 0x5e
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+
+esquire_09Char5f label byte	; 0x5f
+		byte	6	; bitmap width
+		byte	1	; rows
+		sbyte	9	; y offset
+		sbyte	0	; x offset
+		byte	0xfc	; ######
+
+esquire_09Char60 label byte	; 0x60
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+
+esquire_09Char61 label byte	; 0x61
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x10	; ...#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char62 label byte	; 0x62
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0xe0	; ###.
+
+esquire_09Char63 label byte	; 0x63
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Char64 label byte	; 0x64
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char65 label byte	; 0x65
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x60	; .##.
+
+esquire_09Char66 label byte	; 0x66
+		byte	3	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##
+		byte	0x80	; #..
+		byte	0xc0	; ##.
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+		byte	0x80	; #..
+
+esquire_09Char67 label byte	; 0x67
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x60	; .##.
+
+esquire_09Char68 label byte	; 0x68
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+
+esquire_09Char69 label byte	; 0x69
+		byte	1	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+esquire_09Char6a label byte	; 0x6a
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x00	; ...
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0x20	; ..#
+		byte	0xc0	; ##.
+
+esquire_09Char6b label byte	; 0x6b
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0xa0	; #.#.
+		byte	0xc0	; ##..
+		byte	0xa0	; #.#.
+		byte	0x90	; #..#
+
+esquire_09Char6c label byte	; 0x6c
+		byte	1	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+esquire_09Char6d label byte	; 0x6d
+		byte	7	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0xec	; ###.##.
+		byte	0x92	; #..#..#
+		byte	0x92	; #..#..#
+		byte	0x92	; #..#..#
+		byte	0x92	; #..#..#
+
+esquire_09Char6e label byte	; 0x6e
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+
+esquire_09Char6f label byte	; 0x6f
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Char70 label byte	; 0x70
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+esquire_09Char71 label byte	; 0x71
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+
+esquire_09Char72 label byte	; 0x72
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0xb0	; #.##
+		byte	0xc0	; ##..
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0x80	; #...
+
+esquire_09Char73 label byte	; 0x73
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x80	; #...
+		byte	0x60	; .##.
+		byte	0x10	; ...#
+		byte	0xe0	; ###.
+
+esquire_09Char74 label byte	; 0x74
+		byte	2	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0xc0	; ##
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x40	; .#
+
+esquire_09Char75 label byte	; 0x75
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char76 label byte	; 0x76
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Char77 label byte	; 0x77
+		byte	7	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x82	; #.....#
+		byte	0x54	; .#.#.#.
+		byte	0x54	; .#.#.#.
+		byte	0x28	; ..#.#..
+		byte	0x28	; ..#.#..
+
+esquire_09Char78 label byte	; 0x78
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+
+esquire_09Char79 label byte	; 0x79
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x10	; ...#
+		byte	0x60	; .##.
+
+esquire_09Char7a label byte	; 0x7a
+		byte	4	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Char7b label byte	; 0x7b
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+esquire_09Char7c label byte	; 0x7c
+		byte	1	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+esquire_09Char7d label byte	; 0x7d
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+esquire_09Char7e label byte	; 0x7e
+		byte	5	; bitmap width
+		byte	2	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+
+esquire_09Char7f label byte	; 0x7f C_DELETE
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Char80 label byte	; 0x80 C_UA_DIERESIS
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Char81 label byte	; 0x81 C_UA_RING
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Char82 label byte	; 0x82 C_UC_CEDILLA
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x80	; #....
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+		byte	0x40	; .#...
+
+esquire_09Char83 label byte	; 0x83 C_UE_ACUTE
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Char84 label byte	; 0x84 C_UN_TILDE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+		byte	0x00	; .....
+		byte	0xc8	; ##..#
+		byte	0xc8	; ##..#
+		byte	0xa8	; #.#.#
+		byte	0xa8	; #.#.#
+		byte	0x98	; #..##
+		byte	0x98	; #..##
+		byte	0x88	; #...#
+
+esquire_09Char85 label byte	; 0x85 C_UO_DIERESIS
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char86 label byte	; 0x86 C_UU_DIERESIS
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Char87 label byte	; 0x87 C_LA_ACUTE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char88 label byte	; 0x88 C_LA_GRAVE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char89 label byte	; 0x89 C_LA_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x50	; .#.#
+		byte	0x00	; ....
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char8a label byte	; 0x8a C_LA_DIERESIS
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0x00	; ....
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char8b label byte	; 0x8b C_LA_TILDE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0xa0	; #.#.
+		byte	0x00	; ....
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char8c label byte	; 0x8c C_LA_RING
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+		byte	0x00	; ....
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char8d label byte	; 0x8d C_LC_CEDILLA
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+
+esquire_09Char8e label byte	; 0x8e C_LE_ACUTE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x70	; .###
+
+esquire_09Char8f label byte	; 0x8f C_LE_GRAVE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x60	; .##.
+
+esquire_09Char90 label byte	; 0x90 C_LE_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0xa0	; #.#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x60	; .##.
+
+esquire_09Char91 label byte	; 0x91 C_LE_DIERESIS
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x70	; .###
+
+esquire_09Char92 label byte	; 0x92 C_LI_ACUTE
+		byte	2	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+		byte	0x00	; ..
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+esquire_09Char93 label byte	; 0x93 C_LI_GRAVE
+		byte	2	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+		byte	0x00	; ..
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+esquire_09Char94 label byte	; 0x94 C_LI_CIRCUMFLEX
+		byte	3	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+		byte	0x00	; ...
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+esquire_09Char95 label byte	; 0x95 C_LI_DIERESIS
+		byte	3	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+		byte	0x00	; ...
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+esquire_09Char96 label byte	; 0x96 C_LN_TILDE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0xa0	; #.#.
+		byte	0x00	; ....
+		byte	0xe0	; ###.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+
+esquire_09Char97 label byte	; 0x97 C_LO_ACUTE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Char98 label byte	; 0x98 C_LO_GRAVE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Char99 label byte	; 0x99 C_LO_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0xa0	; #.#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Char9a label byte	; 0x9a C_LO_DIERESIS
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Char9b label byte	; 0x9b C_LO_TILDE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0xa0	; #.#.
+		byte	0x00	; ....
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Char9c label byte	; 0x9c C_LU_ACUTE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char9d label byte	; 0x9d C_LU_GRAVE
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char9e label byte	; 0x9e C_LU_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0xa0	; #.#.
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Char9f label byte	; 0x9f C_LU_DIERESIS
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x00	; ....
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+
+esquire_09Chara0 label byte	; 0xa0 C_DAGGER
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+esquire_09Chara1 label byte	; 0xa1 C_DEGREE
+		byte	4	; bitmap width
+		byte	4	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Chara2 label byte	; 0xa2 C_CENT
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x70	; .###.
+		byte	0xa8	; #.#.#
+		byte	0xa0	; #.#..
+		byte	0xa8	; #.#.#
+		byte	0x70	; .###.
+		byte	0x20	; ..#..
+
+esquire_09Chara3 label byte	; 0xa3 C_STERLING
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x30	; ..##.
+		byte	0x40	; .#...
+		byte	0x40	; .#...
+		byte	0xe0	; ###..
+		byte	0x40	; .#...
+		byte	0x48	; .#..#
+		byte	0xf0	; ####.
+
+esquire_09Chara4 label byte	; 0xa4 C_SECTION
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x80	; #....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x08	; ....#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Chara5 label byte	; 0xa5 C_BULLET
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0xf8	; #####
+		byte	0xf8	; #####
+		byte	0xf8	; #####
+		byte	0x70	; .###.
+
+esquire_09Chara6 label byte	; 0xa6 C_PARAGRAPH
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x78	; .####
+		byte	0xa8	; #.#.#
+		byte	0xa8	; #.#.#
+		byte	0xa8	; #.#.#
+		byte	0x78	; .####
+		byte	0x28	; ..#.#
+		byte	0x28	; ..#.#
+
+esquire_09Chara7 label byte	; 0xa7 C_GERMANDBLS
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xb0	; #.##.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0xb0	; #.##.
+
+esquire_09Chara8 label byte	; 0xa8 C_REGISTERED
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x3c	; ..####..
+		byte	0x42	; .#....#.
+		byte	0xb9	; #.###..#
+		byte	0xa5	; #.#..#.#
+		byte	0xb9	; #.###..#
+		byte	0xa5	; #.#..#.#
+		byte	0x42	; .#....#.
+		byte	0x3c	; ..####..
+
+esquire_09Chara9 label byte	; 0xa9 C_COPYRIGHT
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x3c	; ..####..
+		byte	0x42	; .#....#.
+		byte	0x99	; #..##..#
+		byte	0xa1	; #.#....#
+		byte	0xa1	; #.#....#
+		byte	0x99	; #..##..#
+		byte	0x42	; .#....#.
+		byte	0x3c	; ..####..
+
+esquire_09Charaa label byte	; 0xaa C_TRADEMARK
+		byte	8	; bitmap width
+		byte	4	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf1	; ####...#
+		byte	0x5b	; .#.##.##
+		byte	0x55	; .#.#.#.#
+		byte	0x51	; .#.#...#
+
+esquire_09Charab label byte	; 0xab C_ACUTE
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+esquire_09Charac label byte	; 0xac C_DIERESIS
+		byte	3	; bitmap width
+		byte	1	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+
+esquire_09Charad label byte	; 0xad C_NOTEQUAL
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x40	; .#...
+
+esquire_09Charae label byte	; 0xae C_U_AE
+		byte	8	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x1f	; ...#####
+		byte	0x28	; ..#.#...
+		byte	0x28	; ..#.#...
+		byte	0x7e	; .######.
+		byte	0x48	; .#..#...
+		byte	0x88	; #...#...
+		byte	0x8f	; #...####
+
+esquire_09Charaf label byte	; 0xaf C_UO_SLASH
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x3a	; ..###.#
+		byte	0x44	; .#...#.
+		byte	0x4c	; .#..##.
+		byte	0x54	; .#.#.#.
+		byte	0x64	; .##..#.
+		byte	0x44	; .#...#.
+		byte	0xb8	; #.###..
+
+esquire_09Charb0 label byte	; 0xb0 C_INFINITY
+		byte	9	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x63,0x00	; .##...##.
+		byte	0x94,0x80	; #..#.#..#
+		byte	0x88,0x80	; #...#...#
+		byte	0x94,0x80	; #..#.#..#
+		byte	0x63,0x00	; .##...##.
+
+esquire_09Charb1 label byte	; 0xb1 C_PLUSMINUS
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+
+esquire_09Charb2 label byte	; 0xb2 C_LESSEQUAL
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x80	; #...
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0xf0	; ####
+
+esquire_09Charb3 label byte	; 0xb3 C_GREATEREQUAL
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x10	; ...#
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0xf0	; ####
+
+esquire_09Charb4 label byte	; 0xb4 C_YEN
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0xf8	; #####
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Charb5 label byte	; 0xb5 C_L_MU
+		byte	5	; bitmap width
+		byte	8	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#.
+		byte	0x90	; #..#.
+		byte	0x90	; #..#.
+		byte	0x90	; #..#.
+		byte	0x90	; #..#.
+		byte	0xe8	; ###.#
+		byte	0x80	; #....
+		byte	0x80	; #....
+
+esquire_09Charb6 label byte	; 0xb6 C_L_DELTA
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xc0	; ##..
+		byte	0x20	; ..#.
+		byte	0x50	; .#.#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Charb7 label byte	; 0xb7 C_U_SIGMA
+		byte	5	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xf8	; #####
+		byte	0x48	; .#..#
+		byte	0x20	; ..#..
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x48	; .#..#
+		byte	0xf8	; #####
+
+esquire_09Charb8 label byte	; 0xb8 C_U_PI
+		byte	6	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0xfc	; ######
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+		byte	0x48	; .#..#.
+
+esquire_09Charb9 label byte	; 0xb9 C_L_PI
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x02	; ......#
+		byte	0x7c	; .#####.
+		byte	0xa4	; #.#..#.
+		byte	0x24	; ..#..#.
+		byte	0x24	; ..#..#.
+		byte	0x24	; ..#..#.
+		byte	0x48	; .#..#..
+
+esquire_09Charba label byte	; 0xba C_INTEGRAL
+		byte	3	; bitmap width
+		byte	11	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+esquire_09Charbb label byte	; 0xbb C_ORDFEMININE
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x70	; .###
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x70	; .###
+		byte	0x00	; ....
+		byte	0xf0	; ####
+
+esquire_09Charbc label byte	; 0xbc C_ORDMASCULINE
+		byte	4	; bitmap width
+		byte	6	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x60	; .##.
+		byte	0x90	; #..#
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+		byte	0x00	; ....
+		byte	0xf0	; ####
+
+esquire_09Charbd label byte	; 0xbd C_U_OMEGA
+		byte	7	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x38	; ..###..
+		byte	0x44	; .#...#.
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+		byte	0x82	; #.....#
+		byte	0x44	; .#...#.
+		byte	0x28	; ..#.#..
+		byte	0x6c	; .##.##.
+
+esquire_09Charbe label byte	; 0xbe C_L_AE
+		byte	7	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x7c	; .#####.
+		byte	0x92	; #..#..#
+		byte	0x9e	; #..####
+		byte	0x90	; #..#...
+		byte	0x7c	; .#####.
+
+esquire_09Charbf label byte	; 0xbf C_LO_SLASH
+		byte	6	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x34	; ..##.#
+		byte	0x48	; .#..#.
+		byte	0x58	; .#.##.
+		byte	0x68	; .##.#.
+		byte	0x48	; .#..#.
+		byte	0xb0	; #.##..
+
+esquire_09Charc0 label byte	; 0xc0 C_QUESTIONDOWN
+		byte	4	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0x20	; ..#.
+		byte	0x40	; .#..
+		byte	0x80	; #...
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Charc1 label byte	; 0xc1 C_EXCLAMDOWN
+		byte	1	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x00	; .
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+esquire_09Charc2 label byte	; 0xc2 C_LOGICAL_NOT
+		byte	4	; bitmap width
+		byte	3	; rows
+		sbyte	6	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+		byte	0x10	; ...#
+		byte	0x10	; ...#
+
+esquire_09Charc3 label byte	; 0xc3 C_ROOT
+		byte	7	; bitmap width
+		byte	8	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x06	; .....##
+		byte	0x04	; .....#.
+		byte	0x08	; ....#..
+		byte	0x08	; ....#..
+		byte	0xd0	; ##.#...
+		byte	0x50	; .#.#...
+		byte	0x20	; ..#....
+		byte	0x20	; ..#....
+
+esquire_09Charc4 label byte	; 0xc4 C_FLORIN
+		byte	3	; bitmap width
+		byte	11	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+esquire_09Charc5 label byte	; 0xc5 C_APPROX_EQUAL
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x08	; ....#
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+		byte	0x80	; #....
+
+esquire_09Charc6 label byte	; 0xc6 C_U_DELTA
+		byte	5	; bitmap width
+		byte	6	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0x88	; #...#
+		byte	0xf8	; #####
+
+esquire_09Charc7 label byte	; 0xc7 C_GUILLEDBLLEFT
+		byte	6	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x24	; ..#..#
+		byte	0x48	; .#..#.
+		byte	0x90	; #..#..
+		byte	0x48	; .#..#.
+		byte	0x24	; ..#..#
+
+esquire_09Charc8 label byte	; 0xc8 C_GUILLEDBLRIGHT
+		byte	6	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#..
+		byte	0x48	; .#..#.
+		byte	0x24	; ..#..#
+		byte	0x48	; .#..#.
+		byte	0x90	; #..#..
+
+esquire_09Charc9 label byte	; 0xc9 C_ELLIPSIS
+		byte	7	; bitmap width
+		byte	1	; rows
+		sbyte	9	; y offset
+		sbyte	0	; x offset
+		byte	0x92	; #..#..#
+
+esquire_09Charca label byte	; 0xca C_NONBRKSPACE
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Charcb label byte	; 0xcb C_UA_GRAVE
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Charcc label byte	; 0xcc C_UA_TILDE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Charcd label byte	; 0xcd C_UO_TILDE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+		byte	0x00	; .....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Charce label byte	; 0xce C_U_OE
+		byte	8	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x7f	; .#######
+		byte	0x88	; #...#...
+		byte	0x88	; #...#...
+		byte	0x8e	; #...###.
+		byte	0x88	; #...#...
+		byte	0x88	; #...#...
+		byte	0x7f	; .#######
+
+esquire_09Charcf label byte	; 0xcf C_L_OE
+		byte	7	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x6c	; .##.##.
+		byte	0x92	; #..#..#
+		byte	0x9e	; #..####
+		byte	0x90	; #..#...
+		byte	0x7c	; .#####.
+
+esquire_09Chard0 label byte	; 0xd0 C_ENDASH
+		byte	4	; bitmap width
+		byte	1	; rows
+		sbyte	6	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+
+esquire_09Chard1 label byte	; 0xd1 C_EMDASH
+		byte	7	; bitmap width
+		byte	1	; rows
+		sbyte	6	; y offset
+		sbyte	0	; x offset
+		byte	0xfe	; #######
+
+esquire_09Chard2 label byte	; 0xd2 C_QUOTEDBLLEFT
+		byte	4	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0xa0	; #.#.
+		byte	0xa0	; #.#.
+
+esquire_09Chard3 label byte	; 0xd3 C_QUOTEDBLRIGHT
+		byte	4	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0x50	; .#.#
+		byte	0xa0	; #.#.
+
+esquire_09Chard4 label byte	; 0xd4 C_QUOTESNGLEFT
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+		byte	0x80	; #.
+
+esquire_09Chard5 label byte	; 0xd5 C_QUOTESNGRIGHT
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+esquire_09Chard6 label byte	; 0xd6 C_DIVISION
+		byte	5	; bitmap width
+		byte	5	; rows
+		sbyte	4	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0xf8	; #####
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+
+esquire_09Chard7 label byte	; 0xd7 C_DIAMONDBULLET
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#...
+		byte	0x28	; ..#.#..
+		byte	0x44	; .#...#.
+		byte	0x82	; #.....#
+		byte	0x44	; .#...#.
+		byte	0x28	; ..#.#..
+		byte	0x10	; ...#...
+
+esquire_09Chard8 label byte	; 0xd8 C_LY_DIERESIS
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x78	; .####
+		byte	0x08	; ....#
+		byte	0x70	; .###.
+
+esquire_09Chard9 label byte	; 0xd9 C_UY_DIERESIS
+		byte	5	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Charda label byte	; 0xda C_FRACTION
+		byte	8	; bitmap width
+		byte	8	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x01	; .......#
+		byte	0x02	; ......#.
+		byte	0x04	; .....#..
+		byte	0x08	; ....#...
+		byte	0x10	; ...#....
+		byte	0x20	; ..#.....
+		byte	0x40	; .#......
+		byte	0x80	; #.......
+
+esquire_09Chardb label byte	; 0xdb C_CURRENCY
+		byte	7	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x3c	; ..####.
+		byte	0x42	; .#....#
+		byte	0x40	; .#.....
+		byte	0xf8	; #####..
+		byte	0x40	; .#.....
+		byte	0x42	; .#....#
+		byte	0x3c	; ..####.
+
+esquire_09Chardc label byte	; 0xdc C_GUILSNGLEFT
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+
+esquire_09Chardd label byte	; 0xdd C_GUILSNGRIGHT
+		byte	3	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #..
+		byte	0x40	; .#.
+		byte	0x20	; ..#
+		byte	0x40	; .#.
+		byte	0x80	; #..
+
+esquire_09Charde label byte	; 0xde C_LY_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x78	; .####
+		byte	0x08	; ....#
+		byte	0x70	; .###.
+
+esquire_09Chardf label byte	; 0xdf C_UY_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x50	; .#.#.
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+
+esquire_09Chare0 label byte	; 0xe0 C_DBLDAGGER
+		byte	3	; bitmap width
+		byte	6	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0xe0	; ###
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+esquire_09Chare1 label byte	; 0xe1 C_CNTR_DOT
+		byte	1	; bitmap width
+		byte	1	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+
+esquire_09Chare2 label byte	; 0xe2 C_SNGQUOTELOW
+		byte	2	; bitmap width
+		byte	3	; rows
+		sbyte	9	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+esquire_09Chare3 label byte	; 0xe3 C_DBLQUOTELOW
+		byte	5	; bitmap width
+		byte	3	; rows
+		sbyte	9	; y offset
+		sbyte	0	; x offset
+		byte	0x48	; .#..#
+		byte	0x48	; .#..#
+		byte	0x90	; #..#.
+
+esquire_09Chare4 label byte	; 0xe4 C_PERTHOUSAND
+		byte	11	; bitmap width
+		byte	7	; rows
+		sbyte	3	; y offset
+		sbyte	0	; x offset
+		byte	0x7f,0x00	; .#######...
+		byte	0x92,0x00	; #..#..#....
+		byte	0x94,0x00	; #..#.#.....
+		byte	0x6e,0xc0	; .##.###.##.
+		byte	0x19,0x20	; ...##..#..#
+		byte	0x29,0x20	; ..#.#..#..#
+		byte	0x46,0xc0	; .#...##.##.
+
+esquire_09Chare5 label byte	; 0xe5 C_UA_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Chare6 label byte	; 0xe6 C_UE_CIRCUMFLEX
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#.
+		byte	0x50	; .#.#
+		byte	0x00	; ....
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Chare7 label byte	; 0xe7 C_UA_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x20	; ..#..
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x50	; .#.#.
+		byte	0xf8	; #####
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+
+esquire_09Chare8 label byte	; 0xe8 C_UE_DIERESIS
+		byte	4	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x50	; .#.#
+		byte	0x00	; ....
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Chare9 label byte	; 0xe9 C_UE_GRAVE
+		byte	4	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#..
+		byte	0x20	; ..#.
+		byte	0x00	; ....
+		byte	0xf0	; ####
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xe0	; ###.
+		byte	0x80	; #...
+		byte	0x80	; #...
+		byte	0xf0	; ####
+
+esquire_09Charea label byte	; 0xea C_UI_ACUTE
+		byte	2	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+		byte	0x00	; ..
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+		byte	0x80	; #.
+
+esquire_09Chareb label byte	; 0xeb C_UI_CIRCUMFLEX
+		byte	3	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+		byte	0x00	; ...
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+esquire_09Charec label byte	; 0xec C_UI_DIERESIS
+		byte	3	; bitmap width
+		byte	9	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+		byte	0x00	; ...
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+		byte	0x40	; .#.
+
+esquire_09Chared label byte	; 0xed C_UI_GRAVE
+		byte	2	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+		byte	0x00	; ..
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+		byte	0x40	; .#
+
+esquire_09Charee label byte	; 0xee C_UO_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Charef label byte	; 0xef C_UO_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Charf0 label byte	; 0xf0 C_LOGO
+		byte	0	; bitmap width
+		byte	0	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+
+esquire_09Charf1 label byte	; 0xf1 C_UO_GRAVE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#...
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x70	; .###.
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Charf2 label byte	; 0xf2 C_UU_ACUTE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x10	; ...#.
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Charf3 label byte	; 0xf3 C_UU_CIRCUMFLEX
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x20	; ..#..
+		byte	0x50	; .#.#.
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Charf4 label byte	; 0xf4 C_UU_GRAVE
+		byte	5	; bitmap width
+		byte	10	; rows
+		sbyte	0	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#...
+		byte	0x20	; ..#..
+		byte	0x00	; .....
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x88	; #...#
+		byte	0x70	; .###.
+
+esquire_09Charf5 label byte	; 0xf5 C_LI_DOTLESS
+		byte	1	; bitmap width
+		byte	5	; rows
+		sbyte	5	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+		byte	0x80	; #
+
+esquire_09Charf6 label byte	; 0xf6 C_CIRCUMFLEX
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+
+esquire_09Charf7 label byte	; 0xf7 C_TILDE
+		byte	5	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x68	; .##.#
+		byte	0xb0	; #.##.
+
+esquire_09Charf8 label byte	; 0xf8 C_MACRON
+		byte	4	; bitmap width
+		byte	1	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xf0	; ####
+
+esquire_09Charf9 label byte	; 0xf9 C_BREVE
+		byte	4	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x90	; #..#
+		byte	0x60	; .##.
+
+esquire_09Charfa label byte	; 0xfa C_DOTACCENT
+		byte	1	; bitmap width
+		byte	1	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #
+
+esquire_09Charfb label byte	; 0xfb C_RING
+		byte	3	; bitmap width
+		byte	3	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#.
+		byte	0xa0	; #.#
+		byte	0x40	; .#.
+
+esquire_09Charfc label byte	; 0xfc C_CEDILLA
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	10	; y offset
+		sbyte	0	; x offset
+		byte	0x40	; .#
+		byte	0x80	; #.
+
+esquire_09Charfd label byte	; 0xfd C_HUNGARUMLAUT
+		byte	5	; bitmap width
+		byte	2	; rows
+		sbyte	1	; y offset
+		sbyte	0	; x offset
+		byte	0x48	; .#..#
+		byte	0x90	; #..#.
+
+esquire_09Charfe label byte	; 0xfe C_OGONEK
+		byte	2	; bitmap width
+		byte	2	; rows
+		sbyte	10	; y offset
+		sbyte	0	; x offset
+		byte	0x80	; #.
+		byte	0x40	; .#
+
+esquire_09Charff label byte	; 0xff C_CARON
+		byte	3	; bitmap width
+		byte	2	; rows
+		sbyte	2	; y offset
+		sbyte	0	; x offset
+		byte	0xa0	; #.#
+		byte	0x40	; .#.
+
+esquire_09EndData label byte
+esquire_09Seg	ends
