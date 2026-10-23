@@ -1025,7 +1025,7 @@ DIR (ensemble) {
 			#FontData/Mono.fnt GFS LOCALPC
 			FontData/Esquire.fnt GFS LOCALPC
 			FontData/DejaVuSC.fnt GFS LOCALPC
-			FontData/DejaVuSC.txt GFS LOCALPC
+			FontData/DejaVuSC/DejaVuSC.txt GFS LOCALPC
 			#FontData/Markfthn.fnt GFS LOCALPC
 
 			DIR (ttf) {

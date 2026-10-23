@@ -28,28 +28,28 @@ SDKDEFS = $(INCLUDE)/geos.def $(INCLUDE)/graphics.def $(INCLUDE)/fontID.def \
           $(INCLUDE)/driver.def $(INCLUDE)/lmem.def $(INCLUDE)/file.def \
           $(INCLUDE)/char.def
 
-Berkeley.obj Berkeley.fnt : $(SOURCE)/berkeley.asm \
-    $(SOURCE)/berkeley_09.def $(SOURCE)/berkeley_10.def \
-    $(SOURCE)/berkeley_12.def $(SOURCE)/berkeley_14.def $(SOURCE)/berkeley_18.def
-Bison.obj Bison.fnt : $(SOURCE)/bison.asm $(SOURCE)/bison_09.def $(SOURCE)/bison_12.def \
-    $(SOURCE)/bison_14.def $(SOURCE)/bison_13.def
-Esquire.obj Esquire.fnt : $(SOURCE)/esquire.asm \
-    $(SOURCE)/esquire_09.def $(SOURCE)/esquire_10.def $(SOURCE)/esquire_12.def \
-    $(SOURCE)/esquire_14.def $(SOURCE)/esquire_18.def \
-    $(SOURCE)/esquire_bold_09.def $(SOURCE)/esquire_bold_10.def \
-    $(SOURCE)/esquire_bold_12.def $(SOURCE)/esquire_bold_14.def \
-    $(SOURCE)/esquire_bold_18.def
-LED.obj LED.fnt : $(SOURCE)/led.asm $(SOURCE)/led_18.def
-Universi.obj Universi.fnt : $(SOURCE)/universi.asm $(SOURCE)/universi_09.def \
-    $(SOURCE)/universi_10.def $(SOURCE)/universi_12.def \
-    $(SOURCE)/universi_14.def $(SOURCE)/universi_18.def $(SOURCE)/universi_24.def
-DejaVuSC.obj DejaVuSC.fnt : $(SOURCE)/dejavusc.asm $(SOURCE)/dejavusc_10.def
+Berkeley.obj Berkeley.fnt : $(SOURCE)/Berkeley/berkeley.asm \
+    $(SOURCE)/Berkeley/berkeley_09.def $(SOURCE)/Berkeley/berkeley_10.def \
+    $(SOURCE)/Berkeley/berkeley_12.def $(SOURCE)/Berkeley/berkeley_14.def $(SOURCE)/Berkeley/berkeley_18.def
+Bison.obj Bison.fnt : $(SOURCE)/Bison/bison.asm $(SOURCE)/Bison/bison_09.def $(SOURCE)/Bison/bison_12.def \
+    $(SOURCE)/Bison/bison_14.def $(SOURCE)/Bison/bison_13.def
+Esquire.obj Esquire.fnt : $(SOURCE)/Esquire/esquire.asm \
+    $(SOURCE)/Esquire/esquire_09.def $(SOURCE)/Esquire/esquire_10.def $(SOURCE)/Esquire/esquire_12.def \
+    $(SOURCE)/Esquire/esquire_14.def $(SOURCE)/Esquire/esquire_18.def \
+    $(SOURCE)/Esquire/esquire_bold_09.def $(SOURCE)/Esquire/esquire_bold_10.def \
+    $(SOURCE)/Esquire/esquire_bold_12.def $(SOURCE)/Esquire/esquire_bold_14.def \
+    $(SOURCE)/Esquire/esquire_bold_18.def
+LED.obj LED.fnt : $(SOURCE)/LED/led.asm $(SOURCE)/LED/led_18.def
+Universi.obj Universi.fnt : $(SOURCE)/Universi/universi.asm $(SOURCE)/Universi/universi_09.def \
+    $(SOURCE)/Universi/universi_10.def $(SOURCE)/Universi/universi_12.def \
+    $(SOURCE)/Universi/universi_14.def $(SOURCE)/Universi/universi_18.def $(SOURCE)/Universi/universi_24.def
+DejaVuSC.obj DejaVuSC.fnt : $(SOURCE)/DejaVuSC/dejavusc.asm $(SOURCE)/DejaVuSC/dejavusc_10.def
 
 # Keep inputs on both stages: this pmake uses whole-second timestamps.
 $(OBJECTS) $(FONTS) : $(SDKDEFS) Makefile $(ASM)
 
 $(OBJECTS) :
-	"$(ASM)" $(ASMFLAGS) -I"$(SOURCE)" -I"$(INCLUDE)" -o TMP$(.TARGET) $(.ALLSRC:M*.asm)
+	"$(ASM)" $(ASMFLAGS) -I"$(.ALLSRC:M*.asm:H)" -I"$(INCLUDE)" -o TMP$(.TARGET) $(.ALLSRC:M*.asm)
 	$(MOVE) TMP$(.TARGET) $(.TARGET)
 
 $(FONTS) : $(.TARGET:R).obj $(LINK)

@@ -7,7 +7,8 @@ bitmap-font-sources directly from freshly fetched origin/master, with no
 fntpatch or ISUI2000 merge. The original checkout and local configuration
 edits are preserved in their existing worktree.
 
-Six family ASM files and 27 strike DEF files live directly in FontData.
+Six family ASM files and 27 strike DEF files are grouped into one subdirectory
+per family under FontData: Berkeley, Bison, Esquire, LED, Universi and DejaVuSC.
 All six compiled FNTs are committed in Installed/FontData. Five superseded
 source-root bitmap binaries are removed; outline FNTs and TTFs stay unchanged.
 

@@ -1,8 +1,9 @@
 # Bitmap font sources
 
-The ASM and DEF files in this directory are the authoritative sources for six
-SBCS bitmap font families (27 strikes). The compiled FNTs are committed under
-Installed/FontData. Regenerate and commit those outputs with source changes.
+The authoritative ASM/DEF sources are grouped into Berkeley, Bison, Esquire,
+LED, Universi and DejaVuSC subdirectories (six SBCS families, 27 strikes).
+The compiled FNTs are committed under Installed/FontData. Regenerate and
+commit those outputs with source changes.
 The four legacy outline FNTs and the TTF tree are independent of this build.
 
 ## Build and check
@@ -84,7 +85,7 @@ Temporary converters and the original experimental tools are not build
 inputs and are not part of this branch. Additional archive families, DBCS
 variants and outline conversion are outside this change.
 
-DejaVuSC.txt retains the reference font's DejaVu/Bitstream Vera/Arev notices.
+DejaVuSC/DejaVuSC.txt retains the reference font's DejaVu/Bitstream Vera/Arev notices.
 The font is not Apache-2.0 licensed. Packaging includes this DOS 8.3 notice
 beside DejaVuSC.fnt. FID_DEJAVUSC is registered in both SDK font-ID headers;
 no default UI font or font-menu configuration was changed.
