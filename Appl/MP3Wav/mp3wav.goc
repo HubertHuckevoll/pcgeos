@@ -3,6 +3,8 @@
 @include <Objects/gFSelC.goh>
 #include <file.h>
 #include <heap.h>
+#include <timer.h>
+#include <Ansi/stdio.h>
 #include <Ansi/string.h>
 #include <mp3dec.h>
 #include "wavwriter.h"
@@ -24,7 +26,7 @@
 
 @start Interface;
 @object GenPrimaryClass Mp3WavPrimary = {
-    GI_comp = @SourceSelector, @OutputName, @Progress, @Status, @Buttons;
+    GI_comp = @SourceSelector, @OutputName, @Progress, @Status, @Timing, @Buttons;
     HINT_SIZE_WINDOW_AS_DESIRED;
 }
 @object GenFileSelectorClass SourceSelector = {
@@ -46,6 +48,12 @@
 }
 @object GenTextClass Status = {
     GTXI_text = "Select an MP3 file and a new WAV filename.";
+    GI_attrs = @default | GA_READ_ONLY;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+@object GenTextClass Timing = {
+    GI_visMoniker = "Conversion time versus audio duration:";
+    GTXI_text = "-- / --";
     GI_attrs = @default | GA_READ_ONLY;
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
 }
@@ -77,6 +85,7 @@ static struct {
     FileLongName sourceName;
     FileLongName outputName;
     WavWriter writer;
+    dword startTicks;
     dword total;
     dword read;
     word inputSize;
@@ -96,6 +105,8 @@ static void _pascal
 Finish(word success, const char *textP)
 {
     word deleteError;
+    dword ticks, samples, rate;
+    char timing[48];
 
     job.active = 0;
     if (success && (!job.writer.fileH || !job.writer.bytes ||
@@ -123,7 +134,19 @@ Finish(word success, const char *textP)
             if (deleteError) textP = "Error: remove the incomplete WAV file manually.";
         }
     }
-    if (success) @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(100, FALSE);
+    if (success) {
+        /* Include file I/O and queued UI work, through closing the WAV. */
+        ticks = TimerGetCount() - job.startTicks;
+        samples = job.writer.bytes / (job.writer.format.channels * 2);
+        rate = job.writer.format.sampleRate;
+        sprintf(timing, "%lu.%02u s / %lu.%02u s",
+                ticks / 60UL, (word)((ticks % 60UL) * 100UL / 60UL),
+                samples / rate, (word)((samples % rate) * 100UL / rate));
+        @call Timing::MSG_VIS_TEXT_REPLACE_ALL_PTR(timing, 0);
+        @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(100, FALSE);
+    } else {
+        @call Timing::MSG_VIS_TEXT_REPLACE_ALL_PTR("Incomplete", 0);
+    }
     SetStatus(textP);
     @call Convert::MSG_GEN_SET_ENABLED(VUM_NOW);
     @call Cancel::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
@@ -157,6 +180,8 @@ Finish(word success, const char *textP)
     job.inputSize = job.inputOffset = job.ended = 0;
     job.read = 0;
     memset(&job.writer, 0, sizeof(job.writer));
+    @call Timing::MSG_VIS_TEXT_REPLACE_ALL_PTR("Converting...", 0);
+    job.startTicks = TimerGetCount();
     FilePushDir();
     if (FileSetCurrentPath(job.diskH, job.path)) {
         job.sourceH = FileOpen(job.sourceName, FILE_ACCESS_R | FILE_DENY_W);
