@@ -27,8 +27,9 @@ ObjMessage dispatch was recursively entering the next step instead of queuing
 it. Both sends now force the event queue, and the generated EC code passes
 MF_FORCE_QUEUE (0x4000) at both sites. The 4096-byte stack is unchanged.
 The user subsequently confirmed successful GEOS conversion and measured about
-156 seconds for the 205-second music sample. That measurement precedes the
-progress/dispatch optimization below; its GEOS speedup remains unmeasured.
+156 seconds for the 205-second music sample, then 118 seconds after the
+progress/dispatch optimization. The latest ESP tuning below has not yet been
+timed under GEOS.
 The evidence below distinguishes host tests, standalone Watcom DOS tests,
 GEOS linking and user-reported manual runs.
 
@@ -165,8 +166,8 @@ long/short IMDCT, overlap/inversion and alias butterflies. Inner products use
 local instructions/macros; the granule loops retain locked segments. The C
 wrappers retain equalization/transposition and alias block-limit selection.
 Windows and cosine constants live with the DSP code and use CS-relative access.
-The assembled DSP resource is 11653 bytes with no GEOS loader relocations.
-Private DCT16 scratch is 76 bytes; this is not a peak nested stack measurement.
+The assembled DSP resource is 10970 bytes with no GEOS loader relocations.
+Private DCT16 scratch is 64 bytes; this is not a peak nested stack measurement.
 
 The target/reference C equivalence gate is bit exact, including rounding,
 clipping and overlap history. An assembly replacement must meet that same gate;
@@ -342,12 +343,31 @@ active MP3HuffCode resource, using its offset and the current CS. This removes
 the per-codeword GEOS trampoline without fixing the whole resource in memory,
 adding handles or changing the decoder's public API or context layout.
 The 32-input EC/NC PCM comparison and 1000-call dispatch check pass after this
-change (retained evidence: /tmp/mp3wat-fWpcBD). Repeat CAREFREE.MP3 on the same
-GEOS setup to compare against the user's 156-second baseline. No new GEOS
-runtime or speedup claim is made from the DOS checks.
+change (retained evidence: /tmp/mp3wat-fWpcBD). The user subsequently reported
+118 seconds for CAREFREE.MP3 on the same GEOS setup, down from 156 seconds.
 
-Remaining measured DSP work can be tuned inside MP3DspCode without changing
-the public decoder API or introducing per-product GEOS calls.
+The latest ESP tuning keeps both synthesis window sums in registers, assigns
+hot DCT16/DCT6/MDCT temporaries to preserved registers, removes accumulator
+push/pop sequences around products, and accumulates DCT9 outputs in registers.
+DCT9 reads each input pair once. Every product still rounds/truncates before
+its addition, and signed sums wrap before right shifts. The C reference and
+public API are unchanged. No buffers, handles or fixed code were added.
+The DSP resource shrank from 11653 to 10970 bytes; DCT16 local storage fell
+from 76 to 64 bytes. Tests/dsp.c now also compares full-range signed input
+cases for DCT6, DCT9 and MDCT18 against the C implementation.
+
+The existing 32-input EC/NC PCM gate passes (evidence: /tmp/mp3wat-zugl76),
+along with the extended separate-segment DSP check (/tmp/mp3-tuning-focus).
+A temporary, stream-copied 30-second excerpt from the start of CAREFREE.MP3
+provided a longer before/after DOS profile with the same live-CS Huffman path:
+normal core, 486_slow, cpu_cycles=30000, 1150 frames, identical reference PCM.
+Total decode time changed from 38.447 to 37.624 seconds (about 2% in this single
+emulator comparison). Synthesis changed from 10.272 to 9.832 seconds and IMDCT
+from 6.262 to 5.878 seconds. These coarse phase figures fluctuate; this is a
+modest emulator result, not a hardware or GEOS speedup claim. Evidence:
+/tmp/mp3prof-BtLtfV and /tmp/mp3prof-ODOjUr. The profiler now enables
+MP3_HUFF_LOCAL, matching the current decoder dispatch selection.
+Repeat the full CAREFREE.MP3 under GEOS to compare with the 118-second baseline.
 
 Optional mono output can mix after both channels' IMDCT and before polyphase
 synthesis to avoid one synthesis path. It still needs both channels' entropy

@@ -19,6 +19,9 @@ int main(void)
 #else
     static int32 v[576], h[576], scratch[198];
 #endif
+    static const int32 edges[] = {INT32_MIN, INT32_MAX, -1, 0, 1,
+                                  0x40000000L, -0x40000000L,
+                                  123456789L, -987654321L};
     unsigned i;
     FILE *fileP;
 
@@ -49,6 +52,19 @@ int main(void)
     assert(h[6] == -52622884L && h[9] == -10415105L);
     pvmp3_imdct_synth(v, h, 2, 0, 17, scratch);
     assert(fwrite(v, 4, 576, fileP) == 576 && fwrite(h, 4, 576, fileP) == 576);
+    /* Wrapped butterflies and negative shifts at the full signed range. */
+    for (i = 0; i < 9; i++) v[i] = edges[i];
+    pvmp3_dct_9(v);
+    assert(fwrite(v, 4, 9, fileP) == 9);
+    for (i = 0; i < 6; i++) v[i] = edges[i];
+    pvmp3_dct_6(v);
+    assert(fwrite(v, 4, 6, fileP) == 6);
+    for (i = 0; i < 18; i++) {
+        v[i] = edges[i % 9];
+        h[i] = edges[(i + 1) % 9];
+    }
+    pvmp3_mdct_18(v, h, normal_win);
+    assert(fwrite(v, 4, 18, fileP) == 18 && fwrite(h, 4, 18, fileP) == 18);
     assert(!fclose(fileP));
 #ifdef __WATCOMC__
     assert(!_dos_freemem(vSeg));

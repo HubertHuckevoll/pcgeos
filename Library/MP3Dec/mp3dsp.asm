@@ -319,15 +319,15 @@ Mp3Split endp
 	;
 	; Window products truncate individually before wrapping accumulation.
 	; SI and DI walk the two mirrored buffer positions; BX walks CS constants.
-	; ECX retains sum1. sum2 is stack-local because all 16-bit index registers
-	; are live. Output is clipped only after adding the 0x20 rounding bias.
+	; ECX/EBP retain both sums. Borrow EBP only across the leaf product block,
+	; which has no frame references; restore it before output and keep sum2
+	; in EDX across clipping sum1. Each sum starts with the 0x20 rounding bias.
 	;
 Mp3Window proc near
 pcmOff	local	word
 baseOff	local	word
 stride	local	word
 sample	local	word
-sum2	local	dword
 	uses ebx, ecx, edx, si, di
 	.enter
 		mov	pcmOff, di
@@ -344,16 +344,17 @@ nextSample:
 		add	si, ax
 		sub	di, ax
 		mov	ecx, 20h
-		mov	sum2, 20h
+		push	ebp
+		mov	ebp, 20h
 		mov	eax, ds:[si+0]
 		imul	dword ptr cs:[bx+0]
 		add	ecx, edx
 		mov	eax, ds:[di+1920]
 		imul	dword ptr cs:[bx+0]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+0]
 		imul	dword ptr cs:[bx+4]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[di+1920]
 		imul	dword ptr cs:[bx+4]
 		sub	ecx, edx
@@ -362,10 +363,10 @@ nextSample:
 		add	ecx, edx
 		mov	eax, ds:[si+1792]
 		imul	dword ptr cs:[bx+8]
-		sub	sum2, edx
+		sub	ebp, edx
 		mov	eax, ds:[di+128]
 		imul	dword ptr cs:[bx+12]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+1792]
 		imul	dword ptr cs:[bx+12]
 		add	ecx, edx
@@ -374,10 +375,10 @@ nextSample:
 		add	ecx, edx
 		mov	eax, ds:[di+1664]
 		imul	dword ptr cs:[bx+16]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+256]
 		imul	dword ptr cs:[bx+20]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[di+1664]
 		imul	dword ptr cs:[bx+20]
 		sub	ecx, edx
@@ -386,10 +387,10 @@ nextSample:
 		add	ecx, edx
 		mov	eax, ds:[si+1536]
 		imul	dword ptr cs:[bx+24]
-		sub	sum2, edx
+		sub	ebp, edx
 		mov	eax, ds:[di+384]
 		imul	dword ptr cs:[bx+28]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+1536]
 		imul	dword ptr cs:[bx+28]
 		add	ecx, edx
@@ -398,10 +399,10 @@ nextSample:
 		add	ecx, edx
 		mov	eax, ds:[di+1408]
 		imul	dword ptr cs:[bx+32]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+512]
 		imul	dword ptr cs:[bx+36]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[di+1408]
 		imul	dword ptr cs:[bx+36]
 		sub	ecx, edx
@@ -410,10 +411,10 @@ nextSample:
 		add	ecx, edx
 		mov	eax, ds:[si+1280]
 		imul	dword ptr cs:[bx+40]
-		sub	sum2, edx
+		sub	ebp, edx
 		mov	eax, ds:[di+640]
 		imul	dword ptr cs:[bx+44]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+1280]
 		imul	dword ptr cs:[bx+44]
 		add	ecx, edx
@@ -422,10 +423,10 @@ nextSample:
 		add	ecx, edx
 		mov	eax, ds:[di+1152]
 		imul	dword ptr cs:[bx+48]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+768]
 		imul	dword ptr cs:[bx+52]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[di+1152]
 		imul	dword ptr cs:[bx+52]
 		sub	ecx, edx
@@ -434,13 +435,15 @@ nextSample:
 		add	ecx, edx
 		mov	eax, ds:[si+1024]
 		imul	dword ptr cs:[bx+56]
-		sub	sum2, edx
+		sub	ebp, edx
 		mov	eax, ds:[di+896]
 		imul	dword ptr cs:[bx+60]
-		add	sum2, edx
+		add	ebp, edx
 		mov	eax, ds:[si+1024]
 		imul	dword ptr cs:[bx+60]
 		add	ecx, edx
+		mov	edx, ebp
+		pop	ebp
 		add	bx, 16*4
 		mov	eax, ecx
 		call	Mp3ClipPCM
@@ -452,7 +455,7 @@ nextSample:
 monoFirst:
 		add	di, pcmOff
 		mov	es:[di], ax
-		mov	eax, sum2
+		mov	eax, edx
 		call	Mp3ClipPCM
 		mov	di, 32
 		sub	di, sample
@@ -880,13 +883,10 @@ PVMP3_IMDCT_SYNTH endp
 	; DS:SI = in-place vector. Each product is shifted before adding.
 Mp3Dct16 proc near flag:word
 tmp0	local	dword
-tmp1	local	dword
 tmp2	local	dword
 tmp3	local	dword
 tmp4	local	dword
 tmp5	local	dword
-tmp6	local	dword
-tmp7	local	dword
 tmp_o0	local	dword
 tmp_o1	local	dword
 tmp_o2	local	dword
@@ -898,7 +898,8 @@ tmp_o7	local	dword
 itmp_e0	local	dword
 itmp_e1	local	dword
 itmp_e2	local	dword
-	uses ebx, ecx, edx
+	uses ebx, ecx, edx, edi
+	; ECX = tmp1, EBX = tmp6, EDI = tmp7 (reference names below).
 	.enter
 	; tmp_o0 = fxp_mul32_Q32(vec[0] - vec[15], 1078937216L)
 		mov	eax, dword ptr ds:[si+0]
@@ -918,16 +919,16 @@ itmp_e2	local	dword
 	; tmp7 = vec[7] + vec[8]
 		mov	eax, dword ptr ds:[si+28]
 		add	eax, dword ptr ds:[si+32]
-		mov	tmp7, eax
+		mov	edi, eax
 	; itmp_e0 = fxp_mul32_Q32(tmp0 - tmp7, 1094777728L)
 		mov	eax, tmp0
-		sub	eax, tmp7
+		sub	eax, edi
 		Mp3Product	<1094777728>, 32
 		mov	itmp_e0, eax
 	; tmp7 = tmp0 + tmp7
 		mov	eax, tmp0
-		add	eax, tmp7
-		mov	tmp7, eax
+		add	eax, edi
+		mov	edi, eax
 	; tmp_o1 = fxp_mul32_Q32(vec[1] - vec[14], 1122057216L)
 		mov	eax, dword ptr ds:[si+4]
 		sub	eax, dword ptr ds:[si+56]
@@ -936,7 +937,7 @@ itmp_e2	local	dword
 	; tmp1 = vec[1] + vec[14]
 		mov	eax, dword ptr ds:[si+4]
 		add	eax, dword ptr ds:[si+56]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp_o6 = fxp_mul32_Q32((vec[6] - vec[9]) << 1, 1849463552L)
 		mov	eax, dword ptr ds:[si+24]
 		sub	eax, dword ptr ds:[si+36]
@@ -946,16 +947,16 @@ itmp_e2	local	dword
 	; tmp6 = vec[6] + vec[9]
 		mov	eax, dword ptr ds:[si+24]
 		add	eax, dword ptr ds:[si+36]
-		mov	tmp6, eax
+		mov	ebx, eax
 	; itmp_e1 = tmp1 + tmp6
-		mov	eax, tmp1
-		add	eax, tmp6
+		mov	eax, ecx
+		add	eax, ebx
 		mov	itmp_e1, eax
 	; tmp6 = fxp_mul32_Q32(tmp1 - tmp6, 1291378304L)
-		mov	eax, tmp1
-		sub	eax, tmp6
+		mov	eax, ecx
+		sub	eax, ebx
 		Mp3Product	<1291378304>, 32
-		mov	tmp6, eax
+		mov	ebx, eax
 	; tmp_o2 = fxp_mul32_Q32(vec[2] - vec[13], 1217503104L)
 		mov	eax, dword ptr ds:[si+8]
 		sub	eax, dword ptr ds:[si+52]
@@ -1005,7 +1006,7 @@ itmp_e2	local	dword
 	; tmp1 = tmp3 + tmp4
 		mov	eax, tmp3
 		add	eax, tmp4
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp4 = fxp_mul32_Q32((tmp3 - tmp4) << 2, 1375954816L)
 		mov	eax, tmp3
 		sub	eax, tmp4
@@ -1013,14 +1014,14 @@ itmp_e2	local	dword
 		Mp3Product	<1375954816>, 32
 		mov	tmp4, eax
 	; tmp0 = tmp7 + tmp1
-		mov	eax, tmp7
-		add	eax, tmp1
+		mov	eax, edi
+		add	eax, ecx
 		mov	tmp0, eax
 	; tmp1 = fxp_mul32_Q32(tmp7 - tmp1, 1162209792L)
-		mov	eax, tmp7
-		sub	eax, tmp1
+		mov	eax, edi
+		sub	eax, ecx
 		Mp3Product	<1162209792>, 32
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp3 = fxp_mul32_Q32((itmp_e1 - itmp_e2) << 1, 1402911360L)
 		mov	eax, itmp_e1
 		sub	eax, itmp_e2
@@ -1030,25 +1031,25 @@ itmp_e2	local	dword
 	; tmp7 = itmp_e1 + itmp_e2
 		mov	eax, itmp_e1
 		add	eax, itmp_e2
-		mov	tmp7, eax
+		mov	edi, eax
 	; vec[0] = (tmp0 + tmp7) >> 1
 		mov	eax, tmp0
-		add	eax, tmp7
+		add	eax, edi
 		sar	eax, 1
 		mov	dword ptr ds:[si+0], eax
 	; vec[8] = fxp_mul32_Q32(tmp0 - tmp7, 1518500224L)
 		mov	eax, tmp0
-		sub	eax, tmp7
+		sub	eax, edi
 		Mp3Product	<1518500224>, 32
 		mov	dword ptr ds:[si+32], eax
 	; tmp0 = fxp_mul32_Q32((tmp1 - tmp3) << 1, 1518500224L)
-		mov	eax, tmp1
+		mov	eax, ecx
 		sub	eax, tmp3
 		shl	eax, 1
 		Mp3Product	<1518500224>, 32
 		mov	tmp0, eax
 	; vec[4] = (tmp1 + tmp3) + tmp0
-		mov	eax, tmp1
+		mov	eax, ecx
 		add	eax, tmp3
 		add	eax, tmp0
 		mov	dword ptr ds:[si+16], eax
@@ -1060,75 +1061,66 @@ itmp_e2	local	dword
 		sub	eax, tmp4
 		shl	eax, 1
 		Mp3Product	<1162209792>, 32
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp7 = itmp_e0 + tmp4
 		mov	eax, itmp_e0
 		add	eax, tmp4
-		mov	tmp7, eax
+		mov	edi, eax
 	; tmp3 = fxp_mul32_Q32((tmp6 - tmp5) << 2, 1402911360L)
-		mov	eax, tmp6
+		mov	eax, ebx
 		sub	eax, tmp5
 		shl	eax, 2
 		Mp3Product	<1402911360>, 32
 		mov	tmp3, eax
 	; tmp6 += tmp5
-		mov	eax, tmp6
-		add	eax, tmp5
-		mov	tmp6, eax
+		add	ebx, tmp5
 	; tmp4 = fxp_mul32_Q32((tmp7 - tmp6) << 1, 1518500224L)
-		mov	eax, tmp7
-		sub	eax, tmp6
+		mov	eax, edi
+		sub	eax, ebx
 		shl	eax, 1
 		Mp3Product	<1518500224>, 32
 		mov	tmp4, eax
 	; tmp6 += tmp7
-		mov	eax, tmp6
-		add	eax, tmp7
-		mov	tmp6, eax
+		add	ebx, edi
 	; tmp7 = fxp_mul32_Q32((tmp1 - tmp3) << 1, 1518500224L)
-		mov	eax, tmp1
+		mov	eax, ecx
 		sub	eax, tmp3
 		shl	eax, 1
 		Mp3Product	<1518500224>, 32
-		mov	tmp7, eax
+		mov	edi, eax
 	; tmp1 += tmp3 + tmp7
-		mov	eax, tmp1
-		push	eax
-		mov	eax, tmp3
-		add	eax, tmp7
+		mov	eax, ecx
+		add	eax, tmp3
+		add	eax, edi
 		mov	ecx, eax
-		pop	eax
-		add	eax, ecx
-		mov	tmp1, eax
 	; vec[2] = tmp1 + tmp6
-		mov	eax, tmp1
-		add	eax, tmp6
+		add	eax, ebx
 		mov	dword ptr ds:[si+8], eax
 	; vec[6] = tmp1 + tmp4
-		mov	eax, tmp1
+		mov	eax, ecx
 		add	eax, tmp4
 		mov	dword ptr ds:[si+24], eax
 	; vec[10] = tmp7 + tmp4
-		mov	eax, tmp7
+		mov	eax, edi
 		add	eax, tmp4
 		mov	dword ptr ds:[si+40], eax
 	; vec[14] = tmp7
-		mov	eax, tmp7
+		mov	eax, edi
 		mov	dword ptr ds:[si+56], eax
 	; tmp1 = fxp_mul32_Q32((tmp_o0 - tmp_o7) << 1, 1094777728L)
 		mov	eax, tmp_o0
 		sub	eax, tmp_o7
 		shl	eax, 1
 		Mp3Product	<1094777728>, 32
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp7 = tmp_o0 + tmp_o7
 		mov	eax, tmp_o0
 		add	eax, tmp_o7
-		mov	tmp7, eax
+		mov	edi, eax
 	; tmp6 = tmp_o1 + tmp_o6
 		mov	eax, tmp_o1
 		add	eax, tmp_o6
-		mov	tmp6, eax
+		mov	ebx, eax
 	; tmp_o1 = fxp_mul32_Q32((tmp_o1 - tmp_o6) << 1, 1291378304L)
 		mov	eax, tmp_o1
 		sub	eax, tmp_o6
@@ -1158,17 +1150,11 @@ itmp_e2	local	dword
 		cmp	flag, 0
 		jne	positive
 	; tmp7 = -tmp7
-		mov	eax, tmp7
-		neg	eax
-		mov	tmp7, eax
+		neg	edi
 	; tmp1 = -tmp1
-		mov	eax, tmp1
-		neg	eax
-		mov	tmp1, eax
+		neg	ecx
 	; tmp6 = -tmp6
-		mov	eax, tmp6
-		neg	eax
-		mov	tmp6, eax
+		neg	ebx
 	; tmp_o1 = -tmp_o1
 		mov	eax, tmp_o1
 		neg	eax
@@ -1191,35 +1177,31 @@ itmp_e2	local	dword
 		mov	tmp0, eax
 positive:
 	; tmp2 = fxp_mul32_Q32((tmp1 - tmp0) << 1, 1162209792L)
-		mov	eax, tmp1
+		mov	eax, ecx
 		sub	eax, tmp0
 		shl	eax, 1
 		Mp3Product	<1162209792>, 32
 		mov	tmp2, eax
 	; tmp0 += tmp1
 		mov	eax, tmp0
-		add	eax, tmp1
+		add	eax, ecx
 		mov	tmp0, eax
 	; tmp1 = fxp_mul32_Q32((tmp7 - tmp4) << 1, 1162209792L)
-		mov	eax, tmp7
+		mov	eax, edi
 		sub	eax, tmp4
 		shl	eax, 1
 		Mp3Product	<1162209792>, 32
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp7 += tmp4
-		mov	eax, tmp7
-		add	eax, tmp4
-		mov	tmp7, eax
+		add	edi, tmp4
 	; tmp4 = fxp_mul32_Q32((tmp6 - tmp5) << 2, 1402911360L)
-		mov	eax, tmp6
+		mov	eax, ebx
 		sub	eax, tmp5
 		shl	eax, 2
 		Mp3Product	<1402911360>, 32
 		mov	tmp4, eax
 	; tmp6 += tmp5
-		mov	eax, tmp6
-		add	eax, tmp5
-		mov	tmp6, eax
+		add	ebx, tmp5
 	; tmp5 = fxp_mul32_Q32((tmp_o1 - tmp_o5) << 2, 1402911360L)
 		mov	eax, tmp_o1
 		sub	eax, tmp_o5
@@ -1231,25 +1213,25 @@ positive:
 		add	eax, tmp_o5
 		mov	tmp_o1, eax
 	; vec[13] = fxp_mul32_Q32((tmp1 - tmp4) << 1, 1518500224L)
-		mov	eax, tmp1
+		mov	eax, ecx
 		sub	eax, tmp4
 		shl	eax, 1
 		Mp3Product	<1518500224>, 32
 		mov	dword ptr ds:[si+52], eax
 	; vec[5] = (tmp1 + tmp4) + vec[13]
-		mov	eax, tmp1
+		mov	eax, ecx
 		add	eax, tmp4
 		add	eax, dword ptr ds:[si+52]
 		mov	dword ptr ds:[si+20], eax
 	; vec[9] = fxp_mul32_Q32((tmp7 - tmp6) << 1, 1518500224L)
-		mov	eax, tmp7
-		sub	eax, tmp6
+		mov	eax, edi
+		sub	eax, ebx
 		shl	eax, 1
 		Mp3Product	<1518500224>, 32
 		mov	dword ptr ds:[si+36], eax
 	; vec[1] = tmp7 + tmp6
-		mov	eax, tmp7
-		add	eax, tmp6
+		mov	eax, edi
+		add	eax, ebx
 		mov	dword ptr ds:[si+4], eax
 	; tmp4 = fxp_mul32_Q32((tmp0 - tmp_o1) << 1, 1518500224L)
 		mov	eax, tmp0
@@ -1266,15 +1248,11 @@ positive:
 		sub	eax, tmp5
 		shl	eax, 1
 		Mp3Product	<1518500224>, 32
-		mov	tmp6, eax
+		mov	ebx, eax
 	; tmp2 += tmp5 + tmp6
 		mov	eax, tmp2
-		push	eax
-		mov	eax, tmp5
-		add	eax, tmp6
-		mov	ecx, eax
-		pop	eax
-		add	eax, ecx
+		add	eax, tmp5
+		add	eax, ebx
 		mov	tmp2, eax
 	; tmp0 += tmp2
 		mov	eax, tmp0
@@ -1293,7 +1271,6 @@ positive:
 		add	eax, tmp4
 		mov	tmp2, eax
 	; vec[5] = tmp2 + vec[5]
-		mov	eax, tmp2
 		add	eax, dword ptr ds:[si+20]
 		mov	dword ptr ds:[si+20], eax
 	; vec[7] = tmp2 + vec[9]
@@ -1302,10 +1279,9 @@ positive:
 		mov	dword ptr ds:[si+28], eax
 	; tmp4 += tmp6
 		mov	eax, tmp4
-		add	eax, tmp6
+		add	eax, ebx
 		mov	tmp4, eax
 	; vec[9] = tmp4 + vec[9]
-		mov	eax, tmp4
 		add	eax, dword ptr ds:[si+36]
 		mov	dword ptr ds:[si+36], eax
 	; vec[11] = tmp4 + vec[13]
@@ -1313,11 +1289,11 @@ positive:
 		add	eax, dword ptr ds:[si+52]
 		mov	dword ptr ds:[si+44], eax
 	; vec[13] = tmp6 + vec[13]
-		mov	eax, tmp6
+		mov	eax, ebx
 		add	eax, dword ptr ds:[si+52]
 		mov	dword ptr ds:[si+52], eax
 	; vec[15] = tmp6
-		mov	eax, tmp6
+		mov	eax, ebx
 		mov	dword ptr ds:[si+60], eax
 	.leave
 		ret
@@ -1325,33 +1301,30 @@ Mp3Dct16 endp
 
 	; DS:SI = in-place vector. Each product is shifted before adding.
 Mp3Merge32 proc near
-temp0	local	dword
-temp1	local	dword
-temp2	local	dword
-temp3	local	dword
-	uses ebx, ecx, edx
+	uses ebx, ecx, edx, edi
+	; EBX = temp0, ECX = temp1, EDX = temp2, EDI = temp3 (reference names below).
 	.enter
 	; temp0 = vec[14]
 		mov	eax, dword ptr ds:[si+56]
-		mov	temp0, eax
+		mov	ebx, eax
 	; vec[14] = vec[7]
 		mov	eax, dword ptr ds:[si+28]
 		mov	dword ptr ds:[si+56], eax
 	; temp1 = vec[12]
 		mov	eax, dword ptr ds:[si+48]
-		mov	temp1, eax
+		mov	ecx, eax
 	; vec[12] = vec[6]
 		mov	eax, dword ptr ds:[si+24]
 		mov	dword ptr ds:[si+48], eax
 	; temp2 = vec[10]
 		mov	eax, dword ptr ds:[si+40]
-		mov	temp2, eax
+		mov	edx, eax
 	; vec[10] = vec[5]
 		mov	eax, dword ptr ds:[si+20]
 		mov	dword ptr ds:[si+40], eax
 	; temp3 = vec[8]
 		mov	eax, dword ptr ds:[si+32]
-		mov	temp3, eax
+		mov	edi, eax
 	; vec[8] = vec[4]
 		mov	eax, dword ptr ds:[si+16]
 		mov	dword ptr ds:[si+32], eax
@@ -1369,7 +1342,7 @@ temp3	local	dword
 		add	eax, dword ptr ds:[si+68]
 		mov	dword ptr ds:[si+4], eax
 	; vec[16] = temp3
-		mov	eax, temp3
+		mov	eax, edi
 		mov	dword ptr ds:[si+64], eax
 	; vec[3] = vec[18] + vec[17]
 		mov	eax, dword ptr ds:[si+72]
@@ -1391,14 +1364,14 @@ temp3	local	dword
 		add	eax, dword ptr ds:[si+80]
 		mov	dword ptr ds:[si+36], eax
 	; vec[20] = temp2
-		mov	eax, temp2
+		mov	eax, edx
 		mov	dword ptr ds:[si+80], eax
 	; temp2 = vec[13]
 		mov	eax, dword ptr ds:[si+52]
-		mov	temp2, eax
+		mov	edx, eax
 	; temp3 = vec[11]
 		mov	eax, dword ptr ds:[si+44]
-		mov	temp3, eax
+		mov	edi, eax
 	; vec[11] = vec[22] + vec[21]
 		mov	eax, dword ptr ds:[si+88]
 		add	eax, dword ptr ds:[si+84]
@@ -1408,11 +1381,11 @@ temp3	local	dword
 		add	eax, dword ptr ds:[si+88]
 		mov	dword ptr ds:[si+52], eax
 	; vec[22] = temp3
-		mov	eax, temp3
+		mov	eax, edi
 		mov	dword ptr ds:[si+88], eax
 	; temp3 = vec[15]
 		mov	eax, dword ptr ds:[si+60]
-		mov	temp3, eax
+		mov	edi, eax
 	; vec[15] = vec[24] + vec[23]
 		mov	eax, dword ptr ds:[si+96]
 		add	eax, dword ptr ds:[si+92]
@@ -1434,28 +1407,28 @@ temp3	local	dword
 		add	eax, dword ptr ds:[si+108]
 		mov	dword ptr ds:[si+92], eax
 	; vec[24] = temp1
-		mov	eax, temp1
+		mov	eax, ecx
 		mov	dword ptr ds:[si+96], eax
 	; vec[25] = vec[29] + vec[28]
 		mov	eax, dword ptr ds:[si+116]
 		add	eax, dword ptr ds:[si+112]
 		mov	dword ptr ds:[si+100], eax
 	; vec[26] = temp2
-		mov	eax, temp2
+		mov	eax, edx
 		mov	dword ptr ds:[si+104], eax
 	; vec[27] = vec[30] + vec[29]
 		mov	eax, dword ptr ds:[si+120]
 		add	eax, dword ptr ds:[si+116]
 		mov	dword ptr ds:[si+108], eax
 	; vec[28] = temp0
-		mov	eax, temp0
+		mov	eax, ebx
 		mov	dword ptr ds:[si+112], eax
 	; vec[29] = vec[30] + vec[31]
 		mov	eax, dword ptr ds:[si+120]
 		add	eax, dword ptr ds:[si+124]
 		mov	dword ptr ds:[si+116], eax
 	; vec[30] = temp3
-		mov	eax, temp3
+		mov	eax, edi
 		mov	dword ptr ds:[si+120], eax
 	.leave
 		ret
@@ -1463,286 +1436,181 @@ Mp3Merge32 endp
 
 	; DS:SI = in-place vector. Each product is shifted before adding.
 Mp3Dct9 proc near
-tmp0	local	dword
-tmp8	local	dword
-tmp1	local	dword
-tmp7	local	dword
-tmp2	local	dword
-tmp6	local	dword
-tmp3	local	dword
-tmp5	local	dword
-	uses ebx, ecx, edx
+sum0	local	dword
+sum1	local	dword
+sum2	local	dword
+sum3	local	dword
+odd8	local	dword
+odd7	local	dword
+odd6	local	dword
+odd5	local	dword
+	uses ebx, ecx, edx, edi
 	.enter
-	; tmp0 = vec[8] + vec[0]
-		mov	eax, dword ptr ds:[si+32]
-		add	eax, dword ptr ds:[si+0]
-		mov	tmp0, eax
-	; tmp8 = vec[8] - vec[0]
-		mov	eax, dword ptr ds:[si+32]
-		sub	eax, dword ptr ds:[si+0]
-		mov	tmp8, eax
-	; tmp1 = vec[7] + vec[1]
-		mov	eax, dword ptr ds:[si+28]
-		add	eax, dword ptr ds:[si+4]
-		mov	tmp1, eax
-	; tmp7 = vec[7] - vec[1]
-		mov	eax, dword ptr ds:[si+28]
-		sub	eax, dword ptr ds:[si+4]
-		mov	tmp7, eax
-	; tmp2 = vec[6] + vec[2]
-		mov	eax, dword ptr ds:[si+24]
-		add	eax, dword ptr ds:[si+8]
-		mov	tmp2, eax
-	; tmp6 = vec[6] - vec[2]
-		mov	eax, dword ptr ds:[si+24]
-		sub	eax, dword ptr ds:[si+8]
-		mov	tmp6, eax
-	; tmp3 = vec[5] + vec[3]
-		mov	eax, dword ptr ds:[si+20]
-		add	eax, dword ptr ds:[si+12]
-		mov	tmp3, eax
-	; tmp5 = vec[5] - vec[3]
-		mov	eax, dword ptr ds:[si+20]
-		sub	eax, dword ptr ds:[si+12]
-		mov	tmp5, eax
-	; vec[0] = ((tmp0 + tmp2) + tmp3) + (tmp1 + vec[4])
-		mov	eax, tmp0
-		add	eax, tmp2
-		add	eax, tmp3
-		push	eax
-		mov	eax, tmp1
-		add	eax, dword ptr ds:[si+16]
+	; Read each input pair once; keep wrapped sums and differences separate.
+		mov	eax, ds:[si+32]
+		mov	edx, ds:[si+0]
 		mov	ecx, eax
-		pop	eax
-		add	eax, ecx
-		mov	dword ptr ds:[si+0], eax
-	; vec[6] = (((tmp0 + tmp2) + tmp3) >> 1) - (tmp1 + vec[4])
-		mov	eax, tmp0
-		add	eax, tmp2
-		add	eax, tmp3
+		add	eax, edx
+		sub	ecx, edx
+		mov	sum0, eax
+		mov	odd8, ecx
+		mov	eax, ds:[si+28]
+		mov	edx, ds:[si+4]
+		mov	ecx, eax
+		add	eax, edx
+		sub	ecx, edx
+		mov	sum1, eax
+		mov	odd7, ecx
+		mov	eax, ds:[si+24]
+		mov	edx, ds:[si+8]
+		mov	ecx, eax
+		add	eax, edx
+		sub	ecx, edx
+		mov	sum2, eax
+		mov	odd6, ecx
+		mov	eax, ds:[si+20]
+		mov	edx, ds:[si+12]
+		mov	ecx, eax
+		add	eax, edx
+		sub	ecx, edx
+		mov	sum3, eax
+		mov	odd5, ecx
+	; R0 = sum0+sum2+sum3, R1 = sum1+vec[4]. The half-shifts precede
+	; subtraction, exactly as in the reference; sums wrap before shifting.
+		mov	eax, sum0
+		add	eax, sum2
+		add	eax, sum3
+		mov	ecx, sum1
+		add	ecx, ds:[si+16]
+		mov	edx, eax
+		add	edx, ecx
+		mov	ds:[si], edx
 		sar	eax, 1
-		push	eax
-		mov	eax, tmp1
-		add	eax, dword ptr ds:[si+16]
-		mov	ecx, eax
-		pop	eax
 		sub	eax, ecx
-		mov	dword ptr ds:[si+24], eax
-	; vec[2] = (tmp1 >> 1) - vec[4]
-		mov	eax, tmp1
-		sar	eax, 1
-		sub	eax, dword ptr ds:[si+16]
-		mov	dword ptr ds:[si+8], eax
-	; vec[4] = -vec[2]
-		mov	eax, dword ptr ds:[si+8]
-		neg	eax
-		mov	dword ptr ds:[si+16], eax
-	; vec[8] = -vec[2]
-		mov	eax, dword ptr ds:[si+8]
-		neg	eax
-		mov	dword ptr ds:[si+32], eax
-	; vec[4] = fxp_mac32_Q32(vec[4], tmp0 << 1, cos_2pi_9)
-		mov	eax, dword ptr ds:[si+16]
-		push	eax
-		mov	eax, tmp0
-		shl	eax, 1
-		Mp3Product	<1645067904>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+16], eax
-	; vec[8] = fxp_mac32_Q32(vec[8], tmp0 << 1, cos_4pi_9)
-		mov	eax, dword ptr ds:[si+32]
-		push	eax
-		mov	eax, tmp0
-		shl	eax, 1
-		Mp3Product	<372906624>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+32], eax
-	; vec[2] = fxp_mac32_Q32(vec[2], tmp0 << 1, cos_pi_9)
-		mov	eax, dword ptr ds:[si+8]
-		push	eax
-		mov	eax, tmp0
+		mov	ds:[si+24], eax
+		mov	ecx, sum1
+		sar	ecx, 1
+		sub	ecx, ds:[si+16]
+		mov	ebx, ecx
+		neg	ebx
+		mov	edi, ebx
+	; ECX = vec[2], EBX = vec[4], EDI = vec[8] until all terms are added.
+		mov	eax, sum0
 		shl	eax, 1
 		Mp3Product	<2017974528>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+8], eax
-	; vec[2] = fxp_mac32_Q32(vec[2], tmp2 << 1, cos_5pi_9)
-		mov	eax, dword ptr ds:[si+8]
-		push	eax
-		mov	eax, tmp2
-		shl	eax, 1
-		Mp3Product	<-372906624>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+8], eax
-	; vec[4] = fxp_mac32_Q32(vec[4], tmp2 << 1, cos_8pi_9)
-		mov	eax, dword ptr ds:[si+16]
-		push	eax
-		mov	eax, tmp2
-		shl	eax, 1
-		Mp3Product	<-2017974528>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+16], eax
-	; vec[8] = fxp_mac32_Q32(vec[8], tmp2 << 1, cos_2pi_9)
-		mov	eax, dword ptr ds:[si+32]
-		push	eax
-		mov	eax, tmp2
+		add	ecx, eax
+		mov	eax, sum0
 		shl	eax, 1
 		Mp3Product	<1645067904>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+32], eax
-	; vec[8] = fxp_mac32_Q32(vec[8], tmp3 << 1, cos_8pi_9)
-		mov	eax, dword ptr ds:[si+32]
-		push	eax
-		mov	eax, tmp3
-		shl	eax, 1
-		Mp3Product	<-2017974528>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+32], eax
-	; vec[4] = fxp_mac32_Q32(vec[4], tmp3 << 1, cos_4pi_9)
-		mov	eax, dword ptr ds:[si+16]
-		push	eax
-		mov	eax, tmp3
+		add	ebx, eax
+		mov	eax, sum0
 		shl	eax, 1
 		Mp3Product	<372906624>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+16], eax
-	; vec[2] = fxp_mac32_Q32(vec[2], tmp3 << 1, cos_7pi_9)
-		mov	eax, dword ptr ds:[si+8]
-		push	eax
-		mov	eax, tmp3
+		add	edi, eax
+		mov	eax, sum2
+		shl	eax, 1
+		Mp3Product	<-372906624>, 32
+		add	ecx, eax
+		mov	eax, sum2
+		shl	eax, 1
+		Mp3Product	<-2017974528>, 32
+		add	ebx, eax
+		mov	eax, sum2
+		shl	eax, 1
+		Mp3Product	<1645067904>, 32
+		add	edi, eax
+		mov	eax, sum3
 		shl	eax, 1
 		Mp3Product	<-1645067904>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+8], eax
-	; vec[1] = fxp_mul32_Q32(tmp5 << 1, cos_11pi_18)
-		mov	eax, tmp5
+		add	ecx, eax
+		mov	eax, sum3
+		shl	eax, 1
+		Mp3Product	<372906624>, 32
+		add	ebx, eax
+		mov	eax, sum3
+		shl	eax, 1
+		Mp3Product	<-2017974528>, 32
+		add	edi, eax
+		mov	ds:[si+8], ecx
+		mov	ds:[si+16], ebx
+		mov	ds:[si+32], edi
+	; Even sums are finished. Reuse EBX/EDI for two repeatedly used odd inputs.
+		mov	ebx, odd5
+		mov	edi, odd6
+		mov	eax, ebx
 		shl	eax, 1
 		Mp3Product	<-734482688>, 32
-		mov	dword ptr ds:[si+4], eax
-	; vec[1] = fxp_mac32_Q32(vec[1], tmp6 << 1, cos_13pi_18)
-		mov	eax, dword ptr ds:[si+4]
-		push	eax
-		mov	eax, tmp6
+		mov	ecx, eax
+		mov	eax, edi
 		shl	eax, 1
 		Mp3Product	<-1380375936>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+4], eax
-	; vec[1] = fxp_mac32_Q32(vec[1], tmp7 << 1, cos_5pi_6)
-		mov	eax, dword ptr ds:[si+4]
-		push	eax
-		mov	eax, tmp7
+		add	ecx, eax
+		mov	eax, odd7
 		shl	eax, 1
 		Mp3Product	<-1859775360>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+4], eax
-	; vec[1] = fxp_mac32_Q32(vec[1], tmp8 << 1, cos_17pi_18)
-		mov	eax, dword ptr ds:[si+4]
-		push	eax
-		mov	eax, tmp8
+		add	ecx, eax
+		mov	eax, odd8
 		shl	eax, 1
 		Mp3Product	<-2114858496>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+4], eax
-	; vec[3] = fxp_mul32_Q32(((tmp5 + tmp6) - tmp8) << 1, cos_pi_6)
-		mov	eax, tmp5
-		add	eax, tmp6
-		sub	eax, tmp8
-		shl	eax, 1
-		Mp3Product	<1859775360>, 32
-		mov	dword ptr ds:[si+12], eax
-	; vec[5] = fxp_mul32_Q32(tmp5 << 1, cos_17pi_18)
-		mov	eax, tmp5
+		add	ecx, eax
+		mov	ds:[si+4], ecx
+		mov	eax, ebx
 		shl	eax, 1
 		Mp3Product	<-2114858496>, 32
-		mov	dword ptr ds:[si+20], eax
-	; vec[5] = fxp_mac32_Q32(vec[5], tmp6 << 1, cos_7pi_18)
-		mov	eax, dword ptr ds:[si+20]
-		push	eax
-		mov	eax, tmp6
+		mov	ecx, eax
+		mov	eax, edi
 		shl	eax, 1
 		Mp3Product	<734482688>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+20], eax
-	; vec[5] = fxp_mac32_Q32(vec[5], tmp7 << 1, cos_pi_6)
-		mov	eax, dword ptr ds:[si+20]
-		push	eax
-		mov	eax, tmp7
+		add	ecx, eax
+		mov	eax, odd7
 		shl	eax, 1
 		Mp3Product	<1859775360>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+20], eax
-	; vec[5] = fxp_mac32_Q32(vec[5], tmp8 << 1, cos_13pi_18)
-		mov	eax, dword ptr ds:[si+20]
-		push	eax
-		mov	eax, tmp8
+		add	ecx, eax
+		mov	eax, odd8
 		shl	eax, 1
 		Mp3Product	<-1380375936>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+20], eax
-	; vec[7] = fxp_mul32_Q32(tmp5 << 1, cos_5pi_18)
-		mov	eax, tmp5
+		add	ecx, eax
+		mov	ds:[si+20], ecx
+		mov	eax, ebx
 		shl	eax, 1
 		Mp3Product	<1380375936>, 32
-		mov	dword ptr ds:[si+28], eax
-	; vec[7] = fxp_mac32_Q32(vec[7], tmp6 << 1, cos_17pi_18)
-		mov	eax, dword ptr ds:[si+28]
-		push	eax
-		mov	eax, tmp6
+		mov	ecx, eax
+		mov	eax, edi
 		shl	eax, 1
 		Mp3Product	<-2114858496>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+28], eax
-	; vec[7] = fxp_mac32_Q32(vec[7], tmp7 << 1, cos_pi_6)
-		mov	eax, dword ptr ds:[si+28]
-		push	eax
-		mov	eax, tmp7
+		add	ecx, eax
+		mov	eax, odd7
 		shl	eax, 1
 		Mp3Product	<1859775360>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+28], eax
-	; vec[7] = fxp_mac32_Q32(vec[7], tmp8 << 1, cos_11pi_18)
-		mov	eax, dword ptr ds:[si+28]
-		push	eax
-		mov	eax, tmp8
+		add	ecx, eax
+		mov	eax, odd8
 		shl	eax, 1
 		Mp3Product	<-734482688>, 32
-		pop	ecx
-		add	eax, ecx
-		mov	dword ptr ds:[si+28], eax
+		add	ecx, eax
+		mov	ds:[si+28], ecx
+	; vec[3] has one product of a wrapped sum, not three separate products.
+		mov	eax, ebx
+		add	eax, edi
+		sub	eax, odd8
+		shl	eax, 1
+		Mp3Product	<1859775360>, 32
+		mov	ds:[si+12], eax
 	.leave
 		ret
 Mp3Dct9 endp
 
 	; DS:SI = in-place vector. Each product is shifted before adding.
 Mp3Dct6 proc near
-tmp0	local	dword
 tmp1	local	dword
 tmp2	local	dword
-tmp3	local	dword
-tmp4	local	dword
 tmp5	local	dword
-	uses ebx, ecx, edx
+	uses ebx, ecx, edx, edi
+	; EBX = tmp0, EDI = tmp3, ECX = tmp4 (reference names below).
 	.enter
 	; tmp0 = vec[5] + vec[0]
 		mov	eax, dword ptr ds:[si+20]
 		add	eax, dword ptr ds:[si+0]
-		mov	tmp0, eax
+		mov	ebx, eax
 	; tmp5 = vec[5] - vec[0]
 		mov	eax, dword ptr ds:[si+20]
 		sub	eax, dword ptr ds:[si+0]
@@ -1754,7 +1622,7 @@ tmp5	local	dword
 	; tmp4 = vec[4] - vec[1]
 		mov	eax, dword ptr ds:[si+16]
 		sub	eax, dword ptr ds:[si+4]
-		mov	tmp4, eax
+		mov	ecx, eax
 	; tmp2 = vec[3] + vec[2]
 		mov	eax, dword ptr ds:[si+12]
 		add	eax, dword ptr ds:[si+8]
@@ -1762,13 +1630,13 @@ tmp5	local	dword
 	; tmp3 = vec[3] - vec[2]
 		mov	eax, dword ptr ds:[si+12]
 		sub	eax, dword ptr ds:[si+8]
-		mov	tmp3, eax
+		mov	edi, eax
 	; vec[0] = tmp0 + tmp2
-		mov	eax, tmp0
+		mov	eax, ebx
 		add	eax, tmp2
 		mov	dword ptr ds:[si+0], eax
 	; vec[2] = fxp_mul32_Q30(tmp0 - tmp2, cos_pi_6)
-		mov	eax, tmp0
+		mov	eax, ebx
 		sub	eax, tmp2
 		Mp3Product	<929887680>, 30
 		mov	dword ptr ds:[si+8], eax
@@ -1782,50 +1650,36 @@ tmp5	local	dword
 		add	eax, tmp1
 		mov	dword ptr ds:[si+0], eax
 	; tmp0 = fxp_mul32_Q30(tmp3, cos_7_pi_12)
-		mov	eax, tmp3
+		mov	eax, edi
 		Mp3Product	<-277904832>, 30
-		mov	tmp0, eax
+		mov	ebx, eax
 	; tmp0 = fxp_mac32_Q30(tmp4, -cos_3_pi_12, tmp0)
-		mov	eax, tmp0
-		push	eax
-		mov	eax, tmp4
+		mov	eax, ecx
 		Mp3Product	<-759250112>, 30
-		pop	ecx
-		add	eax, ecx
-		mov	tmp0, eax
+		add	ebx, eax
 	; vec[1] = fxp_mac32_Q30(tmp5, cos_11_pi_12, tmp0)
-		mov	eax, tmp0
-		push	eax
 		mov	eax, tmp5
 		Mp3Product	<-1037154944>, 30
-		pop	ecx
-		add	eax, ecx
+		add	eax, ebx
 		mov	dword ptr ds:[si+4], eax
 	; vec[3] = fxp_mul32_Q30((tmp3 + tmp4) - tmp5, cos_3_pi_12)
-		mov	eax, tmp3
-		add	eax, tmp4
+		mov	eax, edi
+		add	eax, ecx
 		sub	eax, tmp5
 		Mp3Product	<759250112>, 30
 		mov	dword ptr ds:[si+12], eax
 	; tmp0 = fxp_mul32_Q30(tmp3, cos_11_pi_12)
-		mov	eax, tmp3
+		mov	eax, edi
 		Mp3Product	<-1037154944>, 30
-		mov	tmp0, eax
+		mov	ebx, eax
 	; tmp0 = fxp_mac32_Q30(tmp4, cos_3_pi_12, tmp0)
-		mov	eax, tmp0
-		push	eax
-		mov	eax, tmp4
+		mov	eax, ecx
 		Mp3Product	<759250112>, 30
-		pop	ecx
-		add	eax, ecx
-		mov	tmp0, eax
+		add	ebx, eax
 	; vec[5] = fxp_mac32_Q30(tmp5, cos_7_pi_12, tmp0)
-		mov	eax, tmp0
-		push	eax
 		mov	eax, tmp5
 		Mp3Product	<-277904832>, 30
-		pop	ecx
-		add	eax, ecx
+		add	eax, ebx
 		mov	dword ptr ds:[si+20], eax
 	.leave
 		ret
@@ -1834,11 +1688,11 @@ Mp3Dct6 endp
 	; DS:SI = in-place vector. Each product is shifted before adding.
 Mp3Mdct18 proc near
 tmp	local	dword
-tmp1	local	dword
 tmp2	local	dword
 tmp3	local	dword
 tmp4	local	dword
 	uses ebx, ecx, edx
+	; ECX = tmp1 (reference names below).
 	.enter
 	; tmp = fxp_mul32_Q32(vec[0] << 1, 1074764800L)
 		mov	eax, dword ptr ds:[si+0]
@@ -1848,14 +1702,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[17], 1538509952L)
 		mov	eax, dword ptr ds:[si+68]
 		Mp3Product	<1538509952>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[0] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+0], eax
 	; vec[17] = fxp_mul32_Q28(tmp - tmp1, 134730416L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<134730416>, 28
 		mov	dword ptr ds:[si+68], eax
 	; tmp = fxp_mul32_Q32(vec[1] << 1, 1083007104L)
@@ -1866,14 +1720,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[16], 514140992L)
 		mov	eax, dword ptr ds:[si+64]
 		Mp3Product	<514140992>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[1] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+4], eax
 	; vec[16] = fxp_mul32_Q28(tmp - tmp1, 138952416L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<138952416>, 28
 		mov	dword ptr ds:[si+64], eax
 	; tmp = fxp_mul32_Q32(vec[2] << 1, 1099811712L)
@@ -1884,14 +1738,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[15], 310058144L)
 		mov	eax, dword ptr ds:[si+60]
 		Mp3Product	<310058144>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[2] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+8], eax
 	; vec[15] = fxp_mul32_Q28(tmp - tmp1, 148092880L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<148092880>, 28
 		mov	dword ptr ds:[si+60], eax
 	; tmp = fxp_mul32_Q32(vec[3] << 1, 1125849600L)
@@ -1902,14 +1756,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[14], 223171168L)
 		mov	eax, dword ptr ds:[si+56]
 		Mp3Product	<223171168>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[3] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+12], eax
 	; vec[14] = fxp_mul32_Q28(tmp - tmp1, 163849584L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<163849584>, 28
 		mov	dword ptr ds:[si+56], eax
 	; tmp = fxp_mul32_Q32(vec[4] << 1, 1162209792L)
@@ -1920,14 +1774,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[13], 175363920L)
 		mov	eax, dword ptr ds:[si+52]
 		Mp3Product	<175363920>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[4] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+16], eax
 	; vec[13] = fxp_mul32_Q28(tmp - tmp1, 189812528L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<189812528>, 28
 		mov	dword ptr ds:[si+52], eax
 	; tmp = fxp_mul32_Q32(vec[5] << 1, 1210517120L)
@@ -1938,14 +1792,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[12], 145336368L)
 		mov	eax, dword ptr ds:[si+48]
 		Mp3Product	<145336368>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[5] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+20], eax
 	; vec[12] = fxp_mul32_Q28(tmp - tmp1, 234001472L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<234001472>, 28
 		mov	dword ptr ds:[si+48], eax
 	; tmp = fxp_mul32_Q32(vec[6] << 1, 1273123968L)
@@ -1956,14 +1810,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[11], 124900264L)
 		mov	eax, dword ptr ds:[si+44]
 		Mp3Product	<124900264>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[6] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+24], eax
 	; vec[11] = fxp_mul32_Q28(tmp - tmp1, 317586208L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<317586208>, 28
 		mov	dword ptr ds:[si+44], eax
 	; tmp = fxp_mul32_Q32(vec[7] << 1, 1353421952L)
@@ -1974,14 +1828,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[10], 110238360L)
 		mov	eax, dword ptr ds:[si+40]
 		Mp3Product	<110238360>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[7] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+28], eax
 	; vec[10] = fxp_mul32_Q28(tmp - tmp1, 518577472L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<518577472>, 28
 		mov	dword ptr ds:[si+40], eax
 	; tmp = fxp_mul32_Q32(vec[8] << 1, 1456360832L)
@@ -1992,14 +1846,14 @@ tmp4	local	dword
 	; tmp1 = fxp_mul32_Q27(vec[9], 99333680L)
 		mov	eax, dword ptr ds:[si+36]
 		Mp3Product	<99333680>, 27
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[8] = tmp + tmp1
 		mov	eax, tmp
-		add	eax, tmp1
+		add	eax, ecx
 		mov	dword ptr ds:[si+32], eax
 	; vec[9] = fxp_mul32_Q28(tmp - tmp1, 1539975680L)
 		mov	eax, tmp
-		sub	eax, tmp1
+		sub	eax, ecx
 		Mp3Product	<1539975680>, 28
 		mov	dword ptr ds:[si+36], eax
 		call	Mp3Dct9
@@ -2092,25 +1946,22 @@ tmp4	local	dword
 		mov	dword ptr ds:[si+40], eax
 	; tmp1 = vec[0 + 1]
 		mov	eax, dword ptr ds:[si+4]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[0] = fxp_mac32_Q32(tmp, vec[0 + 10], window[0])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+40]
 		Mp3Product	<dword ptr fs:[bx+0]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+0], eax
 	; tmp3 = tmp4
 		mov	eax, tmp4
 		mov	tmp3, eax
 	; history[0] = -(tmp2 + tmp1)
 		mov	eax, tmp2
-		add	eax, tmp1
+		add	eax, ecx
 		neg	eax
 		mov	dword ptr es:[di+0], eax
 	; tmp2 = tmp1
-		mov	eax, tmp1
+		mov	eax, ecx
 		mov	tmp2, eax
 	; tmp = history[1]
 		mov	eax, dword ptr es:[di+4]
@@ -2124,25 +1975,22 @@ tmp4	local	dword
 		mov	dword ptr ds:[si+44], eax
 	; tmp1 = vec[1 + 1]
 		mov	eax, dword ptr ds:[si+8]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[1] = fxp_mac32_Q32(tmp, vec[1 + 10], window[1])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+44]
 		Mp3Product	<dword ptr fs:[bx+4]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+4], eax
 	; tmp3 = tmp4
 		mov	eax, tmp4
 		mov	tmp3, eax
 	; history[1] = -(tmp2 + tmp1)
 		mov	eax, tmp2
-		add	eax, tmp1
+		add	eax, ecx
 		neg	eax
 		mov	dword ptr es:[di+4], eax
 	; tmp2 = tmp1
-		mov	eax, tmp1
+		mov	eax, ecx
 		mov	tmp2, eax
 	; tmp = history[2]
 		mov	eax, dword ptr es:[di+8]
@@ -2156,25 +2004,22 @@ tmp4	local	dword
 		mov	dword ptr ds:[si+48], eax
 	; tmp1 = vec[2 + 1]
 		mov	eax, dword ptr ds:[si+12]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[2] = fxp_mac32_Q32(tmp, vec[2 + 10], window[2])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+48]
 		Mp3Product	<dword ptr fs:[bx+8]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+8], eax
 	; tmp3 = tmp4
 		mov	eax, tmp4
 		mov	tmp3, eax
 	; history[2] = -(tmp2 + tmp1)
 		mov	eax, tmp2
-		add	eax, tmp1
+		add	eax, ecx
 		neg	eax
 		mov	dword ptr es:[di+8], eax
 	; tmp2 = tmp1
-		mov	eax, tmp1
+		mov	eax, ecx
 		mov	tmp2, eax
 	; tmp = history[3]
 		mov	eax, dword ptr es:[di+12]
@@ -2188,25 +2033,22 @@ tmp4	local	dword
 		mov	dword ptr ds:[si+52], eax
 	; tmp1 = vec[3 + 1]
 		mov	eax, dword ptr ds:[si+16]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[3] = fxp_mac32_Q32(tmp, vec[3 + 10], window[3])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+52]
 		Mp3Product	<dword ptr fs:[bx+12]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+12], eax
 	; tmp3 = tmp4
 		mov	eax, tmp4
 		mov	tmp3, eax
 	; history[3] = -(tmp2 + tmp1)
 		mov	eax, tmp2
-		add	eax, tmp1
+		add	eax, ecx
 		neg	eax
 		mov	dword ptr es:[di+12], eax
 	; tmp2 = tmp1
-		mov	eax, tmp1
+		mov	eax, ecx
 		mov	tmp2, eax
 	; tmp = history[4]
 		mov	eax, dword ptr es:[di+16]
@@ -2220,25 +2062,22 @@ tmp4	local	dword
 		mov	dword ptr ds:[si+56], eax
 	; tmp1 = vec[4 + 1]
 		mov	eax, dword ptr ds:[si+20]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[4] = fxp_mac32_Q32(tmp, vec[4 + 10], window[4])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+56]
 		Mp3Product	<dword ptr fs:[bx+16]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+16], eax
 	; tmp3 = tmp4
 		mov	eax, tmp4
 		mov	tmp3, eax
 	; history[4] = -(tmp2 + tmp1)
 		mov	eax, tmp2
-		add	eax, tmp1
+		add	eax, ecx
 		neg	eax
 		mov	dword ptr es:[di+16], eax
 	; tmp2 = tmp1
-		mov	eax, tmp1
+		mov	eax, ecx
 		mov	tmp2, eax
 	; tmp = history[5]
 		mov	eax, dword ptr es:[di+20]
@@ -2252,25 +2091,22 @@ tmp4	local	dword
 		mov	dword ptr ds:[si+60], eax
 	; tmp1 = vec[5 + 1]
 		mov	eax, dword ptr ds:[si+24]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[5] = fxp_mac32_Q32(tmp, vec[5 + 10], window[5])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+60]
 		Mp3Product	<dword ptr fs:[bx+20]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+20], eax
 	; tmp3 = tmp4
 		mov	eax, tmp4
 		mov	tmp3, eax
 	; history[5] = -(tmp2 + tmp1)
 		mov	eax, tmp2
-		add	eax, tmp1
+		add	eax, ecx
 		neg	eax
 		mov	dword ptr es:[di+20], eax
 	; tmp2 = tmp1
-		mov	eax, tmp1
+		mov	eax, ecx
 		mov	tmp2, eax
 	; tmp = history[6]
 		mov	eax, dword ptr es:[di+24]
@@ -2284,44 +2120,37 @@ tmp4	local	dword
 		mov	dword ptr ds:[si+64], eax
 	; tmp1 = vec[7]
 		mov	eax, dword ptr ds:[si+28]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; vec[6] = fxp_mac32_Q32(tmp, vec[16] << 1, window[6])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+64]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+24]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+24], eax
 	; tmp = history[7]
 		mov	eax, dword ptr es:[di+28]
 		mov	tmp, eax
 	; history[6] = -(tmp2 + tmp1)
 		mov	eax, tmp2
-		add	eax, tmp1
+		add	eax, ecx
 		neg	eax
 		mov	dword ptr es:[di+24], eax
 	; history[7] = -(tmp1 + vec[8])
-		mov	eax, tmp1
+		mov	eax, ecx
 		add	eax, dword ptr ds:[si+32]
 		neg	eax
 		mov	dword ptr es:[di+28], eax
 	; tmp1 = history[8]
 		mov	eax, dword ptr es:[di+32]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp4 = vec[17] + tmp4
 		mov	eax, dword ptr ds:[si+68]
 		add	eax, tmp4
 		mov	tmp4, eax
 	; vec[7] = fxp_mac32_Q32(tmp, tmp4 << 1, window[7])
-		mov	eax, tmp
-		push	eax
-		mov	eax, tmp4
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+28]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+28], eax
 	; history[8] = -(vec[8] + vec[9])
 		mov	eax, dword ptr ds:[si+32]
@@ -2329,12 +2158,9 @@ tmp4	local	dword
 		neg	eax
 		mov	dword ptr es:[di+32], eax
 	; vec[8] = fxp_mac32_Q32(tmp1, vec[17] << 1, window[8])
-		mov	eax, tmp1
-		push	eax
 		mov	eax, dword ptr ds:[si+68]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+32]>, 32
-		pop	ecx
 		add	eax, ecx
 		mov	dword ptr ds:[si+32], eax
 	; tmp = history[9]
@@ -2342,26 +2168,20 @@ tmp4	local	dword
 		mov	tmp, eax
 	; tmp1 = history[17]
 		mov	eax, dword ptr es:[di+68]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp2 = history[16]
 		mov	eax, dword ptr es:[di+64]
 		mov	tmp2, eax
 	; vec[9] = fxp_mac32_Q32(tmp, vec[17] << 1, window[9])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+68]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+36]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+36], eax
 	; vec[17] = fxp_mac32_Q32(tmp1, vec[10] << 1, window[17])
-		mov	eax, tmp1
-		push	eax
 		mov	eax, dword ptr ds:[si+40]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+68]>, 32
-		pop	ecx
 		add	eax, ecx
 		mov	dword ptr ds:[si+68], eax
 	; vec[10] = -vec[16]
@@ -2369,17 +2189,14 @@ tmp4	local	dword
 		neg	eax
 		mov	dword ptr ds:[si+40], eax
 	; vec[16] = fxp_mac32_Q32(tmp2, vec[11] << 1, window[16])
-		mov	eax, tmp2
-		push	eax
 		mov	eax, dword ptr ds:[si+44]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+64]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp2
 		mov	dword ptr ds:[si+64], eax
 	; tmp1 = history[15]
 		mov	eax, dword ptr es:[di+60]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp2 = history[14]
 		mov	eax, dword ptr es:[di+56]
 		mov	tmp2, eax
@@ -2388,12 +2205,9 @@ tmp4	local	dword
 		neg	eax
 		mov	dword ptr ds:[si+44], eax
 	; vec[15] = fxp_mac32_Q32(tmp1, vec[12] << 1, window[15])
-		mov	eax, tmp1
-		push	eax
 		mov	eax, dword ptr ds:[si+48]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+60]>, 32
-		pop	ecx
 		add	eax, ecx
 		mov	dword ptr ds:[si+60], eax
 	; vec[12] = -vec[14]
@@ -2401,20 +2215,17 @@ tmp4	local	dword
 		neg	eax
 		mov	dword ptr ds:[si+48], eax
 	; vec[14] = fxp_mac32_Q32(tmp2, vec[13] << 1, window[14])
-		mov	eax, tmp2
-		push	eax
 		mov	eax, dword ptr ds:[si+52]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+56]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp2
 		mov	dword ptr ds:[si+56], eax
 	; tmp = history[13]
 		mov	eax, dword ptr es:[di+52]
 		mov	tmp, eax
 	; tmp1 = history[12]
 		mov	eax, dword ptr es:[di+48]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp2 = history[11]
 		mov	eax, dword ptr es:[di+44]
 		mov	tmp2, eax
@@ -2422,44 +2233,32 @@ tmp4	local	dword
 		mov	eax, dword ptr es:[di+40]
 		mov	tmp3, eax
 	; vec[13] = fxp_mac32_Q32(tmp, vec[12] << 1, window[13])
-		mov	eax, tmp
-		push	eax
 		mov	eax, dword ptr ds:[si+48]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+52]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp
 		mov	dword ptr ds:[si+52], eax
 	; vec[12] = fxp_mac32_Q32(tmp1, vec[11] << 1, window[12])
-		mov	eax, tmp1
-		push	eax
 		mov	eax, dword ptr ds:[si+44]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+48]>, 32
-		pop	ecx
 		add	eax, ecx
 		mov	dword ptr ds:[si+48], eax
 	; vec[11] = fxp_mac32_Q32(tmp2, vec[10] << 1, window[11])
-		mov	eax, tmp2
-		push	eax
 		mov	eax, dword ptr ds:[si+40]
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+44]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp2
 		mov	dword ptr ds:[si+44], eax
 	; vec[10] = fxp_mac32_Q32(tmp3, tmp4 << 1, window[10])
-		mov	eax, tmp3
-		push	eax
 		mov	eax, tmp4
 		shl	eax, 1
 		Mp3Product	<dword ptr fs:[bx+40]>, 32
-		pop	ecx
-		add	eax, ecx
+		add	eax, tmp3
 		mov	dword ptr ds:[si+40], eax
 	; tmp1 = history[8]
 		mov	eax, dword ptr es:[di+32]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp3 = history[7]
 		mov	eax, dword ptr es:[di+28]
 		mov	tmp3, eax
@@ -2470,19 +2269,17 @@ tmp4	local	dword
 		mov	eax, dword ptr es:[di+0]
 		mov	tmp, eax
 	; tmp1 <<= 1
-		mov	eax, tmp1
-		shl	eax, 1
-		mov	tmp1, eax
+		shl	ecx, 1
 	; tmp3 <<= 1
 		mov	eax, tmp3
 		shl	eax, 1
 		mov	tmp3, eax
 	; history[0] = fxp_mul32_Q32(tmp1, window[18])
-		mov	eax, tmp1
+		mov	eax, ecx
 		Mp3Product	<dword ptr fs:[bx+72]>, 32
 		mov	dword ptr es:[di+0], eax
 	; history[17] = fxp_mul32_Q32(tmp1, window[35])
-		mov	eax, tmp1
+		mov	eax, ecx
 		Mp3Product	<dword ptr fs:[bx+140]>, 32
 		mov	dword ptr es:[di+68], eax
 	; history[1] = fxp_mul32_Q32(tmp3, window[19])
@@ -2519,7 +2316,7 @@ tmp4	local	dword
 		mov	dword ptr es:[di+36], eax
 	; tmp1 = history[6]
 		mov	eax, dword ptr es:[di+24]
-		mov	tmp1, eax
+		mov	ecx, eax
 	; tmp3 = history[5]
 		mov	eax, dword ptr es:[di+20]
 		mov	tmp3, eax
@@ -2533,9 +2330,7 @@ tmp4	local	dword
 		mov	eax, dword ptr es:[di+8]
 		mov	tmp, eax
 	; tmp1 <<= 1
-		mov	eax, tmp1
-		shl	eax, 1
-		mov	tmp1, eax
+		shl	ecx, 1
 	; tmp3 <<= 1
 		mov	eax, tmp3
 		shl	eax, 1
@@ -2545,11 +2340,11 @@ tmp4	local	dword
 		shl	eax, 1
 		mov	tmp4, eax
 	; history[2] = fxp_mul32_Q32(tmp1, window[20])
-		mov	eax, tmp1
+		mov	eax, ecx
 		Mp3Product	<dword ptr fs:[bx+80]>, 32
 		mov	dword ptr es:[di+8], eax
 	; history[15] = fxp_mul32_Q32(tmp1, window[33])
-		mov	eax, tmp1
+		mov	eax, ecx
 		Mp3Product	<dword ptr fs:[bx+132]>, 32
 		mov	dword ptr es:[di+60], eax
 	; history[3] = fxp_mul32_Q32(tmp3, window[21])
@@ -2598,10 +2393,8 @@ Mp3Mdct18 endp
 
 	; DS:SI = in-place vector. Each product is shifted before adding.
 Mp3Mdct6 proc near
-tmp	local	dword
-tmp1	local	dword
-tmp2	local	dword
 	uses ebx, ecx, edx
+	; EBX = tmp (reference names below).
 	.enter
 	; vec[0] = fxp_mul32_Q29(vec[0], 270751776L)
 		mov	eax, dword ptr ds:[si+0]
@@ -2632,18 +2425,17 @@ tmp2	local	dword
 		mov	eax, dword ptr ds:[si+0]
 		add	eax, dword ptr ds:[si+4]
 		neg	eax
-		mov	tmp, eax
+		mov	ebx, eax
 	; history[3] = tmp
-		mov	eax, tmp
 		mov	dword ptr es:[di+12], eax
 	; history[2] = tmp
-		mov	eax, tmp
+		mov	eax, ebx
 		mov	dword ptr es:[di+8], eax
 	; tmp = -(vec[1] + vec[2])
 		mov	eax, dword ptr ds:[si+4]
 		add	eax, dword ptr ds:[si+8]
 		neg	eax
-		mov	tmp, eax
+		mov	ebx, eax
 	; vec[0] = vec[3] + vec[4]
 		mov	eax, dword ptr ds:[si+12]
 		add	eax, dword ptr ds:[si+16]
@@ -2653,25 +2445,25 @@ tmp2	local	dword
 		add	eax, dword ptr ds:[si+20]
 		mov	dword ptr ds:[si+4], eax
 	; history[4] = tmp
-		mov	eax, tmp
+		mov	eax, ebx
 		mov	dword ptr es:[di+16], eax
 	; history[1] = tmp
-		mov	eax, tmp
+		mov	eax, ebx
 		mov	dword ptr es:[di+4], eax
 	; tmp = -(vec[2] + vec[3])
 		mov	eax, dword ptr ds:[si+8]
 		add	eax, dword ptr ds:[si+12]
 		neg	eax
-		mov	tmp, eax
+		mov	ebx, eax
 	; vec[4] = -vec[1]
 		mov	eax, dword ptr ds:[si+4]
 		neg	eax
 		mov	dword ptr ds:[si+16], eax
 	; history[5] = tmp
-		mov	eax, tmp
+		mov	eax, ebx
 		mov	dword ptr es:[di+20], eax
 	; history[0] = tmp
-		mov	eax, tmp
+		mov	eax, ebx
 		mov	dword ptr es:[di+0], eax
 	; vec[2] = vec[5]
 		mov	eax, dword ptr ds:[si+20]
