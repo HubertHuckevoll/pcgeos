@@ -121,6 +121,7 @@ Input
 ; LOCAL STORE/BUFFER/POINTER DEFINITIONS
 ; Variable declaration - defined here and used outside this module
 ----------------------------------------------------------------------------*/
+#ifndef MP3_386_DSP
 const int32 c_signal [ NUM_BUTTERFLIES ] =
 {
 
@@ -141,6 +142,8 @@ const int32 c_alias [ NUM_BUTTERFLIES ] =
     -30491193L, -7945634L
 };
 
+#endif
+
 /*----------------------------------------------------------------------------
 ; EXTERNAL FUNCTION REFERENCES
 ; Declare functions defined elsewhere and referenced in this module
@@ -155,20 +158,27 @@ const int32 c_alias [ NUM_BUTTERFLIES ] =
 ; FUNCTION CODE
 ----------------------------------------------------------------------------*/
 
+#ifdef MP3_386_DSP
+void _pascal Mp3Alias386(int32 *bufferP, uint16 bands);
+#endif
+
 void pvmp3_alias_reduction(int32 *input_buffer,         /* Ptr to spec values of current channel */
                            granuleInfo *gr_info,
                            int32  *used_freq_lines,
                            mp3Header *info)
 {
+#ifndef MP3_386_DSP
     int32 *ptr1;
     int32 *ptr2;
     int32 *ptr3;
     int32 *ptr4;
     const int32 *ptr_csi;
     const int32 *ptr_csa;
-    int32  sblim;
+
 
     int32 i, j;
+#endif
+    int32 sblim;
 
     *used_freq_lines = fxp_mul32_Q32(*used_freq_lines << 16, 119304648L) >> 15;
 
@@ -196,6 +206,9 @@ void pvmp3_alias_reduction(int32 *input_buffer,         /* Ptr to spec values of
     }
 
 
+#ifdef MP3_386_DSP
+    Mp3Alias386(input_buffer, (uint16)sblim);
+#else
     ptr3 = &input_buffer[17];
     ptr4 = &input_buffer[18];
     ptr_csi = c_signal;
@@ -258,5 +271,6 @@ void pvmp3_alias_reduction(int32 *input_buffer,         /* Ptr to spec values of
             *ptr2    = fxp_mac32_Q32(fxp_mul32_Q32(y << 1, csi2), x, csa2);
         }
     }
+#endif
 
 }

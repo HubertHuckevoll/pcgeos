@@ -66,6 +66,9 @@
  * from oscl/oscl_base.h. The oscl layer was collapsed into its only two
  * consumers (this file and mp3_mem_funcs.h); see CHANGES.md. */
 #ifdef __GEOS__
+#ifndef MP3_386_DSP
+#define MP3_386_DSP
+#endif
 #include <geos.h>
 #endif
 #ifdef __WATCOMC__

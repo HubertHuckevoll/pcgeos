@@ -1,9 +1,10 @@
-/* Out-of-line on 16-bit GEOS to keep EC DSP resources below 64 KB. */
+/* Reference multiplier. GEOS uses the fixed ESP helper in mp3dsp.asm. */
 #include "core/pvmp3_audio_type_defs.h"
 #include "mp3fxp.h"
 #ifdef __WATCOMC__
 #pragma code_seg("MP3MathCode")
 #endif
+#ifndef MP3_386_DSP
 int32 _pascal
 Mp3MulShift(int32 a, int32 b, unsigned shift)
 {
@@ -36,3 +37,4 @@ Mp3MulShift(int32 a, int32 b, unsigned shift)
     }
     return (int32)((hi << (32 - shift)) | (lo >> shift));
 }
+#endif

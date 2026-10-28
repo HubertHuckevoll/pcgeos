@@ -341,3 +341,12 @@ includes from `pvmp3_seek_synch.cpp`.
 A Q26 fixed-point multiply helper with no callers in any DSP routine. It was
 dropped from `pv_mp3dec_fxd_op.h` when the C-equivalent code was folded in, and
 went away with the three deleted platform-variant headers.
+
+## PC/GEOS 386 DSP selection
+
+The C routines remain the host/DOS reference. GEOS defines MP3_386_DSP and
+selects ../mp3dsp.asm for fixed multiplication, synthesis/windowing/DCT32,
+IMDCT/overlap and alias butterflies. The C synthesis and alias wrappers retain
+parameter/block selection. DSP constants move into CS-relative read-only code;
+reference-only tables are omitted from the target C data segment. Each product
+keeps the reference truncation or half-LSB bias before wrapping accumulation.

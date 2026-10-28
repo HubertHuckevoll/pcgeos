@@ -6,8 +6,10 @@
 
 int main(void)
 {
+    static const int32 edges[] = {0, 1, -1, INT32_MAX, INT32_MIN,
+                                  65535, 65536, -65536, 0x40000000L};
     uint32 state = 1;
-    unsigned i, shift;
+    unsigned i, j, shift;
     int32 a, b, c;
     FILE *fileP;
 
@@ -21,6 +23,14 @@ int main(void)
         for (shift = 27; shift <= 32; shift++) {
             c = Mp3MulShift(a, b, shift);
             assert(fwrite(&c, 4, 1, fileP) == 1);
+        }
+    }
+    for (i = 0; i < sizeof(edges) / sizeof(edges[0]); i++) {
+        for (j = 0; j < sizeof(edges) / sizeof(edges[0]); j++) {
+            for (shift = 27; shift <= 32; shift++) {
+                c = Mp3MulShift(edges[i], edges[j], shift);
+                assert(fwrite(&c, 4, 1, fileP) == 1);
+            }
         }
     }
     assert(!fclose(fileP));

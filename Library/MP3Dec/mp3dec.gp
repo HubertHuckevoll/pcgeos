@@ -6,11 +6,12 @@ type        library, single, c-api
 library     geos
 library     ansic
 resource    dgroup fixed read-only shared
-resource    MP3MathCode code read-only shared
+resource    MP3MathCode fixed code read-only shared
 resource    MP3FrameCode code read-only shared
 resource    MP3HuffCode code read-only shared
 resource    MP3ImdctCode code read-only shared
 resource    MP3SynthCode code read-only shared
+resource    MP3DspCode code read-only shared
 resource    MP3QuantCode code read-only shared
 resource    MP3SterCode code read-only shared
 export MP3DECCREATE

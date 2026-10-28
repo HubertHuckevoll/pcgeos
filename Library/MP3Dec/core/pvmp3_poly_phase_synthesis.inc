@@ -120,6 +120,17 @@
 ; FUNCTION CODE
 ----------------------------------------------------------------------------*/
 
+#ifdef MP3_386_DSP
+void _pascal Mp3Synthesis386(int32 *bufferP, int16 *pcmP, uint16 channels);
+
+void pvmp3_poly_phase_synthesis(tmp3dec_chan *pChVars, int32 numChannels,
+                                e_equalization equalizerType, int16 *outPcm)
+{
+    pvmp3_equalizer(pChVars->circ_buffer, equalizerType,
+                   pChVars->work_buf_int32);
+    Mp3Synthesis386(pChVars->circ_buffer, outPcm, (uint16)numChannels);
+}
+#else
 void pvmp3_poly_phase_synthesis(tmp3dec_chan   *pChVars,
                                 int32          numChannels,
                                 e_equalization equalizerType,
@@ -186,3 +197,4 @@ void pvmp3_poly_phase_synthesis(tmp3dec_chan   *pChVars,
                480*sizeof(*pChVars->circ_buffer));
 
 }
+#endif

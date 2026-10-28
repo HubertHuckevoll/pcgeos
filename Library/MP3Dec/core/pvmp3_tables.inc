@@ -163,6 +163,7 @@ const int32 mp3_shortwindBandWidths[9][13] =
 
 
 
+#ifndef MP3_386_DSP
 const int32 pqmfSynthWin[(HAN_SIZE/2) + 8] =
 {
     -16384L, 425984L, 507903L, 3407871L,
@@ -248,6 +249,7 @@ const int32 pqmfSynthWin[(HAN_SIZE/2) + 8] =
     -84426752L, -737280L, 33374208L, -7520257L,
     2392063L, 3489792L, -475130L, -81920L,
 };
+#endif
 
 
 

@@ -5,14 +5,16 @@
 MP3Dec is the reusable product. MP3Wav is a separate, disposable conversion
 client. Both build as EC and NC GEOS geodes. The converter imports mp3dec.lib
 and includes only the public mp3dec.h header. It embeds no decoder sources.
-Neither the kernel nor the existing WAV library is changed.
+Neither the kernel nor the existing WAV library is changed. GEOS now uses a
+386 integer ESP backend for multiplication, synthesis/DCT32, IMDCT/overlap and
+alias butterflies; the C reference and public API remain available unchanged.
 
 The branch started clean at master commit
 690d15fc771ff237f0f1306e83ecc3a494bd4c6a. Decoder sources come from
 https://github.com/esphome-libs/micro-mp3 at
 07c18fa2d045b89bcc19aa0c1dc5333ce69b39db. Library/MP3Dec/LICENSE and NOTICE
 preserve Apache 2.0 licensing and PacketVideo/microMP3 attribution.
-core/CHANGES.md is the upstream change history. The ESP32 C++ wrapper is absent.
+core/CHANGES.md records upstream and port changes. The ESP32 C++ wrapper is absent.
 
 The agent has not started PC/GEOS. The user's initial manual EC conversion
 attempt stopped in FatalError with an invalid backtrace. A GEOS-only Huffman
@@ -79,7 +81,7 @@ One instance owns three HF_SWAPABLE, zero-initialized GEOS blocks:
 - Pending PCM: 4608 bytes, the largest MPEG-1 stereo frame.
 
 The per-instance persistent allocation is 28386 bytes plus GEOS handle/heap
-overhead. Immutable tables/strings additionally occupy one 11984-byte fixed,
+overhead. Immutable tables/strings additionally occupy one 10176-byte fixed,
 read-only shared DGroup per loaded library, not per decoder. Cross-resource
 compiler data references require a real segment: -zc would put these tables in
 movable code and produce invalid direct data references. Keep the fixed data
@@ -116,8 +118,10 @@ The target checks verify int=2, int32=4 and data/function pointers=4 bytes.
 Compile-time floating Q operands are frozen to original host-reference integer
 values. The decoder requires no floating-point or 64-bit runtime operations.
 
-Mp3MulShift takes two signed 32-bit values and a 16-bit shift. It uses unsigned
-partial products to reproduce a signed 64-bit product without a 64-bit runtime.
+Mp3MulShift takes two signed 32-bit values and a 16-bit shift. Its C reference
+uses unsigned partial products to reproduce a signed 64-bit product without a
+64-bit runtime. The ESP target uses one signed IMUL for the full EDX:EAX product
+and SHRD after explicit rounding.
 Q27 through Q30 add half an LSB before shifting. Q32 truncates. Accumulation
 wraps explicitly in unsigned arithmetic. Arithmetic right shifts and
 signed left-shift/wrap idioms inherited from OpenCORE are verified against
@@ -132,7 +136,7 @@ retained instead of being overwritten with success at the end of a frame.
 
 The existing independent Pascal interfaces remain the replacement boundaries:
 
-- Mp3MulShift in mp3fxp.c for fixed-point multiplication.
+- Mp3MulShift: fixed ESP entry in mp3dsp.asm; C reference in mp3fxp.c.
 - pvmp3_huffman_parsing and per-table procedures for Huffman decoding.
 - pvmp3_imdct_synth, pvmp3_mdct_18 and pvmp3_mdct_6 for IMDCT/overlap.
 - pvmp3_poly_phase_synthesis and pvmp3_polyphase_filter_window for synthesis.
@@ -143,8 +147,20 @@ samples; int32 pointers address fixed-width work arrays within locked blocks.
 An ESP replacement must preserve the Pascal ABI, far pointer segments and
 callee-saved registers, including DS, and must not assume DS=SS. Follow
 Library/WebpLib/webpfilter.asm for shared code resources and C entry stubs.
-386 data-register instructions require the normal platform support switch.
-Keep the C routines and select alternatives at translation-unit boundaries.
+GEOS selects MP3_386_DSP at the translation-unit boundaries. The default host
+and standalone DOS builds retain the C implementation. The ESP backend requires
+386 register preservation (SUPPORT_32BIT_DATA_REGS) and fails assembly for older
+product configurations. It uses no FPU, MMX, SIMD or mutable global data.
+
+mp3dsp.asm follows WebpLib's Pascal C/ESP entry pattern. MP3MathCode is a
+67-byte fixed, shared, read-only helper returning DX:AX; it has no movable
+resource call per product. MP3DspCode contains synthesis/windowing, DCT32,
+long/short IMDCT, overlap/inversion and alias butterflies. Inner products use
+local instructions/macros; the granule loops retain locked segments. The C
+wrappers retain equalization/transposition and alias block-limit selection.
+Windows and cosine constants live with the DSP code and use CS-relative access.
+The assembled DSP resource is 11653 bytes with no GEOS loader relocations.
+Private DCT16 scratch is 76 bytes; this is not a peak nested stack measurement.
 
 The target/reference C equivalence gate is bit exact, including rounding,
 clipping and overlap history. An assembly replacement must meet that same gate;
@@ -157,6 +173,7 @@ Run from the repository root with a checkout at the pinned upstream revision:
 
     perl Library/MP3Dec/Tests/check.pl /path/to/micro-mp3 /path/to/vectors
     perl Library/MP3Dec/Tests/watcom.pl /path/to/micro-mp3 /path/to/vectors
+    MP3_ASM=1 KEEP_TESTS=1 perl Library/MP3Dec/Tests/watcom.pl /path/to/micro-mp3 /path/to/vectors
 
 The vectors come from lieff/minimp3 commit
 7b590fdcfa5a79c033e76eacc05d0c3e4c79f536, the same pin used by upstream
@@ -164,6 +181,11 @@ microMP3's conformance runner. Neither external checkout nor fetched vectors
 are committed here. KEEP_TESTS=1 retains temporary evidence. Tests use Perl,
 C, GCC/G++, Open Watcom and BaseBox; no test framework is required. The DOS
 runner suppresses all user/local BaseBox configs and never boots PC/GEOS.
+MP3_ASM=1 requires freshly built GEOS geodes. It wraps the actual linked ESP
+resource bytes in a DOS object, preserving resource offsets and CS constants;
+it does not reimplement or reassemble the DSP instructions with another assembler.
+The retained nc.obj can also be profiled by setting MP3_ASM_OBJECT to its absolute
+path when running Tests/profile.pl. Re-extract after any ESP change.
 
 Observed results on 2026-10-28:
 
@@ -185,11 +207,15 @@ Observed results on 2026-10-28:
   as raw-core equivalence/robustness, not accepted as valid converter input.
 - Standalone DOS builds with EC and NC compiler options produce exact host PCM
   for 32 inputs: eight samples plus 24 corpus inputs. The DSP regression and
-  6000 target fixed-point products also match. The host multiplier additionally
+  6486 target fixed-point products also match, including signed extrema and
+  rounding/carry edges. With MP3_ASM=1 the same 32 PCM comparisons pass through
+  actual EC/NC ESP resource bytes. The focused DSP check allocates distinct
+  DOS segments for input, history and short-block scratch. The host multiplier additionally
   checks 1.2 million randomized products and signed edge cases.
 - aihelp.py builds both actual GEOS geodes in EC and NC. Geodump confirms six
   library exports and the separate mp3dec import in MP3Wav. Code resources are
-  read-only shared and movable. Immutable tables use a fixed read-only shared
+  read-only shared; the 67-byte multiplier is fixed and the DSP resource is movable.
+  Remaining immutable C tables use a fixed read-only shared
   DGroup; the decoder library keeps no instance state there.
 
 The optional SANITIZE=1 host run could not link: the installed GCC sanitizer
@@ -226,11 +252,25 @@ In the 386 scenario, polyphase synthesis accounted for 31.583 seconds (about
 1.922 seconds and Huffman work 0.877 seconds. The 486 scenario was similar.
 Small phases can fall below the DOS clock's resolution. Polyphase synthesis is
 the measured first candidate for a whole-routine 386 assembly replacement.
-No decoder optimization has been implemented on the strength of these numbers.
 The C reference is far from real-time at these settings.
 
+After the ESP multiplier, synthesis and IMDCT replacements, the same 486_slow /
+30000-cycle scenario took 1.978 seconds. Alias reduction then represented about
+19% of decode time, so its butterfly loop was also moved to ESP. The final run
+took 1.757 seconds for 79 frames, or about 22.2 ms per MPEG-1 frame: 13.3 times
+faster than the 23.343-second C baseline. All benchmark PCM remained bit exact.
+About 15% of the 26.1-ms decoder-only budget remains in this emulator scenario;
+this does not establish real 486 speed or playback headroom under GEOS.
+
+Final coarse phase totals were synthesis 605 ms, IMDCT 493 ms, Huffman 385 ms,
+dequantization 165 ms and alias reduction below timer resolution. The DOS clock
+advances coarsely, so phase totals are approximate and individual zeroes do not
+mean free work. WAV output, UI, GEOS dispatch and audio playback are not timed.
+The retained final evidence is /tmp/mp3wat-bbBQaZ (32 PCM comparisons and focused
+checks) and /tmp/mp3prof-fFeJmv (profile). These temporary paths are not fixtures.
+
 Disassembly shows the largest explicit local frame reservation is 310 bytes
-in the EC dequantizer and 126 bytes in the NC DCT16. This is not a peak-stack
+in the original EC dequantizer and 126 bytes in the original NC C DCT16. This is not a peak-stack
 measurement: nested arguments, GEOS dispatch and memory operations add usage.
 The converter reserves a 4096-byte process stack. Actual EC peak stack,
 heap/handle behavior, responsiveness and cancellation remain runtime checks.
@@ -272,3 +312,26 @@ continuations are ignored and the UI continues repainting. Check actual peak
 stack under EC and repeated conversions under memory pressure. The virtual
 Huffman thunk and real movable GEOS allocations particularly need this run;
 DOS tests and the host relocation shim cannot establish their runtime behavior.
+
+## Remaining performance handoff
+
+Confirm the queued conversion fix and the new ESP path under GEOS. Time NC
+decoding separately from EC diagnostics, WAV writes and UI updates. Measure on
+real hardware, or calibrate the emulator before assigning a 486 clock speed.
+For 44100-Hz MPEG-1, one 1152-sample frame has a 26.1-ms real-time budget; aim
+below it with playback headroom.
+
+Huffman dispatch remains unchanged. Its per-codeword GEOS trampoline cost is
+absent from the DOS profile; optimize it if a GEOS measurement shows that cost
+is significant. Remaining measured DSP work can be tuned inside MP3DspCode
+without changing the public decoder API or introducing per-product GEOS calls.
+
+Optional mono output can mix after both channels' IMDCT and before polyphase
+synthesis to avoid one synthesis path. It still needs both channels' entropy
+decoding, stereo reconstruction and overlap history. Averaging finished PCM
+saves output bandwidth only. Earlier spectral mixing needs explicit treatment
+of differing block/window modes. No mono-output API change was made.
+
+MMX/SIMD and an FPU backend remain separate optional work. They require
+numerical review and verified GEOS context preservation; the current backend
+uses 386 integer instructions and needs no coprocessor.

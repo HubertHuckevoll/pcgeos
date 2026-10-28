@@ -28,15 +28,64 @@ run("$tmp/hostdsp");run("$tmp/hostmath");
 rename('dsp.bin','hostdsp.bin') or die $!;
 rename('math.pcm','hostmath.pcm') or die $!;
 chdir $saved or die $!;
+# Optional: execute the actual ESP/glue output in DOS, without booting GEOS.
+# Both resources are self-contained: near calls and CS-relative constants only.
+my %asm;
+if ($ENV{MP3_ASM}) {
+    push @flags, '-DMP3_386_DSP';
+    for my $variant ('ec', 'nc') {
+        my $installed = "$repo/Installed/Library/MP3Dec";
+        my $object = "$installed/mp3dsp." . ($variant eq 'ec' ? 'eobj' : 'obj');
+        my $geode = "$installed/" . ($variant eq 'ec' ? 'mp3decec.geo' : 'mp3dec.geo');
+        open my $dump, '-|', "$repo/bin/printobj", $object or die $!;
+        local $/; my $listing = <$dump>; close $dump or die 'printobj failed';
+        open my $geo, '<:raw', $geode or die $!;
+        my $bytes = <$geo>; close $geo;
+        my $source = ".386\n";
+        for my $segment ('MP3MathCode', 'MP3DspCode') {
+            my ($size,$body) = $listing =~ /name $segment,.*?size\s+(\d+)\n(.*?)(?=\n=================|\z)/s;
+            defined $body or die "missing $segment";
+            my ($data) = $body =~ /\*\*\* DATA:\n(.*?)\*\*\* SYMBOLS:/s;
+            my @hex = $data =~ /^....h  ((?:[0-9a-f]{2} ?)+)/mg;
+            my $raw = pack('H*', join('', map { s/ //gr } @hex));
+            my $at = index($bytes, substr($raw,0,32));
+            $at >= 0 && index($bytes,substr($raw,0,32),$at+1) < 0
+                or die "ambiguous ESP resource $segment";
+            $raw = substr($bytes,$at,$size);
+            my %entries;
+            # Public Pascal symbols keep their uppercase ESP spelling.
+            while ($body =~ /^\s*([A-Z0-9_]+)\s*: global.*?(?:far procedure|variable) at ([0-9a-f]+)/mg) {
+                $entries{hex($2)} = $1;
+            }
+            $source .= "$segment segment para use16 private 'CODE'\n";
+            for (my $i=0;$i<$size;) {
+                $source .= "public $entries{$i}\n$entries{$i} label byte\n" if exists $entries{$i};
+                my $n=1;
+                $n++ while $n<16 && $i+$n<$size && !exists $entries{$i+$n};
+                $source .= 'db '.join(',', map { sprintf('0%02xh',$_) }
+                                              unpack('C*',substr($raw,$i,$n)))."\n";
+                $i+=$n;
+            }
+            $source .= "$segment ends\n";
+        }
+        $source .= "end\n";
+        open my $out,'>',"$tmp/$variant.asm" or die $!; print $out $source; close $out;
+        run('wasm','-q',"-fo=$tmp/$variant.obj","$tmp/$variant.asm");
+        $asm{$variant} = "$tmp/$variant.obj";
+    }
+}
 for my $variant ('ec', 'nc') {
     my @options = $variant eq 'nc' ? ('-ox') : ();
     run('wcl', @flags, @options, "-i=$watcom/h", "-i=$lib/core", "-fo=$tmp/",
-        "-fe=$tmp/$variant.exe", "$lib/Tests/corecheck.c", @core, "$lib/mp3fxp.c");
+        "-fe=$tmp/$variant.exe", "$lib/Tests/corecheck.c", @core, "$lib/mp3fxp.c",
+        $ENV{MP3_ASM} ? ($asm{$variant}) : ());
 }
 run('wcl', @flags, '-ox', "-i=$watcom/h", "-i=$lib/core", "-fo=$tmp/",
-    "-fe=$tmp/dsp.exe", "$lib/Tests/dsp.c", "$lib/mp3imdct.c", "$lib/mp3fxp.c");
+    "-fe=$tmp/dsp.exe", "$lib/Tests/dsp.c", "$lib/mp3imdct.c", "$lib/mp3fxp.c",
+    $ENV{MP3_ASM} ? ($asm{nc}) : ());
 run('wcl', @flags, '-ox', "-i=$watcom/h", "-fo=$tmp/",
-    "-fe=$tmp/math.exe", "$lib/Tests/target.c", "$lib/mp3fxp.c");
+    "-fe=$tmp/math.exe", "$lib/Tests/target.c", "$lib/mp3fxp.c",
+    $ENV{MP3_ASM} ? ($asm{nc}) : ());
 run('wcl', @flags, '-ox', '-D__GEOS__', '-D__WATCOM__',
     "-i=$watcom/h", "-i=$repo/CInclude", "-fo=$tmp/", "-fe=$tmp/thunk.exe",
     "$lib/Tests/thunk.c");
@@ -82,4 +131,4 @@ for my $n (0..$i-1) {
     same("$tmp/h$n.pcm","$tmp/E$n.PCM");
     same("$tmp/h$n.pcm","$tmp/N$n.PCM");
 }
-print "Watcom EC/NC flags: $i inputs, exact PCM; DSP, Pascal thunk and 6000 products: PASS\n";
+print "Watcom EC/NC flags: $i inputs, exact PCM; DSP, Pascal thunk and 6486 products: PASS\n";
