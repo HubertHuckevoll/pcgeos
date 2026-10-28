@@ -19,15 +19,18 @@ core/CHANGES.md records upstream and port changes. The ESP32 C++ wrapper is abse
 The agent has not started PC/GEOS. The user's initial manual EC conversion
 attempt stopped in FatalError with an invalid backtrace. A GEOS-only Huffman
 trampoline argument-order bug was then found and corrected: Pascal requires
-the callback pointer last. A standalone target regression rejects the old
-order and passes 1000 calls with balanced stack for the corrected order. This
-is not a successful GEOS runtime acceptance run; manual confirmation is still
-required. A subsequent manual run reached 43% before an RCI checksum failure.
+the callback pointer last. The initial target regression rejected the old
+order and passed 1000 calls with balanced stack for the corrected order.
+A subsequent manual run reached 43% before an RCI checksum failure.
 Static analysis found both continuation sends lacked forceQueue: same-thread
 ObjMessage dispatch was recursively entering the next step instead of queuing
 it. Both sends now force the event queue, and the generated EC code passes
-MF_FORCE_QUEUE (0x4000) at both sites. The 4096-byte stack is unchanged. The evidence below distinguishes host tests, standalone Watcom DOS
-tests and GEOS linking.
+MF_FORCE_QUEUE (0x4000) at both sites. The 4096-byte stack is unchanged.
+The user subsequently confirmed successful GEOS conversion and measured about
+156 seconds for the 205-second music sample. That measurement precedes the
+progress/dispatch optimization below; its GEOS speedup remains unmeasured.
+The evidence below distinguishes host tests, standalone Watcom DOS tests,
+GEOS linking and user-reported manual runs.
 
 ## Public API and binary interface
 
@@ -100,9 +103,12 @@ Public calls lock the context only for their duration. Decode locks input and
 PCM blocks while using them. mainDataStream.pBuffer is rebound to the relocked
 reservoir on every decode. Both internal bitstream pointers and both external
 buffer pointers are cleared before unlocking. Huffman procedure pointers are
-GEOS virtual code pointers, dispatched through a typed
-ProcCallFixedOrMovable_pascal thunk, with the callback pointer last, not data
-pointers into movable blocks.
+GEOS virtual code pointers. The internal call path combines their stable
+offsets with the current CS only while MP3HuffCode is executing and locked.
+The real address is never stored back in the context, so relocation/reload
+between public calls remains safe. All Huffman callbacks and their callers
+must remain together in MP3HuffCode; cross-resource callbacks require the
+GEOS trampoline again. These are code pointers, not pointers into movable data.
 Destroy releases all three blocks; Reset reuses them and clears all history.
 
 The host heap shim relocates every unlocked allocation. Its checks cover
@@ -210,8 +216,13 @@ Observed results on 2026-10-28:
   6486 target fixed-point products also match, including signed extrema and
   rounding/carry edges. With MP3_ASM=1 the same 32 PCM comparisons pass through
   actual EC/NC ESP resource bytes. The focused DSP check allocates distinct
-  DOS segments for input, history and short-block scratch. The host multiplier additionally
-  checks 1.2 million randomized products and signed edge cases.
+  DOS segments for input, history and short-block scratch. The live-CS Huffman
+  path also passes these comparisons with MP3_HUFF_LOCAL enabled. Tests/thunk.c
+  makes 1000 calls with a deliberately invalid virtual segment, checks the
+  returned value and balanced stack, and verifies the virtual pointer stays
+  unchanged. EC/NC disassembly shows MOV AX,CS and an ordinary indirect far
+  call, with no ProcCallFixedOrMovable reference in mp3huff. The host multiplier
+  additionally checks 1.2 million randomized products and signed edge cases.
 - aihelp.py builds both actual GEOS geodes in EC and NC. Geodump confirms six
   library exports and the separate mp3dec import in MP3Wav. Code resources are
   read-only shared; the 67-byte multiplier is fixed and the DSP resource is movable.
@@ -262,7 +273,8 @@ faster than the 23.343-second C baseline. All benchmark PCM remained bit exact.
 About 15% of the 26.1-ms decoder-only budget remains in this emulator scenario;
 this does not establish real 486 speed or playback headroom under GEOS.
 
-Final coarse phase totals were synthesis 605 ms, IMDCT 493 ms, Huffman 385 ms,
+Before the local Huffman dispatch change, coarse phase totals were synthesis
+605 ms, IMDCT 493 ms, Huffman 385 ms,
 dequantization 165 ms and alias reduction below timer resolution. The DOS clock
 advances coarsely, so phase totals are approximate and individual zeroes do not
 mean free work. WAV output, UI, GEOS dispatch and audio playback are not timed.
@@ -309,9 +321,9 @@ changes; incomplete output must be removed or an explicit cleanup error shown.
 Cancel during input, decoding and WAV output; close during conversion; then
 start another conversion. Verify no decoder/file handles remain, queued stale
 continuations are ignored and the UI continues repainting. Check actual peak
-stack under EC and repeated conversions under memory pressure. The virtual
-Huffman thunk and real movable GEOS allocations particularly need this run;
-DOS tests and the host relocation shim cannot establish their runtime behavior.
+stack under EC and repeated conversions under memory pressure. The local-CS
+Huffman dispatch and real movable GEOS allocations particularly need this run;
+DOS tests and the host relocation shim cannot establish their GEOS runtime behavior.
 
 ## Remaining performance handoff
 
@@ -321,10 +333,21 @@ real hardware, or calibrate the emulator before assigning a 486 clock speed.
 For 44100-Hz MPEG-1, one 1152-sample frame has a 26.1-ms real-time budget; aim
 below it with playback headroom.
 
-Huffman dispatch remains unchanged. Its per-codeword GEOS trampoline cost is
-absent from the DOS profile; optimize it if a GEOS measurement shows that cost
-is significant. Remaining measured DSP work can be tuned inside MP3DspCode
-without changing the public decoder API or introducing per-product GEOS calls.
+MP3Wav now updates progress only when the displayed integer percentage changes;
+the initial zero and successful final 100 remain explicit. Queued continuation
+scheduling and cancellation are unchanged.
+
+Huffman decoding now calls the selected table procedure directly within the
+active MP3HuffCode resource, using its offset and the current CS. This removes
+the per-codeword GEOS trampoline without fixing the whole resource in memory,
+adding handles or changing the decoder's public API or context layout.
+The 32-input EC/NC PCM comparison and 1000-call dispatch check pass after this
+change (retained evidence: /tmp/mp3wat-fWpcBD). Repeat CAREFREE.MP3 on the same
+GEOS setup to compare against the user's 156-second baseline. No new GEOS
+runtime or speedup claim is made from the DOS checks.
+
+Remaining measured DSP work can be tuned inside MP3DspCode without changing
+the public decoder API or introducing per-product GEOS calls.
 
 Optional mono output can mix after both channels' IMDCT and before polyphase
 synthesis to avoid one synthesis path. It still needs both channels' entropy
@@ -335,3 +358,18 @@ of differing block/window modes. No mono-output API change was made.
 MMX/SIMD and an FPU backend remain separate optional work. They require
 numerical review and verified GEOS context preservation; the current backend
 uses 386 integer instructions and needs no coprocessor.
+
+## Long manual music sample
+
+Document/MP3TEST/CAREFREE.MP3 in the target installation is the original
+"Carefree" by Kevin MacLeod (incompetech.com), licensed under
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+The [track page](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400037)
+links the [original MP3](https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3).
+The target's CAREFREE.TXT contains attribution and the download checksum.
+The audio is not transcoded or stored in this source repository.
+
+FFprobe reports 205.139625 seconds, 44100 Hz, stereo, 256 kbit/s, 6566713 bytes.
+FFmpeg decodes the complete download without reported errors. Use a new output
+name such as CAREFREE.WAV; compare conversion time with the app's decoded audio
+duration, which includes the decoder's untrimmed MP3 padding.

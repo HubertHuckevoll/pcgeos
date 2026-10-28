@@ -15,7 +15,7 @@ my $vectors = shift;
 my $tmp = tempdir('mp3wat-XXXXXX', TMPDIR => 1, CLEANUP => !$ENV{KEEP_TESTS});
 my $watcom = $ENV{WATCOM} // die "set WATCOM\n";
 my @core = map { "$lib/$_.c" } qw(mp3frame mp3huff mp3imdct mp3synth mp3quant mp3ster);
-my @flags = qw(-q -bt=dos -ml -3 -zp1 -zu -s -ecp -of -of+ -ol -ol+ -ei -zdp -fpc);
+my @flags = qw(-q -bt=dos -ml -3 -zp1 -zu -s -ecp -of -of+ -ol -ol+ -ei -zdp -fpc -DMP3_HUFF_LOCAL);
 sub run { system(@_) == 0 or die "failed: @_\n"; }
 sub same { compare($_[0], $_[1]) == 0 or die "target data differs: @_\n"; }
 run('gcc', '-std=c89', '-O2', '-fwrapv', '-I', "$lib/core",
@@ -131,4 +131,4 @@ for my $n (0..$i-1) {
     same("$tmp/h$n.pcm","$tmp/E$n.PCM");
     same("$tmp/h$n.pcm","$tmp/N$n.PCM");
 }
-print "Watcom EC/NC flags: $i inputs, exact PCM; DSP, Pascal thunk and 6486 products: PASS\n";
+print "Watcom EC/NC flags: $i inputs, exact PCM; DSP, live-CS dispatch and 6486 products: PASS\n";

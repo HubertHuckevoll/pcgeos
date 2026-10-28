@@ -93,6 +93,7 @@ static struct {
     word ended;
     word active;
     word generation;
+    word progress;
 } job;
 
 static void _pascal
@@ -206,6 +207,7 @@ Finish(word success, const char *textP)
     job.generation++;
     @call Convert::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
     @call Cancel::MSG_GEN_SET_ENABLED(VUM_NOW);
+    job.progress = 0;
     @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(0, FALSE);
     SetStatus("Converting...");
     @send, forceQueue process::MSG_MP3WAV_STEP(job.generation);
@@ -216,7 +218,7 @@ Finish(word success, const char *textP)
     sword *bufferP;
     Mp3DecFormat format;
     Mp3DecResult result;
-    word frames, accepted, count, flags, error;
+    word frames, accepted, count, flags, error, progress;
 
     if (!job.active || generation != job.generation) return;
     bufferP = MemLock(job.bufferH);
@@ -276,8 +278,11 @@ Finish(word success, const char *textP)
             return;
         }
     }
-    @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(
-                       (word)(job.read / (job.total / 100 + 1)), FALSE);
+    progress = (word)(job.read / (job.total / 100 + 1));
+    if (progress != job.progress) {
+        job.progress = progress;
+        @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(progress, FALSE);
+    }
     /* Unwind this handler before executing the next same-thread step. */
     @send, forceQueue process::MSG_MP3WAV_STEP(job.generation);
 }

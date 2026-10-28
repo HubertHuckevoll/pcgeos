@@ -108,14 +108,18 @@ extern "C"
  * h->pdec_huff_tab lookup stays indirect. The get1bit / getUpTo17bits readers
  * they use are __inline in pvmp3_getbits.h.
  */
-#ifdef __GEOS__
-#include <geos.h>
-#include <resource.h>
-/* Typed far Pascal thunk: the callback must be the final stack argument.
- * Huffman code resources may move between calls. */
-typedef uint16 _pascal Mp3HuffDispatch(tmp3Bits *bitsP, Mp3HuffProc proc);
+#if defined(__GEOS__) || defined(MP3_HUFF_LOCAL)
+/* All callers and callbacks are in MP3HuffCode (mp3huff.c), which is locked
+ * while executing. Rebind only the offset to the current CS; keep the stored
+ * virtual pointer intact for the next entry after a move/reload.
+ * ATTENTION: Do not split these routines across resources. Use the GEOS
+ * trampoline again if a callback ever belongs to another resource.
+ */
+static uint16 _pascal Mp3HuffCodeSegment(void);
+#pragma aux Mp3HuffCodeSegment = "mov ax,cs" value [ax] modify exact [ax];
 #define MP3_HUFF_CALL(h,b) \
-    ((Mp3HuffDispatch *)ProcCallFixedOrMovable_pascal)((b),(h)->pdec_huff_tab)
+    ((Mp3HuffProc)(((uint32)Mp3HuffCodeSegment() << 16) | \
+                  ((uint32)(h)->pdec_huff_tab & 0xffffUL)))(b)
 #else
 #define MP3_HUFF_CALL(h,b) ((h)->pdec_huff_tab)(b)
 #endif
