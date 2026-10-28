@@ -1,0 +1,269 @@
+/* Thin MP3Dec client for PC/GEOS Ensemble. No decoder internals belong here. */
+@include <stdapp.goh>
+@include <Objects/gFSelC.goh>
+#include <file.h>
+#include <heap.h>
+#include <Ansi/string.h>
+#include <mp3dec.h>
+#include "wavwriter.h"
+
+@class Mp3WavProcessClass, GenProcessClass;
+@message void MSG_MP3WAV_CONVERT();
+@message void MSG_MP3WAV_CANCEL();
+@message void MSG_MP3WAV_STEP(word generation);
+@endc;
+@classdecl Mp3WavProcessClass, neverSaved;
+
+@start AppResource;
+@object GenApplicationClass Mp3WavApp = {
+    GI_visMoniker = "MP3 to WAV";
+    GI_comp = @Mp3WavPrimary;
+    gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) = @Mp3WavPrimary;
+}
+@end AppResource;
+
+@start Interface;
+@object GenPrimaryClass Mp3WavPrimary = {
+    GI_comp = @SourceSelector, @OutputName, @Progress, @Status, @Buttons;
+    HINT_SIZE_WINDOW_AS_DESIRED;
+}
+@object GenFileSelectorClass SourceSelector = {
+    ATTR_GEN_FILE_SELECTOR_NAME_MASK = { "*.MP3" };
+    HINT_FILE_SELECTOR_NUMBER_OF_FILES_TO_SHOW = 8;
+    HINT_FILE_SELECTOR_FILE_LIST_WIDTH = 40;
+}
+@object GenTextClass OutputName = {
+    GI_visMoniker = "WAV filename (DOS 8.3, in the selected folder):";
+    GTXI_text = "convert.wav";
+    GTXI_attrs = @default | GTA_SINGLE_LINE_TEXT;
+    GTXI_maxLength = 12;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+@object GenValueClass Progress = {
+    GI_visMoniker = "Progress (%):";
+    GVLI_maximum = MakeWWFixed(100);
+    GI_attrs = @default | GA_READ_ONLY;
+}
+@object GenTextClass Status = {
+    GTXI_text = "Select an MP3 file and a new WAV filename.";
+    GI_attrs = @default | GA_READ_ONLY;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+@object GenInteractionClass Buttons = {
+    GI_comp = @Convert, @Cancel;
+    HINT_ORIENT_CHILDREN_HORIZONTALLY;
+}
+@object GenTriggerClass Convert = {
+    GI_visMoniker = "Convert";
+    GTI_destination = process;
+    GTI_actionMsg = MSG_MP3WAV_CONVERT;
+}
+@object GenTriggerClass Cancel = {
+    GI_visMoniker = "Cancel";
+    GI_states = @default & ~GS_ENABLED;
+    GTI_destination = process;
+    GTI_actionMsg = MSG_MP3WAV_CANCEL;
+}
+@end Interface;
+
+/* Process-class variables are globals. Only the process thread uses this job. */
+static struct {
+    FileHandle sourceH;
+    FileHandle outputH;
+    Mp3DecHandle decoderH;
+    MemHandle bufferH;
+    DiskHandle diskH;
+    PathName path;
+    FileLongName sourceName;
+    FileLongName outputName;
+    WavWriter writer;
+    dword total;
+    dword read;
+    word inputSize;
+    word inputOffset;
+    word ended;
+    word active;
+    word generation;
+} job;
+
+static void _pascal
+SetStatus(const char *textP)
+{
+    @call Status::MSG_VIS_TEXT_REPLACE_ALL_PTR(textP, 0);
+}
+
+static void _pascal
+Finish(word success, const char *textP)
+{
+    word deleteError;
+
+    job.active = 0;
+    if (success && (!job.writer.fileH || !job.writer.bytes ||
+                    WavWriterFinish(&job.writer))) {
+        success = 0;
+        textP = "Unable to finalize WAV file.";
+    }
+    Mp3DecDestroy(job.decoderH);
+    job.decoderH = NullHandle;
+    if (job.bufferH) MemFree(job.bufferH);
+    job.bufferH = NullHandle;
+    if (job.sourceH) FileClose(job.sourceH, FALSE);
+    job.sourceH = NullHandle;
+    if (job.outputH) {
+        if (FileClose(job.outputH, FALSE)) {
+            success = 0;
+            textP = "Error closing WAV file.";
+        }
+        job.outputH = NullHandle;
+        if (!success) {
+            FilePushDir();
+            deleteError = !FileSetCurrentPath(job.diskH, job.path);
+            if (!deleteError) deleteError = FileDelete(job.outputName);
+            FilePopDir();
+            if (deleteError) textP = "Error: remove the incomplete WAV file manually.";
+        }
+    }
+    if (success) @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(100, FALSE);
+    SetStatus(textP);
+    @call Convert::MSG_GEN_SET_ENABLED(VUM_NOW);
+    @call Cancel::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+}
+
+@method Mp3WavProcessClass, MSG_MP3WAV_CONVERT
+{
+    dword selection;
+    word length, i;
+
+    if (job.active) return;
+    selection = @call SourceSelector::MSG_GEN_FILE_SELECTOR_GET_SELECTION(job.sourceName);
+    if ((GFS_GET_ENTRY_FLAGS(selection) & GFSEF_NO_ENTRIES) ||
+        GFS_GET_ENTRY_TYPE(GFS_GET_ENTRY_FLAGS(selection)) != GFSET_FILE) {
+        SetStatus("Select an MP3 file first.");
+        return;
+    }
+    length = @call OutputName::MSG_VIS_TEXT_GET_ALL_PTR(job.outputName);
+    if (!length || job.outputName[length-1] == '.' || job.outputName[length-1] == ' ') {
+        SetStatus("Enter a new WAV filename.");
+        return;
+    }
+    for (i = 0; i < length; i++) {
+        if ((byte)job.outputName[i] < 32 || strchr("\\/:*?\"<>|", job.outputName[i])) {
+            SetStatus("Use a filename without a path or wildcard characters.");
+            return;
+        }
+    }
+    @call SourceSelector::MSG_GEN_PATH_GET(job.path, sizeof(job.path));
+    job.diskH = @call SourceSelector::MSG_GEN_PATH_GET_DISK_HANDLE();
+    job.inputSize = job.inputOffset = job.ended = 0;
+    job.read = 0;
+    memset(&job.writer, 0, sizeof(job.writer));
+    FilePushDir();
+    if (FileSetCurrentPath(job.diskH, job.path)) {
+        job.sourceH = FileOpen(job.sourceName, FILE_ACCESS_R | FILE_DENY_W);
+        if (job.sourceH) {
+            /* Exclusive creation protects existing files, including the source. */
+            job.outputH = FileCreate(job.outputName,
+                         FCF_NATIVE | FILE_CREATE_ONLY | FILE_ACCESS_RW | FILE_DENY_RW, 0);
+        }
+    }
+    FilePopDir();
+    if (!job.sourceH || !job.outputH) {
+        Finish(0, "Cannot open files. Use a new DOS 8.3 WAV filename.");
+        return;
+    }
+    job.total = FileSize(job.sourceH);
+    job.bufferH = MemAlloc(MP3DEC_MAX_PCM_BYTES, HF_SWAPABLE, HAF_ZERO_INIT);
+    if (!job.bufferH || Mp3DecCreate(&job.decoderH) != MP3DEC_PCM) {
+        Finish(0, "Not enough memory.");
+        return;
+    }
+    job.active = 1;
+    job.generation++;
+    @call Convert::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+    @call Cancel::MSG_GEN_SET_ENABLED(VUM_NOW);
+    @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(0, FALSE);
+    SetStatus("Converting...");
+    @send, forceQueue process::MSG_MP3WAV_STEP(job.generation);
+}
+
+@method Mp3WavProcessClass, MSG_MP3WAV_STEP
+{
+    sword *bufferP;
+    Mp3DecFormat format;
+    Mp3DecResult result;
+    word frames, accepted, count, flags, error;
+
+    if (!job.active || generation != job.generation) return;
+    bufferP = MemLock(job.bufferH);
+    /* Input is retained until Feed accepts it; reuse the buffer for PCM only
+     * when the entire file chunk has been accepted. Each message does one
+     * input operation or one bounded decoder read, then queues continuation.
+     */
+    if (job.inputOffset < job.inputSize) {
+        flags = job.read == job.total ? MP3DEC_FEED_END : 0;
+        result = Mp3DecFeed(job.decoderH, (byte *)bufferP + job.inputOffset,
+                            job.inputSize - job.inputOffset, flags, &accepted);
+        job.inputOffset += accepted;
+        if (job.inputOffset == job.inputSize && flags) job.ended = 1;
+        MemUnlock(job.bufferH);
+        if (result != MP3DEC_PCM) {
+            Finish(0, "Decoder input error.");
+            return;
+        }
+    } else {
+        result = Mp3DecReadPCM(job.decoderH, bufferP, MP3DEC_MAX_PCM_BYTES,
+                               &frames, &format);
+        error = 0;
+        if (result == MP3DEC_PCM && frames) {
+            if (!job.writer.fileH) error = WavWriterBegin(&job.writer, job.outputH, &format);
+            if (!error) error = WavWriterAppend(&job.writer, bufferP, frames, &format);
+        } else if (result == MP3DEC_NEED_INPUT && !job.ended) {
+            /* 512 bytes always fit after NEED_INPUT: MP3 frames are <= 1441 B,
+             * so the 2048 B decoder input buffer has at least 608 B free.
+             * Feed below uses the exact remaining capacity via accepted.
+             */
+            count = FileRead(job.sourceH, bufferP, 512, FALSE);
+            if (count == 0xffff || (!count && job.read < job.total)) {
+                error = 1;
+            } else {
+                job.read += count;
+                job.inputSize = count;
+                job.inputOffset = 0;
+                if (!count) {
+                    result = Mp3DecFeed(job.decoderH, (void *)0, 0,
+                                        MP3DEC_FEED_END, &accepted);
+                    job.ended = 1;
+                    if (result != MP3DEC_PCM) error = 1;
+                }
+            }
+        }
+        MemUnlock(job.bufferH);
+        if (error) {
+            Finish(0, "File read/write error or WAV size limit reached.");
+            return;
+        }
+        if (result == MP3DEC_END) {
+            Finish(1, "Conversion complete.");
+            return;
+        }
+        if (result != MP3DEC_PCM && result != MP3DEC_NEED_INPUT) {
+            Finish(0, "Invalid, truncated, or changing-format MP3. Output removed.");
+            return;
+        }
+    }
+    @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(
+                       (word)(job.read / (job.total / 100 + 1)), FALSE);
+    /* Unwind this handler before executing the next same-thread step. */
+    @send, forceQueue process::MSG_MP3WAV_STEP(job.generation);
+}
+
+@method Mp3WavProcessClass, MSG_MP3WAV_CANCEL
+{
+    if (job.active) Finish(0, "Cancelled. Incomplete output removed.");
+}
+
+@method Mp3WavProcessClass, MSG_GEN_PROCESS_CLOSE_APPLICATION
+{
+    if (job.active) Finish(0, "Cancelled.");
+    return @callsuper();
+}
