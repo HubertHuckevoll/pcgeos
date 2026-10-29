@@ -9,6 +9,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 include geos.def
 include driver.def
 include geode.def
+		include	resource.def	; Group driverInfo with writable C dgroup.
 include library.def
 include ec.def
 
