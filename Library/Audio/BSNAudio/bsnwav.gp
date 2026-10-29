@@ -24,7 +24,7 @@
 ########################################################################
 
 name bsnwav.lib
-longname "BestSound Wave Library"
+longname "PC/GEOS Ensemble Audio"
 tokenchars "BSNW"
 tokenid 16427
 
@@ -105,3 +105,7 @@ export BSNMP3DECOPEN
 export BSNMP3DECREADPCM
 export BSNMP3DECCLOSE
 resource MP3ReaderCode code read-only shared
+resource AudioMainCode code read-only shared
+resource PCMCode code read-only shared
+resource WAVCode code read-only shared
+resource ASMTOOLS_TEXT code read-only shared

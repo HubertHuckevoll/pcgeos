@@ -1786,8 +1786,8 @@ Installed/Library/Pref/Prefsndn:		ui ansic config sound MAKELIB
 # BestSound - supplemental sound API.
 bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp sndchk mixer
 
-bsnwav	: Installed/Library/Audio/BSNWav
-Installed/Library/Audio/BSNWav:			kernel ansic MAKELIB
+bsnwav	: Installed/Library/Audio/BSNAudio
+Installed/Library/Audio/BSNAudio:			kernel ansic MAKELIB
 
 mixlib	: Installed/Library/Audio/MixLib
 Installed/Library/Audio/MixLib:			bsnwav sound ui ansic MAKELIB

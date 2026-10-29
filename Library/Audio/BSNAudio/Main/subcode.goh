@@ -106,3 +106,6 @@ void    * _pascal BSNWAllocPlayCache(word len);
 optr    _pascal _export BSCNCreateStatusBox(optr parent);
 
 extern BSNPcmSource *playSourceP;
+extern int _pascal BSNWRunPCM(BSNPcmSource *sourceP, word flags, optr parent);
+extern int _pascal BSNWPrepare(BSNPcmFormat *formatP, word flags, optr parent);
+extern int _pascal BSNWPlay(BSNPcmFormat *formatP, word flags, optr parent);

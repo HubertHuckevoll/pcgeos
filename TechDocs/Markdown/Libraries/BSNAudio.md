@@ -10,7 +10,7 @@ branch nor master is modified.
 The PCM baseline fails EC and NC linking: BSNWPlay calls the undefined
 BSNWStartPlay. The prerequisite fix calls the already declared and implemented
 BSNWAsmStartPlay in ASMTOOLS/asmtoolsManager.asm. No driver or DMA changes.
-After this fix aihelp.py build Library/Audio/BSNWav succeeds in EC and NC.
+After this fix aihelp.py build Library/Audio/BSNAudio succeeds in EC and NC.
 Existing warnings concern unused variables/parameters and unprototyped
 ProcCallFixedOrMovable_pascal calls.
 
@@ -42,7 +42,7 @@ Reproduction and retained logs are under ~/pcgeos-tools/bsnaudio/. Tests use
 TMPDIR=~/pcgeos-tools/bsnaudio/tmp and KEEP_TESTS=1. The baseline snapshot is
 an archive of only the decoder, converter and headers, not a branch merge.
 
-mkmf discovers source modules in Library/Audio/BSNWav and generates the
+mkmf discovers source modules in Library/Audio/BSNAudio and generates the
 Installed module Makefile; aihelp.py builds in Installed. pmake lib publishes
 the library definition to Installed/Include. The hand-maintained top-level
 Installed/Makefile has the bsnwav target and Wav, MixLib, Bsqp and SndChk
@@ -65,7 +65,7 @@ invocation uses a typed Pascal trampoline with the code pointer last.
 
 Run the PCM regression with:
 
-    TMPDIR=~/pcgeos-tools/bsnaudio/tmp perl Library/Audio/BSNWav/Tests/check.pl
+    TMPDIR=~/pcgeos-tools/bsnaudio/tmp perl Library/Audio/BSNAudio/Tests/check.pl
 
 It compiles the actual cache, conversion and playback loop routines against
 a synchronous DMA/GEOS host shim. Checks cover short reads, known/unknown
@@ -150,3 +150,32 @@ original core for compressed read chunks of 1, 3, 7, 127 and 2048 bytes and
 capacity, interleaved instances, relocation on every unlock, all three initial
 allocation failures, borrowed files, repeated close, file-read failures,
 truncated final frames and format-change rejection. Both GEOS builds pass.
+
+## Final source and resource organization
+
+Library/Audio/BSNAudio contains Main (library/legacy adapters), PCM, WAV,
+MP3Dec and Driver. The permanent name and library definition remain bsnwav.
+The top-level Installed/Makefile is a hand-maintained product graph; its
+bsnwav target now points at BSNAudio. Module Makefiles/dependencies are
+regenerated with mkmf and pmake depend.
+
+mkmf derives GEODE from the directory name, so local.mk explicitly overrides
+it to bsnwav and reads the matching revision before linking. The historical
+Bsnwav.rev capitalization also prevented Unix revision discovery; it is now
+bsnwav.rev. This restores base protocol 1.6 (the original GP export tranche
+adds one minor, the new appended tranche adds another). Existing export
+positions are retained. The accidentally generated 0.x baseline protocol is
+not used for the final library.
+
+The compiled-out reference multiplier remains in the source and host/DOS
+checks but is excluded from GEOS objects. Its empty Watcom CodeView type
+stream triggers an existing glue parser error with the new module order.
+The assembly math helper is still linked. The private legacy callback adapter
+uses a global internal symbol because this glue cannot resolve a static
+callback address when its merged resource's first contributor is another
+object; no extra GP export is added.
+
+The linked NC map confirms writable fixed dgroup (10432 bytes), fixed math
+(67), and movable shared PCMCode (2572), WAVCode (1037), MP3ReaderCode (806)
+and the original decoder resources. Every segment remains below 64 KB.
+Only geos and ansic are imported; no ui or mp3dec import is introduced.

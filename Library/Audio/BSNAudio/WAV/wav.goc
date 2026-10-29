@@ -1,5 +1,6 @@
 /* Bounded RIFF/WAVE PCM reader; no playback or sound-driver calls. */
 #include <bsnaudio.h>
+#pragma code_seg("WAVCode")
 
 #define WAV_RIFF 0x46464952UL
 #define WAV_WAVE 0x45564157UL

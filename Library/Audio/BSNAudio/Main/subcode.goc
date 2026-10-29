@@ -55,6 +55,7 @@ REVISION HISTORY:
 
 @include "bsnwav.goh"
 @include "Main/subcode.goh"
+#pragma code_seg("AudioMainCode")
 
 #define BSNW_TICKS_PER_SECOND                60
 #define BSNW_MIN_TICKS_PER_HALF_BUFFER       2
@@ -115,7 +116,6 @@ void BSNWDebugNotifyWord(const char *label, word value)
 const char  playKeyIT[]     = "PlayBufferSize";
 const char  secondKeyIT[]   = "SecondBufferSize";
 const char  reverseKeyIT[]  = "OutputChannelReverse";
-word        peakLevel2 = 0;     // helper for peak level
 
 /*
  * Give each half of the secondary buffer at least two timer ticks of audio.

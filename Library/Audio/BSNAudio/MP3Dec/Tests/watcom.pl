@@ -34,7 +34,7 @@ my %asm;
 if ($ENV{MP3_ASM}) {
     push @flags, '-DMP3_386_DSP';
     for my $variant ('ec', 'nc') {
-        my $installed = "$repo/Installed/Library/Audio/BSNWav";
+        my $installed = "$repo/Installed/Library/Audio/BSNAudio";
         my $object = "$installed/MP3Dec." . ($variant eq 'ec' ? 'eobj' : 'obj');
         my $geode = "$installed/" . ($variant eq 'ec' ? 'bsnwavec.geo' : 'bsnwav.geo');
         open my $dump, '-|', "$repo/bin/printobj", $object or die $!;

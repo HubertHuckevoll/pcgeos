@@ -45,8 +45,6 @@ Secondarybuffer:
 @define BSNWAV_NO_UI
 /*-----------------------------------*/
 
-#define SIM_VALUE   0
-// 1 --> for testing purpose only / Allocating Secbuffer by library
 
 @include <stdapp.goh>
 
@@ -65,6 +63,8 @@ Secondarybuffer:
 #include <resource.h>
 
 @include "bsnwav.goh"
+@include "Main/subcode.goh"
+#pragma code_seg("AudioMainCode")
 
 /******************** Constants/Macros ************************/
 
@@ -112,65 +112,13 @@ Boolean     driverUsed  = FALSE;    // driver loaded by BSNWAV
 //
 // for NewWave-Play
 //
-word            simFlags = SIM_VALUE;   // Bit0->Simulating Soundcard
-int             playStatus = 0;     // 0 = System ready (default)
-                                    // 1 = Playing from File
-                                    // 2 = Playing from Memory
-int             playStopFlag = 0;   // <>0 --> Abort
-dword           playedBytes = 0;    // played Bytes
-dword           bytesToPlay = 0;    // Bytes to play
-optr            statusGlyphOptr1 = 0;   // 1. col Statusbox
-optr            statusGlyphOptr2 = 0;
-optr            statusRightBoxOptr = 0;
-char            playStatusText[80];
-MemHandle       playCacheHandle = NullHandle;
 BSNPcmFormat    lastFormat;
 dword           lastLength;
-word            playSampleRate = 0;
-byte            playChannels = 1;   // channels 1=mono
-byte            playBits = 8;       // Bitdepth
-word            playMaxRate = 0;    // Rate supported by soundcard
-byte            playMaxChannels = 1;    // channels
-byte            playMaxBits = 8;    // Bits
-byte            konvRateRed = 1;    // Factor Sampleratereduction
-byte            konvBitsRed = 1;    // Factor Bitreduction
-byte            konvChanRed = 1;    // Factor Channelreduction
-
-byte            *playCachePtr;      // Pointer Playcache
-byte            *secondPtr;     // Pointer Secondarybuffer
-word            playCacheLen = 8192;    // Length Playcache
-word            secBufLen = 8192;   // Length Secondarybuffers
-word            secBufLenSoll = 8192;   // requested length Secondarybuffer
-word            cacheOffset = 0;    // Offset PlayCache
-word            secondOffset = 0;   // Offset Secondbuffer
-word            cacheFree = 0;      // Free space in PlayCache
-word            cacheFull = 0;      // waiting Bytes in cache
-word            cacheKOffset = 0;   // Cacheoffset Reader
-word            secondKOffset = 0;  // SecondPointerOffset Reader
-word            secondFree = 0;         // Free space in Secondarybuffer
-word            secondHandle = 0;   // test purpose only (SecondAlloc)
-word            peakLevel = 0;      // signal level (calculated by Konverter)
-word            playLen2 = 0;       // needed samples from Cache
-// for filling Secondarybufferhalf
-Boolean         pcmUnknownLength = FALSE;
-word            pcmBlockAlign = 1;
-BSNPcmSource    *playSourceP;
-Boolean         stereoToggle = FALSE;   // Soundcard toggle Left/Right
-word            stereoToggleIni = 0;    // INI-Value
-
-Boolean         compatFlag = FALSE; // TRUE = driver supports "NewWave"
-optr            statusBox;
-word            secBufL2;
-dword           fullLen;
-dword           timeOutCounter;
-GeodeHandle     attachGeode = 0;
 
 /**********************************************************
     Internal Functions
  **********************************************************/
 
-int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent);
-int _pascal BSNWPlay(BSNPcmFormat *bfc,word playFlags,optr parent);
 
 // from subcode.goc
 extern void BSNWDebugNotifyWord(const char *label, word value);
@@ -180,47 +128,6 @@ extern void BSNWDebugNotifyWord(const char *label, word value);
  * selected, and bytesToPlay specifies its remaining PCM byte budget.
  * BSNWPlay owns the prepared buffers until playback finishes.
  */
-static int _pascal BSNWRunPCM(BSNPcmSource *sourceP, word playFlags, optr parent)
-{
-    int result;
-    word configuredCacheLen = playCacheLen;
-
-    playSourceP = sourceP;
-    pcmBlockAlign = sourceP->format.blockAlign;
-    pcmUnknownLength = (sourceP->pcmBytes == BSN_PCM_LENGTH_UNKNOWN);
-    bytesToPlay = sourceP->pcmBytes;
-    if (!bytesToPlay)
-    {
-        playStatus = BSNW_STATUS_OK;
-        playSourceP = (void *)0;
-        return BSNW_STATUS_OK;
-    }
-    result = BSNWPrepare(&sourceP->format, playFlags, parent);
-    if (result == BSNW_STATUS_OK)
-    {
-        result = BSNWPlay(&sourceP->format, playFlags, parent);
-    }
-    else
-    {
-        /* A failed prepare never reaches BSNWPlay's ordinary cleanup. */
-        if (secondPtr)
-        {
-            (void)BSNWaveStopRecOrPlay(secondPtr);
-        }
-        if (playCachePtr)
-        {
-            MemUnlock(playCacheHandle);
-            MemFree(playCacheHandle);
-            playCachePtr = 0;
-        }
-        playStatus = BSNW_STATUS_OK;
-    }
-
-    /* Short sources shrink the active cache, not the next playback's default. */
-    playCacheLen = configuredCacheLen;
-    playSourceP = (void *)0;
-    return result;
-}
 
 
 /*
@@ -231,7 +138,7 @@ static int _pascal BSNWRunPCM(BSNPcmSource *sourceP, word playFlags, optr parent
     @include <Art/moniker.goh>
 @end MONIKERRESOURCE;
 
-@include "Main/subcode.goh"
+
 
 @ifndef BSNWAV_NO_UI
     @class  StatusInteractionClass,GenInteractionClass;
@@ -955,7 +862,7 @@ word _pascal _export BSNWaveGetStatus(void)
 typedef word _pascal BSNLegacyReadCall(void *destP, word capacity,
                                      void *readerP);
 
-static word _pascal _export BSNWLegacyPCM(void *contextP, void *destP,
+word _pascal _export BSNWLegacyPCM(void *contextP, void *destP,
                                            word capacity)
 {
     return ((BSNLegacyReadCall *)ProcCallFixedOrMovable_pascal)(
@@ -998,31 +905,6 @@ int _pascal _export BSNWavePlayPCM(BSWavFormChunk *fmt, dword pcmBytes,
 
 /* Canonical blocking playback entry. */
 
-int _pascal _export BSNPcmPlay(BSNPcmSource *sourceP, word flags, optr parent)
-{
-    BSNPcmFormat *formatP;
-    word align;
-    int result;
-
-    if (!sourceP || !sourceP->readP)
-        return BSNW_SOURCE_ERROR;
-    formatP = &sourceP->format;
-    if ((formatP->channels != 1 && formatP->channels != 2) ||
-        (formatP->bitsPerSample != 8 && formatP->bitsPerSample != 16) ||
-        formatP->sampleRate <= 5000 || formatP->sampleRate >= 44200)
-        return BSNW_UNKNOWN_WAVE_FORMAT;
-    align = formatP->channels * (formatP->bitsPerSample / 8);
-    if (formatP->blockAlign != align ||
-        formatP->avgBytesPerSecond != formatP->sampleRate * align ||
-        (sourceP->pcmBytes != BSN_PCM_LENGTH_UNKNOWN &&
-         sourceP->pcmBytes % align))
-        return BSNW_UNKNOWN_WAVE_FORMAT;
-    result = BSNWPreCheck(flags);
-    if (result != BSNW_STATUS_OK || (flags & BSNW_TEST_ONLY))
-        return result;
-    playStatus = BSNW_STATUS_PLAY_MEM;
-    return BSNWRunPCM(sourceP, flags, parent);
-}
 
 /**********************************************************
 
