@@ -10,6 +10,6 @@ heapspace   4096
 library     geos
 library     ui
 library     ansic
-library     mp3dec
+library     bsnwav
 resource    AppResource ui-object
 resource    Interface ui-object

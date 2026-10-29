@@ -179,3 +179,25 @@ The linked NC map confirms writable fixed dgroup (10432 bytes), fixed math
 (67), and movable shared PCMCode (2572), WAVCode (1037), MP3ReaderCode (806)
 and the original decoder resources. Every segment remains below 64 KB.
 Only geos and ansic are imported; no ui or mp3dec import is introduced.
+
+## MP3Wav migration
+
+MP3Wav imports bsnwav protocol 1.8 and uses only the public bsnaudio.h
+pull reader. Its input/feed state is removed. Each queued step reads PCM,
+writes complete frames with the existing WAV writer, updates progress from
+the borrowed source's file position and force-queues continuation. The
+existing generation check, cancel/close cleanup, exclusive output creation
+and removal of incomplete files are retained. Strict conversion rejects the
+reader's damaged flag as well as fatal/truncated input or format changes.
+The application's single output buffer is now 2048 bytes instead of 4608.
+
+The writer now accepts BSNPcmFormat and validates signed 16-bit PCM frame
+alignment and average rate; it still supports all nine MP3 native rates,
+including decoder-only 48 kHz conversion. Both application builds pass.
+Host converter output is byte-exact against the original core for all eight
+sample files, and the existing writer format/overflow/I/O failure regressions
+pass. The full original host corpus continues to pass.
+
+Cancellation is serviced between synchronous reader calls; Open and ReadPCM
+may perform input/metadata I/O and decoding before returning. GEOS UI timing
+and cancellation responsiveness still require manual testing.

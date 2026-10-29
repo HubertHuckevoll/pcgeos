@@ -78,8 +78,8 @@ run('gcc', @flags, @sanitize, @includes, '-I', $lib, '-DMP3_HOST_TEST',
     '-x', 'c', "$lib/Tests/pull.c", "$lib/mp3reader.goc", "$lib/mp3api.c", @core,
     '-o', "$tmp/pull");
 run('gcc', @flags, @sanitize, @includes, '-DMP3_HOST_TEST', '-DMP3_HEAP_ONLY',
-    "$app/Tests/convert.c", "$app/wavwriter.c", "$lib/Tests/stream.c",
-    "$lib/mp3api.c", @core, '-o', "$tmp/convert");
+    '-I', $lib, '-x', 'c', "$app/Tests/convert.c", "$app/wavwriter.c",
+    "$lib/Tests/stream.c", "$lib/mp3reader.goc", "$lib/mp3api.c", @core, '-o', "$tmp/convert");
 run('gcc', @flags, @sanitize, '-DMP3_HOST_TEST', '-DMP3_HEAP_ONLY', '-I', $lib, '-I', "$repo/CInclude",
     "$lib/Tests/malformed.c", "$lib/Tests/stream.c", "$lib/mp3api.c", @core, '-o', "$tmp/malformed");
 run("$tmp/malformed", "$up/tests/data/sine_stereo_44100.mp3",

@@ -30,7 +30,7 @@ int main(int argc, char **argvP)
                                    32000,44100,48000};
     static const sword pcm[] = {-32768, -1, 0, 1, 32767, 42};
     WavWriter writer;
-    Mp3DecFormat format, changed;
+    BSNPcmFormat format, changed;
     byte header[44], samples[12];
     unsigned i, channels;
     unsigned long bytes;
@@ -42,6 +42,9 @@ int main(int argc, char **argvP)
             assert(outputP);
             format.channels = channels;
             format.sampleRate = rates[i];
+            format.bitsPerSample = 16;
+            format.blockAlign = channels * 2;
+            format.avgBytesPerSecond = rates[i] * format.blockAlign;
             assert(!WavWriterBegin(&writer, 1, &format));
             assert(!WavWriterAppend(&writer, pcm, 6/channels, &format));
             assert(!WavWriterFinish(&writer));

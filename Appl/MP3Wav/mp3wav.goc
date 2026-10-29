@@ -6,7 +6,9 @@
 #include <timer.h>
 #include <Ansi/stdio.h>
 #include <Ansi/string.h>
-#include <mp3dec.h>
+#include <bsnaudio.h>
+
+#define CONVERT_PCM_BYTES 2048
 #include "wavwriter.h"
 
 @class Mp3WavProcessClass, GenProcessClass;
@@ -78,7 +80,7 @@
 static struct {
     FileHandle sourceH;
     FileHandle outputH;
-    Mp3DecHandle decoderH;
+    BSNMP3Dec decoder;
     MemHandle bufferH;
     DiskHandle diskH;
     PathName path;
@@ -87,10 +89,6 @@ static struct {
     WavWriter writer;
     dword startTicks;
     dword total;
-    dword read;
-    word inputSize;
-    word inputOffset;
-    word ended;
     word active;
     word generation;
     word progress;
@@ -115,8 +113,7 @@ Finish(word success, const char *textP)
         success = 0;
         textP = "Unable to finalize WAV file.";
     }
-    Mp3DecDestroy(job.decoderH);
-    job.decoderH = NullHandle;
+    BSNMP3DecClose(&job.decoder);
     if (job.bufferH) MemFree(job.bufferH);
     job.bufferH = NullHandle;
     if (job.sourceH) FileClose(job.sourceH, FALSE);
@@ -157,6 +154,7 @@ Finish(word success, const char *textP)
 {
     dword selection;
     word length, i;
+    int result;
 
     if (job.active) return;
     selection = @call SourceSelector::MSG_GEN_FILE_SELECTOR_GET_SELECTION(job.sourceName);
@@ -178,8 +176,6 @@ Finish(word success, const char *textP)
     }
     @call SourceSelector::MSG_GEN_PATH_GET(job.path, sizeof(job.path));
     job.diskH = @call SourceSelector::MSG_GEN_PATH_GET_DISK_HANDLE();
-    job.inputSize = job.inputOffset = job.ended = 0;
-    job.read = 0;
     memset(&job.writer, 0, sizeof(job.writer));
     @call Timing::MSG_VIS_TEXT_REPLACE_ALL_PTR("Converting...", 0);
     job.startTicks = TimerGetCount();
@@ -198,9 +194,19 @@ Finish(word success, const char *textP)
         return;
     }
     job.total = FileSize(job.sourceH);
-    job.bufferH = MemAlloc(MP3DEC_MAX_PCM_BYTES, HF_SWAPABLE, HAF_ZERO_INIT);
-    if (!job.bufferH || Mp3DecCreate(&job.decoderH) != MP3DEC_PCM) {
+    job.bufferH = MemAlloc(CONVERT_PCM_BYTES, HF_SWAPABLE, HAF_ZERO_INIT);
+    if (!job.bufferH) {
         Finish(0, "Not enough memory.");
+        return;
+    }
+    result = BSNMP3DecOpen(&job.decoder, job.sourceH);
+    if (result != BSNW_STATUS_OK || job.decoder.damaged) {
+        Finish(0, result == BSNW_MEMORY_ERROR ? "Not enough memory." :
+               "Invalid or truncated MP3. Output removed.");
+        return;
+    }
+    if (WavWriterBegin(&job.writer, job.outputH, &job.decoder.source.format)) {
+        Finish(0, "Unable to write WAV header.");
         return;
     }
     job.active = 1;
@@ -216,69 +222,36 @@ Finish(word success, const char *textP)
 @method Mp3WavProcessClass, MSG_MP3WAV_STEP
 {
     sword *bufferP;
-    Mp3DecFormat format;
-    Mp3DecResult result;
-    word frames, accepted, count, flags, error, progress;
+    word count, error, progress;
+    dword position;
 
     if (!job.active || generation != job.generation) return;
     bufferP = MemLock(job.bufferH);
-    /* Input is retained until Feed accepts it; reuse the buffer for PCM only
-     * when the entire file chunk has been accepted. Each message does one
-     * input operation or one bounded decoder read, then queues continuation.
-     */
-    if (job.inputOffset < job.inputSize) {
-        flags = job.read == job.total ? MP3DEC_FEED_END : 0;
-        result = Mp3DecFeed(job.decoderH, (byte *)bufferP + job.inputOffset,
-                            job.inputSize - job.inputOffset, flags, &accepted);
-        job.inputOffset += accepted;
-        if (job.inputOffset == job.inputSize && flags) job.ended = 1;
-        MemUnlock(job.bufferH);
-        if (result != MP3DEC_PCM) {
-            Finish(0, "Decoder input error.");
-            return;
-        }
-    } else {
-        result = Mp3DecReadPCM(job.decoderH, bufferP, MP3DEC_MAX_PCM_BYTES,
-                               &frames, &format);
-        error = 0;
-        if (result == MP3DEC_PCM && frames) {
-            if (!job.writer.fileH) error = WavWriterBegin(&job.writer, job.outputH, &format);
-            if (!error) error = WavWriterAppend(&job.writer, bufferP, frames, &format);
-        } else if (result == MP3DEC_NEED_INPUT && !job.ended) {
-            /* 512 bytes always fit after NEED_INPUT: MP3 frames are <= 1441 B,
-             * so the 2048 B decoder input buffer has at least 608 B free.
-             * Feed below uses the exact remaining capacity via accepted.
-             */
-            count = FileRead(job.sourceH, bufferP, 512, FALSE);
-            if (count == 0xffff || (!count && job.read < job.total)) {
-                error = 1;
-            } else {
-                job.read += count;
-                job.inputSize = count;
-                job.inputOffset = 0;
-                if (!count) {
-                    result = Mp3DecFeed(job.decoderH, (void *)0, 0,
-                                        MP3DEC_FEED_END, &accepted);
-                    job.ended = 1;
-                    if (result != MP3DEC_PCM) error = 1;
-                }
-            }
-        }
-        MemUnlock(job.bufferH);
-        if (error) {
-            Finish(0, "File read/write error or WAV size limit reached.");
-            return;
-        }
-        if (result == MP3DEC_END) {
-            Finish(1, "Conversion complete.");
-            return;
-        }
-        if (result != MP3DEC_PCM && result != MP3DEC_NEED_INPUT) {
-            Finish(0, "Invalid, truncated, or changing-format MP3. Output removed.");
-            return;
-        }
+    count = BSNMP3DecReadPCM(&job.decoder, bufferP, CONVERT_PCM_BYTES);
+    error = 0;
+    if (count != BSN_PCM_READ_ERROR && count && !job.decoder.damaged)
+        error = WavWriterAppend(&job.writer, bufferP,
+                  count / job.decoder.source.format.blockAlign,
+                  &job.decoder.source.format);
+    MemUnlock(job.bufferH);
+    if (count == BSN_PCM_READ_ERROR || job.decoder.damaged) {
+        Finish(0, "Invalid, truncated, or changing-format MP3. Output removed.");
+        return;
     }
-    progress = (word)(job.read / (job.total / 100 + 1));
+    if (error) {
+        Finish(0, "File write error or WAV size limit reached.");
+        return;
+    }
+    if (!count) {
+        Finish(1, "Conversion complete.");
+        return;
+    }
+    position = FilePos(job.sourceH, 0, FILE_POS_RELATIVE);
+    if (position == 0xffffffffUL) {
+        Finish(0, "File position error. Output removed.");
+        return;
+    }
+    progress = (word)(position / (job.total / 100 + 1));
     if (progress != job.progress) {
         job.progress = progress;
         @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(progress, FALSE);

@@ -35,10 +35,14 @@ WavHeader(WavWriter *writerP)
 
 word _pascal
 WavWriterBegin(WavWriter *writerP, FileHandle fileH,
-                const Mp3DecFormat *formatP)
+                const BSNPcmFormat *formatP)
 {
     if (formatP->channels < 1 || formatP->channels > 2 ||
-        !formatP->sampleRate || formatP->sampleRate > 48000UL) return 1;
+        !formatP->sampleRate || formatP->sampleRate > 48000UL ||
+        formatP->bitsPerSample != 16 ||
+        formatP->blockAlign != formatP->channels * 2 ||
+        formatP->avgBytesPerSecond != formatP->sampleRate * formatP->blockAlign)
+        return 1;
     writerP->fileH = fileH;
     writerP->format = *formatP;
     writerP->bytes = 0;
@@ -47,7 +51,7 @@ WavWriterBegin(WavWriter *writerP, FileHandle fileH,
 
 word _pascal
 WavWriterAppend(WavWriter *writerP, const sword *pcmP,
-                 word frames, const Mp3DecFormat *formatP)
+                 word frames, const BSNPcmFormat *formatP)
 {
     word bytes;
     word align;

@@ -1,63 +1,58 @@
-/* Host integration: real public decoder API plus the real WAV writer. */
+/* Host integration: public pull API plus the real WAV writer. */
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "../wavwriter.h"
 
-static FILE *outputP;
+static FILE *sourceP, *outputP;
+word FileRead(FileHandle fileH, void *dataP, word size, word flags)
+{
+    (void)flags;
+    assert(fileH == 1);
+    return (word)fread(dataP, 1, size, sourceP);
+}
 word FileWrite(FileHandle fileH, const void *dataP, word size, word flags)
 {
-    (void)fileH;
     (void)flags;
+    assert(fileH == 2);
     return (word)fwrite(dataP, 1, size, outputP);
 }
 dword FilePos(FileHandle fileH, dword offset, word mode)
 {
-    (void)fileH;
+    FILE *fileP;
     (void)mode;
-    return fseek(outputP, offset, SEEK_SET) ? 0xffffffffUL : (dword)ftell(outputP);
+    fileP = fileH == 1 ? sourceP : outputP;
+    return fseek(fileP, offset, SEEK_SET) ? 0xffffffffUL : (dword)ftell(fileP);
 }
 int main(int argc, char **argvP)
 {
-    static sword pcm[2304];
-    byte input[512];
-    FILE *sourceP;
-    Mp3DecHandle decoderH;
-    Mp3DecFormat format;
-    Mp3DecResult result;
+    static sword pcm[1024];
+    BSNMP3Dec decoder;
     WavWriter writer;
-    word count, accepted, frames, ended;
+    word count;
 
     assert(argc == 3);
     sourceP = fopen(argvP[1], "rb");
     outputP = fopen(argvP[2], "wb");
     assert(sourceP && outputP);
-    memset(&writer, 0, sizeof(writer));
-    ended = 0;
-    assert(Mp3DecCreate(&decoderH) == MP3DEC_PCM);
+    assert(BSNMP3DecOpen(&decoder, 1) == BSNW_STATUS_OK);
+    assert(!decoder.damaged);
+    assert(!WavWriterBegin(&writer, 2, &decoder.source.format));
     for (;;) {
-        result = Mp3DecReadPCM(decoderH, pcm, sizeof(pcm), &frames, &format);
-        if (result == MP3DEC_NEED_INPUT && !ended) {
-            count = (word)fread(input, 1, sizeof(input), sourceP);
-            assert(!ferror(sourceP));
-            ended = count < sizeof(input);
-            assert(Mp3DecFeed(decoderH, input, count,
-                              ended ? MP3DEC_FEED_END : 0, &accepted) == MP3DEC_PCM);
-            assert(accepted == count);
-        } else if (result == MP3DEC_PCM && frames) {
-            if (!writer.fileH) assert(!WavWriterBegin(&writer, 1, &format));
-            assert(!WavWriterAppend(&writer, pcm, frames, &format));
-        } else if (result == MP3DEC_END) {
-            assert(writer.bytes && !WavWriterFinish(&writer));
-            break;
-        } else {
-            fprintf(stderr, "decoder status %u\n", result);
-            fclose(outputP);
+        count = BSNMP3DecReadPCM(&decoder, pcm, sizeof(pcm));
+        if (count == BSN_PCM_READ_ERROR || decoder.damaged) {
+            BSNMP3DecClose(&decoder);
+            fclose(sourceP); fclose(outputP);
             remove(argvP[2]);
             return 1;
         }
+        if (!count) break;
+        assert(!WavWriterAppend(&writer, pcm,
+                  count / decoder.source.format.blockAlign,
+                  &decoder.source.format));
     }
-    Mp3DecDestroy(decoderH);
+    assert(writer.bytes && !WavWriterFinish(&writer));
+    BSNMP3DecClose(&decoder);
     assert(!fclose(sourceP) && !fclose(outputP));
     return 0;
 }
