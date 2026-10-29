@@ -62,6 +62,7 @@ Secondarybuffer:
 #include <dirksnd.h>
 #include <file.h>
 #include <riff.h>
+#include <bsnaudio.h>
 
 @include "bsnwav.goh"
 
@@ -1081,6 +1082,23 @@ int _pascal _export BSNWavePlayPCM(BSWavFormChunk *fmt,
     bytesToPlay = pcmBytes;
 
     return BSNWRunPCM(fmt,playFlags,parent);
+}
+
+/* Canonical source entry; the compatibility engine is replaced next. */
+int _pascal _export BSNPcmPlay(BSNPcmSource *sourceP, word flags, optr parent)
+{
+    BSWavFormChunk format;
+
+    if (!sourceP)
+        return BSNW_SOURCE_ERROR;
+    format.BWFC_dataFormat = BSWN_FORMAT_PCM;
+    format.BWFC_sampleRate = sourceP->format.sampleRate;
+    format.BWFC_channels = sourceP->format.channels;
+    format.BWFC_bitsPerSample = sourceP->format.bitsPerSample;
+    format.BWFC_blockAlign = sourceP->format.blockAlign;
+    format.BWFC_avgRate = sourceP->format.avgBytesPerSecond;
+    return BSNWavePlayPCM(&format, sourceP->pcmBytes, flags, parent,
+                          sourceP->contextP, sourceP->readP);
 }
 
 /**********************************************************

@@ -1,0 +1,71 @@
+# Unified BSNAudio implementation
+
+## Baseline (2026-10-29)
+
+Implementation branch BSNAudio-unified starts at PCM-source-v2 commit
+1d4ea7818cb95294145e65410d462d4fe27ccc90. The decoder import is pinned to
+micromp3 commit c230523694bf8d84f86fa86c911974305b99ec28. Neither source
+branch nor master is modified.
+
+The PCM baseline fails EC and NC linking: BSNWPlay calls the undefined
+BSNWStartPlay. The prerequisite fix calls the already declared and implemented
+BSNWAsmStartPlay in ASMTOOLS/asmtoolsManager.asm. No driver or DMA changes.
+After this fix aihelp.py build Library/Audio/BSNWav succeeds in EC and NC.
+Existing warnings concern unused variables/parameters and unprototyped
+ProcCallFixedOrMovable_pascal calls.
+
+Baseline linker resource sizes (bytes, EC then NC):
+
+- dgroup: 272 / 272, fixed; uninitialized data/stack: 152 / 152.
+- udata: 4 / 4; ASMTOOLS_TEXT: 380 / 380.
+- bsnwav_TEXT: 3404 / 2016; subcode_TEXT: 6780 / 3946.
+- MONIKERRESOURCE: 1104 / 1104.
+
+MP3Dec and MP3Wav both build with aihelp.py in EC and NC. The decoder's
+linked resources contain fixed dgroup (10176 bytes) and MP3MathCode (67),
+and movable shared code for MP3DspCode (10970), MP3FrameCode (10796),
+MP3HuffCode (5359), MP3ImdctCode (237), MP3SynthCode (1238),
+MP3QuantCode (2775), MP3SterCode (7342), and mp3api_TEXT (2601).
+The existing decoder allocates three movable blocks per instance (context,
+2048-byte compressed input, 4608-byte PCM); actual GEOS live handle counts
+have not been measured.
+
+The pinned upstream micro-mp3 checkout is
+07c18fa2d045b89bcc19aa0c1dc5333ce69b39db. Existing host checks pass all
+eight upstream inputs, including six feed sizes, byte-exact reference core
+and WAV conversion, relocation, allocation failure, reset and malformed input.
+Standalone Watcom DOS checks pass all eight inputs with EC/NC flags and the
+actual linked ESP DSP resources, plus DSP regression, live-CS Huffman dispatch
+and 6486 fixed-point products. This does not run PC/GEOS.
+
+Reproduction and retained logs are under ~/pcgeos-tools/bsnaudio/. Tests use
+TMPDIR=~/pcgeos-tools/bsnaudio/tmp and KEEP_TESTS=1. The baseline snapshot is
+an archive of only the decoder, converter and headers, not a branch merge.
+
+mkmf discovers source modules in Library/Audio/BSNWav and generates the
+Installed module Makefile; aihelp.py builds in Installed. pmake lib publishes
+the library definition to Installed/Include. The hand-maintained top-level
+Installed/Makefile has the bsnwav target and Wav, MixLib, Bsqp and SndChk
+consumer dependencies. Subdirectory Makefiles and dependencies are generated.
+
+## Common source contract
+
+CInclude/bsnaudio.h defines format-independent BSNPcmFormat and BSNPcmSource.
+The far Pascal reader returns complete PCM frames, zero at EOF and 0xffff
+on error. Short positive reads are valid. The descriptor and opaque context
+remain valid and locked throughout blocking playback; decoder-owned movable
+state is referenced through handles inside that context. Callback pointers
+are GEOS virtual code pointers and require ProcCallFixedOrMovable_pascal
+with callback arguments first and the code pointer last.
+
+BSNPcmPlay is appended after the existing exports with incminor. The geode
+remains bsnwav.lib and retains its token. At this stage it adapts the common
+format to the existing engine; subsequent stages remove this internal WAV
+format dependency.
+
+## Unverified runtime behavior
+
+PC/GEOS was not started, as required by AGENTS.md. Audible playback, DMA
+underruns, movable resource reloads, live handle counts and peak playback
+stack use require later manual testing. Compilation and standalone DOS
+checks do not establish those results.
