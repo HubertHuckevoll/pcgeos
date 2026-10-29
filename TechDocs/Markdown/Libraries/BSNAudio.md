@@ -18,10 +18,10 @@ Baseline linker resource sizes (bytes, EC then NC):
 
 - dgroup: 272 / 272, fixed; uninitialized data/stack: 152 / 152.
 - udata: 4 / 4; ASMTOOLS_TEXT: 380 / 380.
-- bsnwav_TEXT: 3404 / 2016; subcode_TEXT: 6780 / 3946.
+- bsnwav_TEXT: 3404 / 2016; subcode_TEXT: 6777 / 3946.
 - MONIKERRESOURCE: 1104 / 1104.
 
-MP3Dec and MP3Wav both build with aihelp.py in EC and NC. The decoder's
+MP3Dec and MP3Wav both build with aihelp.py in EC and NC. The decoder's NC
 linked resources contain fixed dgroup (10176 bytes) and MP3MathCode (67),
 and movable shared code for MP3DspCode (10970), MP3FrameCode (10796),
 MP3HuffCode (5359), MP3ImdctCode (237), MP3SynthCode (1238),
@@ -176,7 +176,7 @@ callback address when its merged resource's first contributor is another
 object; no extra GP export is added.
 
 The linked NC map confirms writable fixed dgroup (10432 bytes), fixed math
-(67), and movable shared PCMCode (2572), WAVCode (1037), MP3ReaderCode (806)
+(67), and movable shared PCMCode (2756), WAVCode (1058), MP3ReaderCode (806)
 and the original decoder resources. Every segment remains below 64 KB.
 Only geos and ansic are imported; no ui or mp3dec import is introduced.
 
@@ -232,3 +232,115 @@ QuickPlayer still creates its playback thread with a 3000-byte stack
 for MP3: stack depth, worst decoder-call duration, active-resource paging,
 underruns and audible output require manual GEOS measurements. No decoder
 runs in an interrupt handler and no extra decoding thread is introduced.
+
+## Application playback examples
+
+Both entry paths use the same blocking engine and borrowed file ownership.
+Check the Open result before playing, and always Close after a successful Open:
+
+    BSNWav wav;
+    if (BSNWavOpen(&wav, fh) == BSNW_STATUS_OK) {
+        result = BSNPcmPlay(&wav.source, 0, 0);
+        BSNWavClose(&wav);
+    }
+
+    BSNMP3Dec mp3;
+    if (BSNMP3DecOpen(&mp3, fh) == BSNW_STATUS_OK) {
+        result = BSNPcmPlay(&mp3.source, 0, 0);
+        BSNMP3DecClose(&mp3);
+    }
+
+Applications doing conversion call ReadPCM directly instead of BSNPcmPlay;
+they never supply compressed input to the decoder.
+
+## Final validation and measurements
+
+All 16 legacy exports retain their exact ordinal positions; seven new exports
+are appended. The linked geode reports protocol 1.8, permanent name bsnwav,
+token BSNW/16427 and 23 exports. Its only imports are geos and ansic. The
+complete imported core and optimized assembly are byte-identical to the
+pinned donor (the assembly filename differs). No other pre-existing branch
+reference moved, including master.
+
+Final linker resource sizes in bytes (EC / NC):
+
+- dgroup: 10432 / 10432, writable fixed data.
+- MP3MathCode: 67 / 67, fixed shared read-only code.
+- ASMTOOLS_TEXT: 380 / 380, movable shared read-only code.
+- AudioMainCode: 5607 / 3359.
+- PCMCode: 4542 / 2756; WAVCode: 1690 / 1058.
+- MP3ApiCode: 4366 / 2612; MP3ReaderCode: 1268 / 806.
+- MP3DspCode: 10970 / 10970; MP3FrameCode: 21412 / 10796.
+- MP3HuffCode: 16687 / 5359; MP3ImdctCode: 436 / 237.
+- MP3QuantCode: 6068 / 2775; MP3SterCode: 10916 / 7342.
+- MP3SynthCode: 1559 / 1238.
+
+Except dgroup and MP3MathCode, every listed code resource is movable, shared,
+read-only, discardable and swappable in the actual .geo. The linker reports
+96400 / 60187 total resource bytes and 10499 fixed initialized/code bytes,
+plus 132 bytes of uninitialized data/stack. Geodump records 120 additional
+uninitialized bytes after the rounded initialized dgroup resource. Heap
+rounding, resource/handle metadata, resident driver resources and live loaded
+code are not runtime measurements here. The approximately 10-KB fixed decoder
+table/data contribution is present even for WAV-only playback; moving those
+tables requires locked-handle access and is deliberately deferred.
+
+The resource audit found a pre-existing bridge-state error: Driver's udata
+was not grouped with C dgroup and became a four-byte read-only code resource.
+Including the native resource.def now puts driverInfo in writable dgroup;
+all driver request/DMA instructions remain unchanged. The unused 1104-byte
+moniker resource and its source asset are removed. Orphan parser/converter
+comments and obsolete declarations are deleted.
+
+Final PCM regressions additionally cover failed cache/DMA allocation followed
+by retry with stereo toggling enabled. No toggle sample is written through
+a null buffer. DMA accounting excludes the initial toggle sample and final
+silence, so the last PCM sample is drained. The refill loop waits for space
+for a complete source frame, including the partial cache space caused by
+channel toggling. Unknown-stream accounting returns a source error before
+4-GiB wrap; longer playback needs wider counters. A 65535-byte WAV read
+request is capped at 65534 so a valid read cannot equal the error sentinel.
+The host tests exercise that boundary with a 64-KB data chunk.
+
+Source-based dynamic block/handle ownership, excluding all geode/resource,
+thread and driver-loader handles:
+
+- WAV reader alone: no owned memory handle; borrowed file remains open.
+- MP3 reader alone: three movable blocks, unchanged from the original decoder:
+  21730-byte target context, 2048-byte input, 4608-byte pending PCM.
+- Common playback: one movable PCM cache, normally 8192 bytes.
+- Existing BSD16/BSD8ST driver playback: one fixed DMA buffer plus one fixed
+  1000-byte ISR stack (BSDRecAllocateBuffer and BSCreateStack).
+- Thus source ownership predicts three playback blocks for WAV and six for
+  MP3, in addition to library/driver resources. Actual GEOS live/peak handle
+  counts, leaks and physical residency have not been measured.
+- MP3Wav owns the three decoder blocks and one 2048-byte output block, plus
+  its two file handles, application resources and process thread stack.
+
+Final results:
+
+- Audio library, MP3Wav, QuickPlayer and legacy Wav: EC and NC build/link pass.
+- Original host corpus, trusted PCM accuracy, streaming, malformed-input,
+  relocation, allocation/reset, new pull checks and real WAV conversion: pass.
+- Standalone Watcom DOS: 32 inputs with EC/NC settings and actual linked ESP
+  bytes are byte-exact; DSP, live-CS dispatch, 6486 products and public source
+  layout/far-pointer assertions pass.
+- Public playback host integration: all eight MP3 inputs, with/without the
+  initial channel-toggle sample, match original-core PCM. All four native
+  WAV sample layouts match; the 48-kHz source is rejected before driver start.
+- Optional ASan/UBSan could not link: this environment lacks the referenced
+  libasan.so.8.0.0 and libubsan.so.1.0.0. Normal host checks were rerun and pass.
+
+Retained evidence is under ~/pcgeos-tools/bsnaudio/: final-build.log,
+final-geodump-ec.txt, final-geodump-nc.txt, final-host.log, final-watcom.log,
+final-integration.log, final-mp3wav.log, final-quickplayer.log and
+final-legacy-wav.log. swat.rc sends bsnwav, mp3wav, bsqp and wav and ends in c;
+no GEOS session or audible playback was started.
+
+Remaining runtime work is explicit: audible WAV/MP3 output, Stop/Pause/Resume,
+repeated playback under GEOS memory pressure, code reloads, driver-specific
+conversions, allocation failures in the actual sound driver, worst decoder
+latency/underruns, peak 3000-byte QuickPlayer stack use, and live handle/leak
+counts. The host DMA shim does not replace those measurements. Midstream
+format changes, 48-kHz playback, more than 64 recovery steps per reader call,
+and playback sessions at or above 4 GiB of PCM are intentionally unsupported.
