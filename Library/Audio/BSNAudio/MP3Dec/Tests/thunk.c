@@ -5,6 +5,14 @@
 #include <stdio.h>
 #include <alloca.h>
 #include <geos.h>
+#include <bsnaudio.h>
+
+/* Public source ABI uses packed GEOS records and large-model far pointers. */
+typedef char PcmFormatSize[sizeof(BSNPcmFormat) == 14 ? 1 : -1];
+typedef char PcmSourceSize[sizeof(BSNPcmSource) == 26 ? 1 : -1];
+typedef char PcmCallbackSize[sizeof(BSNPcmReadProc *) == 4 ? 1 : -1];
+typedef char WavContextSize[sizeof(BSNWav) == 36 ? 1 : -1];
+typedef char Mp3ContextSize[sizeof(BSNMP3Dec) == 34 ? 1 : -1];
 #include "../core/s_tmp3dec_file.h"
 #include "../core/pv_mp3_huffman.h"
 

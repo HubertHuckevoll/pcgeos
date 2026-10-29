@@ -201,3 +201,34 @@ pass. The full original host corpus continues to pass.
 Cancellation is serviced between synchronous reader calls; Open and ReadPCM
 may perform input/metadata I/O and decoding before returning. GEOS UI timing
 and cancellation responsiveness still require manual testing.
+
+## Playback integration and compatibility
+
+The actual Open -> BSNPcmPlay -> Close paths run under host GEOS/DMA shims
+for all eight MP3 samples and 8/16-bit mono/stereo WAV. The check compiles the
+production prepare/cache/conversion/playback/controller routines with the
+real readers and decoder. Simulated DMA output matches original-core PCM
+byte-for-byte, and known/unknown-length tails drain before cleanup. This is
+not an audible GEOS runtime test. A 48-kHz source is rejected before starting
+the simulated driver. Target ABI checks assert the packed source/format
+layouts and four-byte callback pointer.
+
+Reproduce the basic checks with Tests/check.pl. Passing the pinned upstream
+checkout as its first argument additionally exercises public playback. An
+optional second argument names a directory containing original-core raw PCM
+files named after each input with .pcm appended, for DMA-output comparison.
+Reference outputs and the exact invocation are retained under
+~/pcgeos-tools/bsnaudio/phase8-reference and phase8-integration.log.
+
+QuickPlayer (Appl/Audio/Bsqp) and Library/Wav compile and link EC/NC against
+bsnwav 1.7 requirements, while the new MP3Wav requires 1.8. Their source and
+DMA drivers are unchanged. Driver/Sound/BSD16/bsrecord.asm advertises a
+44100-Hz maximum through BSDRecGetMaxProperties; BSD8ST advertises 22050 Hz.
+BSNWPrepKS retains the 5001..44199-Hz source setup range. No 48-kHz playback
+or speculative resampler/buffer enlargement is introduced.
+
+QuickPlayer still creates its playback thread with a 3000-byte stack
+(Appl/Audio/Bsqp/Main/subcode.goc). No claim is made that this is sufficient
+for MP3: stack depth, worst decoder-call duration, active-resource paging,
+underruns and audible output require manual GEOS measurements. No decoder
+runs in an interrupt handler and no extra decoding thread is introduced.

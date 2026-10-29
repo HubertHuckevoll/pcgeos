@@ -18,6 +18,14 @@ for my $name (qw(BSNWReadPCM BSNWLoadCache BSNWFillSilence BSNWKonvertData BSNWL
         or die "missing $name";
     print $out "$1\n";
 }
+print $out "#ifdef BSN_INTEGRATION_TEST\n";
+for my $name (qw(BSNWDetermineSecondaryBufferLength BSNWPrepare BSNWRunPCM BSNPcmPlay)) {
+    my $definition = $source;
+    $definition =~ /^([^\n;{}]*\b$name\([^;]*?\)\n\{.*?^\})/ms
+        or die "missing $name";
+    print $out "$1\n";
+}
+print $out "#endif\n";
 close $out or die $!;
 # geos.h is replaced only in this host check; production uses the real header.
 open $out, '>', "$tmp/geos.h" or die $!;
@@ -60,3 +68,48 @@ system('gcc', @flags, '-I', $tmp, '-I', "$lib/../../../CInclude", '-x', 'c',
        "$lib/WAV/wav.goc", "$lib/Tests/wav.c", '-o', "$tmp/wav") == 0
     or die 'WAV compile failed';
 system("$tmp/wav", "$tmp/input.wav") == 0 or die 'WAV checks failed';
+
+# Optional decoder-to-playback integration using the same actual PCM routines.
+if (@ARGV) {
+    my ($up, $reference_dir) = @ARGV;
+    my $mp3 = "$lib/MP3Dec";
+    my @core = map { "$mp3/$_.c" } qw(mp3frame mp3huff mp3imdct mp3synth mp3quant mp3ster);
+    system('gcc', @flags, '-fwrapv', '-I', $tmp, '-I', $mp3,
+        '-I', "$lib/../../../CInclude", '-DMP3_HOST_TEST', '-DMP3_HEAP_ONLY',
+        '-DBSN_INTEGRATION_TEST', '-x', 'c', "$lib/Tests/pcm.c",
+        "$mp3/Tests/stream.c", "$mp3/mp3api.c", "$mp3/mp3reader.goc",
+        "$lib/WAV/wav.goc", @core, '-o', "$tmp/play") == 0 or die 'integration compile failed';
+    for my $input (glob("$up/tests/data/*.mp3")) {
+        (my $name = $input) =~ s|.*/||;
+        system("$tmp/play", 'mp3', $input, "$tmp/play.pcm") == 0 or die 'playback failed';
+        if (defined $reference_dir) {
+            open my $ref, '<:raw', "$reference_dir/$name.pcm" or die $!;
+            open my $played, '<:raw', "$tmp/play.pcm" or die $!;
+            my $expected = do { local $/; <$ref> };
+            my $actual = do { local $/; <$played> };
+            die 'playback PCM differs' unless substr($actual, 0, length($expected)) eq $expected;
+        }
+    }
+    for my $bits (8, 16) {
+        for my $channels (1, 2) {
+            my $align = $channels * ($bits / 8);
+            my $payload = pack('C*', 0..255);
+            open my $wave, '>:raw', "$tmp/native.wav" or die $!;
+            print $wave pack('a4Va4a4VvvVVvva4V', 'RIFF', 292, 'WAVE', 'fmt ', 16,
+                            1, $channels, 44100, 44100*$align, $align, $bits,
+                            'data', 256), $payload;
+            close $wave or die $!;
+            system("$tmp/play", 'wav', "$tmp/native.wav", "$tmp/wavplay.pcm") == 0
+                or die 'WAV playback failed';
+            open my $played, '<:raw', "$tmp/wavplay.pcm" or die $!;
+            read($played, my $actual, 256) == 256 or die 'short WAV playback';
+            die 'WAV playback PCM differs' unless $actual eq $payload;
+        }
+    }
+    open my $wav, '>:raw', "$tmp/rate.wav" or die $!;
+    print $wav pack('a4Va4a4VvvVVvva4V', 'RIFF', 40, 'WAVE', 'fmt ', 16,
+                    1, 1, 48000, 96000, 2, 16, 'data', 4), "\0" x 4;
+    close $wav or die $!;
+    system("$tmp/play", 'wav', "$tmp/rate.wav", "$tmp/wavplay.pcm") == 0
+        or die '48kHz rejection failed';
+}

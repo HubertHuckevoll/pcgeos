@@ -5,10 +5,12 @@
 #include <stdint.h>
 #include <bsnaudio.h>
 #define BSNW_PCM_READ_ERROR BSN_PCM_READ_ERROR
-#define BSNW_STATUS_OK 0
-#define BSNW_ABORT 1
-#define BSNW_SOURCE_ERROR 8
-#define BSNW_PLAY_FINISHED 255
+#define BSNW_STATUS_PLAY_MEM 2
+#define NullOptr 0
+#define BSNW_TICKS_PER_SECOND 60
+#define BSNW_MIN_TICKS_PER_HALF_BUFFER 2
+#define HF_SWAPABLE 0
+#define HAF_ZERO_INIT 0
 #define BSCPT_REST_TIME 1
 static word playCacheLen, cacheFree, cacheFull, cacheOffset, cacheKOffset;
 static word secondKOffset, secondFree, secBufLen, secBufL2, playLen2;
@@ -21,7 +23,42 @@ static byte cache[32], dma[8], played[2048];
 static byte *playCachePtr = cache, *secondPtr = dma;
 static char playStatusText[80];
 static BSNPcmSource *playSourceP;
-static word ticks, started, stopped, playedCount;
+static dword ticks, playedCount;
+static word started, stopped;
+static FILE *playOutputP;
+#ifdef BSN_INTEGRATION_TEST
+static MemHandle dmaH;
+static word secBufLenSoll = 512, playSampleRate, secondOffset;
+static byte playChannels, stereoToggle, stereoToggleIni;
+static optr statusBox, statusGlyphOptr1, statusRightBoxOptr;
+extern MemHandle MemAlloc(word size, word flags, word action);
+extern void *MemLock(MemHandle h);
+extern void MemUnlock(MemHandle h);
+extern void MemFree(MemHandle h);
+static int BSNWPreCheck(word flags) { (void)flags; return BSNW_STATUS_OK; }
+static void *BSNWAllocPlayCache(word size)
+{
+    playCacheHandle = MemAlloc(size, 0, 0);
+    return playCacheHandle ? MemLock(playCacheHandle) : (void *)0;
+}
+static word BSNWAllocSecBuffer(byte **ptrP, word size)
+{
+    dmaH = MemAlloc(size, 0, 0);
+    *ptrP = dmaH ? MemLock(dmaH) : (void *)0;
+    return dmaH ? size : 0;
+}
+static int BSNWPrepKS(word rate, byte channels, byte bits)
+{
+    playSampleRate = rate; playChannels = channels; playBits = bits;
+    konvRateRed = konvBitsRed = konvChanRed = 1;
+    return BSNW_STATUS_OK;
+}
+static optr BSCNCreateStatusBox(optr parent) { (void)parent; return 0; }
+static void BSNWInsertSample(void *destP, byte bits)
+{
+    (void)destP; (void)bits; assert(0);
+}
+#endif
 
 static word ProcCallFixedOrMovable_pascal(void *contextP, void *destP,
                                          word capacity, BSNPcmReadProc *readP)
@@ -38,21 +75,30 @@ static word BSNWaveGetAIState(word options)
 {
     word half;
     if (options) { ticks = 0; return 0; }
-    assert(ticks < 200);
+    assert(ticks < 1000000);
     half = (ticks & 1) ? secBufL2 : 0;
-    assert(playedCount + secBufL2 <= sizeof(played));
-    memcpy(played + playedCount, dma + half, secBufL2);
+    if (playOutputP) {
+        assert(fwrite(secondPtr + half, 1, secBufL2, playOutputP) == secBufL2);
+    } else {
+        assert(playedCount + secBufL2 <= sizeof(played));
+        memcpy(played + playedCount, dma + half, secBufL2);
+    }
     playedCount += secBufL2;
     ticks++;
-    return (word)(ticks | ((ticks & 1) ? 0x100 : 0));
+    return (word)((ticks & 255) | ((ticks & 1) ? 0x100 : 0));
 }
 static void TimerSleep(word ticksToSleep) { (void)ticksToSleep; }
 static void BSNWaveStopRecOrPlay(void *bufferP)
 {
     (void)bufferP; stopped++;
+#ifdef BSN_INTEGRATION_TEST
+    if (dmaH) { MemUnlock(dmaH); MemFree(dmaH); dmaH = 0; }
+#endif
 }
+#ifndef BSN_INTEGRATION_TEST
 static void MemUnlock(word h) { (void)h; }
 static void MemFree(word h) { (void)h; }
+#endif
 static dword BSNWaveCalcPlaytimeText(char *textP, dword current, dword full,
                                     dword rate, word mode)
 {
@@ -61,6 +107,7 @@ static dword BSNWaveCalcPlaytimeText(char *textP, dword current, dword full,
 }
 #include "pcm.inc"
 
+#ifndef BSN_INTEGRATION_TEST
 typedef struct {
     word length, offset, chunk, failAt, invalid;
 } Input;
@@ -151,3 +198,58 @@ int main(void)
     puts("PCM partial reads, known/unknown length, early EOF, drain, errors: PASS");
     return 0;
 }
+
+#else
+static FILE *inputP;
+dword FileSize(FileHandle file)
+{
+    long pos, end;
+    (void)file;
+    pos = ftell(inputP); assert(!fseek(inputP, 0, SEEK_END));
+    end = ftell(inputP); assert(!fseek(inputP, pos, SEEK_SET));
+    return (dword)end;
+}
+dword FilePos(FileHandle file, dword offset, word mode)
+{
+    (void)file; (void)mode;
+    return fseek(inputP, (long)offset, SEEK_SET) ? 0xffffffffUL : offset;
+}
+word FileRead(FileHandle file, void *destP, word count, word flags)
+{
+    (void)file; (void)flags;
+    return (word)fread(destP, 1, count, inputP);
+}
+int main(int argc, char **argv)
+{
+    BSNMP3Dec mp3;
+    BSNWav wav;
+    BSNPcmSource *sourceP;
+    int result;
+
+    assert(argc == 4);
+    inputP = fopen(argv[2], "rb"); assert(inputP);
+    playOutputP = fopen(argv[3], "wb"); assert(playOutputP);
+    if (argv[1][0] == 'm') {
+        assert(BSNMP3DecOpen(&mp3, 1) == BSNW_STATUS_OK);
+        sourceP = &mp3.source;
+    } else {
+        assert(BSNWavOpen(&wav, 1) == BSNW_STATUS_OK);
+        sourceP = &wav.source;
+    }
+    playCacheLen = 8192;
+    result = BSNPcmPlay(sourceP, 0, 0);
+    if (sourceP->format.sampleRate >= 44200) {
+        assert(result == BSNW_UNKNOWN_WAVE_FORMAT && !started);
+    } else {
+        assert(result == BSNW_STATUS_OK && started && stopped);
+        assert(playedBytes >= fullLen && playedBytes-fullLen < playLen2);
+        assert(playCacheLen == 8192);
+    }
+    if (argv[1][0] == 'm') BSNMP3DecClose(&mp3);
+    else BSNWavClose(&wav);
+    assert(!fseek(inputP, 0, SEEK_SET));
+    assert(!fclose(inputP) && !fclose(playOutputP));
+    puts("Public decoder -> BSNPcmPlay -> common DMA buffer path: PASS");
+    return 0;
+}
+#endif
