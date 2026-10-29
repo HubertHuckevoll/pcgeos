@@ -1682,7 +1682,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
             // 1st loop --> start
             if (i==0)
             {
-                BSNWStartPlay();
+                BSNWAsmStartPlay();
                 aiState2 = BSNWaveGetAIState(0xFF01);   // FF01 --> ISR clear the buffer
             };
 
