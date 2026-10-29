@@ -10,11 +10,11 @@ PCM             = pcm.goc
 WAV             = wav.goc
 MP3DEC          = mp3decManager.asm mp3api.c mp3frame.c mp3fxp.c mp3huff.c\
                   mp3imdct.c mp3quant.c mp3ster.c mp3synth.c mp3fxp.h\
-                  mp3int.h mp3dec.h
+                  mp3int.h mp3dec.h mp3reader.goc
 UI_TO_RDFS      =
 OBJS            = bsnwav.obj subcode.obj pcm.obj wav.obj mp3api.obj\
                   mp3frame.obj mp3fxp.obj mp3huff.obj mp3imdct.obj\
-                  mp3quant.obj mp3ster.obj mp3synth.obj
+                  mp3quant.obj mp3ster.obj mp3synth.obj mp3reader.obj
 COMMON          =
 MODULES         = ASMTOOLS MP3Dec
 CMODULES        = Main PCM WAV MP3Dec

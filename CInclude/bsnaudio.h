@@ -71,4 +71,20 @@ extern int _pascal _export BSNWavOpen(BSNWav *wavP, FileHandle file);
 extern word _pascal _export BSNWavReadPCM(void *contextP, void *destP,
                                          word maxBytes);
 extern void _pascal _export BSNWavClose(BSNWav *wavP);
+/* Three movable decoder blocks; no extra input or playback buffer.
+ * Open probes with zero PCM capacity and retains the first decoded frame.
+ * Open/Read/Close are serialized per context. File is borrowed.
+ * status records a terminal source error or unsupported format change.
+ */
+typedef struct {
+    BSNPcmSource source;
+    FileHandle file;
+    MemHandle decoderH;
+    word status;
+    word damaged; /* Recovery occurred; strict converters may reject it. */
+} BSNMP3Dec;
+extern int _pascal _export BSNMP3DecOpen(BSNMP3Dec *mp3P, FileHandle file);
+extern word _pascal _export BSNMP3DecReadPCM(void *contextP, void *destP,
+                                            word maxBytes);
+extern void _pascal _export BSNMP3DecClose(BSNMP3Dec *mp3P);
 #endif

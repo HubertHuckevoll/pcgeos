@@ -8,6 +8,8 @@ typedef uint16_t word;
 typedef int16_t sword;
 typedef uint32_t dword;
 typedef word MemHandle;
+typedef int Boolean;
+typedef dword optr;
 #define _pascal
 #define _export
 #define NullHandle 0

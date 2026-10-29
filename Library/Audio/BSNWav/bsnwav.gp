@@ -101,3 +101,7 @@ resource MP3SynthCode code read-only shared
 resource MP3DspCode code read-only shared
 resource MP3QuantCode code read-only shared
 resource MP3SterCode code read-only shared
+export BSNMP3DECOPEN
+export BSNMP3DECREADPCM
+export BSNMP3DECCLOSE
+resource MP3ReaderCode code read-only shared

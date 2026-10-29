@@ -123,6 +123,16 @@ wav.obj \
 wav.eobj: 
 wav.obj \
 wav.eobj: bsnaudio.h geos.h file.h
+mp3reader.obj \
+mp3reader.eobj: 
+mp3reader.obj \
+mp3reader.eobj: MP3Dec/mp3int.h geos.h heap.h ec.h Ansi/string.h \
+                MP3Dec/mp3dec.h MP3Dec/core/pvmp3_framedecoder.h \
+                MP3Dec/core/pvmp3_dec_defs.h \
+                MP3Dec/core/pvmp3_audio_type_defs.h \
+                MP3Dec/core/pvmp3decoder_api.h MP3Dec/core/s_mp3bits.h \
+                MP3Dec/core/s_tmp3dec_file.h MP3Dec/core/s_tmp3dec_chan.h \
+                MP3Dec/core/s_huffcodetab.h bsnaudio.h file.h
 mp3api.obj \
 mp3api.eobj: MP3Dec/mp3int.h geos.h heap.h ec.h Ansi/string.h \
                 MP3Dec/mp3dec.h MP3Dec/core/pvmp3_framedecoder.h \

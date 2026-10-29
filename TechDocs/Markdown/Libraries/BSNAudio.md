@@ -124,3 +124,29 @@ The original MP3Wav sources are imported to retain conversion regressions;
 their GEOS client migration to the combined pull interface follows separately.
 The decoder's feed API/header is private to MP3Dec and is not exported by the
 combined library. EC and NC combined-library builds pass.
+
+## Pull-based MP3 reader
+
+BSNMP3DecOpen, BSNMP3DecReadPCM and BSNMP3DecClose expose the same source
+contract as WAV. Open probes with zero output capacity, retaining the first
+PCM frame inside the existing decoder block. Read drains pending PCM and
+performs file I/O only on NEED_INPUT. It reads directly into the decoder's
+locked compressed-input block, bounded by its free capacity: all read bytes
+are accepted, and no unaccepted suffix or additional buffer is possible.
+The reader still owns only the decoder's original three handles. Close
+releases these blocks and leaves the borrowed file open.
+
+PCM accompanying RECOVERABLE is returned; other recoveries continue with an
+explicit 64-recovery-per-call limit. Long damaged regions beyond that ceiling
+need an incremental recovery API. The context's damaged flag lets strict
+converters reject concealment/recovery while ordinary playback can proceed.
+Fatal/truncated input and file errors return the PCM error sentinel and latch
+status. Midstream format changes latch unknown-format and are rejected before
+returning new-format PCM. EOF follows pending PCM drainage.
+
+The pull checks compare all eight upstream files byte-for-byte with the
+original core for compressed read chunks of 1, 3, 7, 127 and 2048 bytes and
+511-byte PCM capacities. They also verify retained probing output, tiny output
+capacity, interleaved instances, relocation on every unlock, all three initial
+allocation failures, borrowed files, repeated close, file-read failures,
+truncated final frames and format-change rejection. Both GEOS builds pass.

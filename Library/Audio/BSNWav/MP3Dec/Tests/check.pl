@@ -65,6 +65,7 @@ write_file("$tmp/include/file.h", <<'HEADER');
 typedef word FileHandle;
 #define FALSE 0
 #define FILE_POS_START 0
+word FileRead(FileHandle file, void *dataP, word size, word flags);
 word FileWrite(FileHandle file, const void *dataP, word size, word flags);
 dword FilePos(FileHandle file, dword offset, word mode);
 #endif
@@ -73,6 +74,9 @@ my $app = "$repo/Appl/MP3Wav";
 my @includes = ('-I', "$tmp/include", '-I', $lib, '-I', "$repo/CInclude");
 run('gcc', @flags, @includes, "$app/Tests/wavcheck.c", "$app/wavwriter.c", '-o', "$tmp/wavcheck");
 run("$tmp/wavcheck", "$tmp/test.wav");
+run('gcc', @flags, @sanitize, @includes, '-I', $lib, '-DMP3_HOST_TEST',
+    '-x', 'c', "$lib/Tests/pull.c", "$lib/mp3reader.goc", "$lib/mp3api.c", @core,
+    '-o', "$tmp/pull");
 run('gcc', @flags, @sanitize, @includes, '-DMP3_HOST_TEST', '-DMP3_HEAP_ONLY',
     "$app/Tests/convert.c", "$app/wavwriter.c", "$lib/Tests/stream.c",
     "$lib/mp3api.c", @core, '-o', "$tmp/convert");
@@ -86,6 +90,11 @@ for my $sample (@samples) {
     run("$tmp/original", $sample, "$tmp/reference.pcm");
     run("$tmp/core", $sample, "$tmp/core.pcm");
     same("$tmp/reference.pcm", "$tmp/core.pcm");
+    for my $chunk (1, 3, 7, 127, 2048) {
+        run("$tmp/pull", $sample, "$tmp/pull.pcm", $chunk);
+        same("$tmp/reference.pcm", "$tmp/pull.pcm");
+    }
+
     for my $chunk (1, 3, 7, 127, 2048, 65535) {
         run("$tmp/stream", $sample, "$tmp/stream.pcm", $samples[3], "$tmp/other.pcm", $chunk, 511);
         same("$tmp/reference.pcm", "$tmp/stream.pcm");
@@ -100,6 +109,15 @@ for my $sample (@samples) {
                                     unpack('V',substr($header,40,4)) == length($pcm);
     print basename($sample), ": exact core, streaming, and WAV PCM\n";
 }
+# Pull API rejects a truncated final frame and midstream format changes.
+open my $sample_in, '<:raw', "$up/tests/data/sine_stereo_44100_noxing.mp3" or die $!;
+my $stereo = do { local $/; <$sample_in> }; close $sample_in;
+write_file("$tmp/truncated.mp3", substr($stereo, 0, length($stereo)-1));
+run("$tmp/pull", "$tmp/truncated.mp3", "$tmp/truncated.pcm", 127, 'error');
+open $sample_in, '<:raw', "$up/tests/data/sine_mono_8000.mp3" or die $!;
+my $mono = do { local $/; <$sample_in> }; close $sample_in;
+write_file("$tmp/changed.mp3", $stereo . $mono);
+run("$tmp/pull", "$tmp/changed.mp3", "$tmp/changed.pcm", 127, 'error');
 if (defined $vectors) {
     for my $input (glob("$vectors/l3-*.bit"), glob("$vectors/M2L3_*.bit"), "$vectors/ILL2_layer3.bit") {
         next unless -f $input;
