@@ -14,7 +14,7 @@
 
 name bsqp.app
 
-longname "WAV QuickPlayer"
+longname "Audio QuickPlayer"
 
 type    appl, process, single
 
@@ -51,3 +51,5 @@ export  BSQPApplicationClass
 export  BSQPPrimaryClass
 
 # usernotes "� D.Lausecker\x0dWAV-Quickplayer is licensed to NewDeal and is subject to its conditions of use."
+
+export BQAudioFileSelectorClass

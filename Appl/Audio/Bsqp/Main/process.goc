@@ -195,6 +195,8 @@ DESCRIPTION:
     // disable endless playing
     bqOptions = 0;
 
+    bqStopRequested = TRUE;
+
     // stop current paying
     switch (playFlag)
     {
@@ -294,20 +296,11 @@ typedef struct {
 
 @method BSQPProcessClass, MSG_PROCESS_BSQP_STOP
 {
-    word    status;
-
-    status = BSNWaveGetStatus();
-
-    if (BSEXBSSTATUS(status))
-    {
-        // Set stopflag for NewWave Output
+    if (playFlag) {
+        bqStopRequested = TRUE;
+        if (playFlag == BQ_PLAYFLAG_PAUSE) BSNWaveSetPause(2);
         BSNWaveStop();
-    };
-
-    // set stopflag on old BSWAV-Library
-    // its not necessary if only BSNWAV will
-    // be used for playing the WAV's
-//  BSWavStop(1);
+    }
 }
 
 /**********************************************
@@ -392,6 +385,8 @@ typedef struct {
 
     if (playFlag)
     {
+        if (bqStopRequested || !BSEXBSSTATUS(BSNWaveGetStatus())) return;
+
         // PAUSE on/off
         // the value of the playFlag is identically
         // to the mode parameter so we can use
@@ -516,6 +511,7 @@ typedef struct {
                 };
 
                 // Stopping, Displaying, Playing
+                bqStopRequested = TRUE;
                 BSNWaveStop();
                 @call oself::MSG_PROCESS_BSQP_OPEN();
                 BQ_StartPlay();

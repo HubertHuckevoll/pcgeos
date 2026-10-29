@@ -55,6 +55,7 @@ extern  TimerHandle tih;
 extern  word        tid;        // TimerID
 extern  word        quickMode;  // Quickplaymodus
 extern  Boolean     capabFlag;
+extern  Boolean     bqStopRequested;
 extern  word        playFlag;   // State of playing
 extern  char        playText[]; // "PLAY"
 extern  char        pauseText[];    // "PAUSE"

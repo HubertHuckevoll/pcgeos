@@ -35,6 +35,7 @@ word            quickMode = 0;      // Quickplaymode
 
 Boolean         capabFlag = FALSE;  // driver is compatible with BS
 
+Boolean         bqStopRequested = FALSE;
 word            playFlag = 0;       // playState
 char            playText[] = "PLAY";    // strings for replacing visMoniker
 char            pauseText[] = "PAUSE";

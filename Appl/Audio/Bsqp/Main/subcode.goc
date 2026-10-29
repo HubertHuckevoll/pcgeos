@@ -166,7 +166,7 @@ void RedrawTime (GStateHandle gstate)
     int     notExposed,x;
     int h = 0;
     int m = 0;
-    int s,l ;
+    int s;
     static  int oldsec;
     char    tmpText[30];
 
@@ -187,13 +187,14 @@ void RedrawTime (GStateHandle gstate)
         };
 
         // length of WAV in seconds
-        if (bqBits)
+        if (bqBits && bqChannels && bqSampleRate)
         {
 
             // remaining if option or system idle
-            if ((bqDispStyle == BQ_TIME_DISP_REMAIN)||(playFlag == FALSE ))
+            if (bqAllBytes != BSN_PCM_LENGTH_UNKNOWN &&
+                ((bqDispStyle == BQ_TIME_DISP_REMAIN) || !playFlag))
             {
-                len = (bqAllBytes-bqSampleBytes)/((dword)(bqBits/8) * bqChannels * bqSampleRate );
+                len = (bqSampleBytes < bqAllBytes ? bqAllBytes-bqSampleBytes : 0)/((dword)(bqBits/8) * bqChannels * bqSampleRate );
             }
             else
             {
@@ -201,11 +202,9 @@ void RedrawTime (GStateHandle gstate)
             };
 
             // calculate h:m:s
-            l = (word)len;
-            h = l/ 3660;
-            l = l - (h*3660);
-            m = l / 60;
-            s = l - (m*60);
+            h = (int)(len / 3600);
+            m = (int)((len / 60) % 60);
+            s = (int)(len % 60);
         }
         else
         {
@@ -226,7 +225,8 @@ void RedrawTime (GStateHandle gstate)
             // create textstring
             sprintf(tmpText,"%u:%02u:%02u",h,m,s);
 
-            if (bqDispStyle == BQ_TIME_DISP_NORMAL)
+            if (bqDispStyle == BQ_TIME_DISP_NORMAL ||
+                bqAllBytes == BSN_PCM_LENGTH_UNKNOWN)
             {
                 globalText[0] = 0;
             }
@@ -467,6 +467,46 @@ void RedrawFileName (GStateHandle gstate)
 #define BQ_TIMEOUT_1    20
 // Timeout = 20/10 sec
 
+/* Each Open owns only reader state; the caller retains the file handle. */
+static int _pascal BQ_Audio(FileHandle fileH, Boolean testOnly)
+{
+    union {
+        BSNWav wav;
+        BSNMP3Dec mp3;
+    } reader;
+    BSNPcmSource *sourceP;
+    dword signature;
+    Boolean mp3;
+    int result;
+
+    if (FilePos(fileH, 0, FILE_POS_START) != 0 ||
+        FileRead(fileH, &signature, sizeof(signature), FALSE) != sizeof(signature))
+        return BSNW_SOURCE_ERROR;
+    mp3 = signature != CODE_RIFF;
+    if (mp3) {
+        result = BSNMP3DecOpen(&reader.mp3, fileH);
+        sourceP = &reader.mp3.source;
+    } else {
+        result = BSNWavOpen(&reader.wav, fileH);
+        sourceP = &reader.wav.source;
+    }
+    if (result == BSNW_STATUS_OK) {
+        bqSampleRate = sourceP->format.sampleRate;
+        bqChannels = sourceP->format.channels;
+        bqBits = sourceP->format.bitsPerSample;
+        bqAllBytes = sourceP->pcmBytes;
+        bqSampleBytes = 0;
+        if (!testOnly && bqStopRequested)
+            result = BSNW_ABORT;
+        else
+            result = BSNPcmPlay(sourceP,
+                       testOnly ? BSNW_TEST_ONLY : BSNW_SHOW_ERROR_MSG, 0);
+    }
+    if (mp3) BSNMP3DecClose(&reader.mp3);
+    else BSNWavClose(&reader.wav);
+    return result;
+}
+
 void    _pascal BQ_StartPlay(void)
 {
     FileHandle  fh;
@@ -482,6 +522,8 @@ void    _pascal BQ_StartPlay(void)
     // stop it and wait for free (with timeout)
     if (playFlag)
     {
+        bqStopRequested = TRUE;
+        if (playFlag == BQ_PLAYFLAG_PAUSE) BSNWaveSetPause(2);
         BSNWaveStop();
         timeout = 0;
         while (playFlag && (timeout<BQ_TIMEOUT_1))
@@ -510,11 +552,13 @@ void    _pascal BQ_StartPlay(void)
 
         if (fh)
         {
-            if (BSNW_STATUS_OK != BSNWavePlayFile(fh,BSNW_SHOW_ERROR_MSG|BSNW_TEST_ONLY,0))
+            if (BSNW_STATUS_OK != BQ_Audio(fh, TRUE))
             {
                 // Error, WAV-file not playable
                 FileClose(fh,TRUE);
                 fh = 0;
+                SysNotify(SNF_CONTINUE, "Cannot play this audio file.",
+                          "Use PCM WAV or MP3 at 44.1 kHz or below.");
             };
 
             if (fh)
@@ -522,7 +566,6 @@ void    _pascal BQ_StartPlay(void)
                 /////// successfull opening /////////
 
                 // update triggers & display
-                (void)BSNWaveGetLastFormat(&bqSampleRate,&bqChannels,&bqBits);
                 RedrawSettings(0);
 
                 @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(pauseText,VUM_NOW);
@@ -530,13 +573,14 @@ void    _pascal BQ_StartPlay(void)
                 RedrawFileName(0);
 
                 // Set Flag
+                bqStopRequested = FALSE;
                 playFlag = BQ_PLAYFLAG_PLAY;
 
                 // create Playthread
                 if(!ThreadCreate(PRIORITY_HIGH,     //PRIORITY_TIME_CRITICAL,
                                  (word)fh,
                                  BQ_PlayThread,
-                                 3000,
+                                 3000, /* Keep the existing playback stack. */
                                  GeodeGetProcessHandle()))
                 {
                     // Error
@@ -582,7 +626,7 @@ word    BQ_PlayThread(word wavFile)
     {
         if (capabFlag)
         {
-            playState = BSNWavePlayFile(fh,BSNW_SHOW_ERROR_MSG,0);
+            playState = BQ_Audio(fh, FALSE);
         }
         else
         {
@@ -593,8 +637,13 @@ word    BQ_PlayThread(word wavFile)
         };
 
     } while (capabFlag
+             && !bqStopRequested
              && (bqOptions & BQ_OPTION_ENDLESS)
              && (playState == 0));
+
+    if (playState != BSNW_STATUS_OK && playState != BSNW_ABORT)
+        SysNotify(SNF_CONTINUE, "Audio playback failed.",
+                  "Check the file format and sound driver.");
 
     // Close File
     (void) FileClose(fh, TRUE);
@@ -701,46 +750,22 @@ void _pascal BQ_DrawCenterText(GStateHandle  gstate,
 
 Boolean _pascal BQ_CheckForPlay(void)
 {
-    FileHandle  fh;
-    Boolean     retVal = FALSE;
+    FileHandle fileH;
+    Boolean valid;
 
-    // Open WAV-File and testing
-    fh = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W);
-
-    if (fh)
-    {
-        if (BSNW_STATUS_OK != BSNWavePlayFile(fh,BSNW_TEST_ONLY,0))
-        {
-            // Error, WAV-file not playable
-            FileClose(fh,TRUE);
-            fh = 0;
-            bqSampleRate = 0;
-            bqChannels = 0;
-            bqBits = 0;
-        };
-
-        if (fh)
-        {
-            // update triggers & display
-            bqAllBytes = BSNWaveGetLastFormat(&bqSampleRate,&bqChannels,&bqBits);
-            FileClose(fh,TRUE);
-        };
-
-        if (RedrawSettings(0))
-        {
-            // WAV-File OK
-            retVal = TRUE;
-
-        };
-
-        // Display Length (h:m:s)
-        RedrawTime(0);
+    bqSampleRate = bqChannels = bqBits = 0;
+    bqAllBytes = bqSampleBytes = 0;
+    fileH = FileOpen(fullPath, FILE_ACCESS_R | FILE_DENY_W);
+    valid = FALSE;
+    if (fileH) {
+        valid = BQ_Audio(fileH, TRUE) == BSNW_STATUS_OK;
+        FileClose(fileH, TRUE);
     }
-    else
-    {
-        // invalid file
+    if (!valid) {
+        bqSampleRate = bqChannels = bqBits = 0;
         bqAllBytes = 0;
-    };
-
-    return(retVal);
+    }
+    RedrawSettings(0);
+    RedrawTime(0);
+    return valid;
 }

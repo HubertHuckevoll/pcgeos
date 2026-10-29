@@ -176,7 +176,7 @@ callback address when its merged resource's first contributor is another
 object; no extra GP export is added.
 
 The linked NC map confirms writable fixed dgroup (10432 bytes), fixed math
-(67), and movable shared PCMCode (2756), WAVCode (1058), MP3ReaderCode (806)
+(67), and movable shared PCMCode (2801), WAVCode (1058), MP3ReaderCode (806)
 and the original decoder resources. Every segment remains below 64 KB.
 Only geos and ansic are imported; no ui or mp3dec import is introduced.
 
@@ -221,8 +221,8 @@ Reference outputs and the exact invocation are retained under
 ~/pcgeos-tools/bsnaudio/phase8-reference and phase8-integration.log.
 
 QuickPlayer (Appl/Audio/Bsqp) and Library/Wav compile and link EC/NC against
-bsnwav 1.7 requirements, while the new MP3Wav requires 1.8. Their source and
-DMA drivers are unchanged. Driver/Sound/BSD16/bsrecord.asm advertises a
+bsnwav 1.7 requirements, while the new MP3Wav requires 1.8. These compatibility builds preceded the QuickPlayer migration below.
+The legacy Wav source and DMA driver routines are unchanged. Driver/Sound/BSD16/bsrecord.asm advertises a
 44100-Hz maximum through BSDRecGetMaxProperties; BSD8ST advertises 22050 Hz.
 BSNWPrepKS retains the 5001..44199-Hz source setup range. No 48-kHz playback
 or speculative resampler/buffer enlargement is introduced.
@@ -268,7 +268,7 @@ Final linker resource sizes in bytes (EC / NC):
 - MP3MathCode: 67 / 67, fixed shared read-only code.
 - ASMTOOLS_TEXT: 380 / 380, movable shared read-only code.
 - AudioMainCode: 5607 / 3359.
-- PCMCode: 4542 / 2756; WAVCode: 1690 / 1058.
+- PCMCode: 4578 / 2801; WAVCode: 1690 / 1058.
 - MP3ApiCode: 4366 / 2612; MP3ReaderCode: 1268 / 806.
 - MP3DspCode: 10970 / 10970; MP3FrameCode: 21412 / 10796.
 - MP3HuffCode: 16687 / 5359; MP3ImdctCode: 436 / 237.
@@ -277,7 +277,7 @@ Final linker resource sizes in bytes (EC / NC):
 
 Except dgroup and MP3MathCode, every listed code resource is movable, shared,
 read-only, discardable and swappable in the actual .geo. The linker reports
-96400 / 60187 total resource bytes and 10499 fixed initialized/code bytes,
+96436 / 60232 total resource bytes and 10499 fixed initialized/code bytes,
 plus 132 bytes of uninitialized data/stack. Geodump records 120 additional
 uninitialized bytes after the rounded initialized dgroup resource. Heap
 rounding, resource/handle metadata, resident driver resources and live loaded
@@ -344,3 +344,43 @@ latency/underruns, peak 3000-byte QuickPlayer stack use, and live handle/leak
 counts. The host DMA shim does not replace those measurements. Midstream
 format changes, 48-kHz playback, more than 64 recovery steps per reader call,
 and playback sessions at or above 4 GiB of PCM are intentionally unsupported.
+
+## QuickPlayer WAV/MP3 client
+
+QuickPlayer now selects the WAV or MP3 reader by the file's RIFF signature,
+then calls BSNPcmPlay and closes the reader on every exit. The existing
+playback thread, sound controls and repeat option are retained. No compressed
+feeding, second playback engine or extra thread is added. MP3Wav conversion
+was confirmed working by the user before this client migration.
+
+A native file-selector callback accepts .WAV and .MP3 case-insensitively and
+retains directories. A semicolon-separated mask is not used: GEOS supports
+one filename mask. The selector subclass follows the SDK FSFilter pattern,
+including a statically stored virtual callback pointer. QuickPlayer now
+requires bsnwav protocol 1.8 and is labelled Audio QuickPlayer.
+
+The source format and PCM length populate the existing display. Unknown MP3
+lengths show elapsed time without a remaining-time estimate. Time calculation
+uses 32-bit seconds and 3600 seconds/hour. A pending Stop prevents playback
+from starting after a slow reader Open and prevents another repeat; Pause is
+ignored until the driver is running. The existing 3000-byte playback stack
+is retained; actual GEOS stack headroom remains a manual measurement.
+
+QuickPlayer builds in EC and NC. Its one focused host check compiles the
+actual file filter, reader adapter and time formatter with platform shims:
+
+    TMPDIR=~/pcgeos-tools/bsnaudio/tmp perl Appl/Audio/Bsqp/Tests/check.pl
+
+It covers filename cases/directories, reader cleanup on success/failure,
+probe versus play, cancellation before playback, and unknown/long durations.
+No PC/GEOS runtime was started; audible output and UI controls await the
+user's manual test.
+
+A standalone Watcom PCM check also found a pre-existing rate-reduction bug:
+the old converter skipped individual interleaved samples rather than whole
+frames, discarding the right channel at half rate. Both conversion paths now
+skip only after the final byte/sample of a frame. The targeted DOS EC/NC
+check covers partial reads, known/unknown lengths, native frame copies,
+16-to-8-bit mono/stereo reduction and stop/restart. Reproduce with PCM_WATCOM=1
+on Library/Audio/BSNAudio/Tests/check.pl; retained evidence is
+~/pcgeos-tools/bsnaudio/audit-integration.log. DMA and MP3 DSP code are unchanged.

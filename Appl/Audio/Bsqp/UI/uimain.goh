@@ -50,4 +50,7 @@ DESCRIPTION:
 @class BSQPPrimaryClass, GenPrimaryClass;
 @endc
 
+@class BQAudioFileSelectorClass, GenFileSelectorClass;
+@endc
+
 @endif

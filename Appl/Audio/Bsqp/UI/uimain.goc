@@ -31,6 +31,7 @@ DESCRIPTION:
 #include <Ansi/string.h>
 #include <timer.h>
 #include <file.h>
+#include <localize.h>
 
 
 @include "UI/uimain.goh"
@@ -44,6 +45,7 @@ DESCRIPTION:
 
 @classdecl  BSQPApplicationClass;
 @classdecl  BSQPPrimaryClass;
+@classdecl  BQAudioFileSelectorClass;
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  %      Objects
@@ -67,7 +69,7 @@ DESCRIPTION:
     ATTR_GEN_HELP_FILE = @TEXT_HELP_FILE;
 }
 
-@visMoniker BSQPTextMoniker = "WAV-QuickPlayer";
+@visMoniker BSQPTextMoniker = "Audio QuickPlayer";
 
 @end    AppResource;
 
@@ -212,11 +214,11 @@ DESCRIPTION:
 }
 
 @object GenGlyphClass InfoGlyph1 = {
-    GI_visMoniker = "WAV QuickPlayer";
+    GI_visMoniker = "Audio QuickPlayer";
 }
 
 @object GenGlyphClass InfoGlyph2 = {
-    GI_visMoniker = "Play WAV files by double-clicking them.";
+    GI_visMoniker = "Play WAV and MP3 files by double-clicking them.";
 }
 
 @object GenGlyphClass InfoGlyph3 = {
@@ -268,11 +270,11 @@ DESCRIPTION:
     GI_visMoniker = @TEXT_SELECTOR_1;
 }
 
-@object GenFileSelectorClass WavFileSelector =
+@object BQAudioFileSelectorClass WavFileSelector =
 {
     GFSI_destination = process;
     GFSI_notificationMsg = MSG_BSQP_FILE_SELECTED;
-    ATTR_GEN_FILE_SELECTOR_NAME_MASK = {"*.WAV"};
+    GFSI_fileCriteria = @default | FSFC_FILE_FILTER | FSFC_FILTER_IS_C;
     ATTR_GEN_PATH_DATA = {SP_DOCUMENT,0};
     HINT_FILE_SELECTOR_NUMBER_OF_FILES_TO_SHOW = 15;
 }
@@ -454,4 +456,40 @@ DESCRIPTION:
         };
         MemUnlock(appLaunchBlock);
     };
+}
+
+/* File selectors have one wildcard mask; use the native final filter for OR. */
+static Boolean _pascal BQ_FilterAudio(optr oself, FileEnumCallbackData *dataP,
+                                     word frame)
+{
+    FileAttrs *attrsP;
+    char *nameP, *extensionP;
+
+    (void)oself;
+    (void)frame;
+    attrsP = FileEnumLocateAttr(dataP, FEA_FILE_ATTR, (void *)0);
+    if (attrsP && (*attrsP & FA_SUBDIR))
+        return FALSE;
+    nameP = FileEnumLocateAttr(dataP, FEA_NAME, (void *)0);
+    if (!nameP)
+        return TRUE;
+    extensionP = strrchr(nameP, '.');
+    return !extensionP ||
+           (LocalCmpStringsNoCase(extensionP, ".WAV", 0) &&
+            LocalCmpStringsNoCase(extensionP, ".MP3", 0));
+}
+
+@method BQAudioFileSelectorClass, MSG_GEN_FILE_SELECTOR_GET_FILTER_ROUTINE
+{
+    /* Static storage retains a GEOS virtual code pointer instead of live CS. */
+    static GenFileSelectorFilterRoutine *const routineP =
+        (GenFileSelectorFilterRoutine *)BQ_FilterAudio;
+    static const FileExtAttrDesc attrs[] = {
+        { FEA_FILE_ATTR, (void *)0, sizeof(FileAttrs), (void *)0 },
+        { FEA_NAME, (void *)0, sizeof(FileLongName), (void *)0 },
+        { FEA_END_OF_LIST, (void *)0, 0, (void *)0 }
+    };
+
+    filter->filterRoutine = routineP;
+    filter->filterAttrs = attrs;
 }
