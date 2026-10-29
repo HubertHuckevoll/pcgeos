@@ -384,3 +384,10 @@ check covers partial reads, known/unknown lengths, native frame copies,
 16-to-8-bit mono/stereo reduction and stop/restart. Reproduce with PCM_WATCOM=1
 on Library/Audio/BSNAudio/Tests/check.pl; retained evidence is
 ~/pcgeos-tools/bsnaudio/audit-integration.log. DMA and MP3 DSP code are unchanged.
+
+Playback requires a BestSound-compatible driver (BSD16 or BSD8ST). The
+ordinary SoundBlaster driver does not implement the BSW format handshake or
+NewWave DMA requests, so BSNWPreCheck returns BSNW_WRONG_DRIVER even for a
+valid 44.1-kHz file. QuickPlayer now reports that driver error separately
+from unsupported format/rate and general read/memory errors. MP3Wav needs
+no compatible playback driver because it only decodes and writes PCM.

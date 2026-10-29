@@ -511,6 +511,7 @@ void    _pascal BQ_StartPlay(void)
 {
     FileHandle  fh;
     word        timeout;
+    int         result;
 
     // set next level of quickmode
     if (quickMode == BQ_QUICK_START)
@@ -552,13 +553,19 @@ void    _pascal BQ_StartPlay(void)
 
         if (fh)
         {
-            if (BSNW_STATUS_OK != BQ_Audio(fh, TRUE))
+            result = BQ_Audio(fh, TRUE);
+            if (result != BSNW_STATUS_OK)
             {
                 // Error, WAV-file not playable
                 FileClose(fh,TRUE);
                 fh = 0;
-                SysNotify(SNF_CONTINUE, "Cannot play this audio file.",
-                          "Use PCM WAV or MP3 at 44.1 kHz or below.");
+                SysNotify(SNF_CONTINUE,
+                    result == BSNW_WRONG_DRIVER ? "BestSound driver required." :
+                                                 "Cannot play this audio file.",
+                    result == BSNW_WRONG_DRIVER ? "Install/select BSD16 or BSD8ST." :
+                    result == BSNW_UNKNOWN_WAVE_FORMAT ?
+                        "Unsupported PCM format or sample rate." :
+                        "Check the file, sound device and available memory.");
             };
 
             if (fh)
