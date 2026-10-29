@@ -156,6 +156,9 @@ word            peakLevel = 0;      // signal level (calculated by Konverter)
 word            playLen2 = 0;       // needed samples from Cache
 // for filling Secondarybufferhalf
 void            *playCBPtr;     // Callback pointer
+void            *playPCMContext = 0;     // Opaque caller-owned callback context
+Boolean         pcmUnknownLength = FALSE;
+word            pcmBlockAlign = 1;
 Boolean         stereoToggle = FALSE;   // Soundcard toggle Left/Right
 word            stereoToggleIni = 0;    // INI-Value
 
@@ -175,6 +178,36 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc,word playFlags,optr parent);
 
 // from subcode.goc
 extern void BSNWDebugNotifyWord(const char *label, word value);
+
+/*
+ * All playback entry points converge here. The source has already been
+ * selected, and bytesToPlay specifies its remaining PCM byte budget.
+ * BSNWPlay owns the prepared buffers until playback finishes.
+ */
+static int _pascal BSNWRunPCM(BSWavFormChunk *fmt, word playFlags, optr parent)
+{
+    int result;
+
+    result = BSNWPrepare(fmt, playFlags, parent);
+    if (result == BSNW_STATUS_OK)
+    {
+        return BSNWPlay(fmt, playFlags, parent);
+    }
+
+    /* A failed prepare never reaches BSNWPlay's ordinary cleanup. */
+    if (secondPtr)
+    {
+        (void)BSNWaveStopRecOrPlay(secondPtr);
+    }
+    if (playCachePtr)
+    {
+        MemUnlock(playCacheHandle);
+        MemFree(playCacheHandle);
+        playCachePtr = 0;
+    }
+    playStatus = BSNW_STATUS_OK;
+    return result;
+}
 
 
 /*
@@ -358,6 +391,9 @@ int _pascal _export BSNWavePlayFile(FileHandle fh,
         playSourceType = BSNW_SOURCE_FILE;      // Datenquelle = File
         // FileHandle of WAV-file
         playSourceFH = fh;
+        playCBPtr = 0;
+        playPCMContext = 0;
+        pcmUnknownLength = FALSE;
 
         // checking soundcard state
         if ( BSNWaveGetStatus() != 0 )
@@ -431,10 +467,8 @@ int _pascal _export BSNWavePlayFile(FileHandle fh,
                 bytesToPlay = chunkLen;
                 bwfh.BWFH_datLen = chunkLen;
 
-                if ((0==(playFlags & BSNW_TEST_ONLY)))
-                {
-                    respond = BSNWPrepare(&bwfh.BWFH_fmtChunk,playFlags,parent);
-                };
+                /* WAV data is already PCM. The common player consumes it. */
+                pcmBlockAlign = bwfh.BWFH_fmtChunk.BWFC_blockAlign;
             }
             else
             {
@@ -453,7 +487,7 @@ int _pascal _export BSNWavePlayFile(FileHandle fh,
         if ((respond == BSNW_STATUS_OK)&& (0==(playFlags & BSNW_TEST_ONLY)))
         {
             // Play WAV-file
-            respond = BSNWPlay(&bwfh.BWFH_fmtChunk,playFlags,parent);
+            respond = BSNWRunPCM(&bwfh.BWFH_fmtChunk,playFlags,parent);
         }
         else
         {
@@ -968,34 +1002,79 @@ word _pascal _export BSNWaveGetStatus(void)
 
  ******************************************************************/
 int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
-                                        dword      bytes,
-                                        word       playFlags,
-                                        optr       parent,
+                                        dword bytes,
+                                        word playFlags,
+                                        optr parent,
                                         PCB(word,routine,(void *,word)))
 {
-    int respond;        // retVal
+    int respond;
 
-    // PLAY by another thread ?
     respond = BSNWPreCheck(playFlags);
-
-    if (respond == BSNW_STATUS_OK)
+    if (respond != BSNW_STATUS_OK)
     {
-        playCBPtr = routine;
-        playSourceType = BSNW_SOURCE_CALL;      // Sourcetype = Callback
-        bytesToPlay = bytes;
+        return respond;
+    }
 
-        // Preparing soundcard
-        respond = BSNWPrepare(bfc,playFlags,parent);
+    playStatus = BSNW_STATUS_PLAY_MEM;
+    playCBPtr = routine;
+    playPCMContext = 0;
+    playSourceType = BSNW_SOURCE_CALL;
+    pcmUnknownLength = FALSE;
+    pcmBlockAlign = bfc->BWFC_blockAlign;
+    bytesToPlay = bytes;
 
-        if (respond == BSNW_STATUS_OK)
-        {
-            // Playloop
-            respond = BSNWPlay(bfc,playFlags,parent);
-        };
+    return BSNWRunPCM(bfc,playFlags,parent);
+}
 
-    };
+/*
+ * General PCM producer interface. The source can be WAV, MP3, or any
+ * other producer that delivers interleaved 8/16-bit PCM samples.
+ */
+int _pascal _export BSNWavePlayPCM(BSWavFormChunk *fmt,
+                                   dword pcmBytes,
+                                   word playFlags,
+                                   optr parent,
+                                   void *context,
+                                   PCB(word,reader,(void *,void *,word)))
+{
+    int respond;
+    word align;
 
-    return(respond);
+    if (!fmt || !reader)
+    {
+        return BSNW_SOURCE_ERROR;
+    }
+    if (fmt->BWFC_dataFormat != BSWN_FORMAT_PCM ||
+        (fmt->BWFC_channels != 1 && fmt->BWFC_channels != 2) ||
+        (fmt->BWFC_bitsPerSample != 8 && fmt->BWFC_bitsPerSample != 16))
+    {
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+    align = (word)(fmt->BWFC_channels * (fmt->BWFC_bitsPerSample / 8));
+    if (fmt->BWFC_blockAlign != align || !fmt->BWFC_sampleRate)
+    {
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    }
+
+    respond = BSNWPreCheck(playFlags);
+    if (respond != BSNW_STATUS_OK)
+    {
+        return respond;
+    }
+    if (playFlags & BSNW_TEST_ONLY)
+    {
+        return BSNW_STATUS_OK;
+    }
+
+    playStatus = BSNW_STATUS_PLAY_MEM;
+    playSourceType = BSNW_SOURCE_PCM;
+    playCBPtr = reader;
+    playPCMContext = context;
+    pcmUnknownLength = (pcmBytes == BSNW_PCM_LENGTH_UNKNOWN);
+    pcmBlockAlign = align;
+    bytesToPlay = pcmBytes;
+
+    return BSNWRunPCM(fmt,playFlags,parent);
 }
 
 /**********************************************************

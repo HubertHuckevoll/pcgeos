@@ -50,6 +50,11 @@
 // Data Sources
 #define BSNW_SOURCE_FILE        1
 #define BSNW_SOURCE_CALL        2
+#define BSNW_SOURCE_PCM         3  /* read-count PCM callback */
+
+/* BSNWavePlayPCM() may be given an unknown decoded PCM length. */
+#define BSNW_PCM_LENGTH_UNKNOWN 0xFFFFFFFFUL
+#define BSNW_PCM_READ_ERROR     0xFFFF
 
 /////////////////////////////////////////////////////////////////////
 // PlayFlags
@@ -107,6 +112,9 @@
 // Unknown Waveformat -> cannot play
 
 #define BSNW_WRONG_DRIVER       7
+
+#define BSNW_SOURCE_ERROR       8
+// PCM source failed or returned an invalid byte count
 // driver does not support BS-NewWave technology
 
 #define BSNW_PLAY_FINISHED      255
@@ -170,10 +178,31 @@ extern int _pascal _export BSNWavePlayCallback(BSWavFormChunk *bfc,
 				       PCB(word,routine,(void *,word)));
 // Play Sampledata continuosly (Receiving data per Callback-function)
 // returns Returnvalue from type RespondTypes
-// Interface for MP3-Player !!!
+// Compatibility interface: requires an exact byte count on each read.
 
 /*-----------------------------------------------*/
 
+
+/*
+ * Generic PCM source. Blocking, same as BSNWavePlayFile().
+ * fmt describes decoded (not compressed) PCM: rate, channels, bits,
+ * block alignment and average byte rate.
+ *
+ * reader(context, dest, maxBytes) returns 1..maxBytes bytes (in complete
+ * PCM frames), 0 at EOF, or BSNW_PCM_READ_ERROR on failure.
+ * Short positive reads are valid. Unknown-length sources pass
+ * BSNW_PCM_LENGTH_UNKNOWN as pcmBytes. The callback is invoked on the
+ * playback thread and must remain callable for the duration of this call.
+ * Neither the context nor the source's file handle is owned by BSNWav.
+ */
+extern int _pascal _export BSNWavePlayPCM(BSWavFormChunk *fmt,
+                                          dword pcmBytes,
+                                          word playFlags,
+                                          optr parent,
+                                          void *context,
+                                          PCB(word,reader,(void *,void *,word)));
+
+/*-----------------------------------------------*/
 
 extern  void    _pascal _export BSNWaveStop(void);
 // Stopping NewWave-Output
@@ -295,6 +324,7 @@ pragma Alias(BSNWaveGetStatus,          "BSNWAVEGETSTATUS");
 pragma Alias(BSNWaveGetAIState,         "BSNWAVEGETAISTATE");
 pragma Alias(BSNWaveSetPause,           "BSNWAVESETPAUSE");
 pragma Alias(BSNWavePlayCallback,       "BSNWAVEPLAYCALLBACK");
+pragma Alias(BSNWavePlayPCM,            "BSNWAVEPLAYPCM");
 pragma Alias(BSNWaveCheckDriver,        "BSNWAVECHECKDRIVER");
 pragma Alias(BSNWaveCalcPlaytimeText,   "BSNWAVECALCPLAYTIMETEXT");
 pragma Alias(BSNWaveGetPlayState,   	"BSNWAVEGETPLAYSTATE");

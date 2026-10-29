@@ -79,6 +79,7 @@ export	BSNWAVECHECKDRIVER
 export	BSNWAVECALCPLAYTIMETEXT
 export	BSNWAVEGETPLAYSTATE
 export	BSNWAVEGETLASTFORMAT
+export  BSNWAVEPLAYPCM
 
 # usernotes "NewWave-Library for best sound. \xa9 2000 Dirk Lausecker"
 

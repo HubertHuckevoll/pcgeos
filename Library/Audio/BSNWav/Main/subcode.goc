@@ -593,6 +593,38 @@ Boolean _pascal BSNWGetData(void *dest,word len)
     return (error);
 }
 
+/*
+ * Read PCM, not a WAV container. A short read is legal only for the
+ * new count-returning callback; legacy callbacks must satisfy the entire
+ * request. Return 0 for EOF, BSNW_PCM_READ_ERROR for a source error.
+ */
+word _pascal BSNWReadPCM(void *dest, word requested)
+{
+    word count;
+
+    if (playSourceType == BSNW_SOURCE_FILE)
+    {
+        return BSNWGetData(dest, requested)
+               ? BSNW_PCM_READ_ERROR : requested;
+    }
+    if (playSourceType == BSNW_SOURCE_CALL)
+    {
+        if (!playCBPtr)
+            return BSNW_PCM_READ_ERROR;
+        return ProcCallFixedOrMovable_pascal(dest, requested, playCBPtr)
+               ? BSNW_PCM_READ_ERROR : requested;
+    }
+    if (playSourceType == BSNW_SOURCE_PCM)
+    {
+        if (!playCBPtr)
+            return BSNW_PCM_READ_ERROR;
+        count = (word)ProcCallFixedOrMovable_pascal(
+                    playPCMContext, dest, requested, playCBPtr);
+        return count;
+    }
+    return BSNW_PCM_READ_ERROR;
+}
+
 /*********************************************************
 
         BSNWSetSourcePosition
@@ -823,6 +855,10 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
         if ( (cacheFree) && (bytesToPlay) )
         {
             respond = BSNWLoadCache(cachePtr);
+            if (respond != BSNW_STATUS_OK)
+            {
+                return respond;
+            }
             // bytesToPlay,cacheFull will be updated
         };
 
@@ -874,110 +910,77 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
 
 int _pascal BSNWLoadCache(void *cachePtr)
 {
-    int respond = BSNW_STATUS_OK;
-    word    len,len2 = 0;
-    byte    *ptr;
+    word request;
+    word received;
+    byte *dest;
 
-    if ( ((dword)cacheFree) < bytesToPlay)
+    if (!cacheFree || !bytesToPlay)
     {
-        // enough data ready
-        len = cacheFree;
+        return BSNW_STATUS_OK;
+    }
+
+    request = cacheFree;
+    if (!pcmUnknownLength && (bytesToPlay < (dword)request))
+    {
+        request = (word)bytesToPlay;
+    }
+    if (request > (word)(playCacheLen - cacheOffset))
+    {
+        request = playCacheLen - cacheOffset;
+    }
+
+    /* Never ask a PCM decoder for a fractional sample frame. */
+    if (playSourceType == BSNW_SOURCE_PCM)
+    {
+        request = (word)(request - (request % pcmBlockAlign));
+        if (!request)
+        {
+            return BSNW_SOURCE_ERROR;
+        }
+    }
+
+    dest = (byte *)cachePtr + cacheOffset;
+    received = BSNWReadPCM(dest, request);
+    if (received == BSNW_PCM_READ_ERROR || received > request)
+    {
+        return BSNW_SOURCE_ERROR;
+    }
+    if (!received)
+    {
+        if (playSourceType != BSNW_SOURCE_PCM)
+        {
+            return BSNW_SOURCE_ERROR;  /* truncated WAV/legacy source */
+        }
+        /* EOF can precede an estimated length without losing the tail. */
+        if (!pcmUnknownLength)
+        {
+            fullLen -= bytesToPlay;
+        }
+        bytesToPlay = 0;
+        return BSNW_STATUS_OK;
+    }
+    if (playSourceType == BSNW_SOURCE_PCM &&
+        (received % pcmBlockAlign))
+    {
+        return BSNW_SOURCE_ERROR;
+    }
+
+    cacheOffset += received;
+    if (cacheOffset >= playCacheLen)
+    {
+        cacheOffset = 0;
+    }
+    cacheFree -= received;
+    cacheFull += received;
+    if (pcmUnknownLength)
+    {
+        fullLen += (dword)received;
     }
     else
     {
-        // not enough data
-        len = (word)bytesToPlay;
-    };
-
-    // crossing Playcachebounds ?
-    if ( (cacheOffset + len) >= playCacheLen)
-    {
-        // crossing Cachebounds
-        // read data until end of cachebuffer
-        len2 = playCacheLen - cacheOffset;
-
-        ptr =  cachePtr;
-        ptr = ptr + cacheOffset;
-        if (BSNWGetData(ptr,len2))
-        {
-            // Error
-            respond = BSNW_PLAY_FINISHED;
-            bytesToPlay = 0;
-        }
-        else
-        {
-            // no error
-            len = len - len2;
-            cacheFree = cacheFree - len2;
-            cacheFull = cacheFull + len2;
-            bytesToPlay = bytesToPlay - (dword)len2;
-
-            // Pointer = Start of Cachebuffer
-            cacheOffset = 0;
-        };
-
-    };
-
-    // If loading data until bufferend was OK,
-    // than load the rest from start
-    if ((respond == BSNW_STATUS_OK) && len )
-    {
-        // Load Cache
-        ptr =  cachePtr;
-        ptr = ptr + cacheOffset;
-        if (BSNWGetData(ptr,len))
-        {
-            // error
-            respond = BSNW_PLAY_FINISHED;
-            bytesToPlay = 0;
-        }
-        else
-        {
-            // no error
-            cacheOffset = cacheOffset + len;
-            if (!(cacheOffset<playCacheLen))
-            {
-                cacheOffset = 0;
-            };
-            cacheFree = cacheFree - len;
-            cacheFull = cacheFull + len;
-            bytesToPlay = bytesToPlay - (dword)len;
-        };
-    };
-
-    // End
-    return (respond);
-}
-
-/*************************************
- *
- *      BSNWStartPlay
- *
- *  Start NewWave-Play
- *
- * IN:  -
- * OUT: TRUE    error
- *
- *************************************/
-
-Boolean _pascal _export BSNWStartPlay(void)
-{
-    Boolean     back = FALSE;
-    word        back2 = 0;
-
-    if(simFlags || !compatFlag)
-    {
-        back2 = 0;
+        bytesToPlay -= (dword)received;
     }
-    else
-    {
-        back2 = BSNWAsmStartPlay();
-    };
-
-    // errorflag
-    back = (back2>0);
-
-    return (back);
+    return BSNW_STATUS_OK;
 }
 
 /************************************************************
@@ -1605,10 +1608,14 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
         secBufLen  = BSNWAllocSecBuffer(&secondPtr,secBufRequest);
         secBufL2   = secBufLen>>1;      // halbe Pufferl�nge
         secondFree = secBufLen;
+        if (!secBufLen || !secondPtr)
+        {
+            respond = BSNW_MEMORY_ERROR;
+        }
     };
 
     playLen2     = secBufL2 * konvRateRed * konvBitsRed * konvChanRed;
-    fullLen      = bytesToPlay;
+    fullLen      = pcmUnknownLength ? 0 : bytesToPlay;
     playedBytes  = 0;
     secondOffset = 0;
     cacheOffset  = 0;
@@ -1646,9 +1653,10 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
 
     peakLevel2 = 0;             // reset helper
 
-    if (BSNW_PLAY_FINISHED==BSNWLoadData(playCachePtr,secondPtr))
+    respond = BSNWLoadData(playCachePtr,secondPtr);
+    if (respond == BSNW_PLAY_FINISHED)
     {
-        // extreme short WAV-file
+        // extreme short PCM stream
         BSNWStartPlay();
         aiState2 = BSNWaveGetAIState(0xFF01);   // FF01 --> ISR clear the buffer
 
@@ -1658,7 +1666,7 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
             aiState = BSNWaveGetAIState(0);
         } while (aiState == aiState2);
     }
-    else
+    else if (respond == BSNW_STATUS_OK)
     {
 
 /////////////////////////////////////////////////

@@ -79,6 +79,9 @@ extern  word            stereoToggleIni;
 extern  Boolean         compatFlag;     // TRUE = driver is NewWave-kompatibel
 extern  byte            *playCachePtr;          // Pointer to Playcache
 extern  void            *playCBPtr;             // Pointer Callbackroutine
+extern  void            *playPCMContext;
+extern  Boolean         pcmUnknownLength;
+extern  word            pcmBlockAlign;
 extern  optr            statusGlyphOptr1;       // 1. line Statusbox
 extern  optr            statusGlyphOptr2;
 extern  optr            statusRightBoxOptr;
@@ -102,6 +105,7 @@ void    _pascal BSNWFillSilence(void *secPtr,word len);
 word    _pascal BSNWGetAIState(void);
 void    _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr);
 int     _pascal BSNWLoadCache(void *cachePtr);
+word    _pascal BSNWReadPCM(void *dest, word requested);
 int     _pascal BSNWLoadData(void *cachePtr,
                              void *secPtr);
 int     _pascal  BSNWPrepKS(word sampleRate,
