@@ -3,9 +3,29 @@
 #define __BSNAUDIO_H
 
 #include <geos.h>
+#include <file.h>
 
 #define BSN_PCM_LENGTH_UNKNOWN 0xFFFFFFFFUL
 #define BSN_PCM_READ_ERROR     0xFFFF
+
+
+/* Shared playback flags and legacy-compatible result codes. */
+#define BSNW_SHOW_STATUS        0x01
+#define BSNW_WAIT_FOR_FREE      0x02
+#define BSNW_SHOW_ERROR_MSG     0x04
+#define BSNW_PLAY_LOOP          0x08
+#define	BSNW_TEST_ONLY		0x10
+#define BSNW_PLAY_POS		0x20
+#define BSNW_STATUS_OK          0
+#define BSNW_ABORT              1
+#define BSNW_TIMEOUT            2
+#define BSNW_HARDWARE_NOT_READY 3
+#define BSNW_MEMORY_ERROR       4
+#define BSNW_NOT_FREE           5
+#define BSNW_UNKNOWN_WAVE_FORMAT 6
+#define BSNW_WRONG_DRIVER       7
+#define BSNW_SOURCE_ERROR       8
+#define BSNW_PLAY_FINISHED      255
 
 typedef struct {
     dword sampleRate;
@@ -39,4 +59,16 @@ typedef struct {
  */
 extern int _pascal _export BSNPcmPlay(BSNPcmSource *sourceP,
                                      word flags, optr parent);
+/* Caller-owned reader context. Close never closes file. */
+typedef struct {
+    BSNPcmSource source;
+    FileHandle file;
+    dword dataOffset;
+    dword remaining;
+} BSNWav;
+
+extern int _pascal _export BSNWavOpen(BSNWav *wavP, FileHandle file);
+extern word _pascal _export BSNWavReadPCM(void *contextP, void *destP,
+                                         word maxBytes);
+extern void _pascal _export BSNWavClose(BSNWav *wavP);
 #endif

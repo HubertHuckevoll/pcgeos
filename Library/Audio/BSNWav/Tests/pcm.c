@@ -3,16 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#define _pascal
-#define _export
-#define FALSE 0
-#define TRUE 1
-typedef uint8_t byte;
-typedef uint16_t word;
-typedef uint32_t dword;
-typedef int Boolean;
-typedef word MemHandle;
-typedef dword optr;
 #include <bsnaudio.h>
 #define BSNW_PCM_READ_ERROR BSN_PCM_READ_ERROR
 #define BSNW_STATUS_OK 0

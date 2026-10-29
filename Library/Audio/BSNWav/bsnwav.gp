@@ -86,3 +86,6 @@ export  BSNWAVEPLAYPCM
 
 incminor
 export BSNPCMPLAY
+export BSNWAVOPEN
+export BSNWAVREADPCM
+export BSNWAVCLOSE

@@ -87,3 +87,24 @@ PC/GEOS was not started, as required by AGENTS.md. Audible playback, DMA
 underruns, movable resource reloads, live handle counts and peak playback
 stack use require later manual testing. Compilation and standalone DOS
 checks do not establish those results.
+
+## WAV reader
+
+BSNWavOpen, BSNWavReadPCM and BSNWavClose operate on a caller-owned BSNWav
+context without allocating handles or requiring playback. Open validates the
+RIFF extent, chunk sizes/padding and PCM format, supports data before fmt,
+and selects the first data chunk. Reads return only complete frames within
+that chunk; a truncated read is an error. Close leaves the borrowed file open.
+The reader accepts native PCM rates independently of hardware. Playback
+explicitly rejects rates outside the existing 5001..44199 Hz setup range,
+including 48 kHz, rather than playing at an incorrect rate.
+
+BSNWavePlayFile adapts the reader to the common PCM engine. TEST_ONLY and
+GetLastFormat retain format/length reporting, PLAY_POS seeks within the data
+region with bounded arithmetic, and playback uses the existing single-active
+session. Invalid container headers retain the legacy memory-error result;
+unsupported PCM returns unknown-format. The separate Library/Wav is unchanged.
+The host regression additionally compiles the actual WAV reader and checks
+8/16-bit mono/stereo, empty/short data, odd chunk padding, chunk order,
+every file truncation, malformed sizes/formats, read failures and borrowed
+file ownership. EC and NC builds pass.

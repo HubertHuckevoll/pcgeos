@@ -1,0 +1,116 @@
+/* Bounded RIFF/WAVE PCM reader; no playback or sound-driver calls. */
+#include <bsnaudio.h>
+
+#define WAV_RIFF 0x46464952UL
+#define WAV_WAVE 0x45564157UL
+#define WAV_FMT  0x20746d66UL
+#define WAV_DATA 0x61746164UL
+
+int _pascal _export BSNWavOpen(BSNWav *wavP, FileHandle file)
+{
+    dword header[3], chunk[2];
+    dword size, end, pos, dataLength;
+    struct {
+        word encoding, channels;
+        dword rate, avg;
+        word align, bits;
+    } format;
+    Boolean haveFormat, haveData;
+    word align;
+
+    if (!wavP)
+        return BSNW_MEMORY_ERROR;
+    BSNWavClose(wavP);
+    if (!file)
+        return BSNW_MEMORY_ERROR;
+    size = FileSize(file);
+    if (size < 12 || FilePos(file, 0, FILE_POS_START) != 0 ||
+        FileRead(file, header, 12, FALSE) != 12 ||
+        header[0] != WAV_RIFF || header[2] != WAV_WAVE ||
+        header[1] < 4 || header[1] > size - 8)
+        return BSNW_MEMORY_ERROR;
+    end = header[1] + 8;
+    pos = 12;
+    haveFormat = haveData = FALSE;
+    dataLength = 0;
+    while (pos <= end - 8) {
+        if (FilePos(file, pos, FILE_POS_START) != pos ||
+            FileRead(file, chunk, 8, FALSE) != 8)
+            return BSNW_MEMORY_ERROR;
+        pos += 8;
+        if (chunk[1] > end - pos ||
+            ((chunk[1] & 1) && chunk[1] == end - pos))
+            return BSNW_MEMORY_ERROR;
+        if (chunk[0] == WAV_FMT && !haveFormat) {
+            if (chunk[1] < 16 || FileRead(file, &format, 16, FALSE) != 16)
+                return BSNW_MEMORY_ERROR;
+            if (format.encoding != 1 ||
+                (format.channels != 1 && format.channels != 2) ||
+                (format.bits != 8 && format.bits != 16) || !format.rate)
+                return BSNW_UNKNOWN_WAVE_FORMAT;
+            align = format.channels * (format.bits / 8);
+            if (format.align != align || format.rate > 0xffffffffUL / align ||
+                format.avg != format.rate * align)
+                return BSNW_UNKNOWN_WAVE_FORMAT;
+            wavP->source.format.sampleRate = format.rate;
+            wavP->source.format.channels = format.channels;
+            wavP->source.format.bitsPerSample = format.bits;
+            wavP->source.format.blockAlign = align;
+            wavP->source.format.avgBytesPerSecond = format.avg;
+            haveFormat = TRUE;
+        }
+        if (chunk[0] == WAV_DATA && !haveData) {
+            wavP->dataOffset = pos;
+            dataLength = chunk[1];
+            haveData = TRUE;
+        }
+        if (haveData && haveFormat)
+            break;
+        pos += chunk[1] + (chunk[1] & 1);
+    }
+    if (!haveFormat || !haveData)
+        return BSNW_MEMORY_ERROR;
+    if (dataLength % wavP->source.format.blockAlign)
+        return BSNW_UNKNOWN_WAVE_FORMAT;
+    if (FilePos(file, wavP->dataOffset, FILE_POS_START) != wavP->dataOffset)
+        return BSNW_MEMORY_ERROR;
+    wavP->file = file;
+    wavP->remaining = dataLength;
+    wavP->source.pcmBytes = dataLength;
+    wavP->source.readP = BSNWavReadPCM;
+    wavP->source.contextP = wavP;
+    return BSNW_STATUS_OK;
+}
+
+word _pascal _export BSNWavReadPCM(void *contextP, void *destP, word maxBytes)
+{
+    BSNWav *wavP;
+    word count;
+
+    wavP = contextP;
+    if (!wavP || !wavP->file || !destP)
+        return BSN_PCM_READ_ERROR;
+    if (!wavP->remaining)
+        return 0;
+    if (wavP->remaining < maxBytes)
+        maxBytes = (word)wavP->remaining;
+    maxBytes -= maxBytes % wavP->source.format.blockAlign;
+    if (!maxBytes)
+        return BSN_PCM_READ_ERROR;
+    count = FileRead(wavP->file, destP, maxBytes, FALSE);
+    if (count != maxBytes)
+        return BSN_PCM_READ_ERROR;
+    wavP->remaining -= count;
+    return count;
+}
+
+void _pascal _export BSNWavClose(BSNWav *wavP)
+{
+    if (wavP) {
+        wavP->file = 0;
+        wavP->remaining = 0;
+        wavP->source.pcmBytes = 0;
+        wavP->source.readP = (void *)0;
+        wavP->source.contextP = (void *)0;
+    }
+}

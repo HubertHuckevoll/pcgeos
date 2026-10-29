@@ -21,9 +21,42 @@ for my $name (qw(BSNWReadPCM BSNWLoadCache BSNWFillSilence BSNWKonvertData BSNWL
 close $out or die $!;
 # geos.h is replaced only in this host check; production uses the real header.
 open $out, '>', "$tmp/geos.h" or die $!;
-print $out "/* Host types are declared by pcm.c. */\n";
+print $out <<'HEADER';
+#ifndef BSN_HOST_GEOS
+#define BSN_HOST_GEOS
+#include <stdint.h>
+typedef uint8_t byte;
+typedef uint16_t word;
+typedef uint32_t dword;
+typedef int Boolean;
+typedef word MemHandle;
+typedef dword optr;
+#define _pascal
+#define _export
+#define FALSE 0
+#define TRUE 1
+#endif
+HEADER
+close $out or die $!;
+open $out, '>', "$tmp/file.h" or die $!;
+print $out <<'HEADER';
+#ifndef BSN_HOST_FILE
+#define BSN_HOST_FILE
+#include <geos.h>
+typedef word FileHandle;
+#define FILE_POS_START 0
+extern dword FileSize(FileHandle file);
+extern dword FilePos(FileHandle file, dword offset, word mode);
+extern word FileRead(FileHandle file, void *destP, word count, word flags);
+#endif
+HEADER
 close $out or die $!;
 my @flags = qw(-std=gnu89 -Werror=declaration-after-statement -O2);
 system('gcc', @flags, '-I', $tmp, '-I', "$lib/../../../CInclude",
        "$lib/Tests/pcm.c", '-o', "$tmp/pcm") == 0 or die 'compile failed';
 system("$tmp/pcm") == 0 or die 'PCM checks failed';
+
+system('gcc', @flags, '-I', $tmp, '-I', "$lib/../../../CInclude", '-x', 'c',
+       "$lib/WAV/wav.goc", "$lib/Tests/wav.c", '-o', "$tmp/wav") == 0
+    or die 'WAV compile failed';
+system("$tmp/wav", "$tmp/input.wav") == 0 or die 'WAV checks failed';

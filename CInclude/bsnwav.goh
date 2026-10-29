@@ -15,6 +15,7 @@
 @include <stdapp.goh>
 #include <sound.h>
 #include <library.h>
+#include <bsnaudio.h>
 #include <dirksnd.h>
 
 @deflib bsnwav
@@ -60,25 +61,19 @@
 // PlayFlags
 // Bits zur Parameter�bergabe an BSNWavePlayFile()
 
-#define BSNW_SHOW_STATUS        0x01
 // Display Statusbox for showing Rate/Bits/Channels and Time
 
-#define BSNW_WAIT_FOR_FREE      0x02
 // Waiting some seconds if the BSNWAV is used by another thread
 
-#define BSNW_SHOW_ERROR_MSG     0x04
 // Display error messages
 
-#define BSNW_PLAY_LOOP          0x08
 // Endless playing until BSNWaveStop() will be called
 // CURRENTLY NOT SUPPORTED !!!
 
-#define	BSNW_TEST_ONLY		0x10
 // No playing ! Use this flag if you want check the playability
 // of a file or for detecting the format (samplerate,bits,channels)
 // with the function BSNWaveGetLastFormat()
 
-#define BSNW_PLAY_POS		0x20
 // Play FROM/TO  The pointer in parent must point to a structure
 // from the type BSWavPlayPositions defining the startpoint (ms)
 // and the time (ms) to be played
@@ -90,34 +85,24 @@
 // Return value from BSNWavePlayFile()
 //
 
-#define BSNW_STATUS_OK          0
 // No Errors
 
-#define BSNW_ABORT              1
 // Abort by user or BSNWaveStop()
 
-#define BSNW_TIMEOUT            2
 // Timeouterror
 
-#define BSNW_HARDWARE_NOT_READY 3
 // soundcard hardware not ready
 
-#define BSNW_MEMORY_ERROR       4
 // memory error
 
-#define BSNW_NOT_FREE           5
 // Soundcard is allocated by another thread
 
-#define BSNW_UNKNOWN_WAVE_FORMAT 6
 // Unknown Waveformat -> cannot play
 
-#define BSNW_WRONG_DRIVER       7
 
-#define BSNW_SOURCE_ERROR       8
 // PCM source failed or returned an invalid byte count
 // driver does not support BS-NewWave technology
 
-#define BSNW_PLAY_FINISHED      255
 // for internal use
 
 //

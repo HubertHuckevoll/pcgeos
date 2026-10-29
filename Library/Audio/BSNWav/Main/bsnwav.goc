@@ -61,7 +61,6 @@ Secondarybuffer:
 
 #include <dirksnd.h>
 #include <file.h>
-#include <riff.h>
 #include <bsnaudio.h>
 #include <resource.h>
 
@@ -125,12 +124,8 @@ optr            statusGlyphOptr2 = 0;
 optr            statusRightBoxOptr = 0;
 char            playStatusText[80];
 MemHandle       playCacheHandle = NullHandle;
-BSWavFileHeader bwfh;                   // Header WAV-File
-word            playSourceType = BSNW_SOURCE_FILE;  // Datasource = File
-FileHandle      playSourceFH = NullHandle;      // FileHandle Source
-dword           chunkType = 0;
-dword           chunkLen = 0;
-dword           playSourcePos = 0;  // Current Position in WAV-Source
+BSNPcmFormat    lastFormat;
+dword           lastLength;
 word            playSampleRate = 0;
 byte            playChannels = 1;   // channels 1=mono
 byte            playBits = 8;       // Bitdepth
@@ -157,8 +152,6 @@ word            secondHandle = 0;   // test purpose only (SecondAlloc)
 word            peakLevel = 0;      // signal level (calculated by Konverter)
 word            playLen2 = 0;       // needed samples from Cache
 // for filling Secondarybufferhalf
-void            *playCBPtr;     // Callback pointer
-void            *playPCMContext = 0;     // Opaque caller-owned callback context
 Boolean         pcmUnknownLength = FALSE;
 word            pcmBlockAlign = 1;
 BSNPcmSource    *playSourceP;
@@ -386,155 +379,74 @@ typedef struct {
 
  *********************************************************/
 
-Boolean _pascal BSNWGetData(void *dest, word len);
-
-static word _pascal _export BSNWFilePCM(void *contextP, void *destP,
-                                         word capacity)
+int _pascal _export BSNWavePlayFile(FileHandle fh, word playFlags, optr parent)
 {
-    (void)contextP;
-    return BSNWGetData(destP, capacity) ? BSN_PCM_READ_ERROR : capacity;
-}
+    BSNWav wav;
+    BSWavPlayPositions *posP;
+    dword start, stop, frames, rate, fraction;
+    int result;
 
-int _pascal _export BSNWavePlayFile(FileHandle fh,
-                                    word       playFlags,
-                                    optr       parent)
-{
-    int             respond;        // retVal
-    dword           posStart;
-    dword           posStop;
-    BSWavPlayPositions  *posPtr;
-    BSNPcmSource source;
-
-    // PLAY by another thread ?
-    respond = BSNWPreCheck(playFlags);
-
-    if (respond == BSNW_STATUS_OK)
+    result = BSNWPreCheck(playFlags);
+    if (result != BSNW_STATUS_OK)
+        return result;
+    playStatus = BSNW_STATUS_PLAY_FILE;
+    result = BSNWavOpen(&wav, fh);
+    if (result == BSNW_STATUS_OK)
     {
-
-        ////////////// Prepare Library ////////////////////
-
-        // setting internal state (for other threads)
-
-        playStatus = BSNW_STATUS_PLAY_FILE;
-
-        // Data sourcetype
-        playSourceType = BSNW_SOURCE_FILE;      // Datenquelle = File
-        // FileHandle of WAV-file
-        playSourceFH = fh;
-        playCBPtr = 0;
-        playPCMContext = 0;
-        pcmUnknownLength = FALSE;
-
-        // checking soundcard state
-        if ( BSNWaveGetStatus() != 0 )
+        lastFormat = wav.source.format;
+        lastLength = wav.source.pcmBytes;
+        rate = lastFormat.sampleRate;
+        if (rate <= 5000 || rate >= 44200)
+            result = BSNW_UNKNOWN_WAVE_FORMAT;
+        if (result == BSNW_STATUS_OK && (playFlags & BSNW_PLAY_POS) &&
+            !(playFlags & BSNW_SHOW_STATUS) && parent)
         {
-            // Soundcard not free
-            respond = BSNW_HARDWARE_NOT_READY;
-        };
-
-        ////////////// Analyze WAV-Header ////////////////
-
-        if (respond == BSNW_STATUS_OK)
-        {
-            respond = BSNWReadWaveFormat(&bwfh);
-        };
-
-        // Errormessage to user if:
-        if ( (respond == BSNW_UNKNOWN_WAVE_FORMAT)  // 1. unknown Format
-                && (playFlags & BSNW_SHOW_ERROR_MSG ) )   // 2. Message allowed
-        {
-            // "Unknown Waveformat !"
-            BSNWaveDialogUnknownFormat(bwfh.BWFH_fmtChunk.BWFC_dataFormat);
-            playStatus = BSNW_STATUS_OK;
-        };
-
-        ////////////// Analyze chunks ////////////////
-
-        if ((respond == BSNW_STATUS_OK) )
-        {
-            // search for data-Chunk
-            if (BSNWSearchChunk(CODE_data))
-            {
-                // data-Chunk found
-
-                // PlayPositions
-                if ( (playFlags & BSNW_PLAY_POS)
-                        && (0==(playFlags & BSNW_SHOW_STATUS))
-                        && (parent>0))
-                {
-                    // read PlayPostions
-                    posPtr   = (BSWavPlayPositions*)parent;
-                    posStart = posPtr->BWPP_start;
-                    posStop   = posPtr->BWPP_stop;
-
-                    // ms -> Blocks
-                    // Samples = (x * Samplerate)/1000
-                    posStart = (posStart * bwfh.BWFH_fmtChunk.BWFC_sampleRate)/1000;
-                    posStop   = (posStop * bwfh.BWFH_fmtChunk.BWFC_sampleRate)/1000;
-
-                    // Blocksize -> Bytes
-                    posStart = posStart * bwfh.BWFH_fmtChunk.BWFC_blockAlign;
-                    posStop   = posStop * bwfh.BWFH_fmtChunk.BWFC_blockAlign;
-
-                    // Startposition
-                    if ((posStart>0) && (posStart<chunkLen))
-                    {
-                        (void)BSNWSetSourcePosition(playSourcePos+posStart);
-                    };
-
-                    // Stop
-                    if ((posStop > posStart) && (posStop < chunkLen))
-                    {
-                        chunkLen = posStop - posStart;
-                    }
-                    else
-                    {
-                        chunkLen = chunkLen - posStart;
-                    };
-                };
-
-                // Prepare output
-                bytesToPlay = chunkLen;
-                bwfh.BWFH_datLen = chunkLen;
-
-                /* WAV data is already PCM. The common player consumes it. */
-                pcmBlockAlign = bwfh.BWFH_fmtChunk.BWFC_blockAlign;
-            }
+            posP = (BSWavPlayPositions *)parent;
+            frames = wav.remaining / lastFormat.blockAlign;
+            /* Bound seconds before multiplication; clamp positions to EOF. */
+            start = posP->BWPP_start / 1000;
+            if (start > frames / rate)
+                start = frames;
             else
             {
-                // data-Chunk not found
-                bwfh.BWFH_datLen = 0;
-                bytesToPlay = 0;
-                playSampleRate = 0;
-                playChannels = 0;
-                playBits = 0;
-                respond = BSNW_MEMORY_ERROR;
-            };
-        };
-
-        /////////////       PLAY    //////////////////
-
-        if ((respond == BSNW_STATUS_OK)&& (0==(playFlags & BSNW_TEST_ONLY)))
-        {
-            // Play WAV-file
-            source.format.sampleRate = bwfh.BWFH_fmtChunk.BWFC_sampleRate;
-            source.format.channels = bwfh.BWFH_fmtChunk.BWFC_channels;
-            source.format.bitsPerSample = bwfh.BWFH_fmtChunk.BWFC_bitsPerSample;
-            source.format.blockAlign = pcmBlockAlign;
-            source.format.avgBytesPerSecond = bwfh.BWFH_fmtChunk.BWFC_avgRate;
-            source.pcmBytes = bytesToPlay;
-            source.contextP = (void *)0;
-            source.readP = BSNWFilePCM;
-            respond = BSNWRunPCM(&source,playFlags,parent);
+                start *= rate;
+                fraction = (posP->BWPP_start % 1000) * rate / 1000;
+                if (fraction > frames - start) start = frames;
+                else start += fraction;
+            }
+            stop = posP->BWPP_stop / 1000;
+            if (stop > frames / rate)
+                stop = frames;
+            else
+            {
+                stop *= rate;
+                fraction = (posP->BWPP_stop % 1000) * rate / 1000;
+                if (fraction > frames - stop) stop = frames;
+                else stop += fraction;
+            }
+            if (stop <= start) stop = frames;
+            start *= lastFormat.blockAlign;
+            stop *= lastFormat.blockAlign;
+            if (FilePos(fh, wav.dataOffset + start, FILE_POS_START) !=
+                wav.dataOffset + start)
+                result = BSNW_MEMORY_ERROR;
+            wav.remaining = stop - start;
+            wav.source.pcmBytes = wav.remaining;
+            lastLength = wav.remaining;
         }
-        else
-        {
-            playStatus = BSNW_STATUS_OK;
-        };
-
-    };
-
-    return (respond);
+        if (result == BSNW_STATUS_OK && !(playFlags & BSNW_TEST_ONLY))
+            result = BSNWRunPCM(&wav.source, playFlags, parent);
+        BSNWavClose(&wav);
+    }
+    else
+    {
+        lastLength = 0;
+    }
+    if (result == BSNW_UNKNOWN_WAVE_FORMAT &&
+        (playFlags & BSNW_SHOW_ERROR_MSG))
+        BSNWaveDialogUnknownFormat(0);
+    playStatus = BSNW_STATUS_OK;
+    return result;
 }
 
 /********************************************
@@ -1084,7 +996,7 @@ int _pascal _export BSNWavePlayPCM(BSWavFormChunk *fmt, dword pcmBytes,
     return BSNPcmPlay(&source, playFlags, parent);
 }
 
-/* Canonical source entry; the compatibility engine is replaced next. */
+/* Canonical blocking playback entry. */
 
 int _pascal _export BSNPcmPlay(BSNPcmSource *sourceP, word flags, optr parent)
 {
@@ -1187,10 +1099,10 @@ dword _pascal _export BSNWaveGetLastFormat(dword *sampleRate, word *channels, wo
     dword   retVal;
 
     // return the parameters
-    *sampleRate = bwfh.BWFH_fmtChunk.BWFC_sampleRate;
-    *channels   = bwfh.BWFH_fmtChunk.BWFC_channels;
-    *bits       = bwfh.BWFH_fmtChunk.BWFC_bitsPerSample;
-    retVal      = bwfh.BWFH_datLen;
+    *sampleRate = lastFormat.sampleRate;
+    *channels   = lastFormat.channels;
+    *bits       = lastFormat.bitsPerSample;
+    retVal      = lastLength;
 
     return(retVal);
 }
