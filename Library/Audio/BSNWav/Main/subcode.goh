@@ -117,3 +117,5 @@ Boolean _pascal BSNWGetData(void *dest,word len);
 int     _pascal BSNWReadWaveFormat(BSWavFileHeader *bw);
 void    * _pascal BSNWAllocPlayCache(word len);
 optr    _pascal _export BSCNCreateStatusBox(optr parent);
+
+extern BSNPcmSource *playSourceP;

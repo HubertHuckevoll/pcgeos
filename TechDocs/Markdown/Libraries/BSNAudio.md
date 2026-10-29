@@ -59,9 +59,27 @@ are GEOS virtual code pointers and require ProcCallFixedOrMovable_pascal
 with callback arguments first and the code pointer last.
 
 BSNPcmPlay is appended after the existing exports with incminor. The geode
-remains bsnwav.lib and retains its token. At this stage it adapts the common
-format to the existing engine; subsequent stages remove this internal WAV
-format dependency.
+remains bsnwav.lib and retains its token. The PCM module now consumes that format and calls only the reader callback;
+legacy file/callback entry points adapt their inputs outside PCM. Callback
+invocation uses a typed Pascal trampoline with the code pointer last.
+
+Run the PCM regression with:
+
+    TMPDIR=~/pcgeos-tools/bsnaudio/tmp perl Library/Audio/BSNWav/Tests/check.pl
+
+It compiles the actual cache, conversion and playback loop routines against
+a synchronous DMA/GEOS host shim. Checks cover short reads, known/unknown
+lengths, early EOF, buffered tail draining, source errors after playback starts,
+invalid byte counts/frame alignment, and rate-reduction chunk independence.
+The existing conversion and DMA implementations are retained; cache filling
+now combines short reads before conversion, the cache boundary aligns with
+reduction groups, and final reduction skips cannot underflow cacheFull.
+An error from a refill is preserved instead of being overwritten by drain
+accounting. EC and NC builds pass after this extraction.
+
+The full pinned minimp3 corpus also passes the original decoder checks:
+32 inputs through actual EC/NC ESP resources and all host core/streaming
+comparisons, including the trusted PCM accuracy gates.
 
 ## Unverified runtime behavior
 
