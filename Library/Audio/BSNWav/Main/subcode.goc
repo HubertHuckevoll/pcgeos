@@ -758,7 +758,7 @@ Boolean _pascal BSNWSearchChunk(dword type)
 
 int _pascal BSNWPrepKS(word sampleRate, byte channels, byte bits)
 {
-    word    back;       // retVal driver
+    word    back = 1;   /* unsupported formats must fail, not use an uninitialized result */       // retVal driver
     int respond = BSNW_STATUS_OK;
 
     // Get max. values from soundcard

@@ -1051,7 +1051,12 @@ int _pascal _export BSNWavePlayPCM(BSWavFormChunk *fmt,
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
     align = (word)(fmt->BWFC_channels * (fmt->BWFC_bitsPerSample / 8));
-    if (fmt->BWFC_blockAlign != align || !fmt->BWFC_sampleRate)
+    /* BSNWPrepKS currently configures the driver for 5001..44199 Hz.
+     * Reject unsupported rates before its word-sized sampling interface. */
+    if (fmt->BWFC_blockAlign != align ||
+        fmt->BWFC_sampleRate <= 5000UL ||
+        fmt->BWFC_sampleRate >= 44200UL ||
+        fmt->BWFC_avgRate != fmt->BWFC_sampleRate * (dword)align)
     {
         return BSNW_UNKNOWN_WAVE_FORMAT;
     }
