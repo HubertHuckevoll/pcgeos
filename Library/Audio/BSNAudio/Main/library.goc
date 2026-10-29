@@ -115,31 +115,6 @@ Boolean     driverUsed  = FALSE;    // driver loaded by BSNWAV
 BSNPcmFormat    lastFormat;
 dword           lastLength;
 
-/**********************************************************
-    Internal Functions
- **********************************************************/
-
-
-// from subcode.goc
-extern void BSNWDebugNotifyWord(const char *label, word value);
-
-/*
- * All playback entry points converge here. The source has already been
- * selected, and bytesToPlay specifies its remaining PCM byte budget.
- * BSNWPlay owns the prepared buffers until playback finishes.
- */
-
-
-/*
- *      MONIKER
- */
-
-@start MONIKERRESOURCE, data;
-    @include <Art/moniker.goh>
-@end MONIKERRESOURCE;
-
-
-
 @ifndef BSNWAV_NO_UI
     @class  StatusInteractionClass,GenInteractionClass;
     @endc;
@@ -224,68 +199,7 @@ Boolean _pascal _export BSNWaveStopRecOrPlay(void *secPtr)
     return (back);
 }
 
-/***************************************************************
-
-    BSNWavePlayFile
-
-        Main function for playing WAV-file
-
- Descr: Blocking calling thread until playing is finished
-    or aborted by flag
-
- IN:    FileHandle  RIFF-File
-    word        playFlags (Parameter)
-    Bit 0       BSNW_SHOW_STATUS
-    Bit 1       BSNW_WAIT_FOR_FREE
-    Bit 2       BSNW_SHOW_ERROR_MSG
-    Bit 3       reserved
-    Bit 4       BSNW_TEST_ONLY
-    optr        parent (Gentree Statusbox)
-
- OUT:   int     status (reason of ending)
-        = 0     success / no errors
-        = 1     aborted by flag
-        = 2     Timeout
-        = 3     Soundcard not ready
-        = 4     Memory error
-        = 5     PLAY by another thread
-        = 6     BSNW_UNKNOWN_WAVE_FORMAT
-
- [Play From/Len]
- The optr (parent) will be used as a pointer to a structure
- for defining the Startposition (ms) and the max. playtime (ms)
-
-typedef struct {
-    dword       BWPP_start;     // Startposition (ms)
-    dword       BWPP_stop;      // time for play (ms)
-
-} BSWavPlayPositions;
-
-typedef struct {
-    word        BWFC_dataFormat;    // 1 = PCM-Daten
-        word        BWFC_channels;      // Kanalzahl
-        dword       BWFC_sampleRate;    // Samples pro Sekunde
-        dword       BWFC_avgRate;       // durchschnittl. Datenrate
-        word        BWFC_blockAlign;    // L�nge eines Sampleblocks
-        word        BWFC_bitsPerSample; // Bits pro Sample
-
-} BSWavFormChunk;
-
-typedef struct {
-    char        BWFH_typRIFF[4];    // "RIFF"
-    dword       BWFH_fullLen;       // Gesamtdateigr��e - 8
-    char        BWFH_formName[4];   // "WAVE"
-    char        BWFH_typFMT[4];     // "fmt "
-    dword       BWFH_fmtLen;        // 16
-    BSWavFormChunk  BWFH_fmtChunk;
-    char        BWFH_typData[4];    // "data"
-    dword       BWFH_datLen;        // L�nge der Sounddaten
-
-} BSWavFileHeader;
-
-
- *********************************************************/
-
+/* Legacy WAV playback adapter; the caller retains the file handle. */
 int _pascal _export BSNWavePlayFile(FileHandle fh, word playFlags, optr parent)
 {
     BSNWav wav;

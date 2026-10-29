@@ -476,46 +476,8 @@ int _pascal BSNWPrepKS(word sampleRate, byte channels, byte bits)
     return (respond);
 }
 
-/*********************************************************
-
-        BSNWLoadData
-
-      Get Data from source into Playcache and
-      copy them with the Konverter to the Secondarybuffer
-
- IN:    void    *cachePtr
-        void    *secPtr
-        (glob)  secondFree  free Bytes
-                            in Secondarybuffer
-
- OUT:   int respond     BSNW_STATUS_OK
-                        BSNW_HARDWARE_NOT_READY
-                        BSNW_PLAY_FINISHED
-
- 1. Read data from source
- 2. Call Konverter
- 3. goto 1. until Secondarybuffer is filled
-
- *********************************************************/
 
 
-/*********************************************************
-
-        BSNWLoadCache
-
-      Read data from source to cache
-
- IN:    void    *cachePtr
-        (glob)  cacheOffset
-        (glob)  cacheFree
-        (glob)  bytesToPlay
-
-
- OUT:   int respond     BSNW_STATUS_OK
-                        BSNW_HARDWARE_NOT_READY
-                        BSNW_PLAY_FINISHED
-
- *********************************************************/
 
 
 /************************************************************
@@ -544,58 +506,11 @@ word _pascal _export BSNWaveGetAIState(word options)
     return (state);
 }
 
-/************************************************************
-
-     BSNWFillSilence
-
-     Fill Secondarybuffer with silence
-
- IN:    byte    secPtr
-        (glob)  secondKOffset
-        (glob)  secondFree
-        (glob)  secBufLen
-        (glob)  playBits
-
- ***********************************************************/
 
 
-/*********************************************************
-
-        BSNWKonvertData
-
-      Cachedata --> Konverter --> Secondarybuffer
-
- IN:    void    *cachePtr
-        void    *secPtr
-        (glob)  cacheFull
-        (glob)  cacheKOffset
-        (glob)  secondKOffset
-
- OUT:   (glob)  peakLevel
-
- *********************************************************/
 
 
-/*********************************************************
 
-        BSNWKonvert16To8
-
-      Cachedata --> Konverter --> Secondarybuffer
-      Konverting 16 Bit WAV to 8 Bit WAV
-
- IN:    void    *cachePtr
-        void   *secPtr
-        (glob) cacheFull
-        (glob) cacheKOffset
-        (glob)  secondKOffset
-
- OUT:   (glob)  peakLevel
-
- *********************************************************/
-
-extern  byte        konvRateRed;
-extern  byte        konvBitsRed;
-extern  byte        konvChanRed;
 
 
 /************************************************
@@ -771,27 +686,3 @@ int _pascal BSNWSetParams(word rate,word bits,word channels)
 
     return(back);
 }
-
-/******************************************************************
-
-    BSNWPrepare
-
-    Preparing Output
-
- IN:    word    playFlags
-     optr   parent
-
- ******************************************************************/
-
-
-/**********************************************************
-
-    BSNWPlay
-
-        Read Data from source and play it
-
- IN:    bytesToPlay
- OUT:   respond
-
- **********************************************************/
-

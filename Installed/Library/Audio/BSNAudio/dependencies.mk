@@ -29,8 +29,9 @@ MP3Dec.eobj: MP3Dec/mp3decManager.asm \
                 product.def
 Driver.obj \
 Driver.eobj: Driver/driverManager.asm \
-                geos.def driver.def lmem.def geode.def library.def ec.def \
-                dirk.def dirksnd.def Internal/soundDrv.def bsnwav.def
+                geos.def driver.def lmem.def geode.def resource.def \
+                library.def ec.def dirk.def dirksnd.def \
+                Internal/soundDrv.def bsnwav.def
 subcode.obj \
 subcode.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -78,8 +79,7 @@ library.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/gItemC.goh Objects/gBoolC.goh \
                 Objects/gGadgetC.goh Objects/gToolCC.goh \
                 Objects/gValueC.goh Objects/gToolGC.goh \
-                Objects/helpCC.goh bsnwav.goh Main/subcode.goh \
-                Art/moniker.goh
+                Objects/helpCC.goh bsnwav.goh Main/subcode.goh
 library.obj \
 library.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 graphics.h fontID.h font.h color.h gstring.h timer.h vm.h \

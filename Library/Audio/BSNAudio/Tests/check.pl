@@ -25,6 +25,11 @@ for my $name (qw(BSNWDetermineSecondaryBufferLength BSNWPrepare BSNWRunPCM BSNPc
         or die "missing $name";
     print $out "$1\n";
 }
+open my $helpers, '<', "$lib/Main/subcode.goc" or die $!;
+my $helper_source = do { local $/; <$helpers> };
+$helper_source =~ /^(void _pascal BSNWInsertSample\([^;]*?\)\n\{.*?^\})/ms
+    or die 'missing toggle insertion';
+print $out "$1\n";
 print $out "#endif\n";
 close $out or die $!;
 # geos.h is replaced only in this host check; production uses the real header.
@@ -81,13 +86,16 @@ if (@ARGV) {
         "$lib/WAV/wav.goc", @core, '-o', "$tmp/play") == 0 or die 'integration compile failed';
     for my $input (glob("$up/tests/data/*.mp3")) {
         (my $name = $input) =~ s|.*/||;
-        system("$tmp/play", 'mp3', $input, "$tmp/play.pcm") == 0 or die 'playback failed';
-        if (defined $reference_dir) {
-            open my $ref, '<:raw', "$reference_dir/$name.pcm" or die $!;
-            open my $played, '<:raw', "$tmp/play.pcm" or die $!;
-            my $expected = do { local $/; <$ref> };
-            my $actual = do { local $/; <$played> };
-            die 'playback PCM differs' unless substr($actual, 0, length($expected)) eq $expected;
+        for my $mode ('mp3', 'mp3-toggle') {
+            system("$tmp/play", $mode, $input, "$tmp/play.pcm") == 0 or die 'playback failed';
+            if (defined $reference_dir) {
+                open my $ref, '<:raw', "$reference_dir/$name.pcm" or die $!;
+                open my $played, '<:raw', "$tmp/play.pcm" or die $!;
+                my $expected = do { local $/; <$ref> };
+                my $actual = do { local $/; <$played> };
+                my $skip = $mode eq 'mp3-toggle' ? 2 : 0;
+                die 'playback PCM differs' unless substr($actual, $skip, length($expected)) eq $expected;
+            }
         }
     }
     for my $bits (8, 16) {

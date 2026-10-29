@@ -93,6 +93,7 @@ word _pascal _export BSNWavReadPCM(void *contextP, void *destP, word maxBytes)
         return BSN_PCM_READ_ERROR;
     if (!wavP->remaining)
         return 0;
+    if (maxBytes == BSN_PCM_READ_ERROR) maxBytes--; /* Reserve the sentinel. */
     if (wavP->remaining < maxBytes)
         maxBytes = (word)wavP->remaining;
     maxBytes -= maxBytes % wavP->source.format.blockAlign;

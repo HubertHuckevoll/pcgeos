@@ -13,7 +13,7 @@
 #define HAF_ZERO_INIT 0
 #define BSCPT_REST_TIME 1
 static word playCacheLen, cacheFree, cacheFull, cacheOffset, cacheKOffset;
-static word secondKOffset, secondFree, secBufLen, secBufL2, playLen2;
+static word secondKOffset, secondFree, secBufLen, secBufL2, playLen2, secondOffset;
 static word peakLevel, peakLevel2, secondHandle, playCacheHandle;
 static word pcmBlockAlign, statusGlyphOptr2, simFlags, playStatus;
 static byte konvChanRed, konvBitsRed, konvRateRed, playBits;
@@ -28,7 +28,8 @@ static word started, stopped;
 static FILE *playOutputP;
 #ifdef BSN_INTEGRATION_TEST
 static MemHandle dmaH;
-static word secBufLenSoll = 512, playSampleRate, secondOffset;
+static word failCache, failDMA;
+static word secBufLenSoll = 512, playSampleRate;
 static byte playChannels, stereoToggle, stereoToggleIni;
 static optr statusBox, statusGlyphOptr1, statusRightBoxOptr;
 extern MemHandle MemAlloc(word size, word flags, word action);
@@ -38,11 +39,13 @@ extern void MemFree(MemHandle h);
 static int BSNWPreCheck(word flags) { (void)flags; return BSNW_STATUS_OK; }
 static void *BSNWAllocPlayCache(word size)
 {
+    if (failCache) { playCacheHandle = 0; return (void *)0; }
     playCacheHandle = MemAlloc(size, 0, 0);
     return playCacheHandle ? MemLock(playCacheHandle) : (void *)0;
 }
 static word BSNWAllocSecBuffer(byte **ptrP, word size)
 {
+    if (failDMA) { *ptrP = (void *)0; return 0; }
     dmaH = MemAlloc(size, 0, 0);
     *ptrP = dmaH ? MemLock(dmaH) : (void *)0;
     return dmaH ? size : 0;
@@ -54,10 +57,7 @@ static int BSNWPrepKS(word rate, byte channels, byte bits)
     return BSNW_STATUS_OK;
 }
 static optr BSCNCreateStatusBox(optr parent) { (void)parent; return 0; }
-static void BSNWInsertSample(void *destP, byte bits)
-{
-    (void)destP; (void)bits; assert(0);
-}
+void BSNWInsertSample(void *destP, byte bits);
 #endif
 
 static word ProcCallFixedOrMovable_pascal(void *contextP, void *destP,
@@ -137,7 +137,7 @@ static void Reset(BSNPcmSource *sourceP)
     secBufLen = sizeof(dma);
     secBufL2 = secBufLen/2;
     secondFree = secBufLen;
-    secondKOffset = 0;
+    secondKOffset = secondOffset = 0;
     konvChanRed = konvRateRed = konvBitsRed = 1;
     playLen2 = secBufL2;
     playBits = 8;
@@ -163,7 +163,7 @@ int main(void)
                 Reset(&source);
                 assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
                 assert(input.offset == length && fullLen == length);
-                assert(playedBytes >= length && stopped == 1);
+                assert(playedBytes == length && stopped == 1);
                 for (i=0; i<length; i++) assert(played[i] == (byte)i);
             }
         }
@@ -188,6 +188,11 @@ int main(void)
     Reset(&source);
     assert(BSNWPlay(&source.format, 0, 0) == BSNW_SOURCE_ERROR);
     assert(started == 1 && stopped == 1);
+    input.offset = 0; input.failAt = 0xffff;
+    Reset(&source);
+    fullLen = 0xfffffffeUL;
+    assert(BSNWLoadCache(cache) == BSNW_SOURCE_ERROR);
+    assert(fullLen == 0xfffffffeUL);
     input.offset = 0; input.invalid = 1;
     Reset(&source);
     assert(BSNWLoadCache(cache) == BSNW_SOURCE_ERROR);
@@ -237,6 +242,16 @@ int main(int argc, char **argv)
         sourceP = &wav.source;
     }
     playCacheLen = 8192;
+    if (sourceP->format.sampleRate < 44200) {
+        /* Failed preparation must not insert a stereo-toggle sample at NULL. */
+        stereoToggle = 1;
+        failCache = 1;
+        assert(BSNPcmPlay(sourceP, 0, 0) == BSNW_MEMORY_ERROR);
+        failCache = 0; failDMA = 1;
+        assert(BSNPcmPlay(sourceP, 0, 0) == BSNW_MEMORY_ERROR);
+        failDMA = 0; stereoToggle = strchr(argv[1], '-') != (void *)0;
+        assert(!started);
+    }
     result = BSNPcmPlay(sourceP, 0, 0);
     if (sourceP->format.sampleRate >= 44200) {
         assert(result == BSNW_UNKNOWN_WAVE_FORMAT && !started);

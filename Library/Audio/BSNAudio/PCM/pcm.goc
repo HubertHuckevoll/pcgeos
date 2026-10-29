@@ -191,7 +191,7 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
     while ( (secondFree) && (respond == BSNW_STATUS_OK) )
     {
         // Fill Cache
-        while ( (cacheFree) && (bytesToPlay) )
+        while (cacheFree >= pcmBlockAlign && bytesToPlay)
         {
             respond = BSNWLoadCache(cachePtr);
             if (respond != BSNW_STATUS_OK)
@@ -280,6 +280,12 @@ int _pascal BSNWLoadCache(void *cachePtr)
     {
         return BSNW_SOURCE_ERROR;
     }
+
+    /* ATTENTION: Playback counters support less than 4 GiB of PCM/session.
+     * Widen the accounting before accepting longer unknown-length streams.
+     */
+    if (pcmUnknownLength && fullLen > 0xfffffffeUL - received)
+        return BSNW_SOURCE_ERROR;
 
     cacheOffset += received;
     if (cacheOffset >= playCacheLen)
@@ -692,8 +698,9 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
     cacheKOffset = 0;
 
     // Toggle channels if :
-    if (  ( stereoToggle && (stereoToggleIni==0) )  // 1. driver request this
-            ||(!stereoToggle && (stereoToggleIni >0) ) )// 2. INI request this
+    if (secondPtr &&
+        ((stereoToggle && (stereoToggleIni==0)) ||
+         (!stereoToggle && (stereoToggleIni >0))))
     {
         BSNWInsertSample(secondPtr,playBits);
     };
@@ -705,7 +712,7 @@ int _pascal BSNWPlay(BSNPcmFormat *bfc, word playFlags, optr parent)
 {
     int respond = BSNW_STATUS_OK;
     dword   i;
-    word    aiState,aiState2;
+    word    aiState,aiState2, advance;
     dword   newSec,lastSec = 0;     // Sekundenwerte
 
 
@@ -747,7 +754,17 @@ int _pascal BSNWPlay(BSNPcmFormat *bfc, word playFlags, optr parent)
             {
                 //////// INT ! //////////
 
-                playedBytes = playedBytes + playLen2;
+                /* Exclude the initial channel-toggle sample and final silence. */
+                advance = playLen2;
+                if (secondOffset)
+                {
+                    advance -= secondOffset * konvRateRed * konvBitsRed * konvChanRed;
+                    secondOffset = 0;
+                }
+                if (playedBytes >= fullLen || fullLen - playedBytes < advance)
+                    playedBytes = fullLen;
+                else
+                    playedBytes += advance;
 
                 // Timeout-detector
                 if ( ( ( (aiState & 0x00ff)-1 ) != (aiState2 & 0x00ff) )

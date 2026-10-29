@@ -1,6 +1,7 @@
 /* Real WAV reader, native-file shim; no playback or decoder copies. */
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <bsnaudio.h>
 static FILE *inputP;
@@ -74,7 +75,8 @@ word FileRead(FileHandle file, void *destP, word count, word flags)
 int main(int argc, char **argv)
 {
     BSNWav wav;
-    byte pcm[17];
+    byte pcm[17], *largeP;
+    dword n;
     word bits, channels, frames, order, count, total, i;
     assert(argc == 2);
     for (bits=8; bits<=16; bits+=8) {
@@ -124,6 +126,22 @@ int main(int argc, char **argv)
     assert(BSNWavOpen(&wav, 1) == BSNW_UNKNOWN_WAVE_FORMAT); /* Rate overflow. */
     Make(8, 1, 16, 0); bytes[0] = 0; OpenInput(argv[1]);
     assert(BSNWavOpen(&wav, 1) == BSNW_MEMORY_ERROR);
+    /* The 0xffff request must not produce the reserved error byte count. */
+    Make(8, 1, 0, 0);
+    Patch32(4, (dword)used + 65536UL - 8);
+    Patch32(used-4, 65536UL);
+    OpenInput(argv[1]);
+    for (n=0; n<65536UL; n++) assert(fputc((byte)n, inputP) != EOF);
+    assert(!fflush(inputP));
+    assert(BSNWavOpen(&wav, 1) == BSNW_STATUS_OK);
+    largeP = malloc(65534); assert(largeP); /* Host-only caller buffer. */
+    assert(BSNWavReadPCM(&wav, largeP, 0xffff) == 65534);
+    assert(wav.remaining == 2);
+    assert(BSNWavReadPCM(&wav, pcm, sizeof(pcm)) == 2);
+    assert(pcm[0] == 254 && pcm[1] == 255);
+    assert(BSNWavReadPCM(&wav, pcm, sizeof(pcm)) == 0);
+    free(largeP);
+    BSNWavClose(&wav);
     fclose(inputP);
     puts("WAV formats, chunk bounds/padding/order, truncation, borrowed file: PASS");
     return 0;

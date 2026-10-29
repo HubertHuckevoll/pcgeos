@@ -29,11 +29,8 @@ extern  const char      soundCatIT[];
 extern  const char      sampleDriverIT[];
 extern  const char      synthDriverIT[];
 
-extern  Boolean         demoModus;
-extern  byte            valNum;
 extern  GeodeLoadError  gle;
 extern  Boolean         driverUsed;
-extern  int             counter;
 
 extern  int             playStatus;     // 0 = System ready (idle state)
                                         // 1 = PlayFile active
@@ -41,7 +38,6 @@ extern  int             playStatus;     // 0 = System ready (idle state)
 extern  int             playStopFlag;   // <>0 --> Abort
 extern  dword           playedBytes;
 extern  dword           bytesToPlay;
-extern  optr            statusGlyphOptr;
 extern  char            playStatusText[];
 extern  MemHandle       playCacheHandle;
 extern  word            playSampleRate;

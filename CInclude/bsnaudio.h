@@ -37,7 +37,7 @@ typedef struct {
 
 /* Far Pascal callback, invoked through ProcCallFixedOrMovable_pascal.
  * Return complete interleaved PCM frames: unsigned 8-bit or signed 16-bit.
- * A positive count must not exceed maxBytes; short reads are normal.
+ * A positive count is at most maxBytes and 0xfffe; short reads are normal.
  * Zero means EOF; BSN_PCM_READ_ERROR means failure. Format is constant.
  * File I/O and decoding run synchronously on the calling playback thread.
  */
@@ -55,6 +55,7 @@ typedef struct {
  * The descriptor and context are borrowed and must remain valid/locked
  * throughout playback. Store handles in decoder contexts; never retain a
  * pointer into an unlocked movable block. No file handle is transferred.
+ * Playback accounting supports less than 4 GiB of decoded PCM per session.
  * Independent readers may be used without playback or sound hardware.
  */
 extern int _pascal _export BSNPcmPlay(BSNPcmSource *sourceP,
@@ -74,6 +75,7 @@ extern void _pascal _export BSNWavClose(BSNWav *wavP);
 /* Three movable decoder blocks; no extra input or playback buffer.
  * Open probes with zero PCM capacity and retains the first decoded frame.
  * Open/Read/Close are serialized per context. File is borrowed.
+ * Close a live context before opening another file in it.
  * status records a terminal source error or unsupported format change.
  */
 typedef struct {
