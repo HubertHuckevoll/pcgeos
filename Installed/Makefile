@@ -216,7 +216,7 @@ Installed/Library/Net :	kernel MAKELIB
 
 # removed pcmcia
 ui	: Installed/Library/User
-Installed/Library/User	:	kernel sound compress net wav MAKELIB
+Installed/Library/User	:	kernel sound compress net MAKELIB
 
 isui	: Installed/Library/SpecUI/ISUI
 Installed/Library/SpecUI/ISUI	:	kernel text MAKELIB
