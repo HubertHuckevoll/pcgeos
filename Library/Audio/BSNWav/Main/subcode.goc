@@ -1654,19 +1654,15 @@ int _pascal BSNWPlay(BSWavFormChunk *bfc, word playFlags, optr parent)
     peakLevel2 = 0;             // reset helper
 
     respond = BSNWLoadData(playCachePtr,secondPtr);
+    /*
+     * Even a short source may occupy both DMA halves. Do not stop at the
+     * first interrupt: keep running until every queued PCM byte has played.
+     */
     if (respond == BSNW_PLAY_FINISHED)
     {
-        // extreme short PCM stream
-        BSNWStartPlay();
-        aiState2 = BSNWaveGetAIState(0xFF01);   // FF01 --> ISR clear the buffer
-
-        do
-        {
-            TimerSleep(1);
-            aiState = BSNWaveGetAIState(0);
-        } while (aiState == aiState2);
+        respond = BSNW_STATUS_OK;
     }
-    else if (respond == BSNW_STATUS_OK)
+    if (respond == BSNW_STATUS_OK)
     {
 
 /////////////////////////////////////////////////
