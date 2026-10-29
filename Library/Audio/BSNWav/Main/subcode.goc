@@ -758,7 +758,7 @@ Boolean _pascal BSNWSearchChunk(dword type)
 
 int _pascal BSNWPrepKS(word sampleRate, byte channels, byte bits)
 {
-    word    back;       // retVal driver
+    word    back = 1;   // default to error unless sampling is configured
     int respond = BSNW_STATUS_OK;
 
     // Get max. values from soundcard
@@ -1531,8 +1531,10 @@ int _pascal BSNWPrepare(BSWavFormChunk *bfc,word playFlags,optr parent)
         };
 
         playCachePtr = BSNWAllocPlayCache(size);
-        cacheFree    = playCacheLen;
+        /* Cache capacity must match the allocation, including short WAVs. */
+        cacheFree    = size;
         cacheFull    = 0;
+        playCacheLen = size;
     }
     else
     {
