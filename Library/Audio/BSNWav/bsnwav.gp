@@ -89,3 +89,15 @@ export BSNPCMPLAY
 export BSNWAVOPEN
 export BSNWAVREADPCM
 export BSNWAVCLOSE
+
+# Mutable playback state shares dgroup with immutable decoder tables.
+resource dgroup fixed
+resource MP3MathCode fixed code read-only shared
+resource MP3ApiCode code read-only shared
+resource MP3FrameCode code read-only shared
+resource MP3HuffCode code read-only shared
+resource MP3ImdctCode code read-only shared
+resource MP3SynthCode code read-only shared
+resource MP3DspCode code read-only shared
+resource MP3QuantCode code read-only shared
+resource MP3SterCode code read-only shared

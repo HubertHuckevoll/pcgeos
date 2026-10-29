@@ -34,3 +34,8 @@ GOCFLAGS += -L bsnwav
 # CCOMFLAGS += -O2 -w -w-amp -w-cln -w-pin
 # LINKFLAGS += -N Copyright\20Dirk\20Lausecker\202000
 
+
+# Preserve the decoder's Pascal internals and directly addressed fixed tables.
+# ATTENTION: Do not select -zc: cross-resource table references need a real
+# segment. Move tables behind locked-handle access before changing placement.
+XCCOMFLAGS += -ecp

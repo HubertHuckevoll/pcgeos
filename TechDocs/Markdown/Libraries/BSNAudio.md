@@ -108,3 +108,19 @@ The host regression additionally compiles the actual WAV reader and checks
 8/16-bit mono/stereo, empty/short data, odd chunk padding, chunk order,
 every file truncation, malformed sizes/formats, read failures and borrowed
 file ownership. EC and NC builds pass.
+
+## Decoder transplant
+
+MP3Dec is compiled directly into bsnwav.lib, with no mp3dec library import.
+The pinned implementation, core, Apache LICENSE/NOTICE and regression suite
+are preserved. Only private-header lookup, API code-resource placement and
+test paths change; mkmf requires mp3dsp.asm to be named mp3decManager.asm in
+its source module. The instruction bytes are unchanged. dgroup is fixed and
+writable because it also contains mutable playback globals; the immutable
+MP3 tables remain directly addressable. The 386 kernel-register requirement
+is retained explicitly; no kernel configuration is changed.
+
+The original MP3Wav sources are imported to retain conversion regressions;
+their GEOS client migration to the combined pull interface follows separately.
+The decoder's feed API/header is private to MP3Dec and is not exported by the
+combined library. EC and NC combined-library builds pass.
