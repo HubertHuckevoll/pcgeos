@@ -187,25 +187,31 @@ extern void BSNWDebugNotifyWord(const char *label, word value);
 static int _pascal BSNWRunPCM(BSWavFormChunk *fmt, word playFlags, optr parent)
 {
     int result;
+    word configuredCacheLen = playCacheLen;
 
     result = BSNWPrepare(fmt, playFlags, parent);
     if (result == BSNW_STATUS_OK)
     {
-        return BSNWPlay(fmt, playFlags, parent);
+        result = BSNWPlay(fmt, playFlags, parent);
+    }
+    else
+    {
+        /* A failed prepare never reaches BSNWPlay's ordinary cleanup. */
+        if (secondPtr)
+        {
+            (void)BSNWaveStopRecOrPlay(secondPtr);
+        }
+        if (playCachePtr)
+        {
+            MemUnlock(playCacheHandle);
+            MemFree(playCacheHandle);
+            playCachePtr = 0;
+        }
+        playStatus = BSNW_STATUS_OK;
     }
 
-    /* A failed prepare never reaches BSNWPlay's ordinary cleanup. */
-    if (secondPtr)
-    {
-        (void)BSNWaveStopRecOrPlay(secondPtr);
-    }
-    if (playCachePtr)
-    {
-        MemUnlock(playCacheHandle);
-        MemFree(playCacheHandle);
-        playCachePtr = 0;
-    }
-    playStatus = BSNW_STATUS_OK;
+    /* Short sources shrink the active cache, not the next playback's default. */
+    playCacheLen = configuredCacheLen;
     return result;
 }
 
