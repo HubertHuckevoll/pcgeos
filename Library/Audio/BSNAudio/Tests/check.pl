@@ -18,6 +18,14 @@ for my $name (qw(BSNWReadPCM BSNWLoadCache BSNWFillSilence BSNWKonvertData BSNWL
         or die "missing $name";
     print $out "$1\n";
 }
+$source =~ /^(void _pascal BSNWKonvert16To8\([^;]*?\)\n\{.*?^\})/ms
+    or die 'missing 16-bit converter';
+print $out "#ifdef __WATCOMC__\n$1\n#endif\n";
+open my $control_in, '<', "$lib/Main/library.goc" or die $!;
+my $controls = do { local $/; <$control_in> };
+$controls =~ /^(void _pascal _export BSNWaveStop\([^;]*?\)\n\{.*?^\})/ms
+    or die 'missing stop control';
+print $out "$1\n";
 print $out "#ifdef BSN_INTEGRATION_TEST\n";
 for my $name (qw(BSNWDetermineSecondaryBufferLength BSNWPrepare BSNWRunPCM BSNPcmPlay)) {
     my $definition = $source;
@@ -40,6 +48,7 @@ print $out <<'HEADER';
 #include <stdint.h>
 typedef uint8_t byte;
 typedef uint16_t word;
+typedef int16_t sword;
 typedef uint32_t dword;
 typedef int Boolean;
 typedef word MemHandle;
@@ -120,4 +129,38 @@ if (@ARGV) {
     close $wav or die $!;
     system("$tmp/play", 'wav', "$tmp/rate.wav", "$tmp/wavplay.pcm") == 0
         or die '48kHz rejection failed';
+}
+
+# Optional native-int converter/control checks. Standalone DOS only; no GEOS.
+if ($ENV{PCM_WATCOM}) {
+    my $watcom = $ENV{WATCOM} // die "set WATCOM\n";
+    for my $variant ('ec', 'nc') {
+        system('wcl', qw(-q -bt=dos -ml -3 -zp1 -zu -s -ecp -of -of+ -ol -ol+ -ei -zdp -fpc),
+            $variant eq 'nc' ? ('-ox') : (), "-i=$watcom/h", "-i=$tmp",
+            "-i=$lib/../../../CInclude", "-fo=$tmp/", "-fe=$tmp/$variant.exe",
+            "$lib/Tests/pcm.c") == 0 or die 'target PCM compile failed';
+    }
+    open my $batch, '>:raw', "$tmp/all.bat" or die $!;
+    print $batch "ec.exe >ec.txt\r\nif errorlevel 1 goto fail\r\nnc.exe >nc.txt\r\n",
+        "if errorlevel 1 goto fail\r\necho PASS>passed.txt\r\nexit\r\n",
+        ":fail\r\necho FAIL>failed.txt\r\nexit\r\n";
+    close $batch or die $!;
+    {
+        local $ENV{SDL_VIDEODRIVER} = 'offscreen';
+        local $ENV{SDL_AUDIODRIVER} = 'dummy';
+        my $pid = fork(); die $! unless defined $pid;
+        if (!$pid) {
+            open STDOUT, '>', "$tmp/basebox.log" or die $!;
+            open STDERR, '>&', \*STDOUT or die $!;
+            exec 'timeout', '180', 'basebox', '--noprimaryconf', '--nolocalconf', '--noautoexec',
+                '--set', 'output=texture', '--set', 'texture_renderer=software',
+                '--set', 'core=normal', '--set', 'cputype=386', '--set', 'cpu_cycles=max',
+                '--set', 'nosound=true', '--exit', '-c', "mount c $tmp", '-c', 'c:',
+                '-c', 'call all.bat';
+            die $!;
+        }
+        waitpid($pid, 0); die "DOS PCM runner failed: $tmp/basebox.log\n" if $?;
+    }
+    die "DOS PCM checks failed: $tmp/basebox.log\n" unless -f "$tmp/PASSED.TXT";
+    print "Watcom EC/NC PCM, 16-to-8 conversion, stop/restart: PASS ($tmp)\n";
 }

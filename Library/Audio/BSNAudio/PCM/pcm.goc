@@ -425,12 +425,10 @@ void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
         };
 
         // Sourcepointer to next sample
-        i = konvRateRed;
-        if (konvChanRed>1)
-        {
-            //Stereo -> Mono
-            i = i+i-1;
-        };
+        /* Keep interleaved channels together when reducing the rate. */
+        i = 1;
+        if ((cacheKOffset + 1) % pcmBlockAlign == 0)
+            i += (konvRateRed - 1) * pcmBlockAlign;
 
         while(i && cacheFull)
         {
@@ -511,12 +509,10 @@ void _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
         };
 
         // Sourcepointer to next sample
-        i = konvRateRed;
-        if (konvChanRed>1)
-        {
-            //Stereo -> Mono
-            i = i+i-1;
-        };
+        /* Skip whole source frames only after their final channel. */
+        i = 1;
+        if ((cacheKOffset + 2) % pcmBlockAlign == 0)
+            i += (konvRateRed - 1) * (pcmBlockAlign / 2);
 
         while(i && cacheFull)
         {

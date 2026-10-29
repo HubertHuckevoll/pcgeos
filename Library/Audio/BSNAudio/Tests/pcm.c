@@ -24,7 +24,8 @@ static byte *playCachePtr = cache, *secondPtr = dma;
 static char playStatusText[80];
 static BSNPcmSource *playSourceP;
 static dword ticks, playedCount;
-static word started, stopped;
+static word started, stopped, stopAtTick;
+void BSNWaveStop(void);
 static FILE *playOutputP;
 #ifdef BSN_INTEGRATION_TEST
 static MemHandle dmaH;
@@ -65,11 +66,15 @@ static word ProcCallFixedOrMovable_pascal(void *contextP, void *destP,
 {
     return readP(contextP, destP, capacity);
 }
+#ifdef __WATCOMC__
+void BSNWKonvert16To8(void *cacheP, void *secondP);
+#else
 static void BSNWKonvert16To8(void *cacheP, void *secondP)
 {
     (void)cacheP; (void)secondP;
     assert(0); /* This check selects the byte-copy conversion path. */
 }
+#endif
 static void BSNWAsmStartPlay(void) { started++; }
 static word BSNWaveGetAIState(word options)
 {
@@ -85,6 +90,7 @@ static word BSNWaveGetAIState(word options)
     }
     playedCount += secBufL2;
     ticks++;
+    if (stopAtTick && ticks == stopAtTick) BSNWaveStop();
     return (word)((ticks & 255) | ((ticks & 1) ? 0x100 : 0));
 }
 static void TimerSleep(word ticksToSleep) { (void)ticksToSleep; }
@@ -149,7 +155,11 @@ int main(void)
 {
     BSNPcmSource source;
     Input input;
-    word length, chunk, unknown, i;
+    word length, chunk, unknown, i, align, frame, channel, offset, output;
+#ifdef __WATCOMC__
+    word channels, outputChannels, rate;
+    long sample, right;
+#endif
     source.format.avgBytesPerSecond = 8000;
     source.format.blockAlign = 1;
     source.readP = ReadPCM;
@@ -181,6 +191,93 @@ int main(void)
             for (i=0; i<(length+2)/3; i++) assert(played[i] == (byte)(i*3));
         }
     }
+    /* Native PCM copies reduce complete frames, retaining channel order. */
+    for (align=1; align<=4; align*=2) {
+        source.format.blockAlign = align;
+        for (i=1; i<=3; i++) {
+            for (length=0; length<70; length++) {
+                for (chunk=1; chunk<=7; chunk++) {
+                    for (unknown=0; unknown<2; unknown++) {
+                        input.length = length * align;
+                        input.offset = 0; input.chunk = chunk * align;
+                        input.failAt = 0xffff; input.invalid = 0;
+                        source.pcmBytes = unknown ? BSN_PCM_LENGTH_UNKNOWN : input.length+12;
+                        Reset(&source);
+                        playCacheLen -= playCacheLen % (align * i);
+                        cacheFree = playCacheLen;
+                        konvRateRed = (byte)i; playLen2 = secBufL2 * i;
+                        assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
+                        assert(input.offset == input.length && playedBytes == input.length);
+                        output = 0;
+                        for (frame=0; frame<length; frame+=i) {
+                            for (channel=0; channel<align; channel++)
+                                assert(played[output++] == (byte)(frame*align+channel));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    source.format.blockAlign = 1;
+#ifdef __WATCOMC__
+    /* int must be native 16-bit for the production signed-sample converter. */
+    assert(sizeof(int) == 2 && sizeof(long) == 4);
+    for (channels=1; channels<=2; channels++) {
+        for (outputChannels=1; outputChannels<=channels; outputChannels++) {
+            source.format.blockAlign = channels * 2;
+            for (rate=1; rate<=3; rate++) {
+                for (length=0; length<70; length++) {
+                    for (chunk=1; chunk<=7; chunk++) {
+                        for (unknown=0; unknown<2; unknown++) {
+                            input.length = length * source.format.blockAlign;
+                            input.offset = 0; input.chunk = chunk * source.format.blockAlign;
+                            input.failAt = 0xffff; input.invalid = 0;
+                            source.pcmBytes = unknown ? BSN_PCM_LENGTH_UNKNOWN : input.length+12;
+                            Reset(&source);
+                            playCacheLen -= playCacheLen % (pcmBlockAlign * rate);
+                            cacheFree = playCacheLen;
+                            konvBitsRed = 2; konvChanRed = channels/outputChannels;
+                            konvRateRed = (byte)rate;
+                            playLen2 = secBufL2 * konvBitsRed * konvChanRed * rate;
+                            assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
+                            assert(input.offset == input.length && playedBytes == input.length);
+                            output = 0;
+                            for (frame=0; frame<length; frame+=rate) {
+                                for (channel=0; channel<outputChannels; channel++) {
+                                    offset = frame * pcmBlockAlign + channel * 2;
+                                    sample = (sword)((word)(byte)offset |
+                                                    ((word)(byte)(offset+1)<<8));
+                                    if (konvChanRed > 1) {
+                                        right = (sword)((word)(byte)(offset+2) |
+                                                       ((word)(byte)(offset+3)<<8));
+                                        sample = (sample + right) / 2;
+                                    }
+                                    if (played[output] != (byte)(128 + (sample>>8))) {
+                                        printf("channels=%u out=%u rate=%u frames=%u chunk=%u unknown=%u output=%u actual=%u expected=%u\n",
+                                            channels, outputChannels, rate, length, chunk, unknown,
+                                            output, played[output], (byte)(128 + (sample>>8)));
+                                        fflush(stdout);
+                                    }
+                                    assert(played[output++] == (byte)(128 + (sample>>8)));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    source.format.blockAlign = 1;
+#endif
+    /* Stop from a different execution context, then reuse the playback loop. */
+    input.length = 100; input.offset = 0; input.chunk = 8;
+    input.failAt = 0xffff; input.invalid = 0;
+    source.pcmBytes = BSN_PCM_LENGTH_UNKNOWN;
+    Reset(&source); stopAtTick = 2;
+    assert(BSNWPlay(&source.format, 0, 0) == BSNW_ABORT && stopped == 1);
+    input.offset = 0; stopAtTick = 0;
+    Reset(&source);
+    assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK && stopped == 1);
     /* Error after playback starts must not turn into successful EOF. */
     input.length = 100; input.offset = 0; input.chunk = 8;
     input.failAt = 32; input.invalid = 0;
