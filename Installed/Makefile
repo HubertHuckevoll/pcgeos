@@ -83,27 +83,22 @@ stub_wincom	: Installed/Tools/swat/Stub/WinCom
 Installed/Tools/swat/Stub/WinCom:	MAKESTUB
 
 
-
-# Bestsound: bsnwav mixlib bsd16 bsd8st bsqp
-
-
 #
 # Libraries
 #
 minimalLibrary	: kernel swap sound net ui isui motif spool text mailbox \
 		  genpc ansic cdaudio cell chart color compress config hash impex \
 		  borlandc watcomc math pen resolver spline ssmeta styles \
-		  bsnwav mixlib wav \
-		  game cards spreadsheet parse spell convert \
+		  bsnwav mixlib wav game cards spreadsheet parse spell convert \
 		  saver prefLibs accpnt netutils \
 		  socket dhcp borlandrtl ffile streamc mailhub mailsmtp \
 		  modemc mailpop3 lot123ss csv \
 		  parentc wmlib rtf \
-		  jpeg giflib gif htmlimpx n2txt inetmsg extui \
+		  jpeg giflib gif png htmlimpx n2txt inetmsg extui \
 		  winword8 zlib dirlist minizip idialc eps impex_libs \
 		  thumbdb ftplib flllib sitelist int8087 intx87\
 		  basicdb gridlib gsol treplib hostif ascii \
-		  rsftool bmptools
+		  rsftool bmptools icmtool
 
 prefLibs	: prefvid prefts preftd \
 		  prefsndn prefos prefmous preflo preflf prefkbd \
@@ -112,7 +107,7 @@ prefLibs	: prefvid prefts preftd \
 # prefs not used preflvl prefuic prefui prefts prefspui prefsock preflink preflang
 
 # Geos impex libraries
-impex_libs	: dib bmp clp ico pcx tif \
+impex_libs	: dib bmp clp ico pcx tif svg webp \
 		  dbase3 dbase4 htmlimpx vcimpex
 #lot123 msmword msword wordperf5
 
@@ -141,7 +136,7 @@ minimalAppl	: minimalGame minimalUtils minimalTools minimalSavers \
 
 minimalUtils	: prefmgr
 
-minimalTools    : resedit wlgen prntscrn
+minimalTools    : resedit wlgen
 
 minimalGame	: solitaire cword amateur bjack hearts gwpoker \
                   pyramid sokoban uki mine column battle \
@@ -158,6 +153,8 @@ minimalSavers	: lol blackhole blank bobbin circles dribble dust \
 		  fades flame hopalong letter logo maze lastwords \
 		  melt noodle palette pieces pith qix rotate sand \
 		  spotlight stars string swarm tickertape tiles worms
+
+minimalTools	: prntscrn
 
 otherEnsemble	: conview reader term tedit geofile dirls  \
 		  graphvwr macror dump perf bim ffind bbxcd webbox \
@@ -180,7 +177,8 @@ minimalDriver	: nimbus ms4 ntfat os2 cdrom stream dri gdi keyboard modem gdipoin
 		  ps2 msys msser msbus kbmouse absgen genmouse emm extmem \
 		  xms filestr nonts taskmax bnf sblaster bsd16 bsd8st comm spooltd \
 		  vmtree filedd logibus logiser dma mslf kbd_drivers \
-		  etherodi etherpkt msnet cdados truetype
+		  etherodi etherpkt msnet cdados truetype \
+		  hltpwr
 
 printerDriver	: deskjet dj500c lbp mercury pcl4 quietjet canon48 \
 		  canonbjc  epshi24 epson24 epson48 nec24 \
@@ -218,7 +216,7 @@ Installed/Library/Net :	kernel MAKELIB
 
 # removed pcmcia
 ui	: Installed/Library/User
-Installed/Library/User	:	kernel sound compress net MAKELIB
+Installed/Library/User	:	kernel sound compress net wav MAKELIB
 
 isui	: Installed/Library/SpecUI/ISUI
 Installed/Library/SpecUI/ISUI	:	kernel text MAKELIB
@@ -281,6 +279,12 @@ Installed/Library/Hash:	kernel MAKELIB
 pnglib	: Installed/Library/PngLib
 Installed/Library/PngLib:	ansic zlib MAKELIB
 
+webplib	: Installed/Library/WebpLib
+Installed/Library/WebpLib:	ansic MAKELIB
+
+svglib	: Installed/Library/SvgLib
+Installed/Library/SvgLib:	ansic MAKELIB
+
 impex	: Installed/Library/Impex
 Installed/Library/Impex: 	ui MAKELIB
 
@@ -305,8 +309,17 @@ Installed/Library/Breadbox/Impex/JPEG: ui impex ansic ijgjpeg math MAKELIB
 gif : Installed/Library/Breadbox/Impex/GIF
 Installed/Library/Breadbox/Impex/GIF: ui impex ansic extgraph giflib MAKELIB
 
+png : Installed/Library/Breadbox/Impex/PNG
+Installed/Library/Breadbox/Impex/PNG: ui impex extgraph pnglib MAKELIB
+
 wmf : Installed/Library/Trans/Graphics/Vector/Wmf
 Installed/Library/Trans/Graphics/Vector/Wmf: ui impex ansic MAKELIB
+
+webp : Installed/Library/Trans/Graphics/Bitmap/Webp
+Installed/Library/Trans/Graphics/Bitmap/Webp: impex webplib MAKELIB
+
+svg : Installed/Library/Trans/Graphics/Vector/Svg
+Installed/Library/Trans/Graphics/Vector/Svg: impex svglib MAKELIB
 
 ascii	: Installed/Library/Trans/Text/Ascii
 Installed/Library/Trans/Text/Ascii: 	ui text MAKELIB
@@ -351,6 +364,7 @@ Installed/Library/SSMeta:	ui math MAKELIB
 hostif	: Installed/Library/HostIf
 Installed/Library/HostIf:	kernel MAKELIB
 
+# BestSound is used by the WAV library in all builds of this branch.
 wav	: Installed/Library/Wav
 Installed/Library/Wav:	kernel sound bsnwav MAKELIB
 
@@ -895,6 +909,9 @@ Installed/Driver/Printer/DotMatrix/Epson9:	spool MAKEDRV
 propx24	: Installed/Driver/Printer/DotMatrix/Propx24
 Installed/Driver/Printer/DotMatrix/Propx24:	spool MAKEDRV
 
+hltpwr	: Installed/Driver/Power/hltpwr
+Installed/Driver/Power/hltpwr:			kernel MAKEDRV
+
 
 #appl
 
@@ -951,7 +968,7 @@ manager: Installed/Appl/FileMgrs2/GeoManager
 Installed/Appl/FileMgrs2/GeoManager:	ui shell spool MAKEAPPL
 
 isdesk: Installed/Appl/FileMgrs2/ISDesk
-Installed/Appl/FileMgrs2/ISDesk:	ui shell spool wav MAKEAPPL
+Installed/Appl/FileMgrs2/ISDesk:	ui shell spool wav shell MAKEAPPL
 
 sclock:	Installed/Appl/SysTray/SClock
 Installed/Appl/SysTray/SClock:		ui MAKEAPPL
@@ -1429,7 +1446,7 @@ Installed/Library/SSL:				ansic socket mapheap hostif MAKELIB
 
 # product-specific dependency on fjpeg
 impgraph	: Installed/Library/Breadbox/ImpGraph
-Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg pnglib fjpeg MAKELIB
+Installed/Library/Breadbox/ImpGraph:		ansic ijgjpeg pnglib fjpeg svglib webplib MAKELIB
 
 ijgjpeg	: 	Installed/Library/Breadbox/Ijgjpeg
 Installed/Library/Breadbox/Ijgjpeg:		ui ansic MAKELIB
@@ -1572,7 +1589,7 @@ Installed/Appl/Breadbox/BBGrmt:			ui ansic spool text MAKEAPPL
 
 graphvwr : Installed/Appl/Breadbox/Graphvwr
 Installed/Appl/Breadbox/Graphvwr:	ui ansic extui giflib thumbdb ijgjpeg pnglib \
-					MAKEAPPL
+					svglib webplib MAKEAPPL
 
 macror	: Installed/Appl/Breadbox/MacroR
 Installed/Appl/Breadbox/MacroR:		ui ansic MAKEAPPL
@@ -1767,8 +1784,7 @@ prefsndn	: Installed/Library/Pref/Prefsndn
 Installed/Library/Pref/Prefsndn:		ui ansic config sound MAKELIB
 
 # BestSound - supplemental sound API.
-bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp mixer
-# sndchk
+bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp sndchk mixer
 
 bsnwav	: Installed/Library/Audio/BSNWav
 Installed/Library/Audio/BSNWav:			kernel ansic MAKELIB
@@ -1831,6 +1847,10 @@ Installed/Library/Breadbox/Impex/VCImpex:	ui impex ansic math meta MAKELIB
 
 vconvert: Installed/Appl/Breadbox/VConvert
 Installed/Appl/Breadbox/VConvert:		ui ansic grobj text math meta MAKEAPPL
+
+# Icon Editor support and more
+icmtool	: Installed/Library/IcmTool
+Installed/Library/IcmTool:			ansic ui MAKELIB
 
 # RabeSoft Libraries
 

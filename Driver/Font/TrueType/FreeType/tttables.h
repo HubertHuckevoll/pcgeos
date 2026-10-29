@@ -38,9 +38,11 @@
     TT_Fixed  version;      /* should be 0x10000 */
     UShort    numTables;    /* number of tables  */
 
+#ifdef TT_CONFIG_OPTION_SUPPORT_OPTIONAL_FIELDS
     UShort  searchRange;    /* These parameters are only used  */
     UShort  entrySelector;  /* for a dichotomy search in the   */
     UShort  rangeShift;     /* directory. We ignore them.      */
+#endif
   };
 
   typedef struct TTableDir_  TTableDir;
@@ -64,15 +66,6 @@
 
 
   /* 'cmap' tables */
-
-  struct  TCMapDir_
-  {
-    UShort  tableVersionNumber;
-    UShort  numCMaps;
-  };
-
-  typedef struct TCMapDir_  TCMapDir;
-  typedef TCMapDir*         PCMapDir;
 
   struct  TCMapDirEntry_
   {

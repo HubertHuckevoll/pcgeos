@@ -2461,7 +2461,7 @@ MSG_GEN_SET_KBD_ACCELERATOR sets the keyboard accelerator of the
 object the message is sent to. The message must pass the keyboard 
 accelerator to use along with a **VisUpdateMode**. If you wish to remove a 
 keyboard accelerator from an object, pass this message with a keyboard 
-acclerator of zero.
+accelerator of zero.
 
 MSG_GEN_CHANGE_ACCELERATOR changes the keyboard accelerator using 
 a low-level replace operation.
@@ -3523,7 +3523,7 @@ HINT_ALIGN_LEFT_EDGE_WITH_OBJECT,
 HINT_ALIGN_RIGHT_EDGE_WITH_OBJECT, and 
 HINT_ALIGN_BOTTOM_EDGE_WITH_OBJECT all line up an object's edge 
 with the same edge of the object these hints are set to. One of these hints can 
-be used in each direction. The same concerns over superceding the default 
+be used in each direction. The same concerns over superseding the default 
 geometry manager in the above attributes are valid here as well. Therefore, 
 avoid using these hints if possible.
 
@@ -4867,7 +4867,7 @@ should be redrawn.
     MSG_GEN_SET_INITIAL_SIZE, MSG_GEN_SET_MINIMUM_SIZE, 
     MSG_GEN_SET_MAXIMUM_SIZE, MSG_GEN_SET_FIXED_SIZE, 
     MSG_GEN_GET_INITIAL_SIZE, MSG_GEN_GET_MINIMUM_SIZE, 
-    MSG_GEN_GET_MAXIMUM_SIZE, MSG_GEN_GET_FIZED_SIZE, 
+    MSG_GEN_GET_MAXIMUM_SIZE, MSG_GEN_GET_FIXED_SIZE, 
     MSG_GEN_RESET_TO_INITIAL_SIZE, CompSizeHintArgs
 
 These messages all perform resizing operations on generic objects. In some 
@@ -5063,6 +5063,7 @@ passed will remain empty.
 #### MSG_GEN_SET_MAXIMUM_SIZE
 
     void    MSG_GEN_SET_MAXIMUM_SIZE(
+            byte    updateMode,
             word    count,
             word    height,     /* SpecHeight */
             word    width);     /* SpecWidth */
@@ -5116,6 +5117,7 @@ HINT_FIXED_SIZE is not set, the structure passed will remain empty.
 #### MSG_GEN_SET_FIXED_SIZE
 
     void    MSG_GEN_SET_FIXED_SIZE(
+            byte    updateMode,
             word    count,
             word    height,     /* SpecHeight */
             word    width);     /* SpecWidth */
@@ -5617,7 +5619,7 @@ values into one word.
 **Interception:** Generally not intercepted.
 
 ----------
-####MSG_GEN_SET_WIN_CONSTRAIN
+#### MSG_GEN_SET_WIN_CONSTRAIN
 
     void    MSG_GEN_SET_WIN_CONSTRAIN(
             VisUpdateMode       updateMode,

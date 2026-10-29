@@ -9,11 +9,12 @@
 # REVISION HISTORY:
 #       Name      Date            Description
 #       ----      ----            -----------
-#       todd    7/21/98         Initial Revision
-#       jfh     12/5/01         Breadbox Ensemble first pass
+#       todd      7/21/98         Initial Revision
+#       jfh       12/5/01         Breadbox Ensemble first pass
+#       bluewaysw 2018            PC/GEOS Ensemble (FreeGEOS project)
 #
 # DESCRIPTION:
-#       Filetree for Breadbox Ensemble
+#       Filetree
 #
 #       $Id:$
 #
@@ -452,6 +453,9 @@ DIR (ensemble) {
 		# introduced with FreeGEOS project...
 		#
 		Library/PngLib/pnglib{ec}.geo GFS LOCALPC
+		Library/WebpLib/webplib{ec}.geo GFS LOCALPC
+
+		Library/SvgLib/svglib{ec}.geo GFS LOCALPC
 
 		#
 		# for Global Email
@@ -489,8 +493,13 @@ DIR (ensemble) {
 		#
 		# RabeSoft Libraries
 		#
-		Library/RabeSoft/rsftool/rsftool{ec}.geo GFS LOCALPC	
+		Library/RabeSoft/rsftool/rsftool{ec}.geo GFS LOCALPC
 		Library/RabeSoft/bmptools/bmptools{ec}.geo GFS LOCALPC
+
+		#
+		# Icon Editor and more Tools Library
+		#
+		Library/IcmTool/icmtool{ec}.geo GFS LOCALPC
 
 		DIR (font) {
 			Driver/Font/TrueType/{dbcs}/truetype{ec}.geo GFS LOCALPC
@@ -514,6 +523,7 @@ DIR (ensemble) {
 			# BreadBox Libraries
 			#
 			Library/Breadbox/Impex/GIF/gif{ec}.geo
+			Library/Breadbox/Impex/PNG/png{ec}.geo
 			# Library/Breadbox/Impex/HTML/htmlimpx.GEO
 			Library/Breadbox/Impex/JPEG/jpeg{ec}.geo
 
@@ -534,7 +544,9 @@ DIR (ensemble) {
 			Library/Trans/Graphics/Bitmap/Dib/dib{ec}.geo GFS LOCALPC
 			Library/Trans/Graphics/Bitmap/Clp/clp{ec}.geo GFS LOCALPC
 			Library/Trans/Graphics/Bitmap/Ico/ico{ec}.geo GFS LOCALPC
+			Library/Trans/Graphics/Bitmap/Webp/webp{ec}.geo GFS LOCALPC
 			Library/Trans/Graphics/Vector/EPS/eps{ec}.geo GFS LOCALPC
+			Library/Trans/Graphics/Vector/Svg/svg{ec}.geo GFS LOCALPC
 			#Library/Trans/Graphics/Bitmap/Gif/gif{ec}.geo GFS LOCALPC
 			Library/Trans/Web/HtmlImpx/htmlimpx{ec}.geo GFS LOCALPC
 			Library/Trans/Database/CSV/csv{ec}.geo GFS LOCALPC
@@ -841,6 +853,13 @@ DIR (ensemble) {
 			Library/Breadbox/UrlDrv/Wmg3Ext/{dbcs}/wmg3ext{ec}.geo GFS LOCALPC
 		}
 
+		#
+		# Power drivers
+		#
+		DIR (power) {
+			Driver/Power/hltpwr/hltpwr{ec}.geo GFS LOCALPC
+		}
+
 	}
 
 
@@ -1013,17 +1032,6 @@ DIR (ensemble) {
 			#FontData/Markfthn.fnt GFS LOCALPC
 
 			DIR (ttf) {
-				#FontData/Ttf/PTMonoBo.ttf GFS LOCALPC
-				#FontData/Ttf/PTMonoRe.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansBo.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansBI.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansIt.ttf GFS LOCALPC
-				#FontData/Ttf/PTSansRe.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriBo.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriBI.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriIt.ttf GFS LOCALPC
-				#FontData/Ttf/PTSeriRe.ttf GFS LOCALPC
-				#FontData/Ttf/OFL.txt GFS LOCALPC
 				FontData/Ttf/nmonobi.ttf GFS LOCALPC
 				FontData/Ttf/nmonobo.ttf GFS LOCALPC
 				FontData/Ttf/nmonore.ttf GFS LOCALPC

@@ -71,11 +71,6 @@
 #endif /* DEBUG_INTEPRETER */
 
 
-/* required by the tracing mode */
-#undef  TT_COMPONENT
-#define TT_COMPONENT      trace_interp
-
-
 /* In order to detect infinite loops in the code, we set-up         */
 /* a counter within the run loop. a singly stroke of interpretation */
 /* is now limited to a maximum number of opcodes defined below..    */
@@ -161,7 +156,8 @@
 
 #define SKIP_Code()     SkipCode( EXEC_ARG )
 
-#define GET_ShortIns()  GetShortIns( EXEC_ARG )
+#define GET_SHORT_INS()            ( (CUR.IP += 2), \
+                                     (Short)((CUR.code[CUR.IP - 2] << 8) | CUR.code[CUR.IP - 1]) )
 
 #define COMPUTE_Funcs() Compute_Funcs( EXEC_ARG )
 
@@ -180,13 +176,13 @@
 
 #define CUR_Func_dualproj( x, y )  CUR.func_dualproj( EXEC_ARGS x, y )
 
-#define CUR_Func_round( d, c )     CUR.func_round( EXEC_ARGS d, c )
+#define CUR_Func_round( d )        CUR.func_round( EXEC_ARGS d )
 
-#define CUR_Func_read_cvt( index )  CUR.func_read_cvt( EXEC_ARGS index )
+#define WRITE_CVT( index, value )  (CUR.cvt[(index)] = (value))
 
-#define CUR_Func_write_cvt( index, val ) CUR.func_write_cvt( EXEC_ARGS index, val )
+#define MOVE_CVT( index, value )   (CUR.cvt[(index)] += (value))
 
-#define CUR_Func_move_cvt( index, val ) CUR.func_move_cvt( EXEC_ARGS index, val )
+#define READ_CVT( index )          (CUR.cvt[(index)])
 
 #define CURRENT_Ratio()  Current_Ratio( EXEC_ARG )
 #define CURRENT_Ppem()   Current_Ppem( EXEC_ARG )
@@ -205,7 +201,7 @@
   /* Instruction dispatch function, as used by the interpreter */
   typedef void (_near *TInstruction_Function)( INS_ARG );
 
-#define BOUNDS( x, n )  ( (x) >= (n) )
+#define BOUNDS( x, n )    ( (unsigned short)(x) >= (unsigned short)(n) )
 
 #ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
 #pragma code_seg(InterpEntry)
@@ -217,41 +213,21 @@
   {
   #ifdef TT_CONFIG_OPTION_USE_ASSEMBLER_IMPLEMENTATION
     __asm {
-        ; store sign of result
+        ; signed multiplication
         mov     eax, a
-        xor     eax, b
-        mov     esi, eax         ; esi = sign of result
+        imul    b
 
-        ; calculate |a|
-        mov     eax, a
-        cdq                      ; sign extend eax into edx
-        xor     eax, edx
-        sub     eax, edx
-        mov     ebx, eax         ; ebx = |a|
+        ; round to nearest
+        bt      edx, 31
+        cmc
+        adc     eax, 0x7fff
+        adc     edx, 0
 
-        ; calculate |b|
-        mov     eax, b
-        cdq
-        xor     eax, edx
-        sub     eax, edx         ; eax = |b|
-
-        ; multiply |a| * |b|
-        mul     ebx              ; edx:eax = |a| * |b|
-
-        ; add 0x8000 (rounding factor)
-        add     eax, 0x8000
-        adc     edx, 0           ; edx:eax += 0x8000
-
-        ; divide by 0x10000 (shift right by 16)
+        ; fixed point scaling
         shrd    eax, edx, 16
-        shr     edx, 16          ; edx:eax >>= 16
 
-        ; apply sign using NEG if necessary
-        test    esi, 0x80000000  ; test the sign bit
-        jz      positive
-        neg     eax
-    positive:
-        mov     edx, eax         ; store result in dx:ax
+        ; return value alignment
+        mov     edx, eax 
         shr     edx, 16
     }
   #else
@@ -636,7 +612,7 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6  FUnits_To_Pixels( EXEC_OPS Short  distance )
+  static inline TT_F26Dot6  FUnits_To_Pixels( EXEC_OPS Short  distance )
   {
     return TT_MulDiv( distance,
                       CUR.metrics.scale1,
@@ -661,21 +637,15 @@
  *
  *****************************************************************/
 
-  static Long  Current_Ratio( EXEC_OP )
+  static Long _near Current_Ratio( EXEC_OP )
   {
     if ( CUR.metrics.ratio )
       return CUR.metrics.ratio;
 
-    if ( CUR.GS.projVector.y == 0 )
+    if ( CUR.GS.projVector.x == 0 || CUR.GS.projVector.y == 0 )
       CUR.metrics.ratio = 1L << 16;
-
-    else if ( CUR.GS.projVector.x == 0 )
-      CUR.metrics.ratio = 1L << 16;
-
     else
       CUR.metrics.ratio = Norm( CUR.GS.projVector.x, CUR.GS.projVector.y );
-
-    return CUR.metrics.ratio;
   }
 
 
@@ -685,42 +655,6 @@
   }
 
 
-  static TT_F26Dot6  _near Read_CVT( EXEC_OPS UShort  index )
-  {
-    return CUR.cvt[index];
-  }
-
-#ifdef TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS
-  static TT_F26Dot6  _near Read_CVT_Stretched( EXEC_OPS UShort  index )
-  {
-    return TT_MulFix( CUR.cvt[index], CURRENT_Ratio() );
-  }
-#endif
-
-  static void  _near Write_CVT( EXEC_OPS UShort  index, TT_F26Dot6  value )
-  {
-    CUR.cvt[index] = value;
-  }
-
-#ifdef TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS
-  static void  _near Write_CVT_Stretched( EXEC_OPS UShort  index, TT_F26Dot6  value )
-  {
-    CUR.cvt[index] = TT_MulDiv( value, 0x10000, CURRENT_Ratio() );
-  }
-#endif
-
-  static void  _near Move_CVT( EXEC_OPS UShort  index, TT_F26Dot6  value )
-  {
-    CUR.cvt[index] += value;
-  }
-
-#ifdef TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS
-  static void  __near Move_CVT_Stretched( EXEC_OPS UShort  index, TT_F26Dot6  value )
-  {
-    CUR.cvt[index] += TT_MulDiv( value, 0x10000, CURRENT_Ratio() );
-  }
-#endif
-
 /******************************************************************
  *
  *  Function    :  Calc_Length
@@ -729,7 +663,7 @@
  *
  *****************************************************************/
 
-  static Bool  Calc_Length( EXEC_OP )
+ static Bool _near Calc_Length( EXEC_OP )
   {
     CUR.opcode = CUR.code[CUR.IP];
 
@@ -782,29 +716,6 @@
       return FAILURE;
 
     return SUCCESS;
-  }
-
-
-/*******************************************************************
- *
- *  Function    :  GetShortIns
- *
- *  Description :  Returns a short integer taken from the instruction
- *                 stream at address IP.
- *
- *  Input  :  None
- *
- *  Output :  Short read at Code^[IP..IP+1]
- *
- *  Notes  :  This one could become a Macro in the C version.
- *
- *****************************************************************/
-
-  static Short  GetShortIns( EXEC_OP )
-  {
-    /* Reading a byte stream so there is no endianess (DaveP) */
-    CUR.IP += 2;
-    return (Short)((CUR.code[CUR.IP - 2] << 8) | CUR.code[CUR.IP - 1]);
   }
 
 
@@ -923,9 +834,11 @@
  *******************************************************************/
 
   static void _near Direct_Move_X( EXEC_OPS PGlyph_Zone  zone,
-                                       UShort       point,
-                                       TT_F26Dot6   distance )
+                                            UShort       point,
+                                            TT_F26Dot6   distance )
   {
+    (void)exc;
+
     zone->cur[point].x += distance;
     zone->touch[point] |= TT_Flag_Touched_X;
   }
@@ -940,6 +853,8 @@
                                        UShort       point,
                                        TT_F26Dot6   distance )
   {
+    (void)exc;
+
     zone->cur[point].y += distance;
     zone->touch[point] |= TT_Flag_Touched_Y;
   }
@@ -951,7 +866,6 @@
  *  Description :  Does not round, but adds engine compensation.
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  rounded distance.
  *
@@ -961,31 +875,11 @@
  *         should add the compensation before rounding.
  *
  ******************************************************************/
-  static TT_F26Dot6 _near Round_None( EXEC_OPS TT_F26Dot6  distance,
-                                               TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_None( EXEC_OPS TT_F26Dot6  distance )
   {
-    TT_F26Dot6  val;
+    (void)exc;
 
-
-    if ( distance >= 0 )
-    {
-      val = distance + compensation;
-      if ( val < 0 )
-        val = 0;
-    }
-    else {
-      val = distance - compensation;
-      if ( val > 0 )
-        val = 0;
-    }
-
-    return val;
-  }
-
-  static TT_F26Dot6 _far FarRound_None( EXEC_OPS TT_F26Dot6  distance,
-                                               TT_F26Dot6  compensation )
-  {
-    return Round_None( EXEC_ARGS distance, compensation);
+    return distance;
   }
 
 
@@ -993,31 +887,30 @@
  *
  *  Function    :  Round_To_Grid
  *
- *  Description :  Rounds value to grid after adding engine
- *                 compensation
+ *  Description :  Rounds value to grid
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  Rounded distance.
  *
  *****************************************************************/
 
-  static TT_F26Dot6 _near Round_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                  TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_To_Grid( EXEC_OPS TT_F26Dot6  distance )
   {
     TT_F26Dot6  val;
 
 
+    (void)exc;
+
     if ( distance >= 0 )
     {
-      val = (distance + compensation + 32) & (-64);
+      val = (distance + 32) & (-64);
       if ( val < 0 )
         val = 0;
     }
     else
     {
-      val = -( (compensation - distance + 32) & (-64) );
+      val = -( (-distance + 32) & (-64) );
       if ( val > 0 )
         val = 0;
     }
@@ -1030,31 +923,30 @@
  *
  *  Function    :  Round_To_Half_Grid
  *
- *  Description :  Rounds value to half grid after adding engine
- *                 compensation.
+ *  Description :  Rounds value to half grid
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  Rounded distance.
  *
  *****************************************************************/
 
-  static TT_F26Dot6 _near Round_To_Half_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                       TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_To_Half_Grid( EXEC_OPS TT_F26Dot6  distance )
   {
     TT_F26Dot6  val;
 
 
+    (void)exc;
+
     if ( distance >= 0 )
     {
-      val = ((distance + compensation) & (-64)) + 32;
+      val = ((distance) & (-64)) + 32;
       if ( val < 0 )
         val = 0;
     }
     else
     {
-      val = -( ((compensation - distance) & (-64)) + 32 );
+      val = -( ((-distance) & (-64)) + 32 );
       if ( val > 0 )
         val = 0;
     }
@@ -1067,31 +959,30 @@
  *
  *  Function    :  Round_Down_To_Grid
  *
- *  Description :  Rounds value down to grid after adding engine
- *                 compensation.
+ *  Description :  Rounds value down to grid 
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  Rounded distance.
  *
  *****************************************************************/
 
-  static TT_F26Dot6 _near Round_Down_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                       TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_Down_To_Grid( EXEC_OPS TT_F26Dot6  distance )
   {
     TT_F26Dot6  val;
 
 
+    (void)exc;
+
     if ( distance >= 0 )
     {
-      val = (distance + compensation) & (-64);
+      val = distance & (-64);
       if ( val < 0 )
         val = 0;
     }
     else
     {
-      val = -( (compensation - distance) & (-64) );
+      val = -( (-distance) & (-64) );
       if ( val > 0 )
         val = 0;
     }
@@ -1104,31 +995,30 @@
  *
  *  Function    :  Round_Up_To_Grid
  *
- *  Description :  Rounds value up to grid after adding engine
- *                 compensation.
+ *  Description :  Rounds value up to grid
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  Rounded distance.
  *
  *****************************************************************/
 
-  static TT_F26Dot6 _near Round_Up_To_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                     TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_Up_To_Grid( EXEC_OPS TT_F26Dot6  distance )
   {
     TT_F26Dot6  val;
 
 
+    (void)exc;
+
     if ( distance >= 0 )
     {
-      val = (distance + compensation + 63) & (-64);
+      val = (distance + 63) & (-64);
       if ( val < 0 )
         val = 0;
     }
     else
     {
-      val = -( (compensation - distance + 63) & (-64) );
+      val = -( (-distance + 63) & (-64) );
       if ( val > 0 )
         val = 0;
     }
@@ -1141,31 +1031,29 @@
  *
  *  Function    :  Round_To_Double_Grid
  *
- *  Description :  Rounds value to double grid after adding engine
- *                 compensation.
+ *  Description :  Rounds value to double grid 
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  Rounded distance.
  *
  *****************************************************************/
 
-  static TT_F26Dot6 _near Round_To_Double_Grid( EXEC_OPS TT_F26Dot6  distance,
-                                                         TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_To_Double_Grid( EXEC_OPS TT_F26Dot6  distance )
   {
     TT_F26Dot6 val;
 
+    (void)exc;
 
     if ( distance >= 0 )
     {
-      val = (distance + compensation + 16) & (-32);
+      val = (distance + 16) & (-32);
       if ( val < 0 )
         val = 0;
     }
     else
     {
-      val = -( (compensation - distance + 16) & (-32) );
+      val = -( (-distance + 16) & (-32) );
       if ( val > 0 )
         val = 0;
     }
@@ -1178,11 +1066,9 @@
  *
  *  Function    :  Round_Super
  *
- *  Description :  Super-rounds value to grid after adding engine
- *                 compensation.
+ *  Description :  Super-rounds value to grid 
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  Rounded distance.
  *
@@ -1193,24 +1079,21 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6 _near Round_Super( EXEC_OPS TT_F26Dot6  distance,
-                                                TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_Super( EXEC_OPS TT_F26Dot6  distance )
   {
     TT_F26Dot6  val;
 
 
     if ( distance >= 0 )
     {
-      val = (distance - CUR.phase + CUR.threshold + compensation) &
-              (-CUR.period);
+      val = (distance - CUR.phase + CUR.threshold) & (-CUR.period);
       if ( val < 0 )
         val = 0;
       val += CUR.phase;
     }
     else
     {
-      val = -( (CUR.threshold - CUR.phase - distance + compensation) &
-               (-CUR.period) );
+      val = -( (CUR.threshold - CUR.phase - distance) & (-CUR.period) );
       if ( val > 0 )
         val = 0;
       val -= CUR.phase;
@@ -1224,11 +1107,9 @@
  *
  *  Function    :  Round_Super_45
  *
- *  Description :  Super-rounds value to grid after adding engine
- *                 compensation.
+ *  Description :  Super-rounds value to grid 
  *
  *  Input  :  distance      : distance to round
- *            compensation  : engine compensation
  *
  *  Output :  Rounded distance.
  *
@@ -1237,24 +1118,21 @@
  *
  *****************************************************************/
 
-  static TT_F26Dot6 _near Round_Super_45( EXEC_OPS TT_F26Dot6  distance,
-                                                   TT_F26Dot6  compensation )
+  static TT_F26Dot6 _near Round_Super_45( EXEC_OPS TT_F26Dot6  distance )
   {
     TT_F26Dot6  val;
 
 
     if ( distance >= 0 )
     {
-      val = ( (distance - CUR.phase + CUR.threshold + compensation) /
-                CUR.period ) * CUR.period;
+      val = ( (distance - CUR.phase + CUR.threshold) / CUR.period ) * CUR.period;
       if ( val < 0 )
         val = 0;
       val += CUR.phase;
     }
     else
     {
-      val = -( ( (CUR.threshold - CUR.phase - distance + compensation) /
-                   CUR.period ) * CUR.period );
+      val = -( ( (CUR.threshold - CUR.phase - distance) / CUR.period ) * CUR.period );
       if ( val > 0 )
         val = 0;
       val -= CUR.phase;
@@ -1272,7 +1150,7 @@
  *
  *****************************************************************/
 
-  static void  Compute_Round( EXEC_OPS Byte  round_mode )
+  static inline void  Compute_Round( EXEC_OPS Byte  round_mode )
   {
     switch ( round_mode )
     {
@@ -1380,10 +1258,9 @@
 #pragma code_seg()
 #endif
 
-  static TT_F26Dot6 _far FarCUR_Func_round(EXEC_OPS TT_F26Dot6  distance,
-                                                   TT_F26Dot6  compensation)
+  static TT_F26Dot6 _far FarCUR_Func_round(EXEC_OPS TT_F26Dot6  distance)
   {
-    return CUR.func_round(EXEC_ARGS distance, compensation);
+    return CUR.func_round(EXEC_ARGS distance);
   }
 
   static void _far FarCUR_Func_move(EXEC_OPS PGlyph_Zone zone,
@@ -1393,23 +1270,6 @@
     CUR.func_move(EXEC_ARGS zone, point, distance);
   }
 
-#ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
-#pragma code_seg(InterpEntry)
-#endif
-
-  static TT_F26Dot6 _far FarCUR_Func_read_cvt(EXEC_OPS UShort index)
-  {
-    return CUR.func_read_cvt(EXEC_ARGS index);
-  }
-
-  static void _far FarCUR_Func_move_cvt(EXEC_OPS UShort index, TT_F26Dot6  value)
-  {
-    CUR.func_move_cvt(EXEC_ARGS index, value);
-  }
-
-#ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
-#pragma code_seg()
-#endif
 
 /*******************************************************************
  *
@@ -1479,7 +1339,7 @@
  *  Output :  Returns distance in F26dot6 format.
  *
  *****************************************************************/
-
+/*
   static TT_F26Dot6 _near Free_Project( EXEC_OPS TT_Vector*  v1,
                                                  TT_Vector*  v2 )
   {
@@ -1492,7 +1352,7 @@
     ADD_64( T1, T2, T1 );
 
     return (TT_F26Dot6)DIV_64( T1, 0x4000L );
-  }
+  } */
 
 
 /*******************************************************************
@@ -1510,6 +1370,8 @@
   static TT_F26Dot6 _near Project_x( EXEC_OPS TT_Vector*  v1,
                                               TT_Vector*  v2 )
   {
+    (void)exc;
+
     return (v1->x - v2->x);
   }
 
@@ -1529,6 +1391,8 @@
   static TT_F26Dot6 _near Project_y( EXEC_OPS TT_Vector*  v1,
                                               TT_Vector*  v2 )
   {
+    (void)exc;
+
     return (v1->y - v2->y);
   }
 
@@ -1563,8 +1427,6 @@
                       (Long)CUR.GS.projVector.y * CUR.GS.freeVector.y << 2;
       }
     }
-
-    CUR.cached_metrics = FALSE;
 
     if ( CUR.GS.projVector.x == 0x4000 )
       CUR.func_project = Project_x;
@@ -1618,100 +1480,52 @@
  *  Input  :  Vx, Vy    input vector
  *            R         normed unit vector
  *
- *  Output :  Returns FAILURE if a vector parameter is zero.
+ *  Output :  void
  *
  *****************************************************************/
 
-  static Bool  Normalize( TT_F26Dot6      Vx,
-                          TT_F26Dot6      Vy,
-                          TT_UnitVector*  R )
-  {
+static void Normalize( TT_F26Dot6 Vx, TT_F26Dot6 Vy, TT_UnitVector* R )
+{
     TT_F26Dot6  W;
-    Bool        S1, S2;
+    Bool        s1 = FALSE, s2 = FALSE;
 
+    if ( Vx < 0 ) { Vx = -Vx; s1 = TRUE; }
+    if ( Vy < 0 ) { Vy = -Vy; s2 = TRUE; }
 
-    if ( ABS( Vx ) < 0x10000L && ABS( Vy ) < 0x10000L )
+    /* Opt 2: Nullvektor-Check vorgezogen, verhindert Division durch 0 */
+    if ( (Vx | Vy) == 0 ) return;
+
+    /* Opt 2: Beide Zweige vereint */
+    if ( Vx < 0x10000L && Vy < 0x10000L )
     {
-      Vx *= 0x100;
-      Vy *= 0x100;
-
-      W = Norm( Vx, Vy );
-
-      if ( W == 0 )
-      {
-        /* XXX : UNDOCUMENTED! It seems that it's possible to try  */
-        /*       to normalize the vector (0,0). Return immediately */
-        return SUCCESS;
-      }
-
-      R->x = (TT_F2Dot14)TT_MulDiv( Vx, 0x4000L, W );
-      R->y = (TT_F2Dot14)TT_MulDiv( Vy, 0x4000L, W );
-
-      return SUCCESS;
+        Vx <<= 8;
+        Vy <<= 8;
     }
 
-    W = Norm( Vx, Vy );
-
-    Vx = TT_MulDiv( Vx, 0x4000L, W );
-    Vy = TT_MulDiv( Vy, 0x4000L, W );
+    /* Opt 1: Kein Doppel-Shift mehr */
+    W  = Norm( Vx, Vy );
+    Vx = (TT_F26Dot6)TT_MulDiv( Vx, 0x4000L, W );
+    Vy = (TT_F26Dot6)TT_MulDiv( Vy, 0x4000L, W );
 
     W = Vx * Vx + Vy * Vy;
 
-    /* Now, we want that Sqrt( W ) = 0x4000 */
-    /* Or 0x1000000 <= W < 0x1004000        */
-
-    if ( Vx < 0 )
-    {
-      Vx = -Vx;
-      S1 = TRUE;
-    }
-    else
-      S1 = FALSE;
-
-    if ( Vy < 0 )
-    {
-      Vy = -Vy;
-      S2 = TRUE;
-    }
-    else
-      S2 = FALSE;
-
     while ( W < 0x1000000L )
     {
-      /* We need to increase W, by a minimal amount */
-      if ( Vx < Vy )
-        ++Vx;
-      else
-        ++Vy;
-
-      W = Vx * Vx + Vy * Vy;
+        if ( Vx < Vy ) { W += (Vx << 1) + 1; ++Vx; }
+        else           { W += (Vy << 1) + 1; ++Vy; }
     }
-
     while ( W >= 0x1004000L )
     {
-      /* We need to decrease W, by a minimal amount */
-      if ( Vx < Vy )
-        --Vx;
-      else
-        --Vy;
-
-      W = Vx * Vx + Vy * Vy;
+        if ( Vx < Vy ) { W -= (Vx << 1) - 1; --Vx; }
+        else           { W -= (Vy << 1) - 1; --Vy; }
     }
 
-    /* Note that in various cases, we can only  */
-    /* compute a Sqrt(W) of 0x3FFF, eg. Vx = Vy */
-
-    if ( S1 )
-      Vx = -Vx;
-
-    if ( S2 )
-      Vy = -Vy;
-
-    R->x = (TT_F2Dot14)Vx;   /* Type conversion */
-    R->y = (TT_F2Dot14)Vy;   /* Type conversion */
-
-    return SUCCESS;
-  }
+    /* Opt 4: Vorzeichen ohne verschachtelte ternäre Ausdrücke */
+    if ( s1 ) Vx = -Vx;
+    if ( s2 ) Vy = -Vy;
+    R->x = (TT_F2Dot14)Vx;
+    R->y = (TT_F2Dot14)Vy;
+}
 
 
 /****************************************************************
@@ -2041,20 +1855,20 @@
     if ( args[1] != 0 )       \
     {                         \
       CUR.IP      += args[0]; \
-      CUR.step_ins = FALSE;   \
+      CUR.length   = 0;       \
     }
 
 
 #define DO_JMPR             \
     CUR.IP      += args[0]; \
-    CUR.step_ins = FALSE;
+    CUR.length  = 0;
 
 
 #define DO_JROF               \
     if ( args[1] == 0 )       \
     {                         \
       CUR.IP      += args[0]; \
-      CUR.step_ins = FALSE;   \
+      CUR.length  = 0;        \
     }
 
 
@@ -2083,11 +1897,11 @@
 
 
 #define DO_ODD  \
-    args[0] = ( (FarCUR_Func_round(EXEC_ARGS args[0], 0 ) & 127) == 64 );
+    args[0] = ( (FarCUR_Func_round(EXEC_ARGS args[0] ) & 127) == 64 );
 
 
 #define DO_EVEN  \
-    args[0] = ( (FarCUR_Func_round( EXEC_ARGS args[0], 0 ) & 127) == 0 );
+    args[0] = ( (FarCUR_Func_round( EXEC_ARGS args[0] ) & 127) == 0 );
 
 
 #define DO_AND  \
@@ -2189,56 +2003,22 @@
 #endif
 
 
-#ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
 #define DO_RCVT  \
    {                                                            \
-     UShort  I = (UShort)args[0];                                 \
-     if ( BOUNDS( I, CUR.cvtSize ) )                            \
-     {                                                          \
-       if ( CUR.pedantic_hinting )                              \
-       {                                                        \
-         ARRAY_BOUND_ERROR;                                     \
-       }                                                        \
-       else                                                     \
-         args[0] = 0;                                           \
-     }                                                          \
-     else                                                       \
-       args[0] = CUR_Func_read_cvt(I);                          \
-   }
-#else
-#define DO_RCVT  \
-   {                                                            \
-     UShort  I = (UShort)args[0];                                 \
+     UShort  I = (UShort)args[0];                               \
      if ( BOUNDS( I, CUR.cvtSize ) )                            \
          args[0] = 0;                                           \
      else                                                       \
-       args[0] = CUR_Func_read_cvt(I);                          \
+       args[0] = READ_CVT(I);                                   \
    }
-#endif
 
 
-#ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
-#define DO_WCVTP                             \
-   {                                                            \
-     UShort  I = (UShort)args[0];                                 \
-     if ( BOUNDS( I, CUR.cvtSize ) )                            \
-     {                                                          \
-       if ( CUR.pedantic_hinting )                              \
-       {                                                        \
-         ARRAY_BOUND_ERROR;                                     \
-       }                                                        \
-     }                                                          \
-     else                                                       \
-       CUR_Func_write_cvt( I, args[1] );                        \
-   }
-#else
-#define DO_WCVTP                             \
+#define DO_WCVTP                                                \
    {                                                            \
      UShort  I = (UShort)args[0];                               \
      if ( ! BOUNDS( I, CUR.cvtSize ) )                          \
-       CUR_Func_write_cvt( I, args[1] );                        \
+       WRITE_CVT( I, args[1] );                                 \
    }
-#endif
 
 
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
@@ -2270,14 +2050,11 @@
 
 
 #define DO_ROUND                                                            \
-    args[0] = FarCUR_Func_round( EXEC_ARGS args[0],                                      \
-                              CUR.metrics.compensations[CUR.opcode-0x68] );
+    args[0] = FarCUR_Func_round( EXEC_ARGS args[0] );
 
 
-#define DO_NROUND                                                         \
-    args[0] = FarRound_None( EXEC_ARGS                                       \
-                          args[0],                                        \
-                          CUR.metrics.compensations[CUR.opcode - 0x6C] );
+/* NROUND leaves the value unchanged. */
+#define DO_NROUND
 
 
 #define DO_MAX               \
@@ -3340,6 +3117,8 @@
   {
     Long temp = args[2];
 
+    (void)exc;
+
     args[2] = args[0];
     args[0] = args[1];
     args[1] = temp;
@@ -3366,7 +3145,6 @@
     CUR.error = TT_Err_Code_Overflow;
     return FAILURE;
   }
-
 
 
 /*******************************************/
@@ -3442,34 +3220,38 @@
 /*                                                              */
 /****************************************************************/
 
-  static PDefRecord  Locate_FDef( EXEC_OPS Int n, Bool new_def )
+  static PDefRecord Locate_FDef( EXEC_OPS Int n, Bool new_def )
   {
     PDefRecord  def;
     UShort      hash;
     UShort      cnt;
 
-    /* The function table is interpreted as a simple hash table     */
-    /* with indexes computed modulo maxFDefs and the linear search  */
-    /* of free cells in the case of a collision.                    */
-    /* Except for some old Apple fonts, all functions in a TrueType */
-    /* font fit into 0..maxFDefs - 1 range and the lookup is        */
-    /* reduced to a single step.                                    */
 
-    /* Minor optimization. */
     if ( !new_def && ( n < 0 || n > CUR.maxFunc ) )
       return NULL;
 
+    if ( CUR.maxFDefs == 0 )
+      return NULL;
+
+    hash = (UShort)n;
+
+    if ( hash >= CUR.maxFDefs )
+      hash %= CUR.maxFDefs;
+
     for ( cnt = 0; cnt < CUR.maxFDefs; ++cnt )
     {
-      hash = ( (UShort)n + cnt ) % CUR.maxFDefs;
-      def  = &CUR.FDefs[ hash ];
-      if ( !def->Active )
+      def = &CUR.FDefs[hash];
+
+      if ( def->Range == 0 )
         return new_def ? def : NULL;
+
       if ( def->Opc == n )
         return def;
+
+      if ( ++hash == CUR.maxFDefs )
+        hash = 0;
     }
 
-    /* The table is full and the entry has not been found. */
     return NULL;
   }
 
@@ -3513,13 +3295,12 @@
     }
 
     /* Some font programs are broken enough to redefine functions! */
-    if ( !def->Active )
+    if ( def->Range == 0 )
       CUR.numFDefs++;
 
     def->Range  = CUR.curRange;
     def->Opc    = n;
     def->Start  = CUR.IP + 1;
-    def->Active = TRUE;
 
     if ( n > CUR.maxFunc )
       CUR.maxFunc = n;
@@ -3557,23 +3338,22 @@
       return;
     }
 
-    CUR.callTop--;
-
-    pRec = &CUR.callStack[CUR.callTop];
+    pRec = &CUR.callStack[CUR.callTop - 1];
 
     pRec->Cur_Count--;
 
-    CUR.step_ins = FALSE;
+    CUR.length = 0;
 
     if ( pRec->Cur_Count > 0 )
-    {
-      CUR.callTop++;
       CUR.IP = pRec->Cur_Restart;
-    }
     else
+    {
+      CUR.callTop--;
+
       /* Loop through the current function */
       INS_Goto_CodeRange( pRec->Caller_Range,
                           pRec->Caller_IP );
+    }
 
     /* Exit the current call frame.                       */
 
@@ -3624,7 +3404,7 @@
     INS_Goto_CodeRange( def->Range,
                         def->Start );
 
-    CUR.step_ins = FALSE;
+    CUR.length = 0;
   }
 
 #ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
@@ -3672,7 +3452,7 @@
     INS_Goto_CodeRange( def->Range,
                         def->Start );
 
-    CUR.step_ins = FALSE;
+    CUR.length = 0;
   }
 
 
@@ -3712,10 +3492,6 @@
     def->Opc    = opcode;
     def->Start  = CUR.IP + 1;
     def->Range  = CUR.curRange;
-    def->Active = TRUE;
-
-    if ( opcode > CUR.maxIns )
-      CUR.maxIns = opcode;
 
     /* Now skip the whole function definition */
     /* We don't allow nested IDEFs & FDEFs.   */
@@ -3744,7 +3520,7 @@
 /****************************************************************/
 
 #ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
-#pragma code_seg(InterpInfreq)
+#pragma code_seg(InterpEntry)
 #endif
 
 /*******************************************/
@@ -3752,7 +3528,7 @@
 /* CodeRange : $40                         */
 /* Stack     : --> uint32...               */
 
-  static void  Ins_NPUSHB( INS_ARG )
+  static void _near Ins_NPUSHB( INS_ARG )
   {
     UShort  L, K;
 
@@ -3772,12 +3548,16 @@
   }
 
 
+#ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
+#pragma code_seg(InterpEntry)
+#endif
+
 /*******************************************/
 /* NPUSHW[]  : PUSH N Words                */
 /* CodeRange : $41                         */
 /* Stack     : --> int32...                */
 
-  static void  Ins_NPUSHW( INS_ARG )
+  static void _near Ins_NPUSHW( INS_ARG )
   {
     UShort  L, K;
 
@@ -3793,15 +3573,12 @@
     CUR.IP += 2;
 
     for ( K = 0; K < L; ++K )
-      args[K] = GET_ShortIns();
+      args[K] = GET_SHORT_INS();
 
-    CUR.step_ins = FALSE;
+    CUR.length = 0;
     CUR.new_top += L;
   }
 
-#ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
-#pragma code_seg(InterpEntry)
-#endif
 
 /*******************************************/
 /* PUSHB[abc]: PUSH Bytes                  */
@@ -3847,9 +3624,9 @@
     CUR.IP++;
 
     for ( K = 0; K < L; ++K )
-      args[K] = GET_ShortIns();
+      args[K] = GET_SHORT_INS();
 
-    CUR.step_ins = FALSE;
+    CUR.length = 0;
   }
 
 #ifdef TT_CONFIG_GEOS_REAL_MODE_SEGMENTING
@@ -4214,30 +3991,8 @@
 
   static void  Ins_SCANCTRL( INS_ARG )
   {
-    Int  A;
-
-
-    /* Get Threshold */
-    A = (Int)(args[0] & 0xFF);
-
-    if ( A == 0xFF )
-    {
-      CUR.GS.scan_control = TRUE;
-      return;
-    }
-    else if ( A == 0 )
-    {
-      CUR.GS.scan_control = FALSE;
-      return;
-    }
-
-    A *= 64;
-
-    if ( (args[0] & 0x100) != 0 && CUR.metrics.pointSize <= A )
-      CUR.GS.scan_control = TRUE;
-
-    if ( (args[0] & 0x800) != 0 && CUR.metrics.pointSize > A )
-      CUR.GS.scan_control = FALSE;
+    (void)args;
+    (void)exc;
 }
 
 
@@ -4720,8 +4475,7 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
     if ( (CUR.opcode & 1) != 0 )
     {
       cur_dist = CUR_Func_project( CUR.zp0.cur + point, NULL_Vector );
-      distance = CUR_Func_round( cur_dist,
-                                 CUR.metrics.compensations[0] ) - cur_dist;
+      distance = CUR_Func_round( cur_dist ) - cur_dist;
     }
     else
       distance = 0;
@@ -4781,7 +4535,7 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
     /* twilight zone. This is a bad hack, but it seems   */
     /* to work.                                          */
 
-    distance = FarCUR_Func_read_cvt( EXEC_ARGS cvtEntry );
+    distance = READ_CVT( EXEC_ARGS cvtEntry );
 
     if ( CUR.GS.gep0 == 0 )   /* If in twilight zone */
     {
@@ -4799,7 +4553,7 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
       if ( ABS( distance - org_dist ) > CUR.GS.control_value_cutin )
         distance = org_dist;
 
-      distance = CUR_Func_round( distance, CUR.metrics.compensations[0] );
+      distance = CUR_Func_round( distance );
     }
 
     CUR_Func_move( &CUR.zp0, point, distance - org_dist );
@@ -4851,12 +4605,9 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
     /* round flag */
 
     if ( (CUR.opcode & 4) != 0 )
-      distance = CUR_Func_round( org_dist,
-                                 CUR.metrics.compensations[CUR.opcode & 3] );
+      distance = CUR_Func_round( org_dist );
     else
-      distance = Round_None( EXEC_ARGS
-                             org_dist,
-                             CUR.metrics.compensations[CUR.opcode & 3]  );
+      distance = Round_None( EXEC_ARGS org_dist );
 
     /* minimum distance flag */
 
@@ -4924,7 +4675,7 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
     if ( !cvtEntry )
       cvt_dist = 0;
     else
-      cvt_dist = FarCUR_Func_read_cvt( EXEC_ARGS cvtEntry - 1 );
+      cvt_dist = READ_CVT( EXEC_ARGS cvtEntry - 1 );
 
     /* single width test */
 
@@ -4978,13 +4729,10 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
         if ( ABS( cvt_dist - org_dist ) >= CUR.GS.control_value_cutin )
           cvt_dist = org_dist;
 
-      distance = CUR_Func_round( cvt_dist,
-                                 CUR.metrics.compensations[CUR.opcode & 3] );
+      distance = CUR_Func_round( cvt_dist );
     }
     else
-      distance = Round_None( EXEC_ARGS
-                             cvt_dist,
-                             CUR.metrics.compensations[CUR.opcode & 3] );
+      distance = Round_None( EXEC_ARGS cvt_dist );
 
     /* minimum distance test */
 
@@ -5317,10 +5065,10 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
   };
 
 
-  static void  Shift( UShort               p1,
-                      UShort               p2,
-                      UShort               p,
-                      struct LOC_Ins_IUP*  LINK )
+  static void _near Shift( UShort               p1,
+                           UShort               p2,
+                           UShort               p,
+                           struct LOC_Ins_IUP*  LINK )
   {
     UShort      i;
     TT_F26Dot6  x;
@@ -5335,83 +5083,64 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
       LINK->curs[i].x += x;
   }
 
-  static void  Interp( UShort               p1,
-                       UShort               p2,
-                       UShort               ref1,
-                       UShort               ref2,
-                       struct LOC_Ins_IUP*  LINK )
-  {
+
+static void _near Interp( UShort               p1,
+                          UShort               p2,
+                          UShort               ref1,
+                          UShort               ref2,
+                          struct LOC_Ins_IUP*  LINK )
+{
     UShort      i;
     TT_F26Dot6  x, x1, x2, d1, d2;
-
+    TT_F26Dot6  cur1, cur2, cur_delta, x_delta;
+    TT_F26Dot6  lo, hi, d_lo, d_hi;
 
     if ( p1 > p2 )
-      return;
+        return;
 
-    x1 = LINK->orgs[ref1].x;
-    d1 = LINK->curs[ref1].x - LINK->orgs[ref1].x;
-    x2 = LINK->orgs[ref2].x;
-    d2 = LINK->curs[ref2].x - LINK->orgs[ref2].x;
+    x1   = LINK->orgs[ref1].x;
+    x2   = LINK->orgs[ref2].x;
+    d1   = LINK->curs[ref1].x - x1;
+    d2   = LINK->curs[ref2].x - x2;
+    cur1 = LINK->curs[ref1].x;
+    cur2 = LINK->curs[ref2].x;
 
     if ( x1 == x2 )
     {
-      for ( i = p1; i <= p2; ++i )
-      {
-        x = LINK->orgs[i].x;
-
-        if ( x <= x1 )
-          x += d1;
-        else
-          x += d2;
-
-        LINK->curs[i].x = x;
-      }
-      return;
+        for ( i = p1; i <= p2; ++i )
+        {
+            x = LINK->orgs[i].x;
+            LINK->curs[i].x = x + ( x <= x1 ? d1 : d2 );
+        }
+        return;
     }
 
     if ( x1 < x2 )
     {
-      for ( i = p1; i <= p2; ++i )
-      {
-        x = LINK->orgs[i].x;
-
-        if ( x <= x1 )
-          x += d1;
-        else
-        {
-          if ( x >= x2 )
-            x += d2;
-          else
-            x = LINK->curs[ref1].x +
-                  TT_MulDiv( x - x1,
-                             LINK->curs[ref2].x - LINK->curs[ref1].x,
-                             x2 - x1 );
-        }
-        LINK->curs[i].x = x;
-      }
-      return;
+        lo = x1;  hi = x2;  d_lo = d1;  d_hi = d2;
+    }
+    else
+    {
+        lo = x2;  hi = x1;  d_lo = d2;  d_hi = d1;
     }
 
-    /* x2 < x1 */
+    cur_delta = cur2 - cur1;
+    x_delta   = x2 - x1;
 
     for ( i = p1; i <= p2; ++i )
     {
-      x = LINK->orgs[i].x;
-      if ( x <= x2 )
-        x += d2;
-      else
-      {
-        if ( x >= x1 )
-          x += d1;
+        x = LINK->orgs[i].x;
+
+        if ( x <= lo )
+            x += d_lo;
+        else if ( x >= hi )
+            x += d_hi;
         else
-          x = LINK->curs[ref1].x +
-              TT_MulDiv( x - x1,
-                         LINK->curs[ref2].x - LINK->curs[ref1].x,
-                         x2 - x1 );
-      }
-      LINK->curs[i].x = x;
+            x = cur1 + TT_MulDiv( x - x1, cur_delta, x_delta );
+
+        LINK->curs[i].x = x;
     }
-  }
+}
 
 
 /**********************************************/
@@ -5509,15 +5238,30 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
 /* CodeRange   : $5D,$71,$72                  */
 /* Stack       : uint32 (2 * uint32)... -->   */
 
-  static void  Ins_DELTAP( INS_ARG )
+  static void Ins_DELTAP( INS_ARG )
   {
     UShort  nump, k;
     UShort  A;
     ULong   C;
     Long    B;
+    Long    ppem;
 
 
-    nump = (UShort)args[0]; 
+    nump = (UShort)args[0];
+    ppem = CURRENT_Ppem();
+
+    C = (ULong)CUR.GS.delta_base;
+
+    switch ( CUR.opcode )
+    {
+    case 0x71:
+      C += 16;
+      break;
+
+    case 0x72:
+      C += 32;
+      break;
+    }
 
     for ( k = 1; k <= nump; ++k )
     {
@@ -5532,37 +5276,14 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
       A = (UShort)CUR.stack[CUR.args + 1];
       B = CUR.stack[CUR.args];
 
-      /* XXX : because some popular fonts contain some invalid DeltaP */
-      /*       instructions, we simply ignore them when the stacked   */
-      /*       point reference is off limit, rather than returning an */
-      /*       error. As a delta instruction doesn't change a glyph   */
-      /*       in great ways, this shouldn't be a problem..           */
-
       if ( !BOUNDS( A, CUR.zp0.n_points ) )
       {
-        C = ((ULong)B & 0xF0) >> 4;
-
-        switch ( CUR.opcode )
-        {
-        case 0x5d:
-          break;
-
-        case 0x71:
-          C += 16;
-          break;
-
-        case 0x72:
-          C += 32;
-          break;
-        }
-
-        C += CUR.GS.delta_base;
-
-        if ( CURRENT_Ppem() == (Long)C )
+        if ( ppem == (Long)( C + (((ULong)B & 0xF0) >> 4) ) )
         {
           B = ((ULong)B & 0xF) - 8;
           if ( B >= 0 )
             ++B;
+
           B = B * 64L / (1L << CUR.GS.delta_shift);
 
           FarCUR_Func_move( EXEC_ARGS &CUR.zp0, A, B );
@@ -5584,13 +5305,29 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
 /* CodeRange   : $73,$74,$75                  */
 /* Stack       : uint32 (2 * uint32)... -->   */
 
-  static void  Ins_DELTAC( INS_ARG )
+  static void Ins_DELTAC( INS_ARG )
   {
     UShort nump = (UShort)args[0];
     UShort A, k;
     ULong  C;
     Long   B;
+    Long   ppem;
 
+
+    ppem = CURRENT_Ppem();
+
+    C = (ULong)CUR.GS.delta_base;
+
+    switch ( CUR.opcode )
+    {
+    case 0x74:
+      C += 16;
+      break;
+
+    case 0x75:
+      C += 32;
+      break;
+    }
 
     for ( k = 1; k <= nump; ++k )
     {
@@ -5617,29 +5354,15 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
       }
       else
       {
-        C = ((ULong)B & 0xF0) >> 4;
-
-        switch ( CUR.opcode )
-        {
-        case 0x74:
-          C += 16;
-          break;
-
-        case 0x75:
-          C += 32;
-          break;
-        }
-
-        C += CUR.GS.delta_base;
-
-        if ( CURRENT_Ppem() == (Long)C )
+        if ( ppem == (Long)( C + (((ULong)B & 0xF0) >> 4) ) )
         {
           B = ((ULong)B & 0xF) - 8;
           if ( B >= 0 )
             ++B;
+
           B = (B << 6) / (1L << CUR.GS.delta_shift);
 
-          FarCUR_Func_move_cvt( EXEC_ARGS A, B );
+          MOVE_CVT( EXEC_ARGS A, B );
         }
       }
     }
@@ -5665,6 +5388,8 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
 
   static void  Ins_GETINFO( INS_ARG )
   {
+    (void)exc;
+
     /* Return the Windows 3.1 version number for the font scaler */
     args[0] = (args[0] & 1) ? 3 : 0;
   }
@@ -5677,12 +5402,15 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
   {
     /* look up the current instruction in our table */
     PDefRecord  def, limit;
+
+
+    (void)exc;
     
     def   = CUR.IDefs;
     limit = def + CUR.numIDefs;
     for ( ; def < limit; ++def )
     {
-      if ( def->Opc == CUR.opcode && def->Active )
+      if ( def->Opc == CUR.opcode )
       {
         PCallRecord  pCrec;
 
@@ -5707,7 +5435,7 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
         INS_Goto_CodeRange( def->Range,
                             def->Start );
     
-        CUR.step_ins = FALSE;
+        CUR.length = 0;
         return;
       }
     }
@@ -6038,34 +5766,13 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
   TT_Error  RunIns2( PExecution_Context  exc )
 #endif
   {
-    UShort       A;
-    PDefRecord   WITH;
-    PCallRecord  WITH1;
-
-    Short        ins_counter = 0;  /* executed instructions counter */
+    UShort  ins_counter = MAX_RUNNABLE_OPCODES;
 
 #ifdef TT_CONFIG_OPTION_STATIC_INTERPRETER
     cur = *exc;
 #endif
 
-    /* set CVT functions */
-    CUR.metrics.ratio = 0;
-#ifdef TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS
-    if ( CUR.metrics.x_ppem != CUR.metrics.y_ppem )
-    {
-      /* non-square pixels, use the stretched routines */
-      CUR.func_read_cvt  = Read_CVT_Stretched;
-      CUR.func_write_cvt = Write_CVT_Stretched;
-      CUR.func_move_cvt  = Move_CVT_Stretched;
-    }
-    else
-#endif /* TT_CONGIG_OPTION_SUPPORT_NON_SQUARE_PIXELS */
-    {
-      /* square pixels, use normal routines */
-      CUR.func_read_cvt  = Read_CVT;
-      CUR.func_write_cvt = Write_CVT;
-      CUR.func_move_cvt  = Move_CVT;
-    }
+    CUR.error = TT_Err_Ok;
 
     COMPUTE_Funcs();
     Compute_Round( EXEC_ARGS (Byte)exc->GS.round_state );
@@ -6103,8 +5810,6 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
         goto LErrorLabel_;
       }
 
-      CUR.step_ins = TRUE;
-      CUR.error    = TT_Err_Ok;
 
 #ifdef TT_CONFIG_OPTION_INTERPRETER_SWITCH
       {
@@ -6409,11 +6114,11 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
           DO_FLIPOFF
           break;
 
+  #ifdef TT_CONFIG_OPTION_SUPPORT_OBSOLET_INSTRUCTIONS
         case 0x4F:  /* DEBUG */
-        #ifdef TT_CONFIG_OPTION_SUPPORT_OBSOLET_INSTRUCTIONS
           DO_DEBUG
-        #endif
           break;
+  #endif
 
         case 0x50:  /* LT */
           DO_LT
@@ -6653,62 +6358,14 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
       Instruct_Dispatch[CUR.opcode]( EXEC_ARGS &CUR.stack[CUR.args] );
 #endif
       if ( CUR.error != TT_Err_Ok )
-      {
-        switch ( (Int)(CUR.error) )
-        {
-        case TT_Err_Invalid_Opcode: /* looking for redefined instructions */
-          A = 0;
-
-          while ( A < CUR.numIDefs )
-          {
-            WITH = &CUR.IDefs[A];
-
-            if ( WITH->Active && CUR.opcode == WITH->Opc )
-            {
-              if ( CUR.callTop >= CUR.callSize )
-              {
-                CUR.error = TT_Err_Invalid_Reference;
-                goto LErrorLabel_;
-              }
-
-              WITH1 = &CUR.callStack[CUR.callTop];
-
-              WITH1->Caller_Range = CUR.curRange;
-              WITH1->Caller_IP    = CUR.IP + 1;
-              WITH1->Cur_Count    = 1;
-              WITH1->Cur_Restart  = WITH->Start;
-
-              if ( INS_Goto_CodeRange( WITH->Range, WITH->Start ) == FAILURE )
-                goto LErrorLabel_;
-
-              goto LSuiteLabel_;
-            }
-            else
-            {
-              ++A;
-              continue;
-            }
-          }
-
-          CUR.error = TT_Err_Invalid_Opcode;
           goto LErrorLabel_;
-/*        break;   Unreachable code warning suppress.  Leave in case a later
-                   change to remind the editor to consider break; */
-
-        default:
-          goto LErrorLabel_;
-/*        break; */
-        }
-      }
 
       CUR.top = CUR.new_top;
+      CUR.IP += CUR.length;
 
-      if ( CUR.step_ins )
-        CUR.IP += CUR.length;
-
-      /* increment instruction counter and check if we didn't   */
+      /* decrement instruction counter and check if we didn't   */
       /* run this program for too long ?? (e.g. infinite loops) */
-      if ( ++ins_counter > MAX_RUNNABLE_OPCODES )
+      if ( --ins_counter == 0 )
       {
         CUR.error = TT_Err_Execution_Too_Long;
         goto LErrorLabel_;
@@ -6724,12 +6381,13 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
           goto LErrorLabel_;
         }
         else
-          goto LNo_Error_;
+          break;
       }
+#ifdef DEBUG_INTERPRETER
     } while ( !CUR.instruction_trap );
-
-  LNo_Error_:
-    CUR.error = TT_Err_Ok;
+#else
+    } while ( TRUE );
+#endif
 
   LErrorLabel_:
   
@@ -6738,8 +6396,6 @@ static TT_F26Dot6 _far FarCUR_Func_project( EXEC_OPS TT_Vector*  v1, TT_Vector* 
 #endif
     
     return CUR.error;
-    
-  
   }
 
 

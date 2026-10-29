@@ -82,6 +82,9 @@ void _pascal TrueType_Gen_Chars(
         TT_UShort              charIndex;
         TrueTypeVars*          trueTypeVars;
         TransformMatrix*       transformMatrix;
+        TT_Raster_Map          rasterMap;
+        TT_BBox                glyphBBox;
+        TT_Outline             outline;
         void*                  charData;
         sword                  width, height, size;
 
@@ -113,29 +116,26 @@ EC(     ECCheckBounds( (void*)trueTypeOutline ) );
 EC(     ECCheckBounds( (void*)transformMatrix ) );
 
         /* set pointsize and resolution */
-        TT_Set_Instance_CharSize_And_Resolutions( INSTANCE, pointSize >> 10, transformMatrix->TM_resX, transformMatrix->TM_resY );
-
-        /* create new glyph */
-        TT_New_Glyph( FACE, &GLYPH );
+        TT_Set_Instance_CharSize_And_Resolutions( INSTANCE, pointSize >> 10, transformMatrix->TM_resolution );
 
         /* load glyph and load glyphs outline */
         TT_Load_Glyph( INSTANCE, GLYPH, charIndex, TTLOAD_DEFAULT );
-        TT_Get_Glyph_Outline( GLYPH, &OUTLINE );
+        TT_Get_Glyph_Outline( GLYPH, &outline );
 
-        TT_Transform_Outline( &OUTLINE, &transformMatrix->TM_matrix );
+        TT_Transform_Outline( &outline, &transformMatrix->TM_matrix );
 
         /* get glyphs boundig box */
-        TT_Get_Outline_BBox( &OUTLINE, &GLYPH_BBOX );
+        TT_Get_Outline_BBox( &outline, &glyphBBox );
 
         /* Grid-fit it */
-        GLYPH_BBOX.xMin &= -64;
-        GLYPH_BBOX.xMax  = ( GLYPH_BBOX.xMax + 63 ) & -64;
-        GLYPH_BBOX.yMin &= -64;
-        GLYPH_BBOX.yMax  = ( GLYPH_BBOX.yMax + 63 ) & -64;
+        glyphBBox.xMin &= -64;
+        glyphBBox.xMax  = ( glyphBBox.xMax + 63 ) & -64;
+        glyphBBox.yMin &= -64;
+        glyphBBox.yMax  = ( glyphBBox.yMax + 63 ) & -64;
 
         /* compute pixel dimensions */
-        width  = (GLYPH_BBOX.xMax - GLYPH_BBOX.xMin) >> 6;
-        height = (GLYPH_BBOX.yMax - GLYPH_BBOX.yMin) >> 6;
+        width  = (glyphBBox.xMax - glyphBBox.xMin) >> 6;
+        height = (glyphBBox.yMax - glyphBBox.yMin) >> 6;
 
         if( fontBuf->FB_flags & FBF_IS_REGION )
         {
@@ -149,40 +149,37 @@ EC(     ECCheckBounds( (void*)transformMatrix ) );
                 charData = EnsureBitmapBlock( bitmapHandle, size );
 EC(             ECCheckBounds( (void*)charData ) );
 
-                /* init RASTER_MAP */
-                RASTER_MAP.rows   = height;
-                RASTER_MAP.width  = width;
-                RASTER_MAP.cols   = width;
-                RASTER_MAP.bitmap = ((byte*)charData) + SIZE_REGION_HEADER;
+                /* init rasterMap */
+                rasterMap.rows   = height;
+                rasterMap.width  = width;
+                rasterMap.cols   = width;
+                rasterMap.bitmap = ((byte*)charData) + SIZE_REGION_HEADER;
 
                 /* translate outline and render it */
-                TT_Transform_Outline( &OUTLINE, &flipmatrix );
-                TT_Translate_Outline( &OUTLINE, -GLYPH_BBOX.xMin, GLYPH_BBOX.yMax );
-                TT_Get_Outline_Region( &OUTLINE, &RASTER_MAP );
+                TT_Transform_Outline( &outline, &flipmatrix );
+                TT_Translate_Outline( &outline, -glyphBBox.xMin, glyphBBox.yMax );
+                TT_Get_Outline_Region( &outline, &rasterMap );
 
-EC_ERROR_IF(    size < RASTER_MAP.size, ERROR_BITMAP_BUFFER_OVERFLOW );
+EC_ERROR_IF(    size < rasterMap.size, ERROR_BITMAP_BUFFER_OVERFLOW );
 
                 /* fill header of charData */
                 ((RegionCharData*)charData)->RCD_xoff = transformMatrix->TM_scriptX + 
-                                                        transformMatrix->TM_heightX + ( GLYPH_BBOX.xMin >> 6 );
+                                                        transformMatrix->TM_heightX + ( glyphBBox.xMin >> 6 );
                 ((RegionCharData*)charData)->RCD_yoff = transformMatrix->TM_scriptY + 
-                                                        transformMatrix->TM_heightY - ( GLYPH_BBOX.yMax >> 6 ); 
-                ((RegionCharData*)charData)->RCD_size = RASTER_MAP.size;
+                                                        transformMatrix->TM_heightY - ( glyphBBox.yMax >> 6 ); 
+                ((RegionCharData*)charData)->RCD_size = rasterMap.size;
                 ((RegionCharData*)charData)->RCD_bounds.R_left   = 0;
                 ((RegionCharData*)charData)->RCD_bounds.R_right  = width;
                 ((RegionCharData*)charData)->RCD_bounds.R_top    = 0;
                 ((RegionCharData*)charData)->RCD_bounds.R_bottom = height;
 
-                size = RASTER_MAP.size + SIZE_REGION_HEADER;
+                size = rasterMap.size + SIZE_REGION_HEADER;
         }
         else
         {      
-                /* Avoid widths or heights of 0 pixels */
+                /* Avoid heights of 0 pixels */
                 if( height == 0 && width > 0 )
                         height = 1;
-
-                if( width == 0 && height > 0 )
-                        width = 0;
 
                 size = height * ( ( width + 7 ) >> 3 ) + SIZE_CHAR_HEADER;
 
@@ -191,28 +188,26 @@ EC_ERROR_IF(    size < RASTER_MAP.size, ERROR_BITMAP_BUFFER_OVERFLOW );
 EC(             ECCheckBounds( (void*)charData ) );
 
                 /* init rasterMap */
-                RASTER_MAP.rows   = height;
-                RASTER_MAP.width  = width;
-                RASTER_MAP.cols   = (width + 7) >> 3;
-                RASTER_MAP.size   = RASTER_MAP.rows * RASTER_MAP.cols;
-                RASTER_MAP.bitmap = ((byte*)charData) + SIZE_CHAR_HEADER;
+                rasterMap.rows   = height;
+                rasterMap.width  = width;
+                rasterMap.cols   = (width + 7) >> 3;
+                rasterMap.size   = rasterMap.rows * rasterMap.cols;
+                rasterMap.bitmap = ((byte*)charData) + SIZE_CHAR_HEADER;
 
                 /* translate outline and render it */
-                TT_Translate_Outline( &OUTLINE, -GLYPH_BBOX.xMin, -GLYPH_BBOX.yMin );
-                TT_Get_Outline_Bitmap( &OUTLINE, &RASTER_MAP );
+                TT_Translate_Outline( &outline, -glyphBBox.xMin, -glyphBBox.yMin );
+                TT_Get_Outline_Bitmap( &outline, &rasterMap );
 
-EC_ERROR_IF(    size < RASTER_MAP.size, ERROR_BITMAP_BUFFER_OVERFLOW );
+EC_ERROR_IF(    size < rasterMap.size, ERROR_BITMAP_BUFFER_OVERFLOW );
 
                 /* fill header of charData */
                 ((CharData*)charData)->CD_pictureWidth = width;
                 ((CharData*)charData)->CD_numRows      = height;
                 ((CharData*)charData)->CD_xoff         = transformMatrix->TM_scriptX + 
-                                                         transformMatrix->TM_heightX + ( GLYPH_BBOX.xMin >> 6 );
+                                                         transformMatrix->TM_heightX + ( glyphBBox.xMin >> 6 );
                 ((CharData*)charData)->CD_yoff         = transformMatrix->TM_scriptY + 
-                                                         transformMatrix->TM_heightY - ( GLYPH_BBOX.yMax >> 6 );
+                                                         transformMatrix->TM_heightY - ( glyphBBox.yMax >> 6 );
         }
-
-        TT_Done_Glyph( GLYPH );
 
         if( fontBuf->FB_dataSize > MAX_FONTBUF_SIZE )
                 ShrinkFontBuf( fontBuf );
@@ -233,6 +228,11 @@ EC(             ECCheckBounds( (void*)fontBuf ) );
 
         /* cleanup */
         MemUnlock( bitmapHandle );
+
+        /* Only cache glyphs up to MAX_CACHED_POINTSIZE (currently 180pt).     */
+        /* Larger point sizes generate large glyph data while typically having */
+        /* a very low cache hit rate, making persistent caching inefficient.   */
+        if( pointSize <= MAX_CACHED_POINTSIZE )
         {
             TrueTypeCacheBufSpec   bufSpec;
 
@@ -241,7 +241,7 @@ EC(             ECCheckBounds( (void*)fontBuf ) );
             bufSpec.TTCBS_weight = weight;
             bufSpec.TTCBS_stylesToImplement = stylesToImplement;
 
-            if( !(fontBuf->FB_flags & FBF_IS_COMPLEX) ) {
+            if( !( fontBuf->FB_flags & FBF_IS_COMPLEX ) ) {
                 TrueType_Cache_UpdateFontBlock(
                     trueTypeVars->cacheFile,
                     trueTypeVars->entry.TTOE_fontFileName, 
@@ -292,7 +292,7 @@ EC(     ECCheckBounds( (void*)(((byte*)fontBuf) + fontBuf->FB_dataSize ) ) );
 EC(     ECCheckBounds( (void*)(((byte*)fontBuf) + fontBuf->FB_dataSize  + charDataSize - 1) ) );
 
         /* copy rendered Glyph to fontBuf */
-        memmove( ((byte*)fontBuf) + fontBuf->FB_dataSize, charData, charDataSize );
+        memcpy( ((byte*)fontBuf) + fontBuf->FB_dataSize, charData, charDataSize );
 
         /* update CharTableEntry and FontBuf */
         charTableEntries[indexGeosChar].CTE_dataOffset = fontBuf->FB_dataSize;       
@@ -531,33 +531,31 @@ EC(     ECCheckBounds( (void*)(((byte*)charData) + dataSize + bytesToMove  - 1) 
  * REVISION HISTORY:
  *      Date      Name      Description
  *      ----      ----      -----------
- *      12/23/22  JK        Initial Revision
+ *      23.12.22  JK        Initial Revision
+ *      26.02.26  JK        Refactoring to avoid some MemReAlloc() calls
+ *      24.05.26  JK        Optimize bitmap buffer clearing
  *******************************************************************/
 
 static void* EnsureBitmapBlock( MemHandle bitmapHandle, word size )
 {
-        void* bitmapData = MemLock( bitmapHandle );
+    void* bitmapData;
+    word  currentSize;
+    word  allocSize;
 
-        if( bitmapData == NULL )
-        {
-                MemReAlloc( bitmapHandle, MAX( size, INITIAL_BITMAP_BLOCKSIZE ), HAF_NO_ERR );
-                bitmapData = MemLock( bitmapHandle );
-        } else {
-                word  bitmapBlockSize = MemGetInfo( bitmapHandle, MGIT_SIZE );
+    /* round up to 256 bytes */
+    if (size < INITIAL_BITMAP_BLOCKSIZE)
+        allocSize = INITIAL_BITMAP_BLOCKSIZE;
+    else
+        allocSize = (size + 255) & 0xFF00;
 
-                if( bitmapBlockSize < size )
-                {
-                        MemReAlloc( bitmapHandle, size, HAF_NO_ERR );
-                        bitmapData = MemLock( bitmapHandle );
-                }
-                
-                if( size < INITIAL_BITMAP_BLOCKSIZE && bitmapBlockSize > INITIAL_BITMAP_BLOCKSIZE )
-                {
-                        MemReAlloc( bitmapHandle, INITIAL_BITMAP_BLOCKSIZE, HAF_NO_ERR );
-                        bitmapData = MemLock( bitmapHandle );
-                }
-        }
-
-        memset( bitmapData, 0, size );
-        return bitmapData;
+    bitmapData  = MemLock( bitmapHandle );
+    currentSize = (bitmapData == NULL) ? 0 : MemGetInfo( bitmapHandle, MGIT_SIZE );
+        
+    if ( currentSize != allocSize )
+    {
+        MemReAlloc( bitmapHandle, allocSize, HAF_NO_ERR | HAF_LOCK );
+        bitmapData = MemDeref( bitmapHandle );
+    }
+        
+    return memset( bitmapData, 0, size );
 }

@@ -20,7 +20,6 @@
 
 #include "ttconfig.h"
 #include "ttengine.h"
-#include "ttcache.h"
 #include "tttables.h"
 #include "ttcmap.h"
 #include <heap.h>
@@ -196,7 +195,6 @@
     Short          delta_shift;
 
     Byte           instruct_control;
-    Bool           scan_control;
     Int            scan_type;
 
     UShort         gep0;
@@ -258,7 +256,6 @@
     Int    Range;     /* in which code range is it located ? */
     UShort Start;     /* where does it start ?               */
     Int    Opc;       /* function #, or instruction code     */
-    Bool   Active;    /* is it active ?                      */
   };
 
   typedef struct TDefRecord_  TDefRecord;
@@ -318,8 +315,7 @@
 #define CALL_INTERPRETER  ( engineInstance.interpreterActive ? RunIns( exec ) : TT_Err_Ok )
 
   /* Rounding function, as used by the interpreter */
-  typedef TT_F26Dot6  TRound_Function( EXEC_OPS TT_F26Dot6 distance,
-                                                TT_F26Dot6 compensation );
+  typedef TT_F26Dot6  TRound_Function( EXEC_OPS TT_F26Dot6 distance );
 
   /* Point displacement along the freedom vector routine, as */
   /* used by the interpreter                                 */
@@ -332,20 +328,11 @@
   typedef TT_F26Dot6  TProject_Function( EXEC_OPS TT_Vector*  v1,
                                                   TT_Vector*  v2 );
 
-  /* reading a cvt value. Take care of non-square pixels when needed */
-  typedef TT_F26Dot6  TGet_CVT_Function( EXEC_OPS UShort  index );
-
-  /* setting or moving a cvt value.  Take care of non-square pixels  */
-  /* when needed                                                     */
-  typedef void  TSet_CVT_Function ( EXEC_OPS  UShort      index,
-                                              TT_F26Dot6  value );
-
   /* subglyph transformation record */
   struct  TTransform_
   {
     TT_Fixed    xx, xy; /* transformation */
     TT_Fixed    yx, yy; /*     matrix     */
-    TT_F26Dot6  ox, oy; /*    offsets     */
   };
 
   typedef struct TTransform_  TTransform;
@@ -361,12 +348,12 @@
 
     Long         file_offset;
 
-    TT_Big_Glyph_Metrics  metrics;
+    TT_Glyph_Metrics  metrics;
 
     TGlyph_Zone  zone;
 
-    Long         arg1;  /* first argument  */
-    Long         arg2;  /* second argument */
+    Short        arg1;  /* first argument  */
+    Short        arg2;  /* second argument */
 
     UShort       element_flag;    /* current load element flag */
 
@@ -437,25 +424,14 @@
   /* metrics used by the instance and execution context objects */
   struct  TIns_Metrics_
   {
-    TT_F26Dot6  pointSize;      /* point size.  1 point = 1/72 inch. */
+    TT_F26Dot6  pointSize;   /* point size.  1 point = 1/72 inch. */
 
-    UShort      x_resolution;   /* device horizontal resolution in dpi. */
-    UShort      y_resolution;   /* device vertical resolution in dpi.   */
-
-    UShort      x_ppem;         /* horizontal pixels per EM */
-    UShort      y_ppem;         /* vertical pixels per EM   */
-
-    Long        x_scale1;
-    Long        y_scale1;
-
-    Long        units_per_em;
-
+    UShort      resolution;  /* device resolution in dpi. */
     UShort      ppem;        /* maximum ppem size */
+
     Long        ratio;       /* current ratio     */
     Long        scale1;
     Long        scale2;      /* scale for ppem */
-
-    TT_F26Dot6  compensations[4];  /* device-specific compensations */
   };
 
   typedef struct TIns_Metrics_  TIns_Metrics;
@@ -546,12 +522,8 @@
     UShort  maxContours;   /* max glyph contours numb, simple and composite */
     UShort  maxComponents; /* max components in a composite glyph */
 
-    /* the following are object caches to track active */
-    /* and recycled instances and execution contexts   */
-    /* objects.  See 'ttcache.h'                       */
-
-    TCache  instances;   /* current instances for this face */
-    TCache  glyphs;      /* current glyph containers for this face */
+    PInstance  instance;   /* current instances for this face */
+    PGlyph     glyph;      /* current glyph containers for this face */
   };
 
 
@@ -579,12 +551,8 @@
     PDefArray        IDefs;     /* table of IDefs entries            */
 
     Int              maxFunc;   /* maximum function definition id    */
-    Int              maxIns;    /* maximum instruction definition id */
-
-    TCodeRangeTable  codeRangeTable;
 
     TGraphicsState   GS;
-    TGraphicsState   default_GS;
 
     UShort           cvtSize;   /* the scaled control value table */
     PLong            cvt;
@@ -605,7 +573,6 @@
   struct  TExecution_Context_
   {
     PFace           face;
-    PInstance       instance;
 
     /* instructions state */
 
@@ -637,8 +604,6 @@
     Byte            opcode;    /* current opcode              */
     Int             length;    /* length of current opcode    */
 
-    Bool            step_ins;  /* true if the interpreter must */
-                               /* increment IP after ins. exec */
     UShort          cvtSize;
     PLong           cvt;
 
@@ -654,7 +619,6 @@
     PDefRecord      IDefs;     /* table of IDefs entries             */
 
     Int             maxFunc;
-    Int             maxIns;
 
     Int             callTop,    /* top of call stack during execution */
                     callSize;   /* size of call stack */
@@ -674,17 +638,9 @@
     TT_F26Dot6      phase;      /* 'SuperRounding'     */
     TT_F26Dot6      threshold;
 
-    Long            scale1;         /* scaling values along the current   */
-    Long            scale2;         /* projection vector too..            */
-    Bool            cached_metrics; /* the ppem is computed lazily. used  */
-                                    /* to trigger computation when needed */
-
+#ifdef DEBUG_INTERPRETER
     Bool            instruction_trap;  /* If True, the interpreter will */
-                                       /* exit after each instruction   */
-
-    TGraphicsState  default_GS;    /* graphics state resulting from  */
-                                   /* the prep program               */
-    Bool            is_composite;  /* ture if the glyph is composite */
+#endif                                 /* exit after each instruction   */
 
 #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
    Bool            pedantic_hinting;  /* if true, read and write array   */
@@ -700,14 +656,9 @@
     TProject_Function  _near * func_dualproj;  /* current dual proj. function */
 
     TMove_Function     _near * func_move;      /* current point move function */
-
-    TGet_CVT_Function  _near * func_read_cvt;  /* read a cvt entry              */
-    TSet_CVT_Function  _near * func_write_cvt; /* write a cvt entry (in pixels) */
-    TSet_CVT_Function  _near * func_move_cvt;  /* incr a cvt entry (in pixels)  */
-
+    
     UShort             loadSize;
     PSubglyph_Stack    loadStack;      /* loading subglyph stack */
-
   };
 
 
@@ -719,9 +670,9 @@
 
   struct TGlyph_
   {
-    PFace                 face;
-    TT_Big_Glyph_Metrics  metrics;
-    TT_Outline            outline;
+    PFace             face;
+    TT_Glyph_Metrics  metrics;
+    TT_Outline        outline;
   };
 
 
@@ -749,18 +700,6 @@
                             UShort              IP );
 
 
-  /* Set a given code range properties */
-  LOCAL_DEF
-  TT_Error  Set_CodeRange( PExecution_Context  exec,
-                           Int                 range,
-                           void*               base,
-                           UShort              length );
-
-  /* Clear a given coderange */
-  LOCAL_DEF
-  TT_Error  Clear_CodeRange( PExecution_Context  exec, Int  range );
-
-
   LOCAL_DEF
   PExecution_Context  New_Context( PFace  face );
 
@@ -774,11 +713,11 @@
                           PInstance           ins );
 
   LOCAL_DEF
-  void      Context_Save( PExecution_Context  exec,
-                          PInstance           ins );
-
-  LOCAL_DEF
+  #ifdef TT_CONFIG_OPTION_SUPPORT_PEDANTIC_HINTING
   TT_Error  Context_Run( PExecution_Context  exec );
+  #else
+  void      Context_Run( PExecution_Context  exec );
+  #endif
 
   LOCAL_DEF
   TT_Error  Instance_Init( PInstance  ins );
