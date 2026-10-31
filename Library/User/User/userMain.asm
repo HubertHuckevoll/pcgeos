@@ -264,6 +264,17 @@ haveUndo:
 ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	;---------------------------------------------------------------------
 	;PLAY STARTUP MUSIC
+		push	ds
+		segmov	ds, cs
+		mov	si, offset uiCategoryStr
+		mov	cx, cs
+		mov	dx, offset startupSoundKey
+		call	InitFileReadBoolean
+		pop	ds
+		jc	playStartupMusic	; Absent or invalid means enabled.
+		tst	ax
+		jz	startupMusicDone
+playStartupMusic:
 	sub	sp, size GeodeToken
 	segmov	es, ss
 	mov	di, sp
@@ -275,6 +286,7 @@ ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	mov	bx, UIS_STARTUP
 	call	WavPlayInitSound
 	add	sp, size GeodeToken
+startupMusicDone:
 endif	; PLAY_STARTUP_SHUTDOWN_MUSIC
 
 	;CREATE A BLOCK TO PUT UI OBJECTS IN
@@ -1475,6 +1487,9 @@ endif
 ;ui category cat name and keys
 
 uiCategoryStr			char	"ui", 0
+ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
+startupSoundKey			char	"startupSound", 0
+endif
 
 noResetBoxString		char	"doNotDisplayResetBox",0
 
@@ -3766,6 +3781,11 @@ Build ends
 
 Exit segment resource
 
+ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
+shutdownSoundCategory		char	"ui", 0
+shutdownSoundKey			char	"shutdownSound", 0
+endif
+
 
 COMMENT @----------------------------------------------------------------------
 
@@ -3898,7 +3918,16 @@ ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	;
 	push	ax, ds
 	;---------------------------------------------------------------------
-	;PLAY STARTUP MUSIC
+	;PLAY SHUTDOWN MUSIC
+		segmov	ds, cs
+		mov	si, offset shutdownSoundCategory
+		mov	cx, cs
+		mov	dx, offset shutdownSoundKey
+		call	InitFileReadBoolean
+		jc	playShutdownMusic	; Absent or invalid means enabled.
+		tst	ax
+		jz	shutdownMusicDone
+playShutdownMusic:
 	sub	sp, size GeodeToken
 	segmov	es, ss
 	mov	di, sp
@@ -3910,6 +3939,7 @@ ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	mov	bx, UIS_SHUTDOWN
 	call	WavPlayInitSound
 	add	sp, size GeodeToken
+shutdownMusicDone:
 	pop	ax, ds
 
 endif	; PLAY_STARTUP_SHUTDOWN_MUSIC

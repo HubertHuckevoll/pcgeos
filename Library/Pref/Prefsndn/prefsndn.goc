@@ -145,8 +145,8 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
  *****************/
 
 @object PrefInteractionClass SoundSubGroup = {
-	GI_comp = @SoundEnableList;
-	HINT_ORIENT_CHILDREN_HORIZONTALLY;
+	GI_comp = @SoundEnableList, @StartupSoundList, @ShutdownSoundList;
+	HINT_ORIENT_CHILDREN_VERTICALLY;
 	HINT_EXPAND_WIDTH_TO_FIT_PARENT;
         HINT_CENTER_CHILDREN_HORIZONTALLY;
 }
@@ -183,6 +183,32 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 {
  	GI_visMoniker = @OffMoniker;
 	GII_identifier = FALSE;
+}
+
+@object PrefBooleanGroupClass StartupSoundList = {
+    GI_comp = @StartupSoundBoolean;
+    GBGI_selectedBooleans = 1;
+    ATTR_GEN_INIT_FILE_CATEGORY = "ui";
+    ATTR_GEN_INIT_FILE_KEY = "startupSound";
+    ATTR_GEN_BOOLEAN_GROUP_INIT_FILE_BOOLEAN;
+}
+
+@object GenBooleanClass StartupSoundBoolean = {
+    GI_visMoniker = 't', "Play startup sound";
+    GBI_identifier = 1;
+}
+
+@object PrefBooleanGroupClass ShutdownSoundList = {
+    GI_comp = @ShutdownSoundBoolean;
+    GBGI_selectedBooleans = 1;
+    ATTR_GEN_INIT_FILE_CATEGORY = "ui";
+    ATTR_GEN_INIT_FILE_KEY = "shutdownSound";
+    ATTR_GEN_BOOLEAN_GROUP_INIT_FILE_BOOLEAN;
+}
+
+@object GenBooleanClass ShutdownSoundBoolean = {
+    GI_visMoniker = 'd', "Play shutdown sound";
+    GBI_identifier = 1;
 }
 
 /*******************

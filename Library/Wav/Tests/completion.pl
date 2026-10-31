@@ -32,6 +32,45 @@ for my $name (qw(PlaySoundFromFileLow ProcessRIFFFile)) {
     die "nested playback lock in $name\n" if $1 =~ /call\s+Wav(?:Un)?lockExclusive/i;
 }
 my $ui = read_file("$lib/../User/User/userMain.asm");
+my $prefs = read_file("$lib/../Pref/Prefsndn/prefsndn.goc");
+my @hooks = $ui =~ /ifdef PLAY_STARTUP_SHUTDOWN_MUSIC\s*\n(.*?)endif/gms;
+for my $event (qw(startup shutdown)) {
+    $ui =~ /^${event}SoundKey\s+char\s+"([^"]+)"/m or die "missing $event key\n";
+    my $key = $1;
+    die "missing preference binding for $event\n" unless $prefs =~
+        /\@object PrefBooleanGroupClass \w+\s*=\s*\{[^}]*ATTR_GEN_INIT_FILE_CATEGORY\s*=\s*"ui";[^}]*ATTR_GEN_INIT_FILE_KEY\s*=\s*"\Q$key\E";/s;
+    my @matches = grep { /offset ${event}SoundKey\b/ } @hooks;
+    die "missing $event hook\n" unless @matches == 1;
+    my $hook = $matches[0];
+    $hook =~ s/;[^\n]*//g;
+    my @lines = split /\n/, $hook;
+    my %targets;
+    for my $i (0..$#lines) {
+        $targets{$1} = $i if $lines[$i] =~ /^(\w+):/;
+    }
+    # Error returns deliberately poison AX: carry must override its value.
+    for my $case ([0, 0, 0], [0, 1, 1], [0, -1, 1], [1, 0, 1], [1, -1, 1]) {
+        my ($carry, $ax, $expected) = @$case;
+        my ($zero, $plays, $reads) = (0, 0, 0);
+        for (my $pc = 0; $pc < @lines; ++$pc) {
+            my $line = $lines[$pc];
+            ++$reads if $line =~ /call\s+InitFileReadBoolean\b/;
+            ++$plays if $line =~ /call\s+WavPlayInitSound\b/;
+            ($carry, $zero) = (0, $ax == 0) if $line =~ /tst\s+ax\b/;
+            if ($line =~ /^\s*(jc|jnc|jz|jnz|jmp)\s+(\w+)/) {
+                my ($op, $target) = ($1, $2);
+                if ($op eq 'jmp' || ($op eq 'jc' && $carry) ||
+                    ($op eq 'jnc' && !$carry) || ($op eq 'jz' && $zero) ||
+                    ($op eq 'jnz' && !$zero)) {
+                    $pc = $targets{$target} // die "unknown sound label $target\n";
+                }
+            }
+        }
+        die "$event setting failed: carry=$case->[0] AX=$case->[1]\n"
+            unless $reads == 1 && $plays == $expected;
+    }
+}
+print "System sounds: independent startup/shutdown guards and enabled defaults pass\n";
 $ui =~ /; If there was a shutdown sound playing,(.*?)endif/s
     or die "missing shutdown wait\n";
 $code{wait} = [map { ['call', $_] } $1 =~ /call\s+(\w+)/g];
