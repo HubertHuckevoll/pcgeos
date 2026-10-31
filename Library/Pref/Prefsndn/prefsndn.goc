@@ -6,8 +6,6 @@
  *                                              *
  * Autor:       Dirk Lausecker          	*
  *                                              *
- *						*
- * �=128 �=133 �=134 �=138 �=154 �=159 �=167	*
  ************************************************/
 
 @include <stdapp.goh>
@@ -25,12 +23,6 @@
 #include <dirk.h>
 
 /****************************************************************/
-
-/*
-#define	GERMAN
-@define	GERMAN
-
-/* german Version */
 
 /**************************** Makro *****************************/
 
@@ -74,15 +66,8 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @start REBOOTSTRINGRESOURCE, data;
 
-@ifdef GERMAN
-
-@chunk char RebootString[] = "Treiber f�r die Soundkarte";
-
-@else
-
 @chunk char RebootString[] = "driver for your soundcard";
-
-@endif
+@localize "completes the sentence 'The system software will shut down and restart to change the ...' - keep it a lower case noun phrase";
 
 @end REBOOTSTRINGRESOURCE;
 
@@ -127,11 +112,8 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 	GI_visMoniker = list {@PrefTextMoniker,@Moniker0,@Moniker1,@Moniker2,@Moniker3};
 }
 
-@ifdef	GERMAN
-@chunk char TEXT_TITLE_HELP[] = "Die von den Programmen erzeugten T�ne k�nnen ein-/ausgeschaltet und der Soundkartentreiber kann ausgew�hlt werden !";
-@else
 @chunk char TEXT_TITLE_HELP[] = "The sounds produced by applications for errors, alarms, and other reasons can be turned on and off, and a sound driver can be selected.";
-@endif
+@localize "help text at the top of the Sound preferences panel";
 
 @object GenTextClass TitleHelpText = {
     GI_attrs = @default |GA_READ_ONLY;
@@ -167,13 +149,11 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
     };
 }
 
-@ifdef	GERMAN
-@visMoniker OnMoniker = "Ein";
-@visMoniker OffMoniker = "Aus";
-@else
 @visMoniker OnMoniker = "Yes";
+@localize "generic affirmative answer, used for the Sound on/off choice and the sound card settings on/off choice";
+
 @visMoniker OffMoniker = "No";
-@endif
+@localize "generic negative answer, used for the Sound on/off choice and the sound card settings on/off choice";
 
 
 @object	GenItemClass SoundEnable =
@@ -205,11 +185,8 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 /*******************
  * DriverEditGroup *
  *******************/
-@ifdef	GERMAN
-@visMoniker TEXT_DRIVER_GROUP = "Soundkartentreiber";
-@else
 @visMoniker TEXT_DRIVER_GROUP = "Sound Driver";
-@endif
+@localize "title of the box listing the installed sound drivers";
 
 @object PrefInteractionClass DriverEditGroup = {
     GI_visMoniker = @TEXT_DRIVER_GROUP;
@@ -233,7 +210,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
     HINT_ITEM_GROUP_SCROLLABLE;
     ATTR_GEN_INIT_FILE_KEY ="device";
-    ATTR_GEN_PATH_DATA = {SP_SYSTEM,"SOUND"};   /* Pfadangabe */
+    ATTR_GEN_PATH_DATA = {SP_SYSTEM,"SOUND"};   /* path */
     ATTR_PREF_REBOOT_STRING = @RebootString;
 }
 
@@ -241,13 +218,11 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
       SettingsBox
  ***********************/
 
-@ifdef	GERMAN
-@visMoniker TEXT_SETTINGS = "Einstellungen";
-@chunk char TEXT_SETTINGS_TEXT[] = "Bei 16-Bit-Soundkarten die DMA-Puffergr��e auf Maximum stellen !";
-@else
 @visMoniker TEXT_SETTINGS = "Settings";
+@localize "title of the button that opens the sound card settings dialog";
+
 @chunk char TEXT_SETTINGS_TEXT[] = "For 16-bit sound, set the value for the DMA buffer to the maximum.";
-@endif
+@localize "help text at the top of the sound card settings dialog";
 
 @object PrefInteractionClass SettingsBox = {
         GI_comp = 	@AIDMainGroup,
@@ -289,14 +264,11 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
   AIDMainGroup
  **************/
 
-@ifdef	GERMAN
-@visMoniker TEXT_AID_MAIN = "Soundkartenparameter";
-@chunk char TEXT_AID_TEXT[] = "Die Soundkartenparameter nur dann einstellen, wenn es unbedingt n�tig ist !";
-
-@else
 @visMoniker TEXT_AID_MAIN = "Sound Card Settings";
+@localize "title of the box holding the sound card base address, IRQ and DMA settings";
+
 @chunk char TEXT_AID_TEXT[] = "Do you want to use these settings instead of the settings in your AUTOEXEC.BAT file?";
-@endif
+@localize "help text above the sound card base address, IRQ and DMA settings";
 
 @object PrefInteractionClass AIDMainGroup = {
         GI_visMoniker = @TEXT_AID_MAIN;
@@ -352,13 +324,8 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
   AIDGroup
  **********/
 
-@ifdef	GERMAN
-@visMoniker TEXT_AID_BASE = "Basisadresse:";
-
-@else
 @visMoniker TEXT_AID_BASE = "Base Address";
-
-@endif
+@localize "label of the sound card base address value";
 
 @object PrefInteractionClass AIDGroup = {
         GI_comp = @BaseAddressValue,@IrqValue,@DmaValue;
@@ -417,17 +384,14 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
   BufferGroup
  *************/
 
-@ifdef	GERMAN
-@visMoniker TEXT_PLAY_BUFFER = "Abspielpuffergr��e:";
-@visMoniker TEXT_DMA_BUFFER = "DMA-Puffergr��e:";
-@chunk char TEXT_STEREO_TOGGLE[] = "Mit dem nachfolgenden Schalter wird das System angewiesen, die Stereokan�le bei der Wiedergabe zu vertauschen.";
-
-@else
 @visMoniker TEXT_PLAY_BUFFER = "Play Buffer Size";
-@visMoniker TEXT_DMA_BUFFER = "DMA Buffer Size";
-@chunk char TEXT_STEREO_TOGGLE[] = "To swap the left and right stereo channels when playing WAV files, select this check box.";
+@localize "label of the sound play buffer size value";
 
-@endif
+@visMoniker TEXT_DMA_BUFFER = "DMA Buffer Size";
+@localize "label of the sound DMA buffer size value";
+
+@chunk char TEXT_STEREO_TOGGLE[] = "To swap the left and right stereo channels when playing WAV files, select this check box.";
+@localize "help text above the Swap Stereo Channels check box";
 
 @object PrefInteractionClass BufferGroup = {
         GI_comp = @PlayValue,@SecondValue;
@@ -494,11 +458,8 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @object GenBooleanClass StereoBoolean =
 {
-@ifdef	GERMAN
-	GI_visMoniker = "Stereoausgabekan�le tauschen";
-@else
 	GI_visMoniker = "Swap Stereo Channels";
-@endif
+	@localize "label of the check box that swaps the left and right stereo channels";
 
         GBI_identifier = 1;
 }
@@ -574,11 +535,9 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
 
 	MSG_PREF_GET_PSELF
 
-        Hilfsmessage zum Ermitteln
-        von pself um �ber die
-        eigenen instance Data
-        andere Objekte ansprechen
-        zu k�nnen.
+        Helper message to get pself, so that
+        other objects can be reached through
+        this object's own instance data.
 
  ******************************/
 
@@ -592,12 +551,11 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
 
 	MSG_GEN_GUP_INTERACTION_COMMAND
 
- identifiziert nach Schlie�en der Dialogbox
- ob OK gedr�ckt wurde und ob es sich um
- FMEdit-Box handelte.
- Wenn JA wird der selektierte Text angezeigt
- und der DOS-Name in die [sound] Kategorie
- eingetragen.
+ Determines, after the dialog box closes,
+ whether OK was pressed and whether this was
+ the FMEdit box.
+ If so, the selected text is shown and the
+ DOS name is written to the [sound] category.
 
  *******************************************/
 
@@ -608,22 +566,22 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
     pself = @call oself::MSG_PREF_GET_PSELF();	/* */
     if (command==IC_APPLY)
     {
-	// aktuelle Selektion auslesen
+	// read the current selection
 	l = @call pself->PDMMC_tocList::MSG_PREF_TOC_LIST_GET_SELECTED_DRIVER_NAME(globalText,50);
 
 	if(!l)
 	{
-            // default-String anlegen im Fehlerfall
+            // fall back to a default string on error
 	    sprintf (globalText, "Standard Sound Driver");
 	}
 
 
-        // DOS-Namen ermitteln, in INI speichern
+        // get the DOS name and store it in the INI file
 	if (FileSetCurrentPath(SP_SYSTEM,"SOUND"))
         {
            if(!FileGetPathExtAttributes(globalText,FEA_DOS_NAME,dosName,12))
 	   {
-           	// DOS-Namen speichern
+           	// store the DOS name
             	InitFileWriteString(soundCategory,sampleDriverIT,dosName);
             	InitFileWriteString(soundCategory,synthDriverIT,dosName);
            }
@@ -644,7 +602,7 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
         optr	op;
         word	aid;
 
-        // InitKeys l�schen wenn AID-Group deaktiviert ist
+        // delete the InitKeys if the AID group is disabled
 	op = ConstructOptr(OptrToHandle(oself), ChunkOf(@AIDItemGroup));
         aid = @call op::MSG_GEN_ITEM_GROUP_GET_SELECTION();
     	if (aid == AID_IDENT_OFF)
@@ -654,7 +612,7 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
 	     InitFileDeleteEntry(soundCategory,"Dma");
         };
 
-        // Modified-State setzen
+        // set the modified state
 	op = ConstructOptr(OptrToHandle(oself), ChunkOf(@StereoBooleanGroup));
         @send op::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_MODIFIED_STATE(0xffff,0);
 
@@ -673,7 +631,7 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
 {
     	@callsuper();
 
-    	// AIDItemGroup auswerten
+    	// evaluate the AID item group
     	@send oself::MSG_GEN_ITEM_GROUP_MM_STATE();
 }
 
@@ -688,7 +646,7 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
     	word	aid = 0;
         optr	op;
 
-    	// AIDItemGroup auswerten
+    	// evaluate the AID item group
     	aid = @call oself::MSG_GEN_ITEM_GROUP_GET_SELECTION();
 
     	if (aid == AID_IDENT_ON)
