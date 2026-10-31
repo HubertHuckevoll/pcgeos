@@ -34,9 +34,12 @@ for my $name (qw(PlaySoundFromFileLow ProcessRIFFFile)) {
 my $ui = read_file("$lib/../User/User/userMain.asm");
 my $prefs = read_file("$lib/../Pref/Prefsndn/prefsndn.goc");
 my @hooks = $ui =~ /ifdef PLAY_STARTUP_SHUTDOWN_MUSIC\s*\n(.*?)endif/gms;
+my $combined_key;
 for my $event (qw(startup shutdown)) {
     $ui =~ /^${event}SoundKey\s+char\s+"([^"]+)"/m or die "missing $event key\n";
     my $key = $1;
+    $combined_key //= $key;
+    die "startup/shutdown settings differ\n" unless $key eq $combined_key;
     die "missing preference binding for $event\n" unless $prefs =~
         /\@object PrefBooleanGroupClass \w+\s*=\s*\{[^}]*ATTR_GEN_INIT_FILE_CATEGORY\s*=\s*"ui";[^}]*ATTR_GEN_INIT_FILE_KEY\s*=\s*"\Q$key\E";/s;
     my @matches = grep { /offset ${event}SoundKey\b/ } @hooks;
@@ -70,7 +73,33 @@ for my $event (qw(startup shutdown)) {
             unless $reads == 1 && $plays == $expected;
     }
 }
-print "System sounds: independent startup/shutdown guards and enabled defaults pass\n";
+print "System sounds: combined startup/shutdown guards and enabled defaults pass\n";
+# Native Boolean INI loading supplies 0xffff, not the checkbox's identifier.
+# SetBooleanState clears only the identifier bits; Boolean saving tests nonzero.
+# See User/Gen/genBooleanGroup.asm and Kernel/Initfile/initfileHigh.asm.
+my ($group) = grep { /ATTR_GEN_INIT_FILE_KEY\s*=\s*"\Q$combined_key\E"/ }
+    $prefs =~ /\@object PrefBooleanGroupClass \w+\s*=\s*\{(.*?)^\}/msg;
+defined $group or die "missing system sound group\n";
+$group =~ /GBGI_selectedBooleans\s*=\s*(\w+);/ or die "missing default\n";
+my $default = $1;
+$group =~ /GI_comp\s*=\s*\@(\w+);/ or die "missing checkbox\n";
+my $child = $1;
+$prefs =~ /\@object GenBooleanClass \Q$child\E\s*=\s*\{[^}]*GBI_identifier\s*=\s*(\w+);/s
+    or die "missing checkbox identifier\n";
+my $identifier = $1;
+my ($initial, $mask) = map {
+    $_ eq 'TRUE' ? 0xffff : /^\d+$/ ? 0+$_ : die "unknown Boolean constant $_\n"
+} ($default, $identifier);
+for my $saved ($initial, 0, 0xffff) {
+    my $loaded = $saved;
+    for my $checked (0, 1, 0, 1) {
+        $loaded = $checked ? ($loaded | $mask) : ($loaded & (~$mask & 0xffff));
+        $loaded = $loaded ? 0xffff : 0; # Save Boolean and reopen the module.
+        die "system sound checkbox does not persist $checked\n"
+            unless !!$loaded == $checked;
+    }
+}
+print "System sounds: unchecked/checked save and reopen round trips pass\n";
 $ui =~ /; If there was a shutdown sound playing,(.*?)endif/s
     or die "missing shutdown wait\n";
 $code{wait} = [map { ['call', $_] } $1 =~ /call\s+(\w+)/g];

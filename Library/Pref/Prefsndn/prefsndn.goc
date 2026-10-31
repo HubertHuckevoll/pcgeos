@@ -7,7 +7,7 @@
  * Autor:       Dirk Lausecker          	*
  *                                              *
  *						*
- * é=128 ô=133 ö=134 Ñ=138 î=154 Å=159 ·=167	*
+ * ÔøΩ=128 ÔøΩ=133 ÔøΩ=134 ÔøΩ=138 ÔøΩ=154 ÔøΩ=159 ÔøΩ=167	*
  ************************************************/
 
 @include <stdapp.goh>
@@ -76,7 +76,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @ifdef GERMAN
 
-@chunk char RebootString[] = "Treiber für die Soundkarte";
+@chunk char RebootString[] = "Treiber fÔøΩr die Soundkarte";
 
 @else
 
@@ -128,7 +128,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 }
 
 @ifdef	GERMAN
-@chunk char TEXT_TITLE_HELP[] = "Die von den Programmen erzeugten Töne können ein-/ausgeschaltet und der Soundkartentreiber kann ausgewählt werden !";
+@chunk char TEXT_TITLE_HELP[] = "Die von den Programmen erzeugten TÔøΩne kÔøΩnnen ein-/ausgeschaltet und der Soundkartentreiber kann ausgewÔøΩhlt werden !";
 @else
 @chunk char TEXT_TITLE_HELP[] = "The sounds produced by applications for errors, alarms, and other reasons can be turned on and off, and a sound driver can be selected.";
 @endif
@@ -145,10 +145,10 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
  *****************/
 
 @object PrefInteractionClass SoundSubGroup = {
-	GI_comp = @SoundEnableList, @StartupSoundList, @ShutdownSoundList;
+	GI_comp = @SoundEnableList, @StartupShutdownSoundList;
 	HINT_ORIENT_CHILDREN_VERTICALLY;
 	HINT_EXPAND_WIDTH_TO_FIT_PARENT;
-        HINT_CENTER_CHILDREN_HORIZONTALLY;
+        HINT_LEFT_JUSTIFY_CHILDREN;
 }
 
 @object PrefItemGroupClass SoundEnableList =
@@ -162,6 +162,9 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 	ATTR_GEN_ITEM_GROUP_INIT_FILE_BOOLEAN;
 	ATTR_GEN_INIT_FILE_CATEGORY = "ui";
 	ATTR_GEN_INIT_FILE_KEY = "sound";
+    ATTR_PREF_ITEM_GROUP_ENABLE = {
+        TRUE, ChunkOf(@StartupShutdownSoundList), 0
+    };
 }
 
 @ifdef	GERMAN
@@ -185,30 +188,18 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 	GII_identifier = FALSE;
 }
 
-@object PrefBooleanGroupClass StartupSoundList = {
-    GI_comp = @StartupSoundBoolean;
-    GBGI_selectedBooleans = 1;
+@object PrefBooleanGroupClass StartupShutdownSoundList = {
+    GI_comp = @StartupShutdownSoundBoolean;
+    GBGI_selectedBooleans = TRUE;
     ATTR_GEN_INIT_FILE_CATEGORY = "ui";
-    ATTR_GEN_INIT_FILE_KEY = "startupSound";
+    ATTR_GEN_INIT_FILE_KEY = "startupShutdownSounds";
     ATTR_GEN_BOOLEAN_GROUP_INIT_FILE_BOOLEAN;
 }
 
-@object GenBooleanClass StartupSoundBoolean = {
-    GI_visMoniker = 't', "Play startup sound";
-    GBI_identifier = 1;
-}
-
-@object PrefBooleanGroupClass ShutdownSoundList = {
-    GI_comp = @ShutdownSoundBoolean;
-    GBGI_selectedBooleans = 1;
-    ATTR_GEN_INIT_FILE_CATEGORY = "ui";
-    ATTR_GEN_INIT_FILE_KEY = "shutdownSound";
-    ATTR_GEN_BOOLEAN_GROUP_INIT_FILE_BOOLEAN;
-}
-
-@object GenBooleanClass ShutdownSoundBoolean = {
-    GI_visMoniker = 'd', "Play shutdown sound";
-    GBI_identifier = 1;
+@object GenBooleanClass StartupShutdownSoundBoolean = {
+    GI_visMoniker = 't', "Play startup and shutdown sounds";
+    /* INI true is 0xffff; unchecking must clear every loaded bit. */
+    GBI_identifier = TRUE;
 }
 
 /*******************
@@ -252,7 +243,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @ifdef	GERMAN
 @visMoniker TEXT_SETTINGS = "Einstellungen";
-@chunk char TEXT_SETTINGS_TEXT[] = "Bei 16-Bit-Soundkarten die DMA-Puffergröße auf Maximum stellen !";
+@chunk char TEXT_SETTINGS_TEXT[] = "Bei 16-Bit-Soundkarten die DMA-PuffergrÔøΩÔøΩe auf Maximum stellen !";
 @else
 @visMoniker TEXT_SETTINGS = "Settings";
 @chunk char TEXT_SETTINGS_TEXT[] = "For 16-bit sound, set the value for the DMA buffer to the maximum.";
@@ -300,7 +291,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @ifdef	GERMAN
 @visMoniker TEXT_AID_MAIN = "Soundkartenparameter";
-@chunk char TEXT_AID_TEXT[] = "Die Soundkartenparameter nur dann einstellen, wenn es unbedingt nötig ist !";
+@chunk char TEXT_AID_TEXT[] = "Die Soundkartenparameter nur dann einstellen, wenn es unbedingt nÔøΩtig ist !";
 
 @else
 @visMoniker TEXT_AID_MAIN = "Sound Card Settings";
@@ -427,9 +418,9 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
  *************/
 
 @ifdef	GERMAN
-@visMoniker TEXT_PLAY_BUFFER = "Abspielpuffergröße:";
-@visMoniker TEXT_DMA_BUFFER = "DMA-Puffergröße:";
-@chunk char TEXT_STEREO_TOGGLE[] = "Mit dem nachfolgenden Schalter wird das System angewiesen, die Stereokanäle bei der Wiedergabe zu vertauschen.";
+@visMoniker TEXT_PLAY_BUFFER = "AbspielpuffergrÔøΩÔøΩe:";
+@visMoniker TEXT_DMA_BUFFER = "DMA-PuffergrÔøΩÔøΩe:";
+@chunk char TEXT_STEREO_TOGGLE[] = "Mit dem nachfolgenden Schalter wird das System angewiesen, die StereokanÔøΩle bei der Wiedergabe zu vertauschen.";
 
 @else
 @visMoniker TEXT_PLAY_BUFFER = "Play Buffer Size";
@@ -504,7 +495,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 @object GenBooleanClass StereoBoolean =
 {
 @ifdef	GERMAN
-	GI_visMoniker = "Stereoausgabekanäle tauschen";
+	GI_visMoniker = "StereoausgabekanÔøΩle tauschen";
 @else
 	GI_visMoniker = "Swap Stereo Channels";
 @endif
@@ -569,15 +560,25 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
     @callsuper();
 }
 
+/* Refresh dependent controls after restoring the master selection. */
+@method PrefDialogMMClass, MSG_GEN_RESET
+{
+    optr soundList;
+
+    @callsuper();
+    soundList = ConstructOptr(OptrToHandle(oself), ChunkOf(@SoundEnableList));
+    @call soundList::MSG_GEN_ITEM_GROUP_SEND_STATUS_MSG(FALSE);
+}
+
 /******************************
 
 	MSG_PREF_GET_PSELF
 
         Hilfsmessage zum Ermitteln
-        von pself um Åber die
+        von pself um ÔøΩber die
         eigenen instance Data
         andere Objekte ansprechen
-        zu kînnen.
+        zu kÔøΩnnen.
 
  ******************************/
 
@@ -591,8 +592,8 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
 
 	MSG_GEN_GUP_INTERACTION_COMMAND
 
- identifiziert nach Schlie·en der Dialogbox
- ob OK gedrÅckt wurde und ob es sich um
+ identifiziert nach SchlieÔøΩen der Dialogbox
+ ob OK gedrÔøΩckt wurde und ob es sich um
  FMEdit-Box handelte.
  Wenn JA wird der selektierte Text angezeigt
  und der DOS-Name in die [sound] Kategorie
@@ -643,7 +644,7 @@ void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *modInfo )
         optr	op;
         word	aid;
 
-        // InitKeys lîschen wenn AID-Group deaktiviert ist
+        // InitKeys lÔøΩschen wenn AID-Group deaktiviert ist
 	op = ConstructOptr(OptrToHandle(oself), ChunkOf(@AIDItemGroup));
         aid = @call op::MSG_GEN_ITEM_GROUP_GET_SELECTION();
     	if (aid == AID_IDENT_OFF)

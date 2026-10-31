@@ -1488,7 +1488,7 @@ endif
 
 uiCategoryStr			char	"ui", 0
 ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
-startupSoundKey			char	"startupSound", 0
+startupSoundKey			char	"startupShutdownSounds", 0
 endif
 
 noResetBoxString		char	"doNotDisplayResetBox",0
@@ -3783,7 +3783,7 @@ Exit segment resource
 
 ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 shutdownSoundCategory		char	"ui", 0
-shutdownSoundKey			char	"shutdownSound", 0
+shutdownSoundKey			char	"startupShutdownSounds", 0
 endif
 
 
