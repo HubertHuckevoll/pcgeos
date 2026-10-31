@@ -215,7 +215,7 @@ Installed/Library/Net :	kernel MAKELIB
 
 # removed pcmcia
 ui	: Installed/Library/User
-Installed/Library/User	:	kernel sound compress net MAKELIB
+Installed/Library/User	:	kernel sound compress net wav MAKELIB
 
 isui	: Installed/Library/SpecUI/ISUI
 Installed/Library/SpecUI/ISUI	:	kernel text MAKELIB
@@ -1786,7 +1786,7 @@ Installed/Library/Pref/Prefsndn:		ui ansic config sound MAKELIB
 bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp sndchk mixer
 
 bsnwav	: Installed/Library/Audio/BSNWav
-Installed/Library/Audio/BSNWav:			kernel ansic MAKELIB
+Installed/Library/Audio/BSNWav:			kernel MAKELIB
 
 mixlib	: Installed/Library/Audio/MixLib
 Installed/Library/Audio/MixLib:			bsnwav sound ui ansic MAKELIB

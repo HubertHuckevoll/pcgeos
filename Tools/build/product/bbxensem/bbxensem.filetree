@@ -254,6 +254,8 @@ DIR (ensemble) {
 		}
 		}
 		DIR (sounds) {
+			Tools/build/product/bbxensem/Privdata/Sounds/SY001.wav
+			Tools/build/product/bbxensem/Privdata/Sounds/SY002.WAV
 			# do we need these sounds?  out for now - jfh
 #			Appl/Tutorial/Sounds/move.wav
 			#Tools/build/product/bbxensem/Privdata/Sounds/sy010.wav

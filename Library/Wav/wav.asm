@@ -87,15 +87,14 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 WavPlaySoundAndDestroyThread		proc	far
 
-;	call	WavLockExclusive
-
+	; WavPlayFile reserved wavSem before creating this thread.
 	call	WavPlayFromWavFilePathBlock
 
 	; We won't give up the ghost here because we are A-number-1
 	; priority.  We should get the ThreadDestroy before being
 	; task switched.
 	;
-;	call	WavUnlockExclusive
+		call	WavUnlockExclusive
 
 	;    Set hair on fire and run
 	;
@@ -283,6 +282,8 @@ WavPlayFile		proc	far
 
 	call	MemUnlock
 
+	; Reserve playback before ThreadCreate so a waiter cannot overtake it.
+		call	WavLockExclusive
 	push	bx				;WavFilePathBlock handle
 	mov	al,PRIORITY_UI
 	mov	cx, segment Fixed
@@ -298,6 +299,7 @@ done:
 	ret
 
 threadCreateError:
+		call	WavUnlockExclusive
 	call	MemFree
 	jmp	done
 
@@ -347,7 +349,7 @@ WavPlayFromWavFilePathBlock		proc	far
 
 	mov	bx,cx
 	call	MemLock
-	jc	done
+		jc	freeBlock
 	push	bx				;WavFilePathBlock handle
 	mov	ds,ax
 
@@ -373,7 +375,7 @@ WavPlayFromWavFilePathBlock		proc	far
 	;
 
 	mov	bx,ax				;.wav file handle
-	call	PlaySoundFromFile
+		call	PlaySoundFromFileLow	; wavSem is already reserved
 
 	;    Close that file
 	;
@@ -392,6 +394,7 @@ popDir:
 
 	pop	bx				;WavFilePathBlock handle
 	call	MemUnlock
+freeBlock:
 	call	MemFree
 
 done:
@@ -516,7 +519,17 @@ REVISION HISTORY:
 	atw	7/21/93   	Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-PlaySoundFromFile	proc	far	uses	ax, di, ds, si, cx, dx, bp
+PlaySoundFromFile	proc	far
+		call	WavLockExclusive
+		call	PlaySoundFromFileLow
+		call	WavUnlockExclusive
+		ret
+PlaySoundFromFile	endp
+
+	;
+	; Play with wavSem held by the caller, including the BestSound path.
+	;
+PlaySoundFromFileLow	proc	far	uses	ax, di, ds, si, cx, dx, bp
 
 	.enter
 
@@ -577,7 +590,7 @@ EC<	WARNING	WAV_AFTER_BSNWAV>
 exit:
 	.leave
 	ret
-PlaySoundFromFile	endp
+PlaySoundFromFileLow	endp
 soundPlayRoutines	nptr	ProcessRIFFFile
 
 
@@ -692,11 +705,9 @@ done:
 	ret
 
 	;
-	; Grab the exclusive lock now, so that other WAV threads trying to play
-	; will fail above, and other external clients can block until we're done.
+	; PlaySoundFromFile or WavPlayFile already holds wavSem.
 	;
 playSound:
-	call	WavLockExclusive
 
 	call	PlaySound
 
@@ -764,9 +775,8 @@ endif
 	call	SoundDisableSampleStream
 
 	;
-	; Relinquish our exclusive lock, cleanup and leave.
+	; Cleanup and leave; the caller releases wavSem.
 	;
-	call	WavUnlockExclusive
 	jmp	freeDAC
 
 

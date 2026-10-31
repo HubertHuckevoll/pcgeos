@@ -30,6 +30,10 @@ EOBJS := $(EOBJS:Nmp3fxp.eobj)
 GOBJS := $(GOBJS:Nmp3fxp.gobj)
 #include <$(SYSMAKEFILE)>
 
+# Keep startup playback independent of AnsiC -> Math -> UI.
+.PATH.asm .PATH.def: $(ROOT_DIR)/Library/AnsiC
+-IFLAGS += -I$(ROOT_DIR)/Library/AnsiC
+
 GOCFLAGS += -L bsnwav
 # ASM_TO_OBJS    += ASMTOOLS/asmtoolsManager.asm
 # OBJS            += ASMTOOLS/asmtoolsManager.obj

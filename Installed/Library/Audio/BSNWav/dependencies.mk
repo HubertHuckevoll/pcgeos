@@ -32,6 +32,18 @@ Driver.eobj: Driver/driverManager.asm \
                 geos.def driver.def lmem.def geode.def resource.def \
                 library.def ec.def dirk.def dirksnd.def \
                 Internal/soundDrv.def bsnwav.def
+Runtime.obj \
+Runtime.eobj: Runtime/runtimeManager.asm \
+                wcc_rtl.asm ansicGeode.def geos.def file.def heap.def \
+                ec.def lmem.def library.def geode.def resource.def \
+                chunkarr.def localize.def sllang.def ansic.def \
+                ansicErrors.def
+Memory.obj \
+Memory.eobj: Memory/memoryManager.asm \
+                memory_asm.asm ansicGeode.def geos.def file.def heap.def \
+                ec.def lmem.def library.def geode.def resource.def \
+                chunkarr.def localize.def sllang.def ansic.def \
+                ansicErrors.def product.def
 subcode.obj \
 subcode.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -238,4 +250,4 @@ mp3synth.eobj: MP3Dec/core/pvmp3_poly_phase_synthesis.inc \
                 MP3Dec/core/mp3_mem_funcs.h Ansi/string.h \
                 MP3Dec/core/pvmp3_equalizer.inc
 
-bsnwavEC.geo bsnwav.geo : geos.ldf ansic.ldf 
+bsnwavEC.geo bsnwav.geo : geos.ldf 

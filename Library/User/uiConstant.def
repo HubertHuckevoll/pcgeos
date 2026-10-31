@@ -139,14 +139,13 @@ GENERAL_DEVICE_STRINGS		equ	FALSE
 
 ;-----------------------------------------------------------------------------
 ; PLAY_STARTUP_SHUTDOWN_MUSIC: If DEFINED, music from .wav files are played when
-; the system boots and shuts down.  The files are specified in the .INI file
-; under [ui]/startupMusic and [ui]/shutdownMusic, and are relative to
-; SP_USER_DATA\SOUNDS.
+; the system boots and shuts down. WavPlayInitSound reads the [sound] keys
+; 85_73_48_48_0_0 and 85_73_48_48_0_1, relative to its sounds directory.
 ; PLAY_WAV_FOR_ERRORS: Use WAV files for SST_NO_INPUT and SST_NO_HELP. The files
 ; must be specified in the geos.ini file. See WavPlayInitSound for details.
 ; If PLAY_WAV_FOR_ERRORS is NOT DEFINED, FM sounds will be played instead.
 ;-----------------------------------------------------------------------------
-; PLAY_STARTUP_SHUTDOWN_MUSIC	equ	FALSE
+PLAY_STARTUP_SHUTDOWN_MUSIC	equ	TRUE
 ; PLAY_WAV_FOR_ERRORS		equ	FALSE
 
 PCMCIA_SUPPORT			equ	FALSE

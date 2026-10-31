@@ -46,7 +46,7 @@ library compress noload
 library net noload
 #library	pcmcia noload
 library	sound
-# library	w a v
+library	wav
 
 #
 # Desktop-related things

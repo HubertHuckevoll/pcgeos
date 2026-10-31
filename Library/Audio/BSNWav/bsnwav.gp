@@ -36,13 +36,9 @@ type    library, single, c-api
 # Libraries: list which libraries are used by the application.
 #
 library geos
-# For playing the startup sound its necessary to exclude
-# the use of the UI-Library which is not available at startup :-(
-# No UI-Objects, No UserStandardDialog (replaced by SysNotify() )
-# ANSIC uses UI too
-#
-library ansic
-# library ui
+# Keep arithmetic and memory routines local: AnsiC imports Math and UI.
+resource WCC_TEXT fixed code read-only shared
+resource STRINGCODE fixed code read-only shared
 
 # resource STATUSBOXRESOURCE	ui-object
 # resource MONIKERRESOURCE	data object read-only
