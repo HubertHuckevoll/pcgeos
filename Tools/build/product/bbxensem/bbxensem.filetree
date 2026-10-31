@@ -381,6 +381,8 @@ DIR (ensemble) {
 		Library/Cards/cards{ec}.geo GFS LOCALPC
 		Library/ParentC/{dbcs}/parentc{ec}.geo GFS LOCALPC
 		Library/Wav/{dbcs}/wav{ec}.geo GFS LOCALPC
+		Library/Audio/BSNWav/bsnwav{ec}.geo GFS LOCALPC
+		Library/Audio/MixLib/mixlib{ec}.geo GFS LOCALPC
 		Library/MapHeap/{dbcs}/mapheap{ec}.geo GFS LOCALPC
 		Library/IDialC/{dbcs}/idialc{ec}.geo GFS LOCALPC
 		#Library/PhotoPC/photopc{ec}.geo GFS LOCALPC
@@ -644,7 +646,7 @@ DIR (ensemble) {
 #			Library/Pref/Preflf/preflf{ec}.geo GFS LOCALPC
 			Library/Pref/Preflo/preflo{ec}.geo GFS LOCALPC
 			Library/Pref/Prefmous/prefmous{ec}.geo GFS LOCALPC
-			Library/Pref/Prefsnd/prefsnd{ec}.geo GFS LOCALPC
+			Library/Pref/Prefsndn/prefsndn{ec}.geo GFS LOCALPC
 			Library/Pref/Preftd/preftd{ec}.geo GFS LOCALPC
 			Library/Pref/Prefvid/prefvid{ec}.geo GFS LOCALPC
 			Library/Pref/PrefPntC/prefpntc{ec}.geo GFS LOCALPC
@@ -770,6 +772,8 @@ DIR (ensemble) {
 #			} ELSE {
 				Driver/Sound/Standard/standard{ec}.geo GFS LOCALPC
 				Driver/Sound/SoundBlaster/sblaster{ec}.geo GFS LOCALPC
+				Driver/Sound/BSD16/bsd16{ec}.geo GFS LOCALPC
+				Driver/Sound/BSD8ST/bsd8st{ec}.geo GFS LOCALPC
 #			}
 		}
 
@@ -1497,6 +1501,9 @@ DIR (ensemble) {
 
 		}
 		DIR (Extras) {
+			Appl/Audio/Bsqp/bsqp{ec}.geo GFS LOCALPC
+			Appl/Audio/Mixer/mixer{ec}.geo GFS LOCALPC
+			Appl/Audio/SndChk/sndchk{ec}.geo GFS LOCALPC
 			Appl/Breadbox/Bnkr30/bnkr30{ec}.geo GFS LOCALPC
 			Appl/EduApps/OLiner/oliner{ec}.geo GFS LOCALPC
 			Appl/Install/Instf/instf.geo GFS LOCALPC

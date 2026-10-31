@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <alloca.h>
 #include <geos.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 
 /* Public source ABI uses packed GEOS records and large-model far pointers. */
 typedef char PcmFormatSize[sizeof(BSNPcmFormat) == 14 ? 1 : -1];

@@ -1,7 +1,7 @@
 /* File-backed pull API against the relocating heap and original core. */
 #define MP3_HEAP_ONLY
 #include "stream.c"
-#include <bsnaudio.h>
+#include <bsnwav.h>
 static FILE *files[3];
 static word inputChunk, failRead;
 static unsigned reads;

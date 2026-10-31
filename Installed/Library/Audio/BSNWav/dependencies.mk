@@ -60,7 +60,7 @@ subcode.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                initfile.h dirksnd.h bsnaudio.h
+                initfile.h dirksnd.h bsnwav.h
 library.obj \
 library.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -89,7 +89,7 @@ library.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/string.h library.h \
-                initfile.h dirksnd.h bsnaudio.h sound.h
+                initfile.h dirksnd.h bsnwav.h sound.h
 pcm.obj \
 pcm.eobj: stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -117,12 +117,12 @@ pcm.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 disk.h drive.h input.h char.h hwr.h win.h uDialog.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
-                parallDr.h hugearr.h fileEnum.h bsnaudio.h sound.h \
+                parallDr.h hugearr.h fileEnum.h bsnwav.h sound.h \
                 library.h dirksnd.h
 wav.obj \
 wav.eobj: 
 wav.obj \
-wav.eobj: bsnaudio.h geos.h file.h
+wav.eobj: bsnwav.h geos.h file.h
 mp3reader.obj \
 mp3reader.eobj: 
 mp3reader.obj \
@@ -132,7 +132,7 @@ mp3reader.eobj: MP3Dec/mp3int.h geos.h heap.h ec.h Ansi/string.h \
                 MP3Dec/core/pvmp3_audio_type_defs.h \
                 MP3Dec/core/pvmp3decoder_api.h MP3Dec/core/s_mp3bits.h \
                 MP3Dec/core/s_tmp3dec_file.h MP3Dec/core/s_tmp3dec_chan.h \
-                MP3Dec/core/s_huffcodetab.h bsnaudio.h file.h
+                MP3Dec/core/s_huffcodetab.h bsnwav.h file.h
 mp3api.obj \
 mp3api.eobj: MP3Dec/mp3int.h geos.h heap.h ec.h Ansi/string.h \
                 MP3Dec/mp3dec.h MP3Dec/core/pvmp3_framedecoder.h \

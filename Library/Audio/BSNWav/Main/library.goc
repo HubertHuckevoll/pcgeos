@@ -59,7 +59,7 @@ Secondarybuffer:
 
 #include <dirksnd.h>
 #include <file.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 #include <resource.h>
 
 @include "bsnwav.goh"

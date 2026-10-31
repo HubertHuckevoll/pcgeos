@@ -26,7 +26,7 @@ bsqp.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                bsnaudio.h dirksnd.h
+                bsnwav.h dirksnd.h
 process.obj \
 process.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -56,8 +56,7 @@ process.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                bsnaudio.h dirksnd.h Ansi/stdio.h Ansi/string.h \
-                initfile.h
+                bsnwav.h dirksnd.h Ansi/stdio.h Ansi/string.h initfile.h
 subcode.obj \
 subcode.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -87,7 +86,7 @@ subcode.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                bsnaudio.h dirksnd.h Ansi/stdio.h Ansi/string.h
+                bsnwav.h dirksnd.h Ansi/stdio.h Ansi/string.h
 uimain.obj \
 uimain.eobj: bsnwav.goh stdapp.goh object.goh ui.goh Objects/metaC.goh \
                 Objects/inputC.goh Objects/clipbrd.goh \
@@ -117,6 +116,6 @@ uimain.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h sound.h library.h \
-                bsnaudio.h dirksnd.h Ansi/stdio.h Ansi/string.h
+                bsnwav.h dirksnd.h Ansi/stdio.h Ansi/string.h
 
 bsqpEC.geo bsqp.geo : geos.ldf ui.ldf bsnwav.ldf ansic.ldf sound.ldf 

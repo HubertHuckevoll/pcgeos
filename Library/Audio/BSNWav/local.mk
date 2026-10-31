@@ -23,11 +23,6 @@
 ########################################################################
 
 
-# Keep the permanent geode name while the source directory is BSNAudio.
-GEODE = bsnwav
-# geos.mk reads revisions before this GEODE override.
-_PROTO != grev getproto $(INSTALL_DIR)/bsnwav.rev -P
-_REL != grev neweng $(INSTALL_DIR)/bsnwav.rev -R
 # The reference multiplier is compiled out for GEOS; do not link an empty
 # Watcom CodeView type stream (older glue versions cannot process it).
 OBJS := $(OBJS:Nmp3fxp.obj)

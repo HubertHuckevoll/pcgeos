@@ -1,4 +1,4 @@
-# Unified BSNAudio implementation
+# Unified BSNWav implementation
 
 ## Baseline (2026-10-29)
 
@@ -10,7 +10,7 @@ branch nor master is modified.
 The PCM baseline fails EC and NC linking: BSNWPlay calls the undefined
 BSNWStartPlay. The prerequisite fix calls the already declared and implemented
 BSNWAsmStartPlay in ASMTOOLS/asmtoolsManager.asm. No driver or DMA changes.
-After this fix aihelp.py build Library/Audio/BSNAudio succeeds in EC and NC.
+After this fix aihelp.py build Library/Audio/BSNWav succeeds in EC and NC.
 Existing warnings concern unused variables/parameters and unprototyped
 ProcCallFixedOrMovable_pascal calls.
 
@@ -42,7 +42,7 @@ Reproduction and retained logs are under ~/pcgeos-tools/bsnaudio/. Tests use
 TMPDIR=~/pcgeos-tools/bsnaudio/tmp and KEEP_TESTS=1. The baseline snapshot is
 an archive of only the decoder, converter and headers, not a branch merge.
 
-mkmf discovers source modules in Library/Audio/BSNAudio and generates the
+mkmf discovers source modules in Library/Audio/BSNWav and generates the
 Installed module Makefile; aihelp.py builds in Installed. pmake lib publishes
 the library definition to Installed/Include. The hand-maintained top-level
 Installed/Makefile has the bsnwav target and Wav, MixLib, Bsqp and SndChk
@@ -50,7 +50,7 @@ consumer dependencies. Subdirectory Makefiles and dependencies are generated.
 
 ## Common source contract
 
-CInclude/bsnaudio.h defines format-independent BSNPcmFormat and BSNPcmSource.
+CInclude/bsnwav.h defines format-independent BSNPcmFormat and BSNPcmSource.
 The far Pascal reader returns complete PCM frames, zero at EOF and 0xffff
 on error. Short positive reads are valid. The descriptor and opaque context
 remain valid and locked throughout blocking playback; decoder-owned movable
@@ -65,7 +65,7 @@ invocation uses a typed Pascal trampoline with the code pointer last.
 
 Run the PCM regression with:
 
-    TMPDIR=~/pcgeos-tools/bsnaudio/tmp perl Library/Audio/BSNAudio/Tests/check.pl
+    TMPDIR=~/pcgeos-tools/bsnaudio/tmp perl Library/Audio/BSNWav/Tests/check.pl
 
 It compiles the actual cache, conversion and playback loop routines against
 a synchronous DMA/GEOS host shim. Checks cover short reads, known/unknown
@@ -153,19 +153,18 @@ truncated final frames and format-change rejection. Both GEOS builds pass.
 
 ## Final source and resource organization
 
-Library/Audio/BSNAudio contains Main (library/legacy adapters), PCM, WAV,
+Library/Audio/BSNWav contains Main (library/legacy adapters), PCM, WAV,
 MP3Dec and Driver. The permanent name and library definition remain bsnwav.
 The top-level Installed/Makefile is a hand-maintained product graph; its
-bsnwav target now points at BSNAudio. Module Makefiles/dependencies are
+bsnwav target points at BSNWav. Module Makefiles/dependencies are
 regenerated with mkmf and pmake depend.
 
-mkmf derives GEODE from the directory name, so local.mk explicitly overrides
-it to bsnwav and reads the matching revision before linking. The historical
-Bsnwav.rev capitalization also prevented Unix revision discovery; it is now
-bsnwav.rev. This restores base protocol 1.6 (the original GP export tranche
-adds one minor, the new appended tranche adds another). Existing export
-positions are retained. The accidentally generated 0.x baseline protocol is
-not used for the final library.
+mkmf derives GEODE=bsnwav from the BSNWav directory name. The matching
+bsnwav.rev is read by the normal build rules; local.mk needs no geode or
+revision overrides. Base protocol 1.6 is retained (the original GP export
+tranche adds one minor, the new appended tranche adds another). Existing
+export positions are retained. The public PCM/reader header is bsnwav.h;
+bsnwav.goh supplies the legacy GOC declarations.
 
 The compiled-out reference multiplier remains in the source and host/DOS
 checks but is excluded from GEOS objects. Its empty Watcom CodeView type
@@ -182,7 +181,7 @@ Only geos and ansic are imported; no ui or mp3dec import is introduced.
 
 ## MP3Wav migration
 
-MP3Wav imports bsnwav protocol 1.8 and uses only the public bsnaudio.h
+MP3Wav imports bsnwav protocol 1.8 and uses only the public bsnwav.h
 pull reader. Its input/feed state is removed. Each queued step reads PCM,
 writes complete frames with the existing WAV writer, updates progress from
 the borrowed source's file position and force-queues continuation. The
@@ -382,7 +381,7 @@ frames, discarding the right channel at half rate. Both conversion paths now
 skip only after the final byte/sample of a frame. The targeted DOS EC/NC
 check covers partial reads, known/unknown lengths, native frame copies,
 16-to-8-bit mono/stereo reduction and stop/restart. Reproduce with PCM_WATCOM=1
-on Library/Audio/BSNAudio/Tests/check.pl; retained evidence is
+on Library/Audio/BSNWav/Tests/check.pl; retained evidence is
 ~/pcgeos-tools/bsnaudio/audit-integration.log. DMA and MP3 DSP code are unchanged.
 
 Playback requires a BestSound-compatible driver (BSD16 or BSD8ST). The

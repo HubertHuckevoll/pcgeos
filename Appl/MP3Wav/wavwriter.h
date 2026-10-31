@@ -2,7 +2,7 @@
 #define WAVWRITER_H
 #include <geos.h>
 #include <file.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 
 typedef struct {
     FileHandle fileH;

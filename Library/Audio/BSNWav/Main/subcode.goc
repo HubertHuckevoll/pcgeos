@@ -51,7 +51,7 @@ REVISION HISTORY:
 
 #include <dirksnd.h>
 #include <file.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 
 @include "bsnwav.goh"
 @include "Main/subcode.goh"

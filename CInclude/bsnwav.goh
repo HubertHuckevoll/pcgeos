@@ -15,7 +15,7 @@
 @include <stdapp.goh>
 #include <sound.h>
 #include <library.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 #include <dirksnd.h>
 
 @deflib bsnwav

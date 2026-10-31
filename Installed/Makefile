@@ -64,7 +64,7 @@ MAKESTUB:	.USE
 
 
 minimal		: minimalLoader minimalLibrary minimalDriver minimalAppl \
-		  otherEnsemble minimalStub
+		  otherEnsemble minimalStub bestsnd
 
 minimalLoader	: textLoader VGALoader
 
@@ -131,8 +131,7 @@ minimalAppl	: minimalGame minimalUtils minimalTools minimalSavers \
 		  bbxchat bbxmail \
 		  newsread geozip sclock trayapps\
  	  	  hmbase pdfvu bnkr30 ftpc \
- 	  	  instc instf grafcalc \
-		  bsqp
+		  instc instf grafcalc
 
 minimalUtils	: prefmgr
 
@@ -1685,7 +1684,7 @@ ndorest:  regis run legos 	\
 	  ms3 ntfat int8087 intx87 netware	\
 	  irlap loopback slip 		\
 	  vid_drivers	\
-	  impex_libs bestsnd mp3snd rfsd	\
+	  impex_libs bestsnd rfsd	\
 	  print_drivers extras taskmax more_prefs	\
 	  faxsendtd geosafari slides
 
@@ -1786,11 +1785,8 @@ Installed/Library/Pref/Prefsndn:		ui ansic config sound MAKELIB
 # BestSound - supplemental sound API.
 bestsnd	: bsnwav mixlib bsd16 bsd8st bsqp sndchk mixer
 
-mp3wav	: Installed/Appl/MP3Wav
-Installed/Appl/MP3Wav:			bsnwav ansic ui MAKEAPPL
-
-bsnwav	: Installed/Library/Audio/BSNAudio
-Installed/Library/Audio/BSNAudio:			kernel ansic MAKELIB
+bsnwav	: Installed/Library/Audio/BSNWav
+Installed/Library/Audio/BSNWav:			kernel ansic MAKELIB
 
 mixlib	: Installed/Library/Audio/MixLib
 Installed/Library/Audio/MixLib:			bsnwav sound ui ansic MAKELIB
@@ -1809,15 +1805,6 @@ Installed/Appl/Audio/SndChk:			bsnwav wav ansic ui MAKEAPPL
 
 mixer	: Installed/Appl/Audio/Mixer
 Installed/Appl/Audio/Mixer:			mixlib ui MAKEAPPL
-
-# MP3 - audio format decoder
-mp3snd	: kernel mp3 mp3play
-
-mp3	: Installed/Library/Audio/Mp3
-Installed/Library/Audio/Mp3:			math ansic MAKELIB
-
-mp3play	: Installed/Appl/Audio/Mp3Play
-Installed/Appl/Audio/Mp3Play:			ui sound mp3 MAKEAPPL
 
 # Extras apps
 extras : bounce spintext timer

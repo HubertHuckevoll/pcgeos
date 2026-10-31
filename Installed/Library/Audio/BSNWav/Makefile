@@ -3,7 +3,7 @@
 #
 # If you edit it, you will lose your changes, should it be regenerated.
 #
-GEODE           = bsnaudio
+GEODE           = bsnwav
 MAIN            = subcode.goc library.goc subcode.goh
 PCM             = pcm.goc
 WAV             = wav.goc

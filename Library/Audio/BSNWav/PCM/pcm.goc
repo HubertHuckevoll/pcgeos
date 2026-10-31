@@ -2,7 +2,7 @@
 @define BSNWAV_NO_UI
 @include <stdapp.goh>
 #include <resource.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 @include <bsnwav.goh>
 @include "Main/subcode.goh"
 

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 static FILE *inputP;
 static byte bytes[512];
 static word used, failRead;

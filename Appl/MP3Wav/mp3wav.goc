@@ -6,7 +6,7 @@
 #include <timer.h>
 #include <Ansi/stdio.h>
 #include <Ansi/string.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 
 #define CONVERT_PCM_BYTES 2048
 #include "wavwriter.h"

@@ -40,7 +40,7 @@ print $out <<'C';
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 #define CODE_RIFF 0x46464952UL
 #define FEA_FILE_ATTR 1
 #define FEA_NAME 2

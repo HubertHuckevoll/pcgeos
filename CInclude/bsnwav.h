@@ -1,6 +1,6 @@
 /* Pull-based PCM sources for PC/GEOS Ensemble (bsnwav.lib). */
-#ifndef __BSNAUDIO_H
-#define __BSNAUDIO_H
+#ifndef __BSNWAV_H
+#define __BSNWAV_H
 
 #include <geos.h>
 #include <file.h>

@@ -26,8 +26,8 @@ mp3wav.eobj: geos.h heap.h geode.h resource.h ec.h object.h lmem.h \
                 Objects/gInterC.h Objects/Text/tCommon.h stylesh.h \
                 driver.h thread.h print.h Internal/spoolInt.h serialDr.h \
                 parallDr.h hugearr.h fileEnum.h Ansi/stdio.h \
-                Ansi/string.h bsnaudio.h wavwriter.h
+                Ansi/string.h bsnwav.h wavwriter.h
 wavwriter.obj \
-wavwriter.eobj: wavwriter.h geos.h file.h bsnaudio.h Ansi/string.h
+wavwriter.eobj: wavwriter.h geos.h file.h bsnwav.h Ansi/string.h
 
 mp3wavEC.geo mp3wav.geo : geos.ldf ui.ldf ansic.ldf bsnwav.ldf 

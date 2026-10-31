@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <bsnaudio.h>
+#include <bsnwav.h>
 #define BSNW_PCM_READ_ERROR BSN_PCM_READ_ERROR
 #define BSNW_STATUS_PLAY_MEM 2
 #define NullOptr 0

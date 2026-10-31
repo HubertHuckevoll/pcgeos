@@ -1,6 +1,6 @@
 /* File-backed pull adapter; compressed input stays in the decoder's buffer. */
 #include "mp3int.h"
-#include <bsnaudio.h>
+#include <bsnwav.h>
 #ifdef __WATCOMC__
 #pragma code_seg("MP3ReaderCode")
 #endif
