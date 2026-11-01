@@ -3784,6 +3784,9 @@ Exit segment resource
 ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 shutdownSoundCategory		char	"ui", 0
 shutdownSoundKey			char	"startupShutdownSounds", 0
+shutdownWaveCategory		char	"sound", 0
+shutdownWaveKey			char	"85_73_48_48_0_1", 0
+shutdownWavePath		TCHAR	"sounds", 0
 endif
 
 
@@ -3912,37 +3915,6 @@ notYetDetachingSystem:
 						; UI process is gone.
 	mov	ds:[uiAckID], cx
 	movdw	ds:[uiAckOD], dxbp
-
-ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
-	; Play shutdown music.
-	;
-	push	ax, ds
-	;---------------------------------------------------------------------
-	;PLAY SHUTDOWN MUSIC
-		segmov	ds, cs
-		mov	si, offset shutdownSoundCategory
-		mov	cx, cs
-		mov	dx, offset shutdownSoundKey
-		call	InitFileReadBoolean
-		jc	playShutdownMusic	; Absent or invalid means enabled.
-		tst	ax
-		jz	shutdownMusicDone
-playShutdownMusic:
-	sub	sp, size GeodeToken
-	segmov	es, ss
-	mov	di, sp
-	mov	ax, GGIT_TOKEN_ID
-	mov	bx, handle 0
-	call	GeodeGetInfo
-	mov	cx, es
-	mov	dx, di
-	mov	bx, UIS_SHUTDOWN
-	call	WavPlayInitSound
-	add	sp, size GeodeToken
-shutdownMusicDone:
-	pop	ax, ds
-
-endif	; PLAY_STARTUP_SHUTDOWN_MUSIC
 
 ;done in GenFieldDetach
 if 0
@@ -4119,11 +4091,54 @@ noHWRLib:
 
 ifdef PLAY_STARTUP_SHUTDOWN_MUSIC
 	;
-	; If there was a shutdown sound playing, this will wait until it
-	; exits.  Otherwise, this should do nothing.
+	; Play synchronously after system detach; only shutdown waits here.
+	; Implemented with ChatGPT Codex, prompted by MeyerK
 	;
-	call	WavLockExclusive
-	call	WavUnlockExclusive
+		push	ds, es
+		segmov	ds, cs
+		mov	si, offset shutdownSoundCategory
+		mov	cx, cs
+		mov	dx, offset shutdownSoundKey
+		call	InitFileReadBoolean
+		jc	playShutdownMusic	; Absent or invalid means enabled.
+		tst	ax
+		jz	shutdownMusicDone
+playShutdownMusic:
+		mov	si, offset shutdownWaveCategory
+		mov	dx, offset shutdownWaveKey
+		mov	bp, InitFileReadFlags <IFCC_INTACT, 1, 0, 0>
+		call	InitFileReadString
+		jc	shutdownMusicDone
+		push	bx			; Filename block handle.
+		call	MemLock
+		jc	shutdownMusicFree
+		mov	es, ax			; Keep filename segment across path change.
+		call	FilePushDir
+		mov	dx, offset shutdownWavePath
+ifdef PRODUCT_NDO2000
+		mov	bx, SP_USER_DATA
+else
+		mov	bx, SP_PRIVATE_DATA
+endif
+		call	FileSetCurrentPath
+		jc	shutdownMusicPopDir
+		segmov	ds, es
+		clr	dx			; ds:dx = filename.
+		mov	al, FE_DENY_WRITE shl offset FAF_EXCLUDE or \
+			    FA_READ_ONLY shl offset FAF_MODE
+		call	FileOpen
+		jc	shutdownMusicPopDir
+		mov	bx, ax
+		call	PlaySoundFromFile
+		clr	al
+		call	FileClose
+shutdownMusicPopDir:
+		call	FilePopDir
+shutdownMusicFree:
+		pop	bx
+		call	MemFree
+shutdownMusicDone:
+		pop	ds, es
 endif	; PLAY_STARTUP_SHUTDOWN_MUSIC
 
 

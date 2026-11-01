@@ -87,14 +87,9 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 WavPlaySoundAndDestroyThread		proc	far
 
-	; WavPlayFile reserved wavSem before creating this thread.
+	; Implemented with ChatGPT Codex, prompted by MeyerK
+	; Serialize playback in this worker, not in the calling thread.
 	call	WavPlayFromWavFilePathBlock
-
-	; We won't give up the ghost here because we are A-number-1
-	; priority.  We should get the ThreadDestroy before being
-	; task switched.
-	;
-		call	WavUnlockExclusive
 
 	;    Set hair on fire and run
 	;
@@ -282,8 +277,6 @@ WavPlayFile		proc	far
 
 	call	MemUnlock
 
-	; Reserve playback before ThreadCreate so a waiter cannot overtake it.
-		call	WavLockExclusive
 	push	bx				;WavFilePathBlock handle
 	mov	al,PRIORITY_UI
 	mov	cx, segment Fixed
@@ -299,7 +292,6 @@ done:
 	ret
 
 threadCreateError:
-		call	WavUnlockExclusive
 	call	MemFree
 	jmp	done
 
@@ -375,7 +367,7 @@ WavPlayFromWavFilePathBlock		proc	far
 	;
 
 	mov	bx,ax				;.wav file handle
-		call	PlaySoundFromFileLow	; wavSem is already reserved
+		call	PlaySoundFromFile
 
 	;    Close that file
 	;
@@ -705,7 +697,7 @@ done:
 	ret
 
 	;
-	; PlaySoundFromFile or WavPlayFile already holds wavSem.
+	; PlaySoundFromFile already holds wavSem.
 	;
 playSound:
 
