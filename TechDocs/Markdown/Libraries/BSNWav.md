@@ -219,14 +219,14 @@ files named after each input with .pcm appended, for DMA-output comparison.
 Reference outputs and the exact invocation are retained under
 ~/pcgeos-tools/bsnaudio/phase8-reference and phase8-integration.log.
 
-QuickPlayer (Appl/Audio/Bsqp) and Library/Wav compile and link EC/NC against
-bsnwav 1.7 requirements, while the new MP3Wav requires 1.8. These compatibility builds preceded the QuickPlayer migration below.
+Audio Quick Player (Appl/Audio/Bsqp) and Library/Wav compile and link EC/NC against
+bsnwav 1.7 requirements, while the new MP3Wav requires 1.8. These compatibility builds preceded the Audio Quick Player migration below.
 The legacy Wav source and DMA driver routines are unchanged. Driver/Sound/BSD16/bsrecord.asm advertises a
 44100-Hz maximum through BSDRecGetMaxProperties; BSD8ST advertises 22050 Hz.
 BSNWPrepKS retains the 5001..44199-Hz source setup range. No 48-kHz playback
 or speculative resampler/buffer enlargement is introduced.
 
-QuickPlayer still creates its playback thread with a 3000-byte stack
+Audio Quick Player still creates its playback thread with a 3000-byte stack
 (Appl/Audio/Bsqp/Main/subcode.goc). No claim is made that this is sufficient
 for MP3: stack depth, worst decoder-call duration, active-resource paging,
 underruns and audible output require manual GEOS measurements. No decoder
@@ -318,7 +318,7 @@ thread and driver-loader handles:
 
 Final results:
 
-- Audio library, MP3Wav, QuickPlayer and legacy Wav: EC and NC build/link pass.
+- Audio library, MP3Wav, Audio Quick Player and legacy Wav: EC and NC build/link pass.
 - Original host corpus, trusted PCM accuracy, streaming, malformed-input,
   relocation, allocation/reset, new pull checks and real WAV conversion: pass.
 - Standalone Watcom DOS: 32 inputs with EC/NC settings and actual linked ESP
@@ -339,14 +339,14 @@ no GEOS session or audible playback was started.
 Remaining runtime work is explicit: audible WAV/MP3 output, Stop/Pause/Resume,
 repeated playback under GEOS memory pressure, code reloads, driver-specific
 conversions, allocation failures in the actual sound driver, worst decoder
-latency/underruns, peak 3000-byte QuickPlayer stack use, and live handle/leak
+latency/underruns, peak 3000-byte Audio Quick Player stack use, and live handle/leak
 counts. The host DMA shim does not replace those measurements. Midstream
 format changes, 48-kHz playback, more than 64 recovery steps per reader call,
 and playback sessions at or above 4 GiB of PCM are intentionally unsupported.
 
-## QuickPlayer WAV/MP3 client
+## Audio Quick Player WAV/MP3 client
 
-QuickPlayer now selects the WAV or MP3 reader by the file's RIFF signature,
+Audio Quick Player now selects the WAV or MP3 reader by the file's RIFF signature,
 then calls BSNPcmPlay and closes the reader on every exit. The existing
 playback thread, sound controls and repeat option are retained. No compressed
 feeding, second playback engine or extra thread is added. MP3Wav conversion
@@ -355,8 +355,8 @@ was confirmed working by the user before this client migration.
 A native file-selector callback accepts .WAV and .MP3 case-insensitively and
 retains directories. A semicolon-separated mask is not used: GEOS supports
 one filename mask. The selector subclass follows the SDK FSFilter pattern,
-including a statically stored virtual callback pointer. QuickPlayer now
-requires bsnwav protocol 1.8 and is labelled Audio QuickPlayer.
+including a statically stored virtual callback pointer. Audio Quick Player now
+requires bsnwav protocol 1.8 and is labelled Audio Quick Player.
 
 The source format and PCM length populate the existing display. Unknown MP3
 lengths show elapsed time without a remaining-time estimate. Time calculation
@@ -365,7 +365,7 @@ from starting after a slow reader Open and prevents another repeat; Pause is
 ignored until the driver is running. The existing 3000-byte playback stack
 is retained; actual GEOS stack headroom remains a manual measurement.
 
-QuickPlayer builds in EC and NC. Its one focused host check compiles the
+Audio Quick Player builds in EC and NC. Its one focused host check compiles the
 actual file filter, reader adapter and time formatter with platform shims:
 
     TMPDIR=~/pcgeos-tools/bsnaudio/tmp perl Appl/Audio/Bsqp/Tests/check.pl
@@ -387,6 +387,6 @@ on Library/Audio/BSNWav/Tests/check.pl; retained evidence is
 Playback requires a BestSound-compatible driver (BSD16 or BSD8ST). The
 ordinary SoundBlaster driver does not implement the BSW format handshake or
 NewWave DMA requests, so BSNWPreCheck returns BSNW_WRONG_DRIVER even for a
-valid 44.1-kHz file. QuickPlayer now reports that driver error separately
+valid 44.1-kHz file. Audio Quick Player now reports that driver error separately
 from unsupported format/rate and general read/memory errors. MP3Wav needs
 no compatible playback driver because it only decodes and writes PCM.

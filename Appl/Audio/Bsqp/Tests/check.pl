@@ -173,7 +173,7 @@ int main(void)
     bqDispStyle = BQ_TIME_DISP_NORMAL; bqAllBytes = BSN_PCM_LENGTH_UNKNOWN;
     bqSampleBytes = 16000*3600UL;
     RedrawTime(1); assert(!strcmp(drawn, "1:00:00"));
-    puts("QuickPlayer WAV/MP3 filter, shared playback lifecycle, cancel/probe and elapsed time: PASS");
+    puts("Audio Quick Player WAV/MP3 filter, shared playback lifecycle, cancel/probe and elapsed time: PASS");
     return 0;
 }
 C
@@ -181,4 +181,4 @@ close $out or die $!;
 system('gcc', '-std=c89', '-pedantic-errors', '-Werror=declaration-after-statement',
        '-I', $tmp, '-I', "$app/../../../CInclude", "$tmp/check.c", '-o', "$tmp/check") == 0
     or die 'compile failed';
-system("$tmp/check") == 0 or die 'QuickPlayer checks failed';
+system("$tmp/check") == 0 or die 'Audio Quick Player checks failed';

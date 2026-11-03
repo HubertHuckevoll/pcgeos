@@ -5,7 +5,7 @@
     Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
 PROJECT:    BestSound
-MODULE:     BestSound Quickplayer
+MODULE:     Audio Quick Player
 FILE:       process.goc
 
 AUTHOR:     Dirk Lausecker
@@ -86,7 +86,7 @@ DESCRIPTION:
     capabFlag = BSNWaveCheckDriver(0,5);
 
     // Overwrite old Filename in Primary
-    @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("QuickPlayer",VUM_NOW);/**/
+    @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("Audio Quick Player",VUM_NOW);/**/
 
     // detect Datafile
     if (launchBlock)
