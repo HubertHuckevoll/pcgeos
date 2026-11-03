@@ -20,4 +20,4 @@ library mixlib
 
 resource AppResource          ui-object
 resource Interface            ui-object
-
+resource MonikerRes           ui-object

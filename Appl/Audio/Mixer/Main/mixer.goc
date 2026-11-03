@@ -68,12 +68,22 @@ static void MixerDisableControls(Boolean disable);
 @visMoniker MixerMuteMoniker = "Mute";
 
 @object GenApplicationClass MixerApp = {
-    GI_visMoniker = list { @MixerTextMoniker };
+    GI_visMoniker = list {
+        @MixerTextMoniker, @MixerVGAMoniker, @MixerHGAMoniker,
+        @MixerEGAMoniker, @MixerHGCMoniker, @MixerCGAMoniker,
+        @MixerTCMoniker, @MixerTMMoniker, @MixerTCGAMoniker
+    };
     GI_comp = @MixerPrimary;
     gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) = @MixerPrimary;
 }
 
 @end AppResource;
+
+@start MonikerRes, data;
+
+@include "token.goh"
+
+@end MonikerRes;
 
 @start Interface;
 
