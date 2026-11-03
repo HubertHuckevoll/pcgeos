@@ -19,7 +19,7 @@
  *      1/6/92    josh      goc support
  *
  * DESCRIPTION:
- *	Hack to convert from a pcx icon to a .ui icon
+ *	Convert PCX and PNG images to GEOS bitmap/moniker source
  *
  * NOTES:
  *	This code no longer really supports negative Y offsets when not
@@ -40,6 +40,12 @@ static char *rcsid =
 #include    <ctype.h>
 #include    <assert.h>
 #include    <bswap.h>
+#include    <sys/stat.h>
+#include    <errno.h>
+#include    "lodepng.h"
+
+/* Implemented with ChatGPT Codex, prompted by MeyerK */
+#define CVTPCX_VERSION "2.0"
 
 typedef unsigned char byte;
 typedef unsigned short word;
@@ -451,6 +457,20 @@ byte            bitsPerPCXPixel = 0; /* number of bits per pixel in the cvx
 byte    	maskout = 255;	    /* Pixel whose presence indicates a 0
 				     * bit should be placed in the mask */
 
+/* Implemented with ChatGPT Codex, prompted by MeyerK */
+static struct {
+    LodePNGState state;
+    byte *pixelsP;
+    unsigned width, height;
+    Boolean active, hasAlpha;
+    byte palette[256 * 3];
+} pngImage;
+static int pngDepth = 0;
+static int pngMaskPixel = -1;
+static Boolean bitmapHasMask;
+static Boolean preserve4Palette = FALSE;
+static Boolean bitmap4Palette;
+
 char    	*rname = "App";     /* Name to give resource */
 char    	*mname = "";	    /* Name to give moniker */
 
@@ -691,6 +711,7 @@ IconCreate(int	    width,
 {
     int	    size;
     Icon    *retval;
+    size_t  dataSize;
 
     /*
      * Figure the number of bytes needed for the bitmap itself. If the
@@ -702,17 +723,21 @@ IconCreate(int	    width,
     size = ((hasMask ? (width+7)/8 : 0) + ((width * bitsPerPixel) + 7)/8) *
 	height;
 
-
     /*
      * Allocate everything we need in one block, so caller can just free
      * the Icon * and have it all go away.
      */
+    dataSize = (2 * size + sizeof(byte *) - 1) & ~(sizeof(byte *) - 1);
     retval = (Icon *)malloc(sizeof(Icon) +
-			    (((2 * size) + 3) & ~3) +	/* image data */
+			    dataSize +	/* image data */
 			    (2 *
 			     ((height + 1 +	    /* scanline pointers */
 			       (hasMask ? height : 0)) *
 			      sizeof(byte *))));
+    if (retval == (void*)0) {
+        fprintf(stderr, "out of memory creating bitmap\n");
+        exit(1);
+    }
 
     /*
      * Setup pointers for compacted bitmap (data follow the Icon structure)
@@ -733,7 +758,7 @@ IconCreate(int	    width,
      * Setup the scanline pointers for both bitmaps.
      */
     retval->compacted.scanlines =
-	(byte **)(retval->compacted.data + (((2 * size) + 3) & ~3));
+	(byte **)(retval->compacted.data + dataSize);
     retval->uncompacted.scanlines =
 	&retval->compacted.scanlines[height + (hasMask ? height : 0)];
 
@@ -1955,7 +1980,7 @@ readega(FILE	    *stream,
     		    lowPixel = MapPixelToResponder(*bp0&0x0f);
 		    *bp0 = lowPixel | (highPixel<<4);
 		}
-	    } else {
+            } else if (!bitmap4Palette) {
 		for (bp0 = pixels; bp0 < pp; bp0++) {
 		    byte highPixel, lowPixel;
 		    highPixel = MapPixelToGeosColorMap((*bp0&0xf0)>>4);
@@ -1980,6 +2005,250 @@ readega(FILE	    *stream,
     free(mask);
 
     return(result);
+}
+
+/*
+ * Implemented with ChatGPT Codex, prompted by MeyerK.
+ * ATTENTION: PNG input is limited to 64 MB and 16 million pixels. Raise
+ * these host-side limits only after checking decoder allocation bounds.
+ */
+#define PNG_MAX_FILE (64UL * 1024 * 1024)
+#define PNG_MAX_PIXELS (16UL * 1024 * 1024)
+
+/***********************************************************************
+ * ROUTINE:     ReadPNG
+ * DESCRIPTION: Decode one PNG, retaining indexed pixels and their palette.
+ * PARAMETERS:  Input stream positioned at the beginning of the file.
+ * RETURN:      TRUE on success; decoded image remains until file cleanup.
+ * STRATEGY:    Check dimensions before decoding; use RGBA for other types.
+ * REVISION HISTORY:
+ *      MeyerK  11/03/26        Added PNG input with ChatGPT Codex
+ ***********************************************************************/
+static Boolean
+ReadPNG(FILE *streamP)
+{
+    byte *fileP = (void*)0;
+    LodePNGColorMode *colorP;
+    long length;
+    unsigned error;
+    size_t i, bit;
+    Boolean ok = FALSE;
+
+    lodepng_state_init(&pngImage.state);
+    pngImage.active = TRUE;
+    if (fseek(streamP, 0, SEEK_END) != 0 ||
+        (length = ftell(streamP)) < 0 || (unsigned long)length > PNG_MAX_FILE ||
+        fseek(streamP, 0, SEEK_SET) != 0) {
+        fprintf(stderr, "%s: cannot read PNG or file exceeds 64 MB\n", inname);
+        goto done;
+    }
+    fileP = (byte *)malloc((size_t)length);
+    if (fileP == (void*)0 ||
+        fread(fileP, 1, (size_t)length, streamP) != (size_t)length) {
+        fprintf(stderr, "%s: cannot read PNG data\n", inname);
+        goto done;
+    }
+    error = lodepng_inspect(&pngImage.width, &pngImage.height,
+                            &pngImage.state, fileP, (size_t)length);
+    if (error == 0 && (pngImage.width > 32767 || pngImage.height > 32767 ||
+        pngImage.height == 0 ||
+        pngImage.width > PNG_MAX_PIXELS / pngImage.height)) {
+        fprintf(stderr, "%s: PNG exceeds 32767 per axis or 16M pixels\n", inname);
+        goto done;
+    }
+    colorP = &pngImage.state.info_png.color;
+    if (error == 0) {
+        pngImage.state.decoder.color_convert = (colorP->colortype != LCT_PALETTE);
+        error = lodepng_decode(&pngImage.pixelsP, &pngImage.width,
+                              &pngImage.height, &pngImage.state,
+                              fileP, (size_t)length);
+    }
+    if (error != 0) {
+        fprintf(stderr, "%s: PNG: %s\n", inname, lodepng_error_text(error));
+        goto done;
+    }
+    pngImage.hasAlpha = FALSE;
+    memset(pngImage.palette, 0, sizeof(pngImage.palette));
+    if (colorP->colortype == LCT_PALETTE) {
+        for (i = 0; i < colorP->palettesize; i++) {
+            memcpy(pngImage.palette + i * 3, colorP->palette + i * 4, 3);
+            if (colorP->palette[i * 4 + 3] < 128) {
+                pngImage.hasAlpha = TRUE;
+            }
+        }
+        for (i = 0; i < (size_t)pngImage.width * pngImage.height; i++) {
+            bit = i * colorP->bitdepth;
+            if (((pngImage.pixelsP[bit / 8] >>
+                 (8 - colorP->bitdepth - bit % 8)) &
+                 ((1U << colorP->bitdepth) - 1)) >= colorP->palettesize) {
+                fprintf(stderr, "%s: PNG palette index out of range\n", inname);
+                goto done;
+            }
+        }
+        bitsPerPCXPixel = colorP->palettesize > 16 ? 8 : 4;
+    } else {
+        memcpy(pngImage.palette, GeosColorTable, sizeof(pngImage.palette));
+        for (i = 0; i < (size_t)pngImage.width * pngImage.height; i++) {
+            if (pngImage.pixelsP[i * 4 + 3] < 128) {
+                pngImage.hasAlpha = TRUE;
+                break;
+            }
+        }
+        bitsPerPCXPixel = 4;
+    }
+    colorTable = pngImage.palette;
+    outputCustomPalette = !IsSameAsGeosPalette(colorTable);
+    ok = TRUE;
+done:
+    free(fileP);
+    return ok;
+}
+
+static byte
+NearestGeosColor(const byte *rgbP, int count)
+{
+    int i, delta, best = 766;
+    byte pixel = 0;
+
+    for (i = 0; i < count; i++) {
+        delta = abs(rgbP[0] - GeosColorTable[i * 3]) +
+                abs(rgbP[1] - GeosColorTable[i * 3 + 1]) +
+                abs(rgbP[2] - GeosColorTable[i * 3 + 2]);
+        if (delta < best) {
+            best = delta;
+            pixel = (byte)i;
+        }
+    }
+    return pixel;
+}
+
+/***********************************************************************
+ * ROUTINE:     ReadPNGIcon
+ * DESCRIPTION: Crop decoded PNG pixels into a GEOS bitmap and binary mask.
+ * PARAMETERS:  Output format and source origin, in pixels.
+ * RETURN:      Icon for the existing writers, or null on invalid output size.
+ * STRATEGY:    Pack rows and reuse the PCX tool's PackBits compressor.
+ *              PNG alpha below 128 is transparent; -m also masks indices.
+ * REVISION HISTORY:
+ *      MeyerK  11/03/26        Added PNG input with ChatGPT Codex
+ ***********************************************************************/
+static Icon *
+ReadPNGIcon(IconFormat *formatP, int xoffset, int yoffset)
+{
+    LodePNGColorMode *colorP = &pngImage.state.info_png.color;
+    Icon *iconP;
+    byte *rowP, *maskP, *pixelsP, *rgbaP;
+    byte pixel, rawPixel;
+    unsigned alpha;
+    size_t position, bit;
+    int x, y, rowBytes, maskBytes, pixelBytes, i, count;
+    long sourceX, sourceY;
+    Boolean indexed, opaque;
+
+    bitmapHasMask = pngImage.hasAlpha || pngMaskPixel >= 0 ||
+                    xoffset < 0 || yoffset < 0 ||
+                    (long)xoffset + formatP->width > pngImage.width ||
+                    (long)yoffset + formatP->height > pngImage.height;
+    if (formatP->width <= 0 || formatP->width > 32767 ||
+        formatP->height <= 0 || formatP->height > 32767 ||
+        xoffset < -32767 || xoffset > 32767 ||
+        yoffset < -32767 || yoffset > 32767) {
+        fprintf(stderr, "%s: invalid PNG output dimensions or offsets\n", inname);
+        return (void*)0;
+    }
+    maskBytes = bitmapHasMask ? (formatP->width + 7) / 8 : 0;
+    pixelBytes = (formatP->width * formatP->bpp + 7) / 8;
+    rowBytes = maskBytes + pixelBytes;
+    /* ATTENTION: reserve space below 64K for palette, gstring and moniker
+     * headers. Larger output needs exact chunk accounting or HugeBitmaps. */
+    if ((long)rowBytes * formatP->height > 64000) {
+        fprintf(stderr, "%s: PNG output bitmap exceeds 64000 bytes\n", inname);
+        return (void*)0;
+    }
+    rowP = (byte *)calloc(rowBytes, 1);
+    if (rowP == (void*)0) {
+        fprintf(stderr, "%s: out of memory creating PNG scanline\n", inname);
+        return (void*)0;
+    }
+    iconP = IconCreate(formatP->width, formatP->height, formatP->bpp, bitmapHasMask);
+    indexed = colorP->colortype == LCT_PALETTE;
+    count = formatP->bpp == 8 ? 256 : 16;
+    maskP = rowP;
+    pixelsP = rowP + maskBytes;
+
+    for (y = 0; y < formatP->height; y++) {
+        memset(rowP, 0, rowBytes);
+        sourceY = (long)yoffset + y;
+        for (x = 0; x < formatP->width; x++) {
+            sourceX = (long)xoffset + x;
+            if (sourceX < 0 || sourceY < 0 ||
+                sourceX >= pngImage.width || sourceY >= pngImage.height) {
+                continue;
+            }
+            position = (size_t)sourceY * pngImage.width + sourceX;
+            rawPixel = 0;
+            if (indexed) {
+                bit = position * colorP->bitdepth;
+                rawPixel = (byte)((pngImage.pixelsP[bit / 8] >>
+                           (8 - colorP->bitdepth - bit % 8)) &
+                           ((1U << colorP->bitdepth) - 1));
+                rgbaP = colorP->palette + rawPixel * 4;
+                pixel = (formatP->bpp == 8 || bitmap4Palette) ? rawPixel :
+                        NearestGeosColor(rgbaP, count);
+            } else {
+                rgbaP = pngImage.pixelsP + position * 4;
+                pixel = NearestGeosColor(rgbaP, count);
+            }
+            alpha = rgbaP[3];
+            opaque = alpha >= 128 &&
+                     (pngMaskPixel < 0 ||
+                      (indexed ? rawPixel : pixel) != pngMaskPixel);
+            if (!opaque) {
+                continue;
+            }
+            if (maskBytes != 0) {
+                maskP[x / 8] |= 0x80 >> (x % 8);
+            }
+            if (formatP->bpp == 1) {
+                /* PNG monochrome uses colors, never source palette positions. */
+                pixel = (flags & CVT_FORCE_INVERSE_MONO) ?
+                        !(rgbaP[0] == 255 && rgbaP[1] == 255 && rgbaP[2] == 255) :
+                        (rgbaP[0] == 0 && rgbaP[1] == 0 && rgbaP[2] == 0);
+                pixelsP[x / 8] |= pixel << (7 - x % 8);
+            } else if (formatP->bpp == 4) {
+                if (mapColorsForResponder) {
+                    pixel = responderMap[pixel];
+                    if (pixel == 0xff) {
+                        fprintf(stderr, "%s: PNG color cannot map to Nokia\n", inname);
+                        free(rowP);
+                        free(iconP);
+                        return (void*)0;
+                    }
+                }
+                pixelsP[x / 2] |= pixel << ((x & 1) ? 0 : 4);
+            } else {
+                pixelsP[x] = pixel;
+            }
+        }
+        if (maskBytes != 0) {
+            for (i = 0; i < maskBytes; i++) {
+                (void)BitmapAddByte(&iconP->uncompacted, maskP[i]);
+            }
+            iconP->cvalid = iconP->cvalid &&
+                           CompactBytes(maskP, maskBytes, &iconP->compacted);
+            BitmapEndScanline(&iconP->uncompacted);
+            BitmapEndScanline(&iconP->compacted);
+        }
+        for (i = 0; i < pixelBytes; i++) {
+            (void)BitmapAddByte(&iconP->uncompacted, pixelsP[i]);
+        }
+        iconP->cvalid = iconP->cvalid &&
+                       CompactBytes(pixelsP, pixelBytes, &iconP->compacted);
+        BitmapEndScanline(&iconP->uncompacted);
+        BitmapEndScanline(&iconP->compacted);
+    }
+    free(rowP);
+    return iconP;
 }
 
 
@@ -2044,7 +2313,7 @@ OutputCommentary(IconFormat *format, FILE *outf)
 	if (flags & CVT_ESP_MODE) {
 	    fprintf(outf, ";\n; Moniker generated from %s", inname);
 	    if (maskout != 255) {
-		fprintf(outf, " with pixel %d masked out\n;\n");
+		fprintf(outf, " with pixel %d masked out\n;\n", maskout);
 	    } else {
 		fputs("\n;\n", outf);
 	    }
@@ -2156,7 +2425,9 @@ OpenChunk(IconFormat *format, int yoffset, int size, FILE *outf)
 	char	*drawStr, *moveStr, *drawCpStr;
 	int bitmapSize;
 
-	if (format->bpp == 8) {
+        if (bitmap4Palette) {
+            bitmapSize = 70;
+        } else if (format->bpp == 8) {
 	    if (outputCustomPalette) {
 		bitmapSize = 790;
 	    } else {
@@ -2191,7 +2462,8 @@ OpenChunk(IconFormat *format, int yoffset, int size, FILE *outf)
 		    fputs("\tcolor = gray1;\n", outf);
 		    break;
 		default:
-		    fprintf(outf, "\tcolor = color%d;\n", format->bpp);
+		    fprintf(outf, "\tcolor = color%d;\n",
+                            bitmap4Palette ? 8 : format->bpp);
 		    break;
 		}
 		fprintf(outf, "\tcachedSize = %d, %d;\n", format->width,
@@ -2291,28 +2563,31 @@ OutputHeader(IconFormat *format,
 {
     char *bitmapStr, *packbitsStr, *formatStr,
 	 *paletteStr2, *paletteStr3, *paletteStr4;
+    Boolean complexBitmap = format->bpp == 8 || bitmap4Palette;
+    Boolean outputPalette = bitmap4Palette || outputCustomPalette;
+    int paletteEntries = bitmap4Palette ? 16 : 256;
 
     if (flags & (CVT_UIC_MODE | CVT_ESP_MODE)) {
 
-	if (maskout != 255 && format->bpp == 4) {
+	if (bitmapHasMask && !complexBitmap) {
 	    bitmapStr = "\t\tBitmap <%d,%d,%s,%s or mask BMT_MASK>\n";
-	} else if (format->bpp != 8) {
+	} else if (!complexBitmap) {
 	    bitmapStr = "\t\tBitmap <%d,%d,%s,%s>\n";
-	} else { /* 8 bit color */
-            if (maskout != 255) {
-		if (outputCustomPalette) {
+	} else { /* Complex bitmap, with optional palette. */
+            if (bitmapHasMask) {
+		if (outputPalette) {
 		    bitmapStr = "\t\tCBitmap <<%d,%d,%s,%s or mask BMT_MASK or mask BMT_PALETTE or mask BMT_COMPLEX>, 0, %d, 0, %d, %d, 72, 72>\n";
 		} else {
 		    bitmapStr = "\t\tCBitmap <<%d,%d,%s,%s or mask BMT_MASK or mask BMT_COMPLEX>, 0, %d, 0, %d, %d, 72, 72>\n";
 		}
             } else {
-		if (outputCustomPalette) {
+		if (outputPalette) {
 		    bitmapStr = "\t\tCBitmap <<%d,%d,%s,%s or mask BMT_PALETTE or mask BMT_COMPLEX>, 0, %d, 0, %d, %d, 72, 72>\n";
 		} else {
 		    bitmapStr = "\t\tCBitmap <<%d,%d,%s,%s or mask BMT_COMPLEX>, 0, %d, 0, %d, %d, 72, 72>\n";
 		}
             }
-	    paletteStr2 = "\t\tword\t256\n";
+	    paletteStr2 = "\t\tword\t%d\n";
 	    paletteStr3 = "\t\tRGBValue < 0x%02x, 0x%02x, 0x%02x >\n";
 	    paletteStr4 = "\n";
 	}
@@ -2329,19 +2604,19 @@ OutputHeader(IconFormat *format,
 
     } else {
 
-	if (maskout != 255 && format->bpp == 4) {
+	if (bitmapHasMask && !complexBitmap) {
 	    bitmapStr = "\t\tBitmap (%d,%d,%s,(%s|BMT_MASK)),\n";
-	} else if (format->bpp != 8) {
+	} else if (!complexBitmap) {
 	    bitmapStr = "\t\tBitmap (%d,%d,%s,%s),\n";
-	} else { /* 8 bit color */
-            if (maskout != 255) {
-		if (outputCustomPalette) {
+	} else { /* Complex bitmap, with optional palette. */
+            if (bitmapHasMask) {
+		if (outputPalette) {
 		    bitmapStr = "\t\tBitmap (%d, %d, %s,(%s | BMT_MASK | BMT_PALETTE | BMT_COMPLEX)), 0,0, %d,%d, 0,0, %d,%d, %d,%d, 72,0, 72,0,\n";
 		} else {
 		    bitmapStr = "\t\tBitmap (%d, %d, %s,(%s | BMT_MASK | BMT_COMPLEX)), 0,0, %d,%d, 0,0, %d,%d, %d,%d, 72,0, 72,0,\n";
 		}
             } else {
-		if (outputCustomPalette) {
+		if (outputPalette) {
 		    bitmapStr = "\t\tBitmap (%d, %d, %s,(%s | BMT_PALETTE | BMT_COMPLEX)), 0,0, %d,%d, 0,0, %d,%d, %d,%d, 72,0, 72,0,\n";
 		} else {
 		    bitmapStr = "\t\tBitmap (%d, %d, %s,(%s | BMT_COMPLEX)), 0,0, %d,%d, 0,0, %d,%d, %d,%d, 72,0, 72,0,\n";
@@ -2367,20 +2642,21 @@ OutputHeader(IconFormat *format,
 	break;
 
     case 4:
-	formatStr = "BMF_4BIT";
-	fprintf(outf, bitmapStr, format->width,	height,	packbitsStr, formatStr);
-	break;
-
+        if (!bitmap4Palette) {
+            fprintf(outf, bitmapStr, format->width, height, packbitsStr, "BMF_4BIT");
+            break;
+        }
+        /* FALLTHRU: custom 4-bit palettes use the same complex header. */
     case 8:
     {
 	int i;
 	int dataOffset;
 	byte *colorEntry = colorTable;
 
-	formatStr = "BMF_8BIT";
+	formatStr = bitmap4Palette ? "BMF_4BIT" : "BMF_8BIT";
 
-	if (outputCustomPalette) {
-	    dataOffset = 790;
+	if (outputPalette) {
+	    dataOffset = 20 + 2 + paletteEntries * 3;
 	} else {
 	    dataOffset = 20;
 	}
@@ -2403,10 +2679,15 @@ OutputHeader(IconFormat *format,
 		    20, 0);
 	}
 
-	if (outputCustomPalette) {
-	    fprintf(outf, paletteStr2, 256 & 0xff, (256 >> 8) & 0xff);
+	if (outputPalette) {
+            if (flags & (CVT_UIC_MODE | CVT_ESP_MODE)) {
+                fprintf(outf, paletteStr2, paletteEntries);
+            } else {
+                fprintf(outf, paletteStr2, paletteEntries & 0xff,
+                        (paletteEntries >> 8) & 0xff);
+            }
 
-	    for (i = 0; i < 256; i++) {
+	    for (i = 0; i < paletteEntries; i++) {
 		fprintf(outf,
 			paletteStr3,
 			colorEntry[0], colorEntry[1], colorEntry[2]);
@@ -2522,9 +2803,9 @@ ExitResource(IconFormat *format, FILE *outf)
 /***********************************************************************
  *				ConvertFormat
  ***********************************************************************
- * SYNOPSIS:	    Convert an icon format from PCX to ours.
+ * SYNOPSIS:	    Convert an icon format from PCX or PNG to ours.
  * CALLED BY:	    main
- * RETURN:	    nothing
+ * RETURN:	    TRUE on success, FALSE on conversion or output error
  * SIDE EFFECTS:    stuff is written to the output file.
  *
  * STRATEGY:
@@ -2535,7 +2816,7 @@ ExitResource(IconFormat *format, FILE *outf)
  *	ardeb	12/11/92	Initial Revision
  *
  ***********************************************************************/
-static void
+static Boolean
 ConvertFormat(FILE  	 *stream,  /* Input stream, positioned at start of
 				    * image data */
 	      FILE  	 *outf,    /* Output stream */
@@ -2551,15 +2832,36 @@ ConvertFormat(FILE  	 *stream,  /* Input stream, positioned at start of
     int	    	height;		/* Actual height, after adjusting for
 				 * negative y offset and our ability to
 				 * use GSRelMoveTo or what have you */
+    IconFormat selected = *format;
+
+    format = &selected;
+    if (format->bpp == 0) {
+        format->bpp = pngImage.active && pngDepth != 0 ?
+                      pngDepth : bitsPerPCXPixel;
+    }
+    bitmapHasMask = maskout != 255 && format->bpp > 1;
+    bitmap4Palette = preserve4Palette && format->bpp == 4;
+    if (bitmap4Palette &&
+        (long)(((format->width + 1) / 2) +
+               (bitmapHasMask ? (format->width + 7) / 8 : 0)) *
+               format->height > 64000) {
+        fprintf(stderr, "%s: output bitmap exceeds 64000 bytes\n", inname);
+        return FALSE;
+    }
 
     /*
      * Convert the thing from the file, as we need the size in the
      * prologue...
      */
-    if (bitsPerPCXPixel < 8) {
+    if (pngImage.active) {
+        icon = ReadPNGIcon(format, xoffset, yoffset);
+    } else if (bitsPerPCXPixel < 8) {
 	icon = readega(stream, format, xoffset, yoffset);
     } else {
 	icon = readvga(stream, format, xoffset, yoffset);
+    }
+    if (icon == (void*)0) {
+        return FALSE;
     }
 
     /*
@@ -2595,7 +2897,7 @@ ConvertFormat(FILE  	 *stream,  /* Input stream, positioned at start of
     /*
      * Now open the chunk.
      */
-    height = OpenChunk(format, yoffset, size, outf);
+    height = OpenChunk(format, pngImage.active ? 0 : yoffset, size, outf);
 
     /*
      * Now put out the bitmap header itself.
@@ -2618,12 +2920,17 @@ ConvertFormat(FILE  	 *stream,  /* Input stream, positioned at start of
     ExitResource(format, outf);
 
     free(icon);
+    return !ferror(outf);
 }
 
 volatile void
 usage(void)
 {
+    fprintf(stderr, "cvtpcx " CVTPCX_VERSION "\n\n");
     fprintf(stderr, "\
+cvtpcx converts PCX and PNG images to GEOS GOH, UIC or ESP source.\n\
+Input formats are detected by signature; existing PCX options still apply.\n\
+\n\
 We accept as many arguments as desired, with the conversion parameters being\n\
 specified before any file to be converted. \n\
 \n\
@@ -2633,6 +2940,17 @@ format is known by its abbreviation, which is used for the -d option (see\n\
 below), forming the name of the moniker produced for a particular grid\n\
 position, and forming the name of the resource in which the moniker is\n\
 placed.\n\
+\n\
+PNG input:\n\
+    Indexed images with at most 16 palette entries default to 4-bit GEOS\n\
+    colors; larger palettes default to 8-bit, retaining source indices and\n\
+    colors. Other PNGs default to 4-bit. -c4 or -c8 selects PNG color depth;\n\
+    RGB images use nearest GEOS colors without dithering.\n\
+    Alpha below 128 is transparent; other alpha values are opaque. Padding\n\
+    is transparent. -m also masks a source palette index (0-255), or a mapped\n\
+    GEOS index for RGB input. PNG -b/-B test black/white by RGB color.\n\
+    PNG input is limited to 64 MB, 32767 per axis and 16M pixels.\n\
+    Uncompressed PNG output bitmap data is limited to 64000 bytes.\n\
 \n\
 The defined formats are:\n\
     Abbr  Color  Aspect        Size      Style  Width  Height\n\
@@ -2662,7 +2980,15 @@ around the grid as a whole. Three grids exist, currently. They are:\n\
     -z	    TC, TM, TCGA\n\
 \n\
 The following parameters are useful for both grid and non-grid conversions:\n\
+    -V or --version     Display the cvtpcx version and exit.\n\
     -G                  Produce goc output instead of uic \n\
+    -E                  Produce ESP output instead of uic \n\
+    -c4 or -c8          Select PNG color depth (PCX input is unchanged)\n\
+    -p                  Preserve a custom 16-color palette in 4-bit output.\n\
+                        Accepts indexed PNG with at most 16 palette entries\n\
+                        and 4-bit PCX. Implies -2; incompatible with -c8/-N.\n\
+                        Monochrome grid entries remain monochrome. No RGB\n\
+                        color reduction is performed. Default output is unchanged.\n\
 \n");
     fprintf(stderr, "\
     -g			Do not put resulting bitmaps in gstrings. The bitmap\n\
@@ -2672,7 +2998,7 @@ The following parameters are useful for both grid and non-grid conversions:\n\
     -j			Only output the gstring (don't create a moniker or\n\
 			put the gstring in a chunk)\n\
 \n\
-    -2			Use 2.0 constants in the resulting gstring/bitmap.\n\
+    -2			Use GEOS 2.0 constants in the resulting gstring/bitmap.\n\
 \n\
     -f			Uses GrFillBitmap instead of GrDrawBitmap for all\n\
 			monochrome bitmaps.  Also implies the use of 2.0\n\
@@ -2769,6 +3095,23 @@ The following parameters are useful only for converting single icons:\n\
     exit(1);
 }
 
+/* Validate host-tool options before bitmap allocation or coordinate arithmetic. */
+static int
+ReadNumber(const char *optionP, int minimum, int maximum)
+{
+    char *endP;
+    long value;
+
+    errno = 0;
+    value = strtol(optionP + 2, &endP, 10);
+    if (errno == ERANGE || endP == optionP + 2 || *endP != '\0' ||
+        value < minimum || value > maximum) {
+        fprintf(stderr, "invalid numeric option: %s\n", optionP);
+        exit(1);
+    }
+    return (int)value;
+}
+
 
 /***********************************************************************
  *				main
@@ -2803,7 +3146,7 @@ The following parameters are useful only for converting single icons:\n\
  *	ardeb	1/ 6/90		Initial Revision
  *
  ***********************************************************************/
-void
+int
 main(int argc, char **argv)
 {
     int	    	ac;
@@ -2813,6 +3156,12 @@ main(int argc, char **argv)
     char	*outname;
     FILE	*outf;
     char    	*cp;
+    FILE *stream, *destinationP;
+    byte signature[8], copyBuffer[4096];
+    size_t copied;
+    int status = 0;
+    Boolean converted;
+    struct stat inputStat, outputStat;
     static IconFormat	format = {
 	"",
 	0,
@@ -2831,25 +3180,42 @@ main(int argc, char **argv)
     }
 
     for (ac = 1; ac < argc; ac++) {
+        if (strcmp(argv[ac], "--version") == 0 || strcmp(argv[ac], "-V") == 0) {
+            puts("cvtpcx " CVTPCX_VERSION);
+            return 0;
+        }
 	if (argv[ac][0] == '-') {
 	    switch(argv[ac][1]) {
 	    case 't':
 		flags |= CVT_TOKEN_MODE;
 		break;
+            case 'p':
+                preserve4Palette = TRUE;
+                flags |= CVT_TWO_POINT_OH;
+                break;
+            case 'c':
+                if (strcmp(&argv[ac][2], "4") != 0 &&
+                    strcmp(&argv[ac][2], "8") != 0) {
+                    fprintf(stderr, "PNG color depth must be -c4 or -c8\n");
+                    return 1;
+                }
+                pngDepth = atoi(&argv[ac][2]);
+                break;
 	    case 'm':
-		maskout = atoi(&argv[ac][2]);
+		pngMaskPixel = ReadNumber(argv[ac], 0, 255);
+                maskout = (byte)pngMaskPixel;
 		break;
 	    case 'w':
-		format.width = atoi(&argv[ac][2]);
+		format.width = ReadNumber(argv[ac], 1, 32767);
 		break;
 	    case 'h':
-		format.height = atoi(&argv[ac][2]);
+		format.height = ReadNumber(argv[ac], 1, 32767);
 		break;
 	    case 'x':
-		xoffset = atoi(&argv[ac][2]);
+		xoffset = ReadNumber(argv[ac], -32767, 32767);
 		break;
 	    case 'y':
-		yoffset = atoi(&argv[ac][2]);
+		yoffset = ReadNumber(argv[ac], -32767, 32767);
 		break;
 	    case 'g':
 		flags |= CVT_NO_GSTRING|CVT_NO_MONIKER;
@@ -2967,10 +3333,15 @@ main(int argc, char **argv)
 	    /*
 	     * Must be a file for us to convert...
 	     */
-	    FILE    *stream = fopen(argv[ac], "rb");
+	    stream = fopen(argv[ac], "rb");
+            outf = (void*)0;
+            outname = (void*)0;
+            pngImage.active = FALSE;
+            colorTable = header.PCXH_palette;
 
 	    if (stream == NULL) {
 		perror(argv[ac]);
+                status = 1;
 		continue;
 	    }
 
@@ -3005,25 +3376,42 @@ main(int argc, char **argv)
 	    }
 
 
-	    /*
-	     * Read in the header and make sure it makes sense.
-	     */
-	    if (fread(&header, sizeof(header), 1, stream) != 1) {
-		fprintf(stderr, "no header on %s\n", argv[ac]);
-	    file_err:
-		(void)fclose(stream);
-		continue;
-	    } else if (header.PCXH_id != 10) {
-		fprintf(stderr, "header id wrong for %s\n", argv[ac]);
-		goto file_err;
-	    } else if (header.PCXH_planes != 4 &&
-		       header.PCXH_planes * header.PCXH_bitsPerPixel != 8)
-	    {
-		fprintf(stderr,
-			"Only able to convert 4-bit color or 8-bit color "
-			"bitmaps at this time. Sorry.\n");
-		goto file_err;
-	    }
+            /* Detect the input by signature, independent of its filename. */
+            if (fread(signature, 1, sizeof(signature), stream) != sizeof(signature) ||
+                fseek(stream, 0, SEEK_SET) != 0) {
+                fprintf(stderr, "no image header on %s\n", inname);
+                goto file_err;
+            }
+            if (memcmp(signature, "\211PNG\r\n\032\n", 8) == 0) {
+                if (!ReadPNG(stream)) {
+                    goto file_err;
+                }
+            } else {
+                if (fread(&header, sizeof(header), 1, stream) != 1 ||
+                    header.PCXH_id != 10) {
+                    fprintf(stderr, "%s: expected PCX or PNG header\n", inname);
+                    goto file_err;
+                }
+                if (!((header.PCXH_planes == 4 && header.PCXH_bitsPerPixel == 1) ||
+                      (header.PCXH_planes == 1 && header.PCXH_bitsPerPixel == 8))) {
+                    fprintf(stderr, "%s: PCX must use 4-bit or 8-bit indexed color\n", inname);
+                    goto file_err;
+                }
+                bitsPerPCXPixel = header.PCXH_planes * header.PCXH_bitsPerPixel;
+            }
+
+            /* ATTENTION: -p preserves existing palettes only. RGB reduction
+             * or palettes over 16 entries need a separate quantizer. */
+            if (preserve4Palette &&
+                (mapColorsForResponder || pngDepth == 8 ||
+                 (pngImage.active ?
+                  (pngImage.state.info_png.color.colortype != LCT_PALETTE ||
+                   pngImage.state.info_png.color.palettesize > 16) :
+                  bitsPerPCXPixel != 4))) {
+                fprintf(stderr, "%s: -p requires indexed PNG with at most 16 "
+                        "palette entries or 4-bit PCX; incompatible with -c8/-N\n", inname);
+                goto file_err;
+            }
 
 	    cp = index(argv[ac], '.');
 
@@ -3042,24 +3430,36 @@ main(int argc, char **argv)
 			cp = argv[ac] + strlen(argv[ac]);
 		    }
 		    outname = (char *)malloc(cp-argv[ac] + 10);
-		    sprintf(outname, "%.*s.%s", cp-argv[ac], argv[ac],
+		    sprintf(outname, "%.*s.%s", (int)(cp-argv[ac]), argv[ac],
 			    FILE_SUFFIX);
 		    /*
 		     * Define the moniker name while we're at it
 		     */
-		    mname = (char *)malloc(cp-argv[ac]);
-		    sprintf(mname, "%.*s", cp-argv[ac], argv[ac]);
+		    mname = (char *)malloc(cp-argv[ac] + 1);
+		    sprintf(mname, "%.*s", (int)(cp-argv[ac]), argv[ac]);
 		}
 	    } else {
 		outname = ofile;
 	    }
-	    outf = fopen(outname, "wb");   /* for writing out */
+	    /* Do not truncate an input image or publish failed conversions. */
+            if (strcmp(inname, outname) == 0 ||
+                (stat(inname, &inputStat) == 0 && stat(outname, &outputStat) == 0 &&
+                 inputStat.st_ino != 0 && inputStat.st_ino == outputStat.st_ino &&
+                 inputStat.st_dev == outputStat.st_dev)) {
+                fprintf(stderr, "%s: output is the input image\n", outname);
+                goto file_err;
+            }
+            outf = tmpfile();
 
 	    if (outf == NULL) {
 		perror(outname);
 		goto file_err;
 	    }
 	    fprintf(stderr, "Input parameters for %s:\n", argv[ac]);
+            if (pngImage.active) {
+                fprintf(stderr, "\tPNG: %u x %u pixels\n",
+                        pngImage.width, pngImage.height);
+            } else {
 	    fprintf(stderr,
 		    "\t%d bits per pixel, %d planes, %d bytes per plane\n",
 		    header.PCXH_bitsPerPixel, header.PCXH_planes,
@@ -3079,24 +3479,24 @@ main(int argc, char **argv)
 		    swaps(header.PCXH_dispXRes),
 		    swaps(header.PCXH_dispYRes));
 
-	    bitsPerPCXPixel = header.PCXH_planes * header.PCXH_bitsPerPixel;
+            }
+
 
 	    if (grid != NULL) {
 		int 	i;
 
 		for (i = 0; i < gridlen; i++) {
-		    if (grid[i].format->bpp == 0) {
-			grid[i].format->bpp = header.PCXH_planes *
-			                     header.PCXH_bitsPerPixel;
-		    }
 		    if (!(grid[i].format->ignore)) {
 			/*
 			 * Format not being ignored, so convert it.
 			 */
-			ConvertFormat(stream, outf,
+			converted = ConvertFormat(stream, outf,
 				      xoffset + grid[i].xOffset,
 				      yoffset + grid[i].yOffset,
 				      grid[i].format);
+                        if (!converted) {
+                            goto file_err;
+                        }
 			/*
 			 * Rewind the input file to the start of the image
 			 * data again.
@@ -3110,23 +3510,59 @@ main(int argc, char **argv)
 		 * local variable. The CVT_NO_RESOURCES flag is set, so
 		 * we can just do this...
 		 */
-		if (format.bpp == 0) {
-		    format.bpp = header.PCXH_planes * header.PCXH_bitsPerPixel;
-		}
-		ConvertFormat(stream, outf, xoffset, yoffset, &format);
+                if (!ConvertFormat(stream, outf, xoffset, yoffset, &format)) {
+                    goto file_err;
+                }
 	    }
 
-	    fclose(outf);
-
-	    if (!ofile) {
-		free(outname);
-	    } else {
-		ofile = NULL;
-		mname = NULL;
-	    }
-	    fclose(stream);
+            if (fflush(outf) != 0 || fseek(outf, 0, SEEK_SET) != 0) {
+                fprintf(stderr, "%s: cannot stage output\n", outname);
+                goto file_err;
+            }
+            destinationP = fopen(outname, "wb");
+            if (destinationP == (void*)0) {
+                perror(outname);
+                goto file_err;
+            }
+            converted = TRUE;
+            while ((copied = fread(copyBuffer, 1, sizeof(copyBuffer), outf)) != 0) {
+                if (fwrite(copyBuffer, 1, copied, destinationP) != copied) {
+                    converted = FALSE;
+                    break;
+                }
+            }
+            if (ferror(outf)) {
+                converted = FALSE;
+            }
+            if (fclose(destinationP) != 0) {
+                converted = FALSE;
+            }
+            if (!converted) {
+                fprintf(stderr, "%s: error writing output\n", outname);
+                goto file_err;
+            }
+            goto file_done;
+        file_err:
+            status = 1;
+        file_done:
+            if (outf != (void*)0) {
+                fclose(outf);
+            }
+            if (!ofile) {
+                free(outname);
+            } else {
+                ofile = (void*)0;
+                mname = (void*)0;
+            }
+            if (pngImage.active) {
+                free(pngImage.pixelsP);
+                pngImage.pixelsP = (void*)0;
+                lodepng_state_cleanup(&pngImage.state);
+                pngImage.active = FALSE;
+            }
+            fclose(stream);
 	}
     }
 
-    exit(0);
+    return status;
 }

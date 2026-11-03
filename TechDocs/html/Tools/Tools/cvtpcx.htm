@@ -9,11 +9,11 @@
 <LINK REL="STYLESHEET" HREF="../../docHelpers/style.css">
 <LINK REV="MADE" HREF="mailto:doc-feedback@geoworks.com">
 
-<TITLE>cvtpcx</TITLE></HEAD>
+<TITLE>cvtpcx 2.0</TITLE></HEAD>
 <BODY BGCOLOR="#ffffff">
 <H1 CLASS="sectionTitle">
 <A HREF="index.htm">Using Tools</A>: 16 
-cvtpcx</H1>
+cvtpcx 2.0</H1>
 <!-- This blob is a bunch of standard links: up, back, index, etc. -->
 <!-- up to top -->|&nbsp;<A HREF="../../index.htm"><IMG SRC="../../docImages/upTop.gif" ALT="Up: " BORDER="0">GEOS SDK TechDocs</A>
 <!-- up to parent -->| <A HREF="index.htm"><IMG SRC="../../docImages/up.gif" ALT="Up" BORDER="0"></A>
@@ -23,9 +23,9 @@ cvtpcx</H1>
 <!-- That blob was a bunch of standard links: up, back, index, etc. -->
 <P>
 
-<CODE> cvtpcx.exe</CODE> is an application that converts PCX graphics files to the GEOS icon format, either as a .ui or a .goh file.  There are two kinds of possible conversions. The PCX file may be converted to a single icon resource. Or the PCX file may contain the same icon image in a variety of different formats arranged in a predefined grid arrangement. The cvtpcx utility will convert each of these formats into its own icon resource within a single .goh or .ui file. For more information, refer to the bottom of this document. 
+<CODE>cvtpcx.exe</CODE> version 2.0 converts PCX and PNG graphics files to the GEOS icon format, either as a .ui or a .goh file.  There are two kinds of possible conversions. The input file may be converted to a single icon resource. Or the input file may contain the same icon image in a variety of different formats arranged in a predefined grid arrangement. The cvtpcx utility will convert each of these formats into its own icon resource within a single .goh or .ui file. For more information, refer to the bottom of this document.
 <P>
-The source PCX file may have at most a 16-color (4 bit) color lookup table. Use a program like Paint Shop Pro to reduce the number of colors to 2-16 colors and save it in PCX format.
+PCX input supports 4-bit and 8-bit indexed color. Version 2.0 adds PNG input, PNG output-depth selection with <STRONG>-c4</STRONG> or <STRONG>-c8</STRONG>, and custom 4-bit palettes with <STRONG>-p</STRONG>. The <STRONG>-p</STRONG> option accepts indexed PNG images with at most 16 palette entries or 4-bit PCX images; it performs no color reduction. Run <CODE>cvtpcx</CODE> without arguments for the complete current help.
 <P>
 The syntax for <CODE>cvtpcx</CODE> is
 <PRE class = "syntax">
@@ -41,6 +41,8 @@ These options specify the parameters for converting and saving the icon file.
 <P>
 
 <DL>
+<DT><STRONG>-V or --version</STRONG>
+<DD> Display the cvtpcx version and exit.
 <DT><STRONG>         -o&lt<EM>filename</EM>&gt         </STRONG>
 <DD> The file name for the moniker(s). 
 <DT><STRONG>    -G</STRONG>
@@ -52,7 +54,7 @@ These options specify the parameters for converting and saving the icon file.
 <DD> Only output the gstring (don't create a moniker or
                         put the gstring in a chunk)
 <DT><STRONG>     -2</STRONG>
-<DD> Use 2.0 constants in the resulting gstring/bitmap.
+<DD> Use GEOS 2.0 constants in the resulting gstring/bitmap.
 <DT><STRONG>     -f </STRONG>
 <DD> Uses GrFillBitmap instead of GrDrawBitmap for all
                         monochrome bitmaps.  Also implies the use of 2.0
