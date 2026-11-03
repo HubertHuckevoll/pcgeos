@@ -21,3 +21,8 @@ library mixlib
 resource AppResource          ui-object
 resource Interface            ui-object
 resource MonikerRes           ui-object
+
+resource AdvancedResource     ui-object
+resource Templates            ui-object
+
+export MixerControlClass
