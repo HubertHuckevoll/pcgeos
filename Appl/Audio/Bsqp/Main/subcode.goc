@@ -678,8 +678,9 @@ word    BQ_PlayThread(word wavFile)
         @send BSQPApp::MSG_META_QUIT();
     };
 
-    //Thread End
-    ThreadDestroy(0, 0, 0);
+    /* Return through the ThreadCreate wrapper. It releases this movable
+     * code lock before it destroys the thread.
+     */
     return (0);
 }
 
