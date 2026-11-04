@@ -321,6 +321,16 @@ word _pascal _export BSNWAllocSecBuffer(byte **ptr,word len)
         len2 = (word)bytesToPlay;
     };
 
+    /* Round up to eight bytes. Each half then holds whole PCM frames,
+     * including four-byte stereo frames. Keep two halves for short files.
+     * Limit the size before adding seven, to prevent a 16-bit overflow.
+     */
+    len2 = (len2 > 0xfff8) ? 0xfff8 : ((len2 + 7) & 0xfff8);
+    if (len2 < 8)
+        len2 = 8;
+    /* Simulation must return the size it allocates, as the driver does. */
+    len = len2;
+
     // Simulation mode
     if(simFlags || !compatFlag)
     {

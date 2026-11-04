@@ -3,6 +3,7 @@
 @include <stdapp.goh>
 #include <resource.h>
 #include <bsnwav.h>
+#include <Ansi/string.h>
 @include <bsnwav.goh>
 @include "Main/subcode.goh"
 
@@ -154,6 +155,7 @@ static word BSNWDetermineSecondaryBufferLength(const BSNPcmFormat *fmt,
         return configuredLength;
     }
 
+    /* Round up: each usable half must hold at least two ticks of audio. */
     minHalfBytes = avgRate * BSNW_MIN_TICKS_PER_HALF_BUFFER;
     minHalfBytes = (minHalfBytes + (BSNW_TICKS_PER_SECOND - 1))
                    / BSNW_TICKS_PER_SECOND;
@@ -162,12 +164,17 @@ static word BSNWDetermineSecondaryBufferLength(const BSNPcmFormat *fmt,
         minHalfBytes = 256;
     }
 
-    requiredLen = minHalfBytes << 1;
+    /* At a 64K boundary, the driver keeps the larger part of the block.
+     * It can also skip 16 bytes. Request twice the usable buffer size,
+     * plus those 16 bytes, to keep two full halves after this reduction.
+     */
+    requiredLen = (minHalfBytes << 2) + 16;
     if (requiredLen > 0x0000FFF8UL)
     {
         requiredLen = 0x0000FFF8UL;
     }
 
+    /* Eight-byte alignment also aligns each half to a stereo PCM frame. */
     computedLen = (word)requiredLen;
     computedLen = (word)((computedLen + 7) & ~7);
     if (computedLen < 512)
@@ -704,128 +711,182 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
     return (respond);
 };
 
+/***********************************************************************
+ *
+ * ROUTINE:     BSNWPlay
+ * DESCRIPTION: Play PCM with one temporary buffer for all refills.
+ * PARAMETERS:  Source format, playback flags, and optional status parent.
+ * STRATEGY:    Read and convert outside DMA memory. Select the free half
+ *              after reading. Keep the refill if an IRQ occurs during
+ *              its copy. Count source bytes only after their half plays.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              A missed deadline can cause silence or repeat part of a
+ *              refill. Keep the prepared data so it is not skipped.
+ * REVISION HISTORY:
+ *      Name    Date        Description
+ *      ----    ----        -----------
+ *      Codex   11/04/26    Prepare refills and recover after missed deadlines
+ *
+ ***********************************************************************/
 int _pascal BSNWPlay(BSNPcmFormat *bfc, word playFlags, optr parent)
 {
     int respond = BSNW_STATUS_OK;
-    dword   i;
-    word    aiState,aiState2, advance;
-    dword   newSec,lastSec = 0;     // Sekundenwerte
+    dword i;
+    word aiState, aiState2, advance, half;
+    /* These counts use source bytes, before rate or format conversion. */
+    dword queued[2], converted, refillBytes;
+    dword newSec, lastSec = 0;
+    MemHandle refillH;
+    byte *refillP;
+    Boolean refillReady = FALSE; /* TRUE until the DMA copy succeeds. */
 
-
-    peakLevel2 = 0;             // reset helper
-
-    respond = BSNWLoadData(playCachePtr,secondPtr);
-    /*
-     * Even a short source may occupy both DMA halves. Do not stop at the
-     * first interrupt: keep running until every queued PCM byte has played.
+    peakLevel2 = 0;
+    /* Allocate and lock once, before DMA starts. A slow source must write
+     * here instead of a DMA half which can become active during the read.
      */
-    if (respond == BSNW_PLAY_FINISHED)
+    refillH = MemAlloc(secBufL2, HF_SWAPABLE, HAF_ZERO_INIT);
+    refillP = refillH ? MemLock(refillH) : (void *)0;
+    if (!refillP)
+        respond = BSNW_MEMORY_ERROR;
+    else
     {
-        respond = BSNW_STATUS_OK;
+        /* Measure each initial half separately. A channel-toggle sample
+         * uses output space but contains no source data. With rate
+         * reduction, the two halves can consume different source lengths.
+         */
+        secondFree = secBufL2 - secondOffset;
+        respond = BSNWLoadData(playCachePtr, secondPtr);
+        /* Remove unread and cached bytes to count converted source bytes.
+         * For an unknown length, fullLen counts bytes read so far;
+         * bytesToPlay can still contain the unknown-length marker.
+         */
+        queued[0] = fullLen - cacheFull;
+        if (!pcmUnknownLength)
+            queued[0] -= bytesToPlay;
+        if (respond == BSNW_STATUS_OK || respond == BSNW_PLAY_FINISHED)
+        {
+            secondFree = secBufL2;
+            secondKOffset = secBufL2;
+            respond = BSNWLoadData(playCachePtr, secondPtr);
+            queued[1] = fullLen - cacheFull - queued[0];
+            if (!pcmUnknownLength)
+                queued[1] -= bytesToPlay;
+        }
     }
+    /* EOF means that reading is done. The prepared halves must still play. */
+    if (respond == BSNW_PLAY_FINISHED)
+        respond = BSNW_STATUS_OK;
     if (respond == BSNW_STATUS_OK)
     {
+        secondOffset = 0;
+        if (BSNWAsmStartPlay())
+            respond = BSNW_HARDWARE_NOT_READY;
+        /* Both drivers reset the count and half to zero at start. Keep
+         * this baseline so an IRQ during the option call is still counted.
+         * The high byte requests an option write. Bit 0 of the low byte
+         * enables clearing of completed DMA halves.
+         */
+        aiState2 = 0;
+        (void)BSNWaveGetAIState(0xFF01);
+        i = 0;
 
-/////////////////////////////////////////////////
-//  PLAYLOOP
-//
-// No data to play --> respond = BSNW_PLAY_FINISHED
-//
-/////////////////////////////////////////////////
-
-        i = 0;      // loopcounter
-
-        // loop until end
         while (respond == BSNW_STATUS_OK)
         {
-            // 1st loop --> start
-            if (i==0)
+            if (playStopFlag)
             {
-                BSNWAsmStartPlay();
-                aiState2 = BSNWaveGetAIState(0xFF01);   // FF01 --> ISR clear the buffer
-            };
-
-            aiState = BSNWaveGetAIState(0);
+                respond = BSNW_ABORT;
+                break;
+            }
+            /* Simulation has no IRQ: advance the byte count and swap halves. */
+            if (simFlags)
+                aiState = (byte)(aiState2 + 1) |
+                          ((aiState2 ^ 0x0100) & 0x0100);
+            else
+                aiState = BSNWaveGetAIState(0);
+            /* A nonzero high byte means the lower half is free. */
+            half = (aiState & 0xFF00) ? 0 : 1;
             if (aiState != aiState2)
             {
-                //////// INT ! //////////
-
-                /* Exclude the initial channel-toggle sample and final silence. */
-                advance = playLen2;
-                if (secondOffset)
-                {
-                    advance -= secondOffset * konvRateRed * konvBitsRed * konvChanRed;
-                    secondOffset = 0;
-                }
-                if (playedBytes >= fullLen || fullLen - playedBytes < advance)
-                    playedBytes = fullLen;
-                else
-                    playedBytes += advance;
-
-                // Timeout-detector
-                if ( ( ( (aiState & 0x00ff)-1 ) != (aiState2 & 0x00ff) )
-                        &&(aiState & 0x00ff) )
-                {
-                    // Timeout !
+                /* Cast to byte so 255 -> 0 counts as one IRQ.
+                 * ATTENTION: This byte cannot count a full cycle of 256
+                 * IRQs between reads. Use a wider driver counter if needed.
+                 */
+                advance = (byte)(aiState - aiState2);
+                /* An IRQ with a refill still ready means its copy is late. */
+                if (advance != 1 || refillReady)
                     timeOutCounter++;
-                    @ifndef BSNWAV_NO_UI
-                    sprintf(playStatusText,"%u Timeout(s)",(word)timeOutCounter);
-                    @call statusGlyphOptr1::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playStatusText,VUM_NOW); /**/
-                    @endif
-                };
-                // update globals
-                secondFree = secondFree + secBufL2;
-                aiState2 = aiState;
-
-                // Detect DMA-bufferside
-                if (aiState & 0xFF00)
+                if (advance == 1)
                 {
-                    secondKOffset = 0;
+                    playedBytes += queued[half];
+                    queued[half] = 0;
                 }
                 else
                 {
-                    secondKOffset = secBufL2;
-                };
-
-                /////// End INT /////
+                    /* At least two halves passed. Count each queued source
+                     * block once; later empty halves contain only silence.
+                     */
+                    playedBytes += queued[0] + queued[1];
+                    queued[0] = queued[1] = 0;
+                }
+                aiState2 = aiState;
             }
-            else
+            else if (!refillReady)
             {
-                // no INT --> let the current Thread 1/60 sec sleep
                 TimerSleep(1);
-            };
+                continue;
+            }
 
-            // load data to playcache until Secondarybuffer is filled
-            if(secondFree)
+            /* EOF alone is not enough. Also wait for the last DMA half
+             * and for any prepared refill which is not yet in DMA memory.
+             */
+            if (!refillReady && !bytesToPlay && !cacheFull &&
+                !queued[0] && !queued[1])
             {
-                respond = BSNWLoadData(playCachePtr,secondPtr);
-
+                respond = BSNW_PLAY_FINISHED;
+                break;
+            }
+            if (!refillReady)
+            {
+                if (!bytesToPlay && !cacheFull)
+                    continue;
+                /* Save the converted count before reading. Its increase
+                 * gives the source length of this refill, without silence.
+                 */
+                converted = fullLen - cacheFull;
+                if (!pcmUnknownLength)
+                    converted -= bytesToPlay;
+                /* Reuse the converter with one half of temporary space.
+                 * Offset zero and this limit keep all writes in that half.
+                 */
+                secondFree = secBufL2;
+                secondKOffset = 0;
+                respond = BSNWLoadData(playCachePtr, refillP);
                 if (respond != BSNW_STATUS_OK &&
                     respond != BSNW_PLAY_FINISHED)
-                {
                     break;
-                }
-                if (bytesToPlay)
-                {
-                    // "some" bytes left
-                }
-                else
-                {
-                    // Reading data is done
+                respond = BSNW_STATUS_OK;
+                refillBytes = fullLen - cacheFull - converted;
+                if (!pcmUnknownLength)
+                    refillBytes -= bytesToPlay;
+                refillReady = (refillBytes != 0);
+                /* Reading or decoding can wait on files or the heap.
+                 * Read the DMA state again before choosing a destination.
+                 */
+                continue;
+            }
 
-
-                    // wait until soundcard has played all samples
-                    if (playedBytes < fullLen)
-                    {
-                        respond = BSNW_STATUS_OK;
-
-                    }
-                    else
-                    {
-                        respond = BSNW_PLAY_FINISHED;
-                    };
-                };
-            };
+            memcpy(secondPtr + half * secBufL2, refillP, secBufL2);
+            if (!simFlags && BSNWaveGetAIState(0) != aiState2)
+            {
+                /* DMA reached another half during the copy or state call.
+                 * Keep the prepared data and retry in the current free half.
+                 * The source can be a decoder which cannot read backwards.
+                 */
+                continue;
+            }
+            /* Record this source length only after a copy with no new IRQ. */
+            queued[half] = refillBytes;
+            refillReady = FALSE;
 
             ////////////// Display if: /////////////
 
@@ -844,13 +905,8 @@ int _pascal BSNWPlay(BSNPcmFormat *bfc, word playFlags, optr parent)
                 };
             };
 
-            ///////// Simulation (NT-Target) //////////
             if (simFlags)
-            {
-                secondFree = secBufL2;
-                // UserStandardSound(SST_CUSTOM_NOTE,HIGH_A,5);
                 TimerSleep(5);
-            };
 
             /////////// Check Abort condition /////////////
 
@@ -869,6 +925,12 @@ int _pascal BSNWPlay(BSNPcmFormat *bfc, word playFlags, optr parent)
     // Stop soundcard/DMA and free Secondarybuffer
     // (driver will do this jobs)
     BSNWaveStopRecOrPlay(secondPtr);
+    /* Release the extra block on success, abort, and all error paths. */
+    if (refillH)
+    {
+        MemUnlock(refillH);
+        MemFree(refillH);
+    }
 
     if (respond == BSNW_PLAY_FINISHED)
     {

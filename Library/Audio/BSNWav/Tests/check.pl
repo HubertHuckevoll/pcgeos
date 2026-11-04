@@ -13,7 +13,8 @@ $source =~ s/\@ifndef BSNWAV_NO_UI\b.*?\@endif\s*//sg;
 open my $out, '>', "$tmp/pcm.inc" or die $!;
 $source =~ /(typedef word _pascal BSNPcmReadCall\(.*?;)/s or die 'missing callback type';
 print $out "$1\n";
-for my $name (qw(BSNWReadPCM BSNWLoadCache BSNWFillSilence BSNWKonvertData BSNWLoadData BSNWPlay)) {
+# Extract the size policy too, so the boundary check uses the real code.
+for my $name (qw(BSNWReadPCM BSNWDetermineSecondaryBufferLength BSNWLoadCache BSNWFillSilence BSNWKonvertData BSNWLoadData BSNWPlay)) {
     $source =~ /^([^\n;{}]*\b$name\([^;]*?\)\n\{.*?^\})/ms
         or die "missing $name";
     print $out "$1\n";
@@ -27,7 +28,7 @@ $controls =~ /^(void _pascal _export BSNWaveStop\([^;]*?\)\n\{.*?^\})/ms
     or die 'missing stop control';
 print $out "$1\n";
 print $out "#ifdef BSN_INTEGRATION_TEST\n";
-for my $name (qw(BSNWDetermineSecondaryBufferLength BSNWPrepare BSNWRunPCM BSNPcmPlay)) {
+for my $name (qw(BSNWPrepare BSNWRunPCM BSNPcmPlay)) {
     my $definition = $source;
     $definition =~ /^([^\n;{}]*\b$name\([^;]*?\)\n\{.*?^\})/ms
         or die "missing $name";
@@ -35,9 +36,12 @@ for my $name (qw(BSNWDetermineSecondaryBufferLength BSNWPrepare BSNWRunPCM BSNPc
 }
 open my $helpers, '<', "$lib/Main/subcode.goc" or die $!;
 my $helper_source = do { local $/; <$helpers> };
-$helper_source =~ /^(void _pascal BSNWInsertSample\([^;]*?\)\n\{.*?^\})/ms
-    or die 'missing toggle insertion';
-print $out "$1\n";
+# Keep the real short-buffer rounding and channel-toggle sample insertion.
+for my $name (qw(BSNWInsertSample BSNWAllocSecBuffer)) {
+    $helper_source =~ /^([^\n;{}]*\b$name\([^;]*?\)\n\{.*?^\})/ms
+        or die "missing $name";
+    print $out "$1\n";
+}
 print $out "#endif\n";
 close $out or die $!;
 # geos.h is replaced only in this host check; production uses the real header.
@@ -93,15 +97,28 @@ if (@ARGV) {
         '-DBSN_INTEGRATION_TEST', '-x', 'c', "$lib/Tests/pcm.c",
         "$mp3/Tests/stream.c", "$mp3/mp3api.c", "$mp3/mp3reader.goc",
         "$lib/WAV/wav.goc", @core, '-o', "$tmp/play") == 0 or die 'integration compile failed';
+    if (!defined $reference_dir) {
+        # Decode without playback to get reference bytes for the DMA check.
+        system('gcc', @flags, '-fwrapv', '-I', $tmp, '-I', $mp3,
+            '-I', "$lib/../../../CInclude", '-DMP3_HOST_TEST', '-x', 'c',
+            "$mp3/Tests/pull.c", "$mp3/mp3api.c", "$mp3/mp3reader.goc",
+            @core, '-o', "$tmp/pull") == 0 or die 'reader compile failed';
+    }
     for my $input (glob("$up/tests/data/*.mp3")) {
         (my $name = $input) =~ s|.*/||;
+        my $reference = defined $reference_dir ? "$reference_dir/$name.pcm" : "$tmp/reference.pcm";
+        if (!defined $reference_dir) {
+            system("$tmp/pull", $input, $reference, '1536') == 0 or die 'reader failed';
+        }
         for my $mode ('mp3', 'mp3-toggle') {
             system("$tmp/play", $mode, $input, "$tmp/play.pcm") == 0 or die 'playback failed';
-            if (defined $reference_dir) {
-                open my $ref, '<:raw', "$reference_dir/$name.pcm" or die $!;
+            {
+                open my $ref, '<:raw', $reference or die $!;
                 open my $played, '<:raw', "$tmp/play.pcm" or die $!;
                 my $expected = do { local $/; <$ref> };
                 my $actual = do { local $/; <$played> };
+                # Skip the optional 16-bit toggle sample. Allow final silence
+                # after EOF, but compare every source byte in the DMA output.
                 my $skip = $mode eq 'mp3-toggle' ? 2 : 0;
                 die 'playback PCM differs' unless substr($actual, $skip, length($expected)) eq $expected;
             }
@@ -109,18 +126,22 @@ if (@ARGV) {
     }
     for my $bits (8, 16) {
         for my $channels (1, 2) {
+          for my $frames (1, 2, 3, 64, 65) {
+            # Very short files test the minimum size and rounding of halves.
             my $align = $channels * ($bits / 8);
-            my $payload = pack('C*', 0..255);
+            my $payload = pack('C*', map { $_ & 255 } 0..($frames * $align - 1));
             open my $wave, '>:raw', "$tmp/native.wav" or die $!;
-            print $wave pack('a4Va4a4VvvVVvva4V', 'RIFF', 292, 'WAVE', 'fmt ', 16,
+            # RIFF includes the pad byte after odd data. The data size does not.
+            print $wave pack('a4Va4a4VvvVVvva4V', 'RIFF', 36 + length($payload) + (length($payload) & 1), 'WAVE', 'fmt ', 16,
                             1, $channels, 44100, 44100*$align, $align, $bits,
-                            'data', 256), $payload;
+                            'data', length($payload)), $payload, length($payload) & 1 ? "\0" : '';
             close $wave or die $!;
             system("$tmp/play", 'wav', "$tmp/native.wav", "$tmp/wavplay.pcm") == 0
                 or die 'WAV playback failed';
             open my $played, '<:raw', "$tmp/wavplay.pcm" or die $!;
-            read($played, my $actual, 256) == 256 or die 'short WAV playback';
+            read($played, my $actual, length($payload)) == length($payload) or die 'short WAV playback';
             die 'WAV playback PCM differs' unless $actual eq $payload;
+          }
         }
     }
     open my $wav, '>:raw', "$tmp/rate.wav" or die $!;

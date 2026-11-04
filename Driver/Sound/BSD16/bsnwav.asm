@@ -278,8 +278,10 @@ BSDNWGetAIState	proc	far
 	mov	ds:[bsOptions],cl	; yes
 noset:
 
-	mov	ch,ds:[bsRecDataHalf]
-	mov	cl,ds:[bsRecDataFlag]
+	; Keep these bytes together: CL returns the IRQ count, CH the half.
+	; One word load prevents an IRQ between the two byte reads.
+		CheckHack <bsRecDataHalf eq bsRecDataFlag+1>
+		mov	cx,{word}ds:[bsRecDataFlag]
 
 	.leave
 	ret

@@ -25,6 +25,8 @@ static char playStatusText[80];
 static BSNPcmSource *playSourceP;
 static dword ticks, playedCount;
 static word started, stopped, stopAtTick;
+/* Insert IRQs during a source read, a DMA copy, or the first option call. */
+static word delayRead, delayCopy, delayStart;
 void BSNWaveStop(void);
 static FILE *playOutputP;
 #ifdef BSN_INTEGRATION_TEST
@@ -32,6 +34,7 @@ static MemHandle dmaH;
 static word failCache, failDMA;
 static word secBufLenSoll = 512, playSampleRate;
 static byte playChannels, stereoToggle, stereoToggleIni;
+static Boolean compatFlag = TRUE;
 static optr statusBox, statusGlyphOptr1, statusRightBoxOptr;
 extern MemHandle MemAlloc(word size, word flags, word action);
 extern void *MemLock(MemHandle h);
@@ -44,11 +47,17 @@ static void *BSNWAllocPlayCache(word size)
     playCacheHandle = MemAlloc(size, 0, 0);
     return playCacheHandle ? MemLock(playCacheHandle) : (void *)0;
 }
-static word BSNWAllocSecBuffer(byte **ptrP, word size)
+word BSNWAllocSecBuffer(byte **ptrP, word size);
+/* Use the real allocation wrapper. Replace only GEOS segment pointers
+ * and the driver call with host memory, including the allocation failure.
+ */
+#define BSNW_FARPTR(type, ptr) (ptr)
+#define MK_FP(seg, off) (dmaH ? MemLock(dmaH) : (void *)0)
+static word BSNWAsmSecondAlloc(word size, word *offsetP, word *segmentP)
 {
-    if (failDMA) { *ptrP = (void *)0; return 0; }
+    *offsetP = *segmentP = 0;
+    if (failDMA) { dmaH = 0; return 0; }
     dmaH = MemAlloc(size, 0, 0);
-    *ptrP = dmaH ? MemLock(dmaH) : (void *)0;
     return dmaH ? size : 0;
 }
 static int BSNWPrepKS(word rate, byte channels, byte bits)
@@ -75,11 +84,13 @@ static void BSNWKonvert16To8(void *cacheP, void *secondP)
     assert(0); /* This check selects the byte-copy conversion path. */
 }
 #endif
-static void BSNWAsmStartPlay(void) { started++; }
-static word BSNWaveGetAIState(word options)
+static word BSNWAsmStartPlay(void) { started++; ticks = 0; return 0; }
+/* One call plays a complete half, then clears it as the driver ISR does.
+ * Normal state reads do not advance DMA; a read can occur between two IRQs.
+ */
+static void AdvanceDMA(void)
 {
     word half;
-    if (options) { ticks = 0; return 0; }
     assert(ticks < 1000000);
     half = (ticks & 1) ? secBufL2 : 0;
     if (playOutputP) {
@@ -88,12 +99,33 @@ static word BSNWaveGetAIState(word options)
         assert(playedCount + secBufL2 <= sizeof(played));
         memcpy(played + playedCount, dma + half, secBufL2);
     }
+    memset(secondPtr + half, playBits == 16 ? 0 : 0x80, secBufL2);
     playedCount += secBufL2;
     ticks++;
     if (stopAtTick && ticks == stopAtTick) BSNWaveStop();
+}
+static word BSNWaveGetAIState(word options)
+{
+    if (options) {
+        /* An IRQ can arrive before the first option call returns. */
+        while (delayStart) { delayStart--; AdvanceDMA(); }
+    }
     return (word)((ticks & 255) | ((ticks & 1) ? 0x100 : 0));
 }
-static void TimerSleep(word ticksToSleep) { (void)ticksToSleep; }
+static void TimerSleep(word ticksToSleep)
+{
+    /* Model one half completing while the playback thread is asleep. */
+    (void)ticksToSleep;
+    AdvanceDMA();
+}
+static void *CopyRefill(void *destP, const void *sourceP, size_t count)
+{
+    void *resultP;
+    resultP = memcpy(destP, sourceP, count);
+    /* Complete an IRQ before the caller can check the copy result. */
+    if (delayCopy) { delayCopy = 0; AdvanceDMA(); }
+    return resultP;
+}
 static void BSNWaveStopRecOrPlay(void *bufferP)
 {
     (void)bufferP; stopped++;
@@ -102,6 +134,16 @@ static void BSNWaveStopRecOrPlay(void *bufferP)
 #endif
 }
 #ifndef BSN_INTEGRATION_TEST
+/* The small PCM tests need one four-byte refill block, with no host heap. */
+static byte refill[4];
+static word failRefill;
+static word MemAlloc(word size, word flags, word action)
+{
+    (void)flags; (void)action;
+    assert(size == sizeof(refill));
+    return failRefill ? 0 : 1;
+}
+static void *MemLock(word h) { assert(h == 1); return refill; }
 static void MemUnlock(word h) { (void)h; }
 static void MemFree(word h) { (void)h; }
 #endif
@@ -111,7 +153,12 @@ static dword BSNWaveCalcPlaytimeText(char *textP, dword current, dword full,
     (void)textP; (void)current; (void)full; (void)rate; (void)mode;
     return 0;
 }
+/* Replace only the copy in the extracted playback code. DMA output and
+ * other test copies must not trigger the copy-delay hook.
+ */
+#define memcpy CopyRefill
 #include "pcm.inc"
+#undef memcpy
 
 #ifndef BSN_INTEGRATION_TEST
 typedef struct {
@@ -123,6 +170,10 @@ static word ReadPCM(void *contextP, void *destP, word capacity)
     word count, i;
     if (inputP->invalid) return inputP->invalid == 1 ? capacity+1 : 1;
     if (inputP->offset >= inputP->failAt) return BSN_PCM_READ_ERROR;
+    if (started && delayRead) {
+        /* DMA keeps playing while the source callback cannot return data. */
+        while (delayRead) { delayRead--; AdvanceDMA(); }
+    }
     count = inputP->length - inputP->offset;
     if (count > capacity) count = capacity;
     if (count > inputP->chunk) count = inputP->chunk;
@@ -148,6 +199,7 @@ static void Reset(BSNPcmSource *sourceP)
     playLen2 = secBufL2;
     playBits = 8;
     playedBytes = ticks = started = stopped = playedCount = 0;
+    timeOutCounter = delayRead = delayCopy = delayStart = 0;
     playStopFlag = FALSE;
     memset(dma, 0xcc, sizeof(dma));
 }
@@ -156,6 +208,8 @@ int main(void)
     BSNPcmSource source;
     Input input;
     word length, chunk, unknown, i, align, frame, channel, offset, output;
+    BSNPcmFormat format;
+    dword physical, actual, requested, minimum, tail;
 #ifdef __WATCOMC__
     word channels, outputChannels, rate;
     long sample, right;
@@ -219,6 +273,93 @@ int main(void)
         }
     }
     source.format.blockAlign = 1;
+    /* Rate reduction and the channel-toggle byte split a source frame
+     * across the DMA halves. The last byte must play before completion.
+     */
+    for (unknown=0; unknown<2; unknown++) {
+        input.length = 6; input.offset = 0; input.chunk = 8;
+        input.failAt = 0xffff; input.invalid = 0;
+        source.format.blockAlign = 2;
+        source.pcmBytes = unknown ? BSN_PCM_LENGTH_UNKNOWN : 6;
+        Reset(&source);
+        konvRateRed = 2; playLen2 = 8;
+        secondOffset = secondKOffset = 1; secondFree--;
+        dma[0] = 0x80;
+        assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
+        assert(playedBytes == 6 && playedCount >= 5);
+        assert(played[0] == 0x80 && played[1] == 0 && played[2] == 1);
+        assert(played[3] == 4 && played[4] == 5);
+    }
+    source.format.blockAlign = 1;
+    /* Check the real size policy after the driver's 64K boundary split.
+     * Test all paragraph addresses. Address 0xe910 caused the old failure.
+     */
+    for (i=0; i<3; i++) {
+        format.sampleRate = 11025UL << i;
+        for (align=1; align<=4; align*=2) {
+            format.avgBytesPerSecond = format.sampleRate * align;
+            minimum = (format.avgBytesPerSecond * 2 + 59) / 60;
+            requested = BSNWDetermineSecondaryBufferLength(&format, 8192);
+            for (physical=0; physical<65536UL; physical+=16) {
+                actual = requested;
+                if (physical + actual >= 65536UL) {
+                    /* Match BSDMAGrenzen: keep the larger part. If it is
+                     * after the boundary, skip one more 16-byte paragraph.
+                     */
+                    tail = physical + actual - 65536UL;
+                    actual = (actual/2 < tail) ? tail-16 : actual-tail;
+                }
+                assert(actual / 2 >= minimum);
+            }
+        }
+    }
+
+    /* DMA continues while a reader blocks; retain every source byte. */
+    for (unknown=0; unknown<2; unknown++) {
+        for (i=1; i<=3; i++) {
+            input.length = 96; input.offset = 0; input.chunk = 8;
+            input.failAt = 0xffff; input.invalid = 0;
+            source.pcmBytes = unknown ? BSN_PCM_LENGTH_UNKNOWN : input.length;
+            Reset(&source); delayRead = i;
+            assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
+            assert(playedBytes == 96 && input.offset == 96 && timeOutCounter);
+            output = 0;
+            for (frame=0; frame<playedCount; frame++) {
+                /* Input is 0..95. Only gaps can contain 8-bit silence. */
+                if (played[frame] != 0x80)
+                    assert(played[frame] == output++);
+            }
+            assert(output == 96);
+        }
+    }
+    /* If an IRQ occurs during the copy, keep and retry the same refill. */
+    input.length = 96; input.offset = 0; input.chunk = 8;
+    source.pcmBytes = input.length;
+    Reset(&source); delayCopy = 1;
+    assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
+    assert(playedBytes == 96 && timeOutCounter && input.offset == 96);
+    assert(played[playedCount-1] == 95);
+
+    /* Count IRQs which arrive before the first option call returns. */
+    input.offset = 0;
+    Reset(&source); delayStart = 3;
+    assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
+    assert(playedBytes == 96 && timeOutCounter && input.offset == 96);
+
+    /* More than 256 halves test the normal byte-counter change 255 -> 0. */
+    input.length = 1100; input.offset = 0;
+    source.pcmBytes = input.length;
+    Reset(&source);
+    assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
+    assert(playedBytes == 1100 && ticks > 256 && !timeOutCounter);
+    for (i=0; i<1100; i++) assert(played[i] == (byte)i);
+
+    input.offset = 0;
+    /* Failure of the extra allocation must stop and free the DMA buffer. */
+    Reset(&source); failRefill = 1;
+    assert(BSNWPlay(&source.format, 0, 0) == BSNW_MEMORY_ERROR);
+    assert(!started && stopped == 1);
+    failRefill = 0;
 #ifdef __WATCOMC__
     /* int must be native 16-bit for the production signed-sample converter. */
     assert(sizeof(int) == 2 && sizeof(long) == 4);
@@ -280,7 +421,8 @@ int main(void)
     assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK && stopped == 1);
     /* Error after playback starts must not turn into successful EOF. */
     input.length = 100; input.offset = 0; input.chunk = 8;
-    input.failAt = 32; input.invalid = 0;
+    /* Initial fills read 32 + 4 bytes. Fail the first read after start. */
+    input.failAt = 36; input.invalid = 0;
     source.pcmBytes = BSN_PCM_LENGTH_UNKNOWN;
     Reset(&source);
     assert(BSNWPlay(&source.format, 0, 0) == BSNW_SOURCE_ERROR);
@@ -297,7 +439,7 @@ int main(void)
     source.format.blockAlign = 4;
     Reset(&source);
     assert(BSNWLoadCache(cache) == BSNW_SOURCE_ERROR);
-    puts("PCM partial reads, known/unknown length, early EOF, drain, errors: PASS");
+    puts("PCM reads, conversion, drain, errors, DMA boundaries, late refills: PASS");
     return 0;
 }
 
