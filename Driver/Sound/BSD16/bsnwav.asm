@@ -320,7 +320,7 @@ BSNWISR	proc	far
 ; 	clear old halfbuffer
 ;-----------------------------
 	mov	ah,ds:[bsOptions]
-	or	ah,1			; Bit 1 ?
+		test	ah,01h			; Bit 0 enables clearing.
 	jz	done			; no, not delete
 
 	mov	al,ds:[bsRecDataHalf]
@@ -331,23 +331,23 @@ BSNWISR	proc	far
 firstbuf:
 	mov	ax,ds:[bufferSegment]
 	mov	es,ax			; Segmentaddress
-	mov	ah,080h
-	mov	al,ds:[bsRecBits]
-	cmp	al,16			; 16 Bit ?
-	jnz	next			; no
-	mov	ah,0			; yes, clear with 0
-next:
-	mov	es:[di],ah		; clear Buffer
-	inc	di
-	dec	cx
-	jnz	next
+		mov	ax,8080h		; Unsigned 8-bit silence.
+		cmp	ds:[bsRecBits],16
+		jne	clearHalf
+		clr	ax			; Signed 16-bit silence.
+	; The caller clears DF. Clear before publishing the free half, so
+	; a late refill plays silence instead of old samples.
+clearHalf:
+		shr	cx,1			; Word count; CF saves an odd byte.
+		rep	stosw			; Clear two bytes per iteration.
+		jnc	done			; REP STOSW does not change CF.
+		stosb				; Clear the last byte of an odd half.
 
 ;------------------------
 ; 	Set Flags
 ;------------------------
-; bsRecDataFlag will be incremented by every INT.
-; The Data-Writer must decrement this flag
-; Values above 2 will indicate problems with the transfer speed
+	; Increment the byte counter and swap halves only after the clear.
+	; The reader compares counts; it does not decrement this byte.
 ;
 done:
 	inc	ds:[bsRecDataFlag]

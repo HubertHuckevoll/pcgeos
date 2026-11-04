@@ -384,12 +384,14 @@ kill_half:
 firstbuf:
 	mov	ax,ds:[bufferSegment]
         mov	es,ax			; Segmentaddress
-	mov	ah,080h
-next:
-        mov	es:[di],ah		; erase Buffer
-        inc	di
-        dec	cx
-        jnz	next
+		mov	ax,8080h		; Unsigned 8-bit silence.
+	; The caller clears DF. Clear before publishing the free half, so
+	; a late refill plays silence instead of old samples.
+clearHalf:
+		shr	cx,1			; Word count; CF saves an odd byte.
+		rep	stosw			; Clear two bytes per iteration.
+		jnc	done			; REP STOSW does not change CF.
+		stosb				; Clear the last byte of an odd half.
 
 done:
         inc	ds:[bsRecDataFlag]
