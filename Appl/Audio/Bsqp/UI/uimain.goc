@@ -95,7 +95,7 @@ DESCRIPTION:
         @Moniker1,
         @Moniker2}
 
-    GI_comp = @DisplayGroup, @FolderGlyph, @TrackList, @EmptyGlyph,
+    GI_comp = @FileMenu, @DisplayGroup, @FolderGlyph, @TrackList, @EmptyGlyph,
               @OptionsMenu, @TriggerGroup;
     HINT_ORIENT_CHILDREN_VERTICALLY;
 
@@ -104,7 +104,6 @@ DESCRIPTION:
     HINT_SIZE_WINDOW_AS_DESIRED;
     HINT_CENTER_CHILDREN_VERTICALLY;
     HINT_CENTER_CHILDREN_HORIZONTALLY;
-    HINT_PRIMARY_NO_FILE_MENU;
     HINT_NO_WIDER_THAN_CHILDREN_REQUIRE;
     HINT_NO_TALLER_THAN_CHILDREN_REQUIRE;
     HINT_DISPLAY_NOT_RESIZABLE;
@@ -181,9 +180,7 @@ DESCRIPTION:
 
 @object GenInteractionClass TriggerGroup =
 {
-    GI_comp = @STOPTrigger,
-    @PLAYTrigger,
-    @FileSelectorBox;
+    GI_comp = @PLAYTrigger, @STOPTrigger;
 
     GII_visibility = GIV_SUB_GROUP;
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
@@ -272,6 +269,13 @@ DESCRIPTION:
 
 
 @start  SELECTORRESOURCE;
+
+@object GenInteractionClass FileMenu = {
+    GII_visibility = GIV_POPUP;
+    GI_comp = @FileSelectorBox;
+    GI_attrs = @default | GA_KBD_SEARCH_PATH;
+    ATTR_GEN_INTERACTION_GROUP_TYPE = (GIGT_FILE_MENU);
+}
 
 /*----------------------------------------------------------------------
  *      File selector
