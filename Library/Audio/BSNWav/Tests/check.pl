@@ -97,8 +97,8 @@ if (@ARGV) {
         '-DBSN_INTEGRATION_TEST', '-x', 'c', "$lib/Tests/pcm.c",
         "$mp3/Tests/stream.c", "$mp3/mp3api.c", "$mp3/mp3reader.goc",
         "$lib/WAV/wav.goc", @core, '-o', "$tmp/play") == 0 or die 'integration compile failed';
-    if (!defined $reference_dir) {
-        # Decode without playback to get reference bytes for the DMA check.
+    {
+        # Decode without playback to get reference bytes for both modes.
         system('gcc', @flags, '-fwrapv', '-I', $tmp, '-I', $mp3,
             '-I', "$lib/../../../CInclude", '-DMP3_HOST_TEST', '-x', 'c',
             "$mp3/Tests/pull.c", "$mp3/mp3api.c", "$mp3/mp3reader.goc",
@@ -110,17 +110,21 @@ if (@ARGV) {
         if (!defined $reference_dir) {
             system("$tmp/pull", $input, $reference, '1536') == 0 or die 'reader failed';
         }
-        for my $mode ('mp3', 'mp3-toggle') {
-            system("$tmp/play", $mode, $input, "$tmp/play.pcm") == 0 or die 'playback failed';
+        system("$tmp/pull", $input, "$tmp/half-reference.pcm", '1536', 'half') == 0
+            or die 'half-rate reader failed';
+        for my $mode ('mp3', 'mp3-toggle', 'mp3half', 'mp3half-toggle') {
+            my $status = system("$tmp/play", $mode, $input, "$tmp/play.pcm");
+            next if $status == (2 << 8); # The C check verified rate rejection.
+            $status == 0 or die "playback failed: $input ($mode)";
             {
-                open my $ref, '<:raw', $reference or die $!;
+                open my $ref, '<:raw', $mode =~ /half/ ? "$tmp/half-reference.pcm" : $reference or die $!;
                 open my $played, '<:raw', "$tmp/play.pcm" or die $!;
                 my $expected = do { local $/; <$ref> };
                 my $actual = do { local $/; <$played> };
                 # Skip the optional 16-bit toggle sample. Allow final silence
                 # after EOF, but compare every source byte in the DMA output.
-                my $skip = $mode eq 'mp3-toggle' ? 2 : 0;
-                die 'playback PCM differs' unless substr($actual, $skip, length($expected)) eq $expected;
+                my $skip = $mode =~ /-toggle$/ ? 2 : 0;
+                die "playback PCM differs: $input ($mode)" unless substr($actual, $skip, length($expected)) eq $expected;
             }
         }
     }
@@ -148,7 +152,7 @@ if (@ARGV) {
     print $wav pack('a4Va4a4VvvVVvva4V', 'RIFF', 40, 'WAVE', 'fmt ', 16,
                     1, 1, 48000, 96000, 2, 16, 'data', 4), "\0" x 4;
     close $wav or die $!;
-    system("$tmp/play", 'wav', "$tmp/rate.wav", "$tmp/wavplay.pcm") == 0
+    system("$tmp/play", 'wav', "$tmp/rate.wav", "$tmp/wavplay.pcm") == (2 << 8)
         or die '48kHz rejection failed';
 }
 

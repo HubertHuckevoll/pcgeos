@@ -35,6 +35,9 @@ int main(int argc, char **argvP)
     assert(sourceP && destP);
     memset(&ext, 0, sizeof(ext));
     pvmp3_InitDecoder(&ext, &state);
+#ifdef MP3_HALF_RATE_TEST
+    ext.halfRate = 1;
+#endif
     for (;;) {
         assert(fseek(sourceP, offset, SEEK_SET) == 0);
         got = fread(input, 1, 4, sourceP);
@@ -63,6 +66,9 @@ int main(int argc, char **argvP)
         ext.outputFrameSize = 2304;
         ext.crcEnabled = 1;
         error = pvmp3_framedecoder(&ext, &state);
+#ifdef MP3_HALF_RATE_TEST
+        if (version == 3) rate >>= 1;
+#endif
         if (error == NO_DECODING_ERROR ||
             (error == NO_ENOUGH_MAIN_DATA_ERROR && ext.inputBufferUsedLength)) {
             assert(ext.outputFrameSize > 0 && ext.outputFrameSize <= 2304);

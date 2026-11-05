@@ -358,7 +358,8 @@ DESCRIPTION:
 {
     GI_comp =   @OptionsBoolItem1,
     @OptionsBoolItem2,
-    @OptionsBoolItem3;
+    @OptionsBoolItem3,
+    @OptionsBoolItem4;
     GBGI_selectedBooleans = 0;
     GBGI_destination = process;
     GBGI_applyMsg = MSG_BSQP_OPTIONS_APPLY;
@@ -383,6 +384,13 @@ DESCRIPTION:
     // GI_visMoniker = 'E',"Endloswiedergabe";
     GI_visMoniker = 'M',"Repeat Mode";
     GBI_identifier =BQ_OPTION_ENDLESS;
+}
+
+/* The existing option mask and Save Options command store this bit. */
+@object GenBooleanClass OptionsBoolItem4 =
+{
+    GI_visMoniker = 'R',"Reduce MP3 Quality (Lower CPU Use)";
+    GBI_identifier = BQ_OPTION_MP3_HALF_RATE;
 }
 
 /***************

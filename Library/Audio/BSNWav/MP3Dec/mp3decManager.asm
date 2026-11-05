@@ -152,13 +152,15 @@ PVMP3_MDCT_6 endp
 
 	; Pascal far-pointer entry; the private kernel never calls GEOS.
 global PVMP3_POLYPHASE_FILTER_WINDOW:far
-PVMP3_POLYPHASE_FILTER_WINDOW proc far vecP:fptr, pcmP:fptr, channels:dword
+PVMP3_POLYPHASE_FILTER_WINDOW proc far vecP:fptr, pcmP:fptr, channels:dword,
+                                      halfRate:dword
 	uses ebx, ecx, edx, si, di, ds, es, fs
 	.enter
 		lds	si, vecP
 		les	di, pcmP
 		mov	bx, word ptr channels
 		shl	bx, 1
+		push	word ptr halfRate
 		call	Mp3Window
 	.leave
 		ret
@@ -170,7 +172,7 @@ PVMP3_POLYPHASE_FILTER_WINDOW endp
 	; BX is the PCM stride in bytes (2 mono, 4 stereo).
 	;
 global MP3SYNTHESIS386:far
-MP3SYNTHESIS386 proc far bufferP:fptr, pcmP:fptr, channels:word
+MP3SYNTHESIS386 proc far bufferP:fptr, pcmP:fptr, channels:word, halfRate:word
 slots	local	word
 	uses ebx, ecx, edx, si, di, ds, es
 	.enter
@@ -189,9 +191,14 @@ nextSlot:
 		push	1
 		call	Mp3Dct16
 		call	Mp3Merge32
+		push	halfRate
 		call	Mp3Window
 		mov	ax, bx
 		shl	ax, 5
+		cmp	halfRate, 0
+		je	fullStride
+		shr	ax, 1		; Half rate writes 16 samples, not 32.
+fullStride:
 		add	di, ax
 		sub	si, 32*4
 		dec	slots
@@ -323,7 +330,7 @@ Mp3Split endp
 	; which has no frame references; restore it before output and keep sum2
 	; in EDX across clipping sum1. Each sum starts with the 0x20 rounding bias.
 	;
-Mp3Window proc near
+Mp3Window proc near halfRate:word
 pcmOff	local	word
 baseOff	local	word
 stride	local	word
@@ -333,8 +340,13 @@ sample	local	word
 		mov	pcmOff, di
 		mov	baseOff, si
 		mov	stride, bx
-		mov	sample, 1
+		mov	ax, halfRate
+		inc	ax
+		mov	sample, ax		; Half rate starts at even sample 2.
 		mov	bx, offset Mp3SynthWin
+		cmp	halfRate, 0
+		je	nextSample
+		add	bx, 16*4		; Skip coefficients for sample 1.
 nextSample:
 		mov	si, baseOff
 		add	si, 16*4
@@ -445,10 +457,18 @@ nextSample:
 		mov	edx, ebp
 		pop	ebp
 		add	bx, 16*4
+		cmp	halfRate, 0
+		je	windowStep
+		add	bx, 16*4		; Skip the next odd output sample.
+windowStep:
 		mov	eax, ecx
 		call	Mp3ClipPCM
 		mov	di, sample
 		shl	di, 1
+		cmp	halfRate, 0
+		je	firstRate
+		shr	di, 1			; Pack the even samples contiguously.
+firstRate:
 		cmp	stride, 2
 		je	monoFirst
 		shl	di, 1
@@ -460,6 +480,10 @@ monoFirst:
 		mov	di, 32
 		sub	di, sample
 		shl	di, 1
+		cmp	halfRate, 0
+		je	secondRate
+		shr	di, 1
+secondRate:
 		cmp	stride, 2
 		je	monoSecond
 		shl	di, 1
@@ -467,6 +491,8 @@ monoSecond:
 		add	di, pcmOff
 		mov	es:[di], ax
 		inc	sample
+		mov	ax, halfRate
+		add	sample, ax		; Step by two in half-rate mode.
 		cmp	sample, 16
 		LONG jne nextSample
 	; DC and the center sample use the final 24 coefficients.
@@ -553,6 +579,10 @@ monoSecond:
 		call	Mp3ClipPCM
 		mov	di, stride
 		shl	di, 4
+		cmp	halfRate, 0
+		je	centerRate
+		shr	di, 1
+centerRate:
 		add	di, pcmOff
 		mov	es:[di], ax
 	.leave

@@ -86,6 +86,13 @@ typedef struct {
     word damaged; /* Recovery occurred; strict converters may reject it. */
 } BSNMP3Dec;
 extern int _pascal _export BSNMP3DecOpen(BSNMP3Dec *mp3P, FileHandle file);
+/* Optional lower CPU use. MPEG-1 outputs half rate; lower rates stay normal.
+ * Set options at Open, before probing. Unknown option bits are rejected.
+ * Existing Open selects normal decoding. The context layout is unchanged.
+ */
+#define BSN_MP3_HALF_RATE 0x0001
+extern int _pascal _export BSNMP3DecOpenEx(BSNMP3Dec *mp3P, FileHandle file,
+                                          word options);
 extern word _pascal _export BSNMP3DecReadPCM(void *contextP, void *destP,
                                             word maxBytes);
 extern void _pascal _export BSNMP3DecClose(BSNMP3Dec *mp3P);

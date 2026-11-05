@@ -33,6 +33,8 @@ typedef struct {
     word started;
     word terminal;
     word damaged;
+    word halfRate;
+    word sourceRate;
     dword skip;
     Mp3DecFormat format;
     tPVMP3DecoderExternal ext;

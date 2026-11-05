@@ -114,7 +114,7 @@ Input
 
 void pvmp3_polyphase_filter_window(int32 *synth_buffer,
                                    int16 *outPcm,
-                                   int32 numChannels)
+                                   int32 numChannels, int32 halfRate)
 {
     int16 j;
     int32 k;
@@ -125,8 +125,12 @@ void pvmp3_polyphase_filter_window(int32 *synth_buffer,
     int32 i;
 
 
-    for (j = 1; j < SUBBANDS_NUMBER / 2; j++)
+    /* Half rate computes only even PCM positions. Keep all time slots
+     * and the full synthesis history; skipping slots changes the pitch.
+     */
+    for (j = 1 + halfRate; j < SUBBANDS_NUMBER / 2; j += 1 + halfRate)
     {
+        winPtr = pqmfSynthWin + (j - 1) * 16;
         sum1 = 0x00000020;
         sum2 = 0x00000020;
 
@@ -198,13 +202,14 @@ void pvmp3_polyphase_filter_window(int32 *synth_buffer,
 
 
 
-        k = j << (numChannels - 1);
+        k = (j >> halfRate) << (numChannels - 1);
         outPcm[k] = saturate16(sum1 >> 6);
-        outPcm[(numChannels<<5) - k] = saturate16(sum2 >> 6);
+        outPcm[((numChannels<<5) >> halfRate) - k] = saturate16(sum2 >> 6);
     }
 
 
 
+    winPtr = pqmfSynthWin + 15 * 16;
     sum1 = 0x00000020;
     sum2 = 0x00000020;
 
@@ -233,7 +238,7 @@ void pvmp3_polyphase_filter_window(int32 *synth_buffer,
 
 
     outPcm[0] = saturate16(sum1 >> 6);
-    outPcm[(SUBBANDS_NUMBER/2)<<(numChannels-1)] = saturate16(sum2 >> 6);
+    outPcm[((SUBBANDS_NUMBER/2) >> halfRate)<<(numChannels-1)] = saturate16(sum2 >> 6);
 
 
 }

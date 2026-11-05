@@ -107,7 +107,7 @@ extern "C"
 
     void pvmp3_polyphase_filter_window(int32 *synth_buffer,
                                        int16 *outPcm,
-                                       int32 numChannels);
+                                       int32 numChannels, int32 halfRate);
 
 
 #ifdef __cplusplus

@@ -121,20 +121,23 @@
 ----------------------------------------------------------------------------*/
 
 #ifdef MP3_386_DSP
-void _pascal Mp3Synthesis386(int32 *bufferP, int16 *pcmP, uint16 channels);
+void _pascal Mp3Synthesis386(int32 *bufferP, int16 *pcmP, uint16 channels,
+                           uint16 halfRate);
 
 void pvmp3_poly_phase_synthesis(tmp3dec_chan *pChVars, int32 numChannels,
-                                e_equalization equalizerType, int16 *outPcm)
+                                e_equalization equalizerType, int16 *outPcm,
+                                int32 halfRate)
 {
     pvmp3_equalizer(pChVars->circ_buffer, equalizerType,
                    pChVars->work_buf_int32);
-    Mp3Synthesis386(pChVars->circ_buffer, outPcm, (uint16)numChannels);
+    Mp3Synthesis386(pChVars->circ_buffer, outPcm, (uint16)numChannels,
+                   (uint16)halfRate);
 }
 #else
 void pvmp3_poly_phase_synthesis(tmp3dec_chan   *pChVars,
                                 int32          numChannels,
                                 e_equalization equalizerType,
-                                int16          *outPcm)
+                                int16          *outPcm, int32 halfRate)
 {
     int16 *ptr_out;
     int32 band;
@@ -167,7 +170,7 @@ void pvmp3_poly_phase_synthesis(tmp3dec_chan   *pChVars,
 
         pvmp3_polyphase_filter_window(inData,
                                       ptr_out,
-                                      numChannels);
+                                      numChannels, halfRate);
 
         inData  -= SUBBANDS_NUMBER;
 
@@ -183,10 +186,10 @@ void pvmp3_poly_phase_synthesis(tmp3dec_chan   *pChVars,
         pvmp3_merge_in_place_N32(inData);
 
         pvmp3_polyphase_filter_window(inData,
-                                      ptr_out + (numChannels << 5),
-                                      numChannels);
+                                      ptr_out + ((numChannels << 5) >> halfRate),
+                                      numChannels, halfRate);
 
-        ptr_out += (numChannels << 6);
+        ptr_out += (numChannels << 6) >> halfRate;
 
         inData  -= SUBBANDS_NUMBER;
 

@@ -9,6 +9,7 @@ Mp3InitCore(Mp3Decoder *decoderP)
     memset(&decoderP->core, 0, sizeof(decoderP->core));
     memset(&decoderP->ext, 0, sizeof(decoderP->ext));
     pvmp3_InitDecoder(&decoderP->ext, &decoderP->core);
+    decoderP->ext.halfRate = decoderP->halfRate;
     decoderP->core.mainDataStream.pBuffer = (void *)0;
 }
 
@@ -58,14 +59,17 @@ Mp3DecReset(Mp3DecHandle decoderH)
 {
     Mp3Decoder *decoderP;
     MemHandle inputH, pcmH;
+    word halfRate;
 
     if (decoderH == NullHandle) return MP3DEC_BAD_ARGUMENT;
     decoderP = MemLock(decoderH);
     inputH = decoderP->inputH;
     pcmH = decoderP->pcmH;
+    halfRate = decoderP->halfRate;
     memset(decoderP, 0, sizeof(*decoderP));
     decoderP->inputH = inputH;
     decoderP->pcmH = pcmH;
+    decoderP->halfRate = halfRate;
     Mp3InitCore(decoderP);
     MemUnlock(decoderH);
     return MP3DEC_PCM;
@@ -147,6 +151,7 @@ Mp3DecodeFrame(Mp3Decoder *decoderP, byte *inputP, sword *pcmP)
     static const word br2[16] = {0,8,16,24,32,40,48,56,64,80,
                                  96,112,128,144,160,0};
     word version, index, frequency, rate, size, channels, count, changed;
+    word outputRate;
     dword tagSize, apeVersion;
     ERROR_CODE error;
 
@@ -218,9 +223,11 @@ Mp3DecodeFrame(Mp3Decoder *decoderP, byte *inputP, sword *pcmP)
                   ((inputP[2] >> 1) & 1);
     if (decoderP->used < size) return Mp3Missing(decoderP);
     channels = (inputP[3] >> 6) == 3 ? 1 : 2;
+    /* Only MPEG-1 has the 32/44.1/48 kHz rates supported by this mode. */
+    outputRate = decoderP->halfRate && version == 3 ? rate >> 1 : rate;
     changed = decoderP->format.channels &&
               (decoderP->format.channels != channels ||
-               decoderP->format.sampleRate != rate);
+               decoderP->sourceRate != rate);
     decoderP->core.mainDataStream.pBuffer = decoderP->core.mainDataBuffer;
     decoderP->ext.pInputBuffer = inputP;
     decoderP->ext.inputBufferCurrentLength = size;
@@ -245,7 +252,8 @@ Mp3DecodeFrame(Mp3Decoder *decoderP, byte *inputP, sword *pcmP)
         (error == NO_DECODING_ERROR || error == NO_ENOUGH_MAIN_DATA_ERROR)) {
         decoderP->pending = (word)decoderP->ext.outputFrameSize / channels;
         decoderP->pcmOffset = 0;
-        decoderP->format.sampleRate = rate;
+        decoderP->sourceRate = rate;
+        decoderP->format.sampleRate = outputRate;
         decoderP->format.channels = channels;
         decoderP->damaged = error != NO_DECODING_ERROR;
         return changed ? MP3DEC_FORMAT_CHANGED : MP3DEC_PCM;

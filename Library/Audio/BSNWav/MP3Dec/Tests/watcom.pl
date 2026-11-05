@@ -12,13 +12,18 @@ my $lib = abs_path(dirname(__FILE__) . '/..');
 my $repo = abs_path("$lib/../../../..");
 my $up = abs_path(shift // die "usage: $0 micro-mp3-checkout [vectors]\n");
 my $vectors = shift;
+$vectors = abs_path($vectors) if defined $vectors;
 my $tmp = tempdir('mp3wat-XXXXXX', TMPDIR => 1, CLEANUP => !$ENV{KEEP_TESTS});
 my $watcom = $ENV{WATCOM} // die "set WATCOM\n";
+# WCL uses a fixed response-file name in its working directory.
+chdir $tmp or die $!;
 my @core = map { "$lib/$_.c" } qw(mp3frame mp3huff mp3imdct mp3synth mp3quant mp3ster);
 my @flags = qw(-q -bt=dos -ml -3 -zp1 -zu -s -ecp -of -of+ -ol -ol+ -ei -zdp -fpc -DMP3_HUFF_LOCAL);
+my @mode = $ENV{HALF_RATE} ? ('-DMP3_HALF_RATE_TEST') : ();
+push @flags, @mode;
 sub run { system(@_) == 0 or die "failed: @_\n"; }
 sub same { compare($_[0], $_[1]) == 0 or die "target data differs: @_\n"; }
-run('gcc', '-std=c89', '-O2', '-fwrapv', '-I', "$lib/core",
+run('gcc', '-std=c89', '-O2', '-fwrapv', @mode, '-I', "$lib/core",
     "$lib/Tests/corecheck.c", @core, '-o', "$tmp/host");
 run('gcc', '-std=c89', '-O2', '-fwrapv', '-I', "$lib/core",
     "$lib/Tests/dsp.c", "$lib/mp3imdct.c", '-o', "$tmp/hostdsp");

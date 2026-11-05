@@ -92,10 +92,11 @@ $harness=~s/    return 0;/    Mp3ProfileReport();\n    return 0;/;
 write_file("$tmp/bench.c",$harness);
 my @core=map {"$tmp/$_.c"} qw(mp3frame mp3huff mp3imdct mp3synth mp3quant mp3ster);
 my @asm = $asmObject ? ('-DMP3_386_DSP', $asmObject) : ();
+my @mode = $ENV{HALF_RATE} ? ('-DMP3_HALF_RATE_TEST') : ();
 run('wcl',qw(-q -bt=dos -ml -3 -zp1 -zu -s -ecp -of -of+ -ol -ol+ -ei -zdp -fpc -ox -DMP3_HUFF_LOCAL),
     "-i=$watcom/h","-i=$tmp/core","-fo=$tmp/","-fe=$tmp/bench.exe",
-    "$tmp/bench.c",@core,"$tmp/mp3fxp.c",@asm);
-run('gcc','-std=c89','-O2','-fwrapv','-I',"$lib/core","$lib/Tests/corecheck.c",
+    "$tmp/bench.c",@core,"$tmp/mp3fxp.c",@asm,@mode);
+run('gcc','-std=c89','-O2','-fwrapv',@mode,'-I',"$lib/core","$lib/Tests/corecheck.c",
     map({"$lib/$_.c"} qw(mp3frame mp3huff mp3imdct mp3synth mp3quant mp3ster)), '-o',"$tmp/host");
 run("$tmp/host",$input,"$tmp/host.pcm");
 copy($input,"$tmp/input.mp3") or die $!;

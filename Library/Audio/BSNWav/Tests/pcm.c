@@ -474,7 +474,8 @@ int main(int argc, char **argv)
     inputP = fopen(argv[2], "rb"); assert(inputP);
     playOutputP = fopen(argv[3], "wb"); assert(playOutputP);
     if (argv[1][0] == 'm') {
-        assert(BSNMP3DecOpen(&mp3, 1) == BSNW_STATUS_OK);
+        assert(BSNMP3DecOpenEx(&mp3, 1,
+               strstr(argv[1], "half") ? BSN_MP3_HALF_RATE : 0) == BSNW_STATUS_OK);
         sourceP = &mp3.source;
     } else {
         assert(BSNWavOpen(&wav, 1) == BSNW_STATUS_OK);
@@ -503,7 +504,8 @@ int main(int argc, char **argv)
     else BSNWavClose(&wav);
     assert(!fseek(inputP, 0, SEEK_SET));
     assert(!fclose(inputP) && !fclose(playOutputP));
-    puts("Public decoder -> BSNPcmPlay -> common DMA buffer path: PASS");
-    return 0;
+    puts(result == BSNW_UNKNOWN_WAVE_FORMAT ? "Unsupported PCM output rate rejected: PASS" :
+         "Public decoder -> BSNPcmPlay -> common DMA buffer path: PASS");
+    return result == BSNW_UNKNOWN_WAVE_FORMAT ? 2 : 0;
 }
 #endif

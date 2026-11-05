@@ -226,6 +226,11 @@ extern "C"
 
         int16       *pOutputBuffer;
 
+        /* PC/GEOS: request half-rate output for MPEG-1 (32/44.1/48 kHz).
+         * Set before the first frame and keep it fixed for this stream.
+         */
+        int16       halfRate;
+
     } tPVMP3DecoderExternal;
 
 

@@ -63,6 +63,8 @@ static int LocalCmpStringsNoCase(const char *aP, const char *bP, word limit)
 static dword bqSampleRate, bqAllBytes, bqSampleBytes;
 static word bqChannels, bqBits;
 static Boolean bqStopRequested;
+#define BQ_OPTION_MP3_HALF_RATE 0x0008
+static word bqOptions, expectedOptions;
 static dword magic;
 static int openResult, playResult, wavOpens, mp3Opens, wavCloses, mp3Closes, plays;
 static word expectedFlags, readCount;
@@ -85,17 +87,20 @@ int BSNWavOpen(BSNWav *wavP, FileHandle fileH)
     wavP->source.format = format; wavP->source.pcmBytes = 176400;
     return openResult;
 }
-int BSNMP3DecOpen(BSNMP3Dec *mp3P, FileHandle fileH)
+int BSNMP3DecOpenEx(BSNMP3Dec *mp3P, FileHandle fileH, word options)
 {
-    assert(fileH == 55); mp3Opens++;
+    assert(fileH == 55 && options == expectedOptions); mp3Opens++;
     mp3P->source.format = format; mp3P->source.pcmBytes = BSN_PCM_LENGTH_UNKNOWN;
+    if (options) mp3P->source.format.sampleRate /= 2;
     return openResult;
 }
 void BSNWavClose(BSNWav *wavP) { (void)wavP; wavCloses++; }
 void BSNMP3DecClose(BSNMP3Dec *mp3P) { (void)mp3P; mp3Closes++; }
 int BSNPcmPlay(BSNPcmSource *sourceP, word flags, optr parent)
 {
-    assert(sourceP->format.sampleRate == format.sampleRate && flags == expectedFlags && !parent);
+    assert(sourceP->format.sampleRate ==
+           (magic != CODE_RIFF && expectedOptions ? format.sampleRate/2 : format.sampleRate));
+    assert(flags == expectedFlags && !parent);
     plays++; return playResult;
 }
 typedef word GStateHandle;
@@ -158,6 +163,17 @@ int main(void)
         bqStopRequested = FALSE;
     }
     assert(wavOpens == wavCloses && mp3Opens == mp3Closes);
+    /* The saved option affects MP3 probe and playback, but not WAV. */
+    bqOptions = BQ_OPTION_MP3_HALF_RATE; expectedOptions = BSN_MP3_HALF_RATE;
+    for (mp3=0; mp3<2; mp3++) {
+        magic = mp3 ? 0x00334449UL : CODE_RIFF;
+        for (preview=0; preview<2; preview++) {
+            expectedFlags = preview ? BSNW_TEST_ONLY : BSNW_SHOW_ERROR_MSG;
+            assert(BQ_Audio(55, preview) == BSNW_STATUS_OK);
+            assert(bqSampleRate == (mp3 ? 22050 : 44100));
+        }
+    }
+    bqOptions = expectedOptions = 0;
     i = plays; failSeek = TRUE;
     assert(BQ_Audio(55, FALSE) == BSNW_SOURCE_ERROR && plays == (int)i);
     failSeek = FALSE; readCount = 3;

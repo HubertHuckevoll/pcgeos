@@ -80,18 +80,41 @@ static word _pascal BSNMP3Read(BSNMP3Dec *mp3P, void *destP, word maxBytes,
 
 int _pascal _export BSNMP3DecOpen(BSNMP3Dec *mp3P, FileHandle file)
 {
+    return BSNMP3DecOpenEx(mp3P, file, 0);
+}
+
+/***********************************************************************
+ * ROUTINE:     BSNMP3DecOpenEx
+ * DESCRIPTION: Open an MP3 with a fixed output-quality option.
+ * PARAMETERS:  Caller context, borrowed file, and BSN_MP3_HALF_RATE or zero.
+ * STRATEGY:    Set the option before the probe retains the first PCM frame.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Half rate reduces high-frequency detail. It does not change
+ *              duration, pitch, channel count, or the caller context layout.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/04/26  Initial version
+ ***********************************************************************/
+int _pascal _export BSNMP3DecOpenEx(BSNMP3Dec *mp3P, FileHandle file,
+                                   word options)
+{
     Mp3DecResult result;
+    Mp3Decoder *decoderP;
     word count;
     int status;
 
     if (!mp3P)
         return BSNW_SOURCE_ERROR;
     memset(mp3P, 0, sizeof(*mp3P));
-    if (!file || FilePos(file, 0, FILE_POS_START) != 0)
+    if ((options & ~BSN_MP3_HALF_RATE) ||
+        !file || FilePos(file, 0, FILE_POS_START) != 0)
         return BSNW_SOURCE_ERROR;
     result = Mp3DecCreate(&mp3P->decoderH);
     if (result != MP3DEC_PCM)
         return result == MP3DEC_NO_MEMORY ? BSNW_MEMORY_ERROR : BSNW_SOURCE_ERROR;
+    decoderP = MemLock(mp3P->decoderH);
+    decoderP->halfRate = (options & BSN_MP3_HALF_RATE) != 0;
+    decoderP->ext.halfRate = decoderP->halfRate;
+    MemUnlock(mp3P->decoderH);
     mp3P->file = file;
     count = BSNMP3Read(mp3P, (void *)0, 0, TRUE);
     if (count == BSN_PCM_READ_ERROR) {

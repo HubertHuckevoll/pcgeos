@@ -1,5 +1,65 @@
 # Unified BSNWav implementation
 
+## Optional reduced-rate MP3 output
+
+Bsqp has an Options checkbox, Reduce MP3 Quality (Lower CPU Use). The
+application default is off. The bbxensem product geos.ini template enables
+it with QuickPlayer/options = 8. Save Options stores bit 0x0008 in the
+existing QuickPlayer/options integer. The setting applies when playback starts again. WAV files are not
+affected.
+
+BSNMP3DecOpenEx takes the existing context and borrowed file handle, plus
+an options word. BSN_MP3_HALF_RATE selects reduced-rate output. Zero selects
+normal output. Unknown option bits return BSNW_SOURCE_ERROR. The existing
+BSNMP3DecOpen calls OpenEx with zero, so existing callers retain normal
+output. The new export is appended under a new minor protocol; existing
+export ordinals and the public BSNMP3Dec layout are unchanged.
+
+The option is set before the first decoded frame is retained by the open
+probe. It belongs to the decoder context and survives decoder reset and
+error recovery. It cannot change during playback. Separate contexts can
+use different modes. A change in the encoded source rate is still reported
+as a format change, even if the two effective output rates would be equal.
+
+The mode applies to MPEG-1 input rates:
+
+- 32,000 Hz becomes 16,000 Hz.
+- 44,100 Hz becomes 22,050 Hz.
+- 48,000 Hz becomes 24,000 Hz.
+
+Lower-rate MPEG-2 and MPEG-2.5 files retain their original output rate.
+Channel count and signed 16-bit PCM remain unchanged. Each affected MPEG
+frame returns half as many PCM frames at half the rate, preserving duration
+and pitch. The source format and playback counters describe these actual
+PCM bytes. Existing encoder-delay and padding behavior is unchanged.
+
+The decoder retains the lowest 15 of 32 synthesis subbands. The next band
+is a guard below the new Nyquist limit. Upper IMDCT bands keep zero overlap
+from stream initialization. The synthesis window calculates only even
+output positions, but all time slots and the circular history still advance.
+This is filtering and reduced synthesis, not removal of alternate samples
+after a full PCM decode. Huffman decoding and dequantization remain intact.
+The option adds no memory handles or large tables.
+
+High-frequency detail is reduced. The guard band makes the transition
+start below 11 kHz for 44.1 kHz input. This option does not guarantee that
+decoding will meet every playback deadline.
+
+MP3Dec/Tests/half.pl compares reduced-rate output with every second PCM frame of
+a filtered full-rate reference, checks partial reads, EOF, reset, independent
+contexts, invalid options, and source-rate changes, and tests tone level,
+pitch, stereo order, and suppression of frequencies above Nyquist. It takes
+the micro-mp3 corpus path and optional extra MP3 files. FFmpeg is used only
+to generate and inspect test inputs.
+
+MP3Dec/Tests/watcom.pl accepts HALF_RATE=1 and MP3_ASM=1 to compare actual
+ESP DSP output with the C reference in standalone DOS. Tests/profile.pl
+also accepts HALF_RATE=1. With TOTAL_ONLY=1 and the extracted production
+DSP object, dudu.mp3 took 89.803 seconds of measured decoder time instead
+of 103.590 seconds in normal mode at the same controlled 15,000-cycle
+Basebox setting. This is about 13% less decoder time, not a GEOS playback
+latency measurement. These tests do not run PC/GEOS.
+
 ## Baseline (2026-10-29)
 
 Implementation branch BSNAudio-unified starts at PCM-source-v2 commit

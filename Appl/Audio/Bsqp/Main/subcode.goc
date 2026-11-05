@@ -484,7 +484,11 @@ static int _pascal BQ_Audio(FileHandle fileH, Boolean testOnly)
         return BSNW_SOURCE_ERROR;
     mp3 = signature != CODE_RIFF;
     if (mp3) {
-        result = BSNMP3DecOpen(&reader.mp3, fileH);
+        /* Set quality before probing. The live decoder keeps this choice
+         * until it closes, even if the user changes the Options menu.
+         */
+        result = BSNMP3DecOpenEx(&reader.mp3, fileH,
+                     (bqOptions & BQ_OPTION_MP3_HALF_RATE) ? BSN_MP3_HALF_RATE : 0);
         sourceP = &reader.mp3.source;
     } else {
         result = BSNWavOpen(&reader.wav, fileH);

@@ -9,7 +9,7 @@ word FileRead(FileHandle file, void *destP, word size, word flags)
 {
     (void)flags;
     assert(file && file < 3 && files[file]);
-    assert(++reads < 1000000);
+    assert(++reads < 10000000); /* Also allow one-byte reads of long tracks. */
     if (failRead) return 0xffff;
     if (size > inputChunk) size = inputChunk;
     return (word)fread(destP, 1, size, files[file]);
@@ -29,25 +29,33 @@ int main(int argc, char **argv)
     BSNMP3Dec mp3, other;
     FILE *outputP;
     byte pcm[511], otherPCM[4];
-    word count, second, i, expectError;
+    word count, second, i, expectError, options;
     unsigned long total;
     assert(argc == 4 || argc == 5);
-    expectError = argc == 5;
+    expectError = argc == 5 && strstr(argv[4], "error") != (void *)0;
+    options = argc == 5 && strstr(argv[4], "half") ? BSN_MP3_HALF_RATE : 0;
     inputChunk = (word)atoi(argv[3]);
     files[1] = fopen(argv[1], "rb"); assert(files[1]);
     files[2] = fopen(argv[1], "rb"); assert(files[2]);
     for (i=1; i<=3; i++) {
         failAllocation = i; allocation = 0;
-        assert(BSNMP3DecOpen(&mp3, 1) == BSNW_MEMORY_ERROR);
+        assert(BSNMP3DecOpenEx(&mp3, 1, options) == BSNW_MEMORY_ERROR);
         BSNMP3DecClose(&mp3); CheckFree();
     }
     failAllocation = 0;
     failRead = 1;
-    assert(BSNMP3DecOpen(&mp3, 1) == BSNW_SOURCE_ERROR);
+    assert(BSNMP3DecOpenEx(&mp3, 1, options) == BSNW_SOURCE_ERROR);
     BSNMP3DecClose(&mp3); CheckFree();
     failRead = 0;
-    assert(BSNMP3DecOpen(&mp3, 1) == BSNW_STATUS_OK);
+    assert(BSNMP3DecOpenEx(&mp3, 1, 2) == BSNW_SOURCE_ERROR);
+    CheckFree();
+    assert(BSNMP3DecOpenEx(&mp3, 1, options) == BSNW_STATUS_OK);
     assert(BSNMP3DecOpen(&other, 2) == BSNW_STATUS_OK);
+    /* The option belongs to one context. The other keeps normal output. */
+    assert(mp3.source.format.sampleRate ==
+           (options && other.source.format.sampleRate >= 32000 ?
+            other.source.format.sampleRate / 2 : other.source.format.sampleRate));
+    assert(mp3.source.format.channels == other.source.format.channels);
     assert(mp3.source.pcmBytes == BSN_PCM_LENGTH_UNKNOWN);
     assert(mp3.source.format.bitsPerSample == 16);
     assert(mp3.source.format.channels == 1 || mp3.source.format.channels == 2);
@@ -78,7 +86,12 @@ int main(int argc, char **argv)
     BSNMP3DecClose(&mp3); BSNMP3DecClose(&mp3);
     BSNMP3DecClose(&other); CheckFree();
     /* A file error after probing/draining pending PCM remains an error. */
-    assert(BSNMP3DecOpen(&mp3, 1) == BSNW_STATUS_OK);
+    assert(BSNMP3DecOpenEx(&mp3, 1, options) == BSNW_STATUS_OK);
+    /* Reset keeps the output mode, although it clears buffered PCM/input. */
+    assert(Mp3DecReset(mp3.decoderH) == MP3DEC_PCM);
+    assert(FilePos(1, 0, FILE_POS_START) == 0);
+    count = BSNMP3DecReadPCM(&mp3, pcm, sizeof(pcm));
+    assert(count && count != BSN_PCM_READ_ERROR);
     failRead = 1;
     while ((count = BSNMP3DecReadPCM(&mp3, pcm, sizeof(pcm))) != BSN_PCM_READ_ERROR)
         assert(count);

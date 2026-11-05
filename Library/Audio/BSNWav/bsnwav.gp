@@ -105,3 +105,7 @@ resource AudioMainCode code read-only shared
 resource PCMCode code read-only shared
 resource WAVCode code read-only shared
 resource ASMTOOLS_TEXT code read-only shared
+
+# Optional MP3 output quality; retain all existing export ordinals.
+incminor
+export BSNMP3DECOPENEX

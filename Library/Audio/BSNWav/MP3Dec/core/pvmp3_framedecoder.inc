@@ -160,6 +160,7 @@ ERROR_CODE pvmp3_framedecoder(tPVMP3DecoderExternal *pExt,
 {
     int32 outputFrameSize;
     int32 temp;
+    int32 halfRate;
     uint16 mixedBlocksLongBlocks;
 
 
@@ -230,11 +231,13 @@ ERROR_CODE pvmp3_framedecoder(tPVMP3DecoderExternal *pExt,
     pVars->num_channels = (info->mode == MPG_MD_MONO) ? 1 : 2;
     pExt->num_channels = pVars->num_channels;
 
+    halfRate = pExt->halfRate && info->version_x == MPEG_1;
     outputFrameSize = (info->version_x == MPEG_1) ?
                             2 * SUBBANDS_NUMBER * FILTERBANK_BANDS :
                             SUBBANDS_NUMBER * FILTERBANK_BANDS;
 
     outputFrameSize = (info->mode == MPG_MD_MONO) ? outputFrameSize : outputFrameSize << 1;
+    outputFrameSize >>= halfRate;
 
 
     /*
@@ -530,6 +533,12 @@ ERROR_CODE pvmp3_framedecoder(tPVMP3DecoderExternal *pExt,
                     }
                 }
 
+                /* Keep 15 low subbands. The next band is a guard below
+                 * the new Nyquist limit. Upper overlap stays zero because
+                 * the mode is fixed before the first frame of the stream.
+                 */
+                if (halfRate && pChVars[ch]->used_freq_lines > 13)
+                    pChVars[ch]->used_freq_lines = 13;
                 pvmp3_imdct_synth(pChVars[ch]->work_buf_int32,
                                   pChVars[ch]->overlap,
                                   pVars->sideInfo.ch[ch].gran[gr].block_type,
@@ -545,12 +554,12 @@ ERROR_CODE pvmp3_framedecoder(tPVMP3DecoderExternal *pExt,
                 pvmp3_poly_phase_synthesis(pChVars[ch],
                                            pVars->num_channels,
                                            pExt->equalizerType,
-                                           &ptrOutBuffer[ch]);
+                                           &ptrOutBuffer[ch], halfRate);
 
 
             }/* end ch loop */
 
-            ptrOutBuffer += pVars->num_channels * SUBBANDS_NUMBER * FILTERBANK_BANDS;
+            ptrOutBuffer += (pVars->num_channels * SUBBANDS_NUMBER * FILTERBANK_BANDS) >> halfRate;
         }  /*   for (gr=0;gr<Max_gr;gr++)  */
 
         /* skip ancillary data */
@@ -588,6 +597,7 @@ ERROR_CODE pvmp3_framedecoder(tPVMP3DecoderExternal *pExt,
     pExt->totalNumberOfBitsUsed += pVars->inputStream.usedBits;
     pExt->version = info->version_x;
     pExt->samplingRate = mp3_s_freq[info->version_x][info->sampling_frequency];
+    pExt->samplingRate >>= halfRate;
     pExt->bitRate = mp3_bitrate[pExt->version][info->bitrate_index];
 
 
@@ -732,6 +742,7 @@ void pvmp3_InitDecoder(tPVMP3DecoderExternal *pExt,
     pVars->num_channels = 0;
 
     pExt->totalNumberOfBitsUsed = 0;
+    pExt->halfRate = 0;
     pExt->inputBufferCurrentLength = 0;
     pExt->inputBufferUsedLength    = 0;
 
