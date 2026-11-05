@@ -35,8 +35,8 @@ dword           bqWorkerSerial = 0;
 
 Boolean         bqStopRequested = FALSE;
 word            playFlag = 0;       // playState
-char            playText[] = "PLAY";    // strings for replacing visMoniker
-char            pauseText[] = "PAUSE";
+char            playText[] = "Play";    // strings for replacing visMoniker
+char            pauseText[] = "Pause";
 dword           bqSampleRate = 0;
 word            bqChannels = 0;     // 1 = MONO 2 = STEREO
 word            bqBits = 0;     // 8 / 16 Bit
