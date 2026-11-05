@@ -55,7 +55,7 @@ typedef uint8_t byte;
 typedef uint16_t word;
 typedef uint32_t dword;
 typedef word MemHandle, DiskHandle, VMBlockHandle, VMFileHandle, FileHandle;
-typedef word TimerHandle, WindowHandle, Color;
+typedef word TimerHandle, WindowHandle, Color, GStateHandle;
 typedef byte FileAttrs;
 typedef int Boolean;
 typedef dword optr;
@@ -85,6 +85,7 @@ typedef char PathName[198], FileLongName[36];
 #define FESF_CALLBACK 4
 #define PRIORITY_HIGH 0
 #define VUM_NOW 0
+#define DISP_VIEW_X_SIZE 250
 #define CODE_PAGE_LATIN_1 819
 #define BSNW_STATUS_OK 0
 #define BSNW_ABORT 9
@@ -257,6 +258,15 @@ static void UI_TrackList_MSG_GEN_DYNAMIC_LIST_INITIALIZE(word count) { (void)cou
 static void UI_TrackList_MSG_GEN_DYNAMIC_LIST_REPLACE_ITEM_TEXT(word item,const char *textP)
 { (void)item; assert(!arrayLocks && strlen(textP)<BQ_LABEL_SIZE+3); }
 static void UI_BSQPPrimary_MSG_GEN_REPLACE_VIS_MONIKER_TEXT(const char *textP,word mode) { (void)textP; (void)mode; assert(!arrayLocks); }
+static word GrTextWidth(GStateHandle gstate,const char *textP,word count)
+{
+    word width=0;
+    assert(gstate==1 && !count);
+    while(*textP) { width += *textP=='W' ? 10 : *textP=='.' ? 2 : 5; ++textP; }
+    return width;
+}
+static GStateHandle UI_FolderGlyph_MSG_VIS_VUP_CREATE_GSTATE(void) { return 1; }
+static void GrDestroyState(GStateHandle gstate) { assert(gstate==1); }
 static void UI_FolderGlyph_MSG_GEN_REPLACE_VIS_MONIKER_TEXT(const char *textP,word mode) { (void)mode; assert(!arrayLocks); strcpy(folderLabel,textP); }
 static void UI_EmptyGlyph_MSG_GEN_SET_USABLE(word mode) { (void)mode; }
 static void UI_EmptyGlyph_MSG_GEN_SET_NOT_USABLE(word mode) { (void)mode; }
@@ -354,6 +364,7 @@ static void CheckFolders(void)
     AppLaunchBlock *launchP;
     FileEnumCallbackData data;
     FileEnumParams params;
+    char longPath[198];
     static byte visited[700];
     audioLength=16; memset(audioBytes,0,16);
     entryCount=130;
@@ -374,6 +385,17 @@ static void CheckFolders(void)
     MemUnlock(requestH);
     MSG_BSQP_LOAD_FOLDER(requestH); Pump();
     assert(starts==before && !strcmp(folderLabel,"C:\\DOCUMENT\\MUSIC"));
+    /* Long labels fit in pixels and preserve the full file-access path. */
+    memset(longPath,'W',sizeof(longPath)-1); longPath[0]='\\';
+    strcpy(longPath+sizeof(longPath)-7,"\\MUSIC");
+    MSG_BSQP_LOAD_FOLDER(Request(longPath,"")); Pump();
+    assert(!strcmp(folderPath,longPath) && !strncmp(folderLabel,"...",3));
+    assert(GrTextWidth(1,folderLabel,0)<=DISP_VIEW_X_SIZE);
+    assert(!strcmp(folderLabel+strlen(folderLabel)-6,"\\MUSIC"));
+    /* Narrow glyphs that fit in pixels are left unchanged. */
+    strcpy(longPath,"\\iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
+    MSG_BSQP_LOAD_FOLDER(Request(longPath,"")); Pump();
+    assert(!strncmp(folderLabel,"C:",2) && !strcmp(folderLabel+2,longPath));
     oldArray=tracksH; oldCount=trackCount; oldMemory=memoryCount;
     MSG_BSQP_LOAD_FOLDER(Request("bad","")); Pump();
     assert(tracksH==oldArray && trackCount==oldCount && memoryCount==oldMemory);

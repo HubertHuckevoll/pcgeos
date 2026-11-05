@@ -449,7 +449,8 @@ void _pascal BQ_PlaySelected(void)
 void _pascal BQ_PollPending(void)
 {
     BQFolderRequest *requestP;
-    word item;
+    word item, length, start, dotsWidth;
+    GStateHandle gstate;
     char path[BQ_FULL_PATH_SIZE];
 
     if (closing) return;
@@ -488,6 +489,24 @@ void _pascal BQ_PollPending(void)
         RedrawFileName(0);
         RedrawSettings(0);
         RedrawTime(0);
+        /* Shorten only the label, using the glyph's current UI font.
+         * Keep the tail so the opened folder remains identifiable.
+         */
+        gstate = @call FolderGlyph::MSG_VIS_VUP_CREATE_GSTATE();
+        if (gstate) {
+            if (GrTextWidth(gstate, path, 0) > DISP_VIEW_X_SIZE) {
+                length = strlen(path);
+                start = 0;
+                dotsWidth = GrTextWidth(gstate, "...", 0);
+                while (start < length &&
+                       (GrTextWidth(gstate, path + start, 0) + dotsWidth > DISP_VIEW_X_SIZE ||
+                        length - start + 4 > sizeof(path)))
+                    ++start;
+                memmove(path + 3, path + start, length - start + 1);
+                memcpy(path, "...", 3);
+            }
+            GrDestroyState(gstate);
+        }
         @call FolderGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(path, VUM_NOW);
         if (trackCount) @call EmptyGlyph::MSG_GEN_SET_NOT_USABLE(VUM_NOW);
         else @call EmptyGlyph::MSG_GEN_SET_USABLE(VUM_NOW);

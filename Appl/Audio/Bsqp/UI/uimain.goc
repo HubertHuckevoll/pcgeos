@@ -95,7 +95,8 @@ DESCRIPTION:
         @Moniker1,
         @Moniker2}
 
-    GI_comp = @DisplayGroup, @FolderGroup, @OptionsMenu, @TriggerGroup;
+    GI_comp = @DisplayGroup, @FolderGlyph, @TrackList, @EmptyGlyph,
+              @OptionsMenu, @TriggerGroup;
     HINT_ORIENT_CHILDREN_VERTICALLY;
 
     ATTR_GEN_DISPLAY_NOT_MAXIMIZABLE;
@@ -147,21 +148,16 @@ DESCRIPTION:
     GVI_content = process;
 }
 
-@object GenInteractionClass FolderGroup = {
-    GI_comp = @FolderGlyph, @TrackList, @EmptyGlyph;
-    GII_visibility = GIV_SUB_GROUP;
-    GI_attrs = @default | GA_KBD_SEARCH_PATH;
-    HINT_ORIENT_CHILDREN_VERTICALLY;
-    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
-}
-
 @object GenGlyphClass FolderGlyph = {
     GI_visMoniker = "Open a folder to list its MP3 and WAV files.";
-    HINT_FIXED_SIZE = { SST_PIXELS | 250, SST_LINES_OF_TEXT | 2, 2 };
+    HINT_CAN_CLIP_MONIKER_WIDTH;
+    HINT_FIXED_SIZE = { SST_PIXELS | DISP_VIEW_X_SIZE, SST_LINES_OF_TEXT | 2, 2 };
 }
 
 @object GenGlyphClass EmptyGlyph = {
     GI_visMoniker = "No MP3 or WAV files in this folder.";
+    HINT_CAN_CLIP_MONIKER_WIDTH;
+    HINT_MAXIMUM_SIZE = { SST_PIXELS | DISP_VIEW_X_SIZE, 0, 0 };
     GI_states = @default & ~GS_USABLE;
 }
 
@@ -175,7 +171,8 @@ DESCRIPTION:
     ATTR_GEN_ITEM_GROUP_CUSTOM_DOUBLE_PRESS = MSG_BSQP_TRACK_ACTIVATE;
     HINT_ITEM_GROUP_SCROLLABLE;
     HINT_ITEM_GROUP_SHOW_SELECTION_EVEN_WHEN_NOT_FOCUS;
-    HINT_FIXED_SIZE = { SST_PIXELS | 250, SST_LINES_OF_TEXT | 8, 8 };
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+    HINT_FIXED_SIZE = { 0, SST_LINES_OF_TEXT | 8, 8 };
 }
 
 /****************

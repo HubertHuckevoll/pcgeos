@@ -23,7 +23,9 @@ editing, album art, or folder monitoring.
   readable folder stops the old track, loads its list, selects its first
   entry, and waits for Play. If the folder cannot be read or stored, report
   the error and retain the old list. An empty folder is a valid result.
-- Show the opened folder path above the list. Sort rows by filename without
+- Show the opened folder path above the list, with a leading ellipsis when
+  it exceeds the fixed LCD width. Keep the full path for file access.
+  Sort rows by filename without
   regard to case. Metadata changes the displayed text, not the row order.
 - For MP3, show artist and title when available. With only a title, show the
   title. Without a usable title, show the filename, including its extension.
