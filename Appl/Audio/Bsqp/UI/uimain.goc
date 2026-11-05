@@ -201,7 +201,7 @@ DESCRIPTION:
 
 @object GenTriggerClass STOPTrigger =
 {
-    GI_visMoniker   = "STOP";
+    GI_visMoniker   = "Stop";
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_kbdAccelerator = ctrl 's';
     GTI_actionMsg   = MSG_PROCESS_BSQP_STOP;
@@ -210,7 +210,7 @@ DESCRIPTION:
 
 @object GenTriggerClass PLAYTrigger =
 {
-    GI_visMoniker   = "PLAY";
+    GI_visMoniker   = "Play";
     GI_states = @default & ~GS_ENABLED;
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_kbdAccelerator = ctrl 'p';
@@ -286,8 +286,7 @@ DESCRIPTION:
 @define TEXT_SELECTOR_2 "Select"
 
 @object GenInteractionClass FileSelectorBox = {
-    // GI_visMoniker = '�',"�ffnen";
-    GI_visMoniker = 'O',"Open Folder...";
+    GI_visMoniker = 'O',"Open Folder";
     GI_kbdAccelerator = ctrl 'o';
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GII_visibility = GIV_DIALOG;

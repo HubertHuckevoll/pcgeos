@@ -73,6 +73,7 @@ typedef char PathName[198], FileLongName[36];
 #define VMO_TEMP_FILE 1
 #define VM_UPDATE_NOTHING_DIRTY 272
 #define FILE_POS_START 0
+#define FILE_NO_ERRORS 0x80
 #define FRSPF_ADD_DRIVE_NAME 2
 #define FILE_ACCESS_R 0
 #define FILE_DENY_W 0
@@ -171,7 +172,7 @@ static void HugeArrayReplace(VMFileHandle fileH, VMBlockHandle arrayH, word coun
 static word VMClose(VMFileHandle fileH, Boolean noError)
 {
     word i;
-    assert(fileH==1 && noError && vmOpen);
+    assert(fileH==1 && noError==FILE_NO_ERRORS && vmOpen);
     for (i=1;i<8;++i) if (arrays[i].data) HugeArrayDestroy(fileH,i);
     vmOpen=0; return 0;
 }

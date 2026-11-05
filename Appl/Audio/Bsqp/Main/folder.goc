@@ -642,7 +642,7 @@ void _pascal BQ_CloseFolder(void)
     tracksH = 0;
     trackCount = 0;
     if (listFile) {
-        VMClose(listFile, TRUE);
+        VMClose(listFile, FILE_NO_ERRORS);
         listFile = 0;
         FileDelete(tempName);
     }
