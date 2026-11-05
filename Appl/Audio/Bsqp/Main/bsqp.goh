@@ -38,6 +38,10 @@ DESCRIPTION:
 #define BQ_QUICK_START  1
 #define BQ_QUICK_END    2
 
+/* Application-only errors; library result codes remain unchanged. */
+#define BQ_ERROR_OPEN   0x100
+#define BQ_ERROR_THREAD 0x101
+
 // Playstate
 #define BQ_PLAYFLAG_PLAY    1
 #define BQ_PLAYFLAG_PAUSE   2

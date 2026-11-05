@@ -33,6 +33,7 @@ DESCRIPTION:
 #include <timer.h>
 #include <file.h>
 #include <initfile.h>
+#include <uDialog.h>
 
 @include <stdapp.goh>
 
@@ -50,6 +51,20 @@ DESCRIPTION:
 @chunk  char    optionsKey[] = "options";
 @chunk  char    displayKey[] = "timeDisplay";
 
+@chunk char BQOpenError[] = "Cannot open the audio file. It may be missing, in use, or inaccessible.";
+@chunk char BQThreadError[] = "Cannot start audio playback. There are not enough system resources.";
+@chunk char BQDriverError[] = "A BestSound driver is required. Install or select BSD16 or BSD8ST.";
+@chunk char BQMemoryError[] = "There is not enough memory to open or play this audio file.";
+@chunk char BQBusyError[] = "Audio playback is busy. Stop other audio playback and try again.";
+@chunk char BQHardwareError[] = "Cannot configure the sound device for audio playback.";
+@chunk char BQReadError[] = "Cannot read the audio file. Check that its disk is available and try again.";
+@chunk char BQTruncatedError[] = "The audio data ends unexpectedly. The file may be incomplete or invalid.";
+@chunk char BQDataError[] = "The file contains no playable audio data, or its audio data is damaged or unsupported.";
+@chunk char BQChangedError[] = "The MP3 sample rate or channel count changes within the file. This is not supported.";
+@chunk char BQFormatError[] = "This audio format or playback sample rate is not supported.";
+@chunk char BQTimeoutError[] = "The previous audio playback did not stop in time. Try again.";
+@chunk char BQPlaybackError[] = "Cannot play this audio file because of an unexpected audio error.";
+
 @end    TEXTCHUNKRESOURCE;
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -61,6 +76,55 @@ DESCRIPTION:
  */
 
 @classdecl  BSQPProcessClass, neverSaved;
+
+/***********************************************************************
+ * MESSAGE:     MSG_PROCESS_BSQP_FINISHED
+ * DESCRIPTION: Restore idle controls and report an audio error.
+ * PARAMETERS:  result = playback/open result; closeAfter = quick-mode exit.
+ * STRATEGY:    The worker closes its file and releases playback first.
+ *              Show one standard dialog, then close quick mode if requested.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Selection probes do not send this message.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/05/26  Initial version
+ ***********************************************************************/
+@method BSQPProcessClass, MSG_PROCESS_BSQP_FINISHED
+{
+    optr text;
+
+    if (!playFlag) {
+        @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playText, VUM_NOW);
+        rmsValue = 0;
+        RedrawStatus(0);
+        RedrawRMS(0);
+    }
+    text = 0;
+    switch (result) {
+    case BSNW_STATUS_OK:
+    case BSNW_ABORT: break;
+    case BQ_ERROR_OPEN: text = @BQOpenError; break;
+    case BQ_ERROR_THREAD: text = @BQThreadError; break;
+    case BSNW_WRONG_DRIVER: text = @BQDriverError; break;
+    case BSNW_MEMORY_ERROR: text = @BQMemoryError; break;
+    case BSNW_NOT_FREE: text = @BQBusyError; break;
+    case BSNW_HARDWARE_NOT_READY: text = @BQHardwareError; break;
+    case BSNW_READ_ERROR: text = @BQReadError; break;
+    case BSNW_TRUNCATED: text = @BQTruncatedError; break;
+    case BSNW_INVALID_DATA: text = @BQDataError; break;
+    case BSNW_FORMAT_CHANGED: text = @BQChangedError; break;
+    case BSNW_UNKNOWN_WAVE_FORMAT: text = @BQFormatError; break;
+    case BSNW_TIMEOUT: text = @BQTimeoutError; break;
+    default: text = @BQPlaybackError; break;
+    }
+    if (text)
+        (void)UserStandardDialogOptr((char *)0, (void *)0, 0, 0, text,
+                    (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
+                    (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+    if (!playFlag && bqMinimizedState)
+        @send BSQPPrimary::MSG_GEN_DISPLAY_SET_MINIMIZED();
+    if (closeAfter)
+        @send BSQPApp::MSG_META_QUIT();
+}
 
 /********************************************************
 
@@ -87,6 +151,24 @@ DESCRIPTION:
 
     // Overwrite old Filename in Primary
     @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("Audio Quick Player",VUM_NOW);/**/
+
+    ///////////// Loading settings from INI ////////////////////
+    MemLock(HandleOf(@category));
+    cat = LMemDeref(@category);
+
+    // Options
+    if (!InitFileReadInteger(cat,LMemDeref(@optionsKey),&bqOptions))
+    {
+        @call OptionsBooleans::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(bqOptions,FALSE);
+    };
+
+    // Display
+    if (!InitFileReadInteger(cat,LMemDeref(@displayKey),&bqDispStyle))
+    {
+        @call TimeDispList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(bqDispStyle,FALSE);
+    };
+
+    MemUnlock(HandleOf(@category));
 
     // detect Datafile
     if (launchBlock)
@@ -132,24 +214,6 @@ DESCRIPTION:
         // no file -> Normalmode
         quickMode = BQ_QUICK_OFF;
     };
-
-    ///////////// Loading settings from INI ////////////////////
-    MemLock(HandleOf(@category));
-    cat = LMemDeref(@category);
-
-    // Options
-    if (!InitFileReadInteger(cat,LMemDeref(@optionsKey),&bqOptions))
-    {
-        @call OptionsBooleans::MSG_GEN_BOOLEAN_GROUP_SET_GROUP_STATE(bqOptions,FALSE);
-    };
-
-    // Display
-    if (!InitFileReadInteger(cat,LMemDeref(@displayKey),&bqDispStyle))
-    {
-        @call TimeDispList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(bqDispStyle,FALSE);
-    };
-
-    MemUnlock(HandleOf(@category));
 
     // Display Releasenumber in Infobox
     // gh = GeodeGetProcessHandle();

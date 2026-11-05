@@ -24,6 +24,18 @@ static void CheckFree(void)
     word h;
     for (h=1; h<16; h++) assert(!blocks[h].dataP);
 }
+static void CheckBadInput(BSNMP3Dec *mp3P, const char *dataP, word size,
+                          int expected)
+{
+    FILE *savedP;
+
+    savedP = files[1];
+    files[1] = tmpfile(); assert(files[1]);
+    assert(fwrite(dataP, 1, size, files[1]) == size);
+    assert(BSNMP3DecOpen(mp3P, 1) == expected);
+    BSNMP3DecClose(mp3P); CheckFree();
+    fclose(files[1]); files[1] = savedP;
+}
 int main(int argc, char **argv)
 {
     BSNMP3Dec mp3, other;
@@ -44,9 +56,13 @@ int main(int argc, char **argv)
     }
     failAllocation = 0;
     failRead = 1;
-    assert(BSNMP3DecOpenEx(&mp3, 1, options) == BSNW_SOURCE_ERROR);
+    assert(BSNMP3DecOpenEx(&mp3, 1, options) == BSNW_READ_ERROR);
     BSNMP3DecClose(&mp3); CheckFree();
     failRead = 0;
+    CheckBadInput(&mp3, "", 0, BSNW_INVALID_DATA);
+    CheckBadInput(&mp3, "not audio data", 14, BSNW_TRUNCATED);
+    CheckBadInput(&mp3, "ID3\x05\0\0\0\0\0\0", 10, BSNW_INVALID_DATA);
+    CheckBadInput(&mp3, "ID3\x04\0\0\0\0\0\x10", 10, BSNW_TRUNCATED);
     assert(BSNMP3DecOpenEx(&mp3, 1, 2) == BSNW_SOURCE_ERROR);
     CheckFree();
     assert(BSNMP3DecOpenEx(&mp3, 1, options) == BSNW_STATUS_OK);
@@ -76,8 +92,8 @@ int main(int argc, char **argv)
     assert(total);
     if (expectError) {
         assert(count == BSN_PCM_READ_ERROR);
-        assert(mp3.status == BSNW_SOURCE_ERROR ||
-               mp3.status == BSNW_UNKNOWN_WAVE_FORMAT);
+        assert(mp3.status == (strstr(argv[1], "changed") ?
+                              BSNW_FORMAT_CHANGED : BSNW_TRUNCATED));
     } else {
         assert(count == 0);
         assert(BSNMP3DecReadPCM(&mp3, pcm, sizeof(pcm)) == 0);
@@ -95,7 +111,7 @@ int main(int argc, char **argv)
     failRead = 1;
     while ((count = BSNMP3DecReadPCM(&mp3, pcm, sizeof(pcm))) != BSN_PCM_READ_ERROR)
         assert(count);
-    assert(mp3.status == BSNW_SOURCE_ERROR);
+    assert(mp3.status == BSNW_READ_ERROR);
     failRead = 0;
     BSNMP3DecClose(&mp3); CheckFree();
     /* Both borrowed file handles remain usable. */

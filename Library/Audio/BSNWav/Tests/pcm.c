@@ -32,8 +32,15 @@ static FILE *playOutputP;
 #ifdef BSN_INTEGRATION_TEST
 static MemHandle dmaH;
 static word failCache, failDMA;
-static word secBufLenSoll = 512, playSampleRate;
-static byte playChannels, stereoToggle, stereoToggleIni;
+static word secBufLenSoll = 512, playSampleRate, playMaxRate, testMaxRate = 44100;
+static byte playChannels, stereoToggle, stereoToggleIni, playMaxChannels, playMaxBits;
+static word configuredRate;
+/* Globals consumed by the actual BQ_Audio extracted for integration checks. */
+#define CODE_RIFF 0x46464952UL
+#define BQ_OPTION_MP3_HALF_RATE 0x0008
+static word bqOptions, bqChannels, bqBits;
+static dword bqSampleRate, bqAllBytes, bqSampleBytes;
+static Boolean bqStopRequested;
 static Boolean compatFlag = TRUE;
 static optr statusBox, statusGlyphOptr1, statusRightBoxOptr;
 extern MemHandle MemAlloc(word size, word flags, word action);
@@ -60,12 +67,17 @@ static word BSNWAsmSecondAlloc(word size, word *offsetP, word *segmentP)
     dmaH = MemAlloc(size, 0, 0);
     return dmaH ? size : 0;
 }
-static int BSNWPrepKS(word rate, byte channels, byte bits)
+static Boolean BSNWavGetMaxProperties(word *rateP, byte *channelsP, byte *bitsP)
 {
-    playSampleRate = rate; playChannels = channels; playBits = bits;
-    konvRateRed = konvBitsRed = konvChanRed = 1;
-    return BSNW_STATUS_OK;
+    *rateP = testMaxRate; *channelsP = 2; *bitsP = 16;
+    return stereoToggle;
 }
+static word BSNWSetParams(word rate, word bits, word channels)
+{
+    assert((bits == 8 || bits == 16) && (channels == 1 || channels == 2));
+    configuredRate = rate; return 0;
+}
+int BSNWPrepKS(word rate, byte channels, byte bits);
 static optr BSCNCreateStatusBox(optr parent) { (void)parent; return 0; }
 void BSNWInsertSample(void *destP, byte bits);
 #endif
@@ -471,9 +483,16 @@ int main(int argc, char **argv)
     int result;
 
     assert(argc == 4);
+    /* The integer converter must program its actual rate, including BSD8ST. */
+    testMaxRate = 22050;
+    assert(BSNWPrepKS(24000, 2, 16) == BSNW_STATUS_OK);
+    assert(konvRateRed == 2 && playSampleRate == 12000 && configuredRate == 12000);
+    testMaxRate = 0;
+    assert(BSNWPrepKS(24000, 2, 16) == BSNW_HARDWARE_NOT_READY);
+    testMaxRate = 44100;
     inputP = fopen(argv[2], "rb"); assert(inputP);
     playOutputP = fopen(argv[3], "wb"); assert(playOutputP);
-    if (argv[1][0] == 'm') {
+    if (argv[1][0] == 'm' || argv[1][0] == 'q') {
         assert(BSNMP3DecOpenEx(&mp3, 1,
                strstr(argv[1], "half") ? BSN_MP3_HALF_RATE : 0) == BSNW_STATUS_OK);
         sourceP = &mp3.source;
@@ -489,10 +508,20 @@ int main(int argc, char **argv)
         assert(BSNPcmPlay(sourceP, 0, 0) == BSNW_MEMORY_ERROR);
         failCache = 0; failDMA = 1;
         assert(BSNPcmPlay(sourceP, 0, 0) == BSNW_MEMORY_ERROR);
-        failDMA = 0; stereoToggle = strchr(argv[1], '-') != (void *)0;
+        failDMA = 0;
         assert(!started);
     }
-    result = BSNPcmPlay(sourceP, 0, 0);
+    stereoToggle = strchr(argv[1], '-') != (void *)0;
+    if (argv[1][0] == 'q') {
+        BSNMP3DecClose(&mp3);
+        bqOptions = strstr(argv[1], "half") ? BQ_OPTION_MP3_HALF_RATE : 0;
+        result = BQ_Audio(1, FALSE);
+        assert(bqSampleRate == (sourceP->format.sampleRate == 48000 ?
+                               24000 : sourceP->format.sampleRate));
+        sourceP->format.sampleRate = bqSampleRate;
+    } else {
+        result = BSNPcmPlay(sourceP, 0, 0);
+    }
     if (sourceP->format.sampleRate >= 44200) {
         assert(result == BSNW_UNKNOWN_WAVE_FORMAT && !started);
     } else {
@@ -500,7 +529,7 @@ int main(int argc, char **argv)
         assert(playedBytes >= fullLen && playedBytes-fullLen < playLen2);
         assert(playCacheLen == 8192);
     }
-    if (argv[1][0] == 'm') BSNMP3DecClose(&mp3);
+    if (argv[1][0] == 'm' || argv[1][0] == 'q') BSNMP3DecClose(&mp3);
     else BSNWavClose(&wav);
     assert(!fseek(inputP, 0, SEEK_SET));
     assert(!fclose(inputP) && !fclose(playOutputP));

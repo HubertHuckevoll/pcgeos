@@ -429,11 +429,14 @@ int _pascal BSNWPrepKS(word sampleRate, byte channels, byte bits)
     // Get max. values from soundcard
     stereoToggle = BSNWavGetMaxProperties(&playMaxRate, &playMaxChannels, &playMaxBits);
 
-    // Samplerate
+    if (!playMaxRate)
+        return BSNW_HARDWARE_NOT_READY;
+
+    // Use an integer reduction and its actual output rate to preserve pitch.
     if (sampleRate > playMaxRate)
     {
-        konvRateRed = sampleRate/playMaxRate;
-        playSampleRate = playMaxRate;
+        konvRateRed = (sampleRate - 1) / playMaxRate + 1;
+        playSampleRate = sampleRate / konvRateRed;
     }
     else
     {

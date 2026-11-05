@@ -37,11 +37,17 @@ for my $name (qw(BSNWPrepare BSNWRunPCM BSNPcmPlay)) {
 open my $helpers, '<', "$lib/Main/subcode.goc" or die $!;
 my $helper_source = do { local $/; <$helpers> };
 # Keep the real short-buffer rounding and channel-toggle sample insertion.
-for my $name (qw(BSNWInsertSample BSNWAllocSecBuffer)) {
+for my $name (qw(BSNWInsertSample BSNWAllocSecBuffer BSNWPrepKS)) {
     $helper_source =~ /^([^\n;{}]*\b$name\([^;]*?\)\n\{.*?^\})/ms
         or die "missing $name";
     print $out "$1\n";
 }
+open my $quick_in, '<', "$lib/../../../Appl/Audio/Bsqp/Main/subcode.goc" or die $!;
+my $quick = do { local $/; <$quick_in> };
+$quick =~ s/\r\n/\n/g;
+$quick =~ /^(static int _pascal BQ_Audio\([^;]*?\)\n\{.*?^\})/ms
+    or die 'missing quick-player audio path';
+print $out "$1\n";
 print $out "#endif\n";
 close $out or die $!;
 # geos.h is replaced only in this host check; production uses the real header.
@@ -104,20 +110,28 @@ if (@ARGV) {
             "$mp3/Tests/pull.c", "$mp3/mp3api.c", "$mp3/mp3reader.goc",
             @core, '-o', "$tmp/pull") == 0 or die 'reader compile failed';
     }
-    for my $input (glob("$up/tests/data/*.mp3")) {
+    # The upstream corpus has no 48 kHz sample. Exercise the real fallback too.
+    system('ffmpeg', '-v', 'error', '-f', 'lavfi', '-i',
+        'sine=frequency=1000:sample_rate=48000:duration=0.2', '-ac', '2',
+        '-c:a', 'libmp3lame', '-write_xing', '0', "$tmp/48k.mp3") == 0
+        or die '48 kHz fixture failed';
+    for my $input (glob("$up/tests/data/*.mp3"), "$tmp/48k.mp3") {
         (my $name = $input) =~ s|.*/||;
-        my $reference = defined $reference_dir ? "$reference_dir/$name.pcm" : "$tmp/reference.pcm";
-        if (!defined $reference_dir) {
+        my $reference = defined $reference_dir && -f "$reference_dir/$name.pcm" ?
+                        "$reference_dir/$name.pcm" : "$tmp/reference.pcm";
+        if ($reference eq "$tmp/reference.pcm") {
             system("$tmp/pull", $input, $reference, '1536') == 0 or die 'reader failed';
         }
         system("$tmp/pull", $input, "$tmp/half-reference.pcm", '1536', 'half') == 0
             or die 'half-rate reader failed';
-        for my $mode ('mp3', 'mp3-toggle', 'mp3half', 'mp3half-toggle') {
+        for my $mode ('mp3', 'mp3-toggle', 'mp3half', 'mp3half-toggle',
+                      'quick', 'quick-toggle', 'quickhalf', 'quickhalf-toggle') {
             my $status = system("$tmp/play", $mode, $input, "$tmp/play.pcm");
             next if $status == (2 << 8); # The C check verified rate rejection.
             $status == 0 or die "playback failed: $input ($mode)";
             {
-                open my $ref, '<:raw', $mode =~ /half/ ? "$tmp/half-reference.pcm" : $reference or die $!;
+                my $half = $mode =~ /half/ || ($mode =~ /^quick/ && $name eq '48k.mp3');
+                open my $ref, '<:raw', $half ? "$tmp/half-reference.pcm" : $reference or die $!;
                 open my $played, '<:raw', "$tmp/play.pcm" or die $!;
                 my $expected = do { local $/; <$ref> };
                 my $actual = do { local $/; <$played> };

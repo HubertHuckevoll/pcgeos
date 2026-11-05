@@ -25,6 +25,10 @@
 #define BSNW_UNKNOWN_WAVE_FORMAT 6
 #define BSNW_WRONG_DRIVER       7
 #define BSNW_SOURCE_ERROR       8
+#define BSNW_READ_ERROR         9
+#define BSNW_TRUNCATED          10
+#define BSNW_INVALID_DATA       11
+#define BSNW_FORMAT_CHANGED     12
 #define BSNW_PLAY_FINISHED      255
 
 typedef struct {
@@ -76,7 +80,7 @@ extern void _pascal _export BSNWavClose(BSNWav *wavP);
  * Open probes with zero PCM capacity and retains the first decoded frame.
  * Open/Read/Close are serialized per context. File is borrowed.
  * Close a live context before opening another file in it.
- * status records a terminal source error or unsupported format change.
+ * status records READ_ERROR, TRUNCATED, INVALID_DATA or FORMAT_CHANGED.
  */
 typedef struct {
     BSNPcmSource source;
