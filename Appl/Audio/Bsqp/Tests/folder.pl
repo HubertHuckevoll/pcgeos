@@ -496,7 +496,7 @@ int main(int argc,char **argv)
     shortRead=1; CheckTag(argv[1],"original.mp3"); shortRead=0;
     failSeek=1; CheckTag(argv[1],"original.mp3"); failSeek=0;
     CheckFolders();
-    puts("Audio Quick Player ID3, folder scans, launch ownership, sequence/shuffle, stop/replacement/errors: PASS");
+    puts("Audio Player ID3, folder scans, launch ownership, sequence/shuffle, stop/replacement/errors: PASS");
     return 0;
 }
 C

@@ -3,7 +3,7 @@
     Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 
 PROJECT:    BestSound
-MODULE:     Audio Quick Player
+MODULE:     Audio Player
 FILE:       uimain.goc
 
 AUTHOR:     Dirk Lausecker
@@ -69,7 +69,7 @@ DESCRIPTION:
     ATTR_GEN_HELP_FILE = @TEXT_HELP_FILE;
 }
 
-@visMoniker BSQPTextMoniker = "Audio Quick Player";
+@visMoniker BSQPTextMoniker = "Audio Player";
 
 @end    AppResource;
 
@@ -241,7 +241,7 @@ DESCRIPTION:
 }
 
 @object GenGlyphClass InfoGlyph1 = {
-    GI_visMoniker = "Audio Quick Player";
+    GI_visMoniker = "Audio Player";
 }
 
 @object GenGlyphClass InfoGlyph2 = {

@@ -161,7 +161,7 @@ REVISION HISTORY:
 @define TEXT_DMA_FOUND          "DMA Driver (DOSREAL.GEO)"
 @define TEXT_SUPPORT_MIXER      "Driver supports BestSound Mixer"
 @define TEXT_SUPPORT_RECORD     "Driver supports BestSound Recorder"
-@define TEXT_SUPPORT_BSNWAV     "Driver supports Audio Quick Player"
+@define TEXT_SUPPORT_BSNWAV     "Driver supports Audio Player"
 
 @object GenInteractionClass MainSubGroup1 = {
     GI_visMoniker   = @TEXT_SYSTEMANALYSE;

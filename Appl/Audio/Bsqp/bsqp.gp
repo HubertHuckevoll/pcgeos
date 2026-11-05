@@ -3,7 +3,7 @@
 #   Copyright (C) 2000 Dirk Lausecker -- All Rights Reserved
 #
 # PROJECT:  BestSound
-# MODULE:   Audio Quick Player
+# MODULE:   Audio Player
 # FILE:     bsqp.gp
 #
 # AUTHOR:   Dirk Lausecker
@@ -14,7 +14,7 @@
 
 name bsqp.app
 
-longname "Audio Quick Player"
+longname "Audio Player"
 
 type    appl, process, single
 
@@ -50,6 +50,6 @@ resource APPLMONIKERRESOURCE    data object read-only
 export  BSQPApplicationClass
 export  BSQPPrimaryClass
 
-# usernotes "� D.Lausecker\x0dAudio Quick Player is licensed to NewDeal and is subject to its conditions of use."
+# usernotes "� D.Lausecker\x0dAudio Player is licensed to NewDeal and is subject to its conditions of use."
 
 export BQTrackListClass

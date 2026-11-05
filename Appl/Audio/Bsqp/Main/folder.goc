@@ -516,7 +516,7 @@ void _pascal BQ_PollPending(void)
             @call PLAYTrigger::MSG_GEN_SET_ENABLED(VUM_NOW);
         } else {
             @call PLAYTrigger::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
-            @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("Audio Quick Player", VUM_NOW);
+            @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("Audio Player", VUM_NOW);
         }
         @call WavFileSelector::MSG_GEN_PATH_SET(folderPath, folderDisk);
         @send, forceQueue process::MSG_BSQP_READ_TAGS(folderGeneration);
