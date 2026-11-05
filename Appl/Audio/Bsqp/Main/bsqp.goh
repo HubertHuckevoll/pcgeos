@@ -33,14 +33,49 @@ DESCRIPTION:
 #define BQ_OPTION_ENDLESS       0x0004
 #define BQ_OPTION_MP3_HALF_RATE 0x0008
 
-// QuickMode
-#define BQ_QUICK_OFF    0
-#define BQ_QUICK_START  1
-#define BQ_QUICK_END    2
+#define BQ_OPTION_CONTINUE      0x0010
+#define BQ_OPTION_SHUFFLE       0x0020
+
+#define BQ_FULL_PATH_SIZE      256
+#define BQ_LABEL_SIZE          164
+#define BQ_NO_TRACK            0xffff
+/* ATTENTION: FileEnum decrements FEP_skipCount with a signed test.
+ * Batches support 32768 matches. Stream names in the callback for more.
+ */
+#define BQ_MAX_TRACKS          0x8000
+
+#include <file.h>
+#include <vm.h>
+
+typedef struct {
+    DiskHandle disk;
+    PathName path;
+    FileLongName file;
+} BQFolderRequest;
+
+typedef struct {
+    FileLongName name;
+    char label[BQ_LABEL_SIZE];
+    Boolean visited;
+    Boolean tagged;
+} BQTrack;
+
+Boolean _pascal BQ_IsAudio(const char *nameP);
+MemHandle _pascal BQ_CopyLaunch(MemHandle launchH);
+void _pascal BQ_PlaySelected(void);
+void _pascal BQ_StopPlayback(void);
+void _pascal BQ_PollPending(void);
+Boolean _pascal BQ_FinishPlayback(int result, dword serial);
+void _pascal BQ_CloseFolder(void);
+void _pascal BQ_ResetShuffle(void);
+void _pascal BQ_ReadTags(FileHandle fileH, char *labelP);
 
 /* Application-only errors; library result codes remain unchanged. */
 #define BQ_ERROR_OPEN   0x100
 #define BQ_ERROR_THREAD 0x101
+#define BQ_ERROR_FOLDER 0x102
+#define BQ_ERROR_LIMIT  0x103
+#define BQ_ERROR_PATH   0x104
 
 // Playstate
 #define BQ_PLAYFLAG_PLAY    1
@@ -52,14 +87,12 @@ DESCRIPTION:
 #define DISP_VIEW_Y_SIZE    85
 
 // Globals
-extern  char        fullPath[];
-extern  char        WCI_soundName[];
-extern  char        WCI_soundPath[];
+extern  char        fullPath[BQ_FULL_PATH_SIZE];
 extern  char        globalText[];
 extern  TimerHandle tih;
 extern  word        tid;        // TimerID
-extern  word        quickMode;  // Quickplaymodus
-extern  Boolean     capabFlag;
+extern  dword       bqPlaySerial;
+extern  dword       bqWorkerSerial;
 extern  Boolean     bqStopRequested;
 extern  word        playFlag;   // State of playing
 extern  char        playText[]; // "PLAY"
@@ -75,4 +108,3 @@ extern  WindowHandle    winHan;     // Handle for GenView
 extern  Color       backGroundColor;
 extern  word        bqOptions;  // global value for options
 extern  word        bqDispStyle;    // 1=normal 2=remaining
-extern  Boolean     bqMinimizedState;

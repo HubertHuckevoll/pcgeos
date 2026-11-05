@@ -38,8 +38,13 @@ DESCRIPTION:
     @message void MSG_PROCESS_BSQP_STOP();
     @message void MSG_PROCESS_BSQP_PLAY();
     @message void MSG_PROCESS_BSQP_OPEN();
-    @message void MSG_PROCESS_BSQP_FINISHED(int result, Boolean closeAfter);
+    @message void MSG_PROCESS_BSQP_FINISHED(int result, dword serial);
     @message (GEN_FILE_SELECTOR_NOTIFICATION_MSG) MSG_BSQP_FILE_SELECTED;
+    @message void MSG_BSQP_LOAD_FOLDER(MemHandle requestH);
+    @message void MSG_BSQP_SCAN_FOLDER(dword generation);
+    @message void MSG_BSQP_READ_TAGS(dword generation);
+    @message (GEN_DYNAMIC_LIST_QUERY_MSG) MSG_BSQP_TRACK_MONIKER;
+    @message (GEN_ITEM_GROUP_APPLY_MSG) MSG_BSQP_TRACK_ACTIVATE;
 
 @endc;
 

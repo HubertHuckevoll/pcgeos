@@ -52,4 +52,4 @@ export  BSQPPrimaryClass
 
 # usernotes "� D.Lausecker\x0dAudio Quick Player is licensed to NewDeal and is subject to its conditions of use."
 
-export BQAudioFileSelectorClass
+export BQTrackListClass

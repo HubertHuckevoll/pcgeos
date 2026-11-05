@@ -45,7 +45,7 @@ DESCRIPTION:
 
 @classdecl  BSQPApplicationClass;
 @classdecl  BSQPPrimaryClass;
-@classdecl  BQAudioFileSelectorClass;
+@classdecl  BQTrackListClass;
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  %      Objects
@@ -95,7 +95,8 @@ DESCRIPTION:
         @Moniker1,
         @Moniker2}
 
-    GI_comp = @DisplayGroup, @OptionsMenu, @TriggerGroup;
+    GI_comp = @DisplayGroup, @FolderGroup, @OptionsMenu, @TriggerGroup;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
 
     ATTR_GEN_DISPLAY_NOT_MAXIMIZABLE;
     ATTR_GEN_HELP_CONTEXT = "TOC";
@@ -146,6 +147,37 @@ DESCRIPTION:
     GVI_content = process;
 }
 
+@object GenInteractionClass FolderGroup = {
+    GI_comp = @FolderGlyph, @TrackList, @EmptyGlyph;
+    GII_visibility = GIV_SUB_GROUP;
+    GI_attrs = @default | GA_KBD_SEARCH_PATH;
+    HINT_ORIENT_CHILDREN_VERTICALLY;
+    HINT_EXPAND_WIDTH_TO_FIT_PARENT;
+}
+
+@object GenGlyphClass FolderGlyph = {
+    GI_visMoniker = "Open a folder to list its MP3 and WAV files.";
+    HINT_FIXED_SIZE = { SST_PIXELS | 250, SST_LINES_OF_TEXT | 2, 2 };
+}
+
+@object GenGlyphClass EmptyGlyph = {
+    GI_visMoniker = "No MP3 or WAV files in this folder.";
+    GI_states = @default & ~GS_USABLE;
+}
+
+@object BQTrackListClass TrackList = {
+    GIGI_destination = process;
+    GIGI_behaviorType = GIGBT_EXCLUSIVE;
+    GDLI_queryMsg = MSG_BSQP_TRACK_MONIKER;
+    GDLI_numItems = 0;
+    GIGI_selection = GIGS_NONE;
+    GIGI_numSelections = 0;
+    ATTR_GEN_ITEM_GROUP_CUSTOM_DOUBLE_PRESS = MSG_BSQP_TRACK_ACTIVATE;
+    HINT_ITEM_GROUP_SCROLLABLE;
+    HINT_ITEM_GROUP_SHOW_SELECTION_EVEN_WHEN_NOT_FOCUS;
+    HINT_FIXED_SIZE = { SST_PIXELS | 250, SST_LINES_OF_TEXT | 8, 8 };
+}
+
 /****************
  * TriggerGroup *
  ****************/
@@ -179,6 +211,7 @@ DESCRIPTION:
 @object GenTriggerClass PLAYTrigger =
 {
     GI_visMoniker   = "PLAY";
+    GI_states = @default & ~GS_ENABLED;
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_kbdAccelerator = ctrl 'p';
     GTI_actionMsg   = MSG_PROCESS_BSQP_PLAY;
@@ -249,12 +282,13 @@ DESCRIPTION:
 
 // @define TEXT_SELECTOR_1 "W�hle eine WAV-Datei zum Abspielen..."
 // @define TEXT_SELECTOR_2 "Ausw�hlen"
-@define TEXT_SELECTOR_1 "Select a file to play..."
+@define TEXT_SELECTOR_1 "Open the folder shown below:"
 @define TEXT_SELECTOR_2 "Select"
 
 @object GenInteractionClass FileSelectorBox = {
     // GI_visMoniker = '�',"�ffnen";
-    GI_visMoniker = 'p',"Open";
+    GI_visMoniker = 'O',"Open Folder...";
+    GI_kbdAccelerator = ctrl 'o';
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GII_visibility = GIV_DIALOG;
     GII_type = GIT_COMMAND;
@@ -270,11 +304,9 @@ DESCRIPTION:
     GI_visMoniker = @TEXT_SELECTOR_1;
 }
 
-@object BQAudioFileSelectorClass WavFileSelector =
+@object GenFileSelectorClass WavFileSelector =
 {
-    GFSI_destination = process;
-    GFSI_notificationMsg = MSG_BSQP_FILE_SELECTED;
-    GFSI_fileCriteria = @default | FSFC_FILE_FILTER | FSFC_FILTER_IS_C;
+    GFSI_fileCriteria = FSFC_DIRS;
     ATTR_GEN_PATH_DATA = {SP_DOCUMENT,0};
     HINT_FILE_SELECTOR_NUMBER_OF_FILES_TO_SHOW = 15;
 }
@@ -282,7 +314,6 @@ DESCRIPTION:
 @object GenTriggerClass FileSelectorOpenTrigger =
 {
     GI_visMoniker = @TEXT_SELECTOR_2;
-    GI_states = @default & ~GS_USABLE;
     GTI_actionMsg = MSG_PROCESS_BSQP_OPEN;
     GTI_destination = process;
     HINT_SEEK_REPLY_BAR;
@@ -356,20 +387,11 @@ DESCRIPTION:
 
 @object GenBooleanGroupClass OptionsBooleans =
 {
-    GI_comp =   @OptionsBoolItem1,
-    @OptionsBoolItem2,
-    @OptionsBoolItem3,
-    @OptionsBoolItem4;
+    GI_comp = @OptionsBoolItem2, @OptionsBoolItem3, @OptionsBoolItem4,
+              @ContinueOption, @ShuffleOption;
     GBGI_selectedBooleans = 0;
     GBGI_destination = process;
     GBGI_applyMsg = MSG_BSQP_OPTIONS_APPLY;
-}
-
-@object GenBooleanClass OptionsBoolItem1 =
-{
-    // GI_visMoniker = 'D',"Dateiauswahlbox nach Doppelklick schlie�en";
-    GI_visMoniker = 'C',"Close File Selector on Double-click";
-    GBI_identifier =BQ_OPTION_CLOSE_SELECTOR;
 }
 
 @object GenBooleanClass OptionsBoolItem2 =
@@ -382,7 +404,7 @@ DESCRIPTION:
 @object GenBooleanClass OptionsBoolItem3 =
 {
     // GI_visMoniker = 'E',"Endloswiedergabe";
-    GI_visMoniker = 'M',"Repeat Mode";
+    GI_visMoniker = 'T',"Repeat Current Track";
     GBI_identifier =BQ_OPTION_ENDLESS;
 }
 
@@ -391,6 +413,16 @@ DESCRIPTION:
 {
     GI_visMoniker = 'R',"Reduce MP3 Quality (Lower CPU Use)";
     GBI_identifier = BQ_OPTION_MP3_HALF_RATE;
+}
+
+@object GenBooleanClass ContinueOption = {
+    GI_visMoniker = 'C',"Continue Playing";
+    GBI_identifier = BQ_OPTION_CONTINUE;
+}
+
+@object GenBooleanClass ShuffleOption = {
+    GI_visMoniker = 'S',"Shuffle";
+    GBI_identifier = BQ_OPTION_SHUFFLE;
 }
 
 /***************
@@ -403,7 +435,6 @@ DESCRIPTION:
     GI_visMoniker = 'O',"Save Options";
     GI_states = @default;
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
-    GI_kbdAccelerator = ctrl 's';
     GTI_destination = process;
     GTI_actionMsg = MSG_META_SAVE_OPTIONS;
 }
@@ -429,75 +460,22 @@ DESCRIPTION:
 
 @method BSQPApplicationClass, MSG_META_IACP_NEW_CONNECTION
 {
-    AppLaunchBlock  *aplb;
-    DiskHandle  dh = 0;
-    char        *pB = &fullPath,c;
+    MemHandle requestH;
 
-    // get minimize state
-    bqMinimizedState = @call BSQPPrimary::MSG_GEN_DISPLAY_GET_MINIMIZED();
+    /* Super may release the launch block. Copy it first. */
+    requestH = appLaunchBlock ? BQ_CopyLaunch(appLaunchBlock) : 0;
     @callsuper();
-
-    if (appLaunchBlock && (quickMode == BQ_QUICK_OFF))
-    {
-        aplb = MemLock(appLaunchBlock);
-        dh = aplb->ALB_diskHandle;
-        dh = FileConstructFullPath(&pB, // pointer to pointer
-                                   256,    // Length of buffer
-                                   dh, // This can be a disk or
-                                   // standard path
-                                   aplb->ALB_path,
-                                   TRUE);  // Prepend drive name
-
-        strcat(fullPath,"\\");
-        strcat(fullPath,aplb->ALB_dataFile);
-
-        // check filename
-        c = aplb->ALB_dataFile[0];
-        if (c)
-        {
-            // Display WAV-Name
-            @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(aplb->ALB_dataFile,VUM_NOW);
-
-            // Play File
-            BQ_CheckForPlay();
-            BQ_StartPlay();
-        };
-        MemUnlock(appLaunchBlock);
-    };
+    if (appLaunchBlock)
+        @send, forceQueue process::MSG_BSQP_LOAD_FOLDER(requestH);
 }
 
-/* File selectors have one wildcard mask; use the native final filter for OR. */
-static Boolean _pascal BQ_FilterAudio(optr oself, FileEnumCallbackData *dataP,
-                                     word frame)
+/* Enter activates the selected row even while another row is playing. */
+@method BQTrackListClass, MSG_META_FUP_KBD_CHAR
 {
-    FileAttrs *attrsP;
-    char *nameP, *extensionP;
-
-    (void)oself;
-    (void)frame;
-    attrsP = FileEnumLocateAttr(dataP, FEA_FILE_ATTR, (void *)0);
-    if (attrsP && (*attrsP & FA_SUBDIR))
-        return FALSE;
-    nameP = FileEnumLocateAttr(dataP, FEA_NAME, (void *)0);
-    if (!nameP)
+    if (character == ((CS_CONTROL << 8) | VC_ENTER)) {
+        if (flags & CF_FIRST_PRESS)
+            @send process::MSG_BSQP_TRACK_ACTIVATE(0, 0, 0);
         return TRUE;
-    extensionP = strrchr(nameP, '.');
-    return !extensionP ||
-           (LocalCmpStringsNoCase(extensionP, ".WAV", 0) &&
-            LocalCmpStringsNoCase(extensionP, ".MP3", 0));
-}
-
-@method BQAudioFileSelectorClass, MSG_GEN_FILE_SELECTOR_GET_FILTER_ROUTINE
-{
-    /* Static storage retains a GEOS virtual code pointer instead of live CS. */
-    static GenFileSelectorFilterRoutine *const routineP =
-        (GenFileSelectorFilterRoutine *)BQ_FilterAudio;
-    static const FileExtAttrDesc attrs[] = {
-        { FEA_FILE_ATTR, (void *)0, sizeof(FileAttrs), (void *)0 },
-        { FEA_NAME, (void *)0, sizeof(FileLongName), (void *)0 },
-        { FEA_END_OF_LIST, (void *)0, 0, (void *)0 }
-    };
-
-    filter->filterRoutine = routineP;
-    filter->filterAttrs = attrs;
+    }
+    @callsuper();
 }

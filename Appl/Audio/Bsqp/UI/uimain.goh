@@ -41,6 +41,10 @@ DESCRIPTION:
 @extern object	PrimaryGlyph;
 @extern	object	TriggerGroup;
 
+@extern object TrackList;
+@extern object FolderGlyph;
+@extern object EmptyGlyph;
+
 @endif
 
 // subclassing ApplicationClass
@@ -50,7 +54,7 @@ DESCRIPTION:
 @class BSQPPrimaryClass, GenPrimaryClass;
 @endc
 
-@class BQAudioFileSelectorClass, GenFileSelectorClass;
+@class BQTrackListClass, GenDynamicListClass;
 @endc
 
 @endif

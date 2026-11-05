@@ -1,0 +1,332 @@
+/* Bounded display-only ID3 reader. Author: Codex/MeyerK */
+@include <bsnwav.goh>
+@include <stdapp.goh>
+#include <Ansi/string.h>
+#include <localize.h>
+@include "Main/bsqp.goh"
+
+/* ATTENTION: At most 8 KB of ID3v2 reads, one 128-byte ID3v1 read, and
+ * 256 frames per file. Large
+ * unsynchronized v2.2/v2.3 frames cannot be sought by their logical size;
+ * those fall back to ID3v1/filename. Increase these limits or add a resumable
+ * reader if unusually large tags need full extraction. Compressed/encrypted
+ * frames and compressed v2.2 tags are deliberately unsupported.
+ */
+#define BQ_TAG_BUDGET 8192
+#define BQ_TAG_FRAMES 256
+#define BQ_TAG_FIELD  81
+
+typedef struct {
+    FileHandle fileH;
+    dword position, end;
+    word used, available, budget;
+    Boolean unsync, lastFF, failed;
+    byte buffer[256];
+    byte text[324];
+    char title[BQ_TAG_FIELD], artist[BQ_TAG_FIELD];
+} BQTagReader;
+
+static int _pascal BQ_TagRaw(BQTagReader *readerP)
+{
+    word count;
+    int value;
+
+    if (readerP->failed || readerP->position >= readerP->end) return -1;
+    if (readerP->used == readerP->available) {
+        count = sizeof(readerP->buffer);
+        if (readerP->end - readerP->position < count)
+            count = (word)(readerP->end - readerP->position);
+        if (readerP->budget < count) count = readerP->budget;
+        if (!count || FilePos(readerP->fileH, readerP->position,
+                               FILE_POS_START) != readerP->position ||
+            FileRead(readerP->fileH, readerP->buffer, count, FALSE) != count) {
+            readerP->failed = TRUE;
+            return -1;
+        }
+        readerP->budget -= count;
+        readerP->used = 0;
+        readerP->available = count;
+    }
+    value = readerP->buffer[readerP->used++];
+    ++readerP->position;
+    return value;
+}
+
+static int _pascal BQ_TagByte(BQTagReader *readerP)
+{
+    int value;
+
+    value = BQ_TagRaw(readerP);
+    if (readerP->unsync && readerP->lastFF && value == 0)
+        value = BQ_TagRaw(readerP);
+    readerP->lastFF = value == 255;
+    return value;
+}
+
+static Boolean _pascal BQ_TagRead(BQTagReader *readerP, byte *bufferP, word count)
+{
+    int value;
+
+    while (count--) {
+        value = BQ_TagByte(readerP);
+        if (value < 0) return FALSE;
+        *bufferP++ = (byte)value;
+    }
+    return TRUE;
+}
+
+static Boolean _pascal BQ_TagSkip(BQTagReader *readerP, dword count)
+{
+    if (count > readerP->end - readerP->position) return FALSE;
+    if (readerP->unsync) {
+        while (count--) if (BQ_TagByte(readerP) < 0) return FALSE;
+    } else {
+        readerP->position += count;
+        if (count <= readerP->available - readerP->used)
+            readerP->used += (word)count;
+        else
+            readerP->used = readerP->available = 0;
+        readerP->lastFF = FALSE;
+    }
+    return TRUE;
+}
+
+static dword _pascal BQ_TagSize(const byte *bytesP, word count, Boolean synchsafe)
+{
+    dword result;
+    word i;
+
+    result = 0;
+    for (i = 0; i < count; ++i) {
+        if (synchsafe && (bytesP[i] & 128)) return 0xffffffffUL;
+        result = (result << (synchsafe ? 7 : 8)) | bytesP[i];
+    }
+    return result;
+}
+
+static char _pascal BQ_TagChar(dword value)
+{
+    if (value < 32 || (value >= 127 && value < 160)) return ' ';
+    if (value < 256)
+        return (char)LocalCodePageToGeosChar((word)value, CODE_PAGE_LATIN_1, '?');
+    /* Native GEOS glyphs outside Latin-1. Other missing glyphs use '?'. */
+    switch (value) {
+    case 0x0152: return C_U_OE;
+    case 0x0153: return C_L_OE;
+    case 0x0178: return C_UY_DIERESIS;
+    case 0x0131: return C_LI_DOTLESS;
+    case 0x2013: return C_ENDASH;
+    case 0x2014: return C_EMDASH;
+    case 0x2018: return C_QUOTESNGLEFT;
+    case 0x2019: return C_QUOTESNGRIGHT;
+    case 0x201a: return C_SNGQUOTELOW;
+    case 0x201c: return C_QUOTEDBLLEFT;
+    case 0x201d: return C_QUOTEDBLRIGHT;
+    case 0x201e: return C_DBLQUOTELOW;
+    case 0x2022: return C_BULLET;
+    case 0x2026: return C_ELLIPSIS;
+    case 0x2122: return C_TRADEMARK;
+    }
+    return '?';
+}
+
+/* Decode the first text value. A malformed field stays empty for fallback. */
+static void _pascal BQ_TagText(const byte *bytesP, word count, char *fieldP)
+{
+    word encoding, at, length, extra, i, value16, low;
+    dword value, minimum;
+    Boolean little;
+    char ch;
+
+    fieldP[0] = 0;
+    if (!count) return;
+    encoding = bytesP[0];
+    at = 1;
+    length = 0;
+    little = FALSE;
+    if (encoding > 3) return;
+    if (encoding == 1) {
+        if (count < 3) return;
+        if (bytesP[1] == 255 && bytesP[2] == 254) little = TRUE;
+        else if (bytesP[1] != 254 || bytesP[2] != 255) return;
+        at = 3;
+    }
+    while (at < count && length < BQ_TAG_FIELD - 1) {
+        value = bytesP[at++];
+        if (encoding == 1 || encoding == 2) {
+            if (at >= count) goto invalid;
+            value16 = little ? (word)value | ((word)bytesP[at++] << 8) :
+                               ((word)value << 8) | bytesP[at++];
+            value = value16;
+            if (value16 >= 0xd800 && value16 <= 0xdbff) {
+                if (count - at < 2) goto invalid;
+                low = little ? bytesP[at] | ((word)bytesP[at + 1] << 8) :
+                               ((word)bytesP[at] << 8) | bytesP[at + 1];
+                at += 2;
+                if (low < 0xdc00 || low > 0xdfff) goto invalid;
+                value = 0x10000UL + ((dword)(value16 - 0xd800) << 10) + low - 0xdc00;
+            } else if (value16 >= 0xdc00 && value16 <= 0xdfff) goto invalid;
+        } else if (encoding == 3 && value >= 128) {
+            if (value >= 0xc2 && value <= 0xdf) {
+                extra = 1; minimum = 0x80; value &= 31;
+            } else if (value >= 0xe0 && value <= 0xef) {
+                extra = 2; minimum = 0x800; value &= 15;
+            } else if (value >= 0xf0 && value <= 0xf4) {
+                extra = 3; minimum = 0x10000UL; value &= 7;
+            } else goto invalid;
+            if (count - at < extra) goto invalid;
+            for (i = 0; i < extra; ++i) {
+                if ((bytesP[at] & 0xc0) != 0x80) goto invalid;
+                value = (value << 6) | (bytesP[at++] & 63);
+            }
+            if (value < minimum || value > 0x10ffffUL ||
+                (value >= 0xd800 && value <= 0xdfff)) goto invalid;
+        }
+        if (!value) break;
+        if (value == 0xfeff) continue;
+        ch = BQ_TagChar(value);
+        if (ch != ' ' || length) fieldP[length++] = ch;
+    }
+    while (length && fieldP[length - 1] == ' ') --length;
+    fieldP[length] = 0;
+    return;
+invalid:
+    fieldP[0] = 0;
+}
+
+/***********************************************************************
+ * ROUTINE:     BQ_TagV2
+ * DESCRIPTION: Extract bounded title/artist text from an ID3v2 tag.
+ * PARAMETERS:  readerP = private reader with file bounds and read budget.
+ * STRATEGY:    Validate each header; seek unrelated frames where possible.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              See the read/work ceilings above. Never interpret audio data.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/05/26  Initial version
+ ***********************************************************************/
+static void _pascal BQ_TagV2(BQTagReader *readerP)
+{
+    byte header[10];
+    word version, flags, frames, headerSize, count, prefix, i;
+    dword size, frameEnd, oldEnd;
+    Boolean globalUnsync, textFrame;
+    char *fieldP;
+    int value;
+
+    if (!BQ_TagRead(readerP, header, 10) || memcmp(header, "ID3", 3)) return;
+    version = header[3];
+    flags = header[5];
+    if (version < 2 || version > 4 || header[4] == 255 ||
+        (flags & (version == 2 ? 0x3f : version == 3 ? 0x1f : 0x0f)) ||
+        (version == 2 && (flags & 0x40))) return;
+    size = BQ_TagSize(header + 6, 4, TRUE);
+    if (size == 0xffffffffUL || size > readerP->end - 10) return;
+    readerP->end = size + 10;
+    readerP->used = readerP->available = 0;
+    globalUnsync = (flags & 0x80) != 0;
+    readerP->unsync = version < 4 && globalUnsync;
+    if (version > 2 && (flags & 0x40)) {
+        if (!BQ_TagRead(readerP, header, 4)) return;
+        size = BQ_TagSize(header, 4, version == 4);
+        if (version == 4) {
+            if (size < 6 || size == 0xffffffffUL) return;
+            size -= 4;
+        } else if (size < 6) return;
+        if (!BQ_TagSkip(readerP, size)) return;
+    }
+    headerSize = version == 2 ? 6 : 10;
+    for (frames = 0; frames < BQ_TAG_FRAMES; ++frames) {
+        if (!BQ_TagRead(readerP, header, headerSize) || !header[0]) return;
+        for (i = 0; i < (version == 2 ? 3 : 4); ++i)
+            if (!((header[i] >= 'A' && header[i] <= 'Z') ||
+                  (header[i] >= '0' && header[i] <= '9'))) return;
+        size = BQ_TagSize(header + (version == 2 ? 3 : 4), version == 2 ? 3 : 4,
+                          version == 4);
+        if (!size || size == 0xffffffffUL || size > readerP->end - readerP->position)
+            return;
+        fieldP = (char *)0;
+        if (!memcmp(header, version == 2 ? "TT2" : "TIT2", version == 2 ? 3 : 4))
+            fieldP = readerP->title;
+        if (!memcmp(header, version == 2 ? "TP1" : "TPE1", version == 2 ? 3 : 4))
+            fieldP = readerP->artist;
+        flags = version == 2 ? 0 : header[9];
+        if (version == 3 && ((header[8] & 0x1f) || (flags & 0x1f))) return;
+        if (version == 4 && ((header[8] & 0x8f) || (flags & 0xb0))) return;
+        textFrame = fieldP && !fieldP[0] &&
+                    !(flags & (version == 3 ? 0xc0 : 0x0c));
+        frameEnd = readerP->position + size;
+        oldEnd = readerP->end;
+        if (version == 4) {
+            readerP->end = frameEnd;
+            readerP->unsync = globalUnsync || (flags & 2);
+            readerP->lastFF = FALSE;
+        }
+        if (textFrame) {
+            prefix = (flags & (version == 3 ? 0x20 : version == 4 ? 0x40 : 0)) ? 1 : 0;
+            if (size < prefix || !BQ_TagSkip(readerP, prefix)) return;
+            size -= prefix;
+            if (version == 4 && (flags & 1)) {
+                if (size < 4 || !BQ_TagRead(readerP, header, 4) ||
+                    BQ_TagSize(header, 4, TRUE) == 0xffffffffUL) return;
+                size -= 4;
+            }
+            count = size > sizeof(readerP->text) ? sizeof(readerP->text) : (word)size;
+            for (i = 0; i < count; ++i) {
+                value = BQ_TagByte(readerP);
+                if (value < 0) break;
+                readerP->text[i] = (byte)value;
+            }
+            if ((version != 4 && i != count) || readerP->failed) return;
+            BQ_TagText(readerP->text, i, fieldP);
+            size -= i;
+        }
+        if (version == 4) {
+            readerP->end = oldEnd;
+            readerP->unsync = FALSE;
+            readerP->lastFF = FALSE;
+            if (!BQ_TagSkip(readerP, frameEnd - readerP->position)) return;
+        } else if (!BQ_TagSkip(readerP, size)) return;
+        if (readerP->title[0] && readerP->artist[0]) return;
+    }
+}
+
+void _pascal BQ_ReadTags(FileHandle fileH, char *labelP)
+{
+    MemHandle readerH;
+    BQTagReader *readerP;
+    dword fileSize;
+
+    fileSize = FileSize(fileH);
+    if (fileSize < 10 || fileSize == 0xffffffffUL) return;
+    readerH = MemAlloc(sizeof(BQTagReader), HF_DYNAMIC, HAF_ZERO_INIT);
+    if (!readerH) return;
+    readerP = MemLock(readerH);
+    readerP->fileH = fileH;
+    readerP->end = fileSize;
+    readerP->budget = BQ_TAG_BUDGET;
+    BQ_TagV2(readerP);
+    if (fileSize >= 128 && (!readerP->title[0] || !readerP->artist[0]) &&
+        FilePos(fileH, fileSize - 128, FILE_POS_START) == fileSize - 128 &&
+        FileRead(fileH, readerP->buffer, 128, FALSE) == 128 &&
+        !memcmp(readerP->buffer, "TAG", 3)) {
+        readerP->text[0] = 0;
+        if (!readerP->title[0]) {
+            memcpy(readerP->text + 1, readerP->buffer + 3, 30);
+            BQ_TagText(readerP->text, 31, readerP->title);
+        }
+        if (!readerP->artist[0]) {
+            memcpy(readerP->text + 1, readerP->buffer + 33, 30);
+            BQ_TagText(readerP->text, 31, readerP->artist);
+        }
+    }
+    if (readerP->title[0]) {
+        labelP[0] = 0;
+        if (readerP->artist[0]) {
+            strcpy(labelP, readerP->artist);
+            strcat(labelP, " - ");
+        }
+        strcat(labelP, readerP->title);
+    }
+    MemUnlock(readerH);
+    MemFree(readerH);
+}

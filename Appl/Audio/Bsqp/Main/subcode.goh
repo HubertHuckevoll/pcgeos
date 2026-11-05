@@ -28,9 +28,6 @@ DESCRIPTION:
 
 /************* functions ****************/
 
-Boolean _pascal BQ_CheckForPlay(void);
-// check WAV-file for playing
-
 void _pascal BQ_DrawCenterText(GStateHandle  gstate,
                                char      *text,
                                word      x,

@@ -1,0 +1,649 @@
+/* Folder list and playback coordination. Author: Codex/MeyerK */
+@include <bsnwav.goh>
+@include <stdapp.goh>
+#include <Ansi/string.h>
+#include <fileEnum.h>
+#include <hugearr.h>
+#include <localize.h>
+#include <timer.h>
+@include "Main/bsqp.goh"
+@include "Main/process.goh"
+@include "Main/subcode.goh"
+@include "UI/uimain.goh"
+
+static VMFileHandle listFile;
+static VMBlockHandle tracksH, scanH;
+static char tempName[BQ_FULL_PATH_SIZE];
+static DiskHandle folderDisk;
+static PathName folderPath;
+static MemHandle scanRequestH;
+static word trackCount, scanCount, scanSkip, tagIndex;
+static word playingTrack = BQ_NO_TRACK;
+static word pendingTrack = BQ_NO_TRACK;
+static dword folderGeneration, stopTicks, scanMatches;
+static dword randomState;
+static Boolean scanDone, running, closing;
+
+static void _pascal BQ_FolderError(int result)
+{
+    @send, forceQueue process::MSG_PROCESS_BSQP_FINISHED(result, bqPlaySerial);
+    if (!closing && tracksH && !scanRequestH)
+        @send, forceQueue process::MSG_BSQP_READ_TAGS(folderGeneration);
+}
+
+Boolean _pascal BQ_IsAudio(const char *nameP)
+{
+    const char *extensionP;
+
+    extensionP = strrchr(nameP, '.');
+    return extensionP && (!LocalCmpStringsNoCase(extensionP, ".WAV", 0) ||
+                         !LocalCmpStringsNoCase(extensionP, ".MP3", 0));
+}
+
+MemHandle _pascal BQ_CopyLaunch(MemHandle launchH)
+{
+    AppLaunchBlock *launchP;
+    BQFolderRequest *requestP;
+    MemHandle requestH;
+
+    if (MemGetInfo(launchH, MGIT_SIZE) < sizeof(AppLaunchBlock)) return 0xffff;
+    launchP = MemLock(launchH);
+    if (!memchr(launchP->ALB_path, 0, sizeof(launchP->ALB_path)) ||
+        !memchr(launchP->ALB_dataFile, 0, sizeof(launchP->ALB_dataFile))) {
+        MemUnlock(launchH);
+        return 0xffff;
+    }
+    if (!launchP->ALB_dataFile[0]) {
+        MemUnlock(launchH);
+        return 0;
+    }
+    requestH = MemAlloc(sizeof(BQFolderRequest), HF_DYNAMIC, HAF_ZERO_INIT);
+    if (requestH) {
+        requestP = MemLock(requestH);
+        requestP->disk = launchP->ALB_diskHandle;
+        strcpy(requestP->path, launchP->ALB_path);
+        strcpy(requestP->file, launchP->ALB_dataFile);
+        MemUnlock(requestH);
+    }
+    MemUnlock(launchH);
+    return requestH ? requestH : 0xffff;
+}
+
+/* Resolve the current directory through the C API that reports errors.
+ * FileConstructFullPath's C wrapper discards its carry/error flag.
+ */
+static Boolean _pascal BQ_MakePath(char *bufferP, DiskHandle disk,
+                                  const char *pathP, const char *nameP)
+{
+    char *endP;
+    word length;
+    FileAttrs attrs;
+    DiskHandle resolvedDisk;
+
+    memset(bufferP, 0, BQ_FULL_PATH_SIZE);
+    endP = bufferP;
+    FilePushDir();
+    resolvedDisk = 0;
+    /* FileSetCurrentPath returns a disk handle, or zero on failure. */
+    if (FileSetCurrentPath(disk, pathP))
+        resolvedDisk = FileResolveStandardPath(&endP, BQ_FULL_PATH_SIZE, "",
+                                               FRSPF_ADD_DRIVE_NAME, &attrs);
+    FilePopDir();
+    if (!resolvedDisk || endP < bufferP || endP >= bufferP + BQ_FULL_PATH_SIZE || *endP)
+        return FALSE;
+    length = strlen(bufferP);
+    if (!length || length + strlen(nameP) + 2 > BQ_FULL_PATH_SIZE)
+        return FALSE;
+    if (nameP[0]) {
+        if (bufferP[length - 1] != '\\') strcat(bufferP, "\\");
+        strcat(bufferP, nameP);
+    }
+    return TRUE;
+}
+
+static void _pascal BQ_CancelScan(void)
+{
+    if (!closing && scanRequestH && tracksH)
+        @send, forceQueue process::MSG_BSQP_READ_TAGS(folderGeneration);
+    if (scanH) HugeArrayDestroy(listFile, scanH);
+    if (scanRequestH) MemFree(scanRequestH);
+    scanH = 0;
+    scanRequestH = 0;
+    scanDone = FALSE;
+}
+
+static void _pascal BQ_RefreshRow(word item)
+{
+    if (item < trackCount)
+        @send, forceQueue process::MSG_BSQP_TRACK_MONIKER(@TrackList, item);
+}
+
+static void _pascal BQ_ClearPlaying(void)
+{
+    word previous;
+
+    previous = playingTrack;
+    playingTrack = BQ_NO_TRACK;
+    BQ_RefreshRow(previous);
+}
+
+static void _pascal BQ_Idle(void)
+{
+    BQ_ClearPlaying();
+    bqStopRequested = FALSE;
+    rmsValue = 0;
+    @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playText, VUM_NOW);
+    RedrawStatus(0);
+    RedrawRMS(0);
+}
+
+void _pascal BQ_StopPlayback(void)
+{
+    if (scanRequestH) {
+        BQ_CancelScan();
+        ++folderGeneration;
+    }
+    ++bqPlaySerial;
+    running = FALSE;
+    pendingTrack = BQ_NO_TRACK;
+    bqStopRequested = TRUE;
+    stopTicks = TimerGetCount();
+    if (playFlag) {
+        if (playFlag == BQ_PLAYFLAG_PAUSE) BSNWaveSetPause(2);
+        BSNWaveStop();
+    } else {
+        BQ_Idle();
+    }
+}
+
+/* The VM file holds both the displayed list and an uncommitted scan. */
+static Boolean _pascal BQ_OpenListFile(void)
+{
+    char *endP;
+    FileAttrs attrs;
+    DiskHandle disk;
+
+    if (listFile) return TRUE;
+    memset(tempName, 0, sizeof(tempName));
+    endP = tempName;
+    disk = 0;
+    FilePushDir();
+    if (FileSetCurrentPath(SP_PRIVATE_DATA, ""))
+        disk = FileResolveStandardPath(&endP, sizeof(tempName) - 14, "",
+                                       FRSPF_ADD_DRIVE_NAME, &attrs);
+    FilePopDir();
+    if (!disk) return FALSE;
+    /* VMO_TEMP_FILE appends a generated name and requires 14 spare bytes. */
+    listFile = VMOpen(tempName, VMAF_FORCE_READ_WRITE | VMAF_FORCE_DENY_WRITE,
+                      VMO_TEMP_FILE, 0);
+    return listFile != 0;
+}
+
+static word _pascal BQ_FindTrack(VMBlockHandle arrayH, word count,
+                                const char *nameP)
+{
+    BQTrack *trackP;
+    word low, high, middle, size;
+    int comparison;
+
+    low = 0;
+    high = count;
+    while (low < high) {
+        middle = low + (high - low) / 2;
+        HugeArrayLock(listFile, arrayH, middle, (void **)&trackP, &size);
+        comparison = LocalCmpStringsNoCase(nameP, trackP->name, 0);
+        HugeArrayUnlock(trackP);
+        if (!comparison) return middle;
+        if (comparison < 0) high = middle;
+        else low = middle + 1;
+    }
+    return BQ_NO_TRACK;
+}
+
+static word _pascal BQ_EnumAudio(FileEnumParams *paramsP,
+                                FileEnumCallbackData *dataP, word frame)
+{
+    char *nameP;
+
+    (void)paramsP;
+    (void)frame;
+    nameP = FileEnumLocateAttr(dataP, FEA_NAME, (void *)0);
+    /* FileEnum's C callback accepts on TRUE (unlike the selector filter). */
+    if (!nameP || !BQ_IsAudio(nameP)) return FALSE;
+    /* FileEnum's word-sized noFit count can wrap in a very large folder. */
+    if (scanMatches <= BQ_MAX_TRACKS) ++scanMatches;
+    return TRUE;
+}
+
+static void _pascal BQ_InsertTrack(const char *nameP)
+{
+    BQTrack record, *trackP;
+    word low, high, middle, size;
+
+    memset(&record, 0, sizeof(record));
+    strcpy(record.name, nameP);
+    strcpy(record.label, nameP);
+    record.tagged = LocalCmpStringsNoCase(strrchr(nameP, '.'), ".MP3", 0) != 0;
+    low = 0;
+    high = scanCount;
+    while (low < high) {
+        middle = low + (high - low) / 2;
+        HugeArrayLock(listFile, scanH, middle, (void **)&trackP, &size);
+        if (LocalCmpStringsNoCase(nameP, trackP->name, 0) < 0) high = middle;
+        else low = middle + 1;
+        HugeArrayUnlock(trackP);
+    }
+    HugeArrayInsert(listFile, scanH, 1, low, &record);
+    ++scanCount;
+}
+
+/***********************************************************************
+ * MESSAGE:     MSG_BSQP_LOAD_FOLDER
+ * DESCRIPTION: Start a cancellable folder scan without replacing the list.
+ * PARAMETERS:  requestH = owned BQFolderRequest; 0 = no launch document.
+ * STRATEGY:    Validate the directory, then queue bounded enumeration steps.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              0xffff reports a launch-copy error without owning memory.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/05/26  Initial version
+ ***********************************************************************/
+@extern method BSQPProcessClass, MSG_BSQP_LOAD_FOLDER
+{
+    BQFolderRequest *requestP;
+    Boolean valid;
+
+    if (!requestH) return;
+    if (requestH == 0xffff) {
+        BQ_FolderError(BQ_ERROR_PATH);
+        return;
+    }
+    if (closing) {
+        MemFree(requestH);
+        return;
+    }
+    BQ_CancelScan();
+    ++folderGeneration;
+    requestP = MemLock(requestH);
+    valid = memchr(requestP->path, 0, sizeof(requestP->path)) &&
+            memchr(requestP->file, 0, sizeof(requestP->file));
+    if (valid && requestP->file[0])
+        valid = BQ_IsAudio(requestP->file) && !strpbrk(requestP->file, "\\/:");
+    FilePushDir();
+    if (valid) valid = FileSetCurrentPath(requestP->disk, requestP->path) != 0;
+    FilePopDir();
+    MemUnlock(requestH);
+    if (!valid || !BQ_OpenListFile()) {
+        MemFree(requestH);
+        BQ_FolderError(valid ? BQ_ERROR_FOLDER : BQ_ERROR_PATH);
+        return;
+    }
+    BQ_StopPlayback();
+    scanRequestH = requestH;
+    scanH = HugeArrayCreate(listFile, sizeof(BQTrack), 0);
+    if (!scanH) {
+        BQ_CancelScan();
+        BQ_FolderError(BSNW_MEMORY_ERROR);
+        return;
+    }
+    scanCount = scanSkip = 0;
+    @send, forceQueue process::MSG_BSQP_SCAN_FOLDER(folderGeneration);
+}
+
+/***********************************************************************
+ * MESSAGE:     MSG_BSQP_SCAN_FOLDER
+ * DESCRIPTION: Read one batch of names and insert them in filename order.
+ * PARAMETERS:  generation = folder request identity.
+ * STRATEGY:    Keep the old list until the whole scan and requested lookup pass.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Honor the signed FileEnum skip ceiling; never truncate silently.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/05/26  Initial version
+ ***********************************************************************/
+@extern method BSQPProcessClass, MSG_BSQP_SCAN_FOLDER
+{
+    typedef word _pascal EnumRoutine(FileEnumParams *paramsP,
+                                      FileEnumCallbackData *dataP, word frame);
+    /* Static initialization retains the virtual code pointer. */
+    static EnumRoutine *const enumP = BQ_EnumAudio;
+    static const FileExtAttrDesc attrs[] = {
+        { FEA_NAME, (void *)0, sizeof(FileLongName), (void *)0 },
+        { FEA_END_OF_LIST, (void *)0, 0, (void *)0 }
+    };
+    BQFolderRequest *requestP;
+    FileEnumParams params;
+    MemHandle namesH;
+    char *namesP;
+    word count, noFit, i;
+    int error;
+
+    if (closing || generation != folderGeneration || !scanRequestH) return;
+    requestP = MemLock(scanRequestH);
+    FilePushDir();
+    error = !FileSetCurrentPath(requestP->disk, requestP->path);
+    MemUnlock(scanRequestH);
+    memset(&params, 0, sizeof(params));
+    params.FEP_searchFlags = FILE_ENUM_ALL_FILE_TYPES | FESF_CALLBACK;
+    params.FEP_returnAttrs = (FileExtAttrDesc *)FESRT_NAME;
+    params.FEP_returnSize = sizeof(FileLongName);
+    params.FEP_bufSize = 32;
+    params.FEP_skipCount = scanSkip;
+    params.FEP_callback = enumP;
+    params.FEP_callbackAttrs = (FileExtAttrDesc *)attrs;
+    namesH = 0;
+    noFit = 0;
+    scanMatches = 0;
+    count = error ? 0xffff : FileEnum(&params, &namesH, &noFit);
+    FilePopDir();
+    if (count == 0xffff || scanMatches > BQ_MAX_TRACKS ||
+        count > BQ_MAX_TRACKS - scanCount ||
+        (noFit && (!count || count == BQ_MAX_TRACKS - scanCount))) {
+        if (namesH) MemFree(namesH);
+        BQ_CancelScan();
+        BQ_FolderError(count == 0xffff ? BQ_ERROR_FOLDER : BQ_ERROR_LIMIT);
+        return;
+    }
+    if (namesH) {
+        namesP = MemLock(namesH);
+        for (i = 0; i < count; ++i) {
+            if (!memchr(namesP, 0, sizeof(FileLongName))) break;
+            BQ_InsertTrack(namesP);
+            namesP += sizeof(FileLongName);
+        }
+        MemUnlock(namesH);
+        MemFree(namesH);
+        if (i != count) {
+            BQ_CancelScan();
+            BQ_FolderError(BQ_ERROR_FOLDER);
+            return;
+        }
+    }
+    scanSkip += count;
+    if (noFit) {
+        @send, forceQueue process::MSG_BSQP_SCAN_FOLDER(generation);
+    } else {
+        error = VMUpdate(listFile);
+        if (error && error != VM_UPDATE_NOTHING_DIRTY) {
+            BQ_CancelScan();
+            BQ_FolderError(BQ_ERROR_FOLDER);
+            return;
+        }
+        requestP = MemLock(scanRequestH);
+        pendingTrack = requestP->file[0] ?
+                       BQ_FindTrack(scanH, scanCount, requestP->file) : BQ_NO_TRACK;
+        error = requestP->file[0] && pendingTrack == BQ_NO_TRACK;
+        MemUnlock(scanRequestH);
+        if (error) {
+            BQ_CancelScan();
+            BQ_FolderError(BQ_ERROR_OPEN);
+            return;
+        }
+        scanDone = TRUE;
+        BQ_PollPending();
+    }
+}
+
+void _pascal BQ_ResetShuffle(void)
+{
+    BQTrack *trackP;
+    word i, size;
+
+    for (i = 0; i < trackCount; ++i) {
+        HugeArrayLock(listFile, tracksH, i, (void **)&trackP, &size);
+        trackP->visited = i == playingTrack;
+        HugeArrayDirty(trackP);
+        HugeArrayUnlock(trackP);
+    }
+}
+
+static void _pascal BQ_StartTrack(word item, Boolean newRun)
+{
+    BQTrack *trackP;
+    FileLongName name;
+    word size;
+
+    if (item >= trackCount || playFlag || closing) return;
+    BQ_ClearPlaying();
+    if (newRun) BQ_ResetShuffle();
+    HugeArrayLock(listFile, tracksH, item, (void **)&trackP, &size);
+    strcpy(name, trackP->name);
+    trackP->visited = TRUE;
+    HugeArrayDirty(trackP);
+    HugeArrayUnlock(trackP);
+    if (!BQ_MakePath(fullPath, folderDisk, folderPath, name)) {
+        BQ_FolderError(BQ_ERROR_PATH);
+        return;
+    }
+    ++bqPlaySerial;
+    running = TRUE;
+    playingTrack = item;
+    bqStopRequested = FALSE;
+    @call TrackList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(item, FALSE);
+    @call TrackList::MSG_GEN_ITEM_GROUP_MAKE_ITEM_VISIBLE(item);
+    @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(name, VUM_NOW);
+    BQ_RefreshRow(item);
+    BQ_StartPlay();
+}
+
+void _pascal BQ_PlaySelected(void)
+{
+    word item;
+
+    item = @call TrackList::MSG_GEN_ITEM_GROUP_GET_SELECTION();
+    if (item >= trackCount || closing) return;
+    BQ_CancelScan();
+    BQ_StopPlayback();
+    pendingTrack = item;
+    BQ_PollPending();
+}
+
+/***********************************************************************
+ * ROUTINE:     BQ_PollPending
+ * DESCRIPTION: Commit a complete scan or start a pending replacement.
+ * PARAMETERS:  Process-owned pending state.
+ * STRATEGY:    Never start a second worker while the old one owns playback.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              The display timer also checks the two-second stop deadline.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/05/26  Initial version
+ ***********************************************************************/
+void _pascal BQ_PollPending(void)
+{
+    BQFolderRequest *requestP;
+    word item;
+    char path[BQ_FULL_PATH_SIZE];
+
+    if (closing) return;
+    if (playFlag) {
+        if (bqStopRequested && (scanRequestH || pendingTrack != BQ_NO_TRACK) &&
+            TimerGetCount() - stopTicks >= 120) {
+            BQ_CancelScan();
+            pendingTrack = BQ_NO_TRACK;
+            BQ_FolderError(BSNW_TIMEOUT);
+        }
+        return;
+    }
+    if (bqStopRequested) BQ_Idle();
+    if (scanDone) {
+        requestP = MemLock(scanRequestH);
+        if (!BQ_MakePath(path, requestP->disk, requestP->path, "")) {
+            MemUnlock(scanRequestH);
+            BQ_CancelScan();
+            BQ_FolderError(BQ_ERROR_PATH);
+            return;
+        }
+        folderDisk = requestP->disk;
+        strcpy(folderPath, requestP->path);
+        MemUnlock(scanRequestH);
+        if (tracksH) HugeArrayDestroy(listFile, tracksH);
+        tracksH = scanH;
+        scanH = 0;
+        trackCount = scanCount;
+        tagIndex = 0;
+        scanDone = FALSE;
+        MemFree(scanRequestH);
+        scanRequestH = 0;
+        fullPath[0] = 0;
+        bqSampleRate = bqChannels = bqBits = 0;
+        bqAllBytes = bqSampleBytes = 0;
+        RedrawFileName(0);
+        RedrawSettings(0);
+        RedrawTime(0);
+        @call FolderGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(path, VUM_NOW);
+        if (trackCount) @call EmptyGlyph::MSG_GEN_SET_NOT_USABLE(VUM_NOW);
+        else @call EmptyGlyph::MSG_GEN_SET_USABLE(VUM_NOW);
+        @call TrackList::MSG_GEN_DYNAMIC_LIST_INITIALIZE(trackCount);
+        if (trackCount) {
+            @call TrackList::MSG_GEN_ITEM_GROUP_SET_SINGLE_SELECTION(0, FALSE);
+            @call PLAYTrigger::MSG_GEN_SET_ENABLED(VUM_NOW);
+        } else {
+            @call PLAYTrigger::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
+            @call BSQPPrimary::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("Audio Quick Player", VUM_NOW);
+        }
+        @call WavFileSelector::MSG_GEN_PATH_SET(folderPath, folderDisk);
+        @send, forceQueue process::MSG_BSQP_READ_TAGS(folderGeneration);
+    }
+    if (!scanRequestH && pendingTrack != BQ_NO_TRACK) {
+        item = pendingTrack;
+        pendingTrack = BQ_NO_TRACK;
+        BQ_StartTrack(item, TRUE);
+    }
+}
+
+static word _pascal BQ_NextTrack(void)
+{
+    BQTrack *trackP;
+    word i, count, rank, size;
+    dword limit;
+
+    if (bqOptions & BQ_OPTION_ENDLESS) return playingTrack;
+    if (!(bqOptions & BQ_OPTION_CONTINUE)) return BQ_NO_TRACK;
+    if (!(bqOptions & BQ_OPTION_SHUFFLE))
+        return playingTrack + 1 < trackCount ? playingTrack + 1 : BQ_NO_TRACK;
+    count = 0;
+    for (i = 0; i < trackCount; ++i) {
+        HugeArrayLock(listFile, tracksH, i, (void **)&trackP, &size);
+        if (!trackP->visited) ++count;
+        HugeArrayUnlock(trackP);
+    }
+    if (!count) return BQ_NO_TRACK;
+    if (!randomState) randomState = TimerGetCount() | 1;
+    /* No kernel C random API is available. One LCG state, with rejection
+     * to avoid bias when the remaining count is not a power of two.
+     */
+    limit = (65536UL / count) * count;
+    do {
+        randomState = randomState * 1664525UL + 1013904223UL;
+        rank = (word)(randomState >> 16);
+    } while ((dword)rank >= limit);
+    rank %= count;
+    for (i = 0; i < trackCount; ++i) {
+        HugeArrayLock(listFile, tracksH, i, (void **)&trackP, &size);
+        if (!trackP->visited) {
+            if (!rank) {
+                HugeArrayUnlock(trackP);
+                return i;
+            }
+            --rank;
+        }
+        HugeArrayUnlock(trackP);
+    }
+    return BQ_NO_TRACK;
+}
+
+Boolean _pascal BQ_FinishPlayback(int result, dword serial)
+{
+    word next;
+
+    BQ_PollPending();
+    if (closing || serial != bqPlaySerial) return FALSE;
+    if (result != BSNW_STATUS_OK && result != BSNW_ABORT) {
+        BQ_CancelScan();
+        pendingTrack = BQ_NO_TRACK;
+    }
+    if (!playFlag && result == BSNW_STATUS_OK && running && !bqStopRequested) {
+        next = BQ_NextTrack();
+        if (next != BQ_NO_TRACK) {
+            BQ_StartTrack(next, FALSE);
+            return FALSE;
+        }
+    }
+    running = FALSE;
+    if (!playFlag) BQ_ClearPlaying();
+    return TRUE;
+}
+
+@extern method BSQPProcessClass, MSG_BSQP_TRACK_ACTIVATE
+{
+    BQ_PlaySelected();
+}
+
+@extern method BSQPProcessClass, MSG_BSQP_TRACK_MONIKER
+{
+    BQTrack *trackP;
+    char text[BQ_LABEL_SIZE + 3];
+    word size;
+
+    if (closing || item >= trackCount) return;
+    HugeArrayLock(listFile, tracksH, item, (void **)&trackP, &size);
+    strcpy(text, item == playingTrack ? "> " : "  ");
+    strcat(text, trackP->label);
+    HugeArrayUnlock(trackP);
+    @call TrackList::MSG_GEN_DYNAMIC_LIST_REPLACE_ITEM_TEXT(item, text);
+}
+
+/***********************************************************************
+ * MESSAGE:     MSG_BSQP_READ_TAGS
+ * DESCRIPTION: Enrich one row per queued event without decoder work.
+ * PARAMETERS:  generation = folder request identity.
+ * STRATEGY:    Read through a single short-lived metadata file handle.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Generation checks cancel work after a new folder request.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/05/26  Initial version
+ ***********************************************************************/
+@extern method BSQPProcessClass, MSG_BSQP_READ_TAGS
+{
+    BQTrack record, *trackP;
+    char path[BQ_FULL_PATH_SIZE];
+    FileHandle fileH;
+    word item, size;
+
+    if (closing || generation != folderGeneration || scanRequestH || tagIndex >= trackCount)
+        return;
+    /* Read the playing file's tags first, without delaying its playback. */
+    item = tagIndex;
+    if (playingTrack < trackCount) {
+        HugeArrayLock(listFile, tracksH, playingTrack, (void **)&trackP, &size);
+        if (!trackP->tagged) item = playingTrack;
+        HugeArrayUnlock(trackP);
+    }
+    HugeArrayLock(listFile, tracksH, item, (void **)&trackP, &size);
+    record = *trackP;
+    HugeArrayUnlock(trackP);
+    if (!record.tagged && BQ_MakePath(path, folderDisk, folderPath, record.name)) {
+        fileH = FileOpen(path, FILE_ACCESS_R | FILE_DENY_NONE);
+        if (fileH) {
+            BQ_ReadTags(fileH, record.label);
+            FileClose(fileH, TRUE);
+        }
+        record.tagged = TRUE;
+        HugeArrayReplace(listFile, tracksH, 1, item, &record);
+        BQ_RefreshRow(item);
+    }
+    if (item == tagIndex) ++tagIndex;
+    @send, forceQueue process::MSG_BSQP_READ_TAGS(generation);
+}
+
+void _pascal BQ_CloseFolder(void)
+{
+    closing = TRUE;
+    ++folderGeneration;
+    BQ_CancelScan();
+    tracksH = 0;
+    trackCount = 0;
+    if (listFile) {
+        VMClose(listFile, TRUE);
+        listFile = 0;
+        FileDelete(tempName);
+    }
+}
