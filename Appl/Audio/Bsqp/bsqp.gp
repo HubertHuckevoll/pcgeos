@@ -42,6 +42,7 @@ resource AppResource        ui-object
 resource Interface      ui-object
 # resource UIMainInfoResource   ui-object
 resource DISPLAYRESOURCE    ui-object
+resource PlaybackMonikers lmem read-only shared
 resource SELECTORRESOURCE   ui-object
 resource OPTIONSMENURESOURCE    ui-object
 
@@ -53,3 +54,4 @@ export  BSQPPrimaryClass
 # usernotes "� D.Lausecker\x0dAudio Player is licensed to NewDeal and is subject to its conditions of use."
 
 export BQTrackListClass
+export BQPlayTriggerClass

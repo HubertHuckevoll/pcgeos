@@ -46,6 +46,7 @@ DESCRIPTION:
 @classdecl  BSQPApplicationClass;
 @classdecl  BSQPPrimaryClass;
 @classdecl  BQTrackListClass;
+@classdecl  BQPlayTriggerClass;
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  %      Objects
@@ -115,6 +116,94 @@ DESCRIPTION:
 /*----------------------------------------------------------------------
  *      Display & Triggergroup  (ui thread)
  *----------------------------------------------------------------------*/
+
+/* Shared data has no object-thread owner during moniker copies. */
+@start PlaybackMonikers, data;
+
+/* The native hint calls UserCreateIconTextMoniker on these lists. */
+@visMoniker PlayMoniker = list { @PlayLabel, @PlayIcon };
+@visMoniker PauseMoniker = list { @PauseLabel, @PauseIcon };
+@visMoniker PlayLabel = "Play";
+@visMoniker PauseLabel = "Pause";
+@visMoniker StopLabel = "Stop";
+
+/* Fill at the current position so the icons follow the combined layout. */
+@visMoniker PlayIcon = {
+    size = standard;
+    style = icon;
+    aspectRatio = normal;
+    color = gray1;
+    cachedSize = 12, 12;
+    gstring {
+        GSFillBitmapAtCP(30),
+        Bitmap(12, 12, BMC_UNCOMPACTED, BMF_MONO),
+        0x00, 0x00,
+        0x20, 0x00,
+        0x38, 0x00,
+        0x3e, 0x00,
+        0x3f, 0x80,
+        0x3f, 0xe0,
+        0x3f, 0xe0,
+        0x3f, 0x80,
+        0x3e, 0x00,
+        0x38, 0x00,
+        0x20, 0x00,
+        0x00, 0x00,
+        GSEndString()
+    }
+}
+
+@visMoniker PauseIcon = {
+    size = standard;
+    style = icon;
+    aspectRatio = normal;
+    color = gray1;
+    cachedSize = 12, 12;
+    gstring {
+        GSFillBitmapAtCP(30),
+        Bitmap(12, 12, BMC_UNCOMPACTED, BMF_MONO),
+        0x00, 0x00,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x39, 0xc0,
+        0x00, 0x00,
+        GSEndString()
+    }
+}
+
+@visMoniker StopIcon = {
+    size = standard;
+    style = icon;
+    aspectRatio = normal;
+    color = gray1;
+    cachedSize = 12, 12;
+    gstring {
+        GSFillBitmapAtCP(30),
+        Bitmap(12, 12, BMC_UNCOMPACTED, BMF_MONO),
+        0x00, 0x00,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x7f, 0xe0,
+        0x00, 0x00,
+        GSEndString()
+    }
+}
+
+@end PlaybackMonikers;
 
 @start  DISPLAYRESOURCE;
 
@@ -195,16 +284,18 @@ DESCRIPTION:
 
 @object GenTriggerClass STOPTrigger =
 {
-    GI_visMoniker   = "Stop";
+    GI_visMoniker = list { @StopLabel, @StopIcon };
+    HINT_USE_ICON_TEXT_COMBINATION_MONIKER = { 0, 4 };
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_kbdAccelerator = ctrl 's';
     GTI_actionMsg   = MSG_PROCESS_BSQP_STOP;
     GTI_destination = process;
 }
 
-@object GenTriggerClass PLAYTrigger =
+@object BQPlayTriggerClass PLAYTrigger =
 {
-    GI_visMoniker   = "Play";
+    GI_visMoniker = list { @PlayLabel, @PlayIcon };
+    HINT_USE_ICON_TEXT_COMBINATION_MONIKER = { 0, 4 };
     GI_states = @default & ~GS_ENABLED;
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GI_kbdAccelerator = ctrl 'p';
@@ -467,6 +558,28 @@ DESCRIPTION:
     @callsuper();
     if (appLaunchBlock)
         @send, forceQueue process::MSG_BSQP_LOAD_FOLDER(requestH);
+}
+
+/***********************************************************************
+ * MESSAGE:     MSG_SPEC_RESOLVE_MONIKER_LIST
+ * DESCRIPTION: Keep both icon and text when the Play/Pause moniker changes.
+ * PARAMETERS:  monikerList = moniker list chunk to resolve.
+ * STRATEGY:    GenFindMoniker honors the icon/text combination hint.
+ *              The default VisClass resolver only selects an icon.
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Other moniker lists retain the default resolution.
+ * REVISION HISTORY:
+ *      Codex/MeyerK  11/05/26  Initial version
+ ***********************************************************************/
+@method BQPlayTriggerClass, MSG_SPEC_RESOLVE_MONIKER_LIST
+{
+    if (monikerList == @call self::MSG_GEN_GET_VIS_MONIKER()) {
+        (void)@call self::MSG_GEN_FIND_MONIKER(FALSE,
+            VMSF_REPLACE_LIST | VMSF_GSTRING |
+            (VMS_ICON << VMSF_STYLE_OFFSET), 0);
+    } else {
+        @callsuper();
+    }
 }
 
 /* Enter activates the selected row even while another row is playing. */

@@ -8,6 +8,29 @@ use File::Temp qw(tempdir);
 my $app = abs_path(dirname(__FILE__).'/..');
 my $tmp = tempdir('bsqp-folder-XXXXXX', TMPDIR=>1, CLEANUP=>!$ENV{KEEP_TESTS});
 sub read_file { open my $f, '<', $_[0] or die $!; local $/; return <$f>; }
+# Template lists and their referenced chunks must be safe on either thread.
+my $ui = read_file("$app/UI/uimain.goc");
+my $gp = read_file("$app/bsqp.gp");
+my (%monikers, %checked);
+while ($ui =~ /\@start\s+(\w+)([^;]*);(.*?)\@end\s+\1;/sg) {
+    my ($resource, $attributes, $body) = ($1, $2, $3);
+    while ($body =~ /\@visMoniker\s+(\w+)\s*=\s*(.*?);/sg) {
+        $monikers{$1} = [$resource, $attributes, $2];
+    }
+}
+my @pending = qw(PlayMoniker PauseMoniker StopLabel StopIcon);
+while (@pending) {
+    my $name = pop @pending;
+    next if $checked{$name}++;
+    my $moniker = $monikers{$name} or die "missing moniker $name";
+    my ($resource, $attributes, $body) = @$moniker;
+    my ($flags) = $gp =~ /^resource[ \t]+\Q$resource\E[ \t]+([^\r\n]*)/m;
+    defined($flags) && $attributes =~ /\bdata\b/ &&
+        $flags =~ /\blmem\b/ && $flags =~ /\bread-only\b/ &&
+        $flags =~ /\bshared\b/ && $flags !~ /\b(?:ui-object|object)\b/
+        or die "$name is in a thread-owned or writable template resource";
+    push @pending, $body =~ /\@(\w+)/g;
+}
 my $folder = read_file("$app/Main/folder.goc");
 my $tags = read_file("$app/Main/tags.goc");
 my $header = read_file("$app/Main/bsqp.goh");
@@ -24,6 +47,12 @@ for my $name (qw(BQ_StartPlay BQ_PlayThread)) {
     $audio =~ /^([^\n;{}]*\b$name\s*\([^;]*?\)\n\{.*?^\})/ms or die "missing $name";
     $folder .= "$1\n";
 }
+my $process = read_file("$app/Main/process.goc");
+$process =~ s/\r\n/\n/g;
+$process =~ s{//([^\n]*)}{/*$1*/}g;
+$process =~ /\@method BSQPProcessClass, MSG_PROCESS_BSQP_PLAY\n(\{.*?^\})/ms
+    or die 'missing Play/Pause method';
+$folder .= "void PlayPause(void)\n$1\n";
 my %methods = (
     MSG_BSQP_LOAD_FOLDER => 'MemHandle requestH',
     MSG_BSQP_SCAN_FOLDER => 'dword generation',
@@ -41,6 +70,8 @@ for ($folder, $tags) {
     s/\@send, forceQueue process::MSG_BSQP_TRACK_MONIKER/QueueRow/g;
     s/\@(?:call|send) (\w+)::(\w+)/UI_$1_$2/g;
     s/\@TrackList/123/g;
+    s/\@PlayMoniker/124/g;
+    s/\@PauseMoniker/125/g;
     die 'unhandled GOC' if /\@/;
 }
 open my $out, '>', "$tmp/check.c" or die $!;
@@ -96,7 +127,6 @@ C
 print $out "$header\n";
 print $out <<'C';
 char fullPath[BQ_FULL_PATH_SIZE], globalText[80];
-char playText[] = "PLAY", pauseText[] = "PAUSE";
 TimerHandle tih;
 word tid, playFlag, rmsValue, bqChannels, bqBits, bqOptions, bqDispStyle;
 dword bqPlaySerial, bqWorkerSerial, bqSampleRate, bqAllBytes, bqSampleBytes;
@@ -228,7 +258,9 @@ static word LocalCodePageToGeosChar(word ch, word page, word fallback)
 }
 static dword TimerGetCount(void) { return ticks; }
 static void BSNWaveStop(void) { }
-static void BSNWaveSetPause(word mode) { assert(mode==2); }
+static void BSNWaveSetPause(word mode) { assert(mode==1 || mode==2); }
+#define BSEXBSSTATUS(status) (status)
+#define BSNWaveGetStatus() (running)
 static void RedrawSettings(word state) { (void)state; }
 static void RedrawStatus(word state) { (void)state; }
 static void RedrawRMS(word state) { (void)state; }
@@ -246,8 +278,11 @@ static int ThreadCreate(word priority, word arg, word (*entryP)(word), word stac
     ++starts; if(fileOwned>maxWorkers) maxWorkers=fileOwned; return 1;
 }
 #define GeodeGetProcessHandle() 1
-static void UI_PLAYTrigger_MSG_GEN_REPLACE_VIS_MONIKER_TEXT(const char *textP, word mode)
-{ (void)mode; assert(!arrayLocks); strcpy(button,textP); }
+static void UI_PLAYTrigger_MSG_GEN_REPLACE_VIS_MONIKER_OPTR(optr moniker, word mode)
+{
+    (void)mode; assert(!arrayLocks && (moniker==124 || moniker==125));
+    strcpy(button,moniker==124 ? "PLAY" : "PAUSE");
+}
 static void UI_PLAYTrigger_MSG_GEN_SET_ENABLED(word mode) { (void)mode; }
 static void UI_PLAYTrigger_MSG_GEN_SET_NOT_ENABLED(word mode) { (void)mode; }
 static word UI_TrackList_MSG_GEN_ITEM_GROUP_GET_SELECTION(void) { return selected; }
@@ -414,7 +449,7 @@ static void CheckFolders(void)
     BQ_StopPlayback(); Pump(); assert(!scanRequestH && starts==before);
     /* Run through filename order exactly once. */
     selected=0; bqOptions=BQ_OPTION_CONTINUE; BQ_PlaySelected(); Pump();
-    for(i=0;i<trackCount;++i) { assert(playingTrack==i); Complete(); }
+    for(i=0;i<trackCount;++i) { assert(playingTrack==i && !strcmp(button,"PAUSE")); Complete(); }
     assert(!playFlag && !running);
     /* Shuffle visits each row once, including the explicitly chosen first. */
     memset(visited,0,sizeof(visited)); bqOptions=BQ_OPTION_CONTINUE|BQ_OPTION_SHUFFLE;
@@ -427,6 +462,8 @@ static void CheckFolders(void)
     BQ_StopPlayback(); Complete(); assert(!playFlag && !running && !strcmp(button,"PLAY"));
     /* A replacement waits for release. An obsolete result cannot advance. */
     bqOptions=BQ_OPTION_CONTINUE; selected=2; BQ_PlaySelected(); Pump(); serial=bqPlaySerial;
+    PlayPause(); assert(playFlag==BQ_PLAYFLAG_PAUSE && !strcmp(button,"PLAY"));
+    PlayPause(); assert(playFlag==BQ_PLAYFLAG_PLAY && !strcmp(button,"PAUSE"));
     selected=7; BQ_PlaySelected(); assert(pendingTrack==7 && playFlag);
     Complete(); assert(playingTrack==7 && playFlag && bqPlaySerial!=serial);
     assert(!BQ_FinishPlayback(123,serial) && playingTrack==7);

@@ -554,7 +554,7 @@ void _pascal BQ_StartPlay(void)
 
     RedrawSettings(0);
     RedrawFileName(0);
-    @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(pauseText, VUM_NOW);
+    @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(@PauseMoniker, VUM_NOW);
     @send PLAYTrigger::MSG_GEN_SET_ENABLED(VUM_NOW);
     bqStopRequested = FALSE;
     playFlag = BQ_PLAYFLAG_PLAY;

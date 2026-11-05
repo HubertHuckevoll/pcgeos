@@ -34,6 +34,8 @@ DESCRIPTION:
 @extern	object	WavFileSelector;
 @extern	object	FileSelectorOpenTrigger;
 @extern	object	PLAYTrigger;
+@extern visMoniker PlayMoniker;
+@extern visMoniker PauseMoniker;
 
 @extern	object	BSQPPrimary;
 @extern	object	BSQPApp;
@@ -52,6 +54,9 @@ DESCRIPTION:
 @endc
 
 @class BSQPPrimaryClass, GenPrimaryClass;
+@endc
+
+@class BQPlayTriggerClass, GenTriggerClass;
 @endc
 
 @class BQTrackListClass, GenDynamicListClass;

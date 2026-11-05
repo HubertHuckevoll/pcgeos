@@ -102,7 +102,7 @@ DESCRIPTION:
 
     if (!BQ_FinishPlayback(result, serial)) return;
     if (!playFlag) {
-        @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playText, VUM_NOW);
+        @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(@PlayMoniker, VUM_NOW);
         rmsValue = 0;
         RedrawStatus(0);
         RedrawRMS(0);
@@ -385,7 +385,7 @@ typedef struct {
 
 @method BSQPProcessClass, MSG_PROCESS_BSQP_PLAY
 {
-    char    *ptr = playText;
+    optr moniker = @PlayMoniker;
 
     if (playFlag)
     {
@@ -402,17 +402,17 @@ typedef struct {
         {
             // PLAY --> PAUSE
             playFlag = BQ_PLAYFLAG_PAUSE;
-            ptr = playText;
+            moniker = @PlayMoniker;
         }
         else
         {
             // PAUSE --> PLAY
             playFlag = BQ_PLAYFLAG_PLAY;
-            ptr = pauseText;
+            moniker = @PauseMoniker;
         };
 
-        // update text of PLAYTrigger
-        @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(ptr,VUM_NOW);
+        // Update the icon and text together.
+        @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(moniker,VUM_NOW);
 
         // update display
         RedrawStatus(0);

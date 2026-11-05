@@ -95,8 +95,6 @@ extern  dword       bqPlaySerial;
 extern  dword       bqWorkerSerial;
 extern  Boolean     bqStopRequested;
 extern  word        playFlag;   // State of playing
-extern  char        playText[]; // "PLAY"
-extern  char        pauseText[];    // "PAUSE"
 extern  word        rmsValue;   // 255 = full level
 extern  dword       bqSampleRate;
 extern  word        bqChannels; // 1 = MONO 2 = STEREO

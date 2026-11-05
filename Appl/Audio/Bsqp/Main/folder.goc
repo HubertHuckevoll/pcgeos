@@ -132,7 +132,7 @@ static void _pascal BQ_Idle(void)
     BQ_ClearPlaying();
     bqStopRequested = FALSE;
     rmsValue = 0;
-    @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(playText, VUM_NOW);
+    @send PLAYTrigger::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(@PlayMoniker, VUM_NOW);
     RedrawStatus(0);
     RedrawRMS(0);
 }
