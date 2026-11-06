@@ -53,6 +53,8 @@ typedef struct {
 #define GR_DRAW_ELLIPSE 53
 #define GR_FILL_ELLIPSE 72
 #define GR_DRAW_RECT_TO 45
+#define GR_DRAW_ROUND_RECT 46
+#define GR_DRAW_ROUND_RECT_TO 47
 #define GR_DRAW_CURVE 50
 #define GR_DRAW_CURVE_TO 51
 #define GR_DRAW_POLYGON 54
@@ -63,6 +65,8 @@ typedef struct {
 #define GR_DRAW_TEXT_FIELD 62
 #define GR_FILL_RECT 66
 #define GR_FILL_RECT_TO 67
+#define GR_FILL_ROUND_RECT 68
+#define GR_FILL_ROUND_RECT_TO 69
 #define GR_FILL_POLYGON 71
 #define GR_OUTPUT_5F 95
 #define GR_SAVE_STATE 96

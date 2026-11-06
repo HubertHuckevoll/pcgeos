@@ -45,6 +45,8 @@ void PdfFinish(PdfDocument *pdf);
 void PdfColor(PdfDocument *pdf, PdfDWord rgb, int stroke);
 /* Signed 16-bit GEOS bounding coordinates; reversed corners are accepted. */
 void PdfEllipse(PdfDocument *pdf, int x1, int y1, int x2, int y2, int fill);
+void PdfRoundRect(PdfDocument *pdf, int x1, int y1, int x2, int y2,
+                  PdfWord radius, int fill);
 void PdfText(PdfDocument *pdf, int x, int y, PdfFixed size,
              PdfWord font, const unsigned char *text, PdfWord count);
 #endif

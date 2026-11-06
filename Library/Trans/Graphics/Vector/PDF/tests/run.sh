@@ -4,7 +4,7 @@ src=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 cc=${CC:-cc}
-for test in writer gstring shape; do
+for test in writer gstring shape roundrect; do
     "$cc" -std=c99 -Wall -Wextra -Werror -Wno-unknown-pragmas \
         -DPDF_HOST_TEST ${PDF_TEST_CFLAGS:-} -o "$work/${test}_test" \
         "$src/tests/${test}_test.c" "$src/pdfWriter.c" "$src/pdfShape.c" -lm

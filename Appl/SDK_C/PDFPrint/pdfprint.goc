@@ -48,6 +48,9 @@
         GrFillRect(gstate,60,180,200,260);
         GrDrawEllipse(gstate,60,300,260,400);
         GrFillEllipse(gstate,300,300,400,450);
+        GrDrawRoundRect(gstate,60,480,260,580,20);
+        GrMoveTo(gstate,300,480);
+        GrFillRoundRectTo(gstate,400,600,20);
         GrSetTextColor(gstate,CF_RGB,0,0,0);
         GrSetFont(gstate,FID_DTC_URW_SANS,MakeWWFixed(18));
         GrSetTextMode(gstate,TM_DRAW_BASE,0);

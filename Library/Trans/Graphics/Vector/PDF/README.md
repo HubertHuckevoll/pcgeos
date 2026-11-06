@@ -61,7 +61,7 @@ C calls before unlocking the PState.
 | `pdfGeos.c` | GEOS memory, graphics state, GString decoding/translation |
 | `pdfStream.asm` | Checked Pascal wrapper for the stream strategy |
 | `pdfWriter.c` | Portable PDF object and operator serialization |
-| `pdfShape.c` | Independent vector primitives, currently cubic ellipses |
+| `pdfShape.c` | Independent vector primitives: ellipses and rounded rectangles |
 | `Include/pdf.def` | Private printer/backend API and lifetime contract |
 
 The writer buffers 512 bytes and tracks its own 32-bit byte position. Each page
@@ -80,7 +80,7 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   transforms; physical media clipping.
 * Lines, line-to, horizontal/vertical lines, rectangles, filled rectangles,
   polylines, polygons (both fill rules), cubic Bezier curves, outlined/filled
-  ellipses.
+  ellipses and rounded rectangles (including current-position variants).
 * RGB fill/stroke/text colors; solid masks, line width/caps/joins/miter limit.
 * DrawText/DrawTextAtCP, DrawChar/DrawCharAtCP, plain counted text-field runs.
 * Helvetica regular/bold/oblique/bold-oblique, substituting other GEOS fonts.
@@ -132,9 +132,9 @@ Perl checker validates every xref byte offset, indirect stream length and page
 reference. Poppler parsing/rendering is checked when installed. These are
 host-side development checks, not runtime dependencies.
 
-The shape module adds only one internal C function, `PdfEllipse`; the printer
-and exported library API are unchanged. Two GString cases select stroke/area
-attributes and pass the bounds to it. Four cubic segments approximate an ellipse
+The shape module provides internal C functions `PdfEllipse` and `PdfRoundRect`;
+the printer and exported library API are unchanged. GString cases select
+stroke/area attributes and pass the bounds to them. Four cubic segments approximate an ellipse
 using 16.16 arithmetic and no floating point, allocations or local CTM scaling.
 Inherited stroke width is therefore preserved for noncircular ellipses. Reversed
 corners are normalized as in the kernel; zero-area fills vanish and degenerate
@@ -144,6 +144,21 @@ Independent host tests sample the emitted curves against the ellipse equation
 (normalized radial error below 0.0004), including odd dimensions, 1-point bounds,
 the full signed-word range and extreme aspect ratios. Tests also cover inherited
 area masks, malformed GString operands, sink failures, and transformed rendering.
+
+Rounded rectangles reuse the same quarter-circle control factor for four cubic
+corners joined by straight edges. Their unsigned word radius is limited to the
+smaller **integer** half-extent, rounded down, matching `PrepRoundRectLow` in
+`Library/Kernel/Graphics/graphicsRoundedRect.asm`. A zero/clamped-zero radius
+emits an ordinary rectangle, including degenerate bounds. Coordinates are
+normalized before radius calculation and promoted before arithmetic, supporting
+the complete signed-word coordinate range without 16-bit subtraction overflow.
+The four records are decoded explicitly from `Include/gstring.def`: a word
+radius precedes either four signed coordinate words (11 bytes total) or two
+coordinate words with the first corner taken from the current pen position
+(7 bytes total). The kernel continues
+to own pen state. Tests cover all four opcodes, radius 0xffff, line/area attribute
+selection, truncated/oversized operands, edge/corner tangencies, sampled radial
+accuracy, odd and tiny dimensions, coordinate limits, and transformed rendering.
 
 Verified during implementation: Watcom 2020-12-01, ESP and Glue from this
 repository, both native EC/NC library/driver/application builds; sanitizer host
@@ -159,7 +174,8 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
    file output. Launch PDF Print Test and print to a filename ending in `.pdf`.
    No application's export command or external conversion is involved.
 3. Expect two pages, each containing a red diagonal line, a blue rectangle,
-   a red ellipse outline, a blue filled ellipse, and the appropriate
+   a red ellipse outline, a blue filled ellipse, a red rounded-rectangle outline,
+   a blue filled rounded rectangle, and the appropriate
    `Native PDF page 1` / `Native PDF page 2` text.
 4. Open in the GEOS PDF Viewer; also inspect with `pdfinfo`, `pdftotext` and
    `tests/check_pdf.pl output.pdf 2` on a development host. Check portrait,

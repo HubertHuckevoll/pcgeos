@@ -187,7 +187,8 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size)
     int x = (sword)(word)cp, y = (sword)(word)(cp >> 16);
     int x2, y2;
     Boolean fill = op == GR_FILL_RECT || op == GR_FILL_RECT_TO ||
-                   op == GR_FILL_POLYGON || op == GR_FILL_ELLIPSE;
+                   op == GR_FILL_POLYGON || op == GR_FILL_ELLIPSE ||
+                   op == GR_FILL_ROUND_RECT || op == GR_FILL_ROUND_RECT_TO;
     attributes(p, gs, fill);
     switch (op) {
     case GR_DRAW_LINE:
@@ -216,6 +217,14 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size)
         PdfInteger(p, x); PdfInteger(p, y);
         PdfInteger(p, (long)x2 - x); PdfInteger(p, (long)y2 - y);
         PdfRaw(p, fill ? "re f\n" : "re S\n"); break;
+    case GR_DRAW_ROUND_RECT: case GR_FILL_ROUND_RECT:
+        if (size != 11) goto bad;
+        PdfRoundRect(p, s16(b+3), s16(b+5), s16(b+7), s16(b+9), u16(b+1), fill);
+        break;
+    case GR_DRAW_ROUND_RECT_TO: case GR_FILL_ROUND_RECT_TO:
+        if (size != 7) goto bad;
+        PdfRoundRect(p, x, y, s16(b+3), s16(b+5), u16(b+1), fill);
+        break;
     case GR_DRAW_ELLIPSE: case GR_FILL_ELLIPSE:
         if (size != 9) goto bad;
         PdfEllipse(p, s16(b+1), s16(b+3), s16(b+5), s16(b+7), fill);

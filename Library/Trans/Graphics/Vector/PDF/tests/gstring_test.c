@@ -98,6 +98,51 @@ static MemHandle begin(void)
 }
 static void discard(MemHandle h)
 { (void)PDFDESTROY(h);assert(!live); }
+static void roundGStrings(void)
+{
+    byte ops[]={GR_DRAW_ROUND_RECT,GR_FILL_ROUND_RECT,
+                GR_DRAW_ROUND_RECT_TO,GR_FILL_ROUND_RECT_TO};
+    byte move[]={GR_MOVE_TO,10,0,20,0}, end[]={GR_END_GSTRING};
+    byte full[]={0,10,0,10,0,20,0,110,0,80,0};
+    byte to[]={0,10,0,110,0,80,0};
+    byte malformed[12];
+    char pdf[8192];
+    word i, size, j;
+    byte *record;
+    MemHandle h;
+    size_t n;
+    for (i=0;i<4;++i) {
+        record=i<2 ? full : to;size=i<2 ? sizeof(full) : sizeof(to);
+        record[0]=ops[i];
+        out=tmpfile();assert(out);h=begin();
+        add(move,sizeof(move));add(record,size);add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+        assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);assert(!live);
+        rewind(out);n=fread(pdf,1,sizeof(pdf)-1,out);assert(feof(out));pdf[n]=0;
+        assert(strstr(pdf,"20 20 m\n"));
+        assert(strstr(pdf,(i&1) ? "h f\n" : "h S\n"));
+        assert(strstr(pdf,(i&1) ? "0 0 1 rg\n" : "1 0 0 RG\n"));fclose(out);
+        /* 0xffff must stay unsigned and clamp to the integer half-height. */
+        record[1]=record[2]=255;out=tmpfile();assert(out);h=begin();
+        add(move,sizeof(move));add(record,size);add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+        assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);assert(!live);
+        rewind(out);n=fread(pdf,1,sizeof(pdf)-1,out);assert(feof(out));pdf[n]=0;
+        assert(strstr(pdf,"40 20 m\n"));fclose(out);record[1]=10;record[2]=0;
+        out=tmpfile();assert(out);h=begin();mask=0;
+        add(move,sizeof(move));add(record,size);add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==((i&1) ? GSRT_COMPLETE : GSRT_FAULT));
+        mask=SDM_100;discard(h);fclose(out);
+        /* Both truncated and oversized operands must fail before decoding. */
+        for (j=0;j<2;++j) {
+            memcpy(malformed,record,size);malformed[size]=0;
+            out=tmpfile();assert(out);h=begin();
+            add(move,sizeof(move));add(malformed,(word)(size+(j ? 1 : -1)));
+            add(end,sizeof(end));assert(PDFGSTRING(h,1,0)==GSRT_FAULT);
+            discard(h);fclose(out);
+        }
+    }
+}
 int main(int argc,char **argv)
 {
     MemHandle h;
@@ -167,6 +212,7 @@ int main(int argc,char **argv)
     }
     out=tmpfile();streamCalls=0;failStream=1;
     assert(!PDFCREATE(0,0,595,842));assert(!live);failStream=0;fclose(out);
-    puts("gstring: pages, field layout, dispatch, clipping, errors and cleanup passed");
+    roundGStrings();
+    puts("gstring: pages, fields, ellipse/roundrect dispatch, clipping and cleanup passed");
     return 0;
 }
