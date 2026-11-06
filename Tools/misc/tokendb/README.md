@@ -1,27 +1,37 @@
-# PC/GEOS token database ↔ PNG
+# PC/GEOS token database ↔ PNG (Perl)
 
-`tokendb.py` extracts a GEOS 2.x Token Database (`token.000`) into editable
-PNGs plus a JSON manifest, and builds a new database from that directory.
-It runs on the host; neither a GEOS build nor a GEOS runtime is required.
+`tokendb.pl` exports a GEOS 2.x Token Database (`token.000`) as editable
+PNGs and a JSON manifest, and builds a new database from that directory.
+It runs on the host without a GEOS runtime or a GEOS build.
 
 Implemented with ChatGPT Codex, prompted by MeyerK.
 
 ## Usage
 
-Requires Python 3.10+ and Pillow:
+Requires Perl 5.14+ with `JSON::PP`, `MIME::Base64`, `Digest::SHA`,
+`File::Temp` and `Compress::Zlib`. The first four ship with Perl;
+`Compress::Zlib` may need to be installed separately on your host.
+There is no Python dependency.
 
 ```sh
-python3 -m pip install Pillow
-python3 Tools/misc/tokendb/tokendb.py export /path/to/token.000 /path/to/icons
+perl Tools/misc/tokendb/tokendb.pl export /path/to/token.000 /path/to/icons
 # Edit the PNG files, keeping manifest.json and the .bin files.
-python3 Tools/misc/tokendb/tokendb.py build /path/to/icons /path/to/new-token.000
+perl Tools/misc/tokendb/tokendb.pl build /path/to/icons /path/to/new-token.000 \
+    --cvtpcx /path/to/cvtpcx
 ```
 
-The export directory must not already exist. Build writes its output atomically;
-use a separate output filename when experimenting. To install the result, close
-GEOS before replacing its database, and keep a backup of the original.
+The PNG-capable **cvtpcx from the `cvtpcx2` branch** is needed to import
+new/changed PNGs. It can also be selected through the `CVTPCX` environment
+variable. Otherwise the script checks the repository's installed Linux/Windows
+tool locations and `PATH`. Export and an unchanged roundtrip need no converter.
 
-Example directory:
+The export directory must not already exist. Build writes a temporary file and
+renames it into place only after successful validation. Use a new output
+filename when experimenting; on hosts where `rename` cannot replace an existing
+file, choose a different target. Close GEOS before replacing its database, and
+keep a backup of the original.
+
+Example output:
 
 ```text
 icons/
@@ -34,31 +44,36 @@ icons/
   ...
 ```
 
-The directory prefix preserves token order. Each token has a four-byte ID and a
-manufacturer ID; the filename suffix is the full 16-bit moniker-list entry type
-(size, style, aspect ratio, display class, and graphics/list flags). Icons with
-different size, aspect ratio or color depth remain separate files.
+Each token has a four-byte ID and manufacturer ID. The filename suffix is the
+complete 16-bit moniker-list entry type (size, style, aspect ratio, display
+class, and graphics/list flags). Different icon variants remain separate files.
+The directory prefix preserves token order.
 
-The manifest records these IDs, token flags, release/protocol words, paths and
-pixel hashes. A `.bin` file holds the complete original VisMoniker, including
-its GString or text bytes. **Keep these files**: unchanged PNGs reuse the original
-moniker bytes, preserving compression, drawing operations and palettes. Text
-monikers and unsupported graphics also survive unchanged. `text_hex` and
-`pixel_sha256` are informational; the importer compares PNG pixels with a fresh
-render of the `.bin` file rather than trusting the saved hash.
+The manifest records those IDs, flags, release/protocol words, file paths and
+hashes. Each `.bin` holds the entire original VisMoniker, including its GString
+or text bytes. **Keep these files**: unchanged PNGs reuse the original bytes,
+retaining compression, drawing operations and palettes. Text monikers and
+unsupported graphics also survive unchanged. `text_hex` is informational;
+the corresponding `.bin` remains authoritative.
 
-The VM blocks, handles and free space are rebuilt, so a no-edit roundtrip is
-**semantically lossless**, not a byte-identical copy of the entire database.
-All TokenEntry metadata and all original moniker bytes remain identical.
-Unreferenced/deleted items and original VM allocation history are discarded.
-The 256-byte GEOS file header and dummy first token-map entry are retained.
+A PNG and its raw moniker are reused together only if both still match their
+exported file hashes. Otherwise the PNG is converted through cvtpcx; if the
+rendered pixels still match the original moniker, the original is retained.
+The previous manifest layout without file hashes is also accepted through this
+conversion path. Deleting a hash does not delete a moniker.
+
+The VM blocks, physical handles and free space are rebuilt. Thus a no-edit
+roundtrip is **semantically lossless**, rather than a byte-identical copy of the
+whole file: all TokenEntry metadata and original moniker bytes remain identical.
+Unreferenced/deleted items and old allocation history are discarded. The
+256-byte GEOS header and dummy first token-map entry are preserved.
 
 ## Editing and adding icons
 
-Edit an existing PNG in place and run `build`. PNG dimensions become the new
+Edit an existing PNG in place and run `build`. Its dimensions become the new
 cached moniker dimensions. Only PNGs referenced by the manifest are imported.
 
-A new token can be appended to the manifest's `tokens` array, for example:
+For example, append this token to the manifest's `tokens` array:
 
 ```json
 {
@@ -73,87 +88,96 @@ A new token can be appended to the manifest's `tokens` array, for example:
 }
 ```
 
-This example uses token `TEST` and type `0x13c6` (decimal 5062), a standard-size,
+This uses token `TEST` and type `0x13c6` (decimal 5062): a standard-size,
 normal-aspect, 16-color graphic icon. Use your own manufacturer ID. New PNG-only
-entries need no `.bin`; copy the appropriate type from an existing variant.
-Token/manufacturer pairs must be unique. Remove or reorder entries to remove or
-reorder tokens; moniker order is likewise preserved.
+entries need no `.bin`; copy a suitable type from an existing variant.
+Token/manufacturer pairs must be unique and each token needs at least one
+moniker. Remove or reorder entries to remove or reorder tokens. An entirely
+empty database is also supported.
 
-Changed/new images use uncompressed GEOS bitmaps, with binary alpha (below 128
-is transparent), retaining the display class from the manifest:
+New/changed PNGs are passed to cvtpcx with `-G -2 -g -u`, their actual width and
+height, and a depth selected from the manifest's display class:
 
-- Monochrome: black/white at a weighted luminance threshold of 128.
-- Up to 4-bit: nearest of the 16 GEOS system colors.
-- 8-bit: nearest of the 256 GEOS system colors.
-- RGB: 24-bit RGB triples.
+- Monochrome: `-b` (black pixels become set bits).
+- Display classes through 4-bit: `-c4` (nearest GEOS system color).
+- Higher display classes: `-c8` (indexed PNGs retain palette/indices; RGB PNGs
+  are mapped to the GEOS 256-color palette).
 
-Color matching uses the same palette and Manhattan RGB distance as `cvtpcx`.
-Arbitrary custom palette colors in an edited 4/8-bit PNG are reduced to the
-system palette; unchanged custom-palette monikers retain their original bytes.
-No dithering or automatic generation of other variants is performed.
+Alpha below 128 is transparent. Converted bitmaps are uncompressed; cvtpcx
+supports indexed, RGB, alpha, 16-bit and interlaced PNG input. See its own PNG
+limits and mapping rules in `Tools/misc/cvtpcx/cvtpcx.c`.
 
-The tool implements the binary codec directly: `cvtpcx` produces compiler source,
-not complete binary VM/DB files, and does not decode existing monikers to PNG.
-The tests cross-check this branch's PNG-capable `cvtpcx` as an independent encoder.
+Unchanged custom-palette and RGB24 monikers retain their original raw bytes.
+Changed 4-bit PNGs use the system palette. New/changed high-color variants use
+cvtpcx's 8-bit output, with possible color reduction; this tool does not add a
+24-bit encoder to cvtpcx. No dithering or automatic generation of other variants
+is performed.
+
+Perl handles VM/DB/LMem structures, GString decoding and PNG export. PNG export
+uses `Compress::Zlib` to write RGBA scanlines directly. For import, the script
+parses cvtpcx's narrowly defined bitmap initializer into bytes; it never evaluates
+the generated GOC source, invokes a compiler, or passes filenames through a shell.
 
 ## Supported export graphics
 
-- Simple and full-height complex bitmaps: mono, packed 4-bit, 8-bit, RGB24.
-- Uncompressed and GEOS PackBits data, binary masks, custom palettes.
-- GStrings containing DrawBitmap/FillBitmap, at coordinates or current position;
-  integer MoveTo/RelMoveTo, area RGB/index color, copy mix mode, NullOp, EndGString.
+- Simple and full-height complex bitmaps: mono, packed 4-bit, 8-bit and RGB24.
+- Uncompressed and GEOS PackBits data, binary masks and custom palettes.
+- GStrings containing DrawBitmap/FillBitmap at coordinates or current position;
+  integer MoveTo/RelMoveTo, area RGB/index color, copy mix mode, NullOp and EndGString.
 - FillBitmap's zero bits are transparent; DrawBitmap's mono zero bits are white.
 
 Unknown GString operations (including vector drawing), fractional positioning,
-huge/sliced bitmaps, CMYK and LZG compression are reported and retained as raw
-`.bin` files. They receive no misleading partial PNG. Arbitrary GStrings may
-depend on external GState settings; supported icons are rendered at initial
-current position `(0,0)` with black area color onto a transparent canvas.
-No GEOS font/text rendering is attempted. The file must use the GEOS 2.x GEAS
-signature; GEOS 1.x and DBCS text interpretation are outside the PNG codec.
+huge/sliced bitmaps, CMYK and LZG compression are reported and preserved as raw
+`.bin` files. They receive no misleading partial PNG. Supported icons are
+rendered from current position `(0,0)` with black area color onto a transparent
+canvas; arbitrary GStrings can depend on other external GState settings.
+No font/text rendering is attempted. The file must use the GEOS 2.x GEAS
+signature. GEOS 1.x and interpretation of DBCS text are outside the PNG codec.
 
-The encoder limits each bitmap to 64,000 uncompressed raster bytes and each
-DB item/VM block to 16-bit size limits. Ordinary item blocks are grouped around
-8 KiB, with larger individual items allowed. The token-map item itself must fit
-in a single DB item. Input parsing checks bounds, handles, lengths and manifest
-paths. These checks do not constitute a general-purpose hostile-file sandbox.
+The builder limits each DB item to 65,000 bytes and keeps ordinary item blocks
+around 8 KiB, allowing larger individual items. The token-map item must fit in
+one DB item. Reads check lengths, handles and manifest paths. These checks are
+not a general hostile-file sandbox.
 
-## Format references in this repository
+## Format references
 
-- `Include/token.def`: TokenEntry (24 bytes), TokenDBItem, MonikerGroupEntry.
+- `Include/token.def`: 24-byte TokenEntry, TokenDBItem, MonikerGroupEntry.
 - `Library/User/Token/token.asm`: InitializeLocalTokenDB, AddMonikers, GetGroup.
 - `Tools/utils/vmInt.h`: VMFileHeader2, VMHeader, 12-byte VM block descriptors.
 - `Include/Internal/dbaseInt.def`: DBMapBlock, DBGroupHeader, DBItemInfo,
-  DBItemBlockInfo, DBItemBlockHeader.
-- `Include/lmem.def` and `Library/Kernel/LMem/lmemErrorCheck.asm`: chunk heaps.
+  DBItemBlockInfo and DBItemBlockHeader.
+- `Include/lmem.def`, `Library/Kernel/LMem/lmemErrorCheck.asm`: chunk heaps.
 - `Include/Objects/visC.def`: VisMoniker and 6-byte VisMonikerListEntry.
-- `Include/graphics.def`, `CInclude/graphics.h`, `Include/gstring.def`: bitmap
-  headers, display formats and GString opcodes.
+- `Include/graphics.def`, `CInclude/graphics.h`, `Include/gstring.def`:
+  bitmap headers, display formats and GString opcodes.
 - `Library/Kernel/Graphics/graphicsRasterDraw.asm`: GEOS PackBits decoding
-  (notably `0x80` means a 129-byte repeat, not a Macintosh no-op).
-- `Tools/misc/cvtpcx/cvtpcx.c`: system palette, bitmap headers and PNG mapping.
+  (`0x80` repeats 129 bytes, unlike the Macintosh no-op).
+- `Tools/misc/cvtpcx/cvtpcx.c`: system palette, binary bitmap layout, PNG mapping.
 
-All words are little-endian. VM block handles are byte offsets into the VM
-header. Block file positions are relative to byte 256. The VM map holds the
-moniker-type → current DB-group index; the separate DB map points to the token
-array. Its first record is a dummy. A token points to a list of `(type, group,
-item)` records. A DB item is an offset into its group containing an item-block
-info offset and LMem chunk handle; dereferencing that handle locates the moniker.
+Words are little-endian. VM handles are byte offsets into the VM header;
+block file positions are relative to byte 256. The VM map holds the
+moniker-type → current DB-group index. A separate DB map points to the token
+array, whose first record is a dummy. Each token points to a list of
+`(type, group, item)` records. A DB item is an offset into its group, containing
+an item-block info offset and an LMem chunk handle. Dereferencing that handle
+locates the moniker bytes.
 
-## Verification
+## Tests
 
 ```sh
-python3 -m unittest discover -s Tools/misc/tokendb -v
-CVTPCX=/path/to/cvtpcx python3 -m unittest discover -s Tools/misc/tokendb -v
+perl Tools/misc/tokendb/Tests/token.pl
+CVTPCX=/path/to/cvtpcx perl Tools/misc/tokendb/Tests/token.pl
 ```
 
-The two real repository fixtures contain 90 tokens / 395 graphics / 77 text
-monikers, and 29 tokens / 87 graphics. Tests compare all metadata and moniker
-bytes after rebuilding, check edited and new PNGs, deletion/reordering, empty
-databases, unknown GStrings, malformed input, atomic failure, mask/mono semantics,
-complex palettes, RGB24, and independent physical VM/LMem heap invariants.
-The optional cvtpcx check exercises actual generated 4/8-bit bitmap data.
+Tests cover both repository fixtures (90 tokens / 395 graphics / 77 text
+monikers, and 29 tokens / 87 graphics), comparing all metadata and original
+moniker bytes after rebuilding. Independent physical VM/LMem heap checks catch
+invalid allocation layouts. Other checks cover PNG chunks/CRC/rows, mono masks,
+complex palettes, RGB24, positioning, unknown GStrings, invalid files, path
+traversal, atomic failure and empty databases. With `CVTPCX`, they also cover
+edited PNGs, new tokens, deletion/reordering, spaces in paths and masked
+mono/4-bit/8-bit import.
 
-**A runtime smoke test in GEOS remains necessary before using the generated
-database as a production replacement.** Host-side tests do not execute the
-GEOS VM/DB loader or prove that subsequent GEOS writes are safe.
+**A runtime smoke test in GEOS is still needed before treating the generated
+file as a production replacement.** Host tests do not run its VM/DB loader or
+prove subsequent GEOS writes safe.
