@@ -46,7 +46,7 @@ typedef struct {
 #define GR_DRAW_LINE_TO 33
 #define GR_DRAW_HLINE 35
 #define GR_DRAW_HLINE_TO 36
-#define GR_DRAW_VLINE 37   
+#define GR_DRAW_VLINE 37
 #define GR_DRAW_VLINE_TO 38
 #define GR_DRAW_POLYLINE 39
 #define GR_DRAW_RECT 44
@@ -56,7 +56,7 @@ typedef struct {
 #define GR_DRAW_POLYGON 54
 #define GR_DRAW_CHAR 58
 #define GR_DRAW_CHAR_CP 59
-#define GR_DRAW_TEXT 60   
+#define GR_DRAW_TEXT 60
 #define GR_DRAW_TEXT_CP 61
 #define GR_DRAW_TEXT_FIELD 62
 #define GR_FILL_RECT 66
@@ -65,11 +65,11 @@ typedef struct {
 #define GR_OUTPUT_5F 95
 #define GR_SAVE_STATE 96
 #define GR_RESTORE_STATE 97
-#define GR_MOVE_TO 99     
+#define GR_MOVE_TO 99
 #define GR_SET_CUSTOM_LINE_STYLE 116
 #define GR_SET_AREA_PATTERN 123
 #define GR_SET_CUSTOM_AREA_PATTERN 124
-#define GR_SET_TEXT_PATTERN 140  
+#define GR_SET_TEXT_PATTERN 140
 #define GR_SET_CUSTOM_TEXT_PATTERN 141
 #define GR_BEGIN_PATH 160
 #define GR_SET_CLIP_RECT 162

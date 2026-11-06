@@ -1,0 +1,87 @@
+; Regular functions receive the locked PState segment in BP.
+PrintStartJob proc far
+        uses ax, bx, cx, dx, si, di, ds, es
+        .enter
+        mov ds, bp
+        clr ds:[PS_expansionInfo]
+        ; Only a normal spooler file stream is advertised by this device.
+        cmp ds:[PS_jobParams].JP_portInfo.PPI_type, PPT_FILE
+        jne failed
+        mov bx, ds:[PS_deviceInfo]
+        call MemLock
+        mov es, ax
+        mov al, es:[PI_type]
+        mov ah, es:[PI_smarts]
+        mov {word}ds:[PS_printerType], ax
+        call MemUnlock
+        mov al, ds:[PS_jobParams].JP_printerData.PUID_paperInput
+        mov ah, ds:[PS_jobParams].JP_printerData.PUID_paperOutput
+        call PrintSetPaperPath
+        push ds:[PS_streamToken]
+        pushdw ds:[PS_streamStrategy]
+        push ds:[PS_customWidth]
+        push ds:[PS_customHeight]
+        call PDFCREATE
+        tst ax
+        jz failed
+        mov ds:[PS_expansionInfo], ax
+        clc
+        jmp done
+failed:
+        stc
+done:
+        .leave
+        ret
+PrintStartJob endp
+
+PrintEndJob proc far
+        uses ax, ds
+        .enter
+        mov ds, bp
+        push ds:[PS_expansionInfo]
+        clr ds:[PS_expansionInfo]
+        call PDFDESTROY
+        tst ax
+        jz ok
+        stc
+        jmp done
+ok:
+        clc
+done:
+        .leave
+        ret
+PrintEndJob endp
+
+PrintStartPage proc far
+        uses ax, ds
+        .enter
+        mov ds, bp
+        push ds:[PS_expansionInfo]
+        call PDFSTARTPAGE
+        tst ax
+        jz ok
+        stc
+        jmp done
+ok:
+        clc
+done:
+        .leave
+        ret
+PrintStartPage endp
+
+PrintEndPage proc far
+        uses ax, ds
+        .enter
+        mov ds, bp
+        push ds:[PS_expansionInfo]
+        call PDFENDPAGE
+        tst ax
+        jz ok
+        stc
+        jmp done
+ok:
+        clc
+done:
+        .leave
+        ret
+PrintEndPage endp

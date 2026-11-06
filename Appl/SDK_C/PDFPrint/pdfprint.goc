@@ -1,0 +1,57 @@
+/* Normal PrintControl smoke test for the native PDF PDL driver (#1160).
+ * No direct calls into pdf.lib: this exercises the real application/spooler ABI.
+ */
+@include <stdapp.goh>
+@include <spool.goh>
+#include <fontID.h>
+@class PDFPrintProcessClass, GenProcessClass;
+@endc;
+@classdecl PDFPrintProcessClass, neverSaved;
+
+@start Application;
+@object GenApplicationClass PDFPrintApp = {
+    GI_visMoniker = "PDF Print Test";
+    GI_comp = @PDFPrintPrimary;
+    gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) = @PDFPrintPrimary;
+    gcnList(MANUFACTURER_ID_GEOWORKS, MGCNLT_ACTIVE_LIST) = @PDFPrintControl;
+    ATTR_GEN_APPLICATION_PRINT_CONTROL = @PDFPrintControl;
+}
+@end Application;
+
+@start Interface;
+@object GenPrimaryClass PDFPrintPrimary = {
+    GI_visMoniker = "PDF Print Test";
+    GI_comp = @PDFPrintControl;
+}
+@object PrintControlClass PDFPrintControl = {
+    GI_states = @default | GS_ENABLED;
+    PCI_attrs = @default & ~(PCA_PAGE_CONTROLS | PCA_VERIFY_PRINT);
+    PCI_output = (TO_PROCESS);
+    PCI_docNameOutput = (TO_PROCESS);
+    PCI_docSizeInfo = { 595, 842, PT_PAPER, {36,36,36,36} };
+}
+@end Interface;
+
+@method PDFPrintProcessClass, MSG_PRINT_GET_DOC_NAME {
+    @send printCtrlOD::MSG_PRINT_CONTROL_SET_DOC_NAME("Native PDF smoke test");
+}
+@method PDFPrintProcessClass, MSG_PRINT_START_PRINTING {
+    word page;
+    @call printCtrlOD::MSG_PRINT_CONTROL_SET_TOTAL_PAGE_RANGE(1,2);
+    for (page=0; page<2; ++page) {
+        GrSaveState(gstate);
+        GrSetClipRect(gstate,PCT_REPLACE,36,36,559,806);
+        GrSetLineColor(gstate,CF_RGB,255,0,0);
+        GrSetLineWidth(gstate,MakeWWFixed(2));
+        GrDrawLine(gstate,50,50,300,120);
+        GrSetAreaColor(gstate,CF_RGB,0,0,255);
+        GrFillRect(gstate,60,180,200,260);
+        GrSetTextColor(gstate,CF_RGB,0,0,0);
+        GrSetFont(gstate,FID_DTC_URW_SANS,MakeWWFixed(18));
+        GrSetTextMode(gstate,TM_DRAW_BASE,0);
+        GrDrawText(gstate,60,150,page ? "Native PDF page 2" : "Native PDF page 1",0);
+        GrRestoreState(gstate);
+        GrNewPage(gstate,PEC_FORM_FEED);
+    }
+    @send printCtrlOD::MSG_PRINT_CONTROL_PRINTING_COMPLETED();
+}

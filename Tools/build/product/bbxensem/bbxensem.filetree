@@ -333,6 +333,8 @@ DIR (ensemble) {
 		Library/Breadbox/flllib/flllib{ec}.geo
 		Library/Breadbox/ftplib/ftplib{ec}.geo
 		#
+		# Native PDF translation backend
+		Library/Trans/Graphics/Vector/PDF/pdf{ec}.geo GFS LOCALPC
 		# Library ps2pdf for pscript printer driver
 		#
 		Library/Breadbox/ps2pdf/ps2pdf{ec}.geo
@@ -679,6 +681,7 @@ DIR (ensemble) {
 			Driver/Printer/DotMatrix/Ppds24/ppds24{ec}.geo GFS LOCALPC
 			Driver/Printer/DotMatrix/Tosh24/tosh24{ec}.geo GFS LOCALPC
 			Driver/Printer/PScript/pscript{ec}.geo GFS LOCALPC
+			Driver/Printer/PDF/pdf{ec}.geo GFS LOCALPC
 			Tools/build/product/bbxensem/Images/BJC240.GEO GFS LOCALPC
 			Driver/Printer/Ascii/Diablo/diablo{ec}.geo GFS LOCALPC
 			Driver/Printer/Ascii/Dumb/dumb{ec}.geo GFS LOCALPC
