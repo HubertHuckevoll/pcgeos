@@ -50,6 +50,8 @@ typedef struct {
 #define GR_DRAW_VLINE_TO 38
 #define GR_DRAW_POLYLINE 39
 #define GR_DRAW_RECT 44
+#define GR_DRAW_ELLIPSE 53
+#define GR_FILL_ELLIPSE 72
 #define GR_DRAW_RECT_TO 45
 #define GR_DRAW_CURVE 50
 #define GR_DRAW_CURVE_TO 51

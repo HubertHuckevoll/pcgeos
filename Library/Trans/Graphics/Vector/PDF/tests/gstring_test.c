@@ -12,6 +12,7 @@ static struct { const byte *data; word size; } elements[32];
 static word elementCount, cursor, cpX, cpY, style;
 static TransMatrix transform;
 static word mask = SDM_100;
+static word areaMask = SDM_100;
 MemHandle MemAlloc(word size, word flags, word af)
 {
     word i;
@@ -52,7 +53,7 @@ dword GrGetMiterLimit(GStateHandle gs) { (void)gs; return 10L << 16; }
 word GrGetMixMode(GStateHandle gs) { (void)gs; return MM_COPY; }
 word GrGetLineStyle(GStateHandle gs) { (void)gs; return LS_SOLID; }
 word GrGetLineMask(GStateHandle gs, DrawMask *m) { (void)gs;(void)m;return mask; }
-word GrGetAreaMask(GStateHandle gs, DrawMask *m) { return GrGetLineMask(gs,m); }
+word GrGetAreaMask(GStateHandle gs, DrawMask *m) { (void)gs;(void)m;return areaMask; }
 word GrGetTextMask(GStateHandle gs, DrawMask *m) { return GrGetLineMask(gs,m); }
 word GrGetFont(GStateHandle gs, dword *size) { (void)gs; *size=12L<<16; return 0; }
 word GrGetTextStyle(GStateHandle gs) { (void)gs; return style; }
@@ -104,6 +105,8 @@ int main(int argc,char **argv)
     byte clip[]={GR_SET_CLIP_RECT,1,0, 20,0,20,0, 244,1,188,2};
     byte line[]={GR_DRAW_LINE,30,0,30,0, 44,1,120,0};
     byte rect[]={GR_FILL_RECT,60,0,180,0, 200,0,4,1};
+    byte ellipse[]={GR_DRAW_ELLIPSE,60,0,44,1, 4,1,144,1};
+    byte filled[]={GR_FILL_ELLIPSE,44,1,44,1, 144,1,194,1};
     byte txt[]={GR_DRAW_TEXT,60,0,150,0, 5,0, 'H','e','l','l','o'};
     byte ff[]={GR_NEW_PAGE,0}, end[]={GR_END_GSTRING};
     byte field[1+sizeof(PdfTextField)+sizeof(PdfTextRun)+5];
@@ -113,7 +116,8 @@ int main(int argc,char **argv)
     assert(argc==2);assert(sizeof(PdfTextField)==14);assert(sizeof(TextAttr)==23);
     out=fopen(argv[1],"wb");assert(out);
     h=begin(); add(save,sizeof(save));add(clip,sizeof(clip));add(line,sizeof(line));
-    add(rect,sizeof(rect));add(txt,sizeof(txt));add(restore,sizeof(restore));add(ff,sizeof(ff));
+    add(rect,sizeof(rect));add(ellipse,sizeof(ellipse));add(filled,sizeof(filled));
+    add(txt,sizeof(txt));add(restore,sizeof(restore));add(ff,sizeof(ff));
     assert(PDFGSTRING(h,1,GSC_NEW_PAGE)==GSRT_NEW_PAGE);
     assert(cursor==elementCount);assert(PDFENDPAGE(h)==0);
     assert(PDFSTARTPAGE(h)==0);
@@ -132,6 +136,12 @@ int main(int argc,char **argv)
     assert(PDFGSTRING(h,1,0)==GSRT_FAULT);discard(h);fclose(out);
     out=tmpfile();h=begin();mask=0;add(line,sizeof(line));add(end,sizeof(end));
     assert(PDFGSTRING(h,1,0)==GSRT_FAULT);mask=SDM_100;discard(h);fclose(out);
+    /* Filled ellipses use area attributes even when the line mask is empty. */
+    out=tmpfile();h=begin();mask=0;add(filled,sizeof(filled));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);mask=SDM_100;
+    assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);assert(!live);fclose(out);
+    out=tmpfile();h=begin();areaMask=0;add(filled,sizeof(filled));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_FAULT);areaMask=SDM_100;discard(h);fclose(out);
     out=tmpfile();h=begin();add(restore,sizeof(restore));add(end,sizeof(end));
     assert(PDFGSTRING(h,1,0)==GSRT_FAULT);discard(h);fclose(out);
     out=tmpfile();h=begin();add(save,sizeof(save));add(end,sizeof(end));
@@ -142,6 +152,8 @@ int main(int argc,char **argv)
     { byte bitmap[]={80};add(bitmap,sizeof(bitmap));add(end,sizeof(end));
       assert(PDFGSTRING(h,1,0)==GSRT_FAULT); }
     discard(h);fclose(out);
+    out=tmpfile();h=begin();add(ellipse,sizeof(ellipse)-1);add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_FAULT);discard(h);fclose(out);
     out=tmpfile();h=begin();
     { TransMatrix t;memset(&t,0,sizeof(t));t.TM_e31.DWF_int=32768;
       assert(PDFSETTRANSFORM(h,&t)==PDF_LIMIT_ERROR); }

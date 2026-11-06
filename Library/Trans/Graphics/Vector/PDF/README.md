@@ -61,6 +61,7 @@ C calls before unlocking the PState.
 | `pdfGeos.c` | GEOS memory, graphics state, GString decoding/translation |
 | `pdfStream.asm` | Checked Pascal wrapper for the stream strategy |
 | `pdfWriter.c` | Portable PDF object and operator serialization |
+| `pdfShape.c` | Independent vector primitives, currently cubic ellipses |
 | `Include/pdf.def` | Private printer/backend API and lifetime contract |
 
 The writer buffers 512 bytes and tracks its own 32-bit byte position. Each page
@@ -78,7 +79,8 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
 * Spooler orientation and tiling matrix; kernel-maintained per-object affine
   transforms; physical media clipping.
 * Lines, line-to, horizontal/vertical lines, rectangles, filled rectangles,
-  polylines, polygons (both fill rules), cubic Bezier curves.
+  polylines, polygons (both fill rules), cubic Bezier curves, outlined/filled
+  ellipses.
 * RGB fill/stroke/text colors; solid masks, line width/caps/joins/miter limit.
 * DrawText/DrawTextAtCP, DrawChar/DrawCharAtCP, plain counted text-field runs.
 * Helvetica regular/bold/oblique/bold-oblique, substituting other GEOS fonts.
@@ -90,7 +92,7 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   clip. Replacing a parent scope's clip and unions currently fail explicitly.
 
 This is a **restricted SBCS vector/text milestone**, not general document
-fidelity yet. Bitmaps, arbitrary paths, arcs/ellipses, patterned fills/dashes,
+fidelity yet. Bitmaps, arbitrary paths, arcs, patterned fills/dashes,
 non-copy mixing, window clipping, embedded graphics in text fields, automatic
 hyphens, underline/strikeout/super/subscript and DBCS remain future work.
 Font family/shape fidelity, fractional text-field positioning, full character
@@ -130,6 +132,19 @@ Perl checker validates every xref byte offset, indirect stream length and page
 reference. Poppler parsing/rendering is checked when installed. These are
 host-side development checks, not runtime dependencies.
 
+The shape module adds only one internal C function, `PdfEllipse`; the printer
+and exported library API are unchanged. Two GString cases select stroke/area
+attributes and pass the bounds to it. Four cubic segments approximate an ellipse
+using 16.16 arithmetic and no floating point, allocations or local CTM scaling.
+Inherited stroke width is therefore preserved for noncircular ellipses. Reversed
+corners are normalized as in the kernel; zero-area fills vanish and degenerate
+outlines collapse to a line/point. This continuous PDF treatment does not promise
+pixel-identical GEOS raster results for degenerate or very small ellipses.
+Independent host tests sample the emitted curves against the ellipse equation
+(normalized radial error below 0.0004), including odd dimensions, 1-point bounds,
+the full signed-word range and extreme aspect ratios. Tests also cover inherited
+area masks, malformed GString operands, sink failures, and transformed rendering.
+
 Verified during implementation: Watcom 2020-12-01, ESP and Glue from this
 repository, both native EC/NC library/driver/application builds; sanitizer host
 tests; independent PDF structural validation; Poppler rendering of both pages.
@@ -143,8 +158,9 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
 2. In Preferences/Printer, add **PDF 1.1 (Native, Print to File)** and select
    file output. Launch PDF Print Test and print to a filename ending in `.pdf`.
    No application's export command or external conversion is involved.
-3. Expect two pages, each containing a red diagonal line, a blue rectangle
-   and the appropriate `Native PDF page 1` / `Native PDF page 2` text.
+3. Expect two pages, each containing a red diagonal line, a blue rectangle,
+   a red ellipse outline, a blue filled ellipse, and the appropriate
+   `Native PDF page 1` / `Native PDF page 2` text.
 4. Open in the GEOS PDF Viewer; also inspect with `pdfinfo`, `pdftotext` and
    `tests/check_pdf.pl output.pdf 2` on a development host. Check portrait,
    landscape, copies and tiled pages separately. An unsupported output operation
@@ -157,7 +173,7 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
 
 1. **This branch:** native streaming writer, PDL printer plumbing, basic
    vectors/text, native smoke application and development regression checks.
-2. Full clip/path fidelity, arcs/ellipses, line styles, masks and patterns;
+2. Full clip/path fidelity, arcs, line styles, masks and patterns;
    broaden shape fixtures and complete live spooler/legacy-viewer validation.
 3. Font-family mapping, proper run metrics/justification, all GEOS characters,
    font embedding/subsetting and complex text-field graphics.

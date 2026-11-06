@@ -186,7 +186,8 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size)
     XYValueAsDWord cp = GrGetCurPos(gs);
     int x = (sword)(word)cp, y = (sword)(word)(cp >> 16);
     int x2, y2;
-    Boolean fill = op == GR_FILL_RECT || op == GR_FILL_RECT_TO || op == GR_FILL_POLYGON;
+    Boolean fill = op == GR_FILL_RECT || op == GR_FILL_RECT_TO ||
+                   op == GR_FILL_POLYGON || op == GR_FILL_ELLIPSE;
     attributes(p, gs, fill);
     switch (op) {
     case GR_DRAW_LINE:
@@ -215,6 +216,10 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size)
         PdfInteger(p, x); PdfInteger(p, y);
         PdfInteger(p, (long)x2 - x); PdfInteger(p, (long)y2 - y);
         PdfRaw(p, fill ? "re f\n" : "re S\n"); break;
+    case GR_DRAW_ELLIPSE: case GR_FILL_ELLIPSE:
+        if (size != 9) goto bad;
+        PdfEllipse(p, s16(b+1), s16(b+3), s16(b+5), s16(b+7), fill);
+        break;
     case GR_DRAW_CURVE: case GR_DRAW_CURVE_TO:
         pos = 1;
         if (op == GR_DRAW_CURVE) {

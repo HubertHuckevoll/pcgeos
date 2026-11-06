@@ -4,10 +4,10 @@ src=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 cc=${CC:-cc}
-for test in writer gstring; do
+for test in writer gstring shape; do
     "$cc" -std=c99 -Wall -Wextra -Werror -Wno-unknown-pragmas \
         -DPDF_HOST_TEST ${PDF_TEST_CFLAGS:-} -o "$work/${test}_test" \
-        "$src/tests/${test}_test.c" "$src/pdfWriter.c"
+        "$src/tests/${test}_test.c" "$src/pdfWriter.c" "$src/pdfShape.c" -lm
     "$work/${test}_test" "$work/$test.pdf"
     perl "$src/tests/check_pdf.pl" "$work/$test.pdf" 2
     if command -v pdfinfo >/dev/null 2>&1; then
