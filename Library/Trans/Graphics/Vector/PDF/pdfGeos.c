@@ -12,6 +12,7 @@
 #include <font.h>
 #endif
 #include "pdfWriter.h"
+#include "pdfBitmap.h"
 #pragma Code ("PdfCode")
 
 extern word _pascal PDFSTREAMWRITE(word token, void (*strategy)(void),
@@ -267,6 +268,82 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size)
 bad:
     p->error = PDF_STATE_ERROR;
 }
+
+/* A bitmap is one logical output element with zero or more follow-on slices.
+ * Kernel bitmap playback consumes those slices via a callback, so we must
+ * advance them explicitly instead of calling GrDrawGStringAtCP on the bitmap.
+ * Only the serialized slice is retained; no image or extra scanline buffer. */
+static void bitmap(PdfDocument *p, GStateHandle gs, GStateHandle string, byte op)
+{
+    PdfBitmapSlice s, first;
+    PdfBitmapReader reader;
+    PdfImage image;
+    TransMatrix t;
+    PdfFixed m[6], width, height;
+    MemHandle block = 0;
+    byte *b;
+    const byte *row;
+    word size, prefix, i, error, rowBytes;
+    XYValueAsDWord cp = GrGetCurPos(gs);
+    int x = (sword)(word)cp, y = (sword)(word)(cp >> 16);
+    Boolean initial = TRUE, fill = op == GR_FILL_BITMAP || op == GR_FILL_BITMAP_CP;
+    if (GrGetMixMode(gs) != MM_COPY || GrGetAreaMask(gs, (DrawMask *)0) != SDM_100) {
+        p->error = PDF_UNSUPPORTED; return;
+    }
+    while (!p->error) {
+        GrGetGStringElement(gs, string, 0, (void *)0, &size);
+        if (!size) { p->error = PDF_STATE_ERROR; break; }
+        if (size > 32760) { p->error = PDF_LIMIT_ERROR; break; }
+        block = MemAlloc(size, HF_DYNAMIC, HAF_LOCK);
+        if (!block) { p->error = PDF_LIMIT_ERROR; break; }
+        b = MemDeref(block);
+        GrGetGStringElement(gs, string, size, b, &size);
+        prefix = initial && (op == GR_DRAW_BITMAP || op == GR_FILL_BITMAP) ? 7 : 3;
+        if (size < prefix || b[0] != (initial ? op : GSE_BITMAP_SLICE) ||
+            u16(b + prefix - 2) != size - prefix) { p->error = PDF_STATE_ERROR; break; }
+        error = PdfBitmapReaderOpen(&reader, b + prefix, (word)(size - prefix));
+        if (error) { p->error = error; break; }
+        s = reader.slice;
+        if (initial) {
+            if (s.firstRow) { p->error = PDF_STATE_ERROR; break; }
+            if (fill && s.image.format != PDF_IMAGE_STENCIL1) { p->error = PDF_UNSUPPORTED; break; }
+            first = s;
+            if (prefix == 7) { x = s16(b+1); y = s16(b+3); }
+            error = PdfBitmapExtent(s.image.width, s.xDpi, &width);
+            if (!error) error = PdfBitmapExtent(s.image.height, s.yDpi, &height);
+            if (error) { p->error = error; break; }
+            GrGetTransform(gs, &t);
+            if (!matrix(p, &t, m)) break;
+            PdfRaw(p, "q\n");
+            for (i = 0; i < 6; ++i) PdfNumber(p, m[i]);
+            PdfRaw(p, "cm\n");
+            /* GEOS DrawBitmap's mono foreground is black; FillBitmap uses
+             * area color. In both cases zero source bits remain transparent. */
+            if (s.image.format == PDF_IMAGE_STENCIL1)
+                PdfColor(p, fill ? GrGetAreaColor(gs) : 0, 0);
+            PdfImageBegin(p, &image, &s.image, x, y, width, height);
+            if (prefix == 7) GrMoveTo(gs, x, y);
+        } else if (!s.complex || !s.rows || s.firstRow != image.rows ||
+                   s.image.width != first.image.width || s.image.height != first.image.height ||
+                   s.image.format != first.image.format || s.xDpi != first.xDpi || s.yDpi != first.yDpi) {
+            p->error = PDF_STATE_ERROR; break;
+        }
+        for (i = 0; i < s.rows && !p->error; ++i) {
+            error = PdfBitmapNextRow(&reader, &row, &rowBytes);
+            if (error) p->error = error;
+            else PdfImageRow(p, &image, row, rowBytes);
+        }
+        MemFree(block); block = 0;
+        if (p->error) break;
+        GrSetGStringPos(string, GSSPT_SKIP_1, 0);
+        if (image.rows == image.spec.height) {
+            PdfImageEnd(p, &image); PdfRaw(p, "Q\n"); break;
+        }
+        if (!first.complex) { p->error = PDF_STATE_ERROR; break; }
+        initial = FALSE;
+    }
+    if (block) MemFree(block);
+}
 word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
 {
     PdfDocument *p = MemLock(h);
@@ -280,12 +357,22 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
     if (!p->inPage || !p->transformed) p->error = PDF_STATE_ERROR;
     clipped[0] = 0;
     PdfRaw(p, "q\n");
-    while (!p->error) {
+    /* Prime playback before extracting an element: establishes the kernel's
+     * default transform at origin, including when the first output is a bitmap.
+     * No element is ready yet, so GSC_ONE stops BEFORE the first operation. */
+    result = GrDrawGStringAtCP(gs, string, GSC_ONE, &last);
+    if (result != GSRT_ONE && result != GSRT_COMPLETE) p->error = PDF_STATE_ERROR;
+    while (!p->error && result != GSRT_COMPLETE) {
         op = GrGetGStringElement(gs, string, 0, (void *)0, &size);
         if (!size) { p->error = PDF_STATE_ERROR; break; }
         if (op == GR_END_GSTRING || op == GR_NEW_PAGE) {
             if (op == GR_NEW_PAGE) GrSetGStringPos(string, GSSPT_SKIP_1, 0);
             result = op == GR_NEW_PAGE ? GSRT_NEW_PAGE : GSRT_COMPLETE; break;
+        }
+        if (op == GR_DRAW_BITMAP || op == GR_DRAW_BITMAP_CP ||
+            op == GR_FILL_BITMAP || op == GR_FILL_BITMAP_CP) {
+            bitmap(p, gs, string, op);
+            continue;
         }
         if (op == GR_SAVE_STATE) {
             if (depth == 31) { p->error = PDF_LIMIT_ERROR; break; }
@@ -341,6 +428,8 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
         }
         result = GrDrawGStringAtCP(gs, string, GSC_ONE, &last);
         if (result != GSRT_ONE && result != GSRT_COMPLETE) { p->error = PDF_STATE_ERROR; break; }
+        /* COMPLETE restores the kernel transform and rewinds the source.
+         * Stop here; another extraction would repeat the document forever. */
     }
     if (depth) p->error = PDF_STATE_ERROR;
     PdfRaw(p, "Q\n");

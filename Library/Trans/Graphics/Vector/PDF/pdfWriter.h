@@ -25,7 +25,7 @@ typedef sdword PdfFixed;
 typedef struct {
     PdfWord token;
     void (*strategy)(void);
-    PdfWord error, pages, inPage, finished, transformed, width, height, used;
+    PdfWord error, pages, inPage, finished, transformed, width, height, used, imageOpen;
     PdfDWord position, contentStart;
     PdfDWord offsets[PDF_MAX_OBJECTS];
     unsigned char buffer[PDF_BUFFER_SIZE];

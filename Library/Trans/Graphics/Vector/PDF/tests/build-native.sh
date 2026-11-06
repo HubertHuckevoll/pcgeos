@@ -12,7 +12,7 @@ for variant in nc ec; do
     defs=
     glueflags=
     if test "$variant" = ec; then defs=-DDO_ERROR_CHECKING; glueflags=-E; fi
-    for unit in pdfWriter pdfShape pdfGeos; do
+    for unit in pdfWriter pdfShape pdfImage pdfBitmap pdfGeos; do
         wcc -zq -D__GEOS__ -D__WATCOM__ $defs -w4 -fpc -zu -of -of+ -ol \
             -s -ecc -zp1 -ei -zdp -d2 -hc -ml -i="$root/CInclude" -i="$WATCOM/h" \
             -fo="$out/$variant/$unit.obj" "$root/Library/Trans/Graphics/Vector/PDF/$unit.c"
@@ -32,7 +32,7 @@ for variant in nc ec; do
         mkdir -p printer
         glue -Og "$root/Library/Trans/Graphics/Vector/PDF/pdf.gp" $glueflags \
             -o pdf.geo -l -L"$GEOS_LDF_DIR" -R 1.0.0.0 -P 1.0 \
-            pdfWriter.obj pdfShape.obj pdfGeos.obj pdfStream.obj
+            pdfWriter.obj pdfShape.obj pdfImage.obj pdfBitmap.obj pdfGeos.obj pdfStream.obj
         glue -Og "$root/Driver/Printer/PDF/pdf.gp" $glueflags \
             -o printer/pdf.geo -L. -L"$GEOS_LDF_DIR" -R 1.0.0.0 \
             -P PRINT_PROTO_MAJOR.PRINT_PROTO_MINOR pdfManager.obj

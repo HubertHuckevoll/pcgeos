@@ -72,7 +72,7 @@ void PdfBegin(PdfDocument *p)
 {
     PdfWord i;
     p->position = 0; p->used = 0; p->pages = 0;
-    p->error = 0; p->inPage = 0; p->finished = 0; p->transformed = 0;
+    p->error = 0; p->inPage = 0; p->finished = 0; p->transformed = 0; p->imageOpen = 0;
     if (!p->width || !p->height) { p->error = PDF_STATE_ERROR; return; }
     PdfRaw(p, "%PDF-1.1\n%\200\201\202\203\n");
     object(p, 1); PdfRaw(p, "<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
@@ -113,7 +113,7 @@ void PdfEndPage(PdfDocument *p)
     PdfWord id;
     PdfDWord size;
     if (p->error) return;
-    if (!p->inPage) { p->error = PDF_STATE_ERROR; return; }
+    if (!p->inPage || p->imageOpen) { p->error = PDF_STATE_ERROR; return; }
     id = (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * p->pages);
     PdfRaw(p, "Q\n"); size = p->position - p->contentStart;
     PdfRaw(p, "endstream\nendobj\n");
@@ -121,7 +121,7 @@ void PdfEndPage(PdfDocument *p)
     object(p, (PdfWord)(id + 2));
     PdfRaw(p, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ");
     PdfUnsigned(p, p->width); PdfRaw(p, " "); PdfUnsigned(p, p->height);
-    PdfRaw(p, "] /Resources << /ProcSet [/PDF /Text] /Font << /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R >> >> /Contents ");
+    PdfRaw(p, "] /Resources << /ProcSet [/PDF /Text /ImageB /ImageC] /Font << /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R >> >> /Contents ");
     reference(p, id); PdfRaw(p, ">>\nendobj\n");
     ++p->pages; p->inPage = 0;
     PdfFlush(p); /* Bound latency and detect a failed stream at each page. */

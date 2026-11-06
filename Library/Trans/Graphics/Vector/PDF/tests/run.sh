@@ -4,10 +4,11 @@ src=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 cc=${CC:-cc}
-for test in writer gstring shape roundrect; do
+for test in writer gstring shape roundrect bitmap; do
     "$cc" -std=c99 -Wall -Wextra -Werror -Wno-unknown-pragmas \
         -DPDF_HOST_TEST ${PDF_TEST_CFLAGS:-} -o "$work/${test}_test" \
-        "$src/tests/${test}_test.c" "$src/pdfWriter.c" "$src/pdfShape.c" -lm
+        "$src/tests/${test}_test.c" "$src/pdfWriter.c" "$src/pdfShape.c" \
+        "$src/pdfImage.c" "$src/pdfBitmap.c" -lm
     "$work/${test}_test" "$work/$test.pdf"
     perl "$src/tests/check_pdf.pl" "$work/$test.pdf" 2
     if command -v pdfinfo >/dev/null 2>&1; then
@@ -18,5 +19,10 @@ for test in writer gstring shape roundrect; do
     if command -v pdftoppm >/dev/null 2>&1; then
         pdftoppm -scale-to 200 -png "$work/$test.pdf" "$work/$test" 2> "$work/render.err"
         test ! -s "$work/render.err"
+        if test "$test" = bitmap; then
+            pdftoppm -r 72 -f 1 -singlefile "$work/bitmap.pdf" "$work/bitmap-pixels" 2> "$work/render.err"
+            test ! -s "$work/render.err"
+            perl "$src/tests/check_bitmap_pixels.pl" "$work/bitmap-pixels.ppm"
+        fi
     fi
 done

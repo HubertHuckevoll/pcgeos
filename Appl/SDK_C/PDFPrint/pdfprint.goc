@@ -8,6 +8,16 @@
 @endc;
 @classdecl PDFPrintProcessClass, neverSaved;
 
+/* Uncompacted complex bitmaps exercise embedded data and explicit DPI. */
+static const struct { CBitmap header; byte rows[12]; } rgbBitmap = {
+    {{2,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_24BIT},0,2,0,sizeof(CBitmap),0,2,2},
+    {255,0,0, 0,255,0, 0,0,255, 255,255,0}
+};
+static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
+    {{9,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_MONO},0,2,0,sizeof(CBitmap),0,9,9},
+    {0x80,0x80,0x40,0}
+};
+
 @start Application;
 @object GenApplicationClass PDFPrintApp = {
     GI_visMoniker = "PDF Print Test";
@@ -55,6 +65,12 @@
         GrSetFont(gstate,FID_DTC_URW_SANS,MakeWWFixed(18));
         GrSetTextMode(gstate,TM_DRAW_BASE,0);
         GrDrawText(gstate,60,150,page ? "Native PDF page 2" : "Native PDF page 1",0);
+        GrDrawBitmap(gstate,60,650,(const Bitmap *)&rgbBitmap,0);
+        GrSetAreaColor(gstate,CF_RGB,0,180,0);
+        GrFillRect(gstate,200,650,272,666);
+        GrSetAreaColor(gstate,CF_RGB,255,0,0);
+        GrMoveTo(gstate,200,650);
+        GrFillBitmapAtCP(gstate,(const Bitmap *)&monoBitmap,0);
         GrRestoreState(gstate);
         GrNewPage(gstate,PEC_FORM_FEED);
     }

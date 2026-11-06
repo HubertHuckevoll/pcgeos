@@ -68,6 +68,11 @@ typedef struct {
 #define GR_FILL_ROUND_RECT 68
 #define GR_FILL_ROUND_RECT_TO 69
 #define GR_FILL_POLYGON 71
+#define GR_FILL_BITMAP 76
+#define GR_FILL_BITMAP_CP 77
+#define GR_DRAW_BITMAP 80
+#define GR_DRAW_BITMAP_CP 81
+#define GSE_BITMAP_SLICE 84
 #define GR_OUTPUT_5F 95
 #define GR_SAVE_STATE 96
 #define GR_RESTORE_STATE 97
@@ -125,4 +130,5 @@ byte GrGetGStringElement(GStateHandle gs, GStateHandle string, word size,
 void GrSetGStringPos(GStateHandle string, byte type, word skip);
 word GrDrawGStringAtCP(GStateHandle gs, GStateHandle string, word flags, word *last);
 void GrTransformWWFixed(GStateHandle gs, dword x, dword y, PointWWFixed *point);
+void GrMoveTo(GStateHandle gs, sword x, sword y);
 #endif
