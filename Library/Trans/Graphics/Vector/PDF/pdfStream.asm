@@ -2,6 +2,9 @@
 include geos.def
 include resource.def
 include ec.def
+if ERROR_CHECK
+PDF_TRANSLATION_FAILED enum Warnings, 5044h
+endif
 UseDriver Internal/streamDr.def
 
 SetGeosConvention

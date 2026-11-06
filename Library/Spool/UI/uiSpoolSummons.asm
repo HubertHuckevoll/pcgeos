@@ -2943,10 +2943,96 @@ InitPrintToFile	proc	near
 setExcl:
 	mov	si, offset PrintToOptionsList
 	call	SSSetItemSelectionStatus	; make selection, send status
+	mov	si, offset PrintDialogBox
+	call	InitPrintFileFormat		; use the selected driver's format
 
 	.leave
 	ret
 InitPrintToFile	endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		InitPrintFileFormat
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Set the file format label and default filename for this printer.
+CALLED BY:	InitPrintToFile
+PASS:		*DS:SI = SpoolSummons object
+RETURN:		Nothing
+DESTROYED:	AX, BX, CX, DX, DI
+
+STRATEGY:	Use PostScript unless the driver supports the format query.
+
+REVISION HISTORY:
+	Name		Date		Description
+	----		----		-----------
+	Codex/MeyerK	11/06/26	Initial version
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
+InitPrintFileFormat proc near
+		class	SpoolSummonsClass
+	uses	si
+strategy	local	fptr.far
+pstateH		local	hptr
+driverH		local	hptr
+fileFormat	local	PrinterOutputFormat
+	.enter
+
+		mov	fileFormat, POF_POSTSCRIPT
+		mov	di, ds:[si]
+		add	di, ds:[di].SpoolSummons_offset
+		mov	dx, ds:[di].SSI_currentPrinter
+		call	SpoolLoadDriver
+		jc	setFormat
+		mov	pstateH, ax
+		mov	driverH, bx
+		movdw	strategy, dxcx
+		mov_tr	bx, ax
+		mov	di, DR_PRINT_ESC_GET_OUTPUT_FORMAT
+		call	strategy
+		jc	freeDriver
+		tst	di			; old drivers return zero
+		jz	freeDriver
+		cmp	ax, POF_PDF
+		jne	freeDriver		; unknown formats keep the default
+		mov	fileFormat, ax
+freeDriver:
+		mov	bx, pstateH
+		call	MemFree
+		mov	bx, driverH
+		call	SpoolFreeDriver
+setFormat:
+		mov	bx, offset PrintFilePostScriptFormat
+		cmp	fileFormat, POF_PDF
+		jne	setMoniker
+		mov	bx, offset PrintFilePDFFormat
+setMoniker:
+		mov	cx, ds:[LMBH_handle]
+		mov	dx, bx			; source moniker chunk
+		mov	si, offset PrintFileFormatRawEntry
+		mov	ax, MSG_GEN_REPLACE_VIS_MONIKER_OPTR
+		push	bp
+		mov	bp, VUM_DELAYED_VIA_UI_QUEUE
+		call	ObjCallInstanceNoLock
+		pop	bp
+
+		mov	bx, offset PrintFilePostScriptName
+		cmp	fileFormat, POF_PDF
+		jne	setName
+		mov	bx, offset PrintFilePDFName
+setName:
+		mov	dx, ds:[LMBH_handle]
+		clr	cx			; null-terminated text
+		mov	si, offset PrintFileNameText
+		mov	ax, MSG_VIS_TEXT_REPLACE_ALL_OPTR
+		push	bp
+		mov	bp, bx
+		call	ObjCallInstanceNoLock
+		pop	bp
+
+	.leave
+		ret
+InitPrintFileFormat endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

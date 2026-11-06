@@ -6,6 +6,15 @@ include printcomConstant.def
 include printcomMacro.def
 DR_PRINT_LAST_RESIDENT = DR_PRINT_HOME_CURSOR
 
+if ERROR_CHECK
+PDF_CREATE_FAILED enum Warnings
+PDF_FINISH_FAILED enum Warnings
+PDF_START_PAGE_FAILED enum Warnings
+PDF_END_PAGE_FAILED enum Warnings
+PDF_PAGE_TRANSFORM_FAILED enum Warnings
+PDF_GSTRING_FAILED enum Warnings
+endif
+
 Entry segment resource
 Entry ends
 CommonCode segment resource
@@ -26,10 +35,10 @@ PrintInitStream label near
         clc
         ret
 PrintInit endp
-escCodes word DR_PRINT_ESC_SET_PAGE_TRANSFORM, DR_PRINT_ESC_PRINT_GSTRING
+escCodes word DR_PRINT_ESC_SET_PAGE_TRANSFORM, DR_PRINT_ESC_PRINT_GSTRING, DR_PRINT_ESC_GET_OUTPUT_FORMAT
 NUM_ESC_ENTRIES equ ($ - escCodes)/2
-escHanJumpTable hptr handle CommonCode, handle CommonCode
-escOffJumpTable nptr offset PrintSetPageTransform, offset PrintGString
+escHanJumpTable hptr handle CommonCode, handle CommonCode, handle CommonCode
+escOffJumpTable nptr offset PrintSetPageTransform, offset PrintGString, offset PrintGetOutputFormat
 Entry ends
 
 CommonCode segment resource

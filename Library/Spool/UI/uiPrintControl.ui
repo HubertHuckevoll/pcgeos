@@ -898,7 +898,7 @@ PrintFileFileSelector = GenFileSelector {
 	hints = {
 		HINT_FILE_SELECTOR_SINGLE_ACTION,
 		ATTR_GEN_PATH_DATA {
-			GenFilePath <SP_SPOOL>
+			GenFilePath <SP_DOCUMENT>
 		}
 	}
 }
@@ -916,6 +916,11 @@ PrintFileFormatList = GenItemGroup {
 		HINT_PLACE_MONIKER_ABOVE
 	}
 }
+
+visMoniker PrintFilePostScriptFormat = "PS (PostScript)";
+visMoniker PrintFilePDFFormat = "PDF (Portable Document Format)";
+chunk PrintFilePostScriptName = "UNNAMED.PS";
+chunk PrintFilePDFName = "UNNAMED.PDF";
 
 PrintFileFormatRawEntry = GenItem {
 	moniker = "PS (PostScript)";

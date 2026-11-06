@@ -688,7 +688,16 @@ typedef enum {
  * 	DESTROYS: 	nothing
  */
     DR_PRINT_ESC_SET_JOB_STATUS,
+    DR_PRINT_ESC_PROCESS_ERRORS,
+    DR_PRINT_ESC_CHANGE_INK_CARTRIDGE,
+    /* BX = PState; AX = PrinterOutputFormat; DI = 0 if unsupported. */
+    DR_PRINT_ESC_GET_OUTPUT_FORMAT,
 } PrintEscCode;
+
+typedef enum {
+    POF_POSTSCRIPT,
+    POF_PDF
+} PrinterOutputFormat;
 
 
 /* ---------------------------------------------------------------------------

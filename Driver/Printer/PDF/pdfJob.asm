@@ -23,6 +23,7 @@ PrintStartJob proc far
         push ds:[PS_customHeight]
         call PDFCREATE
         tst ax
+EC <		WARNING_Z PDF_CREATE_FAILED	>
         jz failed
         mov ds:[PS_expansionInfo], ax
         clc
@@ -42,6 +43,7 @@ PrintEndJob proc far
         clr ds:[PS_expansionInfo]
         call PDFDESTROY
         tst ax
+EC <		WARNING_NZ PDF_FINISH_FAILED	>
         jz ok
         stc
         jmp done
@@ -59,6 +61,7 @@ PrintStartPage proc far
         push ds:[PS_expansionInfo]
         call PDFSTARTPAGE
         tst ax
+EC <		WARNING_NZ PDF_START_PAGE_FAILED	>
         jz ok
         stc
         jmp done
@@ -76,6 +79,7 @@ PrintEndPage proc far
         push ds:[PS_expansionInfo]
         call PDFENDPAGE
         tst ax
+EC <		WARNING_NZ PDF_END_PAGE_FAILED	>
         jz ok
         stc
         jmp done

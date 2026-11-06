@@ -31,9 +31,11 @@ typedef struct {
     WBFixed space; word font; WBFixed size; sword kern; byte weight, width;
 } TextAttr;
 #pragma pack(pop)
+#define SDM_0      89
 #define SDM_100    25
 #define MM_COPY 1
 #define LS_SOLID 0
+#define PT_SOLID 0
 #define TS_BOLD		0x20
 #define TS_ITALIC	0x10
 #define TM_DRAW_BASE			0x08

@@ -587,6 +587,16 @@ DR_PRINT_ESC_CHANGE_INK_CARTRIDGE	enum PrintEscCode
 ;	DESTROYS:	nothing
 ;
 
+; Query the native file format. Unsupported escapes return DI = 0.
+DR_PRINT_ESC_GET_OUTPUT_FORMAT enum PrintEscCode
+; PASS: BX = PState handle
+; RETURN: AX = PrinterOutputFormat, carry clear; DI unchanged if supported.
+; DESTROYS: AX
+
+PrinterOutputFormat etype word
+POF_POSTSCRIPT enum PrinterOutputFormat
+POF_PDF enum PrinterOutputFormat
+
 ;---------------------------------------------------------------------------
 ;		Enums, Records and Structure Definitions
 ;---------------------------------------------------------------------------

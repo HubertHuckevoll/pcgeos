@@ -95,7 +95,7 @@ minimalLibrary	: kernel swap sound net ui isui motif spool text mailbox \
 		  modemc mailpop3 lot123ss csv \
 		  parentc wmlib rtf \
 		  jpeg giflib gif png htmlimpx n2txt inetmsg extui \
-		  winword8 zlib dirlist minizip idialc eps impex_libs \
+		  winword8 zlib dirlist minizip idialc eps pdf impex_libs \
 		  thumbdb ftplib flllib sitelist int8087 intx87\
 		  basicdb gridlib gsol treplib hostif ascii \
 		  rsftool bmptools icmtool
@@ -181,7 +181,7 @@ minimalDriver	: nimbus ms4 ntfat os2 cdrom stream dri gdi keyboard modem gdipoin
 
 printerDriver	: deskjet dj500c lbp mercury pcl4 quietjet canon48 \
 		  canonbjc  epshi24 epson24 epson48 nec24 \
-		  ppds24 tosh24 pscript dumb diablo citoh9 prop9 \
+		  ppds24 tosh24 pscript pdfprinter dumb diablo citoh9 prop9 \
  	  	  diconix9 eplx9 epmx9 eprx9 bchip9 star9 \
    	  	  oki9 grpr9 epson9 propx24
 #canonrgb
@@ -409,6 +409,9 @@ Installed/Library/NetUtils:	ui MAKELIB
 
 eps	: Installed/Library/Trans/Graphics/Vector/EPS
 Installed/Library/Trans/Graphics/Vector/EPS:	ui MAKELIB
+
+pdf	: Installed/Library/Trans/Graphics/Vector/PDF
+Installed/Library/Trans/Graphics/Vector/PDF:	kernel ansic MAKELIB
 
 ps2pdf	: Installed/Library/Breadbox/ps2pdf
 Installed/Library/Breadbox/ps2pdf:	kernel ansic MAKELIB
@@ -862,6 +865,9 @@ Installed/Driver/Printer/DotMatrix/Ppds24:	spool MAKEDRV
 
 tosh24	: Installed/Driver/Printer/DotMatrix/Tosh24
 Installed/Driver/Printer/DotMatrix/Tosh24:	spool MAKEDRV
+
+pdfprinter	: Installed/Driver/Printer/PDF
+Installed/Driver/Printer/PDF:		spool pdf MAKEDRV
 
 pscript	: Installed/Driver/Printer/PScript
 Installed/Driver/Printer/PScript:		spool eps ps2pdf MAKEDRV

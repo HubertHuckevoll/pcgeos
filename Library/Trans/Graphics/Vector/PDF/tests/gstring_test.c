@@ -13,6 +13,7 @@ static word elementCount, cursor, cpX, cpY, style;
 static TransMatrix transform;
 static word mask = SDM_100;
 static word areaMask = SDM_100;
+static word textMask = SDM_100, lineStyle = LS_SOLID;
 static int ready;
 MemHandle MemAlloc(word size, word flags, word af)
 {
@@ -52,16 +53,16 @@ word GrGetLineEnd(GStateHandle gs) { (void)gs; return 0; }
 word GrGetLineJoin(GStateHandle gs) { (void)gs; return 0; }
 dword GrGetMiterLimit(GStateHandle gs) { (void)gs; return 10L << 16; }
 word GrGetMixMode(GStateHandle gs) { (void)gs; return MM_COPY; }
-word GrGetLineStyle(GStateHandle gs) { (void)gs; return LS_SOLID; }
+word GrGetLineStyle(GStateHandle gs) { (void)gs; return lineStyle; }
 word GrGetLineMask(GStateHandle gs, DrawMask *m) { (void)gs;(void)m;return mask; }
 word GrGetAreaMask(GStateHandle gs, DrawMask *m) { (void)gs;(void)m;return areaMask; }
-word GrGetTextMask(GStateHandle gs, DrawMask *m) { return GrGetLineMask(gs,m); }
+word GrGetTextMask(GStateHandle gs, DrawMask *m) { (void)gs;(void)m;return textMask; }
 word GrGetFont(GStateHandle gs, dword *size) { (void)gs; *size=12L<<16; return 0; }
 word GrGetTextStyle(GStateHandle gs) { (void)gs; return style; }
 word GrGetTextMode(GStateHandle gs) { (void)gs; return TM_DRAW_BASE; }
 dword GrFontMetrics(GStateHandle gs, word type) { (void)gs;(void)type;return 9L<<16; }
 word GrTextWidth(GStateHandle gs, const char *s, word count) { (void)gs;(void)s;return count*7; }
-void GrSetTextAttr(GStateHandle gs, const TextAttr *a) { (void)gs;style=a->styleSet; }
+void GrSetTextAttr(GStateHandle gs, const TextAttr *a) { (void)gs;style=a->styleSet;textMask=a->mask; }
 dword GrGetCurPos(GStateHandle gs) { (void)gs; return (dword)cpY<<16 | cpX; }
 void GrMoveTo(GStateHandle gs, sword x, sword y) { (void)gs;cpX=(word)x;cpY=(word)y; }
 void GrTransformWWFixed(GStateHandle gs, dword x, dword y, PointWWFixed *p)
@@ -252,10 +253,31 @@ int main(int argc,char **argv)
     byte clip[]={GR_SET_CLIP_RECT,1,0, 20,0,20,0, 244,1,188,2};
     byte line[]={GR_DRAW_LINE,30,0,30,0, 44,1,120,0};
     byte rect[]={GR_FILL_RECT,60,0,180,0, 200,0,4,1};
+    byte border[]={GR_DRAW_RECT,60,0,180,0,200,0,4,1};
+    char captured[4096];
+    size_t capturedSize;
     byte ellipse[]={GR_DRAW_ELLIPSE,60,0,44,1, 4,1,144,1};
     byte filled[]={GR_FILL_ELLIPSE,44,1,44,1, 144,1,194,1};
     byte txt[]={GR_DRAW_TEXT,60,0,150,0, 5,0, 'H','e','l','l','o'};
     byte ff[]={GR_NEW_PAGE,0}, end[]={GR_END_GSTRING};
+    byte areaPattern[]={GR_SET_AREA_PATTERN,PT_SOLID,255};
+    byte textPattern[]={GR_SET_TEXT_PATTERN,PT_SOLID,0};
+    byte pattern[4];
+    /* Native wire bytes: 14-byte GDF_saved, then 26-byte TFStyleRuns.
+     * Build these independently of the decoder's packed C structures.
+     * Nonzero alignment bytes must never become characters. */
+    byte wireField[]={
+        GR_DRAW_TEXT_FIELD,6,0, 0,60,0, 0,100,0, 0,12,0, 0,0,0,
+        5,0,
+        0,0,0,0, SDM_100,0,0, 0,0,0,0, 0,0,0, 0,0,
+        0,12,0, 0,0, 100,100,0x94,
+        'H','a','l','l','o',
+        1,0,
+        0,0,0,0, SDM_100,0,0, TS_BOLD,0,0,0, 0,0,0, 0,0,
+        0,12,0, 0,0, 100,100,0xee,
+        '!'
+    };
+    unsigned j;
     byte imageRecord[64], monoRecord[64];
     byte rgbPixels[]={255,0,0,0,255,0,0,0,255,255,255,0};
     byte monoPixels[]={0x80,0x80,0x40,0};
@@ -264,11 +286,11 @@ int main(int argc,char **argv)
     PdfTextField *f=(PdfTextField *)(field+1);
     PdfTextRun *r=(PdfTextRun *)(field+1+sizeof(PdfTextField));
     unsigned i;
-    assert(argc==2);assert(sizeof(PdfTextField)==14);assert(sizeof(TextAttr)==23);
+    assert(argc==2);assert(sizeof(PdfTextField)==14);assert(sizeof(TextAttr)==23);assert(sizeof(PdfTextRun)==26);
     out=fopen(argv[1],"wb");assert(out);
     imageSize=bitmapRecord(imageRecord,GR_DRAW_BITMAP,3,2,2,1,0,2,2,rgbPixels);
     monoSize=bitmapRecord(monoRecord,GR_DRAW_BITMAP_CP,0,9,2,1,0,2,9,monoPixels);
-    h=begin();add(imageRecord,imageSize);add(save,sizeof(save));add(clip,sizeof(clip));add(line,sizeof(line));
+    h=begin();add(imageRecord,imageSize);add(save,sizeof(save));add(areaPattern,sizeof(areaPattern));add(clip,sizeof(clip));add(line,sizeof(line));
     add(rect,sizeof(rect));add(ellipse,sizeof(ellipse));add(filled,sizeof(filled));
     add(txt,sizeof(txt));add(restore,sizeof(restore));add(ff,sizeof(ff));
     assert(PDFGSTRING(h,1,GSC_NEW_PAGE)==GSRT_NEW_PAGE);
@@ -278,11 +300,74 @@ int main(int argc,char **argv)
       t.TM_e31.DWF_int=10;assert(PDFSETTRANSFORM(h,&t)==0); }
     cursor=elementCount=0;memset(field,0,sizeof(field));
     field[0]=GR_DRAW_TEXT_FIELD;f->count=5;f->x.WBF_int=60;f->y.WBF_int=100;
-    f->baseline.WBF_int=12;r->count=5;r->attr.styleSet=TS_BOLD;
+    f->baseline.WBF_int=12;r->count=5;r->attr.styleSet=TS_BOLD;r->attr.mask=SDM_100;
     memcpy(field+sizeof(field)-5,"World",5);
-    add(monoRecord,monoSize);add(field,sizeof(field));add(end,sizeof(end));
+    add(monoRecord,monoSize);add(textPattern,sizeof(textPattern));add(field,sizeof(field));add(end,sizeof(end));
     assert(PDFGSTRING(h,1,GSC_NEW_PAGE)==GSRT_COMPLETE);
     assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);assert(!live);fclose(out);
+
+    out=tmpfile();assert(out);h=begin();assert(sizeof(wireField)==73);
+    add(wireField,sizeof(wireField));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);assert(!live);
+    rewind(out);capturedSize=fread(captured,1,sizeof(captured)-1,out);
+    assert(feof(out));captured[capturedSize]=0;
+    assert(strstr(captured,"(H)") && strstr(captured,"(o)") && strstr(captured,"(!)"));
+    assert(!strstr(captured,"\\224") && !strstr(captured,"\\356"));fclose(out);
+
+    /* GeoWrite emits solid pattern resets inside saved graphics states.
+     * Non-solid and malformed records must fail without masking the cause
+     * with the unfinished save/restore stack on the error path. */
+    for (i=0;i<2;++i) {
+        pattern[0]=i ? GR_SET_TEXT_PATTERN : GR_SET_AREA_PATTERN;
+        pattern[2]=255;pattern[3]=0;
+        for (j=1;j<=7;++j) {
+            pattern[1]=j==7 ? 255 : (byte)j;
+            out=tmpfile();assert(out);h=begin();
+            add(save,sizeof(save));add(save,sizeof(save));
+            add(pattern,3);add(end,sizeof(end));
+            assert(PDFGSTRING(h,1,0)==GSRT_FAULT);
+            assert(PDFENDPAGE(h)==PDF_UNSUPPORTED);
+            assert(PDFDESTROY(h)==PDF_UNSUPPORTED);assert(!live);fclose(out);
+        }
+        pattern[1]=PT_SOLID;
+        for (j=0;j<4;++j) {
+            out=tmpfile();assert(out);h=begin();
+            add(save,sizeof(save));add(pattern,(word)(j==3 ? 4 : j));
+            add(end,sizeof(end));assert(PDFGSTRING(h,1,0)==GSRT_FAULT);
+            assert(PDFDESTROY(h)==PDF_STATE_ERROR);assert(!live);fclose(out);
+        }
+    }
+
+    /* Invisible borders must not reject the following text. Text-field runs
+     * supply their own masks, independently of inherited line/text masks. */
+    for (i=0;i<2;++i) {
+        out=tmpfile();assert(out);h=begin();mask=SDM_0;lineStyle=1;
+        textMask=SDM_0;
+        add(border,sizeof(border));
+        if (i) add(field,sizeof(field));
+        else {textMask=SDM_100;add(txt,sizeof(txt));}
+        add(end,sizeof(end));assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+        assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);assert(!live);
+        rewind(out);capturedSize=fread(captured,1,sizeof(captured)-1,out);
+        assert(feof(out));captured[capturedSize]=0;
+        assert(strstr(captured,"BT /F") && strstr(captured,"%%EOF"));fclose(out);
+        mask=SDM_100;lineStyle=LS_SOLID;textMask=SDM_100;
+    }
+    /* Empty area and text masks also succeed; malformed invisible geometry
+     * still fails, and a partial visible mask remains unsupported. */
+    out=tmpfile();assert(out);h=begin();areaMask=SDM_0;textMask=SDM_0;
+    add(rect,sizeof(rect));add(txt,sizeof(txt));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);assert(!live);
+    rewind(out);capturedSize=fread(captured,1,sizeof(captured)-1,out);
+    assert(feof(out));captured[capturedSize]=0;
+    assert(!strstr(captured,"BT /F"));fclose(out);
+    areaMask=SDM_100;textMask=SDM_100;
+    out=tmpfile();assert(out);h=begin();mask=SDM_0;
+    add(border,sizeof(border)-1);add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_FAULT);
+    assert(PDFDESTROY(h)==PDF_STATE_ERROR);assert(!live);fclose(out);mask=SDM_100;
 
     /* Missing final marker must remain a fault (never EPS's fault->complete). */
     out=tmpfile();h=begin();add(line,sizeof(line));
@@ -321,6 +406,6 @@ int main(int argc,char **argv)
     out=tmpfile();streamCalls=0;failStream=1;
     assert(!PDFCREATE(0,0,595,842));assert(!live);failStream=0;fclose(out);
     roundGStrings();bitmapGStrings();
-    puts("gstring: pages, fields, shapes, bitmap/slice dispatch, clipping and cleanup passed");
+    puts("gstring: pages, fields, solid patterns, shapes, bitmap/slice dispatch, clipping and cleanup passed");
     return 0;
 }

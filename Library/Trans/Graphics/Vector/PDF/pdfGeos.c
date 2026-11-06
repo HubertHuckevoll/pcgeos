@@ -6,6 +6,7 @@
 #include "tests/geosmock.h"
 #else
 #include <geos.h>
+#include <ec.h>
 #include <heap.h>
 #include <graphics.h>
 #include <gstring.h>
@@ -89,23 +90,29 @@ static void point(PdfDocument *p, int x, int y, const char *op)
 {
     PdfInteger(p, x); PdfInteger(p, y); PdfRaw(p, op);
 }
-static void attributes(PdfDocument *p, GStateHandle gs, Boolean fill)
+static void attributes(PdfDocument *p, GStateHandle gs, Boolean fill,
+                       Boolean textOutput)
 {
     TransMatrix t;
     PdfFixed m[6];
+    word drawMask = SDM_100;
     int i;
-    if (GrGetMixMode(gs) != MM_COPY ||
-        (fill ? GrGetAreaMask(gs, (DrawMask *)0) : GrGetLineMask(gs, (DrawMask *)0)) != SDM_100 ||
-        (!fill && GrGetLineStyle(gs) != LS_SOLID)) {
-        p->error = PDF_UNSUPPORTED; return;
+    if (!textOutput) {
+        drawMask = fill ? GrGetAreaMask(gs, (DrawMask *)0) : GrGetLineMask(gs, (DrawMask *)0);
+        if (drawMask != SDM_0 && (GrGetMixMode(gs) != MM_COPY ||
+            drawMask != SDM_100 || (!fill && GrGetLineStyle(gs) != LS_SOLID))) {
+            p->error = PDF_UNSUPPORTED; return;
+        }
     }
     GrGetTransform(gs, &t);
     PdfRaw(p, "q\n");
+    /* Keep operand validation and kernel pen updates for invisible shapes. */
+    if (drawMask == SDM_0) PdfRaw(p, "0 0 0 0 re W n\n");
     if (!matrix(p, &t, m)) return;
     for (i = 0; i < 6; ++i) PdfNumber(p, m[i]);
     PdfRaw(p, "cm\n");
-    PdfColor(p, fill ? GrGetAreaColor(gs) : GrGetLineColor(gs), !fill);
-    if (!fill) {
+    if (!textOutput) PdfColor(p, fill ? GrGetAreaColor(gs) : GrGetLineColor(gs), !fill);
+    if (!fill && !textOutput) {
         PdfNumber(p, (PdfFixed)GrGetLineWidth(gs)); PdfRaw(p, "w\n");
         PdfInteger(p, GrGetLineEnd(gs)); PdfRaw(p, "J\n");
         PdfInteger(p, GrGetLineJoin(gs)); PdfRaw(p, "j\n");
@@ -116,9 +123,11 @@ static void text(PdfDocument *p, GStateHandle gs, int x, int y,
                  const byte *s, word count, Boolean baseline)
 {
     WWFixedAsDWord size;
-    word style, font, i;
+    word style, font, i, drawMask;
     int dx;
-    if (GrGetTextMask(gs, (DrawMask *)0) != SDM_100) {
+    drawMask = GrGetTextMask(gs, (DrawMask *)0);
+    if (drawMask == SDM_0) return;
+    if (drawMask != SDM_100 || GrGetMixMode(gs) != MM_COPY) {
         p->error = PDF_UNSUPPORTED; return;
     }
     GrGetFont(gs, &size);
@@ -154,7 +163,8 @@ typedef struct {
     word limit;
     byte flags;
 } PdfTextField;
-typedef struct { word count; TextAttr attr; } PdfTextRun;
+/* ESP TextAttr ends with word alignment; packed C TextAttr has no padding. */
+typedef struct { word count; TextAttr attr; byte padding; } PdfTextRun;
 #pragma pack()
 static void textField(PdfDocument *p, GStateHandle gs, const byte *b, word size)
 {
@@ -190,7 +200,7 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size)
     Boolean fill = op == GR_FILL_RECT || op == GR_FILL_RECT_TO ||
                    op == GR_FILL_POLYGON || op == GR_FILL_ELLIPSE ||
                    op == GR_FILL_ROUND_RECT || op == GR_FILL_ROUND_RECT_TO;
-    attributes(p, gs, fill);
+    attributes(p, gs, fill, op >= GR_DRAW_CHAR && op <= GR_DRAW_TEXT_FIELD);
     switch (op) {
     case GR_DRAW_LINE:
         if (size != 9) goto bad;
@@ -351,8 +361,8 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
     MemHandle element = 0;
     byte *b;
     word size, last, result = GSRT_FAULT, depth = 0;
-    byte clipped[32];
-    byte op;
+    byte clipped[32], pattern[3];
+    byte op = 0;
     (void)flags; /* PDL contract always ends at a physical page boundary. */
     if (!p->inPage || !p->transformed) p->error = PDF_STATE_ERROR;
     clipped[0] = 0;
@@ -410,10 +420,14 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
                 }
                 PdfRaw(p, "h W n\n"); clipped[depth] = 1;
             }
+        } else if (op == GR_SET_AREA_PATTERN || op == GR_SET_TEXT_PATTERN) {
+            if (size != sizeof(pattern)) { p->error = PDF_STATE_ERROR; break; }
+            GrGetGStringElement(gs, string, size, pattern, &size);
+            /* PT_SOLID ignores the data byte; playback maintains the GState. */
+            if (pattern[1] != PT_SOLID) { p->error = PDF_UNSUPPORTED; break; }
         } else if (op >= GR_BEGIN_PATH || op == GR_ESCAPE ||
                    op == GR_SET_CUSTOM_LINE_STYLE || op == GR_SET_CUSTOM_AREA_PATTERN ||
-                   op == GR_SET_CUSTOM_TEXT_PATTERN || op == GR_SET_AREA_PATTERN ||
-                   op == GR_SET_TEXT_PATTERN) {
+                   op == GR_SET_CUSTOM_TEXT_PATTERN) {
             p->error = PDF_UNSUPPORTED; break;
         }
         if (op >= GR_DRAW_LINE && op <= GR_OUTPUT_5F) {
@@ -431,8 +445,13 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
         /* COMPLETE restores the kernel transform and rewinds the source.
          * Stop here; another extraction would repeat the document forever. */
     }
-    if (depth) p->error = PDF_STATE_ERROR;
+    if (depth && !p->error) p->error = PDF_STATE_ERROR;
     PdfRaw(p, "Q\n");
-    if (p->error) result = GSRT_FAULT;
+    if (p->error) {
+#ifndef PDF_HOST_TEST
+        EC_WARNING(0x5044); /* PDF translation failed; inspect op and p->error. */
+#endif
+        result = GSRT_FAULT;
+    }
     GrDestroyState(gs); MemUnlock(h); return result;
 }

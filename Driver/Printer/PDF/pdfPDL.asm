@@ -12,6 +12,7 @@ PrintSetPageTransform proc far
         pop bx
         call MemUnlock
         tst ax
+EC <		WARNING_NZ PDF_PAGE_TRANSFORM_FAILED	>
         jz ok
         stc
         jmp done
@@ -33,6 +34,8 @@ PrintGString proc far
         call PDFGSTRING
         pop bx
         call MemUnlock
+EC <		cmp	ax, GSRT_FAULT			>
+EC <		WARNING_Z PDF_GSTRING_FAILED		>
         ; The spooler follows GSRT_FAULT's normal conversion error path.
         ; Keep carry clear so it also destroys the loaded GString handle.
         clc

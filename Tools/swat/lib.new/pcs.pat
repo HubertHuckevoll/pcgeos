@@ -11,6 +11,7 @@
 */Library/Trans/Graphics/Bitmap/Dib/ 		GEO	SYSTEM
 */Library/Trans/Graphics/Vector/Wmf/ 		GEO	SYSTEM
 */Library/Trans/Text/MSMFile/			GEO	SYSTEM
+*/Library/Trans/Graphics/Vector/PDF/*		GEO	SYSTEM
 */Library/Trans/*				GEO	SYSTEM/IMPEX
 */Library/FMTools/*				GEO	SYSTEM/FILEMGR
 */Library/Net/*					GEO	SYSTEM

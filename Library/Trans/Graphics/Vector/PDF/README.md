@@ -34,7 +34,9 @@ The implementation follows these existing contracts:
   is consumed; a manually inspected end-of-string marker is retained.
 * `Include/gstring.def` and `Include/text.def` define the on-disk wire layout.
   Text fields contain a **14-byte** GDF_saved followed by counted TFStyleRuns;
-  `TextAttr` is 23 bytes in the SBCS ABI. CInclude's OpDrawLine member names
+  native `TextAttr` is 24 bytes, including word-alignment padding, while the
+  packed C declaration is 23 bytes. Each native TFStyleRun is therefore 26
+  bytes before its characters. CInclude's OpDrawLine member names
   interchange x2/y1, so scalar operands are explicitly decoded little endian.
 * `Driver/Printer/PrintCom/Stream/streamWrite.asm` defines `DR_STREAM_WRITE`:
   token in BX, blocking mode in AX, DS:SI buffer, CX byte count. The adapter

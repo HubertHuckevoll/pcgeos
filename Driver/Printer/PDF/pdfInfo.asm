@@ -1,4 +1,13 @@
 ; No device UI, host integration or printer-specific commands.
+;
+; Identify the bytes written by this driver for the print-to-file dialog.
+;
+PrintGetOutputFormat proc far
+		mov	ax, POF_PDF
+		clc
+		ret
+PrintGetOutputFormat endp
+
 PrintGetMainUI proc far
 PrintGetOptionsUI label far
         clr cx, dx
