@@ -1,0 +1,16 @@
+; Native PDF printer API, Pascal stack arguments, AX result.
+; CREATE(token:word, strategy:fptr, width:word, height:word) -> job handle/0.
+; STARTPAGE(job), ENDPAGE(job), DESTROY(job) -> 0 success, nonzero error.
+; SETTRANSFORM(job, matrix:fptr) -> error. GSTRING(job,string,flags) -> GSRetType.
+; DESTROY always frees the job, also on output failure. The spooler owns stream.
+SetDef __PDF
+StartLibrary pdf
+SetGeosConvention
+global PDFCREATE:far
+global PDFSTARTPAGE:far
+global PDFSETTRANSFORM:far
+global PDFGSTRING:far
+global PDFENDPAGE:far
+global PDFDESTROY:far
+SetDefaultConvention
+EndLibrary pdf

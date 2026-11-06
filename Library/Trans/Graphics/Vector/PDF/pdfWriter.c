@@ -1,0 +1,180 @@
+/* PDF object serialization, shared verbatim by GEOS and host regression tests.
+ * Object IDs: 1 catalog, 2 pages, 3..6 Helvetica regular/bold/oblique/boldoblique;
+ * each page then owns content, indirect length, page dictionary, in that order.
+ */
+#include "pdfWriter.h"
+#ifndef PDF_HOST_TEST
+#pragma Code ("PdfCode")
+#endif
+static void byteOut(PdfDocument *p, unsigned char c)
+{
+    if (p->error) return;
+    if (p->position == 0xffffffffUL) { p->error = PDF_LIMIT_ERROR; return; }
+    p->buffer[p->used++] = c;
+    ++p->position;
+    if (p->used == PDF_BUFFER_SIZE) PdfFlush(p);
+}
+void PdfFlush(PdfDocument *p)
+{
+    if (!p->error && p->used) {
+        if (PdfSink(p, p->buffer, p->used)) p->error = PDF_IO_ERROR;
+        p->used = 0;
+    }
+}
+void PdfRaw(PdfDocument *p, const char *s)
+{
+    while (*s && !p->error) byteOut(p, (unsigned char)*s++);
+}
+void PdfUnsigned(PdfDocument *p, PdfDWord v)
+{
+    char digits[10];
+    int n = 0;
+    do { digits[n++] = (char)('0' + v % 10); v /= 10; } while (v);
+    while (n) byteOut(p, (unsigned char)digits[--n]);
+}
+void PdfInteger(PdfDocument *p, PdfFixed v)
+{
+    PdfDWord n = (PdfDWord)v;
+    if (v < 0) { byteOut(p, '-'); n = 0UL - n; }
+    PdfUnsigned(p, n);
+    byteOut(p, ' ');
+}
+void PdfNumber(PdfDocument *p, PdfFixed v)
+{
+    PdfDWord mag, frac;
+    int i;
+    mag = (PdfDWord)v;
+    if (v < 0) { byteOut(p, '-'); mag = 0UL - mag; }
+    PdfUnsigned(p, mag >> 16);
+    frac = mag & 65535UL;
+    if (frac) {
+        byteOut(p, '.');
+        /* Five decimal places, truncate. Never floating point or exponent. */
+        for (i = 0; i < 5 && frac; ++i) {
+            frac *= 10;
+            byteOut(p, (unsigned char)('0' + (frac >> 16)));
+            frac &= 65535UL;
+        }
+    }
+    byteOut(p, ' ');
+}
+static void object(PdfDocument *p, PdfWord id)
+{
+    if (id >= PDF_MAX_OBJECTS) { p->error = PDF_LIMIT_ERROR; return; }
+    p->offsets[id] = p->position;
+    PdfUnsigned(p, id); PdfRaw(p, " 0 obj\n");
+}
+static void reference(PdfDocument *p, PdfWord id)
+{
+    PdfUnsigned(p, id); PdfRaw(p, " 0 R ");
+}
+void PdfBegin(PdfDocument *p)
+{
+    PdfWord i;
+    p->position = 0; p->used = 0; p->pages = 0;
+    p->error = 0; p->inPage = 0; p->finished = 0; p->transformed = 0;
+    if (!p->width || !p->height) { p->error = PDF_STATE_ERROR; return; }
+    PdfRaw(p, "%PDF-1.1\n%\200\201\202\203\n");
+    object(p, 1); PdfRaw(p, "<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+    for (i = 0; i < 4; ++i) {
+        object(p, (PdfWord)(3 + i));
+        PdfRaw(p, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica");
+        if (i == 1) PdfRaw(p, "-Bold");
+        if (i == 2) PdfRaw(p, "-Oblique");
+        if (i == 3) PdfRaw(p, "-BoldOblique");
+        PdfRaw(p, " /Encoding /MacRomanEncoding >>\nendobj\n");
+    }
+}
+void PdfBeginPage(PdfDocument *p)
+{
+    PdfWord id;
+    if (p->error) return;
+    if (p->inPage || p->finished) { p->error = PDF_STATE_ERROR; return; }
+    if (p->pages == PDF_MAX_PAGES) { p->error = PDF_LIMIT_ERROR; return; }
+    id = (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * p->pages);
+    object(p, id); PdfRaw(p, "<< /Length "); reference(p, (PdfWord)(id + 1));
+    PdfRaw(p, ">>\nstream\n");
+    p->contentStart = p->position;
+    p->inPage = 1; p->transformed = 0;
+    PdfRaw(p, "q\n1 0 0 -1 0 "); PdfUnsigned(p, p->height); PdfRaw(p, " cm\n");
+    /* Physical paper boundary also clips rotated/tiled document pages. */
+    PdfRaw(p, "0 0 "); PdfUnsigned(p, p->width); PdfRaw(p, " ");
+    PdfUnsigned(p, p->height); PdfRaw(p, " re W n\n");
+}
+void PdfPageMatrix(PdfDocument *p, const PdfFixed *m)
+{
+    int i;
+    if (!p->inPage || p->transformed) { p->error = PDF_STATE_ERROR; return; }
+    for (i = 0; i < 6; ++i) PdfNumber(p, m[i]);
+    PdfRaw(p, "cm\n"); p->transformed = 1;
+}
+void PdfEndPage(PdfDocument *p)
+{
+    PdfWord id;
+    PdfDWord size;
+    if (p->error) return;
+    if (!p->inPage) { p->error = PDF_STATE_ERROR; return; }
+    id = (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * p->pages);
+    PdfRaw(p, "Q\n"); size = p->position - p->contentStart;
+    PdfRaw(p, "endstream\nendobj\n");
+    object(p, (PdfWord)(id + 1)); PdfUnsigned(p, size); PdfRaw(p, "\nendobj\n");
+    object(p, (PdfWord)(id + 2));
+    PdfRaw(p, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ");
+    PdfUnsigned(p, p->width); PdfRaw(p, " "); PdfUnsigned(p, p->height);
+    PdfRaw(p, "] /Resources << /ProcSet [/PDF /Text] /Font << /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R >> >> /Contents ");
+    reference(p, id); PdfRaw(p, ">>\nendobj\n");
+    ++p->pages; p->inPage = 0;
+    PdfFlush(p); /* Bound latency and detect a failed stream at each page. */
+}
+void PdfFinish(PdfDocument *p)
+{
+    PdfWord i, total;
+    PdfDWord xref, divisor;
+    if (p->error) return;
+    if (p->inPage || p->finished || !p->pages) { p->error = PDF_STATE_ERROR; return; }
+    object(p, 2); PdfRaw(p, "<< /Type /Pages /Count "); PdfUnsigned(p, p->pages);
+    PdfRaw(p, " /Kids [");
+    for (i = 0; i < p->pages; ++i)
+        reference(p, (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * i + 2));
+    PdfRaw(p, "] >>\nendobj\n");
+    xref = p->position;
+    total = (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * p->pages);
+    PdfRaw(p, "xref\n0 "); PdfUnsigned(p, total);
+    PdfRaw(p, "\n0000000000 65535 f \n");
+    for (i = 1; i < total; ++i) {
+        for (divisor = 1000000000UL; divisor; divisor /= 10)
+            byteOut(p, (unsigned char)('0' + p->offsets[i] / divisor % 10));
+        PdfRaw(p, " 00000 n \n");
+    }
+    PdfRaw(p, "trailer\n<< /Size "); PdfUnsigned(p, total);
+    PdfRaw(p, " /Root 1 0 R >>\nstartxref\n"); PdfUnsigned(p, xref);
+    PdfRaw(p, "\n%%EOF\n"); PdfFlush(p); p->finished = 1;
+}
+void PdfColor(PdfDocument *p, PdfDWord rgb, int stroke)
+{
+    int i;
+    /* GEOS RGBColorAsDWord stores red in the lowest byte. */
+    for (i = 0; i < 3; ++i) {
+        PdfNumber(p, (PdfFixed)(((rgb & 255UL) * 65536UL) / 255));
+        rgb >>= 8;
+    }
+    PdfRaw(p, stroke ? "RG\n" : "rg\n");
+}
+void PdfText(PdfDocument *p, int x, int y, PdfFixed size,
+             PdfWord font, const unsigned char *s, PdfWord count)
+{
+    PdfWord i;
+    unsigned char c;
+    PdfRaw(p, "BT /F"); PdfUnsigned(p, font); PdfRaw(p, " "); PdfNumber(p, size);
+    PdfRaw(p, "Tf 1 0 0 -1 "); PdfInteger(p, x); PdfInteger(p, y); PdfRaw(p, "Tm (");
+    for (i = 0; i < count; ++i) {
+        c = s[i];
+        if (c == '(' || c == ')' || c == '\\') byteOut(p, '\\');
+        if (c < 32 || c >= 127) {
+            byteOut(p, '\\'); byteOut(p, (unsigned char)('0' + (c >> 6)));
+            byteOut(p, (unsigned char)('0' + ((c >> 3) & 7)));
+            byteOut(p, (unsigned char)('0' + (c & 7)));
+        } else byteOut(p, c);
+    }
+    PdfRaw(p, ") Tj ET\n");
+}

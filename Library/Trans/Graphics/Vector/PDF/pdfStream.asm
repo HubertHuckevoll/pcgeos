@@ -1,0 +1,31 @@
+; Pascal adapter to the spooler's stream strategy (including its file driver).
+include geos.def
+include resource.def
+include ec.def
+UseDriver Internal/streamDr.def
+
+SetGeosConvention
+global PDFSTREAMWRITE:far
+PdfCode segment public 'CODE'
+PDFSTREAMWRITE proc far token:word, strategy:fptr.far, buffer:fptr.byte, count:word
+        uses bx, cx, dx, si, di, ds, es
+        .enter
+        mov bx, token
+        mov cx, count
+        lds si, buffer
+        mov ax, STREAM_BLOCK
+        mov di, DR_STREAM_WRITE
+        call strategy
+        jc failed
+        cmp cx, count
+        jne failed
+        clr ax
+        jmp done
+failed:
+        mov ax, 1
+done:
+        .leave
+        ret
+PDFSTREAMWRITE endp
+PdfCode ends
+end
