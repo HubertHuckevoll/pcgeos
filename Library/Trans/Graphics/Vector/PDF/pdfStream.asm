@@ -31,6 +31,8 @@ include Internal/gstate.def
 include ec.def
 if ERROR_CHECK
 PDF_TRANSLATION_FAILED enum Warnings, 5044h
+PDF_TRANSLATION_STARTED enum Warnings, 5045h
+PDF_TRANSLATION_FINISHED enum Warnings, 5046h
 endif
 UseDriver Internal/streamDr.def
 

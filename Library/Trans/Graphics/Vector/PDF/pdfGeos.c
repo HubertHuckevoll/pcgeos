@@ -1871,6 +1871,9 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
     byte pattern[3], control[15];
     byte op = 0;
 
+#ifndef PDF_HOST_TEST
+    EC_WARNING(0x5045); /* PDF_TRANSLATION_STARTED: one message per page. */
+#endif
     (void)flags; /* PDL contract always ends at a physical page boundary. */
     if (!p->inPage || !p->transformed) {
         p->error = PDF_STATE_ERROR;
@@ -2086,6 +2089,11 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
         GrEndPath(gs);
     }
     GrDestroyState(gs);
+#ifndef PDF_HOST_TEST
+    if (!p->error) {
+        EC_WARNING(0x5046); /* PDF_TRANSLATION_FINISHED. */
+    }
+#endif
     MemUnlock(h);
     return result;
 }

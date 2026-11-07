@@ -115,3 +115,19 @@ $pdf_device =~ /pdfGraphics GraphicsProperties <\Q$dpi\E, \Q$dpi\E,/
     or die "PDF device grid differs from advertised printer DPI\n";
 $dpi == 300 or die "Update the exact 0.24-point device matrix for changed DPI\n";
 print "PDF device grid: 300 dpi agrees with driver properties\n";
+
+# Optional Watcom disassembly checks the native call, which host mocks cannot.
+# Usage: check-native-boundary.pl /tmp/pdfWriter.dis
+if (@ARGV) {
+    open my $fh, '<', $ARGV[0] or die "$ARGV[0]: $!";
+    local $/;
+    my $code = <$fh>;
+    $code =~ /\bPDFPATHPOINT:(.*?)(?:Routine Size:|\bPDFPATHRECT:)/s
+        or die "PdfPathPoint disassembly not recognized\n";
+    my $point = $1;
+    $point =~ /call\s+PROCCALLFIXEDORMOVABLE_PASCAL/
+        or die "Path callback bypasses the GEOS movable-code dispatcher\n";
+    $point !~ /call\s+dword ptr/
+        or die "Path callback still uses a raw far call\n";
+    print "Native path callback: GEOS movable-code dispatcher used\n";
+}

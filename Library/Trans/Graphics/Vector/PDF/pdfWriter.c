@@ -30,7 +30,10 @@ DESCRIPTION:
  */
 #include "pdfWriter.h"
 #ifndef PDF_HOST_TEST
+#include <resource.h>
 #pragma Code ("PdfCode")
+typedef void _pascal PdfPointTransformCall(void *context, PdfFixed *xP,
+                                          PdfFixed *yP, PdfPointTransform *callback);
 #endif
 
 static void byteOut(PdfDocument *p, unsigned char c)
@@ -145,7 +148,13 @@ static void reference(PdfDocument *p, PdfWord id)
 void _pascal PdfPathPoint(PdfDocument *p, PdfFixed x, PdfFixed y)
 {
     if (p->pathTransform) {
+#ifdef PDF_HOST_TEST
         p->pathTransform(p, &x, &y);
+#else
+        /* Movable code pointers contain virtual segments, not CPU segments. */
+        ((PdfPointTransformCall *)ProcCallFixedOrMovable_pascal)(
+            p, &x, &y, p->pathTransform);
+#endif
     }
     PdfNumber(p, x);
     PdfNumber(p, y);
