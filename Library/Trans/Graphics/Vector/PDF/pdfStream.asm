@@ -10,6 +10,7 @@ ROUTINES:
 	PDFSTREAMWRITE       - Write bytes through the spooler stream
 	PDFTEXTWIDTHFIXED    - Fetch fractional GEOS text width
 	PDFGETDASH          - Return effective line dash factors
+	PDFGENCHAR          - Generate a native glyph outline
 
 REVISION HISTORY:
 	Name            Date        Description
@@ -28,11 +29,15 @@ include resource.def
 include heap.def
 include graphics.def
 include Internal/gstate.def
+include Internal/fontDr.def
 include ec.def
 if ERROR_CHECK
 PDF_TRANSLATION_FAILED enum Warnings, 5044h
 PDF_TRANSLATION_STARTED enum Warnings, 5045h
 PDF_TRANSLATION_FINISHED enum Warnings, 5046h
+PDF_TEXT_PATH_REQUIRED enum Warnings, 5047h
+PDF_PATH_TRANSLATION_FAILED enum Warnings, 5048h
+PDF_DRAW_MODE_UNSUPPORTED enum Warnings, 5049h
 endif
 UseDriver Internal/streamDr.def
 
@@ -40,6 +45,7 @@ SetGeosConvention
 global PDFSTREAMWRITE:far
 global PDFTEXTWIDTHFIXED:far
 global PDFGETDASH:far
+global PDFGENCHAR:far
 PdfCode segment public 'CODE'
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -178,6 +184,57 @@ PDFGETDASH proc far gstate:hptr, buffer:fptr.byte
 	.leave
 		ret
 PDFGETDASH endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		PDFGENCHAR
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Append a native glyph outline to a recording GState.
+
+PASS:		gstate = recording GState; character = GEOS character
+RETURN:		AX = zero on success, PDF_UNSUPPORTED (4) for a non-outline font
+DESTROYED:	See saved registers
+
+STRATEGY:	Use the actual FontInfo maker, even when the current font buffer
+		is a cached bitmap. PostScript mode leaves baseline and Y flip
+		to the caller. No saved state is needed for this temporary stream.
+
+REVISION HISTORY:
+	Codex/MeyerK	11/07/26	Initial version
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+PDFGENCHAR proc far gstate:hptr, character:word
+	uses	bx, cx, dx, si, di, ds, es
+	.enter
+		mov	bx, gstate
+		call	MemLock
+		mov	ds, ax
+		mov	cx, ds:[GS_fontAttr].FCA_fontID
+		call	MemUnlock
+		call	FontDrLockInfoBlock
+		call	FontDrFindFontInfo
+		jnc	noFont
+		test	ds:[di].FI_family, mask FA_OUTLINE
+		jz	noFont
+		mov	ax, ds:[di].FI_maker
+		push	ax
+		call	FontDrUnlockInfoBlock
+		pop	ax
+		mov	bx, gstate
+		mov	dx, character
+		mov	cx, mask FGPF_POSTSCRIPT
+		mov	di, DR_FONT_GEN_PATH
+		call	GrCallFontDriverID
+	; DR_FONT_GEN_PATH has no status result, as in the EPS exporter.
+		clr	ax
+		jmp	done
+noFont:
+		call	FontDrUnlockInfoBlock
+		mov	ax, 4
+done:
+	.leave
+		ret
+PDFGENCHAR endp
 
 PdfCode ends
 end

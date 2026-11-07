@@ -79,9 +79,16 @@ static TransMatrix deviceTransform;
 static TransMatrix pathTransform;
 static word pathX, pathY, pathXF, pathYF, pathCursor, pathReady;
 static const byte *farPointer, *pathSource;
-static TransMatrix savedPathTransform;
-static word savedPathX, savedPathY, savedPathXF, savedPathYF;
+static struct {
+    TransMatrix matrix;
+    word x, y, xf, yf;
+} savedPathStates[32];
 static int pathSaved;
+static byte glyphBytes[512];
+static word glyphSize, glyphCursor, glyphReady, glyphFont, glyphStyle, glyphCalls;
+static word glyphError;
+static int glyphLive;
+static TransMatrix glyphTransform;
 static void storeWord(byte *p, word n)
 {
     p[0] = (byte)n;
@@ -154,11 +161,25 @@ static void restore(const MockFrame *f)
 
 static word rawSize(const byte *b)
 {
+    word left, pos, n;
     switch (b[0]) {
+    case GR_COMMENT: return (word)(3+u16(b+1));
+    case GR_DRAW_HLINE_TO: case GR_DRAW_VLINE_TO:return 3;
+    case GR_DRAW_TEXT_FIELD:
+        left = u16(b+1);
+        pos = 15;
+        while (left) {
+            n = u16(b+pos);
+            pos += 26+n;
+            assert(n && n <= left);
+            left -= n;
+        }
+        return pos;
     case GR_APPLY_TRANSFORM: case GR_SET_TRANSFORM: return 29;
     case GR_DRAW_POINT: case GR_MOVE_TO: case GR_DRAW_LINE_TO: case GR_DRAW_RECT_TO:
     case GR_DRAW_HLINE: case GR_DRAW_VLINE: return b[0]==GR_DRAW_HLINE || b[0]==GR_DRAW_VLINE ? 7 : 5;
     case GR_BEGIN_PATH: return 5;
+    case GR_SET_LINE_WIDTH: return 5;
     case GR_DRAW_LINE:case GR_DRAW_RECT:case GR_DRAW_ELLIPSE:
     case GR_FILL_RECT:case GR_FILL_ELLIPSE:case GR_MOVE_TO_WWFIXED: return 9;
     case GR_DRAW_ROUND_RECT:case GR_FILL_ROUND_RECT: return 11;
@@ -293,6 +314,12 @@ MemHandle GrGetPath(GStateHandle gs, word type)
 
 GStateHandle GrLoadGString(word segment, byte type, word offset)
 {
+    if (type == GST_CHUNK) {
+        assert(segment && offset == 1 && !glyphLive);
+        glyphLive = 1;
+        glyphCursor = glyphReady = 0;
+        return 103;
+    }
     assert(segment==1 && type==GST_PTR && !offset);
     pathSource = farPointer;
     pathCursor = pathReady = 0;
@@ -301,30 +328,35 @@ GStateHandle GrLoadGString(word segment, byte type, word offset)
 
 void GrDestroyGString(GStateHandle string, GStateHandle gs, byte type)
 {
+    if (string == 103) {
+        assert(glyphLive && (gs == 101 || !gs) && type == GSKT_LEAVE_DATA);
+        glyphLive = 0;
+        return;
+    }
     assert(string==2 && !gs && type==GSKT_LEAVE_DATA);
     pathSource = 0;
 }
 
 void GrSaveState(GStateHandle gs)
 {
-    assert(gs==101 && !pathSaved);
-    pathSaved = 1;
-    savedPathTransform = pathTransform;
- savedPathX = pathX;
- savedPathY = pathY;
- savedPathXF = pathXF;
- savedPathYF = pathYF;
+    assert(gs==101 && pathSaved < 32);
+    savedPathStates[pathSaved].matrix = pathTransform;
+    savedPathStates[pathSaved].x = pathX;
+    savedPathStates[pathSaved].y = pathY;
+    savedPathStates[pathSaved].xf = pathXF;
+    savedPathStates[pathSaved].yf = pathYF;
+    ++pathSaved;
 }
 
 void GrRestoreState(GStateHandle gs)
 {
     assert(gs==101 && pathSaved);
-    pathSaved = 0;
-    pathTransform = savedPathTransform;
- pathX = savedPathX;
- pathY = savedPathY;
- pathXF = savedPathXF;
- pathYF = savedPathYF;
+    --pathSaved;
+    pathTransform = savedPathStates[pathSaved].matrix;
+    pathX = savedPathStates[pathSaved].x;
+    pathY = savedPathStates[pathSaved].y;
+    pathXF = savedPathStates[pathSaved].xf;
+    pathYF = savedPathStates[pathSaved].yf;
 }
 
 void GrEndPath(GStateHandle gs)
@@ -345,7 +377,7 @@ MemHandle MemAlloc(word size, word flags, word af)
         assert(blocks[i].p);
         blocks[i].locks = !!(af & HAF_LOCK);
         ++live;
-        assert(live<=4);
+        assert(live<=5); /* One bounded glyph block during retained text. */
         return i;
     }
     abort();
@@ -443,8 +475,103 @@ void GrGetTransform(GStateHandle gs, TransMatrix *t)
 
 void GrSetTransform(GStateHandle gs, const TransMatrix *t)
 {
+    if (gs == 103) {
+        assert(glyphLive);
+        glyphTransform = *t;
+        return;
+    }
     assert(gs==102 && deviceStateLive);
     deviceTransform = *t;
+}
+
+MemHandle MemAllocLMem(word type, word header)
+{
+    assert(type == LMEM_TYPE_GENERAL && !header);
+    return MemAlloc(8, HF_DYNAMIC, HAF_ZERO_INIT);
+}
+
+GStateHandle GrCreateGString(MemHandle block, byte type, word *chunk)
+{
+    assert(block && type == GST_CHUNK && !glyphLive);
+    glyphLive = 1;
+    glyphSize = glyphCursor = glyphReady = 0;
+    identity(&glyphTransform);
+    *chunk = 1;
+    return 103;
+}
+
+void GrSetFont(GStateHandle gs, word font, dword size)
+{
+    assert(gs == 103 && size == fontSize);
+    glyphFont = font;
+}
+
+void GrSetTextStyle(GStateHandle gs, byte set, byte clear)
+{
+    assert(gs == 103 && clear == 0xff);
+    glyphStyle = set;
+}
+
+word GrGetFontWeight(GStateHandle gs) { (void)gs; return 100; }
+word GrGetFontWidth(GStateHandle gs) { (void)gs; return 100; }
+void GrSetFontWeight(GStateHandle gs, word weight) { assert(gs == 103 && weight == 100); }
+void GrSetFontWidth(GStateHandle gs, word width) { assert(gs == 103 && width == 100); }
+
+void GrApplyTranslation(GStateHandle gs, dword x, dword y)
+{
+    TransMatrix t;
+    byte record[29];
+    assert(gs == 103);
+    identity(&t);
+    t.TM_e31.DWF_int = (sdword)x >> 16;
+    t.TM_e31.DWF_frac = (word)x;
+    t.TM_e32.DWF_int = (sdword)y >> 16;
+    t.TM_e32.DWF_frac = (word)y;
+    record[0] = GR_APPLY_TRANSFORM;
+    memcpy(record+1, &t, sizeof(t));
+    compose(&glyphTransform, record);
+}
+
+void GrApplyScale(GStateHandle gs, dword x, dword y)
+{
+    TransMatrix t;
+    byte record[29];
+    assert(gs == 103 && x == 65536 && y == (dword)-65536);
+    identity(&t);
+    t.TM_e22.WWF_int = -1;
+    record[0] = GR_APPLY_TRANSFORM;
+    memcpy(record+1, &t, sizeof(t));
+    compose(&glyphTransform, record);
+}
+
+word PDFGENCHAR(GStateHandle gs, word character)
+{
+    /* Synthetic outline with a counter. Real generation is the native font
+     * driver's job; exercise placement, replay and clipping independently. */
+    static const byte outline[] = {
+        GR_COMMENT, 1, 0, 0,
+        GR_MOVE_TO, 0, 0, 0, 0, GR_DRAW_HLINE_TO, 6, 0,
+        GR_DRAW_VLINE_TO, 10, 0, GR_DRAW_LINE_TO, 0, 0, 10, 0,
+        GR_DRAW_LINE_TO, 0, 0, 0, 0,
+        GR_MOVE_TO, 2, 0, 2, 0, GR_DRAW_VLINE_TO, 8, 0,
+        GR_DRAW_HLINE_TO, 4, 0, GR_DRAW_LINE_TO, 4, 0, 2, 0,
+        GR_DRAW_LINE_TO, 2, 0, 2, 0
+    };
+    assert(gs == 103 && character && glyphLive);
+    ++glyphCalls;
+    if (glyphError) return glyphError;
+    glyphBytes[0] = GR_SET_TRANSFORM;
+    memcpy(glyphBytes+1, &glyphTransform, sizeof(glyphTransform));
+    memcpy(glyphBytes+29, outline, sizeof(outline));
+    glyphSize = 29+sizeof(outline);
+    return 0;
+}
+
+word GrEndGString(GStateHandle gs)
+{
+    assert(gs == 103 && glyphLive);
+    glyphBytes[glyphSize++] = GR_END_GSTRING;
+    return GSET_NO_ERROR;
 }
 
 void GrTransformDWFixed(GStateHandle gs, PointDWFixed *point)
@@ -686,6 +813,15 @@ void GrTransformWWFixed(GStateHandle gs, dword x, dword y, PointWWFixed *p)
 byte GrGetGStringElement(GStateHandle gs, GStateHandle str, word size, void *b, word *actual)
 {
     (void)gs;
+    if (str == 103) {
+        *actual = rawSize(glyphBytes+glyphCursor);
+        glyphReady = 1;
+        if (size) {
+            assert(size >= *actual);
+            memcpy(b, glyphBytes+glyphCursor, *actual);
+        }
+        return glyphBytes[glyphCursor];
+    }
     if (str==2) {
         *actual=rawSize(pathSource+pathCursor);
         pathReady = 1;
@@ -712,6 +848,11 @@ void GrSetGStringPos(GStateHandle str, byte type, word skip)
 {
     (void)skip;
     assert(type==GSSPT_SKIP_1);
+    if (str == 103) {
+        glyphCursor += rawSize(glyphBytes+glyphCursor);
+        glyphReady = 0;
+        return;
+    }
   if (str==2) {
       pathCursor+=rawSize(pathSource+pathCursor);
       pathReady = 0;
@@ -737,20 +878,25 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
     const byte *b;
     word at;
     assert(flags==GSC_ONE);
-    if (str==2) {
-        b = pathSource+pathCursor;
+    if (str==2 || str==103) {
+        b = str == 2 ? pathSource+pathCursor : glyphBytes+glyphCursor;
         assert(gs==101);
-        if (!pathReady) {
-            pathReady = 1;
+        if (!(str == 2 ? pathReady : glyphReady)) {
+            if (str == 2) pathReady = 1;
+            else glyphReady = 1;
             *last=b[0];
             return b[0]==GR_END_GSTRING ? GSRT_COMPLETE : GSRT_ONE;
         }
         if (b[0]==GR_APPLY_TRANSFORM)compose(&pathTransform, b);
         if (b[0]==GR_SET_TRANSFORM)memcpy(&pathTransform, b+1, sizeof(pathTransform));
+        if (b[0]==GR_SAVE_STATE)GrSaveState(gs);
+        if (b[0]==GR_RESTORE_STATE)GrRestoreState(gs);
         if (b[0]==GR_MOVE_TO || b[0]==GR_DRAW_LINE_TO) {
             pathX = u16(b+1);
             pathY = u16(b+3);
         }
+        if (b[0]==GR_DRAW_HLINE_TO) pathX = u16(b+1);
+        if (b[0]==GR_DRAW_VLINE_TO) pathY = u16(b+1);
         if (b[0]==GR_DRAW_LINE) {
             pathX = u16(b+5);
             pathY = u16(b+7);
@@ -783,10 +929,16 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
             pathY = u16(b+at+2);
             pathXF = pathYF = 0;
         }
-        pathCursor+=rawSize(b);
-        *last=pathSource[pathCursor];
+        if (str == 2) {
+            pathCursor += rawSize(b);
+            *last = pathSource[pathCursor];
+        } else {
+            glyphCursor += rawSize(b);
+            *last = glyphBytes[glyphCursor];
+        }
         if (*last==GR_END_GSTRING) {
-            pathCursor = pathReady = 0;
+            if (str == 2) pathCursor = pathReady = 0;
+            else glyphCursor = glyphReady = 0;
             return GSRT_COMPLETE;
         }
         return GSRT_ONE;

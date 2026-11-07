@@ -65,6 +65,10 @@ typedef struct {
 #define GPT_CLIP 1
 #define GPT_WIN_CLIP 2
 #define GST_PTR 0
+#define GST_CHUNK 1
+#define LMEM_TYPE_GENERAL 0
+#define GR_COMMENT 1
+#define GSET_NO_ERROR 0
 #define GSKT_LEAVE_DATA 0
 #define GR_APPLY_ROTATION 16
 #define GR_APPLY_TRANSFORM 19
@@ -170,6 +174,7 @@ void GrRestoreState(GStateHandle gs);
 #define GR_OUTPUT_5F 95
 #define GR_SAVE_STATE 96
 #define GR_RESTORE_STATE 97
+#define GR_SET_MIX_MODE 98
 #define GR_MOVE_TO 99
 #define GR_SET_CUSTOM_LINE_STYLE 116
 #define GR_SET_TEXT_ATTR 131
@@ -183,6 +188,7 @@ void GrRestoreState(GStateHandle gs);
 #define GSC_ONE			0x0100
 #define GSC_NEW_PAGE		0x0010
 #define GSSPT_SKIP_1 0
+#define GSSPT_BEGINNING 2
 #define GSRT_COMPLETE 0
 #define GSRT_ONE 1
 #define GSRT_NEW_PAGE 5
@@ -198,6 +204,17 @@ void GrRestoreState(GStateHandle gs);
 #define GFMI_STRIKE_POS 36
 #define GFMI_ACCENT 24
 MemHandle MemAlloc(word size, word flags, word allocFlags);
+MemHandle MemAllocLMem(word type, word header);
+GStateHandle GrCreateGString(MemHandle block, byte type, word *chunk);
+word GrEndGString(GStateHandle gs);
+void GrSetFont(GStateHandle gs, word font, dword size);
+void GrSetTextStyle(GStateHandle gs, byte set, byte clear);
+word GrGetFontWeight(GStateHandle gs);
+word GrGetFontWidth(GStateHandle gs);
+void GrSetFontWeight(GStateHandle gs, word weight);
+void GrSetFontWidth(GStateHandle gs, word width);
+void GrApplyTranslation(GStateHandle gs, dword x, dword y);
+void GrApplyScale(GStateHandle gs, dword x, dword y);
 void *MemLock(MemHandle h);
 void *MemDeref(MemHandle h);
 void MemUnlock(MemHandle h);

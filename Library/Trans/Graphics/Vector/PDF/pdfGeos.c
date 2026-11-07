@@ -35,6 +35,7 @@ DESCRIPTION:
 #include <geos.h>
 #include <ec.h>
 #include <heap.h>
+#include <lmem.h>
 #include <system.h>
 #include <graphics.h>
 #include <gstring.h>
@@ -52,6 +53,7 @@ extern word _pascal PDFSTREAMWRITE(word token, void (*strategy)(void),
 
 extern dword _pascal PDFTEXTWIDTHFIXED(GStateHandle gs, const char *textP, word count);
 extern void _pascal PDFGETDASH(GStateHandle gs, byte *dashP);
+extern word _pascal PDFGENCHAR(GStateHandle gs, word character);
 /* The kernel C entry returns packed PatternInfo in AX. Watcom's struct
  * return convention would instead dereference AX as a result pointer. */
 extern word _pascal GRGETTEXTPATTERN(GStateHandle gs, MemHandle *patternH,
@@ -275,6 +277,8 @@ static void point(PdfDocument *p, int x, int y, const char *op)
 }
 
 static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int paint);
+static void _pascal glyphPath(PdfDocument *p, GStateHandle gs, word character,
+                              PdfFixed x, PdfFixed y);
 static void _pascal clipPaths(PdfDocument *p, GStateHandle gs)
 {
     nativePath(p, gs, GPT_WIN_CLIP, 2);
@@ -336,6 +340,9 @@ static void attributes(PdfDocument *p, GStateHandle gs, Boolean fill,
         if (drawMask != SDM_0 && (GrGetMixMode(gs) != MM_COPY ||
             drawMask != SDM_100)) {
                 p->error = PDF_UNSUPPORTED;
+#ifndef PDF_HOST_TEST
+            EC_WARNING(0x5049); /* PDF_DRAW_MODE_UNSUPPORTED. */
+#endif
             return;
         }
     }
@@ -473,11 +480,11 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
     word pattern;
     byte encoded, glyph, pair[2];
     PdfFixed advance = 0, previous = 0, width, kern, origin, offset, thickness, fontBase;
-    Boolean visible;
+    Boolean visible, path = p->pathTransform != (void*)0;
 
     drawMask = GrGetTextMask(gs, (void*)0);
-    visible = drawMask != SDM_0;
-    if (visible && (drawMask != SDM_100 || GrGetMixMode(gs) != MM_COPY)) {
+    visible = path || drawMask != SDM_0;
+    if (!path && visible && (drawMask != SDM_100 || GrGetMixMode(gs) != MM_COPY)) {
         p->error = PDF_UNSUPPORTED;
         return 0;
     }
@@ -485,7 +492,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
     pattern = GRGETTEXTPATTERN(gs, &patternH, &patternSize);
     if (((byte)pattern == PT_CUSTOM_HATCH || (byte)pattern == PT_CUSTOM_BITMAP) && patternH)
         MemFree(patternH);
-    if (visible && (byte)pattern != PT_SOLID) {
+    if (!path && visible && (byte)pattern != PT_SOLID) {
         p->error = PDF_UNSUPPORTED;
         return 0;
     }
@@ -523,7 +530,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
             font = PDF_FONT_SYMBOL;
         } else if ((fontID & 0x0fff) == 0x0801 || (fontID & 0x0fff) == 0x0802)
             font = PDF_FONT_DINGBATS;
-        else if (visible) {
+        else if (visible && !path) {
             p->error = PDF_UNSUPPORTED;
             return 0;
         }
@@ -531,7 +538,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
         break;
     }
 
-    if (visible) {
+    if (visible && !path) {
         PdfColor(p, GrGetTextColor(gs), 0);
     }
     /* Only one- and two-character native width queries are needed. The pair
@@ -575,7 +582,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
             !addFixed(p, x, advance, &origin)) break;
         if (visible) {
             glyphFont = textCharacter(glyph, &encoded, font);
-            if (glyphFont == 0xffff) {
+            if (glyphFont == 0xffff && !path) {
                 p->error = PDF_UNSUPPORTED;
                 break;
             }
@@ -590,7 +597,11 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
 
             if (!addFixed(p, width, -offset, &offset) ||
                 !addFixed(p, origin, offset, &origin)) break;
-            PdfText(p, origin, y, (PdfFixed)size, glyphFont, &encoded, 1);
+            if (path) {
+                glyphPath(p, gs, glyph == C_NONBRKHYPHEN ? '-' : glyph, origin, y);
+            } else {
+                PdfText(p, origin, y, (PdfFixed)size, glyphFont, &encoded, 1);
+            }
         }
 
         if (!addFixed(p, advance, width, &advance)) {
@@ -622,11 +633,16 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
                         i == TS_UNDERLINE ? GFMI_UNDER_POS : GFMI_STRIKE_POS);
                     if (!addFixed(p, offset, -fontBase, &offset) ||
                         !addFixed(p, y, offset, &offset)) break;
-                    PdfNumber(p, x);
-                    PdfNumber(p, offset);
-                    PdfNumber(p, origin - x);
-                    PdfNumber(p, thickness);
-                    PdfRaw(p, "re f\n");
+                    if (path) {
+                        if (!addFixed(p, offset, thickness, &kern)) break;
+                        PdfPathRect(p, x, offset, origin, kern);
+                    } else {
+                        PdfNumber(p, x);
+                        PdfNumber(p, offset);
+                        PdfNumber(p, origin - x);
+                        PdfNumber(p, thickness);
+                        PdfRaw(p, "re f\n");
+                    }
                 }
             }
         }
@@ -655,6 +671,32 @@ typedef struct {
 
 PdfTextRun;
 #pragma pack()
+
+/* Validate without painting: object bounds can use a temporary text path. */
+static word _pascal textFieldSize(const byte *b, word size)
+{
+    word left, pos, n;
+
+    if (size < 1 + sizeof(PdfTextField)) {
+        return PDF_STATE_ERROR;
+    }
+    left = u16(b + 1);
+    pos = 1 + sizeof(PdfTextField);
+    while (left) {
+        if (pos > size || (word)(size - pos) < (word)sizeof(PdfTextRun)) {
+            return PDF_STATE_ERROR;
+        }
+        n = u16(b + pos);
+        pos += sizeof(PdfTextRun);
+        if (!n || n > left || n > size - pos) {
+            return PDF_STATE_ERROR;
+        }
+        left -= n;
+        pos += n;
+    }
+    return PDF_OK;
+}
+
 /* Decode packed style runs before emitting GEOS text field glyphs. */
 static void textField(PdfDocument *p, GStateHandle gs, const byte *b, word size)
 {
@@ -663,7 +705,7 @@ static void textField(PdfDocument *p, GStateHandle gs, const byte *b, word size)
     word left, pos, n;
     PdfFixed x, y, advance;
 
-    if (size < 1 + sizeof(PdfTextField)) {
+    if (textFieldSize(b, size)) {
         p->error = PDF_STATE_ERROR;
         return;
     }
@@ -678,18 +720,9 @@ static void textField(PdfDocument *p, GStateHandle gs, const byte *b, word size)
     }
     pos = 1 + sizeof(PdfTextField);
     while (left && !p->error) {
-        if (pos > size || (word)(size - pos) < (word)sizeof(PdfTextRun)) {
-            p->error = PDF_STATE_ERROR;
-            break;
-        }
-
         r = (const PdfTextRun *)(b + pos);
         n = r->count;
         pos += sizeof(PdfTextRun);
-        if (!n || n > left || n > size - pos) {
-            p->error = PDF_STATE_ERROR;
-            break;
-        }
 
         GrSetTextAttr(gs, &r->attr);
         advance = text(p, gs, x, y, b + pos, n, TRUE, f->limit);
@@ -736,6 +769,18 @@ static word _pascal geometrySize(const byte *b, word size)
         return PDF_STATE_ERROR;
     }
     switch (b[0]) {
+    case GR_DRAW_TEXT_FIELD:
+        return textFieldSize(b, size);
+    case GR_DRAW_TEXT:
+        return size >= 7 && u16(b+5) == size - 7 ? PDF_OK : PDF_STATE_ERROR;
+    case GR_DRAW_TEXT_CP:
+        return size >= 3 && u16(b+1) == size - 3 ? PDF_OK : PDF_STATE_ERROR;
+    case GR_DRAW_CHAR:
+        expected = 6;
+        break;
+    case GR_DRAW_CHAR_CP:
+        expected = 2;
+        break;
     case GR_DRAW_LINE:
     case GR_DRAW_RECT:
     case GR_FILL_RECT:
@@ -1311,22 +1356,12 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size,
                              (op == GR_DRAW_POLYGON ? "h S\n" : "S\n"));
                              break;
     case GR_DRAW_TEXT:
-        if (path) {
-            p->error = PDF_UNSUPPORTED;
-            break;
-        }
-
         if (size < 7 || u16(b+5) != size - 7) {
             goto bad;
         }
         text(p, gs, (PdfFixed)s16(b+1)*65536L, (PdfFixed)s16(b+3)*65536L, b+7, u16(b+5), FALSE, 0xffff);
         break;
     case GR_DRAW_TEXT_CP:
-        if (path) {
-            p->error = PDF_UNSUPPORTED;
-            break;
-        }
-
         if (size < 3 || u16(b+1) != size - 3) {
             goto bad;
         }
@@ -1334,22 +1369,12 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size,
         text(p, gs, fixed(textPen.PF_x), fixed(textPen.PF_y), b+3, u16(b+1), FALSE, 0xffff);
         break;
     case GR_DRAW_CHAR:
-        if (path) {
-            p->error = PDF_UNSUPPORTED;
-            break;
-        }
-
         if (size != 6) {
             goto bad;
         }
         text(p, gs, (PdfFixed)s16(b+2)*65536L, (PdfFixed)s16(b+4)*65536L, b+1, 1, FALSE, 0xffff);
         break;
     case GR_DRAW_CHAR_CP:
-        if (path) {
-            p->error = PDF_UNSUPPORTED;
-            break;
-        }
-
         if (size != 2) {
             goto bad;
         }
@@ -1357,11 +1382,6 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size,
         text(p, gs, fixed(textPen.PF_x), fixed(textPen.PF_y), b+1, 1, FALSE, 0xffff);
         break;
     case GR_DRAW_TEXT_FIELD:
-        if (path) {
-            p->error = PDF_UNSUPPORTED;
-            break;
-        }
-
         textField(p, gs, b, size);
         break;
     default:
@@ -1374,6 +1394,118 @@ static void output(PdfDocument *p, GStateHandle gs, const byte *b, word size,
     return;
 bad:
     p->error = PDF_STATE_ERROR;
+}
+
+/***********************************************************************
+ * FUNCTION:    glyphPath
+ * DESCRIPTION: Append one native font outline to the current PDF path.
+ * STRATEGY:    Record one glyph through DR_FONT_GEN_PATH. Replay its bounded
+ *              geometry on the saved path state, using the existing native
+ *              coordinate callback. Keep neither a font nor a page cache.
+ * CAVEATS:     Bitmap-only fonts have no outline and fail explicitly.
+ * REVISION HISTORY:
+ *              Codex/MeyerK 11/07/26 Initial version.
+ ***********************************************************************/
+static void _pascal glyphPath(PdfDocument *p, GStateHandle gs, word character,
+                              PdfFixed x, PdfFixed y)
+{
+    MemHandle blockH;
+    GStateHandle string = 0;
+    TransMatrix transform;
+    PointWWFixed subStart;
+    WWFixedAsDWord size;
+    word chunk, font = 0, op = 0, bytes = 0, result, last;
+    byte element[32];
+    Boolean saved = FALSE, contour = FALSE;
+
+    blockH = MemAllocLMem(LMEM_TYPE_GENERAL, 0);
+    if (!blockH) {
+        p->error = PDF_LIMIT_ERROR;
+        return;
+    }
+    string = GrCreateGString(blockH, GST_CHUNK, &chunk);
+    if (!string) {
+        p->error = PDF_LIMIT_ERROR;
+        goto cleanup;
+    }
+    font = GrGetFont(gs, &size);
+    GrSetFont(string, font, size);
+    GrSetTextStyle(string, GrGetTextStyle(gs), 0xff);
+    GrSetFontWeight(string, GrGetFontWeight(gs));
+    GrSetFontWidth(string, GrGetFontWidth(gs));
+    GrGetTransform(gs, &transform);
+    GrSetTransform(string, &transform);
+    /* Fractional placement is in the matrix: font drivers query integer CP.
+     * PostScript outlines are baseline-relative with Y increasing upwards. */
+    GrApplyTranslation(string, x, y);
+    GrApplyScale(string, 65536L, -65536L);
+    p->error = PDFGENCHAR(string, character);
+    if (p->error) goto cleanup;
+    if (GrEndGString(string) != GSET_NO_ERROR) {
+        p->error = PDF_LIMIT_ERROR;
+        goto cleanup;
+    }
+    GrDestroyGString(string, 0, GSKT_LEAVE_DATA);
+    string = GrLoadGString(blockH, GST_CHUNK, chunk);
+    if (!string) {
+        p->error = PDF_LIMIT_ERROR;
+        goto cleanup;
+    }
+
+    GrSaveState(gs);
+    saved = TRUE;
+    GrSetNullTransform(gs);
+    GrMoveTo(gs, 0, 0);
+    result = GrDrawGStringAtCP(gs, string, GSC_ONE, &last);
+    while (!p->error && result == GSRT_ONE) {
+        op = GrGetGStringElement(gs, string, 0, (void*)0, &bytes);
+        if (op == GR_END_GSTRING) break;
+        if (op == GR_COMMENT) {
+            GrSetGStringPos(string, GSSPT_SKIP_1, 0);
+            continue;
+        }
+        if (!bytes || bytes > sizeof(element)) {
+            /* ATTENTION: glyph commands are limited to 32 bytes. Extend
+             * this bounded decoder if a font driver adds larger records. */
+            p->error = PDF_LIMIT_ERROR;
+            break;
+        }
+        GrGetGStringElement(gs, string, bytes, element, &bytes);
+        if (op == GR_MOVE_TO || op == GR_DRAW_LINE_TO || op == GR_DRAW_HLINE_TO ||
+            op == GR_DRAW_VLINE_TO || op == GR_DRAW_REL_LINE_TO ||
+            op == GR_DRAW_CURVE_TO || op == GR_DRAW_REL_CURVE_TO ||
+            op == GR_CLOSE_SUB_PATH) {
+            if (op == GR_MOVE_TO) {
+                if (contour) PdfRaw(p, "h\n");
+                contour = TRUE;
+            } else if (!contour) {
+                p->error = PDF_STATE_ERROR;
+                break;
+            }
+            output(p, gs, element, bytes, TRUE, &subStart);
+        } else if (!((op >= GR_APPLY_ROTATION && op <= GR_RESTORE_TRANSFORM) ||
+                     (op >= GR_SET_MIX_MODE && op <= GR_SET_CUSTOM_TEXT_PATTERN))) {
+            p->error = PDF_UNSUPPORTED;
+            break;
+        }
+        result = GrDrawGStringAtCP(gs, string, GSC_ONE, &last);
+        if (op == GR_MOVE_TO) GrGetCurPosWWFixed(gs, &subStart);
+        if (op == GR_CLOSE_SUB_PATH)
+            GrMoveToWWFixed(gs, fixed(subStart.PF_x), fixed(subStart.PF_y));
+    }
+    if (!p->error && result != GSRT_ONE && result != GSRT_COMPLETE)
+        p->error = PDF_STATE_ERROR;
+    if (!p->error && contour) PdfRaw(p, "h\n");
+
+cleanup:
+#ifndef PDF_HOST_TEST
+    if (p->error) {
+        EC_WARNING(0x5047); /* PDF_TEXT_PATH_REQUIRED: inspect the native glyph. */
+    }
+#endif
+    if (string) GrDestroyGString(string, saved ? gs : 0, GSKT_LEAVE_DATA);
+    if (saved) GrRestoreState(gs);
+    MemFree(blockH);
 }
 
 /***********************************************************************
@@ -1395,7 +1527,7 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
     TransMatrix transform;
     PdfFixed values[6], previousMatrix[6];
     PointWWFixed subStart, pen;
-    word op, size, result, last, i, rule = 0, sections = 0;
+    word op, size, result, last, i, rule = 0, sections = 0, depth = 0;
     Boolean open = FALSE, complete = FALSE, more, to, changed;
     Boolean subpath = FALSE, matrixKnown = FALSE, separatePen = FALSE;
 
@@ -1466,7 +1598,7 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
 
             GrSetGStringPos(source, GSSPT_SKIP_1, 0);
         } else if (op == GR_END_PATH) {
-            if (!open || size != 1) {
+            if (!open || depth || size != 1) {
                 p->error = PDF_STATE_ERROR;
                 break;
             }
@@ -1558,9 +1690,32 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
                 subStart = pen;
                 subpath = TRUE;
             }
-        } else if (op >= GR_APPLY_ROTATION && op <= GR_RESTORE_TRANSFORM) {
+        } else if (op == GR_SAVE_STATE || op == GR_RESTORE_STATE) {
+            /* The section's own saved state must not be consumed by a
+             * recorded RestoreState. Coordinates remain in the PDF path. */
+            if (!open || size != 1 || (op == GR_RESTORE_STATE && !depth)) {
+                p->error = PDF_STATE_ERROR;
+            } else if (op == GR_SAVE_STATE && depth == 31) {
+                p->error = PDF_LIMIT_ERROR;
+            } else {
+                if (op == GR_SAVE_STATE) {
+                    ++depth;
+                } else {
+                    --depth;
+                    separatePen = TRUE; /* The kernel also restores the pen. */
+                }
+                result = GrDrawGStringAtCP(playback, source, GSC_ONE, &last);
+            }
+        } else if ((op >= GR_APPLY_ROTATION && op <= GR_RESTORE_TRANSFORM) ||
+                   (op >= GR_SET_MIX_MODE && op <= GR_SET_CUSTOM_TEXT_PATTERN)) {
+            /* Replay captured attributes in the kernel. Painting uses the
+             * caller's final attributes, not the definition's temporary ones. */
             result = GrDrawGStringAtCP(playback, source, GSC_ONE, &last);
         } else p->error = PDF_UNSUPPORTED;
+        /* Preserve the rejected snapshot element for the EC warning. */
+        if (p->error) {
+            break;
+        }
         MemFree(elementH);
         elementH = 0;
         if (result != GSRT_ONE && result != GSRT_COMPLETE) {
@@ -1571,7 +1726,7 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
     if (result == GSRT_COMPLETE) {
         complete = TRUE;
     }
-    if ((!complete || open || !sections) && !p->error) {
+    if ((!complete || open || depth || !sections) && !p->error) {
         p->error = PDF_STATE_ERROR;
     }
     if (!p->error && paint != 2) {
@@ -1585,6 +1740,11 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
 cleanup:
     /* These are borrowed or temporary resources, never owned by the job. */
     p->pathTransform = (void*)0;
+#ifndef PDF_HOST_TEST
+    if (p->error && elementH) {
+        EC_WARNING(0x5048); /* PDF_PATH_TRANSLATION_FAILED: retain the element. */
+    }
+#endif
     if (elementH) {
         MemFree(elementH);
     }

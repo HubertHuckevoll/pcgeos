@@ -149,8 +149,16 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   including patterns supplied through text-field and standalone TextAttr.
 * Balanced save/restore scopes (up to 31 nested saves). Retained native paths
   support lines, polygons, curves, points, all arc forms, ellipses and rounded rectangles, with fill,
-  stroke, holes and transforms. Relative lines/curves and splines also have
-  native output handlers.
+  stroke, holes, transforms and balanced saved states inside path definitions.
+  Captured attributes are replayed by the kernel; painting uses the final
+  caller attributes. Relative lines/curves and splines also have
+  native output handlers. Text, characters and text fields in painted or
+  clipped paths use DR_FONT_GEN_PATH outlines from the selected GEOS font,
+  with fractional placement and the same native width/kerning queries as
+  ordinary text. Glyph counters remain path holes. One glyph is recorded
+  and released at a time; the command buffer is 32 bytes. Bitmap-only fonts
+  and unexpected larger glyph commands still fail explicitly, with
+  PDF_TEXT_PATH_REQUIRED diagnostics.
 * Application and window path/rectangle clipping supports intersection,
   replacement and null clips, including replacement inside saved scopes.
   Clips are rebuilt at painting from the current native state, so there is
@@ -170,7 +178,7 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   remain packed; PDF indexed color spaces avoid a full RGB expansion buffer.
 
 This is a **restricted SBCS vector/text milestone**, not general document
-fidelity yet. Boolean path unions, text inside retained paths, patterned fills,
+fidelity yet. Boolean path unions, patterned fills,
 non-copy mixing, embedded graphics in text fields, super/subscript and DBCS
 remain future work.
 Font shape fidelity beyond the standard-family substitution, full character
