@@ -3798,7 +3798,7 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 GRGETTEXTMASK	proc	far
-	mov	cx, 1
+	mov	cx, 2			; select text, not area
 	jmp	CGetMaskCommon
 
 GRGETTEXTMASK	endp

@@ -3391,7 +3391,7 @@ REVISION HISTORY:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 ExitPrinterDriver proc	near
-		uses	ax, bx, cx, di, si, ds, es
+		uses	ax, bx, cx, dx, di, si, ds, es
 curJob		local	SpoolJobInfo
 		.enter	inherit
 
@@ -3400,6 +3400,17 @@ curJob		local	SpoolJobInfo
 		mov	bx, curJob.SJI_pstate	; set up handle to PState
 		mov	di, DR_PRINT_END_JOB
 		call	curJob.SJI_pDriver
+		jnc	saveJobData
+
+		; Final output can fail after the last successful EndPage.
+		; Preserve an earlier conversion error or user cancellation.
+		call	CheckForErrors
+		jc	saveJobData
+		call	StoppedByError
+		mov	cx, SERROR_CANNOT_CONVERT_PAGE
+		mov	dx, curJob.SJI_qHan
+		call	SpoolErrorBox
+saveJobData:
 
 		; write the printer-specific data stored in the JobParameters
 		; tacked onto the end of the PState back to the queue, just

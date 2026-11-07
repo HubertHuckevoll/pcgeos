@@ -13,6 +13,7 @@ static const struct { CBitmap header; byte rows[12]; } rgbBitmap = {
     {{2,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_24BIT},0,2,0,sizeof(CBitmap),0,2,2},
     {255,0,0, 0,255,0, 0,0,255, 255,255,0}
 };
+static const Point pathTriangle[] = {{430,480},{530,480},{480,580}};
 static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
     {{9,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_MONO},0,2,0,sizeof(CBitmap),0,9,9},
     {0x80,0x80,0x40,0}
@@ -61,6 +62,11 @@ static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
         GrDrawRoundRect(gstate,60,480,260,580,20);
         GrMoveTo(gstate,300,480);
         GrFillRoundRectTo(gstate,400,600,20);
+        GrBeginPath(gstate,PCT_REPLACE);
+        GrDrawPolygon(gstate,pathTriangle,3);
+        GrEndPath(gstate);
+        GrFillPath(gstate,ODD_EVEN);
+        GrDrawPath(gstate);
         GrSetTextColor(gstate,CF_RGB,0,0,0);
         GrSetFont(gstate,FID_DTC_URW_SANS,MakeWWFixed(18));
         GrSetTextMode(gstate,TM_DRAW_BASE,0);

@@ -38,7 +38,7 @@ void PdfRoundRect(PdfDocument *p, int x1, int y1, int x2, int y2,
     if (!radius) {
         PdfInteger(p, x1); PdfInteger(p, y1);
         PdfInteger(p, (PdfFixed)x2 - x1); PdfInteger(p, (PdfFixed)y2 - y1);
-        PdfRaw(p, fill ? "re f\n" : "re S\n");
+        PdfRaw(p, fill < 0 ? "re\n" : (fill ? "re f\n" : "re S\n"));
         return;
     }
     r = (PdfFixed)radius * 65536L; k = control(r);
@@ -59,7 +59,7 @@ void PdfRoundRect(PdfDocument *p, int x1, int y1, int x2, int y2,
     PdfRaw(p, "c\n");
     point(p, left, it); PdfRaw(p, "l\n");
     point(p, left, it - k); point(p, il - k, top); point(p, il, top);
-    PdfRaw(p, fill ? "c\nh f\n" : "c\nh S\n");
+    PdfRaw(p, fill < 0 ? "c\nh\n" : (fill ? "c\nh f\n" : "c\nh S\n"));
 }
 
 void PdfEllipse(PdfDocument *p, int x1, int y1, int x2, int y2, int fill)
@@ -75,9 +75,9 @@ void PdfEllipse(PdfDocument *p, int x1, int y1, int x2, int y2, int fill)
     if (x1 == x2 || y1 == y2) {
         /* Zero-area fills vanish; an outline collapses to a line/point.
          * Avoid a singular scaling matrix, including for collapsed ellipses. */
-        if (!fill) {
+        if (fill <= 0) {
             PdfInteger(p, x1); PdfInteger(p, y1); PdfRaw(p, "m ");
-            PdfInteger(p, x2); PdfInteger(p, y2); PdfRaw(p, "l S\n");
+            PdfInteger(p, x2); PdfInteger(p, y2); PdfRaw(p, fill < 0 ? "l\n" : "l S\n");
         }
         return;
     }
@@ -98,5 +98,5 @@ void PdfEllipse(PdfDocument *p, int x1, int y1, int x2, int y2, int fill)
     point(p, left, cy - ky); point(p, cx - kx, top); point(p, cx, top);
     PdfRaw(p, "c\n");
     point(p, cx + kx, top); point(p, right, cy - ky); point(p, right, cy);
-    PdfRaw(p, fill ? "c\nh f\n" : "c\nh S\n");
+    PdfRaw(p, fill < 0 ? "c\nh\n" : (fill ? "c\nh f\n" : "c\nh S\n"));
 }

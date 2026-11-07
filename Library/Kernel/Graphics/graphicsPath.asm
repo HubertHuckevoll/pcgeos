@@ -856,6 +856,7 @@ nextElement:
 	push	di, si				; save GState, GString handles
 	call	GrDerefPtrGString		; offset => SI
 	mov	ax, ds:[si].OBP_combine		; PathCombineType => AX
+	mov	dx, {word} ds:[si].OBP_flags	; retain fill/coordinate flags
 	mov	{byte} ds:[si], GR_APPLY_TRANSFORM
 	inc	si				; skip over opcode
 	mov	di, si				; destination => ES:DI
@@ -864,7 +865,8 @@ nextElement:
 	rep	movsb
 	mov	{byte} es:[di], GR_BEGIN_PATH
 	inc	di
-	stosw					; store PathCombineType, twice
+	stosw					; store PathCombineType
+	mov	ax, dx				; preserve original path metadata
 	stosw
 	pop	di, si				; restore GState,GString han
 	mov	al, GSSPT_RELATIVE

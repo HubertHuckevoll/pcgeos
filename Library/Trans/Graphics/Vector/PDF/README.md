@@ -38,6 +38,11 @@ The implementation follows these existing contracts:
   packed C declaration is 23 bytes. Each native TFStyleRun is therefore 26
   bytes before its characters. CInclude's OpDrawLine member names
   interchange x2/y1, so scalar operands are explicitly decoded little endian.
+* The kernel C entry `GRGETTEXTPATTERN` returns packed PatternInfo in AX.
+  The adapter declares that entry with a word result because Watcom's Pascal
+  structure-return convention would treat AX as a pointer. Only the low byte
+  selects the pattern type; PT_SOLID ignores the data byte. Custom-pattern
+  snapshot handles are freed after inspection.
 * `Driver/Printer/PrintCom/Stream/streamWrite.asm` defines `DR_STREAM_WRITE`:
   token in BX, blocking mode in AX, DS:SI buffer, CX byte count. The adapter
   checks both carry and short writes. The stream remains owned by the spooler.
@@ -51,6 +56,9 @@ Ownership is explicit: PS_expansionInfo contains one backend memory handle.
 StartJob allocates it; every backend call locks/unlocks it; EndJob frees it,
 including after an error. No job state is held in shared globals. One temporary
 heap block holds the current output element and is freed immediately after use.
+Path painting additionally owns one native snapshot and one snapshot element;
+only one snapshot is live at a time. An unfinished native path definition is
+closed before destroying the playback state, including on conversion failure.
 The assembly-to-C boundary uses Pascal stack arguments and preserves BX across
 C calls before unlocking the PState.
 
@@ -90,27 +98,42 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   ellipses and rounded rectangles (including current-position variants).
 * RGB fill/stroke/text colors; solid masks, line width/caps/joins/miter limit.
 * DrawText/DrawTextAtCP, DrawChar/DrawCharAtCP, plain counted text-field runs.
-* Helvetica regular/bold/oblique/bold-oblique, substituting other GEOS fonts.
-  Characters use GEOS-measured positions to preserve line/run layout. The
-  common MacRoman subset includes German umlauts and sharp s. GEOS characters
-  that differ from MacRoman are rejected. No embedded fonts are required.
-* Balanced save/restore scopes (up to 31 nested saves). Rectangular clipping
-  supports intersection and replacement/null in scopes without an inherited
-  clip. Replacing a parent scope's clip and unions currently fail explicitly.
+* Standard Helvetica, Times and Courier faces selected by GEOS font family,
+  with bold/italic variants, plus Symbol and ZapfDingbats resources. Common
+  mathematical GEOS characters use the existing EPS Symbol mappings rather
+  than undefined PDF MacRoman codes. Unsupported characters fail explicitly.
+  No embedded fonts are required.
+* Text positions and run advances retain native 1/256-point fractions. Native
+  single/pair width queries preserve pair/track kerning and space padding in
+  linear work. Current-position text also retains the fractional pen position.
+  Underline and strike-through use native font positions and thickness,
+  preserve fractional coordinates and follow the text color/mask. Text-field
+  decoration limits do not shorten run advances.
+* Independent native line/area/text masks and paint-time text-pattern checking,
+  including patterns supplied through text-field and standalone TextAttr.
+* Balanced save/restore scopes (up to 31 nested saves). Retained native paths
+  support lines, polygons, curves, ellipses and rounded rectangles, with fill,
+  stroke, holes and transforms. Relative lines/curves and splines also have
+  native output handlers.
+* Application and window path/rectangle clipping supports intersection,
+  replacement and null clips, including replacement inside saved scopes.
+  Clips are rebuilt at painting from the current native state, so there is
+  no second persistent PDF clip stack. Boolean union sections still fail
+  explicitly; their native region conversion remains work to complete.
 * Uncompacted mono and RGB24 bitmaps: simple headers and complex sliced headers,
   explicit DPI, DrawBitmap/DrawBitmapAtCP; FillBitmap/FillBitmapAtCP for mono.
   Empty introductory headers emitted by HugeBitmapToString are supported.
 
 This is a **restricted SBCS vector/text milestone**, not general document
-fidelity yet. Paletted/compacted bitmaps, stored bitmap masks, arbitrary paths,
-arcs, patterned fills/dashes,
+fidelity yet. Paletted/compacted bitmaps, stored bitmap masks, Boolean path
+unions, text inside retained paths, arcs, patterned fills/dashes,
 non-copy mixing, window clipping, embedded graphics in text fields, automatic
-hyphens, underline/strikeout/super/subscript and DBCS remain future work.
-Font family/shape fidelity, fractional text-field positioning, full character
-coverage and justified field metrics need further work. Prefix-width queries
-currently favor correctness of simple text positioning over speed on long
-runs. Failed jobs may leave incomplete output; the spooler owns destination
-cleanup. The backend does not publish a success trailer after a latched error.
+hyphens, super/subscript and DBCS remain future work.
+Font shape fidelity beyond the standard-family substitution, full character
+coverage and application-level justified text verification need further work. Failed jobs may leave incomplete output; the spooler owns destination
+cleanup. The backend does not publish a success trailer after a latched error. The
+spooler records and reports EndJob failure even after the last page succeeds,
+while preserving prior cancellation or an already reported error.
 
 ## Bitmap boundary and extension points
 
@@ -187,7 +210,13 @@ PDF_TEST_CFLAGS='-fsanitize=address,undefined -g' \
     Library/Trans/Graphics/Vector/PDF/tests/run.sh
 ```
 
-The tests use the production serializer and GEOS adapter. The kernel double
+The tests use the production serializer and GEOS adapter. A separate Perl
+check executes the small native text-mask and EndJob dispatch branches with
+distinct input states; it does not execute the full kernel or spooler.
+Ghostscript, when installed, also checks the emitted mathematical Symbol glyph.
+The text tests check fractional multi-run layout, incoming pair kerning, track
+kerning before the first glyph, hidden-run advances, font-family choice and
+late finalization write failure. The kernel double
 checks element dispatch, end/new-page handling, packed text-field layout,
 rectangular clipping, allocation/write failures and handle cleanup. A separate
 Perl checker validates every xref byte offset, indirect stream length and page
@@ -196,8 +225,9 @@ host-side development checks, not runtime dependencies.
 
 Bitmap checks cover simple/complex headers, CP/fill variants, empty intro slices,
 continuation validation, DPI, malformed payloads, every slice allocation failure,
-and streaming an image larger than a 16-bit block. At most two owned heap blocks
-(job context and current element) may be live in the double. Image tests inject
+and streaming an image larger than a 16-bit block. Bitmap-only playback uses at most two owned heap blocks (job context and
+current element); path/clip playback can also hold one native snapshot and
+one snapshot element. Image tests inject
 write failures and prevent premature page finalization. When Poppler is available,
 an independent Perl pixel oracle verifies exact RGB channel/row order, mono
 stencil polarity, transparent zero bits and non-byte-aligned widths. The GString
@@ -246,11 +276,13 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
    No application's export command or external conversion is involved.
 3. Expect two pages, each containing a red diagonal line, a blue rectangle,
    a red ellipse outline, a blue filled ellipse, a red rounded-rectangle outline,
-   a blue filled rounded rectangle, and the appropriate
+   a blue filled rounded rectangle, a blue native-path triangle with a red
+   outline, and the appropriate
    `Native PDF page 1` / `Native PDF page 2` text. Near the bottom are a
    red/green-over-blue/yellow RGB bitmap and a red mono stencil over green,
    whose unset pixels must retain the green background.
-4. Open in the GEOS PDF Viewer; also inspect with `pdfinfo`, `pdftotext` and
+4. Use the matching rebuilt kernel as well as the backend: GrGetPath now
+   retains the section fill/coordinate flags needed by clipping. Open in the GEOS PDF Viewer; also inspect with `pdfinfo`, `pdftotext` and
    `tests/check_pdf.pl output.pdf 2` on a development host. Check portrait,
    landscape, copies and tiled pages separately. An unsupported output operation
    must report a conversion error, rather than silently completing the job.
@@ -269,3 +301,18 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
 4. Bitmap compression/palette/mask converters and optional XObject output.
 5. Replace the bounded xref table with VM-backed metadata for larger jobs;
    optimize text translation and add packaging/localization/UI refinements.
+
+## Native path verification
+
+The path fixture checks retained fill plus stroke, same-direction contours
+with an odd-even hole, saved-scope clip replacement, independent application
+and window clips, and transformed/intersected sections. A small pixel oracle
+checks interior samples in the rendered PDF. Representative allocation and
+write failures also check cleanup. This is a host adapter check; the existing
+PDFPrint application's triangle is the corresponding native smoke fixture.
+
+The path snapshot comes from GrGetPath, following SvgLib's C ownership pattern.
+The separate playback state executes transforms and pen updates, while the PDF
+writer constructs each section without painting its component primitives.
+Stroke attributes are applied after path construction so the painting matrix
+affects stroke width without transforming the retained geometry twice.

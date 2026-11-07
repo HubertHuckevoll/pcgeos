@@ -13,7 +13,10 @@ typedef dword PdfDWord;
 typedef sdword PdfFixed;
 #endif
 #define PDF_MAX_PAGES 256
-#define PDF_FIRST_PAGE_OBJECT 7
+#define PDF_FONT_COUNT 14
+#define PDF_FONT_SYMBOL 12
+#define PDF_FONT_DINGBATS 13
+#define PDF_FIRST_PAGE_OBJECT (3 + PDF_FONT_COUNT)
 #define PDF_MAX_OBJECTS (PDF_FIRST_PAGE_OBJECT + 3 * PDF_MAX_PAGES)
 #define PDF_BUFFER_SIZE 512
 #define PDF_OK 0
@@ -43,10 +46,11 @@ void PdfPageMatrix(PdfDocument *pdf, const PdfFixed *matrix);
 void PdfEndPage(PdfDocument *pdf);
 void PdfFinish(PdfDocument *pdf);
 void PdfColor(PdfDocument *pdf, PdfDWord rgb, int stroke);
-/* Signed 16-bit GEOS bounding coordinates; reversed corners are accepted. */
+/* Signed 16-bit GEOS bounds; reversed corners accepted. fill=-1 appends
+ * construction operators only, preserving the current PDF path. */
 void PdfEllipse(PdfDocument *pdf, int x1, int y1, int x2, int y2, int fill);
 void PdfRoundRect(PdfDocument *pdf, int x1, int y1, int x2, int y2,
                   PdfWord radius, int fill);
-void PdfText(PdfDocument *pdf, int x, int y, PdfFixed size,
+void PdfText(PdfDocument *pdf, PdfFixed x, PdfFixed y, PdfFixed size,
              PdfWord font, const unsigned char *text, PdfWord count);
 #endif

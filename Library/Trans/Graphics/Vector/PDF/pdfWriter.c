@@ -1,5 +1,5 @@
 /* PDF object serialization, shared verbatim by GEOS and host regression tests.
- * Object IDs: 1 catalog, 2 pages, 3..6 Helvetica regular/bold/oblique/boldoblique;
+ * Object IDs: 1 catalog, 2 pages, then the standard 14 PDF fonts;
  * each page then owns content, indirect length, page dictionary, in that order.
  */
 #include "pdfWriter.h"
@@ -76,13 +76,21 @@ void PdfBegin(PdfDocument *p)
     if (!p->width || !p->height) { p->error = PDF_STATE_ERROR; return; }
     PdfRaw(p, "%PDF-1.1\n%\200\201\202\203\n");
     object(p, 1); PdfRaw(p, "<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < PDF_FONT_COUNT; ++i) {
         object(p, (PdfWord)(3 + i));
-        PdfRaw(p, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica");
-        if (i == 1) PdfRaw(p, "-Bold");
-        if (i == 2) PdfRaw(p, "-Oblique");
-        if (i == 3) PdfRaw(p, "-BoldOblique");
-        PdfRaw(p, " /Encoding /MacRomanEncoding >>\nendobj\n");
+        PdfRaw(p, "<< /Type /Font /Subtype /Type1 /BaseFont /");
+        if (i < 4) PdfRaw(p, "Helvetica");
+        else if (i < 8) PdfRaw(p, "Times");
+        else if (i < 12) PdfRaw(p, "Courier");
+        else PdfRaw(p, i == PDF_FONT_SYMBOL ? "Symbol" : "ZapfDingbats");
+        if (i < 12) {
+            if (i == 4) PdfRaw(p, "-Roman");
+            else if ((i & 3) == 1) PdfRaw(p, "-Bold");
+            else if ((i & 3) == 2) PdfRaw(p, i < 8 && i >= 4 ? "-Italic" : "-Oblique");
+            else if ((i & 3) == 3) PdfRaw(p, i < 8 && i >= 4 ? "-BoldItalic" : "-BoldOblique");
+            PdfRaw(p, " /Encoding /MacRomanEncoding");
+        }
+        PdfRaw(p, " >>\nendobj\n");
     }
 }
 void PdfBeginPage(PdfDocument *p)
@@ -110,7 +118,7 @@ void PdfPageMatrix(PdfDocument *p, const PdfFixed *m)
 }
 void PdfEndPage(PdfDocument *p)
 {
-    PdfWord id;
+    PdfWord id, i;
     PdfDWord size;
     if (p->error) return;
     if (!p->inPage || p->imageOpen) { p->error = PDF_STATE_ERROR; return; }
@@ -121,7 +129,12 @@ void PdfEndPage(PdfDocument *p)
     object(p, (PdfWord)(id + 2));
     PdfRaw(p, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ");
     PdfUnsigned(p, p->width); PdfRaw(p, " "); PdfUnsigned(p, p->height);
-    PdfRaw(p, "] /Resources << /ProcSet [/PDF /Text /ImageB /ImageC] /Font << /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R >> >> /Contents ");
+    PdfRaw(p, "] /Resources << /ProcSet [/PDF /Text /ImageB /ImageC] /Font << ");
+    for (i = 0; i < PDF_FONT_COUNT; ++i) {
+        PdfRaw(p, "/F"); PdfUnsigned(p, i); PdfRaw(p, " ");
+        reference(p, (PdfWord)(3 + i));
+    }
+    PdfRaw(p, ">> >> /Contents ");
     reference(p, id); PdfRaw(p, ">>\nendobj\n");
     ++p->pages; p->inPage = 0;
     PdfFlush(p); /* Bound latency and detect a failed stream at each page. */
@@ -160,13 +173,13 @@ void PdfColor(PdfDocument *p, PdfDWord rgb, int stroke)
     }
     PdfRaw(p, stroke ? "RG\n" : "rg\n");
 }
-void PdfText(PdfDocument *p, int x, int y, PdfFixed size,
+void PdfText(PdfDocument *p, PdfFixed x, PdfFixed y, PdfFixed size,
              PdfWord font, const unsigned char *s, PdfWord count)
 {
     PdfWord i;
     unsigned char c;
     PdfRaw(p, "BT /F"); PdfUnsigned(p, font); PdfRaw(p, " "); PdfNumber(p, size);
-    PdfRaw(p, "Tf 1 0 0 -1 "); PdfInteger(p, x); PdfInteger(p, y); PdfRaw(p, "Tm (");
+    PdfRaw(p, "Tf 1 0 0 -1 "); PdfNumber(p, x); PdfNumber(p, y); PdfRaw(p, "Tm (");
     for (i = 0; i < count; ++i) {
         c = s[i];
         if (c == '(' || c == ')' || c == '\\') byteOut(p, '\\');

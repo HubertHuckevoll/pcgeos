@@ -12,6 +12,12 @@ typedef int16_t sword, Boolean;
 typedef uint32_t dword, WWFixedAsDWord, XYValueAsDWord;
 typedef int32_t sdword;
 typedef byte DrawMask[8];
+typedef struct { byte HP_type, HP_data; } GraphicPattern;
+#define FG_SERIF 0x0000
+#define FG_SANS_SERIF 0x0200
+#define FG_SYMBOL 0x0800
+#define FG_MONO 0x0a00
+#define FID_PS_SYMBOL 0x2800
 #define TRUE 1
 #define FALSE 0
 #define HF_DYNAMIC 0
@@ -31,13 +37,45 @@ typedef struct {
     WBFixed space; word font; WBFixed size; sword kern; byte weight, width;
 } TextAttr;
 #pragma pack(pop)
+#define GPT_CURRENT 0
+#define GPT_CLIP 1
+#define GPT_WIN_CLIP 2
+#define GST_PTR 0
+#define GSKT_LEAVE_DATA 0
+#define GR_APPLY_ROTATION 16
+#define GR_APPLY_TRANSFORM 19
+#define GR_SET_TRANSFORM 21
+#define GR_RESTORE_TRANSFORM 26
+#define GR_REL_MOVE_TO 100
+#define GR_DRAW_PATH 65
+#define GR_FILL_PATH 73
+#define GR_END_PATH 161
+#define GR_SET_WIN_CLIP_RECT 163
+#define GR_CLOSE_SUB_PATH 164
+#define GR_SET_CLIP_PATH 165
+#define GR_SET_WIN_CLIP_PATH 166
+word MockSegment(const void *p);
+#define PtrToSegment(p) MockSegment(p)
+#define PtrToOffset(p) ((word)0)
+Boolean GrTestPath(GStateHandle gs, word type);
+MemHandle GrGetPath(GStateHandle gs, word type);
+GStateHandle GrLoadGString(word segment, byte type, word offset);
+void GrDestroyGString(GStateHandle string, GStateHandle gs, byte type);
+void GrSetNullTransform(GStateHandle gs);
+void GrEndPath(GStateHandle gs);
+void GrSaveState(GStateHandle gs);
+void GrRestoreState(GStateHandle gs);
 #define SDM_0      89
 #define SDM_100    25
 #define MM_COPY 1
 #define LS_SOLID 0
 #define PT_SOLID 0
+#define PT_CUSTOM_HATCH 5
+#define PT_CUSTOM_BITMAP 6
 #define TS_BOLD		0x20
 #define TS_ITALIC	0x10
+#define TS_UNDERLINE 0x01
+#define TS_STRIKE_THRU 0x02
 #define TM_DRAW_BASE			0x08
 #define TM_DRAW_BOTTOM			0x04
 #define TM_DRAW_ACCENT			0x02
@@ -46,6 +84,10 @@ typedef struct {
 #define GR_NEW_PAGE 15
 #define GR_DRAW_LINE 32
 #define GR_DRAW_LINE_TO 33
+#define GR_DRAW_REL_LINE_TO 34
+#define GR_DRAW_SPLINE 48
+#define GR_DRAW_SPLINE_TO 49
+#define GR_DRAW_REL_CURVE_TO 52
 #define GR_DRAW_HLINE 35
 #define GR_DRAW_HLINE_TO 36
 #define GR_DRAW_VLINE 37
@@ -80,6 +122,8 @@ typedef struct {
 #define GR_RESTORE_STATE 97
 #define GR_MOVE_TO 99
 #define GR_SET_CUSTOM_LINE_STYLE 116
+#define GR_SET_TEXT_ATTR 131
+#define GR_MOVE_TO_WWFIXED 142
 #define GR_SET_AREA_PATTERN 123
 #define GR_SET_CUSTOM_AREA_PATTERN 124
 #define GR_SET_TEXT_PATTERN 140
@@ -99,6 +143,9 @@ typedef struct {
 #define PCT_INTERSECTION 3
 #define GFMI_HEIGHT 0
 #define GFMI_BASELINE 6
+#define GFMI_UNDER_POS 18
+#define GFMI_UNDER_THICKNESS 20
+#define GFMI_STRIKE_POS 36
 #define GFMI_ACCENT 24
 MemHandle MemAlloc(word size, word flags, word allocFlags);
 void *MemLock(MemHandle h);
@@ -124,13 +171,16 @@ word GrGetFont(GStateHandle gs, dword *size);
 word GrGetTextStyle(GStateHandle gs);
 word GrGetTextMode(GStateHandle gs);
 dword GrFontMetrics(GStateHandle gs, word type);
+dword GrCharWidth(GStateHandle gs, word ch);
 word GrTextWidth(GStateHandle gs, const char *text, word count);
 void GrSetTextAttr(GStateHandle gs, const TextAttr *attr);
 dword GrGetCurPos(GStateHandle gs);
+void GrGetCurPosWWFixed(GStateHandle gs, PointWWFixed *point);
 byte GrGetGStringElement(GStateHandle gs, GStateHandle string, word size,
                         void *buffer, word *actual);
 void GrSetGStringPos(GStateHandle string, byte type, word skip);
 word GrDrawGStringAtCP(GStateHandle gs, GStateHandle string, word flags, word *last);
 void GrTransformWWFixed(GStateHandle gs, dword x, dword y, PointWWFixed *point);
 void GrMoveTo(GStateHandle gs, sword x, sword y);
+void GrMoveToWWFixed(GStateHandle gs, dword x, dword y);
 #endif
