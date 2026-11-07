@@ -479,10 +479,10 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
     word style, font, i, drawMask, fontID, glyphFont, patternSize, mode;
     MemHandle patternH;
     word pattern;
-    byte encoded, glyph, pair[2];
+    byte encoded, glyph, metricGlyph, pair[2];
     PdfFixed advance = 0, previous = 0, width, kern, origin, offset, thickness, fontBase;
     PdfFixed glyphY;
-    Boolean visible, path = p->pathTransform != (void*)0;
+    Boolean drawGlyph, visible, path = p->pathTransform != (void*)0;
 
     drawMask = GrGetTextMask(gs, (void*)0);
     visible = path || drawMask != SDM_0;
@@ -570,6 +570,43 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
             glyph = '-';
         }
 
+        metricGlyph = glyph;
+        drawGlyph = TRUE;
+        switch (glyph) {
+        case C_GRAPHIC:
+            /* A text graphic requires its callback/data, not a blank glyph. */
+            if (visible) p->error = PDF_UNSUPPORTED;
+            break;
+        case C_TAB:
+            glyph = C_LOGICAL_NOT;
+            drawGlyph = (mode & TM_DRAW_CONTROL_CHARS) != 0;
+            break;
+        case C_CR:
+            glyph = C_PARAGRAPH;
+            drawGlyph = (mode & TM_DRAW_CONTROL_CHARS) != 0;
+            break;
+        case C_CTRL_K: /* GEOS section break. */
+            glyph = C_SECTION;
+            drawGlyph = (mode & TM_DRAW_CONTROL_CHARS) != 0;
+            break;
+        case C_CTRL_L: /* GEOS page/column break. */
+            glyph = C_DBLDAGGER;
+            drawGlyph = (mode & TM_DRAW_CONTROL_CHARS) != 0;
+            break;
+        case C_LINEFEED:
+        case C_NULL_WIDTH:
+        case C_THINSPACE:
+        case C_ENSPACE:
+        case C_EMSPACE:
+            drawGlyph = FALSE;
+            break;
+        case C_SPACE:
+        case C_NONBRKSPACE:
+            if (mode & TM_DRAW_CONTROL_CHARS) glyph = C_CNTR_DOT;
+            break;
+        }
+        if (p->error) break;
+
         width = (PdfFixed)PDFTEXTWIDTHFIXED(gs, (const char *)(s+i), 1);
         if (width < 0) {
             p->error = PDF_LIMIT_ERROR;
@@ -592,7 +629,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
 
         if (!addFixed(p, advance, kern, &advance) ||
             !addFixed(p, x, advance, &origin)) break;
-        if (visible) {
+        if (visible && drawGlyph) {
             glyphFont = textCharacter(glyph, &encoded, font);
             if (glyphFont == 0xffff && !path) {
                 p->error = PDF_UNSUPPORTED;
@@ -601,7 +638,10 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
             /* VidCom KernChar applies track kerning before painting, including
              * the first glyph. Single width minus bare glyph width also keeps
              * GEOS space padding at the same side of the space character. */
-            offset = (PdfFixed)GrCharWidth(gs, glyph);
+            /* VidCom maps formatting marks before painting, then restores
+             * the original character's advance afterwards. Use the original
+             * bare width here so a wider mark does not move its own origin. */
+            offset = (PdfFixed)GrCharWidth(gs, metricGlyph);
             if (offset < 0) {
                 p->error = PDF_LIMIT_ERROR;
                 break;

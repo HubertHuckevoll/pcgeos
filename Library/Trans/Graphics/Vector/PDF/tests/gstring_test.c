@@ -817,6 +817,12 @@ dword GrCharWidth(GStateHandle gs, word ch)
     (void)gs;
     if (ch=='-')width=3L*65536+32768;
     else if (ch==C_NONBRKHYPHEN)width=4L*65536+16384;
+    else if (ch==C_TAB)width=3L*65536+32768;
+    else if (ch==C_CR || ch==C_LINEFEED || ch==C_CTRL_K || ch==C_CTRL_L ||
+             ch==C_NULL_WIDTH)width=0;
+    else if (ch==C_THINSPACE)width=65536+16384;
+    else if (ch==C_ENSPACE)width=3L*65536+49152;
+    else if (ch==C_EMSPACE)width=7L*65536+32768;
     else width=fractionalMetrics ? 7L*65536+32768 : 7L*65536;
     return style & (TS_SUPERSCRIPT | TS_SUBSCRIPT) ? width/2 : width;
 }
@@ -1705,6 +1711,89 @@ static void textPrecision(void)
     assert(strstr(captured,"60.25 101.75 7 0.5 re f"));
     fclose(out);
     style = 0;
+}
+
+static void textControls(void)
+{
+    static const byte chars[] = {'A', C_TAB, C_CR, C_LINEFEED, C_CTRL_K,
+        C_CTRL_L, C_NULL_WIDTH, C_THINSPACE, C_ENSPACE, C_EMSPACE,
+        C_SPACE, C_NONBRKSPACE, 'V'};
+    byte field[81], end[] = {GR_END_GSTRING};
+    byte start[] = {GR_BEGIN_PATH, PCT_REPLACE, 0, 0, 0};
+    byte finish[] = {GR_END_PATH}, stroke[] = {GR_DRAW_PATH};
+    PdfTextField *f = (PdfTextField *)(field+1);
+    PdfTextRun *first = (PdfTextRun *)(field+15);
+    PdfTextRun *second = (PdfTextRun *)(field+54);
+    char captured[8192];
+    size_t n;
+    MemHandle h;
+    word i;
+
+    memset(field, 0, sizeof(field));
+    field[0] = GR_DRAW_TEXT_FIELD;
+    f->count = sizeof(chars)+1;
+    f->x.WBF_int = 60;
+    f->x.WBF_frac = 64;
+    f->y.WBF_int = 100;
+    f->baseline.WBF_int = 12;
+    f->limit = 0xffff;
+    first->count = sizeof(chars);
+    second->count = 1;
+    first->attr.font = second->attr.font = FG_SANS_SERIF;
+    first->attr.size.WBF_int = second->attr.size.WBF_int = 12;
+    first->attr.styleClear = second->attr.styleClear = 0xff;
+    first->attr.modeClear = second->attr.modeClear = 0xff;
+    second->attr.modeSet = TM_DRAW_BASE;
+    second->attr.mask = SDM_100;
+    field[80] = 'Z';
+    for (i = 0; i < 5; ++i) {
+        out = tmpfile();
+        assert(out);
+        h = begin();
+        fractionalMetrics = 1;
+        trackAdvance = 16384;
+        glyphCalls = 0;
+        memcpy(field+41, chars, sizeof(chars));
+        if (i == 4) field[41] = C_GRAPHIC;
+        first->attr.mask = i == 2 ? SDM_0 : SDM_100;
+        first->attr.modeSet = TM_DRAW_BASE | (i ? TM_DRAW_CONTROL_CHARS : 0);
+        if (i == 3) add(start, sizeof(start));
+        add(field, sizeof(field));
+        if (i == 3) {
+            add(finish, 1);
+            add(stroke, 1);
+        }
+        add(end, 1);
+        assert(PDFGSTRING(h, 1, 0) == (i == 4 ? GSRT_FAULT : GSRT_COMPLETE));
+        if (i != 4) assert(PDFENDPAGE(h) == PDF_OK);
+        assert(PDFDESTROY(h) == (i == 4 ? PDF_UNSUPPORTED : PDF_OK));
+        assert(!live && !glyphLive && !pathStateLive && !mainStateLive);
+        if (i == 3) {
+            /* Only A, four marks, two dots, V and Z have outlines. */
+            assert(glyphCalls == 9);
+            assert(glyphTransform.TM_e31.DWF_int == 109);
+            assert(glyphTransform.TM_e31.DWF_frac == 49152);
+        } else if (i != 4) {
+            rewind(out);
+            n = fread(captured, 1, sizeof(captured)-1, out);
+            captured[n] = 0;
+            assert(strstr(captured, "109.75 112 Tm (Z)"));
+            if (i == 1) {
+                /* Marks retain their original origins, not right alignment
+                 * to the narrower tab or the zero-width break characters. */
+                assert(strstr(captured, "68.25 112 Tm (\\302)"));
+                assert(strstr(captured, "72 112 Tm (\\246)"));
+                assert(strstr(captured, "72.5 112 Tm (\\244)"));
+                assert(strstr(captured, "72.75 112 Tm (\\340)"));
+                assert(strstr(captured, "86.5 112 Tm (\\341)"));
+                assert(strstr(captured, "94.25 112 Tm (\\341)"));
+            } else assert(!strstr(captured, "\\302"));
+            if (i == 2) assert(!strstr(captured, "Tm (A)"));
+        }
+        fclose(out);
+    }
+    fractionalMetrics = 0;
+    trackAdvance = 0;
 }
 
 static void textHyphens(void)
@@ -2663,6 +2752,7 @@ int main(int argc, char **argv)
     auditRegressions();
     textPrecision();
     textHyphens();
+    textControls();
     lineDashes();
     puts("gstring: pages, fields, solid patterns, shapes, bitmap/slice dispatch, clipping and cleanup passed");
     return 0;
