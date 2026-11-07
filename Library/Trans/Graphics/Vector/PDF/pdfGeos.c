@@ -13,6 +13,7 @@
 #include <gstring.h>
 #include <font.h>
 #include <fontID.h>
+#include <char.h>
 #endif
 #include "pdfWriter.h"
 #include "pdfBitmap.h"
@@ -22,6 +23,7 @@ extern word _pascal PDFSTREAMWRITE(word token, void (*strategy)(void),
                                   const void *data, word size);
 
 extern dword _pascal PDFTEXTWIDTHFIXED(GStateHandle gs, const char *textP, word count);
+extern void _pascal PDFGETDASH(GStateHandle gs, byte *dashP);
 /* The kernel C entry returns packed PatternInfo in AX. Watcom's struct
  * return convention would instead dereference AX as a result pointer. */
 extern word _pascal GRGETTEXTPATTERN(GStateHandle gs, MemHandle *patternH,
@@ -104,17 +106,41 @@ static void _pascal clipPaths(PdfDocument *p, GStateHandle gs)
     nativePath(p, gs, GPT_WIN_CLIP, 2);
     if (!p->error) nativePath(p, gs, GPT_CLIP, 2);
 }
+static void _pascal lineDash(PdfDocument *p, GStateHandle gs, PdfFixed width)
+{
+    byte dash[12];
+    word i, factor;
+    if (GrGetLineStyle(gs) == LS_SOLID) { PdfRaw(p, "[] 0 d\n"); return; }
+    PDFGETDASH(gs, dash);
+    if (!dash[0] || dash[0] > 5 || dash[1] > 127 || width < 0) {
+        p->error = PDF_STATE_ERROR; return;
+    }
+    /* ATTENTION: a PDF hairline has device-dependent width. Use SvgLib's
+     * 1/16-point dash scale until a target-resolution policy is available. */
+    if (!width) width = 4096;
+    PdfRaw(p, "[");
+    for (i = 0; i < (word)dash[0] * 2 + 1; ++i) {
+        factor = i == dash[0] * 2 ? dash[1] : dash[2+i];
+        if ((!factor && i < dash[0] * 2) ||
+            (factor && width > 0x7fffffffL / factor)) {
+            p->error = PDF_LIMIT_ERROR; return;
+        }
+        if (i == dash[0] * 2) PdfRaw(p, "] ");
+        PdfNumber(p, width * factor);
+    }
+    PdfRaw(p, "d\n");
+}
 static void attributes(PdfDocument *p, GStateHandle gs, Boolean fill,
                        Boolean textOutput)
 {
     TransMatrix t;
-    PdfFixed m[6];
+    PdfFixed m[6], width;
     word drawMask = SDM_100;
     int i;
     if (!textOutput) {
         drawMask = fill ? GrGetAreaMask(gs, (DrawMask *)0) : GrGetLineMask(gs, (DrawMask *)0);
         if (drawMask != SDM_0 && (GrGetMixMode(gs) != MM_COPY ||
-            drawMask != SDM_100 || (!fill && GrGetLineStyle(gs) != LS_SOLID))) {
+            drawMask != SDM_100)) {
             p->error = PDF_UNSUPPORTED; return;
         }
     }
@@ -127,7 +153,9 @@ static void attributes(PdfDocument *p, GStateHandle gs, Boolean fill,
     PdfRaw(p, "cm\n");
     if (!textOutput) PdfColor(p, fill ? GrGetAreaColor(gs) : GrGetLineColor(gs), !fill);
     if (!fill && !textOutput) {
-        PdfNumber(p, (PdfFixed)GrGetLineWidth(gs)); PdfRaw(p, "w\n");
+        width = (PdfFixed)GrGetLineWidth(gs);
+        PdfNumber(p, width); PdfRaw(p, "w\n");
+        if (drawMask != SDM_0) lineDash(p, gs, width);
         PdfInteger(p, GrGetLineEnd(gs)); PdfRaw(p, "J\n");
         PdfInteger(p, GrGetLineJoin(gs)); PdfRaw(p, "j\n");
         PdfNumber(p, (PdfFixed)GrGetMiterLimit(gs)); PdfRaw(p, "M\n");
@@ -138,6 +166,7 @@ static void attributes(PdfDocument *p, GStateHandle gs, Boolean fill,
 static word _pascal textCharacter(byte source, byte *encodedP, word font)
 {
     switch (source) {
+    case C_NONBRKHYPHEN: *encodedP = '-'; return font;
     case 0xad: *encodedP = 0xb9; return PDF_FONT_SYMBOL;
     case 0xb0: *encodedP = 0xa5; return PDF_FONT_SYMBOL;
     case 0xb2: *encodedP = 0xa3; return PDF_FONT_SYMBOL;
@@ -175,7 +204,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
     word style, font, i, drawMask, fontID, glyphFont, patternSize, mode;
     MemHandle patternH;
     word pattern;
-    byte encoded, pair[2];
+    byte encoded, glyph, pair[2];
     PdfFixed advance = 0, previous = 0, width, kern, origin, offset, thickness, fontBase;
     Boolean visible;
 
@@ -213,7 +242,17 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
     /* Only one- and two-character native width queries are needed. The pair
      * difference includes incoming pair kerning without remeasuring prefixes.
      * Widths retain native space padding, track kerning and 1/256 fractions. */
-    for (i = 0; i < count && !p->error; ++i) {
+    for (i = 0; i < count && s[i] && !p->error; ++i) {
+        glyph = s[i];
+        if (glyph == C_OPTHYPHEN) {
+            /* A one-character width query would mistake an internal soft
+             * hyphen for the end of the run. Hidden ones have no advance. */
+            if (!(mode & TM_DRAW_OPTIONAL_HYPHENS) ||
+                (i + 1 < count && s[i+1])) {
+                previous = 0; continue;
+            }
+            glyph = '-';
+        }
         width = (PdfFixed)PDFTEXTWIDTHFIXED(gs, (const char *)(s+i), 1);
         if (width < 0) { p->error = PDF_LIMIT_ERROR; break; }
         kern = 0;
@@ -227,12 +266,12 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
         if (!addFixed(p, advance, kern, &advance) ||
             !addFixed(p, x, advance, &origin)) break;
         if (visible) {
-            glyphFont = textCharacter(s[i], &encoded, font);
+            glyphFont = textCharacter(glyph, &encoded, font);
             if (glyphFont == 0xffff) { p->error = PDF_UNSUPPORTED; break; }
             /* VidCom KernChar applies track kerning before painting, including
              * the first glyph. Single width minus bare glyph width also keeps
              * GEOS space padding at the same side of the space character. */
-            offset = (PdfFixed)GrCharWidth(gs, s[i]);
+            offset = (PdfFixed)GrCharWidth(gs, glyph);
             if (offset < 0) { p->error = PDF_LIMIT_ERROR; break; }
             if (!addFixed(p, width, -offset, &offset) ||
                 !addFixed(p, origin, offset, &origin)) break;
@@ -290,9 +329,6 @@ static void textField(PdfDocument *p, GStateHandle gs, const byte *b, word size)
     PdfFixed x, y, advance;
     if (size < 1 + sizeof(PdfTextField)) { p->error = PDF_STATE_ERROR; return; }
     f = (const PdfTextField *)(b + 1);
-    /* Native text can leave unused flag bits unchanged. Only bit 0 is
-     * HF_AUTO_HYPHEN; reject that unsupported feature, not the other bits. */
-    if (f->flags & 0x01) { p->error = PDF_UNSUPPORTED; return; }
     left = f->count;
     x = (PdfFixed)f->x.WBF_int * 65536L + (word)f->x.WBF_frac * 256L;
     y = (PdfFixed)f->y.WBF_int * 65536L + (word)f->y.WBF_frac * 256L;
@@ -309,6 +345,10 @@ static void textField(PdfDocument *p, GStateHandle gs, const byte *b, word size)
         if (!addFixed(p, x, advance, &x)) break;
         left -= n; pos += n;
     }
+    /* HF_AUTO_HYPHEN is the only defined flag. GrDrawTextField draws the
+     * extra hyphen separately, using the last run's attributes and limit. */
+    if (!p->error && (f->flags & 0x01))
+        text(p, gs, x, y, (const byte *)"-", 1, TRUE, f->limit);
 }
 static PdfFixed _pascal operandFixed(const byte *b)
 {
@@ -717,9 +757,9 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
     GStateHandle gs = GrCreateState(0);
     MemHandle element = 0;
     byte *b;
-    word size, last, result = GSRT_FAULT, depth = 0;
+    word size, last, result = GSRT_FAULT, depth = 0, n;
     Boolean definingPath = FALSE;
-    byte pattern[3], control[11];
+    byte pattern[3], control[15];
     byte op = 0;
     (void)flags; /* PDL contract always ends at a physical page boundary. */
     if (!p->inPage || !p->transformed) p->error = PDF_STATE_ERROR;
@@ -769,13 +809,31 @@ word _pascal _export PDFGSTRING(MemHandle h, GStateHandle string, word flags)
                 (u16(control+2) != PCT_NULL && control[1] > 1)) {
                 p->error = PDF_STATE_ERROR; break;
             }
+        } else if (op == GR_SET_LINE_STYLE) {
+            if (size != 3) { p->error = PDF_STATE_ERROR; break; }
+            GrGetGStringElement(gs, string, size, control, &size);
+            if (control[1] > LS_DASHDDOT || control[2] > 127 ||
+                (control[1] != LS_SOLID && control[2] >
+                    (control[1] == LS_DOTTED ? 3 : 8))) {
+                p->error = PDF_STATE_ERROR; break;
+            }
+        } else if (op == GR_SET_CUSTOM_LINE_STYLE) {
+            if (size < 7 || size > sizeof(control)) { p->error = PDF_STATE_ERROR; break; }
+            GrGetGStringElement(gs, string, size, control, &size);
+            n = u16(control+3);
+            if (!n || n > 5 || size != 5 + n * 2 || u16(control+1) > 127 ||
+                u16(control+1) > (byte)(control[5] + control[6])) {
+                p->error = PDF_STATE_ERROR; break;
+            }
+            for (n = 5; n < size; ++n) if (!control[n]) p->error = PDF_STATE_ERROR;
+            if (p->error) break;
         } else if (op == GR_SET_AREA_PATTERN || op == GR_SET_TEXT_PATTERN) {
             if (size != sizeof(pattern)) { p->error = PDF_STATE_ERROR; break; }
             GrGetGStringElement(gs, string, size, pattern, &size);
             /* PT_SOLID ignores the data byte; playback maintains the GState. */
             if (pattern[1] != PT_SOLID) { p->error = PDF_UNSUPPORTED; break; }
         } else if (op >= GR_BEGIN_PATH || op == GR_ESCAPE ||
-                   op == GR_SET_CUSTOM_LINE_STYLE || op == GR_SET_CUSTOM_AREA_PATTERN ||
+                   op == GR_SET_CUSTOM_AREA_PATTERN ||
                    op == GR_SET_CUSTOM_TEXT_PATTERN) {
             p->error = PDF_UNSUPPORTED; break;
         }

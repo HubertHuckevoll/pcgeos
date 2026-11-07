@@ -69,6 +69,13 @@ void GrRestoreState(GStateHandle gs);
 #define SDM_100    25
 #define MM_COPY 1
 #define LS_SOLID 0
+#define LS_DASHED 1
+#define LS_DOTTED 2
+#define LS_DASHDOT 3
+#define LS_DASHDDOT 4
+#define LS_CUSTOM 5
+#define GR_SET_LINE_STYLE 113
+#define GR_SET_LINE_WIDTH 108
 #define PT_SOLID 0
 #define PT_CUSTOM_HATCH 5
 #define PT_CUSTOM_BITMAP 6
@@ -76,6 +83,9 @@ void GrRestoreState(GStateHandle gs);
 #define TS_ITALIC	0x10
 #define TS_UNDERLINE 0x01
 #define TS_STRIKE_THRU 0x02
+#define C_NONBRKHYPHEN 0x1e
+#define C_OPTHYPHEN 0x1f
+#define TM_DRAW_OPTIONAL_HYPHENS 0x01
 #define TM_DRAW_BASE			0x08
 #define TM_DRAW_BOTTOM			0x04
 #define TM_DRAW_ACCENT			0x02

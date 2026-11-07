@@ -15,7 +15,10 @@ static word mask = SDM_100;
 static word areaMask = SDM_100;
 static word textMask = SDM_100, lineStyle = LS_SOLID;
 static int ready;
+static byte dashInfo[12];
+static dword lineWidth=2L<<16;
 static byte textPattern;
+static word textMode = TM_DRAW_BASE;
 static word fontID = FG_SANS_SERIF;
 static dword fontSize = 12L << 16;
 static unsigned widthWork;
@@ -27,7 +30,9 @@ typedef struct { byte bytes[4096]; word size; } MockPath;
 typedef struct {
     MockPath paths[3];
     TransMatrix matrix;
-    word x,y,xf,yf;
+    word x,y,xf,yf, lineStyle;
+    dword lineWidth;
+    byte dashInfo[12];
 } MockFrame;
 static MockPath paths[3], building;
 static MockFrame savedFrames[32], buildingFrame;
@@ -67,10 +72,12 @@ static void compose(TransMatrix *current,const byte *record)
 }
 static void snapshot(MockFrame *f)
 { memcpy(f->paths,paths,sizeof(paths));f->matrix=transform;
-  f->x=cpX;f->y=cpY;f->xf=cpFracX;f->yf=cpFracY; }
+  f->x=cpX;f->y=cpY;f->xf=cpFracX;f->yf=cpFracY;
+  f->lineStyle=lineStyle;f->lineWidth=lineWidth;memcpy(f->dashInfo,dashInfo,12); }
 static void restore(const MockFrame *f)
 { memcpy(paths,f->paths,sizeof(paths));transform=f->matrix;
-  cpX=f->x;cpY=f->y;cpFracX=f->xf;cpFracY=f->yf; }
+  cpX=f->x;cpY=f->y;cpFracX=f->xf;cpFracY=f->yf;
+  lineStyle=f->lineStyle;lineWidth=f->lineWidth;memcpy(dashInfo,f->dashInfo,12); }
 static word rawSize(const byte *b)
 {
     switch(b[0]) {
@@ -195,7 +202,8 @@ GStateHandle GrCreateState(word w)
         pathX=pathY=pathXF=pathYF=0;pathSaved=0;return 101;}
     mainStateLive=1;memset(paths,0,sizeof(paths));saveDepth=0;capturing=0;
     cpX = cpY = cpFracX = cpFracY = style = 0; ready = 0; textPattern = PT_SOLID;
-    fontID=FG_SANS_SERIF;fontSize=12L<<16;
+    fontID=FG_SANS_SERIF;fontSize=12L<<16;textMode=TM_DRAW_BASE;
+    lineStyle=LS_SOLID;lineWidth=2L<<16;memset(dashInfo,0,12);
     memset(&transform,0,sizeof(transform));
     transform.TM_e11.WWF_int = transform.TM_e22.WWF_int = 1;
     return 100;
@@ -207,7 +215,8 @@ void GrGetTransform(GStateHandle gs, TransMatrix *t) { *t=gs==101 ? pathTransfor
 dword GrGetLineColor(GStateHandle gs) { (void)gs; return 255; }
 dword GrGetAreaColor(GStateHandle gs) { (void)gs; return 0xff0000UL; }
 dword GrGetTextColor(GStateHandle gs) { (void)gs; return 0; }
-dword GrGetLineWidth(GStateHandle gs) { (void)gs; return 2L << 16; }
+dword GrGetLineWidth(GStateHandle gs) { (void)gs; return lineWidth; }
+void PDFGETDASH(GStateHandle gs,byte *dashP) { (void)gs;memcpy(dashP,dashInfo,12); }
 word GrGetLineEnd(GStateHandle gs) { (void)gs; return 0; }
 word GrGetLineJoin(GStateHandle gs) { (void)gs; return 0; }
 dword GrGetMiterLimit(GStateHandle gs) { (void)gs; return 10L << 16; }
@@ -226,7 +235,7 @@ word GRGETTEXTPATTERN(GStateHandle gs, MemHandle *pattern, word *size)
 }
 word GrGetFont(GStateHandle gs, dword *size) { (void)gs; *size=fontSize; return fontID; }
 word GrGetTextStyle(GStateHandle gs) { (void)gs; return style; }
-word GrGetTextMode(GStateHandle gs) { (void)gs; return TM_DRAW_BASE; }
+word GrGetTextMode(GStateHandle gs) { (void)gs; return textMode; }
 dword GrFontMetrics(GStateHandle gs, word type)
 {
     (void)gs;
@@ -237,17 +246,35 @@ dword GrFontMetrics(GStateHandle gs, word type)
 }
 dword PDFTEXTWIDTHFIXED(GStateHandle gs, const char *s, word count)
 {
-    dword width;
-    (void)gs;widthWork+=count;
-    width=count*((fractionalMetrics ? 7L*65536+32768 : 7L*65536)+trackAdvance);
-    if(fractionalMetrics && count==2 && s[0]=='A' && s[1]=='V') width-=65536;
+    dword width=0;
+    word i;
+    byte c, previous=0;
+    widthWork+=count;
+    for(i=0;i<count && s[i];++i) {
+        c=(byte)s[i];
+        if(c==C_OPTHYPHEN) {
+            if(!(textMode & TM_DRAW_OPTIONAL_HYPHENS) || (i+1<count && s[i+1])) {
+                previous=c;continue;
+            }
+            c='-';
+        }
+        width+=GrCharWidth(gs,c)+trackAdvance;
+        if(fractionalMetrics && previous=='A' && c=='V')width-=65536;
+        previous=c;
+    }
     return width;
 }
 dword GrCharWidth(GStateHandle gs, word ch)
-{ (void)gs;(void)ch;return fractionalMetrics ? 7L*65536+32768 : 7L*65536; }
+{
+    (void)gs;
+    if(ch=='-')return 3L*65536+32768;
+    if(ch==C_NONBRKHYPHEN)return 4L*65536+16384;
+    return fractionalMetrics ? 7L*65536+32768 : 7L*65536;
+}
 word GrTextWidth(GStateHandle gs, const char *s, word count) { (void)gs;(void)s;return count*7; }
 void GrSetTextAttr(GStateHandle gs, const TextAttr *a) { (void)gs;style=(style & ~a->styleClear) | a->styleSet;textMask=a->mask;textPattern=a->pattern[0];fontID=a->font;
-  fontSize=(dword)(word)a->size.WBF_int*65536UL+(dword)a->size.WBF_frac*256; }
+  fontSize=(dword)(word)a->size.WBF_int*65536UL+(dword)a->size.WBF_frac*256;
+  textMode=(textMode & ~a->modeClear) | a->modeSet; }
 void GrGetCurPosWWFixed(GStateHandle gs, PointWWFixed *point)
 { point->PF_x.WWF_int=(sword)(gs==101 ? pathX : cpX);point->PF_y.WWF_int=(sword)(gs==101 ? pathY : cpY);
   point->PF_x.WWF_frac=gs==101 ? pathXF : cpFracX;point->PF_y.WWF_frac=gs==101 ? pathYF : cpFracY; }
@@ -305,6 +332,17 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
     assert(b[0]!=GR_DRAW_BITMAP && b[0]!=GR_DRAW_BITMAP_CP &&
            b[0]!=GR_FILL_BITMAP && b[0]!=GR_FILL_BITMAP_CP && b[0]!=GSE_BITMAP_SLICE);
     rootPlayback(b,elements[cursor].size);
+    if(b[0]==GR_SET_LINE_WIDTH)lineWidth=(dword)operandFixed(b+1);
+    if(b[0]==GR_SET_LINE_STYLE) {
+        static const byte counts[]={0,1,1,2,3};
+        static const byte values[][6]={{0},{4,4},{1,2},{4,4,1,4},{4,4,1,4,1,4}};
+        lineStyle=b[1];dashInfo[0]=counts[lineStyle];dashInfo[1]=b[2];
+        memset(dashInfo+2,0,10);memcpy(dashInfo+2,values[lineStyle],dashInfo[0]*2);
+    }
+    if(b[0]==GR_SET_CUSTOM_LINE_STYLE) {
+        lineStyle=LS_CUSTOM;dashInfo[0]=(byte)u16(b+3);dashInfo[1]=(byte)u16(b+1);
+        memcpy(dashInfo+2,b+5,dashInfo[0]*2);
+    }
     if (b[0]==GR_SET_TEXT_ATTR) GrSetTextAttr(gs,(const TextAttr *)(b+1));
     if (b[0]==GR_MOVE_TO) { cpX=u16(b+1);cpY=u16(b+3);cpFracX=cpFracY=0; }
     if (b[0]==GR_MOVE_TO_WWFIXED) {
@@ -503,11 +541,13 @@ static void auditRegressions(void)
     rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
     assert(strstr(captured,"BT /F0 8 Tf") && strstr(captured,"(L)") && strstr(captured,"(E)"));
     fclose(out);
-    lastName[14] |= 1; /* An actual auto-hyphen is still unsupported. */
+    lastName[14] |= 1;
     out=tmpfile();assert(out);h=begin();
     add(lastName,sizeof(lastName));add(end,sizeof(end));
-    assert(PDFGSTRING(h,1,0)==GSRT_FAULT);
-    assert(PDFDESTROY(h)==PDF_UNSUPPORTED);assert(!live);fclose(out);
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+    assert(strstr(captured,"80 30 Tm (-)"));fclose(out);
     memset(field,0,sizeof(field));field[0]=GR_DRAW_TEXT_FIELD;
     f->count=1;r->count=1;r->attr.mask=SDM_100;
     r->attr.font=FG_SANS_SERIF;r->attr.size.WBF_int=12;
@@ -635,6 +675,97 @@ static void textPrecision(void)
     rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
     assert(strstr(captured,"60.25 100.5 Tm (Z)"));
     assert(strstr(captured,"60.25 101.75 7 0.5 re f"));fclose(out);style=0;
+}
+
+static void textHyphens(void)
+{
+    byte field[72], end[]={GR_END_GSTRING};
+    PdfTextField *f=(PdfTextField *)(field+1);
+    PdfTextRun *first=(PdfTextRun *)(field+15);
+    PdfTextRun *second=(PdfTextRun *)(field+45);
+    char captured[8192];
+    size_t n;
+    MemHandle h;
+    word i;
+    memset(field,0,sizeof(field));field[0]=GR_DRAW_TEXT_FIELD;
+    f->count=5;f->x.WBF_int=60;f->x.WBF_frac=64;
+    f->y.WBF_int=100;f->baseline.WBF_int=12;f->limit=0xffff;
+    first->count=4;second->count=1;
+    first->attr.mask=second->attr.mask=SDM_100;
+    first->attr.styleClear=second->attr.styleClear=0xff;
+    first->attr.styleSet=TS_UNDERLINE;second->attr.styleSet=TS_BOLD;
+    first->attr.font=FG_SANS_SERIF;second->attr.font=FG_MONO;
+    first->attr.size.WBF_int=second->attr.size.WBF_int=12;
+    first->attr.modeClear=second->attr.modeClear=0xff;
+    first->attr.modeSet=second->attr.modeSet=TM_DRAW_BASE;
+    field[41]='A';field[42]=C_OPTHYPHEN;field[43]='V';field[44]=C_OPTHYPHEN;
+    field[71]='W';fractionalMetrics=1;trackAdvance=16384;
+    for(i=0;i<3;++i) {
+        first->attr.modeSet=TM_DRAW_BASE | (i ? TM_DRAW_OPTIONAL_HYPHENS : 0);
+        f->flags=i==2 ? 0x25 : 0x24;
+        out=tmpfile();assert(out);h=begin();add(field,sizeof(field));add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+        assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+        rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+        assert(strstr(captured,"68.25 112 Tm (V)"));
+        assert(!strstr(captured,"\\037"));
+        if(!i) {
+            assert(!strstr(captured,"Tm (-)"));
+            assert(strstr(captured,"76 112 Tm (W)"));
+        } else {
+            assert(strstr(captured,"76 112 Tm (-)"));
+            assert(strstr(captured,"79.75 112 Tm (W)"));
+        }
+        if(i==2)assert(strstr(captured,"BT /F9 12 Tf 1 0 0 -1 87.5 112 Tm (-)"));
+        fclose(out);
+    }
+    /* Keep native nonbreaking-hyphen advance, even if its font width differs. */
+    field[41]=C_NONBRKHYPHEN;field[42]='X';field[43]='Y';field[44]='Z';f->flags=0;
+    out=tmpfile();assert(out);h=begin();add(field,sizeof(field));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+    assert(strstr(captured,"60.5 112 Tm (-)"));
+    assert(strstr(captured,"65 112 Tm (X)"));fclose(out);
+    fractionalMetrics=0;trackAdvance=0;
+}
+
+static void lineDashes(void)
+{
+    byte builtin[]={GR_SET_LINE_STYLE,LS_DASHDOT,2};
+    byte custom[]={GR_SET_CUSTOM_LINE_STYLE,1,0,2,0,3,1,2,4};
+    byte width[]={GR_SET_LINE_WIDTH,0,128,1,0};
+    byte save[]={GR_SAVE_STATE}, restore[]={GR_RESTORE_STATE}, end[]={GR_END_GSTRING};
+    byte line[]={GR_DRAW_LINE,10,0,20,0,100,0,20,0};
+    const char *standard="[8 8 2 8 ] 4 d";
+    char captured[8192], *at;
+    size_t n;
+    MemHandle h;
+    word i;
+    out=tmpfile();assert(out);h=begin();
+    add(builtin,sizeof(builtin));add(line,sizeof(line));add(save,sizeof(save));
+    add(custom,sizeof(custom));add(width,sizeof(width));add(line,sizeof(line));
+    add(restore,sizeof(restore));add(line,sizeof(line));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+    at=strstr(captured,standard);assert(at);
+    at=strstr(at+1,"[4.5 1.5 3 6 ] 1.5 d");assert(at);
+    assert(strstr(at+1,standard));fclose(out);
+    /* A hairline must still emit positive dash lengths. */
+    memset(width+1,0,4);
+    out=tmpfile();assert(out);h=begin();
+    add(custom,sizeof(custom));add(width,sizeof(width));add(line,sizeof(line));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+    assert(strstr(captured,"[0.1875 0.0625 0.125 0.25 ] 0.0625 d"));fclose(out);
+    for(i=0;i<2;++i) {
+        custom[i ? 5 : 3]=0; /* Zero factor or zero pair count. */
+        out=tmpfile();assert(out);h=begin();add(custom,sizeof(custom));add(line,sizeof(line));add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==GSRT_FAULT);
+        assert(PDFDESTROY(h)==PDF_STATE_ERROR);assert(!live);fclose(out);custom[3]=2;
+    }
 }
 
 int main(int argc,char **argv)
@@ -801,7 +932,7 @@ int main(int argc,char **argv)
     }
     out=tmpfile();streamCalls=0;failStream=1;
     assert(!PDFCREATE(0,0,595,842));assert(!live);failStream=0;fclose(out);
-    roundGStrings();bitmapGStrings();auditRegressions();textPrecision();
+    roundGStrings();bitmapGStrings();auditRegressions();textPrecision();textHyphens();lineDashes();
     puts("gstring: pages, fields, solid patterns, shapes, bitmap/slice dispatch, clipping and cleanup passed");
     return 0;
 }

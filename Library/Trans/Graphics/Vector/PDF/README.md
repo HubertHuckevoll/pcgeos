@@ -72,7 +72,7 @@ C calls before unlocking the PState.
 | `Driver/Printer/PDF/pdfInfo.asm` | Margins, paper path, UI evaluation |
 | `Driver/Printer/PDF/pdfDriverInfo.asm` | One file-only PDL device |
 | `pdfGeos.c` | GEOS memory, graphics state, GString decoding/translation |
-| `pdfStream.asm` | Checked Pascal wrapper for the stream strategy |
+| `pdfStream.asm` | Stream strategy, fractional text-width and native dash adapters |
 | `pdfWriter.c` | Portable PDF object and operator serialization |
 | `pdfShape.c` | Independent vector primitives: ellipses and rounded rectangles |
 | `pdfBitmap.c` / `pdfBitmap.h` | GEOS storage validation, DPI and source-row iterator |
@@ -97,6 +97,9 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   polylines, polygons (both fill rules), cubic Bezier curves, outlined/filled
   ellipses and rounded rectangles (including current-position variants).
 * RGB fill/stroke/text colors; solid masks, line width/caps/joins/miter limit.
+  Built-in and custom dash arrays use native byte factors, phase and current
+  line width, including save/restore. Hairline dash spacing uses the same
+  1/16-point fallback as SvgLib; device-exact hairline spacing remains open.
 * DrawText/DrawTextAtCP, DrawChar/DrawCharAtCP, plain counted text-field runs.
 * Standard Helvetica, Times and Courier faces selected by GEOS font family,
   with bold/italic variants, plus Symbol and ZapfDingbats resources. Common
@@ -109,6 +112,9 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   Underline and strike-through use native font positions and thickness,
   preserve fractional coordinates and follow the text color/mask. Text-field
   decoration limits do not shorten run advances.
+  Optional hyphens follow the native mode and counted-run boundary;
+  nonbreaking hyphens retain native advances. Automatic field hyphens use
+  the final run's attributes. Unused saved-field flag bits are ignored.
 * Independent native line/area/text masks and paint-time text-pattern checking,
   including patterns supplied through text-field and standalone TextAttr.
 * Balanced save/restore scopes (up to 31 nested saves). Retained native paths
@@ -126,9 +132,9 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
 
 This is a **restricted SBCS vector/text milestone**, not general document
 fidelity yet. Paletted/compacted bitmaps, stored bitmap masks, Boolean path
-unions, text inside retained paths, arcs, patterned fills/dashes,
-non-copy mixing, window clipping, embedded graphics in text fields, automatic
-hyphens, super/subscript and DBCS remain future work.
+unions, text inside retained paths, arcs, patterned fills,
+non-copy mixing, embedded graphics in text fields, super/subscript and DBCS
+remain future work.
 Font shape fidelity beyond the standard-family substitution, full character
 coverage and application-level justified text verification need further work. Failed jobs may leave incomplete output; the spooler owns destination
 cleanup. The backend does not publish a success trailer after a latched error. The
@@ -185,6 +191,15 @@ Remaining bitmap work: PackBits/LZG, indexed/palette formats, separately stored
 masks, pointer/optr records and colored FillBitmap semantics. Unsupported forms
 fail explicitly. This boundary allows those converters to be developed with
 source-row fixtures independently of the print driver and spooler.
+
+## Hyphen and dash runtime check
+
+Print the PDFPrint sample with the PDF printer. Its added text should read
+"Soft: cooperate / end-" and "Nonbreaking: non-breaking". Two lines below
+the bitmaps exercise built-in and custom dashes. For automatic hyphens,
+print a GeoWrite paragraph with automatic hyphenation enabled and a narrow
+text column; check the line ends in the GEOS PDF viewer. Runtime verification
+is performed by the user; the automated checks do not start PC/GEOS.
 
 ## Build and verification
 

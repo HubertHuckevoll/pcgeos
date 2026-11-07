@@ -13,6 +13,8 @@ static const struct { CBitmap header; byte rows[12]; } rgbBitmap = {
     {{2,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_24BIT},0,2,0,sizeof(CBitmap),0,2,2},
     {255,0,0, 0,255,0, 0,0,255, 255,255,0}
 };
+/* The native dash ABI consumes byte factors despite the C word-array type. */
+static const byte customDash[] = {3,1,2,4};
 static const Point pathTriangle[] = {{430,480},{530,480},{480,580}};
 static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
     {{9,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_MONO},0,2,0,sizeof(CBitmap),0,9,9},
@@ -71,12 +73,20 @@ static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
         GrSetFont(gstate,FID_DTC_URW_SANS,MakeWWFixed(18));
         GrSetTextMode(gstate,TM_DRAW_BASE,0);
         GrDrawText(gstate,60,150,page ? "Native PDF page 2" : "Native PDF page 1",0);
+        GrSetFont(gstate,FID_DTC_URW_SANS,MakeWWFixed(12));
+        GrSetTextMode(gstate,TM_DRAW_OPTIONAL_HYPHENS,0);
+        GrDrawText(gstate,60,615,"Soft: co\037operate / end\037",0);
+        GrDrawText(gstate,60,635,"Nonbreaking: non\036breaking",0);
         GrDrawBitmap(gstate,60,650,(const Bitmap *)&rgbBitmap,0);
         GrSetAreaColor(gstate,CF_RGB,0,180,0);
         GrFillRect(gstate,200,650,272,666);
         GrSetAreaColor(gstate,CF_RGB,255,0,0);
         GrMoveTo(gstate,200,650);
         GrFillBitmapAtCP(gstate,(const Bitmap *)&monoBitmap,0);
+        GrSetLineStyle(gstate,LS_DASHED,0,(const DashPairArray *)0,0);
+        GrDrawLine(gstate,60,710,300,710);
+        GrSetLineStyle(gstate,LS_CUSTOM,1,(const DashPairArray *)customDash,2);
+        GrDrawLine(gstate,60,735,300,735);
         GrRestoreState(gstate);
         GrNewPage(gstate,PEC_FORM_FEED);
     }
