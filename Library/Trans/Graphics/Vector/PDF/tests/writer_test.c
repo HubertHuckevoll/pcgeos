@@ -1,3 +1,25 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     PDF Host Regression Tests
+FILE:       writer_test.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    main - Write a sample two-page PDF document
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Exercise the production serializer with a non-seekable sink.
+    Check PDF object emission, fixed numbers and stream failures.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Run the production serializer against a non-seekable sink. */
 #include <assert.h>
 #include <stdio.h>

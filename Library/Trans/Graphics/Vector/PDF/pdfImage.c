@@ -1,3 +1,28 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfImage.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PdfImageBegin       - Open an inline PDF image
+    PdfImageBeginMasked - Open a masked PDF image
+    PdfImageRowPart     - Write partial image scanlines
+    PdfImageEnd         - Close an inline PDF image
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Emit PDF 1.1 inline image data in bounded chunks.
+    Represent binary transparency using clip paths.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* PDF 1.1 inline images: bounded ASCIIHex output, no full-image allocation. */
 #include "pdfImage.h"
 #ifndef PDF_HOST_TEST

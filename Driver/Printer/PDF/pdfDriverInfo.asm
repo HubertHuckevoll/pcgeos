@@ -1,3 +1,26 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Printer Driver
+FILE:       pdfDriverInfo.asm
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+ROUTINES:
+	DriverInfo           - Driver and device information table
+	pdfDeviceInfo        - Native PDF printer capabilities
+
+REVISION HISTORY:
+	Name            Date        Description
+	----            ----        -----------
+	Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+	Define the file-only native PDF device and supported graphics.
+	Expose standard PrintCom printer information resources.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 DriverInfo segment lmem LMEM_TYPE_GENERAL
 DefPrinter PD_NATIVE_PDF, "PDF 1.1 (Native, Print to File)", pdfDeviceInfo
 DriverExtendedInfoTable <{}, PrintDevice/2, offset deviceStrings, offset deviceInfoTab>

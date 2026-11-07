@@ -1,3 +1,25 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     PDF Host Regression Tests
+FILE:       path_test.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    main - Exercise native paths and clipping operations
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Validate path replay, fills, clips and transform behavior.
+    Reuse the GEOS test double from gstring_test.c.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Native path/clip adapter fixtures, using the shared kernel boundary double. */
 #define main gstringChecksMain
 #include "gstring_test.c"

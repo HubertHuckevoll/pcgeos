@@ -1,3 +1,27 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfWriter.h
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PdfDocument - Per-job PDF serialization context
+    PdfBegin    - Begin PDF output
+    PdfFinish   - Write trailer and cross-reference table
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Declare PDF writer types, limits, error codes and public routines.
+    Keep the document state in a caller-owned memory block.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Native PDF 1.1 writer. No page buffer, seek, stdio or host service. */
 #ifndef PDF_WRITER_H
 #define PDF_WRITER_H

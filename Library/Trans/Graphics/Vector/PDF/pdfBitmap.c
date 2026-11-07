@@ -1,3 +1,28 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfBitmap.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PdfBitmapParse      - Parse GEOS bitmap storage
+    PdfBitmapReaderOpen - Prepare a bitmap reader
+    PdfBitmapNextRow    - Read an uncompressed row
+    PdfBitmapNextChunk  - Decode a compressed row chunk
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Validate serialized GEOS bitmap data and decode scanlines.
+    Keep compression parsing separate from PDF serialization.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Include/graphics.def: 6-byte Bitmap / 20-byte CBitmap, little endian. */
 #include "pdfBitmap.h"
 #ifndef PDF_HOST_TEST

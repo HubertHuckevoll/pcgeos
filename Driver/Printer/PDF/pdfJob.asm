@@ -1,19 +1,25 @@
-COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-PROJECT:	PC/GEOS
-MODULE:		Native PDF printer
-FILE:		pdfJob.asm
-AUTHOR:		Codex/MeyerK
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Printer Driver
+FILE:       pdfJob.asm
+
+AUTHOR:     Codex/MeyerK, Nov 2026
 
 ROUTINES:
-	PrintStartJob  - create a PDF document
-	PrintEndJob    - finalize and release it
-	PrintStartPage - start one output page
-	PrintEndPage   - close one output page
+	PrintStartJob        - Create a PDF document for a spooler job
+	PrintEndJob          - Finish the PDF document
+	PrintStartPage       - Begin a physical PDF page
+	PrintEndPage         - Close the current PDF page
+
+REVISION HISTORY:
+	Name            Date        Description
+	----            ----        -----------
+	Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
 
 DESCRIPTION:
-	Create and destroy the PDF context and delimit physical pages.
-	The print spooler owns the destination stream and PState.
+	Manage the PDF document lifecycle for the standard spooler.
+	Store the per-job PDF context handle in PS_expansionInfo.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 

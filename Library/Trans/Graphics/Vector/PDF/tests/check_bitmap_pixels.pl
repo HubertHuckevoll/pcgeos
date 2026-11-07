@@ -1,4 +1,26 @@
 #!/usr/bin/env perl
+##############################################################################
+#
+# PROJECT:    PC/GEOS
+# MODULE:     PDF Host Regression Tests
+# FILE:       check_bitmap_pixels.pl
+#
+# AUTHOR:     Codex/MeyerK, Nov 2026
+#
+# ROUTINES:
+#     pixel - Compare one expected pixel against a rendered PPM
+#
+# REVISION HISTORY:
+#     Name            Date        Description
+#     ----            ----        -----------
+#     Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+#
+# DESCRIPTION:
+#     Check rendered bitmap color channels, rows and transparency.
+#     Read sample positions from the generated PPM image.
+#
+##############################################################################
+
 # Independent rendered-pixel oracle: RGB channel order, row order, stencil
 # polarity, transparent zero bits, and a width not divisible by eight.
 use strict;use warnings;

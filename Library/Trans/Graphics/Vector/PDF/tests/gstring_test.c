@@ -1,3 +1,26 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     PDF Host Regression Tests
+FILE:       gstring_test.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    main   - Exercise PDFGSTRING using a mock GEOS kernel
+    PdfSink - Capture serialized PDF output
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Test the production GString adapter against mocked GEOS services.
+    Model graphics state, paths, text, bitmaps and allocation failures.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Exercise the actual GEOS adapter, dispatcher and serializer, with a small
  * kernel double. This does not substitute for a live spooler/GEOS smoke test. */
 #include <assert.h>

@@ -1,4 +1,26 @@
 #!/bin/sh
+##############################################################################
+#
+# PROJECT:    PC/GEOS
+# MODULE:     PDF Host Regression Tests
+# FILE:       run.sh
+#
+# AUTHOR:     Codex/MeyerK, Nov 2026
+#
+# ROUTINES:
+#     main - Compile and run host-side PDF regression programs
+#
+# REVISION HISTORY:
+#     Name            Date        Description
+#     ----            ----        -----------
+#     Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+#
+# DESCRIPTION:
+#     Run the PDF serialization and GString test cases.
+#     Optionally inspect and rasterize the generated PDF documents.
+#
+##############################################################################
+
 set -eu
 src=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 work=$(mktemp -d)

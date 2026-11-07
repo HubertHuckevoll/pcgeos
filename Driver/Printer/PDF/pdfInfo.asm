@@ -1,18 +1,25 @@
-COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-PROJECT:	PC/GEOS
-MODULE:		Native PDF printer
-FILE:		pdfInfo.asm
-AUTHOR:		Codex/MeyerK
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Printer Driver
+FILE:       pdfInfo.asm
+
+AUTHOR:     Codex/MeyerK, Nov 2026
 
 ROUTINES:
-	PrintGetOutputFormat - advertise native PDF
-	PrintGetPrintArea   - return the selected paper size
-	PrintSetPaperPath   - initialize paper options
+	PrintGetOutputFormat - Advertise PDF output
+	PrintGetMainUI       - Report no device-specific UI
+	PrintGetPrintArea    - Return selected page dimensions
+	PrintSetPaperPath    - Initialize the paper path
+
+REVISION HISTORY:
+	Name            Date        Description
+	----            ----        -----------
+	Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
 
 DESCRIPTION:
-	Expose the PDF file format and file-only paper capabilities.
-	The print spooler owns the destination stream and PState.
+	Report the output format and file-only device capabilities.
+	Provide paper dimensions and printer option defaults.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 

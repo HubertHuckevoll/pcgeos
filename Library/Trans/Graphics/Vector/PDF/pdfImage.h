@@ -1,3 +1,26 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfImage.h
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PdfImageSpec - Canonical pixel format and geometry
+    PdfImage     - Active inline image state
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Declare the format-neutral PDF image-row interface.
+    Scanline data and mask storage remain caller-owned.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Canonical row interface. No GEOS headers, compression or palette layout here. */
 #ifndef PDF_IMAGE_H
 #define PDF_IMAGE_H

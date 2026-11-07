@@ -1,17 +1,23 @@
-COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-PROJECT:	PC/GEOS
-MODULE:		Native PDF printer
-FILE:		pdfPDL.asm
-AUTHOR:		Codex/MeyerK
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Printer Driver
+FILE:       pdfPDL.asm
+
+AUTHOR:     Codex/MeyerK, Nov 2026
 
 ROUTINES:
-	PrintSetPageTransform - pass the selected page matrix
-	PrintGString          - translate page records
+	PrintSetPageTransform - Forward a page transform
+	PrintGString          - Translate a page graphics string
+
+REVISION HISTORY:
+	Name            Date        Description
+	----            ----        -----------
+	Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
 
 DESCRIPTION:
-	Forward spooler PDL escapes to the native PDF translation library.
-	The print spooler owns the destination stream and PState.
+	Implement the PDL-specific printer escape entry points.
+	Translate between PState handles and the PDF library ABI.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 

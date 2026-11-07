@@ -1,3 +1,29 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfWriter.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PdfBegin       - Start PDF object output
+    PdfBeginPage   - Open a page content stream
+    PdfEndPage     - Close a page content stream
+    PdfFinish      - Emit the page tree and cross-reference table
+    PdfText        - Write PDF text operations
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Write PDF 1.1 objects and page streams without seeking.
+    Buffer only small output chunks and retain object offsets.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* PDF object serialization, shared verbatim by GEOS and host regression tests.
  * Object IDs: 1 catalog, 2 pages, then the standard 14 PDF fonts;
  * each page then owns content, indirect length, page dictionary, in that order.

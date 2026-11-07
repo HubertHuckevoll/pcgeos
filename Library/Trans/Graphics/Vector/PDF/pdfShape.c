@@ -1,3 +1,29 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfShape.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PdfRoundRect      - Draw rounded rectangles
+    PdfEllipse        - Draw ellipses
+    PdfArc            - Draw elliptical arcs
+    PdfThreePointArc  - Draw arcs specified by three points
+    PdfBrushSegment   - Draw brush segments
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Convert GEOS vector primitives to PDF path operators.
+    Use bounded 16.16 fixed-point calculations.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Small vector primitives, independent of GEOS playback and document objects. */
 #include "pdfWriter.h"
 #ifdef PDF_HOST_TEST

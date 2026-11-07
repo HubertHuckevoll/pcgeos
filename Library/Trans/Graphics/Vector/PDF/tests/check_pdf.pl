@@ -1,4 +1,26 @@
 #!/usr/bin/env perl
+##############################################################################
+#
+# PROJECT:    PC/GEOS
+# MODULE:     PDF Host Regression Tests
+# FILE:       check_pdf.pl
+#
+# AUTHOR:     Codex/MeyerK, Nov 2026
+#
+# ROUTINES:
+#     main - Validate objects and page references in a PDF file
+#
+# REVISION HISTORY:
+#     Name            Date        Description
+#     ----            ----        -----------
+#     Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+#
+# DESCRIPTION:
+#     Check indirect stream lengths, cross-reference offsets and page lists.
+#     Do not rely on a PDF parser library.
+#
+##############################################################################
+
 # Independent check of byte offsets, stream lengths and page references.
 use strict;
 use warnings;

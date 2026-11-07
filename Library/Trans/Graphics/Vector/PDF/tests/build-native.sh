@@ -1,4 +1,26 @@
 #!/bin/sh
+##############################################################################
+#
+# PROJECT:    PC/GEOS
+# MODULE:     PDF Native Build Checks
+# FILE:       build-native.sh
+#
+# AUTHOR:     Codex/MeyerK, Nov 2026
+#
+# ROUTINES:
+#     main - Compile EC and NC variants using native GEOS tools
+#
+# REVISION HISTORY:
+#     Name            Date        Description
+#     ----            ----        -----------
+#     Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+#
+# DESCRIPTION:
+#     Build the PDF library, printer driver and test application.
+#     Keep generated build products outside the source tree.
+#
+##############################################################################
+
 # Build both GEOS variants without changing revision files or the source tree.
 # PATH must supply wcc, esp, glue, goc. GEOS_LDF_DIR supplies built SDK .ldf files.
 set -eu

@@ -1,3 +1,27 @@
+; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;
+; PROJECT:    PC/GEOS
+; MODULE:     Native PDF Translation Library
+; FILE:       pdf.def
+;
+; AUTHOR:     Codex/MeyerK, Nov 2026
+;
+; ROUTINES:
+; 	PDFCREATE            - Create a PDF job
+; 	PDFGSTRING           - Convert a graphics string
+; 	PDFDESTROY           - Finish and free the PDF job
+;
+; REVISION HISTORY:
+; 	Name            Date        Description
+; 	----            ----        -----------
+; 	Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+;
+; DESCRIPTION:
+; 	Declare the PDF library's external Pascal entry points.
+; 	The spooler retains ownership of the destination stream.
+;
+; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 ; Native PDF printer API, Pascal stack arguments, AX result.
 ; CREATE(token:word, strategy:fptr, width:word, height:word) -> job handle/0.
 ; STARTPAGE(job), ENDPAGE(job), DESTROY(job) -> 0 success, nonzero error.

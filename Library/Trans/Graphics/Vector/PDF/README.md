@@ -1,3 +1,24 @@
+<!--
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Printer
+FILE:       README.md
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Document the streaming PDF driver architecture, ABI and tests.
+    Record known limitations and integration decisions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-->
+
 # Native PDF printer, milestone 1 (issue #1160)
 
 This is a separate `pdf.drvr` printer and `pdf.lib` translation backend. It

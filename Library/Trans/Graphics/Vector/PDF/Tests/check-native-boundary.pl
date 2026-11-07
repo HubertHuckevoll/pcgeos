@@ -1,4 +1,27 @@
 #!/usr/bin/env perl
+##############################################################################
+#
+# PROJECT:    PC/GEOS
+# MODULE:     PDF Native Boundary Checks
+# FILE:       check-native-boundary.pl
+#
+# AUTHOR:     Codex/MeyerK, Nov 2026
+#
+# ROUTINES:
+#     source - Read an existing GEOS implementation file
+#     main   - Check native dispatcher and spooler error handling
+#
+# REVISION HISTORY:
+#     Name            Date        Description
+#     ----            ----        -----------
+#     Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+#
+# DESCRIPTION:
+#     Inspect relevant PC/GEOS source boundaries used by the PDF driver.
+#     Verify expected text-mask and spooler error-dispatch behavior.
+#
+##############################################################################
+
 # Execute the small native dispatch/error branches with distinct input states.
 use strict;
 use warnings;

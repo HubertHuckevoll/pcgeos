@@ -1,4 +1,26 @@
 #!/usr/bin/env perl
+##############################################################################
+#
+# PROJECT:    PC/GEOS
+# MODULE:     PDF Host Regression Tests
+# FILE:       check_path_pixels.pl
+#
+# AUTHOR:     Codex/MeyerK, Nov 2026
+#
+# ROUTINES:
+#     main - Check representative path and clipping pixel samples
+#
+# REVISION HISTORY:
+#     Name            Date        Description
+#     ----            ----        -----------
+#     Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+#
+# DESCRIPTION:
+#     Verify holes, clipping and path transform behavior in rendered pages.
+#     Use interior pixels away from antialiasing edges.
+#
+##############################################################################
+
 # One interior sample per visible path/clip behavior, away from antialias edges.
 use strict;use warnings;
 for my $page (1,2) {

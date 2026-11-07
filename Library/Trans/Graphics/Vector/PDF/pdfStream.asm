@@ -1,18 +1,24 @@
-COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-PROJECT:	PC/GEOS
-MODULE:		Native PDF printer
-FILE:		pdfStream.asm
-AUTHOR:		Codex/MeyerK
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfStream.asm
+
+AUTHOR:     Codex/MeyerK, Nov 2026
 
 ROUTINES:
-	PDFSTREAMWRITE    - send bounded bytes to the spooler
-	PDFTEXTWIDTHFIXED - fetch fractional text width
-	PDFGETDASH       - read line dash factors
+	PDFSTREAMWRITE       - Write bytes through the spooler stream
+	PDFTEXTWIDTHFIXED    - Fetch fractional GEOS text width
+	PDFGETDASH          - Return effective line dash factors
+
+REVISION HISTORY:
+	Name            Date        Description
+	----            ----        -----------
+	Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
 
 DESCRIPTION:
-	Bridge Watcom Pascal calls to GEOS stream and graphics routines.
-	The PDF library borrows the spooler's stream strategy and graphics state.
+	Bridge Pascal-style calls between Watcom C and GEOS assembly.
+	Access the spooler's stream strategy and graphics state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 

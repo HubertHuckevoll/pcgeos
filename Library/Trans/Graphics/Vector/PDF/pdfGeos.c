@@ -1,3 +1,30 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfGeos.c
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PDFCREATE       - Create a PDF job context
+    PDFSTARTPAGE    - Begin a physical page
+    PDFSETTRANSFORM - Set the page transformation
+    PDFGSTRING      - Translate a GEOS graphics string
+    PDFENDPAGE      - Close the current page
+    PDFDESTROY      - Finish and release the job
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Translate GEOS GString records into PDF drawing operations.
+    Use the kernel to maintain the graphics state and transforms.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* GEOS adapter and GString translator. Kernel playback maintains attributes,
  * current position and transforms; only output primitives are serialized here.
  * No raw GString byte stream is interpreted without GrGetGStringElement.

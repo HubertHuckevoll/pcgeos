@@ -1,18 +1,24 @@
-COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-PROJECT:	PC/GEOS
-MODULE:		Native PDF printer
-FILE:		pdfManager.asm
-AUTHOR:		Codex/MeyerK
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Printer Driver
+FILE:       pdfManager.asm
+
+AUTHOR:     Codex/MeyerK, Nov 2026
 
 ROUTINES:
-	DriverStrategy - common print entry
-	PrintInit       - initialize the driver
-	PrintSwath      - reject unsupported raster output
+	DriverStrategy       - Standard printer driver dispatch
+	PrintInit            - Initialize the printer driver
+	PrintSwath           - Reject unsupported raster calls
+
+REVISION HISTORY:
+	Name            Date        Description
+	----            ----        -----------
+	Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
 
 DESCRIPTION:
-	Assemble the native PDF printer driver and its PrintCom entries.
-	The print spooler owns the destination stream and PState.
+	Set up the PrintCom entry points and PDL escape dispatch.
+	Include the PDF printer's job, page and device information modules.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 

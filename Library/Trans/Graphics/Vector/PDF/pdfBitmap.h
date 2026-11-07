@@ -1,3 +1,26 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     Native PDF Translation Library
+FILE:       pdfBitmap.h
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    PdfBitmapSlice  - Validated bitmap slice description
+    PdfBitmapReader - Source bitmap read/decompression state
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Declare the GEOS bitmap parsing and row-reader interface.
+    Callers supply bounded decompression workspace.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* GEOS bitmap source adapter. It validates storage independently of PDF syntax.
  * Decompression belongs here; source flags must not reach the PDF serializer. */
 #ifndef PDF_BITMAP_H

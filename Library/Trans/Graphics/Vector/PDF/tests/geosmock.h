@@ -1,3 +1,26 @@
+/*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:    PC/GEOS
+MODULE:     PDF Host Regression Tests
+FILE:       geosmock.h
+
+AUTHOR:     Codex/MeyerK, Nov 2026
+
+FUNCTIONS:
+    MockSegment - Map test pointers to mock GEOS segments
+    GrCreateState - Simulated graphics state API
+
+REVISION HISTORY:
+    Name            Date        Description
+    ----            ----        -----------
+    Codex/MeyerK    11/07/26    Add GeoWorks-style module header.
+
+DESCRIPTION:
+    Define the minimal packed GEOS ABI types used by the host tests.
+    Native compilation uses the real GEOS headers instead.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
 /* Minimal GEOS ABI test double. Native compilation uses the real CInclude.
  * Wire structures are packed exactly like Watcom -zp1, never host enums. */
 #ifndef PDF_GEOS_MOCK_H
