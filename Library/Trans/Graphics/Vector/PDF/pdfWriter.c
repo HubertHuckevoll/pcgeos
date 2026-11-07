@@ -68,6 +68,20 @@ static void reference(PdfDocument *p, PdfWord id)
 {
     PdfUnsigned(p, id); PdfRaw(p, " 0 R ");
 }
+/* Retained geometry supplies a native point-transform callback. Ordinary
+ * writer primitives use their existing caller CTM and leave it unset. */
+void _pascal PdfPathPoint(PdfDocument *p, PdfFixed x, PdfFixed y)
+{
+    if (p->pathTransform) p->pathTransform(p, &x, &y);
+    PdfNumber(p, x); PdfNumber(p, y);
+}
+void _pascal PdfPathRect(PdfDocument *p, PdfFixed x1, PdfFixed y1, PdfFixed x2, PdfFixed y2)
+{
+    PdfPathPoint(p, x1, y1); PdfRaw(p, "m ");
+    PdfPathPoint(p, x2, y1); PdfRaw(p, "l ");
+    PdfPathPoint(p, x2, y2); PdfRaw(p, "l ");
+    PdfPathPoint(p, x1, y2); PdfRaw(p, "l h\n");
+}
 void PdfBegin(PdfDocument *p)
 {
     PdfWord i;
@@ -113,8 +127,15 @@ void PdfPageMatrix(PdfDocument *p, const PdfFixed *m)
 {
     int i;
     if (!p->inPage || p->transformed) { p->error = PDF_STATE_ERROR; return; }
-    for (i = 0; i < 6; ++i) PdfNumber(p, m[i]);
-    PdfRaw(p, "cm\n"); p->transformed = 1;
+    for (i = 0; i < 6; ++i) p->pageMatrix[i] = m[i];
+    p->transformed = 1;
+}
+void PdfApplyPageMatrix(PdfDocument *p)
+{
+    int i;
+    if (!p->inPage || !p->transformed) { p->error = PDF_STATE_ERROR; return; }
+    for (i = 0; i < 6; ++i) PdfNumber(p, p->pageMatrix[i]);
+    PdfRaw(p, "cm\n");
 }
 void PdfEndPage(PdfDocument *p)
 {
@@ -129,7 +150,7 @@ void PdfEndPage(PdfDocument *p)
     object(p, (PdfWord)(id + 2));
     PdfRaw(p, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ");
     PdfUnsigned(p, p->width); PdfRaw(p, " "); PdfUnsigned(p, p->height);
-    PdfRaw(p, "] /Resources << /ProcSet [/PDF /Text /ImageB /ImageC] /Font << ");
+    PdfRaw(p, "] /Resources << /ProcSet [/PDF /Text /ImageB /ImageC /ImageI] /Font << ");
     for (i = 0; i < PDF_FONT_COUNT; ++i) {
         PdfRaw(p, "/F"); PdfUnsigned(p, i); PdfRaw(p, " ");
         reference(p, (PdfWord)(3 + i));

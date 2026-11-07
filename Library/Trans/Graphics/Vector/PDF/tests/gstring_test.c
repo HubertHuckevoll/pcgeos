@@ -1,6 +1,7 @@
 /* Exercise the actual GEOS adapter, dispatcher and serializer, with a small
  * kernel double. This does not substitute for a live spooler/GEOS smoke test. */
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +38,8 @@ typedef struct {
 static MockPath paths[3], building;
 static MockFrame savedFrames[32], buildingFrame;
 static word saveDepth, buildingCombine;
-static int mainStateLive, pathStateLive, capturing;
+static int mainStateLive, pathStateLive, deviceStateLive, capturing;
+static TransMatrix deviceTransform;
 static TransMatrix pathTransform;
 static word pathX,pathY,pathXF,pathYF,pathCursor,pathReady;
 static const byte *farPointer, *pathSource;
@@ -82,13 +84,17 @@ static word rawSize(const byte *b)
 {
     switch(b[0]) {
     case GR_APPLY_TRANSFORM: case GR_SET_TRANSFORM: return 29;
-    case GR_MOVE_TO: case GR_DRAW_LINE_TO: case GR_DRAW_RECT_TO:
+    case GR_DRAW_POINT: case GR_MOVE_TO: case GR_DRAW_LINE_TO: case GR_DRAW_RECT_TO:
     case GR_DRAW_HLINE: case GR_DRAW_VLINE: return b[0]==GR_DRAW_HLINE || b[0]==GR_DRAW_VLINE ? 7 : 5;
     case GR_BEGIN_PATH: return 5;
     case GR_DRAW_LINE:case GR_DRAW_RECT:case GR_DRAW_ELLIPSE:
     case GR_FILL_RECT:case GR_FILL_ELLIPSE:case GR_MOVE_TO_WWFIXED: return 9;
     case GR_DRAW_ROUND_RECT:case GR_FILL_ROUND_RECT: return 11;
     case GR_DRAW_ROUND_RECT_TO:case GR_FILL_ROUND_RECT_TO:return 7;
+    case GR_DRAW_ARC: case GR_FILL_ARC:return 15;
+    case GR_DRAW_ARC_3POINT: case GR_FILL_ARC_3POINT:return 27;
+    case GR_DRAW_ARC_3POINT_TO: case GR_FILL_ARC_3POINT_TO:
+    case GR_DRAW_REL_ARC_3POINT_TO:return 19;
     case GR_DRAW_CURVE:return 17;
     case GR_DRAW_CURVE_TO:return 13;
     case GR_DRAW_REL_CURVE_TO:return 25;
@@ -96,6 +102,7 @@ static word rawSize(const byte *b)
     case GR_DRAW_SPLINE:case GR_DRAW_SPLINE_TO:return (word)(3+u16(b+1)*4);
     case GR_DRAW_POLYLINE:case GR_DRAW_POLYGON:return (word)(3+u16(b+1)*4);
     case GR_FILL_POLYGON:return (word)(4+u16(b+1)*4);
+    case GR_BRUSH_POLYLINE:return (word)(5+u16(b+1)*4);
     default:return 1;
     }
 }
@@ -198,6 +205,9 @@ word PDFSTREAMWRITE(word token, void (*strategy)(void), const void *data, word s
 GStateHandle GrCreateState(word w)
 {
     (void)w;
+    if(mainStateLive && (!pathSource || pathStateLive)) {
+        assert(!deviceStateLive);deviceStateLive=1;identity(&deviceTransform);return 102;
+    }
     if(mainStateLive){assert(!pathStateLive);pathStateLive=1;identity(&pathTransform);
         pathX=pathY=pathXF=pathYF=0;pathSaved=0;return 101;}
     mainStateLive=1;memset(paths,0,sizeof(paths));saveDepth=0;capturing=0;
@@ -209,12 +219,45 @@ GStateHandle GrCreateState(word w)
     return 100;
 }
 void GrDestroyState(GStateHandle gs)
-{ if(gs==101){assert(pathStateLive);pathStateLive=pathSaved=0;}
+{ if(gs==102){assert(deviceStateLive);deviceStateLive=0;}
+  else if(gs==101){assert(pathStateLive);pathStateLive=pathSaved=0;}
   else {assert(gs==100 && mainStateLive && !pathStateLive && !capturing);mainStateLive=0;} }
 void GrGetTransform(GStateHandle gs, TransMatrix *t) { *t=gs==101 ? pathTransform : transform; }
+void GrSetTransform(GStateHandle gs,const TransMatrix *t)
+{ assert(gs==102 && deviceStateLive);deviceTransform=*t; }
+void GrTransformDWFixed(GStateHandle gs,PointDWFixed *point)
+{
+    TransMatrix *t=gs==102 ? &deviceTransform : (gs==101 ? &pathTransform : &transform);
+    int64_t x=(int64_t)point->PDF_x.DWF_int*65536+point->PDF_x.DWF_frac;
+    int64_t y=(int64_t)point->PDF_y.DWF_int*65536+point->PDF_y.DWF_frac;
+    int64_t dx=(x*fixed(t->TM_e11)+y*fixed(t->TM_e21))/65536+
+               (int64_t)t->TM_e31.DWF_int*65536+t->TM_e31.DWF_frac;
+    int64_t dy=(x*fixed(t->TM_e12)+y*fixed(t->TM_e22))/65536+
+               (int64_t)t->TM_e32.DWF_int*65536+t->TM_e32.DWF_frac;
+    point->PDF_x.DWF_int=(sdword)(dx>>16);point->PDF_x.DWF_frac=(word)dx;
+    point->PDF_y.DWF_int=(sdword)(dy>>16);point->PDF_y.DWF_frac=(word)dy;
+}
+void GrUntransformDWFixed(GStateHandle gs,PointDWFixed *point)
+{
+    TransMatrix *t=gs==102 ? &deviceTransform : (gs==101 ? &pathTransform : &transform);
+    double a=fixed(t->TM_e11)/65536.0,b=fixed(t->TM_e12)/65536.0;
+    double c=fixed(t->TM_e21)/65536.0,d=fixed(t->TM_e22)/65536.0;
+    double x=point->PDF_x.DWF_int+point->PDF_x.DWF_frac/65536.0;
+    double y=point->PDF_y.DWF_int+point->PDF_y.DWF_frac/65536.0;
+    int64_t dx,dy;
+    x-=t->TM_e31.DWF_int+t->TM_e31.DWF_frac/65536.0;
+    y-=t->TM_e32.DWF_int+t->TM_e32.DWF_frac/65536.0;
+    assert(a*d-b*c);
+    dx=(int64_t)((d*x-c*y)/(a*d-b*c)*65536);
+    dy=(int64_t)((a*y-b*x)/(a*d-b*c)*65536);
+    point->PDF_x.DWF_int=(sdword)(dx>>16);point->PDF_x.DWF_frac=(word)dx;
+    point->PDF_y.DWF_int=(sdword)(dy>>16);point->PDF_y.DWF_frac=(word)dy;
+}
 dword GrGetLineColor(GStateHandle gs) { (void)gs; return 255; }
 dword GrGetAreaColor(GStateHandle gs) { (void)gs; return 0xff0000UL; }
 dword GrGetTextColor(GStateHandle gs) { (void)gs; return 0; }
+dword GrMapColorIndex(GStateHandle gs, byte index)
+{ assert(!gs);return (dword)index | (dword)index<<8 | (dword)index<<16; }
 dword GrGetLineWidth(GStateHandle gs) { (void)gs; return lineWidth; }
 void PDFGETDASH(GStateHandle gs,byte *dashP) { (void)gs;memcpy(dashP,dashInfo,12); }
 word GrGetLineEnd(GStateHandle gs) { (void)gs; return 0; }
@@ -301,6 +344,16 @@ void GrSetGStringPos(GStateHandle str, byte type, word skip)
 { (void)skip;assert(type==GSSPT_SKIP_1);
   if(str==2){pathCursor+=rawSize(pathSource+pathCursor);pathReady=0;}
   else {++cursor;ready=0;} }
+static void arcPen(GStateHandle gs,const byte *b)
+{
+    double rx=(s16(b+7)-s16(b+3))/2.0,ry=(s16(b+9)-s16(b+5))/2.0;
+    double a=s16(b+(u16(b+1)==ACT_OPEN ? 13 : 11))*3.14159265358979323846/180;
+    double t=atan2(rx*sin(a),ry*cos(a));
+    sword x=(sword)floor(s16(b+3)+rx+rx*cos(t)+0.5);
+    sword y=(sword)floor(s16(b+5)+ry-ry*sin(t)+0.5);
+    /* ArcSetCurPos rounds the selected endpoint to signed word coordinates. */
+    GrMoveToWWFixed(gs,(dword)(word)x<<16,(dword)(word)y<<16);
+}
 word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last)
 {
     const byte *b;
@@ -318,6 +371,15 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
                                ((dword)pathY<<16 | pathYF)+(dword)operandFixed(b+5));
         if(b[0]==GR_DRAW_CURVE){pathX=u16(b+13);pathY=u16(b+15);}
         if(b[0]==GR_DRAW_CURVE_TO){pathX=u16(b+9);pathY=u16(b+11);}
+        if(b[0]==GR_DRAW_ARC || b[0]==GR_FILL_ARC)arcPen(gs,b);
+        if(b[0]==GR_DRAW_ARC_3POINT || b[0]==GR_FILL_ARC_3POINT) {
+            word at=u16(b+1) ? 19 : 3;
+            GrMoveToWWFixed(gs,(dword)operandFixed(b+at),(dword)operandFixed(b+at+4));
+        }
+        if(b[0]==GR_DRAW_POINT){pathX=u16(b+1);pathY=u16(b+3);pathXF=pathYF=0;}
+        if(b[0]==GR_BRUSH_POLYLINE && u16(b+1)) {
+            word at=(word)(5+(u16(b+1)-1)*4);pathX=u16(b+at);pathY=u16(b+at+2);pathXF=pathYF=0;
+        }
         pathCursor+=rawSize(b);*last=pathSource[pathCursor];
         if(*last==GR_END_GSTRING){pathCursor=pathReady=0;return GSRT_COMPLETE;}
         return GSRT_ONE;
@@ -347,6 +409,18 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
     if (b[0]==GR_MOVE_TO) { cpX=u16(b+1);cpY=u16(b+3);cpFracX=cpFracY=0; }
     if (b[0]==GR_MOVE_TO_WWFIXED) {
         cpFracX=u16(b+1);cpX=u16(b+3);cpFracY=u16(b+5);cpY=u16(b+7);
+    }
+    if (b[0]==GR_DRAW_ARC || b[0]==GR_FILL_ARC)arcPen(gs,b);
+    if(b[0]==GR_DRAW_ARC_3POINT || b[0]==GR_FILL_ARC_3POINT) {
+        word at=u16(b+1) ? 19 : 3;
+        GrMoveToWWFixed(gs,(dword)operandFixed(b+at),(dword)operandFixed(b+at+4));
+    }
+    if(capturing && (b[0]==GR_DRAW_ARC_3POINT_TO || b[0]==GR_FILL_ARC_3POINT_TO ||
+       b[0]==GR_DRAW_REL_ARC_3POINT_TO) && u16(b+1))
+        GrMoveToWWFixed(gs,(dword)operandFixed(b+11),(dword)operandFixed(b+15));
+    if (b[0]==GR_DRAW_POINT)GrMoveTo(gs,s16(b+1),s16(b+3));
+    if(b[0]==GR_BRUSH_POLYLINE && u16(b+1)) {
+        word at=(word)(5+(u16(b+1)-1)*4);GrMoveTo(gs,s16(b+at),s16(b+at+2));
     }
     if (b[0]==GR_DRAW_LINE) { cpX=u16(b+5);cpY=u16(b+7); }
     ++cursor;
@@ -414,6 +488,7 @@ static void roundGStrings(void)
     }
 }
 static void putWord(byte *b, word n) { b[0]=(byte)n;b[1]=(byte)(n>>8); }
+static void putFixed(byte *b, PdfFixed n) { putWord(b,(word)n);putWord(b+2,(word)((dword)n>>16)); }
 static word bitmapRecord(byte *b, byte op, word format, word width, word height,
                          word complex, word first, word rows, word dpi, const byte *data)
 {
@@ -730,6 +805,241 @@ static void textHyphens(void)
     fractionalMetrics=0;trackAdvance=0;
 }
 
+static void deviceGStrings(void)
+{
+    byte brush[]={GR_BRUSH_POLYLINE,2,0,4,2,12,0,12,0,24,0,12,0};
+    byte dot[]={GR_DRAW_POINT,12,0,12,0},end[]={GR_END_GSTRING};
+    byte record[29]={GR_SET_TRANSFORM};
+    byte start[]={GR_BEGIN_PATH,PCT_REPLACE,0,0,0},finish[]={GR_END_PATH},stroke[]={GR_DRAW_PATH};
+    TransMatrix t;
+    MemHandle h;
+    char captured[8192];
+    size_t n;
+    unsigned i;
+    for(i=0;i<3;++i) {
+        out=tmpfile();assert(out);h=PDFCREATE(0,0,595,842);assert(h);
+        assert(PDFSTARTPAGE(h)==0);cursor=elementCount=0;
+        identity(&t);
+        if(i) {
+            /* Rotate/scale the physical page and scale the GString. The nib
+             * remains four by two device pixels, rather than scaling with it. */
+            t.TM_e11.WWF_int=t.TM_e22.WWF_int=0;t.TM_e12.WWF_int=2;t.TM_e21.WWF_int=-1;
+            t.TM_e31.DWF_int=100;
+        }
+        assert(PDFSETTRANSFORM(h,&t)==PDF_OK);
+        if(i) {
+            identity(&t);t.TM_e11.WWF_int=2;t.TM_e22.WWF_int=3;
+            memcpy(record+1,&t,sizeof(t));add(record,sizeof(record));
+        }
+        if(i==2)add(start,5);
+        add(brush,sizeof(brush));
+        if(i==2){add(finish,1);add(stroke,1);}
+        else {lineStyle=LS_DOTTED;lineWidth=500L*65536;}
+        add(dot,sizeof(dot));add(end,1);
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);
+        assert(!deviceStateLive && !live);
+        rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;fclose(out);
+        assert(strstr(captured,"0.24 0 0 0.24 0 0 cm"));
+        assert(strstr(captured,i ? "267 200 4 202 re f" : "50 50 54 2 re f"));
+        assert(strstr(captured,i ? "267 200 1 1 re f" : "50 50 1 1 re f"));
+    }
+}
+static void threePointGStrings(void)
+{
+    byte arc[27],move[9]={GR_MOVE_TO_WWFIXED},end[]={GR_END_GSTRING};
+    byte tail[]={GR_DRAW_LINE_TO,40,0,40,0};
+    byte beginPath[]={GR_BEGIN_PATH,PCT_REPLACE,0,0,0},endPath[]={GR_END_PATH};
+    byte stroke[]={GR_DRAW_PATH};
+    const byte ops[]={GR_DRAW_ARC_3POINT,GR_FILL_ARC_3POINT,GR_DRAW_ARC_3POINT_TO,
+                      GR_FILL_ARC_3POINT_TO,GR_DRAW_REL_ARC_3POINT_TO};
+    char captured[4096];
+    size_t n;
+    unsigned i;
+    word size;
+    MemHandle h;
+    putFixed(move+1,200L*65536);putFixed(move+5,100L*65536);
+    for(i=0;i<sizeof(ops);++i) {
+        memset(arc,0,sizeof(arc));arc[0]=ops[i];arc[1]=ACT_CHORD;
+        size=i<2 ? 27 : 19;
+        if(i<2) { putFixed(arc+3,200L*65536);putFixed(arc+7,100L*65536); }
+        putFixed(arc+(i<2 ? 11 : 3),(i==4 ? -100L : 100L)*65536);
+        putFixed(arc+(i<2 ? 15 : 7),(i==4 ? -100L : 0L)*65536);
+        putFixed(arc+(i<2 ? 19 : 11),(i==4 ? -200L : 0L)*65536);
+        putFixed(arc+(i<2 ? 23 : 15),i==4 ? 0 : 100L*65536);
+        out=tmpfile();assert(out);h=begin();add(move,9);add(arc,size);add(tail,5);add(end,1);
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);
+        rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;fclose(out);
+        assert(strstr(captured,"200 100 m") && strstr(captured,"100 0 c"));
+        assert(strstr(captured,i==4 ? "-200 0 m 40 40 l" : "0 100 m 40 40 l"));
+        out=tmpfile();assert(out);h=begin();add(move,9);add(beginPath,5);add(arc,size);
+        add(tail,5);add(endPath,1);add(stroke,1);add(end,1);
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);
+        assert(!live && !pathStateLive && !mainStateLive);fclose(out);
+    }
+    for(i=0;i<3;++i) {
+        arc[0]=i==2 ? GR_FILL_ARC_3POINT_TO : GR_DRAW_ARC_3POINT_TO;
+        arc[1]=i==1 ? 3 : ACT_OPEN;
+        out=tmpfile();assert(out);h=begin();add(arc,i ? 19 : 18);add(end,1);
+        assert(PDFGSTRING(h,1,0)==GSRT_FAULT);assert(PDFDESTROY(h)==PDF_STATE_ERROR);
+        assert(!live);fclose(out);
+    }
+}
+static void arcPointGStrings(void)
+{
+    byte arc[]={GR_DRAW_ARC,ACT_OPEN,0,10,0,20,0,210,0,120,0,0,0,90,0};
+    byte dot[]={GR_DRAW_POINT,25,0,35,0},dotCP[]={GR_DRAW_POINT_CP};
+    byte end[]={GR_END_GSTRING},lineTo[]={GR_DRAW_LINE_TO,10,0,20,0};
+    byte beginPath[]={GR_BEGIN_PATH,PCT_REPLACE,0,0,0},endPath[]={GR_END_PATH};
+    byte close[]={GR_CLOSE_SUB_PATH},stroke[]={GR_DRAW_PATH};
+    MemHandle h;
+    char captured[4096];
+    size_t n;
+    unsigned i;
+    out=tmpfile();assert(out);h=begin();mask=0;lineStyle=LS_CUSTOM;
+    add(dot,sizeof(dot));add(dotCP,1);add(end,1);
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;fclose(out);
+    assert(strstr(captured,"0 0 1 rg") && strstr(captured,"104 146 1 1 re f"));
+    mask=SDM_100;lineStyle=LS_SOLID;
+    /* An open arc and LineTo share a subpath; CloseSubPath restores its start. */
+    out=tmpfile();assert(out);h=begin();add(beginPath,5);add(arc,15);add(lineTo,5);
+    add(close,1);add(lineTo,5);add(endPath,1);add(stroke,1);add(end,1);
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);assert(PDFENDPAGE(h)==0);assert(PDFDESTROY(h)==0);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;fclose(out);
+    assert(strstr(captured,"210 70 m") && strstr(captured,"110 20 c"));
+    assert(strstr(captured,"10 20 l\n") && !strstr(captured,"110 20 m"));
+    for(i=0;i<3;++i) {
+        out=tmpfile();assert(out);h=begin();
+        arc[0]=i==1 ? GR_FILL_ARC : GR_DRAW_ARC;arc[1]=i==2 ? 3 : ACT_OPEN;
+        add(arc,i ? 15 : 14);add(end,1);
+        assert(PDFGSTRING(h,1,0)==GSRT_FAULT);assert(PDFDESTROY(h)==PDF_STATE_ERROR);
+        assert(!live && !pathStateLive && !mainStateLive);fclose(out);
+    }
+}
+static void maskedGStrings(void)
+{
+    byte record[40], indexed[41], end[]={GR_END_GSTRING};
+    byte *dataP;
+    byte pixels[]={0x80,255,0,0,0,255,0,0x40,0,0,255,255,255,0};
+    char captured[8192];
+    size_t n;
+    word codec, row, pos;
+    MemHandle h;
+    for(codec=0;codec<=2;++codec) {
+        memset(record,0,sizeof(record));record[0]=GR_DRAW_BITMAP;
+        putWord(record+7,2);putWord(record+9,2);record[11]=(byte)codec;record[12]=0x13;pos=13;
+        for(row=0;row<2;++row) {
+            if(codec)record[pos++]=codec==1 ? 6 : 0xfe;
+            memcpy(record+pos,pixels+row*7,7);pos+=7;
+            if(codec==2)record[pos++]=0x60;
+        }
+        putWord(record+5,(word)(pos-7));
+        out=tmpfile();assert(out);h=begin();add(record,pos);add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+        assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+        rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+        assert(strstr(captured,"0 0 1 1 re\n") && strstr(captured,"1 0 1 1 re\n"));
+        assert(strstr(captured,"FF000000FF00\n>\nEI"));fclose(out);
+    }
+    memset(indexed,0,sizeof(indexed));indexed[0]=GR_DRAW_BITMAP;putWord(indexed+5,34);
+    dataP=indexed+7;putWord(dataP,2);putWord(dataP+2,2);dataP[5]=0x5a;putWord(dataP+8,2);
+    putWord(dataP+12,28);putWord(dataP+14,20);putWord(dataP+16,72);putWord(dataP+18,72);
+    putWord(dataP+20,2);dataP[22]=255;dataP[26]=255;
+    dataP[28]=0x80;dataP[30]=255;dataP[31]=0x40;dataP[32]=255;dataP[33]=1;
+    out=tmpfile();assert(out);h=begin();add(indexed,sizeof(indexed));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+    assert(strstr(captured,"/Indexed /DeviceRGB 255 <FF000000FF00"));
+    assert(strstr(captured,"00FF\n>\nEI") && strstr(captured,"FF01\n>\nEI"));fclose(out);
+    out=tmpfile();assert(out);h=begin();failAllocation=allocations+2;
+    add(record,pos);add(end,sizeof(end));assert(PDFGSTRING(h,1,0)==GSRT_FAULT);
+    assert(PDFDESTROY(h)==PDF_LIMIT_ERROR);assert(!live);failAllocation=0;fclose(out);
+}
+
+static void compressedGStrings(void)
+{
+    byte record[32], end[]={GR_END_GSTRING};
+    byte wide[]={GR_DRAW_BITMAP,0,0,0,0,8,0,129,0,1,0,1,2,128,0x12};
+    byte pixels[]={255,0,0,0,255,0,0,0,255,255,255,0};
+    byte *data;
+    char captured[8192];
+    size_t n;
+    word codec, row, pos;
+    MemHandle h;
+    for(codec=1;codec<=2;++codec) {
+        memset(record,0,sizeof(record));record[0]=GR_DRAW_BITMAP;
+        data=record+7;putWord(data,2);putWord(data+2,2);data[4]=(byte)codec;data[5]=3;pos=13;
+        for(row=0;row<2;++row) {
+            record[pos++]=codec==1 ? 5 : 0xfc;
+            memcpy(record+pos,pixels+row*6,6);pos+=6;
+            if(codec==2)record[pos++]=0x60;
+        }
+        putWord(record+5,(word)(pos-7));
+        out=tmpfile();assert(out);h=begin();add(record,pos);add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+        assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+        rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+        assert(strstr(captured,"FF000000FF00\n0000FFFFFF00\n>\nEI"));fclose(out);
+    }
+    out=tmpfile();assert(out);h=begin();add(wide,sizeof(wide));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);fclose(out);
+    out=tmpfile();assert(out);h=begin();failAllocation=allocations+3;
+    add(wide,sizeof(wide));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_FAULT);assert(PDFDESTROY(h)==PDF_LIMIT_ERROR);
+    assert(!live);failAllocation=0;fclose(out);
+}
+
+static void indexedGStrings(void)
+{
+    byte simple[14]={GR_DRAW_BITMAP,0,0,0,0,7,0,1,0,1,0,0,1,0x1f};
+    byte intro[35], slice[27], repeated[35], end[]={GR_END_GSTRING};
+    byte *b;
+    char captured[8192];
+    size_t n;
+    word i;
+    MemHandle h;
+    for(i=1;i<=2;++i) {
+        simple[12]=(byte)i;out=tmpfile();assert(out);h=begin();
+        add(simple,sizeof(simple));add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+        assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+        rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+        assert(strstr(captured,i==1 ? "/Indexed /DeviceRGB 15 <000000010101" :
+                                    "/Indexed /DeviceRGB 255 <000000010101"));fclose(out);
+    }
+    memset(intro,0,sizeof(intro));intro[0]=GR_DRAW_BITMAP;putWord(intro+5,28);
+    b=intro+7;putWord(b,2);putWord(b+2,2);b[5]=0x4a;
+    putWord(b+12,28);putWord(b+14,20);putWord(b+16,72);putWord(b+18,72);
+    putWord(b+20,2);b[22]=255;b[26]=255; /* red, green */
+    memset(slice,0,sizeof(slice));slice[0]=GSE_BITMAP_SLICE;putWord(slice+1,24);
+    b=slice+3;putWord(b,2);putWord(b+2,2);b[5]=0x0a;putWord(b+8,2);
+    putWord(b+12,20);putWord(b+16,72);putWord(b+18,72);b[21]=b[22]=1;
+    out=tmpfile();assert(out);h=begin();
+    add(intro,sizeof(intro));add(slice,sizeof(slice));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);
+    assert(PDFENDPAGE(h)==PDF_OK);assert(PDFDESTROY(h)==PDF_OK);assert(!live);
+    rewind(out);n=fread(captured,1,sizeof(captured)-1,out);captured[n]=0;
+    assert(strstr(captured,"/Indexed /DeviceRGB 255 <FF000000FF00000000"));
+    assert(strstr(captured,"0001\n0100\n>\nEI"));fclose(out);
+    memset(repeated,0,sizeof(repeated));repeated[0]=GSE_BITMAP_SLICE;putWord(repeated+1,32);
+    memcpy(repeated+3,intro+7,28);putWord(repeated+11,2);memcpy(repeated+31,slice+23,4);
+    for(i=0;i<2;++i) {
+        if(i)repeated[25]=0; /* Changed palettes cannot share one PDF image. */
+        out=tmpfile();assert(out);h=begin();
+        add(intro,sizeof(intro));add(repeated,sizeof(repeated));add(end,sizeof(end));
+        assert(PDFGSTRING(h,1,0)==(i ? GSRT_FAULT : GSRT_COMPLETE));
+        if(!i)assert(PDFENDPAGE(h)==PDF_OK);
+        assert(PDFDESTROY(h)==(i ? PDF_UNSUPPORTED : PDF_OK));assert(!live);fclose(out);
+    }
+    /* The temporary default palette must fail cleanly when memory is short. */
+    out=tmpfile();assert(out);h=begin();failAllocation=allocations+2;
+    add(simple,sizeof(simple));add(end,sizeof(end));
+    assert(PDFGSTRING(h,1,0)==GSRT_FAULT);assert(PDFDESTROY(h)==PDF_LIMIT_ERROR);
+    assert(!live);failAllocation=0;fclose(out);
+}
+
 static void lineDashes(void)
 {
     byte builtin[]={GR_SET_LINE_STYLE,LS_DASHDOT,2};
@@ -932,7 +1242,7 @@ int main(int argc,char **argv)
     }
     out=tmpfile();streamCalls=0;failStream=1;
     assert(!PDFCREATE(0,0,595,842));assert(!live);failStream=0;fclose(out);
-    roundGStrings();bitmapGStrings();auditRegressions();textPrecision();textHyphens();lineDashes();
+    deviceGStrings();threePointGStrings();arcPointGStrings();roundGStrings();bitmapGStrings();indexedGStrings();compressedGStrings();maskedGStrings();auditRegressions();textPrecision();textHyphens();lineDashes();
     puts("gstring: pages, fields, solid patterns, shapes, bitmap/slice dispatch, clipping and cleanup passed");
     return 0;
 }

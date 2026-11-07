@@ -83,3 +83,12 @@ for my $flags (0..63) {
         or die "GrGetPath lost section flags $flags\n";
 }
 print "Native path copy: combine and all fill/coordinate flags preserved\n";
+
+my $pdf_header = source('Library/Trans/Graphics/Vector/PDF/pdfWriter.h');
+my $pdf_device = source('Driver/Printer/PDF/pdfDriverInfo.asm');
+$pdf_header =~ /#define PDF_DEVICE_DPI (\d+)/ or die "PDF DPI missing\n";
+my $dpi = $1;
+$pdf_device =~ /pdfGraphics GraphicsProperties <\Q$dpi\E, \Q$dpi\E,/
+    or die "PDF device grid differs from advertised printer DPI\n";
+$dpi == 300 or die "Update the exact 0.24-point device matrix for changed DPI\n";
+print "PDF device grid: 300 dpi agrees with driver properties\n";

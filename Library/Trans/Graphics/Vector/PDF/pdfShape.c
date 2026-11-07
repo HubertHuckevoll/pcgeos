@@ -1,12 +1,38 @@
 /* Small vector primitives, independent of GEOS playback and document objects. */
 #include "pdfWriter.h"
-#ifndef PDF_HOST_TEST
+#ifdef PDF_HOST_TEST
+#include <math.h>
+/* Host equivalents of the kernel fixed-point primitives. */
+static PdfFixed _pascal multiply(PdfFixed a, PdfFixed b)
+{
+    return (PdfFixed)floor((double)a * b / 65536.0);
+}
+static PdfFixed _pascal divide(PdfFixed a, PdfFixed b)
+{
+    return (PdfFixed)((double)a * 65536.0 / b);
+}
+static PdfFixed _pascal root(PdfFixed a)
+{
+    return (PdfFixed)sqrt((double)a * 65536.0);
+}
+static PdfFixed _pascal sine(int angle)
+{
+    /* GrQuickSine linearly interpolates the integer-degree sine table.
+     * This caller needs only integer angles. */
+    return (PdfFixed)(sin(angle * 3.14159265358979323846 / 180.0) * 65536.0);
+}
+#else
+#include <graphics.h>
 #pragma Code ("PdfCode")
+#define multiply(a,b) ((PdfFixed)GrMulWWFixed((a),(b)))
+#define divide(a,b) ((PdfFixed)GrUDivWWFixed((a),(b)))
+#define root(a) ((PdfFixed)GrSqrRootWWFixed(a))
+#define sine(a) ((PdfFixed)GrQuickSine((PdfDWord)(a) * 65536UL))
 #endif
 
 static void point(PdfDocument *p, PdfFixed x, PdfFixed y)
 {
-    PdfNumber(p, x); PdfNumber(p, y);
+    PdfPathPoint(p, x, y);
 }
 
 /* Multiply a nonnegative 16.16 radius by the quarter-circle control factor
@@ -36,6 +62,10 @@ void PdfRoundRect(PdfDocument *p, int x1, int y1, int x2, int y2,
     limit = (PdfWord)(((PdfFixed)y2 - y1) / 2);
     if (radius > limit) radius = limit;
     if (!radius) {
+        if (fill < 0) {
+            PdfPathRect(p, (PdfFixed)x1*65536L, (PdfFixed)y1*65536L,
+                        (PdfFixed)x2*65536L, (PdfFixed)y2*65536L); return;
+        }
         PdfInteger(p, x1); PdfInteger(p, y1);
         PdfInteger(p, (PdfFixed)x2 - x1); PdfInteger(p, (PdfFixed)y2 - y1);
         PdfRaw(p, fill < 0 ? "re\n" : (fill ? "re f\n" : "re S\n"));
@@ -76,8 +106,8 @@ void PdfEllipse(PdfDocument *p, int x1, int y1, int x2, int y2, int fill)
         /* Zero-area fills vanish; an outline collapses to a line/point.
          * Avoid a singular scaling matrix, including for collapsed ellipses. */
         if (fill <= 0) {
-            PdfInteger(p, x1); PdfInteger(p, y1); PdfRaw(p, "m ");
-            PdfInteger(p, x2); PdfInteger(p, y2); PdfRaw(p, fill < 0 ? "l\n" : "l S\n");
+            point(p, (PdfFixed)x1*65536L, (PdfFixed)y1*65536L); PdfRaw(p, "m ");
+            point(p, (PdfFixed)x2*65536L, (PdfFixed)y2*65536L); PdfRaw(p, fill < 0 ? "l\n" : "l S\n");
         }
         return;
     }
@@ -99,4 +129,321 @@ void PdfEllipse(PdfDocument *p, int x1, int y1, int x2, int y2, int fill)
     PdfRaw(p, "c\n");
     point(p, cx + kx, top); point(p, right, cy - ky); point(p, right, cy);
     PdfRaw(p, fill < 0 ? "c\nh\n" : (fill ? "c\nh f\n" : "c\nh S\n"));
+}
+
+/* Normalize with guard bits before squaring, including thin ellipses. */
+static void _pascal normalize(PdfFixed x, PdfFixed y, PdfFixed *xP, PdfFixed *yP)
+{
+    PdfFixed largest, length;
+    int negativeX = x < 0, negativeY = y < 0;
+    if (x == (-2147483647L - 1) || y == (-2147483647L - 1)) { x /= 2; y /= 2; }
+    if (negativeX) x = -x;
+    if (negativeY) y = -y;
+    largest = x > y ? x : y;
+    if (!largest) { *xP = *yP = 0; return; }
+    while (largest > 4194304L) { x >>= 1; y >>= 1; largest >>= 1; }
+    while (largest < 2097152L) { x <<= 1; y <<= 1; largest <<= 1; }
+    length = root(multiply(x, x) + multiply(y, y));
+    x = divide(x, length); y = divide(y, length);
+    if (x > 65536L) x = 65536L;
+    if (y > 65536L) y = 65536L;
+    *xP = negativeX ? -x : x; *yP = negativeY ? -y : y;
+}
+/* GEOS angles describe a ray from the center, not the ellipse parameter. */
+static void _pascal arcVector(PdfFixed rx, PdfFixed ry, int angle,
+                              PdfFixed *xP, PdfFixed *yP)
+{
+    int quadrant = angle / 90;
+    if (!(angle % 90)) {
+        *xP = quadrant == 0 ? 65536L : (quadrant == 2 ? -65536L : 0);
+        *yP = quadrant == 1 ? 65536L : (quadrant == 3 ? -65536L : 0);
+        return;
+    }
+    normalize(multiply(ry, sine((angle + 90) % 360)),
+              multiply(rx, sine(angle)), xP, yP);
+}
+static PdfFixed _pascal unit(PdfFixed v)
+{
+    return v < -65536L ? -65536L : (v > 65536L ? 65536L : v);
+}
+
+static PdfFixed _pascal coordinate(PdfDocument *p, PdfFixed base, PdfFixed delta)
+{
+    if ((delta > 0 && base > 0x7fffffffL - delta) ||
+        (delta < 0 && base < (-2147483647L - 1) - delta)) {
+        p->error = PDF_LIMIT_ERROR; return 0;
+    }
+    return base + delta;
+}
+/* Both arc forms split at axes, so their cubic controls stay in the bounds. */
+static void _pascal arcPiece(PdfDocument *p, PdfFixed cx, PdfFixed cy,
+                             PdfFixed rx, PdfFixed ry, PdfFixed x, PdfFixed y,
+                             PdfFixed nx, PdfFixed ny, int direction,
+                             const PdfFixed *endP)
+{
+    PdfFixed dot, cross, k, px, py;
+    dot = multiply(x, nx) + multiply(y, ny);
+    cross = (multiply(x, ny) - multiply(y, nx)) * direction;
+    if (dot < 0) dot = 0;
+    if (dot > 65536L) dot = 65536L;
+    if (cross < 0) cross = 0;
+    if (cross > 65536L) cross = 65536L;
+    /* k = 4/3 tan(delta/4), delta <= 90 degrees.
+     * ATTENTION: quarter-cubic approximation, as for PdfEllipse.
+     * Subdivide further if a smaller radial error is required. */
+    k = divide(cross, 65536L + dot + root(131072L + dot * 2));
+    k = ((k * 4 + 1) / 3) * direction;
+    px = coordinate(p, cx, multiply(rx, unit(x - multiply(k, y))));
+    py = coordinate(p, cy, -multiply(ry, unit(y + multiply(k, x))));
+    point(p, px, py);
+    px = coordinate(p, cx, multiply(rx, unit(nx + multiply(k, ny))));
+    py = coordinate(p, cy, -multiply(ry, unit(ny - multiply(k, nx))));
+    point(p, px, py);
+    if (endP) point(p, endP[0], endP[1]);
+    else {
+        px = coordinate(p, cx, multiply(rx, nx));
+        py = coordinate(p, cy, -multiply(ry, ny));
+        point(p, px, py);
+    }
+    PdfRaw(p, "c\n");
+}
+/***********************************************************************
+ *
+ * FUNCTION:    PdfArc
+ * DESCRIPTION: Append or paint a bounded GEOS elliptical arc.
+ * PARAMETERS:  Signed word bounds/angles, close=0 open, 1 chord, 2 pie;
+ *              fill=-1 appends geometry, 0 strokes, 1 fills; optional
+ *              startP receives the subpath start in two fixed coordinates.
+ * STRATEGY:    Split at quadrant boundaries. Endpoint vectors determine
+ *              cubic tangents without an inverse-trig approximation.
+ *
+ ***********************************************************************/
+void PdfArc(PdfDocument *p, int x1, int y1, int x2, int y2,
+             int start, int end, PdfWord close, int fill, PdfFixed *startP)
+{
+    PdfFixed cx, cy, rx, ry, x, y, nx, ny;
+    int swap, next, left, step;
+    if (p->error) return;
+    if (!p->inPage || close > 2 || (fill > 0 && !close)) {
+        p->error = PDF_STATE_ERROR; return;
+    }
+    if (x1 > x2) { swap = x1; x1 = x2; x2 = swap; }
+    if (y1 > y2) { swap = y1; y1 = y2; y2 = swap; }
+    cx = (PdfFixed)x1 * 32768L + (PdfFixed)x2 * 32768L;
+    cy = (PdfFixed)y1 * 32768L + (PdfFixed)y2 * 32768L;
+    rx = ((PdfFixed)x2 - x1) * 32768L;
+    ry = ((PdfFixed)y2 - y1) * 32768L;
+    start %= 360; if (start < 0) start += 360;
+    end %= 360; if (end < 0) end += 360;
+    left = end - start; if (left <= 0) left += 360;
+    arcVector(rx, ry, start, &x, &y);
+    if (startP) {
+        startP[0] = cx + multiply(rx, x); startP[1] = cy - multiply(ry, y);
+    }
+    point(p, cx + multiply(rx, x), cy - multiply(ry, y)); PdfRaw(p, "m\n");
+    while (left && !p->error) {
+        step = 90 - start % 90;
+        if (step > left) step = left;
+        next = (start + step) % 360;
+        arcVector(rx, ry, next, &nx, &ny);
+        arcPiece(p, cx, cy, rx, ry, x, y, nx, ny, 1, (void*)0);
+        x = nx; y = ny; start = next; left -= step;
+    }
+    if (close == 2) { point(p, cx, cy); PdfRaw(p, "l\n"); }
+    if (close) PdfRaw(p, "h\n");
+    if (fill >= 0) PdfRaw(p, fill ? "f\n" : "S\n");
+}
+
+static PdfDWord _pascal magnitude(PdfFixed v)
+{
+    return v < 0 ? 0UL - (PdfDWord)v : (PdfDWord)v;
+}
+static PdfDWord _pascal gcd(PdfDWord a, PdfDWord b)
+{
+    PdfDWord r;
+    while (b) { r = a % b; a = b; b = r; }
+    return a;
+}
+/* Exact collinearity, without overflowing products of 32-bit differences. */
+static int _pascal collinear(const PdfFixed *vP)
+{
+    PdfDWord a, b, c, d, g;
+    int sign1, sign2;
+    a = vP[2] >= vP[0] ? (PdfDWord)vP[2] - vP[0] : (PdfDWord)vP[0] - vP[2];
+    b = vP[3] >= vP[1] ? (PdfDWord)vP[3] - vP[1] : (PdfDWord)vP[1] - vP[3];
+    c = vP[4] >= vP[0] ? (PdfDWord)vP[4] - vP[0] : (PdfDWord)vP[0] - vP[4];
+    d = vP[5] >= vP[1] ? (PdfDWord)vP[5] - vP[1] : (PdfDWord)vP[1] - vP[5];
+    if ((!a && !b) || (!c && !d)) return 1;
+    sign1 = (vP[2] < vP[0]) != (vP[3] < vP[1]);
+    sign2 = (vP[4] < vP[0]) != (vP[5] < vP[1]);
+    g = gcd(a, b); a /= g; b /= g;
+    g = gcd(c, d); c /= g; d /= g;
+    return a == c && b == d && (!a || !b || sign1 == sign2);
+}
+static PdfFixed _pascal quotient(PdfDocument *p, PdfFixed a, PdfFixed b)
+{
+    PdfDWord result, numerator = magnitude(a), denominator = magnitude(b);
+    if (!denominator || numerator / denominator >= 32768UL) {
+        p->error = PDF_LIMIT_ERROR; return 0;
+    }
+    result = divide(numerator, denominator);
+    return (a < 0) != (b < 0) ? -(PdfFixed)result : (PdfFixed)result;
+}
+static PdfFixed _pascal unscale(PdfDocument *p, PdfFixed v, int shift)
+{
+    PdfDWord m = magnitude(v);
+    if (shift > 0) {
+        if (m > (0x7fffffffUL >> shift)) { p->error = PDF_LIMIT_ERROR; return 0; }
+        m <<= shift;
+    } else m >>= -shift;
+    return v < 0 ? -(PdfFixed)m : (PdfFixed)m;
+}
+/* Append a circular interval in the selected direction, splitting at axes. */
+static void _pascal circleInterval(PdfDocument *p, PdfFixed cx, PdfFixed cy,
+                                   PdfFixed radius, PdfFixed x, PdfFixed y,
+                                   PdfFixed nx, PdfFixed ny, int direction,
+                                   const PdfFixed *endP)
+{
+    PdfFixed ax, ay, cross, dot, remaining;
+    int i, last;
+    for (i = 0; i < 5 && !p->error; ++i) {
+        if (direction > 0) {
+            ax = y < 0 ? 65536L : (y > 0 ? -65536L : 0);
+            ay = !y ? (x > 0 ? 65536L : -65536L) : 0;
+            if (x > 0 && y > 0) { ax = 0; ay = 65536L; }
+            if (x < 0 && y < 0) { ax = 0; ay = -65536L; }
+        } else {
+            ax = y < 0 ? -65536L : (y > 0 ? 65536L : 0);
+            ay = !y ? (x > 0 ? -65536L : 65536L) : 0;
+            if (x < 0 && y > 0) { ax = 0; ay = 65536L; }
+            if (x > 0 && y < 0) { ax = 0; ay = -65536L; }
+        }
+        cross = (multiply(x, ny) - multiply(y, nx)) * direction;
+        dot = multiply(x, nx) + multiply(y, ny);
+        remaining = (multiply(nx, ay) - multiply(ny, ax)) * direction;
+        last = cross >= 0 && dot >= 0 && remaining >= 0;
+        if (last) { ax = nx; ay = ny; }
+        arcPiece(p, cx, cy, radius, radius, x, y, ax, ay, direction,
+                 last ? endP : (void*)0);
+        if (last) return;
+        x = ax; y = ay;
+    }
+    if (!p->error) p->error = PDF_STATE_ERROR;
+}
+
+/***********************************************************************
+ *
+ * FUNCTION:    PdfThreePointArc
+ * DESCRIPTION: Paint a circular arc through three fractional GEOS points.
+ * PARAMETERS:  pointsP holds x1,y1,x2,y2,x3,y3 in document coordinates.
+ * STRATEGY:    Fit the circle with bounded scaled chord vectors; emit the
+ *              two intervals through point2, using the shared arc cubics.
+ *              Collinear points form a line, as in the native kernel.
+ * CAVEATS:     ATTENTION: the fit and emitted operands use 16.16. A circle
+ *              outside that range, or a non-collinear determinant lost at
+ *              that precision, fails with PDF_LIMIT_ERROR. A wider native
+ *              fixed-point fitter can extend this without changing playback.
+ *
+ ***********************************************************************/
+void PdfThreePointArc(PdfDocument *p, const PdfFixed *pointsP, PdfWord close, int fill)
+{
+    PdfFixed d[4], ux, uy, vx, vy, cross, s, t, ox, oy, cx, cy, radius;
+    PdfFixed x, y, mx, my, nx, ny;
+    PdfDWord largest = 0, m;
+    int shift = 0, i, direction;
+    if (p->error) return;
+    if (!p->inPage || close > 2 || (fill > 0 && !close)) {
+        p->error = PDF_STATE_ERROR; return;
+    }
+    if (collinear(pointsP)) {
+        point(p, pointsP[0], pointsP[1]); PdfRaw(p, "m ");
+        point(p, pointsP[4], pointsP[5]); PdfRaw(p, "l\n");
+        if (close) PdfRaw(p, "h\n");
+        if (fill >= 0) PdfRaw(p, fill ? "f\n" : "S\n");
+        return;
+    }
+    for (i = 0; i < 4; ++i) {
+        m = pointsP[i+2] >= pointsP[i%2] ? (PdfDWord)pointsP[i+2] - pointsP[i%2] :
+                                                   (PdfDWord)pointsP[i%2] - pointsP[i+2];
+        if (m > largest) largest = m;
+    }
+    while (largest > 1048576UL) { largest >>= 1; ++shift; }
+    while (largest < 524288UL) { largest <<= 1; --shift; }
+    for (i = 0; i < 4; ++i) {
+        m = pointsP[i+2] >= pointsP[i%2] ? (PdfDWord)pointsP[i+2] - pointsP[i%2] :
+                                                   (PdfDWord)pointsP[i%2] - pointsP[i+2];
+        m = shift > 0 ? m >> shift : m << -shift;
+        d[i] = pointsP[i+2] < pointsP[i%2] ? -(PdfFixed)m : (PdfFixed)m;
+    }
+    ux = d[0]; uy = d[1]; vx = d[2]; vy = d[3];
+    cross = multiply(ux, vy) - multiply(uy, vx);
+    direction = cross < 0 ? 1 : -1; /* PDF construction uses mathematical Y. */
+    s = (multiply(ux, ux) + multiply(uy, uy)) / 2;
+    t = (multiply(vx, vx) + multiply(vy, vy)) / 2;
+    ox = quotient(p, multiply(s, vy) - multiply(t, uy), cross);
+    oy = quotient(p, multiply(t, ux) - multiply(s, vx), cross);
+    if (p->error) return;
+    normalize(-ox, oy, &x, &y);
+    radius = magnitude(x) >= magnitude(y) ? quotient(p, -ox, x) : quotient(p, oy, y);
+    radius = unscale(p, radius, shift);
+    cx = coordinate(p, pointsP[0], unscale(p, ox, shift));
+    cy = coordinate(p, pointsP[1], unscale(p, oy, shift));
+    mx = coordinate(p, ux, -ox); my = coordinate(p, oy, -uy);
+    nx = coordinate(p, vx, -ox); ny = coordinate(p, oy, -vy);
+    if (p->error) return;
+    normalize(mx, my, &mx, &my); normalize(nx, ny, &nx, &ny);
+    point(p, pointsP[0], pointsP[1]); PdfRaw(p, "m\n");
+    circleInterval(p, cx, cy, radius, x, y, mx, my, direction, pointsP+2);
+    circleInterval(p, cx, cy, radius, mx, my, nx, ny, direction, pointsP+4);
+    if (close == 2) { point(p, cx, cy); PdfRaw(p, "l\n"); }
+    if (close) PdfRaw(p, "h\n");
+    if (fill >= 0) PdfRaw(p, fill ? "f\n" : "S\n");
+}
+
+/* VidCom's DDA groups horizontal/vertical pixel runs. Brush coverage extends
+ * right/down, independently of line width, dashes, joins and end caps. */
+void PdfBrushSegment(PdfDocument *p, PdfFixed x1, PdfFixed y1,
+                      PdfFixed x2, PdfFixed y2, PdfWord width, PdfWord height)
+{
+    PdfFixed dx, dy, major, minor, error, at, run, end, minorAt;
+    PdfFixed left, top, runWidth, runHeight;
+    int alongX, majorSign, minorSign, bump;
+    if (p->error) return;
+    if (!p->inPage || !width || !height || width > 128 || height > 128) {
+        p->error = PDF_STATE_ERROR; return;
+    }
+    /* Coordinates come from signed 16.16 physical points at the device DPI.
+     * This bound also keeps doubled DDA differences safely inside 32 bits. */
+    if (magnitude(x1) > 32768UL*PDF_DEVICE_DPI/72+1 ||
+        magnitude(y1) > 32768UL*PDF_DEVICE_DPI/72+1 ||
+        magnitude(x2) > 32768UL*PDF_DEVICE_DPI/72+1 ||
+        magnitude(y2) > 32768UL*PDF_DEVICE_DPI/72+1) {
+        p->error = PDF_LIMIT_ERROR; return;
+    }
+    dx = x2 >= x1 ? x2-x1 : x1-x2;
+    dy = y2 >= y1 ? y2-y1 : y1-y2;
+    alongX = dx >= dy;
+    major = alongX ? dx : dy; minor = alongX ? dy : dx;
+    at = run = alongX ? x1 : y1; end = alongX ? x2 : y2;
+    minorAt = alongX ? y1 : x1;
+    majorSign = end >= at ? 1 : -1;
+    minorSign = (alongX ? y2 >= y1 : x2 >= x1) ? 1 : -1;
+    error = minor*2-major;
+    while (!p->error) {
+        /* Native ties depend on dominant-axis direction so reversing a line
+         * keeps the same covered pixels (vidcomLine.asm:DDA_X/DDA_Y). */
+        bump = error > 0 || (!error && majorSign > 0);
+        if (bump || at == end || !minor) {
+            if (!minor) at = end;
+            left = alongX ? (run < at ? run : at) : minorAt;
+            top = alongX ? minorAt : (run < at ? run : at);
+            runWidth = width + (alongX ? (at >= run ? at-run : run-at) : 0);
+            runHeight = height + (alongX ? 0 : (at >= run ? at-run : run-at));
+            PdfInteger(p, left); PdfInteger(p, top);
+            PdfInteger(p, runWidth); PdfInteger(p, runHeight); PdfRaw(p, "re f\n");
+            if (at == end) break;
+            run = at + majorSign; minorAt += minorSign; error -= major*2;
+        }
+        at += majorSign; error += minor*2;
+    }
 }

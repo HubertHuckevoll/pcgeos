@@ -2,6 +2,9 @@
 #ifndef PDF_WRITER_H
 #define PDF_WRITER_H
 #ifdef PDF_HOST_TEST
+#ifndef _pascal
+#define _pascal
+#endif
 #include <stdint.h>
 typedef uint16_t PdfWord;
 typedef uint32_t PdfDWord;
@@ -19,17 +22,22 @@ typedef sdword PdfFixed;
 #define PDF_FIRST_PAGE_OBJECT (3 + PDF_FONT_COUNT)
 #define PDF_MAX_OBJECTS (PDF_FIRST_PAGE_OBJECT + 3 * PDF_MAX_PAGES)
 #define PDF_BUFFER_SIZE 512
+#define PDF_DEVICE_DPI 300
 #define PDF_OK 0
 #define PDF_IO_ERROR 1
 #define PDF_LIMIT_ERROR 2
 #define PDF_STATE_ERROR 3
 #define PDF_UNSUPPORTED 4
+typedef void _pascal PdfPointTransform(void *context, PdfFixed *xP, PdfFixed *yP);
 /* All state is per job. The caller owns and locks this block while in use. */
 typedef struct {
     PdfWord token;
     void (*strategy)(void);
     PdfWord error, pages, inPage, finished, transformed, width, height, used, imageOpen;
     PdfDWord position, contentStart;
+    PdfFixed pageMatrix[6];
+    PdfWord deviceH, pathStateH, pathPaintH;
+    PdfPointTransform *pathTransform;
     PdfDWord offsets[PDF_MAX_OBJECTS];
     unsigned char buffer[PDF_BUFFER_SIZE];
 } PdfDocument;
@@ -39,10 +47,14 @@ void PdfRaw(PdfDocument *pdf, const char *text);
 void PdfUnsigned(PdfDocument *pdf, PdfDWord value);
 void PdfNumber(PdfDocument *pdf, PdfFixed value);
 void PdfInteger(PdfDocument *pdf, PdfFixed value);
+void _pascal PdfPathPoint(PdfDocument *pdf, PdfFixed x, PdfFixed y);
+void _pascal PdfPathRect(PdfDocument *pdf, PdfFixed x1, PdfFixed y1, PdfFixed x2, PdfFixed y2);
 void PdfFlush(PdfDocument *pdf);
 void PdfBegin(PdfDocument *pdf);
 void PdfBeginPage(PdfDocument *pdf);
+/* Set once per page; apply inside each object, after physical clipping. */
 void PdfPageMatrix(PdfDocument *pdf, const PdfFixed *matrix);
+void PdfApplyPageMatrix(PdfDocument *pdf);
 void PdfEndPage(PdfDocument *pdf);
 void PdfFinish(PdfDocument *pdf);
 void PdfColor(PdfDocument *pdf, PdfDWord rgb, int stroke);
@@ -51,6 +63,11 @@ void PdfColor(PdfDocument *pdf, PdfDWord rgb, int stroke);
 void PdfEllipse(PdfDocument *pdf, int x1, int y1, int x2, int y2, int fill);
 void PdfRoundRect(PdfDocument *pdf, int x1, int y1, int x2, int y2,
                   PdfWord radius, int fill);
+void PdfArc(PdfDocument *pdf, int x1, int y1, int x2, int y2,
+             int start, int end, PdfWord close, int fill, PdfFixed *startP);
+void PdfThreePointArc(PdfDocument *pdf, const PdfFixed *pointsP, PdfWord close, int fill);
+void PdfBrushSegment(PdfDocument *pdf, PdfFixed x1, PdfFixed y1,
+                      PdfFixed x2, PdfFixed y2, PdfWord width, PdfWord height);
 void PdfText(PdfDocument *pdf, PdfFixed x, PdfFixed y, PdfFixed size,
              PdfWord font, const unsigned char *text, PdfWord count);
 #endif

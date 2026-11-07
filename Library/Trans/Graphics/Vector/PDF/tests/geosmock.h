@@ -28,6 +28,7 @@ typedef struct { word WWF_frac; sword WWF_int; } WWFixed;
 typedef struct { byte WBF_frac; sword WBF_int; } WBFixed;
 typedef struct { word DWF_frac; sdword DWF_int; } DWFixed;
 typedef struct { WWFixed PF_x, PF_y; } PointWWFixed;
+typedef struct { DWFixed PDF_x, PDF_y; } PointDWFixed;
 typedef struct {
     WWFixed TM_e11, TM_e12, TM_e21, TM_e22;
     DWFixed TM_e31, TM_e32;
@@ -62,6 +63,9 @@ MemHandle GrGetPath(GStateHandle gs, word type);
 GStateHandle GrLoadGString(word segment, byte type, word offset);
 void GrDestroyGString(GStateHandle string, GStateHandle gs, byte type);
 void GrSetNullTransform(GStateHandle gs);
+void GrSetTransform(GStateHandle gs, const TransMatrix *t);
+void GrTransformDWFixed(GStateHandle gs, PointDWFixed *point);
+void GrUntransformDWFixed(GStateHandle gs, PointDWFixed *point);
 void GrEndPath(GStateHandle gs);
 void GrSaveState(GStateHandle gs);
 void GrRestoreState(GStateHandle gs);
@@ -97,6 +101,19 @@ void GrRestoreState(GStateHandle gs);
 #define GR_DRAW_REL_LINE_TO 34
 #define GR_DRAW_SPLINE 48
 #define GR_DRAW_SPLINE_TO 49
+#define GR_BRUSH_POLYLINE 57
+#define GR_DRAW_POINT 55
+#define GR_DRAW_POINT_CP 56
+#define GR_DRAW_ARC_3POINT 41
+#define GR_DRAW_ARC_3POINT_TO 42
+#define GR_DRAW_REL_ARC_3POINT_TO 43
+#define GR_FILL_ARC_3POINT 74
+#define GR_FILL_ARC_3POINT_TO 75
+#define GR_DRAW_ARC 40
+#define GR_FILL_ARC 70
+#define ACT_OPEN 0
+#define ACT_CHORD 1
+#define ACT_PIE 2
 #define GR_DRAW_REL_CURVE_TO 52
 #define GR_DRAW_HLINE 35
 #define GR_DRAW_HLINE_TO 36
@@ -168,6 +185,7 @@ void GrGetTransform(GStateHandle gs, TransMatrix *t);
 dword GrGetLineColor(GStateHandle gs);
 dword GrGetAreaColor(GStateHandle gs);
 dword GrGetTextColor(GStateHandle gs);
+dword GrMapColorIndex(GStateHandle gs, byte index);
 dword GrGetLineWidth(GStateHandle gs);
 word GrGetLineEnd(GStateHandle gs);
 word GrGetLineJoin(GStateHandle gs);

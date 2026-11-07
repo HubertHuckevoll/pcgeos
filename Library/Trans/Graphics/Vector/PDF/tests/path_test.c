@@ -78,7 +78,12 @@ int main(int argc,char **argv)
     add(transformRecord,29);add(startPath,5);add(transformedSquare,sizeof(transformedSquare));
     add(finishPath,1);add(fillWinding,2);add(finishString,1);
     assert(PDFGSTRING(h,1,0)==GSRT_COMPLETE);assert(PDFENDPAGE(h)==0);
-    assert(PDFSTARTPAGE(h)==0);identity(&identityMatrix);assert(PDFSETTRANSFORM(h,&identityMatrix)==0);
+    assert(PDFSTARTPAGE(h)==0);identity(&identityMatrix);
+    identityMatrix.TM_e11.WWF_int=identityMatrix.TM_e22.WWF_int=0;
+    identityMatrix.TM_e12.WWF_int=2;identityMatrix.TM_e21.WWF_int=-1;
+    identityMatrix.TM_e31.DWF_int=200;
+    assert(PDFSETTRANSFORM(h,&identityMatrix)==0);
+    identity(&identityMatrix);
     cursor=elementCount=0;
     identityMatrix.TM_e31.DWF_int=20;memcpy(transformRecord+1,&identityMatrix,sizeof(identityMatrix));
     add(transformRecord,29);add(firstClip,sizeof(firstClip));add(identityRecord,29);

@@ -27,14 +27,14 @@ int main(int argc, char **argv)
     assert(argc == 2);
     out = fopen(argv[1], "wb"); assert(out);
     init(&p);
-    PdfBeginPage(&p); PdfPageMatrix(&p, m);
+    PdfBeginPage(&p); PdfPageMatrix(&p, m); PdfApplyPageMatrix(&p);
     PdfRaw(&p, "q 1 0 0 RG 2 w 30 30 m 300 120 l S Q\n");
     PdfRaw(&p, "q 0 0 1 rg 60 180 140 80 re f Q\n");
     PdfText(&p, 60L * 65536, 150L * 65536, 18L * 65536, 0,
             (const unsigned char *)"Native PDF (GEOS) \\ page 1", 26);
     for (i = 0; i < 5000; ++i) PdfRaw(&p, "% streamed padding\n");
     PdfEndPage(&p);
-    PdfBeginPage(&p); PdfPageMatrix(&p, m);
+    PdfBeginPage(&p); PdfPageMatrix(&p, m); PdfApplyPageMatrix(&p);
     PdfRaw(&p, "30 30 m 80 20 160 220 300 200 c S\n");
     PdfText(&p, 60L * 65536, 150L * 65536, 18L * 65536, 1,
             (const unsigned char *)"Second page", 11);

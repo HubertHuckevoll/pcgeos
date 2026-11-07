@@ -16,9 +16,33 @@ static const struct { CBitmap header; byte rows[12]; } rgbBitmap = {
 /* The native dash ABI consumes byte factors despite the C word-array type. */
 static const byte customDash[] = {3,1,2,4};
 static const Point pathTriangle[] = {{430,480},{530,480},{480,580}};
+static const Point brushPoints[] = {{300,145},{340,155},{380,145},{420,160}};
+static const ThreePointArcParams threePointArc = {
+    ACT_CHORD, {{0x8000,60},{0,450}}, {{0x8000,160},{0,410}}, {{0x8000,260},{0,450}}
+};
 static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
     {{9,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_MONO},0,2,0,sizeof(CBitmap),0,9,9},
     {0x80,0x80,0x40,0}
+};
+static const struct { CBitmap header; word count; RGBValue colors[16]; byte rows[4]; } index4Bitmap = {
+    {{3,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMT_PALETTE | BMF_4BIT},0,2,0,70,20,3,2},
+    16, {{255,0,0},{0,255,0},{0,0,255},{255,255,0}}, {0x01,0x2f,0x32,0x1f}
+};
+static const struct { CBitmap header; byte rows[4]; } index8Bitmap = {
+    {{2,2,BMC_UNCOMPACTED,BMT_COMPLEX | BMF_8BIT},0,2,0,sizeof(CBitmap),0,2,2},
+    {4,2,1,14}
+};
+static const struct { CBitmap header; byte rows[4]; } packBitmap = {
+    {{16,2,BMC_PACKBITS,BMT_COMPLEX | BMF_MONO},0,2,0,sizeof(CBitmap),0,16,4},
+    {0xff,0xaa,0xff,0x55}
+};
+static const struct { CBitmap header; byte rows[12]; } lzgBitmap = {
+    {{4,2,BMC_LZG,BMT_COMPLEX | BMF_8BIT},0,2,0,sizeof(CBitmap),0,4,4},
+    {0xf0,4,2,1,14,0x60,0xf0,14,1,2,4,0x60}
+};
+static const struct { CBitmap header; byte rows[16]; } maskedBitmap = {
+    {{2,2,BMC_PACKBITS,BMT_COMPLEX | BMT_MASK | BMF_24BIT},0,2,0,sizeof(CBitmap),0,2,4},
+    {6,0x80,255,0,0,0,255,0,6,0x40,0,0,255,255,255,0}
 };
 
 @start Application;
@@ -59,8 +83,19 @@ static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
         GrDrawLine(gstate,50,50,300,120);
         GrSetAreaColor(gstate,CF_RGB,0,0,255);
         GrFillRect(gstate,60,180,200,260);
+        GrDrawArc(gstate,300,50,400,120,30,300,ACT_OPEN);
+        GrFillArc(gstate,430,50,530,120,30,300,ACT_PIE);
+        GrSetAreaColor(gstate,CF_RGB,0,0,255);
+        GrDrawPoint(gstate,425,135);
+        GrDrawPointAtCP(gstate);
+        GrSaveState(gstate);
+        GrSetLineStyle(gstate,LS_DOTTED,0,(const DashPairArray *)0,0);
+        GrBrushPolyline(gstate,brushPoints,4,3,8); /* Height/width: device pixels. */
+        GrRestoreState(gstate);
         GrDrawEllipse(gstate,60,300,260,400);
         GrFillEllipse(gstate,300,300,400,450);
+        GrFillArc3Point(gstate,&threePointArc);
+        GrDrawArc3Point(gstate,&threePointArc);
         GrDrawRoundRect(gstate,60,480,260,580,20);
         GrMoveTo(gstate,300,480);
         GrFillRoundRectTo(gstate,400,600,20);
@@ -69,6 +104,9 @@ static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
         GrEndPath(gstate);
         GrFillPath(gstate,ODD_EVEN);
         GrDrawPath(gstate);
+        GrSetAreaColor(gstate,CF_RGB,0,180,180);
+        GrFillRect(gstate,430,585,502,621);
+        GrDrawBitmap(gstate,430,585,(const Bitmap *)&maskedBitmap,0);
         GrSetTextColor(gstate,CF_RGB,0,0,0);
         GrSetFont(gstate,FID_DTC_URW_SANS,MakeWWFixed(18));
         GrSetTextMode(gstate,TM_DRAW_BASE,0);
@@ -78,6 +116,10 @@ static const struct { CBitmap header; byte rows[4]; } monoBitmap = {
         GrDrawText(gstate,60,615,"Soft: co\037operate / end\037",0);
         GrDrawText(gstate,60,635,"Nonbreaking: non\036breaking",0);
         GrDrawBitmap(gstate,60,650,(const Bitmap *)&rgbBitmap,0);
+        GrDrawBitmap(gstate,360,650,(const Bitmap *)&index4Bitmap,0);
+        GrDrawBitmap(gstate,450,650,(const Bitmap *)&index8Bitmap,0);
+        GrDrawBitmap(gstate,360,740,(const Bitmap *)&packBitmap,0);
+        GrDrawBitmap(gstate,450,740,(const Bitmap *)&lzgBitmap,0);
         GrSetAreaColor(gstate,CF_RGB,0,180,0);
         GrFillRect(gstate,200,650,272,666);
         GrSetAreaColor(gstate,CF_RGB,255,0,0);

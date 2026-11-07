@@ -96,6 +96,15 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
 * Lines, line-to, horizontal/vertical lines, rectangles, filled rectangles,
   polylines, polygons (both fill rules), cubic Bezier curves, outlined/filled
   ellipses and rounded rectangles (including current-position variants).
+  Points use area attributes and one physical 300 dpi pixel, independent of
+  page/GString scaling. Brush polylines preserve the native rectangular nib,
+  pixel DDA, line color/mask and packed byte dimensions; dashes, line width,
+  caps and joins do not change that nib.
+  Bounded elliptical arcs support open, chord and pie closure; filled arcs
+  require chord/pie. GEOS radial angles, wraparound and native pen updates
+  are preserved. Absolute, current-position and relative three-point circular
+  arcs also support open/chord/pie geometry, with fractional source points and
+  collinear fallback.
 * RGB fill/stroke/text colors; solid masks, line width/caps/joins/miter limit.
   Built-in and custom dash arrays use native byte factors, phase and current
   line width, including save/restore. Hairline dash spacing uses the same
@@ -118,21 +127,29 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
 * Independent native line/area/text masks and paint-time text-pattern checking,
   including patterns supplied through text-field and standalone TextAttr.
 * Balanced save/restore scopes (up to 31 nested saves). Retained native paths
-  support lines, polygons, curves, ellipses and rounded rectangles, with fill,
+  support lines, polygons, curves, points, all arc forms, ellipses and rounded rectangles, with fill,
   stroke, holes and transforms. Relative lines/curves and splines also have
   native output handlers.
 * Application and window path/rectangle clipping supports intersection,
   replacement and null clips, including replacement inside saved scopes.
   Clips are rebuilt at painting from the current native state, so there is
-  no second persistent PDF clip stack. Boolean union sections still fail
+  no second persistent PDF clip stack. Captured coordinates are transformed
+  with native GEOS APIs before serialization: fills/clips use physical page
+  coordinates, and strokes use the final painting state's coordinates. This
+  preserves rotated/scaled page clips and affine stroke widths without
+  changing the PDF CTM during path construction. Boolean union sections still fail
   explicitly; their native region conversion remains work to complete.
-* Uncompacted mono and RGB24 bitmaps: simple headers and complex sliced headers,
+* Mono, indexed 4-/8-bit and RGB24 bitmaps, uncompacted or using native
+  PackBits/LZG compression: simple headers and complex sliced headers,
   explicit DPI, DrawBitmap/DrawBitmapAtCP; FillBitmap/FillBitmapAtCP for mono.
   Empty introductory headers emitted by HugeBitmapToString are supported.
+  Indexed images support default GEOS colors and explicit RGB palettes,
+  including palette-only introductory slices and identical repeated palettes.
+  Stored masks are supported for all these formats and codecs. Pixel rows
+  remain packed; PDF indexed color spaces avoid a full RGB expansion buffer.
 
 This is a **restricted SBCS vector/text milestone**, not general document
-fidelity yet. Paletted/compacted bitmaps, stored bitmap masks, Boolean path
-unions, text inside retained paths, arcs, patterned fills,
+fidelity yet. Boolean path unions, text inside retained paths, patterned fills,
 non-copy mixing, embedded graphics in text fields, super/subscript and DBCS
 remain future work.
 Font shape fidelity beyond the standard-family substitution, full character
@@ -149,17 +166,19 @@ The bitmap pipeline separates **source storage**, **canonical rows**, and
 | Layer | Current contract | Extension point |
 | --- | --- | --- |
 | `PdfBitmapParse` | Validate the 6-byte Bitmap or 20-byte CBitmap, dimensions, row count, data offset and DPI | Recognize additional storage headers/flags without changing PDF objects |
-| `PdfBitmapReaderOpen` / `PdfBitmapNextRow` | Return borrowed, top-down canonical scanlines from one locked source slice; no extra allocation today | Palette expansion or bounded scanline decompression belongs here; keep encoded-row cursor and optional workspace in the reader |
-| `PdfImageBegin` / `PdfImageRow` / `PdfImageEnd` | Canonical stencil1/RGB24 rows, exact byte/row counts, ASCIIHex inline image | Additional PDF color spaces or encodings remain independent of GEOS storage; indexed input can initially expand to existing RGB24 rows |
+| `PdfBitmapReaderOpen` / `PdfBitmapNextRow` / `PdfBitmapNextChunk` | Borrow raw rows or decode compressed chunks from one source slice | Additional source codecs belong here |
+| `PdfImageBegin` / `PdfImageRow` / `PdfImageEnd` | Canonical stencil1, RGB24 and packed indexed rows; exact byte/row counts; ASCIIHex inline image | Additional encodings remain independent of GEOS storage |
 
 GEOS monochrome drawing is **not** an opaque black/white image: zero bits leave
 existing content alone. DrawBitmap paints set bits black, whereas FillBitmap
 paints them with the current area color (`graphicsRaster.asm` and the video
 driver's PutBWScan/FillBWScan). The writer therefore uses an inline image mask
-with `/IM true /D [1 0]`. This supports the inherent mono stencil and does not
-mean that separately stored `BMT_MASK` planes are implemented. Those are rejected;
-a later masked-color implementation can add a separate mask-plane path instead
-of changing opaque RGB samples into a guessed background color.
+with `/IM true /D [1 0]`. A stored `BMT_MASK` prefixes each canonical row
+with ceil(width/8) coverage bytes; a clear bit leaves the destination unchanged.
+Mono pixels still act as a stencil inside this coverage. Masked output uses
+small clipped inline-image tiles, keeping PDF 1.1 compatibility. Each tile holds
+at most 128 color bytes (126 for RGB), with at most 1024 mask-run rectangles.
+Empty coverage emits an empty clip. No background color is guessed.
 
 `pdfGeos.c` owns playback, per-object transform, clipping, area/mix checks,
 placement and the lifetime of each source slice. It explicitly consumes bitmap
@@ -177,18 +196,25 @@ slices must make progress. Missing, overlapping, reordered, mismatched and orpha
 slices fault. The GString slice-size word and the exact row-data length are
 checked before use. Currently slices share the existing 32,760-byte element
 limit; an entire image may exceed 64 KiB. Only one source slice is copied/locked
-at a time, plus a 65-byte hex conversion buffer. There is no full-image or
-additional scanline allocation. ASCIIHex output approximately doubles data size.
+at a time, plus a 65-byte hex conversion buffer. Indexed/masked input uses one
+owned block for its palette and one packed mask row: at most 8240 bytes combined,
+including at most 8192 mask bytes. Compressed input uses a separate 128-byte
+PackBits workspace or a 1152-byte LZG history/chunk workspace. Decoded chunks
+are at most 128 bytes and never cross a row. There is no full-image or
+full color-scanline allocation. Masked indexed images retain the palette until
+image end; opaque images need it only during image begin. ASCIIHex output
+approximately doubles data size. Repeating inline headers and indexed palettes
+for masked tiles adds output overhead.
 
 Physical dimensions are pixels*72/DPI, calculated with checked 32-bit integer
 arithmetic. The local image matrix corrects PDF's top-row orientation within
 GEOS's downward y axis, while retaining the caller's affine transform. The
-classic page resources declare ImageB/ImageC. Image lifetime is checked: a page
+classic page resources declare ImageB/ImageC/ImageI. Image lifetime is checked: a page
 cannot end inside an image, and partial or extra rows do not produce a successful
 trailer. No seek, external converter or new exported library function is needed.
 
-Remaining bitmap work: PackBits/LZG, indexed/palette formats, separately stored
-masks, pointer/optr records and colored FillBitmap semantics. Unsupported forms
+Remaining bitmap work: changing palettes between slices, pointer/optr records
+and colored FillBitmap semantics. Unsupported forms
 fail explicitly. This boundary allows those converters to be developed with
 source-row fixtures independently of the print driver and spooler.
 
@@ -200,6 +226,43 @@ the bitmaps exercise built-in and custom dashes. For automatic hyphens,
 print a GeoWrite paragraph with automatic hyphenation enabled and a narrow
 text column; check the line ends in the GEOS PDF viewer. Runtime verification
 is performed by the user; the automated checks do not start PC/GEOS.
+
+## Point and bounded-arc runtime check
+
+PDFPrint draws an open red elliptical arc and a filled blue pie near the top
+right, plus a blue point below them. The point is independent of line width.
+Bounded arcs use kernel fixed-point math and quadrant-sized cubic segments;
+no floating-point library or new geode dependency is needed. Retained open
+arcs keep their subpath start for later LineTo/CloseSubPath operations.
+Below the outlined ellipse, PDFPrint draws a blue three-point circular cap
+with a red outline. The fit uses bounded 16.16 chord arithmetic; circles or
+non-collinear determinants beyond that precision fail with PDF_LIMIT_ERROR.
+Kernel null-window playback omits pen setters for three-point To operations;
+the adapter preserves the recording branch's pen behavior explicitly. Following
+path To operations restart at that native pen if it differs from the curve end.
+PDFPrint also draws a continuous red brushed zigzag next to the page title.
+Its 8-by-3 pixel nib must stay continuous although the inherited line style is
+dotted. Points and brushes use the driver's advertised 300 dpi grid. Their
+positions include both the page and GString transforms; their pixel size stays
+physical. Captured brush fill/clipping uses the centerline, as in GEOS, while
+captured brush strokes retain the rectangular nib.
+
+## Indexed bitmap runtime check
+
+PDFPrint also draws a custom-palette 4-bit image and a default-palette 8-bit
+image at the lower right. Check their colors and orientation in the GEOS PDF
+viewer. Lookup tables are padded to the full sample range for that viewer;
+visible source pixel indices must still fit the actual palette entry count.
+PDFPrint also draws a masked PackBits RGB patch over cyan near the lower right:
+expect red at the top left, yellow at the bottom right, and cyan elsewhere.
+
+## Compressed bitmap runtime check
+
+Below the indexed images, PDFPrint draws a PackBits mono pattern and an LZG
+indexed image. Both stay inside the page clip. Source decompression validates
+row sizes and input bounds; LZG additionally checks history distances and end
+markers. No full scanline is needed, even for wide images. This changes input
+storage support; PDF output still uses the existing ASCIIHex stream.
 
 ## Build and verification
 
@@ -240,15 +303,22 @@ host-side development checks, not runtime dependencies.
 
 Bitmap checks cover simple/complex headers, CP/fill variants, empty intro slices,
 continuation validation, DPI, malformed payloads, every slice allocation failure,
-and streaming an image larger than a 16-bit block. Bitmap-only playback uses at most two owned heap blocks (job context and
-current element); path/clip playback can also hold one native snapshot and
-one snapshot element. Image tests inject
+and streaming an image larger than a 16-bit block. Compression checks cover
+GEOS PackBits runs, LZG token forms, overlapping matches, history wrap, row
+boundaries, truncation, trailing data and invalid back-references. The rendered
+RGB fixture is LZG input; the rendered indexed fixture uses PackBits. Bitmap-only
+playback uses two owned heap blocks (job context and
+current element) for plain mono/RGB input. Indexed/compressed playback can
+add one palette/mask block and one decoder workspace; path/clip playback can instead hold
+one native snapshot and one snapshot element. A single additional null-window
+GState is allocated lazily for the physical page transform, reused across the
+job, and freed during PDFDESTROY, including failed jobs. Image tests inject
 write failures and prevent premature page finalization. When Poppler is available,
 an independent Perl pixel oracle verifies exact RGB channel/row order, mono
 stencil polarity, transparent zero bits and non-byte-aligned widths. The GString
 fixture itself also contains mono/RGB images and is parsed/rendered independently.
 
-The shape module provides internal C functions `PdfEllipse` and `PdfRoundRect`;
+The shape module provides internal C functions `PdfEllipse`, `PdfRoundRect`, `PdfArc` and `PdfThreePointArc`;
 the printer and exported library API are unchanged. GString cases select
 stroke/area attributes and pass the bounds to them. Four cubic segments approximate an ellipse
 using 16.16 arithmetic and no floating point, allocations or local CTM scaling.
@@ -309,11 +379,11 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
 
 1. **This branch:** native streaming writer, PDL printer plumbing, basic
    vectors/text, native smoke application and development regression checks.
-2. Full clip/path fidelity, arcs, line styles, masks and patterns;
+2. Full clip/path fidelity, masks and patterns;
    broaden shape fixtures and complete live spooler/legacy-viewer validation.
 3. Font-family mapping, proper run metrics/justification, all GEOS characters,
    font embedding/subsetting and complex text-field graphics.
-4. Bitmap compression/palette/mask converters and optional XObject output.
+4. Changing palettes between slices; optional XObject output.
 5. Replace the bounded xref table with VM-backed metadata for larger jobs;
    optimize text translation and add packaging/localization/UI refinements.
 
