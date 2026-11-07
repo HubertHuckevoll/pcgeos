@@ -1,4 +1,4 @@
-; Pascal adapter to the spooler's stream strategy (including its file driver).
+	; Pascal adapter to the spooler's stream strategy (including its file driver).
 include geos.def
 include resource.def
 include heap.def
@@ -15,29 +15,83 @@ global PDFSTREAMWRITE:far
 global PDFTEXTWIDTHFIXED:far
 global PDFGETDASH:far
 PdfCode segment public 'CODE'
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		PDFSTREAMWRITE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Write bytes to the spooler stream.
+
+CALLED BY:	Printer driver interface
+
+PASS:		token, strategy, buffer, count on stack
+
+RETURN:		AX = zero on success
+
+DESTROYED:	See saved registers
+
+PSEUDO CODE/STRATEGY:
+		Check for stream error and short writes.
+
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
+		None documented here.
+
+REVISION HISTORY:
+	Name		Date		Description
+	----		----		-----------
+	Codex/MeyerK	11/07/26	Document interface
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 PDFSTREAMWRITE proc far token:word, strategy:fptr.far, buffer:fptr.byte, count:word
-        uses bx, cx, dx, si, di, ds, es
-        .enter
-        mov bx, token
-        mov cx, count
-        lds si, buffer
-        mov ax, STREAM_BLOCK
-        mov di, DR_STREAM_WRITE
-        call strategy
-        jc failed
-        cmp cx, count
-        jne failed
-        clr ax
-        jmp done
+	uses	bx, cx, dx, si, di, ds, es
+	.enter
+		mov	bx, token
+		mov	cx, count
+		lds	si, buffer
+		mov	ax, STREAM_BLOCK
+		mov	di, DR_STREAM_WRITE
+		call	strategy
+		jc	failed
+		cmp	cx, count
+		jne	failed
+		clr	ax
+		jmp	done
 failed:
-        mov ax, 1
+		mov	ax, 1
 done:
-        .leave
-        ret
+	.leave
+		ret
 PDFSTREAMWRITE endp
-;
-; C bridge to the native fractional string-width API. Return DX:AX as 16.16.
-;
+	;
+	; C bridge to the native fractional string-width API. Return DX:AX as 16.16.
+	;
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		PDFTEXTWIDTHFIXED
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Read native text width.
+
+CALLED BY:	Printer driver interface
+
+PASS:		gstate, text, count on stack
+
+RETURN:		DX:AX = fractional width
+
+DESTROYED:	See saved registers
+
+PSEUDO CODE/STRATEGY:
+		Use kernel text metrics.
+
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
+		None documented here.
+
+REVISION HISTORY:
+	Name		Date		Description
+	----		----		-----------
+	Codex/MeyerK	11/07/26	Document interface
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 PDFTEXTWIDTHFIXED proc far gstate:hptr, text:fptr.byte, count:word
 	uses	bx, cx, si, di, ds
 	.enter
@@ -49,10 +103,37 @@ PDFTEXTWIDTHFIXED proc far gstate:hptr, text:fptr.byte, count:word
 	.leave
 		ret
 PDFTEXTWIDTHFIXED endp
-;
-; GrGetLineStyle returns only the enum. Copy the effective native byte dash
-; factors so saved states, built-in patterns and custom patterns agree.
-;
+	;
+	; GrGetLineStyle returns only the enum. Copy the effective native byte dash
+	; factors so saved states, built-in patterns and custom patterns agree.
+	;
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		PDFGETDASH
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:	Read native dash factors.
+
+CALLED BY:	Printer driver interface
+
+PASS:		gstate, buffer on stack
+
+RETURN:		buffer receives dash data
+
+DESTROYED:	See saved registers
+
+PSEUDO CODE/STRATEGY:
+		Copy factors from the locked graphics state.
+
+KNOWN BUGS/SIDE EFFECTS/IDEAS:
+		None documented here.
+
+REVISION HISTORY:
+	Name		Date		Description
+	----		----		-----------
+	Codex/MeyerK	11/07/26	Document interface
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 PDFGETDASH proc far gstate:hptr, buffer:fptr.byte
 	uses	ax, bx, cx, si, di, ds, es
 	.enter

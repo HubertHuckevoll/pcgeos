@@ -1,5 +1,5 @@
-; Native PDF PDL printer. The spooler owns the output stream; pdf.lib owns
-; the per-job translation context in PS_expansionInfo. No shared job globals.
+	; Native PDF PDL printer. The spooler owns the output stream; pdf.lib owns
+	; the per-job translation context in PS_expansionInfo. No shared job globals.
 include printcomInclude.def
 UseLib pdf.def
 include printcomConstant.def
@@ -32,8 +32,8 @@ include printcomInfo.asm
 PrintInit proc near
 PrintExit label near
 PrintInitStream label near
-        clc
-        ret
+		clc
+		ret
 PrintInit endp
 escCodes word DR_PRINT_ESC_SET_PAGE_TRANSFORM, DR_PRINT_ESC_PRINT_GSTRING, DR_PRINT_ESC_GET_OUTPUT_FORMAT
 NUM_ESC_ENTRIES equ ($ - escCodes)/2
@@ -49,7 +49,7 @@ include pdfJob.asm
 include pdfPDL.asm
 include pdfInfo.asm
 
-; PDL jobs enter only via the two escapes. Reject raster/text/raw calls.
+	; PDL jobs enter only via the two escapes. Reject raster/text/raw calls.
 PrintSwath proc far
 PrintText label far
 PrintRaw label far
@@ -59,8 +59,8 @@ PrintSetCursor label far
 PrintGetCursor label far
 PrintGetLineSpacing label far
 PrintSetLineSpacing label far
-        stc
-        ret
+		stc
+		ret
 PrintSwath endp
 CommonCode ends
 include pdfDriverInfo.asm

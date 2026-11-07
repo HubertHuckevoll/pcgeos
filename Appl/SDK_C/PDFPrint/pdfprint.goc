@@ -69,9 +69,45 @@ static const struct { CBitmap header; byte rows[16]; } maskedBitmap = {
 }
 @end Interface;
 
+/***********************************************************************
+ *
+ * MESSAGE:     MSG_PRINT_GET_DOC_NAME
+ *
+ * DESCRIPTION: Set the print-test document name.
+ *
+ * PARAMETERS:  Standard print method context.
+ *
+ * STRATEGY:    Use the application's PrintControl.
+ *
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Test application only.
+ *
+ * REVISION HISTORY:
+ *      Codex/MeyerK 11/07/26 Document method.
+ *
+ ***********************************************************************/
+
 @method PDFPrintProcessClass, MSG_PRINT_GET_DOC_NAME {
     @send printCtrlOD::MSG_PRINT_CONTROL_SET_DOC_NAME("Native PDF smoke test");
 }
+/***********************************************************************
+ *
+ * MESSAGE:     MSG_PRINT_START_PRINTING
+ *
+ * DESCRIPTION: Draw two pages of test content.
+ *
+ * PARAMETERS:  Standard print method context.
+ *
+ * STRATEGY:    Use the application's PrintControl.
+ *
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Test application only.
+ *
+ * REVISION HISTORY:
+ *      Codex/MeyerK 11/07/26 Document method.
+ *
+ ***********************************************************************/
+
 @method PDFPrintProcessClass, MSG_PRINT_START_PRINTING {
     word page;
     @call printCtrlOD::MSG_PRINT_CONTROL_SET_TOTAL_PAGE_RANGE(1,2);

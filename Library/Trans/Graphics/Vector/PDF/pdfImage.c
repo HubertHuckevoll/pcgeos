@@ -17,19 +17,23 @@ PdfWord PdfImageRowBytes(const PdfImageSpec *spec, PdfWord *bytes)
     *bytes = (PdfWord)n;
     return PDF_OK;
 }
+
 static void imageHex(PdfDocument *p, const unsigned char *data, PdfWord bytes)
 {
     char encoded[65];
     PdfWord n, i, at = 0;
     unsigned char c;
     while (at < bytes && !p->error) {
-        n = (PdfWord)(bytes - at); if (n > 32) n = 32;
+        n = (PdfWord)(bytes - at);
+        if (n > 32) n = 32;
         for (i = 0; i < n; ++i) {
             c = data[at + i];
             encoded[2*i] = (char)((c >> 4) < 10 ? '0' + (c >> 4) : 'A' + (c >> 4) - 10);
             encoded[2*i+1] = (char)((c & 15) < 10 ? '0' + (c & 15) : 'A' + (c & 15) - 10);
         }
-        encoded[2*n] = 0; PdfRaw(p, encoded); at += n;
+        encoded[2*n] = 0;
+        PdfRaw(p, encoded);
+        at += n;
     }
 }
 /* Keep raster coordinates small: masked tiles have at most 1024 pixels.
@@ -40,33 +44,63 @@ static void inverse(PdfDocument *p, PdfWord divisor)
     PdfDWord remainder = 1;
     PdfWord i;
     if (divisor == 1) { PdfRaw(p, "1 "); return; }
-    number[0] = '0'; number[1] = '.';
+    number[0] = '0';
+    number[1] = '.';
     for (i = 0; i < 10; ++i) {
-        remainder *= 10; number[i+2] = (char)('0' + remainder / divisor);
+        remainder *= 10;
+        number[i+2] = (char)('0' + remainder / divisor);
         remainder %= divisor;
     }
-    number[12] = 0; PdfRaw(p, number); PdfRaw(p, " ");
+    number[12] = 0;
+    PdfRaw(p, number);
+    PdfRaw(p, " ");
 }
+
 static void imageHeader(PdfDocument *p, const PdfImageSpec *specP, PdfWord width, PdfWord height)
 {
     PdfWord paletteSize, i;
-    PdfRaw(p, "BI /W "); PdfUnsigned(p, width); PdfRaw(p, " /H "); PdfUnsigned(p, height);
+    PdfRaw(p, "BI /W ");
+    PdfUnsigned(p, width);
+    PdfRaw(p, " /H ");
+    PdfUnsigned(p, height);
     if (specP->format == PDF_IMAGE_STENCIL1) PdfRaw(p, " /IM true /BPC 1 /D [1 0]");
     else if (specP->format == PDF_IMAGE_RGB24) PdfRaw(p, " /CS /RGB /BPC 8");
     else {
         paletteSize = specP->format == PDF_IMAGE_INDEX4 ? 16 : 256;
-        PdfRaw(p, " /CS [/Indexed /DeviceRGB "); PdfUnsigned(p, paletteSize - 1);
-        PdfRaw(p, " <"); imageHex(p, specP->palette, specP->paletteEntries * 3);
+        PdfRaw(p, " /CS [/Indexed /DeviceRGB ");
+        PdfUnsigned(p, paletteSize - 1);
+        PdfRaw(p, " <");
+        imageHex(p, specP->palette, specP->paletteEntries * 3);
         /* The GEOS viewer precomputes every 2^BPC lookup. */
         for (i = specP->paletteEntries; i < paletteSize && !p->error; ++i) PdfRaw(p, "000000");
-        PdfRaw(p, ">] /BPC "); PdfUnsigned(p, specP->format == PDF_IMAGE_INDEX4 ? 4 : 8);
+        PdfRaw(p, ">] /BPC ");
+        PdfUnsigned(p, specP->format == PDF_IMAGE_INDEX4 ? 4 : 8);
     }
     PdfRaw(p, " /F /AHx\nID\n");
 }
+
 static int covered(const PdfImage *imageP, PdfWord pixel)
 {
     return !imageP->maskBytes || (imageP->maskP[pixel/8] & (128 >> (pixel & 7)));
 }
+/***********************************************************************
+ *
+ * FUNCTION:    imageTile
+ *
+ * DESCRIPTION: Encode one inline PDF image tile.
+ *
+ * PARAMETERS:  p = context; imageP = row and mask state.
+ *
+ * STRATEGY:    Write one indexed or masked tile.
+ *
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Keep tile buffers bounded.
+ *
+ * REVISION HISTORY:
+ *      Codex/MeyerK 11/07/26 Document routine.
+ *
+ ***********************************************************************/
+
 static void imageTile(PdfDocument *p, PdfImage *imageP)
 {
     PdfWord offset, bytes, pixel, pixels, x = 0, start, any = 0;
@@ -74,28 +108,57 @@ static void imageTile(PdfDocument *p, PdfImage *imageP)
     bytes = imageP->rowBytes - imageP->rowOffset;
     if (imageP->spec.format == PDF_IMAGE_RGB24) {
         if (bytes > 126) bytes = 126;
-        pixel = offset / 3; pixels = bytes / 3;
+        pixel = offset / 3;
+        pixels = bytes / 3;
     } else {
         if (bytes > 128) bytes = 128;
-        pixel = offset; pixels = bytes;
+        pixel = offset;
+        pixels = bytes;
         if (imageP->spec.format == PDF_IMAGE_STENCIL1) { pixel *= 8; pixels *= 8; }
         else if (imageP->spec.format == PDF_IMAGE_INDEX4) { pixel *= 2; pixels *= 2; }
         if (pixels > imageP->spec.width - pixel) pixels = imageP->spec.width - pixel;
     }
     imageP->tileLeft = bytes;
-    PdfRaw(p, "q 1 0 0 1 "); PdfInteger(p, pixel); PdfInteger(p, imageP->rows); PdfRaw(p, "cm\n");
+    PdfRaw(p, "q 1 0 0 1 ");
+    PdfInteger(p, pixel);
+    PdfInteger(p, imageP->rows);
+    PdfRaw(p, "cm\n");
     while (x < pixels && !p->error) {
         while (x < pixels && !covered(imageP, pixel+x)) ++x;
         start = x;
         while (x < pixels && covered(imageP, pixel+x)) ++x;
         if (x > start) {
-            PdfInteger(p, start); PdfRaw(p, "0 "); PdfInteger(p, x-start); PdfRaw(p, "1 re\n"); any = 1;
+            PdfInteger(p, start);
+            PdfRaw(p, "0 ");
+            PdfInteger(p, x-start);
+            PdfRaw(p, "1 re\n");
+            any = 1;
         }
     }
     if (!any) PdfRaw(p, "0 0 0 0 re\n");
-    PdfRaw(p, "W n\n"); PdfInteger(p, pixels); PdfRaw(p, "0 0 -1 0 1 cm\n");
+    PdfRaw(p, "W n\n");
+    PdfInteger(p, pixels);
+    PdfRaw(p, "0 0 -1 0 1 cm\n");
     imageHeader(p, &imageP->spec, pixels, 1);
 }
+/***********************************************************************
+ *
+ * FUNCTION:    imageBegin
+ *
+ * DESCRIPTION: Start an inline PDF image.
+ *
+ * PARAMETERS:  p = context; im = image state; spec = format.
+ *
+ * STRATEGY:    Initialize image geometry and inline PDF header.
+ *
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Reject invalid image dimensions or format.
+ *
+ * REVISION HISTORY:
+ *      Codex/MeyerK 11/07/26 Document routine.
+ *
+ ***********************************************************************/
+
 static void imageBegin(PdfDocument *p, PdfImage *im, const PdfImageSpec *spec,
                        int x, int y, PdfFixed width, PdfFixed height, unsigned char *maskP)
 {
@@ -108,42 +171,82 @@ static void imageBegin(PdfDocument *p, PdfImage *im, const PdfImageSpec *spec,
     if ((spec->format == PDF_IMAGE_INDEX4 || spec->format == PDF_IMAGE_INDEX8) &&
         (!spec->palette || !spec->paletteEntries ||
          spec->paletteEntries > (spec->format == PDF_IMAGE_INDEX4 ? 16 : 256))) {
-        p->error = PDF_STATE_ERROR; return;
+        p->error = PDF_STATE_ERROR;
+        return;
     }
-    im->spec = *spec; im->rowBytes = bytes; im->rows = 0; im->active = 1;
-    im->rowOffset = im->tileLeft = 0; im->maskP = maskP;
+    im->spec = *spec;
+    im->rowBytes = bytes;
+    im->rows = 0;
+    im->active = 1;
+    im->rowOffset = im->tileLeft = 0;
+    im->maskP = maskP;
     im->maskBytes = spec->masked ? (PdfWord)(((PdfDWord)spec->width + 7) / 8) : 0;
     p->imageOpen = 1;
-    PdfRaw(p, "q\n1 0 0 1 "); PdfInteger(p, x); PdfInteger(p, y); PdfRaw(p, "cm\n");
+    PdfRaw(p, "q\n1 0 0 1 ");
+    PdfInteger(p, x);
+    PdfInteger(p, y);
+    PdfRaw(p, "cm\n");
     if (im->maskBytes) {
-        PdfNumber(p, width); PdfRaw(p, "0 0 "); PdfNumber(p, height); PdfRaw(p, "0 0 cm\n");
-        inverse(p, spec->width); PdfRaw(p, "0 0 "); inverse(p, spec->height); PdfRaw(p, "0 0 cm\n");
+        PdfNumber(p, width);
+        PdfRaw(p, "0 0 ");
+        PdfNumber(p, height);
+        PdfRaw(p, "0 0 cm\n");
+        inverse(p, spec->width);
+        PdfRaw(p, "0 0 ");
+        inverse(p, spec->height);
+        PdfRaw(p, "0 0 cm\n");
     } else {
-        PdfNumber(p, width); PdfRaw(p, "0 0 "); PdfNumber(p, -height);
-        PdfRaw(p, "0 "); PdfNumber(p, height); PdfRaw(p, "cm\n");
+        PdfNumber(p, width);
+        PdfRaw(p, "0 0 ");
+        PdfNumber(p, -height);
+        PdfRaw(p, "0 ");
+        PdfNumber(p, height);
+        PdfRaw(p, "cm\n");
         imageHeader(p, spec, spec->width, spec->height);
         im->spec.palette = (const unsigned char *)0;
     }
 }
+
 void PdfImageBegin(PdfDocument *p, PdfImage *im, const PdfImageSpec *spec,
                    int x, int y, PdfFixed width, PdfFixed height)
 {
     imageBegin(p, im, spec, x, y, width, height, (unsigned char *)0);
 }
+
 void PdfImageBeginMasked(PdfDocument *p, PdfImage *im, const PdfImageSpec *spec,
                          int x, int y, PdfFixed width, PdfFixed height, unsigned char *maskP)
 {
     imageBegin(p, im, spec, x, y, width, height, maskP);
 }
+
 void PdfImageRow(PdfDocument *p, PdfImage *im, const unsigned char *row,
                  PdfWord bytes)
 {
     if (p->error) return;
     if (!p->imageOpen || !im->active || bytes != im->rowBytes || im->rowOffset) {
-        p->error = PDF_STATE_ERROR; return;
+        p->error = PDF_STATE_ERROR;
+        return;
     }
     PdfImageRowPart(p, im, row, bytes);
 }
+/***********************************************************************
+ *
+ * FUNCTION:    PdfImageRowPart
+ *
+ * DESCRIPTION: Encode a partial bitmap scanline.
+ *
+ * PARAMETERS:  p = context; im = row state; row/bytes = input.
+ *
+ * STRATEGY:    Validate and encode part of a scanline.
+ *
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              Invalid row bounds set the PDF error.
+ *
+ * REVISION HISTORY:
+ *      Codex/MeyerK 11/07/26 Document routine.
+ *
+ ***********************************************************************/
+
 void PdfImageRowPart(PdfDocument *p, PdfImage *im, const unsigned char *row,
                      PdfWord bytes)
 {
@@ -152,9 +255,12 @@ void PdfImageRowPart(PdfDocument *p, PdfImage *im, const unsigned char *row,
     if (!p->imageOpen || !im->active || im->rows >= im->spec.height ||
         !bytes || bytes > im->rowBytes - im->rowOffset || !row) { p->error = PDF_STATE_ERROR; return; }
     if (im->rowOffset < im->maskBytes) {
-        n = im->maskBytes - im->rowOffset; if (n > bytes) n = bytes;
+        n = im->maskBytes - im->rowOffset;
+        if (n > bytes) n = bytes;
         for (i = 0; i < n; ++i) im->maskP[im->rowOffset+i] = row[i];
-        im->rowOffset += n; row += n; bytes -= n;
+        im->rowOffset += n;
+        row += n;
+        bytes -= n;
         if (!bytes) return;
     }
     offset = im->rowOffset - im->maskBytes;
@@ -166,30 +272,41 @@ void PdfImageRowPart(PdfDocument *p, PdfImage *im, const unsigned char *row,
             if (index >= im->spec.paletteEntries && covered(im, pixel)) { p->error = PDF_STATE_ERROR; return; }
             if (im->spec.format == PDF_IMAGE_INDEX4 && pixel + 1 < im->spec.width &&
                 (row[i] & 15) >= im->spec.paletteEntries && covered(im, pixel+1)) {
-                p->error = PDF_STATE_ERROR; return;
+                p->error = PDF_STATE_ERROR;
+                return;
             }
         }
     }
     if (im->maskBytes) {
         while (bytes && !p->error) {
             if (!im->tileLeft) imageTile(p, im);
-            n = im->tileLeft; if (n > bytes) n = bytes;
-            imageHex(p, row, n); row += n; bytes -= n;
-            im->tileLeft -= n; im->rowOffset += n;
+            n = im->tileLeft;
+            if (n > bytes) n = bytes;
+            imageHex(p, row, n);
+            row += n;
+            bytes -= n;
+            im->tileLeft -= n;
+            im->rowOffset += n;
             if (!im->tileLeft) PdfRaw(p, "\n>\nEI\nQ\n");
         }
     } else { imageHex(p, row, bytes); im->rowOffset += bytes; }
     if (im->rowOffset == im->rowBytes) {
         if (!im->maskBytes) PdfRaw(p, "\n");
-        ++im->rows; im->rowOffset = 0;
+        ++im->rows;
+        im->rowOffset = 0;
     }
 }
+
 void PdfImageEnd(PdfDocument *p, PdfImage *im)
 {
     if (p->error) return;
     if (!p->imageOpen || !im->active || im->rows != im->spec.height || im->rowOffset || im->tileLeft) {
-        p->error = PDF_STATE_ERROR; return;
+        p->error = PDF_STATE_ERROR;
+        return;
     }
     PdfRaw(p, im->maskBytes ? "Q\n" : ">\nEI\nQ\n");
-    im->active = 0; p->imageOpen = 0; im->spec.palette = (const unsigned char *)0; im->maskP = (unsigned char *)0;
+    im->active = 0;
+    p->imageOpen = 0;
+    im->spec.palette = (const unsigned char *)0;
+    im->maskP = (unsigned char *)0;
 }
