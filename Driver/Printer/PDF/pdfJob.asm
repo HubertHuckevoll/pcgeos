@@ -42,7 +42,7 @@ PrintStartJob proc far
 		mov	{word}ds:[PS_printerType], ax
 		call	MemUnlock
 
-	; Reuse the paper settings already selected by the spooler.
+	; Initialize the file-only paper path and physical margins.
 		mov	al, ds:[PS_jobParams].JP_printerData.PUID_paperInput
 		mov	ah, ds:[PS_jobParams].JP_printerData.PUID_paperOutput
 		call	PrintSetPaperPath
