@@ -6,15 +6,21 @@
 #ifndef PDF_HOST_TEST
 #pragma Code ("PdfCode")
 #endif
+
 static void byteOut(PdfDocument *p, unsigned char c)
 {
     if (p->error) return;
-    if (p->position == 0xffffffffUL) { p->error = PDF_LIMIT_ERROR; return; }
+    if (p->position == 0xffffffffUL) {
+        p->error = PDF_LIMIT_ERROR;
+        return;
+    }
+
     p->buffer[p->used++] = c;
     ++p->position;
     if (p->used == PDF_BUFFER_SIZE) PdfFlush(p);
 }
 
+/* Commit only complete output chunks; remember stream errors in the job. */
 void PdfFlush(PdfDocument *p)
 {
     if (!p->error && p->used) {
@@ -32,14 +38,23 @@ void PdfUnsigned(PdfDocument *p, PdfDWord v)
 {
     char digits[10];
     int n = 0;
-    do { digits[n++] = (char)('0' + v % 10); v /= 10; } while (v);
+
+    do {
+        digits[n++] = (char)('0' + v % 10);
+        v /= 10;
+    } while (v);
     while (n) byteOut(p, (unsigned char)digits[--n]);
 }
 
 void PdfInteger(PdfDocument *p, PdfFixed v)
 {
     PdfDWord n = (PdfDWord)v;
-    if (v < 0) { byteOut(p, '-'); n = 0UL - n; }
+
+    if (v < 0) {
+        byteOut(p, '-');
+        n = 0UL - n;
+    }
+
     PdfUnsigned(p, n);
     byteOut(p, ' ');
 }
@@ -48,8 +63,13 @@ void PdfNumber(PdfDocument *p, PdfFixed v)
 {
     PdfDWord mag, frac;
     int i;
+
     mag = (PdfDWord)v;
-    if (v < 0) { byteOut(p, '-'); mag = 0UL - mag; }
+    if (v < 0) {
+        byteOut(p, '-');
+        mag = 0UL - mag;
+    }
+
     PdfUnsigned(p, mag >> 16);
     frac = mag & 65535UL;
     if (frac) {
@@ -61,12 +81,18 @@ void PdfNumber(PdfDocument *p, PdfFixed v)
             frac &= 65535UL;
         }
     }
+
     byteOut(p, ' ');
 }
 
+/* Xref offsets are recorded at object start, before any buffered bytes. */
 static void object(PdfDocument *p, PdfWord id)
 {
-    if (id >= PDF_MAX_OBJECTS) { p->error = PDF_LIMIT_ERROR; return; }
+    if (id >= PDF_MAX_OBJECTS) {
+        p->error = PDF_LIMIT_ERROR;
+        return;
+    }
+
     p->offsets[id] = p->position;
     PdfUnsigned(p, id);
     PdfRaw(p, " 0 obj\n");
@@ -77,6 +103,7 @@ static void reference(PdfDocument *p, PdfWord id)
     PdfUnsigned(p, id);
     PdfRaw(p, " 0 R ");
 }
+
 /* Retained geometry supplies a native point-transform callback. Ordinary
  * writer primitives use their existing caller CTM and leave it unset. */
 void _pascal PdfPathPoint(PdfDocument *p, PdfFixed x, PdfFixed y)
@@ -97,6 +124,7 @@ void _pascal PdfPathRect(PdfDocument *p, PdfFixed x1, PdfFixed y1, PdfFixed x2, 
     PdfPathPoint(p, x1, y2);
     PdfRaw(p, "l h\n");
 }
+
 /***********************************************************************
  *
  * FUNCTION:    PdfBegin
@@ -118,6 +146,7 @@ void _pascal PdfPathRect(PdfDocument *p, PdfFixed x1, PdfFixed y1, PdfFixed x2, 
 void PdfBegin(PdfDocument *p)
 {
     PdfWord i;
+
     p->position = 0;
     p->used = 0;
     p->pages = 0;
@@ -126,7 +155,11 @@ void PdfBegin(PdfDocument *p)
     p->finished = 0;
     p->transformed = 0;
     p->imageOpen = 0;
-    if (!p->width || !p->height) { p->error = PDF_STATE_ERROR; return; }
+    if (!p->width || !p->height) {
+        p->error = PDF_STATE_ERROR;
+        return;
+    }
+
     PdfRaw(p, "%PDF-1.1\n%\200\201\202\203\n");
     object(p, 1);
     PdfRaw(p, "<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
@@ -144,9 +177,11 @@ void PdfBegin(PdfDocument *p)
             else if ((i & 3) == 3) PdfRaw(p, i < 8 && i >= 4 ? "-BoldItalic" : "-BoldOblique");
             PdfRaw(p, " /Encoding /MacRomanEncoding");
         }
+
         PdfRaw(p, " >>\nendobj\n");
     }
 }
+
 /***********************************************************************
  *
  * FUNCTION:    PdfBeginPage
@@ -168,9 +203,18 @@ void PdfBegin(PdfDocument *p)
 void PdfBeginPage(PdfDocument *p)
 {
     PdfWord id;
+
     if (p->error) return;
-    if (p->inPage || p->finished) { p->error = PDF_STATE_ERROR; return; }
-    if (p->pages == PDF_MAX_PAGES) { p->error = PDF_LIMIT_ERROR; return; }
+    if (p->inPage || p->finished) {
+        p->error = PDF_STATE_ERROR;
+        return;
+    }
+
+    if (p->pages == PDF_MAX_PAGES) {
+        p->error = PDF_LIMIT_ERROR;
+        return;
+    }
+
     id = (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * p->pages);
     object(p, id);
     PdfRaw(p, "<< /Length ");
@@ -193,7 +237,12 @@ void PdfBeginPage(PdfDocument *p)
 void PdfPageMatrix(PdfDocument *p, const PdfFixed *m)
 {
     int i;
-    if (!p->inPage || p->transformed) { p->error = PDF_STATE_ERROR; return; }
+
+    if (!p->inPage || p->transformed) {
+        p->error = PDF_STATE_ERROR;
+        return;
+    }
+
     for (i = 0; i < 6; ++i) p->pageMatrix[i] = m[i];
     p->transformed = 1;
 }
@@ -201,10 +250,16 @@ void PdfPageMatrix(PdfDocument *p, const PdfFixed *m)
 void PdfApplyPageMatrix(PdfDocument *p)
 {
     int i;
-    if (!p->inPage || !p->transformed) { p->error = PDF_STATE_ERROR; return; }
+
+    if (!p->inPage || !p->transformed) {
+        p->error = PDF_STATE_ERROR;
+        return;
+    }
+
     for (i = 0; i < 6; ++i) PdfNumber(p, p->pageMatrix[i]);
     PdfRaw(p, "cm\n");
 }
+
 /***********************************************************************
  *
  * FUNCTION:    PdfEndPage
@@ -227,8 +282,13 @@ void PdfEndPage(PdfDocument *p)
 {
     PdfWord id, i;
     PdfDWord size;
+
     if (p->error) return;
-    if (!p->inPage || p->imageOpen) { p->error = PDF_STATE_ERROR; return; }
+    if (!p->inPage || p->imageOpen) {
+        p->error = PDF_STATE_ERROR;
+        return;
+    }
+
     id = (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * p->pages);
     PdfRaw(p, "Q\n");
     size = p->position - p->contentStart;
@@ -248,6 +308,7 @@ void PdfEndPage(PdfDocument *p)
         PdfRaw(p, " ");
         reference(p, (PdfWord)(3 + i));
     }
+
     PdfRaw(p, ">> >> /Contents ");
     reference(p, id);
     PdfRaw(p, ">>\nendobj\n");
@@ -255,6 +316,7 @@ void PdfEndPage(PdfDocument *p)
     p->inPage = 0;
     PdfFlush(p); /* Bound latency and detect a failed stream at each page. */
 }
+
 /***********************************************************************
  *
  * FUNCTION:    PdfFinish
@@ -277,8 +339,13 @@ void PdfFinish(PdfDocument *p)
 {
     PdfWord i, total;
     PdfDWord xref, divisor;
+
     if (p->error) return;
-    if (p->inPage || p->finished || !p->pages) { p->error = PDF_STATE_ERROR; return; }
+    if (p->inPage || p->finished || !p->pages) {
+        p->error = PDF_STATE_ERROR;
+        return;
+    }
+
     object(p, 2);
     PdfRaw(p, "<< /Type /Pages /Count ");
     PdfUnsigned(p, p->pages);
@@ -296,6 +363,7 @@ void PdfFinish(PdfDocument *p)
             byteOut(p, (unsigned char)('0' + p->offsets[i] / divisor % 10));
         PdfRaw(p, " 00000 n \n");
     }
+
     PdfRaw(p, "trailer\n<< /Size ");
     PdfUnsigned(p, total);
     PdfRaw(p, " /Root 1 0 R >>\nstartxref\n");
@@ -313,6 +381,7 @@ void PdfColor(PdfDocument *p, PdfDWord rgb, int stroke)
         PdfNumber(p, (PdfFixed)(((rgb & 255UL) * 65536UL) / 255));
         rgb >>= 8;
     }
+
     PdfRaw(p, stroke ? "RG\n" : "rg\n");
 }
 
@@ -329,6 +398,7 @@ void PdfText(PdfDocument *p, PdfFixed x, PdfFixed y, PdfFixed size,
     PdfNumber(p, x);
     PdfNumber(p, y);
     PdfRaw(p, "Tm (");
+
     for (i = 0; i < count; ++i) {
         c = s[i];
         if (c == '(' || c == ')' || c == '\\') byteOut(p, '\\');
@@ -339,5 +409,6 @@ void PdfText(PdfDocument *p, PdfFixed x, PdfFixed y, PdfFixed size,
             byteOut(p, (unsigned char)('0' + (c & 7)));
         } else byteOut(p, c);
     }
+
     PdfRaw(p, ") Tj ET\n");
 }
