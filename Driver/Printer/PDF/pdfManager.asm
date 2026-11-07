@@ -1,3 +1,21 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:	PC/GEOS
+MODULE:		Native PDF printer
+FILE:		pdfManager.asm
+AUTHOR:		Codex/MeyerK
+
+ROUTINES:
+	DriverStrategy - common print entry
+	PrintInit       - initialize the driver
+	PrintSwath      - reject unsupported raster output
+
+DESCRIPTION:
+	Assemble the native PDF printer driver and its PrintCom entries.
+	The print spooler owns the destination stream and PState.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 	; Native PDF PDL printer. The spooler owns the output stream; pdf.lib owns
 	; the per-job translation context in PS_expansionInfo. No shared job globals.
 include printcomInclude.def

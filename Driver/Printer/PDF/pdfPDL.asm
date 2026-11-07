@@ -1,3 +1,20 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:	PC/GEOS
+MODULE:		Native PDF printer
+FILE:		pdfPDL.asm
+AUTHOR:		Codex/MeyerK
+
+ROUTINES:
+	PrintSetPageTransform - pass the selected page matrix
+	PrintGString          - translate page records
+
+DESCRIPTION:
+	Forward spooler PDL escapes to the native PDF translation library.
+	The print spooler owns the destination stream and PState.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 	; Escape ABI: BX=PState handle, DX:SI=matrix or SI=GString, CX=GSControl.
 	; DriverStrategy already locks the PState, but the escape ABI is handle based.
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

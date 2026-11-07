@@ -9,7 +9,9 @@
 
 static void byteOut(PdfDocument *p, unsigned char c)
 {
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (p->position == 0xffffffffUL) {
         p->error = PDF_LIMIT_ERROR;
         return;
@@ -17,21 +19,27 @@ static void byteOut(PdfDocument *p, unsigned char c)
 
     p->buffer[p->used++] = c;
     ++p->position;
-    if (p->used == PDF_BUFFER_SIZE) PdfFlush(p);
+    if (p->used == PDF_BUFFER_SIZE) {
+        PdfFlush(p);
+    }
 }
 
 /* Commit only complete output chunks; remember stream errors in the job. */
 void PdfFlush(PdfDocument *p)
 {
     if (!p->error && p->used) {
-        if (PdfSink(p, p->buffer, p->used)) p->error = PDF_IO_ERROR;
+        if (PdfSink(p, p->buffer, p->used)) {
+            p->error = PDF_IO_ERROR;
+        }
         p->used = 0;
     }
 }
 
 void PdfRaw(PdfDocument *p, const char *s)
 {
-    while (*s && !p->error) byteOut(p, (unsigned char)*s++);
+    while (*s && !p->error) {
+        byteOut(p, (unsigned char)*s++);
+    }
 }
 
 void PdfUnsigned(PdfDocument *p, PdfDWord v)
@@ -43,7 +51,9 @@ void PdfUnsigned(PdfDocument *p, PdfDWord v)
         digits[n++] = (char)('0' + v % 10);
         v /= 10;
     } while (v);
-    while (n) byteOut(p, (unsigned char)digits[--n]);
+    while (n) {
+        byteOut(p, (unsigned char)digits[--n]);
+    }
 }
 
 void PdfInteger(PdfDocument *p, PdfFixed v)
@@ -108,7 +118,9 @@ static void reference(PdfDocument *p, PdfWord id)
  * writer primitives use their existing caller CTM and leave it unset. */
 void _pascal PdfPathPoint(PdfDocument *p, PdfFixed x, PdfFixed y)
 {
-    if (p->pathTransform) p->pathTransform(p, &x, &y);
+    if (p->pathTransform) {
+        p->pathTransform(p, &x, &y);
+    }
     PdfNumber(p, x);
     PdfNumber(p, y);
 }
@@ -155,6 +167,7 @@ void PdfBegin(PdfDocument *p)
     p->finished = 0;
     p->transformed = 0;
     p->imageOpen = 0;
+
     if (!p->width || !p->height) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -163,18 +176,30 @@ void PdfBegin(PdfDocument *p)
     PdfRaw(p, "%PDF-1.1\n%\200\201\202\203\n");
     object(p, 1);
     PdfRaw(p, "<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+
+    /* Standard Type 1 font objects are shared by every page. */
     for (i = 0; i < PDF_FONT_COUNT; ++i) {
         object(p, (PdfWord)(3 + i));
         PdfRaw(p, "<< /Type /Font /Subtype /Type1 /BaseFont /");
-        if (i < 4) PdfRaw(p, "Helvetica");
-        else if (i < 8) PdfRaw(p, "Times");
-        else if (i < 12) PdfRaw(p, "Courier");
-        else PdfRaw(p, i == PDF_FONT_SYMBOL ? "Symbol" : "ZapfDingbats");
+        if (i < 4) {
+            PdfRaw(p, "Helvetica");
+        } else if (i < 8) {
+            PdfRaw(p, "Times");
+        } else if (i < 12) {
+            PdfRaw(p, "Courier");
+        } else {
+            PdfRaw(p, i == PDF_FONT_SYMBOL ? "Symbol" : "ZapfDingbats");
+        }
         if (i < 12) {
-            if (i == 4) PdfRaw(p, "-Roman");
-            else if ((i & 3) == 1) PdfRaw(p, "-Bold");
-            else if ((i & 3) == 2) PdfRaw(p, i < 8 && i >= 4 ? "-Italic" : "-Oblique");
-            else if ((i & 3) == 3) PdfRaw(p, i < 8 && i >= 4 ? "-BoldItalic" : "-BoldOblique");
+            if (i == 4) {
+                PdfRaw(p, "-Roman");
+            } else if ((i & 3) == 1) {
+                PdfRaw(p, "-Bold");
+            } else if ((i & 3) == 2) {
+                PdfRaw(p, i < 8 && i >= 4 ? "-Italic" : "-Oblique");
+            } else if ((i & 3) == 3) {
+                PdfRaw(p, i < 8 && i >= 4 ? "-BoldItalic" : "-BoldOblique");
+            }
             PdfRaw(p, " /Encoding /MacRomanEncoding");
         }
 
@@ -204,7 +229,9 @@ void PdfBeginPage(PdfDocument *p)
 {
     PdfWord id;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (p->inPage || p->finished) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -221,6 +248,8 @@ void PdfBeginPage(PdfDocument *p)
     reference(p, (PdfWord)(id + 1));
     PdfRaw(p, ">>\nstream\n");
     p->contentStart = p->position;
+
+    /* A fresh page starts with a clean transformation state. */
     p->inPage = 1;
     p->transformed = 0;
     PdfRaw(p, "q\n1 0 0 -1 0 ");
@@ -243,7 +272,9 @@ void PdfPageMatrix(PdfDocument *p, const PdfFixed *m)
         return;
     }
 
-    for (i = 0; i < 6; ++i) p->pageMatrix[i] = m[i];
+    for (i = 0; i < 6; ++i) {
+        p->pageMatrix[i] = m[i];
+    }
     p->transformed = 1;
 }
 
@@ -256,7 +287,9 @@ void PdfApplyPageMatrix(PdfDocument *p)
         return;
     }
 
-    for (i = 0; i < 6; ++i) PdfNumber(p, p->pageMatrix[i]);
+    for (i = 0; i < 6; ++i) {
+        PdfNumber(p, p->pageMatrix[i]);
+    }
     PdfRaw(p, "cm\n");
 }
 
@@ -283,7 +316,9 @@ void PdfEndPage(PdfDocument *p)
     PdfWord id, i;
     PdfDWord size;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (!p->inPage || p->imageOpen) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -340,7 +375,9 @@ void PdfFinish(PdfDocument *p)
     PdfWord i, total;
     PdfDWord xref, divisor;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (p->inPage || p->finished || !p->pages) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -353,6 +390,8 @@ void PdfFinish(PdfDocument *p)
     for (i = 0; i < p->pages; ++i)
         reference(p, (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * i + 2));
     PdfRaw(p, "] >>\nendobj\n");
+
+    /* Xref offsets refer to the serialized stream, not buffer positions. */
     xref = p->position;
     total = (PdfWord)(PDF_FIRST_PAGE_OBJECT + 3 * p->pages);
     PdfRaw(p, "xref\n0 ");
@@ -401,7 +440,9 @@ void PdfText(PdfDocument *p, PdfFixed x, PdfFixed y, PdfFixed size,
 
     for (i = 0; i < count; ++i) {
         c = s[i];
-        if (c == '(' || c == ')' || c == '\\') byteOut(p, '\\');
+        if (c == '(' || c == ')' || c == '\\') {
+            byteOut(p, '\\');
+        }
         if (c < 32 || c >= 127) {
             byteOut(p, '\\');
             byteOut(p, (unsigned char)('0' + (c >> 6)));

@@ -1,3 +1,22 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:	PC/GEOS
+MODULE:		Native PDF printer
+FILE:		pdfJob.asm
+AUTHOR:		Codex/MeyerK
+
+ROUTINES:
+	PrintStartJob  - create a PDF document
+	PrintEndJob    - finalize and release it
+	PrintStartPage - start one output page
+	PrintEndPage   - close one output page
+
+DESCRIPTION:
+	Create and destroy the PDF context and delimit physical pages.
+	The print spooler owns the destination stream and PState.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 	; Regular functions receive the locked PState segment in BP.
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		PrintStartJob
@@ -57,6 +76,7 @@ PrintStartJob proc far
 		EC <		WARNING_Z PDF_CREATE_FAILED	>
 		jz	failed
 		mov	ds:[PS_expansionInfo], ax
+
 		clc
 		jmp	done
 failed:

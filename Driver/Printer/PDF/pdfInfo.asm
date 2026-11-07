@@ -1,3 +1,21 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:	PC/GEOS
+MODULE:		Native PDF printer
+FILE:		pdfInfo.asm
+AUTHOR:		Codex/MeyerK
+
+ROUTINES:
+	PrintGetOutputFormat - advertise native PDF
+	PrintGetPrintArea   - return the selected paper size
+	PrintSetPaperPath   - initialize paper options
+
+DESCRIPTION:
+	Expose the PDF file format and file-only paper capabilities.
+	The print spooler owns the destination stream and PState.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 	; No device UI, host integration or printer-specific commands.
 	;
 	; Identify the bytes written by this driver for the print-to-file dialog.

@@ -74,7 +74,9 @@ void PdfRoundRect(PdfDocument *p, int x1, int y1, int x2, int y2,
     PdfWord limit;
     int swap;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (!p->inPage) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -94,14 +96,18 @@ void PdfRoundRect(PdfDocument *p, int x1, int y1, int x2, int y2,
     /* PrepRoundRectLow uses integer half-extents, rounding down even for
      * odd widths/heights. Clamp the unsigned word BEFORE converting to 16.16. */
     limit = (PdfWord)(((PdfFixed)x2 - x1) / 2);
-    if (radius > limit) radius = limit;
+    if (radius > limit) {
+        radius = limit;
+    }
     limit = (PdfWord)(((PdfFixed)y2 - y1) / 2);
-    if (radius > limit) radius = limit;
+    if (radius > limit) {
+        radius = limit;
+    }
     if (!radius) {
         if (fill < 0) {
             PdfPathRect(p, (PdfFixed)x1*65536L, (PdfFixed)y1*65536L,
                         (PdfFixed)x2*65536L, (PdfFixed)y2*65536L);
-                        return;
+            return;
         }
 
         PdfInteger(p, x1);
@@ -112,6 +118,7 @@ void PdfRoundRect(PdfDocument *p, int x1, int y1, int x2, int y2,
         return;
     }
 
+    /* Work in 16.16 document coordinates, not a scaled PDF CTM. */
     r = (PdfFixed)radius * 65536L;
     k = control(r);
     left = (PdfFixed)x1 * 65536L;
@@ -175,7 +182,9 @@ void PdfEllipse(PdfDocument *p, int x1, int y1, int x2, int y2, int fill)
     PdfFixed cx, cy, rx, ry, kx, ky, left, top, right, bottom;
     int swap;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (!p->inPage) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -250,8 +259,12 @@ static void _pascal normalize(PdfFixed x, PdfFixed y, PdfFixed *xP, PdfFixed *yP
         y /= 2;
     }
 
-    if (negativeX) x = -x;
-    if (negativeY) y = -y;
+    if (negativeX) {
+        x = -x;
+    }
+    if (negativeY) {
+        y = -y;
+    }
     largest = x > y ? x : y;
     if (!largest) {
         *xP = *yP = 0;
@@ -271,8 +284,12 @@ static void _pascal normalize(PdfFixed x, PdfFixed y, PdfFixed *xP, PdfFixed *yP
     length = root(multiply(x, x) + multiply(y, y));
     x = divide(x, length);
     y = divide(y, length);
-    if (x > 65536L) x = 65536L;
-    if (y > 65536L) y = 65536L;
+    if (x > 65536L) {
+        x = 65536L;
+    }
+    if (y > 65536L) {
+        y = 65536L;
+    }
     *xP = negativeX ? -x : x; *yP = negativeY ? -y : y;
 }
 
@@ -301,7 +318,7 @@ static PdfFixed _pascal coordinate(PdfDocument *p, PdfFixed base, PdfFixed delta
 {
     if ((delta > 0 && base > 0x7fffffffL - delta) ||
         (delta < 0 && base < (-2147483647L - 1) - delta)) {
-        p->error = PDF_LIMIT_ERROR;
+            p->error = PDF_LIMIT_ERROR;
         return 0;
     }
 
@@ -318,10 +335,18 @@ static void _pascal arcPiece(PdfDocument *p, PdfFixed cx, PdfFixed cy,
 
     dot = multiply(x, nx) + multiply(y, ny);
     cross = (multiply(x, ny) - multiply(y, nx)) * direction;
-    if (dot < 0) dot = 0;
-    if (dot > 65536L) dot = 65536L;
-    if (cross < 0) cross = 0;
-    if (cross > 65536L) cross = 65536L;
+    if (dot < 0) {
+        dot = 0;
+    }
+    if (dot > 65536L) {
+        dot = 65536L;
+    }
+    if (cross < 0) {
+        cross = 0;
+    }
+    if (cross > 65536L) {
+        cross = 65536L;
+    }
     /* k = 4/3 tan(delta/4), delta <= 90 degrees.
      * ATTENTION: quarter-cubic approximation, as for PdfEllipse.
      * Subdivide further if a smaller radial error is required. */
@@ -333,8 +358,9 @@ static void _pascal arcPiece(PdfDocument *p, PdfFixed cx, PdfFixed cy,
     px = coordinate(p, cx, multiply(rx, unit(nx + multiply(k, ny))));
     py = coordinate(p, cy, -multiply(ry, unit(ny - multiply(k, nx))));
     point(p, px, py);
-    if (endP) point(p, endP[0], endP[1]);
-    else {
+    if (endP) {
+        point(p, endP[0], endP[1]);
+    } else {
         px = coordinate(p, cx, multiply(rx, nx));
         py = coordinate(p, cy, -multiply(ry, ny));
         point(p, px, py);
@@ -378,7 +404,9 @@ void PdfArc(PdfDocument *p, int x1, int y1, int x2, int y2,
     PdfFixed cx, cy, rx, ry, x, y, nx, ny;
     int swap, next, left, step;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (!p->inPage || close > 2 || (fill > 0 && !close)) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -401,11 +429,17 @@ void PdfArc(PdfDocument *p, int x1, int y1, int x2, int y2,
     rx = ((PdfFixed)x2 - x1) * 32768L;
     ry = ((PdfFixed)y2 - y1) * 32768L;
     start %= 360;
-    if (start < 0) start += 360;
+    if (start < 0) {
+        start += 360;
+    }
     end %= 360;
-    if (end < 0) end += 360;
+    if (end < 0) {
+        end += 360;
+    }
     left = end - start;
-    if (left <= 0) left += 360;
+    if (left <= 0) {
+        left += 360;
+    }
     arcVector(rx, ry, start, &x, &y);
     if (startP) {
         startP[0] = cx + multiply(rx, x);
@@ -416,7 +450,9 @@ void PdfArc(PdfDocument *p, int x1, int y1, int x2, int y2,
     PdfRaw(p, "m\n");
     while (left && !p->error) {
         step = 90 - start % 90;
-        if (step > left) step = left;
+        if (step > left) {
+            step = left;
+        }
         next = (start + step) % 360;
         arcVector(rx, ry, next, &nx, &ny);
         arcPiece(p, cx, cy, rx, ry, x, y, nx, ny, 1, (void*)0);
@@ -431,8 +467,12 @@ void PdfArc(PdfDocument *p, int x1, int y1, int x2, int y2,
         PdfRaw(p, "l\n");
     }
 
-    if (close) PdfRaw(p, "h\n");
-    if (fill >= 0) PdfRaw(p, fill ? "f\n" : "S\n");
+    if (close) {
+        PdfRaw(p, "h\n");
+    }
+    if (fill >= 0) {
+        PdfRaw(p, fill ? "f\n" : "S\n");
+    }
 }
 
 static PdfDWord _pascal magnitude(PdfFixed v)
@@ -463,7 +503,9 @@ static int _pascal collinear(const PdfFixed *vP)
     b = vP[3] >= vP[1] ? (PdfDWord)vP[3] - vP[1] : (PdfDWord)vP[1] - vP[3];
     c = vP[4] >= vP[0] ? (PdfDWord)vP[4] - vP[0] : (PdfDWord)vP[0] - vP[4];
     d = vP[5] >= vP[1] ? (PdfDWord)vP[5] - vP[1] : (PdfDWord)vP[1] - vP[5];
-    if ((!a && !b) || (!c && !d)) return 1;
+    if ((!a && !b) || (!c && !d)) {
+        return 1;
+    }
     sign1 = (vP[2] < vP[0]) != (vP[3] < vP[1]);
     sign2 = (vP[4] < vP[0]) != (vP[5] < vP[1]);
     g = gcd(a, b);
@@ -552,12 +594,16 @@ static void _pascal circleInterval(PdfDocument *p, PdfFixed cx, PdfFixed cy,
 
         arcPiece(p, cx, cy, radius, radius, x, y, ax, ay, direction,
                  last ? endP : (void*)0);
-        if (last) return;
+        if (last) {
+            return;
+        }
         x = ax;
         y = ay;
     }
 
-    if (!p->error) p->error = PDF_STATE_ERROR;
+    if (!p->error) {
+        p->error = PDF_STATE_ERROR;
+    }
 }
 
 /***********************************************************************
@@ -599,7 +645,9 @@ void PdfThreePointArc(PdfDocument *p, const PdfFixed *pointsP, PdfWord close, in
     PdfDWord largest = 0, m;
     int shift = 0, i, direction;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (!p->inPage || close > 2 || (fill > 0 && !close)) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -610,15 +658,21 @@ void PdfThreePointArc(PdfDocument *p, const PdfFixed *pointsP, PdfWord close, in
         PdfRaw(p, "m ");
         point(p, pointsP[4], pointsP[5]);
         PdfRaw(p, "l\n");
-        if (close) PdfRaw(p, "h\n");
-        if (fill >= 0) PdfRaw(p, fill ? "f\n" : "S\n");
+        if (close) {
+            PdfRaw(p, "h\n");
+        }
+        if (fill >= 0) {
+            PdfRaw(p, fill ? "f\n" : "S\n");
+        }
         return;
     }
 
     for (i = 0; i < 4; ++i) {
         m = pointsP[i+2] >= pointsP[i%2] ? (PdfDWord)pointsP[i+2] - pointsP[i%2] :
                                                    (PdfDWord)pointsP[i%2] - pointsP[i+2];
-        if (m > largest) largest = m;
+        if (m > largest) {
+            largest = m;
+        }
     }
     while (largest > 1048576UL) {
         largest >>= 1;
@@ -646,7 +700,9 @@ void PdfThreePointArc(PdfDocument *p, const PdfFixed *pointsP, PdfWord close, in
     t = (multiply(vx, vx) + multiply(vy, vy)) / 2;
     ox = quotient(p, multiply(s, vy) - multiply(t, uy), cross);
     oy = quotient(p, multiply(t, ux) - multiply(s, vx), cross);
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     normalize(-ox, oy, &x, &y);
     radius = magnitude(x) >= magnitude(y) ? quotient(p, -ox, x) : quotient(p, oy, y);
     radius = unscale(p, radius, shift);
@@ -656,7 +712,9 @@ void PdfThreePointArc(PdfDocument *p, const PdfFixed *pointsP, PdfWord close, in
     my = coordinate(p, oy, -uy);
     nx = coordinate(p, vx, -ox);
     ny = coordinate(p, oy, -vy);
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     normalize(mx, my, &mx, &my);
     normalize(nx, ny, &nx, &ny);
     point(p, pointsP[0], pointsP[1]);
@@ -668,8 +726,12 @@ void PdfThreePointArc(PdfDocument *p, const PdfFixed *pointsP, PdfWord close, in
         PdfRaw(p, "l\n");
     }
 
-    if (close) PdfRaw(p, "h\n");
-    if (fill >= 0) PdfRaw(p, fill ? "f\n" : "S\n");
+    if (close) {
+        PdfRaw(p, "h\n");
+    }
+    if (fill >= 0) {
+        PdfRaw(p, fill ? "f\n" : "S\n");
+    }
 }
 
 /* VidCom's DDA groups horizontal/vertical pixel runs. Brush coverage extends
@@ -699,7 +761,9 @@ void PdfBrushSegment(PdfDocument *p, PdfFixed x1, PdfFixed y1,
     PdfFixed left, top, runWidth, runHeight;
     int alongX, majorSign, minorSign, bump;
 
-    if (p->error) return;
+    if (p->error) {
+        return;
+    }
     if (!p->inPage || !width || !height || width > 128 || height > 128) {
         p->error = PDF_STATE_ERROR;
         return;
@@ -710,7 +774,7 @@ void PdfBrushSegment(PdfDocument *p, PdfFixed x1, PdfFixed y1,
         magnitude(y1) > 32768UL*PDF_DEVICE_DPI/72+1 ||
         magnitude(x2) > 32768UL*PDF_DEVICE_DPI/72+1 ||
         magnitude(y2) > 32768UL*PDF_DEVICE_DPI/72+1) {
-        p->error = PDF_LIMIT_ERROR;
+            p->error = PDF_LIMIT_ERROR;
         return;
     }
 
@@ -730,7 +794,9 @@ void PdfBrushSegment(PdfDocument *p, PdfFixed x1, PdfFixed y1,
          * keeps the same covered pixels (vidcomLine.asm:DDA_X/DDA_Y). */
         bump = error > 0 || (!error && majorSign > 0);
         if (bump || at == end || !minor) {
-            if (!minor) at = end;
+            if (!minor) {
+                at = end;
+            }
             left = alongX ? (run < at ? run : at) : minorAt;
             top = alongX ? minorAt : (run < at ? run : at);
             runWidth = width + (alongX ? (at >= run ? at-run : run-at) : 0);
@@ -740,7 +806,9 @@ void PdfBrushSegment(PdfDocument *p, PdfFixed x1, PdfFixed y1,
             PdfInteger(p, runWidth);
             PdfInteger(p, runHeight);
             PdfRaw(p, "re f\n");
-            if (at == end) break;
+            if (at == end) {
+                break;
+            }
             run = at + majorSign;
             minorAt += minorSign;
             error -= major*2;

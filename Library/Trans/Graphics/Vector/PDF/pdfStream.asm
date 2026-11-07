@@ -1,3 +1,21 @@
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+PROJECT:	PC/GEOS
+MODULE:		Native PDF printer
+FILE:		pdfStream.asm
+AUTHOR:		Codex/MeyerK
+
+ROUTINES:
+	PDFSTREAMWRITE    - send bounded bytes to the spooler
+	PDFTEXTWIDTHFIXED - fetch fractional text width
+	PDFGETDASH       - read line dash factors
+
+DESCRIPTION:
+	Bridge Watcom Pascal calls to GEOS stream and graphics routines.
+	The PDF library borrows the spooler's stream strategy and graphics state.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+
 	; Pascal adapter to the spooler's stream strategy (including its file driver).
 include geos.def
 include resource.def
