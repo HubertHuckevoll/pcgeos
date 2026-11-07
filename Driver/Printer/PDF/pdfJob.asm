@@ -41,9 +41,13 @@ PrintStartJob proc far
 		mov	ah, es:[PI_smarts]
 		mov	{word}ds:[PS_printerType], ax
 		call	MemUnlock
+
+	; Reuse the paper settings already selected by the spooler.
 		mov	al, ds:[PS_jobParams].JP_printerData.PUID_paperInput
 		mov	ah, ds:[PS_jobParams].JP_printerData.PUID_paperOutput
 		call	PrintSetPaperPath
+
+	; Pass the spooler-owned stream, strategy and page size to pdf.lib.
 		push	ds:[PS_streamToken]
 		pushdw	ds:[PS_streamStrategy]
 		push	ds:[PS_customWidth]

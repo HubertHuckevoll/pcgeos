@@ -15,6 +15,7 @@ global PDFSTREAMWRITE:far
 global PDFTEXTWIDTHFIXED:far
 global PDFGETDASH:far
 PdfCode segment public 'CODE'
+
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		PDFSTREAMWRITE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -50,6 +51,7 @@ PDFSTREAMWRITE proc far token:word, strategy:fptr.far, buffer:fptr.byte, count:w
 		lds	si, buffer
 		mov	ax, STREAM_BLOCK
 		mov	di, DR_STREAM_WRITE
+	; The stream driver can also report a short write without carry.
 		call	strategy
 		jc	failed
 		cmp	cx, count
@@ -62,6 +64,7 @@ done:
 	.leave
 		ret
 PDFSTREAMWRITE endp
+
 	;
 	; C bridge to the native fractional string-width API. Return DX:AX as 16.16.
 	;
@@ -103,6 +106,7 @@ PDFTEXTWIDTHFIXED proc far gstate:hptr, text:fptr.byte, count:word
 	.leave
 		ret
 PDFTEXTWIDTHFIXED endp
+
 	;
 	; GrGetLineStyle returns only the enum. Copy the effective native byte dash
 	; factors so saved states, built-in patterns and custom patterns agree.
@@ -148,5 +152,6 @@ PDFGETDASH proc far gstate:hptr, buffer:fptr.byte
 	.leave
 		ret
 PDFGETDASH endp
+
 PdfCode ends
 end

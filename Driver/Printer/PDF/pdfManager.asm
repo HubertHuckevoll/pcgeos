@@ -20,6 +20,9 @@ Entry ends
 CommonCode segment resource
 CommonCode ends
 
+	;
+	; Standard PrintCom driver entry and device information
+	;
 idata segment
 DriverTable DriverExtendedInfoStruct <<DriverStrategy, mask DA_HAS_EXTENDED_INFO, DRIVER_TYPE_PRINTER>, handle DriverInfo>
 public DriverTable
@@ -35,6 +38,10 @@ PrintInitStream label near
 		clc
 		ret
 PrintInit endp
+
+	;
+	; Native PDF escapes: page transform, GString and output format
+	;
 escCodes word DR_PRINT_ESC_SET_PAGE_TRANSFORM, DR_PRINT_ESC_PRINT_GSTRING, DR_PRINT_ESC_GET_OUTPUT_FORMAT
 NUM_ESC_ENTRIES equ ($ - escCodes)/2
 escHanJumpTable hptr handle CommonCode, handle CommonCode, handle CommonCode
@@ -42,6 +49,9 @@ escOffJumpTable nptr offset PrintSetPageTransform, offset PrintGString, offset P
 Entry ends
 
 CommonCode segment resource
+	;
+	; Shared PrintCom support stays separate from the PDF-specific handlers
+	;
 include printcomNoStyles.asm
 include Color/colorGetFormat.asm
 include Color/colorSetNone.asm

@@ -8,17 +8,22 @@ PrintGetOutputFormat proc far
 		ret
 PrintGetOutputFormat endp
 
+	;
+	; This file-only driver has no custom UI object trees.
+	;
 PrintGetMainUI proc far
 PrintGetOptionsUI label far
 		clr	cx, dx
 		ret
 PrintGetMainUI endp
+
 PrintEvalUI proc far
 		mov	es:[si].JP_printerData.PUID_paperInput, ASF_TRAY1 shl offset PIO_ASF
 		clr	es:[si].JP_printerData.PUID_paperOutput
 		clc
 		ret
 PrintEvalUI endp
+
 PrintStuffUI proc far
 		clc
 		ret
@@ -28,6 +33,9 @@ PrintGetMargins proc far
 		clr	ax, si, cx, dx
 		ret
 PrintGetMargins endp
+	;
+	; PState stores the physical page size selected by DR_PRINT_SET_MODE.
+	;
 PrintGetPrintArea proc far
 	uses	ds
 	.enter
@@ -38,6 +46,7 @@ PrintGetPrintArea proc far
 	.leave
 		ret
 PrintGetPrintArea endp
+
 PrintGetPaperPath proc far
 	uses	ds
 	.enter
@@ -48,6 +57,7 @@ PrintGetPaperPath proc far
 	.leave
 		ret
 PrintGetPaperPath endp
+
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		PrintSetPaperPath
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

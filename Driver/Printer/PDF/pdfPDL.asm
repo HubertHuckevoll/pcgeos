@@ -30,12 +30,15 @@ REVISION HISTORY:
 PrintSetPageTransform proc far
 	uses	bx, ds
 	.enter
+	; Escape callers pass a PState handle rather than a locked segment.
 		call	MemLock
 		mov	ds, ax
 		push	bx
 		push	ds:[PS_expansionInfo]
 		push	dx, si
 		call	PDFSETTRANSFORM
+
+	; Unlock the PState before testing the translator's result.
 		pop	bx
 		call	MemUnlock
 		tst	ax
@@ -86,6 +89,8 @@ PrintGString proc far
 		push	ds:[PS_expansionInfo]
 		push	si, cx
 		call	PDFGSTRING
+
+	; Preserve AX so the spooler sees the actual GString status.
 		pop	bx
 		call	MemUnlock
 		EC <		cmp	ax, GSRT_FAULT			>
