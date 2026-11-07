@@ -11,6 +11,7 @@ ROUTINES:
 	PDFTEXTWIDTHFIXED    - Fetch fractional GEOS text width
 	PDFGETDASH          - Return effective line dash factors
 	PDFGENCHAR          - Generate a native glyph outline
+	PDFSCRIPTY          - Fetch native script baseline displacement
 
 REVISION HISTORY:
 	Name            Date        Description
@@ -46,6 +47,7 @@ global PDFSTREAMWRITE:far
 global PDFTEXTWIDTHFIXED:far
 global PDFGETDASH:far
 global PDFGENCHAR:far
+global PDFSCRIPTY:far
 PdfCode segment public 'CODE'
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -184,6 +186,70 @@ PDFGETDASH proc far gstate:hptr, buffer:fptr.byte
 	.leave
 		ret
 PDFGETDASH endp
+
+COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                PDFSCRIPTY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SYNOPSIS:       Read the native script baseline displacement.
+PASS:           gstate on stack
+RETURN:         DX:AX = signed 16.16 displacement from the normal baseline
+DESTROYED:      See saved registers
+
+STRATEGY:       Match Nimbus/Bitstream AddStyleTransforms and TrueType
+                CalcTransform. FontBuf metrics stay in document coordinates.
+                TrueType truncates scriptY. Nimbus rounds ties upward;
+                Bitstream rounds ties away from zero.
+                Both script bits together select subscript, as in the drivers.
+
+REVISION HISTORY:
+        Codex/MeyerK    11/07/26    Initial version
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
+PDFSCRIPTY proc far gstate:hptr
+	uses	bx, cx, si, di, ds, es
+	.enter
+		mov	bx, gstate
+		call	MemLock
+		mov	ds, ax
+		clr	ax
+		mov	al, ds:[GS_fontAttr].FCA_textStyle
+		mov	si, ax
+		call	FontDrLockFont
+		mov	es, ax
+		push	bx			; retain the returned font handle
+		clr	cx
+		movwbf	dxch, es:FB_height
+		addwbf	dxch, es:FB_heightAdjust
+		mov	ax, 1a00h		; native subscript fraction
+		test	si, mask TS_SUBSCRIPT
+		jnz	multiply
+		mov	ax, 6000h		; native superscript fraction
+multiply:
+		clr	bx
+		call	GrMulWWFixed
+		test	si, mask TS_SUBSCRIPT
+		jnz	roundOffset
+		subwbf	dxch, es:FB_baselinePos
+		subwbf	dxch, es:FB_baseAdjust
+roundOffset:
+		cmp	es:FB_maker, FM_TRUETYPE
+		je	offsetReady		; TrueType uses arithmetic truncation
+		cmp	es:FB_maker, FM_BITSTREAM
+		je	signedRound
+		rnduwbf	dxch			; Nimbus rounds negative ties upward
+		jmp	offsetReady
+signedRound:
+		rndwbf	dxch
+offsetReady:
+		pop	bx
+		call	FontDrUnlockFont
+		mov	bx, gstate
+		call	MemUnlock
+		clr	ax			; native scriptY is an integer
+	.leave
+		ret
+PDFSCRIPTY endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		PDFGENCHAR

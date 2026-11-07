@@ -31,7 +31,7 @@ DESCRIPTION:
 #include "../pdfGeos.c"
 static struct {
     void *p;
-    unsigned locks;
+    unsigned locks, size;
 }
 blocks[32];
 static unsigned live, allocations, failAllocation, streamCalls, failStream;
@@ -89,6 +89,12 @@ static word glyphSize, glyphCursor, glyphReady, glyphFont, glyphStyle, glyphCall
 static word glyphError;
 static int glyphLive;
 static TransMatrix glyphTransform;
+static word regionSections, regionCalls, regionCombines[128], regionRules[128];
+static int regionCapturing, regionEmpty;
+static const word *regionFixture;
+static word regionFixtureWords;
+static const word defaultRegion[] = {0, 0, 100, 100, 0xffff, EOREGREC,
+                                    100, 0, 100, EOREGREC, EOREGREC};
 static void storeWord(byte *p, word n)
 {
     p[0] = (byte)n;
@@ -360,7 +366,59 @@ void GrRestoreState(GStateHandle gs)
 }
 
 void GrEndPath(GStateHandle gs)
-{byte end[] = {GR_END_PATH};assert(gs==100);rootPlayback(end, 1);}
+{
+    byte end[] = {GR_END_PATH};
+    if (gs == 101) {
+        assert(regionCapturing);
+        regionCapturing = 0;
+        GrRestoreState(gs);
+    } else {assert(gs==100);rootPlayback(end, 1);}
+}
+void GrBeginPath(GStateHandle gs, word combine)
+{
+    assert(gs == 101 && combine == PCT_REPLACE && !regionCapturing);
+    GrSaveState(gs);
+    regionCapturing = 1;
+}
+void GrSetClipPath(GStateHandle gs, word combine, word rule)
+{
+    assert(gs == 101 && !regionCapturing && rule <= 1 && regionSections < 128);
+    regionCombines[regionSections] = combine;
+    regionRules[regionSections++] = rule;
+}
+void GrInitDefaultTransform(GStateHandle gs) { assert(gs == 101); }
+void GrApplyTransform(GStateHandle gs, const TransMatrix *t)
+{
+    byte record[29];
+    assert(gs == 101);
+    record[0] = GR_APPLY_TRANSFORM;
+    memcpy(record+1, t, sizeof(*t));
+    compose(&pathTransform, record);
+}
+MemHandle GrGetClipRegion(GStateHandle gs, word rule)
+{
+    MemHandle h;
+    word *r, i, words = regionFixture ? regionFixtureWords : sizeof(defaultRegion)/2;
+    sdword offset;
+    assert(gs == 101 && rule == ODD_EVEN && !regionCapturing && regionSections);
+    ++regionCalls;
+    if (regionEmpty) return 0;
+    h = MemAlloc(words*2, HF_DYNAMIC, HAF_ZERO_INIT | HAF_LOCK);
+    assert(h); /* The native region builder uses HAF_NO_ERR. */
+    r = MemDeref(h);
+    memcpy(r, regionFixture ? regionFixture : defaultRegion, words*2);
+    /* Supply independent native region bands, translated like the real API.
+     * Do not implement a second Boolean geometry engine in this test double. */
+    offset = -(sdword)pathTransform.TM_e32.DWF_int;
+    i = 4;
+    while (i < words && r[i] != EOREGREC) {
+        r[i] = (word)((sword)r[i] - offset);
+        while (++i < words && r[i] != EOREGREC) {}
+        ++i;
+    }
+    MemUnlock(h);
+    return h;
+}
 void GrSetNullTransform(GStateHandle gs)
 {
     assert(gs==101);
@@ -376,12 +434,16 @@ MemHandle MemAlloc(word size, word flags, word af)
         blocks[i].p = calloc(1, size);
         assert(blocks[i].p);
         blocks[i].locks = !!(af & HAF_LOCK);
+        blocks[i].size = size;
         ++live;
         assert(live<=5); /* One bounded glyph block during retained text. */
         return i;
     }
     abort();
 }
+
+word MemGetInfo(MemHandle h, word info)
+{assert(h && blocks[h].p && info == MGIT_SIZE);return blocks[h].size;}
 
 void *MemLock(MemHandle h)
 {
@@ -436,6 +498,7 @@ GStateHandle GrCreateState(word w)
         return 101;
     }
     mainStateLive = 1;
+    regionSections = regionCalls = regionCapturing = 0;
     memset(paths, 0, sizeof(paths));
     saveDepth = 0;
     capturing = 0;
@@ -470,7 +533,7 @@ void GrDestroyState(GStateHandle gs)
 
 void GrGetTransform(GStateHandle gs, TransMatrix *t)
 {
-    *t=gs==101 ? pathTransform : transform;
+    *t=gs==101 ? pathTransform : gs==102 ? deviceTransform : transform;
 }
 
 void GrSetTransform(GStateHandle gs, const TransMatrix *t)
@@ -480,6 +543,7 @@ void GrSetTransform(GStateHandle gs, const TransMatrix *t)
         glyphTransform = *t;
         return;
     }
+    if (gs == 101) {pathTransform = *t;return;}
     assert(gs==102 && deviceStateLive);
     deviceTransform = *t;
 }
@@ -521,7 +585,7 @@ void GrApplyTranslation(GStateHandle gs, dword x, dword y)
 {
     TransMatrix t;
     byte record[29];
-    assert(gs == 103);
+    assert(gs == 103 || gs == 101);
     identity(&t);
     t.TM_e31.DWF_int = (sdword)x >> 16;
     t.TM_e31.DWF_frac = (word)x;
@@ -529,19 +593,23 @@ void GrApplyTranslation(GStateHandle gs, dword x, dword y)
     t.TM_e32.DWF_frac = (word)y;
     record[0] = GR_APPLY_TRANSFORM;
     memcpy(record+1, &t, sizeof(t));
-    compose(&glyphTransform, record);
+    compose(gs == 103 ? &glyphTransform : &pathTransform, record);
 }
 
 void GrApplyScale(GStateHandle gs, dword x, dword y)
 {
     TransMatrix t;
     byte record[29];
-    assert(gs == 103 && x == 65536 && y == (dword)-65536);
+    assert((gs == 101 && x == 273067 && y == x) ||
+           (gs == 103 && (x == 65536 || x == 32768) && y == (dword)-(sdword)x));
     identity(&t);
-    t.TM_e22.WWF_int = -1;
+    t.TM_e11.WWF_int = (sdword)x >> 16;
+    t.TM_e11.WWF_frac = (word)x;
+    t.TM_e22.WWF_int = (sdword)y >> 16;
+    t.TM_e22.WWF_frac = (word)y;
     record[0] = GR_APPLY_TRANSFORM;
     memcpy(record+1, &t, sizeof(t));
-    compose(&glyphTransform, record);
+    compose(gs == 103 ? &glyphTransform : &pathTransform, record);
 }
 
 word PDFGENCHAR(GStateHandle gs, word character)
@@ -737,17 +805,28 @@ dword PDFTEXTWIDTHFIXED(GStateHandle gs, const char *s, word count)
             c='-';
         }
         width+=GrCharWidth(gs, c)+trackAdvance;
-        if (fractionalMetrics && previous=='A' && c=='V')width-=65536;
+        if (fractionalMetrics && previous=='A' && c=='V')
+            width-=style & (TS_SUPERSCRIPT | TS_SUBSCRIPT) ? 32768 : 65536;
         previous = c;
     }
     return width;
 }
 dword GrCharWidth(GStateHandle gs, word ch)
 {
+    dword width;
     (void)gs;
-    if (ch=='-')return 3L*65536+32768;
-    if (ch==C_NONBRKHYPHEN)return 4L*65536+16384;
-    return fractionalMetrics ? 7L*65536+32768 : 7L*65536;
+    if (ch=='-')width=3L*65536+32768;
+    else if (ch==C_NONBRKHYPHEN)width=4L*65536+16384;
+    else width=fractionalMetrics ? 7L*65536+32768 : 7L*65536;
+    return style & (TS_SUPERSCRIPT | TS_SUBSCRIPT) ? width/2 : width;
+}
+
+sdword PDFSCRIPTY(GStateHandle gs)
+{
+    (void)gs;
+    /* Native Nimbus metrics: height=12, baseline=9, adjustments=0.
+     * Rounded offsets are -4 for super and +1 for sub; sub takes priority. */
+    return style & TS_SUBSCRIPT ? 65536 : -4L*65536;
 }
 
 word GrTextWidth(GStateHandle gs, const char *s, word count)
@@ -847,6 +926,11 @@ byte GrGetGStringElement(GStateHandle gs, GStateHandle str, word size, void *b, 
 void GrSetGStringPos(GStateHandle str, byte type, word skip)
 {
     (void)skip;
+    if (type == GSSPT_BEGINNING) {
+        assert(str == 2);
+        pathCursor = pathReady = 0;
+        return;
+    }
     assert(type==GSSPT_SKIP_1);
     if (str == 103) {
         glyphCursor += rawSize(glyphBytes+glyphCursor);
@@ -886,6 +970,13 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
             else glyphReady = 1;
             *last=b[0];
             return b[0]==GR_END_GSTRING ? GSRT_COMPLETE : GSRT_ONE;
+        }
+        if (regionCapturing && regionFixture && b[0] == GR_DRAW_RECT) {
+            /* A recorded null transform must retain page/device placement. */
+            assert(fixed(pathTransform.TM_e11) == 273067);
+            assert(fixed(pathTransform.TM_e22) == 273067);
+            assert(pathTransform.TM_e32.DWF_int == -1024 ||
+                   pathTransform.TM_e32.DWF_int == -3072);
         }
         if (b[0]==GR_APPLY_TRANSFORM)compose(&pathTransform, b);
         if (b[0]==GR_SET_TRANSFORM)memcpy(&pathTransform, b+1, sizeof(pathTransform));
@@ -1528,6 +1619,39 @@ static void textPrecision(void)
         assert(strstr(captured, fonts[i]));
         fclose(out);
     }
+    /* Mixed script and normal runs: native advances must not be halved
+     * twice. The bars keep their normal baseline, including combined bits. */
+    f->limit = 0xffff;
+    for (i = 0; i < 3; ++i) {
+        out = tmpfile();
+        assert(out);
+        h = begin();
+        fractionalMetrics = 1;
+        trackAdvance = i == 2 ? 16384 : 0;
+        first->attr.styleClear = second->attr.styleClear = 0xff;
+        first->attr.styleSet = TS_UNDERLINE | TS_STRIKE_THRU |
+            (i ? TS_SUBSCRIPT : TS_SUPERSCRIPT) | (i == 2 ? TS_SUPERSCRIPT : 0);
+        second->attr.styleSet = 0;
+        add(field, sizeof(field));
+        add(end, sizeof(end));
+        assert(PDFGSTRING(h, 1, 0) == GSRT_COMPLETE);
+        assert(PDFENDPAGE(h) == PDF_OK && PDFDESTROY(h) == PDF_OK);
+        assert(!live);
+        rewind(out);
+        n = fread(captured, 1, sizeof(captured)-1, out);
+        captured[n] = 0;
+        assert(strstr(captured, "BT /F8 6 Tf"));
+        assert(strstr(captured, i == 0 ? "60.25 109.25 Tm (A)" :
+            i == 1 ? "60.25 114.25 Tm (A)" : "60.5 114.25 Tm (A)"));
+        assert(strstr(captured, i == 0 ? "63.5 109.25 Tm (V)" :
+            i == 1 ? "63.5 114.25 Tm (V)" : "64 114.25 Tm (V)"));
+        assert(strstr(captured, i == 2 ? "68 113.25 Tm (W)" :
+                                                     "67.25 113.25 Tm (W)"));
+        assert(strstr(captured, i == 2 ? "60.25 114.5 7.5 0.5 re f" :
+                                                   "60.25 114.5 7 0.5 re f"));
+        fclose(out);
+    }
+    trackAdvance = 0;
     /* Both native bars share text color/mask. Cap the first run's bars
      * without clamping the next run's fractional pen position. */
     first->attr.font = second->attr.font = FG_SANS_SERIF;
@@ -2474,7 +2598,9 @@ int main(int argc, char **argv)
       add(unionClip, sizeof(unionClip));
       add(line, sizeof(line));
       add(end, sizeof(end));
-      assert(PDFGSTRING(h, 1, 0)==GSRT_FAULT);
+      assert(PDFGSTRING(h, 1, 0)==GSRT_COMPLETE);
+      assert(regionCalls == 2 && regionSections == 4);
+      assert(regionCombines[0] == PCT_REPLACE && regionCombines[1] == PCT_UNION);
 }
     discard(h);
     fclose(out);

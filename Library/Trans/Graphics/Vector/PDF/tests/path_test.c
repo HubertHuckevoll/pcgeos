@@ -50,6 +50,44 @@ static void addDonut(void)
     add(strokePath, 1);
 }
 
+/* A native region fixture for (donut OR overlapping rectangle) AND a clip.
+ * Its hole and solid spans cross the 2048-row conversion-strip boundary. */
+static const word unionRegion[] = {
+    1875, 1875, 2249, 2291, 1874, EOREGREC,
+    1999, 1875, 2207, EOREGREC,
+    2041, 1875, 1999, 2083, 2207, EOREGREC,
+    2166, 1875, 1999, 2042, 2249, EOREGREC,
+    2207, 1875, 2249, EOREGREC,
+    2291, 1875, 2207, EOREGREC, EOREGREC
+};
+
+static void addUnionClip(void)
+{
+    static byte outer[] = {GR_DRAW_RECT, 194, 1, 194, 1, 18, 2, 38, 2};
+    static byte resetTransform[] = {GR_SET_NULL_TRANSFORM};
+    static byte inner[] = {GR_DRAW_RECT, 224, 1, 224, 1, 244, 1, 8, 2};
+    static byte overlap[] = {GR_DRAW_RECT, 234, 1, 234, 1, 38, 2, 18, 2};
+    static byte replace[] = {GR_SET_WIN_CLIP_PATH, 0, PCT_REPLACE, 0};
+    static byte unite[] = {GR_SET_WIN_CLIP_PATH, 1, PCT_UNION, 0};
+    static byte intersect[] = {GR_SET_WIN_CLIP_RECT, PCT_INTERSECTION, 0,
+                       194, 1, 194, 1, 28, 2, 38, 2};
+    static byte paint[] = {GR_FILL_RECT, 194, 1, 194, 1, 38, 2, 38, 2};
+    static byte clear[] = {GR_SET_WIN_CLIP_RECT, PCT_NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    add(startPath, 5);
+    add(resetTransform, 1);
+    add(outer, sizeof(outer));
+    add(inner, sizeof(inner));
+    add(finishPath, 1);
+    add(replace, sizeof(replace));
+    add(startPath, 5);
+    add(overlap, sizeof(overlap));
+    add(finishPath, 1);
+    add(unite, sizeof(unite));
+    add(intersect, sizeof(intersect));
+    add(paint, sizeof(paint));
+    add(clear, sizeof(clear));
+}
+
 static void pathChecks(void)
 {
     MemHandle h;
@@ -69,7 +107,9 @@ static void pathChecks(void)
 
     /* The same captured heading can now be consumed as native outlines.
      * Truncated fields and unavailable outline fonts still fail explicitly. */
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < 6; ++i) {
+        heading[24] = TS_ITALIC | (i == 4 ? TS_SUPERSCRIPT :
+                                 i == 5 ? TS_SUBSCRIPT : 0);
         out = tmpfile();
         assert(out);
         h = begin();
@@ -78,18 +118,57 @@ static void pathChecks(void)
         add(startPath, sizeof(startPath));
         add(heading, (word)(sizeof(heading) - (i == 2)));
         add(finishPath, 1);
-        if (i == 1 || i == 3) add(strokePath, 1);
+        if (i == 1 || i >= 3) add(strokePath, 1);
         add(finishString, 1);
-        assert(PDFGSTRING(h, 1, 0) == (i >= 2 ? GSRT_FAULT : GSRT_COMPLETE));
-        if (i < 2) assert(PDFENDPAGE(h) == PDF_OK);
+        assert(PDFGSTRING(h, 1, 0) == (i == 2 || i == 3 ? GSRT_FAULT : GSRT_COMPLETE));
+        if (i != 2 && i != 3) assert(PDFENDPAGE(h) == PDF_OK);
         assert(PDFDESTROY(h) == (i == 2 ? PDF_STATE_ERROR :
                                 i == 3 ? PDF_UNSUPPORTED : PDF_OK));
         if (i == 1) assert(glyphCalls == 20 && glyphFont == 0x1204 && glyphStyle == TS_ITALIC);
+        if (i >= 4) {
+            assert(glyphCalls == 20 && glyphStyle == TS_ITALIC);
+            assert(fixed(glyphTransform.TM_e11) == 32768);
+            assert(fixed(glyphTransform.TM_e22) == -32768);
+            assert(glyphTransform.TM_e32.DWF_int == (i == 4 ? 8 : 13));
+        }
         assert(!glyphLive);
         glyphError = 0;
         assert(!live && !pathStateLive && !mainStateLive);
         fclose(out);
     }
+    out = tmpfile();
+    assert(out);
+    h = begin();
+    addUnionClip();
+    add(finishString, 1);
+    regionEmpty = 1;
+    assert(PDFGSTRING(h, 1, 0) == GSRT_COMPLETE);
+    regionEmpty = 0;
+    assert(PDFENDPAGE(h) == PDF_OK && PDFDESTROY(h) == PDF_OK);
+    assert(!live && !pathStateLive && !mainStateLive);
+    fclose(out);
+    out = tmpfile();
+    assert(out);
+    h = begin();
+    {
+        static byte unitePath[] = {GR_BEGIN_PATH, PCT_UNION, 0, 0, 0};
+        add(startPath, 5);
+        add(moveSquare, sizeof(moveSquare));
+        add(edge1, sizeof(edge1));
+        add(edge2, sizeof(edge2));
+        add(finishPath, 1);
+        add(unitePath, 5);
+        add(hole, sizeof(hole));
+        add(finishPath, 1);
+        add(fillWinding, 2);
+    }
+    add(finishString, 1);
+    assert(PDFGSTRING(h, 1, 0) == GSRT_COMPLETE);
+    assert(regionCalls == 2 && regionSections == 4);
+    assert(regionRules[0] == 1 && regionRules[1] == 1);
+    assert(PDFENDPAGE(h) == PDF_OK && PDFDESTROY(h) == PDF_OK);
+    assert(!live && !pathStateLive && !mainStateLive);
+    fclose(out);
     /* A snapshot must not restore the reader's section frame, or leave a
      * recorded save open when the section ends. */
     for (i = 0; i < 2; ++i) {
@@ -246,8 +325,16 @@ int main(int argc, char **argv)
     add(textClip, sizeof(textClip));
     add(textPaint, sizeof(textPaint));
     add(nullWin, sizeof(nullWin));
+    addUnionClip();
     add(finishString, 1);
+    regionFixture = unionRegion;
+    regionFixtureWords = sizeof(unionRegion)/2;
     assert(PDFGSTRING(h, 1, 0)==GSRT_COMPLETE);
+    assert(regionCalls == 2 && regionSections == 6);
+    assert(regionCombines[0] == PCT_REPLACE && regionCombines[1] == PCT_UNION &&
+           regionCombines[2] == PCT_INTERSECTION);
+    assert(regionRules[0] == 0 && regionRules[1] == 1 && regionRules[2] == 0);
+    regionFixture = 0;
     assert(PDFENDPAGE(h)==0);
     assert(PDFSTARTPAGE(h)==0);
     identity(&identityMatrix);

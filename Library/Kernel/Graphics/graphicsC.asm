@@ -6677,7 +6677,8 @@ COMMENT @----------------------------------------------------------------------
 C FUNCTION:	GrGetClipRegion
 
 C DECLARATION:	extern MemHandle
-			_far _pascal GrGetClipRegion (GStateHandle gstate);
+			_far _pascal GrGetClipRegion (GStateHandle gstate,
+						      RegionFillRule rule);
 
 KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
 
@@ -6688,7 +6689,12 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 GRGETCLIPREGION	proc	far
-	C_GetOneWordArg	ax, cx,dx		; GState => AX
+	; CInclude declares both GState and RegionFillRule. Decode both words:
+	; the native entry requires CL, and Pascal must remove both arguments.
+	; With Pascal argument order, the former one-word decoder read the rule
+	; as the GState, passed an undefined CL, and left the actual GState word
+	; on the caller's stack after returning.
+	C_GetTwoWordArgs	ax,cx, bx,dx	; GState => AX, FillRule => CL
 	xchg	ax, di				; GState => DI, save DI in AX
 	call	GrGetClipRegion
 	xchg	di, ax				; restore DI

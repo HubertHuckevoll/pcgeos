@@ -73,6 +73,10 @@ typedef struct {
 #define GR_APPLY_ROTATION 16
 #define GR_APPLY_TRANSFORM 19
 #define GR_SET_TRANSFORM 21
+#define GR_SET_NULL_TRANSFORM 22
+#define EOREGREC 0x8000
+#define ODD_EVEN 0
+#define MGIT_SIZE 0
 #define GR_RESTORE_TRANSFORM 26
 #define GR_REL_MOVE_TO 100
 #define GR_DRAW_PATH 65
@@ -94,6 +98,12 @@ void GrSetTransform(GStateHandle gs, const TransMatrix *t);
 void GrTransformDWFixed(GStateHandle gs, PointDWFixed *point);
 void GrUntransformDWFixed(GStateHandle gs, PointDWFixed *point);
 void GrEndPath(GStateHandle gs);
+void GrBeginPath(GStateHandle gs, word combine);
+void GrSetClipPath(GStateHandle gs, word combine, word rule);
+void GrApplyTransform(GStateHandle gs, const TransMatrix *t);
+void GrInitDefaultTransform(GStateHandle gs);
+MemHandle GrGetClipRegion(GStateHandle gs, word rule);
+word MemGetInfo(MemHandle h, word info);
 void GrSaveState(GStateHandle gs);
 void GrRestoreState(GStateHandle gs);
 #define SDM_0      89
@@ -114,6 +124,8 @@ void GrRestoreState(GStateHandle gs);
 #define TS_ITALIC	0x10
 #define TS_UNDERLINE 0x01
 #define TS_STRIKE_THRU 0x02
+#define TS_SUPERSCRIPT 0x08
+#define TS_SUBSCRIPT 0x04
 #define C_NONBRKHYPHEN 0x1e
 #define C_OPTHYPHEN 0x1f
 #define TM_DRAW_OPTIONAL_HYPHENS 0x01

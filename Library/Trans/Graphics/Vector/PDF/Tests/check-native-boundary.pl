@@ -131,3 +131,22 @@ if (@ARGV) {
         or die "Path callback still uses a raw far call\n";
     print "Native path callback: GEOS movable-code dispatcher used\n";
 }
+
+# CopyRegionPath must restore through the relocated chunk pointer (BP), not
+# the chunk handle (SI). Otherwise the two saved bounds corrupt GState memory.
+my $path_low = source('Library/Kernel/Graphics/graphicsPathLow.asm');
+$path_low =~ /CopyRegionPath\s+proc(.*?)CopyRegionPath\s+endp/s
+    or die "Region copy not recognized\n";
+my $restore = $1;
+$restore =~ /call\s+PathBuildRegionSlow.*?mov\s+bp, ds:\[si\](.*?)call\s+MemUnlock/s
+    or die "Relocated region-copy restoration not recognized\n";
+my @restores = $1 =~ /pop\s+ds:\[(\w+)\]\.(P_\w+)/g;
+"@restores" eq 'bp P_bottom bp P_top bp P_flags bp P_slowRegion'
+    or die "Region-copy cleanup writes outside the relocated Path\n";
+print "Native region copy: all saved fields restored through relocated chunk\n";
+
+$graphics =~ /GRGETCLIPREGION\s+proc\s+far(.*?)GRGETCLIPREGION\s+endp/s
+    or die "C clip-region wrapper not recognized\n";
+$1 =~ /C_GetTwoWordArgs\s+ax,cx,\s*bx,dx/
+    or die "C clip-region wrapper must consume both declared arguments\n";
+print "Native C clip region: GState and fill-rule arguments decoded\n";

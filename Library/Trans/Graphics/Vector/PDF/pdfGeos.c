@@ -54,6 +54,7 @@ extern word _pascal PDFSTREAMWRITE(word token, void (*strategy)(void),
 extern dword _pascal PDFTEXTWIDTHFIXED(GStateHandle gs, const char *textP, word count);
 extern void _pascal PDFGETDASH(GStateHandle gs, byte *dashP);
 extern word _pascal PDFGENCHAR(GStateHandle gs, word character);
+extern sdword _pascal PDFSCRIPTY(GStateHandle gs);
 /* The kernel C entry returns packed PatternInfo in AX. Watcom's struct
  * return convention would instead dereference AX as a result pointer. */
 extern word _pascal GRGETTEXTPATTERN(GStateHandle gs, MemHandle *patternH,
@@ -480,6 +481,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
     word pattern;
     byte encoded, glyph, pair[2];
     PdfFixed advance = 0, previous = 0, width, kern, origin, offset, thickness, fontBase;
+    PdfFixed glyphY;
     Boolean visible, path = p->pathTransform != (void*)0;
 
     drawMask = GrGetTextMask(gs, (void*)0);
@@ -499,7 +501,8 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
 
     fontID = GrGetFont(gs, &size);
     style = GrGetTextStyle(gs);
-    if (visible && (style & ~(TS_BOLD | TS_ITALIC | TS_UNDERLINE | TS_STRIKE_THRU))) {
+    if (visible && (style & ~(TS_BOLD | TS_ITALIC | TS_UNDERLINE | TS_STRIKE_THRU |
+                              TS_SUPERSCRIPT | TS_SUBSCRIPT))) {
         p->error = PDF_UNSUPPORTED;
         return 0;
     }
@@ -515,6 +518,15 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
         if (!addFixed(p, y, offset, &y)) {
             return 0;
         }
+    }
+
+    glyphY = y;
+    if (visible && (style & (TS_SUPERSCRIPT | TS_SUBSCRIPT))) {
+        /* Native widths already include script scaling. Move only the glyph
+         * baseline; kernel underline/strike bars retain the original top. */
+        offset = (PdfFixed)PDFSCRIPTY(gs);
+        if (!addFixed(p, y, offset, &glyphY)) return 0;
+        size /= 2;
     }
 
     font = (style & TS_BOLD ? 1 : 0) + (style & TS_ITALIC ? 2 : 0);
@@ -598,9 +610,9 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
             if (!addFixed(p, width, -offset, &offset) ||
                 !addFixed(p, origin, offset, &origin)) break;
             if (path) {
-                glyphPath(p, gs, glyph == C_NONBRKHYPHEN ? '-' : glyph, origin, y);
+                glyphPath(p, gs, glyph == C_NONBRKHYPHEN ? '-' : glyph, origin, glyphY);
             } else {
-                PdfText(p, origin, y, (PdfFixed)size, glyphFont, &encoded, 1);
+                PdfText(p, origin, glyphY, (PdfFixed)size, glyphFont, &encoded, 1);
             }
         }
 
@@ -1414,7 +1426,7 @@ static void _pascal glyphPath(PdfDocument *p, GStateHandle gs, word character,
     TransMatrix transform;
     PointWWFixed subStart;
     WWFixedAsDWord size;
-    word chunk, font = 0, op = 0, bytes = 0, result, last;
+    word chunk, font = 0, op = 0, bytes = 0, result, last, style;
     byte element[32];
     Boolean saved = FALSE, contour = FALSE;
 
@@ -1430,7 +1442,10 @@ static void _pascal glyphPath(PdfDocument *p, GStateHandle gs, word character,
     }
     font = GrGetFont(gs, &size);
     GrSetFont(string, font, size);
-    GrSetTextStyle(string, GrGetTextStyle(gs), 0xff);
+    style = GrGetTextStyle(gs);
+    /* Apply script placement ourselves. Driver path transforms use different
+     * script translations from their native text rasterizers. */
+    GrSetTextStyle(string, style & ~(TS_SUPERSCRIPT | TS_SUBSCRIPT), 0xff);
     GrSetFontWeight(string, GrGetFontWeight(gs));
     GrSetFontWidth(string, GrGetFontWidth(gs));
     GrGetTransform(gs, &transform);
@@ -1438,7 +1453,9 @@ static void _pascal glyphPath(PdfDocument *p, GStateHandle gs, word character,
     /* Fractional placement is in the matrix: font drivers query integer CP.
      * PostScript outlines are baseline-relative with Y increasing upwards. */
     GrApplyTranslation(string, x, y);
-    GrApplyScale(string, 65536L, -65536L);
+    if (style & (TS_SUPERSCRIPT | TS_SUBSCRIPT))
+        GrApplyScale(string, 32768L, -32768L);
+    else GrApplyScale(string, 65536L, -65536L);
     p->error = PDFGENCHAR(string, character);
     if (p->error) goto cleanup;
     if (GrEndGString(string) != GSET_NO_ERROR) {
@@ -1510,6 +1527,85 @@ cleanup:
 
 /***********************************************************************
  *
+ * FUNCTION:    regionPath
+ * DESCRIPTION: Append one native region strip to the PDF construction path.
+ * PARAMETERS:  gs = reconstructed clip; bandOffset = physical row origin.
+ * STRATEGY:    Decode inclusive scanline bands and emit disjoint rectangles.
+ *              The region copy is owned here and freed on every exit.
+ *
+ * KNOWN BUGS/SIDE EFFECTS/CAVEATS/IDEAS:
+ *              ATTENTION: Boolean unions use the printer's 300 dpi grid.
+ *              Ordinary paths retain curves; exact vector unions need a
+ *              curve Boolean engine. Native regions use word coordinates.
+ *
+ ***********************************************************************/
+static void _pascal regionPath(PdfDocument *p, GStateHandle gs, sdword bandOffset)
+{
+    MemHandle regionH;
+    const byte *regionP;
+    word size, at = 12, value;
+    sdword previous, bottom, top, end, left, right;
+    PdfFixed x1, y1, x2, y2;
+    Boolean complete = FALSE;
+
+    regionH = GrGetClipRegion(gs, ODD_EVEN);
+    if (!regionH) return; /* The intersection can genuinely be empty. */
+    regionP = MemLock(regionH);
+    size = MemGetInfo(regionH, MGIT_SIZE);
+    if (size < 14 || u16(regionP+8) == EOREGREC || u16(regionP+10) != EOREGREC) {
+        p->error = PDF_STATE_ERROR;
+        goto cleanup;
+    }
+    previous = s16(regionP+8); /* initial empty band ends at top-1 */
+    while (!p->error && at + 2UL <= size) {
+        value = u16(regionP + at);
+        at += 2;
+        if (value == EOREGREC) {
+            complete = TRUE;
+            break;
+        }
+        bottom = (sword)value;
+        if (bottom <= previous) {
+            p->error = PDF_STATE_ERROR;
+            break;
+        }
+        /* The null-window region builder reserves two safety scanlines.
+         * Keep adjacent 2048-row strips disjoint, even at their boundaries. */
+        top = previous < -1024 ? -1024 : previous + 1;
+        end = bottom > 1023 ? 1024 : bottom + 1;
+        top += bandOffset;
+        end += bandOffset;
+        y1 = top / 25 * 393216L + top % 25 * 393216L / 25;
+        y2 = end / 25 * 393216L + end % 25 * 393216L / 25;
+        while (at + 2UL <= size && u16(regionP + at) != EOREGREC) {
+            if (at + 6UL > size) {
+                p->error = PDF_STATE_ERROR;
+                break;
+            }
+            left = s16(regionP + at);
+            right = s16(regionP + at + 2);
+            at += 4;
+            if (right < left || right == -32768L) {
+                p->error = PDF_STATE_ERROR;
+                break;
+            }
+            /* 72/300 = 6/25. Divide before multiplying to avoid overflow. */
+            x1 = left / 25 * 393216L + left % 25 * 393216L / 25;
+            ++right;
+            x2 = right / 25 * 393216L + right % 25 * 393216L / 25;
+            if (end > top) PdfPathRect(p, x1, y1, x2, y2);
+        }
+        if (at + 2UL > size) break;
+        at += 2; /* end of this band's spans */
+        previous = bottom;
+    }
+    if (!p->error && !complete) p->error = PDF_STATE_ERROR;
+cleanup:
+    MemFree(regionH);
+}
+
+/***********************************************************************
+ *
  * FUNCTION:    nativePath
  * DESCRIPTION: Serialize a copied native path. The kernel owns the live path;
  *              this routine owns only the snapshot and one current element.
@@ -1524,12 +1620,14 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
     MemHandle pathH = 0, elementH = 0;
     GStateHandle source = 0, playback = 0;
     byte *pathP, *elementP;
-    TransMatrix transform;
+    TransMatrix transform, regionBase;
     PdfFixed values[6], previousMatrix[6];
     PointWWFixed subStart, pen;
-    word op, size, result, last, i, rule = 0, sections = 0, depth = 0;
+    word op, size, result, last, i, combine = 0, rule = 0, sections = 0, depth = 0;
+    byte header[5];
+    sdword band = 0, bands = 1, bandOffset;
     Boolean open = FALSE, complete = FALSE, more, to, changed;
-    Boolean subpath = FALSE, matrixKnown = FALSE, separatePen = FALSE;
+    Boolean subpath = FALSE, matrixKnown = FALSE, separatePen = FALSE, region = FALSE;
 
     if (p->error || !GrTestPath(gs, type)) {
         return;
@@ -1556,7 +1654,41 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
     if (paint != -1 && !deviceState(p)) {
         goto cleanup;
     }
+    /* Detect unions before emitting any clips: a PDF clip cannot expand. */
+    if (paint >= 0) {
+        while (TRUE) {
+            op = GrGetGStringElement(playback, source, 0, (void*)0, &size);
+            if (!size || op == GR_END_GSTRING) break;
+            if (op == GR_BEGIN_PATH && size == 5) {
+                GrGetGStringElement(playback, source, 5, header, &size);
+                if ((header[3] & 3) == PCT_UNION) region = TRUE;
+            }
+            GrSetGStringPos(source, GSSPT_SKIP_1, 0);
+        }
+        GrSetGStringPos(source, GSSPT_BEGINNING, 0);
+    }
+    if (region) {
+        /* Native regions use signed word device coordinates. */
+        if ((sdword)p->width * PDF_DEVICE_DPI > 32767L * 72 ||
+            (sdword)p->height * PDF_DEVICE_DPI > 32767L * 72) {
+            p->error = PDF_LIMIT_ERROR;
+            goto cleanup;
+        }
+        bands = ((sdword)p->height * PDF_DEVICE_DPI + 147455L) / 147456L;
+    }
     PdfRaw(p, "n\n");
+replay:
+    if (region) {
+        /* GetWinTopBottom limits null-window regions to roughly +/-1024.
+         * Shift one page strip into that range for each native conversion. */
+        bandOffset = band * 2048L + 1024;
+        GrGetTransform(p->deviceH, &transform);
+        GrApplyTranslation(playback, 0, -bandOffset * 65536L);
+        GrApplyScale(playback, 273067L, 273067L); /* 300/72 in 16.16 */
+        GrApplyTransform(playback, &transform);
+        GrGetTransform(playback, &regionBase);
+        GrInitDefaultTransform(playback);
+    }
     result = GrDrawGStringAtCP(playback, source, GSC_ONE, &last);
     if (result != GSRT_ONE && result != GSRT_COMPLETE) {
         p->error = PDF_STATE_ERROR;
@@ -1585,15 +1717,14 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
             if (open || size != 5 || u16(elementP+1) > PCT_INTERSECTION) {
                 p->error = PDF_STATE_ERROR;
             } else {
-                /* Intersection sections become successive PDF clip paths.
-                 * ATTENTION: Boolean unions need native region conversion;
-                 * retain an explicit failure until that converter is added. */
-                if (sections && paint != -1 && (elementP[3] & 3) != PCT_INTERSECTION)
+                combine = sections ? elementP[3] & 3 : PCT_REPLACE;
+                if (sections && paint != -1 && !region && combine != PCT_INTERSECTION)
                     p->error = PDF_UNSUPPORTED;
                 rule = (elementP[3] & 0x10) ? !!(elementP[3] & 0x20) : (paint == 1);
                 ++sections;
                 open = TRUE;
-                GrSaveState(playback);
+                if (region) GrBeginPath(playback, PCT_REPLACE);
+                else GrSaveState(playback);
             }
 
             GrSetGStringPos(source, GSSPT_SKIP_1, 0);
@@ -1603,21 +1734,31 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
                 break;
             }
 
-            GrRestoreState(playback);
+            if (region) {
+                GrEndPath(playback);
+                GrSetClipPath(playback, combine, rule);
+            } else GrRestoreState(playback);
             open = FALSE;
             GrSetGStringPos(source, GSSPT_SKIP_1, 0);
             op = GrGetGStringElement(playback, source, 0, (void*)0, &size);
             more = op != GR_END_GSTRING;
-            if (paint == 2 || (paint >= 0 && more))
+            if (!region && (paint == 2 || (paint >= 0 && more)))
                 PdfRaw(p, rule ? "W n\n" : "W* n\n");
             /* GrGetPath changed each saved SetTransform to ApplyTransform.
              * Each section's saved matrix is absolute, not cumulative. */
-            GrSetNullTransform(playback);
+            if (region) GrSetTransform(playback, &regionBase);
+            else GrSetNullTransform(playback);
             subpath = matrixKnown = separatePen = FALSE;
         } else if ((op >= GR_DRAW_LINE && op <= GR_OUTPUT_5F) ||
                    op == GR_MOVE_TO || op == GR_CLOSE_SUB_PATH ||
                    op == GR_REL_MOVE_TO || op == GR_MOVE_TO_WWFIXED) {
-            if (paint == -1 && (op == GR_DRAW_POINT || op == GR_DRAW_POINT_CP ||
+            if (region) {
+                if (op == GR_MOVE_TO || op == GR_REL_MOVE_TO ||
+                    op == GR_MOVE_TO_WWFIXED || op == GR_CLOSE_SUB_PATH) {
+                    if (size != (op == GR_CLOSE_SUB_PATH ? 1 : op == GR_MOVE_TO ? 5 : 9))
+                        p->error = PDF_STATE_ERROR;
+                } else p->error = geometrySize(elementP, size);
+            } else if (paint == -1 && (op == GR_DRAW_POINT || op == GR_DRAW_POINT_CP ||
                                  op == GR_BRUSH_POLYLINE)) {
                 attributes(p, gs, FALSE, FALSE, TRUE);
                 PdfRaw(p, "S\nQ\nq\n");
@@ -1681,8 +1822,8 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
                 }
             }
 
-            result = GrDrawGStringAtCP(playback, source, GSC_ONE, &last);
             if (!p->error) {
+                result = GrDrawGStringAtCP(playback, source, GSC_ONE, &last);
                 arcToPen(playback, elementP);
             }
             if (op == GR_MOVE_TO || op == GR_REL_MOVE_TO || op == GR_MOVE_TO_WWFIXED) {
@@ -1710,7 +1851,16 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
                    (op >= GR_SET_MIX_MODE && op <= GR_SET_CUSTOM_TEXT_PATTERN)) {
             /* Replay captured attributes in the kernel. Painting uses the
              * caller's final attributes, not the definition's temporary ones. */
-            result = GrDrawGStringAtCP(playback, source, GSC_ONE, &last);
+            if (region && (op == GR_SET_TRANSFORM || op == GR_SET_NULL_TRANSFORM)) {
+                if (size != (op == GR_SET_TRANSFORM ? 29 : 1)) {
+                    p->error = PDF_STATE_ERROR;
+                } else {
+                    GrSetTransform(playback, &regionBase);
+                    if (op == GR_SET_TRANSFORM)
+                        GrApplyTransform(playback, (const TransMatrix *)(elementP+1));
+                    GrSetGStringPos(source, GSSPT_SKIP_1, 0);
+                }
+            } else result = GrDrawGStringAtCP(playback, source, GSC_ONE, &last);
         } else p->error = PDF_UNSUPPORTED;
         /* Preserve the rejected snapshot element for the EC warning. */
         if (p->error) {
@@ -1728,6 +1878,23 @@ static void _pascal nativePath(PdfDocument *p, GStateHandle gs, word type, int p
     }
     if ((!complete || open || depth || !sections) && !p->error) {
         p->error = PDF_STATE_ERROR;
+    }
+    if (!p->error && region) {
+        regionPath(p, playback, bandOffset);
+        if (!p->error && ++band < bands) {
+            GrDestroyState(playback);
+            playback = GrCreateState(0);
+            if (!playback) {
+                p->error = PDF_LIMIT_ERROR;
+                goto cleanup;
+            }
+            sections = depth = 0;
+            open = complete = FALSE;
+            GrSetGStringPos(source, GSSPT_BEGINNING, 0);
+            goto replay;
+        }
+        rule = 1; /* Native region rectangles have no overlapping interiors. */
+        if (paint == 2) PdfRaw(p, "0 0 0 0 re W n\n");
     }
     if (!p->error && paint != 2) {
         /* Fills use physical coordinates. Strokes were mapped into the
@@ -1749,6 +1916,13 @@ cleanup:
         MemFree(elementH);
     }
     if (playback) {
+        if (region && open) {
+            while (depth) {
+                GrRestoreState(playback);
+                --depth;
+            }
+            GrEndPath(playback);
+        }
         GrDestroyState(playback);
     }
     if (source) {

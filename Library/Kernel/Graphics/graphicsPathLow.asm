@@ -5930,8 +5930,14 @@ EC <	ERROR_A GRAPHICS_REGION_ILLEGAL_REGION_FILL_RULE		>
 	mov	si, bx				; Path chunk handle => SI
 	call	PathBuildRegionSlow		; build a region from the path
 	mov	bp, ds:[si]			; Path => DS:BP
-	pop	ds:[si].P_bottom
-	pop	ds:[si].P_top
+	;
+	; PathBuildRegionSlow can move the Path chunk. SI is still its handle,
+	; not its address, so restore all four fields through the new BP pointer.
+	; Using DS:[SI] for P_top/P_bottom overwrote unrelated GState data near
+	; the chunk-handle table, and left the Path's original bounds unrestored.
+	;
+	pop	ds:[bp].P_bottom
+	pop	ds:[bp].P_top
 	pop	ds:[bp].P_flags
 	pop	ds:[bp].P_slowRegion
 	call	MemUnlock			; unlock the sucker
