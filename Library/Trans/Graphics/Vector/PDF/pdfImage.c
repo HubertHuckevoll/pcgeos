@@ -203,14 +203,14 @@ static void imageBegin(PdfDocument *p, PdfImage *im, const PdfImageSpec *spec,
         PdfNumber(p, height);
         PdfRaw(p, "cm\n");
         imageHeader(p, spec, spec->width, spec->height);
-        im->spec.palette = (const unsigned char *)0;
+        im->spec.palette = (void*)0;
     }
 }
 
 void PdfImageBegin(PdfDocument *p, PdfImage *im, const PdfImageSpec *spec,
                    int x, int y, PdfFixed width, PdfFixed height)
 {
-    imageBegin(p, im, spec, x, y, width, height, (unsigned char *)0);
+    imageBegin(p, im, spec, x, y, width, height, (void*)0);
 }
 
 void PdfImageBeginMasked(PdfDocument *p, PdfImage *im, const PdfImageSpec *spec,
@@ -307,6 +307,6 @@ void PdfImageEnd(PdfDocument *p, PdfImage *im)
     PdfRaw(p, im->maskBytes ? "Q\n" : ">\nEI\nQ\n");
     im->active = 0;
     p->imageOpen = 0;
-    im->spec.palette = (const unsigned char *)0;
-    im->maskP = (unsigned char *)0;
+    im->spec.palette = (void*)0;
+    im->maskP = (void*)0;
 }

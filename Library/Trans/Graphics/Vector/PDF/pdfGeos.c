@@ -255,7 +255,7 @@ static void attributes(PdfDocument *p, GStateHandle gs, Boolean fill,
     word drawMask = SDM_100;
     int i;
     if (!textOutput) {
-        drawMask = fill ? GrGetAreaMask(gs, (DrawMask *)0) : GrGetLineMask(gs, (DrawMask *)0);
+        drawMask = fill ? GrGetAreaMask(gs, (void*)0) : GrGetLineMask(gs, (void*)0);
         if (drawMask != SDM_0 && (GrGetMixMode(gs) != MM_COPY ||
             drawMask != SDM_100)) {
             p->error = PDF_UNSUPPORTED;
@@ -367,7 +367,7 @@ static PdfFixed _pascal text(PdfDocument *p, GStateHandle gs, PdfFixed x, PdfFix
     PdfFixed advance = 0, previous = 0, width, kern, origin, offset, thickness, fontBase;
     Boolean visible;
 
-    drawMask = GrGetTextMask(gs, (DrawMask *)0);
+    drawMask = GrGetTextMask(gs, (void*)0);
     visible = drawMask != SDM_0;
     if (visible && (drawMask != SDM_100 || GrGetMixMode(gs) != MM_COPY)) {
         p->error = PDF_UNSUPPORTED;
@@ -1183,14 +1183,14 @@ static void bitmap(PdfDocument *p, GStateHandle gs, GStateHandle string, byte op
     TransMatrix t;
     PdfFixed m[6], width, height;
     MemHandle block = 0, auxH = 0, workspaceH = 0;
-    byte *b, *paletteP, *workspaceP = (byte *)0;
+    byte *b, *paletteP, *workspaceP = (void*)0;
     const byte *row;
     word size, prefix, i, error, rowBytes, maskBytes, paletteBytes;
     dword rgb;
     XYValueAsDWord cp = GrGetCurPos(gs);
     int x = (sword)(word)cp, y = (sword)(word)(cp >> 16);
     Boolean initial = TRUE, fill = op == GR_FILL_BITMAP || op == GR_FILL_BITMAP_CP;
-    if (GrGetMixMode(gs) != MM_COPY || GrGetAreaMask(gs, (DrawMask *)0) != SDM_100) {
+    if (GrGetMixMode(gs) != MM_COPY || GrGetAreaMask(gs, (void*)0) != SDM_100) {
         p->error = PDF_UNSUPPORTED;
         return;
     }
@@ -1259,7 +1259,7 @@ static void bitmap(PdfDocument *p, GStateHandle gs, GStateHandle string, byte op
             if (s.image.masked)
                 PdfImageBeginMasked(p, &image, &s.image, x, y, width, height, paletteP + paletteBytes);
             else PdfImageBegin(p, &image, &s.image, x, y, width, height);
-            first.image.palette = (const byte *)0;
+            first.image.palette = (void*)0;
             if (prefix == 7) GrMoveTo(gs, x, y);
         } else if (!s.complex || !s.rows || s.firstRow != image.rows ||
                    s.image.width != first.image.width || s.image.height != first.image.height ||

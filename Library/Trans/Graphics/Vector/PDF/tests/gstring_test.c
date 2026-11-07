@@ -357,6 +357,7 @@ static void arcPen(GStateHandle gs,const byte *b)
 word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last)
 {
     const byte *b;
+    word at;
     assert(flags==GSC_ONE);
     if(str==2) {
         b=pathSource+pathCursor;assert(gs==101);
@@ -373,12 +374,12 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
         if(b[0]==GR_DRAW_CURVE_TO){pathX=u16(b+9);pathY=u16(b+11);}
         if(b[0]==GR_DRAW_ARC || b[0]==GR_FILL_ARC)arcPen(gs,b);
         if(b[0]==GR_DRAW_ARC_3POINT || b[0]==GR_FILL_ARC_3POINT) {
-            word at=u16(b+1) ? 19 : 3;
+            at=u16(b+1) ? 19 : 3;
             GrMoveToWWFixed(gs,(dword)operandFixed(b+at),(dword)operandFixed(b+at+4));
         }
         if(b[0]==GR_DRAW_POINT){pathX=u16(b+1);pathY=u16(b+3);pathXF=pathYF=0;}
         if(b[0]==GR_BRUSH_POLYLINE && u16(b+1)) {
-            word at=(word)(5+(u16(b+1)-1)*4);pathX=u16(b+at);pathY=u16(b+at+2);pathXF=pathYF=0;
+            at=(word)(5+(u16(b+1)-1)*4);pathX=u16(b+at);pathY=u16(b+at+2);pathXF=pathYF=0;
         }
         pathCursor+=rawSize(b);*last=pathSource[pathCursor];
         if(*last==GR_END_GSTRING){pathCursor=pathReady=0;return GSRT_COMPLETE;}
@@ -412,7 +413,7 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
     }
     if (b[0]==GR_DRAW_ARC || b[0]==GR_FILL_ARC)arcPen(gs,b);
     if(b[0]==GR_DRAW_ARC_3POINT || b[0]==GR_FILL_ARC_3POINT) {
-        word at=u16(b+1) ? 19 : 3;
+        at=u16(b+1) ? 19 : 3;
         GrMoveToWWFixed(gs,(dword)operandFixed(b+at),(dword)operandFixed(b+at+4));
     }
     if(capturing && (b[0]==GR_DRAW_ARC_3POINT_TO || b[0]==GR_FILL_ARC_3POINT_TO ||
@@ -420,7 +421,7 @@ word GrDrawGStringAtCP(GStateHandle gs, GStateHandle str, word flags, word *last
         GrMoveToWWFixed(gs,(dword)operandFixed(b+11),(dword)operandFixed(b+15));
     if (b[0]==GR_DRAW_POINT)GrMoveTo(gs,s16(b+1),s16(b+3));
     if(b[0]==GR_BRUSH_POLYLINE && u16(b+1)) {
-        word at=(word)(5+(u16(b+1)-1)*4);GrMoveTo(gs,s16(b+at),s16(b+at+2));
+        at=(word)(5+(u16(b+1)-1)*4);GrMoveTo(gs,s16(b+at),s16(b+at+2));
     }
     if (b[0]==GR_DRAW_LINE) { cpX=u16(b+5);cpY=u16(b+7); }
     ++cursor;

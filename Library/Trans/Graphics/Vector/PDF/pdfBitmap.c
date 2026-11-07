@@ -36,7 +36,7 @@ PdfWord PdfBitmapParse(const unsigned char *b, PdfWord size, PdfBitmapSlice *s)
     if (b[4] > 2 || (type & 0xa0)) return PDF_UNSUPPORTED;
     s->compact = b[4];
     s->image.masked = (type & 0x10) != 0;
-    s->image.palette = (const unsigned char *)0;
+    s->image.palette = (void*)0;
     s->image.paletteEntries = 0;
     if ((type & 7) == 0) s->image.format = PDF_IMAGE_STENCIL1;
     else if ((type & 7) == 1) { s->image.format = PDF_IMAGE_INDEX4; s->image.paletteEntries = 16; }

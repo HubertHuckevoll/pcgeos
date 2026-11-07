@@ -125,7 +125,7 @@ static const struct { CBitmap header; byte rows[16]; } maskedBitmap = {
         GrDrawPoint(gstate,425,135);
         GrDrawPointAtCP(gstate);
         GrSaveState(gstate);
-        GrSetLineStyle(gstate,LS_DOTTED,0,(const DashPairArray *)0,0);
+        GrSetLineStyle(gstate,LS_DOTTED,0,(void*)0,0);
         GrBrushPolyline(gstate,brushPoints,4,3,8); /* Height/width: device pixels. */
         GrRestoreState(gstate);
         GrDrawEllipse(gstate,60,300,260,400);
@@ -161,7 +161,7 @@ static const struct { CBitmap header; byte rows[16]; } maskedBitmap = {
         GrSetAreaColor(gstate,CF_RGB,255,0,0);
         GrMoveTo(gstate,200,650);
         GrFillBitmapAtCP(gstate,(const Bitmap *)&monoBitmap,0);
-        GrSetLineStyle(gstate,LS_DASHED,0,(const DashPairArray *)0,0);
+        GrSetLineStyle(gstate,LS_DASHED,0,(void*)0,0);
         GrDrawLine(gstate,60,710,300,710);
         GrSetLineStyle(gstate,LS_CUSTOM,1,(const DashPairArray *)customDash,2);
         GrDrawLine(gstate,60,735,300,735);
