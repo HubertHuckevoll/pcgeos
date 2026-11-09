@@ -61,7 +61,7 @@ for my $driver ('BSD16', 'BSD8ST') {
     my $asm = read_file("$root/Driver/Sound/$driver/bsmixer.asm");
     for my $table (['1745',16], ['1345',9], ['1335',4]) {
         my ($chip, $expected) = @$table;
-        $asm =~ /valTab$chip:\s*(.*?)subTab$chip:/s or die "Missing table\n";
+        $asm =~ /valTab$chip\s+label\s+word\s*(.*?)subTab$chip\s+label\s+word/s or die "Missing table\n";
         my $table_source = $1;
         $code .= "{ unsigned visible = 0; MixerValue d;\n";
         while ($table_source =~ /word\s+(\d+)[^\n]*\n\s*word\s+(\d+)[^\n]*\n\s*byte\s+(\d+),(\d+),(\d+)[^\n]*\n\s*byte\s+([0-9a-f]+)h/gi) {

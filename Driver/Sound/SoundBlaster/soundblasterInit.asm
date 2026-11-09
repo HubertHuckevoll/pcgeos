@@ -41,7 +41,6 @@ udata		segment
 	numOfVoices		word		; # of FM voices
 	numOfDACs		word		; # of DACs
 
-	runningOnAT		byte		; Are we running on an AT?
 udata		ends
 
 
@@ -257,7 +256,6 @@ skipNonWhiteSpace:
 markWithNull:
 	mov	{byte} ds:[si]-1, ah			; null termined token
 
-restoreFirstChar:
 	pop	ax					; restore 1st interest
 
 	;

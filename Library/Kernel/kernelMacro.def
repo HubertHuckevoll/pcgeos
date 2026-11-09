@@ -128,6 +128,7 @@ COMMENT @----------------------------------------------------------------------
 		destReg - register to receive segment address (may *not* be
 				a segment register
 		myLabel1, myLabel2 -- unique labels
+		jumpSize - optional LONG prefix for a distant slow path
 		fileGlobal - non-blank if myLabel1 and myLabel2 should be
 				made file-global, else they're made
 				procedure-local
@@ -144,7 +145,7 @@ COMMENT @----------------------------------------------------------------------
 	Total 52 cycles (fast case, using ds)
 
 -------------------------------------------------------------------------------@
-FastLock1	macro	idataReg, handleReg, destReg, myLabel1, myLabel2, fileGlobal, sigToCheck, sigLabel
+FastLock1	macro	idataReg, handleReg, destReg, myLabel1, myLabel2, fileGlobal, sigToCheck, sigLabel, jumpSize
 
 if	ERROR_CHECK
 ifdif	<handleReg>, <bx>
@@ -165,7 +166,7 @@ destHigh	catstr	destHead, <h>
 	jz	sigLabel
 endif
 	tst	destReg				;3 - test for not in memory
-	jz	???_&myLabel2			;4
+	jumpSize jz	???_&myLabel2		;4 - use LONG for a distant slow path
 	inc	idataReg:[handleReg][HM_lockCount]	;24 - lock block
 	INT_ON					;2
 

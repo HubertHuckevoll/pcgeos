@@ -91,6 +91,8 @@ Boolean     driverUsed  = FALSE;    //Driver was loaded explicitly
 
 Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
 {
+    (void)client;
+
         switch (type) {
             case LCT_ATTACH:                /* The library was just loaded. */
               {

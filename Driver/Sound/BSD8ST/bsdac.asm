@@ -33,7 +33,6 @@ udata           segment
 
 	streamSegment		word
 	dataOnStream		word
-	bytesToRead         	word
 
 	DSPFormatCommand	byte
 	streamSize		word
@@ -507,7 +506,6 @@ unlock:
 ;---------------------
 ; reset Status
 ;---------------------
-statclear:
         clr	ds:[isrunning]
         clr	ds:[streamState]	; Status = not attached
 

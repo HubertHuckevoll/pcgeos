@@ -467,6 +467,7 @@ void BSNWaveDialogUnknownFormat(word formatID)
 {
 
 @ifdef  BSNWAV_NO_UI
+    (void)formatID;
 //  sprintf(playStatusText,TEXT_UNKNOWN_WAV_FORMAT_2,formatID);
 //  (void)SysNotify(SNF_CONTINUE,playStatusText,0);
 //  sorry: no UI, no sprintf
@@ -589,8 +590,12 @@ void BSNWaveDialogUnknownFormat(word formatID)
 
 optr _pascal _export BSCNCreateStatusBox(optr parent)
 {
+@ifndef BSNWAV_NO_UI
     MemHandle   newBlock = 0;
+@endif
     optr        op = 0;
+
+    (void)parent;
 
 @ifndef BSNWAV_NO_UI
 
@@ -674,6 +679,8 @@ Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)
     word    state;
     word    numOfDACs;
     Boolean respond;
+
+    (void)flags;
 
     state = 0;
     numOfDACs = 0;
@@ -835,12 +842,15 @@ BSNWavePlayMemory( BSWavFormChunk  *bfc,
                    word        len,
                    word        playFlags)
 {
-    word    secLen;
-    int i;
-    int respond = BSNW_STATUS_OK;
-    word    aiState,aiState2;
+    /* ATTENTION: Keep the reserved entry's existing success result until
+     * memory playback is implemented with a BSNPcmPlay source reader.
+     */
+    (void)bfc;
+    (void)buffer;
+    (void)len;
+    (void)playFlags;
 
-    return(respond);
+    return BSNW_STATUS_OK;
 }
 
 /**********************************************************

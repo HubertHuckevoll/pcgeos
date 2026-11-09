@@ -376,7 +376,7 @@ fetchChar:
 	cmp	al, ah			;escape backslashes in blobs
 	je	storeEscaped
 
-notBrace:                               ;escape CR ONLY if not paired with LF
+	; Escape CR only when it is not paired with LF.
 SBCS<   cmp     al, VC_ENTER                                            >
 DBCS<   cmp     al, C_ENTER                                             >
         jne     notCR
@@ -814,7 +814,7 @@ charGotten:
 	jne	processingBlob		;branch if so
 
 	cmp	al, VC_ENTER		;else CR?
-	je	copyDone		;done if so
+	LONG je	copyDone		;done if so
 	cmp	al, VC_LF		;LF?
 	je	copyDone		;done if so
 	cmp	al, MSDOS_TEXT_FILE_EOF	;EOF?

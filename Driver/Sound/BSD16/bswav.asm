@@ -35,7 +35,6 @@ idata           segment
 	bufferP2		word	0h	; Copypointer
 	bufferFree		word	0h	; free Buffer
 	bufferMax		word	1h	; Endoffset Buffer
-	bufferState		byte	0h	; 1 = lower half
 	dacStatus		byte	0h	; 0 = ready
 						; 1 = AI fill lower half
 						; 2 = fill upper half
@@ -89,7 +88,7 @@ BSPrepareMode proc    far
 ;-----------------------
 	mov	al,ds:[DSPFormatCommand]
 	cmp	al,7fh			; Bit 7 ?
-	jbe	done
+	LONG jbe	done
 
 	mov	bx,ds:[DSPVersion]	; Version for later
 ;
@@ -98,7 +97,7 @@ BSPrepareMode proc    far
 	mov	bx,200h
 	mov	dx,ds:[sampleRate]	; Rate for later
 	cmp	al,81h			; 8 Bit mono ?
-	jne	done			; no
+	LONG jne	done			; no
 
 ;-----------------------
 ;	8 Bit MONO
@@ -784,7 +783,7 @@ endif
 testdac:
         mov	al,ds:[dacStatus]
         cmp	al,0			; Idle?
-        jz      finished			; Yes, do nothing
+        LONG jz	     finished			; Yes, do nothing
 	cmp	al,3			; dacStatus = Singletransfer ?
         jnz	secondbuftest		; No
 

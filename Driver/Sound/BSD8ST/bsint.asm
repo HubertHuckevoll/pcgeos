@@ -186,7 +186,6 @@ ackInterrupt::
 no_rec:
 	cmp	al,BSNW_PLAY_RUN		; NewWave-Play ?
         jnz	no_nw				; no
-new_wave:
         call	BSNWISR				; Yes
         jmp	short yes_rec
 ;
@@ -252,7 +251,6 @@ BSCreateStack proc    far
 	call	MemAlloc
         mov	ds:[stackHandle],bx	; Handle
 	mov	cs:[bsisrSS],ax		; Stacksegment
-done:
         .leave
 	ret
 

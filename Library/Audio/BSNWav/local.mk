@@ -47,4 +47,4 @@ GOCFLAGS += -L bsnwav
 # Preserve the decoder's Pascal internals and directly addressed fixed tables.
 # ATTENTION: Do not select -zc: cross-resource table references need a real
 # segment. Move tables behind locked-handle access before changing placement.
-XCCOMFLAGS += -ecp
+XCCOMFLAGS += -ecp -ntAudioMainCode

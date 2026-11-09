@@ -115,7 +115,7 @@ EC<	ERROR_NE -1							>
 	mov_tr	cx, ax				; cx <- transfer amount
 	clr	ds:[interruptTransferLength]
 	clr	ds:[lastInterruptTransferLength]
-	jmp	short	updateStream
+	jmp	updateStream
 
 trimTransferAmount	label near
 EC<	mov	ax, ds					>
@@ -184,7 +184,7 @@ ackInterrupt::
 
 	sub	ds:[dataOnStream], ax			; remove bytes
 EC<	ERROR_L	-1	; dataOnStream went negative		>
-	jle	emptyStream
+	LONG jle	emptyStream
 
 	mov	ax, ds:[interruptTransferLength]; ax <- # of bytes to transfer
 
@@ -294,7 +294,6 @@ sendACK:
 	mov	al, IC_GENEOI
 	out	IC1_CMDPORT, al			; acknowledge PC chip
 
-done:
 	call	SysExitInterrupt
 
 	.leave

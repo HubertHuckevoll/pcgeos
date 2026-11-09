@@ -2843,7 +2843,7 @@ endif	; ERROR_CHECK
 
 EC <	call	ECCheckNotAfterFilesClosed				>
 
-	FastLock1	ds, bx, si, RCI_1, RCI_2	;52
+	FastLock1	ds, bx, si, RCI_1, RCI_2,,,,LONG	;52
 
 if	ANALYZE_WORKING_SET
 	call	WorkingSetResourceInUse

@@ -372,7 +372,7 @@ getDrawPoint:
 		; get the next slice and call the driver.  
 
 		call	BMGetSlice		; get the next slice
-		jc	done			;  has no scans, just quit
+		LONG jc	done			;  has no scans, just quit
 
 		; check for rotation.  deal with that separately
 
@@ -470,7 +470,7 @@ drawImage:
 		mov	ax, BMframe.BF_drawPoint.P_x
 		add	bx, BMframe.BF_drawPoint.P_y
 		call	ImageHugeSectionFar
-		jnc	afterCall		; if not done, continue
+		LONG jnc	afterCall		; if not done, continue
 		pop	ds			; else restore stack and exit
 		jmp	done
 DrawSlice	endp

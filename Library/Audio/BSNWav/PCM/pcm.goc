@@ -358,8 +358,6 @@ void _pascal BSNWConvertData(byte *cachePtr, byte *secPtr)
     byte    *src;
     byte    b;
     word    sample;
-    dword   level = 0;
-    dword   div = 0;
     int i;
 
     dest = secPtr + secondKOffset;
@@ -548,9 +546,6 @@ void _pascal BSNWConvert16To8(void *cachePtr, void *secPtr)
 int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
 {
     int respond = 0;
-    word    bits,rate;
-    word    conversionFactor;
-    char    *ptr;
     word    size;
     word    secBufRequest;
 
@@ -739,6 +734,9 @@ int _pascal BSNWPlay(BSNPcmFormat *bfc, word playFlags, optr parent)
     MemHandle refillH;
     byte *refillP;
     Boolean refillReady = FALSE; /* TRUE until the DMA copy succeeds. */
+
+    (void)playFlags;
+    (void)parent;
 
     peakLevel2 = 0;
     /* Allocate and lock once, before DMA starts. A slow source must write

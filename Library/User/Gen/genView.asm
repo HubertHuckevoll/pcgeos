@@ -1596,7 +1596,7 @@ GenViewScrollOnWheel	method dynamic GenViewClass, 	MSG_META_SCROLL_VERTICAL
 	cmp	al, 0			; compare with 0
 	jg	scrollDown		; > 0 = scroll down
 
-scrollUp:				; < 0 = scroll up
+	; A negative wheel count scrolls up.
   	mov 	ax, MSG_GEN_VIEW_SCROLL_UP
 	jmp 	finish
 

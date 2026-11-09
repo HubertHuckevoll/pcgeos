@@ -34,6 +34,9 @@ DriverTable	DriverExtendedInfoStruct <
 		SoundExtendedInfoSegment
 		>
 
+	; The kernel reads the driver table at the start of idata.
+	ForceRef DriverTable
+
 idata	ends
 
 SoundExtendedInfoSegment	segment lmem LMEM_TYPE_GENERAL
@@ -44,6 +47,9 @@ SoundExtendedDriverInfoTable	DriverExtendedInfoTable <
 					offset SoundBoardNames,
 					offset SoundBoardInfoTable
 				>
+
+	; The kernel reads the extended table at resource offset zero.
+	ForceRef SoundExtendedDriverInfoTable
 
 SoundBoardNames		lptr.char	cardName1
 			lptr.char	0

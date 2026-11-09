@@ -173,7 +173,7 @@ BSMixerGetCap proc    far
 ; Count the value table entries
         clr	ds:[bsMixerValMax]
 next:
-        tst	cs:[bx]			; End?
+		cmp	{word} cs:[bx],0		; End of the word table?
         jz	done			; Yes
         add	bx,VAL_LEN
         inc	ds:[bsMixerValMax]
@@ -359,7 +359,6 @@ TokenToIndex proc    near
         .enter
 	mov	ax,segment dgroup
         mov	ds,ax
-start:
         push	cx
 	call	GetOffToValTab
         mov	si,bx			; si Valuetable
@@ -553,7 +552,6 @@ BSMixerGetSubToken proc    far
 ;-----------------------
 ; Find the token
 ;-----------------------
-start:
         mov	di,dx			; identifier for later
         push	cx
         call	GetOffToValTab
@@ -626,7 +624,6 @@ BSMixerTokenToText proc    far
 ;-----------------------
 ; Find the token
 ;-----------------------
-start:
         mov	bx,0
 search:
         mov	ax,cs:tokenToTextList[bx]
@@ -639,7 +636,8 @@ search:
         jmp	short search
 
 notfound:
-        mov	bx,TTLnotFound
+	; Index the fallback pointer rather than its text address.
+		mov	bx, offset TTLnotFound - offset tokenTextList
 
 ;-----------------------
 ; Pointer to source text
@@ -675,6 +673,7 @@ BSMixerTokenToText	endp
 tokenToTextList	word	50
 		word	51
                 word	52
+		word	0		; End the token search.
 
 tokenTextList	word	offset	tokenText50
 		word	offset	tokenText51
@@ -746,7 +745,7 @@ BSMixerSpecValue	endp
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mixerSuperTable:
+mixerSuperTable	label	word
 	word	offset	valTab1745	; valueTable CT1745
         word	offset  subTab1745	; subTokenTable
 
@@ -762,7 +761,7 @@ mixerSuperTable:
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;		CT 1745
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-valTab1745:
+valTab1745	label	word
 	word	1		; BSMX_TOKEN_MASTER
 	word	255		; Range
         byte	1,0,1		; Type,sliderNum,target
@@ -884,7 +883,7 @@ valTab1745:
 	byte    043h,01h
         byte	00h,00h
 
-subTab1745:
+subTab1745	label	word
 	word	BSMX_TOKEN_OUT_MX_SW
         word	6 ,28,27,26,25, 0, 0, 0	; subTokens
 
@@ -921,7 +920,7 @@ subTab1745:
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;		CT 1345
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-valTab1345:
+valTab1345	label	word
 	word	1		; BSMX_TOKEN_MASTER
 	word	255		; Range
         byte	1,0,1		; Type,sliderNum,target
@@ -986,10 +985,9 @@ valTab1345:
 	byte    0Ch,06h
         byte	00h,00h
 
-valTabEnd:
 	word	0
 
-subTab1345:
+subTab1345	label	word
 	word	BSMX_TOKEN_IN_FLT,	; mainToken
 		BSMX_TOKEN_ON,
         	BSMX_TOKEN_OFF,
@@ -1008,7 +1006,7 @@ subTab1345:
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;		CT 1335
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-valTab1335:
+valTab1335	label	word
 	word	1		; BSMX_TOKEN_MASTER
 	word	255		; Range
         byte	1,0,1		; Type,sliderNum,target
@@ -1037,13 +1035,13 @@ valTab1335:
 	byte    08h,0eh
         byte	0h,0h
 
-subTab1335:
+subTab1335	label	word
 	word	0		; End
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;		Unknown DSP version
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-valTabDum:
+valTabDum	label	word
 	word	1		; BSMX_TOKEN_MASTER
 	word	255		; Range
         byte	1,0,1		; Type,sliderNum,target
@@ -1072,7 +1070,7 @@ valTabDum:
 	byte    02h,0h
         byte	0h,0h
 
-subTabDum:
+subTabDum	label	word
 	word	0		; End
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

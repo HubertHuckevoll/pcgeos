@@ -270,6 +270,8 @@ LocalDefString mcgaDevName <'IBM MCGA: 640x480 Mono', 0>
 LocalDefString svgaDevName <'VESA Compatible Super VGA: 800x600 16-color', 0>
 
 	localize "Name for default Super VGA-compatible video driver.  Must match one of the names in the SVGA driver exactly.";
+	; Keep this existing localization chunk even when it has no caller.
+	ForceRef svgaDevName
 
 
 if GENERAL_DEVICE_STRINGS

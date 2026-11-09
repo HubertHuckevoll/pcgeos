@@ -600,5 +600,5 @@ DESCRIPTION:
             @send process::MSG_BSQP_TRACK_ACTIVATE(0, 0, 0);
         return TRUE;
     }
-    @callsuper();
+    return @callsuper();
 }

@@ -1430,6 +1430,8 @@ DESTROYED:	ax, cx, dx, bp
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
 finderKey char "finder", 0
+	; Keep the existing resource string identity.
+	ForceRef finderKey
 
 ExpressMenuControlTweakDuplicatedUI method dynamic ExpressMenuControlClass,
 					MSG_GEN_CONTROL_TWEAK_DUPLICATED_UI

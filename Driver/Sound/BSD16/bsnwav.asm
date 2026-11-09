@@ -169,7 +169,7 @@ BSDNWStartPlay	proc	far
 ; dacStatus = idle ?
 ;-------------------
 	tst	ds:[dacStatus]		; active ?
-	jnz	error			; yes
+	LONG jnz	error			; yes
 
 	mov	ds:[bsStatus],BSNW_PLAY_PREPARE
 	clr	ds:[bsRecDataFlag]	; clear DataFlag

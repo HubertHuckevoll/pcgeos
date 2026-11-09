@@ -247,12 +247,6 @@ set_size:
         jmp	done			; --> End
 
 ;------------------------
-;    handling errors
-;------------------------
-error1:
-	call	BSDRecFreeBuffer	; release buffer
-
-;------------------------
 ;   	E N D
 ;------------------------
 error:
@@ -365,7 +359,6 @@ BSNWISR	proc	far
 ;-----------------------------
 ; 	erase the old data
 ;-----------------------------
-kill_half:
 	tst	ds:[bufferO2]		; Buffer existent ?
         jz	done			; no (zero len)
 
@@ -387,7 +380,6 @@ firstbuf:
 		mov	ax,8080h		; Unsigned 8-bit silence.
 	; The caller clears DF. Clear before publishing the free half, so
 	; a late refill plays silence instead of old samples.
-clearHalf:
 		shr	cx,1			; Word count; CF saves an odd byte.
 		rep	stosw			; Clear two bytes per iteration.
 		jnc	done			; REP STOSW does not change CF.
@@ -399,7 +391,6 @@ done:
 	mov	al,ds:[bsRecDataHalf]
         xor	al,01h
 	mov	ds:[bsRecDataHalf],al
-done2:
         .leave
         ret
 BSNWISR	endp

@@ -926,7 +926,7 @@ blobFound:
 EC<	ERROR_C	INIT_FILE_BAD_BLOB					>
 EC<	tst	bx			;assert no longer in blob	>
 EC<	ERROR_NZ INIT_FILE_BAD_BLOB					>
-	jnc	findLoop						
+		LONG jnc	findLoop
 error:
 	GOTO	CorruptedIniFileError
 
@@ -1218,7 +1218,6 @@ findCharLoop:
 checkEscaped:
 	cmp	al, '\\'
 	je	escapedChar
-notEscaped:
 	cmp	al, INIT_FILE_COMMENT
 	je	commentChar
 	cmp	al, '{'				;found start of blob?

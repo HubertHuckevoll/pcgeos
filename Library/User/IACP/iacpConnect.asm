@@ -407,7 +407,7 @@ endif
 		mov	si, ds:[di].IACPL_servers
 		call	ChunkArrayGetCount	; cx <- # servers
 		pop	di
-		jcxz	toMaybeInstantiate
+		LONG jcxz	toMaybeInstantiate
 
 		clr	si
 		mov	ss:[justLaunched],si

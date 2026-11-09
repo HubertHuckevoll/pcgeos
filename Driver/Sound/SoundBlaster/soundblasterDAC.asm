@@ -663,7 +663,6 @@ EC<	ERROR_AE UNSUPORTED_DAC_FORMAT				>
 	xlat	cs:[bx]				; al <- DSP command for format
 
 	mov	dl, al				; dl <- command for DSP
-done:
 	.leave
 	ret
 SBDDACGetFormatSetting	endp

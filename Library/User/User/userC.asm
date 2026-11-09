@@ -1364,8 +1364,8 @@ REVISION HISTORY:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 global USERCREATEICONTEXTMONIKER:far
-USERCREATEICONTEXTMONIKER	proc	far	params:CreateIconTextMonikerParams
-	ForceRef params
+USERCREATEICONTEXTMONIKER	proc	far
+	; Forward the raw parameter frame without adding a local stack frame.
 
 	; lock icon moniker lmem block, as UserCreateIconTextMoniker expects one
 	mov 	cx, bp
@@ -1382,7 +1382,7 @@ USERCREATEICONTEXTMONIKER	proc	far	params:CreateIconTextMonikerParams
 	; unlock icon moniker lmem block
 	mov	bx, ds: [LMBH_handle]
 	call	MemUnlock
-	ret	@ArgSize
+	ret	size CreateIconTextMonikerParams
 
 USERCREATEICONTEXTMONIKER	endp
 

@@ -32,7 +32,6 @@ ROUTINES:
 	BSDStopRecOrPlay 	Stop Recording or Playing
 	BSDRecStartRecording 	Start Recording
 	BSDRecAllocateBuffer 	Allocate Buffer for Recording
-	BSDRecFreeBuffer 	Free the allocated buffer
 	BSDRecProgramDMA 	Program DMA
 	BSRECISR		ISR for Recording
         BSRecordGetRMSValue	ADC-RMS Levelmeter
@@ -90,7 +89,6 @@ idata           segment
 	bsRecDataHalf		byte	0	; 1 = lower bufferhalf ready
         					; 0 = higher bufferhalf ready
         filterState		byte	0	; temp buffer for Filterstatus
-	stereoMode		byte	0	; Temporary buffer for stereo mode
 
 idata           ends
 
@@ -245,7 +243,6 @@ BSRECISR	proc	far
         xor	al,01h			; Swap halves
 	mov	ds:[bsRecDataHalf],al
 
-done:
         .leave
         ret
 
@@ -278,14 +275,12 @@ BSDStopRecOrPlay	proc	far
 ;------------------
 ; Free the buffer
 ;------------------
-unlock:
 	call	BSSecondUnlock		; Delegate the operation
 
 ; Reset the status
 
 	mov	ds:[bsStatus],BS_STATE_IDLE
 
-done:
         .leave
         ret
 
@@ -322,7 +317,7 @@ BSDRecStartRecording	proc	far
 ; dacStatus = idle?
 ;-------------------
 	tst	ds:[dacStatus]		; Is DAC output active?
-        jnz	error			; Yes
+        LONG jnz	error			; Yes
 
 	mov	ds:[bsStatus],BSREC_STATE_PREPARE
 	clr	ds:[bsRecDataFlag]	; Clear the data flag
@@ -405,11 +400,6 @@ prog_size:
         jmp	done			; --> End
 
 ;------------------------
-;    Error handling
-;------------------------
-	call	BSDRecFreeBuffer	; Free the buffer
-
-;------------------------
 ;   	E N D E
 ;------------------------
 error:
@@ -470,33 +460,6 @@ BSDRecAllocateBuffer	endp
 
 
 
-;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-;
-;	BSDRecFreeBuffer
-;
-; 	Free the allocated buffer
-;	Internal routine
-;
-;13.02.2000 Restore the input filter
-;
-;
-;  IN:	bufferHandle
-;
-;
-;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-BSDRecFreeBuffer	proc	near
-        .enter
-
-unlock:
-;	call	BSSecondUnlock		; (until P 0.0)
-	call	BSDStopRecOrPlay
-;        mov	ds:[hsFlag],0		; Reset the high-speed flag
-
-        .leave
-        ret
-
-BSDRecFreeBuffer	endp
 
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -617,7 +580,6 @@ BSDRecSetTransferSize	proc	near
 	SBDDACWriteDSP  ch, 0			; H Byte
         clc
 
-done:
         .leave
         ret
 
@@ -681,7 +643,6 @@ BSDRecSetSampling	proc	far
 ;   Check the sample data
 ;----------------------------
 
-done:
         .leave
         ret
 
@@ -866,7 +827,6 @@ RecProgramDMADriver    proc    far
 ;-----------------------
 ; Address and length --> DMA
 ;-----------------------
-setStereoSize:
 	dec     ax                      ; transfer size -1
 	push	ax			; Save for the check
 	mov     cx, ax                  ; cx <- size of buffer

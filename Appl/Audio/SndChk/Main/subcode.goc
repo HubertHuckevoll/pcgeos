@@ -164,6 +164,8 @@ word    PlayThreadLoop(word dummy)
     word        output;
     word        error;
 
+    (void)dummy;
+
     while (playThreadRunState == PLAY_THREAD_RUN)
     {
         // PLAY
@@ -719,9 +721,9 @@ void    SC_CreateWaveFile(char *fileName)
             if (error)
             {
                 // error
-                (void) UserStandardDialogOptr((char *)0,
-                                          (char *)0,
-                                          (char *)0,
+                (void) UserStandardDialogOptr((void *)0,
+                                          (void *)0,
+                                          0,
                                           0,        // arg1
                                           @errorString,  // string
                                           (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
@@ -730,13 +732,16 @@ void    SC_CreateWaveFile(char *fileName)
             else
             {
                 // Complete message
-                (void) UserStandardDialogOptr((char *)0,
-                                          (char *)0,
-                                          (char *)0,
+                /* fileName is text, so use the pointer-based dialog API. */
+                MemLock(HandleOf(@completeString));
+                (void) UserStandardDialog((void *)0,
+                                          (void *)0,
+                                          (void *)0,
                                           fileName, // arg1
-                                          @completeString,       // string
+                                          LMemDeref(@completeString), // string
                                           (CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
                                           (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
+                MemUnlock(HandleOf(@completeString));
             };
         };
 

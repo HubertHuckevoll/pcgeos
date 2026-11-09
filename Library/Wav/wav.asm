@@ -389,7 +389,6 @@ popDir:
 freeBlock:
 	call	MemFree
 
-done:
 	.leave
 	ret
 WavPlayFromWavFilePathBlock		endp

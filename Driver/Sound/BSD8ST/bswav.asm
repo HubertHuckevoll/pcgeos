@@ -37,7 +37,6 @@ idata           segment
         bufferP2		word	0h	; Copypointer
         bufferFree		word	0h	;
         bufferMax		word	1h	; Endoffset Buffer
-        bufferState		byte	0h	; 1 = lower half
 	dacStatus		byte	0h	; 0 = ready
         					; 1 = AI fill lower half
                                                 ; 2 = fill upper half
@@ -103,7 +102,6 @@ BSPrepareMode proc    far
 ;-----------------------
 ;  Store DSPCommand
 ;-----------------------
-setDSPCommand:
 	mov	ds:[singleCommand],cl
         mov	ds:[stopCommand],ch
 	mov	ds:[DSPFormatCommand],ah
@@ -287,7 +285,6 @@ ProgramDMADriver    proc    far
 ;-----------------------
 ; Address, size --> DMA
 ;-----------------------
-setStereoSize:
 	dec     ax                      ; transfer size -1
 	push	ax			; save for checking later
 	mov     cx, ax                  ; cx <- size of buffer
@@ -591,7 +588,6 @@ enoughSpace:
 ;-------------------
 ; Counter = 0 ?
 ;-------------------
-testcx:
 	tst	cx				; Buffer full ?
         jz	done				; yes, do nothing
 
@@ -775,7 +771,7 @@ endif
 
 	call	MyBreak
 	SBDDACWriteDSP	DSP_DMA_HALT,0	; DSP stop
-	jmp     short finished
+	jmp     finished
 
 ;------------------------
 ; check dacStatus
@@ -783,7 +779,7 @@ endif
 testdac:
 	mov	al,ds:[dacStatus]
 	cmp	al,0			; idle ?
-	jz      finished			; yes, do nothing
+	LONG jz	     finished			; yes, do nothing
 	cmp	al,3			; dacStatus = Singletransfer ?
 	jnz	secondbuftest		; no
 
@@ -822,7 +818,6 @@ secondbuftest:
 ;------------------
 ; Halt DSP
 ;------------------
-exitai:
 	tst	ds:[hsFlag]		; Highspeed ?
 	jz	exitlow			; no
 	call    SBDInitChipDSP		; RESET will ending Highspeed AI
@@ -958,7 +953,7 @@ BSSecondUnlock proc    far
 	mov	ax,ds:[bufferHandle]	; Handle to block allocated
 	mov	bx,ax
 	tst	ax			; Handle = 0 ?
-	jz	done			; yes
+	LONG jz	done			; yes
 
 ;----------------------------
 ;	DMA Stop
@@ -1159,7 +1154,6 @@ BSECTestStream proc    far
 	cmp	ax,bx			; Segment OK ?
 	jz	done			; yes
 
-error:
 	ERROR	BS_EC_TEST_ERROR_STREAM
 done:
 	.leave
