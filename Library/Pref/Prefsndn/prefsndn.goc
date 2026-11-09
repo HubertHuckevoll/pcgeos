@@ -1,10 +1,10 @@
 /************************************************
  *                                              *
- * Projekt:     BestSound	         	*
+ * Project:     BestSound	         	*
  *                                              *
  * File:        prefsndn.GOC             	*
  *                                              *
- * Autor:       Dirk Lausecker          	*
+ * Author:       Dirk Lausecker          	*
  *                                              *
  ************************************************/
 
@@ -24,7 +24,7 @@
 
 /****************************************************************/
 
-/**************************** Makro *****************************/
+/**************************** Macro *****************************/
 
 #define SET_PSELF  pself = ObjDerefGen(oself)
 
@@ -60,6 +60,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 @visMoniker     PrefMM1MonikerList = list {@Moniker0,@Moniker1,@Moniker2,@Moniker3,@PrefTextMoniker};/* */
 
 @visMoniker     PrefTextMoniker = "Sound";
+@localize "Name of the Sound preferences panel.";
 
 @end MONIKERRESOURCE;
 
@@ -81,6 +82,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @object PrefDialogMMClass BaseBox = {
         GI_visMoniker = "Sound";
+        @localize "Name of the Sound preferences panel.";
 	GI_states = @default & ~GS_USABLE;
 	GI_comp = @TitleGroup,
                   @SoundSubGroup,
@@ -136,6 +138,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 @object PrefItemGroupClass SoundEnableList =
 {
 	GI_visMoniker = 'S',"Sound:";
+	@localize "Enable or disable application system sounds. Preserve a suitable keyboard mnemonic.";
 	GI_comp = @SoundEnable,
 		  @SoundDisable;
         GIGI_numSelections = 1;
@@ -178,6 +181,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @object GenBooleanClass StartupShutdownSoundBoolean = {
     GI_visMoniker = 't', "Play startup and shutdown sounds";
+    @localize "Enable the sounds played when GEOS starts and exits. Preserve a suitable keyboard mnemonic.";
     /* INI true is 0xffff; unchecking must clear every loaded bit. */
     GBI_identifier = TRUE;
 }
@@ -253,6 +257,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 @object GenTriggerClass SettingsTrigger =
 {
 	GI_visMoniker = "OK";
+	@localize "Accept these sound card settings.";
         GI_attrs = @default | GA_SIGNAL_INTERACTION_COMPLETE;
         GTI_actionMsg = MSG_PREF_SETTINGS_NOTIFY;
         GTI_destination = @BaseBox;
@@ -355,6 +360,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 @object PrefValueClass IrqValue =
 {
         GI_visMoniker = "IRQ";
+        @localize "Sound card interrupt request number; IRQ is the hardware abbreviation.";
     	PI_attrs = (PA_SAVE_IF_CHANGED);
 	PVI_originalValue = 5;
         GVLI_value 	= MakeWWFixed(5.0);
@@ -369,6 +375,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 @object PrefValueClass DmaValue =
 {
         GI_visMoniker = "DMA(8 Bit)";
+        @localize "DMA channel for eight-bit sound transfers; preserve the hardware abbreviation.";
     	PI_attrs = (PA_SAVE_IF_CHANGED);
 	PVI_originalValue = 1;
         GVLI_value 	= MakeWWFixed(1.0);
@@ -466,7 +473,7 @@ void    _pascal PrefGetModuleInfo( PrefModuleInfo *info );
 
 @end    BASEINTERFACE;
 
-/**************************** Funktionen ************************/
+/**************************** Functions ************************/
 
 /****************************
 

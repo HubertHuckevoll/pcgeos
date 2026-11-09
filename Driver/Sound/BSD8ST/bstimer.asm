@@ -4,21 +4,21 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound Template
 
-DATEI:		bstimer.asm
+FILE:		bstimer.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 
 
-Beschreibung:
+Description:
 	This contains all the structures, enum types and constants needed
 	to program the I8255 and I8253.  These chips, in case you are
 	not familiar with them, are what are used to program the PC

@@ -4,27 +4,27 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound Template
 
-DATEI:		bsmixer.asm
+FILE:		bsmixer.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	06.10.98	Init
         DL	20.02.2000	NewWave (bsRecordState -> bsStatus)
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
-	BSMixerGetCap		Anzahl Einstellkanaele
-	BSMixerGetValue		Einstellwert abfragen
-        BSMixerSetValue		Einstellwert setzen
-        BSMixerSetDefault	Defaultwerte setzen
-        BSMixerReset		Mixerchip resetten
+	BSMixerGetCap		Number of control channels
+	BSMixerGetValue		Read a control value
+        BSMixerSetValue		Set a control value
+        BSMixerSetDefault	Set default values
+        BSMixerReset		Reset the mixer chip
 
-Beschreibung:
-	Routinen zum Ansteuern des Mixerchips.
+Description:
+	Routines to control the mixer chip.
 
 *****************************************************************@
 
@@ -32,7 +32,7 @@ VAL_LEN		equ	12
 
 idata           segment
 
-	bsMixerValMax		word	1h	; Anzahl Values
+	bsMixerValMax		word	1h	; Number of values
         valTabOffs		word	0	; Offset valueTable
 	subTabOffs		word	0	; Offset subTokenTable
 
@@ -45,13 +45,13 @@ LoadableCode            segment resource
 ;
 ;	GetOffToValTab
 ;
-; Offset zur ValueTable zurÅck
+; Return the offset of the value table
 ;
 ;  IN:	[valTabOffs]	Offset valueTable
 ;  	[subTabOffs]	Offset subTokenTable
 ;
-; OUT:	bx  Offset zur valueTable
-;	cx  Offset zur subTokenTable
+; OUT:	bx  Offset of the value table
+;	cx  Offset of the subtoken table
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -61,36 +61,36 @@ GetOffToValTab	proc	far
 	mov	ax,segment dgroup
         mov	ds,ax
 
-; Pointer testen
+; Check the pointer
 
         mov	bx,ds:[valTabOffs]
         mov	cx,ds:[subTabOffs]
-        tst	bx			; valueTable gesetzt ?
-        jne	done			; ja, fertig
+        tst	bx			; Is the value table set?
+        jne	done			; Yes, finished
 
-; Pointer neu setzen
+; Set the pointer again
 
 ;-------------------------
-; Warten bis DSP frei ist
+; Wait until the DSP is available
 ;-------------------------
 teststream:
-	tst	ds:[dacStatus]		; DAC frei ?
-        jz	testrecording		; ja
-; Warten
+	tst	ds:[dacStatus]		; Is the DAC available?
+        jz	testrecording		; Yes
+; Wait
 	mov	ax,10
-        call	TimerSleep		; warten
+        call	TimerSleep		; Wait
         jmp	teststream
 
 ;------------------
-; Rec/Play testen
+; Check recording and playback
 ;------------------
 testrecording:
-	tst	ds:[bsStatus]		; Rec/Play im Gange ?
-        jz	getversion		; nein, weiter
+	tst	ds:[bsStatus]		; Recording or playback active?
+        jz	getversion		; No, continue
 
-; Warten
+; Wait
 	mov	ax,10
-        call	TimerSleep		; warten
+        call	TimerSleep		; Wait
         jmp	testrecording
 
 getversion:
@@ -100,18 +100,18 @@ getversion:
         mov	ax,ds:[DSPVersion]	; DSP Version
 
         cmp	ax,400h			; SB 16 ?
-        jae	select			; ja
-        add	di,4			; Zeiger weiter
+        jae	select			; Yes
+        add	di,4			; Advance the pointer
 
         cmp	ax,201h			; SB Pro
-        jae	select			; ja
-        add	di,4			; Zeiger weiter
+        jae	select			; Yes
+        add	di,4			; Advance the pointer
 
         cmp	ax,200h			; SB 2.0 CD
-        jae	select			; ja
-        add	di,4			; Zeiger weiter
+        jae	select			; Yes
+        add	di,4			; Advance the pointer
 
-; Pointer holen/speichern
+; Get and save the pointer
 select:
 	mov	bx,cs:[di]		; valueTable
         inc	di
@@ -120,7 +120,7 @@ select:
         mov	ds:[valTabOffs],bx
         mov	ds:[subTabOffs],cx
 
-; Pointer zurÅckgeben
+; Return the pointer
 done:
                 .leave
                 ret
@@ -131,15 +131,15 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSMixerGetCap
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       Einstellkanaele (Values) ermitteln
+Function:       Get the control channels (values)
 
-Aufrufer:	Mixerlibrary
+Called by:	Mixer library
 
 IN:
 
-OUT:            cx      Anzahl Kanaele
+OUT:            cx      Number of channels
 		dx	DSP-Version
-		CF=1 	Fehler
+		CF=1 	Error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -159,21 +159,21 @@ BSMixerGetCap proc    far
 
         clr	ds:[valTabOffs]
 
-; Zeiger neu berechnen lassen
+; Force the pointer to be calculated again
 
 	call	GetOffToValTab
 
-; Valuetable abzÑhlen
+; Count the value table entries
         clr	ds:[bsMixerValMax]
 next:
-        tst	cs:[bx]			; Ende ?
-        jz	done			; ja
+        tst	cs:[bx]			; End?
+        jz	done			; Yes
         add	bx,VAL_LEN
         inc	ds:[bsMixerValMax]
         jmp	short next
 
 ;-----------------
-;     ENDE
+;     END
 ; bsMixerValMax
 ;-----------------
 done:
@@ -188,14 +188,14 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSMixerGetValue
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       Kanal lesen
+Function:       Read a channel
 
-Aufrufer:	Mixerlibrary
+Called by:	Mixer library
 
 IN:		dx	Token
 
-OUT:            ax      Wert
-		CF=1 	Fehler
+OUT:            ax      Value
+		CF=1 	Error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -208,43 +208,43 @@ BSMixerGetValue proc    far
 	uses    bx,cx,dx,si,di		;PUSH ax, ...
 	.enter
 
-; Token in TokenRegTable suchen
+; Find the token in TokenRegTable
 
-        mov     ax,0		; fuer Fehlerfall
+        mov     ax,0		; Default result on error
         mov	cx,dx		; Token
         call	TokenToIndex	; di = Index
-	jc      error		; Fehler
+	jc      error		; Error
 
         add	bx,4		; Typ
-        mov	dh,cs:[bx]	; Valuetyp
+        mov	dh,cs:[bx]	; Value type
 
         add	bx,4		; Offset 1
         mov	di,bx
 
-; Parameter auslesen
+; Parameter Read
 
 	mov	dl,cs:[di]
         inc	di
         mov	bl,cs:[di]		; Bitmask
         inc	di
         push	dx
-        call	BSMixerGetRegister	; Links
-	pop	dx			; dh = Valuetyp
-	mov	bh,al			; Wert retten
+        call	BSMixerGetRegister	; Left
+	pop	dx			; dh = value type
+	mov	bh,al			; Save the value
 
-; zweiten Parameter (Rechts) schreiben wenn definiert
+; Write the second parameter (right) if defined
 
 	mov	dl,cs:[di]
-        cmp	dl,0			; leer ?
-        je	done			; ja, Abbruch
+        cmp	dl,0			; Empty?
+        je	done			; Yes, abort
         inc	di
         mov	bl,cs:[di]		; Bitmask
-        call	BSMixerGetRegister	; Rechts
-	mov	ah,al			; ah = 2. Wert
-        mov	al,bh			; al = 1. Wert
+        call	BSMixerGetRegister	; Right
+	mov	ah,al			; ah = second value
+        mov	al,bh			; al = first value
 
 ;-----------------
-;	ENDE
+;	END
 ;-----------------
 done:
         clc
@@ -258,15 +258,15 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSMixerSetValue
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       Mixerkanal beschreiben
+Function:       Describe a mixer channel
 
-Aufrufer:	Mixerlibrary
+Called by:	Mixer library
 
 IN:		dx	Token	0 = Reset
-		al	Wert L
-                ah	Wert R
+		al	Left value
+                ah	Right value
 
-OUT:            CF=1 	Fehler
+OUT:            CF=1 	Error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -280,49 +280,49 @@ BSMixerSetValue proc    far
 	.enter
 
 ; Reset
-; (irgendeinen Wert in Register 00 schreiben)
+; (Write any value to register 00)
 
         tst	dx		; Reset ?
-        jnz	tsearch		; nein
-	mov	dh,2		; keine Korrektur
-        mov	ah,1		; Bitmaske
+        jnz	tsearch		; No
+	mov	dh,2		; No adjustment
+        mov	ah,1		; Bit mask
 	call	BSMixerSetRegister
-        jmp	done		; Ende
+        jmp	done		; End
 
-; Token in TokenRegTable suchen
+; Find the token in TokenRegTable
 tsearch:
         mov	cx,dx		; Token
         call	TokenToIndex	; di = Index
-	jc      error		; Fehler
+	jc      error		; Error
 
-        add	bx,4		; Zeiger auf Typ
-				; (Boolean darf nicht korr. werden)
-        mov	dh,cs:[bx]	; Valuetyp
+        add	bx,4		; Pointer to the type
+				; (Boolean values must not be adjusted)
+        mov	dh,cs:[bx]	; Value type
 
-        add	bx,4		; Zeiger auf Offset1
-        mov	cx,ax		; Wert L,R
+        add	bx,4		; Pointer to offset1
+        mov	cx,ax		; Left and right values
 
-; Parameter auslesen
+; Parameter Read
 
 	mov	dl,cs:[bx]	; Register
         inc	bx
-        mov	ah,cs:[bx]	; Bitmaske
+        mov	ah,cs:[bx]	; Bit mask
         inc	bx
-        mov	al,cl		; Wert L
-        call	BSMixerSetRegister	; ausgeben
+        mov	al,cl		; Left value
+        call	BSMixerSetRegister	; Output
 
-; zweiten Parameter (Rechts) schreiben wenn definiert
+; Write the second parameter (right) if defined
 
 	mov	dl,cs:[bx]
-        cmp	dl,0			; leer ?
-        je	done			; ja, Abbruch
+        cmp	dl,0			; Empty?
+        je	done			; Yes, abort
         inc	bx
         mov	ah,cs:[bx]
         mov	al,ch
-        call	BSMixerSetRegister	; Rechts
+        call	BSMixerSetRegister	; Right
 
 ;-----------------
-;	ENDE
+;	END
 ;-----------------
 done:
         clc
@@ -336,11 +336,11 @@ BSMixerSetValue	endp
 ;
 ;	TokenToIndex
 ;
-; 	Token suchen
+; 	Find the token
 ;
 ;  IN	cx	token
 ;  OUT	di	index (valNum)
-;	bx	Zeiger Eintrag
+;	bx	Pointer to the entry
 ;	CY=1	not found
 ;
 ;-----------------------
@@ -379,42 +379,42 @@ TokenToIndex endp
 ;
 ;	BSMixerGetRegister
 ;
-; IN	dl	Registernummer
-;	dh	Valuetyp
-;		1 = Slider (korrigieren)
+; IN	dl	Register number
+;	dh	Value type
+;		1 = slider (adjust)
 ;	bl	Bitmask
-; OUT	al	Wert
-;	dx	Adresse Dataport
+; OUT	al	Value
+;	dx	Data port address
 ;--------------------------------
 
 BSMixerGetRegister proc    near
 	uses	bx,cx
         .enter
-        mov	ch,dh		; dh = Typ retten
+        mov	ch,dh		; dh = saved type
         mov	al,dl
 	mov	dx,ds:[basePortAddress]
         add	dx,4		; Mixer Address Port
         out	dx,al
         inc	dx
-        in	al,dx		; Auslesen
-	and	al,bl		; Bits maskieren
-        tst	bl		; mindestens 1 Bit gesetzt ?
-	je	done		; nein
+        in	al,dx		; Read
+	and	al,bl		; Mask bits
+        tst	bl		; Is at least one bit set?
+	je	done		; No
         cmp	ch,1		; Slider ?
-        je	slider		; ja
+        je	slider		; Yes
         cmp	ch,2		; Itemgroup ?
-        jne	done		; nein
+        jne	done		; No
 
 itemgroup:
-        sar	bl		; Bit 0 gesetzt ?
-        jc	done		; ja
-        shr	al		; nein,Value korrigieren
+        sar	bl		; Is bit 0 set?
+        jc	done		; Yes
+        shr	al		; No, adjust the value
         jmp short itemgroup	; next
 
 slider:
-        sal	bl		; Bit 7 gesetzt ?
-        jc	done		; ja
-        shl	al		; Value korrigieren
+        sal	bl		; Is bit 7 set?
+        jc	done		; Yes
+        shl	al		; Adjust the value
         jmp short slider
 done:
 	.leave
@@ -427,11 +427,11 @@ BSMixerGetRegister endp
 ;	BSMixerSetRegister
 ;
 ; IN    dl	Register
-;	dh	Valuetyp
-;		1 = Slider (korrigieren)
+;	dh	Value type
+;		1 = slider (adjust)
 ;		2 = Itemgroup
-;	al	Wert
-;	ah	Bitmaske
+;	al	Value
+;	ah	Bit mask
 ;--------------------------------
 
 BSMixerSetRegister proc    near
@@ -439,41 +439,41 @@ BSMixerSetRegister proc    near
 	uses	ax,bx,cx,dx
         .enter
 
-; Wert korrigieren wenn Typ = Slider,Itemgroup
-        mov	cl,ah		; Bitmaske
-        tst	cl		; Bitmaske gÅltig ?
-        jz	getreg		; nein
+; Adjust the value for slider and item-group types
+        mov	cl,ah		; Bit mask
+        tst	cl		; Is the bit mask valid?
+        jz	getreg		; No
 
 	cmp	dh,1		; Slider ?
-        jz	slider		; ja
+        jz	slider		; Yes
         cmp	dh,3		; Boolean ?
-        jz	getreg		; ja, keine Korrektur
+        jz	getreg		; Yes, no adjustment
 
 itemgroup:
-        sar	cl		; Bit 0 gesetzt ?
-        jc	getreg		; ja
-        shl	al		; Value korrigieren
+        sar	cl		; Is bit 0 set?
+        jc	getreg		; Yes
+        shl	al		; Adjust the value
         jmp short itemgroup
 
-; Korrektur
+; Adjustment
 slider:
-        sal	cl		; Bit 7 gesetzt ?
-        jc	getreg		; ja
-        shr	al		; Value korrigieren
+        sal	cl		; Is bit 7 set?
+        jc	getreg		; Yes
+        shr	al		; Adjust the value
         jmp short slider
 
-; Register einlesen
+; Read the register
 getreg:
-        mov	cx,ax		; save Wert,Bitmaske
-        mov	bl,0ffh		; Bitmaske = 0FFh keine Korrektur
+        mov	cx,ax		; Save the value and bit mask
+        mov	bl,0ffh		; Bit mask = 0FFh: no adjustment
         call	BSMixerGetRegister
 
         mov	ah,0ffh
-        xor	ah,ch		; Bitmaske negiert
-        and	al,ah		; al = ausmaskierte Bits
+        xor	ah,ch		; Inverted bit mask
+        and	al,ah		; al = masked-out bits
 
-        and	cl,ch		; Wert Bits maskieren
-        or	al,cl		; Einstellwert berechnen
+        and	cl,ch		; Mask the value bits
+        or	al,cl		; Calculate the control value
         out	dx,al
 	.leave
         ret             	; dx = Data Port
@@ -484,13 +484,13 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSMixerSetDefault
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       Mixerchip init.
+Function:       Initialize the mixer chip
 
-Aufrufer:	Mixerlibrary
+Called by:	Mixer library
 
 IN:		-
 
-OUT:            CF=1 	Fehler
+OUT:            CF=1 	Error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -504,7 +504,7 @@ BSMixerSetDefault proc    far
 	.enter
 
 ;-----------------
-;	ENDE
+;	END
 ;-----------------
 ;done:
         clc
@@ -517,9 +517,9 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSMixerGetSubToken
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       Zum Token zugewiesenen Text zurueckgeben
+Function:       Return the text assigned to a token
 
-Aufrufer:	Mixerlibrary
+Called by:	Mixer library
 
 IN:             dx	identifier
 		cx	Token
@@ -531,8 +531,8 @@ REVISION HISTORY:
 	----    ----            -----------
 	DL	10.10.98	Init
 
- ACHTUNG: Obwohl identifier von Typ word ist sind nur 8 Identifier
- 	  wegen der Tabellenlaenge erlaubt (0x01 .. 0x80)
+ ATTENTION: Although identifier is a word, the table supports
+ 	  only eight selectors (0x01 .. 0x80). Extend the table to add more.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
@@ -541,43 +541,43 @@ BSMixerGetSubToken proc    far
 	.enter
 
 ;-----------------------
-; Token suchen
+; Find the token
 ;-----------------------
         mov	di,dx			; identifier for later
         push	cx
         call	GetOffToValTab
         mov	bx,cx
-        pop	cx			; Token zurÅck
+        pop	cx			; Restore the token
         mov	ax,0			; not found Token
 search:
         mov	dx,cs:[bx]
-        cmp	dx,0			; Endekennung ?
-        je	done			; ja !
-        cmp	dx,cx			; Token gefunden ?
-        je	found			; ja !
-        add	bx,18			; naechste Pos.
+        cmp	dx,0			; End marker?
+        je	done			; Yes!
+        cmp	dx,cx			; Token found?
+        je	found			; Yes!
+        add	bx,18			; Next position
         jmp	search
 
 ;-----------------------
-; SubToken ermitteln
+; Get the subtoken
 ;-----------------------
 found:
         inc	bx
         inc	bx
 	mov	dx,di			; identifier
-        tst	dl			; identifier OK (0x01 bis 0x80) ?
+        tst	dl			; Is identifier valid (0x01 to 0x80)?
         je	done
 subsearch:
-        shr	dl			; LSB gesetzt ?
-        jc	found2			; ja
-        inc	bx			; nein nÑchste Stelle
+        shr	dl			; Is the LSB set?
+        jc	found2			; Yes
+        inc	bx			; No, try the next position
         inc	bx
         jmp	subsearch
 found2:
 	mov	ax,cs:[bx]		; SubToken
 
 ;-----------------
-;	ENDE
+;	END
 ;-----------------
 done:
 	.leave
@@ -589,14 +589,14 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSMixerTokenToText
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       Zum Token zugewiesenen Text zurueckgeben
+Function:       Return the text assigned to a token
 
-Aufrufer:	Mixerlibrary
+Called by:	Mixer library
 
-IN:		ax:bx	Zieltextpuffer
+IN:		ax:bx	Destination text buffer
 		cx	Token
 
-OUT:            CF=1 	Fehler
+OUT:            CF=1 	Error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -609,11 +609,11 @@ BSMixerTokenToText proc    far
 	uses    ax,bx,cx,dx,es,si,di		;PUSH ax, ...
 	.enter
 
-        mov	es,ax		; Ziel
+        mov	es,ax		; Destination
         mov	si,bx
 
 ;-----------------------
-; Token suchen
+; Find the token
 ;-----------------------
         mov	bx,0
 search:
@@ -630,28 +630,28 @@ notfound:
         mov	bx,TTLnotFound
 
 ;-----------------------
-; Zeiger auf Text (Src)
+; Pointer to source text
 ;-----------------------
 found:
 	mov	di,cs:tokenTextList[bx]
 
 ;-----------------------
-; Text kopieren (Src) --> (Ziel)
+; Copy source text to the destination
 ;-----------------------
 
 	mov	cx,31		; max. Count
 loop1:
 	mov	al,cs:[di]
 	mov	es:[si],al
-	tst	al		; Ende ?
-	je	done		; ja
+	tst	al		; End?
+	je	done		; Yes
         inc	si
         inc	di
 	dec	cx
 	jne	loop1		; next
 
 ;-----------------
-;	ENDE
+;	END
 ;-----------------
 done:
         clc
@@ -668,7 +668,7 @@ tokenTextList	word	offset	tokenText50
 		word	offset	tokenText51
 TTLnotFound	word	offset	notfoundText
 
-tokenText50	char	'Eingangsquelle',0
+tokenText50	char	'Input Source',0
 tokenText51	char	'token51',0
 notfoundText	char	'unknown',0
 
@@ -676,9 +676,9 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSMixerSpecValue
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       Value genauer definieren
+Function:       Describe a control value
 
-Aufrufer:	Mixerlibrary
+Called by:	Mixer library
 
 IN:		dx	valNum
 
@@ -688,7 +688,7 @@ OUT:            ax	Range
                 ch	sliderNum
                 dl	target
                 dh	visible,stereo
-		CF=1 	Fehler
+		CF=1 	Error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -701,15 +701,15 @@ BSMixerSpecValue proc    far
 	uses    di		;PUSH ax, ...
 	.enter
 
-; Zeiger berechnen
-	call	GetOffToValTab	; bx = Zeiger valueTab
+; Calculate the pointer
+	call	GetOffToValTab	; bx = pointer to valueTab
 
-	mov	ax,VAL_LEN    	; Laenge eines Eintrags
+	mov	ax,VAL_LEN    	; Length of one entry
         mul	dx
         add	ax,bx
         mov	di,ax
 
-; Tokentabelle auslesen
+; Read the token table
 
 	mov     bx,cs:[di]	; Token
         inc	di
@@ -723,7 +723,7 @@ BSMixerSpecValue proc    far
 	mov     dx,cs:[di]	; target, visible
 
 ;-----------------
-;	ENDE
+;	END
 ;-----------------
 ;done:
         clc
@@ -744,7 +744,7 @@ mixerSuperTable:
 	word	offset	valTab1335
 	word	offset	subTab1335
 
-	word	offset	valTabDum	; fÅr unbekannte DSP Version
+	word	offset	valTabDum	; For an unknown DSP version
 	word	offset	subTabDum
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -755,37 +755,37 @@ valTab1745:
 	word	255		; Range
         byte	1,0,1		; Type,sliderNum,target
 	byte	0C0h		; visible,stereo
-	byte    030h,0f8h	; Offset, Bitmaske 1
-        byte	031h,0f8h	; Offset, Bitmaske 2
+	byte    030h,0f8h	; Offset, bit mask 1
+        byte	031h,0f8h	; Offset, bit mask 2
 ; MIDI (FM)
 	word	2		; BSMX_TOKEN_MIDI
 	word	255		; Range
         byte	1,1,1		; Type,sliderNum,target
 	byte	0C0h		; visible,stereo
-	byte    034h,0f8h	; Offset, Bitmaske 1
-        byte	035h,0f8h	; Offset, Bitmaske 2
+	byte    034h,0f8h	; Offset, bit mask 1
+        byte	035h,0f8h	; Offset, bit mask 2
 ; VOICE (WAV)
 	word	4		; BSMX_TOKEN_VOICE
 	word	255
         byte	1,2,1
 	byte	0C0h
-	byte    032h,0f8h	; Offset, Bitmaske 1
-        byte	033h,0f8h	; Offset, Bitmaske 2
+	byte    032h,0f8h	; Offset, bit mask 1
+        byte	033h,0f8h	; Offset, bit mask 2
 ; CD
 	word	3		; BSMX_TOKEN_CD
 	word	255
         byte	1,3,1		; Type,sliderNum,target
 	byte	0C0h		; visible,stereo
-	byte    036h,0f8h	; Offset, Bitmaske 1
-        byte	037h,0f8h	; Offset, Bitmaske 2
+	byte    036h,0f8h	; Offset, bit mask 1
+        byte	037h,0f8h	; Offset, bit mask 2
 ; LINE
 	word	5		; BSMX_TOKEN_LINE
 	word	255		; Range
         byte	1,4,1		; Type,sliderNum,target
 	byte	0C0h		; visible,stereo
-	byte    038h,0f8h	; Offset, Bitmaske 1
-        byte	039h,0f8h	; Offset, Bitmaske 2
-; Mikro
+	byte    038h,0f8h	; Offset, bit mask 1
+        byte	039h,0f8h	; Offset, bit mask 2
+; Microphone
 	word	6		; BSMX_TOKEN_MIC
 	word	255		; Range
         byte	1,5,1		; Type,sliderNum,target
@@ -800,14 +800,14 @@ valTab1745:
 	byte	00h		; visible,stereo
 	byte    03bh,0c0h
         byte	00h,00h
-; Tiefen
+; Bass
 	word	9		; BSMX_TOKEN_BASS
 	word	255		; Range
         byte	1,7,1		; Type,sliderNum,target
 	byte	0c0h		; visible,stereo
 	byte    046h,0f0h
         byte	047h,0f0h
-; Hîhen
+; Treble
 	word	8		; BSMX_TOKEN_TREBLE
 	word	255		; Range
         byte	1,8,1		; Type,sliderNum,target
@@ -815,49 +815,49 @@ valTab1745:
 	byte    044h,0f0h
         byte	045h,0f0h
 
-; Output mixer switches (Quellen fÅr Wiedergabe)
+; Output mixer switches (playback sources)
 	word	15		; BSMX_TOKEN_OUT_MX_SW
 	word	5		; Range
         byte	3,9,3		; Type,sliderNum,target
 	byte	080h		; visible,stereo
 	byte    03ch,01fh
         byte	00h,00h
-; Input mixer switches Links (Quellen fÅr Aufnahme)
+; Left input mixer switches (recording sources)
 	word	16		; BSMX_TOKEN_IN_MX_SW_L
 	word	7		; Range
         byte	3,10,2		; Type,sliderNum,target
 	byte	080h		; visible,stereo
 	byte    03dh,07fh
         byte	00h,00h
-; Input mixer switches Rechts (Quellen fÅr Aufnahme)
+; Right input mixer switches (recording sources)
 	word	17		; BSMX_TOKEN_IN_MX_SW_R
 	word	7		; Range
         byte	3,11,2		; Type,sliderNum,target
 	byte	080h		; visible,stereo
 	byte    03eh,07fh
         byte	00h,00h
-; Input Gain Links
+; Left input gain
 	word	18		; BSMX_TOKEN_IN_GAIN_L
 	word	4		; Range
         byte	2,12,2		; Type,sliderNum,target
 	byte	080h		; visible,stereo
 	byte    03fh,0c0h
         byte	00h,00h
-; Input Gain Rechts
+; Right input gain
 	word	19		; BSMX_TOKEN_IN_GAIN_R
 	word	4		; Range
         byte	2,13,2		; Type,sliderNum,target
 	byte	080h		; visible,stereo
 	byte    040h,0c0h
         byte	00h,00h
-; Output Gain Links
+; Left output gain
 	word	20		; BSMX_TOKEN_OUT_GAIN_L
 	word	4		; Range
         byte	2,14,3		; Type,sliderNum,target
 	byte	080h		; visible,stereo
 	byte    041h,0c0h
         byte	00h,00h
-; Output Gain Rechts
+; Right output gain
 	word	21		; BSMX_TOKEN_OUT_GAIN_R
 	word	4		; Range
         byte	2,15,3		; Type,sliderNum,target
@@ -899,12 +899,12 @@ subTab1745:
         	BSMX_TOKEN_OFF,
         	 0, 0, 0, 0, 0, 0	; subTokens LSB..MSB
 
-	word	BSMX_TOKEN_LOWPASS,	; Tiefpass
+	word	BSMX_TOKEN_LOWPASS,	; Low-pass
 		BSMX_TOKEN_ON,
         	BSMX_TOKEN_OFF,
 		 0, 0, 0, 0, 0, 0	; subTokens
 
-        word	0			; Endekennung
+        word	0			; End marker
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;		CT 1345
@@ -914,15 +914,15 @@ valTab1345:
 	word	255		; Range
         byte	1,0,1		; Type,sliderNum,target
 	byte	0c0h		; visible,stereo
-	byte    022h,0e0h	; Offset, Bitmaske 1
-        byte	022h,00eh	; Offset, Bitmaske 2
+	byte    022h,0e0h	; Offset, bit mask 1
+        byte	022h,00eh	; Offset, bit mask 2
 ; MIDI (FM)
 	word	2		; BSMX_TOKEN_MIDI
 	word	255		; Range
         byte	1,1,1		; Type,sliderNum,target
 	byte	0C0h		; visible,stereo
-	byte    026h,0e0h	; Offset, Bitmaske 1
-        byte	026h,00eh	; Offset, Bitmaske 2
+	byte    026h,0e0h	; Offset, bit mask 1
+        byte	026h,00eh	; Offset, bit mask 2
 ; VOICE (WAV)
 	word	4		; BSMX_TOKEN_VOICE
 	word	255
@@ -944,7 +944,7 @@ valTab1345:
 	byte	0C0h		; visible,stereo
 	byte    02eh,0e0h
         byte	02eh,00eh
-; Mikro
+; Microphone
 	word	6		; BSMX_TOKEN_MIC
 	word	255		; Range
         byte	1,5,1		; Type,sliderNum,target
@@ -959,7 +959,7 @@ valTab1345:
 	byte	080h		; visible,stereo
 	byte    0ch,020h
         byte	00h,00h
-; Tiefpassfilter
+; Low-pass filter
 	word	11		; BSMX_TOKEN_LOWPASS
 	word	2		; Range
         byte	2,7,3		; Type,sliderNum,target
@@ -981,7 +981,7 @@ subTab1345:
         	BSMX_TOKEN_OFF,
         	 0, 0, 0, 0, 0, 0	; subTokens LSB..MSB
 
-	word	BSMX_TOKEN_LOWPASS,	; Tiefpass
+	word	BSMX_TOKEN_LOWPASS,	; Low-pass
 		BSMX_TOKEN_ON,
         	BSMX_TOKEN_OFF,
 		 0, 0, 0, 0, 0, 0	; subTokens
@@ -989,7 +989,7 @@ subTab1345:
 	word	BSMX_TOKEN_INP_SRC
         word	0 , 3, 6, 5, 0, 0, 0, 0	; subTokens
 
-        word	0			; Endekennung
+        word	0			; End marker
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;		CT 1335
@@ -999,15 +999,15 @@ valTab1335:
 	word	255		; Range
         byte	1,0,1		; Type,sliderNum,target
 	byte	080h		; visible,stereo
-	byte    02h,0e0h	; Offset, Bitmaske 1
-        byte	0h,00h		; Offset, Bitmaske 2
+	byte    02h,0e0h	; Offset, bit mask 1
+        byte	0h,00h		; Offset, bit mask 2
 ; MIDI (FM)
 	word	2		; BSMX_TOKEN_MIDI
 	word	255		; Range
         byte	1,1,1		; Type,sliderNum,target
 	byte	080h		; visible,stereo
-	byte    06h,0e0h	; Offset, Bitmaske 1
-        byte	0h,00h		; Offset, Bitmaske 2
+	byte    06h,0e0h	; Offset, bit mask 1
+        byte	0h,00h		; Offset, bit mask 2
 ; VOICE (WAV)
 	word	4		; BSMX_TOKEN_VOICE
 	word	255
@@ -1024,10 +1024,10 @@ valTab1335:
         byte	0h,0h
 
 subTab1335:
-	word	0		; Ende
+	word	0		; End
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-;		unbekannte DSP Version
+;		Unknown DSP version
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 valTabDum:
 	word	1		; BSMX_TOKEN_MASTER
@@ -1059,7 +1059,7 @@ valTabDum:
         byte	0h,0h
 
 subTabDum:
-	word	0		; Ende
+	word	0		; End
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -5,17 +5,17 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound Driver
 
-DATEI:		bsconst.def
+FILE:		bsconst.def
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
 	DL	15.10.99	Warnings for Recording
 
-Beschreibung:
+Description:
 
 *****************************************************************/@
 
@@ -133,7 +133,7 @@ SBMap   struct
 	dspDataRead             word    ; base + AH
 	dspDataWrite            word    ; base + CH
 	dspDataAvailable        byte    ; base + EH
-	dspAckHighDMA		byte	; base + FH  16Bit-DMA quitt.
+	dspAckHighDMA		byte	; base + FH  Acknowledge 16-bit DMA
 	cdRomReadData           byte    ; base +10H
 	cdRomStatus             byte    ; base +11H
 	cdRomReset              byte    ; base +12H
@@ -474,10 +474,10 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	TS      10/26/92        Initial version
-	DL	13.04.97	cx wird nicht geÑndert !
+	DL	13.04.97	cx is not changed.
 	DL	14.04.97	dx push/pop
-	DL	28.06.97	out dx,al wird durch Unterprogramm aus-
-				gefÅhrt. Dadurch bessere Debuggingmîgl.
+	DL	28.06.97	out dx,al is executed by a subroutine.
+				This makes debugging easier.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 SBDDACWriteDSP  macro   value,times
@@ -504,7 +504,7 @@ topOfLoop:
 	jz      writeToDSP
 	dec     ah
 	jnz     topOfLoop
-	jz     	topOfLoop		; LA: Timeout aufgehoben
+	jz     	topOfLoop		; LA: Removed timeout
 
 writeToDSP:
 	;

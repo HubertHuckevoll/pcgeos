@@ -4,17 +4,17 @@
 
 PROJECT:        BestSound NewWave-Library
 
-DATEI:          SUBCODE.GOH
+FILE:          SUBCODE.GOH
 
-AUTOR:          Dirk Lausecker
+AUTHOR:          Dirk Lausecker
 
 REVISION HISTORY:
-        Name    Datum           Beschreibung
+        Name    Date           Description
         ----    -----           ------------
         DL      28.02.2000      Init
-        DL      08.08.2000      Translation german --> english
+        DL      08.08.2000      Translated German comments into English
 
-Beschreibung:
+Description:
         Headerfile for SUBCODE.GOC
 
 *****************************************************************/
@@ -46,13 +46,13 @@ extern  byte            playBits;       // Bits
 extern  word            playMaxRate;
 extern  byte            playMaxChannels;
 extern  byte            playMaxBits;
-extern  byte            konvRateRed;
-extern  byte            konvBitsRed;
-extern  byte            konvChanRed;
+extern  byte            rateReduction;
+extern  byte            bitReduction;
+extern  byte            channelReduction;
 
 extern  word            playCacheLen;
 extern  word            secBufLen;      // Length Secondarybuffer
-extern  word            secBufLenSoll;
+extern  word            secBufRequestedLen;
 extern  word            cacheOffset;    // Offset PlayCache
 extern  word            secondOffset;   // Offset Secondbuffer
 extern  word            cacheFree;      // Free space in PlayCache
@@ -61,12 +61,12 @@ extern  word            cacheFull;      // in Cache waiting Bytes
 extern  word            secondFree;     // Free space in Secondarybuffer
 extern  word            cacheKOffset;   // Cacheoffset Reader
 extern  word            secondHandle;   // for test purpose only (SecondAlloc)
-extern  word            peakLevel;      // RMS-level (Konverter)
+extern  word            peakLevel;      // RMS-level (converter)
 extern  word            simFlags;       // Bit0->simulate Soundcard
-extern  Boolean         stereoToggle;   // Soundkarte toggle Left/Right
+extern  Boolean         stereoToggle;   // Swap the sound card's left/right channels
 extern  word            stereoToggleIni;
 
-extern  Boolean         compatFlag;     // TRUE = driver is NewWave-kompatibel
+extern  Boolean         compatFlag;     // TRUE = driver supports NewWave
 extern  byte            *playCachePtr;          // Pointer to Playcache
 extern  Boolean         pcmUnknownLength;
 extern  word            pcmBlockAlign;
@@ -87,10 +87,10 @@ int     _pascal BSNWSetParams(word rate,word bits,word channels);
 void    BSNWLoadIniSettings(void);
 void    _pascal BSNWInsertSample(void *ptr,byte bits);
 int     _pascal BSNWPreCheck(word playFlags);
-void    _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr);
+void    _pascal BSNWConvert16To8(void *cachePtr, void *secPtr);
 void    _pascal BSNWFillSilence(void *secPtr,word len);
 word    _pascal BSNWGetAIState(void);
-void    _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr);
+void    _pascal BSNWConvertData(byte *cachePtr, byte *secPtr);
 int     _pascal BSNWLoadCache(void *cachePtr);
 word    _pascal BSNWReadPCM(void *dest, word requested);
 int     _pascal BSNWLoadData(void *cachePtr,

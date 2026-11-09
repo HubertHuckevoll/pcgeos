@@ -49,6 +49,7 @@ static Boolean _pascal MixerDescribe(MixerValue *descriptionP);
 
 @start AppResource;
 @visMoniker MixerTextMoniker = "Mixer";
+@localize "Application name for the sound card mixer.";
 @object GenApplicationClass MixerApp = {
     GI_visMoniker = list {
         @MixerTextMoniker, @MixerVGAMoniker, @MixerHGAMoniker,
@@ -78,6 +79,7 @@ static Boolean _pascal MixerDescribe(MixerValue *descriptionP);
 }
 @object GenGlyphClass MixerStatus = {
     GI_visMoniker = "No supported mixer controls are available.";
+    @localize "Shown when the active driver exposes no supported mixer controls.";
 }
 @object GenInteractionClass MixerPlayback = {
     HINT_ORIENT_CHILDREN_HORIZONTALLY;
@@ -91,6 +93,7 @@ static Boolean _pascal MixerDescribe(MixerValue *descriptionP);
 }
 @object GenTriggerClass MixerAdvancedTrigger = {
     GI_visMoniker = 'A', "Advanced...";
+    @localize "Button that opens advanced mixer settings. Preserve a suitable keyboard mnemonic.";
     GI_states = @default & ~GS_ENABLED;
     GTI_destination = @MixerAdvanced;
     GTI_actionMsg = MSG_GEN_INTERACTION_INITIATE;
@@ -100,6 +103,7 @@ static Boolean _pascal MixerDescribe(MixerValue *descriptionP);
 @start AdvancedResource;
 @object GenInteractionClass MixerAdvanced = {
     GI_visMoniker = "Advanced mixer settings";
+    @localize "Title of the advanced mixer dialog.";
     GII_attrs = @default | GIA_NOT_USER_INITIATABLE;
     GII_visibility = GIV_DIALOG;
     GII_type = GIT_COMMAND;
@@ -112,6 +116,7 @@ static Boolean _pascal MixerDescribe(MixerValue *descriptionP);
 }
 @object GenGlyphClass MixerAdvancedHelp = {
     GI_visMoniker = "Changes take effect immediately.";
+    @localize "Mixer help text: no Apply button is needed.";
 }
 @object GenItemGroupClass MixerPages = {
     GI_comp = @MixerToneItem, @MixerRecordingItem, @MixerOtherItem;
@@ -121,14 +126,17 @@ static Boolean _pascal MixerDescribe(MixerValue *descriptionP);
 }
 @object GenItemClass MixerToneItem = {
     GI_visMoniker = "Tone";
+    @localize "Group of bass and treble controls.";
     GII_identifier = 0;
 }
 @object GenItemClass MixerRecordingItem = {
     GI_visMoniker = "Recording";
+    @localize "Group of recording input controls.";
     GII_identifier = 1;
 }
 @object GenItemClass MixerOtherItem = {
     GI_visMoniker = "Other";
+    @localize "Group of additional sound card controls.";
     GII_identifier = 2;
 }
 @object GenInteractionClass MixerTone = {
@@ -196,6 +204,7 @@ static Boolean _pascal MixerDescribe(MixerValue *descriptionP);
 }
 @object GenBooleanClass MixerMuteBooleanTemplate = {
     GI_visMoniker = "Mute";
+    @localize "Silence this playback channel without losing its saved level.";
     GBI_identifier = MIXER_MUTE_IDENTIFIER;
 }
 @object GenItemGroupClass MixerItemsTemplate = {

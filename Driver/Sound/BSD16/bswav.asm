@@ -2,27 +2,27 @@ COMMENT @********************************************************
 
 	Copyright (c) Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound Treiber
+PROJECT:	BestSound Driver
 
-DATEI:		bswav.asm
+FILE:		bswav.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	29.08.98	Init
-        DL	02.03.2000	Speakerausgaberoutinen entfernt
-	DL	02.03.2000	Ableitung SB16
+        DL	02.03.2000	Removed speaker output routines
+	DL	02.03.2000	Derived from SB16
 	DL	25.10.2000	Translations for ND
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	BSSecondAlloc		Allocate Secondarybuffer
 	BSSecondUnlock		Unlock Secondarybuffer
 	BSSecondWrite		Fill Secondarybuffer
-	BSDMAGrenzen		check DMA-Segment
+	BSDMACheckBoundaries		check DMA-Segment
 
 *****************************************************************@
 
@@ -40,14 +40,14 @@ idata           segment
 						; 1 = AI fill lower half
 						; 2 = fill upper half
 						; 3 = Single cycle (End)
-	endeFlag		byte	0h	; 1 Ending PLAY
+	playEndFlag		byte	0h	; 1 Ending PLAY
 
 	blockISR		byte	0h	; for Debugging
 	stackHandle		word	0	; MemHandle for ISR-Stack
 	DSPVersion		word	0h	; DSP Version
 	hsFlag			byte	0h	; 1 = Highspeedmode
 	bsInterleave		byte	1h	; every X. Byte will be copied
-	singleCommand		byte	14h	; DSP Commando Singletransfer
+	singleCommand		byte	14h	; DSP command for a single-cycle transfer
 	stopCommand		byte	0dah	; Stop AI
 	tempDMAChannel		word	0h
 	highDMAChannel		word	5h
@@ -68,7 +68,7 @@ called by:	SBDDACSetSample
 IN:		[sampleRate]
 		[DSPFormatCommand]
 
-OUT:		CF=1 Fehler
+OUT:		CF=1 error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -148,7 +148,7 @@ progRate:
 	SBDDACWriteDSP	cl,0
 	mov	cl,DSP_EXIT_AUTOINIT
 	mov	ch,ah
-	jmp	setDSPCommand		; Ende
+	jmp	setDSPCommand		; End
 
 ;-----------------------
 ;  Store DSPCommand
@@ -173,13 +173,13 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSSecondAlloc
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Secondary Buffer belegen
+Function:       Allocate a secondary buffer
 
 called by:	AttachToStream
 
-IN:		cx = LÑnge
+IN:		cx = length
 
-OUT:		CF=1 Fehler
+OUT:		CF=1 error
 
 REVISION HISTORY:
 	Name    Date            Description
@@ -213,7 +213,7 @@ BSSecondAlloc proc    far
 	mov	cl,mask HF_FIXED	; HeapFlags
 	mov	ch,mask HAF_ZERO_INIT	; HeapAllocFlags
 	call	MemAlloc
-	jc	error			; Fehler !
+	jc	error			; Error!
 
 	mov	ds:[bufferHandle],bx	; Handle to block allocated
 	mov	ds:[bufferSegment],ax	; Address of block allocated
@@ -227,7 +227,7 @@ BSSecondAlloc proc    far
 	mov	bx,ax			; Bufferaddress
 	mov	dx,ds:[bufferLen]	; size
 
-	call	BSDMAGrenzen		; check DMA-Segment
+	call	BSDMACheckBoundaries		; check DMA-Segment
 	mov	ds:[bufferSegment],bx	; corrected segment address
 
         mov	cx,0			; Mode = Play
@@ -266,29 +266,29 @@ BSSecondAlloc endp
 
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		BSDMAGrenzen
+		BSDMACheckBoundaries
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       PrÅft Segmentgrenzen und korrigiert ggf. Einstellungen
+Function:       Check segment boundaries and adjust settings if needed
 
 called by:	BSSecondAlloc
 
 IN:		bx = Segment
-		dx = LÑnge
+		dx = length
 
-OUT:		bx = neues Segment
-		dx = neue LÑnge
+OUT:		bx = New segment
+		dx = new length
 
 REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	DL	29.08.98	Init
 
-- Wenn 64K-Segmentgrenze Åberschritten wird, den grî·eren Teil
-  als Puffer definieren !
+- If the buffer crosses a 64K boundary, use the larger part
+  as the buffer.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
-BSDMAGrenzen proc    near
+BSDMACheckBoundaries proc    near
 	uses    ax,cx			;PUSH ax, ...
 	.enter
 
@@ -296,53 +296,53 @@ BSDMAGrenzen proc    near
 ;	START
 ;--------------------
         mov	ax,bx			; Segmentadresse
-	and	ax,0fffh		; 64K Bereich ausblenden
+	and	ax,0fffh		; Mask out the 64K region
         mov	cl,4
-	shl	ax,cl			; Offset in 64K Bereich
-        add	ax,dx			; Pruefung Grenzueberschreitung
-	jnc	noproblem		; bestanden !
+	shl	ax,cl			; Offset within the 64K region
+        add	ax,dx			; Check for a boundary crossing
+	jnc	noproblem		; Passed!
 
 ;--------------------
-;   Problemloesung
+;   Handle a boundary crossing
 ;--------------------
-	mov	cx,ax			; Laenge hinter 64K (Restlaenge)
-        mov	ax,dx			; ax = Sollaenge
-        shr	ax			; ax = halbe Laenge
-        cmp	ax,cx			; Restlaenge mehr als Haelfte ?
-        jb	hintseg			; ja
+	mov	cx,ax			; Length beyond 64K (remaining length)
+        mov	ax,dx			; ax = requested length
+        shr	ax			; ax = half the length
+        cmp	ax,cx			; Is the remaining length greater than half?
+        jb	useTrailingSegment			; Yes
         sub	dx,cx
-	jmp short noproblem1		; nein, Rest reicht
+	jmp short noproblem1		; No, the remaining length is sufficient
 
 ;--------------------
-; Bereich hinter Seg-
-; mentueberschreitung
-; als Secondbuffer !
+; Region beyond
+; the segment boundary
+; as the secondary buffer.
 ;--------------------
-hintseg:
-        mov	ax,dx			; alte Laenge
-	sub	ax,cx			; toter Bereich
+useTrailingSegment:
+        mov	ax,dx			; Old length
+	sub	ax,cx			; Unused region
         mov	cl,4
         shr	ax,cl			; Offset-->Segment
-        inc	ax			; Sicherheit
-        add	bx,ax			; neue Segmentadresse
-        shl	ax,cl			; Seg-->Offs (verlorengegange Bytes)
-        sub	dx,ax			; abziehen
+        inc	ax			; Safety margin
+        add	bx,ax			; New segment address
+        shl	ax,cl			; Segment --> offset (bytes lost)
+        sub	dx,ax			; Subtract
 
 noproblem1:
 ;--------------------
-;	ENDE
+;	END
 ;--------------------
 noproblem:
 	.leave				; POP ax, ...
 	ret
 
-BSDMAGrenzen endp
+BSDMACheckBoundaries endp
 
 COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSSetSamplerate
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Vorbereitende Berechnungen
+Function:       Prepare calculations
 
 called by:	SBDDACSetSample
 
@@ -364,10 +364,10 @@ BSSetSamplerate proc    far
 ;--------------------
 ;	INT
 ;--------------------
-	call	BSGetDSPVersion		; DSP Version holen
+	call	BSGetDSPVersion		; Get the DSP version
 
 ;--------------------
-;	ENDE
+;	END
 ;--------------------
 	clc
 	.leave				; POP ax, ...
@@ -379,7 +379,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSGetDSPVersion
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       DSP Version ermitteln
+Function:       Get the DSP version
 
 called by:	?
 
@@ -401,14 +401,14 @@ BSGetDSPVersion proc    far
 ;	WARNING	GET_DSP_VERSION
 
 	SBDDACWriteDSP	DSP_GET_VERSION,0
-        SBDDACReadDSP	0		; al = RÅckgabe von DSP
+        SBDDACReadDSP	0		; al = DSP return value
         mov	bh,al
-        SBDDACReadDSP	0		; al = RÅckgabe von DSP
+        SBDDACReadDSP	0		; al = DSP return value
         mov	bl,al
-	mov	ds:[DSPVersion],bx	; Version abspeichern
+	mov	ds:[DSPVersion],bx	; Store the version
 
 ;--------------------
-;	ENDE
+;	END
 ;--------------------
 
 	.leave				; POP ax, ...
@@ -420,11 +420,11 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSSingletransfer
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Singlecycletransfer starten
+Function:       Start a single-cycle transfer
 
 called by:	DettachFromStream
 
-IN:		cx	Anzahl Bytes
+IN:		cx	Byte count
 
 OUT:		-
 
@@ -442,42 +442,42 @@ BSSingletransfer proc    near
 	clr	ds:[hsFlag]
 
 ;-----------------------------
-; DSP Befehl fuer Singlecycle
-; berechnen
+; DSP command for single-cycle mode
+; Calculate
 ;-----------------------------
         mov	bl,DSP_DMA_PCM_MODE	; Single mono
-	mov	al,ds:[DSPFormatCommand]; AI Befehl holen
+	mov	al,ds:[DSPFormatCommand]; Get the auto-init command
 	cmp	al,1ch			; AI mono ?
-	jz	single			; ja
+	jz	single			; Yes
         ;
-        ; vorbereiteten Singletransfercode
-        ; auslesen
+        ; Prepared single-cycle command
+        ; Read
         ;
-        mov	bl,ds:[singleCommand]	; Code gueltig ?
-        jz	done			; nein, unbekannt
+        mov	bl,ds:[singleCommand]	; Valid command?
+        jz	done			; No, unknown
 
 ;--------------------
-; DSP aus AI rausholen
+; Take the DSP out of auto-init
 ;--------------------
 ;	SBDDACWriteDSP	DSP_EXIT_AUTOINIT,0
-        tst	cx			; noch was zu spielen ?
-        jz	setstate		; nein
+        tst	cx			; Is there more to play?
+        jz	setstate		; No
 
 ;--------------------
-; DSP programmieren
+; Program the DSP
 ;--------------------
 single:
 	SBDDACWriteDSP  bl, 0
-        dec	cx			; Laenge -1
+        dec	cx			; Length - 1
 	SBDDACWriteDSP  cl, 0
 	SBDDACWriteDSP  ch, 0
 
 	mov	cl,3			; Status
 setstate:
-        mov	ds:[dacStatus],cl	; Endestatus setzen
+        mov	ds:[dacStatus],cl	; Set the end state
 
 ;--------------------
-;	ENDE
+;	END
 ;--------------------
 done:
 	.leave				; POP ax, ...
@@ -493,21 +493,21 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSSecondWrite
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Streamdaten in Secondarybuffer schreiben
-		Startet Autoinit wenn Puffer voll ist
+Function:       Write stream data to the secondary buffer
+		Start auto-init when the buffer is full
 
 called by:	Notificationroutine
 
 IN:		cx	Bytes to write
 		si	Offset Stream
 
-OUT:		cx	geschriebene Bytes
+OUT:		cx	Bytes written
 
 REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	DL	29.08.98	Init
-        DL	22.09.98	Beruecksichtigung Interleave
+        DL	22.09.98	Handle interleaving
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
@@ -519,38 +519,38 @@ BSSecondWrite proc    far
 ;--------------------
 ; Secondbuffer OK ?
 ;--------------------
-        tst	ds:[bufferHandle]		; Secondbuffer vorhanden ?
-	jz	ende				; nein, nichts machen
+        tst	ds:[bufferHandle]		; Is the secondary buffer allocated?
+	jz	exitProc				; No, do nothing
 	push	ds				; Stack [1]
 
 ;-------------------
-; Interleave holen
+; Get interleave
 ;-------------------
         mov	bx,cx				; bx = Bytes
         mov	ax,cx				; ax = Bytes
 	mov	cl,ds:[bsInterleave]		; cl
         dec	cl
 	mov	dl,cl				; dl = interleave
-	shr	ax,cl				; verfÅgbare Daten korrig.
+	shr	ax,cl				; Adjust available data
         mov	cx,ax				; cx = Bytes to copy
 
 ;--------------------
-; LÑnge ggf. korr.
+; Adjust length if needed
 ;--------------------
 	mov	ax,ds:[bufferFree]
-        cmp	ax,cx				; weniger frei als gefordert ?
-        jnc	genug				; nein, LÑnge ist OK
-	mov	cx,ax				; MaxlÑnge
-genug:
-	sub	ds:[bufferFree],cx		; freier Speicher - LÑnge
+        cmp	ax,cx				; Less space than requested?
+        jnc	enoughSpace				; No, length is OK
+	mov	cx,ax				; Maximum length
+enoughSpace:
+	sub	ds:[bufferFree],cx		; Free space - length
         mov	ax,cx
         mov	cl,dl				; Interleave
-        shl	ax,cl				; Quellbytes berechnen
+        shl	ax,cl				; Calculate source bytes
         mov	cx,ax				; cx = Bytes to copy
-	push	cx				; Stack [2] LÑnge
+	push	cx				; Stack [2]: length
 
 ;-------------------------
-; Zeiger auf Secondbuffer
+; Pointer to the secondary buffer
 ;-------------------------
         mov	di,ds:[bufferP2]		; Startoffset
 	mov	ax,ds:[bufferSegment]
@@ -558,31 +558,31 @@ genug:
         mov	bx,ds:[bufferLen]		; max Offset
 
 ;------------------------
-; Zeiger auf Streamdaten
+; Pointer to stream data
 ;------------------------
-        mov	ax, ds:[streamSegment]		; Zeiger auf Stream
-        mov	ds,ax				; Segment Quelle
+        mov	ax, ds:[streamSegment]		; Pointer to the stream
+        mov	ds,ax				; Source segment
         mov	al,dl				; al = Interleave
-        inc	al				; zurueckkorrigieren
+        inc	al				; Adjust back
 	mov     dx, ds:[SD_max]			; dx = ptr-Max
 
 ;-------------------
-; Zaehler auf NULL ?
+; Counter = 0?
 ;-------------------
-	tst	cx				; Puffer voll ?
-        jz	done				; ja ! nicht kopieren
+	tst	cx				; Is the buffer full?
+        jz	done				; Yes, do not copy
 
 ;----------------
-; Offsets prÅfen
+; Check offsets
 ;----------------
 testoffs:
-	cmp	di, bx				; Zieloffset zu gro· ?
-        jb	copybyte2			; nein
-        sub	di, bx				; zurÅck an Anfang
+	cmp	di, bx				; Is the destination offset too large?
+        jb	copybyte2			; No
+        sub	di, bx				; Return to the start
 
 copybyte2:
-        cmp     si,dx				; Streamende ?
-	jb	copybyte			; nein
+        cmp     si,dx				; End of stream?
+	jb	copybyte			; No
         ;
         ;  We wrapped the pointer.  Subtract the max value
         ;       and add to starting value.
@@ -603,47 +603,47 @@ copybyte:
         add	si,ax				; SI + Interleave
 
 	sub	cx,ax
-        ja	testoffs			; nÑchstes Byte
+        ja	testoffs			; Next byte
 
 ;--------------------
-;   Kopieren ENDE
+;   End of copy
 ;--------------------
 done:
         pop	cx			; Stack [2]
         pop	ds			; Stack [1]
-        mov	ds:[bufferP2],di	; Pufferzeiger speichern
+        mov	ds:[bufferP2],di	; Store the buffer pointer
 
 ;--------------------
-; AutoInit starten
+; Start auto-init
 ;--------------------
-	tst	ds:[dacStatus]		; DAC noch wartend ?
-        jne	fertig			; nein, Ende
+	tst	ds:[dacStatus]		; Is the DAC still waiting?
+        jne	finished			; No, end
 
         mov	ax,ds:[bufferFree]
-        tst	ax			; Puffer voll ?
-        jne	fertig			; nein
+        tst	ax			; Is the buffer full?
+        jne	finished			; No
 
 ;-----------------------
 ;	AI
-; hier Autoinit starten
-; cx nicht Ñndern !!!
+; Start auto-init here
+; Do not change cx!
 ;-----------------------
 	call	BSAutoInitStart
-	jmp 	short ende
+	jmp 	short exitProc
 
 ;-------------------------------
-; NO_INT: Secondarybuffer leeren
+; NO_INT: empty the secondary buffer
 ;-------------------------------
-fertig:
+finished:
 
 ifdef BS_NO_INT
 	call	BSDACISR
 endif
 
 ;-----------------
-;	ENDE
+;	END
 ;-----------------
-ende:
+exitProc:
         call    SysExitInterrupt	; LA 15.09.98
 	.leave				; POP ax, ...
 
@@ -656,7 +656,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSAutoInitStart
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Startet Autoinit bzw. Bearbeitung Daten im Secondarybuffer
+Function:       Start auto-init or process data in the secondary buffer
 
 called by:	BSSecondWrite
 
@@ -679,7 +679,7 @@ BSAutoInitStart proc    near
 	.enter
 
 ;--------------------
-;   Status setzen
+;   Set the status
 ;--------------------
         mov	al,1
         mov	ds:[dacStatus],al	; Startstatus
@@ -693,27 +693,27 @@ BSAutoInitStart proc    near
 ;--------------------
 ifdef BS_NO_INT
 
-;	call	BSDACISR			; so tun als ob Interrupt
-        				; ausgelîst wurde
+;	call	BSDACISR			; Simulate an interrupt
+        				; was triggered.
 endif
 
 ;--------------------
 ;	INT
 ;--------------------
-        mov	cx,ds:[bufferO2]	; halbe Secondbufferlaenge
+        mov	cx,ds:[bufferO2]	; Half the secondary buffer length
         dec	cx
-	SBDDACWriteDSP  DSP_SET_BLOCK_SIZE, 0	; Blocklaenge
+	SBDDACWriteDSP  DSP_SET_BLOCK_SIZE, 0	; Block length
 	SBDDACWriteDSP  cl, 0			; L Byte
 	SBDDACWriteDSP  ch, 0			; H Byte
 
 ;--------------------
-;  Transfer starten
+;  Start the transfer
 ;--------------------
-	mov	cl,ds:[DSPFormatCommand]	; AI Befehl holen
-	SBDDACWriteDSP  cl, 0		; abschicken
+	mov	cl,ds:[DSPFormatCommand]	; Get the auto-init command
+	SBDDACWriteDSP  cl, 0		; Send
 
 ;--------------------
-;	ENDE
+;	END
 ;--------------------
 
 	.leave				; POP ax, ...
@@ -725,7 +725,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSDACISR
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Zusatzcode fÅr Interruptservice
+Function:       Additional interrupt service code
 
 called by:	ISR
 
@@ -737,17 +737,17 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	DL	30.08.98	Init
-        DL	02.09.98	endeFlag
+        DL	02.09.98	playEndFlag
 
 - bufferFree + bufferO2
 - bufferFree=bufferLen  --> dacStatus = 3
-- dacStatus = 1 	--> (DSP spielt gerade zweite HÑlfte ab)
+- dacStatus = 1 	--> (DSP is playing the second half)
 		    	    bufferP2  = 0
                     	    dacStatus = 2
-- dacStatus = 2 	--> (DSP spielt gerade erste HÑlfte ab)
+- dacStatus = 2 	--> (DSP is playing the first half)
 		    	    bufferP2  = bufferO2
                     	    dacStatus = 1
-- dacStatus = 3		--> Singlecycle programmieren
+- dacStatus = 3		--> program a single-cycle transfer
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
@@ -760,121 +760,121 @@ ifdef	BS_SWAT_WARNING
 endif
 
 ;------------------------
-; blockISR (fuer debug)
+; blockISR (for debugging)
 ;------------------------
-	tst	ds:[blockISR]		; ISR blockiert ?
-;       jnz     fertig			; ja
+	tst	ds:[blockISR]		; Is the ISR blocked?
+;       jnz     finished			; Yes
         mov	al,1
-        mov	ds:[blockISR],al	; blockieren
+        mov	ds:[blockISR],al	; Block
 
 ;------------------------
-; Notbehandlung wenn
+; Emergency handling if
 ; streamStatus = 0
 ;------------------------
-	tst	ds:[streamState]	; Status gesetzt ?
-        jnz	testdac			; ja, OK
+	tst	ds:[streamState]	; Is the status set?
+        jnz	testdac			; Yes, OK
 
         call	MyBreak
-	SBDDACWriteDSP	DSP_DMA_HALT,0	; DSP stoppen
-	jmp     fertig			; fertig
+	SBDDACWriteDSP	DSP_DMA_HALT,0	; Stop the DSP
+	jmp     finished			; finished
 
 ;------------------------
-; 	dacStatus testen
+; 	Check dacStatus
 ;------------------------
 testdac:
         mov	al,ds:[dacStatus]
-        cmp	al,0			; in Ruhe ?
-        jz      fertig			; ja, nichts machen
+        cmp	al,0			; Idle?
+        jz      finished			; Yes, do nothing
 	cmp	al,3			; dacStatus = Singletransfer ?
-        jnz	secondbuftest		; nein
+        jnz	secondbuftest		; No
 
 ;------------------------
-; dacStatus war Singletr.
+; dacStatus was a single-cycle transfer
 ;
-; Stream wurde geleert (letzter Transfer war Singlecycle)
-; solange endeFlag nicht gesetzt ist, kann Ausgabe wieder
-; gestartet werden indem Stream wieder gefÅllt wird !
+; Stream was emptied (last transfer was single-cycle)
+; While playEndFlag is clear, output can be restarted
+; by filling the stream again.
 ;------------------------
 	call	MyBreak
 	clr	ds:[dacStatus]		; Status = 0
 ;	clr	ds:[bufferP2]		; LA 10.08.98
 
-        jmp	fertig
+        jmp	finished
 
 ;------------------------
-; Secondarybuffer leer ?
+; Is the secondary buffer empty?
 ;------------------------
 secondbuftest:
-	mov	cx,ds:[bufferO2]	; PufferhÑlfte
-	mov	ax,ds:[bufferFree]	; freier Puffer
-	add	ax,cx			; eine HÑlfte ist wieder frei !
-        mov	ds:[bufferFree],ax	; PufferhÑlfte freigeben
+	mov	cx,ds:[bufferO2]	; Buffer half
+	mov	ax,ds:[bufferFree]	; Free buffer space
+	add	ax,cx			; One half is available again
+        mov	ds:[bufferFree],ax	; Release a buffer half
         mov	dx,ds:[bufferLen]
-        mov	bx,dx			; bx = Laenge (fuer spaeter)
+        mov	bx,dx			; bx = length (for later use)
 
-        sub	ax,cx			; Puffer geleert ?
-        jbe	swapdacstate		; nein
+        sub	ax,cx			; Is the buffer empty?
+        jbe	swapdacstate		; No
 
 ;--------------------
-;  Ausgabe beenden
+;  End output
 ;
-; Rest der Pufferhaelfte
-; mit Stummwert (80h)
-; fuellen
+; Fill the rest of the buffer half
+; with the silence value (80h).
+; Fill
 ;--------------------
-        mov	ds:[bufferFree],dx	; max. Len frei !
-        mov	cx,ax			; Restlaenge
+        mov	ds:[bufferFree],dx	; The full length is available
+        mov	cx,ax			; Remaining length
 	mov	al,3			; Status = 3
-        mov	ds:[dacStatus],al	; speichern
+        mov	ds:[dacStatus],al	; Store
 
-        call	BSFillRest		; Rest mit Stummwert lîschen
+        call	BSFillRest		; Fill the rest with silence
 
 ;------------------
-;   DSP anhalten
+;   Halt the DSP
 ;------------------
 
 	tst	ds:[hsFlag]		; Highspeed ?
-        jz	exitlow			; nein
-        call    SBDInitChipDSP		; RESET beendet Highspeed AI
-	clr	ds:[hsFlag]		; Highspeedflag resetten
+        jz	exitlow			; No
+        call    SBDInitChipDSP		; RESET ends high-speed auto-init
+	clr	ds:[hsFlag]		; Reset the high-speed flag
         clr	ds:[dacStatus]
         call	MyBreak
-        jmp	deblock			; fertig
+        jmp	deblock			; finished
         ;
-	; normaler Transfer
+	; Normal transfer
         ;
 exitlow:
 	SBDDACWriteDSP	DSP_EXIT_AUTOINIT,0
         ;
 deblock:
-	clr	ds:[blockISR]		; nÑchsten ISR deblockieren
-        jmp	fertig
+	clr	ds:[blockISR]		; Unblock the next ISR
+        jmp	finished
 
 ;--------------------
-; dacStatus swappen
+; Swap dacStatus
 ;--------------------
 swapdacstate:
-	mov	dx,0			; bufferP2 bei Status = 1
+	mov	dx,0			; bufferP2 when status = 1
         mov	al,ds:[dacStatus]
-        xor	al,3			; Status swappen 1-->2 bzw. 2-->1
-        mov	ds:[dacStatus],al	; speichern
-        cmp	al,1			; alter Status 2 ?
-        jne	stateold2		; nein
-        mov	dx,cx			; bufferP2 = 0 bei Status 2
+        xor	al,3			; Swap status 1-->2 or 2-->1
+        mov	ds:[dacStatus],al	; Store
+        cmp	al,1			; Old status = 2?
+        jne	stateold2		; No
+        mov	dx,cx			; bufferP2 = 0 when status = 2
 
 stateold2:
 
-	mov	ds:[bufferP2],dx	; Startzeiger fÅr nÑchsten Transfer
-	mov	ax,ds:[bufferP2]	; Startzeiger fÅr nÑchsten Transfer
+	mov	ds:[bufferP2],dx	; Start pointer for the next transfer
+	mov	ax,ds:[bufferP2]	; Start pointer for the next transfer
         sub	ax,bx
-        jb	fertig			; Zeiger am Ende ?
+        jb	finished			; Pointer at the end?
 
-	mov	ds:[bufferP2],ax	; korrigierter Zeiger
+	mov	ds:[bufferP2],ax	; Adjusted pointer
 
 ;----------------
-; 	ENDE
+; 	END
 ;----------------
-fertig:
+finished:
 
 	.leave				; POP ax, ...
 	ret
@@ -886,11 +886,11 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSFillRest
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Rest loeschen
+Function:       Clear the rest
 
 called by:	?
 
-IN:		cx	Anzahl Bytes
+IN:		cx	Byte count
 		(glob)	bsRecBits
 
 OUT:		-
@@ -920,22 +920,22 @@ EC<	WARNING	BS_FILL_REST>
         mov	al,0			; yes
 
 	;
-        ; cx = Anzahl Bytes
+        ; cx = byte count
         ;
 fill:
         mov	es,ds:[bufferSegment]
         mov	si,ds:[bufferP2]
-        mov	dx,ds:[bufferLen]	; Grenze
-        tst	cx			; Laenge = 0 ?
-        jz	fertig			; ja, fertig
-stumm:
+        mov	dx,ds:[bufferLen]	; Boundary
+        tst	cx			; Length = 0?
+        jz	finished			; Yes, finished
+silence:
 	cmp	si,dx			; si < bufferLen ?
-        jae	fertig			; nein, fertig
+        jae	finished			; No, finished
         mov	es:[si],al
         inc	si
         dec	cx
-        jnz	stumm
-fertig:
+        jnz	silence
+finished:
         .leave
         ret
 
@@ -945,10 +945,10 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSSecondUnlock
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       Speicher fÅr Secondarybuffer freigeben
-		DMA stoppen (wenn nîtig)
+Function:       Free the secondary buffer memory
+		Stop DMA if needed
 
-called by:	Routine die den Transfer beendet
+called by:	Routine that ends the transfer
 
 IN:		-
 
@@ -962,7 +962,7 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	DL	29.08.98	Init
-        DL	07.09.98	bufferSegment,-Len werden nicht resettet
+        DL	07.09.98	Do not reset bufferSegment or bufferLen
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
@@ -973,12 +973,12 @@ BSSecondUnlock proc    far
 ;	WARNING	BS_SECOND_UNLOCK
 
 ;--------------------
-;	aktiv ?
+;	Active?
 ;--------------------
 	mov	ax,ds:[bufferHandle]	; Handle to block allocated
         mov	bx,ax
         tst	ax			; Handle = 0 ?
-        jz	done			; ja, Ende
+        jz	done			; Yes, end
 
 ;----------------------------
 ;	DMA Stop
@@ -991,16 +991,16 @@ BSSecondUnlock proc    far
         mov	bh,DSP_EXIT_AI8
 	mov	al,ds:[bsRecBits]
 	cmp	al,16				; 16 Bit
-	jnz	exitdsp			; nein
+	jnz	exitdsp			; No
         mov	bh,DSP_EXIT_AI16
 exitdsp:
-	SBDDACWriteDSP	bh,0	; der eigentliche Befehl zum Beenden
+	SBDDACWriteDSP	bh,0	; The actual stop command
 
         mov	ax,30
         call	TimerSleep
 
 ;---------------------
-;	DMA disable'n
+;	Disable DMA
 ;---------------------
 	mov     cx, ds:[baseDMAChannel]  ; cx <- channel for transfer
 	mov     dl, 1
@@ -1018,7 +1018,7 @@ exitdsp:
 	;       we release the channel
 
 ;-------------------
-;	DMA stoppen
+;	Stop DMA
 ;-------------------
 
 	mov     dx, ds:[baseDMAChannel]         ; dl <- channel
@@ -1037,24 +1037,24 @@ exitdsp:
 	pop	bx			; bx = Stack[1]
 
 ;----------------------------
-; Secondarybuffer freigeben
+; Free the secondary buffer
 ;----------------------------
-	call	MemFree			; Speicher freigeben
+	call	MemFree			; Free memory
         clr	ds:[bufferHandle]
 
 ;--------------------
-; ISR-Stack freigeben
+; Free the ISR stack
 ;--------------------
 	call	BSFreeStack
 
 ;--------------------
-;	ENDE
+;	END
 ;--------------------
 done:
-        mov	ds:[bsRecBits],8	; 16 Bit-Kennung loeschen
+        mov	ds:[bsRecBits],8	; Clear the 16-bit flag
         mov	ax,ds:[tempDMAChannel]
-        mov	ds:[baseDMAChannel],ax	; aktueller DMA-Channel
-					; wiederhergestellt
+        mov	ds:[baseDMAChannel],ax	; Current DMA channel
+					; restored
 	.leave				; POP ax, ...
 	ret
 
@@ -1064,7 +1064,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSECInit
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       EC PrÅfung vorbereiten
+Function:       Prepare the EC check
 
 called by:       ?
 
@@ -1084,9 +1084,9 @@ BSECInit proc    far
 	.enter
 
 ;-----------------------
-;	DS abspeichern
+;	Save DS
 ;-----------------------
-	mov     cs:[BS_ECListDS],ds	; Datensegment speichern
+	mov     cs:[BS_ECListDS],ds	; Save the data segment
 
         .leave
 	ret
@@ -1099,7 +1099,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSECTest
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       EC PrÅfung
+Function:       EC check
 
 called by:       ?
 
@@ -1119,20 +1119,20 @@ BSECTest proc    far
 	.enter
 
 ;-----------------------
-;	DS testen
+;	Check DS
 ;-----------------------
-	mov     ax,ds			; Datensegment holen
-	cmp	ax,cs:[BS_ECListDS]	; vergleichen
-        jnz	error			; Fehler !
+	mov     ax,ds			; Get the data segment
+	cmp	ax,cs:[BS_ECListDS]	; Compare
+        jnz	error			; Error!
 
 ;-----------------------
-;	SS testen
+;	Check SS
 ;-----------------------
 	mov	ax,ss
-        cmp	ax,00ffh		; Stacksegment zweifelhaft ?
-        jbe	error			; ja
-        cmp	ax,09f00h		; oberhalb 640k ?
-        jb	done			; nein
+        cmp	ax,00ffh		; Invalid stack segment?
+        jbe	error			; Yes
+        cmp	ax,09f00h		; Above 640K?
+        jb	done			; No
 error:
 ;EC<	ERROR	BS_EC_TEST_ERROR_DS	>
 done:
@@ -1145,7 +1145,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSECTestStream
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Function:       EC PrÅfung
+Function:       EC check
 
 called by:      ?
 
@@ -1166,11 +1166,11 @@ BSECTestStream proc    far
 	.enter
 
 ;-----------------------
-;	Stream testen
+;	Check the stream
 ;-----------------------
 	mov	ax,ds:[streamSegment]
-        cmp	ax,bx			; Segment gleichgeblieben ?
-        jz	done			; ja
+        cmp	ax,bx			; Segment unchanged?
+        jz	done			; Yes
 
 	ERROR	BS_EC_TEST_ERROR_STREAM
 done:
@@ -1183,7 +1183,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		ProgramDMADriver
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:       DMA-Treiber programmieren
+SYNOPSIS:       Program the DMA driver
 
 CALLED BY:      BSSecondAlloc
 
@@ -1192,7 +1192,7 @@ PASS:           bx      -> stream segment
                 cx	-> Modeflag	(2 -> Recording, else Playing)
 		INT_ON
 
-RETURN:         bufferLen -> DMA-LÑnge
+RETURN:         bufferLen -> DMA length
 
 DESTROYED:      nothing
 SIDE EFFECTS:
@@ -1204,7 +1204,7 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	DL	09.11.97	Initial
-				(aus SBDDACAttachToStream herausgelîst)
+				(Extracted from SBDDACAttachToStream)
         DL	29.09.98	BestSound Template
         DL	23.03.2000	16 Bit
         DL	04.11.2000	Recording/Playing (cx)
@@ -1219,21 +1219,21 @@ ProgramDMADriver    proc    far
 	push	dx			; stream size [1]
 
 ;---------------------------------
-;	DMA-Kanal belegen
+;	Allocate the DMA channel
 ;---------------------------------
 	;
 	;  Try to request the DMA channel
         ;
-        ;DL:	gÅltiger DMA-Kanal wird in
-        ;	[baseDMAChannel] bereitgestellt.
+        ;DL:	The valid DMA channel is stored in
+        ;	[baseDMAChannel].
         ;
-        mov	cx,ds:[baseDMAChannel]	; aktueller DMA-Channel
+        mov	cx,ds:[baseDMAChannel]	; Current DMA channel
         mov	ds:[tempDMAChannel],cx
 	mov	al,ds:[bsRecBits]
         cmp	al,16			; 16 Bit ?
         jnz	prep
-        mov	cx,ds:[highDMAChannel]	; High-DMA-Kanal
-        mov	ds:[baseDMAChannel],cx	; aktueller DMA-Channel
+        mov	cx,ds:[highDMAChannel]	; High DMA channel
+        mov	ds:[baseDMAChannel],cx	; Current DMA channel
 prep:
 	mov     dl, 1
 	shl     dl, cl                  ; dl <- mask of request channel
@@ -1246,7 +1246,7 @@ prep:
 	INT_ON
 
 ;-------------------------
-;	Fehler ?
+;	Error?
 ;-------------------------
 
 	tst     dl                      ; did we get it?
@@ -1264,7 +1264,7 @@ prep:
 	INT_ON
 
 ;--------------------------------------
-;	AutoINIT-DMA??? initialisieren
+;	Initialize auto-init DMA
 ;--------------------------------------
 	;
 	;  Try to set up an auto-init transfer of the
@@ -1275,22 +1275,22 @@ prep:
 	mov     si, 0      		; bx:si <- buffer to DMA
 
 ;-----------------------
-; Adresse,LÑnge --> DMA
+; Address and length --> DMA
 ;-----------------------
 	mov     dx, ds:[baseDMAChannel] ; dl <- channel #
         cmp	dl,4			; High-DMA ?
-	jb	setsize			; nein
-        shr	ax			; High-DMA -> Puffergroesse wird
-        				; in "wordsize" uebergeben
+	jb	setsize			; No
+        shr	ax			; High DMA: convert the byte count
+        				; to a word count
 setsize:
 	mov     dh, ModeRegisterMask <DMATM_SINGLE_TRANSFER,0,1,DMATD_READ>
         pop	cx			; [2]
         cmp	cx,2			; Recording ?
-        jnz	norec			; nein
+        jnz	norec			; No
 	mov     dh, ModeRegisterMask <DMATM_SINGLE_TRANSFER,0,1,DMATD_WRITE>
 norec:
 	dec     ax                      ; transfer size -1
-	push	ax			; fÅr PrÅfung retten
+	push	ax			; Save for the check
 	mov     cx, ax                  ; cx <- size of buffer
 	mov     di, DR_START_DMA_TRANSFER
 
@@ -1300,28 +1300,26 @@ norec:
 
         INT_ON
 ;-----------------------
-;	PrÅfung
+;	Check
 ;-----------------------
-	pop	ax			; Sollaenge
-        cmp	ax,cx			; Istlaenge = Sollaenge ?
-	jnz	nokorlen		; nein, Rueckkorrektur nicht
-					; durchfuheren !
-                                        ; DMA-Treiber liefert bei Nichtein-
-                                        ; haltung der Laenge nicht L-1 son-
-                                        ; dern L zurueck. L nur korrigieren,
-                                        ; wenn angeforderte Laenge zurueck-
-                                        ; gegeben wurde.
-        inc	cx			; DMA benutzt fÅr LÑnge l-1
-nokorlen:
+	pop	ax			; Requested length
+        cmp	ax,cx			; Actual length = requested length?
+	jnz	lengthReady		; Different length: skip adjustment
+                                        ; If the requested length cannot be used,
+                                        ; the DMA driver returns L instead of L-1.
+                                        ; Adjust L only if the requested length
+                                        ; was returned.
+        inc	cx			; DMA uses length - 1
+lengthReady:
 	cmp	dl,4			; High-DMA ? (Word)
-        jb	setlen			; nein, cx enthÑlt size in Bytes
-	shl	cx			; High-DMA -> Umrechnung "wordsize"
-        				; in "bytesize"
+        jb	setlen			; No, cx contains the size in bytes
+	shl	cx			; High DMA: convert words to bytes
+        				; In bytes
 setlen:
-	mov	ds:[bufferLen],cx	; neue LÑnge abspeichern
+	mov	ds:[bufferLen],cx	; Save the new length
 
 ;-----------------------
-; 	DMA enable'n
+; 	Enable DMA
 ;-----------------------
 
 	mov     cx, ds:[baseDMAChannel]
@@ -1342,7 +1340,7 @@ done:
 	ret
 
 ;----------------------
-;	FEHLER
+;	ERROR
 ;----------------------
 error:
 	pop	cx			; clean up stack [2] [1]

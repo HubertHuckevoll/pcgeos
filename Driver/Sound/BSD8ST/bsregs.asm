@@ -4,22 +4,22 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound Template
 
-DATEI:		bsregs.asm
+FILE:		bsregs.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	SBDWriteFMReg		Write to a specific register on the FM chip
 	SBDWriteFMRegFar	Far call location for register writes
 
-Beschreibung:
+Description:
 
 *****************************************************************@
 

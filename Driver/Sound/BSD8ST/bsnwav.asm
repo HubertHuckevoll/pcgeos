@@ -2,21 +2,21 @@ COMMENT @/********************************************************
 
 	Copyright (C) Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound Treiber
+PROJECT:	BestSound Driver
 
-DATEI:		bsnwav.asm
+FILE:		bsnwav.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	06.10.98	Init
-        DL	20.02.2000	Ableitung BSNWAV.ASM
-        DL	02.03.2000	bsOptions Bit 0 definiert
+        DL	20.02.2000	Derived from BSNWAV.ASM
+        DL	02.03.2000	Defined bsOptions bit 0
 	DL	09.03.2000	bsSingle
-        DL	13.03.2000	Ableitung BSD8ST
-        DL	16.03.2000	bsSingle abgeschafft
+        DL	13.03.2000	Derived from BSD8ST
+        DL	16.03.2000	Removed bsSingle
         DL	16.08.2000	Translation for ND
 
 Routines:
@@ -100,7 +100,7 @@ BSDNWSetPause	proc	far
         cmp	ch,1			; current mode = PAUSE ?
         jz	nopause			; yes
 	cmp	cl,1			; new mode = PAUSE ?
-        jnz	nopause			; nein
+        jnz	nopause			; No
 ;
 ; PAUSE
 ;
@@ -188,7 +188,7 @@ BSDNWStartPlay	proc	far
         mov	ah,DSP_DMA_PCM_AI_MONO_LOW
 	mov	al,ds:[bsChannels]	; get channels
         cmp	al,2			; Stereo ?
-        jnz	set_bef			; no
+        jnz	setCommand			; no
 ;
 ; Stereomode
 ;
@@ -203,7 +203,7 @@ BSDNWStartPlay	proc	far
 
 	mov	ah,DSP_DMA_PCM_AI_HIGH	; DSP-command
 
-set_bef:
+setCommand:
 	mov	ds:[DSPFormatCommand],ah
 
 ;-------------------
@@ -323,8 +323,8 @@ BSDNWGetAIState	proc	far
 ; set bsOptions
 ;-------------------
 	tst	ch			; set bsOptions ?
-        jz	noset			; nein
-        mov	ds:[bsOptions],cl	; ja
+        jz	noset			; No
+        mov	ds:[bsOptions],cl	; Yes
 noset:
 
 	; Keep these bytes together: CL returns the IRQ count, CH the half.

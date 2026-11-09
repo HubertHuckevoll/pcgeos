@@ -9,7 +9,7 @@ FILE:       BSNWAV.GOC
 AUTHOR:     Dirk Lausecker
 
 REVISION HISTORY:
-    Name    Datum       Beschreibung
+    Name    Date       Description
     ----    -----       ------------
     DL  20.02.2000  new Header
     DL  23.02.2000  subroutines -> SUBCODE.GOC
@@ -92,7 +92,7 @@ extern word _far _pascal BSNWAsmStartPlay();
 extern word _far _pascal BSNWAsmGetAIState(word options);
 extern word _far _pascal BSNWAsmSetSampling(word rate, word bits, word channels);
 
-/******************** Const / Makros ************************/
+/******************** Constants / Macros ************************/
 
 
 /*********************************
@@ -290,7 +290,7 @@ void _pascal _export BSNWaveStop(void)
  *
  *  NewWave-Play Pause/Restart
  *
- * IN:  byte    modus   0 = state requ.
+ * IN:  byte    mode   0 = state requ.
  *          1 = PAUSE
  *          2 = Restart
  * OUT: byte    current mode
@@ -456,12 +456,12 @@ dword _pascal BSNWaveCalcPlaytimeText(  char    *textBuffer,
 
  ***************************************************************/
 
-// #define TEXT_UNKNOWN_WAV_FORMAT "Unbekanntes Waveformat (0x\01) !"
-// #define TEXT_UNKNOWN_WAV_FORMAT_2   "Unbekanntes Waveformat (%04X)"
-// #define TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI "Unbekanntes Waveformat"
 #define TEXT_UNKNOWN_WAV_FORMAT "Unknown Waveformat (0x\01) !"
 #define TEXT_UNKNOWN_WAV_FORMAT_2   "Unknown Waveformat (%04X)"
-#define TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI "Unknown Waveformat"
+@start AudioErrorStrings, data;
+@chunk char UnknownWaveFormatText[] = "Unknown Waveformat";
+@localize "Notification that the WAV audio format is not supported.";
+@end AudioErrorStrings;
 
 void BSNWaveDialogUnknownFormat(word formatID)
 {
@@ -470,7 +470,9 @@ void BSNWaveDialogUnknownFormat(word formatID)
 //  sprintf(playStatusText,TEXT_UNKNOWN_WAV_FORMAT_2,formatID);
 //  (void)SysNotify(SNF_CONTINUE,playStatusText,0);
 //  sorry: no UI, no sprintf
-    (void)SysNotify(SNF_CONTINUE,TEXT_UNKNOWN_WAV_FORMAT_2_NO_UI,0);
+    MemLock(HandleOf(@UnknownWaveFormatText));
+    (void)SysNotify(SNF_CONTINUE, LMemDeref(@UnknownWaveFormatText), (void *)0);
+    MemUnlock(HandleOf(@UnknownWaveFormatText));
 @else
     sprintf(playStatusText,"%04X",formatID);
     (void)UserStandardDialog(0,              //helpContext,
@@ -499,7 +501,6 @@ void BSNWaveDialogUnknownFormat(word formatID)
 @start STATUSBOXRESOURCE;
 
 
-// @visMoniker StatusBoxMoniker = "WAV-Ausgabe";
 @visMoniker StatusBoxMoniker = "OUTPUT";
 
 @object StatusInteractionClass StatusBox =
@@ -666,7 +667,6 @@ optr _pascal _export BSCNCreateStatusBox(optr parent)
 #define DRE_SOUND_QUERY_DEVICE_CAPABILITY   12
 #endif
 
-// #define TEXT_WRONG_DRIVER   "Der Soundkartentreiber ist nicht NewWave-kompatibel !\rBitte einen geeigneten BestSound-Treiber installieren oder per eMail anfordern (dlausecker\x40snafu.de)."
 #define TEXT_WRONG_DRIVER "The sound driver is not compatible with this program!"
 
 Boolean _pascal _export BSNWaveCheckDriver(word flags, word testValue)

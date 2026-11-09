@@ -1,13 +1,13 @@
 COMMENT @
 /************************************************
  *						*
- *	Projekt:	BestSound		*
+ *	Project:	BestSound		*
  *						*
  *	Module:		Mixer-Library		*
  *						*
  *	File:		MIXLIB.DEF		*
  *						*
- *	Autor:		Dirk Lausecker		*
+ *	Author:		Dirk Lausecker		*
  *						*
  ************************************************/@
 
@@ -53,7 +53,7 @@ BSMX_TOKEN_ON		enum BSMixerToken 	; 34
 BSMX_TOKEN_ACTIVE	enum BSMixerToken 	; 35
 BSMX_TOKEN_INACT	enum BSMixerToken 	; 36
 
-; Valuetypen
+; Value types
 
 BSMixerValueType	etype	byte, 1, 1
 

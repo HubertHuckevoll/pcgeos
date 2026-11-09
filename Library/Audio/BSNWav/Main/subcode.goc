@@ -6,7 +6,7 @@
 
 PROJECT:    BestSound NewWave-Library
 
-DATEI:      SUBCODE.GOC
+FILE:      SUBCODE.GOC
 
 AUTHOR:     Dirk Lausecker
 
@@ -16,17 +16,17 @@ Routines:
     BSNWGetData         Get Data from source
     BSNWLoadCache       Fill cache with data
     BSNWLoadData        Get Data from source into Playcache and copy
-                        them with the Konverter to the Secondarybuffer
+                        them with the converter to the Secondarybuffer
     BSNWPlay            Read Data from source and play it
      BSNWFillSilence    Fill Secondarybuffer with silence
 
 
 REVISION HISTORY:
 
-    Name    Datum       Beschreibung
+    Name    Date       Description
     ----    -----       ------------
-    DL      20.02.2000  neuer Header
-    DL      23.02.2000  interne Subroutinen -> SUBCODE.GOC
+    DL      20.02.2000  New header
+    DL      23.02.2000  Internal subroutines -> SUBCODE.GOC
     DL      07.08.2000  Translation of the comments
 
 ***************************************************************/
@@ -61,7 +61,7 @@ REVISION HISTORY:
 #define BSNW_MIN_TICKS_PER_HALF_BUFFER       2
 
 
-/******************** Constants/Makros ************************/
+/******************** Constants/Macros ************************/
 
 // Watcom C 16 bit compatible macros
 #define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
@@ -124,7 +124,7 @@ const char  reverseKeyIT[]  = "OutputChannelReverse";
 
 
 
-/**************************** Funktionen ************************/
+/**************************** Functions ************************/
 
 void
 MyBreak(void)
@@ -244,10 +244,10 @@ Boolean _pascal _export BSNWLibEntry(LibraryCallType type,GeodeHandle client)
 
     Search/Load Driver
  IN:
- * gle       Ablage Fehlercode
- [sampleDriver] = Treibername
+ * gle       Receives the error code
+ [sampleDriver] = driver name
  OUT    Boolean demoMode
- * name      Treibername
+ * name      Driver name
 
  **********************************/
 
@@ -265,7 +265,7 @@ Boolean _pascal _export BSNWavLoadDriver(GeodeLoadError *gle, char *name)
         demoMode = (InitFileReadStringBuffer(soundCatIT,synthDriverIT,name,32,&datasize));
     };
 
-    //Fehlercode reset
+    //Reset the error code
     *gle = 0;
 
     //search/load driver
@@ -398,7 +398,7 @@ void* _pascal BSNWAllocPlayCache(word len)
 
         BSNWPrepKS
 
-        Prepare Konverter and soundcard for output
+        Prepare converter and soundcard for output
 
  IN:    word    sampleRate
      word   channels
@@ -409,14 +409,14 @@ void* _pascal BSNWAllocPlayCache(word len)
      (glob) playSampleRate
         (glob)  playChannels
         (glob)  playBits
-        (glob)  konvRateRed Factor Sampleratereduction
-        (glob)  konvBitsRed Factor Bitdephtreduction
-        (glob)  konvChanRed Factor Channelreduction
+        (glob)  rateReduction Factor Sampleratereduction
+        (glob)  bitReduction Factor Bitdephtreduction
+        (glob)  channelReduction Factor Channelreduction
 
 
  1. Get max. values from soundcard and compare with needed params.
  2. If necessary --> Adapt Parameters
- 3. Prepare konverter
+ 3. Prepare converter
  4. Programming soundcard (by driver)
 
  *********************************************************/
@@ -435,40 +435,40 @@ int _pascal BSNWPrepKS(word sampleRate, byte channels, byte bits)
     // Use an integer reduction and its actual output rate to preserve pitch.
     if (sampleRate > playMaxRate)
     {
-        konvRateRed = (sampleRate - 1) / playMaxRate + 1;
-        playSampleRate = sampleRate / konvRateRed;
+        rateReduction = (sampleRate - 1) / playMaxRate + 1;
+        playSampleRate = sampleRate / rateReduction;
     }
     else
     {
         // Samplerate OK
         playSampleRate = sampleRate;
-        konvRateRed = 1;
+        rateReduction = 1;
     };
 
     // channels
     if (channels > playMaxChannels)
     {
-        konvChanRed = channels/playMaxChannels;
+        channelReduction = channels/playMaxChannels;
         playChannels = playMaxChannels;
     }
     else
     {
-        // Kanalzahl OK
+        // Channel count OK
         playChannels = channels;
-        konvChanRed = 1;
+        channelReduction = 1;
     };
 
     // Bits
     if (bits > playMaxBits)
     {
-        konvBitsRed = bits/playMaxBits;
+        bitReduction = bits/playMaxBits;
         playBits = playMaxBits;
     }
     else
     {
-        // Bittiefe OK
+        // Bit depth OK
         playBits = bits;
-        konvBitsRed = 1;
+        bitReduction = 1;
     };
 
     // Programming Soundcard
@@ -657,17 +657,17 @@ void BSNWLoadIniSettings(void)
         playCacheLen = 512;
     };
 
-    if (InitFileReadInteger(soundCatIT,secondKeyIT,&secBufLenSoll))
+    if (InitFileReadInteger(soundCatIT,secondKeyIT,&secBufRequestedLen))
     {
-        secBufLenSoll = BSNW_BUFFER_SIZE;
+        secBufRequestedLen = BSNW_BUFFER_SIZE;
     };
 
     // Only multiples of 8 allowed
     // minimal cachesize = 512
-    secBufLenSoll = secBufLenSoll & 0xfff8;
-    if (secBufLenSoll<512)
+    secBufRequestedLen = secBufRequestedLen & 0xfff8;
+    if (secBufRequestedLen<512)
     {
-        secBufLenSoll = 512;
+        secBufRequestedLen = 512;
     };
 
     if (InitFileReadInteger(soundCatIT,reverseKeyIT,&stereoToggleIni))

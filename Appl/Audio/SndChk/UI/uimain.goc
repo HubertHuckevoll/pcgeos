@@ -51,7 +51,6 @@ REVISION HISTORY:
  *----------------------------------------------------------------------*/
 
 // Name of helpfile
-// @define TEXT_HELP_FILE "schlp_de"
 @define TEXT_HELP_FILE "sndchk"
 
 @start  AppResource;
@@ -67,6 +66,7 @@ REVISION HISTORY:
 }
 
 @visMoniker SDCKTextMoniker = "SoundCheck";
+@localize "Application name for the sound hardware test utility.";
 
 @end    AppResource;
 
@@ -103,6 +103,7 @@ REVISION HISTORY:
 
 @object GenGlyphClass PrimaryGlyph = {
     GI_visMoniker = "Originally created by Dirk Lausecker in 2000.";
+    @localize "Application credit. Preserve the author name and year.";
 }
 
 @end Interface;
@@ -117,6 +118,7 @@ REVISION HISTORY:
 {
     GI_comp = /*@InfoBox,*/ @AnalyseTrigger;
     GI_visMoniker = "SoundCheck";
+    @localize "Application name for the sound hardware test utility.";
     GII_visibility = GIV_POPUP;
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     ATTR_GEN_INTERACTION_GROUP_TYPE = (GIGT_FILE_MENU); // Standard File Menu
@@ -124,6 +126,7 @@ REVISION HISTORY:
 
 @object GenTriggerClass AnalyseTrigger = {
     GI_visMoniker   = "Re-Scan";
+    @localize "Repeat detection of the sound card and driver capabilities.";
     GTI_actionMsg   = MSG_SNDCHK_CHECK_SYSTEM;
     GTI_destination = process;
 }
@@ -149,12 +152,6 @@ REVISION HISTORY:
   MainSubGroup1     Display results
  ***************/
 
-//@define TEXT_SYSTEMANALYSE  "Systemanalyse"
-//@define TEXT_SB_COMP_CARD   "Soundblasterkompatible Soundkarte"
-//@define TEXT_DMA_FOUND      "DMA-Treiber (DOSREAL.GEO)"
-//@define TEXT_SUPPORT_MIXER  "Treiber unterst�tzt BS-Mixer"
-//@define TEXT_SUPPORT_RECORD     "Treiber unterst�tzt BS-Recording"
-//@define TEXT_SUPPORT_BSNWAV     "Treiber unterst�tzt BS-NewWave"
 
 @define TEXT_SYSTEMANALYSE      "Sound Card Test Results"
 @define TEXT_SB_COMP_CARD       "Sound Blaster-compatible sound card"
@@ -165,6 +162,7 @@ REVISION HISTORY:
 
 @object GenInteractionClass MainSubGroup1 = {
     GI_visMoniker   = @TEXT_SYSTEMANALYSE;
+    @localize "Heading for sound card and driver detection results.";
     GI_comp         = @MSG1Sub1,@MSG1Sub2;
     GI_attrs        = @default | GA_KBD_SEARCH_PATH;
     GII_visibility  = GIV_SUB_GROUP;
@@ -198,61 +196,67 @@ REVISION HISTORY:
 @object GenGlyphClass MSG1_1GlyphL =
 {
     GI_visMoniker = @TEXT_SB_COMP_CARD;
+    @localize "Detection result label for a Sound Blaster-compatible sound card.";
 }
 
 @object GenGlyphClass MSG1_1GlyphR =
 {
     GI_visMoniker = "?";
+    @localize not;
 }
 
 @object GenGlyphClass MSG1_2GlyphL =
 {
     GI_visMoniker = @TEXT_DMA_FOUND;
+    @localize "Detection result label for the DMA driver. Preserve the driver filename.";
 }
 
 @object GenGlyphClass MSG1_2GlyphR =
 {
     GI_visMoniker = "?";
+    @localize not;
 }
 
 @object GenGlyphClass MSG1_3GlyphL =
 {
     GI_visMoniker = @TEXT_SUPPORT_MIXER;
+    @localize "Detection result label for BestSound mixer support.";
 }
 
 @object GenGlyphClass MSG1_3GlyphR =
 {
     GI_visMoniker = "?";
+    @localize not;
 }
 
 @object GenGlyphClass MSG1_4GlyphL =
 {
     GI_visMoniker = @TEXT_SUPPORT_RECORD;
+    @localize "Detection result label for BestSound recording support.";
 }
 
 @object GenGlyphClass MSG1_4GlyphR =
 {
     GI_visMoniker = "?";
+    @localize not;
 }
 
 @object GenGlyphClass MSG1_5GlyphL =
 {
     GI_visMoniker = @TEXT_SUPPORT_BSNWAV;
+    @localize "Detection result label for NewWave audio playback support.";
 }
 
 @object GenGlyphClass MSG1_5GlyphR =
 {
     GI_visMoniker = "?";
+    @localize not;
 }
 
 /***************
   MainSubGroup2     Systemsounds
  ***************/
 
-// @define TEXT_SYSTEM_SOUNDS  "Systemkl�nge"
-// @define TEXT_WARNING        "Warnton"
-// @define TEXT_ERROR      "Fehlerton"
-// @define TEXT_NOTIFICATION   "Hinweiston"
 
 @define TEXT_SYSTEM_SOUNDS  "Test System Sounds"
 @define TEXT_WARNING        "Alarm"
@@ -261,6 +265,7 @@ REVISION HISTORY:
 
 @object GenInteractionClass MainSubGroup2 = {
     GI_visMoniker   = @TEXT_SYSTEM_SOUNDS;
+    @localize "Group of buttons that test the system sounds.";
     GI_comp         = @MainSub2Trigger1,@MainSub2Trigger2,@MainSub2Trigger3;
     GI_attrs        = @default | GA_KBD_SEARCH_PATH;
     GII_visibility  = GIV_SUB_GROUP;
@@ -274,21 +279,24 @@ REVISION HISTORY:
 @object GenTriggerClass MainSub2Trigger1 =
 {
     GI_visMoniker   = @TEXT_WARNING;
-    GTI_actionMsg   = MSG_SNDCHK_PROCESS_WARNTON;
+    @localize "Button that plays the alarm sound.";
+    GTI_actionMsg   = MSG_SNDCHK_PROCESS_ALARM_SOUND;
     GTI_destination = process;
 }
 
 @object GenTriggerClass MainSub2Trigger2 =
 {
     GI_visMoniker   = @TEXT_ERROR;
-    GTI_actionMsg   = MSG_SNDCHK_PROCESS_FEHLERTON;
+    @localize "Button that plays the error sound.";
+    GTI_actionMsg   = MSG_SNDCHK_PROCESS_ERROR_SOUND;
     GTI_destination = process;
 }
 
 @object GenTriggerClass MainSub2Trigger3 =
 {
     GI_visMoniker   = @TEXT_NOTIFICATION;
-    GTI_actionMsg   = MSG_SNDCHK_PROCESS_HINWEISTON;
+    @localize "Button that plays the notification sound.";
+    GTI_actionMsg   = MSG_SNDCHK_PROCESS_NOTIFICATION_SOUND;
     GTI_destination = process;
 }
 
@@ -296,13 +304,6 @@ REVISION HISTORY:
   MainSubGroup3     Geos/ND - WAV
  ***************/
 
-// @define TEXT_OUTPUT     "WAV-Ausgabe"
-// @define TEXT_OUTPUT_ON      "Ausgabe auf:"
-// @define TEXT_FILE       "Datei"
-// @define TEXT_PLAY_ONE       "PLAY (1x)"
-// @define TEXT_PLAY_ENDLESS   "PLAY (endlos)"
-// @define TEXT_SAVE       "Speichern"
-// @define TEXT_PERIOD     "Dauer (sec):"
 
 @define TEXT_OUTPUT         "Test WAV Support"
 @define TEXT_OUTPUT_ON      "Output To"
@@ -314,6 +315,7 @@ REVISION HISTORY:
 
 @object GenInteractionClass MainSubGroup3 = {
     GI_visMoniker  = @TEXT_OUTPUT;
+    @localize "Group of WAV playback and test-file controls.";
     GI_comp        = @MSG3Sub1,@MSG3Sub2,@MSG3Sub3;
     GI_attrs       = @default | GA_KBD_SEARCH_PATH;
     GII_visibility = GIV_SUB_GROUP;
@@ -346,18 +348,21 @@ REVISION HISTORY:
 @object GenItemClass Rate_11025 =
 {
     GI_visMoniker = "11025 Hz";
+    @localize not;
     GII_identifier = 11;
 }
 
 @object GenItemClass Rate_22050 =
 {
     GI_visMoniker = "22050 Hz";
+    @localize not;
     GII_identifier = 22;
 }
 
 @object GenItemClass Rate_44100 =
 {
     GI_visMoniker = "44100 Hz";
+    @localize not;
     GII_identifier = 44;
 }
 
@@ -374,12 +379,14 @@ REVISION HISTORY:
 @object GenItemClass WavBits8 =
 {
     GI_visMoniker = "8 Bit";
+    @localize "Select eight bits per audio sample.";
     GII_identifier = 8;
 }
 
 @object GenItemClass WavBits16 =
 {
     GI_visMoniker = "16 Bit";
+    @localize "Select sixteen bits per audio sample.";
     GII_identifier = 16;
 }
 
@@ -396,17 +403,20 @@ REVISION HISTORY:
 @object GenItemClass WavMono =
 {
     GI_visMoniker = "Mono";
+    @localize "Select one audio channel.";
     GII_identifier = 1;
 }
 
 @object GenItemClass WavStereo =
 {
     GI_visMoniker = "Stereo";
+    @localize "Select two audio channels.";
     GII_identifier = 2;
 }
 
 @object GenInteractionClass MSG3Sub2 = {
     GI_visMoniker   = @TEXT_OUTPUT_ON;
+    @localize "Label for choosing the WAV output destination.";
     GI_comp         = @OutputItemGroup;
     GI_attrs        = @default | GA_KBD_SEARCH_PATH;
     GII_visibility  = GIV_SUB_GROUP;
@@ -431,18 +441,21 @@ REVISION HISTORY:
 @object GenItemClass Output_WAV =
 {
     GI_visMoniker = "WAV Library";
+    @localize "Output through the standard WAV library.";
     GII_identifier = 1;
 }
 
 @object GenItemClass Output_BSNWAV =
 {
     GI_visMoniker = "BestSound Wave Library";
+    @localize "Output through the BestSound playback library.";
     GII_identifier = 2;
 }
 
 @object GenItemClass Output_File =
 {
     GI_visMoniker = @TEXT_FILE;
+    @localize "Output option that creates a WAV test file.";
     GII_identifier = 3;
 }
 
@@ -459,6 +472,7 @@ REVISION HISTORY:
 @object GenTriggerClass MainSub3Trigger1 =
 {
     GI_visMoniker   = @TEXT_PLAY_ONE;
+    @localize "Play the test sound once.";
     GTI_actionMsg   = MSG_SNDCHK_PROCESS_PLAY_ONCE;
     GTI_destination = process;
 }
@@ -466,6 +480,7 @@ REVISION HISTORY:
 @object GenTriggerClass MainSub3Trigger2 =
 {
     GI_visMoniker   = @TEXT_PLAY_ENDLESS;
+    @localize "Play the test sound repeatedly until stopped.";
     GTI_actionMsg   = MSG_SNDCHK_PROCESS_PLAY_CONT;
     GTI_destination = process;
 }
@@ -473,6 +488,7 @@ REVISION HISTORY:
 @object GenTriggerClass MainSub3Trigger3 =
 {
     GI_visMoniker   = @TEXT_SAVE;
+    @localize "Create a WAV test file in the Document folder.";
     GI_states = @default & ~GS_USABLE;
     GTI_actionMsg   = MSG_SNDCHK_PROCESS_PLAY_FILE;
     GTI_destination = process;
@@ -481,6 +497,7 @@ REVISION HISTORY:
 @object GenValueClass LenValue =
 {
     GI_visMoniker   = @TEXT_PERIOD;
+    @localize "Duration of the WAV test file in seconds.";
     GVLI_value  = MakeWWFixed(2.0);
     GVLI_minimum    = MakeWWFixed(1.0);
     GVLI_maximum    = MakeWWFixed(999.0);
@@ -498,12 +515,12 @@ REVISION HISTORY:
 // CreateProgressBox
 //////////////////////
 
-// @define TEXT_CREATE_PROGRESS    "WAV-Datei wird angelegt..."
 @define TEXT_CREATE_PROGRESS    "Creating .WAV File..."
 
 @object GenInteractionClass CreateProgressBox =
 {
     GI_visMoniker = @TEXT_CREATE_PROGRESS;
+    @localize "Title of the WAV test-file creation progress dialog.";
     GI_comp = @CreateProgressGlyph;
     GII_attrs = @default | GIA_NOT_USER_INITIATABLE | GIA_MODAL;
     GII_visibility = GIV_DIALOG;
@@ -514,7 +531,8 @@ REVISION HISTORY:
 
 @object GenGlyphClass CreateProgressGlyph =
 {
-    GI_visMoniker = "0% fertig";
+    GI_visMoniker = "0% complete";
+    @localize "Initial WAV file creation progress.";
 }
 
 @end MAINTEXTOBJRESOURCE;
@@ -576,3 +594,38 @@ REVISION HISTORY:
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  %      Code
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+/* Keep new data after the existing resources to preserve their IDs. */
+@start SoundCheckStrings, data;
+
+@chunk char TEXT_FOUND_SB_MONO[] = "Mono Sound Blaster found at address %X";
+@localize { "Sound card detection result. Preserve %X: the hexadecimal base address (up to four digits)." 0-77 };
+
+@chunk char TEXT_FOUND_SB_PRO[] = "Sound Blaster Pro found at address %X";
+@localize { "Sound card detection result. Preserve %X: the hexadecimal base address (up to four digits)." 0-77 };
+
+@chunk char TEXT_FOUND_SB_16[] = "Sound Blaster 16 found at address %X";
+@localize { "Sound card detection result. Preserve %X: the hexadecimal base address (up to four digits)." 0-77 };
+
+@chunk char TEXT_FOUND_SB_NONE[] = "No Sound Blaster-compatible sound card found.";
+@localize { "Sound card detection failure; keep within the 80-byte display buffer." 0-79 };
+
+@chunk char SCThreadError[] = "Cannot create the playback thread.";
+@localize "Error when system resources are insufficient for sound testing.";
+
+@chunk char SCStopText[] = "STOP";
+@localize "Button that stops the repeated test sound.";
+
+@chunk char completeString[] = "A .WAV file with the name \x01 was created in the Document folder.";
+@localize "WAV file creation confirmation. Preserve the character with code 0x01: the filename substitution.";
+
+@chunk char errorString[] = "An error occurred while creating the .WAV file.";
+@localize "WAV test file creation error.";
+
+@chunk char SCProgressFormat[] = "%d%%";
+@localize { "WAV file creation progress. Preserve %d and %% in this order." 0-28 };
+
+@chunk char TEXT_PLAY_ENDLESS[] = "Play Repeatedly";
+@localize "Button label restored after a repeated test sound stops; match the Play Repeatedly button in the main window.";
+
+@end SoundCheckStrings;

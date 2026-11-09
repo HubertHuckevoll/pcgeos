@@ -2,7 +2,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	Copyright (c) Dirk Lausecker 1997 -- All Rights Reserved
 
-PROJECT:	Soundtreiber fÅr NewDeal
+PROJECT:	Sound driver for NewDeal
 FILE:		dirksnd.def
 
 REVISION HISTORY:
@@ -12,7 +12,7 @@ REVISION HISTORY:
 
 
 DESCRIPTION:
-	zusÑtzliche Deklarationen
+	Additional declarations
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@

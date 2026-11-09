@@ -4,12 +4,12 @@ COMMENT @/********************************************************
 
 PROJECT:	BestSound driver
 
-DATEI:		bsinit.asm
+FILE:		bsinit.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
         DL	2000		reading settings from INI
@@ -128,7 +128,7 @@ initDACs::
 ;       jc      initFM
 
         mov     ds:[numOfDACs], cx      ; set DACs available
-        call	BSGetDSPVersion		; DSP-Version laden
+        call	BSGetDSPVersion		; Load DSP version
 
 initFM:
         ;
@@ -165,7 +165,7 @@ REVISION HISTORY:
         Name    Date            Description
         ----    ----            -----------
         TS      3/ 1/93         Initial version
-        DL	18.03.2000	FunktionalitÑt implementiert
+        DL	18.03.2000	Implemented functionality
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 soundCategory	char    "sound",0
@@ -196,11 +196,11 @@ tempStringBuffer local 20 dup (byte)
         mov     dx, offset addressKey
         mov     bp, InitFileReadFlags <IFCC_INTACT,,,13>
         call    InitFileReadString              ; String -> es:di
-        mov	bx,0				; Adressdummy
-	jc	read_irq			; Fehler -> Ende
+        mov	bx,0				; Dummy address
+	jc	read_irq			; Error: exit
 
 ;-----------------------
-; Settings aus INI lesen
+; Read settings from the INI file
 ;	[sound]
 ;	address = 220
 ;	irq 	= 5
@@ -248,7 +248,7 @@ test_dma:
         jae	done				; no !
         mov     ds:[baseDMAChannel],dx		; DMA
 
-;------ Ende ------
+;------ End ------
 done:
 	pop	bp
 
@@ -260,7 +260,7 @@ ReadIniFileSettings     endp
 ;
 ;	BSHexAsciiToHex
 ;
-;	Konvert Hexnumber (Null terminated ASCII-String)
+;	Convert hexadecimal number (Null terminated ASCII-String)
 ;	into HexValue
 ;
 ; IN:	es:di	String
@@ -417,7 +417,7 @@ REVISION HISTORY:
         Name    Date            Description
         ----    ----            -----------
         TS      10/26/92        Initial version
-        DL	19.10.97	auf far geÑndert
+        DL	19.10.97	Changed to far
 	martin	2001/2/22	Added OPL3-SA compatibility
 		
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
@@ -439,10 +439,10 @@ SBDInitChipDSP  proc    far
 ;------------------------------
 ;	Highspeedmode RESET
 ;
-; Es gibt zwei GrÅnde, weshalb SBDInitChipDSP aufgerufen wird:
-; 1. Initialisierung beim Laden des Treibers
-; 2. ZurÅckschalten von Highspeed in Normalmodus
-; Nur bei 1. dÅrfen Portadressen berechnet werden !
+; SBDInitChipDSP is called for two reasons:
+; 1. Initialization when the driver loads
+; 2. Switching from high speed to normal mode
+; Calculate port addresses only in case 1.
 ; . . . . . . . . . . . . . . . . . . . . . . . . .
 ; There exist two reasons for calling this function:
 ; 1. Init. after loading the driver
@@ -450,7 +450,7 @@ SBDInitChipDSP  proc    far
 ; Only for reason 1. it's allowed to calculate
 ; the port adresses
 ;------------------------------
-	tst	ds:[hsFlag]		; DSP in Highspeedmode ?
+	tst	ds:[hsFlag]		; DSP in high-speed mode?
         jnz	resetdsp		; yes, reset only
 
 ;------------------------------
@@ -600,7 +600,7 @@ irqctrl2:
 
         in      al, 0a1h                        ; read current int. mask
 
-        call	WaitPerJump			; frueher jmp $+2
+        call	WaitPerJump			; Previously jmp $+2
 
         mov     ah, 0xFE
         rol     ah, cl
@@ -611,7 +611,7 @@ irqctrl2:
 
         in      al, 021h                        ; read current int. mask
 
-        call	WaitPerJump			; frueher jmp $+2
+        call	WaitPerJump			; Previously jmp $+2
 
         and     al, 0FBh
         out     021h, al
@@ -954,7 +954,7 @@ REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
 	TS	6/16/94    	Initial version
-	DL	10.12.97	öbernahme aus Falks SB16-Code
+	DL	10.12.97	Taken from Falk's SB16 code
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 dosEnvironName		char	"BLASTER",0
@@ -1154,8 +1154,8 @@ GetDefaultSettings	endp
 ;-----------------------
 ;   Delay Subroutine
 ;
-; bis Rel. 0.12.2.X
-; 8 mal jmp $+2
+; Until release 0.12.2.X
+; Eight times jmp $+2
 ; TimerSleep() is not
 ; usable for this !
 ;-----------------------

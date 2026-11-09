@@ -7,7 +7,7 @@
  * AUTHOR:      Dirk Lausecker
  *
  * DESCRIPTION:
- *      Include-File zum Definieren der DACSF und TreibereinsprÅnge
+ *      Definitions for DAC sample formats and driver entry points
  *
  ***********************************************************************/
 
@@ -23,24 +23,24 @@
   -----------------------------------------------*/
 
 typedef struct {
-	word		BWFC_dataFormat;	// 1 = PCM-Daten
-        word		BWFC_channels;		// Kanalzahl
-        dword		BWFC_sampleRate;	// Samples pro Sekunde
-        dword		BWFC_avgRate;		// durchschnittl. Datenrate
-        word		BWFC_blockAlign;	// Blockausrichtung
-        word		BWFC_bitsPerSample;	// Bits pro Sample
+	word		BWFC_dataFormat;	// 1 = PCM data
+        word		BWFC_channels;		// Channel count
+        dword		BWFC_sampleRate;	// Samples per second
+        dword		BWFC_avgRate;		// Average byte rate
+        word		BWFC_blockAlign;	// Block alignment
+        word		BWFC_bitsPerSample;	// Bits per sample
 
 } BSWavFormChunk;
 
 typedef struct {
 	char		BWFH_typRIFF[4];	// "RIFF"
-	dword		BWFH_fullLen;		// Gesamtdateigrî·e - 8
+	dword		BWFH_fullLen;		// Total file size - 8
 	char		BWFH_formName[4];	// "WAVE"
 	char		BWFH_typFMT[4];		// "fmt "
 	dword		BWFH_fmtLen;		// 16
 	BSWavFormChunk	BWFH_fmtChunk;
 	char		BWFH_typData[4];	// "data"
-	dword		BWFH_datLen;		// LÑnge der Sounddaten
+	dword		BWFH_datLen;		// Length of sound data
 
 } BSWavFileHeader;
 
@@ -77,8 +77,8 @@ typedef struct {
 #define	DRE_BSREC_GET_MAX_PROPERTIES	0x3A
 
 // NewWave
-#define DRE_BSNWAV_SET_SAMPLING		0x32	/* identisch mit REC */
-#define	DRE_BSNWAV_GET_MAX_PROPERTIES	0x3A	/* identisch mit REC */
+#define DRE_BSNWAV_SET_SAMPLING		0x32	/* Same as recording */
+#define	DRE_BSNWAV_GET_MAX_PROPERTIES	0x3A	/* Same as recording */
 #define	DRE_BSNWAV_SECOND_ALLOC		0x3C
 #define	DRE_BSNWAV_GET_STATUS		0x3E
 #define	DRE_BSNWAV_START_PLAY		0x40

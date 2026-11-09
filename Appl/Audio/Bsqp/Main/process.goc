@@ -48,25 +48,51 @@ DESCRIPTION:
 @start  TEXTCHUNKRESOURCE,data;
 
 @chunk  char    category[] = "QuickPlayer";
+@localize not;
 @chunk  char    optionsKey[] = "options";
+@localize not;
 @chunk  char    displayKey[] = "timeDisplay";
+@localize not;
 
 @chunk char BQOpenError[] = "Cannot open the audio file. It may be missing, in use, or inaccessible.";
+@localize "Audio Player error: Cannot open a track.";
 @chunk char BQThreadError[] = "Cannot start audio playback. There are not enough system resources.";
+@localize "Audio Player error: Cannot create the playback thread.";
 @chunk char BQDriverError[] = "A BestSound driver is required. Install or select BSD16 or BSD8ST.";
+@localize "Audio Player error: No compatible audio driver. Preserve the BSD16 and BSD8ST driver names.";
 @chunk char BQMemoryError[] = "There is not enough memory to open or play this audio file.";
+@localize "Audio Player error: Insufficient memory to play a track.";
 @chunk char BQBusyError[] = "Audio playback is busy. Stop other audio playback and try again.";
+@localize "Audio Player error: Another playback request owns the sound device.";
 @chunk char BQHardwareError[] = "Cannot configure the sound device for audio playback.";
+@localize "Audio Player error: The sound device could not be configured.";
 @chunk char BQReadError[] = "Cannot read the audio file. Check that its disk is available and try again.";
+@localize "Audio Player error: The track could not be read from disk.";
 @chunk char BQTruncatedError[] = "The audio data ends unexpectedly. The file may be incomplete or invalid.";
+@localize "Audio Player error: The audio data ends before expected.";
 @chunk char BQDataError[] = "The file contains no playable audio data, or its audio data is damaged or unsupported.";
+@localize "Audio Player error: The input contains no supported audio data.";
 @chunk char BQChangedError[] = "The MP3 sample rate or channel count changes within the file. This is not supported.";
+@localize "Audio Player error: An MP3 changes its rate or channel count during playback.";
 @chunk char BQFormatError[] = "This audio format or playback sample rate is not supported.";
+@localize "Audio Player error: The audio format or sample rate cannot be played.";
 @chunk char BQTimeoutError[] = "The previous audio playback did not stop in time. Try again.";
+@localize "Audio Player error: Previous playback did not stop within the timeout.";
 @chunk char BQFolderError[] = "Cannot read this folder or create the temporary track list.";
+@localize "Audio Player error: Cannot read the selected folder or create its temporary track list.";
 @chunk char BQLimitError[] = "This folder has too many audio files for the track list.";
+@localize "Audio Player error: The folder contains more tracks than the track list can hold.";
 @chunk char BQPathError[] = "The audio folder or filename is invalid or too long.";
+@localize "Audio Player error: The selected audio path or filename is invalid.";
 @chunk char BQPlaybackError[] = "Cannot play this audio file because of an unexpected audio error.";
+@localize "Audio Player error: Unexpected playback failure.";
+
+@chunk char BQBitsFormat[] = "%u Bit";
+@localize { "Audio sample bit depth. Preserve %u: an unsigned number of up to five digits." 0-76 };
+@chunk char BQMonoText[] = " MONO";
+@localize { "One audio channel; the leading space is display padding." 0-79 };
+@chunk char BQStereoText[] = "STEREO";
+@localize { "Two audio channels, left and right." 0-79 };
 
 @end    TEXTCHUNKRESOURCE;
 
@@ -207,7 +233,7 @@ DESCRIPTION:
 
     MSG_GEN_PROCESS_CLOSE_APPLICATION
 
-    Funktion:
+    Function:
 
     IN:     -
 
@@ -311,7 +337,7 @@ typedef struct {
 
     MSG_META_CONTENT_VIEW_WIN_OPENED
 
- Funktion:  store WindowHandle for display
+ Function:  store WindowHandle for display
 
  IN:     viewWin
 
@@ -328,7 +354,7 @@ typedef struct {
 
     MSG_META_CONTENT_VIEW_WIN_CLOSED
 
-    Funktion:  delete WindowHandle
+    Function:  delete WindowHandle
 
     IN:     -
 
@@ -345,7 +371,7 @@ typedef struct {
 
     MSG_META_EXPOSED
 
- Funktion:  redraw content of GenView
+ Function:  redraw content of GenView
 
  IN:     -
 

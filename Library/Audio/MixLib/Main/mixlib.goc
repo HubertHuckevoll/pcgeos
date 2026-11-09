@@ -28,7 +28,7 @@
 
 @include "mixlib.goh"
 
-/**************************** Konstanten ************************/
+/**************************** Constants ************************/
 
 // Watcom C 16 bit compatible macros
 #define FP_SEG(fp) ((unsigned short)((unsigned long)(void far *)(fp) >> 16))
@@ -65,13 +65,13 @@ const char  soundCatIT[]     = "sound";      //INI Entry
 const char  mixerDriverIT[]  = "mixerDriver";    //INI Entry
 const char  synthDriverIT[]  = "synthDriver";    //INI Entry
 //char      driverName[32]  = "sblaster.geo";
-Boolean     demoModus   = TRUE;
+Boolean     demoModeActive   = TRUE;
 byte        valNum      = 0;
 GeodeLoadError  gle;
 Boolean     driverUsed  = FALSE;    //Driver was loaded explicitly
 
 
-/**************************** Funktionen ************************/
+/**************************** Functions ************************/
 
 /****************************
 
@@ -99,7 +99,7 @@ Boolean _pascal _export LibMixEntry(LibraryCallType type,GeodeHandle client)
                   //Init
                   mixerDriver = NullHandle;
                   driverUsed  = FALSE;
-                  demoModus = TRUE;
+                  demoModeActive = TRUE;
 
                   (void) BSMixerLoadDriver(&gle, driverName);
               };
@@ -183,7 +183,7 @@ Boolean _pascal _export BSMixerLoadDriver(GeodeLoadError  *gle, char * name)
 
         };
 
-        demoModus = demoMode;
+        demoModeActive = demoMode;
 
         if (demoMode)
         {
@@ -216,7 +216,7 @@ void    _pascal _export BSMixerSetValue (word token, byte dataType, byte value1,
         word    val_L;
         word    val_R;
 
-        if (demoModus)
+        if (demoModeActive)
         {
         //Do not send data to the driver while in demo mode
         }
@@ -263,7 +263,7 @@ word _pascal _export BSMixerGetValue (word token, byte dataType)
     word    value;
     byte    val1,val2;
 
-        if (demoModus)
+        if (demoModeActive)
         {
           value = 0;
         }
@@ -318,9 +318,9 @@ word _pascal _export BSMixerGetCap (word *dsp)
 {
         word    valNum,DSPVersion;
 
-//    demoModus = TRUE;     //LA TEST !!!
+//    demoModeActive = TRUE;     //LA TEST !!!
 
-        if (demoModus)
+        if (demoModeActive)
         {
             //Do not send data to the driver while in demo mode
             valNum = 5;
@@ -338,81 +338,81 @@ word _pascal _export BSMixerGetCap (word *dsp)
 
 @start  STRINGRESOURCE, data;
 
-// @chunk  char bsmText1[] = "SUMME";
-// @chunk  char bsmText2[] = "FM";
-// @chunk  char bsmText3[] = "CD";
-// @chunk  char bsmText4[] = "WAV";
-// @chunk  char bsmText5[] = "LINE";
-// @chunk  char bsmText6[] = "Mikro";
-// @chunk  char bsmText7[] = "PC-Lspr";
-// @chunk  char bsmText8[] = "H�hen";
-// @chunk  char bsmText9[] = "Tiefen";
-// @chunk  char bsmText10[] = "Aufnahmefilter";
-// @chunk  char bsmText11[] = "Tiefpass";
-// @chunk  char bsmText12[] = "Aufnahmequelle";
-// @chunk  char bsmText13[] = "Wiedergabefilter";
-// @chunk  char bsmText14[] = "Stereo";
-// @chunk  char bsmText15[] = "Quelle f�r Wiedergabe";
-// @chunk  char bsmText16[] = "Aufnahmequelle Links";
-// @chunk  char bsmText17[] = "Aufnahmequelle Rechts";
-// @chunk  char bsmText18[] = "Aufnahmeverst�rkung Links";
-// @chunk  char bsmText19[] = "Aufnahmeverst�rkung Rechts";
-// @chunk  char bsmText20[] = "Wiedergabeverst�rkung Links";
-// @chunk  char bsmText21[] = "Wiedergabeverst�rkung Rechts";
-// @chunk  char bsmText22[] = "Automatische Verst�rkungsregelung";
-// @chunk  char bsmText23[] = "FM-L";
-// @chunk  char bsmText24[] = "FM-R";
-// @chunk  char bsmText25[] = "LINE-L";
-// @chunk  char bsmText26[] = "LINE-R";
-// @chunk  char bsmText27[] = "CD-L";
-// @chunk  char bsmText28[] = "CD-R";
-// @chunk  char bsmText29[] = "1 fach";
-// @chunk  char bsmText30[] = "2 fach";
-// @chunk  char bsmText31[] = "4 fach";
-// @chunk  char bsmText32[] = "8 fach";
-// @chunk  char bsmText33[] = "aus";
-// @chunk  char bsmText34[] = "ein";
-// @chunk  char bsmText35[] = "aktiv";
-// @chunk  char bsmText36[] = "inaktiv";
-// @chunk  char bsmText0[]  = "???";
 
 @chunk  char bsmText1[] = "MASTER";
+@localize { "Master output level. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText2[] = "FM";
+@localize { "FM synthesizer level. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText3[] = "CD";
+@localize { "CD audio input level. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText4[] = "WAV";
+@localize { "WAV digital playback level. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText5[] = "LINE";
-@chunk  char bsmText6[] = "Micro";
+@localize { "Line input level. Maximum 31 characters for the caller buffer." 0-31 };
+@chunk  char bsmText6[] = "Mic";
+@localize { "Microphone input level. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText7[] = "PC-Spkr";
+@localize { "PC speaker level. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText8[] = "Treble";
+@localize { "Treble tone level. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText9[] = "Bass";
-@chunk  char bsmText10[] = "Imput Filter";
+@localize { "Bass tone level. Maximum 31 characters for the caller buffer." 0-31 };
+@chunk  char bsmText10[] = "Input Filter";
+@localize { "Recording input filter switch. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText11[] = "Lowpass";
+@localize { "Low-pass filter switch. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText12[] = "Recording Source";
+@localize { "Recording input source selection. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText13[] = "Output Filter";
+@localize { "Playback output filter switch. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText14[] = "Stereo";
+@localize { "Stereo output switch. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText15[] = "Output Source";
+@localize { "Sources routed to playback output. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText16[] = "Record Source Left";
+@localize { "Sources routed to the left recording input. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText17[] = "Record Source Right";
+@localize { "Sources routed to the right recording input. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText18[] = "Input Gain Left";
+@localize { "Left recording input gain. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText19[] = "Input Gain Right";
+@localize { "Right recording input gain. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText20[] = "Output Gain Left";
+@localize { "Left playback output gain. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText21[] = "Output Gain Right";
+@localize { "Right playback output gain. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText22[] = "AGC";
+@localize { "Automatic gain control (AGC) switch. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText23[] = "FM-L";
+@localize { "Left FM synthesizer source. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText24[] = "FM-R";
+@localize { "Right FM synthesizer source. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText25[] = "LINE-L";
+@localize { "Left line input source. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText26[] = "LINE-R";
+@localize { "Right line input source. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText27[] = "CD-L";
+@localize { "Left CD input source. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText28[] = "CD-R";
+@localize { "Right CD input source. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText29[] = "1x";
+@localize not;
 @chunk  char bsmText30[] = "2x";
+@localize not;
 @chunk  char bsmText31[] = "4x";
+@localize not;
 @chunk  char bsmText32[] = "8x";
+@localize not;
 @chunk  char bsmText33[] = "off";
+@localize { "Disabled state of a mixer switch. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText34[] = "on";
+@localize { "Enabled state of a mixer switch. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText35[] = "active";
+@localize { "Active state of a mixer option. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText36[] = "inactive";
+@localize { "Inactive state of a mixer option. Maximum 31 characters for the caller buffer." 0-31 };
 @chunk  char bsmText0[]  = "???";
+@localize not;
 
 @end    STRINGRESOURCE;
 
@@ -477,7 +477,7 @@ void _pascal _export BSMixerGetTokenText (word token,char *tokenText)
         };
 
         //Ask the driver for the string if the token was unknown
-        if ((token > 49) && (demoModus == 0))
+        if ((token > 49) && (demoModeActive == 0))
         {
             MixAsmTokenToText(token, MIX_FARPTR(char, tokenText));
         }
@@ -508,7 +508,7 @@ word _pascal _export BSMixerGetSubToken(word token, word identifier)
         word    subToken;
 
         //demo mode = no calls to the driver
-        if (demoModus)
+        if (demoModeActive)
         {
             //demo mode
             subToken = 0;
@@ -534,7 +534,7 @@ word _pascal _export BSMixerGetSubToken(word token, word identifier)
 void _pascal _export BSMixerSpecValue(word valNum, MixerValue *value)
 {
         //demo mode = no calls to the driver
-        if (demoModus)
+        if (demoModeActive)
         {
             //demo mode
             value->valVisible = TRUE;       //Visibility
@@ -579,7 +579,7 @@ word _pascal _export BSMixerGetState(void)
     word    state;
 
     //demo mode = no calls to the driver
-    if (demoModus)
+    if (demoModeActive)
     {
         //demo mode
         state = 0x8000;
@@ -596,7 +596,7 @@ word _pascal _export BSMixerGetState(void)
         else
         {
             state = 0x4000;     //No mixer support!
-            demoModus = TRUE;   //Therefore, demo mode!
+            demoModeActive = TRUE;   //Therefore, demo mode!
         };
     };
 

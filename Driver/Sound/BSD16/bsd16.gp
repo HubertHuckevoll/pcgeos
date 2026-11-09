@@ -3,7 +3,7 @@
 #	Copyright (c) 2000 Dirk Lausecker -- All Rights Reserved
 #
 # PROJECT:	BestSound
-# DATEI:	bsd16.gp
+# FILE:	bsd16.gp
 #
 # AUTHOR:       Dirk Lausecker
 #

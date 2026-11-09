@@ -1,10 +1,10 @@
 /************************************************
  *                                              *
- *      Projekt:        BestSound               *
+ *      Project:        BestSound               *
  *                                              *
  *      File:           prefsndn.goh            *
  *                                              *
- *      Autor:          Dirk Lausecker          *
+ *      Author:          Dirk Lausecker          *
  *                                              *
  ************************************************/
 
@@ -17,7 +17,7 @@
 
 @deflib prefsndn
 
-/************* Classdeklaration *****************/
+/************* Class declarations *****************/
 
 
 @class  PrefDialogMMClass, PrefDialogClass;
@@ -36,7 +36,7 @@
 	@message (GEN_ITEM_GROUP_STATUS_MSG) MSG_GEN_ITEM_GROUP_MM_STATE_2;
 @endc;
 
-/************* Funktionsdekl. ******************/
+/************* Function declarations ******************/
 
 extern  optr    _export _pascal PrefGetOptrBox(void);
 extern  void    _export _pascal PrefGetModuleInfo( PrefModuleInfo *info );

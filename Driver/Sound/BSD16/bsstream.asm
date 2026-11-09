@@ -4,24 +4,24 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound Template
 
-DATEI:		bsstream.asm
+FILE:		bsstream.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	SBDDACReadNotification	Notificationroutine
-        BSDischargeStream	Stream um cx Bytes entladen
+        BSDischargeStream	Read cx bytes from the stream
 
 
-Beschreibung:
-	Template zum Erstellen von Soundtreibern.
+Description:
+	Template for sound drivers.
 
 *****************************************************************@
 
@@ -63,43 +63,43 @@ SBDDACReadNotification	proc	far
 	mov	ds, ax				; ds <- dgroup of driver
 
 ;----------------------------
-; Erkennung Streamdaten (cx)
+; Detect stream data (cx)
 ;----------------------------
-	tst	cx				; cx=0 ThresholdÑnderung ?
-	jz	sendAck				; ja
+	tst	cx				; cx=0: threshold change?
+	jz	sendAck				; Yes
 
 ;----------------------------------------
-;	Stream enthÑlt Daten zum Senden
+;	The stream contains data to send
 ;----------------------------------------
 streamsz:
-	mov	ds:[dataOnStream], cx		; Anzahl Bytes abspeichern
+	mov	ds:[dataOnStream], cx		; Save the byte count
 
 	mov	ax, ds:[streamSize]		; ax <- upper limit on size
 
-	cmp	ax, cx				; mehr Daten als Stream lang ?
-						; (VERBOTEN !)
-	jb	sendAck                 	; nein
+	cmp	ax, cx				; More data than the stream length?
+						; (NOT ALLOWED!)
+	jb	sendAck                 	; No
 
 ;==============================
-;	Stream entladen
+;	Read from the stream
 ;
-; An dieser Stelle mÅssen die
-; Daten aus dem Stream gelesen
-; werden
+; At this point, the threshold values
+; Data read from the stream
+; must be updated.
 ;
-;	cx = Anzahl Bytes
+;	cx = byte count
 ;==============================
-	call	BSECTestStream		; Stream testen
+	call	BSECTestStream		; Check the stream
 
 	call	BSDischargeStream
-        sub	ds:[dataOnStream],cx	; Streamdaten aktual.
+        sub	ds:[dataOnStream],cx	; Update stream data
 	mov	ax,ds:[dataOnStream]
         mov	cx,ax
-        tst	ax			; noch Daten drin ?
-        jnz	streamsz		; ja, warten bis Stream leer ist
+        tst	ax			; Is there still data?
+        jnz	streamsz		; Yes, wait until the stream is empty
 
 ;----------------------------
-; 	ACK an Reader senden
+; 	Send ACK to the reader
 ;----------------------------
 sendAck:
 	mov	ds, bx				; ds <- stream segment
@@ -131,13 +131,13 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSDischargeStream
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:	Stream "entladen"
+SYNOPSIS:	Read data from the stream
 
 CALLED BY:
 PASS:		cx	-> # of bytes to read
 		bx	-> stream segment ??? La 28.08.98
 
-RETURN:		cx	= gelesene Bytes
+RETURN:		cx	= Bytes read
 
 DESTROYED:
 
@@ -150,7 +150,7 @@ REVISION HISTORY:
 	----	----		-----------
         DL	09.08.98	Template
         DL	30.09.98	Secondarybuffer
-        DL	01.09.98	wartet bis cx gelesen wurde
+        DL	01.09.98	Wait until cx bytes have been read
 
 ToDo-List:
 ----------
@@ -169,39 +169,39 @@ endif
 	call	BSECTest
 
 ;-------------------------------
-;	verfÅgbare Daten testen
+;	Check available data
 ;-------------------------------
-        mov	ax,ds:[dataOnStream]	; Daten im Stream
-	cmp     cx, ax   		; genug Daten vorhanden ?
-	jnc	genug			; ja
-        mov	cx,ax			; nein, max. moeglich
+        mov	ax,ds:[dataOnStream]	; Data in the stream
+	cmp     cx, ax   		; Is enough data available?
+	jnc	enoughSpace			; Yes
+        mov	cx,ax			; No, use the available amount
 
 ;---------------------------------
-; Daten zum Secondbuffer kopieren
-; und warten bis alle Daten abge-
-; nommen werden.
+; Copy data to the secondary buffer
+; and wait until all data
+; has been consumed.
 ;---------------------------------
-genug:
-        mov	bx,60			; max. 60 Versuche
+enoughSpace:
+        mov	bx,60			; At most 60 attempts
         push	es
         mov	ax,ds:[streamSegment]	; Offset Stream
         mov	es,ax
 	mov     si,es:[SD_reader].SSD_ptr
         pop	es
 
-	mov	dx,cx			; dx = Anzahl
-        mov	ax,cx			; ax = Startanzahl
-nochmal:
-        tst	ds:[bufferFree]		; Puffer noch leer ?
-        jz	warten			; ja, warten
+	mov	dx,cx			; dx = count
+        mov	ax,cx			; ax = initial count
+retryWrite:
+        tst	ds:[bufferFree]		; Is the buffer still empty?
+        jz	waitForData			; Yes, wait
 
         mov	cx,ax
-        call	BSSecondWrite		; Daten --> Secondbuffer
+        call	BSSecondWrite		; Data --> secondary buffer
 	call	BSECTest
-        				; cx = gelesene Bytes
-        sub	ax,cx			; alles gelesen ?
-        jz	fertig			; ja
-warten:
+        				; cx = bytes read
+        sub	ax,cx			; All data read?
+        jz	finished			; Yes
+waitForData:
         push	ax
         mov	ax,1
 	call	TimerSleep		; LA 17.09.98
@@ -212,36 +212,36 @@ ifdef	BS_NO_INT
         mov	ax,2
 	call	TimerSleep		; LA 17.09.98
 endif
-	dec	bx			; Versuche ausgeschoepft
-        jnz 	nochmal			; nein, nochmal
+	dec	bx			; No attempts left
+        jnz 	retryWrite			; No, retry
 
 ;---------------------------------
-; 60 Versuche haben nicht
-; gereicht Stream zu entladen
-; Vermutlich wurde Abspielvorgang
-; unterbrochen und die BSDACISR hat
-; dacStatus auf Null gesetzt.
+; 60 attempts did not
+; finish reading the stream.
+; Playback was probably interrupted
+; and BSDACISR set
+; dacStatus to zero.
 ;---------------------------------
-        tst	ds:[dacStatus]		; DSP in Ruhe ?
+        tst	ds:[dacStatus]		; Is the DSP idle?
 
-        jnz	fertig			; nein, Problem ignorieren
+        jnz	finished			; No, ignore the problem
 
-        				; LA: BEARBEITUNGSWUERDIG !!!
+        				; LA: NEEDS REVIEW !!!
 
-	call	BSAutoInitStart		; Transfer neu starten
-        jmp	short genug
+	call	BSAutoInitStart		; Restart the transfer
+        jmp	short enoughSpace
 
 ;--------------------------------
-;     Kopieren abgeschlossen
+;     Copy complete
 ;--------------------------------
-fertig:
-        mov	cx,dx			; Anzahl zurÅck
-        mov	bx,ds:[streamSegment]	; bx Zeiger auf Streamstruktur
+finished:
+        mov	cx,dx			; Return the count
+        mov	bx,ds:[streamSegment]	; bx points to the stream structure
 
 	push	cx			; Stack [1] cx
 
 ;--------------------------------
-;	Stream aktualisieren
+;	Update the stream
 ;--------------------------------
 
 ; updateStream label near
@@ -253,14 +253,14 @@ fertig:
         ;  Update semaphores for reader and writer
         ;
 ;---------------------------
-; Semaphoren aktualisieren
+; Update semaphores
 ;---------------------------
 
-        sub     es:[SD_reader.SSD_sem].Sem_value, cx	; Bytes die gelesen werden mÅssen
-        add     es:[SD_writer.SSD_sem].Sem_value, cx	; freie Bytes im Stream
+        sub     es:[SD_reader.SSD_sem].Sem_value, cx	; Bytes that must be read
+        add     es:[SD_writer.SSD_sem].Sem_value, cx	; Free bytes in the stream
 
 ;-----------------------------
-;  Pointer fÅr Reader aktual.
+;  Update the reader pointer
 ;-----------------------------
 	add     cx, es:[SD_reader].SSD_ptr
 	cmp     cx, es:[SD_max]
@@ -276,7 +276,7 @@ fertig:
         add     cx, offset SD_data              ; cx <- # past beginning
 
 ;---------------------------
-; Readerpointer setzen (cx)
+; Set the reader pointer (cx)
 ;---------------------------
 
 writeReaderPtr:
@@ -292,12 +292,12 @@ writeReaderPtr:
         ;  Call SysEnterInterrupt to deal with this.
 
 ;-------------------------------------------
-; neue Daten in Stream schreiben lassen
+; Allow new data to be written to the stream
 ;
-;- Contextswitching verbieten
-;- Writer freigeben
-;- INT sperren
-;- Contextswitching erlauben
+;- Prevent context switches
+;- Release the writer
+;- Disable interrupts
+;- Allow context switches
 ;-------------------------------------------
 
         call    SysEnterInterrupt
@@ -310,7 +310,7 @@ writeReaderPtr:
         jz      sendACK
 
 ;-------------------------------
-; Writersemaphore de-blockieren
+; Unblock the writer semaphore
 ;-------------------------------
 
         ;

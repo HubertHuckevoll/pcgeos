@@ -1,14 +1,14 @@
 /************************************************
  *                                              *
- *      Projekt:        BestSound               *
+ *      Project:        BestSound               *
  *                                              *
  *      Module:         NewWave-Library         *
  *                                              *
  *      File:           BSNWAV.GOH              *
  *                                              *
- *      Autor:          Dirk Lausecker          *
+ *      Author:          Dirk Lausecker          *
  *                                              *
- * 28.07.2000   DL      F�r ND �berarbeitet     *
+ * 28.07.2000   DL      Reworked for ND          *
  *                                              *
  ************************************************/
 
@@ -59,7 +59,7 @@
 
 /////////////////////////////////////////////////////////////////////
 // PlayFlags
-// Bits zur Parameter�bergabe an BSNWavePlayFile()
+// Parameter bits for BSNWavePlayFile()
 
 // Display Statusbox for showing Rate/Bits/Channels and Time
 
@@ -223,14 +223,14 @@ extern int _pascal BSNWavePlayMemory(   BSWavFormChunk  *bfc,
 					void            *buffer,
 					word            len,
 					word            playFlags);
-// kurzes Sample einmal oder dauerhaft abspielen
+// Play a short sample once or repeatedly
 // NOT IMPLEMENTED !
 
 /*-----------------------------------------------*/
 
 extern  word    _pascal _export BSNWaveGetAIState(word options);
 // setting bsOptions and reading AutoInit-State from driver
-// OUT: word    High-Byte = 0 -> untere Bufferh�lfte
+// OUT: word    High-Byte = 0 -> lower buffer half
 //              Low- Byte = IRQ-Counter
 
 /*-----------------------------------------------*/

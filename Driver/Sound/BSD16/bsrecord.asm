@@ -2,86 +2,85 @@ COMMENT @********************************************************
 
 	Copyright (c) Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound Treiber
+PROJECT:	BestSound Driver
 
-DATEI:		bsrecord.asm
+FILE:		bsrecord.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	06.10.98	Init
-        DL	08.10.99	Ableitung Recording
+        DL	08.10.99	Derived from Recording
         DL	20.02.2000	NewWave
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
-	BSDRecGetMaxProperties	Max Samprate/Bittiefe/Kanalzahl
-	BSDRecGetData		Warten auf Samplingdaten
-	BSDStopRecOrPlay 	Recording stoppen
-	BSDRecStartRecording 	Recording starten
-	BSDRecAllocateBuffer 	Buffer belegen
-	BSDRecFreeBuffer 	Belegten Puffer freigeben
-	BSDRecProgramDMA 	DMA programmieren
-	BSRECISR		ISR fÅr Recording
-        BSRecordGetRMSValue	ADC-RMS Spannungsmessung
+	BSDRecGetMaxProperties	Maximum sample rate, bit depth and channels
+	BSDRecGetData		Wait for sample data
+	BSDStopRecOrPlay 	Stop recording
+	BSDRecStartRecording 	Start recording
+	BSDRecAllocateBuffer 	Allocate a buffer
+	BSDRecFreeBuffer 	Free the allocated buffer
+	BSDRecProgramDMA 	Program DMA
+	BSRECISR		Recording ISR
+        BSRecordGetRMSValue	ADC-RMS voltage measurement
 
-Beschreibung:
-	Mit den folgenden Routinen wurde der Treiber um
-        Recording-Features erweitert.
-        In der ISR mu· getestet werden, ob das Flag bsStatus
-	(vorher	bsRecordState) gesetzt ist und damit die Record-ISR
-	aufgerufen werden mu·.   (Statt BSDACISR)
+Description:
+	These routines add recording support to the driver.
+        The ISR must check bsStatus
+	(formerly bsRecordState) to determine whether
+	to call the recording ISR instead of BSDACISR.
 
 NewWave:
-	Da zum selben Zeitpunkt nur eine Betriebsart moeglich ist,
-        wird die Statusvariable bsStatus (vorher bsRecordState)
-        von NewWave-Play und Recording gleichermassen benutzt.
+	Only one mode can be active at a time.
+        The bsStatus variable (formerly bsRecordState)
+        is shared by NewWave playback and recording.
 
 
 *****************************************************************@
 
 ;
-; Maximale Samplingparameter
-; gÅltig fÅr Recording / NewWave-Play
+; Maximum sampling parameters
+; Used by recording and NewWave playback
 ;
 BSD_MAX_RATE		equ	44100
 BSD_MAX_BITS		equ	16
 BSD_MAX_CHANNELS        equ	2
-BSD_STEREO_TOGGLE	equ	0	; StereokanÑle sind nicht vertauscht
-BS_STATE_IDLE		equ	0	; Zustaende fuer bsStatus
+BSD_STEREO_TOGGLE	equ	0	; Stereo channels are not swapped
+BS_STATE_IDLE		equ	0	; States for bsStatus
 
 BSREC_STATE_PREPARE	equ	1
 BSREC_STATE_RUN		equ	2
-; Status 3,4 in Modul BSNWAV.ASM definiert !
-BSREC_STATE_GET_RMS	equ	5	; RMS-Messung am ADC-Eingang
+; States 3 and 4 are defined in BSNWAV.ASM.
+BSREC_STATE_GET_RMS	equ	5	; RMS measurement at the ADC input
 
-BSREC_DATA_WAIT		equ	0	; ZustÑnde fÅr bsRecDataFlag
+BSREC_DATA_WAIT		equ	0	; States for bsRecDataFlag
 BSREC_DATA_READY	equ	1
 
-BSREC_HALF_LOW		equ	1	; ZustÑnde fÅr bsRecDataHalf
+BSREC_HALF_LOW		equ	1	; States for bsRecDataHalf
 BSREC_HALF_HIGH		equ	0
 
 ;/////////////////////////////////
-;	globale Variable
+;	Global variable
 ;/////////////////////////////////
 
 idata           segment
 
-	bsStatus		byte	0	; 0 = kein Recording
-        					; 1 = Vorbereitungsphase
-                                                ; 2 = Recording aktiv
+	bsStatus		byte	0	; 0 = no recording
+        					; 1 = preparation phase
+                                                ; 2 = recording active
 
         bsRecSamplerate		word	22050	; Samplerate
-	bsRecChannels		byte	1	; Kanalzahl
-        bsRecBits		byte	8	; Bittiefe
+	bsRecChannels		byte	1	; Channel count
+        bsRecBits		byte	8	; Bit depth
 
-        bsRecDataFlag		byte	0	;>0 = Daten stehen bereit
-						; 0 = auf neue Daten warten
-	bsRecDataHalf		byte	0	; 1 = untere HÑlfte fertig
-        					; 0 = obere HÑlfte fertig
+        bsRecDataFlag		byte	0	;>0 = data available
+						; 0 = wait for new data
+	bsRecDataHalf		byte	0	; 1 = lower half ready
+        					; 0 = upper half ready
 idata           ends
 
 
@@ -94,14 +93,14 @@ LoadableCode            segment resource
 ;
 ;	BSDRecGetMaxProperties
 ;
-; 	Maximale Recordingparameter
-;       zurÅckgeben
+; 	Maximum recording parameters
+;       Return the value
 ;
 ;  IN:	-
 ;
 ; OUT:	cx	max. Samplerate
-;	dl	max. Kanalzahl
-;	dh	max. Bittiefe
+;	dl	Maximum channel count
+;	dh	Maximum bit depth
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -110,7 +109,7 @@ BSDRecGetMaxProperties	proc	far
         .enter
 
 ;-----------------------------------------
-; Maximale Recordingparameter zurÅckgeben
+; Return the maximum recording parameters
 ;-----------------------------------------
 	mov	cx,BSD_MAX_RATE		; 44100
         mov	dh,BSD_MAX_BITS		; 16 Bit
@@ -131,14 +130,14 @@ ResidentCode            segment resource
 ;
 ;	BSDRecGetData
 ;
-; 	Wartet bis Daten bereit stehen
-;       und gibt Zeiger und LÑnge zurÅck.
+; 	Wait until data is available
+;       and return its pointer and length.
 ;
 ;  IN:	-
 ;
-; OUT:	dx	Zeiger Segmentadresse
-;	ax	Zeiger Offset
-;	bx	LÑnge
+; OUT:	dx	Pointer segment
+;	ax	Pointer offset
+;	bx	Length
 ;	cx	0 = OK
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -146,60 +145,60 @@ ResidentCode            segment resource
 BSDRecGetData	proc	far
 	uses	ds,di
         .enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
         mov	ds,ax
 
 ;------------------------------
-; Warten bis Flag gesetzt wird
-; oder Timeout anschlÑgt
+; Wait until the flag is set
+; or the timeout expires
 ;------------------------------
-	mov	cx,500			; 500 Zyklen bis Timeout
+	mov	cx,500			; 500 cycles until timeout
 next:
-	tst	ds:[bsRecDataFlag]	; stehen Daten bereit ?
-        jz	waitforflag		; nein, warten
+	tst	ds:[bsRecDataFlag]	; Is data available?
+        jz	waitforflag		; No, wait
 
 ;------------------------------
-;    PufferÅberlauf prÅfen
+;    Check for buffer overrun
 ;------------------------------
-	mov	al,ds:[bsRecDataFlag]	; Flagwert holen
-        cmp	al,1			; 1 --> kein PufferÅberlauf ?
-        jz	wakeup			; JA, alles OK --> weitermachen
+	mov	al,ds:[bsRecDataFlag]	; Get the flag value
+        cmp	al,1			; 1 --> no buffer overrun?
+        jz	wakeup			; Yes, all OK: continue
 
 ; LA 05.11.2000
 ; resetting Overflow-counter
 	clr	ds:[bsRecDataFlag]
-        mov	cl,al			; Flagwert als Fehlercode zurÅckgeben
+        mov	cl,al			; Return the flag value as an error code
         mov	ch,0
-        jmp	done			; mit Fehler zurÅck
+        jmp	done			; Return with an error
 
 ;-----------------------------------
-; Platz fÅr etwaige Pegel-Berechnung
+; Space for a possible level calculation
 ;-----------------------------------
 
 ;-----------------------------------
 waitforflag:
         mov	ax,1
-	call	TimerSleep		; 1/60 sec warten
+	call	TimerSleep		; Wait 1/60 second
 	loop	next			; (dec cx, jnz next)
-        mov	cx,1			; Fehlerkennung
+        mov	cx,1			; Error indicator
 
 	WARNING	BS_REC_GET_DATA_TIMEOUT
 
         jmp	short done
 
 ;---------------------------
-; RÅckgabewerte berechnen
+; Calculate return values
 ;---------------------------
 wakeup:
-	clr	ds:[bsRecDataFlag]	; Flag lîschen
-        mov     ax,0			; 1. HÑlfte
+	clr	ds:[bsRecDataFlag]	; Clear the flag
+        mov     ax,0			; First half
         mov	dx,ds:[bufferSegment]	; Segmentadresse
-        mov     bx,ds:[bufferO2]	; LÑnge
-        tst	ds:[bsRecDataHalf]	; untere HÑlfte ?
-        jnz	lower			; ja
-	mov	ax,bx			; nein, obere HÑlfte
+        mov     bx,ds:[bufferO2]	; Length
+        tst	ds:[bsRecDataHalf]	; Lower half?
+        jnz	lower			; Yes
+	mov	ax,bx			; No, upper half
 lower:
-	mov	cx,0			; Fehlerkennung
+	mov	cx,0			; Error indicator
 done:
         .leave
         ret
@@ -209,9 +208,9 @@ BSDRecGetData	endp
 ;
 ;	BSRECISR
 ;
-; 	ISR fÅr Recording
-;       Wird aufgerufen wenn Buffer halb
-;	gefÅllt wurde und geleert werden kann.
+; 	Recording ISR
+;       Called when half of the buffer
+;	is full and can be read.
 ;
 ;
 ;
@@ -226,19 +225,19 @@ BSRECISR	proc	far
         .enter
 
 ;------------------------
-; 	Flags setzen
+; 	Set flags
 ;------------------------
-; bsRecDataFlag wird durch INT inkrementiert,
-; Die Abholroutine mu· den Wert dekrementieren.
-; Wenn Wert grî·er wird als zum Bsp. 2 wurden
-; die Daten nicht schnell genug abgeholt.
-; Errorflag wird gesetzt um Fehler anzuzeigen !
+; The interrupt increments bsRecDataFlag.
+; The reader must decrement the value.
+; A value greater than, for example, 2 indicates
+; that data was not read quickly enough.
+; Set the error flag to report the error.
 ;
 
         inc	ds:[bsRecDataFlag]
 
 	mov	al,ds:[bsRecDataHalf]
-        xor	al,01h			; Seite swappen
+        xor	al,01h			; Swap halves
 	mov	ds:[bsRecDataHalf],al
 
         .leave
@@ -249,31 +248,31 @@ BSRECISR	endp
 ;
 ;	BSDStopRecOrPlay
 ;
-; 	Recording/Playing stoppen
+; 	Stop recording or playback
 ;
-;       ruft BSSecondUnlock auf
+;       Calls BSSecondUnlock
 ;
 ;
 ;  IN:	-
 ;
 ; OUT:	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 BSDStopRecOrPlay	proc	far
 	uses	ax,bx,dx,di
         .enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
         mov	ds,ax
 
 ;------------------
-; Puffer freigeben
+; Free the buffer
 ;------------------
-	call	BSSecondUnlock		; Job wird weitergereicht
+	call	BSSecondUnlock		; Delegate the operation
 
-; Status zurÅcksetzen
+; Reset the status
 
 	mov	ds:[bsStatus],BS_STATE_IDLE
 
@@ -297,44 +296,44 @@ LoadableCode            segment resource
 ;  IN:	dx	buffersize
 ;
 ; OUT:	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 BSDRecStartRecording	proc	far
 	uses	ax,bx,dx,di,ds
         .enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
         mov	ds,ax
 
 ;-------------------
-; dacStatus = Ruhe ?
+; dacStatus = idle?
 ;-------------------
-	tst	ds:[dacStatus]		; DAC-Ausgabe aktiv ?
-        jnz	error			; ja
+	tst	ds:[dacStatus]		; Is DAC output active?
+        jnz	error			; Yes
 
 	mov	ds:[bsStatus],BSREC_STATE_PREPARE
-	clr	ds:[bsRecDataFlag]	; DataFlag lîschen
-        clr	ds:[bsRecDataHalf]	; Startwert fÅr fertige PufferhÑlfte
+	clr	ds:[bsRecDataFlag]	; Clear the data flag
+        clr	ds:[bsRecDataHalf]	; Initial completed buffer half
 
 ;-------------------
-;  Buffer belegen
+;  Allocate a buffer
 ;-------------------
 	mov	cx,dx
-;        mov	cx,4000h		; 16 kByte ergibt bei ungÅnstigster
-        				; PagegrenzenÅberschreitung 8 kB
-                                        ; und ergibt einen INT-Takt von
-                                        ; 22ms bei 44 kHz / 16 Bit / St.
-	call	BSDRecAllocateBuffer	; ax = Bufferadresse
+;        mov	cx,4000h		; 16 KB leaves at least
+        				; 8 KB after a page boundary split,
+                                        ; giving an interrupt interval of
+                                        ; 22 ms at 44 kHz / 16 bits / stereo.
+	call	BSDRecAllocateBuffer	; ax = buffer address
 
-        jc	error			; Fehler !
+        jc	error			; Error!
 
 ;-------------------
-;  DMA programmieren
+;  Program DMA
 ;-------------------
 	call	BSDRecProgramDMA
-        jc	error1			; Fehler ! / Puffer freigeben
+        jc	error1			; Error! Free the buffer
 
 ;-------------------
 ;  DSP Samplerate
@@ -348,23 +347,23 @@ BSDRecStartRecording	proc	far
 ; Start AutoInit Transfer
 ;------------------------
 	call	BSDRecStartAI
-        jc	error			; Fehler !
+        jc	error			; Error!
 	mov	ds:[bsStatus],BSREC_STATE_RUN
-	mov	cx,0			; kein Fehler
-        jmp	done			; --> Ende
+	mov	cx,0			; No error
+        jmp	done			; --> End
 
 ;------------------------
-;    Fehlerbehandlung
+;    Error handling
 ;------------------------
 error1:
-	call	BSDRecFreeBuffer	; Puffer freigeben
+	call	BSDRecFreeBuffer	; Free the buffer
 
 ;------------------------
 ;   	E N D E
 ;------------------------
 error:
         mov	ds:[bsStatus],BS_STATE_IDLE
-	mov	cx,1		; Fehlerkennung
+	mov	cx,1		; Error indicator
         clc			; CY = 1
 
 done:
@@ -377,13 +376,13 @@ BSDRecStartRecording	endp
 ;
 ;	BSDRecAllocateBuffer
 ;
-; 	Buffer belegen
+; 	Allocate a buffer
 ;
 ;
-;  IN:	cx	PufferlÑnge
+;  IN:	cx	Buffer length
 ;
 ; OUT:  ax	Buffersegment
-;	CY	TRUE = Fehler
+;	CY	TRUE = error
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -394,23 +393,22 @@ BSDRecAllocateBuffer	proc	near
 EC<	WARNING	BS_REC_ALLOCATE_BUFFER	>
 
 ;----------------------
-; 	Puffer belegen
+; 	Allocate a buffer
 ;----------------------
-	mov	ax,cx			; LÑnge
-        mov	ds:[bufferLen],ax	; abspeichern
+	mov	ax,cx			; Length
+        mov	ds:[bufferLen],ax	; Store
         mov	cl,mask HF_FIXED	; HeapFlags
 ;        mov	ch,mask HAF_ZERO_INIT
         mov	ch,0
 					; HeapAllocFlags
-                                        ; LA 18.10.99 HAF_LOCK um
-					; ILLEGAL_SEGMENT zu vermeiden
+                                        ; LA 18.10.99: HAF_LOCK avoids ILLEGAL_SEGMENT
 	call	MemAlloc
-	jc	done			; Fehler !
+	jc	done			; Error!
 
 	mov	ds:[bufferHandle],bx	; Handle to block allocated
 	mov	ds:[bufferSegment],ax	; Address of block allocated
 
-        call	BSCreateStack		; Stack fÅr ISR anlegen
+        call	BSCreateStack		; Create the ISR stack
 
 	clc
 
@@ -426,18 +424,18 @@ BSDRecAllocateBuffer	endp
 ;
 ;	BSDRecFreeBuffer
 ;
-; 	Belegten Puffer freigeben
+; 	Free the allocated buffer
 ;
 ;
 ;  IN:	bufferHandle
 ;
-; OUT:	CY	TRUE = Fehler
+; OUT:	CY	TRUE = error
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 BSDRecFreeBuffer	proc	near
         .enter
-	call	BSSecondUnlock	; Job wird weitergereicht
+	call	BSSecondUnlock	; Delegate the operation
         clc
 
         .leave
@@ -455,7 +453,7 @@ BSDRecFreeBuffer	endp
 ;
 ;  IN:	ds	dgroup
 ;
-; OUT:	CY	TRUE = Fehler
+; OUT:	CY	TRUE = error
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -468,7 +466,7 @@ BSDRecStartAI	proc	near
 ;------------------------
 	mov	al,ds:[bsRecBits]
 	cmp	al,16				; 16 Bit ?
-        jnz	bit8				; nein
+        jnz	bit8				; No
 
         SBDDACWriteDSP  DSP_16BIT_INPUT, 0	; Command
 
@@ -491,11 +489,11 @@ bit8:
 mono:
         SBDDACWriteDSP  bh, 0		; Mode (Mono/Stereo)
 
-        mov	cx,ds:[bufferO2]	; halbe Secondbufferlaenge
+        mov	cx,ds:[bufferO2]	; Half the secondary buffer length
         mov	al,ds:[bsRecBits]
 	cmp	al,16			; 16 Bit ?
-	jnz	set_size		; nein
-	shr	cx			; ja, Blockgroesse in Words
+	jnz	set_size		; No
+	shr	cx			; Yes, block size in words
 set_size:
         dec	cx
 	SBDDACWriteDSP  cl, 0			; L Byte
@@ -511,7 +509,7 @@ BSDRecStartAI	endp
 ;
 ;	BSDRecSetSampling
 ;
-; 	Recordparameter setzen
+; 	Set recording parameters
 ;
 ;
 ;  IN:	bx	Samplerate
@@ -519,26 +517,26 @@ BSDRecStartAI	endp
 ;	dx	bits
 ;
 ; OUT:	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 BSDRecSetSampling	proc	far
 	uses	ax,bx,dx,di
         .enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
         mov	ds,ax
 ;
-; Werte abspeichern
+; Store values
 ;
 	mov	ds:[bsRecSamplerate],bx
 	mov	ds:[bsRecChannels],cl
 	mov	ds:[bsRecBits],dl
-        mov	cx,0			; RÅckgabewert
+        mov	cx,0			; Return value
 
 ;----------------------------
-;   Samplingdaten prÅfen
+;   Check the sample data
 ;----------------------------
 
         .leave
@@ -550,96 +548,91 @@ BSDRecSetSampling	endp
 ;
 ;	BSRecordGetRMSValue
 ;
-; RMS-Effektivspannung messen
+; Measure the RMS voltage
 ;
-; Methode: Die in ax angegebene Durchlauf-
-;	   zahl gibt an, wie oft vom DSP
-;	   im Direct Mode Sampledaten abge-
-;          holt werden.
-;          Die MIN und MAX-Werte werden
-;          zur Berechnung der Effektiv-
-;          spannung benutzt.
+; Read ax samples from the DSP in direct mode.
+; Use the minimum and maximum values to estimate the RMS voltage.
 ;
-;  IN:	ax	Anzahl DurchlÑufe
+;  IN:	ax	Number of iterations
 ;
 ; OUT:	bx  	Value (0...255)
 ;	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
-; 19.10.99	Abbruch wenn Play im Gange
+; 19.10.99	Abort if playback is active
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-BSREC_RMS_OK	equ	0	; Fehlercode fÅr RÅckmeldung
+BSREC_RMS_OK	equ	0	; Result error code
 BSREC_RMS_ERROR	equ	1
 
 
 BSRecordGetRMSValue	proc	far
 	uses	ax,dx,di
         .enter
-        mov	cx,ax			; Anzahl DurchlÑufe
+        mov	cx,ax			; Number of iterations
 	mov	ax,segment dgroup
         mov	ds,ax
 
 ;------------------------
-; Test ob DSP belegt ist
+; Check whether the DSP is in use
 ;------------------------
-        mov	bx,0			; RÅckgabewert im Fehlerfall
-	tst	ds:[dacStatus]		; DAC frei ? (alte Routinen)
+        mov	bx,0			; Return value on error
+	tst	ds:[dacStatus]		; Is the DAC available? (old routines)
         jnz	notfree
 
 	tst	ds:[bsStatus]		; Recording / NewWave ?
-        jz	free			; ja
+        jz	free			; Yes
 notfree:
-        mov	cx,BSREC_RMS_ERROR	; Fehlercode
+        mov	cx,BSREC_RMS_ERROR	; Error code
         jmp	done
 
 ;------------------------
-; RMS Messung durchfÅhren
+; Measure the RMS level
 ;------------------------
 free:
         mov	ds:[bsStatus],BSREC_STATE_GET_RMS
         mov	bx,8080h		; BL = MIN / BH = MAX
 next:
 	SBDDACWriteDSP  DSP_RECORD_DIRECT, 0
-	SBDDACReadDSP 0			; Wert holen
+	SBDDACReadDSP 0			; Read the value
 
 ;------------------------
-; 	MIN / MAX Werte
+; 	MIN / MAX values
 ;------------------------
 	cmp	al,bl
 	jnc	not_under
-	mov	bl,al			; neuer MIN Wert
+	mov	bl,al			; New MIN value
 not_under:
 	cmp	al,bh
 	jc	not_over
-        mov	bh,al			; neuer MAX Wert
+        mov	bh,al			; New MAX value
 
 not_over:
-	loop	next			; cx-1 ungleich 0 --> next
+	loop	next			; cx-1 != 0 --> next
 
 ;------------------------
-;	RMS Berechnung
-; Ruhepegel (80h) abziehen
+;	RMS calculation
+; Subtract the silence level (80h)
 ;------------------------
 	mov	al,80h
-        sub	al,bl			; al = Absolutwert von MIN
-        mov	bl,al			; bl = Absolutwert von MIN
+        sub	al,bl			; al = absolute MIN value
+        mov	bl,al			; bl = absolute MIN value
 
         mov	al,bh			; MIN
-        sub	al,80h			; Ruhepegel abziehen
+        sub	al,80h			; Subtract the silence level
         mov	ah,0
 
         mov	bh,0			; bx = MIN
 
-        add	ax,bx			; ax = Spitze + Spitze
-        mov	bx,ax			; RÅckgabewert
+        add	ax,bx			; ax = peak-to-peak value
+        mov	bx,ax			; Return value
 
-        mov	cx,BSREC_RMS_OK		; Fehlercode
+        mov	cx,BSREC_RMS_OK		; Error code
         mov	ds:[bsStatus],BS_STATE_IDLE
 
-; Value zurÅckgeben
+; Return the value
 done:
         .leave
         ret
@@ -650,12 +643,12 @@ BSRecordGetRMSValue	endp
 ;
 ;	BSDRecProgramDMA
 ;
-; 	DMA programmieren
+; 	Program DMA
 ;
 ;
-;  IN:	ax	Buffersegmentadresse
+;  IN:	ax	Buffer segment address
 ;
-; OUT:	CY	TRUE = Fehler
+; OUT:	CY	TRUE = error
 ;
 ; DL	04.11.2000	RecProgramDMADriver replaced by
 ;			ProgramDMADriver for 16 Bit Recording
@@ -667,27 +660,27 @@ BSDRecProgramDMA	proc	near
         .enter
 
 ;-----------------------
-;	DMA vorbereiten
+;	Prepare DMA
 ;-----------------------
-	mov	bx,ax			; Pufferadresse
-	mov	dx,ds:[bufferLen]	; LÑnge
+	mov	bx,ax			; Buffer address
+	mov	dx,ds:[bufferLen]	; Length
 
-        call	BSDMAGrenzen		; Segmentgrenzen prÅfen
-	mov	ds:[bufferSegment],bx	; korrigierte Segmentadresse
+        call	BSDMACheckBoundaries		; Check segment boundaries
+	mov	ds:[bufferSegment],bx	; Adjusted segment address
 
         mov	cx,2			; Playmode = Recording
-	call	ProgramDMADriver	; DMA vorbereiten
+	call	ProgramDMADriver	; Prepare DMA
 
 ;-----------------------
-; Pufferwerte berechnen
+; Calculate buffer values
 ;-----------------------
-        mov	ax,ds:[bufferLen]	; LÑnge
-        mov	ds:[bufferFree],ax	; freier Speicher
-        mov	ds:[bufferMax],ax	; Offset Pufferende
-        clr	ds:[dacStatus]		; dacStatus = wartend
+        mov	ax,ds:[bufferLen]	; Length
+        mov	ds:[bufferFree],ax	; Free space
+        mov	ds:[bufferMax],ax	; End-of-buffer offset
+        clr	ds:[dacStatus]		; dacStatus = waiting
         clr	ds:[bufferP2]		; Start Buffer
         shr	ax			; /2
-	mov	ds:[bufferO2],ax	; PufferhÑlfte
+	mov	ds:[bufferO2],ax	; Buffer half
 
 	clc
 

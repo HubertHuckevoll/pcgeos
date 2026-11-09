@@ -4,17 +4,17 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound Driver
 
-DATEI:		bsconst.def
+FILE:		bsconst.def
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
         DL	15.10.99	Warnings for Recording
 
-Beschreibung:
+Description:
 
 *****************************************************************@
 
@@ -65,7 +65,7 @@ DSP_DMA_PCM_AI_HIGH		equ     090h	; AI Highspeed
 
 DSP_DMA_PCM_AI_INPUT_HIGH	equ     098h	; Highspeed Recording
 DSP_STEREO_INPUT		equ	0a8h	; Stereo Recording
-DSP_MONO_MODE			equ	0a0h	; Monomodus
+DSP_MONO_MODE			equ	0a0h	; Mono mode
 
 DSP_SET_RATE_DIVISOR            equ     040h
 DSP_SET_SAMPLE_RATE		equ	041h
@@ -89,7 +89,7 @@ DSP_EXIT_AUTOINIT		equ     0dah
 DSP_GET_VERSION                 equ     0e1h
 DSP_FORCE_INTERRUPT             equ     0f2h	
 
-DSP_RECORD_DIRECT		equ	020h	; direkt reading ADC
+DSP_RECORD_DIRECT		equ	020h	; Direct ADC reading
 DSP_RECORD_PCM_INPUT_AI		equ	02ch	; AutoInit Recording
 
 ;-----------------------------------------------------------------------------
@@ -465,11 +465,11 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	TS      10/26/92        Initial version
-	DL	13.04.97	cx wird nicht geÑndert !
+	DL	13.04.97	cx is not changed.
 	DL	14.04.97	dx push/pop
-	DL	28.06.97	out dx,al wird durch Unterprogramm aus-
-				gefÅhrt. Dadurch bessere Debuggingmîgl.
-        DL	20.03.2000	Endlosschleife entfernt, stattdessen
+	DL	28.06.97	out dx,al is executed by a subroutine.
+				This makes debugging easier.
+        DL	20.03.2000	Removed the infinite loop; instead use
         			times * 256
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
@@ -497,7 +497,7 @@ topOfLoop:
         pop	ax
 	jz      writeToDSP
         dec	al
-        jnz	topOfLoop			; al = innere Warteschl.
+        jnz	topOfLoop			; al = inner wait loop
 	dec     ah
 	jnz     topOfLoop
 

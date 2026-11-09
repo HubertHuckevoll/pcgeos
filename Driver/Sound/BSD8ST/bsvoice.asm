@@ -4,23 +4,23 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound Template
 
-DATEI:		bsvoice.asm
+FILE:		bsvoice.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
 	RainerB	09/15/2024	InstrumentTable updated
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 
 
-Beschreibung:
-	Template zum Erstellen von Soundtreibern.
+Description:
+	Template for sound drivers.
 
 *****************************************************************@
 

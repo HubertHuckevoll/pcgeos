@@ -16,10 +16,10 @@ REVISION HISTORY:
         Name    Date            Description
         ----    ----            -----------
         DL      13.03.2000      Initial version.
-        DL      14.03.2000      Umbenennung
+        DL      14.03.2000      Renamed
 
 DESCRIPTION:
-        Globale Variable
+        Global variable
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 

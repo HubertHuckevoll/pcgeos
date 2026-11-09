@@ -2,11 +2,11 @@ COMMENT @----------------------------------------------------------------------
 
         Copyright (c) Dirk Lausecker 1998 -- All Rights Reserved
 
-PROJECT:        Alles
+PROJECT:        Common
 FILE:           dirk.def
 
 DESCRIPTION:
-        Include-File fÅr alle Projekte
+        Common definitions for all projects
 
 	$Id: geode.def,v 2.45.2.4 94/01/27 21:27:03 doug Exp $
 ------------------------------------------------------------------------------@

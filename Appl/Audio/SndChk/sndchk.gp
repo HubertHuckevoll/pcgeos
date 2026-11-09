@@ -48,4 +48,5 @@ resource MAINGROUPRESOURCE	ui-object
 resource MENURESOURCE		ui-object
 resource MAINTEXTOBJRESOURCE 	ui-object
 
-# usernotes "� 2000 D. Lausecker"
+# usernotes "\xa9 2000 D. Lausecker"
+resource SoundCheckStrings lmem read-only shared

@@ -40,7 +40,7 @@ DESCRIPTION:
 @include "Main/bsqp.goh"
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- %      Classdeklaration
+ %      Class declarations
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
 @classdecl  BSQPApplicationClass;
@@ -71,6 +71,7 @@ DESCRIPTION:
 }
 
 @visMoniker BSQPTextMoniker = "Audio Player";
+@localize "Application name shown in the title bar and application list.";
 
 @end    AppResource;
 
@@ -124,8 +125,11 @@ DESCRIPTION:
 @visMoniker PlayMoniker = list { @PlayLabel, @PlayIcon };
 @visMoniker PauseMoniker = list { @PauseLabel, @PauseIcon };
 @visMoniker PlayLabel = "Play";
+@localize "Start or resume audio playback.";
 @visMoniker PauseLabel = "Pause";
+@localize "Pause audio playback; the same button resumes it.";
 @visMoniker StopLabel = "Stop";
+@localize "Stop audio playback.";
 
 /* Fill at the current position so the icons follow the combined layout. */
 @visMoniker PlayIcon = {
@@ -238,12 +242,14 @@ DESCRIPTION:
 
 @object GenGlyphClass FolderGlyph = {
     GI_visMoniker = "Open a folder to list its MP3 and WAV files.";
+    @localize "Prompt shown before an audio folder is opened. MP3 and WAV are file formats.";
     HINT_CAN_CLIP_MONIKER_WIDTH;
     HINT_FIXED_SIZE = { SST_PIXELS | DISP_VIEW_X_SIZE, SST_LINES_OF_TEXT | 2, 2 };
 }
 
 @object GenGlyphClass EmptyGlyph = {
     GI_visMoniker = "No MP3 or WAV files in this folder.";
+    @localize "Message shown when the selected folder contains no supported tracks.";
     HINT_CAN_CLIP_MONIKER_WIDTH;
     HINT_MAXIMUM_SIZE = { SST_PIXELS | DISP_VIEW_X_SIZE, 0, 0 };
     GI_states = @default & ~GS_USABLE;
@@ -372,13 +378,12 @@ DESCRIPTION:
  *      File selector
  *----------------------------------------------------------------------*/
 
-// @define TEXT_SELECTOR_1 "W�hle eine WAV-Datei zum Abspielen..."
-// @define TEXT_SELECTOR_2 "Ausw�hlen"
 @define TEXT_SELECTOR_1 "Open the folder shown below:"
 @define TEXT_SELECTOR_2 "Select"
 
 @object GenInteractionClass FileSelectorBox = {
     GI_visMoniker = 'O',"Open Folder";
+    @localize "Title of the audio folder selector. Preserve a suitable keyboard mnemonic.";
     GI_kbdAccelerator = ctrl 'o';
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GII_visibility = GIV_DIALOG;
@@ -393,6 +398,7 @@ DESCRIPTION:
 
 @object GenGlyphClass FileSelectorGlyph = {
     GI_visMoniker = @TEXT_SELECTOR_1;
+    @localize "Folder selection instructions; the selected folder will be scanned for audio files.";
 }
 
 @object GenFileSelectorClass WavFileSelector =
@@ -405,6 +411,7 @@ DESCRIPTION:
 @object GenTriggerClass FileSelectorOpenTrigger =
 {
     GI_visMoniker = @TEXT_SELECTOR_2;
+    @localize "Button that opens the selected audio folder.";
     GTI_actionMsg = MSG_PROCESS_BSQP_OPEN;
     GTI_destination = process;
     HINT_SEEK_REPLY_BAR;
@@ -450,16 +457,16 @@ DESCRIPTION:
 
 @object GenItemClass TimeDispItem1 =
 {
-    // GI_visMoniker = 'S',"Spielzeit";
     GI_visMoniker = 'P',"Play Time";
+    @localize "Show elapsed playback time. Preserve a suitable keyboard mnemonic.";
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GII_identifier = BQ_TIME_DISP_NORMAL;
 }
 
 @object GenItemClass TimeDispItem2 =
 {
-    // GI_visMoniker = 'R',"Restliche Spielzeit";
     GI_visMoniker = 'R',"Remaining Time";
+    @localize "Show the time left in the current track. Preserve a suitable keyboard mnemonic.";
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GII_identifier = BQ_TIME_DISP_REMAIN;
 }
@@ -487,15 +494,15 @@ DESCRIPTION:
 
 @object GenBooleanClass OptionsBoolItem2 =
 {
-    // GI_visMoniker = 'A',"Aussteuerungsanzeige";
     GI_visMoniker = 'L',"Display Volume Level Meter";
+    @localize "Show the playback signal level. Preserve a suitable keyboard mnemonic.";
     GBI_identifier =BQ_OPTION_LEVELMETER;
 }
 
 @object GenBooleanClass OptionsBoolItem3 =
 {
-    // GI_visMoniker = 'E',"Endloswiedergabe";
     GI_visMoniker = 'T',"Repeat Current Track";
+    @localize "Play the same track repeatedly. Preserve a suitable keyboard mnemonic.";
     GBI_identifier =BQ_OPTION_ENDLESS;
 }
 
@@ -503,16 +510,19 @@ DESCRIPTION:
 @object GenBooleanClass OptionsBoolItem4 =
 {
     GI_visMoniker = 'R',"Reduce MP3 Quality (Lower CPU Use)";
+    @localize "Decode MP3 audio at a reduced rate to save processor time. Preserve a suitable keyboard mnemonic.";
     GBI_identifier = BQ_OPTION_MP3_HALF_RATE;
 }
 
 @object GenBooleanClass ContinueOption = {
     GI_visMoniker = 'C',"Continue Playing";
+    @localize "Automatically advance to the next track. Preserve a suitable keyboard mnemonic.";
     GBI_identifier = BQ_OPTION_CONTINUE;
 }
 
 @object GenBooleanClass ShuffleOption = {
     GI_visMoniker = 'S',"Shuffle";
+    @localize "Play folder tracks in random order. Preserve a suitable keyboard mnemonic.";
     GBI_identifier = BQ_OPTION_SHUFFLE;
 }
 
@@ -522,8 +532,8 @@ DESCRIPTION:
 
 @object GenTriggerClass SaveTrigger =
 {
-    // GI_visMoniker = 'O',"Optionen speichern";
     GI_visMoniker = 'O',"Save Options";
+    @localize "Save the selected playback options. Preserve a suitable keyboard mnemonic.";
     GI_states = @default;
     GI_attrs = @default | GA_KBD_SEARCH_PATH;
     GTI_destination = process;

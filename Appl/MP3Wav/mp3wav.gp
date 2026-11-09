@@ -13,3 +13,4 @@ library     ansic
 library     bsnwav
 resource    AppResource ui-object
 resource    Interface ui-object
+resource    ConverterStrings lmem read-only shared

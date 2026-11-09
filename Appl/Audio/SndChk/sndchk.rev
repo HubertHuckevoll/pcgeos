@@ -119,7 +119,7 @@ R 0.3.1.4 <dirk> <23:15:46 Apr 10, 2000> <>
 R 0.3.1.3 <dirk> <22:51:19 Apr 10, 2000> <>
 R 0.3.1.2 <dirk> <22:51:08 Apr 10, 2000> <>
 R 0.3.1.1 <dirk> <22:48:25 Apr 10, 2000> <>
-R 0.3.1.0 <dirk> <22:24:37 Apr 10, 2000> <Create funktioniert>
+R 0.3.1.0 <dirk> <22:24:37 Apr 10, 2000> <Create works>
 R 0.3.0.44 <dirk> <22:16:17 Apr 10, 2000> <>
 R 0.3.0.43 <dirk> <21:44:06 Apr 10, 2000> <>
 R 0.3.0.42 <dirk> <21:43:35 Apr 10, 2000> <>
@@ -164,13 +164,13 @@ R 0.3.0.4 <Dirk Lausecker> <16:49:24 Apr 10, 2000> <>
 R 0.3.0.3 <Dirk Lausecker> <16:48:27 Apr 10, 2000> <>
 R 0.3.0.2 <Dirk Lausecker> <16:48:14 Apr 10, 2000> <>
 R 0.3.0.1 <Dirk Lausecker> <16:47:40 Apr 10, 2000> <>
-R 0.3.0.0 <Dirk Lausecker> <16:19:52 Apr 10, 2000> <WAV-Ausgabe>
+R 0.3.0.0 <Dirk Lausecker> <16:19:52 Apr 10, 2000> <WAV output>
 R 0.2.4.5 <Dirk Lausecker> <16:17:47 Apr 10, 2000> <>
 R 0.2.4.4 <Dirk Lausecker> <16:13:23 Apr 10, 2000> <>
 R 0.2.4.3 <Dirk Lausecker> <16:13:06 Apr 10, 2000> <>
 R 0.2.4.2 <Dirk Lausecker> <16:12:53 Apr 10, 2000> <>
 R 0.2.4.1 <Dirk Lausecker> <16:12:43 Apr 10, 2000> <>
-R 0.2.4.0 <Dirk Lausecker> <15:48:11 Apr 10, 2000> <SB16 Textfehler korrigiert>
+R 0.2.4.0 <Dirk Lausecker> <15:48:11 Apr 10, 2000> <Corrected SB16 text error>
 R 0.2.3.10 <Dirk Lausecker> <15:47:58 Apr 10, 2000> <>
 R 0.2.3.9 <dirk> <1:45:17 Apr 10, 2000> <>
 R 0.2.3.8 <dirk> <1:44:56 Apr 10, 2000> <>
@@ -194,7 +194,7 @@ R 0.2.2.4 <dirk> <14:18:20 Apr 9, 2000> <>
 R 0.2.2.3 <dirk> <14:17:40 Apr 9, 2000> <>
 R 0.2.2.2 <dirk> <14:16:59 Apr 9, 2000> <>
 R 0.2.2.1 <dirk> <14:16:29 Apr 9, 2000> <>
-R 0.2.2.0 <dirk> <12:39:55 Apr 9, 2000> <DSP_Wait berarbeitet>
+R 0.2.2.0 <dirk> <12:39:55 Apr 9, 2000> <Reworked DSP_Wait>
 R 0.2.1.10 <dirk> <12:39:34 Apr 9, 2000> <>
 R 0.2.1.9 <dirk> <2:34:48 Apr 9, 2000> <>
 R 0.2.1.8 <dirk> <2:34:27 Apr 9, 2000> <>
@@ -205,7 +205,7 @@ R 0.2.1.4 <dirk> <14:55:26 Apr 8, 2000> <>
 R 0.2.1.3 <dirk> <14:55:05 Apr 8, 2000> <>
 R 0.2.1.2 <dirk> <3:19:10 Apr 7, 2000> <>
 R 0.2.1.1 <dirk> <3:17:23 Apr 7, 2000> <>
-R 0.2.1.0 <dirk> <3:14:02 Apr 7, 2000> <Suchbereich eingeengt 220..280>
+R 0.2.1.0 <dirk> <3:14:02 Apr 7, 2000> <Narrowed search range to 220..280>
 R 0.2.0.14 <dirk> <3:13:50 Apr 7, 2000> <>
 R 0.2.0.13 <dirk> <23:42:16 Apr 6, 2000> <>
 R 0.2.0.12 <dirk> <23:41:55 Apr 6, 2000> <>
@@ -220,14 +220,14 @@ R 0.2.0.4 <dirk> <23:37:20 Apr 4, 2000> <>
 R 0.2.0.3 <Dirk Lausecker> <17:45:31 Apr 4, 2000> <>
 R 0.2.0.2 <Dirk Lausecker> <17:43:56 Apr 4, 2000> <>
 R 0.2.0.1 <Dirk Lausecker> <17:42:15 Apr 4, 2000> <>
-R 0.2.0.0 <Dirk Lausecker> <17:41:12 Apr 4, 2000> <Analyse OK>
+R 0.2.0.0 <Dirk Lausecker> <17:41:12 Apr 4, 2000> <Analysis OK>
 R 0.1.7.6 <Dirk Lausecker> <17:37:24 Apr 4, 2000> <>
 R 0.1.7.5 <Dirk Lausecker> <17:26:04 Apr 4, 2000> <>
 R 0.1.7.4 <Dirk Lausecker> <17:25:02 Apr 4, 2000> <>
 R 0.1.7.3 <Dirk Lausecker> <17:14:40 Apr 4, 2000> <>
 R 0.1.7.2 <Dirk Lausecker> <17:13:43 Apr 4, 2000> <>
 R 0.1.7.1 <Dirk Lausecker> <16:52:06 Apr 4, 2000> <>
-R 0.1.7.0 <Dirk Lausecker> <16:51:00 Apr 4, 2000> <WAV-Gruppe not usable / SK-Suche beschleunigt>
+R 0.1.7.0 <Dirk Lausecker> <16:51:00 Apr 4, 2000> <WAV group not usable / faster sound card search>
 R 0.1.6.19 <Dirk Lausecker> <16:45:02 Apr 4, 2000> <>
 R 0.1.6.18 <Dirk Lausecker> <16:44:01 Apr 4, 2000> <>
 R 0.1.6.17 <Dirk Lausecker> <16:26:29 Apr 4, 2000> <>
@@ -247,7 +247,7 @@ R 0.1.6.4 <Dirk Lausecker> <17:21:53 Apr 3, 2000> <>
 R 0.1.6.3 <Dirk Lausecker> <17:21:23 Apr 3, 2000> <>
 R 0.1.6.2 <Dirk Lausecker> <16:53:42 Apr 3, 2000> <>
 R 0.1.6.1 <Dirk Lausecker> <16:53:19 Apr 3, 2000> <>
-R 0.1.6.0 <Dirk Lausecker> <16:35:47 Apr 3, 2000> <Analysefunktionen weiter entwickelt>
+R 0.1.6.0 <Dirk Lausecker> <16:35:47 Apr 3, 2000> <Further developed analysis functions>
 R 0.1.5.48 <Dirk Lausecker> <16:35:22 Apr 3, 2000> <>
 R 0.1.5.47 <Dirk> <21:37:22 Mar 29, 2000> <>
 R 0.1.5.46 <Dirk> <21:37:09 Mar 29, 2000> <>
@@ -330,7 +330,7 @@ R 0.1.4.4 <dirk> <16:18:39 Mar 21, 2000> <>
 R 0.1.4.3 <dirk> <16:17:23 Mar 21, 2000> <>
 R 0.1.4.2 <dirk> <16:15:40 Mar 21, 2000> <>
 R 0.1.4.1 <dirk> <16:13:45 Mar 21, 2000> <>
-R 0.1.4.0 <dirk> <0:40:44 Mar 21, 2000> <Analysegroup>
+R 0.1.4.0 <dirk> <0:40:44 Mar 21, 2000> <Analysis group>
 R 0.1.3.9 <dirk> <0:40:02 Mar 21, 2000> <>
 R 0.1.3.8 <dirk> <0:38:34 Mar 21, 2000> <>
 R 0.1.3.7 <dirk> <0:35:21 Mar 21, 2000> <>
@@ -340,7 +340,7 @@ R 0.1.3.4 <dirk> <0:33:28 Mar 21, 2000> <>
 R 0.1.3.3 <dirk> <0:32:17 Mar 21, 2000> <>
 R 0.1.3.2 <dirk> <0:24:44 Mar 21, 2000> <>
 R 0.1.3.1 <dirk> <0:21:44 Mar 21, 2000> <>
-R 0.1.3.0 <dirk> <23:55:01 Mar 20, 2000> <Standardt”ne>
+R 0.1.3.0 <dirk> <23:55:01 Mar 20, 2000> <Standard sounds>
 R 0.1.2.11 <dirk> <23:54:35 Mar 20, 2000> <>
 R 0.1.2.10 <Dirk> <9:30:10 Mar 17, 2000> <>
 R 0.1.2.9 <Dirk> <9:28:30 Mar 17, 2000> <>
@@ -356,7 +356,7 @@ R 0.1.2.0 <Dirk> <17:11:45 Mar 15, 2000> <Icon OK / UI>
 R 0.1.1.3 <Dirk> <16:39:42 Mar 15, 2000> <>
 R 0.1.1.2 <Dirk> <16:27:05 Mar 15, 2000> <>
 R 0.1.1.1 <Dirk> <16:26:42 Mar 15, 2000> <>
-R 0.1.1.0 <Dirk> <10:05:43 Mar 14, 2000> <Ableitung von BSQP OK>
+R 0.1.1.0 <Dirk> <10:05:43 Mar 14, 2000> <Derived from BSQP OK>
 R 0.1.0.13 <Dirk> <10:05:07 Mar 14, 2000> <>
 R 0.1.0.12 <Dirk> <10:04:53 Mar 14, 2000> <>
 R 0.1.0.11 <Dirk> <10:03:38 Mar 14, 2000> <>
@@ -378,7 +378,7 @@ R 0.0.1.4 <dirk> <17:59:06 Mar 12, 2000> <>
 R 0.0.1.3 <dirk> <17:48:46 Mar 12, 2000> <>
 R 0.0.1.2 <dirk> <17:47:46 Mar 12, 2000> <>
 R 0.0.1.1 <dirk> <17:47:18 Mar 12, 2000> <>
-R 0.0.1.0 <dirk> <17:21:50 Mar 12, 2000> <Icon erzeugt>
+R 0.0.1.0 <dirk> <17:21:50 Mar 12, 2000> <Created icon>
 R 0.0.0.10 <dirk> <17:16:21 Mar 12, 2000> <>
 R 0.0.0.9 <dirk> <17:14:14 Mar 12, 2000> <>
 R 0.0.0.8 <dirk> <17:14:08 Mar 12, 2000> <>
@@ -388,6 +388,6 @@ R 0.0.0.5 <dirk> <16:06:54 Mar 12, 2000> <>
 R 0.0.0.4 <dirk> <16:04:45 Mar 12, 2000> <>
 R 0.0.0.3 <dirk> <16:02:58 Mar 12, 2000> <>
 R 0.0.0.2 <dirk> <16:02:15 Mar 12, 2000> <>
-R 0.0.0.1 <dirk> <23:50:40 Dec 26, 1999> <Ableitung>
+R 0.0.0.1 <dirk> <23:50:40 Dec 26, 1999> <Derived version>
 P 1.0 <dirk> <23:49:45 Dec 26, 1999> <>
 R 0.0.0.0 <dirk> <23:49:45 Dec 26, 1999> <>

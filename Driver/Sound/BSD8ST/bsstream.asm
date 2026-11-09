@@ -4,17 +4,17 @@ COMMENT @/********************************************************
 
 PROJECT:	BestSound
 
-DATEI:		bsstream.asm
+FILE:		bsstream.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
         DL	17.08.2000	Translation for ND
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	SBDDACReadNotification	Notificationroutine
@@ -58,8 +58,8 @@ SBDDACReadNotification	proc	far
 	mov	ax, segment dgroup		; ax <- dgroup of driver
 	mov	ds, ax				; ds <- dgroup of driver
 
-	tst	cx				; cx=0 ThresholdÑnderung ?
-	jz	sendAck				; ja
+	tst	cx				; cx=0: threshold change?
+	jz	sendAck				; Yes
 
 streamsz:
 	mov	ds:[dataOnStream], cx		; store number of bytes
@@ -152,7 +152,7 @@ BSDischargeStream proc far
 
         mov	ax,ds:[dataOnStream]	; Data in Stream
 	cmp     cx, ax   		; enough ?
-	jnc	genug			; yes
+	jnc	enoughSpace			; yes
         mov	cx,ax			; no
 
 ;---------------------------------
@@ -160,7 +160,7 @@ BSDischargeStream proc far
 ; and wait until all data was
 ; accepted
 ;---------------------------------
-genug:
+enoughSpace:
         mov	bx,60			; max. 60 try's
         push	es
         mov	ax,ds:[streamSegment]	; Offset Stream
@@ -170,16 +170,16 @@ genug:
 
 	mov	dx,cx			; dx = size
         mov	ax,cx
-nochmal:
-        tst	ds:[bufferFree]		; Puffer empty ?
-        jz	warten			; yes , wait
+retryWrite:
+        tst	ds:[bufferFree]		; Is the buffer empty?
+        jz	waitForData			; yes , wait
 
         mov	cx,ax
         call	BSSecondWrite		; Dat --> Secondbuffer
 	call	BSECTest
         sub	ax,cx			; all readed ?
-        jz	fertig			; yes
-warten:
+        jz	finished			; yes
+waitForData:
         push	ax
         mov	ax,1
 	call	TimerSleep
@@ -191,22 +191,22 @@ ifdef	BS_NO_INT
 	call	TimerSleep
 endif
 	dec	bx
-        jnz 	nochmal
+        jnz 	retryWrite
 
 ;---------------------------------
 ; Timeout
 ;---------------------------------
         tst	ds:[dacStatus]		; DSP idle ?
 
-        jnz	fertig			; no, ignore Problem
+        jnz	finished			; no, ignore Problem
 
 	call	BSAutoInitStart		; Start new Transfer
-        jmp	short genug
+        jmp	short enoughSpace
 
 ;--------------------------------
 ; Copying over
 ;--------------------------------
-fertig:
+finished:
         mov	cx,dx			; number of bytes
         mov	bx,ds:[streamSegment]
 
@@ -222,8 +222,8 @@ fertig:
         ;  Update semaphores for reader and writer
         ;
 
-        sub     es:[SD_reader.SSD_sem].Sem_value, cx	; Bytes die gelesen werden mÅssen
-        add     es:[SD_writer.SSD_sem].Sem_value, cx	; freie Bytes im Stream
+        sub     es:[SD_reader.SSD_sem].Sem_value, cx	; Bytes that must be read
+        add     es:[SD_writer.SSD_sem].Sem_value, cx	; Free bytes in the stream
 
 	add     cx, es:[SD_reader].SSD_ptr
 	cmp     cx, es:[SD_max]

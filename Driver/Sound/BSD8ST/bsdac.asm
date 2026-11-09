@@ -4,17 +4,17 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound
 
-DATEI:		bsdac.asm
+FILE:		bsdac.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
         DL	03.09.98	DSP
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	SBDDACAttachToStreamNear
@@ -24,7 +24,7 @@ ROUTINEN:
 	SBDDACResetADPCM
 	SBDDACFlushDACNear
 
-Beschreibung:
+Description:
 	Routines for playing WAV's
 
 *****************************************************************@
@@ -52,12 +52,11 @@ idata           segment
 	writeStatusPort         word    dspDataWrite    ; + basePortAddress
 	writeDataPort           word    dspDataWrite    ; + basePortAddress
 
-        isrunning		byte	00h	; 1 = Ausgabe aktiv
-        					; (Dient zur Vermeidung
-						;  unnîtiger Initialisierung
-						;  da SBDDACSetSample durch
-						;  Soundlibrary immer wieder
-						;  aufgerufen wird !)
+        isrunning		byte	00h	; 1 = output active
+        					; (Avoid unnecessary
+						;  initialization when
+						;  SBDDACSetSample is called repeatedly
+						;  by the sound library.)
                                                 ; . . . . . . . .
                                                 ;
                                                 ; 1 = Output active
@@ -104,7 +103,7 @@ PSEUDO CODE/STRATEGY:
 
 		So:
 
-		divisor = 65,356 - (256,000,000 / RATE * Kanalzahl)
+		divisor = 65,356 - (256,000,000 / RATE * channel count)
 
 
 REVISION HISTORY:
@@ -175,7 +174,7 @@ SBDDACSetSample proc    near
 	call	BSPrepareMode
 
 ;---------------------------------
-;	runningflag setzen
+;	Set the running flag
 ;---------------------------------
         mov	ds:[isrunning],1	; set running flag
 
@@ -184,7 +183,7 @@ done:
 	mov     cx, STANDARD_DAC_STREAM_SIZE
 
 ;--------------------
-;	OK-Ende
+;	Successful exit
 ;--------------------
 	clc                             ; everything ok
 	jmp     short exit
@@ -312,7 +311,7 @@ SBDDACAttachToStream    proc    far
 ;	WARNING	BS_ATTACH_STREAM
 
 ;-----------------------
-;	DAC-Nr Test
+;	Check the DAC number
 ;-----------------------
 	cmp     cx, ds:[numOfDACs]
 	jae     done
@@ -344,7 +343,7 @@ waitfordac:
 streamset:
 	mov	ds:[streamSegment],bx	; Pointer to Stream
 	mov	ds:[streamSize],dx	; Streamlen
-	clr	ds:[endeFlag]		; Endflag reset
+	clr	ds:[playEndFlag]		; Endflag reset
 
 ;-----------------------------
 ; Init. Stream
@@ -446,7 +445,7 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
         DL	09.08.98	Template
-	DL	07.09.98	INT_OFF/ON auf Wunsch von EC auskommentiert
+	DL	07.09.98	INT_OFF/ON disabled at EC's request
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 
@@ -467,7 +466,7 @@ SBDDACDettachFromStream proc    far
 	tst	ds:[streamState]	; attached ?
         jnz	waitfordsp		; yes
 
-        clr	ds:[endeFlag]
+        clr	ds:[playEndFlag]
         jmp	short done		; no, End
 
 ;---------------------------
@@ -521,7 +520,7 @@ statclear:
 
         clr	al			; clear endFlag
 setflag:
-	mov	ds:[endeFlag],al
+	mov	ds:[playEndFlag],al
 
 ;---------------------
 ;	End
@@ -648,18 +647,18 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	TS      10/21/92	Initial version
-        DL	13.10.98	Mixertest: Geoworks hatte eine Mixerunter-
-        			nicht vorgesehen. Deshalb musste die Sprung-
-                                tabelle um die Routinen zur Mixersteuerung
-                                erweitert werden. Die Mixerlibrary erkennt
-                                einen Treiber mit Mixerunterstuetzung daran,
-                                dass das DACSampleFormat DACSF_MIXER_TEST
-                                mit einer Samplerate von 2 unterstuetzt wird.
+        DL	13.10.98	Mixer test: GeoWorks did not provide
+        			mixer support. The jump table was extended
+                                with mixer control routines.
+                                The mixer library detects a driver
+                                with mixer support by checking whether
+                                DACSampleFormat DACSF_MIXER_TEST
+                                supports a sample rate of 2.
         DL	24.10.1999	Recordtest:
-        			Ob der Treiber auch Recording unterstÅtzt,
-                                wird durch RÅckmeldung der Samplerate 3
-                                angezeigt.
-        DL	12.03.2000	Samplerate 5 = NewWave-Play wird unterstÅtzt
+        			Recording support is indicated
+                                by returning a sample rate of 3.
+                                indicated by this result.
+        DL	12.03.2000	Sample rate 5 indicates NewWave playback support
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/@
 
@@ -734,10 +733,10 @@ REVISION HISTORY:
         Name    Date            Description
 	----    ----            -----------
 	TS      10/21/92        Initial version
-	DL	13.04.97        formatCommandTable erweitert
-				liefert bei MANUFACTURER_ID_BSW
-				keinen DSP Befehl sondern Zwischencode 80..87H
-				der von --- ausgewertet werden mu·.
+	DL	13.04.97        Extended formatCommandTable
+				For MANUFACTURER_ID_BSW, return a pseudo command
+				(80..87H) instead of a DSP command.
+				The caller must interpret this pseudo command.
         DL	20.12.97	SBLASTER
 
 
@@ -758,7 +757,7 @@ SBDDACGetFormatSetting  proc    near
 	mov     dl, al                          ; dl <- command for DSP
 
 ;---------------------
-;	fertig
+;	finished
 ;---------------------
 	.leave
 	ret
@@ -766,10 +765,10 @@ SBDDACGetFormatSetting  proc    near
 SBDDACGetFormatSetting  endp
 
 	;
-	;  Tabelle mit DSP-Kommandos fÅr das jeweilige
-        ;  Sampleformat. FÅr ManufacturerID = BSW wird
-        ;  nur ein Pseudocode zurÅckgeliefert der von
-        ;  SBDDACDMANextBlock interpretiert wird.
+	;  Table of DSP commands for each
+        ;  sample format. For ManufacturerID = BSW,
+        ;  return a pseudo command which
+        ;  SBDDACDMANextBlock interprets.
         ; . . . . . . . . . . . . . . . . . . . . . . .
         ;
         ;  Table with DSP-commands

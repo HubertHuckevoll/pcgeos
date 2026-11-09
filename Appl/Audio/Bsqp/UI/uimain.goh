@@ -26,7 +26,7 @@ DESCRIPTION:
 
 @ifndef	UI_UIMAIN_GOC
 
-// Objektdekl.
+// Object declarations
 
 @extern	object	TimeDispList;
 @extern	object	OptionsBooleans;

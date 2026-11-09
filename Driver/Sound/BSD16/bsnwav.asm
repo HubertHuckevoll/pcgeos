@@ -2,21 +2,21 @@ COMMENT @********************************************************
 
 	Copyright (C) Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound Treiber
+PROJECT:	BestSound Driver
 
-DATEI:		bsnwav.asm
+FILE:		bsnwav.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	06.10.98	Init
-        DL	20.02.2000	Ableitung BSNWAV.ASM
-	DL	02.03.2000	bsOptions Bit 0 definiert
+        DL	20.02.2000	Derived from BSNWAV.ASM
+	DL	02.03.2000	Defined bsOptions bit 0
 	DL	25.10.2000	Translations for NewDeal
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	BSDNWGetStatus		returns bsStatus and dacStatus
@@ -90,7 +90,7 @@ BSDNWSetPause	proc	far
 	cmp	ch,1			; current mode = PAUSE ?
 	jz	nopause			; yes
 	cmp	cl,1			; new mode = PAUSE ?
-	jnz	nopause			; nein
+	jnz	nopause			; No
 ;
 ; PAUSE
 ;
@@ -162,7 +162,7 @@ BSDNWGetStatus	endp
 BSDNWStartPlay	proc	far
 	uses	ax,bx,dx,di,ds
 	.enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
 	mov	ds,ax
 
 ;-------------------
@@ -183,7 +183,7 @@ BSDNWStartPlay	proc	far
 	SBDDACWriteDSP  cl, 0
 
 ;------------------------
-;  Flags initialisieren
+;  Initialize flags
 ;------------------------
 	mov	ds:[bsStatus],BSNW_PLAY_RUN
 	clr	ds:[bsRecDataHalf]
@@ -373,7 +373,7 @@ if 0
 ;
 ;  IN:	-
 ;
-; OUT:	CY	TRUE = Fehler
+; OUT:	CY	TRUE = error
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -381,7 +381,7 @@ BSDNWStartAI	proc	near
 	uses	ax,bx,dx,di,ds
 	.enter
 
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
 	mov	ds,ax
 	clr	ds:[bsRecDataHalf]
 	clr	ds:[bsRecDataFlag]

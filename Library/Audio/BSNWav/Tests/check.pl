@@ -14,12 +14,12 @@ open my $out, '>', "$tmp/pcm.inc" or die $!;
 $source =~ /(typedef word _pascal BSNPcmReadCall\(.*?;)/s or die 'missing callback type';
 print $out "$1\n";
 # Extract the size policy too, so the boundary check uses the real code.
-for my $name (qw(BSNWReadPCM BSNWDetermineSecondaryBufferLength BSNWLoadCache BSNWFillSilence BSNWKonvertData BSNWLoadData BSNWPlay)) {
+for my $name (qw(BSNWReadPCM BSNWDetermineSecondaryBufferLength BSNWLoadCache BSNWFillSilence BSNWConvertData BSNWLoadData BSNWPlay)) {
     $source =~ /^([^\n;{}]*\b$name\([^;]*?\)\n\{.*?^\})/ms
         or die "missing $name";
     print $out "$1\n";
 }
-$source =~ /^(void _pascal BSNWKonvert16To8\([^;]*?\)\n\{.*?^\})/ms
+$source =~ /^(void _pascal BSNWConvert16To8\([^;]*?\)\n\{.*?^\})/ms
     or die 'missing 16-bit converter';
 print $out "#ifdef __WATCOMC__\n$1\n#endif\n";
 open my $control_in, '<', "$lib/Main/library.goc" or die $!;

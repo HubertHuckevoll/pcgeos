@@ -4,12 +4,12 @@ COMMENT @/********************************************************
 
 PROJECT:	BestSound
 
-DATEI:		bsint.asm
+FILE:		bsint.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
         DL	22.08.2000	Translation for ND

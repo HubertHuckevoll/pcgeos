@@ -18,7 +18,7 @@
 #   Date      Name      Description
 #   --------  --------  -----------
 #   21.06.98  DirkL     Initial Version.
-#   06.10.98	DL	Ableitung von Template
+#   06.10.98	DL	Derived from the template
 #
 ########################################################################
 

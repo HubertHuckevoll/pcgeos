@@ -48,7 +48,7 @@ R 0.14.3.4 <dirk> <18:57:39 Apr 10, 2000> <>
 R 0.14.3.3 <dirk> <18:57:37 Apr 10, 2000> <>
 R 0.14.3.2 <Dirk Lausecker> <15:59:11 Apr 10, 2000> <>
 R 0.14.3.1 <Dirk Lausecker> <15:59:05 Apr 10, 2000> <>
-R 0.14.3.0 <Dirk Lausecker> <15:52:29 Apr 10, 2000> <DSp-Versionsabfrage �berarbeitet>
+R 0.14.3.0 <Dirk Lausecker> <15:52:29 Apr 10, 2000> <Reworked DSP version query>
 R 0.14.2.17 <Dirk Lausecker> <15:46:24 Apr 10, 2000> <>
 R 0.14.2.16 <Dirk Lausecker> <15:46:23 Apr 10, 2000> <>
 R 0.14.2.15 <Dirk Lausecker> <15:46:19 Apr 10, 2000> <>
@@ -66,7 +66,7 @@ R 0.14.2.4 <dirk> <2:32:22 Apr 9, 2000> <>
 R 0.14.2.3 <dirk> <23:52:18 Apr 8, 2000> <>
 R 0.14.2.2 <dirk> <23:52:14 Apr 8, 2000> <>
 R 0.14.2.1 <dirk> <23:52:02 Apr 8, 2000> <>
-R 0.14.2.0 <dirk> <23:47:05 Apr 8, 2000> <DMA wird richtig aus INI ausgelesen>
+R 0.14.2.0 <dirk> <23:47:05 Apr 8, 2000> <Correctly read DMA from INI>
 R 0.14.1.8 <dirk> <14:56:14 Apr 8, 2000> <>
 R 0.14.1.7 <dirk> <14:56:12 Apr 8, 2000> <>
 R 0.14.1.6 <dirk> <14:52:52 Apr 8, 2000> <>
@@ -82,15 +82,15 @@ R 0.14.0.4 <dirk> <23:34:07 Apr 6, 2000> <>
 R 0.14.0.3 <dirk> <23:34:05 Apr 6, 2000> <>
 R 0.14.0.2 <Dirk Lausecker> <17:06:18 Apr 6, 2000> <>
 R 0.14.0.1 <Dirk Lausecker> <17:05:11 Apr 6, 2000> <>
-R 0.14.0.0 <Dirk Lausecker> <16:09:45 Apr 6, 2000> <Recording Optimierung>
-P 3.0 <16:09:45 Apr 6, 2000> <Angleichung ND Rel. 3>
+R 0.14.0.0 <Dirk Lausecker> <16:09:45 Apr 6, 2000> <Recording optimization>
+P 3.0 <16:09:45 Apr 6, 2000> <Adapted for ND release 3>
 R 0.13.1.9 <Dirk Lausecker> <16:09:45 Apr 6, 2000> <>
 R 0.13.1.8 <Dirk Lausecker> <16:09:41 Apr 6, 2000> <>
 R 0.13.1.7 <dirk> <1:23:57 Apr 5, 2000> <>
 R 0.13.1.6 <dirk> <1:23:54 Apr 5, 2000> <>
 R 0.13.1.5 <dirk> <1:22:49 Apr 5, 2000> <>
 R 0.13.1.4 <dirk> <1:22:34 Apr 5, 2000> <>
-R 0.13.1.3 <dirk> <1:07:35 Apr 5, 2000> <TimerSleep nicht immer als Verz�gerung geeignet !>
+R 0.13.1.3 <dirk> <1:07:35 Apr 5, 2000> <TimerSleep is not always suitable for delays>
 R 0.13.1.2 <dirk> <1:05:42 Apr 5, 2000> <>
 R 0.13.1.1 <dirk> <0:57:39 Apr 5, 2000> <>
 R 0.13.1.0 <dirk> <0:56:50 Apr 5, 2000> <Bugfixing Geos 2.X>
@@ -119,15 +119,15 @@ R 0.13.0.4 <dirk> <14:33:11 Mar 19, 2000> <>
 R 0.13.0.3 <dirk> <14:11:16 Mar 19, 2000> <>
 R 0.13.0.2 <dirk> <14:11:04 Mar 19, 2000> <>
 R 0.13.0.1 <dirk> <14:06:08 Mar 19, 2000> <>
-R 0.13.0.0 <dirk> <13:56:17 Mar 19, 2000> <Adresse,IRQ,DMA wird aus INI gelesen>
+R 0.13.0.0 <dirk> <13:56:17 Mar 19, 2000> <Read address, IRQ and DMA from INI>
 R 0.12.3.4 <dirk> <13:55:05 Mar 19, 2000> <>
 R 0.12.3.3 <dirk> <11:15:17 Mar 19, 2000> <>
 R 0.12.3.2 <dirk> <11:15:14 Mar 19, 2000> <>
 R 0.12.3.1 <dirk> <11:11:46 Mar 19, 2000> <>
-R 0.12.3.0 <dirk> <21:47:07 Mar 17, 2000> <Aufr�umaktion alte Routinen>
+R 0.12.3.0 <dirk> <21:47:07 Mar 17, 2000> <Cleaned up old routines>
 R 0.12.2.2 <dirk> <21:47:04 Mar 17, 2000> <>
 R 0.12.2.1 <dirk> <21:42:00 Mar 17, 2000> <>
-R 0.12.2.0 <dirk> <21:25:23 Mar 17, 2000> <Stereokanaltausch realisiert BSNWAV-Lib>
+R 0.12.2.0 <dirk> <21:25:23 Mar 17, 2000> <Implemented stereo channel swap in BSNWAV library>
 R 0.12.1.5 <dirk> <21:14:45 Mar 17, 2000> <>
 R 0.12.1.4 <dirk> <20:53:47 Mar 17, 2000> <>
 R 0.12.1.3 <dirk> <20:33:51 Mar 17, 2000> <>
@@ -147,7 +147,7 @@ R 0.12.0.4 <dirk> <20:35:30 Mar 16, 2000> <>
 R 0.12.0.3 <dirk> <20:27:41 Mar 16, 2000> <>
 R 0.12.0.2 <dirk> <20:00:01 Mar 16, 2000> <>
 R 0.12.0.1 <dirk> <19:28:08 Mar 16, 2000> <>
-R 0.12.0.0 <dirk> <19:27:21 Mar 16, 2000> <SetSingle entfernt>
+R 0.12.0.0 <dirk> <19:27:21 Mar 16, 2000> <Removed SetSingle>
 R 0.11.1.20 <dirk> <19:26:39 Mar 16, 2000> <>
 R 0.11.1.19 <dirk> <19:26:13 Mar 16, 2000> <>
 R 0.11.1.18 <dirk> <17:51:01 Mar 16, 2000> <>
@@ -172,7 +172,7 @@ R 0.11.1.1 <dirk> <23:17:26 Mar 13, 2000> <>
 R 0.11.1.0 <dirk> <21:57:12 Mar 13, 2000> <Stereo Recording OK>
 R 0.11.0.2 <dirk> <21:25:07 Mar 13, 2000> <>
 R 0.11.0.1 <dirk> <16:41:56 Mar 13, 2000> <>
-R 0.11.0.0 <dirk> <15:49:10 Mar 13, 2000> <Ableitung SB-Pro>
+R 0.11.0.0 <dirk> <15:49:10 Mar 13, 2000> <Derived SB-Pro>
 
 R 0.10.0.9 <dirk> <15:49:00 Mar 13, 2000> <>
 R 0.10.0.8 <dirk> <1:53:46 Mar 13, 2000> <>
@@ -208,7 +208,7 @@ R 0.9.10.4 <dirk> <1:32:40 Mar 10, 2000> <>
 R 0.9.10.3 <dirk> <0:58:23 Mar 10, 2000> <>
 R 0.9.10.2 <dirk> <0:53:45 Mar 10, 2000> <>
 R 0.9.10.1 <dirk> <0:44:06 Mar 10, 2000> <>
-R 0.9.10.0 <dirk> <0:33:12 Mar 10, 2000> <Singlecycle 2. Variante>
+R 0.9.10.0 <dirk> <0:33:12 Mar 10, 2000> <Second single-cycle variant>
 R 0.9.9.13 <dirk> <0:07:45 Mar 10, 2000> <>
 R 0.9.9.12 <dirk> <0:07:43 Mar 10, 2000> <>
 R 0.9.9.11 <dirk> <0:05:40 Mar 10, 2000> <>
@@ -250,7 +250,7 @@ R 0.9.8.4 <dirk> <22:07:21 Mar 3, 2000> <>
 R 0.9.8.3 <dirk> <22:06:31 Mar 3, 2000> <>
 R 0.9.8.2 <dirk> <22:06:27 Mar 3, 2000> <>
 R 0.9.8.1 <Dirk Lausecker> <16:59:08 Mar 3, 2000> <>
-R 0.9.8.0 <Dirk Lausecker> <16:50:47 Mar 3, 2000> <TimerSleep nach EXIT_AI optimiert>
+R 0.9.8.0 <Dirk Lausecker> <16:50:47 Mar 3, 2000> <Optimized TimerSleep after EXIT_AI>
 R 0.9.7.6 <Dirk Lausecker> <16:49:48 Mar 3, 2000> <>
 R 0.9.7.5 <Dirk Lausecker> <16:49:40 Mar 3, 2000> <>
 R 0.9.7.4 <Dirk Lausecker> <16:26:25 Mar 3, 2000> <>
@@ -267,12 +267,12 @@ R 0.9.6.4 <Dirk Lausecker> <16:03:10 Mar 2, 2000> <>
 R 0.9.6.3 <Dirk Lausecker> <15:59:56 Mar 2, 2000> <>
 R 0.9.6.2 <Dirk Lausecker> <15:48:31 Mar 2, 2000> <>
 R 0.9.6.1 <Dirk Lausecker> <15:46:29 Mar 2, 2000> <>
-R 0.9.6.0 <Dirk Lausecker> <15:20:54 Mar 2, 2000> <Speakerunterst�tzung entfernt>
-R 0.9.5.0 <Dirk Lausecker> <15:19:34 Mar 2, 2000> <Status BSREC_STATE_GET_RMS f�r RMS-Messung>
+R 0.9.6.0 <Dirk Lausecker> <15:20:54 Mar 2, 2000> <Removed speaker support>
+R 0.9.5.0 <Dirk Lausecker> <15:19:34 Mar 2, 2000> <BSREC_STATE_GET_RMS state for RMS measurement>
 R 0.9.4.3 <Dirk Lausecker> <15:18:50 Mar 2, 2000> <>
 R 0.9.4.2 <Dirk Lausecker> <14:38:50 Mar 2, 2000> <>
 R 0.9.4.1 <Dirk Lausecker> <14:02:46 Mar 2, 2000> <>
-R 0.9.4.0 <Dirk Lausecker> <10:19:07 Mar 2, 2000> <Recording: zeiger auf aktuelle H�lfte wird init.>
+R 0.9.4.0 <Dirk Lausecker> <10:19:07 Mar 2, 2000> <Recording: initialize pointer to the current half>
 R 0.9.3.11 <Dirk Lausecker> <15:23:27 Mar 1, 2000> <>
 R 0.9.3.10 <Dirk Lausecker> <15:23:11 Mar 1, 2000> <>
 R 0.9.3.9 <Dirk Lausecker> <15:06:52 Mar 1, 2000> <>
@@ -284,7 +284,7 @@ R 0.9.3.4 <dirk> <18:47:33 Feb 28, 2000> <>
 R 0.9.3.3 <dirk> <18:47:32 Feb 28, 2000> <>
 R 0.9.3.2 <Dirk Lausecker> <17:44:56 Feb 28, 2000> <>
 R 0.9.3.1 <Dirk Lausecker> <17:21:29 Feb 28, 2000> <>
-R 0.9.3.0 <Dirk Lausecker> <17:20:27 Feb 28, 2000> <Warnings (Lock,Unlock) entfernt / Ursache f�r St�rungen !>
+R 0.9.3.0 <Dirk Lausecker> <17:20:27 Feb 28, 2000> <Removed Lock/Unlock warnings, which caused interference>
 R 0.9.2.15 <Dirk Lausecker> <16:15:03 Feb 28, 2000> <>
 R 0.9.2.14 <Dirk Lausecker> <16:14:59 Feb 28, 2000> <>
 R 0.9.2.13 <dirk> <2:26:25 Feb 28, 2000> <>
@@ -300,7 +300,7 @@ R 0.9.2.4 <dirk> <11:58:14 Feb 26, 2000> <>
 R 0.9.2.3 <dirk> <11:58:00 Feb 26, 2000> <>
 R 0.9.2.2 <dirk> <11:54:44 Feb 26, 2000> <>
 R 0.9.2.1 <dirk> <11:44:02 Feb 26, 2000> <>
-R 0.9.2.0 <dirk> <11:38:11 Feb 26, 2000> <Extra ISR f�r NewWave-Play>
+R 0.9.2.0 <dirk> <11:38:11 Feb 26, 2000> <Separate ISR for NewWave playback>
 R 0.9.1.7 <dirk> <11:37:47 Feb 26, 2000> <>
 R 0.9.1.6 <dirk> <11:37:23 Feb 26, 2000> <>
 R 0.9.1.5 <dirk> <19:05:35 Feb 25, 2000> <>
@@ -315,7 +315,7 @@ R 0.9.0.12 <dirk> <22:56:35 Feb 23, 2000> <>
 R 0.9.0.11 <dirk> <22:47:43 Feb 21, 2000> <>
 R 0.9.0.10 <Dirk Lausecker> <15:55:28 Feb 21, 2000> <>
 R 0.9.0.9 <Dirk Lausecker> <11:03:27 Feb 21, 2000> <>
-R 0.9.0.8 <Dirk Lausecker> <11:00:48 Feb 21, 2000> <BSDNWGetStatus implementiert>
+R 0.9.0.8 <Dirk Lausecker> <11:00:48 Feb 21, 2000> <Implemented BSDNWGetStatus>
 R 0.9.0.7 <Dirk Lausecker> <10:54:30 Feb 21, 2000> <>
 R 0.9.0.6 <Dirk Lausecker> <10:53:59 Feb 21, 2000> <>
 R 0.9.0.5 <Dirk Lausecker> <10:53:27 Feb 21, 2000> <>
@@ -323,7 +323,7 @@ R 0.9.0.4 <Dirk Lausecker> <10:51:25 Feb 21, 2000> <>
 R 0.9.0.3 <dirk> <1:12:35 Feb 21, 2000> <>
 R 0.9.0.2 <dirk> <1:08:29 Feb 21, 2000> <>
 R 0.9.0.1 <dirk> <1:05:32 Feb 21, 2000> <>
-R 0.9.0.0 <dirk> <1:04:36 Feb 21, 2000> <Modul NewWave / Neudefinition Statusvariable>
+R 0.9.0.0 <dirk> <1:04:36 Feb 21, 2000> <NewWave module / redefined status variable>
 R 0.8.8.5 <dirk> <1:04:18 Feb 21, 2000> <>
 R 0.8.8.4 <dirk> <0:06:37 Feb 21, 2000> <>
 R 0.8.8.3 <dirk> <0:03:48 Feb 21, 2000> <>
@@ -340,7 +340,7 @@ R 0.8.7.4 <dirk> <0:17:21 Dec 27, 1999> <>
 R 0.8.7.3 <dirk> <1:52:52 Dec 23, 1999> <>
 R 0.8.7.2 <dirk> <1:04:44 Dec 23, 1999> <>
 R 0.8.7.1 <dirk> <1:04:36 Dec 23, 1999> <>
-R 0.8.7.0 <dirk> <1:00:27 Dec 23, 1999> <Ableitung NewWAV bsd8m3>
+R 0.8.7.0 <dirk> <1:00:27 Dec 23, 1999> <Derived NewWAV bsd8m3>
 R 0.8.6.27 <dirk> <10:29:03 Oct 31, 1999> <>
 R 0.8.6.26 <dirk> <21:43:08 Oct 30, 1999> <>
 R 0.8.6.25 <dirk> <21:42:57 Oct 30, 1999> <>
@@ -368,10 +368,10 @@ R 0.8.6.4 <dirk> <1:43:59 Oct 26, 1999> <>
 R 0.8.6.3 <dirk> <1:36:30 Oct 26, 1999> <>
 R 0.8.6.2 <dirk> <1:35:54 Oct 26, 1999> <>
 R 0.8.6.1 <dirk> <1:24:26 Oct 26, 1999> <>
-R 0.8.6.0 <dirk> <1:23:28 Oct 26, 1999> <Puffer�berlauferkennung bei Record>
+R 0.8.6.0 <dirk> <1:23:28 Oct 26, 1999> <Detect recording buffer overruns>
 R 0.8.5.2 <dirk> <23:49:05 Oct 25, 1999> <>
 R 0.8.5.1 <dirk> <23:33:54 Oct 25, 1999> <>
-R 0.8.5.0 <dirk> <23:16:38 Oct 25, 1999> <Warnings Attach/Dettach-Stream entfernt>
+R 0.8.5.0 <dirk> <23:16:38 Oct 25, 1999> <Removed Attach/Detach stream warnings>
 R 0.8.4.9 <dirk> <9:03:12 Oct 25, 1999> <>
 R 0.8.4.8 <dirk> <9:03:11 Oct 25, 1999> <>
 R 0.8.4.7 <dirk> <2:34:00 Oct 25, 1999> <>
@@ -387,7 +387,7 @@ R 0.8.3.4 <dirk> <1:39:19 Oct 25, 1999> <>
 R 0.8.3.3 <dirk> <1:37:51 Oct 25, 1999> <>
 R 0.8.3.2 <dirk> <23:38:14 Oct 24, 1999> <>
 R 0.8.3.1 <dirk> <23:38:08 Oct 24, 1999> <>
-R 0.8.3.0 <dirk> <18:35:03 Oct 22, 1999> <Featureabfrage mit Samplerate = 3>
+R 0.8.3.0 <dirk> <18:35:03 Oct 22, 1999> <Query features with sample rate = 3>
 R 0.8.2.13 <dirk> <18:35:02 Oct 22, 1999> <>
 R 0.8.2.12 <dirk> <1:26:13 Oct 21, 1999> <>
 R 0.8.2.11 <dirk> <2:30:26 Oct 20, 1999> <>
@@ -401,10 +401,10 @@ R 0.8.2.4 <dirk> <2:42:12 Oct 19, 1999> <>
 R 0.8.2.3 <dirk> <0:03:16 Oct 19, 1999> <>
 R 0.8.2.2 <dirk> <0:02:56 Oct 19, 1999> <>
 R 0.8.2.1 <dirk> <23:55:47 Oct 18, 1999> <>
-R 0.8.2.0 <dirk> <23:52:11 Oct 18, 1999> <Mixer kann w�hrend Play/Record bedient werden>
+R 0.8.2.0 <dirk> <23:52:11 Oct 18, 1999> <Mixer can be used during playback/recording>
 R 0.8.1.2 <dirk> <23:41:17 Oct 18, 1999> <>
 R 0.8.1.1 <dirk> <23:27:22 Oct 18, 1999> <>
-R 0.8.1.0 <dirk> <23:11:57 Oct 18, 1999> <Mixer ber�cksichtigt Recording>
+R 0.8.1.0 <dirk> <23:11:57 Oct 18, 1999> <Mixer accounts for recording>
 R 0.8.0.13 <dirk> <21:47:22 Oct 18, 1999> <>
 R 0.8.0.12 <dirk> <20:40:08 Oct 18, 1999> <>
 R 0.8.0.11 <dirk> <2:31:28 Oct 18, 1999> <>
@@ -427,7 +427,7 @@ R 0.7.4.4 <dirk> <2:50:15 Oct 15, 1999> <>
 R 0.7.4.3 <dirk> <2:40:52 Oct 15, 1999> <>
 R 0.7.4.2 <dirk> <1:54:18 Oct 15, 1999> <>
 R 0.7.4.1 <dirk> <1:40:17 Oct 15, 1999> <>
-R 0.7.4.0 <dirk> <1:00:00 Oct 15, 1999> <AutoInit funktioniert !>
+R 0.7.4.0 <dirk> <1:00:00 Oct 15, 1999> <Auto-init works>
 R 0.7.3.8 <dirk> <0:43:26 Oct 15, 1999> <>
 R 0.7.3.7 <dirk> <0:14:11 Oct 15, 1999> <>
 R 0.7.3.6 <dirk> <20:12:46 Oct 14, 1999> <>
@@ -443,7 +443,7 @@ R 0.7.2.4 <dirk> <1:11:26 Oct 14, 1999> <>
 R 0.7.2.3 <dirk> <1:11:10 Oct 14, 1999> <>
 R 0.7.2.2 <dirk> <23:25:31 Oct 13, 1999> <>
 R 0.7.2.1 <dirk> <1:28:23 Oct 12, 1999> <>
-R 0.7.2.0 <dirk> <1:24:45 Oct 12, 1999> <Ger�st BSDRecStartRecording erstellt>
+R 0.7.2.0 <dirk> <1:24:45 Oct 12, 1999> <Created BSDRecStartRecording skeleton>
 R 0.7.1.4 <dirk> <1:24:30 Oct 12, 1999> <>
 R 0.7.1.3 <dirk> <0:42:30 Oct 12, 1999> <>
 R 0.7.1.2 <dirk> <0:42:13 Oct 12, 1999> <>
@@ -477,7 +477,7 @@ R 0.7.0.4 <dirk> <2:37:24 Oct 8, 1999> <>
 R 0.7.0.3 <dirk> <2:37:16 Oct 8, 1999> <>
 R 0.7.0.2 <dirk> <2:10:32 Oct 8, 1999> <>
 R 0.7.0.1 <dirk> <0:58:59 Oct 8, 1999> <>
-R 0.7.0.0 <dirk> <0:03:55 Oct 8, 1999> <Ableitung f�r Recording Implementierung>
+R 0.7.0.0 <dirk> <0:03:55 Oct 8, 1999> <Derived for recording implementation>
 R 0.6.0.47 <dirk> <0:03:47 Oct 8, 1999> <>
 R 0.6.0.46 <dirk> <0:01:13 Oct 8, 1999> <>
 R 0.6.0.45 <dirk> <0:23:09 Oct 7, 1999> <>
@@ -525,7 +525,7 @@ R 0.6.0.4 <13:02:50 Oct 22, 1998> <>
 R 0.6.0.3 <12:54:54 Oct 22, 1998> <>
 R 0.6.0.2 <12:54:50 Oct 22, 1998> <>
 R 0.6.0.1 <3:08:15 Oct 22, 1998> <>
-R 0.6.0.0 <3:01:13 Oct 22, 1998> <Mixersteuerung wartet bis DAC frei ist>
+R 0.6.0.0 <3:01:13 Oct 22, 1998> <Mixer control waits until the DAC is available>
 R 0.5.4.26 <2:49:27 Oct 22, 1998> <>
 R 0.5.4.25 <2:45:17 Oct 22, 1998> <>
 R 0.5.4.24 <2:41:24 Oct 22, 1998> <>
@@ -541,7 +541,7 @@ R 0.5.4.15 <2:03:06 Oct 22, 1998> <>
 R 0.5.4.14 <2:02:32 Oct 22, 1998> <>
 R 0.5.4.13 <1:35:36 Oct 22, 1998> <>
 R 0.5.4.12 <1:31:41 Oct 22, 1998> <>
-R 0.5.4.11 <23:49:29 Oct 21, 1998> <Versuch Initroutine deaktivieren>
+R 0.5.4.11 <23:49:29 Oct 21, 1998> <Attempt to disable initialization routine>
 R 0.5.4.10 <23:37:08 Oct 21, 1998> <>
 R 0.5.4.9 <23:21:11 Oct 21, 1998> <>
 R 0.5.4.8 <23:17:32 Oct 21, 1998> <>
@@ -552,7 +552,7 @@ R 0.5.4.4 <18:56:46 Oct 21, 1998> <>
 R 0.5.4.3 <16:17:03 Oct 20, 1998> <>
 R 0.5.4.2 <16:15:43 Oct 20, 1998> <>
 R 0.5.4.1 <16:15:40 Oct 20, 1998> <>
-R 0.5.4.0 <22:38:19 Oct 19, 1998> <von BS_TMP abgeleitet>
+R 0.5.4.0 <22:38:19 Oct 19, 1998> <Derived from BS_TMP>
 R 0.5.3.8 <21:35:34 Oct 19, 1998> <>
 R 0.5.3.7 <21:31:12 Oct 19, 1998> <>
 R 0.5.3.6 <21:31:08 Oct 19, 1998> <>
@@ -561,7 +561,7 @@ R 0.5.3.4 <19:56:22 Oct 19, 1998> <>
 R 0.5.3.3 <18:04:49 Oct 19, 1998> <>
 R 0.5.3.2 <16:55:29 Oct 17, 1998> <>
 R 0.5.3.1 <14:00:03 Oct 17, 1998> <>
-R 0.5.3.0 <13:56:55 Oct 17, 1998> <Tabelle bugfixed>
+R 0.5.3.0 <13:56:55 Oct 17, 1998> <Fixed table>
 R 0.5.2.12 <11:54:27 Oct 17, 1998> <>
 R 0.5.2.11 <15:55:42 Oct 16, 1998> <>
 R 0.5.2.10 <15:49:13 Oct 16, 1998> <>
@@ -717,7 +717,7 @@ R 0.5.0.4 <14:30:05 Oct 6, 1998> <>
 R 0.5.0.3 <14:29:53 Oct 6, 1998> <>
 R 0.5.0.2 <14:28:55 Oct 6, 1998> <>
 R 0.5.0.1 <14:28:50 Oct 6, 1998> <>
-R 0.5.0.0 <11:49:12 Sep 29, 1998> <Mixersteuerung>
+R 0.5.0.0 <11:49:12 Sep 29, 1998> <Mixer control>
 R 0.4.3.11 <11:49:08 Sep 29, 1998> <>
 R 0.4.3.10 <21:15:04 Sep 23, 1998> <>
 R 0.4.3.9 <20:45:14 Sep 23, 1998> <>
@@ -729,7 +729,7 @@ R 0.4.3.4 <19:48:15 Sep 23, 1998> <>
 R 0.4.3.3 <19:37:26 Sep 23, 1998> <>
 R 0.4.3.2 <19:06:33 Sep 23, 1998> <>
 R 0.4.3.1 <3:11:47 Sep 23, 1998> <>
-R 0.4.3.0 <3:02:46 Sep 23, 1998> <8 Bit mono 44kHz auf alten DSP 2.00 abspielbar>
+R 0.4.3.0 <3:02:46 Sep 23, 1998> <Old DSP 2.00 can play 8-bit mono at 44 kHz>
 R 0.4.2.21 <2:59:49 Sep 23, 1998> <>
 R 0.4.2.20 <2:56:52 Sep 23, 1998> <>
 R 0.4.2.19 <2:42:27 Sep 23, 1998> <>
@@ -751,7 +751,7 @@ R 0.4.2.4 <1:17:22 Sep 23, 1998> <>
 R 0.4.2.3 <1:11:44 Sep 23, 1998> <>
 R 0.4.2.2 <1:04:59 Sep 23, 1998> <>
 R 0.4.2.1 <1:04:39 Sep 23, 1998> <>
-R 0.4.2.0 <23:31:35 Sep 22, 1998> <DSP Version wird ausgelesen>
+R 0.4.2.0 <23:31:35 Sep 22, 1998> <Read DSP version>
 R 0.4.1.133 <22:59:38 Sep 22, 1998> <>
 R 0.4.1.132 <22:36:57 Sep 22, 1998> <>
 R 0.4.1.131 <22:35:59 Sep 22, 1998> <>
@@ -885,7 +885,7 @@ R 0.4.1.4 <23:53:54 Sep 8, 1998> <>
 R 0.4.1.3 <23:52:45 Sep 8, 1998> <>
 R 0.4.1.2 <23:32:54 Sep 8, 1998> <>
 R 0.4.1.1 <23:31:16 Sep 8, 1998> <>
-R 0.4.1.0 <23:00:28 Sep 8, 1998> <Project notes enth�lt Konzept !>
+R 0.4.1.0 <23:00:28 Sep 8, 1998> <Project notes contain the design>
 R 0.4.0.12 <22:49:14 Sep 8, 1998> <>
 R 0.4.0.11 <18:28:52 Sep 8, 1998> <>
 R 0.4.0.10 <8:31:53 Sep 8, 1998> <>
@@ -898,7 +898,7 @@ R 0.4.0.4 <1:28:54 Sep 8, 1998> <>
 R 0.4.0.3 <1:20:16 Sep 8, 1998> <>
 R 0.4.0.2 <1:01:05 Sep 8, 1998> <>
 R 0.4.0.1 <0:32:35 Sep 8, 1998> <>
-R 0.4.0.0 <23:48:05 Sep 7, 1998> <von Anfang bis Ende sauber / st�rzt aber noch ab>
+R 0.4.0.0 <23:48:05 Sep 7, 1998> <Clean from start to end, but still crashes>
 R 0.3.1.18 <23:44:37 Sep 7, 1998> <>
 R 0.3.1.17 <22:51:14 Sep 7, 1998> <>
 R 0.3.1.16 <22:48:58 Sep 7, 1998> <>
@@ -917,7 +917,7 @@ R 0.3.1.4 <0:51:35 Sep 7, 1998> <>
 R 0.3.1.3 <0:45:29 Sep 7, 1998> <>
 R 0.3.1.2 <0:39:55 Sep 7, 1998> <>
 R 0.3.1.1 <0:13:19 Sep 7, 1998> <>
-R 0.3.1.0 <23:48:10 Sep 6, 1998> <es funktioniert !!!>
+R 0.3.1.0 <23:48:10 Sep 6, 1998> <It works>
 R 0.3.0.90 <23:45:28 Sep 6, 1998> <>
 R 0.3.0.89 <23:25:00 Sep 6, 1998> <>
 R 0.3.0.88 <23:19:24 Sep 6, 1998> <>
@@ -1009,7 +1009,7 @@ R 0.3.0.3 <22:35:59 Sep 3, 1998> <>
 R 0.3.0.2 <22:34:35 Sep 3, 1998> <>
 R 0.3.0.1 <22:34:24 Sep 3, 1998> <>
 R 0.3.0.0 <21:35:42 Sep 3, 1998> <SB Mono>
-R 0.2.1.21 <21:32:27 Sep 3, 1998> <Speakerausgabe �u�erst mangelhaft>
+R 0.2.1.21 <21:32:27 Sep 3, 1998> <Very poor speaker output>
 R 0.2.1.20 <21:23:28 Sep 3, 1998> <>
 R 0.2.1.19 <21:16:40 Sep 3, 1998> <>
 R 0.2.1.18 <21:11:17 Sep 3, 1998> <>
@@ -1030,14 +1030,14 @@ R 0.2.1.4 <0:26:22 Sep 3, 1998> <>
 R 0.2.1.3 <0:20:25 Sep 3, 1998> <>
 R 0.2.1.2 <0:20:15 Sep 3, 1998> <>
 R 0.2.1.1 <0:13:31 Sep 3, 1998> <>
-R 0.2.1.0 <0:03:27 Sep 3, 1998> <Es scheint zu funktionieren !>
+R 0.2.1.0 <0:03:27 Sep 3, 1998> <It seems to work>
 R 0.2.0.6 <23:35:04 Sep 2, 1998> <>
 R 0.2.0.5 <23:33:45 Sep 2, 1998> <>
 R 0.2.0.4 <23:31:46 Sep 2, 1998> <>
 R 0.2.0.3 <23:12:37 Sep 2, 1998> <>
 R 0.2.0.2 <23:03:42 Sep 2, 1998> <>
 R 0.2.0.1 <22:56:17 Sep 2, 1998> <>
-R 0.2.0.0 <21:58:48 Sep 2, 1998> <bedingte Assemblierung BS_NO_INT>
+R 0.2.0.0 <21:58:48 Sep 2, 1998> <Conditional assembly BS_NO_INT>
 R 0.1.4.9 <21:40:06 Sep 2, 1998> <>
 R 0.1.4.8 <21:38:54 Sep 2, 1998> <>
 R 0.1.4.7 <20:31:50 Sep 2, 1998> <>
@@ -1047,7 +1047,7 @@ R 0.1.4.4 <20:29:23 Sep 2, 1998> <>
 R 0.1.4.3 <20:29:21 Sep 2, 1998> <>
 R 0.1.4.2 <20:28:59 Sep 2, 1998> <>
 R 0.1.4.1 <1:19:26 Sep 2, 1998> <>
-R 0.1.4.0 <23:52:04 Sep 1, 1998> <Funktioniert wieder>
+R 0.1.4.0 <23:52:04 Sep 1, 1998> <Works again>
 R 0.1.3.75 <23:30:25 Sep 1, 1998> <>
 R 0.1.3.74 <23:23:34 Sep 1, 1998> <>
 R 0.1.3.73 <23:15:18 Sep 1, 1998> <>
@@ -1060,13 +1060,13 @@ R 0.1.3.67 <22:27:57 Sep 1, 1998> <>
 R 0.1.3.66 <21:53:47 Sep 1, 1998> <>
 R 0.1.3.65 <21:39:56 Sep 1, 1998> <>
 R 0.1.3.64 <21:39:53 Sep 1, 1998> <>
-R 0.1.3.63 <0:39:40 Sep 1, 1998> <Problem: Crash nach Streamwrapping>
+R 0.1.3.63 <0:39:40 Sep 1, 1998> <Problem: crash after stream wrapping>
 R 0.1.3.62 <0:30:16 Sep 1, 1998> <>
 R 0.1.3.61 <0:01:44 Sep 1, 1998> <>
 R 0.1.3.60 <23:48:03 Aug 31, 1998> <>
 R 0.1.3.59 <23:30:40 Aug 31, 1998> <>
 R 0.1.3.58 <23:30:36 Aug 31, 1998> <>
-R 0.1.3.57 <2:42:09 Aug 31, 1998> <Problem:Gegenseite macht nur weiter, wenn Stream leer ist>
+R 0.1.3.57 <2:42:09 Aug 31, 1998> <Problem: other side continues only when the stream is empty>
 R 0.1.3.56 <2:38:41 Aug 31, 1998> <>
 R 0.1.3.55 <2:28:34 Aug 31, 1998> <>
 R 0.1.3.54 <2:05:13 Aug 31, 1998> <>
@@ -1123,7 +1123,7 @@ R 0.1.3.4 <23:52:54 Aug 28, 1998> <>
 R 0.1.3.3 <23:48:23 Aug 28, 1998> <>
 R 0.1.3.2 <23:37:26 Aug 28, 1998> <>
 R 0.1.3.1 <23:37:21 Aug 28, 1998> <>
-R 0.1.3.0 <23:03:15 Aug 28, 1998> <BSDischarge-Bug in Notificationr. entfernt>
+R 0.1.3.0 <23:03:15 Aug 28, 1998> <Fixed BSDischarge bug in notification routine>
 R 0.1.2.13 <22:50:38 Aug 28, 1998> <>
 R 0.1.2.12 <21:50:13 Aug 28, 1998> <>
 R 0.1.2.11 <21:39:05 Aug 28, 1998> <>
@@ -1137,7 +1137,7 @@ R 0.1.2.4 <0:51:40 May 19, 1998> <>
 R 0.1.2.3 <0:40:52 May 19, 1998> <>
 R 0.1.2.2 <0:24:25 May 19, 1998> <>
 R 0.1.2.1 <0:17:18 May 19, 1998> <>
-R 0.1.2.0 <0:09:39 May 19, 1998> <Funktionierendes Ger�st>
+R 0.1.2.0 <0:09:39 May 19, 1998> <Working skeleton>
 R 0.1.1.24 <0:04:42 May 19, 1998> <>
 R 0.1.1.23 <0:03:28 May 19, 1998> <>
 R 0.1.1.22 <23:48:22 May 18, 1998> <>
@@ -1162,7 +1162,7 @@ R 0.1.1.4 <22:50:32 Aug 11, 1998> <>
 R 0.1.1.3 <22:42:18 Aug 11, 1998> <>
 R 0.1.1.2 <22:42:14 Aug 11, 1998> <>
 R 0.1.1.1 <3:24:48 Aug 9, 1998> <>
-R 0.1.1.0 <1:44:37 Aug 9, 1998> <Treiber ausschlanken>
+R 0.1.1.0 <1:44:37 Aug 9, 1998> <Reduce driver size>
 R 0.1.0.15 <1:42:38 Aug 9, 1998> <>
 R 0.1.0.14 <1:38:26 Aug 9, 1998> <>
 R 0.1.0.13 <1:34:02 Aug 9, 1998> <>
@@ -1178,7 +1178,7 @@ R 0.1.0.4 <15:00:05 Aug 8, 1998> <>
 R 0.1.0.3 <14:59:41 Aug 8, 1998> <>
 R 0.1.0.2 <14:58:02 Aug 8, 1998> <>
 R 0.1.0.1 <14:57:49 Aug 8, 1998> <>
-R 0.1.0.0 <0:32:00 May 1, 1998> <Neue Struktur (Secondarybuffer) mit Falk erarbeitet>
+R 0.1.0.0 <0:32:00 May 1, 1998> <Developed new secondary buffer structure with Falk>
 R 0.0.1.33 <0:31:55 May 1, 1998> <>
 R 0.0.1.32 <21:04:32 Jan 26, 1998> <>
 R 0.0.1.31 <21:01:13 Jan 26, 1998> <>
@@ -1254,7 +1254,7 @@ R 0.0.0.17 <16:44:49 Dec 20, 1997> <>
 R 0.0.0.16 <16:44:44 Dec 20, 1997> <>
 R 0.0.0.15 <16:36:52 Dec 20, 1997> <>
 R 0.0.0.14 <16:19:08 Dec 20, 1997> <>
-R 0.0.0.13 <15:46:00 Dec 20, 1997> <Downgrade vom Pro-Treiber>
+R 0.0.0.13 <15:46:00 Dec 20, 1997> <Derived from the Pro driver>
 R 0.0.0.12 <15:43:54 Dec 20, 1997> <>
 R 0.0.0.11 <15:43:17 Dec 20, 1997> <>
 R 0.0.0.10 <15:27:22 Dec 20, 1997> <>

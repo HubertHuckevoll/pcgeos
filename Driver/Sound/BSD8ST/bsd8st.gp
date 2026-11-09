@@ -3,7 +3,7 @@
 #	Copyright (c) 2000 Dirk Lausecker -- All Rights Reserved
 #
 # PROJECT:	BestSound
-# DATEI:	bsd8st.gp
+# FILE:	bsd8st.gp
 #
 # AUTHOR:       Dirk Lausecker
 #

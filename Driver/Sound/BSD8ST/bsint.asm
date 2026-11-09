@@ -4,21 +4,21 @@ COMMENT @/********************************************************
 
 PROJECT:	BestSound
 
-DATEI:		bsint.asm
+FILE:		bsint.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 
 
-Beschreibung:
+Description:
 	Interrupt Service Routine.
 
 *****************************************************************/@
@@ -95,7 +95,7 @@ bumInterrupt            label near
 
 
 ;------------------------------------
-;	auf INT7 testen
+;	Check INT7
 ;------------------------------------
 
 SBDDACEndOfDMATransferInt7      proc    far
@@ -187,7 +187,7 @@ no_rec:
 	cmp	al,BSNW_PLAY_RUN		; NewWave-Play ?
         jnz	no_nw				; no
 new_wave:
-        call	BSNWISR				; ja
+        call	BSNWISR				; Yes
         jmp	short yes_rec
 ;
 ; not NewWave or Recording --> old Play
@@ -198,7 +198,7 @@ no_nw:
 yes_rec:
 
 ;------------------------------------
-; Ende	(allow Context Switching)
+; End	(allow context switching)
 ;------------------------------------
         call    SysExitInterrupt
 
@@ -215,9 +215,9 @@ SafePopf        label   far
         iret
 
 ;---------------------
-; Speicher fuer Stack
+; Memory for the stack
 ;---------------------
-oldSS	word	0			; gespeichertes Stacksegment
+oldSS	word	0			; Saved stack segment
 oldSP	word	0			; Stackpointer
 bsisrSS	word	0
 bsisrSP	word	0
@@ -230,7 +230,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSCreateStack
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       create Stackspace for ISR
+Function:       create Stackspace for ISR
 
 IN:             -
 
@@ -262,7 +262,7 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		BSFreeStack
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Funktion:       release ISR-Stack
+Function:       Release the ISR stack
 
 IN:             -
 

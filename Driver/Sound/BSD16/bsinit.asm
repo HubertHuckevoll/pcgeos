@@ -4,17 +4,17 @@ COMMENT @/********************************************************
 
 PROJECT:	BestSound
 
-DATEI:		bsinit.asm
+FILE:		bsinit.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
         DL	22.08.2000	Translation for ND
 
-ROUTINEN:
+ROUTINES:
 	Name                            Description
 	----                            -----------
 	SoundInitBoardFM                Sets up board for FM synthesis
@@ -111,7 +111,7 @@ initDACs::
 
         call    SBDInitChipDSP          ; set up DSP chip
         jc      initFM
-        call	BSGetDSPVersion		; DSP-Version laden
+        call	BSGetDSPVersion		; Load DSP version
 
 
         ;
@@ -197,7 +197,7 @@ tempStringBuffer local 20 dup (byte)
         mov     dx, offset addressKey
         mov     bp, InitFileReadFlags <IFCC_INTACT,,,13>
         call    InitFileReadString              ; String -> es:di
-        mov	bx,0				; Adressdummy
+        mov	bx,0				; Dummy address
 	jc	read_irq			; error -> End
 
 ;-----------------------
@@ -259,7 +259,7 @@ ReadIniFileSettings     endp
 ;
 ;	BSHexAsciiToHex
 ;
-;	Konvert Hexstring to HexValue
+;	Convert a hexadecimal string to HexValue
 ;
 ; IN:	es:di	String
 ; OUT:	ax	Hexvalue
@@ -415,7 +415,7 @@ REVISION HISTORY:
         Name    Date            Description
         ----    ----            -----------
         TS      10/26/92        Initial version
-        DL	19.10.97	auf far ge„ndert
+        DL	19.10.97	Changed to far
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 SBDInitChipDSP  proc    far
@@ -437,7 +437,7 @@ SBDInitChipDSP  proc    far
 ;	Highspeedmode RESET
 ;
 ;------------------------------
-	tst	ds:[hsFlag]		; DSP in Highspeedmode ?
+	tst	ds:[hsFlag]		; DSP in high-speed mode?
         jnz	resetdsp		; yes
 
         add     ds:[readStatusPort], dx
@@ -929,7 +929,7 @@ REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
 	TS	6/16/94    	Initial version
-	DL	10.12.97	šbernahme aus Falks SB16-Code
+	DL	10.12.97	Taken from Falk's SB16 code
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 dosEnvironName		char	"BLASTER",0

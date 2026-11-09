@@ -51,7 +51,7 @@ resource APPLMONIKERRESOURCE    data object read-only
 export  BSQPApplicationClass
 export  BSQPPrimaryClass
 
-# usernotes "� D.Lausecker\x0dAudio Player is licensed to NewDeal and is subject to its conditions of use."
+# usernotes "\xa9 D.Lausecker\x0dAudio Player is licensed to NewDeal and is subject to its conditions of use."
 
 export BQTrackListClass
 export BQPlayTriggerClass

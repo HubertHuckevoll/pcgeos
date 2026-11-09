@@ -4,24 +4,24 @@ COMMENT @********************************************************
 
 PROJECT:	BestSound NewWave
 
-DATEI:		bsstrate.asm
+FILE:		bsstrate.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
-        DL	22.12.1999	Ableitung fÅr NewWave
+        DL	22.12.1999	Derived for NewWave
         DL	17.08.2000	Translation for ND
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	SoundDriverStrategy	The Strategy for the driver
 
 
-Beschreibung:
+Description:
 
 *****************************************************************@
 

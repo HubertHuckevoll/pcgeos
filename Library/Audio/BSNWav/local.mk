@@ -4,7 +4,7 @@
 #
 # PROJECT:      Best Sound
 # MODULE:       NewWave-Library
-# FILE:         lokal.mk
+# FILE:         local.mk
 #
 # AUTHOR:       Dirk Lausecker
 #
@@ -18,7 +18,7 @@
 #   Date      Name      Description
 #   --------  --------  -----------
 #   06.10.98  DirkL     Initial Version.
-#	2000	  DL		Von Recording Library abgeleitet
+#	2000	  DL		Derived from the recording library
 #
 ########################################################################
 

@@ -16,7 +16,7 @@ static word playCacheLen, cacheFree, cacheFull, cacheOffset, cacheKOffset;
 static word secondKOffset, secondFree, secBufLen, secBufL2, playLen2, secondOffset;
 static word peakLevel, peakLevel2, secondHandle, playCacheHandle;
 static word pcmBlockAlign, statusGlyphOptr2, simFlags, playStatus;
-static byte konvChanRed, konvBitsRed, konvRateRed, playBits;
+static byte channelReduction, bitReduction, rateReduction, playBits;
 static Boolean pcmUnknownLength, playStopFlag;
 static dword bytesToPlay, fullLen, playedBytes, timeOutCounter;
 static byte cache[32], dma[8], played[2048];
@@ -32,7 +32,7 @@ static FILE *playOutputP;
 #ifdef BSN_INTEGRATION_TEST
 static MemHandle dmaH;
 static word failCache, failDMA;
-static word secBufLenSoll = 512, playSampleRate, playMaxRate, testMaxRate = 44100;
+static word secBufRequestedLen = 512, playSampleRate, playMaxRate, testMaxRate = 44100;
 static byte playChannels, stereoToggle, stereoToggleIni, playMaxChannels, playMaxBits;
 static word configuredRate;
 /* Globals consumed by the actual BQ_Audio extracted for integration checks. */
@@ -88,9 +88,9 @@ static word ProcCallFixedOrMovable_pascal(void *contextP, void *destP,
     return readP(contextP, destP, capacity);
 }
 #ifdef __WATCOMC__
-void BSNWKonvert16To8(void *cacheP, void *secondP);
+void BSNWConvert16To8(void *cacheP, void *secondP);
 #else
-static void BSNWKonvert16To8(void *cacheP, void *secondP)
+static void BSNWConvert16To8(void *cacheP, void *secondP)
 {
     (void)cacheP; (void)secondP;
     assert(0); /* This check selects the byte-copy conversion path. */
@@ -207,7 +207,7 @@ static void Reset(BSNPcmSource *sourceP)
     secBufL2 = secBufLen/2;
     secondFree = secBufLen;
     secondKOffset = secondOffset = 0;
-    konvChanRed = konvRateRed = konvBitsRed = 1;
+    channelReduction = rateReduction = bitReduction = 1;
     playLen2 = secBufL2;
     playBits = 8;
     playedBytes = ticks = started = stopped = playedCount = 0;
@@ -252,7 +252,7 @@ int main(void)
             source.pcmBytes = BSN_PCM_LENGTH_UNKNOWN;
             Reset(&source);
             playCacheLen = cacheFree = 30;
-            konvRateRed = 3; playLen2 = secBufL2 * 3;
+            rateReduction = 3; playLen2 = secBufL2 * 3;
             assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
             for (i=0; i<(length+2)/3; i++) assert(played[i] == (byte)(i*3));
         }
@@ -271,7 +271,7 @@ int main(void)
                         Reset(&source);
                         playCacheLen -= playCacheLen % (align * i);
                         cacheFree = playCacheLen;
-                        konvRateRed = (byte)i; playLen2 = secBufL2 * i;
+                        rateReduction = (byte)i; playLen2 = secBufL2 * i;
                         assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
                         assert(input.offset == input.length && playedBytes == input.length);
                         output = 0;
@@ -294,7 +294,7 @@ int main(void)
         source.format.blockAlign = 2;
         source.pcmBytes = unknown ? BSN_PCM_LENGTH_UNKNOWN : 6;
         Reset(&source);
-        konvRateRed = 2; playLen2 = 8;
+        rateReduction = 2; playLen2 = 8;
         secondOffset = secondKOffset = 1; secondFree--;
         dma[0] = 0x80;
         assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
@@ -315,7 +315,7 @@ int main(void)
             for (physical=0; physical<65536UL; physical+=16) {
                 actual = requested;
                 if (physical + actual >= 65536UL) {
-                    /* Match BSDMAGrenzen: keep the larger part. If it is
+                    /* Match BSDMACheckBoundaries: keep the larger part. If it is
                      * after the boundary, skip one more 16-byte paragraph.
                      */
                     tail = physical + actual - 65536UL;
@@ -389,9 +389,9 @@ int main(void)
                             Reset(&source);
                             playCacheLen -= playCacheLen % (pcmBlockAlign * rate);
                             cacheFree = playCacheLen;
-                            konvBitsRed = 2; konvChanRed = channels/outputChannels;
-                            konvRateRed = (byte)rate;
-                            playLen2 = secBufL2 * konvBitsRed * konvChanRed * rate;
+                            bitReduction = 2; channelReduction = channels/outputChannels;
+                            rateReduction = (byte)rate;
+                            playLen2 = secBufL2 * bitReduction * channelReduction * rate;
                             assert(BSNWPlay(&source.format, 0, 0) == BSNW_STATUS_OK);
                             assert(input.offset == input.length && playedBytes == input.length);
                             output = 0;
@@ -400,7 +400,7 @@ int main(void)
                                     offset = frame * pcmBlockAlign + channel * 2;
                                     sample = (sword)((word)(byte)offset |
                                                     ((word)(byte)(offset+1)<<8));
-                                    if (konvChanRed > 1) {
+                                    if (channelReduction > 1) {
                                         right = (sword)((word)(byte)(offset+2) |
                                                        ((word)(byte)(offset+3)<<8));
                                         sample = (sample + right) / 2;
@@ -486,7 +486,7 @@ int main(int argc, char **argv)
     /* The integer converter must program its actual rate, including BSD8ST. */
     testMaxRate = 22050;
     assert(BSNWPrepKS(24000, 2, 16) == BSNW_STATUS_OK);
-    assert(konvRateRed == 2 && playSampleRate == 12000 && configuredRate == 12000);
+    assert(rateReduction == 2 && playSampleRate == 12000 && configuredRate == 12000);
     testMaxRate = 0;
     assert(BSNWPrepKS(24000, 2, 16) == BSNW_HARDWARE_NOT_READY);
     testMaxRate = 44100;

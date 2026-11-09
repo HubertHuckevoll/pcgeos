@@ -2,11 +2,11 @@ COMMENT @/********************************************************
 
 	Copyright (c) Dirk Lausecker -- All Rights Reserved
 
-PROJECT:	BestSound Treiber
+PROJECT:	BestSound Driver
 
-DATEI:		bsrecord.asm
+FILE:		bsrecord.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 
  THE RECORDING FUNCTIONS ARE NOT PART OF THE LICENSING CONTRACT
@@ -16,15 +16,15 @@ AUTOR:		Dirk Lausecker
 
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	06.10.98	Init
-        DL	08.10.99	Ableitung Recording
+        DL	08.10.99	Derived from Recording
         DL	20.02.2000	NewWave
-        DL	06.04.2000	Optimierung
+        DL	06.04.2000	Optimization
         DL	16.08.2000	Translation
 
-ROUTINEN:
+ROUTINES:
 	Name			Description
 	----			-----------
 	BSDRecGetMaxProperties	Get max Samprate/Bits/Channels
@@ -61,7 +61,7 @@ BSD_STEREO_TOGGLE	equ	1	; channels must be toggled
 BS_STATE_IDLE		equ	0	; states for bsStatus
 BSREC_STATE_PREPARE	equ	1
 BSREC_STATE_RUN		equ	2
-; Status 3,4,6 defined in BSNWAV.ASM !
+; States 3, 4 and 6 are defined in BSNWAV.ASM.
 
 BSREC_STATE_GET_RMS	equ	5	; RMS-measuring on ADC-input
 
@@ -90,7 +90,7 @@ idata           segment
 	bsRecDataHalf		byte	0	; 1 = lower bufferhalf ready
         					; 0 = higher bufferhalf ready
         filterState		byte	0	; temp buffer for Filterstatus
-	stereoMode		byte	0	; temp buffer fÅr Stereomode
+	stereoMode		byte	0	; Temporary buffer for stereo mode
 
 idata           ends
 
@@ -158,54 +158,54 @@ BSDRecGetData	proc	far
         mov	ds,ax
 
 ;------------------------------
-; Warten bis Flag gesetzt wird
-; oder Timeout anschlÑgt
+; Wait until the flag is set
+; or the timeout expires
 ;------------------------------
-	mov	cx,200			; 200 Zyklen bis Timeout
+	mov	cx,200			; 200 cycles until timeout
 next:
-	tst	ds:[bsRecDataFlag]	; stehen Daten bereit ?
-        jz	waitforflag		; nein, warten
+	tst	ds:[bsRecDataFlag]	; Is data available?
+        jz	waitforflag		; No, wait
 
 ;------------------------------
-;    PufferÅberlauf prÅfen
+;    Check for buffer overrun
 ;------------------------------
-	mov	al,ds:[bsRecDataFlag]	; Flagwert holen
-        cmp	al,1			; 1 --> kein PufferÅberlauf ?
-        jz	wakeup			; JA, alles OK --> weitermachen
+	mov	al,ds:[bsRecDataFlag]	; Get the flag value
+        cmp	al,1			; 1 --> no buffer overrun?
+        jz	wakeup			; Yes, all OK: continue
 
-        mov	cl,al			; Flagwert als Fehlercode zurÅckgeben
+        mov	cl,al			; Return the flag value as an error code
         mov	ch,0
-        jmp	done			; mit Fehler zurÅck
+        jmp	done			; Return with an error
 
 ;-----------------------------------
-; Platz fÅr etwaige Pegel-Berechnung
+; Space for a possible level calculation
 ;-----------------------------------
 
 ;-----------------------------------
 waitforflag:
 
         mov	ax,1
-	call	TimerSleep		; 1/60 sec warten
+	call	TimerSleep		; Wait 1/60 second
 	loop	next			; (dec cx, jnz next)
-        mov	cx,1			; Fehlerkennung
+        mov	cx,1			; Error indicator
 
 ;	WARNING	BS_REC_GET_DATA_TIMEOUT
 
         jmp	short done
 
 ;---------------------------
-; RÅckgabewerte berechnen
+; Calculate return values
 ;---------------------------
 wakeup:
-	clr	ds:[bsRecDataFlag]	; Flag lîschen
-        mov     ax,0			; 1. HÑlfte
+	clr	ds:[bsRecDataFlag]	; Clear the flag
+        mov     ax,0			; First half
         mov	dx,ds:[bufferSegment]	; Segmentadresse
-        mov     bx,ds:[bufferO2]	; LÑnge
-        tst	ds:[bsRecDataHalf]	; untere HÑlfte ?
-        jnz	lower			; ja
-	mov	ax,bx			; nein, obere HÑlfte
+        mov     bx,ds:[bufferO2]	; Length
+        tst	ds:[bsRecDataHalf]	; Lower half?
+        jnz	lower			; Yes
+	mov	ax,bx			; No, upper half
 lower:
-	mov	cx,0			; Fehlerkennung
+	mov	cx,0			; Error indicator
 done:
         .leave
         ret
@@ -215,9 +215,9 @@ BSDRecGetData	endp
 ;
 ;	BSRECISR
 ;
-; 	ISR fÅr Recording
-;       Wird aufgerufen wenn Buffer halb
-;	gefÅllt wurde und geleert werden kann.
+; 	Recording ISR
+;       Called when half of the buffer
+;	is full and can be read.
 ;
 ;  IN:	-
 ;
@@ -230,19 +230,19 @@ BSRECISR	proc	far
         .enter
 
 ;------------------------
-; 	Flags setzen
+; 	Set flags
 ;------------------------
-; bsRecDataFlag wird durch INT inkrementiert,
-; Die Abholroutine mu· den Wert dekrementieren.
-; Wenn Wert grî·er wird als zum Bsp. 2 wurden
-; die Daten nicht schnell genug abgeholt.
-; Errorflag wird gesetzt um Fehler anzuzeigen !
+; The interrupt increments bsRecDataFlag.
+; The reader must decrement the value.
+; A value greater than, for example, 2 indicates
+; that data was not read quickly enough.
+; Set the error flag to report the error.
 ;
 
         inc	ds:[bsRecDataFlag]
 
 	mov	al,ds:[bsRecDataHalf]
-        xor	al,01h			; Seite swappen
+        xor	al,01h			; Swap halves
 	mov	ds:[bsRecDataHalf],al
 
 done:
@@ -255,16 +255,16 @@ BSRECISR	endp
 ;
 ;	BSDStopRecOrPlay
 ;
-; 	Recording/Playing stoppen
+; 	Stop recording or playback
 ;
-;       ruft BSSecondUnlock auf
+;       Calls BSSecondUnlock
 ;
 ;
 ;  IN:	(glob)	bsStatus
 ;
 ; OUT:	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -272,16 +272,16 @@ BSDStopRecOrPlay	proc	far
 
 	uses	ax,bx,dx,di
         .enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
         mov	ds,ax
 
 ;------------------
-; Puffer freigeben
+; Free the buffer
 ;------------------
 unlock:
-	call	BSSecondUnlock		; Job wird weitergereicht
+	call	BSSecondUnlock		; Delegate the operation
 
-; Status zurÅcksetzen
+; Reset the status
 
 	mov	ds:[bsStatus],BS_STATE_IDLE
 
@@ -299,45 +299,45 @@ LoadableCode            segment resource
 ;
 ;	BSDRecStartRecording
 ;
-; 	Recording starten
-;       Top-Level UP ruft andere UP auf.
+; 	Start recording
+;       Top-level routine calls other routines.
 ;
 ;
 ;
 ;  IN:	-
 ;
 ; OUT:	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 BSDRecStartRecording	proc	far
 	uses	ax,bx,dx,di,ds
         .enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
         mov	ds,ax
 
 ;-------------------
-; dacStatus = Ruhe ?
+; dacStatus = idle?
 ;-------------------
-	tst	ds:[dacStatus]		; DAC-Ausgabe aktiv ?
-        jnz	error			; ja
+	tst	ds:[dacStatus]		; Is DAC output active?
+        jnz	error			; Yes
 
 	mov	ds:[bsStatus],BSREC_STATE_PREPARE
-	clr	ds:[bsRecDataFlag]	; DataFlag lîschen
-        clr	ds:[bsRecDataHalf]	; Startwert fÅr fertige PufferhÑlfte
+	clr	ds:[bsRecDataFlag]	; Clear the data flag
+        clr	ds:[bsRecDataHalf]	; Initial completed buffer half
 
 ;-------------------
-;  Buffer belegen
+;  Allocate a buffer
 ;-------------------
-        mov	cx,4000h		; 16 kByte ergibt bei ungÅnstigster
-        				; PagegrenzenÅberschreitung 8 kB
-                                        ; und ergibt einen INT-Takt von
-                                        ; 22ms bei 44 kHz / 16 Bit / St.
-	call	BSDRecAllocateBuffer	; OUT: ax = Bufferadresse
+        mov	cx,4000h		; 16 KB leaves at least
+        				; 8 KB after a page boundary split,
+                                        ; giving an interrupt interval of
+                                        ; 22 ms at 44 kHz / 16 bits / stereo.
+	call	BSDRecAllocateBuffer	; OUT: ax = buffer address
 
-        jc	error			; Fehler !
+        jc	error			; Error!
 
 ;-------------------
 ;  Mono/Stereo
@@ -347,47 +347,47 @@ BSDRecStartRecording	proc	far
         mov	cl,DSP_RECORD_PCM_INPUT_AI
         mov	ch,0				; Highspeed-Flag = OFF
 
-	mov	al,ds:[bsChannels]		; Kanalzahl
+	mov	al,ds:[bsChannels]		; Channel count
         cmp	al,2				; Stereo ?
-        jnz	mono				; nein
+        jnz	mono				; No
 ; Stereo
-	SBDDACWriteDSP  DSP_STEREO_INPUT, 0	; Mixer programmieren
+	SBDDACWriteDSP  DSP_STEREO_INPUT, 0	; Program the mixer
 
         mov	ch,1				; Highspeed-Flag = ON
-        mov	cl,DSP_DMA_PCM_AI_INPUT_HIGH	; DSP Kommando
+        mov	cl,DSP_DMA_PCM_AI_INPUT_HIGH	; DSP command
 mono:
         mov	ds:[hsFlag],ch			; Highspeedflag
-	mov	ds:[DSPFormatCommand],cl	; DSP-Kommando fuer spaeter
+	mov	ds:[DSPFormatCommand],cl	; DSP command for later use
 
 ;-------------------
-;  DMA programmieren
+;  Program DMA
 ;-------------------
         pop	ax				; (1)
-	call	BSDRecProgramDMA		; IN ax = Buffersegmentadresse
+	call	BSDRecProgramDMA		; IN ax = buffer segment address
 
 ;-------------------
-;  DSP Zeitkonstante
+;  DSP time constant
 ;-------------------
 	call	BSDRecSetTimeConst
 
 ;-------------------
 ;  Mono/Stereo
 ;-------------------
-	mov	al,ds:[bsChannels]	; Kanalzahl
+	mov	al,ds:[bsChannels]	; Channel count
         cmp	al,2			; Stereo ?
-        jnz	prog_size		; nein
+        jnz	prog_size		; No
 ;
-; Input-Filter-Status speichern
-; und ausschalten
+; Save the input filter state
+; and turn it off
 ;
         mov	al,MIXER_FILTER		; Inputfilter
 	mov	dx,ds:[basePortAddress]
         add	dx,4			; Mixer Address Port
         out	dx,al
         inc	dx
-        in	al,dx			; Auslesen
-        mov	ds:[filterState],al	; merken
-        or	al,00100000b		; Inputfilter deaktivieren
+        in	al,dx			; Read
+        mov	ds:[filterState],al	; Save
+        or	al,00100000b		; Disable the input filter
         out	dx,al
 
 ;------------------------
@@ -401,20 +401,20 @@ prog_size:
 ;------------------------
 	call	BSDRecStartAI
 	mov	ds:[bsStatus],BSREC_STATE_RUN
-	mov	cx,0			; kein Fehler
-        jmp	done			; --> Ende
+	mov	cx,0			; No error
+        jmp	done			; --> End
 
 ;------------------------
-;    Fehlerbehandlung
+;    Error handling
 ;------------------------
-	call	BSDRecFreeBuffer	; Puffer freigeben
+	call	BSDRecFreeBuffer	; Free the buffer
 
 ;------------------------
 ;   	E N D E
 ;------------------------
 error:
         mov	ds:[bsStatus],BS_STATE_IDLE
-	mov	cx,1			; Fehlerkennung
+	mov	cx,1			; Error indicator
         clc				; CY = 1
 
 done:
@@ -427,13 +427,13 @@ BSDRecStartRecording	endp
 ;
 ;	BSDRecAllocateBuffer
 ;
-; 	Buffer belegen
+; 	Allocate a buffer
 ;
 ;
-;  IN:	cx	PufferlÑnge
+;  IN:	cx	Buffer length
 ;
 ; OUT:  ax	Buffersegment
-;	CY	TRUE = Fehler
+;	CY	TRUE = error
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -444,22 +444,21 @@ BSDRecAllocateBuffer	proc	near
 ; EC<	WARNING	BS_REC_ALLOCATE_BUFFER	>
 
 ;----------------------
-; 	Puffer belegen
+; 	Allocate a buffer
 ;----------------------
-	mov	ax,cx			; LÑnge
-        mov	ds:[bufferLen],ax	; abspeichern
+	mov	ax,cx			; Length
+        mov	ds:[bufferLen],ax	; Store
         mov	cl,mask HF_FIXED	; HeapFlags
         mov	ch,mask HAF_ZERO_INIT
 					; HeapAllocFlags
-                                        ; LA 18.10.99 HAF_LOCK um
-					; ILLEGAL_SEGMENT zu vermeiden
+                                        ; LA 18.10.99: HAF_LOCK avoids ILLEGAL_SEGMENT
 	call	MemAlloc
-	jc	done			; Fehler !
+	jc	done			; Error!
 
 	mov	ds:[bufferHandle],bx	; Handle to block allocated
 	mov	ds:[bufferSegment],ax	; Address of block allocated
 
-        call	BSCreateStack		; Stack fÅr ISR anlegen
+        call	BSCreateStack		; Create the ISR stack
 
 	clc
 
@@ -475,10 +474,10 @@ BSDRecAllocateBuffer	endp
 ;
 ;	BSDRecFreeBuffer
 ;
-; 	Belegten Puffer freigeben
-;	Interne Routine
+; 	Free the allocated buffer
+;	Internal routine
 ;
-;13.02.2000 Inputfilter wieder herstellen
+;13.02.2000 Restore the input filter
 ;
 ;
 ;  IN:	bufferHandle
@@ -490,9 +489,9 @@ BSDRecFreeBuffer	proc	near
         .enter
 
 unlock:
-;	call	BSSecondUnlock		; (bis P 0.0)
+;	call	BSSecondUnlock		; (until P 0.0)
 	call	BSDStopRecOrPlay
-;        mov	ds:[hsFlag],0		; Highspeedflag zuruecksetzen
+;        mov	ds:[hsFlag],0		; Reset the high-speed flag
 
         .leave
         ret
@@ -504,10 +503,10 @@ BSDRecFreeBuffer	endp
 ;
 ;	BSDRecProgramDMA
 ;
-; 	DMA programmieren
+; 	Program DMA
 ;
 ;
-;  IN:	ax	Buffersegmentadresse
+;  IN:	ax	Buffer segment address
 ;
 ; OUT:	-
 ;
@@ -518,25 +517,25 @@ BSDRecProgramDMA	proc	near
         .enter
 
 ;-----------------------
-;	DMA vorbereiten
+;	Prepare DMA
 ;-----------------------
-	mov	bx,ax			; Pufferadresse
-	mov	dx,ds:[bufferLen]	; LÑnge
+	mov	bx,ax			; Buffer address
+	mov	dx,ds:[bufferLen]	; Length
 
-        call	BSDMAGrenzen		; Segmentgrenzen prÅfen
-	mov	ds:[bufferSegment],bx	; korrigierte Segmentadresse
-	call	RecProgramDMADriver	; DMA vorbereiten
+        call	BSDMACheckBoundaries		; Check segment boundaries
+	mov	ds:[bufferSegment],bx	; Adjusted segment address
+	call	RecProgramDMADriver	; Prepare DMA
 
 ;-----------------------
-; Pufferwerte berechnen
+; Calculate buffer values
 ;-----------------------
-        mov	ax,ds:[bufferLen]	; LÑnge
-        mov	ds:[bufferFree],ax	; freier Speicher
-        mov	ds:[bufferMax],ax	; Offset Pufferende
-        clr	ds:[dacStatus]		; dacStatus = wartend
+        mov	ax,ds:[bufferLen]	; Length
+        mov	ds:[bufferFree],ax	; Free space
+        mov	ds:[bufferMax],ax	; End-of-buffer offset
+        clr	ds:[dacStatus]		; dacStatus = waiting
         clr	ds:[bufferP2]		; Start Buffer
         shr	ax			; /2
-	mov	ds:[bufferO2],ax	; PufferhÑlfte
+	mov	ds:[bufferO2],ax	; Buffer half
 
 	clc
 
@@ -549,7 +548,7 @@ BSDRecProgramDMA	endp
 ;
 ;	BSDRecSetTimeConst
 ;
-; 	DSP Zeitkonstante
+; 	DSP time constant
 ;
 ;
 ;  IN:	ds	dgroup
@@ -563,14 +562,14 @@ BSDRecSetTimeConst	proc	near
         .enter
 
 ;--------------------------------
-; 16 Bit Zeitkonstante berechnen
+; Calculate the 16-bit time constant
 ;--------------------------------
 	mov	cx,ds:[bsSampleRate]	; cx <- sampling rate
 
-        mov	al,ds:[bsChannels]	; Kanalzahl
+        mov	al,ds:[bsChannels]	; Channel count
         cmp	al,1			; Mono ?
         jz	mono
-        shl	cx			; Byterate * 2 wenn Stereo
+        shl	cx			; Byte rate * 2 for stereo
 mono:
 	movdw   dxax, 256000000         ; dxax <- 256000000
 	div     cx                      ; ax <- 65536 - divisor
@@ -597,7 +596,7 @@ BSDRecSetTimeConst	endp
 ;
 ;	BSDRecSetTransferSize
 ;
-; 	DSP Blocktransfersize setzen
+; 	Set the DSP block transfer size
 ;       _
 ;
 ;
@@ -611,9 +610,9 @@ BSDRecSetTransferSize	proc	near
 	uses	ax,bx,dx,di
         .enter
 
-        mov	cx,ds:[bufferO2]	; halbe Secondbufferlaenge
+        mov	cx,ds:[bufferO2]	; Half the secondary buffer length
         dec	cx
-	SBDDACWriteDSP  DSP_SET_BLOCK_SIZE, 0	; Blocklaenge (48h)
+	SBDDACWriteDSP  DSP_SET_BLOCK_SIZE, 0	; Block length (48h)
 	SBDDACWriteDSP  cl, 0			; L Byte
 	SBDDACWriteDSP  ch, 0			; H Byte
         clc
@@ -652,7 +651,7 @@ BSDRecStartAI	endp
 ;
 ;	BSDRecSetSampling
 ;
-; 	Recordparameter setzen
+; 	Set recording parameters
 ;
 ;
 ;  IN:	bx	Samplerate
@@ -660,26 +659,26 @@ BSDRecStartAI	endp
 ;	dx	bits
 ;
 ; OUT:	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 BSDRecSetSampling	proc	far
 	uses	ax,bx,dx,di
         .enter
-	mov	ax,segment dgroup	; dgroup setzen
+	mov	ax,segment dgroup	; Set dgroup
         mov	ds,ax
 ;
-; Werte abspeichern
+; Store values
 ;
 	mov	ds:[bsSampleRate],bx
 	mov	ds:[bsChannels],cl
 	mov	ds:[bsRecBits],dl
-        mov	cx,0			; RÅckgabewert
+        mov	cx,0			; Return value
 
 ;----------------------------
-;   Samplingdaten prÅfen
+;   Check the sample data
 ;----------------------------
 
 done:
@@ -692,96 +691,91 @@ BSDRecSetSampling	endp
 ;
 ;	BSRecordGetRMSValue
 ;
-; RMS-Effektivspannung messen
+; Measure the RMS voltage
 ;
-; Methode: Die in ax angegebene Durchlauf-
-;	   zahl gibt an, wie oft vom DSP
-;	   im Direct Mode Sampledaten abge-
-;          holt werden.
-;          Die MIN und MAX-Werte werden
-;          zur Berechnung der Effektiv-
-;          spannung benutzt.
+; Read ax samples from the DSP in direct mode.
+; Use the minimum and maximum values to estimate the RMS voltage.
 ;
-;  IN:	ax	Anzahl DurchlÑufe
+;  IN:	ax	Number of iterations
 ;
 ; OUT:	bx  	Value (0...255)
 ;	cx      0 = OK
-;		1 = Befehl konnte nicht
-;		    ausgefÅhrt werden.
+;		1 = command could not
+;		    be executed.
 ;
-; 19.10.99	Abbruch wenn Play im Gange
+; 19.10.99	Abort if playback is active
 ;
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-BSREC_RMS_OK	equ	0	; Fehlercode fÅr RÅckmeldung
+BSREC_RMS_OK	equ	0	; Result error code
 BSREC_RMS_ERROR	equ	1
 
 
 BSRecordGetRMSValue	proc	far
 	uses	ax,dx,di
         .enter
-        mov	cx,ax			; Anzahl DurchlÑufe
+        mov	cx,ax			; Number of iterations
 	mov	ax,segment dgroup
         mov	ds,ax
 
 ;------------------------
-; Test ob DSP belegt ist
+; Check whether the DSP is in use
 ;------------------------
-        mov	bx,0			; RÅckgabewert im Fehlerfall
-	tst	ds:[dacStatus]		; DAC frei ? (alte Routinen)
+        mov	bx,0			; Return value on error
+	tst	ds:[dacStatus]		; Is the DAC available? (old routines)
         jnz	notfree
 
 	tst	ds:[bsStatus]		; Recording / NewWave ?
-        jz	free			; ja
+        jz	free			; Yes
 notfree:
-        mov	cx,BSREC_RMS_ERROR	; Fehlercode
+        mov	cx,BSREC_RMS_ERROR	; Error code
         jmp	done
 
 ;------------------------
-; RMS Messung durchfÅhren
+; Measure the RMS level
 ;------------------------
 free:
         mov	ds:[bsStatus],BSREC_STATE_GET_RMS
         mov	bx,8080h		; BL = MIN / BH = MAX
 next:
 	SBDDACWriteDSP  DSP_RECORD_DIRECT, 0
-	SBDDACReadDSP 0			; Wert holen
+	SBDDACReadDSP 0			; Read the value
 
 ;------------------------
-; 	MIN / MAX Werte
+; 	MIN / MAX values
 ;------------------------
 	cmp	al,bl
 	jnc	not_under
-	mov	bl,al			; neuer MIN Wert
+	mov	bl,al			; New MIN value
 not_under:
 	cmp	al,bh
 	jc	not_over
-        mov	bh,al			; neuer MAX Wert
+        mov	bh,al			; New MAX value
 
 not_over:
-	loop	next			; cx-1 ungleich 0 --> next
+	loop	next			; cx-1 != 0 --> next
 
 ;------------------------
-;	RMS Berechnung
-; Ruhepegel (80h) abziehen
+;	RMS calculation
+; Subtract the silence level (80h)
 ;------------------------
 	mov	al,80h
-        sub	al,bl			; al = Absolutwert von MIN
-        mov	bl,al			; bl = Absolutwert von MIN
+        sub	al,bl			; al = absolute MIN value
+        mov	bl,al			; bl = absolute MIN value
 
         mov	al,bh			; MIN
-        sub	al,80h			; Ruhepegel abziehen
+        sub	al,80h			; Subtract the silence level
         mov	ah,0
 
         mov	bh,0			; bx = MIN
 
-        add	ax,bx			; ax = Spitze + Spitze
-        mov	bx,ax			; RÅckgabewert
+        add	ax,bx			; ax = peak-to-peak value
+        mov	bx,ax			; Return value
 
-        mov	cx,BSREC_RMS_OK		; Fehlercode
+        mov	cx,BSREC_RMS_OK		; Error code
         mov	ds:[bsStatus],BS_STATE_IDLE
 
-; Value zurÅckgeben
+; Return the value
 done:
         .leave
         ret
@@ -792,14 +786,14 @@ COMMENT @%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		RecProgramDMADriver
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SYNOPSIS:       DMA-Treiber fÅr Ausgabe programmieren
+SYNOPSIS:       Program the DMA driver for output
 
 CALLED BY:      BSDRecProgramDMA
 PASS:           bx      -> stream segment
 		dx      -> buffer size
 		INT_ON
 
-RETURN:         bufferLen -> DMA-LÑnge
+RETURN:         bufferLen -> DMA length
 
 DESTROYED:      nothing
 SIDE EFFECTS:
@@ -811,9 +805,9 @@ REVISION HISTORY:
 	Name    Date            Description
 	----    ----            -----------
 	DL	09.11.97	Initial
-				(aus SBDDACAttachToStream herausgelîst)
+				(Extracted from SBDDACAttachToStream)
         DL	29.09.98	BestSound Template
-        DL	14.10.99	FÅr Recording abgeleitet
+        DL	14.10.99	Derived for recording
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
 RecProgramDMADriver    proc    far
@@ -821,15 +815,15 @@ RecProgramDMADriver    proc    far
 	;
 	push	dx			; stream size [1]
 ;---------------------------------
-;	DMA-Kanal belegen
+;	Allocate the DMA channel
 ;---------------------------------
 	;
 	;  Try to request the DMA channel
         ;
-        ;DL:	gÅltiger DMA-Kanal wird in
-        ;	[baseDMAChannel] bereitgestellt.
+        ;DL:	The valid DMA channel is stored in
+        ;	[baseDMAChannel].
         ;
-        mov	cx,ds:[baseDMAChannel]	; aktueller DMA-Channel
+        mov	cx,ds:[baseDMAChannel]	; Current DMA channel
 	mov     dl, 1
 	shl     dl, cl                  ; dl <- mask of request channel
 	mov     dh, dl                  ; dh <- mask of request channel
@@ -841,7 +835,7 @@ RecProgramDMADriver    proc    far
 	INT_ON
 
 ;-------------------------
-;	Fehler ?
+;	Error?
 ;-------------------------
 
 	tst     dl                      ; did we get it?
@@ -859,7 +853,7 @@ RecProgramDMADriver    proc    far
 	INT_ON
 
 ;--------------------------------------
-;	AutoINIT-DMA??? initialisieren
+;	Initialize auto-init DMA
 ;--------------------------------------
 	;
 	;  Try to set up an auto-init transfer of the
@@ -870,11 +864,11 @@ RecProgramDMADriver    proc    far
 	mov     si, 0      		; bx:si <- buffer to DMA
 
 ;-----------------------
-; Adresse,LÑnge --> DMA
+; Address and length --> DMA
 ;-----------------------
-stevor:
+setStereoSize:
 	dec     ax                      ; transfer size -1
-	push	ax			; fÅr PrÅfung retten
+	push	ax			; Save for the check
 	mov     cx, ax                  ; cx <- size of buffer
 	mov     dx, ds:[baseDMAChannel]  ; dl <- channel #
 	mov     dh, ModeRegisterMask <DMATM_SINGLE_TRANSFER,0,1,DMATD_WRITE>
@@ -886,23 +880,21 @@ stevor:
 
         INT_ON
 ;-----------------------
-;	PrÅfung
+;	Check
 ;-----------------------
-	pop	ax			; Sollaenge
-        cmp	ax,cx			; Istlaenge = Sollaenge ?
-	jnz	nokorlen		; nein, Rueckkorrektur nicht
-					; durchfuheren !
-                                        ; DMA-Treiber liefert bei Nichtein-
-                                        ; haltung der Laenge nicht L-1 son-
-                                        ; dern L zurueck. L nur korrigieren,
-                                        ; wenn angeforderte Laenge zurueck-
-                                        ; gegeben wurde.
-        inc	cx			; DMA benutzt fÅr LÑnge l-1
-nokorlen:
-	mov	ds:[bufferLen],cx	; neue LÑnge abspeichern
+	pop	ax			; Requested length
+        cmp	ax,cx			; Actual length = requested length?
+	jnz	lengthReady		; Different length: skip adjustment
+                                        ; If the requested length cannot be used,
+                                        ; the DMA driver returns L instead of L-1.
+                                        ; Adjust L only if the requested length
+                                        ; was returned.
+        inc	cx			; DMA uses length - 1
+lengthReady:
+	mov	ds:[bufferLen],cx	; Save the new length
 
 ;-----------------------
-; 	DMA enable'n
+; 	Enable DMA
 ;-----------------------
 
 	mov     cx, ds:[baseDMAChannel]
@@ -922,7 +914,7 @@ done:
 	ret
 
 ;----------------------
-;	FEHLER
+;	ERROR
 ;----------------------
 error:
 	pop     dx                      ; clean up stack [1]

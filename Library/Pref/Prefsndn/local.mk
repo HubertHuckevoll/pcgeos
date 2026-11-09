@@ -4,7 +4,7 @@
 #
 # PROJECT:      BestSound
 # MODULE:       Preference Module
-# FILE:         lokal.mk
+# FILE:         local.mk
 #
 # AUTHOR:       Dirk Lausecker
 #

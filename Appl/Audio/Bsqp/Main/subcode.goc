@@ -39,6 +39,10 @@ DESCRIPTION:
 @include "UI/uimain.goh"
 @include "Main/process.goh"
 @include "Main/subcode.goh"
+
+@extern chunk BQBitsFormat;
+@extern chunk BQMonoText;
+@extern chunk BQStereoText;
 @include "Main/bsqp.goh"
 
 /**********************************************************************/
@@ -321,17 +325,21 @@ Boolean _pascal RedrawSettings (GStateHandle gstate)
         // Bits
         if (waveOK)
         {
-            sprintf(globalText,"%u Bit",(int)bqBits);
+            MemLock(HandleOf(@BQBitsFormat));
+            sprintf(globalText, LMemDeref(@BQBitsFormat), (int)bqBits);
+            MemUnlock(HandleOf(@BQBitsFormat));
         }
         BQ_DrawCenterText(gstate,globalText,DISP_VIEW_X2,DISP_VIEW_B1,DISP_VIEW_L1);
 
         // channels
+        MemLock(HandleOf(@BQMonoText));
         switch (bqChannels)
         {
-            case 1  : strcpy(globalText," MONO"); break;
-            case 2  : strcpy(globalText,"STEREO"); break;
+            case 1  : strcpy(globalText,LMemDeref(@BQMonoText)); break;
+            case 2  : strcpy(globalText,LMemDeref(@BQStereoText)); break;
             default : break;
         };
+        MemUnlock(HandleOf(@BQMonoText));
         BQ_DrawCenterText(gstate,globalText,DISP_VIEW_X3,DISP_VIEW_B1,DISP_VIEW_L1);
 
 
@@ -391,7 +399,7 @@ void RedrawRMS (GStateHandle gstate)
             GrDrawLine(gstate,DISP_VIEW_RMS_X1,y-1,DISP_VIEW_RMS_X2,y-1);
             GrDrawLine(gstate,DISP_VIEW_RMS_X1,y,DISP_VIEW_RMS_X2,y  );
 
-            // calculate next koords.
+            // Calculate the next coordinates
             y=y-DISP_VIEW_RMS_DISTANCE;
             i = i + 16;
         };

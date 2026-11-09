@@ -21,6 +21,7 @@
 @start AppResource;
 @object GenApplicationClass Mp3WavApp = {
     GI_visMoniker = "MP3 to WAV";
+    @localize "Application name for the MP3 to WAV converter.";
     GI_comp = @Mp3WavPrimary;
     gcnList(MANUFACTURER_ID_GEOWORKS, GAGCNLT_WINDOWS) = @Mp3WavPrimary;
 }
@@ -38,24 +39,30 @@
 }
 @object GenTextClass OutputName = {
     GI_visMoniker = "WAV filename (DOS 8.3, in the selected folder):";
+    @localize "Output name. DOS 8.3 allows eight name characters and three extension characters.";
     GTXI_text = "convert.wav";
+    @localize not;
     GTXI_attrs = @default | GTA_SINGLE_LINE_TEXT;
     GTXI_maxLength = 12;
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
 }
 @object GenValueClass Progress = {
     GI_visMoniker = "Progress (%):";
+    @localize "Conversion progress as a percentage.";
     GVLI_maximum = MakeWWFixed(100);
     GI_attrs = @default | GA_READ_ONLY;
 }
 @object GenTextClass Status = {
     GTXI_text = "Select an MP3 file and a new WAV filename.";
+    @localize "Initial instructions for the audio converter.";
     GI_attrs = @default | GA_READ_ONLY;
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
 }
 @object GenTextClass Timing = {
     GI_visMoniker = "Conversion time versus audio duration:";
+    @localize "Compares elapsed conversion time with the duration of the output audio.";
     GTXI_text = "-- / --";
+    @localize not;
     GI_attrs = @default | GA_READ_ONLY;
     HINT_EXPAND_WIDTH_TO_FIT_PARENT;
 }
@@ -65,16 +72,79 @@
 }
 @object GenTriggerClass Convert = {
     GI_visMoniker = "Convert";
+    @localize "Start converting the selected MP3 file to WAV.";
     GTI_destination = process;
     GTI_actionMsg = MSG_MP3WAV_CONVERT;
 }
 @object GenTriggerClass Cancel = {
     GI_visMoniker = "Cancel";
+    @localize "Stop the current conversion and remove incomplete output.";
     GI_states = @default & ~GS_ENABLED;
     GTI_destination = process;
     GTI_actionMsg = MSG_MP3WAV_CANCEL;
 }
 @end Interface;
+
+@start ConverterStrings, data;
+
+@chunk char FinalizeError[] = "Unable to finalize WAV file.";
+@localize "Error while completing the WAV file header.";
+
+@chunk char CloseError[] = "Error closing WAV file.";
+@localize "Error while closing the WAV output file.";
+
+@chunk char RemoveError[] = "Error: remove the incomplete WAV file manually.";
+@localize "The converter could not delete its incomplete output.";
+
+@chunk char IncompleteText[] = "Incomplete";
+@localize "Conversion did not finish; replaces the timing result.";
+
+@chunk char SelectSourceError[] = "Select an MP3 file first.";
+@localize "No source file was selected.";
+
+@chunk char OutputNameError[] = "Enter a new WAV filename.";
+@localize "The output filename is missing or invalid.";
+
+@chunk char PathError[] = "Use a filename without a path or wildcard characters.";
+@localize "The output name must be a plain filename.";
+
+@chunk char ConvertingText[] = "Converting...";
+@localize "Conversion is in progress.";
+
+@chunk char OpenError[] = "Cannot open files. Use a new DOS 8.3 WAV filename.";
+@localize "Input or output could not be opened. DOS 8.3 means eight name characters and three extension characters.";
+
+@chunk char MemoryError[] = "Not enough memory.";
+@localize "Insufficient memory for conversion.";
+
+@chunk char InputError[] = "Invalid or truncated MP3. Output removed.";
+@localize "Conversion stopped because the MP3 input is invalid.";
+
+@chunk char HeaderError[] = "Unable to write WAV header.";
+@localize "Failed to write the output file header.";
+
+@chunk char DecodeError[] = "Invalid, truncated, or changing-format MP3. Output removed.";
+@localize "Conversion stopped because the MP3 is invalid or changes its audio format.";
+
+@chunk char WriteError[] = "File write error or WAV size limit reached.";
+@localize "Conversion stopped while writing audio data.";
+
+@chunk char CompleteText[] = "Conversion complete.";
+@localize "Conversion finished successfully.";
+
+@chunk char PositionError[] = "File position error. Output removed.";
+@localize "Conversion stopped because the source file position could not be read.";
+
+@chunk char CancelledText[] = "Cancelled. Incomplete output removed.";
+@localize "The user cancelled conversion and the partial output was deleted.";
+
+@chunk char ClosingText[] = "Cancelled.";
+@localize "Conversion was cancelled when the application closed.";
+
+@chunk char TimingFormat[] = "%lu.%02u s / %lu.%02u s";
+@localize { "Conversion time / audio duration in seconds. Preserve %lu, %02u, %lu, %02u in order, including their widths." 0-37 };
+
+@end ConverterStrings;
 
 /* Process-class variables are globals. Only the process thread uses this job. */
 static struct {
@@ -95,13 +165,13 @@ static struct {
 } job;
 
 static void _pascal
-SetStatus(const char *textP)
+SetStatus(optr text)
 {
-    @call Status::MSG_VIS_TEXT_REPLACE_ALL_PTR(textP, 0);
+    @call Status::MSG_VIS_TEXT_REPLACE_ALL_OPTR(text, 0);
 }
 
 static void _pascal
-Finish(word success, const char *textP)
+Finish(word success, optr text)
 {
     word deleteError;
     dword ticks, samples, rate;
@@ -111,7 +181,7 @@ Finish(word success, const char *textP)
     if (success && (!job.writer.fileH || !job.writer.bytes ||
                     WavWriterFinish(&job.writer))) {
         success = 0;
-        textP = "Unable to finalize WAV file.";
+        text = @FinalizeError;
     }
     BSNMP3DecClose(&job.decoder);
     if (job.bufferH) MemFree(job.bufferH);
@@ -121,7 +191,7 @@ Finish(word success, const char *textP)
     if (job.outputH) {
         if (FileClose(job.outputH, FALSE)) {
             success = 0;
-            textP = "Error closing WAV file.";
+            text = @CloseError;
         }
         job.outputH = NullHandle;
         if (!success) {
@@ -129,7 +199,7 @@ Finish(word success, const char *textP)
             deleteError = !FileSetCurrentPath(job.diskH, job.path);
             if (!deleteError) deleteError = FileDelete(job.outputName);
             FilePopDir();
-            if (deleteError) textP = "Error: remove the incomplete WAV file manually.";
+            if (deleteError) text = @RemoveError;
         }
     }
     if (success) {
@@ -137,15 +207,17 @@ Finish(word success, const char *textP)
         ticks = TimerGetCount() - job.startTicks;
         samples = job.writer.bytes / (job.writer.format.channels * 2);
         rate = job.writer.format.sampleRate;
-        sprintf(timing, "%lu.%02u s / %lu.%02u s",
+        MemLock(HandleOf(@TimingFormat));
+        sprintf(timing, LMemDeref(@TimingFormat),
                 ticks / 60UL, (word)((ticks % 60UL) * 100UL / 60UL),
                 samples / rate, (word)((samples % rate) * 100UL / rate));
+        MemUnlock(HandleOf(@TimingFormat));
         @call Timing::MSG_VIS_TEXT_REPLACE_ALL_PTR(timing, 0);
         @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(100, FALSE);
     } else {
-        @call Timing::MSG_VIS_TEXT_REPLACE_ALL_PTR("Incomplete", 0);
+        @call Timing::MSG_VIS_TEXT_REPLACE_ALL_OPTR(@IncompleteText, 0);
     }
-    SetStatus(textP);
+    SetStatus(text);
     @call Convert::MSG_GEN_SET_ENABLED(VUM_NOW);
     @call Cancel::MSG_GEN_SET_NOT_ENABLED(VUM_NOW);
 }
@@ -160,24 +232,24 @@ Finish(word success, const char *textP)
     selection = @call SourceSelector::MSG_GEN_FILE_SELECTOR_GET_SELECTION(job.sourceName);
     if ((GFS_GET_ENTRY_FLAGS(selection) & GFSEF_NO_ENTRIES) ||
         GFS_GET_ENTRY_TYPE(GFS_GET_ENTRY_FLAGS(selection)) != GFSET_FILE) {
-        SetStatus("Select an MP3 file first.");
+        SetStatus(@SelectSourceError);
         return;
     }
     length = @call OutputName::MSG_VIS_TEXT_GET_ALL_PTR(job.outputName);
     if (!length || job.outputName[length-1] == '.' || job.outputName[length-1] == ' ') {
-        SetStatus("Enter a new WAV filename.");
+        SetStatus(@OutputNameError);
         return;
     }
     for (i = 0; i < length; i++) {
         if ((byte)job.outputName[i] < 32 || strchr("\\/:*?\"<>|", job.outputName[i])) {
-            SetStatus("Use a filename without a path or wildcard characters.");
+            SetStatus(@PathError);
             return;
         }
     }
     @call SourceSelector::MSG_GEN_PATH_GET(job.path, sizeof(job.path));
     job.diskH = @call SourceSelector::MSG_GEN_PATH_GET_DISK_HANDLE();
     memset(&job.writer, 0, sizeof(job.writer));
-    @call Timing::MSG_VIS_TEXT_REPLACE_ALL_PTR("Converting...", 0);
+    @call Timing::MSG_VIS_TEXT_REPLACE_ALL_OPTR(@ConvertingText, 0);
     job.startTicks = TimerGetCount();
     FilePushDir();
     if (FileSetCurrentPath(job.diskH, job.path)) {
@@ -190,23 +262,23 @@ Finish(word success, const char *textP)
     }
     FilePopDir();
     if (!job.sourceH || !job.outputH) {
-        Finish(0, "Cannot open files. Use a new DOS 8.3 WAV filename.");
+        Finish(0, @OpenError);
         return;
     }
     job.total = FileSize(job.sourceH);
     job.bufferH = MemAlloc(CONVERT_PCM_BYTES, HF_SWAPABLE, HAF_ZERO_INIT);
     if (!job.bufferH) {
-        Finish(0, "Not enough memory.");
+        Finish(0, @MemoryError);
         return;
     }
     result = BSNMP3DecOpen(&job.decoder, job.sourceH);
     if (result != BSNW_STATUS_OK || job.decoder.damaged) {
-        Finish(0, result == BSNW_MEMORY_ERROR ? "Not enough memory." :
-               "Invalid or truncated MP3. Output removed.");
+        Finish(0, result == BSNW_MEMORY_ERROR ? @MemoryError :
+               @InputError);
         return;
     }
     if (WavWriterBegin(&job.writer, job.outputH, &job.decoder.source.format)) {
-        Finish(0, "Unable to write WAV header.");
+        Finish(0, @HeaderError);
         return;
     }
     job.active = 1;
@@ -215,7 +287,7 @@ Finish(word success, const char *textP)
     @call Cancel::MSG_GEN_SET_ENABLED(VUM_NOW);
     job.progress = 0;
     @call Progress::MSG_GEN_VALUE_SET_INTEGER_VALUE(0, FALSE);
-    SetStatus("Converting...");
+    SetStatus(@ConvertingText);
     @send, forceQueue process::MSG_MP3WAV_STEP(job.generation);
 }
 
@@ -235,20 +307,20 @@ Finish(word success, const char *textP)
                   &job.decoder.source.format);
     MemUnlock(job.bufferH);
     if (count == BSN_PCM_READ_ERROR || job.decoder.damaged) {
-        Finish(0, "Invalid, truncated, or changing-format MP3. Output removed.");
+        Finish(0, @DecodeError);
         return;
     }
     if (error) {
-        Finish(0, "File write error or WAV size limit reached.");
+        Finish(0, @WriteError);
         return;
     }
     if (!count) {
-        Finish(1, "Conversion complete.");
+        Finish(1, @CompleteText);
         return;
     }
     position = FilePos(job.sourceH, 0, FILE_POS_RELATIVE);
     if (position == 0xffffffffUL) {
-        Finish(0, "File position error. Output removed.");
+        Finish(0, @PositionError);
         return;
     }
     progress = (word)(position / (job.total / 100 + 1));
@@ -262,11 +334,11 @@ Finish(word success, const char *textP)
 
 @method Mp3WavProcessClass, MSG_MP3WAV_CANCEL
 {
-    if (job.active) Finish(0, "Cancelled. Incomplete output removed.");
+    if (job.active) Finish(0, @CancelledText);
 }
 
 @method Mp3WavProcessClass, MSG_GEN_PROCESS_CLOSE_APPLICATION
 {
-    if (job.active) Finish(0, "Cancelled.");
+    if (job.active) Finish(0, @ClosingText);
     return @callsuper();
 }

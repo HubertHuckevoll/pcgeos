@@ -291,7 +291,7 @@ R 0.4.1.4 <Dirk Lausecker> <13:56:52 Aug 11, 2000> <>
 R 0.4.1.3 <Dirk Lausecker> <13:56:17 Aug 11, 2000> <>
 R 0.4.1.2 <Dirk Lausecker> <13:33:58 Aug 11, 2000> <>
 R 0.4.1.1 <Dirk Lausecker> <13:28:55 Aug 11, 2000> <>
-R 0.4.1.0  <Dirk Lausecker> <14:40:12 Aug 9, 2000> <Fileselektor non modal>
+R 0.4.1.0  <Dirk Lausecker> <14:40:12 Aug 9, 2000> <Non-modal file selector>
 R 0.4.0.46 <Dirk Lausecker> <14:36:24 Aug 9, 2000> <>
 R 0.4.0.45 <Dirk Lausecker> <14:35:07 Aug 9, 2000> <>
 R 0.4.0.44 <Dirk Lausecker> <14:33:27 Aug 9, 2000> <>
@@ -338,7 +338,7 @@ R 0.4.0.4 <Dirk Lausecker> <9:40:44 Aug 9, 2000> <>
 R 0.4.0.3 <Dirk Lausecker> <9:14:02 Aug 9, 2000> <>
 R 0.4.0.2 <Dirk Lausecker> <9:13:42 Aug 9, 2000> <>
 R 0.4.0.1 <Dirk Lausecker> <9:13:33 Aug 9, 2000> <>
-R 0.4.0.0 <Dirk Lausecker> <8:44:49 Aug 9, 2000> <Erweiterung UI>
+R 0.4.0.0 <Dirk Lausecker> <8:44:49 Aug 9, 2000> <Extended UI>
 R 0.3.0.21 <dirk> <23:22:18 May 7, 2000> <>
 R 0.3.0.20 <dirk> <23:21:57 May 7, 2000> <>
 R 0.3.0.19 <dirk> <0:51:09 Apr 18, 2000> <>
@@ -360,7 +360,7 @@ R 0.3.0.4 <dirk> <2:34:25 Apr 9, 2000> <>
 R 0.3.0.3 <dirk> <2:34:04 Apr 9, 2000> <>
 R 0.3.0.2 <dirk> <2:12:31 Apr 9, 2000> <>
 R 0.3.0.1 <dirk> <2:12:22 Apr 9, 2000> <>
-R 0.3.0.0 <dirk> <2:10:57 Apr 9, 2000> <STOP immer sichtbat>
+R 0.3.0.0 <dirk> <2:10:57 Apr 9, 2000> <STOP always visible>
 R 0.2.3.27 <dirk> <2:09:49 Apr 9, 2000> <>
 R 0.2.3.26 <dirk> <2:00:38 Apr 9, 2000> <>
 R 0.2.3.25 <dirk> <2:00:21 Apr 9, 2000> <>
@@ -388,7 +388,7 @@ R 0.2.3.4 <dirk> <0:50:41 Apr 9, 2000> <>
 R 0.2.3.3 <dirk> <0:49:09 Apr 9, 2000> <>
 R 0.2.3.2 <dirk> <0:48:57 Apr 9, 2000> <>
 R 0.2.3.1 <dirk> <0:47:00 Apr 9, 2000> <>
-R 0.2.3.0 <dirk> <0:46:02 Apr 9, 2000> <Applicationclass abgeleitet>
+R 0.2.3.0 <dirk> <0:46:02 Apr 9, 2000> <Derived application class>
 R 0.2.2.26 <dirk> <0:45:44 Apr 9, 2000> <>
 R 0.2.2.25 <dirk> <0:43:29 Apr 9, 2000> <>
 R 0.2.2.24 <dirk> <0:40:45 Apr 9, 2000> <>
@@ -415,7 +415,7 @@ R 0.2.2.4 <21:53:30 Apr 8, 19100> <>
 R 0.2.2.3 <21:53:19 Apr 8, 19100> <>
 R 0.2.2.2 <21:49:54 Apr 8, 19100> <>
 R 0.2.2.1 <21:44:00 Apr 8, 19100> <>
-R 0.2.2.0 <21:40:02 Apr 8, 19100> <Erkennung nicht STOP-f„higer Treiber>
+R 0.2.2.0 <21:40:02 Apr 8, 19100> <Detect drivers without STOP support>
 R 0.2.1.18 <21:38:51 Apr 8, 19100> <>
 R 0.2.1.17 <21:38:47 Apr 8, 19100> <>
 R 0.2.1.16 <dirk> <18:17:07 Apr 8, 2000> <>
@@ -434,7 +434,7 @@ R 0.2.1.4 <dirk> <16:17:43 Apr 8, 2000> <>
 R 0.2.1.3 <dirk> <16:17:29 Apr 8, 2000> <>
 R 0.2.1.2 <dirk> <16:16:47 Apr 8, 2000> <>
 R 0.2.1.1 <dirk> <16:16:38 Apr 8, 2000> <>
-R 0.2.1.0 <dirk> <14:58:10 Apr 8, 2000> <Statusanzeige>
+R 0.2.1.0 <dirk> <14:58:10 Apr 8, 2000> <Status display>
 R 0.2.0.11 <dirk> <14:57:49 Apr 8, 2000> <>
 R 0.2.0.10 <Dirk Lausecker> <18:02:54 Apr 7, 2000> <>
 R 0.2.0.9 <Dirk Lausecker> <18:01:21 Apr 7, 2000> <>
@@ -446,7 +446,7 @@ R 0.2.0.4 <Dirk Lausecker> <17:32:59 Apr 7, 2000> <>
 R 0.2.0.3 <Dirk Lausecker> <17:31:36 Apr 7, 2000> <>
 R 0.2.0.2 <Dirk Lausecker> <17:25:10 Apr 7, 2000> <>
 R 0.2.0.1 <Dirk Lausecker> <17:24:30 Apr 7, 2000> <>
-R 0.2.0.0 <Dirk Lausecker> <16:33:17 Apr 7, 2000> <STOP-Taste bei manuellem Aufruf>
+R 0.2.0.0 <Dirk Lausecker> <16:33:17 Apr 7, 2000> <STOP button on manual launch>
 R 0.1.0.9 <Dirk Lausecker> <17:53:04 Apr 4, 2000> <>
 R 0.1.0.8 <Dirk> <11:53:45 Mar 13, 2000> <>
 R 0.1.0.7 <Dirk> <11:53:31 Mar 13, 2000> <>
@@ -464,7 +464,7 @@ R 0.0.1.4 <dirk> <17:59:06 Mar 12, 2000> <>
 R 0.0.1.3 <dirk> <17:48:46 Mar 12, 2000> <>
 R 0.0.1.2 <dirk> <17:47:46 Mar 12, 2000> <>
 R 0.0.1.1 <dirk> <17:47:18 Mar 12, 2000> <>
-R 0.0.1.0 <dirk> <17:21:50 Mar 12, 2000> <Icon erzeugt>
+R 0.0.1.0 <dirk> <17:21:50 Mar 12, 2000> <Created icon>
 R 0.0.0.10 <dirk> <17:16:21 Mar 12, 2000> <>
 R 0.0.0.9 <dirk> <17:14:14 Mar 12, 2000> <>
 R 0.0.0.8 <dirk> <17:14:08 Mar 12, 2000> <>
@@ -474,6 +474,6 @@ R 0.0.0.5 <dirk> <16:06:54 Mar 12, 2000> <>
 R 0.0.0.4 <dirk> <16:04:45 Mar 12, 2000> <>
 R 0.0.0.3 <dirk> <16:02:58 Mar 12, 2000> <>
 R 0.0.0.2 <dirk> <16:02:15 Mar 12, 2000> <>
-R 0.0.0.1 <dirk> <23:50:40 Dec 26, 1999> <Ableitung>
+R 0.0.0.1 <dirk> <23:50:40 Dec 26, 1999> <Derived version>
 P 1.0 <dirk> <23:49:45 Dec 26, 1999> <>
 R 0.0.0.0 <dirk> <23:49:45 Dec 26, 1999> <>

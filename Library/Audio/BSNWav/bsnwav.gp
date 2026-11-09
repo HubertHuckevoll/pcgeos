@@ -15,10 +15,10 @@
 #   Date      Name      Description
 #   --------  --------  -----------
 #   21.06.98  DirkL     Initial Version.
-#   06.10.98    DL      Ableitung von Template
-#   08.10.99	DL	Ableitung von Mixer Library
-#   27.12.99	DL	Ableitung von Recordlibrary
-#   20.02.2000	DL	NewWave Routinen
+#   06.10.98    DL      Derived from the template
+#   08.10.99	DL	Derived from the mixer library
+#   27.12.99	DL	Derived from the recording library
+#   20.02.2000	DL	NewWave routines
 #   08.08.2000	DL	Translating for ND
 #
 ########################################################################
@@ -109,3 +109,4 @@ resource ASMTOOLS_TEXT code read-only shared
 # Optional MP3 output quality; retain all existing export ordinals.
 incminor
 export BSNMP3DECOPENEX
+resource AudioErrorStrings lmem read-only shared

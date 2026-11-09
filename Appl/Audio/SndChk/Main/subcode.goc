@@ -36,6 +36,12 @@ DESCRIPTION:
 @include "UI/uimain.goh"
 @include "Main/process.goh"
 @include "Main/subcode.goh"
+
+@extern chunk SCThreadError;
+@extern chunk SCStopText;
+@extern chunk completeString;
+@extern chunk errorString;
+@extern chunk SCProgressFormat;
 @include "Main/globals.goh"
 
 
@@ -92,7 +98,9 @@ void    _pascal SC_CreatePlayThread(void)
                      GeodeGetProcessHandle()))
     {
         // error
-        SysNotify(SNF_CONTINUE,"Playthread","could not be created !");
+        MemLock(HandleOf(@SCThreadError));
+        SysNotify(SNF_CONTINUE, LMemDeref(@SCThreadError), (void *)0);
+        MemUnlock(HandleOf(@SCThreadError));
     };
 }
 
@@ -232,7 +240,7 @@ word    PlayThreadLoop(word dummy)
                 // rename "Play (endless)" into STOP
                 if (playThreadFlag == PLAY_CONT)
                 {
-                    @send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT("STOP",VUM_NOW);
+                    @send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(@SCStopText,VUM_NOW);
                 };
             };
 
@@ -424,7 +432,7 @@ word _pascal SC_TestSoundcard(void)
     } while ( (addr < 0x3a9) && (!foundFlag) );
 
     if (!foundFlag) {
-        addr = 0;       // no SB-komp. soundcard found
+        addr = 0;       // No Sound Blaster-compatible sound card found
     } else {
         foundFlag = SC_GetDSPVersion(addr);
     }
@@ -518,7 +526,7 @@ word    _pascal SC_GetDSPVersion(word addr)
 
 /**********************************************************
 
- SC_Create_Viertel
+ SC_CreateQuarterWave
 
  IN *char   fileName
     word    sampleRate
@@ -527,32 +535,32 @@ word    _pascal SC_GetDSPVersion(word addr)
 
  **********************************************************/
 
-#define SC_SCHWINGUNG   48      //JMG 12/24/00
-#define SC_CR_POSITIV   TRUE
-#define SC_CR_NEGATIV   FALSE
-#define SC_CR_STEIG TRUE
-#define SC_CR_FALLEND   FALSE
+#define SC_WAVE_SAMPLES   48      //JMG 12/24/00
+#define SC_CR_POSITIVE   TRUE
+#define SC_CR_NEGATIVE   FALSE
+#define SC_CR_RISING TRUE
+#define SC_CR_FALLING   FALSE
 
 
-//word  sinus[]={ {    0},{ 4663},{ 9232},{13612},{17716}, \
+//word  sineSamples[]={ {    0},{ 4663},{ 9232},{13612},{17716}, \
 //                    {21458},{24764},{27566},{29807},{31441}, \
 //          {32434},{32767} };
 
 // JM 12/24/00 expanded sample list to 13 values, either used 0 to 11 or 12 to 1,
 // to avoid first and last value being used twice.
-// Now all three sample rates result in ~920Hz pure sinus
-word    sinus[]= {   {    0},{ 4277},{ 8480},{12539},{16384},{19947},
+// Now all three sample rates result in a pure sine wave at about 920 Hz
+word    sineSamples[]= {   {    0},{ 4277},{ 8480},{12539},{16384},{19947},
     {23170},{25996},{28377},{30273},{31651},{32487},{32767}
 };
 byte    sampArray[100];
 
-word    SC_Create_Viertel(word index,word interleave,Boolean positiv, Boolean steigend, word samples)
+word    SC_CreateQuarterWave(word index,word interleave,Boolean positive, Boolean rising, word samples)
 {
     int i=0,k,ind;
     dword   value;
 
 
-    if (steigend)
+    if (rising)
     {
         ind = 0;
         k = interleave;
@@ -566,11 +574,11 @@ word    SC_Create_Viertel(word index,word interleave,Boolean positiv, Boolean st
 
     for (i=0; i<samples; i++)
     {
-        value = (dword)sinus[ind];
+        value = (dword)sineSamples[ind];
 
         if (bits==8)
         {
-            if (positiv)
+            if (positive)
             {
                 value = value + (128 * 256);
             }
@@ -583,7 +591,7 @@ word    SC_Create_Viertel(word index,word interleave,Boolean positiv, Boolean st
         else
         {
 
-            if (!positiv)
+            if (!positive)
             {
                 value = 0 - value;
             };
@@ -632,10 +640,6 @@ word    SC_Create_Viertel(word index,word interleave,Boolean positiv, Boolean st
 
  **********************************************************/
 
-// char    completeString[] = "Eine WAV-Datei mit dem Namen \x01 wurde im DOCUMENT-Verzeichnis angelegt !";
-// char    errorString[] = "An error occurred while creating the .WAV file.";
-char    completeString[] = "A .WAV file with the name \x01 was created in the Document folder.";
-char    errorString[] = "An error occurred while creating the .WAV file.";
 
 void    SC_CreateWaveFile(char *fileName)
 {
@@ -643,8 +647,8 @@ void    SC_CreateWaveFile(char *fileName)
     dword   len,fullLen;
     word    samples,j,interleave;
     char    tempText[30];
-    word    prozent;
-    word    oldprozent = 0;
+    word    percent;
+    word    oldPercent = 0;
 
     // create Header
     len = @call LenValue::MSG_GEN_VALUE_GET_INTEGER_VALUE();
@@ -665,26 +669,28 @@ void    SC_CreateWaveFile(char *fileName)
 
         // create wave
         interleave = (44100/sampleRate);
-        samples = (word)SC_SCHWINGUNG/interleave;
+        samples = (word)SC_WAVE_SAMPLES/interleave;
         samples = samples/4;
 
         j = 0;
-        j = SC_Create_Viertel(j,interleave,SC_CR_POSITIV,SC_CR_STEIG,samples);
-        j = SC_Create_Viertel(j,interleave,SC_CR_POSITIV,SC_CR_FALLEND,samples);
-        j = SC_Create_Viertel(j,interleave,SC_CR_NEGATIV,SC_CR_STEIG,samples);
-        j = SC_Create_Viertel(j,interleave,SC_CR_NEGATIV,SC_CR_FALLEND,samples);
+        j = SC_CreateQuarterWave(j,interleave,SC_CR_POSITIVE,SC_CR_RISING,samples);
+        j = SC_CreateQuarterWave(j,interleave,SC_CR_POSITIVE,SC_CR_FALLING,samples);
+        j = SC_CreateQuarterWave(j,interleave,SC_CR_NEGATIVE,SC_CR_RISING,samples);
+        j = SC_CreateQuarterWave(j,interleave,SC_CR_NEGATIVE,SC_CR_FALLING,samples);
 
         // createloop
         fullLen = byteLen;
         while (byteLen>0 && !error)
         {
             // (Statusdisplay: (len go down to zero) )
-            prozent = 100-(word)((byteLen*100)/fullLen);
-            if (prozent > (oldprozent+9))
+            percent = 100-(word)((byteLen*100)/fullLen);
+            if (percent > (oldPercent+9))
             {
-                sprintf (tempText,"%d%%",prozent);
+                MemLock(HandleOf(@SCProgressFormat));
+                sprintf (tempText, LMemDeref(@SCProgressFormat), percent);
+                MemUnlock(HandleOf(@SCProgressFormat));
                 @call CreateProgressGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(tempText,VUM_NOW);
-                oldprozent = prozent;
+                oldPercent = percent;
             };
 
             if (byteLen<(dword)j)
@@ -713,22 +719,22 @@ void    SC_CreateWaveFile(char *fileName)
             if (error)
             {
                 // error
-                (void) UserStandardDialog((char *)0,
+                (void) UserStandardDialogOptr((char *)0,
                                           (char *)0,
                                           (char *)0,
                                           0,        // arg1
-                                          errorString,  // string
+                                          @errorString,  // string
                                           (CDT_ERROR << CDBF_DIALOG_TYPE_OFFSET) |
                                           (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
             }
             else
             {
                 // Complete message
-                (void) UserStandardDialog((char *)0,
+                (void) UserStandardDialogOptr((char *)0,
                                           (char *)0,
                                           (char *)0,
                                           fileName, // arg1
-                                          completeString,       // string
+                                          @completeString,       // string
                                           (CDT_NOTIFICATION << CDBF_DIALOG_TYPE_OFFSET) |
                                           (GIT_NOTIFICATION << CDBF_INTERACTION_TYPE_OFFSET));
             };

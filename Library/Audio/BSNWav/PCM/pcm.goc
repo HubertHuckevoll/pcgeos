@@ -31,15 +31,15 @@ byte            playBits = 8;       // Bitdepth
 word            playMaxRate = 0;    // Rate supported by soundcard
 byte            playMaxChannels = 1;    // channels
 byte            playMaxBits = 8;    // Bits
-byte            konvRateRed = 1;    // Factor Sampleratereduction
-byte            konvBitsRed = 1;    // Factor Bitreduction
-byte            konvChanRed = 1;    // Factor Channelreduction
+byte            rateReduction = 1;    // Factor Sampleratereduction
+byte            bitReduction = 1;    // Factor Bitreduction
+byte            channelReduction = 1;    // Factor Channelreduction
 
 byte            *playCachePtr;      // Pointer Playcache
 byte            *secondPtr;     // Pointer Secondarybuffer
 word            playCacheLen = 8192;    // Length Playcache
 word            secBufLen = 8192;   // Length Secondarybuffers
-word            secBufLenSoll = 8192;   // requested length Secondarybuffer
+word            secBufRequestedLen = 8192;   // requested length Secondarybuffer
 word            cacheOffset = 0;    // Offset PlayCache
 word            secondOffset = 0;   // Offset Secondbuffer
 word            cacheFree = 0;      // Free space in PlayCache
@@ -48,7 +48,7 @@ word            cacheKOffset = 0;   // Cacheoffset Reader
 word            secondKOffset = 0;  // SecondPointerOffset Reader
 word            secondFree = 0;         // Free space in Secondarybuffer
 word            secondHandle = 0;   // test purpose only (SecondAlloc)
-word            peakLevel = 0;      // signal level (calculated by Konverter)
+word            peakLevel = 0;      // signal level (calculated by converter)
 word            playLen2 = 0;       // needed samples from Cache
 // for filling Secondarybufferhalf
 Boolean         pcmUnknownLength = FALSE;
@@ -208,19 +208,19 @@ int _pascal BSNWLoadData(void *cachePtr, void *secPtr)
             // bytesToPlay,cacheFull will be updated
         };
 
-        // Cachedata --> Konverter --> Secondarybuffer
+        // Cachedata --> converter --> Secondarybuffer
         if (cacheFull)
         {
-            // Konvert Cachedata
-            if (konvBitsRed == 1)
+            // Convert cache data
+            if (bitReduction == 1)
             {
                 // no reduction of bitdepth
-                BSNWKonvertData(cachePtr,secPtr);
+                BSNWConvertData(cachePtr,secPtr);
             }
             else
             {
                 // 16 --> 8 Bit
-                BSNWKonvert16To8(cachePtr,secPtr);
+                BSNWConvert16To8(cachePtr,secPtr);
             }
         }
         else
@@ -352,7 +352,7 @@ void _pascal BSNWFillSilence(void *secPtr, word len)
     };
 }
 
-void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
+void _pascal BSNWConvertData(byte *cachePtr, byte *secPtr)
 {
     byte    *dest;
     byte    *src;
@@ -372,7 +372,7 @@ void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
         sample = (word)(*src);
 
         // Stereo --> Mono
-        if (konvChanRed>1)
+        if (channelReduction>1)
         {
             // Pointer / Counter
             src++;
@@ -398,7 +398,7 @@ void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
             // 16 Bit -> ignore lower Byte of Sample for peakLevel
             if (0!=(cacheKOffset & 1))
             {
-                // only positiv 16 Bit signed values
+                // Only positive signed 16-bit values
                 if ((byte)sample < 0x80)
                 {
                     sample = sample + 0x80;
@@ -435,7 +435,7 @@ void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
         /* Keep interleaved channels together when reducing the rate. */
         i = 1;
         if ((cacheKOffset + 1) % pcmBlockAlign == 0)
-            i += (konvRateRed - 1) * pcmBlockAlign;
+            i += (rateReduction - 1) * pcmBlockAlign;
 
         while(i && cacheFull)
         {
@@ -458,7 +458,7 @@ void _pascal BSNWKonvertData(byte *cachePtr, byte *secPtr)
     peakLevel = peakLevel2;
 }
 
-void _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
+void _pascal BSNWConvert16To8(void *cachePtr, void *secPtr)
 {
     byte    *dest;
     byte    b,bs;
@@ -478,7 +478,7 @@ void _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
         sample = (long)(*src);
 
         // Stereo -> Mono
-        if (konvChanRed>1)
+        if (channelReduction>1)
         {
             src++;
             cacheFull--;
@@ -519,7 +519,7 @@ void _pascal BSNWKonvert16To8(void *cachePtr, void *secPtr)
         /* Skip whole source frames only after their final channel. */
         i = 1;
         if ((cacheKOffset + 2) % pcmBlockAlign == 0)
-            i += (konvRateRed - 1) * (pcmBlockAlign / 2);
+            i += (rateReduction - 1) * (pcmBlockAlign / 2);
 
         while(i && cacheFull)
         {
@@ -549,7 +549,7 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
 {
     int respond = 0;
     word    bits,rate;
-    word    konvertFaktor;
+    word    conversionFactor;
     char    *ptr;
     word    size;
     word    secBufRequest;
@@ -615,7 +615,7 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
     {
         // Playcache OK
 
-        // Prepare Konverter / Soundcard
+        // Prepare converter / Soundcard
         respond = BSNWPrepKS((word)bfc->sampleRate,
                              (byte)bfc->channels,
                              (byte)bfc->bitsPerSample);
@@ -636,11 +636,11 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
         bits = (word)(bfc->bitsPerSample);
 
         ptr = playStatusText;
-        konvertFaktor = (konvRateRed * konvBitsRed * konvChanRed);
+        conversionFactor = (rateReduction * bitReduction * channelReduction);
 
-        if (konvertFaktor>1)
+        if (conversionFactor>1)
         {
-            // if konverting --> []
+            // if converting --> []
             *ptr = '[';
             ptr++;
         };
@@ -656,7 +656,7 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
             sprintf(ptr,"%uHz - %uBit - Stereo",rate,bits);
         };
 
-        if (konvertFaktor>1)
+        if (conversionFactor>1)
         {
             strcat(playStatusText,"]");
         };
@@ -672,9 +672,9 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
     if (respond == BSNW_STATUS_OK)
     {
         // Allocate Secondarybuffer
-        secBufRequest = BSNWDetermineSecondaryBufferLength(bfc, secBufLenSoll);
+        secBufRequest = BSNWDetermineSecondaryBufferLength(bfc, secBufRequestedLen);
         secBufLen  = BSNWAllocSecBuffer(&secondPtr,secBufRequest);
-        secBufL2   = secBufLen>>1;      // halbe Pufferl�nge
+        secBufL2   = secBufLen>>1;      // Half the buffer length
         secondFree = secBufLen;
         if (!secBufLen || !secondPtr)
         {
@@ -684,7 +684,7 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
 
     if (respond == BSNW_STATUS_OK)
     {
-        size = pcmBlockAlign * konvRateRed;
+        size = pcmBlockAlign * rateReduction;
         if (playCacheLen >= size)
         {
             playCacheLen -= playCacheLen % size;
@@ -692,7 +692,7 @@ int _pascal BSNWPrepare(BSNPcmFormat *bfc,word playFlags,optr parent)
         }
     }
 
-    playLen2     = secBufL2 * konvRateRed * konvBitsRed * konvChanRed;
+    playLen2     = secBufL2 * rateReduction * bitReduction * channelReduction;
     fullLen      = pcmUnknownLength ? 0 : bytesToPlay;
     playedBytes  = 0;
     secondOffset = 0;

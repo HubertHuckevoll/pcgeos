@@ -18,7 +18,7 @@
 #   08.07.97  DL        Initial Version.
 #   14.09.97  DL	new name (prefsndc)
 #   21.10.98	DL	Mixermodul
-#   21.08.2000	DL	Ableitung PREFSNDN fuer ND
+#   21.08.2000	DL	Derived PREFSNDN for ND
 #
 ########################################################################
 

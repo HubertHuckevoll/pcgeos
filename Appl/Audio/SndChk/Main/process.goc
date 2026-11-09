@@ -40,6 +40,13 @@ DESCRIPTION:
 @include "Main/globals.goh"
 
 
+@extern chunk TEXT_FOUND_SB_MONO;
+@extern chunk TEXT_FOUND_SB_PRO;
+@extern chunk TEXT_FOUND_SB_16;
+@extern chunk TEXT_FOUND_SB_NONE;
+@extern chunk TEXT_PLAY_ENDLESS;
+
+
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  %      Class & Message Definitions
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
@@ -70,7 +77,7 @@ DESCRIPTION:
     // detect colormode
     @call SDCKApp::MSG_GEN_APPLICATION_GET_DISPLAY_SCHEME( &displayScheme );
 
-    if( ((byte)(displayScheme.DS_displayType) & DT_DISP_CLASS) > DC_GRAY_8)//Farbe?
+    if( ((byte)(displayScheme.DS_displayType) & DT_DISP_CLASS) > DC_GRAY_8)// Color?
     {
         colorFlag = TRUE;
     }
@@ -96,13 +103,13 @@ DESCRIPTION:
 
     MSG_GEN_PROCESS_CLOSE_APPLICATION
 
-    Funktion:       Timer stoppen
+    Function:       Stop the timer
 
     IN:     -
 
     OUT:    -
 
-    Aufruf durch :  -
+    Called by:     -
 
  -----------------------------------------------------------*/
 
@@ -127,22 +134,22 @@ DESCRIPTION:
 
 /************************************************************
 
-    MSG_SNDCHK_PROCESS_HINWEISTON
+    MSG_SNDCHK_PROCESS_NOTIFICATION_SOUND
 
  ************************************************************/
 
-@method SDCKProcessClass, MSG_SNDCHK_PROCESS_HINWEISTON
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_NOTIFICATION_SOUND
 {
     UserStandardSound(SST_NOTIFY);
 }
 
 /************************************************************
 
-    MSG_SNDCHK_PROCESS_WARNTON
+    MSG_SNDCHK_PROCESS_ALARM_SOUND
 
  ************************************************************/
 
-@method SDCKProcessClass, MSG_SNDCHK_PROCESS_WARNTON
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_ALARM_SOUND
 {
     UserStandardSound(SST_WARNING);
 
@@ -150,11 +157,11 @@ DESCRIPTION:
 
 /************************************************************
 
-    MSG_SNDCHK_PROCESS_FEHLERTON
+    MSG_SNDCHK_PROCESS_ERROR_SOUND
 
  ************************************************************/
 
-@method SDCKProcessClass, MSG_SNDCHK_PROCESS_FEHLERTON
+@method SDCKProcessClass, MSG_SNDCHK_PROCESS_ERROR_SOUND
 {
     UserStandardSound(SST_ERROR);
 
@@ -205,15 +212,13 @@ DESCRIPTION:
 
  ************************************************************/
 
-// @define TEXT_PLAY_ENDLESS   "PLAY (endlos)"
-@define TEXT_PLAY_ENDLESS   "Play Repeatedly"
 
 @method SDCKProcessClass, MSG_SNDCHK_PROCESS_PLAY_CONT
 {
     if (playThreadFlag == PLAY_CONT)
     {
         playThreadFlag = PLAY_OFF;
-        @send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(@TEXT_PLAY_ENDLESS,VUM_NOW);
+        @send MainSub3Trigger2::MSG_GEN_REPLACE_VIS_MONIKER_OPTR(@TEXT_PLAY_ENDLESS,VUM_NOW);
         @send MainSub3Trigger1::MSG_GEN_SET_ENABLED(VUM_NOW);
         @send MainSub3Trigger3::MSG_GEN_SET_ENABLED(VUM_NOW);
     }
@@ -243,14 +248,6 @@ DESCRIPTION:
     Main method for checking checklist
 
  ************************************************************/
-// @define TEXT_FOUND_SB_MONO  "Mono-Soundblaster bei Adresse %X gefunden"
-// @define TEXT_FOUND_SB_PRO   "Soundblaster-Pro bei Adresse %X gefunden"
-// @define TEXT_FOUND_SB_16    "SB16 (oder besser) bei Adresse %X gefunden"
-// @define TEXT_FOUND_SB_NONE  "Keine SB-kompatible Soundkarte gefunden !"
-@define TEXT_FOUND_SB_MONO  "Mono Sound Blaster found at address %X"
-@define TEXT_FOUND_SB_PRO   "Sound Blaster Pro found at address %X"
-@define TEXT_FOUND_SB_16    "Sound Blaster 16 found at address %X"
-@define TEXT_FOUND_SB_NONE  "No Sound Blaster-compatible sound card found."
 
 @method SDCKProcessClass, MSG_SNDCHK_CHECK_SYSTEM
 {
@@ -267,34 +264,36 @@ DESCRIPTION:
     @call MSG1_4GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
     @call MSG1_5GlyphR::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
 
-    // Soundblasterkompatible Soundcard
+    // Sound Blaster-compatible sound card
     addr = SC_TestSoundcard();
     result = addr > 0;
     SC_SetAnswerGlyph(@MSG1_1GlyphR,result);
+    MemLock(HandleOf(@TEXT_FOUND_SB_MONO));
     if (result)
     {
         if (dspVersion < 0x0201)
         {
-            sprintf (globalText,@TEXT_FOUND_SB_MONO,(addr));
+            sprintf (globalText,LMemDeref(@TEXT_FOUND_SB_MONO),(addr));
         }
         else
         {
             if (dspVersion < 0x0400)
             {
-                sprintf (globalText,@TEXT_FOUND_SB_PRO,(addr));
+                sprintf (globalText,LMemDeref(@TEXT_FOUND_SB_PRO),(addr));
             }
             else
             {
-                sprintf (globalText,@TEXT_FOUND_SB_16,(addr));
+                sprintf (globalText,LMemDeref(@TEXT_FOUND_SB_16),(addr));
             };
 
         };
     }
     else
     {
-        sprintf (globalText,@TEXT_FOUND_SB_NONE);
+        strcpy (globalText,LMemDeref(@TEXT_FOUND_SB_NONE));
     };
 
+    MemUnlock(HandleOf(@TEXT_FOUND_SB_MONO));
     @call PrimaryGlyph::MSG_GEN_REPLACE_VIS_MONIKER_TEXT(globalText,VUM_NOW);
     TimerSleep(30);
 

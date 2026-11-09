@@ -4,16 +4,16 @@ COMMENT @/********************************************************
 
 PROJECT:	BestSound Driver
 
-DATEI:		Manager.asm
+FILE:		Manager.asm
 
-AUTOR:		Dirk Lausecker
+AUTHOR:		Dirk Lausecker
 
 REVISION HISTORY:
-	Name	Datum		Beschreibung
+	Name	Date		Description
 	----	-----		------------
 	DL	08.08.98	Init
-        DL	07.10.1999	Ableitung f�r Recording
-        DL	22.12.1999	Ableitung f�r NewWave (Umgehung Soundlib)
+        DL	07.10.1999	Derived for recording
+        DL	22.12.1999	Derived for NewWave (bypass Sound library)
         DL	22.08.2000	Translation for ND
 
 

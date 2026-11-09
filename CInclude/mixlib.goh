@@ -1,12 +1,12 @@
 /**********************************************************
 
-    Projekt:    BestSound
+    Project:    BestSound
 
     Module:     Mixer-Library
 
     File:       MIXLIB.GOH
 
-    Autor:      Dirk Lausecker
+    Author:      Dirk Lausecker
 
 
  Description:
@@ -92,13 +92,13 @@
   -----------------------------------------------*/
 
 typedef struct {
-    byte    valVisible;     // Sichtbarkeit
+    byte    valVisible;     // Visibility
     byte    valStereoFlag;      // TRUE = Stereo
     byte    valTarget;      // 1=Mixer 2=Record 3=Other
-    word    valRange;       // Wertebereich
+    word    valRange;       // Value range
     word    valToken;       // Texttoken 1,2,3,...32
     byte    valType;        // 0=none 1=Slider 2=Item 3=Boolean
-    byte    valPos;         // Position des Sliders 0,1,2...
+    byte    valPos;         // Slider position 0,1,2...
 } MixerValue;
 
 /*-----------------------------------------------*/
