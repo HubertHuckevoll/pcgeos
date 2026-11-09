@@ -1878,3 +1878,10 @@ DOS_BLOCK_CHECKSUM_CHANGED				enum FatalErrors
 ; block that changed, and ax contains the new checksum.
 
 endif	;CHECKSUM_DOS_BLOCKS
+
+INI_VALIDATION_FAILED					enum Warnings
+; ValidateIniFile rejected the buffer. DS:SI points after the last byte
+; read, DL holds the parser state, and CX holds the remaining byte count.
+
+INI_COMMIT_WRITE_FAILED					enum Warnings
+; InitFileCommit could not write the buffer. AX holds the file error.

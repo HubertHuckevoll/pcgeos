@@ -2381,6 +2381,7 @@ ensureRoom:
 
 writeError:
 	cmp	ax, ERROR_SHORT_READ_WRITE
+EC <	WARNING_NE INI_COMMIT_WRITE_FAILED				>
 	jne	error
 	
 	; a short-write we can allow. we just want to make sure the user is
@@ -2403,7 +2404,11 @@ error:
 	mov	es:[trashedIniBuffer], TRUE	;Set flag saying the .ini buffer
 						; has been trashed, so we don't
 						; want to write it out.
-	call	ExitInitfile
+	; CorruptedIniFileError releases initFileSem. Only unlock the buffer
+	; here, so the error path does not release the module lock twice.
+	;
+	pop	bx
+	call	MemUnlock
 if 0	; Code redundancy
 if ERROR_CHECK
 	ERROR	CORRUPTED_INI_FILE					

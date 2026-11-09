@@ -2491,6 +2491,10 @@ endOfBuffer:
 	jmp	common
 
 error:
+	; Report the parser state before the saved registers are restored.
+	; DS:SI is the next byte, DL is the state, and CX is bytes remaining.
+	;
+EC <	WARNING INI_VALIDATION_FAILED					>
 	stc
 common:
 	.leave
