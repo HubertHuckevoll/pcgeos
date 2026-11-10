@@ -154,7 +154,8 @@ BSNWASMSETPAUSE endp
 ; BSNWASMQUERYDEVICECAPABILITY
 ;--------------------------------------------------------------------------
 BSNWASMQUERYDEVICECAPABILITY proc far
-        uses    bx, dx, di, es, bp ; ...why is bp getting trashed if we don't save it here?
+	; The native query returns CX and BP:SI. Preserve them for C callers.
+	uses    bx, cx, dx, si, di, es, bp
         .enter
 
         les     bx, ds:[driverInfo]         ; ES:BX -> DriverInfoStruct
