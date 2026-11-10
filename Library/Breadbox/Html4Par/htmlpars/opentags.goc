@@ -934,7 +934,7 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
       if (vtg.VTG_size.XYS_width == 0)
           vtg.VTG_size.XYS_width = DEFAULT_IMAGE_WIDTH ;
       id.HID_size = vtg.VTG_size;     /* cache size for vargraphic drawing */
-      
+
       vtg.VTG_size.XYS_width += 2*id.hspace;
       vtg.VTG_size.XYS_height += 2*id.vspace;
                                       /* add spacing around graphic */
@@ -958,15 +958,15 @@ word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
           vtg.VTG_size.XYS_height -= IMAGE_HEIGHT_FUDGE_FACTOR ;
       else
           vtg.VTG_size.XYS_height = 0 ;
- 
+
       ret = AppendToHypertextArray(HTA_IMAGE_ARRAY, &id);
       if(svgFile && ret!=CA_NULL_ELEMENT)
         htbh->HTBH_other.HTBHO_fileInfo |= HTML_FI_INLINE_SVG;
                                         /* add image record to array */
       ((HTMLimageGraphicVariable *)
-        &vtg.VTG_data.VTGD_variable.VTGV_privateData)->HIGV_imageIndex = ret;         
+        &vtg.VTG_data.VTGD_variable.VTGV_privateData)->HIGV_imageIndex = ret;
                                         /* store index of array element */
- 
+
       AddAttrRun(ttbh->TTBH_graphicElements, ttbh->TTBH_graphicRuns,
         &vtg, id.pos);                /* create graphic record for position */
 
@@ -996,11 +996,11 @@ void LOCAL ParseEvent(optr paramArray, char *name, HTMLEventType evt,
       hed.HED_obj = obj;
       hed.HED_code = NamePoolTokenizeDOS(NamePool, p, FALSE);
       AppendToHypertextArray(HTA_EVENT_ARRAY, &hed);
-    }   
+    }
 }
 
 void ParseEvents(optr paramArray, HTMLEventObjectType type, word obj)
-{   
+{
     if (HTMLext->HE_options & HTML_JAVASCRIPT) {
     ParseEvent(paramArray, "ONABORT",     HTML_EVENT_ABORT,     type, obj);
     ParseEvent(paramArray, "ONBLUR",      HTML_EVENT_BLUR,      type, obj);
@@ -1050,7 +1050,7 @@ void _pascal Open_Hx(TagOpenArguments *arg)
     ForceCloseStyle(SPEC_Hx, SPEC_DONT_MATCH);
 }
 
-void _pascal Open_HR(TagOpenArguments *arg) 
+void _pascal Open_HR(TagOpenArguments *arg)
 {
     VisTextParaAttrAttributes align = J_CENTER<<VTPAA_JUSTIFICATION_OFFSET;
     word size = 0;
@@ -1113,7 +1113,7 @@ void _pascal Open_IMG(TagOpenArguments *arg)
             SPEC_IMG,
             0
         } ;
-    static insideHere = FALSE ;
+    static int insideHere = FALSE ;
     char *p ;
     Boolean haveAlign = FALSE ;
     TableStackElement *tableStack;
@@ -1131,7 +1131,7 @@ void _pascal Open_IMG(TagOpenArguments *arg)
 
     if ((insideHere) || (!haveAlign))  {
         image = ParseImage(arg->paramArray, CA_NULL_ELEMENT, TRUE, NAME_POOL_NONE);
-        
+
         /* Attach event handlers */
         if(image != CA_NULL_ELEMENT)
           ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_IMAGE, image);
@@ -1494,7 +1494,7 @@ void _pascal Open_FRAMESET_FRAME(TagOpenArguments *arg)
          specify a split. For those, we have already discarded the parameters */
 
       for(i=0; i<=top; i++)
-        if(arg->tagStack[i].spec == SPEC_FRAMESET && arg->tagStack[i].param) 
+        if(arg->tagStack[i].spec == SPEC_FRAMESET && arg->tagStack[i].param)
         {                               /* found requested element? */
           fr.HF_level++;                /* increase nesting level */
           top2 = i;                     /* pass back latest one */
@@ -1582,7 +1582,7 @@ void _pascal Open_FRAMESET_FRAME(TagOpenArguments *arg)
 
     frame = AppendToHypertextArray(HTA_FRAME_ARRAY, &fr);
                                       /* add frame record to array */
-    
+
     /* Attach events to frameset */
     if(SPEC_FRAMESET == arg->spec)
       ParseEvents(arg->paramArray, HTML_EVENT_OBJECT_FRAMESET, frame);
@@ -1737,7 +1737,7 @@ void _pascal Open_FORM_INPUT_SELECT(TagOpenArguments *arg)
           ParseImage(arg->paramArray, element, FALSE, NAME_POOL_NONE);
 
         /* Create entries for event handlers, if any */
-        ParseEvents(arg->paramArray, 
+        ParseEvents(arg->paramArray,
           (arg->spec==SPEC_FORM)?
             HTML_EVENT_OBJECT_FORM : HTML_EVENT_OBJECT_ELEMENT,
           element);

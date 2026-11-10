@@ -331,6 +331,7 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
     HTMLanchorData *anchorArrayElement;
     word i = -1,size;
     dword pos;
+    sdword parsedPos;
     NameToken myAnchor;
     VisTextConvertOffsetParams vtcop;
     TCHAR buf[POSITION_ANCHOR_SIZE];
@@ -372,8 +373,10 @@ void ISetNumFormatedCells(optr txtObj,  word numFormatedCells) ;
           NamePoolCopy(pself->HTI_namePool, buf, sizeof(buf), myAnchor, NULL);
           if(buf[0]==POSITION_ANCHOR_MARKER)
           {                             /* is it a position anchor? */
-            if(!UtilAsciiToHex32((char*) buf+1, &pos))
+            if(!UtilAsciiToHex32((char*) buf+1, &parsedPos)) {
+              pos = (dword)parsedPos;
               i = 0;                    /* success: use this position */
+            }
           }
       }
     }
@@ -1185,7 +1188,7 @@ ChunkHandle LOCAL LMemCopyToChunk(MemHandle dstMem, ChunkHandle dstArray, optr a
       pself = ObjDerefVis(oself);
       pself->VTI_storageFlags |= VTSF_MULTIPLE_CHAR_ATTRS | 
         VTSF_MULTIPLE_PARA_ATTRS | VTSF_GRAPHICS | VTSF_LARGE;
-      pself->VTI_text = VMCHAIN_GET_VM_BLOCK(ttbh->TTBH_text);
+      pself->VTI_text = (ChunkHandle)VMCHAIN_GET_VM_BLOCK(ttbh->TTBH_text);
       pself->VTI_charAttrRuns = VMCHAIN_GET_VM_BLOCK(ttbh->TTBH_charAttrRuns);
       pself->VTI_paraAttrRuns = VMCHAIN_GET_VM_BLOCK(ttbh->TTBH_paraAttrRuns);
       runs = ObjVarAddData(oself, ATTR_VIS_TEXT_GRAPHIC_RUNS, sizeof(word));

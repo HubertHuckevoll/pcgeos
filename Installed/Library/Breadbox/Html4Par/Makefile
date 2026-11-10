@@ -5,21 +5,21 @@
 #
 GEODE           = html4par
 ASMTOOLS        = asmtoolsManager.asm
-HTMLCLAS        = formset.h htmlcol.goc htmltabl.goc htmltpos.goc\
-                  htmlfedi.goc htmltpre.goc htmlclrt.goc htmlfdrw.goc\
-                  htmlform.goc htmlfsiz.goc htmltcel.goc htmltdrw.goc\
-                  htmlclas.goc
+HTMLCLAS        = formset.h htmlcol.goc htmltpos.goc htmltpre.goc\
+                  htmlclrt.goc htmlfedi.goc htmltabl.goc htmlclas.goc\
+                  htmlfdrw.goc htmlform.goc htmlfsiz.goc htmltcel.goc\
+                  htmltdrw.goc
 HTMLEXPT        = htmlexpt.goc
-HTMLPARS        = awatcher.goc stylesh.goc htmlpars.goc opentags.goc\
-                  parsinit.goc parstags.goc
-WWWTOOLS        = dialogt.goc namepool.goc wwwtools.goc
+HTMLPARS        = awatcher.goc htmlpars.goc opentags.goc parsinit.goc\
+                  parstags.goc stylesh.goc
+WWWTOOLS        = dialogt.goc wwwtools.goc namepool.goc
 UI_TO_RDFS      =
-OBJS            = htmlcol.obj htmltabl.obj htmltpos.obj htmlfedi.obj\
-                  htmltpre.obj htmlclrt.obj htmlfdrw.obj htmlform.obj\
-                  htmlfsiz.obj htmltcel.obj htmltdrw.obj htmlclas.obj\
-                  htmlexpt.obj awatcher.obj stylesh.obj htmlpars.obj\
-                  opentags.obj parsinit.obj parstags.obj dialogt.obj\
-                  namepool.obj wwwtools.obj
+OBJS            = htmlcol.obj htmltpos.obj htmltpre.obj htmlclrt.obj\
+                  htmlfedi.obj htmltabl.obj htmlclas.obj htmlfdrw.obj\
+                  htmlform.obj htmlfsiz.obj htmltcel.obj htmltdrw.obj\
+                  htmlexpt.obj awatcher.obj htmlpars.obj opentags.obj\
+                  parsinit.obj parstags.obj stylesh.obj dialogt.obj\
+                  wwwtools.obj namepool.obj
 COMMON          = dialogt.goh radio0.goh radio1.goh regiont.h tableint.h\
                   options.goh errors.h htmlsty.goh internal.h
 MODULES         = asmtools

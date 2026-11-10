@@ -285,7 +285,7 @@ extern void FormElementInvalidate(
         GI_attrs = @default | GA_TARGETABLE;
         GTXI_maxLength = 512 ;
         GTXI_attrs = @default | GTA_SINGLE_LINE_TEXT ;
-        ATTR_GEN_TEXT_CHAR_ATTR = @PasswordFont ;
+        ATTR_GEN_TEXT_CHAR_ATTR = OptrToChunk(@PasswordFont) ;
         HINT_DEFAULT_FOCUS ;
     }
     /*---------------------------------------------------------------------*/

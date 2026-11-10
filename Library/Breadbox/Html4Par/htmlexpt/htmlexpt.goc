@@ -104,7 +104,7 @@ int _export _pascal CreateHTMLFile(optr obj, FileHandle out)
     while(len)
     {
       diff = (len>sizeof(buf))?sizeof(buf):len;
-      @call obj::MSG_VIS_TEXT_SELECT_RANGE( (char*)pos+diff, pos );
+      @call obj::MSG_VIS_TEXT_SELECT_RANGE( pos+diff, pos );
       @call obj::MSG_VIS_TEXT_GET_SELECTION_PTR( (char*)buf );
       for(i=0; i<(int)diff; i++)
       {

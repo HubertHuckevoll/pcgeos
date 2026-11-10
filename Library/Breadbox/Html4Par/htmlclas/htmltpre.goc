@@ -562,7 +562,7 @@ EC( ECCheckStack(); )
     if(region == CA_NULL_ELEMENT)  {   
         /* First region should be initialized with text size */
         p_region->VLTRAE_charCount = HugeArrayGetCount(pself->VTI_vmFile, 
-          pself->VTI_text) - 1;
+          (VMBlockHandle)pself->VTI_text) - 1;
     }
 
     /* Do we have any cell arrays?  If not, we don't have anything to map */

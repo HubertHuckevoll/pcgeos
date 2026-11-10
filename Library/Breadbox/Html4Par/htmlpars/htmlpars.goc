@@ -46,10 +46,10 @@
 /* Was 12 SANS, but changed to 14 for improved appearance,
  * and of course ROMAN should be the default font */
 @ifdef COMPILE_OPTION_BITMAP_FONTS
-const VisTextCharAttr vcaDefault =
+VisTextCharAttr vcaDefault =
   CHAR_ATTR_FONT_SIZE_STYLE(DEFAULT_BITMAP_FONT, 14, 0);
 @else
-const VisTextCharAttr vcaDefault =
+VisTextCharAttr vcaDefault =
   CHAR_ATTR_FONT_SIZE_STYLE(FID_DTC_URW_ROMAN, 14, 0);
 @endif
 
@@ -363,7 +363,7 @@ void ApplyFontWeightWidthAndSpacingAdjustment(VisTextCharAttr *p_cs)
 
 }
 
-void ApplyCharacterDelta(VisTextCharAttr *cs,CharStyleDelta *cd)
+void ApplyCharacterDelta(VisTextCharAttr *cs,const CharStyleDelta *cd)
 {
     if(cd->CSD_which & CSD_RESET)
     {
@@ -417,7 +417,7 @@ void ApplyCharacterDelta(VisTextCharAttr *cs,CharStyleDelta *cd)
  *              Actual transfer item manipulation
  ***************************************************************************/
 
-void AddAttrRun(VMChain attrs, VMChain runs, void *rec, dword pos)
+void AddAttrRun(VMChain attrs, VMChain runs, const void *rec, dword pos)
 {
     MemHandle memHandle;
     word token;
@@ -428,7 +428,7 @@ void AddAttrRun(VMChain attrs, VMChain runs, void *rec, dword pos)
         VMLock(HTMLext->HE_vmFile, VMCHAIN_GET_VM_BLOCK(attrs), &memHandle);
 	if (MemGetInfo(memHandle, MGIT_SIZE) < PARSE_ARRAY_MEM_SIZE_LIMIT) {
         token = ElementArrayAddElementHandles(memHandle, VM_ELEMENT_ARRAY_CHUNK,
-          rec, (dword)&dummy, NULL);
+          (void *)rec, (dword)&dummy, NULL);
         VMDirty(memHandle);                 /* make sure changes get saved */
         VMUnlock(memHandle);
 
@@ -478,7 +478,7 @@ long GetTextpos(void)
     return textpos + (insertSpace? 1:0);
 }
 
-long AddText(VisTextCharAttr *ca,char *text)
+long AddText(const VisTextCharAttr *ca,const char *text)
 {
     word len ;
     long pos;
@@ -560,7 +560,7 @@ allocLimit:
     return pos;
 }
 
-long LOCAL AddParagraph(VisTextCharAttr *ca, VisTextParaAttr *pa, char *text)
+long LOCAL AddParagraph(const VisTextCharAttr *ca, const VisTextParaAttr *pa, const char *text)
 {
     long pos;
 

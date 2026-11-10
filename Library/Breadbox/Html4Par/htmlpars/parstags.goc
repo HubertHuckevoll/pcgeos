@@ -343,7 +343,7 @@ word AddFormElement(HTMLformData *fd)
     return element;
 }
 
-void AddQuote(char *quoteList)
+void AddQuote(const char *quoteList)
 {
     char quote[2];
     word level;

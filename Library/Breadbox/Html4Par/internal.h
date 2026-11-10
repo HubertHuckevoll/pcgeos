@@ -395,9 +395,9 @@ void EndLine(char *p);
 void EndCell(void);
 void InsertHRule(word size, VisTextParaAttrAttributes align);
 
-void AddAttrRun(VMChain attrs, VMChain runs, void *rec, dword pos);
-void ApplyCharacterDelta(VisTextCharAttr *cs,CharStyleDelta *cd);
-long AddText(VisTextCharAttr *ca,char *text);
+void AddAttrRun(VMChain attrs, VMChain runs, const void *rec, dword pos);
+void ApplyCharacterDelta(VisTextCharAttr *cs,const CharStyleDelta *cd);
+long AddText(const VisTextCharAttr *ca,const char *text);
 long GetTextpos(void);
 Boolean AddCellRecord(void);
 word GetCellLevel(void);
@@ -424,7 +424,7 @@ Boolean _pascal CanParseImage(void);
 word _pascal ParseImage(optr paramArray, word element, Boolean parseName,
                         NameToken svgFile);
 void ForceCloseStyle(SpecialTagType spec, SpecialTagType upTo);
-void AddQuote(char *quoteList);
+void AddQuote(const char *quoteList);
 word AddFormElement(HTMLformData *fd);
 word ParseHREF(optr paramArray, dword pos, WordFlags flags);
 HTMLmultiLength ParseMultiLength(char *p, word n);
