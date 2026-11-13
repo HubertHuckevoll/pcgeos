@@ -137,6 +137,16 @@ doHilite:
 
 printing:
 
+	;
+	; Variable graphics can change line heights during print calculation.
+	; Save the height that belongs to the original line array before any
+	; temporary calculation. Master-page redraws also use this print path.
+	; Save across calculation and drawing: ax will be reused for draw flags,
+	; so dx.al cannot keep the original height in registers.
+	;
+		movwbf	dxal, ds:[bx].VTI_height
+		push	dx, ax
+
 	; if we are printing we need to check for the special case of having
 	; variable graphics that need to be recalculated
 
@@ -150,8 +160,15 @@ doPrinting:
 	call	TextInitModeAndBorder
 	mov	al, mask TCBF_MSG_DRAW or mask TCBF_PRINT
 	call	TextDraw
-	jcxz	common
-	call	TG_RecalcAfterPrint
+
+	;
+	; Balance the saved height on every printing exit. cx is zero when no
+	; temporary line array was made; then neither lines nor height changed.
+	; Otherwise restore the original lines and their exact WBFixed height.
+	;
+		pop	dx, ax			; dx.al = original height
+		jcxz	common
+		call	TG_RecalcAfterPrint
 
 common:
 	;
@@ -191,7 +208,7 @@ REVISION HISTORY:
 	jcw	1/ 3/90		Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-VisTextRecalcAndDraw	method dynamic	VisTextClass, 
+VisTextRecalcAndDraw	method dynamic	VisTextClass,
 					MSG_VIS_TEXT_RECALC_AND_DRAW,
 					MSG_VIS_TEXT_RECALC_FOR_ATTR_CHANGE
 
@@ -249,7 +266,7 @@ TextDraw	proc	far
 	;
 	test	ax, mask TCBF_PRINT
 	jnz	drawRegions
-	
+
 	;
 	; We're not printing. Check to see if drawing is possible.
 	;
@@ -262,11 +279,11 @@ drawRegions:
 	;
 	sub	sp, size TextRegionEnumParameters
 	mov	bp, sp				; ss:bp <- stack frame
-	
+
 	mov	ss:[bp].TREP_flags, al
 	movcb	ss:[bp].TREP_callback, TextDrawRegionCallback
 	call	TR_RegionEnumRegionsInClipRect	; Do the drawing
-	
+
 	add	sp, size TextRegionEnumParameters
 
 quit:
@@ -321,7 +338,7 @@ TextDrawRegionCallback	proc	far
 	jnc	noLimit
 	mov	ax, ds:[bx]
 	cmp	ax, ss:[bp].TREP_region
-	jbe	quit
+	LONG 	jbe	quit
 noLimit:
 	;
 	; Transform the gstate so that all drawing is done relative to the
@@ -373,7 +390,7 @@ gotLineAndCount:
 	mov	bp, sp				; ss:bp <- stack frame
 	movdw	LICL_paraAttrStart,-1		; Init paragraph attributes
 	mov	ss:[bp].LICL_region, dx		; Save current region
-	
+
 	push	ax, bx
 	call	TL_LineToOffsetStart		; dx.ax <- start offset
 	movdw	ss:[bp].LICL_lineStart, dxax
@@ -407,7 +424,7 @@ gotLineAndCount:
 	;
 	test	ax, mask TCBF_PRINT		; Check for printing
 	jz	notPrinting			; Branch if not printing
-	
+
 	;
 	; We are printing. This means that the fact that an update might be
 	; pending is meaningless. We clear the flag that says an update is
@@ -462,7 +479,7 @@ nextLine:
 	;
 	call	TL_LineGetCharCount		; dx.ax <- # of chars on line
 	adddw	ss:[bp].LICL_lineStart, dxax	; Update line start
-	
+
 	;
 	; Update LICL_lineBottom to contain the top of the next line
 	;
@@ -547,7 +564,7 @@ TextScreenUpdate	proc	near
 ;-----------------------------------------------------------------------------
 	uses	ax, bx, cx, dx, bp
 	.enter
-	
+
 	;
 	; Allocate and initialize the stack frame.
 	;
@@ -564,7 +581,7 @@ TextScreenUpdate	proc	near
 	call	TSL_SelectGetSelection		; dx.ax <- start
 						; cx.bx <- end
 	jc	isRange				; If selection is a cursor
-	
+
 	;
 	; The selection is not a range (it is a cursor). Rather than figuring
 	; out later if we need to blink the cursor we just do it now.
@@ -598,9 +615,9 @@ afterRangeSet:
 	; Update each region
 	;
 	call	TR_RegionEnumRegionsInClipRect	; Do the drawing
-	
+
 	;
-	; Check to see if we removed the selection range. If we did then we 
+	; Check to see if we removed the selection range. If we did then we
 	; need to replace it.
 	;
 	cmpdw	ss:[bp].TREP_selectLines.VTR_start, -1
@@ -699,7 +716,7 @@ TextScreenUpdateCallback	proc	far
 	;
 	push	dx				; Save frame ptr
 	movdw	ss:[bp].LICL_theParaAttrStart, -1
-	
+
 	call	TL_LineToOffsetStart		; dx.ax <- starting offset
 	movdw	ss:[bp].LICL_lineStart, dxax	; Save start offset
 
@@ -718,7 +735,7 @@ TextScreenUpdateCallback	proc	far
 	; We haven't drawn the previous line
 	;
 	clr	ss:[bp].LICL_calcFlags
-	
+
 ;-----------------------------------------------------------------------------
 lineLoop:
 	;
@@ -801,7 +818,7 @@ quit:
 	; Restore stack
 	;
 	add	sp, size LICL_vars
-	
+
 	clc					; Signal: continue calling back
 	.leave
 	ret
@@ -832,7 +849,7 @@ interactsAbove:
 	subdw	ss:[bp].LICL_lineStart, dxax
 	inc	cx				; One more line to draw
 	pop	dx				; Restore frame ptr
-	
+
 	;
 	; Remove the line height and get the height of the previous line
 	;
@@ -849,7 +866,7 @@ interactsBelow:
 	; The line we are about to draw interacts with the line below it.
 	; We draw the next line, only if it isn't already marked as needing
 	; to be drawn. If it is marked as needing to be drawn, we don't mark
-	; it. 
+	; it.
 	;
 	; Also we only mark one un-marked line in this manner.
 	;
@@ -868,7 +885,7 @@ interactsBelow:
 
 	call	TL_LineNext			; bx.di <- next line
 	jc	skipMarkLine			; Branch if no next line
-	
+
 	;
 	; Check for next line needs redraw anyway.
 	;
@@ -944,7 +961,7 @@ CheckUnHilite	proc	near
 	cmpdw	bxdi, ss:[bp].TREP_selectLines.VTR_start
 	jb	skipUnHilite			; Branch if before select-start
 
-	cmpdw	bxdi, ss:[bp].TREP_selectLines.VTR_end 
+	cmpdw	bxdi, ss:[bp].TREP_selectLines.VTR_end
 	ja	skipUnHilite			; Branch if after select-end
 
 	;
@@ -991,12 +1008,12 @@ UnHiliteSavingGState	proc	near
 	pushf					; Save "is range" flag
 	call	TextDraw_DerefVis_DI		; ds:di <- instance ptr
 	popf					; Restore "is range" flag
-	
+
 	jc	saveAndRestore			; Branch if range
 	mov	cx, ds:[di].VTI_cursorRegion	; cx <- cursor region
 	cmp	cx, ds:[di].VTI_gstateRegion	; See if region is correct
 	jne	saveAndRestore			; Branch if not
-	
+
 	call	EditUnHilite			; Remove cursor/selection
 quit:
 	.leave
@@ -1004,7 +1021,7 @@ quit:
 
 saveAndRestore:
 	push	ds:[di].VTI_gstateRegion, di	; Save instance ptr, region
-	
+
 	mov	di, ds:[di].VTI_gstate		; di <- gstate
 	call	GrSaveState			; Save it
 	call	EditUnHilite			; Remove cursor/selection
@@ -1012,7 +1029,7 @@ saveAndRestore:
 
 	pop	ds:[di].VTI_gstateRegion, di	; Restore instance ptr, region
 	jmp	quit
-	
+
 UnHiliteSavingGState	endp
 
 
@@ -1052,7 +1069,7 @@ TextDrawCheckMask	proc	far
 
 	call	TR_RegionLinesInClipRect	; Figure the range
 	jc	quit				; Branch if none
-	
+
 	;
 	; Get the first line and figure the count
 	;

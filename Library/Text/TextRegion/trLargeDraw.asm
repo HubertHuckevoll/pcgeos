@@ -82,7 +82,7 @@ LargeEnumRegionsInClipRect	proc	near
 	popf
 
 	pop	ds, si, di			; Restore instance
-	jc	quit				; Null path: all regions fail
+	LONG jc	quit				; Null path: all regions fail
 
 	;
 	; Copy some things from the instance data...

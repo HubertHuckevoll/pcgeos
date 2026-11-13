@@ -706,6 +706,14 @@ WARNING_CANNOT_SET_HYPERLINK_ON_NIL_TEXT_RANGE			enum Warnings
 ; new hyperlink are identical. No hyperlink will be set.
 ;
 
+WARNING_TEXT_REGION_HEIGHT_MISMATCH				enum Warnings
+; The region validator found unequal stored and summed line heights.
+; At the warning: *ds:si = object, cx = region, bp.bl = sum, dx.al = stored.
+
+WARNING_TEXT_PRINT_RESTORE_HEIGHT_MISMATCH			enum Warnings
+; Restoring the original small-text lines left their height sum unequal
+; to VTI_height. At the warning: *ds:si = object, bx.cl = sum, dx.al = stored.
+
 
 endif
 

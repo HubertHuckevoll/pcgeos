@@ -886,13 +886,14 @@ COMMENT @----------------------------------------------------------------------
 
 FUNCTION:	TG_RecalcAfterPrint
 
-DESCRIPTION:	Recalculate after printing with variable graphics
+DESCRIPTION:	Restore line records and height after temporary print layout.
 
 CALLED BY:	INTERNAL
 
 PASS:
 	*ds:si - text object
 	cx - chunk returned by TG_IfVariableGraphicsThenRecalc
+	dx.al - computed height saved before temporary print calculation
 
 RETURN:
 	none
@@ -910,18 +911,48 @@ REVISION HISTORY:
 	Name	Date		Description
 	----	----		-----------
 	Tony	10/13/92		Initial version
+	Codex/MeyerK 11/13/26	Restore the height with the original lines
 
 ------------------------------------------------------------------------------@
-TG_RecalcAfterPrint	proc	far	uses ax, cx, di
+TG_RecalcAfterPrint	proc	far	uses ax, bx, cx, di
 	class	VisTextClass
 	.enter
 EC <	call	T_AssertIsVisText					>
 
-	mov_tr	ax, cx
-	mov	di, ds:[si]
-	add	di, ds:[di].Vis_offset
-	xchg	ax, ds:[di].VTI_lines
-	call	LMemFree
+	;
+	; Keep the saved height fraction before ax is used for chunk handles.
+	; Restore the old line array and its height together. The temporary
+	; line heights may differ, so leaving their computed VTI_height behind
+	; would make the next calculation fail its entry consistency check.
+	; This restores saved state without another calculation or notification.
+	;
+		mov	bl, al			; dx.bl = original height
+		mov_tr	ax, cx
+		mov	di, ds:[si]
+		add	di, ds:[di].Vis_offset
+		xchg	ax, ds:[di].VTI_lines
+		movwbf	ds:[di].VTI_height, dxbl
+		call	LMemFree		; Free only the temporary line array
+
+	;
+	; Printing recalculates a temporary copy of the small object's lines.
+	; The original lines are now back, but their heights must also agree
+	; with VTI_height. Detect a mismatch here, before a later redraw enters
+	; CalculateRegions and loses the connection to this restore operation.
+	; At the warning, bx.cl is the line sum and dx.al is the stored height.
+	;
+EC <		push	bx, cx, dx					>
+EC <		call	TL_LineGetCount					>
+EC <		clrdw	bxdi						>
+EC <		clr	cx						>
+EC <		call	TL_LineSumAndMarkRange				>
+EC <		movwbf	bxcl, dxah					>
+EC <		mov	di, ds:[si]					>
+EC <		add	di, ds:[di].Vis_offset				>
+EC <		movwbf	dxal, ds:[di].VTI_height				>
+EC <		cmpwbf	dxal, bxcl					>
+EC <		WARNING_NZ WARNING_TEXT_PRINT_RESTORE_HEIGHT_MISMATCH	>
+EC <		pop	bx, cx, dx					>
 
 	.leave
 	ret

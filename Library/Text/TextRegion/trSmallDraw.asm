@@ -96,7 +96,7 @@ SmallEnumRegionsInClipRect	proc	near
 
 	pop	ds, si, di			; Restore instance
 	
-	jc	nullPath			; Null path: all regions fail
+	LONG jc	nullPath			; Null path: all regions fail
 	
 	;
 	; Compute the top/left of the object.

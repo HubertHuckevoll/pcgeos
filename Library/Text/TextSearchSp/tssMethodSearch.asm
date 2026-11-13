@@ -1575,7 +1575,7 @@ notFound:
 ;	THE STRING WAS NOT FOUND IN THIS OBJECT
 
 	tst	bx		;Check to see if wrap-around flag was set
-	je	searchComplete	;If not, branch
+	LONG je	searchComplete	;If not, branch
 
 ;	GO TO THE START OF THE NEXT TEXT OBJECT IN THE CHAIN
 ;

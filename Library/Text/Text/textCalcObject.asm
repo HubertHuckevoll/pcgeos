@@ -833,6 +833,14 @@ RippleLinesToNextRegion	proc	near
 if _REGION_LIMIT		
 	jc	done
 endif
+
+	;
+	; Line ownership has changed, so the region just passed must now have
+	; its final height. Check before the next-region setup and the caller
+	; reset the height accounting. A warning here retains the inserted,
+	; deleted, total, and ripple values that produced this transfer.
+	;
+EC <		call	ECValidatePreviousRegion				>
 		
 	clr	ax
 	clrwbf	ss:[bp].LICL_lineBottom, ax	; Set previous line top
@@ -3758,8 +3766,14 @@ gotLineSum:
 	movwbf	bpbl, dxah			; Save sum of line hgts in bp.bl
 	call	TR_RegionGetHeight		; dx.al <- computed height
 	
-	cmpwbf	dxal, bpbl
-	ERROR_NZ SUM_OF_LINE_HGTS_IN_REGION_DOES_NOT_MATCH_STORED_COMPUTED_HGT
+	; Capture the object and the unequal heights before FatalError changes
+	; the register context. Recompare after WarningNotice so the original
+	; fatal check does not depend on the warning's flag preservation.
+	;
+		cmpwbf	dxal, bpbl
+		WARNING_NZ WARNING_TEXT_REGION_HEIGHT_MISMATCH
+		cmpwbf	dxal, bpbl
+		ERROR_NZ SUM_OF_LINE_HGTS_IN_REGION_DOES_NOT_MATCH_STORED_COMPUTED_HGT
 	
 	;
 	; Check to see if the computed height is greater than the region height.

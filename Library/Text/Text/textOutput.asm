@@ -51,7 +51,7 @@ REVISION HISTORY:
 	jcw	3/11/90		Initial version
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@
-VisTextShowPosition	method	dynamic VisTextClass, 
+VisTextShowPosition	method	dynamic VisTextClass,
 			MSG_VIS_TEXT_SHOW_POSITION
 	;
 	; Convert any special values into something more meaningful.
@@ -61,9 +61,9 @@ VisTextShowPosition	method	dynamic VisTextClass,
 	movdw	ss:[bp].VTR_start, dxcx	; Store the (possibly) virtual offset
 	movdw	ss:[bp].VTR_end, dxcx
 
-	clr	bx			; No context	
+	clr	bx			; No context
 	call	TA_GetTextRange		; Convert the range to real values
-	
+
 	movdw	dxax, ss:[bp].VTR_start	; dx.ax <- converted value
 	add	sp, size VisTextRange	; Restore the stack frame
 
@@ -274,11 +274,11 @@ noOptimize:
 
 common:
 	;
-	; Carry is set if we can optimize our way out of this. This happens 
+	; Carry is set if we can optimize our way out of this. This happens
 	; if the position is already on screen.
 	;
 	pop	ax, cx, dx, si			; Rstr reg, X/Y, instance
-	jc	done
+	LONG 	jc	done
 
 noTryOptimize:
 	;
@@ -297,7 +297,7 @@ noTryOptimize:
 	mov_tr	cx, ax				; cx <- region
 	call	TR_RegionGetTopLeft		; Fill in region top-left
 	pop	cx, bp				; Restore X position
-	
+
 	;
 	; Combine the x/y position (cx/dx) with the region position.
 	; For now we are ignoring the high word (which we probably shouldn't)
