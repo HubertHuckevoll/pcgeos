@@ -955,7 +955,7 @@ Ui_Init(int 	*argcPtr,
 
 #if !defined(_MSDOS)
 #ifdef _WIN32
-    term = "smart";
+    term = getenv("SWAT_BATCH") ? "dumb" : "smart";
 #else
     term = getenv("TERM");
 #endif

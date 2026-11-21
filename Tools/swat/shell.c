@@ -522,7 +522,12 @@ Shell_Init(void)
     Cmd_Create(&ShellSystemCmdRec);
 
 #if defined(_WIN32)
-    Initscr_PrepConsole();
+    if (getenv("SWAT_BATCH")) {
+	/* Send the transcript to the runner as soon as it is written. */
+	setvbuf(stdout, NULL, _IONBF, 0);
+    } else {
+	Initscr_PrepConsole();
+    }
 #endif
 
     Tcl_SetVar(interp, "window-system", "shell", TRUE);
