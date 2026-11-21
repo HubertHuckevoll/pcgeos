@@ -25,6 +25,7 @@ nav_order: 3
 [3.5.4 Examining and Modifying Memory](Tools/tswatcm.md#354-examining-and-modifying-memory)  
 [3.5.5 Other Important Commands](Tools/tswatcm.md#355-other-important-commands)  
 [3.6 Additional Features](Tools/tswatcm.md#36-additional-features)  
+[Swat batch tests](Tools/tswat_batch.md)
 
 **[4 Swat Reference](Tools/tswta_i.md)**  
 [4.1 Notation](Tools/tswta_i.md#41-notation)  

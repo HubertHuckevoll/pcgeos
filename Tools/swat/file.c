@@ -3100,7 +3100,7 @@ read_config:
 	}
 	else {
 		fprintf(stderr, "Current directory (%s) is not under GEOS tree %s, using LOCAL_ROOT=%s\n",
-        		cwd, fileDevel);
+			cwd, fileRoot, fileDevel);
 		
 	}
 
