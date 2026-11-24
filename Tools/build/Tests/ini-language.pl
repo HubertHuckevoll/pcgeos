@@ -14,7 +14,7 @@ sub Unix2Dos {}
 sub Error { die $_[0]; }
 
 require "$FindBin::Bin/../build/template.pl";
-my $source = shift || "$FindBin::Bin/../product/bbxensem/Template/geos.ini";
+my $source = shift || "$FindBin::Bin/../product/bbxensem/Template/net.ini";
 open my $in, '<:raw', $source or die "$source: $!";
 my $template = do { local $/; <$in> };
 $template =~ /(\[text\]\r?\n.*?)(?=\r?\n\[)/s
@@ -34,7 +34,7 @@ for my $ec (0, 1) {
             local *STDOUT = $quiet;
             ParseTemplateFileAndSend("$dir/geos.ini", "$dir/Output/");
         }
-        open my $result, '<:raw', "$dir/Output/geos.ini" or die $!;
+        open my $result, '<:raw', "$dir/Output/GEOS.INI" or die $!;
         my $ini = do { local $/; <$result> };
         my ($name, $id, $dialect, $dictionary) = $language eq 'english'
             ? ('English (American)', 16, 128, 'EN_US.DCT')
