@@ -851,7 +851,17 @@ nextElement:
 	cmp	cl, GR_BEGIN_PATH
 	jne	nextElement
 
-	; Found a GR_BEGIN_PATH. Do a little swapping around.
+	;
+	; Move BeginPath after the saved transform and pen position. Preserve
+	; both its combine argument and its flags/unused word while moving it.
+	; The former code stored OBP_combine twice, which replaced OBP_flags
+	; with another copy of the combine argument and cleared OBP_unused.
+	; OBP_flags contains BeginPathFlags (Internal/grWinInt.def): fill rule,
+	; coordinate system and the current combine type. Later clip operations
+	; can change that type without changing the original OBP_combine.
+	; PDF path/clip export reads these flags to preserve holes and unions.
+	; Only the copied metadata changes. Record sizes, geometry, transform
+	; order and ownership stay the same; the source Path is not modified.
 	;
 	push	di, si				; save GState, GString handles
 	call	GrDerefPtrGString		; offset => SI

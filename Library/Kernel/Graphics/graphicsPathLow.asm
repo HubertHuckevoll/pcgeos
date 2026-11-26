@@ -5931,10 +5931,16 @@ EC <	ERROR_A GRAPHICS_REGION_ILLEGAL_REGION_FILL_RULE		>
 	call	PathBuildRegionSlow		; build a region from the path
 	mov	bp, ds:[si]			; Path => DS:BP
 	;
+	; GrGetPathRegion and GrGetClipRegion share this copy routine. Region
+	; queries must restore the source Path after the temporary conversion;
+	; PDF union clipping uses GrGetClipRegion to obtain native regions.
 	; PathBuildRegionSlow can move the Path chunk. SI is still its handle,
 	; not its address, so restore all four fields through the new BP pointer.
-	; Using DS:[SI] for P_top/P_bottom overwrote unrelated GState data near
-	; the chunk-handle table, and left the Path's original bounds unrestored.
+	; The former DS:[SI] writes used the handle as an address even if the
+	; chunk did not move. They could overwrite unrelated GState data and
+	; leave the source bounds unrestored. This only corrects internal field
+	; restoration; the returned region format and handle ownership do not
+	; change.
 	;
 	pop	ds:[bp].P_bottom
 	pop	ds:[bp].P_top

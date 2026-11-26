@@ -3798,6 +3798,14 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 GRGETTEXTMASK	proc	far
+	;
+	; CGetMaskCommon selects line, area or text with CX = 0, 1 or 2.
+	; The former value of 1 returned the area mask from this text getter.
+	; For example, SDM_0 for areas must not hide text with SDM_100. The
+	; PDF exporter needs the independent text mask to preserve visibility.
+	; This corrects the result specified by CInclude/graphics.h. Arguments,
+	; return format and the native assembly GrGetTextMask are unchanged.
+	;
 	mov	cx, 2			; select text, not area
 	jmp	CGetMaskCommon
 
@@ -6689,11 +6697,16 @@ REVISION HISTORY:
 
 ------------------------------------------------------------------------------@
 GRGETCLIPREGION	proc	far
-	; CInclude declares both GState and RegionFillRule. Decode both words:
-	; the native entry requires CL, and Pascal must remove both arguments.
+	;
+	; CInclude/graphics.h and TechDocs/Markdown/Routines/rroutg_g.md both
+	; specify (GStateHandle, RegionFillRule). This is the existing C API,
+	; not an added argument. The native entry requires DI and CL.
 	; With Pascal argument order, the former one-word decoder read the rule
 	; as the GState, passed an undefined CL, and left the actual GState word
-	; on the caller's stack after returning.
+	; on the caller's stack after returning. Decode and remove both words,
+	; as GRGETPATHREGION does. The PDF exporter uses this call for union
+	; clips. The native assembly entry and export ordinal are unchanged.
+	;
 	C_GetTwoWordArgs	ax,cx, bx,dx	; GState => AX, FillRule => CL
 	xchg	ax, di				; GState => DI, save DI in AX
 	call	GrGetClipRegion
