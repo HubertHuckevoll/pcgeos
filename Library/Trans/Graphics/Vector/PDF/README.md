@@ -24,7 +24,8 @@ DESCRIPTION:
 This is a separate `pdf.drvr` printer and `pdf.lib` translation backend. It
 writes PDF 1.1 directly from GEOS GStrings through the spooler's existing file
 stream. It does not invoke EPS, PostScript, ps2pdf, Ghostscript or host services.
-The existing PostScript driver, EPS exporter and spooler are unchanged.
+The existing PostScript driver and EPS exporter are unchanged. The spooler
+queries the output format for the print dialog and reports EndJob failures.
 
 ## Interface audit and architecture
 
@@ -142,6 +143,7 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   Underline and strike-through use native font positions and thickness,
   preserve fractional coordinates and follow the text color/mask. Text-field
   decoration limits do not shorten run advances.
+  Superscript and subscript use native baseline offsets and half-size glyphs.
   Optional hyphens follow the native mode and counted-run boundary;
   nonbreaking hyphens retain native advances. Automatic field hyphens use
   the final run's attributes. Unused saved-field flag bits are ignored.
@@ -166,8 +168,9 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   with native GEOS APIs before serialization: fills/clips use physical page
   coordinates, and strokes use the final painting state's coordinates. This
   preserves rotated/scaled page clips and affine stroke widths without
-  changing the PDF CTM during path construction. Boolean union sections still fail
-  explicitly; their native region conversion remains work to complete.
+  changing the PDF CTM during path construction. Boolean union fills and clips
+  use native regions on the printer's 300 dpi grid, in translated page strips.
+  Other paths retain vector curves.
 * Mono, indexed 4-/8-bit and RGB24 bitmaps, uncompacted or using native
   PackBits/LZG compression: simple headers and complex sliced headers,
   explicit DPI, DrawBitmap/DrawBitmapAtCP; FillBitmap/FillBitmapAtCP for mono.
@@ -178,9 +181,8 @@ most 32,760 bytes. Limits produce errors instead of overflowing 16-bit blocks.
   remain packed; PDF indexed color spaces avoid a full RGB expansion buffer.
 
 This is a **restricted SBCS vector/text milestone**, not general document
-fidelity yet. Boolean path unions, patterned fills,
-non-copy mixing, embedded graphics in text fields, super/subscript and DBCS
-remain future work.
+fidelity yet. Patterned fills, partial drawing masks, non-copy mixing,
+embedded graphics in text fields and DBCS remain future work.
 Font shape fidelity beyond the standard-family substitution, full character
 coverage and application-level justified text verification need further work. Failed jobs may leave incomplete output; the spooler owns destination
 cleanup. The backend does not publish a success trailer after a latched error. The
@@ -214,9 +216,8 @@ placement and the lifetime of each source slice. It explicitly consumes bitmap
 records and continuation slices with GrSetGStringPos: ordinary kernel playback
 would invoke callbacks and consume all the slices itself. For explicit-position
 records GrMoveTo preserves the kernel's starting-pen semantics; CP variants retain
-the existing pen. Other elements still use kernel playback. The test double now
-models priming and COMPLETE's source rewind, so an accidental re-execution at
-the end of a page cannot be hidden by a non-rewinding mock.
+the existing pen. Other elements still use kernel playback. Translation stops
+on COMPLETE because kernel cleanup rewinds the source.
 
 For each complex image, startScan/numScans must form a contiguous sequence from
 row zero through image height. Dimensions, canonical format and DPI must remain
@@ -254,7 +255,7 @@ Print the PDFPrint sample with the PDF printer. Its added text should read
 the bitmaps exercise built-in and custom dashes. For automatic hyphens,
 print a GeoWrite paragraph with automatic hyphenation enabled and a narrow
 text column; check the line ends in the GEOS PDF viewer. Runtime verification
-is performed by the user; the automated checks do not start PC/GEOS.
+is performed by the user.
 
 ## Point and bounded-arc runtime check
 
@@ -295,57 +296,29 @@ storage support; PDF output still uses the existing ASCIIHex stream.
 
 ## Build and verification
 
-With the normal PC/GEOS development environment, build the backend before the
-driver (so `pdf.ldf` is available):
+With the normal PC/GEOS development environment, build the backend and publish
+its `pdf.ldf` to Installed/Include before building the driver:
 
 ```
 (cd Installed/Library/Trans/Graphics/Vector/PDF && pmake full)
+(cd Installed/Library/Trans/Graphics/Vector/PDF && pmake lib)
 (cd Installed/Driver/Printer/PDF && pmake full)
+(cd Installed/Appl/SDK_C/PDFPrint && pmake full)
 ```
 
-Alternatively `tests/build-native.sh /absolute/output/directory` builds the
-backend, driver and `Appl/SDK_C/PDFPrint` smoke application in NC and EC
-variants, without changing source revision files. Set WATCOM, put wcc/esp/glue/
-goc on PATH, and set GEOS_LDF_DIR to the SDK's built Installed/Include folder.
-The driver protocol is obtained from the print-driver definitions.
-
-Portable regression checks (C and Perl; no Python):
+These commands build EC and NC. Use the matching rebuilt kernel and spooler
+with the PDF components. The driver protocol comes from the print-driver
+definitions. The printer escape ABI check is available from the source root:
 
 ```
-Library/Trans/Graphics/Vector/PDF/tests/run.sh
-PDF_TEST_CFLAGS='-fsanitize=address,undefined -g' \
-    Library/Trans/Graphics/Vector/PDF/tests/run.sh
+perl Library/Spool/Tests/check-print-format.pl
 ```
 
-The tests use the production serializer and GEOS adapter. A separate Perl
-check executes the small native text-mask and EndJob dispatch branches with
-distinct input states; it does not execute the full kernel or spooler.
-Ghostscript, when installed, also checks the emitted mathematical Symbol glyph.
-The text tests check fractional multi-run layout, incoming pair kerning, track
-kerning before the first glyph, hidden-run advances, font-family choice and
-late finalization write failure. The kernel double
-checks element dispatch, end/new-page handling, packed text-field layout,
-rectangular clipping, allocation/write failures and handle cleanup. A separate
-Perl checker validates every xref byte offset, indirect stream length and page
-reference. Poppler parsing/rendering is checked when installed. These are
-host-side development checks, not runtime dependencies.
+The PDF host regression tests are no longer included. The ABI check compares
+the ESP and C printer escape values; it does not check rendering. Use the
+application checks below to verify live output.
 
-Bitmap checks cover simple/complex headers, CP/fill variants, empty intro slices,
-continuation validation, DPI, malformed payloads, every slice allocation failure,
-and streaming an image larger than a 16-bit block. Compression checks cover
-GEOS PackBits runs, LZG token forms, overlapping matches, history wrap, row
-boundaries, truncation, trailing data and invalid back-references. The rendered
-RGB fixture is LZG input; the rendered indexed fixture uses PackBits. Bitmap-only
-playback uses two owned heap blocks (job context and
-current element) for plain mono/RGB input. Indexed/compressed playback can
-add one palette/mask block and one decoder workspace; path/clip playback can instead hold
-one native snapshot and one snapshot element. A single additional null-window
-GState is allocated lazily for the physical page transform, reused across the
-job, and freed during PDFDESTROY, including failed jobs. Image tests inject
-write failures and prevent premature page finalization. When Poppler is available,
-an independent Perl pixel oracle verifies exact RGB channel/row order, mono
-stencil polarity, transparent zero bits and non-byte-aligned widths. The GString
-fixture itself also contains mono/RGB images and is parsed/rendered independently.
+## Vector construction
 
 The shape module provides internal C functions `PdfEllipse`, `PdfRoundRect`, `PdfArc` and `PdfThreePointArc`;
 the printer and exported library API are unchanged. GString cases select
@@ -355,10 +328,6 @@ Inherited stroke width is therefore preserved for noncircular ellipses. Reversed
 corners are normalized as in the kernel; zero-area fills vanish and degenerate
 outlines collapse to a line/point. This continuous PDF treatment does not promise
 pixel-identical GEOS raster results for degenerate or very small ellipses.
-Independent host tests sample the emitted curves against the ellipse equation
-(normalized radial error below 0.0004), including odd dimensions, 1-point bounds,
-the full signed-word range and extreme aspect ratios. Tests also cover inherited
-area masks, malformed GString operands, sink failures, and transformed rendering.
 
 Rounded rectangles reuse the same quarter-circle control factor for four cubic
 corners joined by straight edges. Their unsigned word radius is limited to the
@@ -370,14 +339,10 @@ the complete signed-word coordinate range without 16-bit subtraction overflow.
 The four records are decoded explicitly from `Include/gstring.def`: a word
 radius precedes either four signed coordinate words (11 bytes total) or two
 coordinate words with the first corner taken from the current pen position
-(7 bytes total). The kernel continues
-to own pen state. Tests cover all four opcodes, radius 0xffff, line/area attribute
-selection, truncated/oversized operands, edge/corner tangencies, sampled radial
-accuracy, odd and tiny dimensions, coordinate limits, and transformed rendering.
+(7 bytes total). The kernel continues to own pen state.
 
 Verified during implementation: Watcom 2020-12-01, ESP and Glue from this
-repository, both native EC/NC library/driver/application builds; sanitizer host
-tests; independent PDF structural validation; Poppler rendering of both pages.
+repository, both native EC/NC library/driver/application builds.
 **A live GEOS/spooler run and the legacy GEOS PDF Viewer remain unverified.**
 
 ## Normal Print to File smoke test
@@ -396,18 +361,31 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
    red/green-over-blue/yellow RGB bitmap and a red mono stencil over green,
    whose unset pixels must retain the green background.
 4. Use the matching rebuilt kernel as well as the backend: GrGetPath now
-   retains the section fill/coordinate flags needed by clipping. Open in the GEOS PDF Viewer; also inspect with `pdfinfo`, `pdftotext` and
-   `tests/check_pdf.pl output.pdf 2` on a development host. Check portrait,
+   retains the section fill/coordinate flags needed by clipping. Open in the
+   GEOS PDF Viewer; also inspect with `pdfinfo` and `pdftotext` on a development
+   host. Check portrait,
    landscape, copies and tiled pages separately. An unsupported output operation
    must report a conversion error, rather than silently completing the job.
 5. Regression: print the same simple drawing with the PostScript driver and
    export EPS using the existing exporter. Their source and interfaces have
    not changed, but live output comparison is still required.
 
+## Print dialog runtime check
+
+1. In a new print dialog, change between PDF and PostScript printers without
+   editing the filename. Expect UNNAMED.PDF or UNNAMED.PS and the matching
+   format label.
+2. Enter INVOICE.PDF, then change printers and return. The complete filename
+   must stay unchanged; the format label must follow the selected printer.
+3. Clear the filename, then change printers. The field must stay empty.
+4. Print the PDFPrint sample with EC geodes. Successful pages must not emit
+   PDF_TRANSLATION_STARTED or PDF_TRANSLATION_FINISHED warnings. Failure
+   warnings remain enabled.
+
 ## Independently testable next milestones
 
 1. **This branch:** native streaming writer, PDL printer plumbing, basic
-   vectors/text, native smoke application and development regression checks.
+   vectors/text and native smoke application.
 2. Full clip/path fidelity, masks and patterns;
    broaden shape fixtures and complete live spooler/legacy-viewer validation.
 3. Font-family mapping, proper run metrics/justification, all GEOS characters,
@@ -416,14 +394,12 @@ tests; independent PDF structural validation; Poppler rendering of both pages.
 5. Replace the bounded xref table with VM-backed metadata for larger jobs;
    optimize text translation and add packaging/localization/UI refinements.
 
-## Native path verification
+## Native path runtime check
 
-The path fixture checks retained fill plus stroke, same-direction contours
-with an odd-even hole, saved-scope clip replacement, independent application
-and window clips, and transformed/intersected sections. A small pixel oracle
-checks interior samples in the rendered PDF. Representative allocation and
-write failures also check cleanup. This is a host adapter check; the existing
-PDFPrint application's triangle is the corresponding native smoke fixture.
+The PDFPrint application's triangle checks native path fill and stroke. Further
+application checks must cover odd-even holes, clip replacement inside saved
+states, independent application and window clips, and transformed, intersected
+and union sections. Check union shapes across a region-strip boundary as well.
 
 The path snapshot comes from GrGetPath, following SvgLib's C ownership pattern.
 The separate playback state executes transforms and pen updates, while the PDF

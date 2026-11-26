@@ -34,8 +34,6 @@ include Internal/fontDr.def
 include ec.def
 if ERROR_CHECK
 PDF_TRANSLATION_FAILED enum Warnings, 5044h
-PDF_TRANSLATION_STARTED enum Warnings, 5045h
-PDF_TRANSLATION_FINISHED enum Warnings, 5046h
 PDF_TEXT_PATH_REQUIRED enum Warnings, 5047h
 PDF_PATH_TRANSLATION_FAILED enum Warnings, 5048h
 PDF_DRAW_MODE_UNSUPPORTED enum Warnings, 5049h

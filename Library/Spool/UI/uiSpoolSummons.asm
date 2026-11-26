@@ -3016,6 +3016,14 @@ setMoniker:
 		call	ObjCallInstanceNoLock
 		pop	bp
 
+	; Keep the complete name after a user edit, including an empty name.
+	; Only the automatic default follows printer changes.
+		mov	si, offset PrintFileNameText
+		mov	ax, MSG_VIS_TEXT_GET_USER_MODIFIED_STATE
+		call	ObjCallInstanceNoLock
+		tst	cx
+		jnz	done
+
 		mov	bx, offset PrintFilePostScriptName
 		cmp	fileFormat, POF_PDF
 		jne	setName
@@ -3030,6 +3038,10 @@ setName:
 		call	ObjCallInstanceNoLock
 		pop	bp
 
+	; The next printer change can still update this automatic name.
+		mov	ax, MSG_VIS_TEXT_SET_NOT_USER_MODIFIED
+		call	ObjCallInstanceNoLock
+done:
 	.leave
 		ret
 InitPrintFileFormat endp

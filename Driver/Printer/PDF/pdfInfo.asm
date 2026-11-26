@@ -43,8 +43,8 @@ PrintGetOptionsUI label far
 PrintGetMainUI endp
 
 PrintEvalUI proc far
-		mov	es:[si].JP_printerData.PUID_paperInput, ASF_TRAY1 shl offset PIO_ASF
-		clr	es:[si].JP_printerData.PUID_paperOutput
+		mov	es:[si].[JP_printerData].[PUID_paperInput], ASF_TRAY1 shl offset PIO_ASF
+		clr	es:[si].[JP_printerData].[PUID_paperOutput]
 		clc
 		ret
 PrintEvalUI endp

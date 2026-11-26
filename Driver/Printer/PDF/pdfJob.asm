@@ -68,8 +68,6 @@ PrintStartJob proc far
 		call	MemUnlock
 
 	; Initialize the file-only paper path and physical margins.
-		mov	al, ds:[PS_jobParams].JP_printerData.PUID_paperInput
-		mov	ah, ds:[PS_jobParams].JP_printerData.PUID_paperOutput
 		call	PrintSetPaperPath
 
 	; Pass the spooler-owned stream, strategy and page size to pdf.lib.
