@@ -1,11 +1,11 @@
 @rem = '-*- Perl -*-';
 @rem = '
 @echo off
-attrib +R %ROOT_DIR%\Installed\Library\BorlandRTL\BORLAND.OBJ
-attrib +R %ROOT_DIR%\Installed\Include\rgb2cmyk.ldf
-attrib +R %ROOT_DIR%\Installed\Include\serial.ldf
-attrib +R %ROOT_DIR%\Installed\Library\RGB2CMYK/*.*
-attrib +R %ROOT_DIR%\Installed\Library\RGB2CMYK/666/*.*
+rem Clear read-only flags left on generated files by older scripts.
+if defined ROOT_DIR if /I not "%~1"=="no" (
+    if exist "%ROOT_DIR%\Installed\Library\BorlandRTL\BORLAND.OBJ" attrib -R "%ROOT_DIR%\Installed\Library\BorlandRTL\BORLAND.OBJ"
+    if exist "%ROOT_DIR%\Installed\Include\serial.ldf" attrib -R "%ROOT_DIR%\Installed\Include\serial.ldf"
+)
 
 perl -S %0.cmd %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto endofperl
