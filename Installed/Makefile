@@ -3,6 +3,9 @@
 # an old ui.ldf to start with.
 #
 
+# Include implicit class-library imports as well as imports in GP files.
+# Library targets must publish their LDF files before their consumers start.
+
 MAKELIB	:	.USE
 #if defined(linux)
 	mkdir -p ../$(.TARGET)
@@ -268,10 +271,10 @@ cell	: Installed/Library/Cell
 Installed/Library/Cell: 	kernel MAKELIB
 
 chart	: Installed/Library/Chart
-Installed/Library/Chart:	ui grobj spline text MAKELIB
+Installed/Library/Chart:	ui grobj spline text math MAKELIB
 
 config	: Installed/Library/Config
-Installed/Library/Config: 	ui MAKELIB
+Installed/Library/Config: 	ui color MAKELIB
 
 grobj	: Installed/Library/GrObj
 Installed/Library/GrObj:	ui text bitmap ruler spline color \
@@ -281,7 +284,7 @@ hash	: Installed/Library/Hash
 Installed/Library/Hash:	kernel MAKELIB
 
 pnglib	: Installed/Library/PngLib
-Installed/Library/PngLib:	ansic zlib MAKELIB
+Installed/Library/PngLib:	ansic zlib extgraph MAKELIB
 
 webplib	: Installed/Library/WebpLib
 Installed/Library/WebpLib:	ansic MAKELIB
@@ -314,7 +317,7 @@ gif : Installed/Library/Breadbox/Impex/GIF
 Installed/Library/Breadbox/Impex/GIF: ui impex ansic extgraph giflib MAKELIB
 
 png : Installed/Library/Breadbox/Impex/PNG
-Installed/Library/Breadbox/Impex/PNG: ui impex extgraph pnglib MAKELIB
+Installed/Library/Breadbox/Impex/PNG: ui impex extgraph pnglib color MAKELIB
 
 wmf : Installed/Library/Trans/Graphics/Vector/Wmf
 Installed/Library/Trans/Graphics/Vector/Wmf: ui impex ansic MAKELIB
@@ -416,7 +419,7 @@ eps	: Installed/Library/Trans/Graphics/Vector/EPS
 Installed/Library/Trans/Graphics/Vector/EPS:	ui MAKELIB
 
 ps2pdf	: Installed/Library/Breadbox/ps2pdf
-Installed/Library/Breadbox/ps2pdf:	kernel ansic MAKELIB
+Installed/Library/Breadbox/ps2pdf:	kernel ansic text MAKELIB
 
 socket	: Installed/Library/Socket
 Installed/Library/Socket:	ui netutils MAKELIB
@@ -642,7 +645,7 @@ modem	: Installed/Driver/Modem
 Installed/Driver/Modem:			kernel MAKEDRV
 
 gdipointer	: Installed/Driver/Mouse/GDIPointer
-Installed/Driver/Mouse/GDIPointer:	kernel MAKEDRV
+Installed/Driver/Mouse/GDIPointer:	kernel genpc MAKEDRV
 
 standard	: Installed/Driver/Sound/Standard
 Installed/Driver/Sound/Standard:	kernel MAKEDRV
@@ -657,16 +660,16 @@ serial	: Installed/Driver/Stream/Serial
 Installed/Driver/Stream/Serial:		kernel stream MAKEDRV
 
 disk	: Installed/Driver/Swap/Disk
-Installed/Driver/Swap/Disk:		kernel MAKEDRV
+Installed/Driver/Swap/Disk:		kernel swap MAKEDRV
 
 emm	: Installed/Driver/Swap/EMS/EMM
-Installed/Driver/Swap/EMS/EMM:		kernel MAKEDRV
+Installed/Driver/Swap/EMS/EMM:		kernel swap MAKEDRV
 
 extmem	: Installed/Driver/Swap/ExtMem
-Installed/Driver/Swap/ExtMem:		kernel MAKEDRV
+Installed/Driver/Swap/ExtMem:		kernel swap MAKEDRV
 
 xms	: Installed/Driver/Swap/XMS
-Installed/Driver/Swap/XMS:		kernel MAKEDRV
+Installed/Driver/Swap/XMS:		kernel swap MAKEDRV
 
 att6300	: Installed/Driver/Video/Dumb/ATT6300
 Installed/Driver/Video/Dumb/ATT6300:	kernel MAKEDRV
@@ -687,7 +690,7 @@ vga15	: Installed/Driver/Video/VGAlike/VGA15
 Installed/Driver/Video/VGAlike/VGA15:	kernel MAKEDRV
 
 vga16	: Installed/Driver/Video/VGAlike/VGA16
-Installed/Driver/Video/VGAlike/VGA16:	kernel MAKEDRV
+Installed/Driver/Video/VGAlike/VGA16:	kernel hostif MAKEDRV
 
 vga24	: Installed/Driver/Video/VGAlike/VGA24
 Installed/Driver/Video/VGAlike/VGA24:	kernel MAKEDRV
@@ -931,11 +934,11 @@ Installed/Driver/Power/hltpwr:			kernel MAKEDRV
 
 #calendar	: ui text spool config pen
 calendar	: Installed/Appl/Calendar
-Installed/Appl/Calendar:	ui text spool config MAKEAPPL
+Installed/Appl/Calendar:	ui text spool config pen MAKEAPPL
 
 geodex	: Installed/Appl/GeoDex
 Installed/Appl/GeoDex:	ui text spool impex ssmeta convert \
-			mailhub serial MAKEAPPL
+			mailhub serial mailbox MAKEAPPL
 
 geocalc	: Installed/Appl/GeoCalc
 Installed/Appl/GeoCalc:		ui spool cell parse math spreadsheet \
@@ -952,7 +955,7 @@ Installed/Appl/GeoPoint:		ui ansic text color MAKEAPPL
 geowrite	: Installed/Appl/GeoWrite
 Installed/Appl/GeoWrite:	ui spool ruler text spline grobj chart \
 				bitmap spell color impex styles ssmeta \
-				convert compress MAKEAPPL
+				convert compress mailbox MAKEAPPL
 
 banner	: Installed/Appl/Banner
 Installed/Appl/Banner:		ui spool MAKEAPPL
@@ -961,7 +964,7 @@ geodeck	: Installed/Appl/Art/Decks/GeoDeck
 Installed/Appl/Art/Decks/GeoDeck:	MAKEAPPL
 
 scrapbk	: Installed/Appl/ScrapBk
-Installed/Appl/ScrapBk:		ui text impex convert MAKEAPPL
+Installed/Appl/ScrapBk:		ui text impex convert saver MAKEAPPL
 
 bigcalc	: Installed/Appl/BigCalc
 Installed/Appl/BigCalc:		ui math parse MAKEAPPL
@@ -1022,7 +1025,7 @@ Installed/Appl/Breadbox/NewsRead:	ui socket ansic text spool spell \
 					MAKEAPPL
 
 ftpc	: Installed/Appl/Breadbox/ftpc
-Installed/Appl/Breadbox/ftpc:		ui flllib extui ansic ftplib MAKEAPPL
+Installed/Appl/Breadbox/ftpc:		ui flllib extui ansic ftplib sitelist parentc MAKEAPPL
 
 # Utilities
 
@@ -1059,10 +1062,10 @@ amateur	: Installed/Appl/Games/Amateur
 Installed/Appl/Games/Amateur:	ui sound game MAKEAPPL
 
 bjack	: Installed/Appl/Games/BJack
-Installed/Appl/Games/BJack:	ui sound game wav cards MAKEAPPL
+Installed/Appl/Games/BJack:	ui sound game wav cards text MAKEAPPL
 
 gwpoker	: Installed/Appl/Games/GWPoker
-Installed/Appl/Games/GWPoker:	ui sound game wav cards MAKEAPPL
+Installed/Appl/Games/GWPoker:	ui sound game wav cards text MAKEAPPL
 
 hearts	: Installed/Appl/Games/Hearts
 Installed/Appl/Games/Hearts:	ui sound wav cards MAKEAPPL
@@ -1152,11 +1155,11 @@ Installed/Appl/IDialup:		ui ansic socket accpnt MAKEAPPL
 
 gpcmail : Installed/Appl/GPCMail
 Installed/Appl/GPCMail:		ui ansic spell text mailhub mailsmtp \
-				mailpop3 config spool idialc MAKEAPPL
+				mailpop3 config spool idialc parentc impex MAKEAPPL
 
 bbxmail : Installed/Appl/dil/bbxmail
 Installed/Appl/dil/bbxmail:	ui ansic spell text bbxmlib config spool \
-				MAKEAPPL
+				parentc MAKEAPPL
 
 bbxchat : Installed/Appl/Breadbox/BbxChat
 Installed/Appl/Breadbox/BbxChat:	ui text ansic socket accpnt parentc \
@@ -1217,13 +1220,13 @@ Installed/Appl/Saver/Flame/FlamePref:		saver config MAKEAPPL
 
 hopalong	: 	Installed/Appl/Saver/Hopalong \
 			Installed/Appl/Saver/Hopalong/HopalongPref
-Installed/Appl/Saver/Hopalong:			saver config MAKEAPPL
+Installed/Appl/Saver/Hopalong:			saver config math MAKEAPPL
 Installed/Appl/Saver/Hopalong/HopalongPref:	saver config MAKEAPPL
 
 lastwords	: 	Installed/Appl/Saver/LastWords \
 			Installed/Appl/Saver/LWPref
-Installed/Appl/Saver/LastWords:			saver config MAKEAPPL
-Installed/Appl/Saver/LWPref:			saver config MAKEAPPL
+Installed/Appl/Saver/LastWords:			saver config ansic MAKEAPPL
+Installed/Appl/Saver/LWPref:			saver config ansic MAKEAPPL
 
 letter	: 	Installed/Appl/Saver/Letter \
 		Installed/Appl/Saver/Letter/LetterPref
@@ -1507,7 +1510,7 @@ Installed/Library/Breadbox/MiniZip:		ansic ui zlib MAKELIB
 #if defined(PRODUCT) && $(PRODUCT) == "NDO2000"
 #else
 geozip  : 	Installed/Appl/Breadbox/GEOZIP
-Installed/Appl/Breadbox/GEOZIP:			minizip dirlist MAKEAPPL
+Installed/Appl/Breadbox/GEOZIP:			minizip dirlist extui MAKEAPPL
 # endif
 
 #
@@ -1553,10 +1556,10 @@ wordperf5 : 	Installed/Library/Trans/Text/WordPerfect5X
 Installed/Library/Trans/Text/WordPerfect5X:	ansic impex msmfile MAKELIB
 
 dbase3	:	Installed/Library/Trans/Database/DBase3
-Installed/Library/Trans/Database/DBase3:	ansic impex MAKELIB
+Installed/Library/Trans/Database/DBase3:	ansic impex ssmeta MAKELIB
 
 dbase4	: 	Installed/Library/Trans/Database/DBase4
-Installed/Library/Trans/Database/DBase4:	ansic impex MAKELIB
+Installed/Library/Trans/Database/DBase4:	ansic impex ssmeta MAKELIB
 
 # Other Geos stuff (not in GPC)
 conview	: 	Installed/Library/ConView
@@ -1569,7 +1572,7 @@ term	: 	Installed/Appl/Term
 Installed/Appl/Term:				ui text MAKEAPPL
 
 tedit	: 	Installed/Appl/TEdit
-Installed/Appl/TEdit:				ui text mailbox MAKEAPPL
+Installed/Appl/TEdit:				ui text mailbox spell MAKEAPPL
 
 geofile	: 	Installed/Appl/GeoFile
 Installed/Appl/GeoFile:				ui grobj spool parse cell \
@@ -1581,7 +1584,7 @@ dirls	: Installed/Appl/Breadbox/DirList
 Installed/Appl/Breadbox/DirList:		ui ansic text spool MAKEAPPL
 
 bim	: Installed/Appl/Breadbox/BIM
-Installed/Appl/Breadbox/BIM:			ui ansic socket sound MAKEAPPL
+Installed/Appl/Breadbox/BIM:			ui ansic socket sound extui parentc MAKEAPPL
 
 ffind	: Installed/Appl/Breadbox/FFind
 Installed/Appl/Breadbox/FFind:			ui ansic text MAKEAPPL
@@ -1610,7 +1613,7 @@ Installed/Appl/Breadbox/BBGrmt:			ui ansic spool text MAKEAPPL
 
 graphvwr : Installed/Appl/Breadbox/Graphvwr
 Installed/Appl/Breadbox/Graphvwr:	ui ansic extui giflib thumbdb ijgjpeg pnglib \
-					svglib webplib MAKEAPPL
+					svglib webplib color MAKEAPPL
 
 macror	: Installed/Appl/Breadbox/MacroR
 Installed/Appl/Breadbox/MacroR:		ui ansic MAKEAPPL
@@ -1707,7 +1710,7 @@ ndorest:  regis run legos 	\
 	  irlap loopback slip 		\
 	  vid_drivers	\
 	  impex_libs bestsnd mp3snd rfsd	\
-	  print_drivers extras taskmax more_prefs	\
+	  printerDriver extras taskmax more_prefs	\
 	  faxsendtd geosafari slides
 
 ms3     : Installed/Driver/IFS/DOS/MS3
@@ -1847,7 +1850,7 @@ timer	: Installed/Appl/Tools/Timer
 Installed/Appl/Tools/Timer:			ui text MAKEAPPL
 
 slides	: Installed/Appl/Slides
-Installed/Appl/Slides:				ui text impex convert MAKEAPPL
+Installed/Appl/Slides:				ui text impex convert saver MAKEAPPL
 
 resedit	: Installed/Appl/Tools/Localize
 Installed/Appl/Tools/Localize:		ui text spool MAKEAPPL
