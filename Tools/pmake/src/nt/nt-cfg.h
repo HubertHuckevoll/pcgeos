@@ -59,7 +59,7 @@
  * DEFSHELLDIR
  *	The directory in which cmd.exe is found.
  */
-#define DEFSHELLDIR	"C:\WINNT35\SYSTEM32"
+#define DEFSHELLDIR	""
 
 /*
  * DEFSYSMK
@@ -82,6 +82,12 @@
  *	to 0, nothing will ever happen...
  */
 
+/*
+ * ATTENTION: At most 63 children can run in each pmake process. One of
+ * MAXIMUM_WAIT_OBJECTS slots is reserved for cancellation. More children
+ * require a different wait design.
+ */
+#define NT_MAX_JOBS     63
 #define DEFMAXJOBS	1
 #define DEFMAXLOCAL	1
 

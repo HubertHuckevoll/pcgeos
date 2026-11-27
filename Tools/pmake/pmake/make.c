@@ -998,5 +998,10 @@ Make_Run (Lst targs)
     Lst_ForEach(targs, MakePrintStatus,
 		(ClientData)((errors == 0) && (numNodes != 0)));
 
+#if defined(_WIN32)
+    if (errors != 0 || numNodes != 0) {
+        Finish(errors != 0 ? errors : 1);
+    }
+#endif
     return (TRUE);
 }

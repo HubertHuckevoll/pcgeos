@@ -65,6 +65,10 @@
  *
  *	Job_Wait  	    	Wait for all currently-running jobs to finish.
  */
+#if defined(_WIN32)
+/* Expose the job object declarations in the Watcom Windows headers. */
+#    define _WIN32_WINNT 0x0602
+#endif
 #include <config.h>
 
 #ifndef lint
@@ -132,7 +136,9 @@ extern int  errno;
 
 #if defined(_WIN32)
 static int  JobCmpHandle   (Job *job, HANDLE handle);
-BOOL WINAPI JobNTInterrupt (DWORD);
+static BOOL WINAPI JobNTInterrupt (DWORD);
+static void JobNTCheckInterrupt(void);
+static void JobNTExit(void);
 #endif /* defined(_WIN32) */
 
 void JobDoOutput (Job *job, Boolean finish);
@@ -182,35 +188,23 @@ typedef	struct fd_set {
 
 #elif defined(_WIN32)
 
-/*
- * Since in NT children aren't connected to their parents like under unix,
- * there's no equivalent of the unix wait syscall.  Therefore we keep an array
- * of the processes we've spawned around.  The total number of children we can
- * have is DEFMAXJOBS (defined in nt-cfg.h).  It is passed to
- * WaitForMultipleObjects().
- */
-
-/*
- * Total handles in the list is one more than the total number of jobs that
- * can be run.  This is because since even though a job might be finished,
- * it may still have output to do but another job could have been started
- * before we collect that output, so we need an extra handle for the output
- * of a finished job but an uncollected one.
- */
-#define HANDLE_LIST_MAX (DEFMAXJOBS + 1)
+/* Slot zero is the cancellation event; all other slots are children. */
+#define HANDLE_LIST_MAX (NT_MAX_JOBS + 1)
 
 typedef struct {
     HANDLE hArray[HANDLE_LIST_MAX];
     int    numFilled;
 } HandleList;
 
-static HandleList *children;
+static HandleList childHandles;
+static HandleList *children = &childHandles;
+static HANDLE cancelEventH;
+static HANDLE buildJobH;
+static CRITICAL_SECTION cancelLock;
+static Job *pendingJob;
 
-static Boolean JobAddHandle    (HANDLE, HandleList*);
-static Boolean JobRemoveHandle (HANDLE, HandleList*);
-#if 0
-static Boolean JobIsSetHandle  (HANDLE, HandleList*);
-#endif /* 0 */
+static Boolean JobAddHandle(HANDLE, HandleList *);
+static Boolean JobRemoveHandle(HANDLE, HandleList *);
 
 /*
  * These constants define the name and length of the name of the temp file
@@ -317,13 +311,11 @@ static Shell    shells[] = {
 },
 
 #elif defined (_WIN32)
-    /* This is the shell description for WINNT.
-     * Echo control isn't possible, no error control or exit codes, either
-     */
+    /* Commands share one cmd.exe input stream for each target. */
 {
-    "cmd /Q /k echo off",
+    "cmd.exe",
     FALSE, "", "", "", 0,
-    FALSE, "echo %s\r\n", "%s & if errorlevel 1 (set errorlevel=1 & exit)\r\n",
+    FALSE, "echo %s\r\n", "%s\r\nif errorlevel 1 exit 1\r\nif not errorlevel 0 exit 1\r\n",
     "", "",
 },
 
@@ -405,6 +397,121 @@ static int  JobStart(GNode *gn, short flags, Job *previous);
 #if defined(unix)
 static void JobInterrupt(int runINTERRUPT);
 #endif /* defined(unix) */
+
+#if defined(_WIN32)
+/* Write every byte, including when WriteFile completes only part of a write. */
+static void
+JobNTWrite(Job *job, const char *text)
+{
+    DWORD written;
+    DWORD length = strlen(text);
+
+    while (length != 0) {
+        if (!WriteFile(job->cmdOUT, text, length, &written, NULL) ||
+            written == 0) {
+            Punt("Cannot write the command file (Windows error %lu)",
+                 GetLastError());
+        }
+        text += written;
+        length -= written;
+    }
+}
+
+static void
+JobNTClose(HANDLE *handleP)
+{
+    HANDLE handle = *handleP;
+
+    *handleP = INVALID_HANDLE_VALUE;
+    if (handle != NULL && handle != INVALID_HANDLE_VALUE &&
+        !CloseHandle(handle)) {
+        ErrorMessage("pmake: Cannot close handle");
+        errors++;
+    }
+}
+
+static void
+JobNTRemoveFile(char *name)
+{
+    if (!DeleteFile(name)) {
+        ErrorMessage("pmake: Cannot delete %s", name);
+        errors++;
+    }
+    free(name);
+}
+
+/* The main thread owns these files and handles. */
+static void
+JobNTFree(Job *job)
+{
+    JobNTClose(&job->pid.hThread);
+    JobNTClose(&job->pid.hProcess);
+    if (job->cmdOUT != GetStdHandle(STD_OUTPUT_HANDLE)) {
+        JobNTClose(&job->cmdOUT);
+    }
+    Lst_Destroy(job->tempFiles, JobNTRemoveFile);
+    free(job);
+}
+
+/* Escape echo metacharacters so command display cannot redirect output. */
+static void
+JobNTEcho(Job *job, char *command)
+{
+    char *buffer = (char *)malloc(2 * strlen(command) + 8);
+    char *out;
+
+    if (buffer == NULL) Punt("No memory for command display");
+    strcpy(buffer, "echo ");
+    out = buffer + 5;
+    while (*command != '\0') {
+        if (strchr("&|<>()^", *command) != NULL) *out++ = '^';
+        *out++ = *command++;
+    }
+    strcpy(out, "\r\n");
+    JobNTWrite(job, buffer);
+    free(buffer);
+}
+
+/* GetTempFileName creates the file. Record its name before opening it. */
+static HANDLE
+JobNTTempFile(Job *job, Boolean inherit, Boolean deleteOnClose)
+{
+    char temp[MAX_PATH];
+    char filename[MAX_PATH];
+    char *name;
+    DWORD length;
+    HANDLE fileH;
+    SECURITY_ATTRIBUTES attrs = {sizeof(SECURITY_ATTRIBUTES), NULL, FALSE};
+
+    length = GetTempPath(sizeof(temp), temp);
+    if (length == 0 || length >= sizeof(temp) ||
+        !GetTempFileName(temp, "PMA", 0, filename)) {
+        Punt("Cannot create a temporary file (Windows error %lu)", GetLastError());
+    }
+    name = Str_New(filename);
+    if (Lst_AtEnd(job->tempFiles, (ClientData)name) != SUCCESS) {
+        DeleteFile(filename);
+        free(name);
+        Punt("Cannot record a temporary file");
+    }
+    attrs.bInheritHandle = inherit;
+    fileH = CreateFile(filename, GENERIC_READ | GENERIC_WRITE,
+                       FILE_SHARE_READ, &attrs, OPEN_EXISTING,
+                       FILE_ATTRIBUTE_TEMPORARY |
+                       (deleteOnClose ? FILE_FLAG_DELETE_ON_CLOSE : 0), NULL);
+    if (fileH == INVALID_HANDLE_VALUE) {
+        Punt("Cannot open %s (Windows error %lu)", filename, GetLastError());
+    }
+    if (deleteOnClose) {
+        if (Lst_Remove(job->tempFiles, Lst_Last(job->tempFiles)) != SUCCESS) {
+            JobNTClose(&fileH);
+            Punt("Cannot remove the command file record");
+        }
+        free(name);
+    }
+    return fileH;
+}
+#endif
 
 /*-
  *-----------------------------------------------------------------------
@@ -652,17 +759,13 @@ JobPrintCommand (char *cmd, Job *job)
 #else /* _WIN32 */
 #    define DBPRINTF(fmt, arg1, arg2) \
     { \
-        char *dbbuf; \
-        DWORD dbwritten, bufsize = strlen(arg1) + strlen(arg2) + \
-			           strlen(fmt) + 1; \
-      \
-	dbbuf = (char *) malloc(bufsize); \
-	sprintf(dbbuf, fmt, arg1, arg2); \
-        if (DEBUG(JOB)) {printf (dbbuf);} \
-	if (!WriteFile (job->cmdOUT, dbbuf, strlen(dbbuf), &dbwritten, NULL)){\
-	    ErrorMessage("pmake: Write to shell's input stream failed"); \
-	} \
-	free(dbbuf); \
+        char *dbbuf = (char *)malloc(strlen(arg1) + strlen(arg2) + \
+                                     strlen(fmt) + 1); \
+        if (dbbuf == NULL) Punt("No memory for command file"); \
+        sprintf(dbbuf, fmt, arg1, arg2); \
+        if (DEBUG(JOB)) printf("%s", dbbuf); \
+        JobNTWrite(job, dbbuf); \
+        free(dbbuf); \
     }
 #endif /* defined(unix) */
 
@@ -782,60 +885,57 @@ JobPrintCommand (char *cmd, Job *job)
 
 #elif defined(_WIN32)
     {
-	char *cmdExec      = cmd;
-	char  filename[17];
-	int   freeIt       = 0;
+        char *cmdExec = cmd;
+        char *filename;
+        char *args;
+        HANDLE argFileH;
+        DWORD written;
+        Boolean writeOK;
 
-	/*
-	 * check to see if we've gone over NT's stupid 1024 char cmdline limit
-	 */
-	if (strlen(cmd) > 1000) {
-	    int   i            = 0;
-	    FILE *argFile;
+        if (noSpecials) {
+            DBPRINTF("%s\r\n", cmd, "");
+            return 0;
+        }
 
-	    /*
-	     * put the arguments in an argument file and then output to the
-	     * shell command-name @argfile
-	     */
+        /* Keep the existing response-file support for long tool commands. */
+        if (strlen(cmd) > 1000) {
+            args = cmd;
+            if (*args == '"') {
+                args++;
+                while (*args != '\0' && *args != '"') args++;
+                if (*args == '"') args++;
+            } else {
+                while (*args != '\0' && !isspace(*args)) args++;
+            }
+            argFileH = JobNTTempFile(job, FALSE, FALSE);
+            filename = (char *)Lst_Datum(Lst_Last(job->tempFiles));
+            writeOK = WriteFile(argFileH, args, strlen(args), &written, NULL) &&
+                      written == strlen(args);
+            JobNTClose(&argFileH);
+            if (!writeOK) Punt("Cannot write the response file");
+            cmdExec = (char *)malloc(args - cmd + strlen(filename) + 5);
+            if (cmdExec == NULL) Punt("No memory for response file command");
+            memcpy(cmdExec, cmd, args - cmd);
+            sprintf(cmdExec + (args - cmd), " @\"%s\"", filename);
+        }
 
-	    /* skip past the command name */
-	    while (!isspace(cmd[i]) && cmd[i] != '\0') {
-		i++;
-	    }
-
-		strcpy(filename, "TMPXXXXXX");
-	    mktemp(filename);
-		strcat(filename, ".");
-	    argFile = fopen(filename, "wt");
-
-	    fprintf(argFile, "%s", &cmd[i]);
-	    fclose(argFile);
-
-	    cmdExec = (char *) malloc(i + 16 +4);
-	    strncpy(cmdExec, cmd, i);
-            cmdExec[i] = '\0';
-	    strcat(cmdExec, " @");
-	    strcat(cmdExec, filename);
-	    freeIt = 1;
-	}
-
-	if (!shutUp && !(job->flags & JOB_SILENT) && !noSpecials) {
-	    DBPRINTF (commandShell->errCheck, cmdExec, "");
-	}
-
-	if (noSpecials || errOff || (job->flags & JOB_IGNERR)) {
-	    DBPRINTF ("%s\r\n", cmdExec, "");
-	} else {
-	    DBPRINTF (commandShell->ignErr, cmdExec, "");
-	}
-
-	/*
-	 * clean up after ourselves
-	 */
-	if (freeIt) {
-	    DBPRINTF("del %s\r\n", filename, "");
-	    free(cmdExec);
-	}
+        if (!shutUp && !(job->flags & JOB_SILENT)) {
+            if (commandShell == &shells[DEFSHELL]) {
+                JobNTEcho(job, cmdExec);
+            } else {
+                DBPRINTF(commandShell->errCheck, cmdExec, "");
+            }
+        }
+        if (errOff || (job->flags & JOB_IGNERR)) {
+            DBPRINTF("%s\r\n", cmdExec, "");
+            if (commandShell == &shells[DEFSHELL]) {
+                /* Clear ignored errors before commands such as SET or ECHO. */
+                JobNTWrite(job, "ver >nul\r\n");
+            }
+        } else {
+            DBPRINTF(commandShell->ignErr, cmdExec, "");
+        }
+        if (cmdExec != cmd) free(cmdExec);
     }
 #endif /* defined(unix) */
 
@@ -1137,14 +1237,12 @@ JobFinish (Job *job, WAIT_TYPE status)
 /***********************************************************************
  *				JobNTFinish
  ***********************************************************************
- * SYNOPSIS:	    NT version of JobFinish.  Does final processing
- *                  for a job.  Decides if an error occurred and if one
- *                  did, exits pmake.
+ * SYNOPSIS:        Finish a Windows job and record its result.
+ *                  Make_Run reports the final error status.
  * CALLED BY:
  * RETURN:	    nothing
- * SIDE EFFECTS:    pmake may exit if an error occurred.  Job process
- *                  HANDLE is closed.  Some jobs may be put on tobemade
- *                  queue.
+ * SIDE EFFECTS:    Close the process handle. Update parents only after
+ *                  success. Restart the next command in compatibility mode.
  *
  * STRATEGY:	    Simply check flags and error status to see what
  *                  needs to be done.
@@ -1165,14 +1263,12 @@ JobLinuxFinish (Job *job, WAIT_TYPE status)
 /***********************************************************************
  *				JobNTFinish
  ***********************************************************************
- * SYNOPSIS:	    NT version of JobFinish.  Does final processing
- *                  for a job.  Decides if an error occurred and if one
- *                  did, exits pmake.
+ * SYNOPSIS:        Finish a Windows job and record its result.
+ *                  Make_Run reports the final error status.
  * CALLED BY:
  * RETURN:	    nothing
- * SIDE EFFECTS:    pmake may exit if an error occurred.  Job process
- *                  HANDLE is closed.  Some jobs may be put on tobemade
- *                  queue.
+ * SIDE EFFECTS:    Close the process handle. Update parents only after
+ *                  success. Restart the next command in compatibility mode.
  *
  * STRATEGY:	    Simply check flags and error status to see what
  *                  needs to be done.
@@ -1186,67 +1282,37 @@ JobLinuxFinish (Job *job, WAIT_TYPE status)
 void
 JobNTFinish (Job *job, WAIT_TYPE status)
 {
-    nLocal -= 1;
+    nLocal--;
+    JobNTClose(&job->pid.hProcess);
+    JobNTClose(&job->pid.hThread);
 
-    (void) CloseHandle(job->pid.hProcess);
-    (void) CloseHandle(job->pid.hThread);
-
-    job->pid.hProcess = INVALID_HANDLE_VALUE;
-    job->pid.hThread  = INVALID_HANDLE_VALUE;
-
-    if (status == 0 && DEBUG(JOB)) {
-	HANDLE        out = GetStdHandle(STD_OUTPUT_HANDLE);
-	unsigned long numWrit;
-
-	if (out == INVALID_HANDLE_VALUE) {
-	    ErrorMessage("pmake");
-	    ExitProcess(1);
-	}
-
-	if(!WriteFile(out, "*** Completed sucessfully\r\n",
-		      strlen("*** Completed sucessfully\r\n"), &numWrit,
-		      NULL) || numWrit == 0) {
-	    ErrorMessage("pmake");
-	}
+    if (status != 0 && (job->flags & JOB_IGNERR)) {
+        printf("*** %s: error code %lu (ignored)\n", job->node->name, status);
+        status = 0;
     }
-
-    if ((aborting != ABORT_ERROR) && (aborting != ABORT_INTERRUPT) &&
-	(status   == 0)) {
-	if (job->tailCmds != NILLNODE) {
-	    Lst_ForEachFrom (job->node->commands, job->tailCmds,
-			     JobSaveCommand, (ClientData) job->node);
-	}
-	job->node->made = MADE;
-	Make_Update (job->node);
-    } else if (status != 0) {
-	errors += 1;
+    if (status != 0) {
+        printf("*** %s: error code %lu\n", job->node->name, status);
+        job->node->made = ERROR;
+        errors++;
+        if (!keepgoing || ((job->flags & JOB_SPECIAL) && job->node != postCommands)) {
+            aborting = ABORT_ERROR;
+        }
+    } else if (!aborting) {
+        if (backwards && !Lst_IsAtEnd(job->node->commands)) {
+            /* Keep the command-at-a-time compatibility mode. */
+            Lst_Destroy(job->tempFiles, JobNTRemoveFile);
+            JobStart(job->node, job->flags & (JOB_IGNDOTS | JOB_SPECIAL), job);
+            return;
+        }
+        if (job->tailCmds != NILLNODE) {
+            Lst_ForEachFrom(job->node->commands, job->tailCmds,
+                            JobSaveCommand, (ClientData)job->node);
+        }
+        job->node->made = MADE;
+        Make_Update(job->node);
     }
-
-    free(job);
-
-    /*
-     * Set aborting if any error.
-     */
-    if (errors && !keepgoing && (aborting != ABORT_INTERRUPT)) {
-	/*
-	 * If we found any errors in this batch of children and the -k flag
-	 * wasn't given, we set the aborting flag so no more jobs get
-	 * started.
-	 */
-	aborting = ABORT_ERROR;
-    }
-
-    if ((aborting == ABORT_ERROR) && Job_Empty()) {
-	/*
-	 * If we are aborting and the job table is now empty, we finish.
-	 */
-#if 0
-	Finish (errors);
-#endif
-	printf("*** error code %d\n\nStop.", status);
-	ExitProcess(1);
-    }
-}	/* End of JobNTFinish.	*/
+    JobNTFree(job);
+}
 #endif /* defined(unix) */
 
 /*-
@@ -1557,39 +1623,45 @@ JobExec(Job *job, ARGV_TYPE argv)
 	job->pid = cpid;
 
 #elif defined(_WIN32)
-	/* Now set up the STARTUPINFO structure and spawn the shell. */
+    JobNTCheckInterrupt();
+    if (nJobs >= maxJobs || nLocal >= maxLocal ||
+        children->numFilled >= HANDLE_LIST_MAX) {
+        Punt("Windows job limit exceeded");
+    }
+    if (SetFilePointer(job->cmdOUT, 0, NULL, FILE_BEGIN) ==
+        INVALID_SET_FILE_POINTER) {
+        Punt("Cannot rewind the command file (Windows error %lu)", GetLastError());
+    }
+    st_info.cb = sizeof(st_info);
+    st_info.dwFlags = STARTF_USESTDHANDLES;
+    st_info.hStdInput = job->cmdOUT;
+    st_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    st_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
-     /*
-      * Must set the file pointer to the beginning of the file so that
-      * when cmd inherits the HANDLE it has something to read
-      */
-     SetFilePointer(job->cmdOUT, 0, NULL, FILE_BEGIN);
-
-     st_info.cb          = sizeof(STARTUPINFO);
-     st_info.lpReserved  = NULL;
-     st_info.lpReserved2 = NULL;
-     st_info.cbReserved2 = 0;
-     st_info.lpDesktop   = NULL;
-     st_info.lpTitle     = NULL;
-     st_info.dwFlags     = STARTF_USESTDHANDLES;
-     st_info.hStdInput   = job->cmdOUT;
-     st_info.hStdOutput  = GetStdHandle(STD_OUTPUT_HANDLE);
-     st_info.hStdError   = GetStdHandle(STD_ERROR_HANDLE);
-
-     if (!CreateProcess(NULL, argv, NULL, NULL, TRUE,
-			NORMAL_PRIORITY_CLASS,
-			NULL, NULL, &st_info, &job->pid)) {
-         unsigned long numWritten;
-
-         (void) WriteFile(GetStdHandle(STD_OUTPUT_HANDLE),
-			  "Could not execute shell\r\n",
-			  sizeof("Could not execute shell\r\n"),
-			  &numWritten, NULL);
-	 ExitProcess(1);
-     } else {
-         JobAddHandle(job->pid.hProcess, children);
-     }
-     (void) CloseHandle(job->cmdOUT);
+    /* Assign and register the suspended shell before it can start tools. */
+    if (!CreateProcess(shellPath, argv, NULL, NULL, TRUE,
+                       NORMAL_PRIORITY_CLASS | CREATE_SUSPENDED,
+                       NULL, NULL, &st_info, &job->pid)) {
+        Punt("Cannot execute %s (Windows error %lu)", shellPath, GetLastError());
+    }
+    if (!AssignProcessToJobObject(buildJobH, job->pid.hProcess) ||
+        !JobAddHandle(job->pid.hProcess, children)) {
+        Punt("Cannot register the shell (Windows error %lu)", GetLastError());
+    }
+    if (Lst_AtEnd(jobs, (ClientData)job) != SUCCESS) {
+        JobRemoveHandle(job->pid.hProcess, children);
+        Punt("Cannot record the shell");
+    }
+    pendingJob = NULL;
+    nJobs++;
+    nLocal++;
+    jobFull = nJobs >= maxJobs || nLocal >= maxLocal;
+    if (ResumeThread(job->pid.hThread) == (DWORD)-1) {
+        Punt("Cannot resume the shell (Windows error %lu)", GetLastError());
+    }
+    JobNTClose(&job->pid.hThread);
+    JobNTClose(&job->cmdOUT);
+    return;
 #endif /* defined(unix) */
 #if defined(unix) || defined(_LINUX)
 	if (usePipes && (jobflags & JOB_FIRST) ) {
@@ -1670,39 +1742,7 @@ JobAddHandle (HANDLE handle, HandleList *hList)
 
     return FALSE;
 }	/* End of JobAddHandle.	*/
-#if 0  /* don't need this function because we aren't doing any parallel work */
-
-/***********************************************************************
- *				JobIsSetHandle
- ***********************************************************************
- * SYNOPSIS:	    Predicate to see if a handle is present in a
- *                  HandleList
- * CALLED BY:
- * RETURN:	    TRUE if handle is in hList, FALSE otherwise
- * SIDE EFFECTS:    NONE
- *
- * STRATEGY:	    Does a linear search to see if handle is in hList
- *
- * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	TB	8/07/96   	Initial Revision
- *
- ***********************************************************************/
-static Boolean
-JobIsSetHandle (HANDLE handle, HandleList *hList)
-{
-    int i;
 
-    for (i = 0; i < hList->numFilled; i++) {
-        if (hList->hArray[i] == handle) {
-	    return TRUE;
-	}
-    }
-
-    return FALSE;
-}	/* End of JobIsSetHandle.	*/
-#endif /* 0 */
 
 /***********************************************************************
  *				JobRemoveHandle
@@ -1807,12 +1847,12 @@ JobMakeArgv(Job *job, ARGV_TYPE argv)
     argv[argc] = (char *)NULL;
 
 #elif defined (_WIN32)
-    sprintf (argv, "%s", shellName);
-    if (!(job->flags & JOB_IGNERR) && commandShell->exit) {
-        strcat(argv, commandShell->exit);
-    }
-    if (!(job->flags & JOB_SILENT) && commandShell->echo) {
-        strcat(argv, commandShell->echo);
+    sprintf(argv, "\"%s\"", shellPath);
+    if (commandShell == &shells[DEFSHELL]) {
+        strcat(argv, " /D /Q /K echo off");
+    } else {
+        if (!(job->flags & JOB_IGNERR)) strcat(argv, commandShell->exit);
+        if (!(job->flags & JOB_SILENT)) strcat(argv, commandShell->echo);
     }
 #endif /* defined(unix) */
 
@@ -2145,6 +2185,14 @@ JobStart (GNode *gn, short flags, Job *previous)
 
     job->node = gn;
     job->tailCmds = NILLNODE;
+#if defined(_WIN32)
+    job->cmdOUT = INVALID_HANDLE_VALUE;
+    job->pid.hProcess = INVALID_HANDLE_VALUE;
+    job->pid.hThread = INVALID_HANDLE_VALUE;
+    job->tempFiles = Lst_Init(FALSE);
+    pendingJob = job;
+    JobNTCheckInterrupt();
+#endif
 
     /*
      * Set the initial value of the flags for this job based on the global
@@ -2177,6 +2225,10 @@ JobStart (GNode *gn, short flags, Job *previous)
      * we just set the file to be stdout. Cute, huh?
      */
     if (!cmdsOK) {
+#if defined(_WIN32)
+        gn->made = ERROR;
+        errors++;
+#endif
 	/*
 	 * If commands weren't ok and -k wasn't passed, bail now.
 	 */
@@ -2199,32 +2251,14 @@ JobStart (GNode *gn, short flags, Job *previous)
 	}
 	fcntl(fileno(job->cmdFILE), F_SETFD, 1);
 #elif defined(_WIN32)
-	static int          fileCount = 0;
-        TCHAR               temp[MAX_PATH];
-        TCHAR               filename[MAX_PATH];
-	SECURITY_ATTRIBUTES sAttrs = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
-
-        /* Be well-behaved: use windows-supplied temp file support */
-        GetTempPath(MAX_PATH, temp);
-        GetTempFileName(temp, "PMA", 0, filename);
-
-	if ((job->cmdOUT = CreateFile(filename, GENERIC_READ | GENERIC_WRITE,
-				      FILE_SHARE_READ, &sAttrs, CREATE_ALWAYS,
-				      FILE_FLAG_DELETE_ON_CLOSE |
-				      FILE_ATTRIBUTE_TEMPORARY, NULL))
-	     == INVALID_HANDLE_VALUE) {
-	    Punt("Couldn't open %s\n", filename);
-
-	} else {
-	    DWORD numWritten;
-	    char *str = (char *) malloc(strlen("echo --- %s ---\r\n") +
-					strlen(job->node->name));
-	    /* tell the command shell to echo the name of the node it's
-	     * making */
-	    sprintf(str, "echo --- %s ---\r\n", job->node->name);
-	    WriteFile(job->cmdOUT, str, strlen(str), &numWritten, NULL);
-	    free(str);
-	}
+        job->cmdOUT = JobNTTempFile(job, TRUE, TRUE);
+        {
+            char *banner = (char *)malloc(strlen(job->node->name) + 9);
+            if (banner == NULL) Punt("No memory for target banner");
+            sprintf(banner, "--- %s ---", job->node->name);
+            JobNTEcho(job, banner);
+            free(banner);
+        }
 #endif /* defined(unix) */
 	/*
 	 * Send the commands to the command file, flush all its buffers then
@@ -2379,10 +2413,20 @@ JobStart (GNode *gn, short flags, Job *previous)
 		job->node->made = MADE;
 		Make_Update(job->node);
 	    }
-	    free((Address)job);
+#if defined(_WIN32)
+            pendingJob = NULL;
+            JobNTFree(job);
+#else
+            free((Address)job);
+#endif
 	    return(JOB_FINISHED);
 	} else {
-	    free((Address)job);
+#if defined(_WIN32)
+            pendingJob = NULL;
+            JobNTFree(job);
+#else
+            free((Address)job);
+#endif
 	    return(JOB_ERROR);
 	}
     } else {
@@ -2399,10 +2443,12 @@ JobStart (GNode *gn, short flags, Job *previous)
 #if defined(_WIN32)
     /*
      * CreateProcess doesn't take a normal argument vector but a simple
-     * null-terminated string as the command line, so we allocate a maximum
-     * of a 1k command line
+     * null-terminated command line. Include the full executable path.
      */
-    argv = (char *) malloc(MAX_COMMAND_LINE_LENGTH) ;
+    if (commandShell == &shells[DEFSHELL]) JobNTWrite(job, "exit 0\r\n");
+    argv = (char *)malloc(strlen(shellPath) + strlen(commandShell->exit) +
+                          strlen(commandShell->echo) + 40);
+    if (argv == NULL) Punt("No memory for shell command");
 #endif /* defined(_WIN32 */
     JobMakeArgv(job, argv);
 
@@ -2447,6 +2493,10 @@ JobStart (GNode *gn, short flags, Job *previous)
     local = TRUE;
 #endif /* defined(unix) */
 
+#if defined(_WIN32)
+    JobExec(job, argv);
+    free(argv);
+#else
     if (local && (
 #ifdef sparc	/* KLUDGE */
 	(gn->type & OP_M68020) ||
@@ -2486,6 +2536,7 @@ JobStart (GNode *gn, short flags, Job *previous)
 	JobExec(job, argv);
 	free(argv);
     }
+#endif
     return(JOB_RUNNING);
 }
 
@@ -2877,40 +2928,33 @@ JobWaitProcess (WAIT_TYPE     *retStatus,
 		HANDLE        *finishedProc,
 		unsigned long  block)
 {
-    unsigned long waitStat;
+    DWORD waitStat;
+    DWORD index;
 
-    if (procs->numFilled > 0) {
-	waitStat  = WaitForMultipleObjects(procs->numFilled,
-					   procs->hArray,
-					   FALSE, block);
-    } else {
-	return -1;
+    if (procs->numFilled <= 1) return -1;
+    waitStat = WaitForMultipleObjects(procs->numFilled, procs->hArray,
+                                      FALSE, block);
+    if (waitStat == WAIT_TIMEOUT) return 0;
+    if (waitStat == WAIT_FAILED) {
+        Punt("Cannot wait for children (Windows error %lu)", GetLastError());
     }
-
-    switch (waitStat) {
-        case WAIT_TIMEOUT:
-	    return 0;
-
-        case WAIT_FAILED:
-	    return -1;
-
-        default:            /* WAIT_OBJECT_0 */
-	    *finishedProc = procs->hArray[waitStat - WAIT_OBJECT_0];
-	    if (GetExitCodeProcess(*finishedProc, retStatus)) {
-		if (*retStatus != STILL_ACTIVE) {
-		    JobRemoveHandle(*finishedProc, procs);
-		    return (1);
-		} else {
-		    return (0);
-		}
-	    } else { /* failure */
-		ErrorMessage("pmake");
-		ExitProcess(2);
-	    }
-	    break;
+    index = waitStat - WAIT_OBJECT_0;
+    if (index >= (DWORD)procs->numFilled) {
+        Punt("Invalid Windows wait result %lu", waitStat);
     }
-
-    return -1;
+    if (index == 0) {
+        JobNTCheckInterrupt();
+        return 0;
+    }
+    *finishedProc = procs->hArray[index];
+    if (!GetExitCodeProcess(*finishedProc, retStatus)) {
+        Punt("Cannot read child status (Windows error %lu)", GetLastError());
+    }
+    /* A signaled process has finished, including exit code STILL_ACTIVE. */
+    if (!JobRemoveHandle(*finishedProc, procs)) {
+        Punt("Cannot remove the completed child handle");
+    }
+    return 1;
 }	/* End of JobWaitProcess.	*/
 
 
@@ -2925,8 +2969,8 @@ JobWaitProcess (WAIT_TYPE     *retStatus,
  * STRATEGY:
  *              We do waits, blocking or not, according to the wisdom of
  *      our caller, until there are no more children to report. For each
- *	job, call JobNTFinish to finish things off. This will take care of
- *	putting jobs on the stoppedJobs queue.
+ *	job, call JobNTFinish to finish things off. Poll after the first
+ *      completion so the scheduler can fill the available slots.
  *
  * REVISION HISTORY:
  *	Name	Date		Description
@@ -2943,7 +2987,8 @@ Job_NTCatchChildren (unsigned long block)
     /*
      * Don't even bother if we know there's no one around.
      */
-    if ((nLocal == 0) || (children->numFilled == 0)) {
+    JobNTCheckInterrupt();
+    if (nLocal == 0) {
 	return;
     }
     /*
@@ -2960,8 +3005,7 @@ Job_NTCatchChildren (unsigned long block)
 
 	    /* jnode not in stoppedJobs Lst either? */
 	    if (jnode == NILLNODE) {
-		Error ("Child (%x) not in table\n", (unsigned) child);
-		ExitProcess(2);
+                Punt("Child (%x) not in table", (unsigned)child);
 	    } else {
 		job = (Job *) Lst_Datum(jnode);
 		Lst_Remove(stoppedJobs, jnode);
@@ -2978,6 +3022,7 @@ Job_NTCatchChildren (unsigned long block)
 	}
 
 	JobNTFinish(job, status);
+        block = 0;  /* Return when no more children are ready. */
     }
 }	/* End of Job_NTCatchChildren.	*/
 
@@ -3199,17 +3244,21 @@ Job_Init (int maxproc, int maxlocal)
 
 #if defined(_WIN32)
     {
-	/*
-	 * initialize the Data structure that keeps track of process handles to
-	 * be passed to JobWaitProcess
-	 */
-	int i;
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits;
 
-	children    = (HandleList *) malloc(sizeof(HandleList));
-	for (i = 0; i < HANDLE_LIST_MAX; i++) {
-	    children->hArray[i] = INVALID_HANDLE_VALUE;
-	}
-	children -> numFilled = 0;
+        InitializeCriticalSection(&cancelLock);
+        if (atexit(JobNTExit) != 0) Punt("Cannot register Windows cleanup");
+        cancelEventH = CreateEvent(NULL, TRUE, FALSE, NULL);
+        buildJobH = CreateJobObject(NULL, NULL);
+        memset(&limits, 0, sizeof(limits));
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        if (cancelEventH == NULL || buildJobH == NULL ||
+            !SetInformationJobObject(buildJobH, JobObjectExtendedLimitInformation,
+                                     &limits, sizeof(limits))) {
+            Punt("Cannot initialize Windows jobs (Windows error %lu)", GetLastError());
+        }
+        children->hArray[0] = cancelEventH;
+        children->numFilled = 1;
     }
 #endif /* defined(_WIN32) */
 
@@ -3254,10 +3303,21 @@ Job_Init (int maxproc, int maxlocal)
 	 * default one... Both the absolute path and the last component
 	 * must be set. The last component is taken from the 'name' field
 	 * of the default shell description pointed-to by commandShell.
-	 * All default shells are located in DEFSHELLDIR.
+	 * Windows uses COMSPEC. Unix uses DEFSHELLDIR.
 	 */
+#if defined(_WIN32)
+        if (commandShell == &shells[DEFSHELL]) {
+            shellPath = getenv("COMSPEC");
+            if (shellPath == NULL || *shellPath == '\0') shellPath = "cmd.exe";
+            shellPath = Str_New(shellPath);
+        } else {
+            shellPath = Str_New(shellName);
+        }
+        shellName = commandShell->name;
+#else
 	shellName = commandShell->name;
 	shellPath = Str_Concat (DEFSHELLDIR, shellName, STR_ADDSLASH);
+#endif
     }
 
     if (commandShell->exit == NULL) {
@@ -3305,7 +3365,9 @@ Job_Init (int maxproc, int maxlocal)
     }
 #    endif /* defined(RMT_WANTS_SIGNALS) || defined(USE_PGRP) */
 #elif defined(_WIN32)
-    SetConsoleCtrlHandler(JobNTInterrupt, TRUE);
+    if (!SetConsoleCtrlHandler(JobNTInterrupt, TRUE)) {
+        Punt("Cannot install console handler (Windows error %lu)", GetLastError());
+    }
 #endif /* defined(unix) */
 
     begin = Targ_FindNode (".BEGIN", TARG_NOCREATE);
@@ -3346,7 +3408,13 @@ Job_Init (int maxproc, int maxlocal)
 Boolean
 Job_Full (void)
 {
+#if defined(_WIN32)
+    JobNTCheckInterrupt();
+    if (queryFlag) return FALSE;
+    return (aborting || nJobs >= maxJobs || nLocal >= maxLocal);
+#else
     return (aborting || jobFull);
+#endif
 }
 
 /*-
@@ -3368,6 +3436,9 @@ Job_Full (void)
 Boolean
 Job_Empty (void)
 {
+#if defined(_WIN32)
+    JobNTCheckInterrupt();
+#endif
     if (nJobs == 0) {
 	if (!Lst_IsEmpty(stoppedJobs) && !aborting) {
 	    /*
@@ -3687,86 +3758,60 @@ JobInterrupt (int runINTERRUPT)
     exit (0);
 }
 #elif defined(_WIN32)
-
-/***********************************************************************
- *				JobNTTermJob
- ***********************************************************************
- * SYNOPSIS:	    Calls GenerateConsoleCtrlEvent on each job in a lst
- * CALLED BY:	    JobNTInterrupt
- * RETURN:	    0 so Lst_ForEach will continue
- * SIDE EFFECTS:    Kills a bunch of processes
- *
- * STRATEGY:	    Simply call GenerateConsoleCtrlEvent with the signo
- *                  and using the job's pid.hProcessid as the group
- *                  number.  Since CreateProcess was called with the
- *                  CREATE_NEW_PROCESS_GROUP flag, each job started
- *                  gets its own group.
- * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *		8/15/96   	Initial Revision
- *
- ***********************************************************************/
-static int
-JobNTTermJob (Job *job, ClientData signo)
-{
-    (void) TerminateProcess(job->pid.hProcess, (DWORD) signo + 1);
-    if (DEBUG(JOB)) {
-	printf("Terminating job id %x.\n", job->pid.dwProcessId);
-    }
 
-    if (!Targ_Precious (job->node)) {
-	char *file = ((job->node->path == NULL) ? job->node->name :
-		                                  job->node->path);
-	if (DeleteFile(file)) {
-	    fprintf(stderr, "*** %s removed\n", file);
-	} else {
-	    ErrorMessage("pmake: %s", file);
-	}
-    }
-
-    (void) CloseHandle(job->pid.hProcess);
-    (void) CloseHandle(job->pid.hThread);
-
-    return 0;
-}	/* End of JobNTTermJob.	*/
-
-
-/***********************************************************************
- *				JobNTInterrupt
- ***********************************************************************
- * SYNOPSIS:	    SIGINT Handler for Windows NT
- * CALLED BY:	    Whenever ^C is pressed.
- * RETURN:	    Nothing
- * SIDE EFFECTS:    Stops all jobs spawned by pmake, removes all temp
- *                  files (unimplemented), and exits with error status.
- * STRATEGY:
- *
- * REVISION HISTORY:
- *	Name	Date		Description
- *	----	----		-----------
- *	TB	8/15/96   	Initial Revision
- *
- ***********************************************************************/
+/* The console thread must not change lists or close process handles. */
 static BOOL WINAPI
-JobNTInterrupt (DWORD signo)
+JobNTInterrupt(DWORD signo)
 {
-    if (DEBUG(JOB)) {
-	printf("JobNTInterrupt called.\n");
+    if (signo != CTRL_C_EVENT && signo != CTRL_BREAK_EVENT &&
+        signo != CTRL_CLOSE_EVENT && signo != CTRL_LOGOFF_EVENT &&
+        signo != CTRL_SHUTDOWN_EVENT) return FALSE;
+
+    EnterCriticalSection(&cancelLock);
+    if (cancelEventH != NULL && cancelEventH != INVALID_HANDLE_VALUE) {
+        SetEvent(cancelEventH);
     }
+    LeaveCriticalSection(&cancelLock);
+    return TRUE;
+}
 
-    if(!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0) &&
-       !GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0)) {
-	ErrorMessage("pmake");
+static void
+JobNTCheckInterrupt(void)
+{
+    DWORD status;
+
+    if (cancelEventH == NULL || cancelEventH == INVALID_HANDLE_VALUE) return;
+    status = WaitForSingleObject(cancelEventH, 0);
+    if (status == WAIT_FAILED) {
+        Punt("Cannot check cancellation (Windows error %lu)", GetLastError());
     }
+    if (status == WAIT_OBJECT_0) {
+        aborting = ABORT_INTERRUPT;
+        Job_AbortAll();
+        exit(2);
+    }
+}
 
-    Lst_ForEach(jobs, JobNTTermJob, (ClientData) CTRL_C_EVENT);
-    ExitProcess(signo + 1); /* Return signal value as error status (What
-			     * the hell).  Add 1 to make sure that we're
-			     * always returning an error.*/
-
-    return FALSE;
-}	/* End of JobNTInterrupt.	*/
+/***********************************************************************
+ * SYNOPSIS: Release Windows build resources at process exit.
+ * CALLED BY: The C runtime, including after failures in .BEGIN.
+ * SIDE EFFECTS: Stop descendants and close the cancellation event.
+ * STRATEGY: Keep all child and file cleanup on the main thread.
+ ***********************************************************************/
+static void
+JobNTExit(void)
+{
+    Job_AbortAll();
+    if (pendingJob != NULL) {
+        JobNTFree(pendingJob);
+        pendingJob = NULL;
+    }
+    SetConsoleCtrlHandler(JobNTInterrupt, FALSE);
+    /* Keep the lock valid for a console callback that has already started. */
+    EnterCriticalSection(&cancelLock);
+    JobNTClose(&cancelEventH);
+    LeaveCriticalSection(&cancelLock);
+}
 #endif /* defined(unix) */
 
 /*
@@ -3863,6 +3908,46 @@ Job_Wait(void)
 void
 Job_AbortAll (void)
 {
+#if defined(_WIN32)
+    Job *job;
+    Boolean interrupted = aborting == ABORT_INTERRUPT;
+
+    /* A failed start can leave a suspended shell outside the job object. */
+    if (pendingJob != NULL && pendingJob->pid.hProcess != INVALID_HANDLE_VALUE) {
+        if (WaitForSingleObject(pendingJob->pid.hProcess, 0) == WAIT_TIMEOUT &&
+            !TerminateProcess(pendingJob->pid.hProcess, 2)) {
+            ErrorMessage("pmake: Cannot terminate suspended shell");
+        }
+        if (WaitForSingleObject(pendingJob->pid.hProcess, INFINITE) != WAIT_OBJECT_0) {
+            ErrorMessage("pmake: Cannot reap suspended shell");
+        }
+    }
+    if (buildJobH != NULL && buildJobH != INVALID_HANDLE_VALUE) {
+        if (!TerminateJobObject(buildJobH, 2)) {
+            ErrorMessage("pmake: Cannot terminate build process tree");
+        }
+        JobNTClose(&buildJobH);
+    }
+    while (nJobs != 0) {
+        job = (Job *)Lst_DeQueue(jobs);
+        if (WaitForSingleObject(job->pid.hProcess, INFINITE) != WAIT_OBJECT_0) {
+            ErrorMessage("pmake: Cannot reap shell");
+        }
+        if (interrupted && !Targ_Precious(job->node)) {
+            char *file = job->node->path == NULL ? job->node->name : job->node->path;
+            if (DeleteFile(file)) {
+                fprintf(stderr, "*** %s removed\n", file);
+            } else if (GetLastError() != ERROR_FILE_NOT_FOUND &&
+                       GetLastError() != ERROR_PATH_NOT_FOUND) {
+                ErrorMessage("pmake: Cannot remove %s", file);
+            }
+        }
+        JobRemoveHandle(job->pid.hProcess, children);
+        nJobs--;
+        nLocal--;
+        JobNTFree(job);
+    }
+#else
     LstNode           	ln;		/* element in job table */
     Job            	*job;	/* the job descriptor in that element */
 #if defined(unix)
@@ -3893,14 +3978,6 @@ Job_AbortAll (void)
 	    KILL(job->pid, SIGINT);
 	    KILL(job->pid, SIGKILL);
 #    endif /* RMT_WANTS_SIGNALS */
-#elif defined(_WIN32)
-	    (void) TerminateProcess(job->pid.hProcess, 0);
-	    (void) CloseHandle(job->pid.hProcess);
-	    (void) CloseHandle(job->pid.hThread);
-
-	    if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0)) {
-		printf("Warning: couldn't generate ^C event\n.");
-	    }
 #endif /* defined(unix) */
 	}
     }
@@ -3913,4 +3990,5 @@ Job_AbortAll (void)
     }
     (void) unlink (tfile);
 #endif /* defined(unix) */
+#endif
 }

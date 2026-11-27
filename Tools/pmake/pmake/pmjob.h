@@ -87,6 +87,7 @@ typedef struct Job {
     char                *rmtID;      /* ID returned from Rmt module */
 #else /* WIN32 */
     HANDLE		cmdOUT;
+    Lst                 tempFiles;  /* Response files owned by this target */
 #endif /* defined(unix) */
 
     unsigned short       flags;      /* Flags to control treatment of job */

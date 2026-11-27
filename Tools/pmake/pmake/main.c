@@ -108,6 +108,7 @@ extern int errno;
 
 #if defined(_WIN32)
 #    include <windows.h>
+#    include <errno.h>
 #endif /* defined(_WIN32) */
 
 int    idfile;
@@ -187,6 +188,10 @@ static char 	    *help[] = {
 "-L<num>	Specify maximum local concurrency.",
 "-M		Be Make as closely as possible.",
 "-P		Don't use pipes to catch the output of jobs, use files.",
+#endif
+#ifdef _WIN32
+"-J<num>\tMaximum jobs in this pmake process (1 through 63; default 1).",
+"-L<num>\tMaximum local jobs (1 through 63; default 1).",
 #endif
 "-S	    	Turn off the -k flag (see below).",
 #ifndef POSIX
@@ -288,6 +293,25 @@ HeapDump()
  *	given
  *----------------------------------------------------------------------
  */
+#if defined(_WIN32)
+static int
+MainJobLimit(char *value)
+{
+    char *end;
+    long limit;
+
+    errno = 0;
+    limit = strtol(value, &end, 10);
+    if (*value < '0' || *value > '9' || *end != '\0' ||
+        errno == ERANGE || limit < 1 || limit > NT_MAX_JOBS) {
+        fprintf(stderr, "pmake: -J and -L require a decimal value from 1 to %d: %s\n",
+                NT_MAX_JOBS, value);
+        exit(2);
+    }
+    return (int)limit;
+}
+#endif
+
 static void
 MainParseArgs (int argc, char** argv)
 {
@@ -322,17 +346,27 @@ MainParseArgs (int argc, char** argv)
 		amMake = TRUE;
 		Var_Append(MAKEFLAGS, "-M", VAR_GLOBAL);
 		break;
-#if defined(unix) || defined(_LINUX)
+#if defined(unix) || defined(_LINUX) || defined(_WIN32)
 	    case 'J':
+#ifdef _WIN32
+                maxJobs = MainJobLimit(optarg);
+#else
 		maxJobs = atoi(optarg);
+#endif
 		Var_Append(MAKEFLAGS, "-J", VAR_GLOBAL);
 		Var_Append(MAKEFLAGS, optarg, VAR_GLOBAL);
 		break;
 	    case 'L':
+#ifdef _WIN32
+                maxLocal = MainJobLimit(optarg);
+#else
 		maxLocal = atoi(optarg);
+#endif
 		Var_Append(MAKEFLAGS, "-L", VAR_GLOBAL);
 		Var_Append(MAKEFLAGS, optarg, VAR_GLOBAL);
 		break;
+#endif
+#if defined(unix) || defined(_LINUX)
 	    case 'P':
 		usePipes = FALSE;
 		Var_Append(MAKEFLAGS, "-P", VAR_GLOBAL);
@@ -1299,7 +1333,7 @@ DieHorribly(void)
 #if defined(unix)
     exit (2);			/* Not 1, so -q can distinguish error */
 #elif defined(_WIN32)
-    ExitProcess(2);
+    exit(2);
 #endif /* defined(unix) */
 }
 
