@@ -39,7 +39,15 @@ Document is work in progress.... stay tuned!
 Build pmake tool:
 
     cd %ROOT_DIR%/Tools/pmake/pmake
+    wmake pmake.exe
+    perl ../Tests/windows-parallel.pl pmake.exe
     wmake install
+
+On Windows 10/11, use `pmake -J 8 -L 8` for parallel builds. Each option accepts
+1 through 63. Each recursive pmake process has its own limits. The default is
+one job. Windows `-n`/`-N` still select NC builds; `-u`/`-U` show commands.
+See [native Windows pmake checks](TechDocs/Markdown/Tools/pmake_windows_parallel.md)
+for cross-build commands and the pending native runtime checklist.
 
 Build all the other SDK Tools:
 
