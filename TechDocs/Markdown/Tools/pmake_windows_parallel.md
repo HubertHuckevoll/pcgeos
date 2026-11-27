@@ -11,10 +11,43 @@ Each recursive pmake process inherits the options and has its own limits.
 There is no shared job pool. A recursive build can therefore run more than
 eight processes in total.
 
+Windows and Linux print the configured mode and limits at startup, for
+example: pmake: parallel enabled (-J 8 -L 8). A local limit of one reports
+serial. Serial compatibility mode also shows -M, even if the limits are
+higher. Each recursive invocation prints its own line. This reports the
+configuration; dependencies can leave fewer jobs ready to run. Preview
+and query runs do not print this line.
+
+Windows and Linux also print live start and finish lines, for example:
+pmake[1234]: started SSL (3/8 local jobs active). The limit is the smaller
+of -J and -L. Counts cover that pmake process, not all recursive processes.
+They count shells that have started and have not yet been collected. A
+finished line reports a shell exit; the target result can still be an
+error. In -B mode, each command is a separate shell job. With -P, outer
+progress stays live while tool output is captured. Nested progress is
+part of that capture. The -s flag suppresses these progress lines. The
+-M compatibility path retains its existing serial output.
+
 One shell runs the recipe lines for each target. Directory and environment
 changes remain in that shell. Output is live, with the existing target banners.
 Output from different targets can mix. Use call when a recipe must call a batch
 file and then continue.
+
+Add -P to print each target of the outer Windows invocation as one block
+when it finishes.
+For example, use pmake -J 8 -L 8 -P. Both output streams share one unique
+temporary file per target. Output is delayed until completion; the build
+stays parallel. Long lines are preserved. The block starts with the target
+banner and ends with its result. Recursive pmake calls inherit -P, but
+write through to the outer capture. This keeps unfinished recursive output
+available on cancellation. The internal PMAKE_OUTPUT_CAPTURED environment
+variable marks this condition. The -B mode keeps the capture file across
+commands. The -M serial compatibility path retains its existing output
+behavior.
+
+On cancellation, pmake stops the build processes, prints the captured
+output, and closes the files. Capture files use delete-on-close. Live
+output remains the default. Linux keeps its existing -P implementation.
 
 Commands longer than 1000 characters use response files. Watcom requires
 an unquoted response-file path. If TMP has spaces, pmake uses its Windows
@@ -59,6 +92,8 @@ worker modes in the same script. Marker files check overlap, replacement of a
 short job, and dependency order. Each worker handshake and each pmake run has
 a timeout. The Windows run also checks the 63-child boundary, rejected values,
 full Windows exit codes, shell selection, temporary files, and batch calls.
+The Windows checks also cover grouped output, long lines, failure output,
+ignored errors, and recursive capture ownership.
 If WATCOM is set, it also checks long compiler commands after directory
 changes, TMP paths with spaces, and response-file cleanup after errors.
 
@@ -96,6 +131,9 @@ In PowerShell, check the recorded descendant process IDs after cancellation:
 
 Both commands must produce no results. If TMP and TEMP were set in the first
 command prompt, use the original temporary directory in this separate shell.
+Repeat these cancellation checks with -P. Each holding-worker line must
+appear after cancellation, and no PMA capture files must remain.
+
 Also check Task Manager for any remaining pmake, cmd, or tool descendants from
 this build. Repeat cancellation during startup and during a recursive build.
 Check that temporary command files are removed after success, failure, and
@@ -112,6 +150,8 @@ While it runs, sample pmake handle counts in a second PowerShell window:
         $p | Select-Object Id,HandleCount
         Start-Sleep -Milliseconds 250
     }
+
+Repeat the handle test with -P to include capture files.
 
 Handle counts must stay bounded as the 1000 targets run. Run the same command
 several times. Check that no processes or PMA* files remain after each run.

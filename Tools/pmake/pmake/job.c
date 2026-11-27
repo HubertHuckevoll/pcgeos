@@ -398,6 +398,25 @@ static int  JobStart(GNode *gn, short flags, Job *previous);
 static void JobInterrupt(int runINTERRUPT);
 #endif /* defined(unix) */
 
+/* Report local jobs that have started and have not yet been collected. */
+static void
+JobProgress(Job *job, const char *event)
+{
+#if defined(_WIN32) || defined(_LINUX)
+#if defined(_WIN32)
+    unsigned long processID = GetCurrentProcessId();
+#else
+    unsigned long processID = (unsigned long)getpid();
+#endif
+
+    if (beSilent || noExecute || queryFlag || (job->flags & JOB_REMOTE)) return;
+    printf("pmake[%lu]: %s %s (%d/%d local jobs active)\n",
+           processID, event, job->node->name, nLocal,
+           maxJobs < maxLocal ? maxJobs : maxLocal);
+    fflush(stdout);
+#endif
+}
+
 #if defined(_WIN32)
 /* Write every byte, including when WriteFile completes only part of a write. */
 static void
@@ -440,10 +459,54 @@ JobNTRemoveFile(char *name)
     free(name);
 }
 
+/* Replay bytes without text-mode conversion or a fixed line length. */
+static void
+JobNTOutput(Job *job)
+{
+    char buffer[JOB_BUFSIZE];
+    char last = '\n';
+    DWORD count, offset, written;
+
+    if (job->outputH == INVALID_HANDLE_VALUE) return;
+    fflush(stdout);
+    if (SetFilePointer(job->outputH, 0, NULL, FILE_BEGIN) ==
+        INVALID_SET_FILE_POINTER) {
+        ErrorMessage("pmake: Cannot rewind grouped output");
+        errors++;
+        goto done;
+    }
+    for (;;) {
+        if (!ReadFile(job->outputH, buffer, sizeof(buffer), &count, NULL)) {
+            ErrorMessage("pmake: Cannot read grouped output");
+            errors++;
+            goto done;
+        }
+        if (count == 0) break;
+        last = buffer[count - 1];
+        for (offset = 0; offset < count; offset += written) {
+            if (!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buffer + offset,
+                           count - offset, &written, NULL) || written == 0) {
+                ErrorMessage("pmake: Cannot print grouped output");
+                errors++;
+                goto done;
+            }
+        }
+    }
+    if (last != '\n') putchar('\n');
+    if (aborting == ABORT_INTERRUPT || aborting == ABORT_ERROR) {
+        printf("*** %s: %s\n", job->node->name,
+               aborting == ABORT_INTERRUPT ? "interrupted" : "aborted");
+    }
+    fflush(stdout);
+done:
+    JobNTClose(&job->outputH);
+}
+
 /* The main thread owns these files and handles. */
 static void
 JobNTFree(Job *job)
 {
+    JobNTOutput(job);
     JobNTClose(&job->pid.hThread);
     JobNTClose(&job->pid.hProcess);
     if (job->cmdOUT != GetStdHandle(STD_OUTPUT_HANDLE)) {
@@ -1139,6 +1202,7 @@ JobFinish (Job *job, WAIT_TYPE status)
 		nJobs += 1;
 		if (! (job->flags & JOB_REMOTE)) {
 		    nLocal += 1;
+                    JobProgress(job, "resumed");
 		}
 		if (nJobs == maxJobs) {
 		    jobFull = TRUE;
@@ -1299,9 +1363,15 @@ void
 JobNTFinish (Job *job, WAIT_TYPE status)
 {
     nLocal--;
+    JobProgress(job, "finished");
     JobNTClose(&job->pid.hProcess);
     JobNTClose(&job->pid.hThread);
 
+    /* Keep one capture file across the commands of a -B target. */
+    if (!backwards || Lst_IsAtEnd(job->node->commands) || aborting ||
+        (status != 0 && !(job->flags & JOB_IGNERR))) {
+        JobNTOutput(job);
+    }
     if (status != 0 && (job->flags & JOB_IGNERR)) {
         printf("*** %s: error code %lu (ignored)\n", job->node->name, status);
         status = 0;
@@ -1324,9 +1394,11 @@ JobNTFinish (Job *job, WAIT_TYPE status)
             Lst_ForEachFrom(job->node->commands, job->tailCmds,
                             JobSaveCommand, (ClientData)job->node);
         }
+        if (!usePipes) printf("--- %s: completed ---\n", job->node->name);
         job->node->made = MADE;
         Make_Update(job->node);
     }
+    if (!usePipes) fflush(stdout);
     JobNTFree(job);
 }
 #endif /* defined(unix) */
@@ -1651,14 +1723,28 @@ JobExec(Job *job, ARGV_TYPE argv)
     st_info.cb = sizeof(st_info);
     st_info.dwFlags = STARTF_USESTDHANDLES;
     st_info.hStdInput = job->cmdOUT;
-    st_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    st_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+    if (!usePipes) {
+        if (job->outputH == INVALID_HANDLE_VALUE) {
+            job->outputH = JobNTTempFile(job, FALSE, TRUE);
+        }
+        if (!SetHandleInformation(job->outputH, HANDLE_FLAG_INHERIT,
+                                  HANDLE_FLAG_INHERIT)) {
+            Punt("Cannot inherit grouped output (Windows error %lu)", GetLastError());
+        }
+    }
+    st_info.hStdOutput = usePipes ? GetStdHandle(STD_OUTPUT_HANDLE) : job->outputH;
+    st_info.hStdError = usePipes ? GetStdHandle(STD_ERROR_HANDLE) : job->outputH;
 
     /* Assign and register the suspended shell before it can start tools. */
     if (!CreateProcess(shellPath, argv, NULL, NULL, TRUE,
                        NORMAL_PRIORITY_CLASS | CREATE_SUSPENDED,
                        NULL, NULL, &st_info, &job->pid)) {
         Punt("Cannot execute %s (Windows error %lu)", shellPath, GetLastError());
+    }
+    /* Other targets must not inherit this output file. */
+    if (job->outputH != INVALID_HANDLE_VALUE &&
+        !SetHandleInformation(job->outputH, HANDLE_FLAG_INHERIT, 0)) {
+        Punt("Cannot protect grouped output (Windows error %lu)", GetLastError());
     }
     if (!AssignProcessToJobObject(buildJobH, job->pid.hProcess) ||
         !JobAddHandle(job->pid.hProcess, children)) {
@@ -1677,6 +1763,7 @@ JobExec(Job *job, ARGV_TYPE argv)
     }
     JobNTClose(&job->pid.hThread);
     JobNTClose(&job->cmdOUT);
+    JobProgress(job, "started");
     return;
 #endif /* defined(unix) */
 #if defined(unix) || defined(_LINUX)
@@ -1721,6 +1808,7 @@ jobExecFinish:
      */
     nJobs += 1;
     (void)Lst_AtEnd (jobs, (ClientData)job);
+    JobProgress(job, "started");
     if (nJobs == maxJobs) {
 	jobFull = TRUE;
     }
@@ -1993,6 +2081,7 @@ JobRestart(Job *job)
 
 	(void)Lst_AtEnd(jobs, (ClientData)job);
 	nJobs += 1;
+        JobProgress(job, "resumed");
 	if (nJobs == maxJobs) {
 	    jobFull = TRUE;
 	    if (DEBUG(JOB)) {
@@ -2203,6 +2292,7 @@ JobStart (GNode *gn, short flags, Job *previous)
     job->tailCmds = NILLNODE;
 #if defined(_WIN32)
     job->cmdOUT = INVALID_HANDLE_VALUE;
+    if (previous == NULL) job->outputH = INVALID_HANDLE_VALUE;
     job->pid.hProcess = INVALID_HANDLE_VALUE;
     job->pid.hThread = INVALID_HANDLE_VALUE;
     job->tempFiles = Lst_Init(FALSE);
@@ -2906,6 +2996,12 @@ Job_CatchChildren (Boolean block)
 		//Rmt_Done ((int) job->rmtID);
 	    } else {
 		nLocal -= 1;
+                if (WIFEXITED(status) ||
+                    (WIFSIGNALED(status) && WTERMSIG(status) != SIGCONT)) {
+                    JobProgress(job, "finished");
+                } else if (WIFSTOPPED(status)) {
+                    JobProgress(job, "stopped");
+                }
 	    }
 	}
 
@@ -3961,6 +4057,7 @@ Job_AbortAll (void)
         JobRemoveHandle(job->pid.hProcess, children);
         nJobs--;
         nLocal--;
+        JobProgress(job, interrupted ? "interrupted" : "aborted");
         JobNTFree(job);
     }
 #else

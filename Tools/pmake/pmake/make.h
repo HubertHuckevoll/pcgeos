@@ -303,11 +303,9 @@ extern Boolean  keepgoing;    	/* True if should continue on unaffected
 				 * in one portion */
 extern Boolean 	touchFlag;    	/* TRUE if targets should just be 'touched'
 				 * if out of date. Set by the -t flag */
-#if defined(unix) || defined(_LINUX)
-extern Boolean  usePipes;    	/* TRUE if should capture the output of
-				 * subshells by means of pipes. Otherwise it
-				 * is routed to temporary files from which it
-				 * is retrieved when the shell exits */
+#if defined(unix) || defined(_WIN32) || defined(_LINUX)
+extern Boolean  usePipes;    	/* TRUE for live output. FALSE routes output
+				 * to temporary files until each job exits. */
 #endif /* defined(unix) */
 extern Boolean 	queryFlag;    	/* TRUE if we aren't supposed to really make
 				 * anything, just see if the targets are out-

@@ -147,7 +147,7 @@ Boolean	    	    	noExecute;  	/* -n flag */
 Boolean	    	    	keepgoing;  	/* -k flag */
 Boolean			queryFlag;  	/* -q flag */
 Boolean			touchFlag;  	/* -t flag */
-#if defined(unix) || defined(_LINUX)
+#if defined(unix) || defined(_WIN32) || defined(_LINUX)
 Boolean			usePipes;   	/* !-P flag */
 #endif /* defined(unix) */
 Boolean			backwards;  	/* -B flag */
@@ -192,6 +192,7 @@ static char 	    *help[] = {
 #ifdef _WIN32
 "-J<num>\tMaximum jobs in this pmake process (1 through 63; default 1).",
 "-L<num>\tMaximum local jobs (1 through 63; default 1).",
+"-P\t\tPrint each target's output together after it finishes.",
 #endif
 "-S	    	Turn off the -k flag (see below).",
 #ifndef POSIX
@@ -366,7 +367,7 @@ MainParseArgs (int argc, char** argv)
 		Var_Append(MAKEFLAGS, optarg, VAR_GLOBAL);
 		break;
 #endif
-#if defined(unix) || defined(_LINUX)
+#if defined(unix) || defined(_WIN32) || defined(_LINUX)
 	    case 'P':
 		usePipes = FALSE;
 		Var_Append(MAKEFLAGS, "-P", VAR_GLOBAL);
@@ -652,8 +653,8 @@ main (int argc, char** argv)
     queryFlag = FALSE;	      	/* This is not just a check-run */
     noBuiltins = FALSE;	      	/* Read the built-in rules */
     touchFlag = FALSE;	      	/* Actually update targets */
-#if defined(unix) || defined(_LINUX)
-    usePipes = TRUE;	      	/* Catch child output in pipes */
+#if defined(unix) || defined(_WIN32) || defined(_LINUX)
+    usePipes = TRUE;	      	/* Live output; use files with -P */
 #endif /* defined(unix) */
 #ifndef DONT_LOCK
     noLocking = FALSE;	      	/* Lock the current directory against other
@@ -1007,6 +1008,29 @@ main (int argc, char** argv)
 
 	targs = Targ_FindList (create, TARG_CREATE);
     }
+
+#if defined(_WIN32)
+    /* An outer capture must also retain unfinished recursive output. */
+    if (!usePipes && !amMake) {
+        if (getenv("PMAKE_OUTPUT_CAPTURED") != NULL) {
+            usePipes = TRUE;
+        } else if (!SetEnvironmentVariable("PMAKE_OUTPUT_CAPTURED", "1")) {
+            Punt("Cannot mark grouped output (Windows error %lu)", GetLastError());
+        }
+    }
+#endif
+
+#if defined(_WIN32) || defined(_LINUX)
+    if (!queryFlag && !noExecute) {
+        /* Report the final limits, including inherited options. */
+        fprintf(stderr, "pmake: %s (-J %d -L %d%s)\n",
+                (!amMake && maxJobs > 1 &&
+                 (maxLocal == -1 || maxLocal > 1)) ?
+                    "parallel enabled" : "serial",
+                maxJobs, maxLocal == -1 ? maxJobs : maxLocal,
+                amMake ? "; -M" : "");
+    }
+#endif
 
 #if !defined(_MSDOS)
     if (!amMake) {
