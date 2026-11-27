@@ -887,6 +887,7 @@ JobPrintCommand (char *cmd, Job *job)
     {
         char *cmdExec = cmd;
         char *filename;
+        char shortFilename[MAX_PATH];
         char *args;
         HANDLE argFileH;
         DWORD written;
@@ -913,10 +914,25 @@ JobPrintCommand (char *cmd, Job *job)
                       written == strlen(args);
             JobNTClose(&argFileH);
             if (!writeOK) Punt("Cannot write the response file");
-            cmdExec = (char *)malloc(args - cmd + strlen(filename) + 5);
+            /*
+             * Watcom cannot read a quoted response-file path.
+             * ATTENTION: If Windows short names are disabled, use a TMP
+             * path without spaces. Keep the path absolute for CD recipes.
+             */
+            if (strpbrk(filename, " \t") != NULL) {
+                written = GetShortPathName(filename, shortFilename,
+                                           sizeof(shortFilename));
+                if (written == 0 || written >= sizeof(shortFilename) ||
+                    strpbrk(shortFilename, " \t") != NULL) {
+                    Punt("Response file needs a TMP path without spaces "
+                         "or Windows short file names");
+                }
+                filename = shortFilename;
+            }
+            cmdExec = (char *)malloc(args - cmd + strlen(filename) + 3);
             if (cmdExec == NULL) Punt("No memory for response file command");
             memcpy(cmdExec, cmd, args - cmd);
-            sprintf(cmdExec + (args - cmd), " @\"%s\"", filename);
+            sprintf(cmdExec + (args - cmd), " @%s", filename);
         }
 
         if (!shutUp && !(job->flags & JOB_SILENT)) {

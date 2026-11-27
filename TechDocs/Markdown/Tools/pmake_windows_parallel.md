@@ -16,6 +16,11 @@ changes remain in that shell. Output is live, with the existing target banners.
 Output from different targets can mix. Use call when a recipe must call a batch
 file and then continue.
 
+Commands longer than 1000 characters use response files. Watcom requires
+an unquoted response-file path. If TMP has spaces, pmake uses its Windows
+short path. If short names are disabled, set TMP to a directory without
+spaces. The path remains absolute so recipe directory changes work.
+
 The default shell comes from COMSPEC. If COMSPEC is empty or absent, pmake uses
 cmd.exe. An explicit .SHELL path has priority. Paths with spaces are quoted.
 The Windows -n and -N options still select NC builds. The -u and -U options
@@ -54,6 +59,8 @@ worker modes in the same script. Marker files check overlap, replacement of a
 short job, and dependency order. Each worker handshake and each pmake run has
 a timeout. The Windows run also checks the 63-child boundary, rejected values,
 full Windows exit codes, shell selection, temporary files, and batch calls.
+If WATCOM is set, it also checks long compiler commands after directory
+changes, TMP paths with spaces, and response-file cleanup after errors.
 
 Linux keeps its current behavior. Two failure-status assertions are TODO checks:
 with -k, Linux Make_Run can return success after command errors. The Windows
